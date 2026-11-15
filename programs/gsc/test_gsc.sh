@@ -2594,5 +2594,15 @@ check "the same, an atom of knows naming the reading role: traceable" "V2 = synt
 check "the same, nearby not an environment predicate: nearby, added by no schema, names it, and it is traceable" "V3 = syntactically_grassroots" "$out"
 check "an environment predicate over agents, required at each guarding role, is not reported untraceable" "V4 = syntactically_grassroots" "$out"
 
+# The search of an introduction with wards (wards/wards.glp, GLP dce4192, reported by Calculus #6, 2026-11-15): a mark that a role adds without iota is in no set M (def:kinds, clause 2), so it is left out before the sets are tried.  The instance of GnW with child for ward, nine more marks f1 to f9, each added by an act of a person, and two predicates pp and qq that no act adds, which give every mark a guardianship candidate, is certified as the instance is, within the limit of run; the search over every set of the nine did not end within it.
+FLAGS=""
+for i in 1 2 3 4 5 6 7 8 9; do
+  FLAGS="$FLAGS${FLAGS:+, }sas(flag$i, ['Alice'], [], [atom(f$i, ['Alice'])], [atom(identity, ['Alice']), atom(person, ['Alice']), not(atom(f$i, ['Alice']))], true, ['Alice'])"
+done
+NOTEPQ="sas(note, ['Alice', 'Bob'], [], [atom(met, ['Alice', 'Bob']), atom(met, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(pp, ['Alice', 'Bob']), atom(identity, ['Bob']), atom(person, ['Bob']), atom(knows, ['Bob', 'Alice']), atom(qq, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])"
+out=$(run "instantiate($GNWP, $GNWB, [$FLAGS, $NOTEPQ], D), check(D?, V).")
+check "an instance of GnW with nine marks no ward bears is certified with child its ward mark, the search leaving them out" \
+      "V = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)]" "$out"
+
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
