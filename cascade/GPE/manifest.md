@@ -1,10 +1,10 @@
 # A run of the cascade on GPE
 
-- Contract: `GPE` (`gpe` to the checker), its owner's two files `programs/social/graph/GPE.txt` and `programs/social/graph/GPE.glp`, copied here as they stood at `bbc239fe`.
+- Contract: `GPE` (`gpe` to the checker), its owner's two files `programs/social/graph/GPE.txt` and `programs/social/graph/GPE.glp`, copied here as they stood at `bf297941`.
 - The paper: `/Users/udi/Grassroots/GSA (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/social/graph/GPE.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/social/graph/GPE.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 20:06 UTC by `cascade.sh gpe`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `bbc239fe`; each artefact's source and tool:
+- Run on 2026-11-15 17:26 UTC by `cascade.sh gpe`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `bf297941`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
@@ -16,12 +16,11 @@
 | `flat.txt` | the same | calculus/tools/adopt.py | the flat text, the relations applied |
 | `full-schemas.txt` | the same | calculus/tools/adopt.py | the schemas, the relations applied |
 | `verdict.txt` | `GPE.glp` | programs/gsc, check/2 | the checker's verdict: `syntactically_grassroots` |
-| `vmat.tex` | `GPE.glp` | programs/gsc, compile_contract/2 | the compiler to VMAT's refusal |
+| `vmat.tex` | `GPE.glp` | programs/gsc, compile_contract/2 | the VMAT form, 6 displays, one per schema |
 | `platform.vglp` | `GPE.glp` read by programs/gsc's as_read/2, and `GPE.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
 | `platform.glp` | `platform.vglp` | glp_runtime's :emit | the platform compiled to GLP, as emitted |
 | `interface.glp` | `platform.vglp` and `platform.glp` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |
 | (no run) | | | vGLP keeps no plays for gpe |
 
 What the tools refused or lacked:
-- VMAT: % not compiled:
 - run: vGLP keeps no plays for gpe
