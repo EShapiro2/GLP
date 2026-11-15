@@ -646,8 +646,12 @@ function drawGlobe(){
         pts.push(vec(t0 + (t1 - t0) * u, f)); }
     }
     return pts; };
-  const paint = (p, q, rel, fill) => {
-    const U = curve(p, q), sl = [0];
+  const paint = (p, q, rel) => ribbon(curve(p, q), p, q, (Array.isArray(rel) ? rel : [rel]).map(r => RELCOL[r] || RELCOL.extends), true);
+  // A ribbon along the points U of the sphere, from the edge of contract p's
+  // ellipse, or from U's start where p is null, to q's or U's end, in the
+  // colours cols, a part of its length each, with a head or none.
+  const ribbon = (U, p, q, cols, head) => {
+    const sl = [0];
     for (let i = 1; i < U.length; i++) sl.push(sl[i-1] + Math.acos(Math.max(-1, Math.min(1, dot3(U[i-1], U[i])))));
     const total = sl[sl.length-1];
     if (total < 1e-4) return '';
@@ -656,19 +660,19 @@ function drawGlobe(){
       return nrm(add3(U[i-1].map(x => x*(1-f)), U[i], f)); };
     const tan = a => nrm(add3(at(Math.min(total, a + 1e-3)), at(Math.max(0, a - 1e-3)), -1));
     const side = (a, e) => { const P = at(a); return add3(P.map(x => x*Math.cos(e)), nrm(crs(P, tan(a))), Math.sin(e)); };
-    const a0 = edgeAngle(p, tan(0)), a1 = total - edgeAngle(q, tan(total));
+    const a0 = p ? edgeAngle(p, tan(0)) : 0, a1 = total - (q ? edgeAngle(q, tan(total)) : 0);
     // Every arrow has one outline, and its colour says the relation (RELCOL);
     // an arrow of two relations is coloured half and half along its length,
     // one of three a third each, the head in the last (Udi, 2026-11-15, to
     // Website #2).
-    const u = 1/265, rs = Array.isArray(rel) ? rel : [rel], hl = 10*u, hw = 6.5*u, w = 2.4*u;
-    const aB = a1 - hl;
+    const u = 1/265, rs = cols, hl = 10*u, hw = 6.5*u, w = 2.4*u;
+    const aB = head ? a1 - hl : a1;
     if (aB <= a0) return '';
     const front = a => projv(at(a))[2] > 0.02;
     const xy = v => { const [X0, Y0] = projv(v); return X0.toFixed(1) + ',' + Y0.toFixed(1); };
     let out = '';
     rs.forEach((r, j) => {
-      const lo = a0 + (aB - a0) * j / rs.length, hi = a0 + (aB - a0) * (j + 1) / rs.length, col = RELCOL[r] || RELCOL.extends;
+      const lo = a0 + (aB - a0) * j / rs.length, hi = a0 + (aB - a0) * (j + 1) / rs.length, col = r;
       const n = Math.max(2, Math.ceil((hi - lo) / (0.8 * Math.PI/180))), as = [];
       for (let i = 0; i <= n; i++) as.push(lo + (hi - lo) * i / n);
       const runs = []; let run = [];
@@ -684,16 +688,36 @@ function drawGlobe(){
       for (const q2 of runs) if (q2.length > 1)
         out += `<polygon points="${[...q2.map(a => xy(side(a, w))), ...q2.slice().reverse().map(a => xy(side(a, -w)))].join(' ')}" fill="${col}" fill-opacity=".85"/>`;
     });
-    if (front(aB) && front(a1))
-      out += `<polygon points="${[xy(side(aB, hw)), xy(at(a1)), xy(side(aB, -hw))].join(' ')}" fill="${RELCOL[rs[rs.length-1]] || RELCOL.extends}" fill-opacity=".85"/>`;
+    if (head && front(aB) && front(a1))
+      out += `<polygon points="${[xy(side(aB, hw)), xy(at(a1)), xy(side(aB, -hw))].join(' ')}" fill="${rs[rs.length-1]}" fill-opacity=".85"/>`;
     return out; };
   // Each arrow in the colour of the family of the contract it comes from: its
   // head touches the other contract's ellipse, which shows that one's colour,
   // so the arrow shows where it comes from (Udi, 2026-11-10).
-  D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
-    const all = c.rels_all && c.rels_all[p];
-    s += paint(p, c.id, all && all.length ? all : (c.rels && c.rels[p]) || c.relation, FAM[famOf(C[p])][1]);
-  }));
+  // A composition has two origins: 'GAS composes GPD with GSV' is a line from
+  // each of the two that merge along the way into one trunk, which arrives at
+  // GAS; each line has its own relation's colour ('GAI instantiates GnW,
+  // composes it with GFP': GnW's is instantiates'), and the trunk the colours
+  // of what the contract does to the composition, a part each, or composes'
+  // where it says nothing (Udi, 2026-11-15, to Website #2).
+  const composed = c => {
+    const ps = c.extends.filter(p => C[p] && c.rels && c.rels[p] === 'composes'), of = (c.rels_of || []).filter(x => x.of === 'composition');
+    if (ps.length === 1 && of.length && C[of[0].base] && !ps.includes(of[0].base)) ps.unshift(of[0].base);
+    return ps.length === 2 ? {ps, trunk: of.map(x => x.rel)} : null; };
+  const unit = id => vec(th(id), PHI[id]);
+  D.contracts.forEach(c => {
+    const cm = composed(c);
+    c.extends.filter(p => C[p] && !(cm && cm.ps.includes(p))).forEach(p => {
+      const all = c.rels_all && c.rels_all[p];
+      s += paint(p, c.id, all && all.length ? all : (c.rels && c.rels[p]) || c.relation);
+    });
+    if (!cm) return;
+    const [A, B] = cm.ps.map(unit), Cv = unit(c.id), M = nrm(add3(add3(A.map(x => x*0.25), B, 0.25), Cv, 0.5)), K = nrm(add3(M.map(x => x*1.5), Cv, -0.5));
+    const leg = P => { const o = []; for (let i = 0; i <= 40; i++){ const t = i/40; o.push(nrm(add3(add3(P.map(x => x*(1-t)*(1-t)), K, 2*t*(1-t)), M, t*t))); } return o; };
+    const trunk = []; for (let i = 0; i <= 30; i++) trunk.push(nrm(add3(M.map(x => x*(1 - i/30)), Cv, i/30)));
+    cm.ps.forEach((p, i) => { s += ribbon(leg(i ? B : A), p, null, [RELCOL[(c.rels && c.rels[p]) || 'composes']], false); });
+    s += ribbon(trunk, null, c.id, (cm.trunk.length ? cm.trunk : ['composes']).map(r => RELCOL[r] || RELCOL.composes), true);
+  });
   D.contracts.forEach(c => {
     const [X, Y, Z] = pos[c.id];
     if (Z < 0.02 || X < -60 || X > GW+60 || Y < -40 || Y > GH+40) return;
