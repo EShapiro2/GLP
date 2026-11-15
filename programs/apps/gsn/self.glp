@@ -73,7 +73,7 @@ Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
             ; yield(Attempt) ; request(Rho, Integer).
 Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
-Atom      ::= identity ; knows(Peer) ; friend(Peer) ; message(Peer, Speech) ; leader(Speech) ; member(Speech, Peer) ; listed(Peer, Speech) ; member(Speech) ; posted(Speech, Peer, Speech) ; group_delivered(Peer, Speech, Speech, Peer) ; group_message(Peer, Speech, Speech, Peer).
+Atom      ::= identity ; knows(Peer) ; friend(Peer) ; message(Peer, Speech) ; leader(Speech) ; member(Speech, Peer) ; listed(Peer, Speech) ; posted(Speech, Peer, Speech) ; group_delivered(Peer, Speech, Speech, Peer) ; group_message(Peer, Speech, Speech, Peer).
 %% The contract as adopted on 2026-11-15 writes no name term, and no atom above holds a community name: member(g, y) holds the group's name and its leader.  The platform prints the type still, and it is written again with it.  A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
 CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
 Output    ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).

@@ -100,8 +100,6 @@ member(Speech, Peer)
 ;
 listed(Peer, Speech)
 ;
-member(Speech)
-;
 posted(Speech, Peer, Speech)
 ;
 group_delivered(Peer, Speech, Speech, Peer)
@@ -123,8 +121,6 @@ atom_of(g(leader, [s(V1)]), shown(leader(V1?)))
 atom_of(g(member, [s(V1), p(V2)]), shown(member(V1?, V2?)))
 .
 atom_of(g(listed, [p(V1), s(V2)]), shown(listed(V1?, V2?)))
-.
-atom_of(g(member, [s(V1)]), shown(member(V1?)))
 .
 atom_of(g(posted, [s(V1), p(V2), s(V3)]), shown(posted(V1?, V2?, V3?)))
 .
