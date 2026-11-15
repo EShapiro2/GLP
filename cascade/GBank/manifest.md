@@ -1,11 +1,11 @@
 # A run of the cascade on GBank
 
-- Contract: `GBank` (`gbank` to the checker), its owner's two files `programs/go/GBank.txt` and `programs/go/GBank.glp`, copied here as they stood at `5c063697`.
+- Contract: `GBank` (`gbank` to the checker), its owner's two files `programs/go/GBank.txt` and `programs/go/GBank.glp`, copied here as they stood at `3d8b33a5`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
 - Adopted from the Calculus: `programs/go/GBank.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/GBank.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 19:28 UTC by `cascade.sh gbank`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `5c063697`; each artefact's source and tool:
+- Run on 2026-11-15 20:32 UTC by `cascade.sh gbank`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `3d8b33a5`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

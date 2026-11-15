@@ -13,96 +13,25 @@ Alice, Bob and Carol are persons, Orga a network organisation.
 Logic pragmas
 GNO extends GBCC and restricts it.
 A *network organisation* is a backed community currency whose bylaws also name the role *arbiter*. A *provider* is a person whose *stake*, the Orga-coins they hold, is at least *S*, a number of Orga-coins, and a *customer* is a person who accepts Orga-coins. A treasurer is a provider. A *dispute* is over Orga-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
-Alice, Bob and Carol are persons, Orga a network organisation; in clause 2 Alice is the customer and Bob the provider.
-1. ■ Set stake: The treasurers of Orga may set S for Orga, provided Orga is an organisation.
+Alice, Bob and Carol are persons, Orga a network organisation, S and Held numbers; in clause 2 Alice is the customer and Bob the provider.
+1. ■ Set stake: The treasurers of Orga may set the stake of Orga at S, provided Orga is an organisation.
 2. ■ Arbitration. Raise: Alice may raise to Carol her dispute with the provider Bob over Orga-coins, provided Orga-coins are locked between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Provider raise: Bob may raise to Carol his dispute with the customer Alice over Orga-coins, provided Orga-coins are locked between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Arbitrate: Carol may decide the release to Alice and to Bob of the Orga-coins locked between them. The coins are released less the fee the terms set, which is released to Carol.
 Logic pragmas.
-Vocabulary: z has S set = stake_set(z); y is a provider of z = provider(y,z); x is a customer of z = customer(x,z); x has z-coins locked as the customer of y = customer_lock(x,y,z); y has z-coins locked as the provider of x = provider_lock(y,x,z); w holds the dispute of x and y over z-coins = dispute(w,x,y,z).
+Vocabulary: z has the stake at the number n = stake(z,n); x has z-coins locked as the customer of y = customer_lock(x,y,z); y has z-coins locked as the provider of x = provider_lock(y,x,z); w holds the dispute of x and y over z-coins = dispute(w,x,y,z).
 z-coins are locked between the provider y and the customer x: y has z-coins locked as the provider of x and x has z-coins locked as the customer of y.
 x is an arbiter of z: x holds the role Arbiter in z and z has x in the role Arbiter.
-After g sets S for z: z has S set.
+the earlier stake of z has ended: z has the stake at no number.
+x is a customer of z: x accepts a Dollar-denominated z-coin in payment.
+y is a provider of z: z has the stake at the number S, y holds Held z-coins and Held is at least S.
+After g sets the stake of z at n: the earlier stake of z has ended and z has the stake at the number n.
 After x raises to w x's dispute with the provider y over z-coins, which requires w does not hold the dispute of x and y over z-coins: w holds the dispute of x and y over z-coins.
 After y raises to w y's dispute with the customer x over z-coins, which requires w does not hold the dispute of x and y over z-coins: w holds the dispute of x and y over z-coins.
 After w decides the release to x and to y of the z-coins locked between them: no longer w holds the dispute of x and y over z-coins and no longer z-coins are locked between the provider y and the customer x.
+Parameters: x has z-coins locked as the customer of y; y has z-coins locked as the provider of x.
 Interface pragmas
 Look: 🕸️, network
-Organisations: the organisations Alice participates in, and her roles in each.
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
-Identity: Alice [Establish]
-Acquaintance: Alice [Acquaint] <person Bob>
-  Bob: Alice asks you to approve this: acquaint.
-Introduction: Alice [Introduce]
-  Bob: Alice asks you to approve this: introduce.
-Friendship: Alice [Befriend]
-  Bob: Alice asks you to approve this: befriend.
-Ending a friendship: Alice [Unfriend]
-Acts of the organisation: Alice [Sign] <act>
-  Bob [Propose]
-  Bob [Vote] <act>
-  Otto [Move org acquaint] <motion>
-  Otto [Move orgs acquaint] <motion>
-  Bruno [Moveb orgs acquaint] <motion of the other organisation>
-  Otto [Move org befriend] <role> <motion>
-  Otto [Move org unfriend] <motion>
-  Otto [Move orgs befriend] <role> <role> <motion>
-  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
-  Otto [Move retire] <motion>
-  Otto [Move join] <motion>
-  Otto [Move appoint] <role> <motion>
-  Otto [Move dismiss] <role> <motion>
-  Otto [Move amend] <bylaws> <new bylaws> <motion>
-  Otto [Move cc join] <denomination> <stake> <motion>
-  Otto [Move cc remove] <denomination> <motion>
-  Otto [Move gbcc record first] <maturity> <motion>
-  Otto [Move gbcc record] <maturity> <profile> <motion>
-  Otto [Move gno stake] <stake> <motion>
-Creation: Alice [Found] <organisation> <denomination>
-  Orga: Alice asks you to approve this: found.
-Ward and person: Otto [Org acquaint] <person Bob>
-  Bob: Otto asks you to approve this: org acquaint.
-  Otto [Org befriend] <person Bob> <person Alice> <role>
-  Bob: Otto asks you to approve this: org befriend.
-  Alice: Otto asks you to approve this: org befriend.
-  Otto [Org unfriend] <person Bob>
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
-  Bruno: Otto asks you to approve this: orgs acquaint.
-  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
-  Bruno: Otto asks you to approve this: orgs befriend.
-  Alice: Otto asks you to approve this: orgs befriend.
-  Bob: Otto asks you to approve this: orgs befriend.
-Joint guardianship: Bob [Officer unfriend]
-  Otto [Appoint] <person Bob> <role>
-  Bob: Otto asks you to approve this: appoint.
-  Otto [Dismiss] <person Bob> <role>
-  Bob [Resign role]
-Retiring: Otto [Retire]
-Participation: Bob [Join] <person Otto>
-  Otto: Bob asks you to approve this: join.
-Amendment: Otto [Amend] <new bylaws>
-Minting: Alice [Mint coin] <denomination> <amount>
-  Alice [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
-  Bob: Alice asks you to approve this: swap.
-Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount>
-  Alice [Payout] <amount>
-  Alice [Spend] <person Bob> <amount>
-Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Escrow: Alice [Deposit] <amount>
-  Carol: Alice asks you to approve this: deposit.
-  Carol [Release] <amount>
-  Bob: Carol asks you to approve this: release.
-  Carol [Return] <amount>
-  Alice: Carol asks you to approve this: return.
-Treasurers: Otto [Cc join] <person Bob>
-  Bob: Otto asks you to approve this: cc join.
-  Bob [Cc resign]
-  Otto [Cc remove] <person Bob>
-Drawing: Alice [Cc draw] <amount>
-Account: Otto [Gbcc record first] <person Alice> <Dollars>
-  Otto [Gbcc record] <person Alice>
-Stake: Otto [Gno stake] <stake>
-Arbitration: Alice [Gno raise c] <deal> <person Carol>
-  Bob [Gno raise p] <deal> <person Carol>
-  Carol [Gno arbitrate] <deal> <person Alice> <person Bob> <fee> <to customer> <to provider>
+Set stake: Decider [Set stake] <organisation> <stake>
+  Codecider: Decider asks to set the stake of Orga.
+Arbitration: Alice [Raise] <arbiter>
+  Bob [Provider raise] <arbiter>
+  Carol [Arbitrate]

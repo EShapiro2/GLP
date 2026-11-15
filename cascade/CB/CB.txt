@@ -5,92 +5,31 @@
 % Last changed: 2026-11-12, by GO #5.
 % Schemas: CB.glp beside this file.
 CB: Community Bank
-CB instantiates GBank and restricts it.
-A community bank is a bank with two roles, member, held by every participant, and director, held by members the members elect; the directors jointly decide the acts of the bank, and the members jointly elect and remove directors.  A member's credit line is a number of coins the directors set.
-Alice and Bob are persons, Orga a community bank.
-1. ■ Founding.  Alice may found Orga and become its first member and director.
-2. ■ Membership.  Bob becomes a member of Orga by an act of Bob and the directors; his membership ends by an act of Bob or of the directors.
-3. ■ Directors.  The members may elect a member a director, and remove a director.
-4. ■ Credit line.  The directors may set Bob's credit line.
-5. ■ Credit.  Bob may swap Bob-coins he holds for Orga-coins, as long as the Bob-coins Orga holds do not exceed his credit line.
-6. ○ Community currency.  A member shall accept Orga-coins in payment for their offerings at the prices they post.
-7. ■ Leaving.  Upon ending membership, the Orga-coins Bob holds and the Bob-coins Orga holds are redeemed against each other.
-Pragmas
+CB instantiates GBank with community bank bylaws and restricts and extends it.
+A *community bank* is a bank whose bylaws name two roles, *member*, held by every participant, and *director*, held by its first officer and by members; the directors jointly decide the acts of the bank, but the members jointly appoint and remove directors. A member's *credit line* is a number of coins.
+Bob is a person, Orga a community bank.
+1. ■ Leave: GO:3, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other.
+2. ■ Set credit line: The directors may set Bob's credit line.
+3. ■ Credit: Bob may swap Bob-coins he holds for Orga-coins, provided the Bob-coins Orga holds do not exceed his credit line.
+4. ○ Community currency. A member will accept Orga-coins in payment for their offerings at the prices they post.
+Logic pragmas
+CB instantiates GBank with community bank bylaws; x is a director of z for x is entitled to propose m in z; x is a director of z for x is entitled to take m for z; x is a director of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, More is Votes plus 1 and z has fewer than More persons in the role Director for the votes decide m according to the bylaws of z, and restricts and extends it.
+A *community bank* is a bank whose bylaws name two roles, *member*, held by every participant, and *director*, held by its first officer and by members; the directors jointly decide the acts of the bank, but the members jointly appoint and remove directors. A member's *credit line* is a number of coins.
+Bob is a person, Orga a community bank, Sum, Line, Held, Total, Votes and More numbers.
+1. ■ Leave: GO:3 Leave, only if Bob holds exactly 0 Orga-coins. Leave owed nothing: GO:3 Leave, only if Orga holds exactly 0 Bob-coins. Officer leave: GO:3 Officer leave, only if Bob holds exactly 0 Orga-coins. Officer leave owed nothing: GO:3 Officer leave, only if Orga holds exactly 0 Bob-coins.
+2. ■ Set credit line: The directors of Orga may set Bob's credit line in Orga at Line, provided Orga is an organisation and Orga has Bob as a participant.
+3. ■ Credit: Bob may swap Sum Bob-coins for Sum Orga-coins, provided Orga holds exactly Held Bob-coins, Orga has Bob's credit line at the number Line, Total is Held plus Sum and Total is at most Line.
+4. ○ Community currency. A member will accept Orga-coins in payment for their offerings at the prices they post.
+Logic pragmas.
+Vocabulary: z has y's credit line at the number n = credit_line(z,y,n).
+Roles: the directors of z = directors(z), listed by z has y in the role Director and y holds the role Director in z.
+x is a director of z: x holds the role Director in z.
+y's earlier credit line in z has ended: z has y's credit line at no number.
+After g sets y's credit line in z at n: y's earlier credit line in z has ended and z has y's credit line at the number n.
+After y swaps n y-coins for n z-coins: no longer y holds n y-coins, z holds n y-coins, no longer z holds n z-coins and y holds n z-coins.
+Interface pragmas
 Look: 🏘️, money
-Organisations: the organisations Alice participates in, and her roles in each.
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
-Identity: Alice [Establish]
-Acquaintance: Alice [Acquaint] <person Bob>
-  Bob: Alice asks you to approve this: acquaint.
-Introduction: Alice [Introduce]
-  Bob: Alice asks you to approve this: introduce.
-Friendship: Alice [Befriend]
-  Bob: Alice asks you to approve this: befriend.
-Ending a friendship: Alice [Unfriend]
-Acts of the organisation: Alice [Sign] <act>
-  Bob [Propose]
-  Bob [Vote] <act>
-  Otto [Move org acquaint] <motion>
-  Otto [Move orgs acquaint] <motion>
-  Bruno [Moveb orgs acquaint] <motion of the other organisation>
-  Otto [Move org befriend] <role> <motion>
-  Otto [Move org unfriend] <motion>
-  Otto [Move orgs befriend] <role> <role> <motion>
-  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
-  Otto [Move retire] <motion>
-  Otto [Move join] <motion>
-  Otto [Move expel] <denomination> <motion>
-  Otto [Move appoint] <role> <motion>
-  Otto [Move dismiss] <role> <motion>
-  Otto [Move amend] <bylaws> <new bylaws> <motion>
-  Otto [Move expel plain] <denomination> <motion>
-  Otto [Move cb join] <motion>
-  Otto [Move cb elect] <motion>
-  Otto [Move cb line] <limit> <motion>
-Creation: Alice [Found] <organisation>
-  Orga: Alice asks you to approve this: found.
-Ward and person: Otto [Org acquaint] <person Bob>
-  Bob: Otto asks you to approve this: org acquaint.
-  Otto [Org befriend] <person Bob> <person Alice> <role>
-  Bob: Otto asks you to approve this: org befriend.
-  Alice: Otto asks you to approve this: org befriend.
-  Otto [Org unfriend] <person Bob>
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
-  Bruno: Otto asks you to approve this: orgs acquaint.
-  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
-  Bruno: Otto asks you to approve this: orgs befriend.
-  Alice: Otto asks you to approve this: orgs befriend.
-  Bob: Otto asks you to approve this: orgs befriend.
-Joint guardianship: Bob [Officer unfriend]
-  Otto [Appoint] <person Bob> <role>
-  Bob: Otto asks you to approve this: appoint.
-  Otto [Dismiss] <person Bob> <role>
-  Bob [Resign role]
-Retiring: Otto [Retire]
-Participation: Bob [Join] <person Otto>
-  Otto: Bob asks you to approve this: join.
-Membership: Bob [Leave] <denomination>
-  Otto [Expel] <person Bob> <denomination>
-  Bob [Cb join] <person Otto>
-  Otto: Bob asks you to approve this: cb join.
-Amendment: Otto [Amend] <new bylaws>
-Minting: Alice [Mint coin] <denomination> <amount>
-  Alice [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
-  Bob: Alice asks you to approve this: swap.
-Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount>
-  Alice [Payout] <amount>
-  Alice [Spend] <person Bob> <amount>
-Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Escrow: Alice [Deposit] <amount>
-  Carol: Alice asks you to approve this: deposit.
-  Carol [Release] <amount>
-  Bob: Carol asks you to approve this: release.
-  Carol [Return] <amount>
-  Alice: Carol asks you to approve this: return.
-Directors: Otto [Cb elect] <person Bob>
-  Bob: Otto asks you to approve this: cb elect.
-Credit line: Otto [Cb line] <person Bob> <limit>
-Credit: Bob [Cb credit] <amount>
+Leave: Bob [Leave owed nothing] [Officer leave owed nothing]
+Set credit line: Decider [Set credit line] <organisation> <member> <credit line>
+  Codecider: Decider asks to set the credit line of Bob in Orga.
+Credit: Bob [Credit] <organisation> <amount>

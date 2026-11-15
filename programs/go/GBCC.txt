@@ -16,89 +16,17 @@ Logic pragmas
 GBCC extends GCC and restricts it.
 *f*, a fraction 0 ≤ f < 1, is a parameter of GBCC. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
 Alice is a person, Orga a community currency.
-1. ■ Treasurers. Appoint: GO:4 Appoint, only if every treasurer of Orga stays backed. Resign: GnW:2 Resign, only if every treasurer of Orga stays backed. End guardian: GnW:2 End guardian, only if every treasurer of Orga stays backed. Guardian unfriend: GnW:2 Guardian unfriend, only if every treasurer of Orga stays backed. Leave: GO:3 Leave, only if every treasurer of Orga stays backed. Officer leave: GO:3 Officer leave, only if every treasurer of Orga stays backed. Expel: GO:3 Expel, only if every treasurer of Orga stays backed. Officer expel: GO:3 Officer expel, only if every treasurer of Orga stays backed. Swap: GB:2, only if every treasurer of Orga stays backed. Pay: GC:3, only if every treasurer of Orga stays backed. Redeem: GB:3, only if every treasurer of Orga stays backed. Escrow: GB:4, only if every treasurer of Orga stays backed. Pay: DGC:4, only if every treasurer of Orga stays backed.
+1. ■ Treasurers. Appoint: GO:4 Appoint, only if every treasurer of Orga stays backed. Resign: GO:4 Resign, only if every treasurer of Orga stays backed. End officer: GO:4 End officer, only if every treasurer of Orga stays backed. Officer unfriend: GO:4 Officer unfriend, only if every treasurer of Orga stays backed. Leave: GO:3 Leave, only if every treasurer of Orga stays backed. Officer leave: GO:3 Officer leave, only if every treasurer of Orga stays backed. Expel: GO:3 Expel, only if every treasurer of Orga stays backed. Officer expel: GO:3 Officer expel, only if every treasurer of Orga stays backed. Swap: GB:2, only if every treasurer of Orga stays backed. Pay: GC:3, only if every treasurer of Orga stays backed. Redeem: GB:3, only if every treasurer of Orga stays backed. Escrow: GB:4, only if every treasurer of Orga stays backed. Pay: DGC:4, only if every treasurer of Orga stays backed.
 2. ■ Draw: GCC:1, only if Alice stays backed in Orga.
 3. ◆ Record: The treasurers of Orga may record a Dollar as paid into the account of Orga by Alice, with the consent of Alice, provided Orga is an organisation and Alice is a treasurer of Orga. Alice, a treasurer, may pay Dollars into the account, and the treasurers may then jointly record them as paid in by Alice.
 4. ○ Fiat redemption. GCC:2, from the account while it holds Dollars, and from a treasurer if it holds none.
 Logic pragmas.
 Vocabulary: every treasurer of z stays backed, for x = all_stay_backed(x,z); x stays backed in z = stays_backed(z,x); z has a Dollar recorded as paid in by x = paid_in(z,x).
-Roles: the treasurers of z = treasurers(z).
+Roles: the treasurers of z = treasurers(z), listed by z has y in the role Treasurer and y holds the role Treasurer in z.
 After g records a Dollar as paid into the account of z by x: z has a Dollar recorded as paid in by x.
+Environment: every treasurer of z stays backed, for x; x stays backed in z.
 Interface pragmas
 Look: 🪙, money
-Organisations: the organisations Alice participates in, and her roles in each.
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
-Treasury: the treasurers of Orga.
-Identity: Alice [Establish]
-Acquaintance: Alice [Acquaint] <person Bob>
-  Bob: Alice asks you to approve this: acquaint.
-Introduction: Alice [Introduce]
-  Bob: Alice asks you to approve this: introduce.
-Friendship: Alice [Befriend]
-  Bob: Alice asks you to approve this: befriend.
-Ending a friendship: Alice [Unfriend]
-Acts of the organisation: Alice [Sign] <act>
-  Bob [Propose]
-  Bob [Vote] <act>
-  Otto [Move org acquaint] <motion>
-  Otto [Move orgs acquaint] <motion>
-  Bruno [Moveb orgs acquaint] <motion of the other organisation>
-  Otto [Move org befriend] <role> <motion>
-  Otto [Move org unfriend] <motion>
-  Otto [Move orgs befriend] <role> <role> <motion>
-  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
-  Otto [Move retire] <motion>
-  Otto [Move join] <motion>
-  Otto [Move appoint] <role> <motion>
-  Otto [Move dismiss] <role> <motion>
-  Otto [Move amend] <bylaws> <new bylaws> <motion>
-  Otto [Move cc join] <denomination> <motion>
-  Otto [Move cc remove] <denomination> <motion>
-  Otto [Move gbcc record first] <maturity> <motion>
-  Otto [Move gbcc record] <maturity> <profile> <motion>
-Creation: Alice [Found] <organisation> <denomination>
-  Orga: Alice asks you to approve this: found.
-Ward and person: Otto [Org acquaint] <person Bob>
-  Bob: Otto asks you to approve this: org acquaint.
-  Otto [Org befriend] <person Bob> <person Alice> <role>
-  Bob: Otto asks you to approve this: org befriend.
-  Alice: Otto asks you to approve this: org befriend.
-  Otto [Org unfriend] <person Bob>
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
-  Bruno: Otto asks you to approve this: orgs acquaint.
-  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
-  Bruno: Otto asks you to approve this: orgs befriend.
-  Alice: Otto asks you to approve this: orgs befriend.
-  Bob: Otto asks you to approve this: orgs befriend.
-Joint guardianship: Bob [Officer unfriend]
-  Otto [Appoint] <person Bob> <role>
-  Bob: Otto asks you to approve this: appoint.
-  Otto [Dismiss] <person Bob> <role>
-  Bob [Resign role]
-Retiring: Otto [Retire]
-Participation: Bob [Join] <person Otto>
-  Otto: Bob asks you to approve this: join.
-Amendment: Otto [Amend] <new bylaws>
-Minting: Alice [Mint coin] <denomination> <amount>
-  Alice [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
-  Bob: Alice asks you to approve this: swap.
-Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount>
-  Alice [Payout] <amount>
-  Alice [Spend] <person Bob> <amount>
-Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Escrow: Alice [Deposit] <amount>
-  Carol: Alice asks you to approve this: deposit.
-  Carol [Release] <amount>
-  Bob: Carol asks you to approve this: release.
-  Carol [Return] <amount>
-  Alice: Carol asks you to approve this: return.
-Treasurers: Otto [Cc join] <person Bob>
-  Bob: Otto asks you to approve this: cc join.
-  Bob [Cc resign]
-  Otto [Cc remove] <person Bob>
-Drawing: Alice [Cc draw] <amount>
-Account: Otto [Gbcc record first] <person Alice> <Dollars>
-  Otto [Gbcc record] <person Alice>
+Record: Alice [Record] <treasurer>
+  Decider: Alice asks you to record the Dollars she paid into the account of Orga.
+  Codecider: Alice asks you to record the Dollars she paid into the account of Orga.
