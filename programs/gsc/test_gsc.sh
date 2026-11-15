@@ -1573,8 +1573,9 @@ check "and the speech-act fault named" \
 # agent variable of the schema (def:schema).  A bound variable holding an atom
 # need not be among the names.
 SAS_EST="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+SAS_CREATE="sas(create, ['Alice'], [n], [atom(listed, ['Alice', 'Alice', n]), atom(member, ['Alice', ext(own('Alice'), n)])], [atom(identity, ['Alice'])], true, ['Alice'])"   # adds listed and member, which close requires (GSC, Section 3.2, "A contract is required to supply what its acts require")
 sas_close() { # sas_close <names> <head conjunct cond> <body conjunct cond> <body conjunct lits> <more body>
-  printf "[%s, sas(close, %s, [n], [atom(closed, ['Alice', n]), forall('Bob', %s, [not(atom(member, ['Bob', ext(own('Alice'), n)]))])], [atom(identity, ['Alice'])%s, forall('Bob', %s, [%s])], true, ['Alice'])]" \
+  printf "[%s, $SAS_CREATE, sas(close, %s, [n], [atom(closed, ['Alice', n]), forall('Bob', %s, [not(atom(member, ['Bob', ext(own('Alice'), n)]))])], [atom(identity, ['Alice'])%s, forall('Bob', %s, [%s])], true, ['Alice'])]" \
     "$SAS_EST" "$1" "$2" "$5" "$3" "$4"
 }
 LC="atom(listed, ['Alice', 'Bob', n])"
@@ -2294,8 +2295,8 @@ check_eq "adding an unguarded befriend_auto with befriend's head and roles and a
          "V = restriction([kept(establish), kept(acquaint), kept(introduce), kept(befriend), kept(unfriend), added_b(befriend_auto, befriend)])" "$(sf 3)"
 check_eq "adding a guarded schema is no step of the proposition" \
          "V = not_shown([added_guarded(befriend2)])" "$(sf 4)"
-check_eq "a predicate the base has not puts the contract outside the proposition" \
-         "V = not_shown([preds_not_in_base([trusts])])" "$(sf 5)"
+check_eq "a predicate the base has not puts the contract outside the proposition, and, no act adding it, the contract is malformed besides (GSC, Section 3.2: a contract supplies what its acts require; an act adding trusts would be an added guarded schema, another fault)" \
+         "V = not_shown([not_pv(restriction, malformed([unsupplied(befriend, trusts)])), preds_not_in_base([trusts])])" "$(sf 5)"
 check_eq "introduce with Carol named Dave is read up to the names of its variables" \
          "V = restriction([kept(establish), kept(acquaint), replaced_a(introduce), replaced_a(befriend), kept(unfriend)])" "$(sf 6)"
 check_eq "nudge, unguarded, strengthened is a step of (c), restricting under its invariant" \
@@ -2596,16 +2597,16 @@ out=$(run "check($NOTE_ENV, V1)." "check($NOTE_KNOWS, V2)." "check($NOTE_PLAIN, 
 check "an atom whose reading role only an environment atom names is untraceable: Provenance traces through no environment atom" \
       "V1 = not_grassroots([untraceable([met])])" "$out"
 check "the same, an atom of knows naming the reading role: traceable" "V2 = syntactically_grassroots" "$out"
-check "the same, nearby not an environment predicate: nearby, added by no schema, names it, and it is traceable" "V3 = syntactically_grassroots" "$out"
+check "the same, nearby not an environment predicate: nearby, added by no schema and required by note, is not supplied, and the contract is refused (GSC, Section 3.2: a contract supplies what its acts require)" "V3 = malformed([unsupplied(note, nearby)])" "$out"
 check "an environment predicate over agents, required at each guarding role, is not reported untraceable" "V4 = syntactically_grassroots" "$out"
 
-# The search of an introduction with wards (wards/wards.glp, GLP dce4192, reported by Calculus #6, 2026-11-15): a mark that a role adds without iota is in no set M (def:kinds, clause 2), so it is left out before the sets are tried.  The instance of GnW with child for ward, nine more marks f1 to f9, each added by an act of a person, and two predicates pp and qq that no act adds, which give every mark a guardianship candidate, is certified as the instance is, within the limit of run; the search over every set of the nine did not end within it.
+# The search of an introduction with wards (wards/wards.glp, GLP dce4192, reported by Calculus #6, 2026-11-15): a mark that a role adds without iota is in no set M (def:kinds, clause 2), so it is left out before the sets are tried.  The instance of GnW with child for ward, nine more marks f1 to f9, each added by an act of a person, and two predicates pp and qq that no act adds, environment predicates of the instance since a contract supplies what its acts require (GSC, Section 3.2), which give every mark a guardianship candidate, is certified as the instance is, within the limit of run; the search over every set of the nine did not end within it.
 FLAGS=""
 for i in 1 2 3 4 5 6 7 8 9; do
   FLAGS="$FLAGS${FLAGS:+, }sas(flag$i, ['Alice'], [], [atom(f$i, ['Alice'])], [atom(identity, ['Alice']), atom(person, ['Alice']), not(atom(f$i, ['Alice']))], true, ['Alice'])"
 done
 NOTEPQ="sas(note, ['Alice', 'Bob'], [], [atom(met, ['Alice', 'Bob']), atom(met, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(pp, ['Alice', 'Bob']), atom(identity, ['Bob']), atom(person, ['Bob']), atom(knows, ['Bob', 'Alice']), atom(qq, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])"
-out=$(run "instantiate($GNWP, $GNWB, [$FLAGS, $NOTEPQ], D), check(D?, V).")
+out=$(run "instantiate($GNWP, $GNWB, environment([pp, qq], [$FLAGS, $NOTEPQ]), D), check(D?, V).")
 check "an instance of GnW with nine marks no ward bears is certified with child its ward mark, the search leaving them out" \
       "V = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)]" "$out"
 
@@ -2702,6 +2703,55 @@ check "an instance of GnW with officers each holding a role, a variable over con
 check "it is certified with wards, its guardianship the office" \
       "V = syntactically_grassroots_with_wards(acquaint, [org], [guardianship(org, officer_of, officer)]" "$out"
 check "its atoms of the office carry the variable over constants" "atom(officer_of, ['Bob', 'Carol', const(iv" "$out"
+# A contract supplies what its acts require (GSC, Section 3.2, the paragraph before Proposition Turing completeness): "the predicate of every atom that a role of a schema requires, the anchor of a quantifier among them, or that occurs in a safe formula of a body, is the predicate of an atom that some schema of the contract adds, an environment predicate, a predicate the contract declares reflexive (Section 8) or a parameter of it (Section 9) ... the checker refuses it".  GKK's three schemas with note(Alice), which adds noted(Alice) and requires besides identity one thing more: an atom of badge, which nothing adds, refused, unsupplied(note, badge); the same with badge an environment predicate, with an act award adding badge, with badge a parameter of the contract, and with self(Alice, Alice) required and self declared reflexive, each certified; a constant parameter val(badge) is no predicate; an atom forbidden is not required, a negated literal of the body, an atom negated in a safe formula of the body, under an odd number of its negations, and a negated literal of the conclusion of a quantified conjunct of the body, which a listed role forbids, alike (GSC #17, 2026-11-15: "occurs unnegated in a safe formula of a body"), an atom under two negations being unnegated; and a predicate only in a safe formula of the body, only the anchor of a quantifier of the body, and only the anchor of a quantified conjunct of the head, each refused, a conditional atom of a quantified conjunct of a head counting as added; the faults in the order of the schemas and of first occurrence, a predicate once a schema.
+SUPK="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']), atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])"
+supnote() { # supnote <body items after identity> [<head items after noted>] ; the act note
+  echo "sas(note, ['Alice'], [], [atom(noted, ['Alice'])${2:+, $2}], [atom(identity, ['Alice']), $1], true, ['Alice'])"
+}
+SUPN=$(supnote "atom(badge, ['Alice'])")
+SUPAWARD="sas(award, ['Alice'], [], [atom(badge, ['Alice'])], [atom(identity, ['Alice']), not(atom(badge, ['Alice']))], true, ['Alice'])"
+SUPSELF=$(supnote "atom(self, ['Alice', 'Alice'])")
+SUPTAG="sas(tag, ['Alice'], [x], [atom(tag, ['Alice', x])], [atom(identity, ['Alice']), not(atom(tag, ['Alice', x]))], true, ['Alice'])"
+SUPSEEN="sas(look, ['Alice'], [x], [atom(looked, ['Alice'])], [atom(identity, ['Alice']), atom(seen, ['Alice', x])], true, ['Alice'])"
+out=$(run "check([$SUPK], V0)." "check([$SUPK, $SUPN], V1)." "check(environment([badge], [$SUPK, $SUPN]), V2)." \
+          "check([$SUPK, $SUPN, $SUPAWARD], V3)." "check([$SUPK, $SUPSELF], V4)." "check(reflexive([self], [$SUPK, $SUPSELF]), V5)." \
+          "check(parametric([badge], [$SUPK, $SUPN]), V6)." "check(parametric([val(badge)], [$SUPK, $SUPN]), V7)." \
+          "check([$SUPK, $(supnote "not(atom(badge, ['Alice']))")], V8)." \
+          "check([$SUPK, $(supnote "or(atom(badge, ['Alice']), atom(knows, ['Alice', 'Alice']))")], V9)." \
+          "check([$SUPK, $(supnote "exists([x], atom(tag, ['Alice', x]), true)")], V10)." \
+          "check([$SUPK, $(supnote "atom(noted, ['Alice'])" "forall([x], atom(tag, ['Alice', x]), true, [atom(seen, ['Alice', x])])")], V11)." \
+          "check([$SUPK, $SUPTAG, $(supnote "not(atom(noted, ['Alice']))" "forall([x], atom(tag, ['Alice', x]), true, [atom(seen, ['Alice', x])])"), $SUPSEEN], V12)." \
+          "check([$SUPK, $SUPTAG, $SUPSEEN], V13)." \
+          "check([$SUPK, $(supnote "and(not(atom(badge, ['Alice'])), atom(identity, ['Alice']))")], V15)." \
+          "check([$SUPK, $(supnote "not(exists([x], atom(tag, ['Alice', x]), atom(badge, ['Alice'])))")], V16)." \
+          "check([$SUPK, $(supnote "not(not(atom(badge, ['Alice'])))")], V17)." \
+          "check([$SUPK, $SUPTAG, $(supnote "forall([x], atom(tag, ['Alice', x]), true, [not(atom(badge, [x]))])")], V18)." \
+          "check([$SUPK, $SUPTAG, $(supnote "forall([x], atom(tag, ['Alice', x]), true, [atom(badge, [x])])")], V19)." \
+          "check([$SUPK, $(supnote "atom(badge, ['Alice']), atom(pass, ['Alice']), atom(badge, ['Alice'])"), sas(more, ['Alice'], [], [atom(more, ['Alice'])], [atom(pass, ['Alice']), atom(ticket, ['Alice'])], true, ['Alice'])], V14).")
+check "GKK's three schemas supply what they require" "V0 = syntactically_grassroots" "$out"
+check "an act requiring an atom of a predicate nothing adds is refused, unsupplied(note, badge)" "V1 = malformed([unsupplied(note, badge)])" "$out"
+check "the same with the predicate an environment predicate is certified" "V2 = syntactically_grassroots" "$out"
+check "the same with an act adding the predicate is certified" "V3 = syntactically_grassroots" "$out"
+check "a predicate required and added by nothing, not declared reflexive, is refused" "V4 = malformed([unsupplied(note, self)])" "$out"
+check "the same declared reflexive is no fault" "V5 = syntactically_grassroots" "$out"
+check "a predicate required and added by nothing, a parameter of a parametric contract, is no fault" "V6 = syntactically_grassroots" "$out"
+check "a constant parameter of that name, val(badge), is no predicate, and the act is refused" "V7 = malformed([unsupplied(note, badge)])" "$out"
+check "an atom forbidden, a negated literal of the body, is not required" "V8 = syntactically_grassroots" "$out"
+check "an atom negated in a safe formula of a body is not required" "V15 = syntactically_grassroots" "$out"
+check "nor is a quantifier negated there, its anchor and its condition" "V16 = syntactically_grassroots" "$out"
+check "an atom under two negations is unnegated, and required" "V17 = malformed([unsupplied(note, badge)])" "$out"
+check_not "what a listed role forbids, a negated literal of the conclusion of a quantified conjunct of the body, is not required" "unsupplied" "$(printf '%s\n' "$out" | grep -F 'V18 = ')"
+check "what it requires there is" "V19 = malformed([unsupplied(note, badge)])" "$out"
+check "a predicate only in a safe formula of a body, added by nothing, is refused" "V9 = malformed([unsupplied(note, badge)])" "$out"
+check "a predicate only the anchor of a quantifier of a body, added by nothing, is refused" "V10 = malformed([unsupplied(note, tag)])" "$out"
+check "a predicate only the anchor of a quantified conjunct of a head, added by nothing, is refused" "V11 = malformed([unsupplied(note, tag)])" "$out"
+check_not "a conditional atom of a quantified conjunct of a head counts as added" "unsupplied" "$(printf '%s\n' "$out" | grep -F 'V12 = ')"
+check "the conditional atom is what supplied it" "V13 = malformed([unsupplied(look, seen)])" "$out"
+check "the faults are in the order of the schemas and of first occurrence, a predicate once a schema" \
+      "V14 = malformed([unsupplied(note, badge), unsupplied(note, pass), unsupplied(more, pass), unsupplied(more, ticket)])" "$out"
+out=$(run "compile_contract(t, [$SUPK, $SUPN]).")
+check "a contract that does not supply what an act requires is not compiled, the fault named" \
+      "requires an atom of" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

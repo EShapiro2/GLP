@@ -2344,7 +2344,8 @@ Fault ::= no_introductory_act
         ; listed_agent_role(Constant, Constant)
         ; guard_not_role(Constant, Constant)
         ; value_type(Constant, Constant)
-        ; item_argument(Constant, Constant).
+        ; item_argument(Constant, Constant)
+        ; unsupplied(Constant, Constant).
 Faults  ::= [] ; [Fault | Faults].
 % What def:signature is decided against (volition.glp): sig(Is, Cj, OA, OD,
 % TA, TD), the indices of a schema's agent roles, its conjuncts, the
@@ -4403,6 +4404,22 @@ agent_named([], yes).
 agent_named([S|Ss], R?) :- ground(S?), ground(Ss?) |
     sch_agent_named(S?, A),
     agent_named1(A?, Ss?, R).
+% The parameters of a parametric contract, [] where it is not parametric
+% (GSC, Definition Parametric contract: "a contract some of whose predicates
+% and constants are parameters"), a predicate by its name and a constant
+% val(C).
+procedure param_list(WDeclared?, SParams).
+param_list([], []).
+param_list([_|_], []).
+param_list(reflexive(_, _), []).
+param_list(environment(_, _), []).
+param_list(parametric(Ps, D), R?) :- ground(D?) |
+    param_list(D?, R1),
+    sparams_app(Ps?, R1?, R).
+
+procedure sparams_app(SParams?, SParams?, SParams).
+sparams_app([], T, T?).
+sparams_app([P|Ps], T, [P?|R?]) :- sparams_app(Ps?, T?, R).
 
 % ---------------------------------------------------------------------------
 % Entry points
@@ -4415,7 +4432,7 @@ agent_named([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % header); contracts.glp holds the checker's fixtures, by name, and its
 % variants of a contract, by name and the contract's term.
 
-imported procedure check#check_env(NDeclared?, Preds?, Verdict).
+imported procedure check#check_env_params(NDeclared?, Preds?, SParams?, Verdict).
 exported procedure check(WDeclared?, Verdict).
 check(C, V?) :- ground(C?) |
     read_faults(C?, F),
@@ -4427,7 +4444,8 @@ procedure check_read(Faults?, WDeclared?, Verdict).
 check_read([], C, V?) :- ground(C?) |
     unnamed(C?, D),
     env_preds(C?, Ev),
-    check # check_env(D?, Ev?, V).
+    param_list(C?, Pm),
+    check # check_env_params(D?, Ev?, Pm?, V).
 check_read([F|Fs], _, malformed([F?|Fs?])).
 
 % A contract as the checker reads it, each schema of the clause syntax in

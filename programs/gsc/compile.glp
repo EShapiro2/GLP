@@ -1370,6 +1370,10 @@ malformed_lines([item_argument(S, Y)|Fs], T,
                 [S?, 'has the item of', Y?, 'as an argument of an atom, and no agent role requires', Y?, ';'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
+malformed_lines([unsupplied(S, P)|Fs], T,
+                [S?, 'requires an atom of', P?, 'which no schema adds, and which is no environment predicate, reflexive predicate or parameter;'|R?]) :-
+    ground(Fs?), ground(T?) |
+    malformed_lines(Fs?, T?, R).
 malformed_lines([_|Fs], T, R?) :- otherwise, ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 
