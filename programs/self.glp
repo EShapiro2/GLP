@@ -483,6 +483,7 @@ procedure '_term_to_string'(_?, String).
 
 % Time and random
 procedure '_now'(Integer).
+procedure '_set_clock'(Integer?).
 procedure '_random'(Integer?, Integer?, Integer, Integer).
 procedure '_split_random_seed'(Integer?, Integer, Integer).
 
@@ -871,6 +872,12 @@ Result? := ceil(X) :-
 
 procedure now(Integer).
 now(T?) :- '_now'(T).
+
+% set_clock(T) sets the machine's clock to T, Unix milliseconds; the clock runs on from it, and now/1 and the time guards read it.  For a test or a play (GLP-ICLP appendix-guards, "Clock access (now/1, set_clock/1)").
+procedure set_clock(Integer?).
+set_clock(T) :-
+  integer(T?) |
+  '_set_clock'(T?).
 
 % =============================================================================
 % SEEDED RANDOM (random/4)

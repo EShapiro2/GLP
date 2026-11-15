@@ -1369,6 +1369,21 @@ HEREDOC
 check "clock rated aborts before start_clock" "\[ABORT\] rated/2: the simulated clock is not started" "$a33c"
 check "clock step_clock aborts before start_clock" "\[ABORT\] step_clock/2: the simulated clock is not started" "$a33c"
 
+# --- A33d: The machine's clock (now/1, set_clock/1) ---
+# GLP-ICLP appendix-guards, "Clock access (now/1, set_clock/1)": set_clock(T) sets the machine's clock to T, the clock runs on from it, and now/1 and the time guards read it.  day_after_set: now/1 after set_clock gives the day set.  wait_passes: a goal waiting by wait_until for a later day goes on when the clock is set to that day.  duration_passes: the same of wait/1 and the end of its duration.
+a33d=$("$REPL_RUN" <<HEREDOC
+$TYPED/set_clock_test.glp
+day_after_set(D).
+wait_passes(W).
+duration_passes(U).
+:quit
+HEREDOC
+2>&1)
+check "set_clock now/1 gives the day set" "D = 10957" "$a33d"
+check "set_clock ends a wait_until whose time has come" "W = passed" "$a33d"
+check "set_clock ends a wait whose duration has passed" "U = passed" "$a33d"
+check_not "set_clock no abort" "ABORT" "$a33d"
+
 # --- A34: Ackermann on Peano numerals (book/recursive/arithmetic_trees) ---
 # Clause 3's guard was compound(M?), ground(M?): compound refused M = 0, so
 # ackermann(s(0), s(0), A) failed, and every goal that reaches it with it.
