@@ -116,6 +116,15 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
 , \qquad 
 c'_
 {
@@ -126,15 +135,6 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-knows
-}
-(
-Carol
-)
-\}
 ,\\
 &
 \text{provided } 
@@ -147,13 +147,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-knows
-}
-(
-Carol
 )
  \in c_
 {
@@ -169,6 +162,13 @@ knows
 }
 (
 \Alice
+)
+,
+\mathit{
+knows
+}
+(
+Carol
 )
  \in c_
 {
@@ -204,15 +204,6 @@ friend
 (
 \Bob
 )
-,
-\mathit{
-pointer
-}
-(
-\Bob
-,
-\Bob
-)
 \}
 , \qquad 
 c'_
@@ -230,15 +221,6 @@ c_
 friend
 }
 (
-\Alice
-)
-,
-\mathit{
-pointer
-}
-(
-\Alice
-,
 \Alice
 )
 \}
@@ -328,15 +310,6 @@ friend
 (
 \Bob
 )
-,
-\mathit{
-pointer
-}
-(
-\Bob
-,
-\Bob
-)
 \}
 , \qquad 
 c'_
@@ -356,105 +329,7 @@ friend
 (
 \Alice
 )
-,
-\mathit{
-pointer
-}
-(
-\Alice
-,
-\Alice
-)
 \}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
-,
-\mathit{
-pointer
-}
-(
-\Bob
-,
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
-,
-\mathit{
-pointer
-}
-(
-\Alice
-,
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-point_friend
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-points_to
-}
-(
-\Bob
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
 ,\\
 &
 \text{provided } 
@@ -476,22 +351,16 @@ friend
 \mathit{
 identity
 }
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
  \in c_
 {
 \Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-points_to
-}
-(
-\Bob
-)
- \notin c_
-{
-\Alice
 }
 ,\\
 &
@@ -500,7 +369,7 @@ points_to
 \}
 \end{align*}
 \iffalse
-point_transitive
+name_custodian
 \fi
 \begin{align*}
 &
@@ -516,10 +385,10 @@ c_
  \uplus 
 \{
 \mathit{
-points_to
+custodian
 }
 (
-Carol
+\Bob
 )
 \}
 , \qquad 
@@ -532,6 +401,15 @@ c_
 {
 \Bob
 }
+ \uplus 
+\{
+\mathit{
+custodian_of
+}
+(
+\Alice
+)
+\}
 ,\\
 &
 \text{provided } 
@@ -543,14 +421,201 @@ identity
 knows
 }
 (
-Carol
+\Bob
 )
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+fixed
+}
 ,
 \mathit{
-points_to
+custodian
 }
 (
 \Bob
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+identity_record
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+fixed
+}
+,
+\mathit{
+threshold
+}
+(
+Share
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+fixed
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{cardinality}(
+X1
+,
+\mathit{
+custodian
+}
+(
+\Alice
+,
+X1
+)
+)
+\ge
+Share
+\land
+Double
+=
+Share
+\cdot
+2
+\land
+\mathrm{cardinality}(
+X2
+,
+\mathit{
+custodian
+}
+(
+\Alice
+,
+X2
+)
+)
+<
+Double
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+tell
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+records_friend
+}
+(
+\Alice
+,
+\mathit{Carol}
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+friend
+}
+(
+\mathit{Carol}
 )
  \in c_
 {
@@ -562,23 +627,51 @@ identity
 }
 ,
 \mathit{
-points_to
+friend
 }
 (
-Carol
+\Alice
 )
  \in c_
 {
 \Bob
 }
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \in c_
+{
+\mathit{Carol}
+}
 ,\\
 &
-\text{guarded by } \{
+\text{provided } 
+\mathit{
+records_friend
+}
+(
 \Alice
-\}
+,
+\mathit{Carol}
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
 \end{align*}
 \iffalse
-unpoint
+tell_end
 \fi
 \begin{align*}
 &
@@ -594,10 +687,12 @@ c_
  \setminus 
 \{
 \mathit{
-points_to
+records_friend
 }
 (
 \Bob
+,
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -610,71 +705,15 @@ c_
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-points_to
-}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-follow_friend
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-pointer
-}
-(
-\Bob
-,
-Dave
-)
-\}
 , \qquad 
 c'_
 {
-\Bob
+\mathit{Carol}
 }
  := 
 c_
 {
-\Bob
+\mathit{Carol}
 }
 ,\\
 &
@@ -689,6 +728,15 @@ friend
 (
 \Bob
 )
+,
+\mathit{
+records_friend
+}
+(
+\Bob
+,
+\mathit{Carol}
+)
  \in c_
 {
 \Alice
@@ -699,12 +747,124 @@ identity
 }
 ,
 \mathit{
-pointer
+friend
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+\mathit{Carol}
+)
+ \notin c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \notin c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+send_record
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+records_custodian
+}
+(
+\Alice
+,
+Carol
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+fixed
+}
+,
+\mathit{
+custodian
 }
 (
 Carol
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
 ,
-Dave
+\mathit{
+friend
+}
+(
+\Alice
 )
  \in c_
 {
@@ -714,25 +874,23 @@ Dave
 &
 \text{provided } 
 \mathit{
-pointer
+records_custodian
 }
 (
-\Bob
+\Alice
 ,
-Dave
+Carol
 )
  \notin c_
 {
-\Alice
+\Bob
 }
 ,\\
 &
-\text{guarded by } \{
-\Alice
-\}
+\text{guarded by } \emptyset
 \end{align*}
 \iffalse
-follow_transitive
+checkpoint
 \fi
 \begin{align*}
 &
@@ -748,16 +906,13 @@ c_
  \uplus 
 \{
 \mathit{
-pointer
+checkpoint
 }
 (
-\mathit{Carol}
-,
-Dave
+\Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -769,36 +924,16 @@ c_
 }
 ,\\
 &
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
-,\\
-&
 \text{provided } 
 \mathit{
 identity
 }
 ,
 \mathit{
-knows
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-pointer
+friend
 }
 (
 \Bob
-,
-Dave
 )
  \in c_
 {
@@ -809,74 +944,115 @@ Dave
 identity
 }
 ,
-\mathit{
-pointer
-}
-(
-\mathit{Carol}
-,
-Dave
-)
- \in c_
-{
-\Bob
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
-{
-\mathit{Carol}
-}
-,\\
-&
-\text{provided } 
-\mathit{
-pointer
-}
-(
-\mathit{Carol}
-,
-Dave
-)
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{provided } 
-\neg 
-(
 \mathit{
 friend
 }
 (
 \Alice
-,
-\mathit{Carol}
 )
-\land
-\mathit{Carol}
-=
-Dave
-)
+ \in c_
+{
+\Bob
+}
 ,\\
 &
-\text{guarded by } \{
-\Alice
-\}
+\text{guarded by } \emptyset
 \end{align*}
 \iffalse
-follow_transitive_friend
+restore
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+recovered
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+checkpoint
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+state_loss
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+replace
 \fi
 \begin{align*}
 &
@@ -892,16 +1068,15 @@ c_
  \uplus 
 \{
 \mathit{
-pointer
+asked
 }
 (
-\mathit{Carol}
+\Bob
 ,
-Dave
+Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -910,17 +1085,6 @@ c'_
 c_
 {
 \Bob
-}
-,\\
-&
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
 }
 ,\\
 &
@@ -930,38 +1094,14 @@ identity
 }
 ,
 \mathit{
-knows
+custodian_of
 }
 (
-\mathit{Carol}
-)
-,
-\mathit{
-friend
-}
-(
-\Bob
+Alice
 )
  \in c_
 {
 \Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-pointer
-}
-(
-\mathit{Carol}
-,
-Dave
-)
- \in c_
-{
-\Bob
 }
  \text{ and } 
 \mathit{
@@ -976,18 +1116,18 @@ knows
 )
  \in c_
 {
-\mathit{Carol}
+\Bob
 }
 ,\\
 &
 \text{provided } 
 \mathit{
-pointer
+asked
 }
 (
-\mathit{Carol}
+\Bob
 ,
-Dave
+Alice
 )
  \notin c_
 {
@@ -995,30 +1135,12 @@ Dave
 }
 ,\\
 &
-\text{provided } 
-\neg 
-(
-\mathit{
-friend
-}
-(
-\Alice
-,
-\mathit{Carol}
-)
-\land
-\mathit{Carol}
-=
-Dave
-)
-,\\
-&
 \text{guarded by } \{
-\Alice
+\Bob
 \}
 \end{align*}
 \iffalse
-unfollow
+vouch
 \fi
 \begin{align*}
 &
@@ -1028,152 +1150,110 @@ c'_
 }
  := 
 c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+vouched
+}
+(
+Alicia
+,
+Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+asked
+}
+(
+Alicia
+,
+Alice
+)
+,
+\mathit{
+custodian_of
+}
+(
+Alice
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+vouched
+}
+(
+Alicia
+,
+Alice
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+accept
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
 {
 \Alice
 }
  \setminus 
 \{
 \mathit{
-pointer
+friend
 }
 (
-\Bob
-,
-Dave
+Alice
 )
 \}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-pointer
-}
-(
-\Bob
-,
-Dave
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\neg 
-(
+) \uplus 
+\{
 \mathit{
 friend
 }
 (
-\Alice
-,
 \Bob
 )
-\land
+,
+\mathit{
+accepted
+}
+(
 \Bob
-=
-Dave
-)
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-post
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-item
-}
-(
-x
 ,
-\Alice
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
- \in c_
-{
-\Alice
-}
-,\\
-&
-\text{provided } 
-\mathit{
-item
-}
-(
-x
+Alice
 ,
-\Alice
+\mathit{Carol}
 )
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
 \}
-\end{align*}
-\iffalse
-deliver
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
 , \qquad 
 c'_
 {
@@ -1187,22 +1267,170 @@ c_
  \uplus 
 \{
 \mathit{
-item
+friend
 }
 (
-x
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
 ,
-Carol
+\mathit{
+records_custodian
+}
+(
+Alice
+,
+\mathit{Carol}
 )
 ,
 \mathit{
-received
+threshold_vouched
 }
 (
-x
+Alice
 ,
-Carol
+\Bob
+)
 ,
+\mathit{
+friend
+}
+(
+Alice
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+vouched
+}
+(
+\Bob
+,
+Alice
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+accepted
+}
+(
+\Bob
+,
+Alice
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+accept_custodian
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+custodian
+}
+(
+\Bob
+)
+\}
+) \uplus 
+\{
+\mathit{
+custodian
+}
+(
+\mathit{Carol}
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+custodian_of
+}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \uplus 
+\{
+\mathit{
+custodian_of
+}
+(
 \Alice
 )
 \}
@@ -1214,19 +1442,21 @@ identity
 }
 ,
 \mathit{
-knows
+accepted
 }
 (
+\mathit{Carol}
+,
 \Bob
+,
+Carol
 )
 ,
 \mathit{
-item
+custodian
 }
 (
-x
-,
-Carol
+\Bob
 )
  \in c_
 {
@@ -1238,31 +1468,22 @@ identity
 }
 ,
 \mathit{
-pointer
+custodian_of
 }
 (
 \Alice
-,
-Carol
 )
  \in c_
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
+ \text{ and } 
 \mathit{
-item
+identity
 }
-(
-x
-,
-Carol
-)
- \notin c_
+ \in c_
 {
-\Bob
+\mathit{Carol}
 }
 ,\\
 &

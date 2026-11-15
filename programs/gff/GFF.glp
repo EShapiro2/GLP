@@ -2,7 +2,7 @@
 %% complete in itself.  Not to be edited: edit GFF.txt and run adopt.py GFF.
 % contract_named(gff, C): the contract, GFF.
 procedure contract_named(Constant?, SDeclared).
-contract_named(gff, [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
+contract_named(gff, reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
  sas(befriend, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice']), atom(pointer, ['Alice', 'Bob', 'Bob']), atom(pointer, ['Bob', 'Alice', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice', 'Bob']),
@@ -16,4 +16,4 @@ contract_named(gff, [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), a
  sas(labeled_unpoint, ['Alice', 'Carol', 'Dave'], ['Carol', 'Dave'], [not(atom(pointer, ['Alice', 'Carol', 'Dave']))], [atom(identity, ['Alice']), atom(pointer, ['Alice', 'Carol', 'Dave'])], true, ['Alice']),
  sas(labeled_unpoint_self, ['Alice', 'Dave'], ['Dave'], [not(atom(pointer, ['Alice', 'Dave', 'Dave']))], [atom(identity, ['Alice']), not(atom(friend, ['Alice', 'Dave'])), atom(pointer, ['Alice', 'Dave', 'Dave'])], true, ['Alice']),
  sas(post, ['Alice'], ['Item'], [atom(item, ['Alice', 'Item', 'Alice'])], [atom(identity, ['Alice']), not(atom(item, ['Alice', 'Item', 'Alice']))], true, ['Alice']),
- sas(deliver, ['Bob', 'Alice', 'Carol'], ['Item', 'Carol'], [atom(item, ['Alice', 'Item', 'Carol']), atom(received, ['Alice', 'Item', 'Carol', 'Bob'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(pointer, ['Alice', 'Bob', 'Carol']), atom(knows, ['Bob', 'Alice']), atom(item, ['Bob', 'Item', 'Carol']), not(atom(item, ['Alice', 'Item', 'Carol']))], true, [])]).
+ sas(deliver, ['Bob', 'Alice', 'Carol'], ['Item', 'Carol'], [atom(item, ['Alice', 'Item', 'Carol']), atom(received, ['Alice', 'Item', 'Carol', 'Bob'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(pointer, ['Alice', 'Bob', 'Carol']), atom(knows, ['Bob', 'Alice']), atom(item, ['Bob', 'Item', 'Carol']), not(atom(item, ['Alice', 'Item', 'Carol']))], true, [])])).

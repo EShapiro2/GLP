@@ -1,6 +1,6 @@
 GB: Grassroots Bonds
 GB extends GC.
-Vocabulary: x holds a y-bond due e = bond(x,y,e); x holds n y-bonds due e = bond(x,y,e,*n); the current date is e, for x = today(x,e); z holds n w-coins in escrow from x for y on k = escrow_coin(z,w,x,y,k,*n); z holds n w-bonds due e in escrow from x for y on k = escrow_bond(z,w,e,x,y,k,*n); z finds k met = met(z,k); z finds k failed = failed(z,k).
+Vocabulary: x holds a y-bond due e = bond(x,y,e); x holds n y-bonds due e = bond(x,y,e,*n); the current date is e, for x = today(x,e); z holds n w-coins in escrow from x for y on k = escrow_coin(z,w,x,y,k,*n); z holds n w-bonds due e in escrow from x for y on k = escrow_bond(z,w,e,x,y,k,*n).
 After x issues n x-bonds due e: x holds n x-bonds due e.
 After x and y swap n z-coins for m w-bonds due e: no longer x holds n z-coins, y holds n z-coins, no longer y holds m w-bonds due e, x holds m w-bonds due e, y knows z and x knows w.
 After x and y swap n z-bonds due e for m w-bonds due f: no longer x holds n z-bonds due e, y holds n z-bonds due e, no longer y holds m w-bonds due f, x holds m w-bonds due f, y knows z and x knows w.
@@ -26,7 +26,7 @@ GB:3 ■ Redeem bond against bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~bon
 GB:4 ■ | Escrow.
 GB:4 ■ Deposit: ~coin(Alice,Dave,*Sum), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), coin(Alice,Dave,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
 GB:4 ■ Deposit bond: ~bond(Alice,Dave,Day,*Sum), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), bond(Alice,Dave,Day,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
-GB:4 ■ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), met(Carol,Cond), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
-GB:4 ■ Release bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Bob,Dave,Day,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), met(Carol,Cond), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
-GB:4 ■ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), failed(Carol,Cond), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
-GB:4 ■ Return bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Alice,Dave,Day,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), failed(Carol,Cond), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GB:4 ■ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GB:4 ■ Release bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Bob,Dave,Day,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GB:4 ■ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GB:4 ■ Return bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Alice,Dave,Day,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.

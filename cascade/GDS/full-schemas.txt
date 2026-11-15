@@ -1,7 +1,8 @@
 GDS: Grassroots Directory Service (expanded schemas)
 GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
-GKK:1+GnW:3 ■ Establish: identity(Alice), knows(Alice,Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:0 - | Reflexive: x knows y.
+GKK:1+GnW:3 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2+GnW:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
 GKK:3+GnW:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
@@ -14,12 +15,12 @@ GSG:3 ○ | Loss of Trust.
 GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
-GnW:1 ■ Enter: identity(Carol), knows(Carol,Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
+GnW:1 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.
 GnW:2 ■ | Guardian decisions.
-GnW:2 ■ Make guardian: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by guardians(Carol), Bob.
+GnW:2 ■ Make guardian: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), has_guardian(Carol,Alice), friend(Bob,Alice), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by guardians(Carol), Bob.
 GnW:2 ■ Resign: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by Bob.
-GnW:2 ■ End guardian: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by guardians(Carol).
+GnW:2 ■ End guardian: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by guardians(Carol,-Bob).
 GnW:2 ■ Guardian unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- friend(Bob,Carol), friend(Carol,Bob), guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by Bob.
 GnW:2 ■ | Carol may not end a friendship with her guardian.
 GnW:3 ■ | Ward and person.

@@ -1,19 +1,23 @@
 # A run of the cascade on CSSN
 
-- Contract: `CSSN` (`cssn` to the checker), its owner's two files `programs/cssn/CSSN.txt` and `programs/cssn/CSSN.glp`, copied here as they stood at `eef8470c`.
-- The paper: `git@github.com:EShapiro2/SGLP.git` at `f2b94ded`, for the paper's own record.
-- An instance of gsnw, programs/cssn/GSNW.glp, under [=(ward, child), =(guardian_of, parenting), =(make_guardian, make_parent), =(end_guardian, end_parent), =(guardian_unfriend, parent_unfriend), =(ward_acquaint, child_acquaint), =(ward_befriend, child_befriend), =(ward_unfriend, child_unfriend), =(ward_end, child_end), =(wards_acquaint, children_acquaint), =(wards_befriend, children_befriend), =(ward_message, child_message), =(ward_create, child_create), =(ward_join, child_join), =(wards_join, children_join), =(ward_leave, child_leave), =(ward_remove, child_remove), =(ward_withdraw, child_withdraw), =(ward_close, child_close), =(guardian_close, parent_close), =(ward_post_own, child_post_own), =(ward_post, child_post)]: its term formed by programs/gsc's instantiate/4 from the base's, its file holding only what it adds or replaces (GSC, Definition Parametric contract).
-- The tools: this repository at `eef8470c` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP), programs/cssn (the plays with scripted persons).
-- Run on 2026-11-12 22:02 UTC by `cascade.sh cssn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `CSSN` (`cssn` to the checker), its owner's two files `programs/cssn/CSSN.txt` and `programs/cssn/CSSN.glp`, copied here as they stood at `25fbd556`.
+- The paper: `/Users/udi/Grassroots/CSSN (not on this machine)` at `unknown`, for the paper's own record.
+- Adopted from the Calculus: `programs/cssn/CSSN.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/cssn/CSSN.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
+- Run on 2026-11-15 17:29 UTC by `cascade.sh cssn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `25fbd556`; each artefact's source and tool:
 
-| Artefact | What it holds |
-|---|---|
-| `CSSN.txt` | the contract |
-| `CSSN.glp` | the act schemas, as terms |
-| `schemas.txt` | the act schemas in GSC's notation, printed from the terms |
-| `verdict.txt` | the checker's verdict: `syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, guarded_by)], [relay(child_acquaint, ward(1, child, guardian(3)), free(2)), relay(children_acquaint, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [identity, person])` |
-| `vmat.tex` | the VMAT form, 39 displays, one per schema |
-| `platform.vglp` | the CVA compiler's refusal, and no platform.glp and no run |
-
-What the tools refused or lacked:
-- platform: %% not compiled(cssn)
+| Artefact | Source | Tool | What it holds |
+|---|---|---|---|
+| `CSSN.txt` | `programs/cssn/CSSN.txt` | copied | the contract, its Logic pragmas and its Interface pragmas |
+| `CSSN.glp` | `programs/cssn/CSSN.txt` | calculus/tools/adopt.py, copied from `programs/cssn/CSSN.glp` | the full schemas, the term the checker reads |
+| `schemas.txt` | `CSSN.txt`'s Logic pragmas | calculus/tools/adopt.py | the speech-act schemas compiled from the Logic pragmas |
+| `full-contract.txt` | `CSSN.txt` and the contracts it is written from | calculus/tools/adopt.py | the full contract, each clause labelled by its origin |
+| `full-pragmas.txt` | the same | calculus/tools/adopt.py | the Logic pragmas' sentences, the relations applied |
+| `flat.txt` | the same | calculus/tools/adopt.py | the flat text, the relations applied |
+| `full-schemas.txt` | the same | calculus/tools/adopt.py | the schemas, the relations applied |
+| `verdict.txt` | `CSSN.glp` | programs/gsc, check/2 | the checker's verdict: `syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parent, has_parent)], [relay(child_acquaint, ward(1, child, guardian(3)), free(2)), relay(children_acquaint, ward(1, child, guardian(3)), ward(2, child, guardian(4)))], [identity, person])` |
+| `vmat.tex` | `CSSN.glp` | programs/gsc, compile_contract/2 | the VMAT form, 38 displays, one per schema |
+| `platform.vglp` | `CSSN.glp` read by programs/gsc's as_read/2, and `CSSN.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
+| `platform.glp` | `platform.vglp` | glp_runtime's :emit | the platform compiled to GLP, as emitted |
+| `interface.glp` | `platform.vglp` and `platform.glp` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |
+| `run.log` | `platform.vglp` | programs/cssn, the plays with scripted persons, in the REPL | the plays' logs: play_village |

@@ -1,5 +1,5 @@
 GDO-L: Grassroots Directed Overlay with Labels
-Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity.
+Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity. Reflexive: x knows y.
 Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
 Of GDO: Alice, Bob and Carol are persons.
 Of GDO-L: A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice. Alice, Bob, Carol, Dave and Erin are persons, Erin is possibly any of the others; in clause 2 Carol is possibly Dave.

@@ -150,16 +150,23 @@ def contract_text(path):
     meta = [l for l in lines if l.startswith('%')]
     body = [l for l in lines if l.strip() and not l.startswith('%')]
     name, title = body[0].split(': ', 1)
-    # The pragmas follow the clauses under 'Pragmas', or under 'Interface
-    # pragmas' and 'Implementation pragmas', their two kinds (GSC's Section 2;
+    # The pragmas follow the clauses.  A contract adopted from the Calculus
+    # (calculus/MIGRATION.md) has its Logic pragmas after its clauses, under
+    # 'Logic pragmas', and its Interface pragmas after them; an earlier text
+    # has them under 'Pragmas', or under 'Interface pragmas' and
+    # 'Implementation pragmas', their two kinds (GSC's Section 2;
     # Coordination, to_all 2026-11-07 22:13 UTC), the headings kept among them.
     heads = ('Pragmas', 'Interface pragmas', 'Implementation pragmas')
+    box = next((i for i, l in enumerate(body) if l.strip() in heads + ('Logic pragmas',)), len(body))
     end = next((i for i, l in enumerate(body) if l.strip() in heads), len(body))
     clauses, preamble = [], []
-    for l in body[1:end]:
-        m = re.match(r'(\d+)\. (\S) (.+?)\.\s+(.*)$', l)
+    for l in body[1:box]:
+        # A clause's title ends with a full stop, or, in the Calculus's text,
+        # where the title is the clause's act, with a colon; 'sep' keeps
+        # which, so the page prints the clause as it is written.
+        m = re.match(r'(\d+)\. (\S) (.+?)([.:])\s+(.*)$', l)
         if m:
-            clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'text': m.group(4)})
+            clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'sep': m.group(4), 'text': m.group(5)})
         elif not clauses:
             # Every line of the box before its clauses, in its order: the
             # extension line, the definitions that are part of the contract
