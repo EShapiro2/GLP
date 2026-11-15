@@ -4495,9 +4495,9 @@ rn_sdecl([S|Ss], Bs, R?) :- ground(S?), ground(Ss?), ground(Bs?) | rn_scontract(
 rn_sdecl(reflexive(Rf, Ss), Bs, reflexive(Rf1?, R?)) :- ground(Rf?), ground(Ss?), ground(Bs?) |
     rn_preds(Rf?, Bs?, Rf1),
     rn_scontract(Ss?, Bs?, R).
-rn_sdecl(environment(Ev, Ss), Bs, environment(Ev1?, R?)) :- ground(Ev?), ground(Ss?), ground(Bs?) |
+rn_sdecl(environment(Ev, B), Bs, environment(Ev1?, R?)) :- ground(Ev?), ground(B?), ground(Bs?) |
     rn_preds(Ev?, Bs?, Ev1),
-    rn_scontract(Ss?, Bs?, R).
+    rn_sbody(B?, Bs?, R).
 rn_sdecl(parametric(Ps, D), Bs, parametric(Ps?, R?)) :- ground(D?), ground(Bs?) |
     rn_sdecl(D?, Bs?, R).
 
@@ -4736,6 +4736,14 @@ xa_holders([], []).
 xa_holders([atom(_, [H|_])|Aa], [H?|R?]) :- xa_holders(Aa?, R).
 xa_holders([_|Aa], R?) :- otherwise | xa_holders(Aa?, R).
 
+% The body of an environment declaration, a contract or one declaring reflexive predicates (programs/self.glp, SBody).
+procedure rn_sbody(SBody?, SBindings?, SBody).
+rn_sbody([], _, []).
+rn_sbody([S|Ss], Bs, R?) :- ground(S?), ground(Ss?), ground(Bs?) | rn_scontract([S?|Ss?], Bs?, R).
+rn_sbody(reflexive(Rf, Ss), Bs, reflexive(Rf1?, R?)) :- ground(Rf?), ground(Ss?), ground(Bs?) |
+    rn_preds(Rf?, Bs?, Rf1),
+    rn_scontract(Ss?, Bs?, R).
+
 % The rewrite of a contract, schema by schema, wrappers kept.
 procedure xa_sdecl(SDeclared?, XPreds?, SDeclared).
 xa_sdecl(D, [], D?).
@@ -4745,8 +4753,13 @@ procedure xa_sdecl1(SDeclared?, XPreds?, SDeclared).
 xa_sdecl1([], _, []).
 xa_sdecl1([S|Ss], Xs, R?) :- ground(S?), ground(Ss?), ground(Xs?) | xa_scontract([S?|Ss?], Xs?, R).
 xa_sdecl1(reflexive(Rf, Ss), Xs, reflexive(Rf?, R?)) :- ground(Ss?), ground(Xs?) | xa_scontract(Ss?, Xs?, R).
-xa_sdecl1(environment(Ev, Ss), Xs, environment(Ev?, R?)) :- ground(Ss?), ground(Xs?) | xa_scontract(Ss?, Xs?, R).
+xa_sdecl1(environment(Ev, B), Xs, environment(Ev?, R?)) :- ground(B?), ground(Xs?) | xa_sbody(B?, Xs?, R).
 xa_sdecl1(parametric(Ps, D), Xs, parametric(Ps?, R?)) :- ground(D?), ground(Xs?) | xa_sdecl1(D?, Xs?, R).
+
+procedure xa_sbody(SBody?, XPreds?, SBody).
+xa_sbody([], _, []).
+xa_sbody([S|Ss], Xs, R?) :- ground(S?), ground(Ss?), ground(Xs?) | xa_scontract([S?|Ss?], Xs?, R).
+xa_sbody(reflexive(Rf, Ss), Xs, reflexive(Rf?, R?)) :- ground(Ss?), ground(Xs?) | xa_scontract(Ss?, Xs?, R).
 
 procedure xa_scontract(SContract?, XPreds?, SContract).
 xa_scontract([], _, []).
@@ -5154,8 +5167,14 @@ procedure sdecl_parts(SDeclared?, SParts).
 sdecl_parts([], sp([], [], [])).
 sdecl_parts([S|Ss], sp([], [], [S?|Ss?])).
 sdecl_parts(reflexive(Rf, Ss), sp(Rf?, [], Ss?)).
-sdecl_parts(environment(Ev, Ss), sp([], Ev?, Ss?)).
+sdecl_parts(environment(Ev, B), sp(Rf?, Ev?, Ss?)) :- ground(B?) | sbody_parts(B?, Rf, Ss).
 sdecl_parts(parametric(_, D), R?) :- ground(D?) | sdecl_parts(D?, R).
+
+% The parts of the body of an environment declaration: its reflexive predicates and its schemas.
+procedure sbody_parts(SBody?, Preds, SContract).
+sbody_parts([], [], []).
+sbody_parts([S|Ss], [], [S?|Ss?]).
+sbody_parts(reflexive(Rf, Ss), Rf?, Ss?).
 
 procedure sdecl_make(Preds?, Preds?, SContract?, WDeclared).
 sdecl_make([], [], Ss, Ss?).

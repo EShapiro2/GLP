@@ -39,48 +39,27 @@ After g ends y's participation and y's office in z: no longer y is a participant
 After g amends the bylaws of z: z has its bylaws amended.
 Interface pragmas
 Look: 🏛️, governance
-Organisations: the organisations Alice participates in, and her roles in each.
-Identity: Alice [Establish]
-Acquaintance: Alice [Acquaint] <person Bob>
-  Bob: Alice asks you to approve this: acquaint.
-Introduction: Alice [Introduce]
-  Bob: Alice asks you to approve this: introduce.
-Friendship: Alice [Befriend]
-  Bob: Alice asks you to approve this: befriend.
-Ending a friendship: Alice [Unfriend]
-Acts of the organisation: Alice [Sign] <act>
-  Bob [Propose]
-  Bob [Vote] <act>
-  Bob [Named propose]
-  Bob [Named vote] <act>
-  Otto [Move retire] <motion>
-Creation: Alice [Found] <organisation> <role>
-  Orga: Alice asks you to approve this: found.
-  Greta [Gov found] <person Alice> <organisation> <role>
-  Alice: Greta asks you to approve this: gov found.
-  Orga: Greta asks you to approve this: gov found.
-Ward and person: Otto [Org acquaint] <person Bob>
-  Bob: Otto asks you to approve this: org acquaint.
-  Otto [Org befriend] <person Bob> <person Alice> <role>
-  Bob: Otto asks you to approve this: org befriend.
-  Alice: Otto asks you to approve this: org befriend.
-  Otto [Org unfriend] <person Bob>
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
-  Bruno: Otto asks you to approve this: orgs acquaint.
-  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
-  Bruno: Otto asks you to approve this: orgs befriend.
-  Alice: Otto asks you to approve this: orgs befriend.
-  Bob: Otto asks you to approve this: orgs befriend.
-Joint guardianship: Bob [Officer unfriend]
-  Otto [Appoint] <person Bob> <role>
-  Bob: Otto asks you to approve this: appoint.
-  Otto [Dismiss] <person Bob> <role>
-  Bob [Resign role]
-  Nora [First officer] <person Bob> <role>
-  Bob: Nora asks you to approve this: first officer.
-Retiring: Otto [Retire]
-Participation: Bob [Join] <person Otto> <role>
-  Otto: Bob asks you to approve this: join.
-  Bob [Leave]
-  Otto [Expel] <person Bob>
-Amendment: Otto [Amend] <new bylaws>
+Organisations: those Alice is a participant of.
+Found: Gov [Found] <organisation> <person> <role>
+  Alice: Gov asks you to be the first officer of its organisation Orga.
+  Orga: Gov asks to found you.
+Acts of the organisation: Bob [Propose]
+  Decider [Vote] <organisation> <act>
+  Codecider: Decider asks you to vote on an act of Orga.
+  Alice [Act]
+Participation: Bob [Join] <organisation> <officer>
+  Decider: Bob asks to become a participant of Orga.
+  Codecider: Bob asks to become a participant of Orga.
+  Bob [Leave] [Officer leave]
+  Decider [Expel] <person>
+  Codecider: Decider asks to end Bob's participation in Orga.
+  Decider [Officer expel] <person>
+  Codecider: Decider asks to end Bob's participation and his office in Orga.
+Officers: Decider [Appoint] <person> <role>
+  Bob: Decider asks you to be an officer of the organisation Carol.
+  Codecider: Decider asks that Bob be an officer of your organisation Carol.
+  Decider [End officer] <person>
+  Codecider: Decider asks to end Bob's office in your organisation Carol.
+  Bob [Resign] [Officer unfriend]
+Amend: Decider [Amend] <organisation>
+  Codecider: Decider asks to amend the bylaws of Orga.

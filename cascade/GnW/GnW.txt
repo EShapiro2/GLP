@@ -54,6 +54,7 @@ Ward and person: Bob [Ward acquaint] <person>
   Alice [Ward unfriend] <ward> <person>
   Carol [Ward end]
   Bob [Unfriend]
+  Alice [Person unfriend]
 Wards: Carol [Wards acquaint] <person>
   Dave: Carol wishes that you know each other.
   Alice [Wards befriend] <ward>
