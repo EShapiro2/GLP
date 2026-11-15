@@ -115,6 +115,41 @@ play_wild(LA?, LB?, LC?, N?) :-
           wait(holds(dissolved))],
          LA, LB, LC, N).
 
+%% play_leave: carol enrols with alice in two groups and with bob in one, and
+%% leaves: her agent lists alice and bob, alice once, by the anchor
+%% member(Carol, _, E), a wildcard at the group's place before the listed
+%% role, and every listing of carol is cleared at each.
+exported procedure play_leave(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_leave(LA?, LB?, LC?, N?) :-
+    trio([own([A1], propose(arrive(A1?))),
+          approval(enrol(carol, alice, speech(utterance(g1), carol)), yes),
+          approval(enrol(carol, alice, speech(utterance(g2), carol)), yes)],
+         [own([B1], propose(arrive(B1?))),
+          approval(enrol(carol, bob, speech(utterance(g1), carol)), yes)],
+         [own([C1, C2], propose(enrol(C1?, alice, speech(utterance(g1), C2?)))),
+          wait(holds(member(speech(utterance(g1), carol), alice))),
+          own([C3, C4], propose(enrol(C3?, alice, speech(utterance(g2), C4?)))),
+          wait(holds(member(speech(utterance(g2), carol), alice))),
+          own([C5, C6], propose(enrol(C5?, bob, speech(utterance(g1), C6?)))),
+          wait(holds(member(speech(utterance(g1), carol), bob))),
+          own([C7], propose(leave(C7?))),
+          wait(holds(left))],
+         LA, LB, LC, N).
+
+%% play_absent: the same, bob never arriving: carol's leave is refused, bob,
+%% whom she lists, not holding here, which leave requires of every leader.
+exported procedure play_absent(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_absent(LA?, LB?, LC?, N?) :-
+    trio([own([A1], propose(arrive(A1?))),
+          approval(enrol(carol, alice, speech(utterance(g1), carol)), yes)],
+         [approval(enrol(carol, bob, speech(utterance(g1), carol)), yes)],
+         [own([C1, C2], propose(enrol(C1?, alice, speech(utterance(g1), C2?)))),
+          wait(holds(member(speech(utterance(g1), carol), alice))),
+          own([C5, C6], propose(enrol(C5?, bob, speech(utterance(g1), C6?)))),
+          wait(holds(member(speech(utterance(g1), carol), bob))),
+          own([C7], propose(leave(C7?)))],
+         LA, LB, LC, N).
+
 %% alice, bob and carol, each with its dispatcher and scripted person, their
 %% networks joined.
 procedure trio(ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
