@@ -3939,6 +3939,7 @@ check "CVA compiler: vGLP's readings, variables read at a role and a condition a
 check "CVA compiler: vGLP's backed, a safe formula across roles, certified by GSC's check/2, compiled to the platform it prints (vGLP 5f55cf3)" "backed/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's consts, constants the contract names, val(cb) and val(cc), arguments of atoms, compiled to the platform it prints (vGLP 0eeea71)" "consts/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's roles, a value variable over the constants, const(r), an argument of an atom another act requires as a constant the contract names, compiled to the platform it prints (vGLP, Section 5.4; compiler/README.md, 30)" "roles/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's wild, a wildcard in an atom a role requires and in the anchor of a quantifier, written in the clause syntax, read by GSC's as_read/2 and certified by GSC's check/2, compiled to the platform it prints (vGLP, Section 5.4)" "wild/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 # "The platform's own words are four ... Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3): each of vGLP's contracts carries a pragmas term beside it, pragmas_named/2, which compile.sh gives the compiler.
 check "CVA compiler: each of vGLP's contracts carries pragmas, its tab and a button for each guarded schema, which its platform carries (nudge)" '^tabs(\[tab("Friends", friend)\])$' "$(cat "$CVA/nudge/platform.vglp")"
@@ -4789,7 +4790,8 @@ HEREDOC
 check "CVA roles: alice appoints bob, typing arbiter, and his state holds role(alice, arbiter)" "view(bob, \[role(alice, arbiter), knows(alice)\]" "$cva_roles"
 check "CVA roles: ... the attempt naming the constant" "start(attempt(alice, [0-9]*, [0-9]*, appoint(alice, bob, arbiter), none))" "$cva_roles"
 check "CVA roles: ... which is the atom arbitrate requires: bob's arbitrate commits, and his state holds done" "view(bob, \[done, role(alice, arbiter), knows(alice)\]" "$cva_roles"
-check "CVA roles: ... and resign, its variable over the constants local to bob's role, deletes the role his machine finds" "view(bob, \[done, knows(alice)\]" "$cva_roles"
+check "CVA roles: ... and the request of resign names the role resigned, a person and a constant, variables of the atom it deletes at its base" "^resign(Peer, Peer, Constant)$" "$(cat "$CVA/roles/platform.vglp")"
+check "CVA roles: ... and resign(bob, alice, arbiter) deletes that role" "view(bob, \[done, knows(alice)\]" "$cva_roles"
 check_not "CVA roles: ... nothing refused" "refused(" "$cva_roles"
 cva_roles_other=$("$REPL_RUN" <<HEREDOC
 $CVA/roles/
@@ -4801,6 +4803,151 @@ HEREDOC
 check "CVA roles: alice typing clerk, bob's state holds role(alice, clerk)" "view(bob, \[role(alice, clerk), knows(alice)\]" "$cva_roles_other"
 check "CVA roles: ... which is not the atom arbitrate requires: his arbitrate is refused, unable" "refused(arbitrate(bob), bob, unable)" "$cva_roles_other"
 check_not "CVA roles: ... and his state never holds done" "view(bob, \[done" "$cva_roles_other"
+# A wildcard in an unnegated atom (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in an unnegated atom of B, or in the anchor of a quantifier, is a variable of its own, standing for some value: the machine of the person who holds the atom finds one in its state, and the act neither names nor records it, as an act that requires a bond of some maturity"): vGLP's wild, accept requiring bond(c, _) at Alice, boast an exists and report a conjunct with the wildcard in the anchor, and retire a listed role by has_role(c, e, _), each listed person required to hold role(c, _) and losing every role(c, _).
+cva_wild_load=$("$REPL_RUN" <<HEREDOC
+$CVA/wild/
+:quit
+HEREDOC
+2>&1)
+check "CVA wild: the platform and its play load, compiled by the canonical compilation" "Loaded program: .*cva/wild" "$cva_wild_load"
+check_not "CVA wild: no type errors" "Type checking failed" "$cva_wild_load"
+cva_wild_p=$(cat "$CVA/wild/platform.vglp")
+check "CVA wild: a predicate required with a wildcard has one alternative in Atom, the wildcard's place of the type another atom gives it, bond(Peer, Integer)" "^bond(Peer, Integer)$" "$cva_wild_p"
+check_not "CVA wild: ... and no alternative with the place dropped, bond(Peer)" "^bond(Peer)$" "$cva_wild_p"
+check "CVA wild: ... role, required and cleared with a wildcard, is role(Peer, Speech)" "^role(Peer, Speech)$" "$cva_wild_p"
+check_not "CVA wild: ... and not role(Peer)" "^role(Peer)$" "$cva_wild_p"
+check "CVA wild: ... has_role, a listed role's anchor with a wildcard, is has_role(Peer, Speech)" "^has_role(Peer, Speech)$" "$cva_wild_p"
+check_not "CVA wild: ... and not has_role(Peer) or has_role(Speech)" "^has_role(Peer)$\|^has_role(Speech)$" "$cva_wild_p"
+check "CVA wild: the wildcard of a required atom is a variable of the schema local to its role, which the schema-binding does not bind, lv(accept, '_1')" "^binding_of(accept(V1, V2), accept, \[b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('_1'), lv(accept, '_1'))\])" "$cva_wild_p"
+check "CVA wild: ... the request does not name it, accept(Peer, Peer) in Proposal and in Class" "^accept(Peer, Peer)$" "$cva_wild_p"
+check "CVA wild: the wildcard of an anchor is a variable its quantifier binds, an instance restricted to the variable the conjunct's literal names, instances(1, 1, [svar('Role')], atom(has_role, [pvar('_1'), svar('Role')]), ...)" "instances(1, 1, \[svar('Role')\], atom(has_role, \[pvar('_1'), svar('Role')\]), fcons(true), \[hm(2, atom(title, \[role(1), svar('Role')\]))\], \[\])" "$cva_wild_p"
+check "CVA wild: the wildcard of a listed role's anchor stays, listing(2, 1, has_role, [role(2), any], ...), and a listed person's required role(c, _) is a variable local to the listed role beside the cleared role(c, _)" "rs(unguarded, \[\], \[atom(role, \[role(1), any\])\], \[atom(role, \[role(1), svar('_1')\])\], \[\])\], \[listing(2, 1, has_role, \[role(2), any\], fcons(true), \[\], \[\])\]" "$cva_wild_p"
+check "CVA wild: ... and the shared text meets the anchor's other arguments by vals_meet, the wildcard met by any value" "^vals_meet(\[any|Vs\], \[_|Xs\], E?) :- vals_meet(Vs?, Xs?, E)\.$" "$cva_wild_p"
+check_not "CVA wild: a platform with no wildcard in a listed role's anchor prints no vals_meet (consts)" "vals_meet" "$(cat "$CVA/consts/platform.vglp")"
+cva_wild=$("$REPL_RUN" <<HEREDOC
+$CVA/wild/
+:limit 40000000
+play_wild(A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA wild: alice, holding no bond of carol, requests accept(alice, carol), and it is refused as unable" "A = \[view(alice, \[\], \[\], \[\], \[[^]]*\]), refused(accept(alice, carol), alice, unable)" "$cva_wild"
+check "CVA wild: ... holding bond(carol, 7) and bond(carol, 9), bonds of carol of some maturity, either meeting bond(carol, _), she requests it again, and it commits, the attempt naming no maturity" "sent(alice, carol, outcome(attempt(alice, [0-9]*, [0-9]*, accept(alice, carol), none), commit(\[\])))" "$cva_wild"
+check "CVA wild: ... her state gains accepted(carol) and keeps both bonds" "view(alice, \[accepted(carol), bond(carol, 9), bond(carol, 7)\], \[carol\], \[\]" "$cva_wild"
+# A variable a quantifier binds is of the kind of its place in its anchor (vGLP, Section 5.4: "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor"; cvac.glp, bound_kinds): vow's not exists g accepted(g), g at a person's place, which GSC's reader writes svar('G') and the compiler pvar('G'), so that it holds of a person who has accepted no one and fails of one who has.
+check "CVA wild: GSC's reader writes the variable vow's exists binds a speech-act variable, fexists([svar('G')], role(1), atom(accepted, [svar('G')]), ...)" "qschema(vow, \['Bob'\], \[\], \[pvar('G'), svar('G'), num('G')\], true, \[rs(guarded, \[atom(vowed, \[\])\], \[\], \[\], \[atom(vowed, \[\])\])\], \[\], \[fnot(fexists(\[svar('G')\], role(1), atom(accepted, \[svar('G')\]), fcons(true)))\])" "$cva_wild_p"
+check "CVA wild: ... and the compiler an agent variable, of the kind of its place" "^schema_forms(vow, \[sform(at(1), fnot(fexists(\[pvar('G')\], role(1), atom(accepted, \[pvar('G')\]), fcons(true))))\])$" "$cva_wild_p"
+check "CVA wild: carol, who has accepted no one, requests vow(carol), not exists g accepted(g), and gains vowed" "C = \[view(carol, \[\], \[\], \[\], \[[^]]*\]), view(carol, \[\], \[\], \[vow(carol)\], \[[^]]*\]), view(carol, \[vowed\], \[\], \[\]" "$cva_wild"
+check "CVA wild: ... alice, having accepted carol, requests vow(alice), and it is refused as unable" "view(alice, \[accepted(carol), bond(carol, 9), bond(carol, 7)\], \[carol\], \[\], \[[^]]*\]), refused(vow(alice), alice, unable)" "$cva_wild"
+check_not "CVA wild: ... and alice never holds vowed" "view(alice, \[[^]]*vowed" "$cva_wild"
+# A negated atom with a wildcard inside a safe formula holds exactly where the state has no atom it matches (vGLP, Section 5.4: "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, ... every atom of the state that it matches"; cvac.glp, wild_fa): rest's (not role(_, _)) or retired, the atom written the quantifier exists w1 w2 role(w1, w2).
+check "CVA wild: GSC's reader writes rest's formula for(fnot(fa(role(1), atom(role, [any, any]))), fa(role(1), atom(retired, [])))" "\[for(fnot(fa(role(1), atom(role, \[any, any\]))), fa(role(1), atom(retired, \[\])))\])" "$cva_wild_p"
+check "CVA wild: ... and the compiler the atom with wildcards as a quantifier, its wildcards the variables it binds" "^schema_forms(rest, \[sform(at(1), for(fnot(fexists(\[pvar('_1'), svar('_2')\], role(1), atom(role, \[pvar('_1'), svar('_2')\]), fcons(true))), fa(role(1), atom(retired, \[\]))))\])$" "$cva_wild_p"
+check "CVA wild: carol, holding no role in anyone, requests rest(carol), not role(_, _) or retired, and gains rested" "view(carol, \[vowed\], \[\], \[rest(carol)\], \[[^]]*\]), view(carol, \[rested, vowed\], \[\], \[\]" "$cva_wild"
+check "CVA wild: ... alice, holding a role in carol and not retired, requests rest(alice), and it is refused as unable" "view(alice, \[role(carol, speech(utterance(chair), carol)), accepted(carol), bond(carol, 9), bond(carol, 7)\], \[carol\], \[\], \[[^]]*\]), refused(rest(alice), alice, unable)" "$cva_wild"
+check_not "CVA wild: ... and alice never holds rested" "view(alice, \[[^]]*rested" "$cva_wild"
+check "CVA wild: bob, holding no role, requests boast(bob), exists r role(_, r), and it is refused as unable" "B = \[view(bob, \[\], \[\], \[\], \[[^]]*\]), refused(boast(bob), bob, unable)" "$cva_wild"
+check "CVA wild: ... holding roles in carol, he requests it again, and his state gains officer" "view(bob, \[officer, role(carol, speech(utterance(clerk), carol)), role(carol, speech(utterance(chair), carol))\]" "$cva_wild"
+check "CVA wild: carol's report to alice names the roles carol has given, chair once though bob and alice both hold it, without repetition" "sent(carol, alice, start(attempt(carol, [0-9]*, [0-9]*, report(carol, alice, \[speech(utterance(chair), carol), speech(utterance(clerk), carol)\]), none)))" "$cva_wild"
+check "CVA wild: ... and alice's state gains a title for each" "view(alice, \[title(carol, speech(utterance(clerk), carol)), title(carol, speech(utterance(chair), carol)), role(carol, speech(utterance(chair), carol)), accepted(carol), bond(carol, 9), bond(carol, 7)\]" "$cva_wild"
+check "CVA wild: carol's retire lists the people she has in some role, alice and bob, bob once though he holds two" "sent(carol, bob, start(attempt(carol, [0-9]*, [0-9]*, retire(carol, \[alice, bob\]), none)))" "$cva_wild"
+check "CVA wild: ... each, holding a role in carol, votes yes, and it commits" "sent(carol, alice, outcome(attempt(carol, [0-9]*, [0-9]*, retire(carol, \[alice, bob\]), none), commit(\[\]))), sent(carol, bob, outcome(attempt(carol, [0-9]*, [0-9]*, retire(carol, \[alice, bob\]), none), commit(\[\])))" "$cva_wild"
+check "CVA wild: ... bob loses both his roles in carol in the one act" "view(bob, \[officer, role(carol, speech(utterance(clerk), carol)), role(carol, speech(utterance(chair), carol))\], \[carol\], \[\], \[[^]]*\]), view(bob, \[officer\], \[carol\], \[\]" "$cva_wild"
+check "CVA wild: ... alice loses hers" "role(carol, speech(utterance(chair), carol)), accepted(carol), bond(carol, 9), bond(carol, 7)\], \[carol\], \[\], \[[^]]*\]), view(alice, \[title(carol, speech(utterance(clerk), carol)), title(carol, speech(utterance(chair), carol)), accepted(carol), bond(carol, 9), bond(carol, 7)\], \[carol\], \[\]" "$cva_wild"
+check "CVA wild: ... and carol has no one in any role, and is retired" "view(carol, \[retired, reported(alice), accepted_by(alice), issued(alice, 9), issued(alice, 7), rested, vowed\]" "$cva_wild"
+check_not "CVA wild: no person is asked on the retire, the listed role unguarded" "gave(retire\|gave(attempt([a-z]*, [0-9]*, [0-9]*, retire" "$cva_wild"
+# A variable of an atom the schema deletes at its base is no local variable (vGLP, Section 5.4: "but for a variable of an atom the schema deletes at the base of the schema: the person who proposes chooses which of their own records the act removes, so the schema-binding binds that variable and the request names it, as the person a pointer points to and its label when Alice removes one of her pointers"; local.glp, locals_of, base_deletes): unpoint(a? ; c, l) deleting pointer(c, l) at a, as GFF's labeled_unpoint.
+check "CVA wild: the request of unpoint names the pointer removed, unpoint(Peer, Peer, Speech), in Proposal and in Class" "^unpoint(Peer, Peer, Speech)$" "$cva_wild_p"
+check "CVA wild: ... its schema-binding binding the person pointed to and the label" "^binding_of(unpoint(V1, V2, V3), unpoint, \[b(role(1), p(V1?)), b(pvar('Carol'), p(V2?)), b(svar('Label'), s(V3?))\])" "$cva_wild_p"
+check "CVA wild: ... no variable of it local" "^schema_numeric(unpoint, numeric(\[cj(every, true)\], \[\], \[\]))" "$cva_wild_p"
+check "CVA wild: ... and its button with no field, the pointer its proposer holds binding both places, one button for each" "button(\"Unpoint\", \[act(unpoint, 1, \[1\], \[req(pointer, \[at(2), at(3)\])\], \[2, 3\], \[\], \[\], \[\])\])" "$cva_wild_p"
+check "CVA wild: carol holds two pointers, labelled x and y, and requests unpoint(carol, alice, x)" "view(carol, \[pointer(alice, speech(utterance(y), carol)), pointer(alice, speech(utterance(x), carol)), retired, [^]]*\], \[alice, bob\], \[unpoint(carol, alice, speech(utterance(x), carol))\]" "$cva_wild"
+check "CVA wild: ... the pointer she named is removed, and the other stays" "\[unpoint(carol, alice, speech(utterance(x), carol))\], \[[^]]*\]), view(carol, \[pointer(alice, speech(utterance(y), carol)), retired, " "$cva_wild"
+cva_wild_u=$(mktemp -d)
+cva_wild_u_rd="[schema(point, ['Alice'], [pvar('Carol'), svar('Label')], [rs(guarded, [atom(pointer, [pvar('Carol'), svar('Label')])], [], [atom(knows, [pvar('Carol')])], [atom(pointer, [pvar('Carol'), svar('Label')])])]), schema(unpoint, ['Alice'], [pvar('Carol'), svar('Label')], [rs(guarded, [], [atom(pointer, [pvar('Carol'), svar('Label')])], [], [])])]"
+printf '%s\n' '% Owner: vGLP.' 'XU: Test' 'Alice and Carol are persons.' '1. ■ Point: Alice may point to Carol. Unpoint: Alice may remove a pointer.' 'Interface pragmas' 'Pointers: the pointers of Alice.' 'Point: Alice [Point] <label>' '  Alice [Unpoint]' > "$cva_wild_u/XU.txt"
+cva_wild_u_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_wild_u/XU.txt" "$cva_wild_u_rd" 2>&1; echo "exit $?")
+printf '%s\n' '% Owner: vGLP.' 'XU: Test' 'Alice and Carol are persons.' '1. ■ Point: Alice may point to Carol. Unpoint: Alice may remove a pointer.' 'Interface pragmas' 'Pointers: the pointers of Alice.' 'Point: Alice [Point] <label>' '  Alice [Unpoint] <carol> <label>' > "$cva_wild_u/XU.txt"
+cva_wild_u_bad=$(bash "$CVA/compiler/pragmas.sh" "$cva_wild_u/XU.txt" "$cva_wild_u_rd" 2>&1; echo "exit $?")
+rm -rf "$cva_wild_u"
+check "CVA pragmas: a line with no field for an act deleting an atom at its base is read, the atom binding its variables (unpoint)" "act('unpoint', '\"Unpoint\"', \[\], none, '\"Pointers\"', by(\[1\]))" "$cva_wild_u_out"
+check "CVA pragmas: ... and pragmas.sh exits 0 (unpoint)" "^exit 0$" "$cva_wild_u_out"
+check "CVA pragmas: ... a line with fields for them is refused, the atoms binding Carol and Label (unpoint)" "beyond the variables of unpoint that the atoms its proposer.*s role requires do not bind, which are none; those atoms bind Carol, Label" "$cva_wild_u_bad"
+# A wildcard at a constant's place (GO's Retire, has_role(c, e, _), a role's name a constant): office(c?, b? ; const t) adds has_office(b, t) at c and office(c, t) at b; serve requires office(c, _), a variable over the constants local to its role; dissolve lists by has_office(c, e, _), the wildcard staying in the listed role's anchor, each listed person required to hold office(c, _) and losing every one.
+check "CVA wild: an office's title is of the type Constant, the wildcard's place with it, office(Peer, Constant) once" "^office(Peer, Constant)$" "$cva_wild_p"
+check_not "CVA wild: ... and no office(Peer) or office(Peer, Integer)" "^office(Peer)$\|^office(Peer, Integer)$\|^has_office(Peer)$\|^has_office(Peer, Integer)$" "$cva_wild_p"
+check "CVA wild: the wildcard of serve's required office(c, _) is a variable over the constants local to its role, the request not naming it" "^binding_of(serve(V1, V2), serve, \[b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('_1'), lv(serve, '_1'))\])" "$cva_wild_p"
+check "CVA wild: dissolve's listed role keeps the wildcard in its anchor, listing(2, 1, has_office, [role(2), any], ...)" "\[listing(2, 1, has_office, \[role(2), any\], fcons(true), \[\], \[\])\]" "$cva_wild_p"
+check "CVA wild: alice, holding no office in carol, requests serve(alice, carol), and it is refused as unable" "refused(serve(alice, carol), alice, unable)" "$cva_wild"
+check "CVA wild: bob, holding the offices clerk and treasurer in carol, requests serve(bob, carol), and it commits" "view(bob, \[serving(carol), office(carol, treasurer), office(carol, clerk), officer\]" "$cva_wild"
+check "CVA wild: carol's dissolve lists the people she has in some office, alice and bob, bob once though he holds two" "sent(carol, bob, start(attempt(carol, [0-9]*, [0-9]*, dissolve(carol, \[alice, bob\]), none)))" "$cva_wild"
+check "CVA wild: ... and bob loses both his offices in carol in the one act" "view(bob, \[serving(carol), office(carol, treasurer), office(carol, clerk), officer\], \[alice, carol\], \[\], \[[^]]*\]), view(bob, \[serving(carol), officer\], \[alice, carol\], \[\]" "$cva_wild"
+check_not "CVA wild: ... carol holding no has_office after it" "view(carol, \[dissolved[^]]*has_office" "$cva_wild"
+check "CVA wild: ... and dissolved" "view(carol, \[dissolved, " "$cva_wild"
+# The platform emitted by the canonical compilation into a scratch directory and its procedures called on states, as for forms: a person listed in retire(carol, [alice, bob]) who holds no role in carol has no binding under which the act's precondition holds at them, the role(c, _) a listed role requires; one who holds a role has one, the wildcard's variable bound to it; and the people carol lists by has_role(c, e, _) are each taken once.
+cva_wild_dir="$GLP_DIR/programs/tests/vg_wild_$$"
+mkdir -p "$cva_wild_dir" && cp "$CVA/wild/platform.vglp" "$cva_wild_dir/"
+cva_wild_d=$("$REPL_RUN" <<HEREDOC
+:emit $cva_wild_dir
+load $cva_wild_dir/platform.glp
+:limit 10000000
+term_spec(retire(carol, [alice, bob]), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(officer, [])], B1).
+term_spec(retire(carol, [alice, bob]), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(role, [p(carol), s(speech(utterance(chair), carol))])], B2).
+list_at(2, has_role, [role(2), any], fcons(true), [b(role(1), p(carol))], [g(has_role, [p(bob), s(speech(utterance(chair), carol))]), g(has_role, [p(bob), s(speech(utterance(clerk), carol))]), g(has_role, [p(alice), s(speech(utterance(chair), carol))]), g(accepted_by, [p(dave)])], L3).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_wild_dir"
+check "CVA wild: the platform emitted and loaded, its types checked" "Loaded: .*vg_wild_.*platform.glp" "$cva_wild_d"
+check "CVA wild: a listed person holding no role in carol: the precondition of retire holds at them under no binding" "B1 = \[\]$" "$cva_wild_d"
+check "CVA wild: ... holding one: it holds, the wildcard's variable bound to the role found" "B2 = \[\[b(svar('_1'), s(speech(utterance(chair), carol))), " "$cva_wild_d"
+check "CVA wild: the people of a listed role whose anchor has a wildcard, has_role(c, e, _): those carol has in some role, each once" "L3 = \[alice, bob\]$" "$cva_wild_d"
+# GSN's close (programs/gsc/GSN.glp, the Calculus's): as adopted until 2026-11-15 it required member(e, g, _) of every member e its leader lists, the wildcard's variable bound to the leader; as adopted since, it deletes member(e, g, a) at each, a the leader, with no wildcard.  On the social network's platform, emitted likewise, the precondition of close holds at a listed member who is a member of the leader's group, and under no binding at one who is not; and member, which join forbids with a wildcard, member(b, g, _), has one alternative in Atom.
+cva_wild_dir="$GLP_DIR/programs/tests/vg_wildn_$$"
+mkdir -p "$cva_wild_dir" && cp "$CVA/social_network/platform.vglp" "$cva_wild_dir/"
+cva_wild_n=$("$REPL_RUN" <<HEREDOC
+:emit $cva_wild_dir
+load $cva_wild_dir/platform.glp
+:limit 10000000
+term_spec(close(alice, [alice, bob], speech(utterance(club), alice)), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(identity, []), g(member, [s(speech(utterance(club), alice)), p(alice)])], B1).
+term_spec(close(alice, [alice, bob], speech(utterance(club), alice)), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(identity, [])], B2).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_wild_dir"
+check "CVA wild: GSN's member has one alternative in Atom, member(Speech, Peer)" "^member(Speech, Peer)$" "$(cat "$CVA/social_network/platform.vglp")"
+check_not "CVA wild: ... and none with the wildcard's place dropped, member(Speech)" "^member(Speech)$" "$(cat "$CVA/social_network/platform.vglp")"
+check "CVA wild: GSN's close holds at a listed member who is a member of the leader's group, member(g, alice)" "B1 = \[\[b(role(1), p(alice)), " "$cva_wild_n"
+check "CVA wild: ... and under no binding at a listed person who is no member" "B2 = \[\]$" "$cva_wild_n"
+# What the compiler refuses of a wildcard, each with its line (cvac.glp, wild_faults): one at an argument no other atom of the contract types; one in a required atom at a constant's place, the term form having no variable over constants; and one in the anchor of a count.
+cva_wild_pr="pragmas([list('\"T\"', [done])], [act(a, '\"A\"', [], none, '\"T\"', by([1])), act(b, '\"B\"', [], none, '\"T\"', by([1]))])"
+cva_wild_f=$("$REPL_RUN" <<HEREDOC 2>&1 | sed -e 's/^\(GLP> \)*//'
+$CVA/compiler/
+:limit 1000000000
+compile(t1, [schema(a, [], [rs(guarded, [atom(done, [])], [], [atom(tag, [any])], [atom(done, [])])]), schema(b, [], [rs(guarded, [atom(done2, [])], [], [], [atom(done2, [])])])], syntactically_grassroots, no_introduction, $cva_wild_pr).
+compile(t2, [schema(a, [], [rs(guarded, [atom(bylaws, [val(cb)])], [], [], [atom(bylaws, [val(cb)])])]), schema(b, [], [rs(guarded, [atom(done, [])], [], [atom(bylaws, [any])], [atom(done, [])])])], syntactically_grassroots, no_introduction, $cva_wild_pr).
+compile(t4, [schema(a, [const(r)], [rs(guarded, [atom(role, [role(1), num(r)])], [], [], [atom(role, [role(1), num(r)])])]), schema(b, [], [rs(guarded, [atom(done, [])], [], [atom(role, [role(1), any])], [atom(done, [])])])], syntactically_grassroots, no_introduction, pragmas([list('"T"', [done])], [act(a, '"A"', ['""', '"r"'], none, '"T"', by([1])), act(b, '"B"', [], none, '"T"', by([1]))])).
+compile(t7, [schema(a, [svar(n)], [rs(guarded, [atom(member, [nterm(ext(own(1), n))])], [], [], [atom(member, [nterm(ext(own(1), n))])])]), schema(b, [], [rs(guarded, [atom(done, [])], [], [atom(member, [any])], [atom(done, [])])])], syntactically_grassroots, no_introduction, $cva_wild_pr).
+compile(t5, [schema(a, [], [rs(guarded, [atom(done2, [])], [], [], [atom(done2, [])])]), qschema(b, [], [svar(x)], true, [rs(guarded, [atom(done, [])], [], [], [atom(done, [])])], [], [fnot(fexists([svar(x)], role(1), atom(tag, [svar(x)]), fcons(true)))])], syntactically_grassroots, no_introduction, $cva_wild_pr).
+compile(t6, [schema(a, [], [rs(guarded, [atom(bylaws, [val(cb)])], [], [], [atom(bylaws, [val(cb)])])]), qschema(b, [], [svar(x)], true, [rs(guarded, [atom(done, [])], [], [], [atom(done, [])])], [], [fnot(fexists([svar(x)], role(1), atom(bylaws, [svar(x)]), fcons(true)))])], syntactically_grassroots, no_introduction, $cva_wild_pr).
+compile(t3, [schema(a, [svar(x)], [rs(guarded, [atom(noted, [svar(x), role(1)])], [], [], [atom(noted, [svar(x), role(1)])])]), qschema(b, [], [svar(x)], gt(cardinality([svar(x)], role(1), atom(noted, [svar(x), any]), fcons(true)), num(0)), [rs(guarded, [atom(done, [])], [], [], [atom(done, [])])], [], [])], syntactically_grassroots, no_introduction, $cva_wild_pr).
+:quit
+HEREDOC
+)
+check "CVA compiler: a wildcard at an argument of a predicate no other atom of the contract types is refused, the predicate and the argument named (wild)" "^%% the predicate and the argument(tag, 1)$" "$cva_wild_f"
+check "CVA compiler: ... the contract not compiled (wild)" "^%% not compiled(t1)$" "$cva_wild_f"
+check_not "CVA compiler: a wildcard in a required atom at the place of a constant the contract names is compiled, a variable over the constants (wild)" "^%% not compiled(t2)$" "$cva_wild_f"
+check "CVA compiler: ... local to its role, lv(b, '_1') (wild)" "^%% the canonical CVA platform of the contract(t2)$" "$cva_wild_f"
+check_not "CVA compiler: ... and one at the place of a variable over the constants, const(r), likewise (wild)" "^%% not compiled(t4)$" "$cva_wild_f"
+check "CVA compiler: ... (wild)" "^%% the canonical CVA platform of the contract(t4)$" "$cva_wild_f"
+check "CVA compiler: ... each printed a variable over the constants of its schema, binding_of(b(V1), b, [b(role(1), p(V1?)), b(num('_1'), lv(b, '_1'))]) (wild)" "^binding_of(b(V1), b, \[b(role(1), p(V1?)), b(num('_1'), lv(b, '_1'))\])" "$cva_wild_f"
+check "CVA compiler: a wildcard in a required atom at a community name's place is refused, the term form having no variable over community names (wild)" "^%% not compiled(t7)$" "$cva_wild_f"
+check "CVA compiler: ... with the reason (wild)" "at an argument that is a community name or an item" "$cva_wild_f"
+check "CVA compiler: a variable a quantifier binds at a place of its anchor that no other atom of the contract types is refused (bound)" "^%% not compiled(t5)$" "$cva_wild_f"
+check "CVA compiler: ... and one at a constant's place, the compiler carrying no bound variable over constants (bound)" "^%% not compiled(t6)$" "$cva_wild_f"
+check "CVA compiler: ... with the reason (bound)" "it has a variable a quantifier binds, written as a speech-act variable, at a place of its anchor that is not a speech act's" "$cva_wild_f"
+check "CVA compiler: a wildcard in the anchor of a count is refused (wild)" "^%% not compiled(t3)$" "$cva_wild_f"
+check "CVA compiler: ... with the reason (wild)" "it has a wildcard in the anchor of a count or a sum" "$cva_wild_f"
 
 # Readings (vGLP 566c186 and 6abbed9, Section 5.4, "Speech-act schemas as local specifications": "A variable is also local to a role, and read there, where atoms the schema requires at that role hold it, no atom it deletes, forbids or adds at that role and no atom it requires, deletes or forbids at another role holds it, and atoms it adds at other roles do"; "a conjunct that names variables local to two roles or more is of the part's condition"; "the values it finds for the variables read at its role, in each way its state allows, are the readings of its state, which its vote yes carries; the initiator chooses readings under which the conjuncts of the condition hold, and the commit tells them to every participant, whose effect is under them"; Section 3.2, Definition "Deciding", the initiator refusing the attempt on its condition, and "Proposing", a standing approval's part proposed again only once a participant is ready or a commit since): vGLP's contract readings, programs/vglp/cva/readings, its play play_readings (its self.glp).
 cva_readings_load=$("$REPL_RUN" <<HEREDOC

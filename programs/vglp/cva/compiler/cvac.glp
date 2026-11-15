@@ -14,6 +14,7 @@
 
 Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Line) ; standless_only(Line)
         ; day_only(Line) ; dayless_only(Line) ; env_only(Line) ; envless_only(Line)
+        ; wild_only(Line) ; wildless_only(Line)
         ; const_only(Line) ; constless_only(Line).
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
@@ -238,7 +239,11 @@ compile4([L|Ls], Nm, _, _, _, _, _, _) :- ground(Nm?) |
 procedure q_lines(QContract?, Constant?, Lines).
 q_lines(C, Nm, L?) :- ground(C?), ground(Nm?) |
     q_faults(C?, L0),
-    head_line(L0?, Nm?, L).
+    wild_faults(C?, L1),
+    bound_faults(C?, L2),
+    lapp(L1?, L2?, L12),
+    lapp(L0?, L12?, L01),
+    head_line(L01?, Nm?, L).
 procedure q_faults(QContract?, Lines).
 q_faults([], []).
 q_faults([S|Ss], L?) :- ground(S?) |
@@ -705,10 +710,21 @@ const_lines([constless_only(_)|Ls], yes, Ls1?) :- const_lines(Ls?, yes, Ls1).
 const_lines([constless_only(L)|Ls], no, [L?|Ls1?]) :- const_lines(Ls?, no, Ls1).
 const_lines([L|Ls], C, [L?|Ls1?]) :- otherwise | const_lines(Ls?, C?, Ls1).
 %% The schemas, each listed role's arguments taken whole: listed(B, Rho, As), As the anchor's arguments after its holder with the listed role itself, role(I), among them, at its place (norm_roles); GSC's reader writes the role at the anchor's second argument without it, listed(B, Rho, [u_2, ..., u_r]), and a role elsewhere among the arguments as qlisted(B, Rho, As, [role(I)]), which q_roles takes as it is, "the variable at any of the anchor's arguments" (vGLP b413fe1, Section 5.4, "Speech-act schemas as local specifications").
+%% A wildcard in an atom a role requires, or in the anchor of a quantifier, is a variable of its own (wild_schemas, below), so the schemas every procedure of the compiler reads are those with each such wildcard written as that variable.
 procedure decl_schemas(Declared?, QContract).
-decl_schemas([], []).
-decl_schemas([S|Ss], R?) :- norm_schemas([S?|Ss?], R0), consts_off(R0?, R).
-decl_schemas(reflexive(_, C), R?) :- norm_schemas(C?, R0), consts_off(R0?, R).
+decl_schemas(D, R?) :- ground(D?) |
+    decl_norm(D?, C00),
+    bound_kinds(C00?, C01),
+    bound_kinds(C01?, C0),
+    wild_twice_c(C0?, Ca, Cb),
+    wild_table(Ca?, Gs),
+    wild_schemas(Cb?, Gs?, R).
+procedure wild_twice_c(QContract?, QContract, QContract).
+wild_twice_c(C, C?, C?) :- ground(C?) | true.
+procedure decl_norm(Declared?, QContract).
+decl_norm([], []).
+decl_norm([S|Ss], R?) :- norm_schemas([S?|Ss?], R0), consts_off(R0?, R).
+decl_norm(reflexive(_, C), R?) :- norm_schemas(C?, R0), consts_off(R0?, R).
 procedure norm_schemas(QContract?, QContract).
 norm_schemas([], []).
 norm_schemas([schema(S, Hd, Rs)|Ss], [schema(S?, Hd?, Rs1?)|R?]) :- norm_roles(Rs?, 1, Rs1), norm_schemas(Ss?, R).
@@ -726,6 +742,784 @@ norm_roles([R|Rs], I, [R?|Rs1?]) :- otherwise, integer(I?) | I1 := I? + 1, norm_
 procedure role_in(YesNo?, Integer?, Args?, Args).
 role_in(yes, _, As, As?).
 role_in(no, I, As, [role(I?)|As?]).
+%% --- The variables a quantifier binds, each of the kind of its place -----------
+%% vGLP, Section 5.4, "Speech-act schemas as local specifications": "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor and the condition phi holds", every variable a quantifier binds occurring among its anchor's arguments ("A an atom, the quantifier's anchor, among whose arguments every variable of x occurs").  GSC's reader writes a variable a quantifier binds as a speech-act variable, svar(X), unless the schema writes it a number or it holds an atom (programs/gsc/self.glp); the printed text matches a speech-act variable with a speech act alone (kind_ok), so one standing at a person's place of its anchor matched no atom, and "Bob is a guardian of no one", not exists G1 has_guardian(Bob, G1), held in every state.  So a variable a quantifier binds is written of the kind of the place it stands at in its anchor, before any procedure reads the contract (bound_kinds): an agent variable, pvar(X), at a person's place, and a value variable, num(X), at a number's, through the quantifier's scope, its anchor, its condition and its conclusion or conditional literals; the kind of the place is the one the other atoms of the contract give it, the variables that quantifiers bind in their own anchors giving none (bk_masked).  It is done twice, so that a place typed only by a variable another quantifier binds, as that of a conditional literal, has its kind by then.  Refused, with the line (bound_faults): a variable a quantifier binds, still written a speech-act variable, at a place of its anchor that is not a speech act's, no other atom of the contract typing the place, the variable standing at places of two kinds, the place a constant's, a community name's, an item's or a real's, or its kind following only from a longer chain of quantifiers.
+%% A quantifier that binds a listed role, fforall([role(I)], ...) and conjunct([role(I)], ...), binds a role, and is as it is.
+Sb    ::= sb(Constant, Arg).
+Sbs   ::= [] ; [Sb | Sbs].
+BMode ::= mask ; kinds(Sigs).
+procedure bound_kinds(QContract?, QContract).
+bound_kinds(C, R?) :- ground(C?) |
+    bk_schemas(C?, mask, Cm),
+    wild_table(Cm?, T),
+    bk_schemas(C?, kinds(T?), R).
+%% The contract with, under mask, each variable a quantifier binds, written svar(X), the wildcard in its anchor, so that the anchor gives its place no type; and, under kinds(T), each written of the kind the table T gives its place.
+procedure bk_schemas(QContract?, BMode?, QContract).
+bk_schemas([], _, []).
+bk_schemas([schema(S, Hd, Rs)|Ss], Md, [schema(S?, Hd?, Rs?)|Ns?]) :- bk_schemas(Ss?, Md?, Ns).
+bk_schemas([cschema(S, Hd, X, Rs)|Ss], Md, [cschema(S?, Hd?, X?, Rs?)|Ns?]) :- bk_schemas(Ss?, Md?, Ns).
+bk_schemas([nschema(S, Hd, C, Rs)|Ss], Md, [nschema(S?, Hd?, C1?, Rs?)|Ns?]) :- ground(Md?) | bk_con(C?, Md?, C1), bk_schemas(Ss?, Md?, Ns).
+bk_schemas([qschema(S, Hd, Bd, C, Rs, Cj, Fs)|Ss], Md, [qschema(S?, Hd?, Bd?, C1?, Rs?, Cj1?, Fs1?)|Ns?]) :- ground(Md?) |
+    bk_con(C?, Md?, C1),
+    bk_conjs(Cj?, Md?, Cj1),
+    bk_forms(Fs?, Md?, Fs1),
+    bk_schemas(Ss?, Md?, Ns).
+procedure bk_conjs(Conjuncts?, BMode?, Conjuncts).
+bk_conjs([], _, []).
+bk_conjs([conjunct([role(I)], Bi, A, Phi, CA, CD, Lits)|Cs], Md, [conjunct([role(I?)], Bi?, A?, Phi1?, CA?, CD?, Lits?)|Cs1?]) :- ground(Md?) |
+    bk_form(Phi?, Md?, Phi1),
+    bk_conjs(Cs?, Md?, Cs1).
+bk_conjs([conjunct(Xs, Bi, A, Phi, CA, CD, Lits)|Cs], Md, [conjunct(Xs1?, Bi?, A1?, Phi1?, CA1?, CD1?, Lits1?)|Cs1?]) :- otherwise, ground(Md?) |
+    bk_bind(Md?, Xs?, A?, Xs1, A1, Sb),
+    bk_conj(Sb?, Md?, Phi?, CA?, CD?, Lits?, Phi1, CA1, CD1, Lits1),
+    bk_conjs(Cs?, Md?, Cs1).
+procedure bk_conj(Sbs?, BMode?, Form?, HMults?, HMults?, Forms?, Form, HMults, HMults, Forms).
+bk_conj(Sb, Md, Phi, CA, CD, Lits, Phi1?, CA1?, CD1?, Lits1?) :- ground(Sb?) |
+    sb_form(Phi?, Sb?, Phi0),
+    bk_form(Phi0?, Md?, Phi1),
+    sb_hms(CA?, Sb?, CA1),
+    sb_hms(CD?, Sb?, CD1),
+    sb_forms(Lits?, Sb?, Lits1).
+procedure bk_forms(Forms?, BMode?, Forms).
+bk_forms([], _, []).
+bk_forms([F|Fs], Md, [F1?|Fs1?]) :- ground(Md?) | bk_form(F?, Md?, F1), bk_forms(Fs?, Md?, Fs1).
+procedure bk_form(Form?, BMode?, Form).
+bk_form(fa(H, M), _, fa(H?, M?)).
+bk_form(fcons(C), Md, fcons(C1?)) :- bk_con(C?, Md?, C1).
+bk_form(fnot(F), Md, fnot(F1?)) :- bk_form(F?, Md?, F1).
+bk_form(fand(F, G), Md, fand(F1?, G1?)) :- ground(Md?) | bk_form(F?, Md?, F1), bk_form(G?, Md?, G1).
+bk_form(for(F, G), Md, for(F1?, G1?)) :- ground(Md?) | bk_form(F?, Md?, F1), bk_form(G?, Md?, G1).
+bk_form(fexists(Xs, H, A, F), Md, fexists(Xs1?, H?, A1?, F1?)) :- ground(Md?) |
+    bk_bind(Md?, Xs?, A?, Xs1, A1, Sb),
+    sb_form(F?, Sb?, F0),
+    bk_form(F0?, Md?, F1).
+bk_form(fforall([role(I)], H, A, F, Ps), Md, fforall([role(I?)], H?, A?, F1?, Ps1?)) :- ground(Md?) |
+    bk_form(F?, Md?, F1),
+    bk_forms(Ps?, Md?, Ps1).
+bk_form(fforall(Xs, H, A, F, Ps), Md, fforall(Xs1?, H?, A1?, F1?, Ps1?)) :- otherwise, ground(Md?) |
+    bk_bind(Md?, Xs?, A?, Xs1, A1, Sb),
+    bk_scope(Sb?, Md?, F?, Ps?, F1, Ps1).
+procedure bk_scope(Sbs?, BMode?, Form?, Forms?, Form, Forms).
+bk_scope(Sb, Md, F, Ps, F1?, Ps1?) :- ground(Sb?), ground(Md?) |
+    sb_form(F?, Sb?, F0),
+    bk_form(F0?, Md?, F1),
+    sb_forms(Ps?, Sb?, Ps0),
+    bk_forms(Ps0?, Md?, Ps1).
+procedure bk_con(Constraint?, BMode?, Constraint).
+bk_con(and(A, B), Md, and(A1?, B1?)) :- ground(Md?) | bk_con(A?, Md?, A1), bk_con(B?, Md?, B1).
+bk_con(or(A, B), Md, or(A1?, B1?)) :- ground(Md?) | bk_con(A?, Md?, A1), bk_con(B?, Md?, B1).
+bk_con(implies(A, B), Md, implies(A1?, B1?)) :- ground(Md?) | bk_con(A?, Md?, A1), bk_con(B?, Md?, B1).
+bk_con(not(A), Md, not(A1?)) :- bk_con(A?, Md?, A1).
+bk_con(eq(X, Y), Md, eq(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(ne(X, Y), Md, ne(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(le(X, Y), Md, le(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(lt(X, Y), Md, lt(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(ge(X, Y), Md, ge(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(gt(X, Y), Md, gt(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_con(rel(R, Es), Md, rel(R?, Es1?)) :- bk_exprs(Es?, Md?, Es1).
+bk_con(program(E), Md, program(E1?)) :- bk_expr(E?, Md?, E1).
+bk_con(C, _, C?) :- otherwise | true.
+procedure bk_exprs(Exprs?, BMode?, Exprs).
+bk_exprs([], _, []).
+bk_exprs([E|Es], Md, [E1?|Es1?]) :- ground(Md?) | bk_expr(E?, Md?, E1), bk_exprs(Es?, Md?, Es1).
+procedure bk_expr(Expr?, BMode?, Expr).
+bk_expr(plus(X, Y), Md, plus(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_expr(minus(X, Y), Md, minus(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_expr(mul(X, Y), Md, mul(X1?, Y1?)) :- ground(Md?) | bk_expr(X?, Md?, X1), bk_expr(Y?, Md?, Y1).
+bk_expr(fn(F, Es), Md, fn(F?, Es1?)) :- bk_exprs(Es?, Md?, Es1).
+bk_expr(cardinality(Xs, H, A, F), Md, cardinality(Xs1?, H?, A1?, F1?)) :- ground(Md?) |
+    bk_bind(Md?, Xs?, A?, Xs1, A1, Sb),
+    sb_form(F?, Sb?, F0),
+    bk_form(F0?, Md?, F1).
+bk_expr(sum(Xs, H, A, F, U), Md, sum(Xs1?, H?, A1?, F1?, U1?)) :- ground(Md?) |
+    bk_bind(Md?, Xs?, A?, Xs1, A1, Sb),
+    bk_sum(Sb?, Md?, F?, U?, F1, U1).
+bk_expr(E, _, E?) :- otherwise | true.
+procedure bk_sum(Sbs?, BMode?, Form?, Expr?, Form, Expr).
+bk_sum(Sb, Md, F, U, F1?, U1?) :- ground(Sb?), ground(Md?) |
+    sb_form(F?, Sb?, F0),
+    bk_form(F0?, Md?, F1),
+    sb_expr(U?, Sb?, U0),
+    bk_expr(U0?, Md?, U1).
+%% The variables Xs a quantifier binds and its anchor A: under mask, the anchor with each svar(X) of Xs the wildcard, and nothing more; under kinds(T), each svar(X) of Xs that stands at a person's place of A an agent variable, and at a number's a value variable, in Xs and in A, and the substitution for the rest of the quantifier's scope.
+procedure bk_bind(BMode?, Args?, Atom?, Args, Atom, Sbs).
+bk_bind(mask, Xs, A, Xs?, A1?, []) :- ground(Xs?) |
+    mask_subs(Xs?, Sm),
+    sb_atom(A?, Sm?, A1).
+bk_bind(kinds(T), Xs, A, Xs1?, A1?, Sb?) :- ground(Xs?), ground(A?) |
+    kind_subs(Xs?, A?, T?, Sb0),
+    bk_bind1(Sb0?, Xs?, A?, Xs1, A1, Sb).
+procedure bk_bind1(Sbs?, Args?, Atom?, Args, Atom, Sbs).
+bk_bind1(Sb, Xs, A, Xs1?, A1?, Sb?) :- ground(Sb?) | sb_args(Xs?, Sb?, Xs1), sb_atom(A?, Sb?, A1).
+procedure mask_subs(Args?, Sbs).
+mask_subs([], []).
+mask_subs([svar(N)|Xs], [sb(N?, any)|S?]) :- mask_subs(Xs?, S).
+mask_subs([_|Xs], S?) :- otherwise | mask_subs(Xs?, S).
+procedure kind_subs(Args?, Atom?, Sigs?, Sbs).
+kind_subs(Xs, atom(F, As), T, S?) :- ground(F?), ground(As?) |
+    place_kinds(F?, As?, T?, Ks),
+    kind_subs1(Xs?, As?, Ks?, S).
+kind_subs(_, times(_, _), _, []).
+kind_subs(_, rest(_, _, _), _, []).
+procedure kind_subs1(Args?, Args?, Kinds?, Sbs).
+kind_subs1([], _, _, []).
+kind_subs1([svar(N)|Xs], As, Ks, S?) :- ground(N?), ground(As?), ground(Ks?) |
+    var_kind(As?, Ks?, N?, K),
+    kind_sub(K?, N?, S1),
+    kind_subs1(Xs?, As?, Ks?, S2),
+    app(S1?, S2?, S).
+kind_subs1([_|Xs], As, Ks, S?) :- otherwise | kind_subs1(Xs?, As?, Ks?, S).
+%% The kind of the first place of As at which svar(N) stands; wild where it stands at none.
+procedure var_kind(Args?, Kinds?, Constant?, Kind).
+var_kind([], _, _, wild).
+var_kind([svar(M)|_], [K|_], N, K?) :- M? =?= N? | true.
+var_kind([_|As], [_|Ks], N, K?) :- otherwise | var_kind(As?, Ks?, N?, K).
+var_kind([_|_], [], _, wild).
+procedure kind_sub(Kind?, Constant?, Sbs).
+kind_sub(peer, N, [sb(N?, pvar(N?))]) :- ground(N?) | true.
+kind_sub(num, N, [sb(N?, num(N?))]) :- ground(N?) | true.
+kind_sub(_, _, []) :- otherwise | true.
+%% The substitution Sb, svar(X) to its argument, through an argument, an atom, a literal, a safe formula, a constraint and an expression.
+procedure sb_arg(Arg?, Sbs?, Arg).
+sb_arg(svar(N), Sb, A?) :- sb_look(Sb?, N?, A).
+sb_arg(item_of(X), Sb, item_of(X1?)) :- sb_arg(X?, Sb?, X1).
+sb_arg(A, _, A?) :- otherwise | true.
+procedure sb_look(Sbs?, Constant?, Arg).
+sb_look([], N, svar(N?)).
+sb_look([sb(M, A)|_], N, A?) :- M? =?= N? | true.
+sb_look([_|Sb], N, A?) :- otherwise | sb_look(Sb?, N?, A).
+procedure sb_args(Args?, Sbs?, Args).
+sb_args([], _, []).
+sb_args([A|As], Sb, [B?|Bs?]) :- ground(Sb?) | sb_arg(A?, Sb?, B), sb_args(As?, Sb?, Bs).
+procedure sb_atom(Atom?, Sbs?, Atom).
+sb_atom(atom(F, As), Sb, atom(F?, Bs?)) :- sb_args(As?, Sb?, Bs).
+sb_atom(times(K, A), Sb, times(K1?, A1?)) :- ground(Sb?) | sb_arg(K?, Sb?, K1), sb_atom(A?, Sb?, A1).
+sb_atom(rest(K, J, A), Sb, rest(K1?, J1?, A1?)) :- ground(Sb?) | sb_arg(K?, Sb?, K1), sb_arg(J?, Sb?, J1), sb_atom(A?, Sb?, A1).
+procedure sb_hms(HMults?, Sbs?, HMults).
+sb_hms([], _, []).
+sb_hms([hm(J, M)|Hs], Sb, [hm(J?, M1?)|Hs1?]) :- ground(Sb?) | sb_atom(M?, Sb?, M1), sb_hms(Hs?, Sb?, Hs1).
+procedure sb_forms(Forms?, Sbs?, Forms).
+sb_forms([], _, []).
+sb_forms([F|Fs], Sb, [F1?|Fs1?]) :- ground(Sb?) | sb_form(F?, Sb?, F1), sb_forms(Fs?, Sb?, Fs1).
+procedure sb_form(Form?, Sbs?, Form).
+sb_form(F, [], F?).
+sb_form(fa(H, M), [S|Sb], fa(H1?, M1?)) :- ground(S?), ground(Sb?) | sb_arg(H?, [S?|Sb?], H1), sb_atom(M?, [S?|Sb?], M1).
+sb_form(fnot(F), [S|Sb], fnot(F1?)) :- sb_form(F?, [S?|Sb?], F1).
+sb_form(fand(F, G), [S|Sb], fand(F1?, G1?)) :- ground(S?), ground(Sb?) | sb_form(F?, [S?|Sb?], F1), sb_form(G?, [S?|Sb?], G1).
+sb_form(for(F, G), [S|Sb], for(F1?, G1?)) :- ground(S?), ground(Sb?) | sb_form(F?, [S?|Sb?], F1), sb_form(G?, [S?|Sb?], G1).
+sb_form(fexists(Xs, H, A, F), [S|Sb], fexists(Xs?, H1?, A1?, F1?)) :- ground(S?), ground(Sb?) |
+    sb_arg(H?, [S?|Sb?], H1), sb_atom(A?, [S?|Sb?], A1), sb_form(F?, [S?|Sb?], F1).
+sb_form(fforall(Xs, H, A, F, Ps), [S|Sb], fforall(Xs?, H1?, A1?, F1?, Ps1?)) :- ground(S?), ground(Sb?) |
+    sb_arg(H?, [S?|Sb?], H1), sb_atom(A?, [S?|Sb?], A1), sb_form(F?, [S?|Sb?], F1), sb_forms(Ps?, [S?|Sb?], Ps1).
+sb_form(fcons(C), [S|Sb], fcons(C1?)) :- sb_con(C?, [S?|Sb?], C1).
+procedure sb_con(Constraint?, Sbs?, Constraint).
+sb_con(true, _, true).
+sb_con(and(A, B), Sb, and(A1?, B1?)) :- ground(Sb?) | sb_con(A?, Sb?, A1), sb_con(B?, Sb?, B1).
+sb_con(or(A, B), Sb, or(A1?, B1?)) :- ground(Sb?) | sb_con(A?, Sb?, A1), sb_con(B?, Sb?, B1).
+sb_con(implies(A, B), Sb, implies(A1?, B1?)) :- ground(Sb?) | sb_con(A?, Sb?, A1), sb_con(B?, Sb?, B1).
+sb_con(not(A), Sb, not(A1?)) :- sb_con(A?, Sb?, A1).
+sb_con(eq(X, Y), Sb, eq(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(ne(X, Y), Sb, ne(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(le(X, Y), Sb, le(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(lt(X, Y), Sb, lt(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(ge(X, Y), Sb, ge(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(gt(X, Y), Sb, gt(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_con(succ(X, Y), Sb, succ(X1?, Y1?)) :- ground(Sb?) | sb_arg(X?, Sb?, X1), sb_arg(Y?, Sb?, Y1).
+sb_con(signed(U, Y), Sb, signed(U1?, Y?)) :- sb_arg(U?, Sb?, U1).
+sb_con(unsigned(U, Y), Sb, unsigned(U1?, Y?)) :- sb_arg(U?, Sb?, U1).
+sb_con(rel(R, Es), Sb, rel(R?, Es1?)) :- sb_exprs(Es?, Sb?, Es1).
+sb_con(program(E), Sb, program(E1?)) :- sb_expr(E?, Sb?, E1).
+procedure sb_exprs(Exprs?, Sbs?, Exprs).
+sb_exprs([], _, []).
+sb_exprs([E|Es], Sb, [E1?|Es1?]) :- ground(Sb?) | sb_expr(E?, Sb?, E1), sb_exprs(Es?, Sb?, Es1).
+procedure sb_expr(Expr?, Sbs?, Expr).
+sb_expr(svar(N), Sb, A?) :- sb_look(Sb?, N?, A).
+sb_expr(plus(X, Y), Sb, plus(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_expr(minus(X, Y), Sb, minus(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_expr(mul(X, Y), Sb, mul(X1?, Y1?)) :- ground(Sb?) | sb_expr(X?, Sb?, X1), sb_expr(Y?, Sb?, Y1).
+sb_expr(fn(F, Es), Sb, fn(F?, Es1?)) :- sb_exprs(Es?, Sb?, Es1).
+sb_expr(cardinality(Xs, H, A, F), Sb, cardinality(Xs?, H1?, A1?, F1?)) :- ground(Sb?) |
+    sb_arg(H?, Sb?, H1), sb_atom(A?, Sb?, A1), sb_form(F?, Sb?, F1).
+sb_expr(sum(Xs, H, A, F, U), Sb, sum(Xs?, H1?, A1?, F1?, U1?)) :- ground(Sb?) |
+    sb_arg(H?, Sb?, H1), sb_atom(A?, Sb?, A1), sb_form(F?, Sb?, F1), sb_expr(U?, Sb?, U1).
+sb_expr(author_of(Y), Sb, author_of(Y1?)) :- sb_arg(Y?, Sb?, Y1).
+sb_expr(item_of(Y), Sb, item_of(Y1?)) :- sb_arg(Y?, Sb?, Y1).
+sb_expr(E, _, E?) :- otherwise | true.
+%% Whether a variable a quantifier binds is still written svar(X) at a place of its anchor that is not a speech act's by the other atoms of the contract (bk_masked's table): the schemas with one, each with the line.
+procedure bound_faults(QContract?, Lines).
+bound_faults(C, L?) :- ground(C?) |
+    bk_schemas(C?, mask, Cm),
+    wild_table(Cm?, T),
+    bound_faults1(C?, T?, L).
+procedure bound_faults1(QContract?, Sigs?, Lines).
+bound_faults1([], _, []).
+bound_faults1([nschema(S, _, C, _)|Ss], T, L?) :- ground(S?), ground(T?) |
+    bq_con(C?, Qs),
+    bq_bad(Qs?, T?, B),
+    bound_lines(B?, S?, L1),
+    bound_faults1(Ss?, T?, L2),
+    lapp(L1?, L2?, L).
+bound_faults1([qschema(S, _, _, C, _, Cj, Fs)|Ss], T, L?) :- ground(S?), ground(T?) |
+    bq_con(C?, Q1),
+    bq_conjs(Cj?, Q2),
+    bq_forms(Fs?, Q3),
+    app(Q2?, Q3?, Q23),
+    app(Q1?, Q23?, Qs),
+    bq_bad(Qs?, T?, B),
+    bound_lines(B?, S?, L1),
+    bound_faults1(Ss?, T?, L2),
+    lapp(L1?, L2?, L).
+bound_faults1([_|Ss], T, L?) :- otherwise | bound_faults1(Ss?, T?, L).
+procedure bound_lines(YesNo?, Constant?, Lines).
+bound_lines(no, _, []).
+bound_lines(yes, S, ['%% it has a variable a quantifier binds, written as a speech-act variable, at a place of its anchor that is not a speech act\'s: "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), so the variable is of the kind of its place, a person at a person\'s and a number at a number\'s, and here no other atom of the contract gives the place a type, or the variable stands at places of two kinds, or the place is a constant\'s, a community name\'s, an item\'s or a real\'s, of which the compiler carries no variable a quantifier binds, or its kind follows only from a chain of quantifiers longer than the compiler follows:', T?]) :-
+    ground(S?) | said('%% the schema', S?, T).
+%% The quantifiers, but those binding a listed role: qa(Xs, A), the variables one binds and its anchor.
+QA  ::= qa(Args, Atom).
+QAs ::= [] ; [QA | QAs].
+procedure bq_conjs(Conjuncts?, QAs).
+bq_conjs([], []).
+bq_conjs([conjunct([role(_)], _, _, Phi, _, _, _)|Cs], Q?) :- bq_form(Phi?, Q1), bq_conjs(Cs?, Q2), app(Q1?, Q2?, Q).
+bq_conjs([conjunct(Xs, _, A, Phi, _, _, _)|Cs], [qa(Xs?, A?)|Q?]) :- otherwise | bq_form(Phi?, Q1), bq_conjs(Cs?, Q2), app(Q1?, Q2?, Q).
+procedure bq_forms(Forms?, QAs).
+bq_forms([], []).
+bq_forms([F|Fs], Q?) :- bq_form(F?, Q1), bq_forms(Fs?, Q2), app(Q1?, Q2?, Q).
+procedure bq_form(Form?, QAs).
+bq_form(fa(_, _), []).
+bq_form(fcons(C), Q?) :- bq_con(C?, Q).
+bq_form(fnot(F), Q?) :- bq_form(F?, Q).
+bq_form(fand(F, G), Q?) :- bq_form(F?, Q1), bq_form(G?, Q2), app(Q1?, Q2?, Q).
+bq_form(for(F, G), Q?) :- bq_form(F?, Q1), bq_form(G?, Q2), app(Q1?, Q2?, Q).
+bq_form(fexists(Xs, _, A, F), [qa(Xs?, A?)|Q?]) :- bq_form(F?, Q).
+bq_form(fforall([role(_)], _, _, F, Ps), Q?) :- bq_form(F?, Q1), bq_forms(Ps?, Q2), app(Q1?, Q2?, Q).
+bq_form(fforall(Xs, _, A, F, Ps), [qa(Xs?, A?)|Q?]) :- otherwise | bq_form(F?, Q1), bq_forms(Ps?, Q2), app(Q1?, Q2?, Q).
+procedure bq_con(Constraint?, QAs).
+bq_con(and(A, B), Q?) :- bq_con(A?, Q1), bq_con(B?, Q2), app(Q1?, Q2?, Q).
+bq_con(or(A, B), Q?) :- bq_con(A?, Q1), bq_con(B?, Q2), app(Q1?, Q2?, Q).
+bq_con(implies(A, B), Q?) :- bq_con(A?, Q1), bq_con(B?, Q2), app(Q1?, Q2?, Q).
+bq_con(not(A), Q?) :- bq_con(A?, Q).
+bq_con(eq(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(ne(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(le(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(lt(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(ge(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(gt(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_con(rel(_, Es), Q?) :- bq_exprs(Es?, Q).
+bq_con(program(E), Q?) :- bq_expr(E?, Q).
+bq_con(C, []) :- otherwise, ground(C?) | true.
+procedure bq_exprs(Exprs?, QAs).
+bq_exprs([], []).
+bq_exprs([E|Es], Q?) :- bq_expr(E?, Q1), bq_exprs(Es?, Q2), app(Q1?, Q2?, Q).
+procedure bq_expr(Expr?, QAs).
+bq_expr(plus(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_expr(minus(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_expr(mul(X, Y), Q?) :- bq_expr(X?, Q1), bq_expr(Y?, Q2), app(Q1?, Q2?, Q).
+bq_expr(fn(_, Es), Q?) :- bq_exprs(Es?, Q).
+bq_expr(cardinality(Xs, _, A, F), [qa(Xs?, A?)|Q?]) :- bq_form(F?, Q).
+bq_expr(sum(Xs, _, A, F, U), [qa(Xs?, A?)|Q?]) :- bq_form(F?, Q1), bq_expr(U?, Q2), app(Q1?, Q2?, Q).
+bq_expr(E, []) :- otherwise, ground(E?) | true.
+procedure bq_bad(QAs?, Sigs?, YesNo).
+bq_bad([], _, no).
+bq_bad([qa(Xs, atom(F, As))|Qs], T, B?) :- ground(Xs?), ground(F?), ground(As?), ground(T?) |
+    sb_masked(As?, Xs?, Am),
+    place_kinds(F?, Am?, T?, Ks),
+    bq_args(As?, Ks?, Xs?, B1),
+    bq_bad(Qs?, T?, B2),
+    or(B1?, B2?, B).
+bq_bad([_|Qs], T, B?) :- otherwise | bq_bad(Qs?, T?, B).
+procedure sb_masked(Args?, Args?, Args).
+sb_masked(As, Xs, Am?) :- mask_subs(Xs?, Sm), sb_args(As?, Sm?, Am).
+%% Whether an argument svar(X), X of Xs, stands at a place whose kind is not speech.
+procedure bq_args(Args?, Kinds?, Args?, YesNo).
+bq_args([], _, _, no).
+bq_args([svar(N)|As], [K|Ks], Xs, B?) :- ground(N?), ground(K?), ground(Xs?) |
+    mem(svar(N?), Xs?, In),
+    not_speech(K?, Ns),
+    and(In?, Ns?, B1),
+    bq_args(As?, Ks?, Xs?, B2),
+    or(B1?, B2?, B).
+bq_args([_|As], [_|Ks], Xs, B?) :- otherwise | bq_args(As?, Ks?, Xs?, B).
+bq_args([_|_], [], _, no).
+procedure not_speech(Kind?, YesNo).
+not_speech(speech, no).
+not_speech(_, yes) :- otherwise | true.
+%% --- The wildcard in an unnegated atom --------------------------------------
+%% vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches ...; a wildcard in an unnegated atom of B, or in the anchor of a quantifier, is a variable of its own, standing for some value: the machine of the person who holds the atom finds one in its state, and the act neither names nor records it, as an act that requires a bond of some maturity" (GSC, programs/gsc/self.glp: "In an unnegated atom it is a variable of its own, one per occurrence").
+%% (1) A wildcard among the arguments of an atom a role requires, an agent role or a listed role, is written as a variable of the schema that no atom of it names, '_1', '_2', ..., in the order of the schema, of the kind its place has (wild_made), and listed in the schema's head: it occurs in that one atom, required at one role, so it is local to that role (local.glp, locals_of: "A variable that occurs only in atoms the schema requires or deletes at one role ... is local to that role"), "a schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state", the class term and the request do not name it, no field is for it, and, no atom added or deleted naming it, the effect does not depend on it.
+%% (2) A wildcard among the arguments of the anchor of a quantifier of a safe formula, or of a quantified conjunct that binds no listed role, is written as such a variable among the variables its quantifier binds: the printed text matches the anchor into the state of its holder under the binding, which leaves the variable free, so it matches any value (the printed text's match_into); an instance of a conjunct is "restricted to the variables the conjunct's literals name and without repetition" (hm_named; the printed text's inst_at), and no literal names the variable.
+%% (3) A wildcard among the arguments of the anchor of a listed role stays the wildcard, the anchor being no atom the printed text matches: the people of the role are those at the role's place of the atoms of the anchor's predicate in the base's state whose other arguments are the image of the anchor's, the wildcard met by any value, each person once (the printed text's list_at, vals_meet; listed_wild).
+%% (4) A wildcard in a negated atom, forbidden or cleared, is as it was, and so is one in the name term N._.  A wildcard in an atom of a safe formula that is not the anchor of a quantifier makes the atom the quantifier exists Ws (M) (wild_fa), so that the atom holds where the state has an atom it matches, and its negation where it has none.  Refused with the reason (wild_faults): a wildcard at an argument of a predicate to which no other atom of the contract gives a type; one in a required atom, an anchor or an atom of a safe formula at an argument that is a community name or an item, or, in an anchor that is not a listed role's or in an atom of a safe formula, a constant or a real, a variable a quantifier binds not being carried as one (a wildcard at a constant's place in an atom a role requires is a variable over the constants, const(X), and in a listed role's anchor it stays the wildcard, (3)); one in the anchor of a count or a sum, or in an atom of its condition; and one in the anchor of a quantifier that binds a listed role in a safe formula across roles.
+%% The types of the arguments of the contract's predicates, a signature for each predicate and number of arguments, the wildcard's place taking the type another atom of the contract gives it, and wild where none does (wild_sigs), a person where one atom writes a person and another a variable a quantifier binds (peer_sigs).
+procedure wild_table(QContract?, Sigs).
+wild_table(C, Gs?) :-
+    q_all_atoms(C?, As),
+    atom_sigs(As?, Gs0),
+    dedup(Gs0?, Gs1),
+    wild_sigs(Gs1?, Gs2),
+    peer_sigs_all(Gs2?, Gs).
+%% Every atom the schemas write: those of their roles, the anchors of their listed roles, and those of their constraints, conjuncts and safe formulas, each argument of a real variable written real(X) and each of a variable over the constants const(X).
+procedure q_all_atoms(QContract?, Atoms).
+q_all_atoms([], []).
+q_all_atoms([S|Ss], As?) :- qs_atoms(S?, A1), q_all_atoms(Ss?, A2), app(A1?, A2?, As).
+procedure qs_atoms(QSchema?, Atoms).
+qs_atoms(schema(_, Hd, Rs), As?) :- ground(Hd?) | qr_atoms(Rs?, yes, A0), hd_real_names(Hd?, Xs), real_atoms(A0?, Xs?, Ar), hd_const_names(Hd?, Cs), const_atoms(Ar?, Cs?, As).
+qs_atoms(cschema(_, Hd, _, Rs), As?) :- ground(Hd?) | qr_atoms(Rs?, yes, A0), hd_real_names(Hd?, Xs), real_atoms(A0?, Xs?, Ar), hd_const_names(Hd?, Cs), const_atoms(Ar?, Cs?, As).
+qs_atoms(nschema(_, Hd, C, Rs), As?) :- ground(Hd?) |
+    qr_atoms(Rs?, yes, A1),
+    c_atoms(C?, A2),
+    app(A1?, A2?, A0),
+    hd_real_names(Hd?, Xs),
+    real_atoms(A0?, Xs?, Ar), hd_const_names(Hd?, Cs), const_atoms(Ar?, Cs?, As).
+qs_atoms(qschema(_, Hd, _, C, Rs, Cj, Fs), As?) :- ground(Hd?) |
+    qr_atoms(Rs?, yes, A1),
+    c_atoms(C?, A2),
+    cj_atoms(Cj?, yes, A3),
+    fs_atoms(Fs?, A4),
+    app(A3?, A4?, A34),
+    app(A2?, A34?, A24),
+    app(A1?, A24?, A0),
+    hd_real_names(Hd?, Xs),
+    real_atoms(A0?, Xs?, Ar), hd_const_names(Hd?, Cs), const_atoms(Ar?, Cs?, As).
+%% The atoms of the roles, with the atoms they delete (yes) or without (no), and the anchors of the listed roles.
+procedure qr_atoms(RoleSpecs?, YesNo?, Atoms).
+qr_atoms([], _, []).
+qr_atoms([R|Rs], Dl, As?) :- ground(R?), ground(Dl?) |
+    rs_lists(R?, P, M, K, N),
+    deleted_if(Dl?, M?, M1),
+    listed_anchor(R?, A0),
+    qr_atoms(Rs?, Dl?, A5),
+    app(N?, A5?, A4),
+    app(K?, A4?, A3),
+    app(M1?, A3?, A2),
+    app(P?, A2?, A1),
+    app(A0?, A1?, As).
+procedure deleted_if(YesNo?, Atoms?, Atoms).
+deleted_if(yes, M, M?).
+deleted_if(no, _, []).
+procedure listed_anchor(RoleSpec?, Atoms).
+listed_anchor(crs(listed(_, Rho, As), _, _, _, _, _), [atom(Rho?, As?)]).
+listed_anchor(crs(qlisted(_, Rho, As, _), _, _, _, _, _), [atom(Rho?, As?)]).
+listed_anchor(_, []) :- otherwise | true.
+%% The atoms of the conjuncts: their anchors, those of their conditions and their conditional literals added, and, with yes, those deleted and those of their literals.
+procedure cj_atoms(Conjuncts?, YesNo?, Atoms).
+cj_atoms([], _, []).
+cj_atoms([conjunct(_, _, A, Phi, CA, CD, Lits)|Cs], Dl, [A?|As?]) :- ground(Dl?) |
+    f_atoms(Phi?, A1),
+    hm_atoms(CA?, A2),
+    cj_deleted(Dl?, CD?, Lits?, A3),
+    cj_atoms(Cs?, Dl?, A4),
+    app(A3?, A4?, A34),
+    app(A2?, A34?, A24),
+    app(A1?, A24?, As).
+procedure cj_deleted(YesNo?, HMults?, Forms?, Atoms).
+cj_deleted(yes, CD, Lits, As?) :- hm_atoms(CD?, A1), fs_atoms(Lits?, A2), app(A1?, A2?, As).
+cj_deleted(no, _, _, []).
+%% The variables over the constants of a schema's head, const(X), which its atoms write num(X) (consts_off): their places are of the kind const (const_atoms).
+procedure hd_const_names(Args?, Preds).
+hd_const_names([], []).
+hd_const_names([const(X)|As], [X?|Xs?]) :- hd_const_names(As?, Xs).
+hd_const_names([_|As], Xs?) :- otherwise | hd_const_names(As?, Xs).
+procedure hd_real_names(Args?, Preds).
+hd_real_names([], []).
+hd_real_names([real(X)|As], [X?|Xs?]) :- hd_real_names(As?, Xs).
+hd_real_names([_|As], Xs?) :- otherwise | hd_real_names(As?, Xs).
+%% Each signature with the type another signature of its predicate and number of arguments gives a place where it has wild.
+procedure wild_sigs(Sigs?, Sigs).
+wild_sigs(Gs, R?) :- ground(Gs?) | wild_fill(Gs?, Gs?, R).
+procedure wild_fill(Sigs?, Sigs?, Sigs).
+wild_fill([], _, []).
+wild_fill([sig(F, Ks)|Gs], All, [sig(F?, Ks1?)|Gs1?]) :- ground(F?), ground(Ks?), ground(All?) |
+    wild_kinds(All?, F?, Ks?, Ks1),
+    wild_fill(Gs?, All?, Gs1).
+procedure wild_kinds(Sigs?, Constant?, Kinds?, Kinds).
+wild_kinds([], _, Ks, Ks?).
+wild_kinds([sig(G, Js)|Gs], F, Ks, R?) :- G? =?= F?, ground(Js?), ground(Ks?) |
+    same_len(Ks?, Js?, B),
+    wild_zip(B?, Ks?, Js?, Ks1),
+    wild_kinds(Gs?, F?, Ks1?, R).
+wild_kinds([_|Gs], F, Ks, R?) :- otherwise | wild_kinds(Gs?, F?, Ks?, R).
+%% Ks with the kind of Js, of its length, at each place where it has wild.
+procedure wild_zip(YesNo?, Kinds?, Kinds?, Kinds).
+wild_zip(no, Ks, _, Ks?).
+wild_zip(yes, [], _, []).
+wild_zip(yes, [wild|Ks], [J|Js], [J?|R?]) :- wild_zip(yes, Ks?, Js?, R).
+wild_zip(yes, [K|Ks], [_|Js], [K?|R?]) :- otherwise | wild_zip(yes, Ks?, Js?, R).
+%% The signatures with no place wild: one with a place still wild is of an atom no state holds, a cleared conditional literal, or of a contract refused (wild_faults).
+procedure unwild(Sigs?, Sigs).
+unwild([], []).
+unwild([sig(F, Ks)|Gs], R?) :- ground(F?), ground(Ks?) |
+    mem(wild, Ks?, W),
+    unwild(Gs?, R1),
+    drop_sig(W?, sig(F?, Ks?), R1?, R).
+procedure drop_sig(YesNo?, Sig?, Sigs?, Sigs).
+drop_sig(yes, _, R, R?).
+drop_sig(no, G, R, [G?|R?]).
+%% The kinds of the arguments As of the predicate F by the table: those of its signature of that many arguments, and those the arguments write where the table has none.
+procedure place_kinds(Constant?, Args?, Sigs?, Kinds).
+place_kinds(_, As, [], Ks?) :- arg_kinds(As?, Ks).
+place_kinds(F, As, [sig(G, Js)|Gs], Ks?) :- G? =?= F?, ground(As?), ground(Js?) |
+    arg_kinds(As?, Ks0),
+    same_len(Ks0?, Js?, B),
+    place_kinds1(B?, F?, As?, Js?, Gs?, Ks).
+place_kinds(F, As, [_|Gs], Ks?) :- otherwise | place_kinds(F?, As?, Gs?, Ks).
+procedure place_kinds1(YesNo?, Constant?, Args?, Kinds?, Sigs?, Kinds).
+place_kinds1(yes, _, _, Js, _, Js?).
+place_kinds1(no, F, As, _, Gs, Ks?) :- place_kinds(F?, As?, Gs?, Ks).
+%% The schemas with each wildcard of a required atom a variable of the head, and each wildcard of an anchor a variable its quantifier binds, numbered through the schema.
+procedure wild_schemas(QContract?, Sigs?, QContract).
+wild_schemas([], _, []).
+wild_schemas([schema(S, Hd, Rs)|Ss], Gs, [schema(S?, Hd1?, Rs1?)|Ns?]) :- ground(Gs?) |
+    wild_roles(Rs?, Gs?, 1, Rs1, _, Vs),
+    app(Hd?, Vs?, Hd1),
+    wild_schemas(Ss?, Gs?, Ns).
+wild_schemas([cschema(S, Hd, X, Rs)|Ss], Gs, [cschema(S?, Hd1?, X?, Rs1?)|Ns?]) :- ground(Gs?) |
+    wild_roles(Rs?, Gs?, 1, Rs1, _, Vs),
+    app(Hd?, Vs?, Hd1),
+    wild_schemas(Ss?, Gs?, Ns).
+wild_schemas([nschema(S, Hd, C, Rs)|Ss], Gs, [nschema(S?, Hd1?, C?, Rs1?)|Ns?]) :- ground(Gs?) |
+    wild_roles(Rs?, Gs?, 1, Rs1, _, Vs),
+    app(Hd?, Vs?, Hd1),
+    wild_schemas(Ss?, Gs?, Ns).
+wild_schemas([qschema(S, Hd, Bd, C, Rs, Cj, Fs)|Ss], Gs, [qschema(S?, Hd1?, Bd1?, C?, Rs1?, Cj1?, Fs1?)|Ns?]) :- ground(Gs?) |
+    wild_roles(Rs?, Gs?, 1, Rs1, K1, Vs),
+    app(Hd?, Vs?, Hd1),
+    wild_conjs(Cj?, Gs?, K1?, Cj1, K2, B1),
+    wild_forms(Fs?, Gs?, K2?, Fs1, _, B2),
+    app(B1?, B2?, B12),
+    app(Bd?, B12?, Bd1),
+    wild_schemas(Ss?, Gs?, Ns).
+procedure wild_roles(RoleSpecs?, Sigs?, Integer?, RoleSpecs, Integer, Args).
+wild_roles([], _, K, [], K?, []).
+wild_roles([rs(G, P, M, Kp, N)|Rs], Gs, K, [rs(G?, P?, M?, Kp1?, N?)|Rs1?], K2?, Vs?) :- ground(Gs?) |
+    wild_atoms(Kp?, Gs?, head, K?, Kp1, K1, V1),
+    wild_roles(Rs?, Gs?, K1?, Rs1, K2, V2),
+    app(V1?, V2?, Vs).
+wild_roles([crs(Kd, G, P, M, Kp, N)|Rs], Gs, K, [crs(Kd?, G?, P?, M?, Kp1?, N?)|Rs1?], K2?, Vs?) :- ground(Gs?) |
+    wild_atoms(Kp?, Gs?, head, K?, Kp1, K1, V1),
+    wild_roles(Rs?, Gs?, K1?, Rs1, K2, V2),
+    app(V1?, V2?, Vs).
+%% head: a variable of the schema's head, of an atom a role requires; bound: a variable a quantifier binds, of its anchor.
+WMode ::= head ; bound.
+procedure wild_atoms(Atoms?, Sigs?, WMode?, Integer?, Atoms, Integer, Args).
+wild_atoms([], _, _, K, [], K?, []).
+wild_atoms([A|As], Gs, Md, K, [A1?|As1?], K2?, Vs?) :- ground(Gs?), ground(Md?) |
+    wild_atom(A?, Gs?, Md?, K?, A1, K1, V1),
+    wild_atoms(As?, Gs?, Md?, K1?, As1, K2, V2),
+    app(V1?, V2?, Vs).
+%% An atom with a multiplicity carries no wildcard (programs/gsc/self.glp, multiplicity_wildcard), and is as it is.
+procedure wild_atom(Atom?, Sigs?, WMode?, Integer?, Atom, Integer, Args).
+wild_atom(atom(F, As), Gs, Md, K, atom(F?, As1?), K1?, Vs?) :- ground(F?), ground(As?) |
+    place_kinds(F?, As?, Gs?, Ks),
+    wild_args(As?, Ks?, Md?, K?, As1, K1, Vs).
+wild_atom(times(M, A), _, _, K, times(M?, A?), K?, []).
+wild_atom(rest(M, J, A), _, _, K, rest(M?, J?, A?), K?, []).
+procedure wild_args(Args?, Kinds?, WMode?, Integer?, Args, Integer, Args).
+wild_args([], _, _, K, [], K?, []).
+wild_args([any|As], [Kd|Ks], Md, K, [A?|As1?], K2?, Vs?) :- ground(Md?) |
+    wild_var(Kd?, Md?, K?, A, K1, V1),
+    wild_args(As?, Ks?, Md?, K1?, As1, K2, V2),
+    app(V1?, V2?, Vs).
+wild_args([A|As], [_|Ks], Md, K, [A?|As1?], K1?, Vs?) :- otherwise | wild_args(As?, Ks?, Md?, K?, As1, K1, Vs).
+wild_args([A|As], [], _, K, [A?|As?], K?, []).
+%% The K-th wildcard of a schema as a variable of the kind of its place, '_K': an agent variable at a person's place, a speech-act variable at a speech act's, a value variable at a number's, a real one, in the head, at a real's; a variable over the constants, in the head, at a constant's; and the wildcard still, where its place has no type (wild), or is a community name's or an item's, or, in an anchor, a constant's or a real's (wild_faults).
+procedure wild_var(Kind?, WMode?, Integer?, Arg, Integer, Args).
+wild_var(Kd, Md, K, A?, K1?, Vs?) :- integer(K?) |
+    term_to_string(K?, Kt),
+    string_concat(['_', Kt?], N),
+    wild_made(Kd?, Md?, N?, A, Vs),
+    K1 := K? + 1.
+procedure wild_made(Kind?, WMode?, Constant?, Arg, Args).
+wild_made(peer, _, N, pvar(N?), [pvar(N?)]) :- ground(N?) | true.
+wild_made(speech, _, N, svar(N?), [svar(N?)]) :- ground(N?) | true.
+wild_made(num, _, N, num(N?), [num(N?)]) :- ground(N?) | true.
+wild_made(real, head, N, num(N?), [real(N?)]) :- ground(N?) | true.
+wild_made(real, bound, _, any, []).
+wild_made(name, _, _, any, []).
+wild_made(item, _, _, any, []).
+%% A variable over the constants, const(X) in the head and num(X) in the atom, as the schemas write one (consts_off).
+wild_made(const, head, N, num(N?), [const(N?)]) :- ground(N?) | true.
+wild_made(const, bound, _, any, []).
+wild_made(wild, _, _, any, []).
+%% The conjuncts: one binding a listed role, conjunct([role(I)], ...), with its anchor as it is (3), and the anchors of its condition (2); any other with its anchor's wildcards among the variables it binds.
+procedure wild_conjs(Conjuncts?, Sigs?, Integer?, Conjuncts, Integer, Args).
+wild_conjs([], _, K, [], K?, []).
+wild_conjs([conjunct([role(I)], Bi, A, Phi, CA, CD, Lits)|Cs], Gs, K, [conjunct([role(I?)], Bi?, A?, Phi1?, CA?, CD?, Lits?)|Cs1?], K2?, Vs?) :- ground(Gs?) |
+    wild_form(Phi?, Gs?, K?, Phi1, K1, V1),
+    wild_conjs(Cs?, Gs?, K1?, Cs1, K2, V2),
+    app(V1?, V2?, Vs).
+wild_conjs([conjunct(Xs, Bi, A, Phi, CA, CD, Lits)|Cs], Gs, K, [conjunct(Xs1?, Bi?, A1?, Phi1?, CA?, CD?, Lits?)|Cs1?], K3?, Vs?) :- otherwise, ground(Gs?) |
+    wild_atom(A?, Gs?, bound, K?, A1, K1, V0),
+    wild_twice(V0?, V0a, V0b),
+    app(Xs?, V0a?, Xs1),
+    wild_form(Phi?, Gs?, K1?, Phi1, K2, V1),
+    wild_conjs(Cs?, Gs?, K2?, Cs1, K3, V2),
+    app(V1?, V2?, V12),
+    app(V0b?, V12?, Vs).
+procedure wild_twice(Args?, Args, Args).
+wild_twice(Vs, Vs?, Vs?) :- ground(Vs?) | true.
+procedure wild_forms(Forms?, Sigs?, Integer?, Forms, Integer, Args).
+wild_forms([], _, K, [], K?, []).
+wild_forms([F|Fs], Gs, K, [F1?|Fs1?], K2?, Vs?) :- ground(Gs?) |
+    wild_form(F?, Gs?, K?, F1, K1, V1),
+    wild_forms(Fs?, Gs?, K1?, Fs1, K2, V2),
+    app(V1?, V2?, Vs).
+%% A safe formula with the wildcards of the anchors of its quantifiers among the variables they bind, but of a quantifier that binds a listed role, fforall([role(I)], ...), whose anchor and conclusion are as they are; its constraints as they are; and an atom of it with a wildcard, fa(H, M), the quantifier exists Ws M, Ws the wildcards as variables (wild_fa).
+procedure wild_form(Form?, Sigs?, Integer?, Form, Integer, Args).
+wild_form(fa(H, M), Gs, K, F1?, K1?, Vs?) :-
+    wild_atom(M?, Gs?, bound, K?, M1, K1, V0),
+    wild_twice(V0?, V0a, Vs),
+    wild_fa(V0a?, H?, M1?, F1).
+wild_form(fcons(C), _, K, fcons(C?), K?, []).
+wild_form(fnot(F), Gs, K, fnot(F1?), K1?, Vs?) :- wild_form(F?, Gs?, K?, F1, K1, Vs).
+wild_form(fand(F, G), Gs, K, fand(F1?, G1?), K2?, Vs?) :- ground(Gs?) |
+    wild_form(F?, Gs?, K?, F1, K1, V1),
+    wild_form(G?, Gs?, K1?, G1, K2, V2),
+    app(V1?, V2?, Vs).
+wild_form(for(F, G), Gs, K, for(F1?, G1?), K2?, Vs?) :- ground(Gs?) |
+    wild_form(F?, Gs?, K?, F1, K1, V1),
+    wild_form(G?, Gs?, K1?, G1, K2, V2),
+    app(V1?, V2?, Vs).
+wild_form(fexists(Xs, H, A, F), Gs, K, fexists(Xs1?, H?, A1?, F1?), K2?, Vs?) :- ground(Gs?) |
+    wild_atom(A?, Gs?, bound, K?, A1, K1, V0),
+    wild_twice(V0?, V0a, V0b),
+    app(Xs?, V0a?, Xs1),
+    wild_form(F?, Gs?, K1?, F1, K2, V1),
+    app(V0b?, V1?, Vs).
+wild_form(fforall([role(I)], H, A, F, Ps), Gs, K, fforall([role(I?)], H?, A?, F1?, Ps?), K1?, Vs?) :-
+    wild_form(F?, Gs?, K?, F1, K1, Vs).
+wild_form(fforall(Xs, H, A, F, Ps), Gs, K, fforall(Xs1?, H?, A1?, F1?, Ps1?), K3?, Vs?) :- otherwise, ground(Gs?) |
+    wild_atom(A?, Gs?, bound, K?, A1, K1, V0),
+    wild_twice(V0?, V0a, V0b),
+    app(Xs?, V0a?, Xs1),
+    wild_form(F?, Gs?, K1?, F1, K2, V1),
+    wild_forms(Ps?, Gs?, K2?, Ps1, K3, V2),
+    app(V1?, V2?, V12),
+    app(V0b?, V12?, Vs).
+%% An atom of a safe formula with wildcards, as the quantifier exists Ws (M), its anchor the atom with each wildcard a variable Ws binds: it holds in a state that has an atom M matches, "a variable of its own, standing for some value", and its negation, not M, where the state has none, "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, ... every atom of the state that it matches" (vGLP, Section 5.4, "Speech-act schemas as local specifications"); before, the printed text took the wildcard for a value no atom has, the atom held in no state and its negation in every one.
+procedure wild_fa(Args?, Arg?, Atom?, Form).
+wild_fa([], H, M, fa(H?, M?)).
+wild_fa([V|Vs], H, M, fexists([V?|Vs?], H?, M?, fcons(true))).
+%% What the compiler does not take of a wildcard, the lines saying why ((4), above).
+UPlace  ::= up(Constant, Integer).
+UPlaces ::= [] ; [UPlace | UPlaces].
+procedure wild_faults(QContract?, Lines).
+wild_faults(C, L?) :- ground(C?) |
+    wild_table(C?, Gs),
+    wild_faults1(C?, Gs?, L).
+procedure wild_faults1(QContract?, Sigs?, Lines).
+wild_faults1(C, Gs, L?) :- ground(C?), ground(Gs?) |
+    q_typed_atoms(C?, As),
+    untyped_places(As?, Gs?, Ps0),
+    dedup(Ps0?, Ps),
+    untyped_lines(Ps?, L1),
+    wild_schema_faults(C?, Gs?, L2),
+    lapp(L1?, L2?, L).
+%% The atoms whose predicates the type Atom has: those the roles add, require and forbid, the anchors of the listed roles, and those of the constraints, the conjuncts, but the conditional literals they delete, and the safe formulas; a cleared atom is none.
+procedure q_typed_atoms(QContract?, Atoms).
+q_typed_atoms([], []).
+q_typed_atoms([S|Ss], As?) :- qs_typed(S?, A1), q_typed_atoms(Ss?, A2), app(A1?, A2?, As).
+procedure qs_typed(QSchema?, Atoms).
+qs_typed(schema(_, _, Rs), As?) :- qr_atoms(Rs?, no, As).
+qs_typed(cschema(_, _, _, Rs), As?) :- qr_atoms(Rs?, no, As).
+qs_typed(nschema(_, _, C, Rs), As?) :- qr_atoms(Rs?, no, A1), c_atoms(C?, A2), app(A1?, A2?, As).
+qs_typed(qschema(_, _, _, C, Rs, Cj, Fs), As?) :-
+    qr_atoms(Rs?, no, A1),
+    c_atoms(C?, A2),
+    cj_atoms(Cj?, no, A3),
+    fs_atoms(Fs?, A4),
+    app(A3?, A4?, A34),
+    app(A2?, A34?, A24),
+    app(A1?, A24?, As).
+procedure untyped_places(Atoms?, Sigs?, UPlaces).
+untyped_places([], _, []).
+untyped_places([atom(F, As)|Ms], Gs, Ps?) :- ground(F?), ground(As?), ground(Gs?) |
+    place_kinds(F?, As?, Gs?, Ks),
+    untyped_args(As?, Ks?, F?, 1, P1),
+    untyped_places(Ms?, Gs?, P2),
+    app(P1?, P2?, Ps).
+untyped_places([times(_, A)|Ms], Gs, Ps?) :- untyped_places([A?|Ms?], Gs?, Ps).
+untyped_places([rest(_, _, A)|Ms], Gs, Ps?) :- untyped_places([A?|Ms?], Gs?, Ps).
+procedure untyped_args(Args?, Kinds?, Constant?, Integer?, UPlaces).
+untyped_args([], _, _, _, []).
+untyped_args([any|As], [wild|Ks], F, I, [up(F?, I?)|Ps?]) :- ground(F?), integer(I?) |
+    I1 := I? + 1,
+    untyped_args(As?, Ks?, F?, I1?, Ps).
+untyped_args([_|As], [_|Ks], F, I, Ps?) :- otherwise, integer(I?) |
+    I1 := I? + 1,
+    untyped_args(As?, Ks?, F?, I1?, Ps).
+untyped_args([_|_], [], _, _, []).
+procedure untyped_lines(UPlaces?, Lines).
+untyped_lines([], []).
+untyped_lines([P|Ps], ['%% it has a wildcard at an argument of a predicate to which no other atom of the contract gives a type, so the type of the atoms of a state cannot be formed: a wildcard in an unnegated atom "is a variable of its own, standing for some value" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), and the contract says of what type nowhere; the predicate and the argument, counted after the holder:'|L?]) :-
+    untyped_lines1([P?|Ps?], L).
+procedure untyped_lines1(UPlaces?, Lines).
+untyped_lines1([], []).
+untyped_lines1([up(F, I)|Ps], [T?|L?]) :-
+    term_to_string(F?, Ft),
+    term_to_string(I?, It),
+    call_text('%% the predicate and the argument', [Ft?, It?], T),
+    untyped_lines1(Ps?, L).
+procedure wild_schema_faults(QContract?, Sigs?, Lines).
+wild_schema_faults([], _, []).
+wild_schema_faults([schema(S, _, Rs)|Ss], Gs, L?) :- ground(S?), ground(Gs?) |
+    kept_atoms(Rs?, Ka),
+    wild_resid(Ka?, Gs?, R),
+    resid_lines(R?, S?, L1),
+    wild_schema_faults(Ss?, Gs?, L2),
+    lapp(L1?, L2?, L).
+wild_schema_faults([cschema(S, _, _, Rs)|Ss], Gs, L?) :- ground(S?), ground(Gs?) |
+    kept_atoms(Rs?, Ka),
+    wild_resid(Ka?, Gs?, R),
+    resid_lines(R?, S?, L1),
+    wild_schema_faults(Ss?, Gs?, L2),
+    lapp(L1?, L2?, L).
+wild_schema_faults([nschema(S, _, C, Rs)|Ss], Gs, L?) :- ground(S?), ground(Gs?) |
+    kept_atoms(Rs?, Ka),
+    wild_resid(Ka?, Gs?, R),
+    resid_lines(R?, S?, L1),
+    c_atoms(C?, Ca),
+    atoms_any(Ca?, Cw),
+    count_lines(Cw?, S?, L2),
+    wild_schema_faults(Ss?, Gs?, L3),
+    lapp(L2?, L3?, L23),
+    lapp(L1?, L23?, L).
+wild_schema_faults([qschema(S, _, _, C, Rs, Cj, Fs)|Ss], Gs, L?) :- ground(S?), ground(Gs?), ground(Cj?), ground(Fs?) |
+    kept_atoms(Rs?, Ka),
+    cj_anchors(Cj?, Aa1),
+    forms_anchors(Fs?, Aa2),
+    conj_phis(Cj?, Ph),
+    forms_fas(Ph?, Fa1),
+    forms_fas(Fs?, Fa2),
+    app(Fa1?, Fa2?, Fa),
+    app(Aa2?, Fa?, Aa2f),
+    app(Aa1?, Aa2f?, Aa),
+    app(Ka?, Aa?, Ra),
+    wild_resid(Ra?, Gs?, R),
+    resid_lines(R?, S?, L1),
+    c_atoms(C?, Ca1),
+    wcj_cons(Cj?, Ca2),
+    wforms_cons(Fs?, Ca3),
+    app(Ca2?, Ca3?, Ca23),
+    app(Ca1?, Ca23?, Ca),
+    atoms_any(Ca?, Cw),
+    count_lines(Cw?, S?, L2),
+    cross_listed(Fs?, X),
+    cross_lines(X?, S?, L3),
+    wild_schema_faults(Ss?, Gs?, L4),
+    lapp(L3?, L4?, L34),
+    lapp(L2?, L34?, L24),
+    lapp(L1?, L24?, L).
+procedure kept_atoms(RoleSpecs?, Atoms).
+kept_atoms([], []).
+kept_atoms([R|Rs], As?) :- ground(R?) | rs_lists(R?, _, _, K, _), kept_atoms(Rs?, A2), app(K?, A2?, As).
+%% The anchors of the quantifiers of the conjuncts and their conditions, and of the safe formulas, but of those that bind a listed role.
+procedure cj_anchors(Conjuncts?, Atoms).
+cj_anchors([], []).
+cj_anchors([conjunct([role(_)], _, _, Phi, _, _, _)|Cs], As?) :- form_anchors(Phi?, A1), cj_anchors(Cs?, A2), app(A1?, A2?, As).
+cj_anchors([conjunct(_, _, A, Phi, _, _, _)|Cs], [A?|As?]) :- otherwise | form_anchors(Phi?, A1), cj_anchors(Cs?, A2), app(A1?, A2?, As).
+procedure forms_anchors(Forms?, Atoms).
+forms_anchors([], []).
+forms_anchors([F|Fs], As?) :- form_anchors(F?, A1), forms_anchors(Fs?, A2), app(A1?, A2?, As).
+procedure form_anchors(Form?, Atoms).
+form_anchors(fa(_, _), []).
+form_anchors(fcons(_), []).
+form_anchors(fnot(F), As?) :- form_anchors(F?, As).
+form_anchors(fand(F, G), As?) :- form_anchors(F?, A1), form_anchors(G?, A2), app(A1?, A2?, As).
+form_anchors(for(F, G), As?) :- form_anchors(F?, A1), form_anchors(G?, A2), app(A1?, A2?, As).
+form_anchors(fexists(_, _, A, F), [A?|As?]) :- form_anchors(F?, As).
+form_anchors(fforall([role(_)], _, _, F, Ps), As?) :- form_anchors(F?, A1), forms_anchors(Ps?, A2), app(A1?, A2?, As).
+form_anchors(fforall(_, _, A, F, Ps), [A?|As?]) :- otherwise | form_anchors(F?, A1), forms_anchors(Ps?, A2), app(A1?, A2?, As).
+%% The atoms of the safe formulas that are no anchors, but those of the conclusion of a quantifier that binds a listed role, which are the listed role's (its role's atoms).
+procedure forms_fas(Forms?, Atoms).
+forms_fas([], []).
+forms_fas([F|Fs], As?) :- form_fas(F?, A1), forms_fas(Fs?, A2), app(A1?, A2?, As).
+procedure form_fas(Form?, Atoms).
+form_fas(fa(_, M), [M?]).
+form_fas(fcons(_), []).
+form_fas(fnot(F), As?) :- form_fas(F?, As).
+form_fas(fand(F, G), As?) :- form_fas(F?, A1), form_fas(G?, A2), app(A1?, A2?, As).
+form_fas(for(F, G), As?) :- form_fas(F?, A1), form_fas(G?, A2), app(A1?, A2?, As).
+form_fas(fexists(_, _, _, F), As?) :- form_fas(F?, As).
+form_fas(fforall([role(_)], _, _, F, _), As?) :- form_fas(F?, As).
+form_fas(fforall(_, _, _, F, Ps), As?) :- otherwise | form_fas(F?, A1), forms_fas(Ps?, A2), app(A1?, A2?, As).
+%% The atoms of the constraints inside the conjuncts' conditions and the safe formulas, the anchors of their counts and sums and the atoms of those's conditions.
+procedure wcj_cons(Conjuncts?, Atoms).
+wcj_cons([], []).
+wcj_cons([conjunct(_, _, _, Phi, _, _, _)|Cs], As?) :- wform_cons(Phi?, A1), wcj_cons(Cs?, A2), app(A1?, A2?, As).
+procedure wforms_cons(Forms?, Atoms).
+wforms_cons([], []).
+wforms_cons([F|Fs], As?) :- wform_cons(F?, A1), wforms_cons(Fs?, A2), app(A1?, A2?, As).
+procedure wform_cons(Form?, Atoms).
+wform_cons(fa(_, _), []).
+wform_cons(fcons(C), As?) :- c_atoms(C?, As).
+wform_cons(fnot(F), As?) :- wform_cons(F?, As).
+wform_cons(fand(F, G), As?) :- wform_cons(F?, A1), wform_cons(G?, A2), app(A1?, A2?, As).
+wform_cons(for(F, G), As?) :- wform_cons(F?, A1), wform_cons(G?, A2), app(A1?, A2?, As).
+wform_cons(fexists(_, _, _, F), As?) :- wform_cons(F?, As).
+wform_cons(fforall(_, _, _, F, Ps), As?) :- wform_cons(F?, A1), wforms_cons(Ps?, A2), app(A1?, A2?, As).
+%% Whether an atom of As has the wildcard among its arguments.
+procedure atoms_any(Atoms?, YesNo).
+atoms_any([], no).
+atoms_any([A|As], B?) :- atom_any(A?, B1), atoms_any(As?, B2), or(B1?, B2?, B).
+procedure atom_any(Atom?, YesNo).
+atom_any(atom(_, As), B?) :- mem(any, As?, B).
+atom_any(times(_, A), B?) :- atom_any(A?, B).
+atom_any(rest(_, _, A), B?) :- atom_any(A?, B).
+%% Whether a required atom or an anchor still has a wildcard, at a place that has a type: one the term form has no variable of (wild_made).
+procedure wild_resid(Atoms?, Sigs?, YesNo).
+wild_resid([], _, no).
+wild_resid([atom(F, As)|Ms], Gs, B?) :- ground(F?), ground(As?), ground(Gs?) |
+    place_kinds(F?, As?, Gs?, Ks),
+    resid_args(As?, Ks?, B1),
+    wild_resid(Ms?, Gs?, B2),
+    or(B1?, B2?, B).
+wild_resid([times(_, _)|Ms], Gs, B?) :- wild_resid(Ms?, Gs?, B).
+wild_resid([rest(_, _, _)|Ms], Gs, B?) :- wild_resid(Ms?, Gs?, B).
+procedure resid_args(Args?, Kinds?, YesNo).
+resid_args([], _, no).
+resid_args([any|As], [wild|Ks], B?) :- resid_args(As?, Ks?, B).
+resid_args([any|_], [K|_], yes) :- otherwise, ground(K?) | true.
+resid_args([_|As], [_|Ks], B?) :- otherwise | resid_args(As?, Ks?, B).
+resid_args([_|_], [], no).
+procedure resid_lines(YesNo?, Constant?, Lines).
+resid_lines(no, _, []).
+resid_lines(yes, S, ['%% it has a wildcard, in an atom a role requires, in the anchor of a quantifier or in an atom of a safe formula, at an argument that is a community name or an item, or, in an anchor or an atom of a safe formula, a constant or a real: such a wildcard "is a variable of its own, standing for some value" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), and the compiler writes it as an agent, a speech-act or a value variable, over numbers, reals or constants in an atom a role requires and over numbers in an anchor: the schemas\' term form has no variable over community names or items, and a variable a quantifier binds is not carried as a constant or a real:', T?]) :-
+    ground(S?) | said('%% the schema', S?, T).
+procedure count_lines(YesNo?, Constant?, Lines).
+count_lines(no, _, []).
+count_lines(yes, S, ['%% it has a wildcard in the anchor of a count or a sum, or in an atom of its condition: a constraint is over "the count and the sum of the instances of a quantifier, each instance counted as many times as its anchor\'s multiplicity" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), and the paper does not say whether two atoms that differ at the wildcard are one instance or two:', T?]) :-
+    ground(S?) | said('%% the schema', S?, T).
+%% Whether a safe formula across roles binds a listed role by a quantifier whose anchor has a wildcard.
+procedure cross_listed(Forms?, YesNo).
+cross_listed([], no).
+cross_listed([fforall([role(I)], H, A, F, Ps)|Fs], B?) :- ground(I?), ground(H?), ground(A?), ground(F?), ground(Ps?) |
+    atom_any(A?, W),
+    local # form_cross(fforall([role(I?)], H?, A?, F?, Ps?), X),
+    and(W?, X?, B1),
+    cross_listed(Fs?, B2),
+    or(B1?, B2?, B).
+cross_listed([_|Fs], B?) :- otherwise | cross_listed(Fs?, B).
+procedure cross_lines(YesNo?, Constant?, Lines).
+cross_lines(no, _, []).
+cross_lines(yes, S, ['%% it has a wildcard in the anchor of a quantifier that binds a listed role in a safe formula across roles, of the part\'s condition, where each participant reads the atoms of its state the formula\'s atoms match: vGLP Section 5.4 does not say what a reading holds of an anchor with a wildcard, and the compiler does not carry it:', T?]) :-
+    ground(S?) | said('%% the schema', S?, T).
+%% Whether a listed role's anchor has a wildcard among its arguments ((3), above): the shared text then prints vals_meet, and compares the anchor's other arguments by it (wild_shared).
+procedure listed_wild(Contract?, YesNo).
+listed_wild([], no).
+listed_wild([schema(_, _, Rs)|Ss], B?) :- roles_lwild(Rs?, B1), listed_wild(Ss?, B2), or(B1?, B2?, B).
+listed_wild([cschema(_, _, _, Rs)|Ss], B?) :- roles_lwild(Rs?, B1), listed_wild(Ss?, B2), or(B1?, B2?, B).
+listed_wild([nschema(_, _, _, Rs)|Ss], B?) :- roles_lwild(Rs?, B1), listed_wild(Ss?, B2), or(B1?, B2?, B).
+procedure roles_lwild(RoleSpecs?, YesNo).
+roles_lwild([], no).
+roles_lwild([R|Rs], B?) :- kind_args(R?, As), mem(any, As?, B1), roles_lwild(Rs?, B2), or(B1?, B2?, B).
+%% A line wild_only(L) is printed as L where a listed role's anchor has a wildcard, and left out where none has, and a line wildless_only(L) the other way about, so that a platform with no such anchor prints what it printed before.
+procedure wild_shared(Lines?, YesNo?, Lines).
+wild_shared([], _, []).
+wild_shared([wild_only(L)|Ls], yes, [L?|R?]) :- wild_shared(Ls?, yes, R).
+wild_shared([wild_only(_)|Ls], no, R?) :- wild_shared(Ls?, no, R).
+wild_shared([wildless_only(_)|Ls], yes, R?) :- wild_shared(Ls?, yes, R).
+wild_shared([wildless_only(L)|Ls], no, [L?|R?]) :- wild_shared(Ls?, no, R).
+wild_shared([L|Ls], W, [L?|R?]) :- otherwise | wild_shared(Ls?, W?, R).
 procedure decl_reflexive(Declared?, Preds).
 decl_reflexive([], []).
 decl_reflexive([_|_], []).
@@ -965,9 +1759,11 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     env_any(Ev?, En),
     worded_stands(W?, Wsd),
     stands_any(Wsd?, Sd),
+    listed_wild(C?, Wl),
+    wild_shared(Fx?, Wl?, Fx00),
     worded_lx(W?, Lx9),
     lx_consts(Lx9?, Kn),
-    const_lines(Fx?, Kn?, Fx0),
+    const_lines(Fx00?, Kn?, Fx0),
     shared_lines(Fx0?, Gd?, Dy?, En?, Sd?, Fx1),
     proved_rules(C?, Rl),
     worded_lx(W?, Lx7),
@@ -1198,7 +1994,9 @@ env_lines([P|Ps], C, Nt, ['', '%% The atoms of the environment predicates the co
     nt_atoms(Nt?, As1),
     app(As0?, As1?, As),
     atom_sigs(As?, Gs0),
-    dedup(Gs0?, Gs1),
+    wild_sigs(Gs0?, Gs00),
+    unwild(Gs00?, Gs01),
+    dedup(Gs01?, Gs1),
     sigs_of([P?|Ps?], Gs1?, Gs),
     env_atom_lines(Gs?, L).
 procedure sigs_of(Preds?, Sigs?, Sigs).
@@ -1249,7 +2047,8 @@ reader_vals([K|Ks], I, [W?|Ws?]) :- ground(K?), integer(I?) |
     reader_vals(Ks?, I1?, Ws).
 
 %% The type of the machine states, List(Atom), in the type of the views, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) in the shared text (vGLP 12f629d, Section 5.4, "The compilation": "the compilation defines Output as the type of the views", a view carrying "its own key k, the machine state s of its app state, the persons K it knows and the approvals A its person made that are pending"): a machine state is a multiset of the contract's atoms, written as a list, and Atom is the union of the contract's predicates at their argument types: an argument is of the type Peer, a person, where the schemas write a role, a party variable or a name term, and of the type Speech, a speech act, where they write a speech-act variable or a signed term; Atom has one alternative for each predicate and argument types the schemas write it with, in order of first occurrence.  The agent holds an atom as g(Name, Vals), each value p(Peer) or s(Speech), and writes it on the output as the contract writes it: atom_of(g(friend, [p(V1)]), shown(friend(V1?))), one clause per alternative.
-Kind  ::= peer ; speech ; name ; num ; real ; item ; const.
+%% wild is the kind of a wildcard's place before it takes the type another atom of the contract gives that place (wild_sigs).
+Kind  ::= peer ; speech ; name ; num ; real ; item ; const ; wild.
 Kinds ::= [] ; [Kind | Kinds].
 Sig   ::= sig(Constant, Kinds).
 Sigs  ::= [] ; [Sig | Sigs].
@@ -1261,8 +2060,10 @@ atom_parts(C, Nt, Lx, ['', '%% The atoms of the contract at their argument types
     app(As1?, As2?, As12),
     app(As0?, As12?, As),
     atom_sigs(As?, Gs0),
-    peer_sigs_all(Gs0?, Gs01),
-    dedup(Gs01?, Gs1),
+    wild_sigs(Gs0?, Gs00),
+    peer_sigs_all(Gs00?, Gs01),
+    unwild(Gs01?, Gs02),
+    dedup(Gs02?, Gs1),
     drop_today(Gs1?, Gs),
     atom_parts1(Gs?, L).
 %% A predicate has one type at each argument: a variable a quantifier binds, written as a speech-act variable, at an argument where another atom of the contract writes a person, is a person, as G1 of "Bob is a guardian of no one", not exists G1 has_guardian(Bob, G1), beside has_guardian(Carol, Alice); so a signature's speech at a place where another signature of its predicate and arity has peer is peer, and the type Atom has one alternative of that predicate (TGLP: the alternatives of a union have distinct functors).
@@ -1390,8 +2191,8 @@ arg_kinds([num(_)|Xs], [num|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([real(_)|Xs], [real|Ks?]) :- arg_kinds(Xs?, Ks).
 %% A variable over the constants (const_atoms), of the kind const, as a constant the contract names is: its place is of the type Constant, and the agent holds its value as v(C).
 arg_kinds([const(_)|Xs], [const|Ks?]) :- arg_kinds(Xs?, Ks).
-%% The wildcard is in no atom of a state, a cleared atom being none (rs_atoms); the clause covers the type and is never reached.
-arg_kinds([any|Xs], Ks?) :- arg_kinds(Xs?, Ks).
+%% The wildcard's place is of the type the contract gives that place of the predicate in another atom: it is wild here, and takes that type from the signatures of the predicate's other atoms (wild_sigs), a predicate having one type at each argument; a wildcard a role requires, and one in an anchor, is by then a variable of its place's kind (wild_schemas), so the wildcards met here are those of the atoms a role forbids, of the anchors of the listed roles and of the atoms of the safe formulas.
+arg_kinds([any|Xs], [wild|Ks?]) :- arg_kinds(Xs?, Ks).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 arg_kinds([ilist(_, _)|Xs], Ks?) :- arg_kinds(Xs?, Ks).
 %% Atom ::= the alternatives, separated by ;, each the predicate applied to its argument types, a predicate of no argument a constant.
@@ -1417,6 +2218,8 @@ kind_types([num|Ks], ['Integer'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([real|Ks], ['Real'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([item|Ks], ['Utterance'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([const|Ks], ['Constant'|Ts?]) :- kind_types(Ks?, Ts).
+%% No signature printed has a place wild (unwild); the clause covers the type.
+kind_types([wild|Ks], Ts?) :- kind_types(Ks?, Ts).
 %% atom_of(g(f, [p(V1), s(V2)]), shown(f(V1?, V2?))), one clause per alternative of Atom, and a last clause on any other atom, which covers the type GAtom and is never reached: the agent holds only atoms the contract's schemas add.
 procedure atom_of_lines(Sigs?, Lines).
 atom_of_lines([], ['atom_of(_, unshown) :- otherwise | true.']).
@@ -1449,6 +2252,8 @@ kind_val(num, N, W?) :- call_text(n, [N?], W).
 kind_val(real, N, W?) :- call_text(r, [N?], W).
 kind_val(item, N, W?) :- call_text(i, [N?], W).
 kind_val(const, N, W?) :- call_text(v, [N?], W).
+%% No signature printed has a place wild (unwild); the clause covers the type.
+kind_val(wild, N, N?).
 
 %% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]), and, for each variable local to a role, agent, speech-act or numeric, b(pvar(X), lv(s, X)), b(svar(X), lv(s, X)) or b(num(X), lv(s, X)): the schema-binding does not bind it, and its value in the binding stands for the variable, which the state of the person in its role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state"; the shared text, dom_bindings).
 procedure binding_lines(Contract?, NumInfos?, Lines).
