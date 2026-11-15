@@ -1,10 +1,10 @@
 # A run of the cascade on DAO
 
-- Contract: `DAO` (`dao` to the checker), its owner's two files `programs/gce/dao/DAO.txt` and `programs/gce/dao/DAO.glp`, copied here as they stood at `bf297941`.
+- Contract: `DAO` (`dao` to the checker), its owner's two files `programs/gce/dao/DAO.txt` and `programs/gce/dao/DAO.glp`, copied here as they stood at `b9c3aaf8`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gce/dao/DAO.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gce/dao/DAO.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 17:31 UTC by `cascade.sh dao`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `bf297941`; each artefact's source and tool:
+- Run on 2026-11-15 18:26 UTC by `cascade.sh dao`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `b9c3aaf8`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
