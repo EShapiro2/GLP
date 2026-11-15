@@ -275,6 +275,9 @@ stand_act(open_place, makes(encounter)).
 stand_act(close_place, withdraws(encounter)).
 stand_act(_, plain) :- otherwise | true.
 
+procedure schema_consents(Constant?, Ints).
+schema_consents(_, []) :- otherwise | true.
+
 procedure schema_locals(Constant?, Locals).
 schema_locals(_, []) :- otherwise | true.
 
@@ -837,7 +840,14 @@ dispatch_hello(no, _, _, Th, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, S
 
 procedure greet_unless(YesNo?, Peer?, Proposal?, St?, Stream(Trigger), Stream(Trigger)?, St, Stream(Ask(Question))).
 greet_unless(yes, _, _, St, Ans1?, Ans1, St?, []).
-greet_unless(no, P, N, St, Ans?, Ans1, St?, D?) :- ground(P?), ground(N?), ground(St?) | st_id(St?, Me), st_ms(St?, S), name_class(N?, S?, C), question_words(C?, Me?, Ws), greet_whole(P?, N?, Ws?, R, D), merge(R?, Ans1?, Ans).
+greet_unless(no, P, N, St, Ans?, Ans1, St?, D?) :- ground(P?), ground(N?), ground(St?) | st_id(St?, Me), st_ms(St?, S), name_class(N?, S?, C), greet_at(C?, Me?, P?, N?, R, D), merge(R?, Ans1?, Ans).
+
+procedure greet_at(Class?, Peer?, Peer?, Proposal?, Stream(Trigger), Stream(Ask(Question))).
+greet_at(C, Me, P, N, R?, D?) :- ground(C?), ground(Me?) | question_words(C?, Me?, Ws), binding_of(C?, Nm, Bn), consents_me(Nm?, Bn?, Me?, Cs), greet_or_consent(Cs?, P?, N?, Ws?, R, D).
+
+procedure greet_or_consent(YesNo?, Peer?, Proposal?, List(Word)?, Stream(Trigger), Stream(Ask(Question))).
+greet_or_consent(no, P, N, Ws, R?, D?) :- greet_whole(P?, N?, Ws?, R, D).
+greet_or_consent(yes, _, N, _, [greeted(N?)], []).
 
 procedure intro_cond(Peer?, St?, YesNo).
 intro_cond(Q, St, R?) :- ground(Q?), ground(St?) | st_id(St?, Id), st_isent(St?, ISe), same(Q?, Id?, S1), mem(Q?, ISe?, S2), known_st(Q?, St?, S3), or(S1?, S2?, S12), or(S12?, S3?, S), neg(S?, R).
@@ -1666,7 +1676,13 @@ mine_of(yes, Rr, K, mine(Rr?, K?)).
 mine_of(no, _, _, notmine).
 
 procedure asked_by(Attempt?, Peer?, YesNo).
-asked_by(At, Id, B?) :- ground(At?), ground(Id?) | attempt_id(At?, P), attempt_class(At?, C), binding_of(C?, Nm, Bn), marked_people(Nm?, Bn?, G), mem(Id?, G?, In), same(Id?, P?, Me), neg(Me?, NotMe), and(In?, NotMe?, B).
+asked_by(At, Id, B?) :- ground(At?), ground(Id?) | attempt_id(At?, P), attempt_class(At?, C), binding_of(C?, Nm, Bn), asked_at(Nm?, Bn?, Id?, P?, B).
+
+procedure asked_at(Constant?, Binding?, Peer?, Peer?, YesNo).
+asked_at(Nm, Bn, Id, P, B?) :- ground(Nm?), ground(Bn?), ground(Id?) | marked_people(Nm?, Bn?, G), mem(Id?, G?, In), same(Id?, P?, Me), neg(Me?, NotMe), consents_me(Nm?, Bn?, Id?, Cs), neg(Cs?, Asks), and(In?, NotMe?, B0), and(B0?, Asks?, B).
+
+procedure consents_me(Constant?, Binding?, Peer?, YesNo).
+consents_me(Nm, Bn, Me, B?) :- ground(Nm?), ground(Bn?), ground(Me?) | schema_consents(Nm?, Is), persons_of(Is?, Bn?, Ps), mem(Me?, Ps?, B).
 
 procedure answer_effect(YesNo?, Attempt?, St?, St).
 answer_effect(YN, At, St, St1?) :- ground(St?) | st_app(St?, Ap), answer_app(YN?, At?, Ap?, Ap1), set_app(St?, Ap1?, St1).
