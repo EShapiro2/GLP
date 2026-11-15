@@ -1,0 +1,17 @@
+% Written by tools/expand.py from rev/; do not edit.
+STAY: Grassroots Stays
+An *identity* is a unique key pair.
+A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice.
+Alice, Bob and Carol are persons. A party to a contract must have an identity. Alice and Bob are persons.
+GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GC:1. ■ Issue: Alice may issue Alice-coins.
+GC:2. ■ Swap: Alice and Bob, who know each other, may jointly swap coins they hold.
+GC:3. ■ Pay: Alice may pay Bob-coins she holds to Bob, whom she knows.
+GC:4. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
+GC:5. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+STAY:1. ◆ List place: Alice, who can host guests at a place, may list it under a new name of hers.
+STAY:2. ■ Book: Bob, who knows Alice, may book a stay at a place of Alice's on a night later than the current date, for a price Bob pays in Alice-coins, with the consent of Alice; a place may be booked once a night.
+STAY:3. ■ Cancel: Before the night, Alice may cancel a stay, paying Bob back its price in Alice-coins.
+STAY:4. ■ Review: After the night has come, Bob may review his stay, once; Alice keeps the review.

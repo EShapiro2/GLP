@@ -127,6 +127,11 @@ def load_state(papers_dir):
 def key_of(owner_line):
     """The paper the % Owner line of a contract names, by its key in BY_DIR, or None."""
     m = re.search(r'/Grassroots/([A-Za-z0-9_-]+)/', owner_line or '')
+    if m and m.group(1) in BY_DIR:
+        return m.group(1)
+    # A contract adopted from the Calculus may name its paper after its
+    # project, in parentheses: '% Owner: Currencies (GC).'
+    m = re.match(r'% Owner:\s*[A-Za-z0-9_-]+\s*\(([A-Za-z0-9_-]+)\)', owner_line or '')
     return m.group(1) if m and m.group(1) in BY_DIR else None
 
 

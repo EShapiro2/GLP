@@ -1,0 +1,430 @@
+\iffalse
+establish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+identity
+}
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+acquaint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+introduce
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+shelve
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+shelved
+}
+(
+Tome
+)
+,
+\mathit{
+shelf
+}
+(
+Tome
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+shelved
+}
+(
+Tome
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+lend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+shelf
+}
+(
+Tome
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+borrowed
+}
+(
+Tome
+,
+\Alice
+,
+Day
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+today
+}
+(
+Today
+)
+,
+\mathit{
+shelf
+}
+(
+Tome
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+Day
+>
+Today
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+return
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+borrowed
+}
+(
+Tome
+,
+\Bob
+,
+Day
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+shelf
+}
+(
+Tome
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+borrowed
+}
+(
+Tome
+,
+\Bob
+,
+Day
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}

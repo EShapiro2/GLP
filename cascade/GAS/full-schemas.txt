@@ -1,7 +1,8 @@
 GAS: Grassroots App Store (expanded schemas)
 GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
-GKK:1+GnW:3 ■ Establish: identity(Alice), knows(Alice,Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:0 - | Reflexive: x knows y.
+GKK:1+GnW:3 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2+GnW:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
 GKK:3+GnW:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
@@ -23,21 +24,21 @@ GPD:1 ◆ | Carol attests that its schemas say what its clauses say, that it is 
 GPD:2 ■ | Developer Trust.
 GPD:2 ■ Trust: trusts_developer(Alice,Carol) <- knows(Alice,Carol), ~trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
 GPD:2 ■ Untrust: ~trusts_developer(Alice,Carol) <- trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
-GPD:3 ■ Offer: program(Alice,Prog,Dave) <- program(Carol,Prog,Dave), friend(Carol,Alice), friend(Alice,Carol) guarded by Carol possibly Alice=Carol, Alice=Dave, Carol=Dave.
+GPD:3 ■ Offer: program(Alice,Prog@Carol,Dave) <- program(Carol,Prog,Dave), friend(Carol,Alice), friend(Alice,Carol) guarded by Carol possibly Alice=Carol, Alice=Dave, Carol=Dave.
 GPD:3 ■ | Carol offers it by forwarding it to Alice.
 GPD:4 ■ Install own: installed(Alice,Prog,Alice) <- program(Alice,Prog,Alice), ~installed(Alice,Prog,Alice) guarded by Alice.
 GPD:4 ■ Install: installed(Alice,Prog,Carol) <- program(Alice,Prog,Carol), trusts_developer(Alice,Carol), ~installed(Alice,Prog,Carol) guarded by Alice possibly Alice=Carol.
-GPD:5 ■ Invite: program(Bob,Prog,Carol), installed(Bob,Prog,Carol), participant(Alice,Prog,Carol,Bob), participant(Bob,Prog,Carol,Alice) <- friend(Alice,Bob), friend(Bob,Alice), installed(Alice,Prog,Carol), trusts_developer(Bob,Carol) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+GPD:5 ■ Invite: program(Bob,Prog@Alice,Carol), installed(Bob,Prog@Alice,Carol), participant(Alice,Prog,Carol,Bob), participant(Bob,Prog,Carol,Alice) <- friend(Alice,Bob), friend(Bob,Alice), installed(Alice,Prog,Carol), trusts_developer(Bob,Carol) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
 GPD:5 ■ | Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
 GPD:6 ■ Leave: ~installed(Alice,Prog,Carol), ~participant(Alice,Prog,Carol,_), ~participant(_,Prog,Carol,Alice) <- installed(Alice,Prog,Carol) guarded by Alice possibly Alice=Carol.
 GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
-GnW:1 ■ Enter: identity(Carol), knows(Carol,Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
+GnW:1 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.
 GnW:2 ■ | Guardian decisions.
-GnW:2 ■ Make guardian: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by guardians(Carol), Bob.
+GnW:2 ■ Make guardian: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), has_guardian(Carol,Alice), friend(Bob,Alice), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by guardians(Carol), Bob.
 GnW:2 ■ Resign: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by Bob.
-GnW:2 ■ End guardian: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by guardians(Carol).
+GnW:2 ■ End guardian: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by guardians(Carol,-Bob).
 GnW:2 ■ Guardian unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- friend(Bob,Carol), friend(Carol,Bob), guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by Bob.
 GnW:2 ■ | Carol may not end a friendship with her guardian.
 GnW:3 ■ | Ward and person.
@@ -58,9 +59,9 @@ GAS:0 - | A *store* is a service holding a list of programs. Alice *trusts* a st
 GAS:0 - | Alice, Bob and Carol are persons, Dave a service, Prog a program.
 GAS:1 ■ Open store: store(Dave) <- guardian(Carol,Dave), ~store(Dave) guarded by Carol.
 GAS:2 ○ | Listing.
-GAS:2 ○ List: lists_program(Dave,Prog,Bob) <- guardian(Carol,Dave), store(Dave), trusts_developer(Carol,Bob), ~lists_program(Dave,Prog,Bob) guarded by Carol.
+GAS:2 ○ List: lists_program(Dave,Prog,Bob), listing_signed(Dave,Prog,Bob,Carol) <- guardian(Carol,Dave), store(Dave), trusts_developer(Carol,Bob), program(Carol,Prog,Bob), ~lists_program(Dave,Prog,Bob) guarded by Carol.
 GAS:2 ○ | Carol lists it after adding her signature to its signatures.
-GAS:2 ○ Delist: ~lists_program(Dave,Prog,Bob) <- guardian(Carol,Dave), lists_program(Dave,Prog,Bob) guarded by Carol.
+GAS:2 ○ Delist: ~lists_program(Dave,Prog,Bob), ~listing_signed(Dave,Prog,Bob,_) <- guardian(Carol,Dave), lists_program(Dave,Prog,Bob) guarded by Carol.
 GAS:2 ○ | Carol will delist it if she ceases to trust Bob as a developer.
 GAS:3 ■ | Store trust.
 GAS:3 ■ Trust store: trusts_store(Alice,Dave) <- store(Dave), guardian(Carol,Dave), knows(Alice,Carol), knows(Alice,Dave), ~trusts_store(Alice,Dave) guarded by Alice.

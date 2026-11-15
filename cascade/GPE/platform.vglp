@@ -78,12 +78,18 @@ atom_of(g(nearby, [p(V1)]), shown(nearby(V1?)))
 .
 atom_of(_, unshown) :- otherwise | true.
 
+%% The atoms of the environment predicates the contract declares, given when the platform is deployed and held from startup (vGLP, Section 5.4, "Speech-act schemas as local specifications").
+procedure env_atom(Atom?, GAtoms).
+env_atom(nearby(V1), [g(nearby, [p(V1?)])])
+.
+env_atom(_, []) :- otherwise | true.
+
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(open_place, [], [rs(guarded, [atom(open_place, [])], [], [atom(identity, [])], [atom(open_place, [])])]), schema(close_place, [], [rs(guarded, [], [atom(open_place, [])], [atom(identity, [])], [])]), schema(encounter, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(open_place, [], [rs(guarded, [atom(open_place, [])], [], [atom(identity, [])], [atom(open_place, [])])]), schema(close_place, [], [rs(guarded, [], [atom(open_place, [])], [atom(identity, [])], [])]), schema(encounter, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [atom(knows, [role(1)])])])])
 .
 
 procedure schema_entry(Constant?, Schema).
-schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]))
+schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]))
 .
 schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]))
 .
@@ -93,7 +99,7 @@ schema_entry(open_place, schema(open_place, [], [rs(guarded, [atom(open_place, [
 .
 schema_entry(close_place, schema(close_place, [], [rs(guarded, [], [atom(open_place, [])], [atom(identity, [])], [])]))
 .
-schema_entry(encounter, schema(encounter, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [])]))
+schema_entry(encounter, schema(encounter, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [atom(knows, [role(1)])])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -152,7 +158,7 @@ procedure schema_locals(Constant?, Locals).
 schema_locals(_, []) :- otherwise | true.
 
 procedure reflexive_preds(Preds).
-reflexive_preds([])
+reflexive_preds([knows])
 .
 
 procedure introduction_preds(Preds).
@@ -339,7 +345,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("GPE: Grassroots Physical Encounters\nGPE extends GKK (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).\nA person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is.\nAlice and Bob are persons.\n1. ■ Open place: Alice may declare the place she is in open. Close place: Alice may close it.\n2. ■ Encounter: Alice and Bob, nearby each other, who have both declared the place open, may jointly come to know each other.", with([schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(open_place, ['Alice'], [], [rs(guarded, [atom(open_place, [])], [], [atom(identity, [])], [atom(open_place, [])])]), schema(close_place, ['Alice'], [], [rs(guarded, [], [atom(open_place, [])], [atom(identity, [])], [])]), schema(encounter, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [])])], pragmas([list("Contacts", [knows]), list("Nearby", [nearby])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(open_place, "Open place", [], none, "Nearby", by([1])), act(close_place, "Close place", [], none, "Nearby", by([1]))], [standing(encounter, open_place, close_place)], look("📶", "network"), version(1, 1))))
+contract("GPE: Grassroots Physical Encounters\nGPE extends GKK (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).\nA person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is.\nAlice and Bob are persons.\n1. ■ Open place: Alice may declare the place she is in open. Close place: Alice may close it.\n2. ■ Encounter: Alice and Bob, nearby each other, who have both declared the place open, may jointly come to know each other.", with(environment([nearby], reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(open_place, ['Alice'], [], [rs(guarded, [atom(open_place, [])], [], [atom(identity, [])], [atom(open_place, [])])]), schema(close_place, ['Alice'], [], [rs(guarded, [], [atom(open_place, [])], [atom(identity, [])], [])]), schema(encounter, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(nearby, [role(2)]), atom(open_place, [])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(nearby, [role(1)]), atom(open_place, [])], [atom(knows, [role(1)])])])])), pragmas([list("Contacts", [knows]), list("Nearby", [nearby])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(open_place, "Open place", [], none, "Nearby", by([1])), act(close_place, "Close place", [], none, "Nearby", by([1]))], [standing(encounter, open_place, close_place)], look("📶", "network"), version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -609,8 +615,11 @@ ApprovalRes ::= approval_for(Attempt) ; noapproval.
 %% When it starts, its view is written on the output: its own key, the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
 %% Where the contract requires the day, the agent reads also the calendar, a stream of dates the device writes, one a day, merged with its triggers (vGLP, Section 5.4, "The compilation": "the fair merge ... of the answers to its request questions, the messages arriving on the network, the answers to its approval questions, its own triggers and, where the contract requires the day, the calendar").
 %% Where the contract declares environment predicates other than the day, the agent takes, when the platform is deployed, their atoms, written as the contract writes them, List(Atom), and holds them in its machine state from startup, its first view showing them ("An environment predicate is the day, by the calendar, or a value the contract declares and does not fix, as BCC's f and GFF-FR's d: given when the platform is deployed, held from startup", vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "its value is given when the platform is deployed, and the compiled agent holds the atom from startup").
-exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
-agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?]) :- ground(Id?) |
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?).
+agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?)|Thr?], Env) :- ground(Id?), ground(Env?) |
+    env_atoms(Env?, G0),
+    env_atoms(Env?, G1),
+    atoms_of(G1?, V0),
     tabs(Ts),
     request(Rq),
     tag_net(NetIn?, Nt),
@@ -618,7 +627,11 @@ agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?]) :- ground(Id?) |
     merge(M1?, Ans?, M2),
     merge(M2?, [own|Ow?], In),
     agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [],
-        st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).
+        st(Id?, app(G0?, 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).
+%% The atoms of the environment predicates among those given at deployment (env_atom, printed from the contract).
+procedure env_atoms(List(Atom)?, GAtoms).
+env_atoms([], []).
+env_atoms([A|As], G?) :- env_atom(A?, G1), env_atoms(As?, G2), app(G1?, G2?, G).
 
 %% A request question: its question, of the request type Request?, takes the
 %% person's one request, put up once it is made, of a type with the alternative propose(N) for the request name N of each guarded part (vGLP d433f71, Section 5.4, "The compilation"), so that every agent of a contract with a guarded part asks a request question when it starts and the next when it reads the answer to the last; a refresh is no request but a grant addressed to no construct, on which the dispatcher has every construct draw again what it last drew (Section 6.3), and the agent writes nothing on it.

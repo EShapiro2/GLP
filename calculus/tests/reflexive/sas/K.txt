@@ -1,0 +1,6 @@
+K: Base
+Vocabulary: x knows y = knows(x,y); x has noted z = noted(x,z).
+After x and y meet: x knows y and y knows x.
+K:0 - | Alice and Bob are persons.
+K:0 - | Reflexive: x knows y.
+K:1 ■ Meet: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.

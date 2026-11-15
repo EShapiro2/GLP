@@ -1,0 +1,27 @@
+GDO-L: Grassroots Directed Overlay with Labels (flat text)
+GKK:0 - | An *identity* is a unique key pair.
+GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
+GKK:0 - | Reflexive: x knows y.
+GKK:1 ○ Establish: Alice may Alice has an identity, provided not Alice has an identity.
+GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice.
+GKK:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice and Alice knows Carol.
+GSG:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+GSG:0 - | Alice and Bob are persons.
+GSG:1+GDO-L:4 ■ Befriend: Alice and Bob may jointly Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has a Bob-pointer to Bob and Bob has an Alice-pointer to Alice, provided Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
+GSG:1 ○ | Alice and Bob will become friends only if they trust each other.
+GSG:2+GDO-L:4 ■ Unfriend: Alice may no longer Alice counts Bob as a friend, no longer Bob counts Alice as a friend, no longer Alice has a Bob-pointer to Bob and no longer Bob has an Alice-pointer to Alice.
+GSG:3 ○ | Loss of Trust.
+GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+GDO:0 - | Alice, Bob and Carol are persons.
+GDO:1 ■ Point friend: Alice may Alice points to Bob, provided Alice counts Bob as a friend, Bob counts Alice as a friend and not Alice points to Bob.
+GDO:2 ■ Point transitive: Alice may Alice points to Carol, provided Alice knows Carol, Alice points to Bob, Bob points to Carol and not Alice points to Carol.
+GDO:3 ■ Unpoint: Alice may no longer Alice points to Bob.
+GDO-L:0 - | A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice.
+GDO-L:0 - | Alice, Bob, Carol, Dave and Erin are persons, Erin is possibly any of the others; in clause 2 Carol is possibly Dave.
+GDO-L:1 ■ Labeled point friend: Alice may Alice has a Dave-pointer to Bob, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Bob has a Dave-pointer to Erin and not Alice has a Dave-pointer to Bob. Possibly one: Alice=Erin, Bob=Erin, Dave=Erin.
+GDO-L:2 ■ Labeled point transitive: Alice may Alice has a Dave-pointer to Carol, provided Alice knows Carol, Alice has a Dave-pointer to Bob, Bob has a Dave-pointer to Carol and not Alice has a Dave-pointer to Carol. Possibly one: Carol=Dave.
+GDO-L:2 ■ Labeled point transitive friend: Alice may Alice has a Dave-pointer to Carol, provided Alice knows Carol, Alice counts Bob as a friend, Bob counts Alice as a friend, Bob has a Dave-pointer to Carol and not Alice has a Dave-pointer to Carol. Possibly one: Carol=Dave.
+GDO-L:3 ■ Labeled unpoint: Alice may no longer Alice has a Dave-pointer to Carol.
+GDO-L:3 ■ Labeled unpoint self: Alice may no longer Alice has a Dave-pointer to Dave, provided not Alice counts Dave as a friend.
+GDO-L:4 ■ | Friend pointers.

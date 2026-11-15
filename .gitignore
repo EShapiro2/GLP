@@ -28,3 +28,6 @@ glp_multiagent/assets/glp/
 
 ## A run of sGLP's harness of a canonical platform, while it lasts (programs/sglp/cva/run.sh)
 programs/sglp/runs/
+
+# Python byte code, written when the Calculus tools run (Section CALC, cascade.sh)
+__pycache__/

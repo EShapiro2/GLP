@@ -1,5 +1,5 @@
 GD-S: Separating GD
-Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity.
+Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity. Reflexive: x knows y.
 Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
 Of GD: Alice, Bob and Carol are persons.
 Of GD-S: Alice, Bob and Carol are persons.
@@ -9,7 +9,7 @@ GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob,
 GSG:1, GD-S:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice has not declared distrust of Bob and Bob has not declared distrust of Alice. Alice and Bob will become friends only if they trust each other.
 GSG:2. ■ Unfriend: Alice may end her friendship with Bob.
 GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
-GD:1. ■ Distrust: Alice may declare distrust of Carol, provided Alice knows Carol and Alice and Carol are not friends. Distrust friend: Alice may declare distrust of her friend Carol.
+GD:1. ■ Distrust: Alice may declare distrust of Carol, provided Alice knows Carol and Alice and Carol are not friends. Distrust friend: Alice may declare distrust of her friend Carol, provided Alice knows Carol.
 GD:2. ■ Propagate: Alice may declare distrust of Carol, provided Alice does not know Carol, Alice and Bob are friends and Bob has declared distrust of Carol.
 GD:3. ■ Cease: Alice may withdraw her declaration of distrust of Carol.
 GD-S:2. ○ Taking sides. Alice, whose friend Bob has declared distrust of Carol, will eventually declare distrust of Carol or end her friendship with Bob, unless Bob withdraws the declaration.
