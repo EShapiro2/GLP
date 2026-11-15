@@ -59,6 +59,7 @@ Retire: Decider [Retire]
   Codecider: Decider asks to retire your child Carol.
 A ward's messages: Carol [Child message] <text>
   Carol [Child post] <text>
+  Carol [Child post own] <text>
 Child create: Carol [Child create] <name>
   Alice: Carol asks to create a group.
 A ward's group: Carol [Child close]

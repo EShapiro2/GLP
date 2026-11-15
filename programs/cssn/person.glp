@@ -146,7 +146,7 @@ script(frank, Me, [Alice, Bob, _, Carol, Dave, Eve], [own([F1], propose(establis
                                                       wait(holds(leader(speech(utterance(study), Me?)))),
                                                       own([F4, F5], propose(child_join(Dave?, F4?, Bob?, speech(utterance(study), F5?)))), wait(holds(listed(Dave?, speech(utterance(study), Me?)))),
                                                       own([F6, F7], propose(child_join(Carol?, F6?, Alice?, speech(utterance(study), F7?)))), wait(holds(listed(Carol?, speech(utterance(study), Me?)))),
-                                                      own([F8, F8a, F9, F10], propose(post(F8?, F8a?, speech(utterance('Welcome to the study group'), F9?), speech(utterance(study), F10?)))),
+                                                      own([F8, F9, F10], propose(post_own(F8?, speech(utterance('Welcome to the study group'), F9?), speech(utterance(study), F10?)))),
                                                       approval(acquaint(Eve?, Me?), yes),
                                                       approval(befriend(Eve?, Me?), yes)]) :-
     ground(Me?), ground(Alice?), ground(Bob?), ground(Carol?), ground(Dave?), ground(Eve?) | true.
@@ -164,7 +164,7 @@ script(carol, Me, [Alice, Bob, _, Frank, Dave, Eve], [approval(enter(Me?, Alice?
                                                       wait(holds(leader(speech(utterance(kids_chat), Me?)))),
                                                       own([C3, C4], propose(children_join(Dave?, C3?, Alice?, Bob?, speech(utterance(kids_chat), C4?)))), wait(holds(listed(Dave?, speech(utterance(kids_chat), Me?)))),
                                                       own([C5, C6], propose(children_join(Eve?, C5?, Alice?, Bob?, speech(utterance(kids_chat), C6?)))), wait(holds(listed(Eve?, speech(utterance(kids_chat), Me?)))),
-                                                      own([C7, C7a, C8, C9], propose(child_post(C7?, C7a?, speech(utterance('Welcome everyone!'), C8?), speech(utterance(kids_chat), C9?)))),
+                                                      own([C7, C8, C9], propose(child_post_own(C7?, speech(utterance('Welcome everyone!'), C8?), speech(utterance(kids_chat), C9?)))),
                                                       approval(child_join(Me?, Frank?, Alice?, speech(utterance(study), Frank?)), yes),
                                                       wait(holds(group_message(Frank?, speech(utterance('Welcome to the study group'), Frank?), speech(utterance(study), Frank?), Frank?))),
                                                       wait(holds(group_message(Dave?, speech(utterance('Hi from Dave!'), Dave?), speech(utterance(study), Frank?), Frank?))),
