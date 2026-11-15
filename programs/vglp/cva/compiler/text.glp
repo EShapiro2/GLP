@@ -5,10 +5,11 @@
 %% Platform"; Section 5.4, "The compilation").  The compiler prints it, one
 %% line to a constant, after what it prints from the contract; GLP has no
 %% string concatenation, so the text is carried as its lines.  It is GLP
-%% source, the module the compiler prints being self-contained.  The compiler prints a platform only from a contract carrying pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words"), so the text is that of such a platform.  A line guarded_only(L) is printed only for a contract with a guarded part: the request type has the alternative propose([t]_j) for each guarded part [t]_j (vGLP, Section 5.4, "The compilation"), so a contract with none has no request type and its agent asks no request question, and a clause on the request propose([t]_j), on a request rho_N of the guarded parts with an opener named N, or on a hello, which carries the request name of an acquaintance part, would not be well-typed (cvac.glp, module_lines); a line unguarded_only(L) is printed only for a contract with none, in place of the one guarded_only(L) beside it (vGLP f0acbc1, Definition "Local Specification, Part, Guard Set, Opener, Request": a request is of the guarded parts).  A line day_only(L) is printed only for a contract that requires the day, today(d) (vGLP, Section 5.4, "Act schemas as local specifications"), whose agent reads a calendar, and a line dayless_only(L) only for one that does not.  The marks nest: day_only(guarded_only(L)) is printed for a contract that requires the day and has a guarded part.
+%% source, the module the compiler prints being self-contained.  The compiler prints a platform only from a contract carrying pragmas, the words its app shows (vGLP, Section 5.4, "The contract's words"), so the text is that of such a platform.  A line guarded_only(L) is printed only for a contract with a guarded part: the request type has the alternative propose([t]_j) for each guarded part [t]_j (vGLP, Section 5.4, "The compilation"), so a contract with none has no request type and its agent asks no request question, and a clause on the request propose([t]_j), on a request rho_N of the guarded parts with an opener named N, or on a hello, which carries the request name of an acquaintance part, would not be well-typed (cvac.glp, module_lines); a line unguarded_only(L) is printed only for a contract with none, in place of the one guarded_only(L) beside it (vGLP f0acbc1, Definition "Local Specification, Part, Guard Set, Opener, Request": a request is of the guarded parts).  A line day_only(L) is printed only for a contract that requires the day, today(d) (vGLP, Section 5.4, "Act schemas as local specifications"), whose agent reads a calendar, and a line dayless_only(L) only for one that does not.  The marks nest: day_only(guarded_only(L)) is printed for a contract that requires the day and has a guarded part.  A line wild_only(L) is printed only for a contract with a listed role whose anchor has a wildcard among its arguments (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard ... in the anchor of a quantifier, is a variable of its own, standing for some value"), and a line wildless_only(L) only for one with none, in place of the one beside it; these two are not nested in another mark (cvac.glp, wild_shared).
 
 Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Line) ; standless_only(Line)
-        ; day_only(Line) ; dayless_only(Line) ; env_only(Line) ; envless_only(Line).
+        ; day_only(Line) ; dayless_only(Line) ; env_only(Line) ; envless_only(Line)
+        ; wild_only(Line) ; wildless_only(Line).
 Lines ::= [] ; [Line | Lines].
 
 exported procedure fixed_text(Lines).
@@ -5799,13 +5800,24 @@ fixed_text([
     'listing_in([g(F, Xs)|Gs], Rho, Vr, K, Ps?) :- ground(F?), ground(Xs?), ground(Rho?), ground(Vr?), integer(K?) |',
     '    same(F?, Rho?, E1),',
     '    nth_out(Xs?, K?, X, Xr),',
-    '    same(Xr?, Vr?, E2),',
+    wildless_only('    same(Xr?, Vr?, E2),'),
+    wild_only('    vals_meet(Vr?, Xr?, E2),'),
     '    and(E1?, E2?, E),',
     '    listing_in(Gs?, Rho?, Vr?, K?, Ps1),',
     '    keep_listed(E?, X?, Ps1?, Ps).',
     'procedure keep_listed(YesNo?, Val?, Peers?, Peers).',
     'keep_listed(yes, p(Q), Ps, [Q?|Ps?]).',
     'keep_listed(_, _, Ps, Ps?) :- otherwise | true.',
+    wild_only('%% The other arguments of a listed role\'s anchor with a wildcard, under the binding, Vs, are met by those of an atom of the state, Xs, where each is the same but at a wildcard, which any value meets: "a wildcard ... in the anchor of a quantifier, is a variable of its own, standing for some value: the machine of the person who holds the atom finds one in its state" (vGLP, Section 5.4, "Speech-act schemas as local specifications"); the people of the role are taken once each (list_at).'),
+    wild_only('procedure vals_meet(Vals?, Vals?, YesNo).'),
+    wild_only('vals_meet([], [], yes).'),
+    wild_only('vals_meet([any|Vs], [_|Xs], E?) :- vals_meet(Vs?, Xs?, E).'),
+    wild_only('vals_meet([], [_|_], no).'),
+    wild_only('vals_meet([_|_], [], no).'),
+    wild_only('vals_meet([V|Vs], [X|Xs], E?) :- otherwise, ground(V?), ground(X?) |'),
+    wild_only('    same(V?, X?, E1),'),
+    wild_only('    vals_meet(Vs?, Xs?, E2),'),
+    wild_only('    and(E1?, E2?, E).'),
     '%% The class term a request name of a schema with listed roles names at an agent of the state S: the binding B0 of the name, and the people its state lists at the place of each listed role, "so the base agent of close completes L from its listed atoms" (vGLP #15 Cowork to Code, 2026-10-19 14:24 UTC, item 2), "the base agent filling in each from its own listed atoms" (vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC).',
     'procedure listed_class(Constant?, Binding?, GAtoms?, Class).',
     'listed_class(Nm, B0, S, C?) :- ground(Nm?), ground(B0?) |',

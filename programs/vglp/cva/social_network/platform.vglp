@@ -98,8 +98,6 @@ member(Speech, Peer)
 ;
 listed(Peer, Speech)
 ;
-member(Speech)
-;
 posted(Speech, Peer, Speech)
 ;
 group_delivered(Peer, Speech, Speech, Peer)
@@ -122,8 +120,6 @@ atom_of(g(member, [s(V1), p(V2)]), shown(member(V1?, V2?)))
 .
 atom_of(g(listed, [p(V1), s(V2)]), shown(listed(V1?, V2?)))
 .
-atom_of(g(member, [s(V1)]), shown(member(V1?)))
-.
 atom_of(g(posted, [s(V1), p(V2), s(V3)]), shown(posted(V1?, V2?, V3?)))
 .
 atom_of(g(group_delivered, [p(V1), s(V2), s(V3), p(V4)]), shown(group_delivered(V1?, V2?, V3?, V4?)))
@@ -133,7 +129,7 @@ atom_of(g(group_message, [p(V1), s(V2), s(V3), p(V4)]), shown(group_message(V1?,
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(message, [svar('Text')], [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(create, [svar('Grupo')], [rs(guarded, [atom(leader, [svar('Grupo')]), atom(member, [svar('Grupo'), role(1)]), atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, [])], [atom(leader, [svar('Grupo')])])]), lschema(close, [svar('Grupo')], [rs(guarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, [])], []), rs(unguarded, [], [atom(member, [svar('Grupo'), any])], [atom(identity, []), atom(member, [svar('Grupo'), any])], [])], [listing(2, 1, listed, [role(2), svar('Grupo')], fcons(true), [], [])]), schema(join, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(friend, [role(1)])], [])]), schema(remove, [svar('Grupo')], [rs(unguarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, []), atom(leader, [svar('Grupo')])], [])]), schema(leave, [svar('Grupo')], [rs(guarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, [])], [])]), schema(post, [svar('Text'), svar('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), svar('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), svar('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(member, [svar('Grupo'), role(1)])], [])]), schema(deliver, [pvar('Bob'), svar('Text'), svar('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(2)])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), svar('Grupo')]), atom(listed, [pvar('Bob'), svar('Grupo')]), atom(listed, [role(2), svar('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(2)])]), rs(unguarded, [atom(group_message, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)])], [], [atom(identity, [])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(message, [svar('Text')], [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(create, [svar('Grupo')], [rs(guarded, [atom(leader, [svar('Grupo')]), atom(member, [svar('Grupo'), role(1)]), atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, [])], [atom(leader, [svar('Grupo')])])]), lschema(close, [svar('Grupo')], [rs(guarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, [])], []), rs(unguarded, [], [atom(member, [svar('Grupo'), any])], [atom(identity, []), atom(member, [svar('Grupo'), pvar('_1')])], [])], [listing(2, 1, listed, [role(2), svar('Grupo')], fcons(true), [], [])]), schema(join, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(friend, [role(1)])], [])]), schema(remove, [svar('Grupo')], [rs(unguarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, []), atom(leader, [svar('Grupo')])], [])]), schema(leave, [svar('Grupo')], [rs(guarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, [])], [])]), schema(post, [svar('Text'), svar('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), svar('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), svar('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(member, [svar('Grupo'), role(1)])], [])]), schema(deliver, [pvar('Bob'), svar('Text'), svar('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(2)])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), svar('Grupo')]), atom(listed, [pvar('Bob'), svar('Grupo')]), atom(listed, [role(2), svar('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(2)])]), rs(unguarded, [atom(group_message, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)])], [], [atom(identity, [])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -151,7 +147,7 @@ schema_entry(message, schema(message, [svar('Text')], [rs(unguarded, [atom(messa
 .
 schema_entry(create, schema(create, [svar('Grupo')], [rs(guarded, [atom(leader, [svar('Grupo')]), atom(member, [svar('Grupo'), role(1)]), atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, [])], [atom(leader, [svar('Grupo')])])]))
 .
-schema_entry(close, lschema(close, [svar('Grupo')], [rs(guarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, [])], []), rs(unguarded, [], [atom(member, [svar('Grupo'), any])], [atom(identity, []), atom(member, [svar('Grupo'), any])], [])], [listing(2, 1, listed, [role(2), svar('Grupo')], fcons(true), [], [])]))
+schema_entry(close, lschema(close, [svar('Grupo')], [rs(guarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, [])], []), rs(unguarded, [], [atom(member, [svar('Grupo'), any])], [atom(identity, []), atom(member, [svar('Grupo'), pvar('_1')])], [])], [listing(2, 1, listed, [role(2), svar('Grupo')], fcons(true), [], [])]))
 .
 schema_entry(join, schema(join, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(friend, [role(1)])], [])]))
 .
@@ -180,7 +176,7 @@ schema_numeric(message, numeric([cj(every, true)], [], []))
 .
 schema_numeric(create, numeric([cj(every, true)], [], []))
 .
-schema_numeric(close, numeric([cj(every, true)], [], []))
+schema_numeric(close, numeric([cj(every, true)], [pvar('_1')], []))
 .
 schema_numeric(join, numeric([cj(every, true)], [], []))
 .
@@ -260,7 +256,7 @@ binding_of(create(V1, V2), create, [b(role(1), p(V1?)), b(svar('Grupo'), s(V2?))
 .
 binding_of(close(V1, V2, V3), close, B?)
 :-
-listed_binding(close, [b(role(1), p(V1?)), b(svar('Grupo'), s(V3?))], [ppl(V2?)], B)
+listed_binding(close, [b(role(1), p(V1?)), b(svar('Grupo'), s(V3?)), b(pvar('_1'), lv(close, '_1'))], [ppl(V2?)], B)
 .
 binding_of(join(V1, V2, V3), join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Grupo'), s(V3?))])
 .
