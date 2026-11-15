@@ -26,12 +26,14 @@ This directory is published by the project Calculus.  It holds grassroots contra
 
 ## Adopting a contract
 
-`tools/adopt.py` is the owner's command, run from this directory's `tools/` with `GLP_DIR` naming the checkout:
+`tools/adopt.py` is the owner's command, run from `calculus/tools/` in a checkout of GLP, which it finds itself, or with `GLP_DIR` naming the checkout:
 
 - `adopt.py --write NAME DIR` writes the adopted `NAME.txt` into `DIR`: the owner's `%` lines; the lines of `contract.txt`; a line `Logic pragmas`; the lines of `logic-pragmas.txt` after its title; and, where the owner has Interface pragmas, a line `Interface pragmas` and the owner's lines.
-- `adopt.py --paths` writes `PATHS.txt`, the file of each contract: its adopted file, or its directory here.
-- `adopt.py NAME` prints `NAME.glp` beside the adopted file, a module with `contract_named(name, Term)`, the term being the full schemas, complete in itself; and `schemas.txt`, `full-contract.txt`, `full-pragmas.txt`, `flat.txt`, `full-schemas.txt` and `term.glp.txt` into `cascade/NAME/`.
-- `adopt.py --check NAME` exits 0 if those files are what it would print.
+- `adopt.py --paths` writes `PATHS.txt`, the file of each contract: its adopted file, `programs/<dir>/NAME.txt` with a `% Owner` line and a line `Logic pragmas`, or else `calculus/NAME/`.  Without `PATHS.txt` the commands below work the same paths out themselves.
+- A contract not adopted is read from `calculus/NAME/` of the checkout or, where the checkout has none, as on the branches `migration` and `main`, from `calculus/NAME/` of the branch `Calculus` of the clone (`git -C GLP fetch origin Calculus` fetches it; without it, `adopt.py` names the contract as missing and gives that command).
+- `adopt.py NAME` prints `NAME.glp` beside the adopted file, a module with `contract_named(name, Term)`, the term being the full schemas, complete in itself; and into `cascade/NAME/` the record's part that is the Calculus's: `NAME.txt`, a copy of the adopted file, `NAME.glp`, `schemas.txt`, `full-contract.txt`, `full-pragmas.txt`, `flat.txt` and `full-schemas.txt`.  The rest of the record is `cascade.sh`'s.
+- `adopt.py --check NAME` exits 0 if those files are what it would print, and otherwise names each that differs and exits 1.
+- `--out DIR`, after `NAME` or `--check NAME`, writes or checks the files under `DIR` in place of the checkout, so a check writes nothing in it.
 
 ## The relations
 
