@@ -570,7 +570,7 @@ reflexive_preds([knows])
 .
 
 procedure introduction_preds(Preds).
-introduction_preds([])
+introduction_preds([knows])
 .
 
 procedure binding_of(Class?, Constant, Binding).
