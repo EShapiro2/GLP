@@ -1,0 +1,59 @@
+Writing a contract in the grammar, for tools/gcsas.py
+
+rev/NAME.txt is the contract as revised with Udi.  gr/NAME.txt says the same in the grammar of Section 1.1 of the paper, so that tools/gcsas.py compiles it to schemas (sas/), recovers it from them (back/), expands it on the text (flat/) and on the schemas (sasx/), and checks the three.  Models: gr/GKK.txt, GSG.txt, GC.txt, GD.txt, GD-S.txt, GnW.txt, GSV.txt, GO.txt.  Read them, their rev/ originals, and Sections 1 and 2 of sections/01-contracts-schemas.tex first.
+
+THE FILE, line by line, in this order
+1. The title, as in rev/.
+2. The first line, as in rev/, with its reference in parentheses if it has one.  An instantiation is written "T instantiates P with ITEMS, and ..."; the items are separated by ", " and " and ", or all by "; " if one of them has a comma or an "and".  An item is: a word for a word, with their articles ("an organisation for a ward"); a state or a role for a state or a role of P, with places ("the guardians of z for those who decide for z"); or prose ("bylaws"), which does nothing.  A state put for a state may have one more name, as GO's "y holds the role Role in x for y is a guardian of x": each act of P with the state then has the name Role; where the state must not hold, or ends for someone unnamed, the name is anyone ("Bob holds no role in Orga").  Write the items that put a state before those that put a word.  "no role" and "some role" are written for a place after "the role".
+3. "Vocabulary: PHRASE = pred(x,y); PHRASE = pred(x)." the basic states this contract adds, each a phrase with places and its predicate.  The first place of the predicate is the holder, an agent (a person, a ward, an organisation).  A fact two agents hold is two basic states or a defined state of two.  A state whose holder a person would not name is written "PHRASE, for x = pred(x,e)", as "e is later than the current date, for x = later(x,e)": a sentence writes "Day is later than the current date", and its holder is the first of those who take the act; in a citation, the first of those who take the act cited.
+4. "Roles: PHRASE = pred(z)." phrases for those who act, as "those who decide for z".
+5. Definitions, one a line.  A state: "x and y are friends: x counts y as a friend and y counts x as a friend."  An act: "After x ends x's friendship with y: no longer x and y are friends." --- the act phrase after "After", with its subject places first ("x", "x and y", "x, y and z") and its verb in the third person if the subject is one place; then the states that hold after it, and "no longer" before each state that ends.
+6. Prose lines of rev/ that define a term for the reader (they have *term*), kept as they are; and the names line of rev/, with every name the clauses use.
+7. The clauses: "N. MARK SENTENCE SENTENCE ...", N and MARK as in rev/.
+
+SENTENCES
+An act:      "Name: Alice may PHRASE[, with the consent of PERSONS][, provided CONDITIONS]."
+             "Name: Alice and Bob may jointly PHRASE[...]."      several who act together
+             "Name: PHRASE[, provided CONDITIONS]."               an act nobody decides: the full act phrase, present tense
+A citation:  "Name: C:n[ Act name][, only if CONDITIONS][, with the consent of PERSONS]."   it restricts the acts of clause C:n (the one named, if named) and renames a single act to Name
+Anything else is kept word for word and has no schema: an undertaking ("Alice will ..."), a "must", a "may not", the title of a clause ("Proposing.").  A kept sentence must not begin "Word: ".
+A place of a state may hold "someone" (a condition: the state holds of some person) or "no one" (a condition: of no person; an effect: the state that then holds, which ends it for every person of whom it held): "Bob has a Dave-pointer to someone", "no one is a member of g".  Give such an effect a phrase a person would write, defined once: "z has no guardians: no one is a guardian of z and z has no one as a guardian."  Never "no longer anyone ...".  In a schema it is the wildcard _.
+A place of a condition may count: "fewer than D persons", "more than D persons", "at most 3 persons", "at least 2 persons", the number a parameter written with a capital or digits: "Alice points to more than D persons".  In a schema it is the count, >D.
+CONDITIONS and the right side of a definition are lists of states, with ", " and " and "; "not" before a condition that must not hold.  PERSONS are names and role phrases.
+
+WHAT THE PROGRAM CAN READ
+- A place is one lowercase letter, b to z (never a); it may carry 's or a hyphenated suffix (x's, x-pointer).  A name is one capitalised word of letters (Alice, Orga, Prop).  Every thing a sentence speaks of is a name of the names line: "Alice and Bob are persons, Delos a DAO, Prop a proposal."
+- After "may" the verb is in its base form and the subject's own "x's" is written her, his, its (Alice her, Bob his, Carol her, Dave his, Erin her, any other name its); "of x's" at the end of its noun phrase is written of hers, of his, of its ("under a new name of hers").
+- The owners' words: "x holds a y-coin", and so "a Bob-coin", "an Alice-bond due Day", "Orga-coins", "a Dollar-denominated Carol-coin"; "a" or "an" before a place is written as the name put for it needs.
+- No phrase has "may", ", provided", ", with the consent of", or ". " followed by a capital.
+- A phrase of a contract this one is written from is used as that contract writes it; after an instantiation by a word, with the new word.
+- Every place of an act phrase is its subject or a place of one of its effects: else the contract cannot be recovered from the schema ("no act phrase has these effects").
+- Two act phrases may have the same effects (GnW: Resign and End guardian).
+
+HOW TO SAY IT (decisions taken for Udi's later approval; follow them)
+1. Keep the words of rev/ wherever the grammar allows.  Change nothing of substance.  Invent no rule.
+2. One sentence an act.  "Either Alice or Bob may", "Vote for, Vote against:", "Remove, Leave:" are two sentences with two names.  An act with an effect "if ..." is two acts (GD:1).
+3. "Alice, who knows Bob, may ..." becomes "..., provided Alice knows Bob".
+4. A condition never repeats a state the act ends: the schema already requires it.  Where the text says "new", "once", "not yet", add the "not ..." condition.
+5. An act moves an amount of units, a number that is a name of the names line ("Sum and Total numbers"): "Alice may pay Bob Sum Bob-coins".  The vocabulary has the state of one unit and of a number of them: "x holds a y-coin = coin(x,y); x holds n y-coins = coin(x,y,*n)", the last argument *n saying n copies; the definition of the act is of the amount ("After x pays y n y-coins: no longer x holds n y-coins and y holds n y-coins").  An act a clause writes of one unit stays of one unit (GC:4, DGC:3, DGC:4).  The state of an agent is a multiset.
+6. What the grammar cannot break down --- "every member", "more than half", "at most d", "before the night", a computed amount --- is a basic state named by its phrase, with the names it speaks of as places and its holder first ("more than half of the members of d have voted for p = majority_for(d,p)").  Keep such phrases few and close to the text.
+7. A state of mind (trust, belief) is no condition: it goes in an undertaking sentence (GSG:1).  A declaration on record is a state (GD).
+8. An act the machine takes with nobody deciding ("the steward delivers it to every member") is an act with no persons.
+9. A parameter of rev/ (the decision rule of GnW, the message of GSN, the terms of GRA) is a basic state or a role that a contract written from this one replaces in its first line; or prose, if no clause's schema depends on it.
+10. A citation "X:n, where ..." is written "only if" with basic states for what follows "where".  A citation of several clauses is several citations.  A citation is written in the names of its own contract: a name that the act cited does not have stands for the one name of its kind of that act which the citation does not write (GO:4 writes Orga, an organisation, for GnW:2's Carol, a ward, which GO's first line makes an organisation); with no such name it is one more name of the act.  The kinds are those of the names lines.
+11. A sentence of rev/ that only says what cannot happen, or repeats a definition, is kept as a kept sentence.
+
+POSSIBLY ONE PERSON
+The names of a sentence are different persons, but for those the names line says are possibly one: "Carol possibly Alice or Bob", "Carol and Dave possibly Alice, Bob or one person", "in clause 4 Dave is possibly Alice, Bob or Carol", "Frank is possibly any of the others or Orga".  The program writes with each schema the pairs of its names that are possibly one ("possibly Alice=Carol").  Where a condition cannot hold of one person, as "Alice and Bob are friends", write the case of one person as a sentence of its own (GnW:4, Wards of one guardian befriend).
+
+RUN AND CHECK
+python3 tools/gcsas.py NAME [NAME ...]     prints, for each contract and those it is written from: commute, return, recover.
+Wanted: "commute yes; return yes; recover same".  "recover equivalent" is acceptable where two wordings have the same schemas; say which in the notes.  Then read sas/NAME.txt against rev/NAME.txt: each schema must say what its sentence says.
+Do not edit tools/gcsas.py, or a contract of gr/ that is not on your list: note what you need of either and go on.
+Notes go in gr/NOTES-<your group>.txt, one line each: "NAME:n D ..." a decision you took; "NAME:n Q ..." a question for Udi; "TOOL ..." what the program could not read; "PARENT NAME ..." what you need changed in a contract not yours.
+
+NUMBERS
+Every contract has the states of numbers "n is at most m", "n is at least m", "n is more than m", "n is less than m", "n is m plus k" and "n is m times k" (le, ge, gt, lt, sum, product); a place of a number holds a name of the kind number or a numeral.  A state of units has a third form, "x holds exactly n y-coins = coin(x,y,#n)": n of them and no more, a condition only.  A number that an act sets is a place after its noun, "z has y's credit line at the number n", so that "at no number" ends the one set before; give that a phrase, defined once: "y's earlier credit line in z has ended: z has y's credit line at no number." (CB:2, CB:3, SCB:3, SC:2, CnC:2).
+
+STRENGTHENING
+A citation may add effects to the act it cites: "Name: C:n[ Act name][, only if CONDITIONS][, with the consent of PERSONS], and then EFFECTS."  The effects are basic states of this contract or of another it is written from, never of the contract cited: "Befriend: GSG:1, and then Alice has a Bob-pointer to Bob and Bob has an Alice-pointer to Alice."  "no longer STATE" ends a state, which the act then requires; a state of no one ends it for all without requiring it: "Alice is a member of no group of Bob"; of two places of no one named the second is written "any": "no one holds any role in Orga".  Do not also write "only if" a state the strengthening ends.  The first line says "strengthens".

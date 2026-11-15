@@ -39,16 +39,16 @@ library;
 import '../ui_runtime/manifest.dart';
 
 /// Panel `apps`: the constructs the bridge holds open, the output thread
-/// among them.
+/// among them.  Its name, which the bar shows, is the app's own, Grassroots.
 const _appsPanel = Panel(
   id: 'apps',
-  name: 'apps',
+  name: 'grassroots',
   constructs: true,
 );
 
 /// The Grassroots Super-App's manifest.
 const Manifest superappManifest = Manifest(
-  title: 'Apps',
+  title: 'Grassroots',
   panels: [_appsPanel],
   activity: [],
 );

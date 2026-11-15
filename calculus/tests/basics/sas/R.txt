@@ -1,0 +1,4 @@
+R: One act, renamed, a consent repeated
+R restricts K.
+R:0 - | Alice, Bob and Carol are persons.
+R:1 ■ Grant: K:1 Give <- trusted(Bob,Carol) guarded by Bob, Carol.

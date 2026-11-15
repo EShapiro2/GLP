@@ -1,0 +1,5 @@
+P: Strengthens
+P strengthens C.
+Vocabulary: x has a pass = p(x).
+P:0 - | Alice is a person.
+P:1 ■ Mark: C:1 + ~p(Alice) <-.

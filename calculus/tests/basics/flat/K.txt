@@ -1,0 +1,4 @@
+K: Base (flat text)
+K:0 - | Alice, Bob and Carol are persons.
+K:1 ■ Give: Alice and Bob may jointly Bob has a token.
+K:1 ■ Take: Alice may Alice has a token.
