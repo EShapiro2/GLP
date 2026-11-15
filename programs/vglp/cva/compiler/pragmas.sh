@@ -236,6 +236,8 @@ for my $n (keys %cons) {
 # The schemas a button realises: those bearing its name, the button in lower case, or its name with a suffix after an underscore (GSC #7, GSC docs/design-decisions.md, 2026-10-24: "the schemas realising it are those bearing its name or its name with a suffix after an underscore"), as [Enter] realises enter and enter_2 and [Swap] swap_cc, but for a schema another button of the contract names by its own name, as [Post own] names post_own and [Post] does not; the button alone where the term is not given or none is found.
 my %seen; my @order; my %extends;
 my %named_by_button;
+# The schema a button names (README.md, 2): its text in lower case, each run of spaces an underscore, and every character that is no letter, digit, underscore or hyphen left out, as the apostrophe of [Redeem member\x27s coin], the schema redeem_members_coin (Calculus #6, vGLP_inbox.md, 2026-11-15 16:04 UTC).
+sub act_name { my ($b) = @_; (my $a = lc $b) =~ s/ +/_/g; $a =~ s/[^a-z0-9_-]//g; return $a }
 # The guarding roles of a schema whose persons must consent to its act and are not asked (below).
 my %consent_of;
 sub realising {
@@ -283,7 +285,7 @@ sub read_bindings {
 }
 sub bound_button {
     my ($b) = @_;
-    (my $a = lc $b) =~ s/ +/_/g;
+    my $a = act_name($b);
     return $b unless exists $bind{$a};
     (my $n = $bind{$a}) =~ s/_/ /g;
     return ucfirst $n;
@@ -499,7 +501,7 @@ for my $f (@order) {
             $pi++;
             my $k = "$f\x02$ln\x02$pi";
             push @line_keys, $k;
-            $line_buttons{$k} = [ map { (my $a = lc $_) =~ s/ +/_/g; $a } ($part =~ /\[([^\]]+)\]/g) ];
+            $line_buttons{$k} = [ map { act_name($_) } ($part =~ /\[([^\]]+)\]/g) ];
             (my $nm = $f) =~ s{.*/}{}; $nm =~ s/\.txt$//;
             (my $txt = $part) =~ s/^\s+//;
             $line_shown{$k} = "$nm: $title: $txt";
@@ -656,7 +658,7 @@ for my $f (@order) {
                     my @fields;
                     while ($tail =~ s/^<([^>]+)>\s*//) { push @fields, $1 }
                     $tail =~ /^(\[|$)/ or die "pragmas.sh: $f: the pragma \"$title\" has words it cannot read: $tail\n";
-                    (my $ba = lc $buttons[0]) =~ s/ +/_/g;
+                    my $ba = act_name($buttons[0]);
                     if ($replaced{$lk} && $replaced{$lk}{$ba}) {
                         (my $g = (split /\x02/, $replaced{$lk}{$ba})[0]) =~ s{.*/}{};
                         push @lines_out, "$name: $title: $pr->{name} [$buttons[0]]" . join("", map { " <$_>" } @fields) . ": replaced by the line of $g with a button of the same name, the other buttons of the line standing";
@@ -664,7 +666,7 @@ for my $f (@order) {
                     }
                     # An inherited button stands while the contract has an act it names, and goes with its fields and its questions where it has none (vGLP 40f8444, Section 5.4, "The contract’s words", its last sentence: "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it"), as GC’s [Mint] in DGC, whose term has no mint; a button of the contract itself that names no act is a fault (below).
                     if ($f ne $top && @snames) {
-                        my @gone = grep { (my $a = lc $_) =~ s/ +/_/g; !grep { exists $roles{$_} } realising($a) } @buttons;
+                        my @gone = grep { my $a = act_name($_); !grep { exists $roles{$_} } realising($a) } @buttons;
                         if (@gone) {
                             push @lines_out, "$name: $title: $pr->{name} " . join("", map { "[$_]" } @gone) . ": gone, the contract having no act it names";
                             my %g = map { $_ => 1 } @gone;
@@ -674,7 +676,7 @@ for my $f (@order) {
                     }
                     my (%said, %by, %plof, %fit, %err, %reals);
                     for my $button (@buttons) {
-                        (my $a = lc $button) =~ s/ +/_/g;
+                        my $a = act_name($button);
                         my @real = realising($a);
                         $reals{$button} = [@real];
                         $covered{$_} = $button for @real;
