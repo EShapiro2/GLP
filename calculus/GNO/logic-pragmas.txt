@@ -1,0 +1,14 @@
+GNO: Grassroots Network Organisation
+GNO extends GBCC and restricts it.
+A *network organisation* is a backed community currency whose bylaws also name the role *arbiter*. A *provider* is a person whose *stake*, the Orga-coins they hold, is at least *S*, a number of Orga-coins, and a *customer* is a person who accepts Orga-coins. A treasurer is a provider. A *dispute* is over Orga-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+Alice, Bob and Carol are persons, Orga a network organisation; in clause 2 Alice is the customer and Bob the provider.
+1. ■ Set stake: The treasurers of Orga may set S for Orga, provided Orga is an organisation.
+2. ■ Arbitration. Raise: Alice may raise to Carol her dispute with the provider Bob over Orga-coins, provided Orga-coins are locked between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Provider raise: Bob may raise to Carol his dispute with the customer Alice over Orga-coins, provided Orga-coins are locked between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Arbitrate: Carol may decide the release to Alice and to Bob of the Orga-coins locked between them. The coins are released less the fee the terms set, which is released to Carol.
+Logic pragmas.
+Vocabulary: z has S set = stake_set(z); y is a provider of z = provider(y,z); x is a customer of z = customer(x,z); x has z-coins locked as the customer of y = customer_lock(x,y,z); y has z-coins locked as the provider of x = provider_lock(y,x,z); w holds the dispute of x and y over z-coins = dispute(w,x,y,z).
+z-coins are locked between the provider y and the customer x: y has z-coins locked as the provider of x and x has z-coins locked as the customer of y.
+x is an arbiter of z: x holds the role Arbiter in z and z has x in the role Arbiter.
+After g sets S for z: z has S set.
+After x raises to w x's dispute with the provider y over z-coins, which requires w does not hold the dispute of x and y over z-coins: w holds the dispute of x and y over z-coins.
+After y raises to w y's dispute with the customer x over z-coins, which requires w does not hold the dispute of x and y over z-coins: w holds the dispute of x and y over z-coins.
+After w decides the release to x and to y of the z-coins locked between them: no longer w holds the dispute of x and y over z-coins and no longer z-coins are locked between the provider y and the customer x.

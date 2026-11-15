@@ -1,0 +1,7 @@
+MCS: Mutual Credit Society
+MCS instantiates GBank with mutual credit society bylaws and restricts and extends it.
+A *mutual credit society* is a bank whose bylaws name one role, *member*, held by every participant; the members jointly decide its acts. A member is *in the red* by their coins in circulation less the other persons' coins they hold.
+Alice and Bob are persons, Orga a mutual credit society.
+1. ■ Leave, Expel: GO:3, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other.
+2. ■ Redeem: Bob, a member, may redeem an Alice-coin he holds against an Orga-coin, provided Alice is a member.
+3. ■ Credit limit. DGC:2, GC:3 and DGC:4, only if every member is then in the red by at most 1000 coins.

@@ -1,0 +1,22 @@
+GSNW: Grassroots Social Network with Wards
+GSNW extends, restricts and strengthens GSN and GnW.
+After y closes the group g of z: no longer z is the leader of g, z has no one as a member of the group g and no one is a member of g.
+GSNW:0 - | Alice and Bob are persons, Carol a ward, Grupo a group.
+GSNW:1 ■ | A ward's messages.
+GSNW:1 ■ Message: GSN:1 <- person(Alice).
+GSNW:1 ■ Post: GSN:4 Post <- person(Bob).
+GSNW:1 ■ Ward message: message(Bob,Carol) <- ward(Carol), ~retired(Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+GSNW:1 ■ Ward post: posted(Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,_) guarded by Carol.
+GSNW:2 ■ | A ward's group.
+GSNW:2 ■ Create: GSN:2 Create <- person(Alice).
+GSNW:2 ■ Close: GSN:2 Close <- person(Alice).
+GSNW:2 ■ Ward create: leader(Carol,Grupo), member(Carol,Grupo,Carol), listed(Carol,Carol,Grupo) <- ward(Carol), ~retired(Carol), ~leader(Carol,Grupo) guarded by Carol.
+GSNW:2 ■ Ward close: ~leader(Carol,Grupo), ~listed(Carol,_,Grupo), ~member(_,Grupo,_) <- ward(Carol), ~retired(Carol), leader(Carol,Grupo) guarded by Carol.
+GSNW:2 ■ Guardian close: ~leader(Carol,Grupo), ~listed(Carol,_,Grupo), ~member(_,Grupo,_) <- guardian(Alice,Carol), leader(Carol,Grupo) guarded by Alice.
+GSNW:3 ■ Join: GSN:3 Join <- person(Bob).
+GSNW:3 ■ Ward join: member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) <- leader(Bob,Grupo), friend(Bob,Carol), friend(Carol,Bob), has_guardian(Carol,Alice), ~member(Carol,Grupo,_) guarded by Bob, Carol, Alice.
+GSNW:3 ■ Guardian unfriend: GnW:2 Guardian unfriend + ~member(Bob,_,Carol), ~member(Carol,_,Bob), ~listed(Bob,Carol,_), ~listed(Carol,Bob,_) <-.
+GSNW:3 ■ Ward end: GnW:3 Ward end + ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <-.
+GSNW:3 ■ Unfriend: GnW:3 Unfriend + ~member(Bob,_,Carol), ~member(Carol,_,Bob), ~listed(Bob,Carol,_), ~listed(Carol,Bob,_) <-.
+GSNW:3 ■ Ward unfriend: GnW:3 Ward unfriend + ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <-.
+GSNW:3 ■ Retire: GnW:5 Retire + ~member(Carol,_,_), ~listed(_,Carol,_) <-.

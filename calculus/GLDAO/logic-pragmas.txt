@@ -1,0 +1,10 @@
+GLDAO: Grassroots Liquid DAO
+GLDAO extends GDAO.
+A member's *delegate* is another member whose vote counts for theirs.
+Bob and Carol are persons, Orga a DAO.
+1. ■ Delegating. Delegate: Bob may make Carol his delegate in Orga, provided Bob is a member of Orga, Carol is a member of Orga and Bob knows Carol. Revoke: Bob may revoke his delegation to Carol in Orga.
+2. ■ Count. A member who has not voted on a proposal counts as voting as their delegate did, down a chain of delegates, and can no longer vote on it.
+Logic pragmas.
+Vocabulary: y has a delegate in z = delegating(y,z); z holds the delegation of y to x = delegation(z,y,x).
+After y makes x y's delegate in z, which requires y does not have a delegate in z: y has a delegate in z and z holds the delegation of y to x.
+After y revokes y's delegation to x in z: no longer y has a delegate in z and no longer z holds the delegation of y to x.

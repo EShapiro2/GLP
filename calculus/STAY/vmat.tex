@@ -1,0 +1,963 @@
+\iffalse
+establish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+acquaint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+introduce
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+issue
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+swap
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+\}
+) \uplus 
+\{
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+)
+\}
+) \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+pay
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+redeem
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+Carol
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\text{\textcent}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\text{\textcent}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+list_place
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+listed
+}
+(
+Place
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+hosts
+}
+(
+Place
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+listed
+}
+(
+Place
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+book
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+) \uplus 
+\{
+\mathit{
+stay
+}
+(
+\Bob
+,
+Place
+,
+Night
+,
+Sum
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+booked
+}
+(
+Place
+,
+Night
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+date
+}
+(
+Today
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+listed
+}
+(
+Place
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+booked
+}
+(
+Place
+,
+Night
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+Night
+>
+Today
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+cancel
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+stay
+}
+(
+\Bob
+,
+Place
+,
+Night
+,
+Sum
+)
+\}
+) \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+booked
+}
+(
+Place
+,
+Night
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+stay
+}
+(
+\Bob
+,
+Place
+,
+Night
+,
+Sum
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+date
+}
+(
+Today
+)
+,
+\mathit{
+booked
+}
+(
+Place
+,
+Night
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+Night
+>
+Today
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+review
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+review
+}
+(
+\Bob
+,
+Place
+,
+Night
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+stay
+}
+(
+\Alice
+,
+Place
+,
+Night
+,
+Sum
+)
+,
+\mathit{
+date
+}
+(
+Today
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+review
+}
+(
+\Bob
+,
+Place
+,
+Night
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+Night
+\le
+Today
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}

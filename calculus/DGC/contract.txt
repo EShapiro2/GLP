@@ -1,0 +1,8 @@
+DGC: Denominated Grassroots Currencies
+DGC extends GB and GDC, and restricts GB.
+A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
+Alice, Bob and Carol are persons.
+1. ■ Issue bond: Alice may issue Alice-bonds denominated by a fiat currency, of a maturity later than the current date.
+2. ■ Swap, Redeem, Escrow: GC:2, GC:4, GB:2, GB:3 and GB:4, only if the coins and bonds are of one denomination.
+3. ■ Accept: Alice may accept Dollar-denominated Carol-coins in payment up to a limit of her choosing, if she holds a Dollar-denominated Carol-coin or Carol-bond; each such coin paid to Alice counts against the limit, and Alice may accept again.
+4. ■ Pay: Alice may pay Bob, whom she knows, coins she holds that Bob accepts.

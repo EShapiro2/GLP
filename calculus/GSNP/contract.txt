@@ -1,0 +1,4 @@
+GSNP: Grassroots Social Network with Provenance
+GSNP instantiates GSN with items authored by their senders, composes it with GAI (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231), and extends the composition.
+1. ■ Agent message: An AI agent may send a message to a friend (GSN:1).
+2. ■ Post forward: A member of a group, not its leader, may forward an item they hold to the group, adding their signature.

@@ -1,0 +1,19 @@
+GSN: Grassroots Social Network
+GSN extends and strengthens GSG.
+A *message*, a parameter of GSN, is what a person sends.
+Alice, Bob and Carol are persons, Grupo a group, Bob and Carol possibly Alice or one person.
+1. ■ Message: Alice may send a message to Bob, provided Alice and Bob are friends.
+2. ■ Group. Create: Alice may create Grupo. Alice is then its leader and first member. Close: Alice may close Grupo by leaving it.
+3. ■ Joining and Leaving. Join: Alice may add Bob to Grupo, with the consent of Bob, provided Alice is the leader of Grupo and Alice and Bob are friends. Remove: Alice may end Bob's membership in Grupo, provided Alice is the leader of Grupo. Leave: Bob may end his membership in Alice's Grupo. Unfriend: GSG:2, and then Alice is a member of no group of Bob, Bob is a member of no group of Alice, Alice has Bob as a member of no group and Bob has Alice as a member of no group.
+4. ■ Group messaging. Post: Bob may send a message to the group Grupo, provided Bob is a member of Grupo. Deliver: Alice delivers a message of Bob in Grupo to Carol, provided Alice is the leader of Grupo, Bob has posted a message to Grupo, Alice has Bob as a member of the group Grupo and Alice has Carol as a member of the group Grupo.
+Logic pragmas.
+Vocabulary: y has a message from x = message(y,x); x is the leader of g = leader(x,g); x is a member of the group g of y = member(x,g,y); x has y as a member of the group g = listed(x,y,g); x has posted a message to g = posted(x,g); z has a message of x in g = group_message(z,x,g); y has delivered a message of x in g to z = group_delivered(y,x,g,z).
+x is a member of g: x is a member of the group g of someone.
+After x sends a message to y: y has a message from x.
+After x creates g, which requires x is not the leader of g: x is the leader of g, x is a member of the group g of x and x has x as a member of the group g.
+After x closes g by leaving it: no longer x is the leader of g, x has no one as a member of the group g and no one is a member of g.
+After x adds y to g, which requires y is not a member of g: y is a member of the group g of x and x has y as a member of the group g.
+After x ends y's membership in g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
+After y ends y's membership in x's g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
+After x sends a message to the group g: x has posted a message to g.
+After y delivers a message of x in g to z: z has a message of x in g and y has delivered a message of x in g to z.

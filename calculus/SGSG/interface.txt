@@ -1,0 +1,31 @@
+SGSG: Secure Grassroots Social Graph
+1. ○ Establish.  Alice may establish an identity.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+6. ■ Name custodian.  Alice may name Carol her identity custodian, provided Alice knows Carol and Alice does not have a fixed identity record.
+7. ■ Identity record.  Alice may fix her identity record.
+8. ■ Tell.  Alice tells Carol of the friendship of Alice and Bob, provided Alice and Carol are friends and Alice and Bob are friends.
+9. ■ Tell end.  Alice tells Carol of the end of the friendship of Alice and Bob, provided Alice and Carol are friends and Alice and Bob are not friends.
+10. ■ Send record.  Alice sends Bob the identity custodian Carol, provided Alice and Bob are friends, Alice has a fixed identity record and Alice has Carol as an identity custodian.
+11. ■ Checkpoint.  Alice may send Bob a checkpoint of her records, provided Alice and Bob are friends.
+12. ■ Restore.  Bob restores the records of Alice, provided Alice has suffered a state loss and Bob counts Alice as a friend.
+13. ◆ Replace.  Alicia may ask Carol to vouch that Alicia is Alice, provided Alicia knows Carol and Carol is an identity custodian of Alice.
+14. ◆ Vouch.  Carol may vouch that Alicia is Alice, provided Carol has been asked to vouch that Alicia is Alice and Carol is an identity custodian of Alice.
+15. ◆ Accept.  Bob accepts Alicia in place of Alice, provided Bob counts Alice as a friend and at least the threshold of the identity custodians Bob records for Alice have vouched that Alicia is Alice.
+16. ◆ Accept custodian.  Bob accepts Alicia as an identity custodian in place of Alice, provided Bob has accepted Alicia in place of Alice and Bob has Alice as an identity custodian.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+Name custodian: Alice [Name custodian]
+Identity record: Alice [Identity record]
+Checkpoint: Alice [Checkpoint]
+Replace: Alicia [Replace] <alice>
+Vouch: Carol [Vouch]

@@ -1,0 +1,9 @@
+WC: Workers' Cooperative
+WC instantiates GCoop with bylaws that delegate no act, and extends it.
+Vocabulary: z has distributed a coin to y = distributed(z,y); z has distributed no more coins to y than to any other member = least_share(z,y).
+After z pays y n w-coins for y's work: no longer z holds n w-coins and y holds n w-coins.
+After z distributes a w-coin to y: no longer z holds a w-coin, y holds a w-coin and z has distributed a coin to y.
+WC:0 - | A *workers' cooperative* is a cooperative whose members work for it.
+WC:0 - | Bob and Carol are persons, Orga a workers' cooperative, Dollar a fiat currency, Sum a number, Carol possibly Bob or Orga.
+WC:1 ■ Pay: ~coin(Orga,Carol,*Sum), coin(Bob,Carol,*Sum) <- participant(Bob,Orga), issued_in(Carol,Dollar), coin(Orga,Carol,*Sum) guarded by Orga possibly Bob=Carol, Carol=Orga.
+WC:2 ■ Distribute: ~coin(Orga,Carol), coin(Bob,Carol), distributed(Orga,Bob) <- participant(Bob,Orga), issued_in(Carol,Dollar), least_share(Orga,Bob), coin(Orga,Carol) guarded by Orga possibly Bob=Carol, Carol=Orga.

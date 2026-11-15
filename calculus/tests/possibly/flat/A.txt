@@ -1,0 +1,3 @@
+A: Apart (flat text)
+A:0 - | Alice and Bob are persons.
+A:1 ■ Greet: Alice may Bob is greeted by Alice.

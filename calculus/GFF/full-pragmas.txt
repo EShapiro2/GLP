@@ -1,0 +1,21 @@
+GFF: Grassroots Feeds and Followers
+Of GKK: An *identity* is a unique key pair, chosen by the person who has it. Alice, Bob and Carol are persons. A party to a contract must have an identity.
+Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
+Of GDO: Alice, Bob and Carol are persons.
+Of GDO-L: A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice. Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.
+Of GFF: A *feed* is named by its author. Alice, Bob and Carol are persons, Bob and Carol possibly one person.
+GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1, GDO-L:4. ■ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, and then Alice has a Bob-pointer to Bob and Bob has an Alice-pointer to Alice. Alice and Bob will become friends only if they trust each other.
+GSG:2, GDO-L:4. ■ Unfriend: Alice may end her friendship with Bob, and then no longer Alice has a Bob-pointer to Bob and no longer Bob has an Alice-pointer to Alice.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+GDO:1. ■ Point friend: Alice may point to Bob, provided Alice and Bob are friends.
+GDO:2. ■ Point transitive: Alice may point to Carol, provided Alice knows Carol, Alice points to Bob and Bob points to Carol.
+GDO:3. ■ Unpoint: Alice may cease pointing to Bob.
+GDO-L:1. ■ Labeled point friend: Alice may add a Dave-pointer to Bob, provided Alice and Bob are friends and Bob has a Dave-pointer to someone.
+GDO-L:2, GFF:3. ■ Labeled point transitive: Alice may add a Dave-pointer to Carol, provided Alice and Carol know each other, Alice has a Dave-pointer to Bob and Bob has a Dave-pointer to Carol. Labeled point transitive friend: Alice may add a Dave-pointer to Carol, provided Alice and Carol know each other, Alice and Bob are friends and Bob has a Dave-pointer to Carol.
+GDO-L:3. ■ Labeled unpoint: Alice may remove her Dave-pointer to Bob.
+GDO-L:4. ■ Friend pointers.
+GFF:1. ■ Post: Alice may post an item to her feed. Alice has a feed, and the item is created or received.
+GFF:2. ■ Deliver: Alice receives from Bob an item of Carol's feed, provided Alice has a Carol-pointer to Bob, Bob knows Alice and Bob holds an item of Carol's feed.

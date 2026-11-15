@@ -1,0 +1,35 @@
+AGORA: Grassroots Barter
+AGORA extends GB.
+Vocabulary: x has made i = made(x,i); x holds the item i = item(x,i); x is the keeper of m = keeper(x,m); x is a member of the market m of y = member(x,m,y); x has y as a member of m = has_member(x,y,m); y has posted i to m = posted(y,i,m); x sees y's post of i on the wall of m = post(x,y,i,m); x has delivered y's post of i in m to z = delivered_post(x,y,i,m,z); z holds the item i in escrow from x for y on k = escrow_item(z,i,x,y,k).
+x is a member of m: x is a member of the market m of someone.
+After x makes the item i, which requires x has not made i: x has made i and x holds the item i.
+After x opens m under a new name of x's, which requires x is not the keeper of m: x is the keeper of m, x is a member of the market m of x and x has x as a member of m.
+After x admits y to m, which requires y is not a member of m: y is a member of the market m of x and x has y as a member of m.
+After y posts i to the wall of x's m, which requires y has not posted i to m: y has posted i to m and x sees y's post of i on the wall of m.
+After x delivers y's post of i in m to z, which requires x has not delivered y's post of i in m to z: x has delivered y's post of i in m to z, z sees y's post of i on the wall of m and z knows y.
+After x delivers y's post of i in m back to y, which requires x has not delivered y's post of i in m to y: x has delivered y's post of i in m to y and y sees y's post of i on the wall of m.
+After y withdraws y's post of i in x's m: no longer x sees y's post of i on the wall of m, no one sees y's post of i on the wall of m and x has delivered y's post of i in m to no one.
+After x and y swap the item i for n w-coins: no longer x holds the item i, y holds the item i, no longer y holds n w-coins and x holds n w-coins.
+After x and y swap the item i for n w-bonds due e: no longer x holds the item i, y holds the item i, no longer y holds n w-bonds due e and x holds n w-bonds due e.
+After x and y swap the item i for the item j: no longer x holds the item i, y holds the item i, no longer y holds the item j and x holds the item j.
+After x deposits the item i with z for y on k: no longer x holds the item i and z holds the item i in escrow from x for y on k.
+After z and y release the item i that x deposited on k: no longer z holds the item i in escrow from x for y on k and y holds the item i.
+After z and x return the item i deposited for y on k: no longer z holds the item i in escrow from x for y on k and x holds the item i.
+AGORA:0 - | An *item* is a one-of-a-kind thing named by its maker.
+AGORA:0 - | Alice, Bob, Carol and Dave are persons, Item and Thing items, Wish something wanted, Mart a market, Day a maturity date, Cond a condition Alice, Bob and Carol agree, Sum a number; in clauses 4 and 5 Carol is possibly Alice, and in clause 6 Dave is possibly Alice or Bob.
+AGORA:1 ■ Make: made(Alice,Item), item(Alice,Item) <- ~made(Alice,Item) guarded by Alice.
+AGORA:2 ■ Open: keeper(Alice,Mart), member(Alice,Mart,Alice), has_member(Alice,Alice,Mart) <- ~keeper(Alice,Mart) guarded by Alice.
+AGORA:3 ■ Join: member(Bob,Mart,Alice), has_member(Alice,Bob,Mart) <- keeper(Alice,Mart), knows(Alice,Bob), ~member(Bob,Mart,_) guarded by Alice, Bob.
+AGORA:4 ■ | Posting.
+AGORA:4 ■ Offer: posted(Carol,Item,Mart), post(Alice,Carol,Item,Mart) <- member(Carol,Mart,Alice), keeper(Alice,Mart), item(Carol,Item), ~posted(Carol,Item,Mart) guarded by Carol possibly Alice=Carol.
+AGORA:4 ■ Want: posted(Carol,Wish,Mart), post(Alice,Carol,Wish,Mart) <- member(Carol,Mart,Alice), keeper(Alice,Mart), ~posted(Carol,Wish,Mart) guarded by Carol possibly Alice=Carol.
+AGORA:4 ■ Deliver: delivered_post(Alice,Carol,Item,Mart,Bob), post(Bob,Carol,Item,Mart), knows(Bob,Carol) <- keeper(Alice,Mart), post(Alice,Carol,Item,Mart), has_member(Alice,Bob,Mart), ~delivered_post(Alice,Carol,Item,Mart,Bob) possibly Alice=Carol.
+AGORA:4 ■ Deliver to poster: delivered_post(Alice,Carol,Item,Mart,Carol), post(Carol,Carol,Item,Mart) <- keeper(Alice,Mart), post(Alice,Carol,Item,Mart), ~keeper(Carol,Mart), ~delivered_post(Alice,Carol,Item,Mart,Carol) possibly Alice=Carol.
+AGORA:5 ■ Withdraw: ~post(Alice,Carol,Item,Mart), ~post(_,Carol,Item,Mart), ~delivered_post(Alice,Carol,Item,Mart,_) <- post(Alice,Carol,Item,Mart) guarded by Carol possibly Alice=Carol.
+AGORA:5 ■ | Carol may not post Item to Mart again.
+AGORA:6 ■ Swap item for coin: ~item(Alice,Item), item(Bob,Item), ~coin(Bob,Dave,*Sum), coin(Alice,Dave,*Sum) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), coin(Bob,Dave,*Sum) guarded by Alice, Bob possibly Alice=Dave, Bob=Dave.
+AGORA:6 ■ Swap item for bond: ~item(Alice,Item), item(Bob,Item), ~bond(Bob,Dave,Day,*Sum), bond(Alice,Dave,Day,*Sum) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), bond(Bob,Dave,Day,*Sum) guarded by Alice, Bob possibly Alice=Dave, Bob=Dave.
+AGORA:6 ■ Swap items: ~item(Alice,Item), item(Bob,Item), ~item(Bob,Thing), item(Alice,Thing) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), item(Bob,Thing) guarded by Alice, Bob.
+AGORA:6 ■ Deposit item: ~item(Alice,Item), escrow_item(Carol,Item,Alice,Bob,Cond) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), item(Alice,Item) guarded by Alice, Carol.
+AGORA:6 ■ Release item: ~escrow_item(Carol,Item,Alice,Bob,Cond), item(Bob,Item) <- knows(Carol,Bob), knows(Bob,Carol), met(Carol,Cond), escrow_item(Carol,Item,Alice,Bob,Cond) guarded by Carol, Bob.
+AGORA:6 ■ Return item: ~escrow_item(Carol,Item,Alice,Bob,Cond), item(Alice,Item) <- knows(Carol,Alice), knows(Alice,Carol), failed(Carol,Cond), escrow_item(Carol,Item,Alice,Bob,Cond) guarded by Carol, Alice.

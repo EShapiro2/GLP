@@ -1,0 +1,9 @@
+GCC: Grassroots Community Currency
+GCC instantiates GBank with community currency bylaws, and extends it.
+A *community currency* is a bank whose coins are Dollar-denominated and whose bylaws name one role, *treasurer*; the treasurers jointly decide its acts.
+Alice and Bob are persons, Orga a community currency, Sum a number.
+1. ■ Draw: Alice may swap Sum Alice-coins for Sum Orga-coins, provided Alice is a treasurer of Orga.
+2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.
+Logic pragmas.
+x is a treasurer of z: x holds the role Treasurer in z.
+After x swaps n x-coins for n z-coins: no longer x holds n x-coins, z holds n x-coins, no longer z holds n z-coins and x holds n z-coins.

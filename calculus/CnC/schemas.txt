@@ -1,0 +1,7 @@
+CnC: Consumers' Cooperative
+CnC instantiates GCoop and TC with bylaws that delegate no act, and restricts them.
+Vocabulary: y has paid z the fee = paid_fee(z,y).
+CnC:0 - | A *consumers' cooperative* is a cooperative that is a trading company. Its *fee* is a number of Dollars the members set, and the *cost* of a good is the coins Orga paid for it.
+CnC:0 - | Bob and Erin are persons, Orga a consumers' cooperative, Ware a good, Sum a number.
+CnC:1 ■ Join: GO:3 Join <- paid_fee(Orga,Bob).
+CnC:2 ■ Sell: TC:3 <- participant(Erin,Orga), paid_for(Orga,Ware,#Sum).

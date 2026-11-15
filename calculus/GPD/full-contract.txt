@@ -1,0 +1,21 @@
+% Written by tools/expand.py from rev/; do not edit.
+GPD: Grassroots Programs Dissemination
+An *identity* is a unique key pair, chosen by the person who has it.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+The *author* of an item is its first signer.
+A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration.
+Alice, Bob and Carol are persons. A party to a contract must have an identity. Alice and Bob are persons.
+GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+GSG:2. ■ Unfriend: Alice may end her friendship with Bob.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+GFP:1. ■ Sign: Alice may create an item by signing it.
+GFP:2. ■ Forward: Alice may forward an item she holds to her friend Bob, adding her signature to the signatures the item carries.
+GPD:1. ◆ Publish: Carol may publish a program by signing it, attesting that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
+GPD:2. ■ Developer Trust. Trust: Alice may declare trust in Carol, whom she knows, as a developer. Untrust: Alice may withdraw the declaration.
+GPD:3. ■ Offer: Carol may offer a program she holds to her friend Alice by forwarding it to her.
+GPD:4. ■ Install: Alice may install a program she published, as well as a program offered to her whose developer she trusts.
+GPD:5. ■ Invite: Alice may invite her friend Bob to join her in a program she installed, with the consent of Bob, who trusts its developer; Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
+GPD:6. ■ Leave: Alice may leave a program she installed; it is then no longer installed, and her participation in it with every participant ends.

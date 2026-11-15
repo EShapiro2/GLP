@@ -1,0 +1,17 @@
+CMB: Commercial Bank
+CMB instantiates GBank with commercial bank bylaws, and restricts and extends it.
+Vocabulary: y is a customer of z = customer(y,z); x is a loan officer of z = loan_officer(x,z); z has the lending limit of x at the number n = lending_limit(z,x,n).
+Roles: the directors of z = directors(z); those who decide the loan for z = loan_deciders(z).
+After y swaps n w-coins for n z-coins: no longer y holds n w-coins, z holds n w-coins, no longer z holds n z-coins and y holds n z-coins.
+After y and g swap n z-coins for m y-bonds due e: no longer z holds n z-coins, y holds n z-coins, no longer y holds m y-bonds due e and z holds m y-bonds due e.
+the earlier lending limit of x in z has ended: z has the lending limit of x at no number.
+After g sets the lending limit of x in z at n: the earlier lending limit of x in z has ended and z has the lending limit of x at the number n.
+CMB:0 - | A *commercial bank* is a bank that may issue Dollar-denominated coins and bonds, whose bylaws name two roles, *director*, held by its first officer, and *loan officer*; the directors jointly decide the acts of the bank, but a loan officer decides a loan within their *lending limit*, a number of Dollars. A participant who holds no role is a *customer*.
+CMB:0 - | Bob, Carol and Dave are persons, Dave possibly Bob, Orga a commercial bank, Dollar a fiat currency, Day a maturity date, Sum, Total and Limit numbers.
+CMB:1 ■ Leave: GO:3 Leave <- organisation(Orga) guarded by directors(Orga).
+CMB:1 ■ Officer leave: GO:3 Officer leave <- organisation(Orga) guarded by directors(Orga).
+CMB:1 ■ Expel: GO:3 Expel <- organisation(Orga) guarded by Bob, directors(Orga).
+CMB:1 ■ Officer expel: GO:3 Officer expel <- organisation(Orga) guarded by Bob, directors(Orga).
+CMB:2 ■ Deposit: ~coin(Bob,Dave,*Sum), coin(Orga,Dave,*Sum), ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum) <- customer(Bob,Orga), issued_in(Dave,Dollar), coin(Bob,Dave,*Sum), coin(Orga,Orga,*Sum) guarded by Bob possibly Bob=Dave.
+CMB:3 ■ Loan: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Day,*Total), bond(Orga,Bob,Day,*Total) <- organisation(Orga), customer(Bob,Orga), coin(Orga,Orga,*Sum), bond(Bob,Bob,Day,*Total) guarded by Bob, loan_deciders(Orga).
+CMB:4 ■ Set lending limit: ~lending_limit(Orga,Carol,_), lending_limit(Orga,Carol,Limit) <- organisation(Orga), person(Carol), loan_officer(Carol,Orga) guarded by directors(Orga), Carol.

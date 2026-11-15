@@ -1,0 +1,8 @@
+CSSN: Child-Safe Social Network
+CSSN instantiates GSNW with the guardians deciding jointly, a child for a ward and a parent for a guardian, and restricts and extends it.
+Alice and Bob are persons, Carol and Dave children.
+1. ◆ Enter: GnW:1, only if Alice is a legal parent of the minor who operates Carol.
+2. ■ A child's acquaintances. Child acquaint: GnW:3, only if Alice knows Bob, and with the consent of Alice. Children acquaint: GnW:4, only if Alice knows Dave and Bob knows Carol, and with the consent of Alice and Bob, who know each other, Alice and Bob possibly one person.
+3. ■ Child create: GSNW:2, only with the consent of Alice, a parent of Carol. Only a child, Dave, may join the group.
+4. ○ Of age: The creator of Carol may declare Carol of age, which ends every guardianship of Carol, and Carol is then a person. The creator will do so if the minor who operates Carol comes of age, and not before.
+5. ○ A minor who is not a ward. Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.

@@ -1,0 +1,13 @@
+GDS: Grassroots Directory Service
+GDS extends GRV.
+A *directory* is a service with a page every person can read.
+Alice, Bob and Carol are persons, Dora a service.
+1. ■ Open directory: Carol may make Dora a directory, provided Carol is a guardian of Dora.
+2. ■ Listing. List: Alice may list with Dora, provided Dora is a directory and Dora has verified an email address of Alice. Alice lists with a name if she chooses, shown on Dora's page or not, and her app then keeps Dora supplied with invitation links of hers. Delist: Alice may delist from Dora.
+3. ■ Lookup: Bob may look Alice up with Dora, provided Bob knows Dora and Dora lists Alice. Bob looks Alice up on Dora's page if she is shown there, and by her email address and name if not.
+Logic pragmas.
+Vocabulary: d is a directory = directory(d); d has verified an email address of x = verified(d,x); d lists x = lists(d,x); y holds an invitation link of x from d = holds_link(y,x,d).
+After x makes d a directory, which requires d is not a directory: d is a directory.
+After x lists with d, which requires d does not list x: d lists x.
+After x delists from d: no longer d lists x.
+After y looks x up with d: y holds an invitation link of x from d.

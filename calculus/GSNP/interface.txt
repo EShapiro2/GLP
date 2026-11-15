@@ -1,0 +1,85 @@
+GSNP: Grassroots Social Network with Provenance
+1. ■ Establish.  Alice may establish an identity, and then Alice is a person.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+4. ■ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person.
+5. ■ Unfriend.  Alice may end Bob's membership in _, provided Alice is a person and Bob is a person, and then no longer Alice counts Bob as a friend, no longer Bob counts Alice as a friend, Alice is a member of no group of Bob and Bob has Alice as a member of no group.
+6. ■ Message.  Alice may send a message to Bob, provided Alice and Bob are friends.
+7. ■ Create.  Alice may create Grupo.
+8. ■ Close.  Alice may close Grupo by leaving it.
+9. ■ Join.  Alice may add Bob to Grupo, with the consent of Bob, provided Alice is the leader of Grupo and Alice and Bob are friends.
+10. ■ Remove.  Alice may end Bob's membership in Grupo, provided Alice is the leader of Grupo.
+11. ■ Leave.  Bob may end his membership in Alice's Grupo.
+12. ■ Post.  Bob may send a message to the group Grupo, provided Bob is a member of Grupo.
+13. ■ Deliver.  Alice delivers a message of Bob in Grupo to Carol, provided Alice is the leader of Grupo, Bob has posted a message to Grupo, Alice has Bob as a member of the group Grupo and Alice has Carol as a member of the group Grupo.
+14. ■ Enter.  Alice may create Carol, and Carol must consent, provided Alice is a person, and then Carol holds the attestation Proof and Alice holds a record of Carol's attestation Proof.
+15. ■ Make guardian.  The guardians of Carol may make Bob a guardian of Carol, with the consent of Bob, provided Carol is an AI agent, Carol is not retired, Bob is a person and Carol holds the attestation Proof, and then Bob holds a record of Carol's attestation Proof.
+16. ■ Resign.  Bob may end his guardianship of Carol.
+17. ■ End guardian.  The guardians of Carol may end Bob's guardianship of Carol.
+18. ■ Guardian unfriend.  Bob may end his friendship with his AI agent Carol, and then Bob is a member of no group of Carol, Carol is a member of no group of Bob, Bob has Carol as a member of no group and Carol has Bob as a member of no group.
+19. ■ Ward acquaint.  Carol and Bob may jointly come to know each other, provided Carol is an AI agent, Carol has Alice as a guardian, Bob is a person and Carol holds the attestation Proof, and then Bob holds a record of Carol's attestation Proof.
+20. ■ Ward befriend.  Carol and Bob may jointly become friends, with the consent of Alice, provided Carol is an AI agent, Carol is not retired, Carol has Alice as a guardian, Bob is a person, Carol and Bob know each other, Alice and Bob are friends and Carol holds the attestation Proof.
+21. ■ Ward end.  Carol may end Bob's membership in _, provided Bob is not a guardian of Carol and Carol holds the attestation Proof, and then no longer Carol counts Bob as a friend, no longer Bob counts Carol as a friend, Carol is a member of no group of Bob and Bob has Carol as a member of no group.
+22. ■ Unfriend 2.  Bob may end Carol's membership in _, provided Bob is not a guardian of Carol, and then no longer Bob counts Carol as a friend, no longer Carol counts Bob as a friend, Bob is a member of no group of Carol and Carol has Bob as a member of no group.
+23. ■ Ward unfriend.  Alice may end the friendship of Carol and Bob, provided Carol has Alice as a guardian and Bob is not a guardian of Carol, and then Carol is a member of no group of Bob, Bob is a member of no group of Carol, Carol has Bob as a member of no group and Bob has Carol as a member of no group.
+24. ■ Wards acquaint.  Carol and Dave may jointly come to know each other, provided Carol is an AI agent, Carol has Alice as a guardian, Dave is an AI agent, Dave has Bob as a guardian, Carol holds the attestation Proof and Dave holds the attestation Seal, and then Carol holds a record of Dave's attestation Seal and Dave holds a record of Carol's attestation Proof.
+25. ■ Wards befriend.  Carol and Dave may jointly become friends, with the consent of Alice and Bob, provided Carol is an AI agent, Carol is not retired, Carol has Alice as a guardian, Dave is an AI agent, Dave is not retired, Dave has Bob as a guardian, Carol and Dave know each other, Alice knows Dave, Alice and Bob are friends, Carol holds the attestation Proof and Dave holds the attestation Seal.
+26. ■ Wards of one guardian befriend.  Carol and Dave may jointly become friends, with the consent of Alice, provided Carol is an AI agent, Carol is not retired, Carol has Alice as a guardian, Dave is an AI agent, Dave is not retired, Dave has Alice as a guardian, Carol and Dave know each other, Carol holds the attestation Proof and Dave holds the attestation Seal.
+27. ■ Retire.  The guardians of Carol may retire Carol.
+28. ■ Sign.  Alice may send a message to Alice, provided Alice is a person.
+29. ■ Forward.  Alice may forward an item of Carol to Bob, provided Alice holds an item of Carol, Alice and Bob are friends and Alice is a person.
+30. ■ Agent sign.  Alf may send a message to Alf, provided Alf is an AI agent and Alf holds the attestation Proof.
+31. ■ Agent forward.  Alf may forward an item of Erin to Bob, provided Alf is an AI agent, Alf holds the attestation Proof, Alf holds an item of Erin and Alf and Bob are friends.
+32. ■ Agent message.  Alf may send a message to Bob, provided Alf and Bob are friends.
+33. ■ Post forward.  Bob may forward an item of Carol to the group Grupo, provided Bob is a member of Grupo, Bob is not the leader of Grupo and Bob holds an item of Carol.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+Message: Alice [Message]
+Create: Alice [Create] <grupo>
+Close: Alice [Close]
+Join: Alice [Join]
+  Bob: Alice asks for your consent to join.
+Remove: Alice [Remove]
+Leave: Bob [Leave]
+Post: Bob [Post]
+Enter: Alice [Enter] <carol> <proof>
+  Carol: Alice asks for your consent to enter.
+Make guardian: Bob [Make guardian] <carol> <decider> <proof>
+  Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
+Resign: Bob [Resign]
+End guardian: Decider [End guardian] <bob>
+  Codecider: Decider asks for your consent to end guardian.
+Guardian unfriend: Bob [Guardian unfriend]
+Ward acquaint: Carol [Ward acquaint] <bob>
+  Bob: Carol asks for your consent to ward acquaint.
+Ward befriend: Carol [Ward befriend]
+  Bob: Carol asks for your consent to ward befriend.
+  Alice: Carol asks for your consent to ward befriend.
+Ward end: Carol [Ward end]
+Unfriend 2: Bob [Unfriend 2]
+Ward unfriend: Alice [Ward unfriend] <carol> <bob>
+Wards acquaint: Carol [Wards acquaint] <dave>
+  Dave: Carol asks for your consent to wards acquaint.
+Wards befriend: Carol [Wards befriend] <bob>
+  Dave: Carol asks for your consent to wards befriend.
+  Alice: Carol asks for your consent to wards befriend.
+  Bob: Carol asks for your consent to wards befriend.
+Wards of one guardian befriend: Carol [Wards of one guardian befriend]
+  Dave: Carol asks for your consent to wards of one guardian befriend.
+  Alice: Carol asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+Sign: Alice [Sign]
+Forward: Alice [Forward]
+Agent sign: Alf [Agent sign]
+Agent forward: Alf [Agent forward]
+Agent message: Alf [Agent message]
+Post forward: Bob [Post forward]

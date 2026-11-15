@@ -1,0 +1,6 @@
+CnC: Consumers' Cooperative
+CnC instantiates GCoop and TC with bylaws that delegate no act and restricts them.
+A *consumers' cooperative* is a cooperative that is a trading company. Its *fee* is a number of Dollars the members set, and the *cost* of a good is the coins Orga paid for it.
+Bob and Erin are persons, Orga a consumers' cooperative.
+1. ■ Join: GO:3, only if Bob has paid Orga the fee.
+2. ■ Sell: TC:3, only if Erin is a member and pays the cost of the good.

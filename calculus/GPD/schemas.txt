@@ -1,0 +1,26 @@
+GPD: Grassroots Programs Dissemination
+GPD extends GFP (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Vocabulary: x holds a program of y = program(x,y); x trusts y as a developer = trusts_developer(x,y); x has a program of y installed = installed(x,y); x is a participant of a program of z with y = participant(x,z,y).
+x has no participation in a program of z: x is a participant of a program of z with no one and no one is a participant of a program of z with x.
+After x publishes a program by signing it: x holds a program of x.
+After x declares trust in y as a developer, which requires x does not trust y as a developer: x trusts y as a developer.
+After x withdraws x's declaration of trust in y as a developer: no longer x trusts y as a developer.
+After x offers a program of z to y: y holds a program of z.
+After x installs x's own program, which requires x does not have a program of x installed: x has a program of x installed.
+After x installs a program of z, which requires x does not have a program of z installed: x has a program of z installed.
+After x invites y to join in a program of z: y holds a program of z, y has a program of z installed, x is a participant of a program of z with y and y is a participant of a program of z with x.
+After x leaves a program of z: no longer x has a program of z installed and x has no participation in a program of z.
+GPD:0 - | A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration.
+GPD:0 - | Alice, Bob, Carol and Dave are persons, Carol and Dave possibly Alice, Bob or one person.
+GPD:1 ◆ Publish: program(Carol,Carol) <- guarded by Carol.
+GPD:1 ◆ | Carol attests that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
+GPD:2 ■ | Developer Trust.
+GPD:2 ■ Trust: trusts_developer(Alice,Carol) <- knows(Alice,Carol), ~trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
+GPD:2 ■ Untrust: ~trusts_developer(Alice,Carol) <- trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
+GPD:3 ■ Offer: program(Alice,Dave) <- program(Carol,Dave), friend(Carol,Alice), friend(Alice,Carol) guarded by Carol possibly Alice=Carol, Alice=Dave, Carol=Dave.
+GPD:3 ■ | Carol offers it by forwarding it to Alice.
+GPD:4 ■ Install own: installed(Alice,Alice) <- program(Alice,Alice), ~installed(Alice,Alice) guarded by Alice.
+GPD:4 ■ Install: installed(Alice,Carol) <- program(Alice,Carol), trusts_developer(Alice,Carol), ~installed(Alice,Carol) guarded by Alice possibly Alice=Carol.
+GPD:5 ■ Invite: program(Bob,Carol), installed(Bob,Carol), participant(Alice,Carol,Bob), participant(Bob,Carol,Alice) <- friend(Alice,Bob), friend(Bob,Alice), installed(Alice,Carol), trusts_developer(Bob,Carol) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+GPD:5 ■ | Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
+GPD:6 ■ Leave: ~installed(Alice,Carol), ~participant(Alice,Carol,_), ~participant(_,Carol,Alice) <- installed(Alice,Carol) guarded by Alice possibly Alice=Carol.

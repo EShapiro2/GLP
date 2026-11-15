@@ -1,0 +1,156 @@
+CMB: Commercial Bank
+1. ■ Establish.  Alice may establish an identity, and then Alice is a person.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+4. ■ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person.
+5. ■ Person unfriend.  Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
+6. ■ Enter.  Alice may create Carol, and Carol must consent, provided Alice is a person.
+7. ■ Appoint.  Those who decide for Carol may make Bob an officer of Carol, with the consent of Bob, provided Carol is an organisation, Carol is not retired, Bob is a person and Bob is a participant of Carol, and then Bob holds the role Role in Carol and Carol has Bob in the role Role.
+8. ■ Resign.  Bob may end his guardianship of Carol, and then Bob holds no role in Carol and Carol has Bob in no role.
+9. ■ End officer.  Those who decide for Carol may end Bob's guardianship of Carol, and then Bob holds no role in Carol and Carol has Bob in no role.
+10. ■ Officer unfriend.  Bob may end his friendship with his organisation Carol, and then Bob holds no role in Carol and Carol has Bob in no role.
+11. ■ Ward acquaint.  Carol and Bob may jointly come to know each other, provided Carol is an organisation, Carol has Alice as an officer and Bob is a person.
+12. ■ Ward befriend.  Carol and Bob may jointly become friends, with the consent of Alice, provided Carol is an organisation, Carol is not retired, Carol has Alice as an officer, Bob is a person, Carol and Bob know each other and Alice and Bob are friends.
+13. ■ Ward end.  Carol may end her friendship with Bob, provided Bob is not an officer of Carol.
+14. ■ Unfriend.  Bob may end his friendship with Carol, provided Bob is not an officer of Carol.
+15. ■ Ward unfriend.  Alice may end the friendship of Carol and Bob, provided Carol has Alice as an officer and Bob is not an officer of Carol.
+16. ■ Wards acquaint.  Carol and Dave may jointly come to know each other, provided Carol is an organisation, Carol has Alice as an officer, Dave is an organisation and Dave has Bob as an officer.
+17. ■ Wards befriend.  Carol and Dave may jointly become friends, with the consent of Alice and Bob, provided Carol is an organisation, Carol is not retired, Carol has Alice as an officer, Dave is an organisation, Dave is not retired, Dave has Bob as an officer, Carol and Dave know each other, Alice knows Dave and Alice and Bob are friends.
+18. ■ Wards of one guardian befriend.  Carol and Dave may jointly become friends, with the consent of Alice, provided Carol is an organisation, Carol is not retired, Carol has Alice as an officer, Dave is an organisation, Dave is not retired, Dave has Alice as an officer and Carol and Dave know each other.
+19. ■ Retire.  Those who decide for Carol may retire Carol, and then no one holds any role in Carol and Carol has no one in any role.
+20. ■ Found.  Gov may create Orga with Alice as its first officer in the role Role, with the consent of Alice, and Orga must consent, provided Alice is a person.
+21. ■ Propose.  Bob may propose Motion in Orga, provided Bob is entitled to propose Motion in Orga.
+22. ■ Vote.  Those who decide Motion for Orga may vote on Motion in Orga, provided Orga is an organisation and Orga has Motion proposed.
+23. ■ Act.  Alice may take Motion for Orga, provided Alice is entitled to take Motion for Orga and the votes decide Motion according to the bylaws of Orga.
+24. ■ Join.  Bob may become a participant of Orga, with the consent of those who decide for Orga.
+25. ■ Leave.  Bob may end his participation in Orga, with the consent of the directors of Orga, provided Bob is not an officer of Orga and Orga is an organisation.
+26. ■ Officer leave.  Bob may end his participation and his office in Orga, with the consent of the directors of Orga, provided Orga is an organisation.
+27. ■ Expel.  Bob may end his participation in Orga, with the consent of those who decide for Orga and the directors of Orga, provided Bob is not an officer of Orga and Orga is an organisation.
+28. ■ Officer expel.  Bob may end his participation and his office in Orga, with the consent of those who decide for Orga and the directors of Orga, provided Orga is an organisation.
+29. ■ Amend.  Those who decide the amendment of the bylaws of Orga may amend the bylaws of Orga, provided Orga is an organisation.
+30. ■ Issue.  Alice may issue Sum Alice-coins, provided Alice has issued coins of the denomination Dollar.
+31. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other and the coins and bonds of Carol and Dave are of one denomination.
+32. ■ Pay.  Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.
+33. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob and the coins and bonds of Bob and Carol are of one denomination.
+34. ■ Issue bond.  Alice may issue Sum Alice-bonds due Day, provided Alice's date is Today and Day is more than Today.
+35. ■ Swap coin for bond.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-bonds due Day, provided Alice and Bob know each other and the coins and bonds of Carol and Dave are of one denomination.
+36. ■ Swap bonds.  Alice and Bob may jointly swap Sum Carol-bonds due Day for Total Dave-bonds due Term, provided Alice and Bob know each other and the coins and bonds of Carol and Dave are of one denomination.
+37. ■ Redeem coin against bond.  Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob and the coins and bonds of Bob and Carol are of one denomination.
+38. ■ Redeem bond.  Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, Alice's date is Today, Day is at most Today and the coins and bonds of Bob and Carol are of one denomination.
+39. ■ Redeem bond against bond.  Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, Alice's date is Today, Day is at most Today and the coins and bonds of Bob and Carol are of one denomination.
+40. ■ Deposit.  Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob and the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
+41. ■ Deposit bond.  Alice may deposit Sum Dave-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob and the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
+42. ■ Release.  Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other, Carol finds Cond met and the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
+43. ■ Release bond.  Carol and Bob may jointly release Sum Dave-bonds due Day that Alice deposited on Cond, provided Carol and Bob know each other, Carol finds Cond met and the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
+44. ■ Return.  Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other, Carol finds Cond failed and the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
+45. ■ Return bond.  Carol and Alice may jointly return Sum Dave-bonds due Day deposited for Bob on Cond, provided Carol and Alice know each other, Carol finds Cond failed and the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
+46. ■ First issue.  Alice may issue Sum Dollar-denominated Alice-coins, provided Alice has issued coins of no denomination.
+47. ■ Issue bond 2.  Alice may issue Sum Dollar-denominated Alice-bonds due Day, provided Alice's date is Today and Day is more than Today.
+48. ■ Accept.  Alice may accept one more Dollar-denominated Carol-coin in payment, provided Alice holds a Dollar-denominated Carol-coin.
+49. ■ Accept by bond.  Alice may accept one more Dollar-denominated Carol-coin in payment, provided Alice holds a Carol-bond due someone and Carol has issued a Dollar-denominated bond due someone.
+50. ■ Pay 2.  Alice may pay Bob a Carol-coin that Bob accepts as denominated by Dollar, provided Alice knows Bob and Carol has issued coins of the denomination Dollar.
+51. ■ Deposit 2.  Bob may swap Sum Dave-coins for Sum Orga-coins, provided Bob is a customer of Orga and Dave has issued coins of the denomination Dollar.
+52. ■ Loan.  Bob and those who decide the loan for Orga may jointly swap Sum Orga-coins for Total Bob-bonds due Day, provided Orga is an organisation and Bob is a customer of Orga.
+53. ■ Set lending limit.  The directors of Orga may set the lending limit of Carol in Orga at Limit, with the consent of Carol, provided Orga is an organisation, Carol is a person and Carol is a loan officer of Orga.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Person unfriend: Alice [Person unfriend]
+Enter: Alice [Enter] <carol>
+  Carol: Alice asks for your consent to enter.
+Appoint: Bob [Appoint] <decider> <role>
+  Decider: Bob asks for your consent to appoint.
+  Codecider: Bob asks for your consent to appoint.
+Resign: Bob [Resign]
+End officer: Decider [End officer] <bob>
+  Codecider: Decider asks for your consent to end officer.
+Officer unfriend: Bob [Officer unfriend]
+Ward acquaint: Carol [Ward acquaint] <bob>
+  Bob: Carol asks for your consent to ward acquaint.
+Ward befriend: Carol [Ward befriend]
+  Bob: Carol asks for your consent to ward befriend.
+  Alice: Carol asks for your consent to ward befriend.
+Ward end: Carol [Ward end]
+Unfriend: Bob [Unfriend]
+Ward unfriend: Alice [Ward unfriend] <carol> <bob>
+Wards acquaint: Carol [Wards acquaint] <dave>
+  Dave: Carol asks for your consent to wards acquaint.
+Wards befriend: Carol [Wards befriend] <bob>
+  Dave: Carol asks for your consent to wards befriend.
+  Alice: Carol asks for your consent to wards befriend.
+  Bob: Carol asks for your consent to wards befriend.
+Wards of one guardian befriend: Carol [Wards of one guardian befriend]
+  Dave: Carol asks for your consent to wards of one guardian befriend.
+  Alice: Carol asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+Found: Gov [Found] <orga> <alice> <role>
+  Alice: Gov asks for your consent to found.
+  Orga: Gov asks for your consent to found.
+Propose: Bob [Propose]
+Vote: Decider [Vote] <orga> <motion>
+  Codecider: Decider asks for your consent to vote.
+Act: Alice [Act]
+Join: Bob [Join] <orga> <decider>
+  Decider: Bob asks for your consent to join.
+  Codecider: Bob asks for your consent to join.
+Leave: Bob [Leave] <decider>
+  Decider: Bob asks for your consent to leave.
+  Codecider: Bob asks for your consent to leave.
+Officer leave: Bob [Officer leave] <decider>
+  Decider: Bob asks for your consent to officer leave.
+  Codecider: Bob asks for your consent to officer leave.
+Expel: Bob [Expel] <decider> <deciderb>
+  Decider: Bob asks for your consent to expel.
+  DeciderB: Bob asks for your consent to expel.
+  Codecider: Bob asks for your consent to expel.
+  CodeciderB: Bob asks for your consent to expel.
+Officer expel: Bob [Officer expel] <decider> <deciderb>
+  Decider: Bob asks for your consent to officer expel.
+  DeciderB: Bob asks for your consent to officer expel.
+  Codecider: Bob asks for your consent to officer expel.
+  CodeciderB: Bob asks for your consent to officer expel.
+Amend: Decider [Amend] <orga>
+  Codecider: Decider asks for your consent to amend.
+Issue: Alice [Issue] <sum>
+Swap: Alice [Swap] <sum> <total>
+  Bob: Alice asks for your consent to swap.
+Pay: Alice [Pay] <sum>
+Redeem: Alice [Redeem]
+Issue bond: Alice [Issue bond] <day> <sum>
+Swap coin for bond: Alice [Swap coin for bond] <sum> <day> <total>
+  Bob: Alice asks for your consent to swap coin for bond.
+Swap bonds: Alice [Swap bonds] <sum> <term> <total>
+  Bob: Alice asks for your consent to swap bonds.
+Redeem coin against bond: Alice [Redeem coin against bond] <day>
+Redeem bond: Alice [Redeem bond]
+Redeem bond against bond: Alice [Redeem bond against bond] <term>
+Deposit: Alice [Deposit] <sum> <cond>
+  Carol: Alice asks for your consent to deposit.
+Deposit bond: Alice [Deposit bond] <sum> <cond>
+  Carol: Alice asks for your consent to deposit bond.
+Release: Carol [Release] <sum>
+  Bob: Carol asks for your consent to release.
+Release bond: Carol [Release bond] <sum>
+  Bob: Carol asks for your consent to release bond.
+Return: Carol [Return] <sum>
+  Alice: Carol asks for your consent to return.
+Return bond: Carol [Return bond] <sum>
+  Alice: Carol asks for your consent to return bond.
+First issue: Alice [First issue] <sum> <dollar>
+Issue bond 2: Alice [Issue bond 2] <day> <sum> <dollar>
+Accept: Alice [Accept]
+Accept by bond: Alice [Accept by bond]
+Pay 2: Alice [Pay 2] <dollar>
+Deposit 2: Bob [Deposit 2] <sum>
+Loan: Bob [Loan] <decider> <sum> <total>
+  Decider: Bob asks for your consent to loan.
+  Codecider: Bob asks for your consent to loan.
+Set lending limit: Carol [Set lending limit] <decider> <limit>
+  Decider: Carol asks for your consent to set lending limit.
+  Codecider: Carol asks for your consent to set lending limit.

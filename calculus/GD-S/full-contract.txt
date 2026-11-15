@@ -1,0 +1,15 @@
+% Written by tools/expand.py from rev/; do not edit.
+GD-S: Separating GD
+An *identity* is a unique key pair, chosen by the person who has it.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Alice, Bob and Carol are persons. A party to a contract must have an identity. Alice and Bob are persons.
+GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1, GD-S:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends, only if Alice and Bob have not declared distrust of each other.
+GSG:2. ■ Unfriend: Alice may end her friendship with Bob.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+GD:1. ■ Distrust: Alice, who knows Carol, may declare distrust of Carol; if they are friends, this ends their friendship.
+GD:2. ■ Propagate: Alice, who does not know Carol, may declare distrust of Carol provided her friend Bob has declared it.
+GD:3. ■ Cease: Alice, who has declared distrust of Carol, may withdraw the declaration.
+GD-S:2. ○ Taking sides. Alice, whose friend Bob has declared distrust of Carol, will eventually declare distrust of Carol or end her friendship with Bob, unless Bob withdraws the declaration.

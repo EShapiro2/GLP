@@ -1,0 +1,11 @@
+GFF: Grassroots Feeds and Followers
+GFF extends and restricts GDO-L.
+Vocabulary: x holds an item of z's feed = feed_item(x,z); x has received an item of z's feed from y = received(x,z,y).
+After x posts an item to x's feed: x holds an item of x's feed.
+After x receives from y an item of z's feed: x holds an item of z's feed and x has received an item of z's feed from y.
+GFF:0 - | A *feed* is named by its author.
+GFF:0 - | Alice, Bob and Carol are persons, Bob and Carol possibly one person.
+GFF:1 ■ Post: feed_item(Alice,Alice) <- guarded by Alice.
+GFF:1 ■ | Alice has a feed, and the item is created or received.
+GFF:2 ■ Deliver: feed_item(Alice,Carol), received(Alice,Carol,Bob) <- pointer(Alice,Bob,Carol), knows(Bob,Alice), feed_item(Bob,Carol) possibly Bob=Carol.
+GFF:3 ■ Labeled point transitive: GDO-L:2 <- knows(Carol,Alice).

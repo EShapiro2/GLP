@@ -1,0 +1,8 @@
+K: Base
+Alice and Bob are persons.
+1. ■ Meet: Alice and Bob may jointly meet.
+2. ■ Part: Alice may part from Bob.
+Logic pragmas.
+Vocabulary: x has met y = met(x,y).
+After x and y meet, which requires x has not met y: x has met y and y has met x.
+After x parts from y: no longer x has met y and no longer y has met x.

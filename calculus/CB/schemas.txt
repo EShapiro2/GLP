@@ -1,0 +1,17 @@
+CB: Community Bank
+CB instantiates GBank with community bank bylaws, and restricts and extends it.
+Vocabulary: the z-coins y holds and the y-coins z holds have been redeemed against each other = redeemed(z,y); z has y's credit line at the number n = credit_line(z,y,n).
+Roles: the directors of z = directors(z).
+y's earlier credit line in z has ended: z has y's credit line at no number.
+After g sets y's credit line in z at n: y's earlier credit line in z has ended and z has y's credit line at the number n.
+After y swaps n y-coins for n z-coins: no longer y holds n y-coins, z holds n y-coins, no longer z holds n z-coins and y holds n z-coins.
+CB:0 - | A *community bank* is a bank whose bylaws name two roles, *member*, held by every participant, and *director*, held by its first officer and by members; the directors jointly decide the acts of the bank, but the members jointly appoint and remove directors. A member's *credit line* is a number of coins.
+CB:0 - | Bob is a person, Orga a community bank, Sum, Line, Held and Total numbers.
+CB:1 ■ Leave: GO:3 Leave <- redeemed(Orga,Bob).
+CB:1 ■ Officer leave: GO:3 Officer leave <- redeemed(Orga,Bob).
+CB:1 ■ Expel: GO:3 Expel <- redeemed(Orga,Bob).
+CB:1 ■ Officer expel: GO:3 Officer expel <- redeemed(Orga,Bob).
+CB:2 ■ Set credit line: ~credit_line(Orga,Bob,_), credit_line(Orga,Bob,Line) <- organisation(Orga) guarded by directors(Orga), Bob.
+CB:3 ■ Credit: ~coin(Bob,Bob,*Sum), coin(Orga,Bob,*Sum), ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum) <- coin(Orga,Bob,#Held), credit_line(Orga,Bob,Line), sum(Total,Held,Sum), le(Total,Line), coin(Bob,Bob,*Sum), coin(Orga,Orga,*Sum) guarded by Bob.
+CB:4 ○ | Community currency.
+CB:4 ○ | A member will accept Orga-coins in payment for their offerings at the prices they post.

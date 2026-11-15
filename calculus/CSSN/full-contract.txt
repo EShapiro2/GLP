@@ -1,0 +1,27 @@
+% Written by tools/expand.py from rev/; do not edit.
+CSSN: Child-Safe Social Network
+An *identity* is a unique key pair, chosen by the person who has it.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+A *message*, a parameter of GSN, is what a person sends.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a child and how. Here: the parents deciding jointly.
+Alice, Bob and Carol are persons. A party to a contract must have an identity. Alice and Bob are persons. Alice, Bob and Erin are persons, Carol and Dave children. Alice is a person, Carol a child. Alice and Bob are persons, Carol and Dave children.
+GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+GSG:2. ■ Unfriend: Alice may end her friendship with Bob.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+GSN:1. ■ Message: Alice may send a message to her friend Bob.
+GSN:2. ■ Group. Create: Alice may create a group, of which she is the leader and first member. Close: Alice may close the group by leaving it.
+GSN:3. ■ Joining and Leaving. Join: Alice, the leader of a group, may add her friend Bob to it, with the consent of Bob. Remove, Leave: Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+GSN:4. ■ Group messaging. Post: A member of a group may send a message to the group. Deliver: Its leader delivers it to every current member.
+GnW:1, CSSN:1. ◆ Enter: Alice may create a child, Carol, and establish Carol's identity by choosing Carol's key pair, only if Alice is a legal parent of the minor who operates Carol. Alice is then the creator, a parent and a friend of Carol.
+GnW:2. ■ Parent decisions. Make parent: Those who decide for Carol may make Bob a parent and a friend of Carol, with the consent of Bob. Resign: Bob may end his guardianship of Carol. End parent: Those who decide for Carol may end Bob's guardianship. Parent unfriend: Bob may end his friendship with Carol, which ends his guardianship. Carol may not end a friendship with her parent.
+GnW:3, CSSN:2. ■ Child and person. Child acquaint: Carol, a child of Alice, and Bob may jointly come to know each other, only if Alice knows Bob, and with the consent of Alice. Child befriend: Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends. Child end, Unfriend, Child unfriend: Carol, Bob or Alice may end the relation of Bob and Carol.
+GnW:4, CSSN:2. ■ Children. Children acquaint: Carol, a child of Alice, and Dave, a child of Bob, may jointly come to know each other, only if Alice knows Dave and Bob knows Carol, and with the consent of Alice and Bob, who know each other, Alice and Bob possibly one person. Children befriend: Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+GnW:5. ■ Retire: Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
+GSNW:1. ■ A child's messages. Child message: Carol may send a message to a friend (GSN:1). Child post: Carol may send a message to a group (GSN:4).
+GSNW:2, CSSN:3. ■ A child's group. Child create: Carol may create a group (GSN:2), only with the consent of Alice, a parent of Carol. Child close: Carol may close it (GSN:2). Parent close: Alice, a parent of Carol, may close it. Only a child, Dave, may join the group.
+GSNW:3. ■ Child join: Carol may join a group (GSN:3) only with the consent of Alice, a parent of Carol.
+CSSN:4. ○ Of age: The creator of Carol may declare Carol of age, which ends every guardianship of Carol, and Carol is then a person. The creator will do so if the minor who operates Carol comes of age, and not before.
+CSSN:5. ○ A minor who is not a ward. Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.

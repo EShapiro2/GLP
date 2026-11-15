@@ -1,0 +1,7 @@
+GFF-FR-BC: Fault-Resilient GFF with Back-Channels
+GFF-FR-BC extends GFF-FR.
+Alice, Bob, Carol and Dave are persons, Bob and Dave possibly one person.
+1. ■ Back forward: Alice forwards an item of Dave's feed to Carol, provided Alice has a Dave-pointer to Bob, Alice has a Dave-pointer to Carol and Alice has received an item of Dave's feed first from Bob.
+Logic pragmas.
+Vocabulary: x has received an item of w's feed first from y = received_first(x,w,y); z has received an item of w's feed back from x = received_back(z,w,x).
+After x forwards an item of w's feed to z: z holds an item of w's feed and z has received an item of w's feed back from x.

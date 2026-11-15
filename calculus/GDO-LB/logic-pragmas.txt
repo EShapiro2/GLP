@@ -1,0 +1,9 @@
+GDO-LB: Location-Based GDO
+GDO-LB restricts GDO.
+A person has a *location*. N > 0, an integer, and E > 0 are parameters of GDO-LB.
+Alice, Bob and Carol are persons.
+1. ■ Point friend: GDO:1, only if either Alice points to fewer than N persons and Bob is closest to Alice among all of Alice's unpointed friends, or Bob is closer to Alice by more than E than some person pointed to by Alice.
+2. ■ Point transitive: GDO:2, only if Carol is closer to Alice by more than E than some person pointed to by Alice.
+3. ■ Unpoint: GDO:3, only if Alice points to more than N persons and Bob is furthest from Alice among the persons Alice points to.
+Logic pragmas.
+Vocabulary: either x points to fewer than N persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than E than some person pointed to by x = may_point_friend(x,y); y is closer to x by more than E than some person pointed to by x = closer(x,y); y is furthest from x among the persons x points to = furthest(x,y).

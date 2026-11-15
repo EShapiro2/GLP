@@ -1,0 +1,13 @@
+GSNP: Grassroots Social Network with Provenance
+GSNP instantiates GSN with item(y,x) for message(y,x); item(z,x) for group_message(z,x,g), composes it with GAI (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231), and extends the composition.
+Vocabulary: x has forwarded an item of z to g = forwarded(x,z,g).
+After x sends a message to y: y holds an item of x.
+After x forwards an item of z to the group g: x has forwarded an item of z to g.
+GSNP:0 - | Alf is an AI agent, Bob and Carol are persons, Grupo a group, Carol possibly Bob.
+GSNP:1 ■ Agent message: item(Bob,Alf) <- friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
+GSNP:1 ■ Guardian unfriend: GnW:2 Guardian unfriend + ~member(Bob,_,Alf), ~member(Alf,_,Bob), ~listed(Bob,Alf,_), ~listed(Alf,Bob,_) <-.
+GSNP:1 ■ Ward end: GnW:3 Ward end + ~member(Alf,_,Bob), ~member(Bob,_,Alf), ~listed(Alf,Bob,_), ~listed(Bob,Alf,_) <-.
+GSNP:1 ■ Unfriend: GnW:3 Unfriend + ~member(Bob,_,Alf), ~member(Alf,_,Bob), ~listed(Bob,Alf,_), ~listed(Alf,Bob,_) <-.
+GSNP:1 ■ Ward unfriend: GnW:3 Ward unfriend + ~member(Alf,_,Bob), ~member(Bob,_,Alf), ~listed(Alf,Bob,_), ~listed(Bob,Alf,_) <-.
+GSNP:2 ■ Post forward: forwarded(Bob,Carol,Grupo) <- member(Bob,Grupo,_), ~leader(Bob,Grupo), item(Bob,Carol) guarded by Bob possibly Bob=Carol.
+GSNP:2 ■ | Bob adds his signature to the signatures the item carries.

@@ -1,0 +1,18 @@
+DGC: Denominated Grassroots Currencies
+DGC extends GB and GDC, and restricts GB.
+Vocabulary: x has issued an f-denominated bond due e = issued_bond_in(x,f,e); the coins and bonds of z and w are of one denomination, for x = one_denomination(x,z,w); the coins and bonds that z holds in escrow from x for y on k are of one denomination = escrow_one_denomination(z,x,y,k); x accepts an f-denominated z-coin in payment = accepts(x,z,f).
+x holds an f-denominated z-coin: x holds a z-coin and z has issued coins of the denomination f.
+x holds an f-denominated z-bond due e: x holds a z-bond due e and z has issued an f-denominated bond due e.
+After x issues n f-denominated x-bonds due e: x holds n x-bonds due e and x has issued an f-denominated bond due e.
+After x accepts one more f-denominated z-coin in payment: x accepts an f-denominated z-coin in payment.
+After x pays y a z-coin that y accepts as denominated by f: no longer x holds a z-coin, y holds a z-coin and no longer y accepts an f-denominated z-coin in payment.
+DGC:0 - | A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
+DGC:0 - | Alice, Bob, Carol and Dave are persons, Dollar a fiat currency, Day a maturity date, Today a date, Cond a condition Alice, Bob and Carol agree, Sum a number; in clause 4 Carol is possibly Alice or Bob.
+DGC:1 ■ Issue bond: bond(Alice,Alice,Day,*Sum), issued_bond_in(Alice,Dollar,Day) <- date(Alice,Today), gt(Day,Today) guarded by Alice.
+DGC:2 ■ Swap: GB:2 <- one_denomination(Actor,Carol,Dave).
+DGC:2 ■ Redeem: GB:3 <- one_denomination(Actor,Bob,Carol).
+DGC:2 ■ Escrow: GB:4 <- escrow_one_denomination(Carol,Alice,Bob,Cond).
+DGC:3 ■ Accept: accepts(Alice,Carol,Dollar) <- coin(Alice,Carol), issued_in(Carol,Dollar) guarded by Alice.
+DGC:3 ■ Accept by bond: accepts(Alice,Carol,Dollar) <- bond(Alice,Carol,_), issued_bond_in(Carol,Dollar,_) guarded by Alice.
+DGC:3 ■ | Each such coin paid to Alice counts against the limit, and Alice may accept again.
+DGC:4 ■ Pay: ~coin(Alice,Carol), coin(Bob,Carol), ~accepts(Bob,Carol,Dollar) <- knows(Alice,Bob), issued_in(Carol,Dollar), coin(Alice,Carol), accepts(Bob,Carol,Dollar) guarded by Alice possibly Alice=Carol, Bob=Carol.

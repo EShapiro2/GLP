@@ -1,0 +1,8 @@
+GBCC: Grassroots Backed Community Currency
+GBCC extends GCC and restricts it.
+*f*, a fraction 0 ≤ f < 1, is a parameter of GBCC. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
+Alice is a person, Orga a community currency.
+1. ■ Treasurers. GO:4 and GnW:2, only if every treasurer stays backed. Leave, Expel: GO:3, only if every treasurer stays backed. Swap, Pay, Redeem, Escrow: GC:2, GC:3, GC:4, GB:2, GB:3, GB:4 and DGC:4, only if every treasurer stays backed.
+2. ■ Draw: GCC:1, only if Alice stays backed.
+3. ◆ Record: Alice, a treasurer, may pay Dollars into the account, and the treasurers may then jointly record them as paid in by Alice.
+4. ○ Fiat redemption. GCC:2, from the account while it holds Dollars, and from a treasurer if it holds none.

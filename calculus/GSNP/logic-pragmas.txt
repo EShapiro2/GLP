@@ -1,0 +1,9 @@
+GSNP: Grassroots Social Network with Provenance
+GSNP instantiates GSN with y holds an item of x for y has a message from x; z holds an item of x for z has a message of x in g, composes it with GAI (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231), and extends the composition.
+Alf is an AI agent, Bob and Carol are persons, Grupo a group, Carol possibly Bob.
+1. ■ Agent message: Alf may send a message to Bob, provided Alf and Bob are friends. Guardian unfriend: GnW:2 Guardian unfriend, and then Bob is a member of no group of Alf, Alf is a member of no group of Bob, Bob has Alf as a member of no group and Alf has Bob as a member of no group. Ward end: GnW:3 Ward end, and then Alf is a member of no group of Bob, Bob is a member of no group of Alf, Alf has Bob as a member of no group and Bob has Alf as a member of no group. Unfriend: GnW:3 Unfriend, and then Bob is a member of no group of Alf, Alf is a member of no group of Bob, Bob has Alf as a member of no group and Alf has Bob as a member of no group. Ward unfriend: GnW:3 Ward unfriend, and then Alf is a member of no group of Bob, Bob is a member of no group of Alf, Alf has Bob as a member of no group and Bob has Alf as a member of no group.
+2. ■ Post forward: Bob may forward an item of Carol to the group Grupo, provided Bob is a member of Grupo, Bob is not the leader of Grupo and Bob holds an item of Carol. Bob adds his signature to the signatures the item carries.
+Logic pragmas.
+Vocabulary: x has forwarded an item of z to g = forwarded(x,z,g).
+After x sends a message to y: y holds an item of x.
+After x forwards an item of z to the group g: x has forwarded an item of z to g.

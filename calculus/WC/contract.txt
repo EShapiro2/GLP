@@ -1,0 +1,6 @@
+WC: Workers' Cooperative
+WC instantiates GCoop with bylaws that delegate no act and extends it.
+A *workers' cooperative* is a cooperative whose members work for it.
+Bob is a person, Orga a workers' cooperative.
+1. ■ Pay: Orga may pay Bob, a member, Dollar-denominated coins for his work.
+2. ■ Distribute: Orga may distribute Dollar-denominated coins it holds to the members equally.

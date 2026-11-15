@@ -1,0 +1,16 @@
+GDS: Grassroots Directory Service
+GDS extends GRV.
+Vocabulary: d is a directory = directory(d); d has verified an email address of x = verified(d,x); d lists x = lists(d,x); y holds an invitation link of x from d = holds_link(y,x,d).
+After x makes d a directory, which requires d is not a directory: d is a directory.
+After x lists with d, which requires d does not list x: d lists x.
+After x delists from d: no longer d lists x.
+After y looks x up with d: y holds an invitation link of x from d.
+GDS:0 - | A *directory* is a service with a page every person can read.
+GDS:0 - | Alice, Bob and Carol are persons, Dora a service.
+GDS:1 ■ Open directory: directory(Dora) <- guardian(Carol,Dora), ~directory(Dora) guarded by Carol.
+GDS:2 ■ | Listing.
+GDS:2 ■ List: lists(Dora,Alice) <- directory(Dora), verified(Dora,Alice), ~lists(Dora,Alice) guarded by Alice.
+GDS:2 ■ | Alice lists with a name if she chooses, shown on Dora's page or not, and her app then keeps Dora supplied with invitation links of hers.
+GDS:2 ■ Delist: ~lists(Dora,Alice) <- lists(Dora,Alice) guarded by Alice.
+GDS:3 ■ Lookup: holds_link(Bob,Alice,Dora) <- knows(Bob,Dora), lists(Dora,Alice) guarded by Bob.
+GDS:3 ■ | Bob looks Alice up on Dora's page if she is shown there, and by her email address and name if not.

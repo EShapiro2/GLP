@@ -1,0 +1,7 @@
+K: Base
+Alice, Bob and Carol are persons.
+1. ■ Give: Bob may take a token, with the consent of Alice. Take: Alice may take a token.
+Logic pragmas.
+Vocabulary: x has a token = token(x); x is trusted by y = trusted(x,y).
+After x gives y a token: y has a token.
+After x takes a token: x has a token.

@@ -1,0 +1,14 @@
+CB: Community Bank
+CB instantiates GBank with community bank bylaws, and restricts and extends it.
+A *community bank* is a bank whose bylaws name two roles, *member*, held by every participant, and *director*, held by its first officer and by members; the directors jointly decide the acts of the bank, but the members jointly appoint and remove directors. A member's *credit line* is a number of coins.
+Bob is a person, Orga a community bank, Sum, Line, Held and Total numbers.
+1. ■ Leave: GO:3 Leave, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other. Officer leave: GO:3 Officer leave, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other. Expel: GO:3 Expel, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other. Officer expel: GO:3 Officer expel, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other.
+2. ■ Set credit line: The directors of Orga may set Bob's credit line in Orga at Line, with the consent of Bob, provided Orga is an organisation.
+3. ■ Credit: Bob may swap Sum Bob-coins for Sum Orga-coins, provided Orga holds exactly Held Bob-coins, Orga has Bob's credit line at the number Line, Total is Held plus Sum and Total is at most Line.
+4. ○ Community currency. A member will accept Orga-coins in payment for their offerings at the prices they post.
+Logic pragmas.
+Vocabulary: the z-coins y holds and the y-coins z holds have been redeemed against each other = redeemed(z,y); z has y's credit line at the number n = credit_line(z,y,n).
+Roles: the directors of z = directors(z).
+y's earlier credit line in z has ended: z has y's credit line at no number.
+After g sets y's credit line in z at n: y's earlier credit line in z has ended and z has y's credit line at the number n.
+After y swaps n y-coins for n z-coins: no longer y holds n y-coins, z holds n y-coins, no longer z holds n z-coins and y holds n z-coins.

@@ -1,0 +1,11 @@
+REC: Recommendations
+REC extends GKK.
+Alice, Bob and Carol are persons, Skill a skill or a service.
+1. ◆ Recommend: Alice may recommend Bob for Skill, provided Alice knows Bob.
+2. ■ Show: Bob may show Carol Alice's recommendation for Skill, provided Bob holds Alice's recommendation for Skill and Bob knows Carol.
+3. ■ Withdraw: Alice may withdraw her recommendation of Bob for Skill. Alice may not make it again.
+Logic pragmas.
+Vocabulary: x has recommended y for s = recommended(x,y,s); y holds x's recommendation for s = recommendation(y,x,s); y has shown z x's recommendation for s = shown(y,z,x,s); z sees x's recommendation of y for s = sees(z,x,y,s).
+After x recommends y for s, which requires x has not recommended y for s: x has recommended y for s and y holds x's recommendation for s.
+After y shows z x's recommendation for s, which requires y has not shown z x's recommendation for s: y has shown z x's recommendation for s and z sees x's recommendation of y for s.
+After x withdraws x's recommendation of y for s: no longer y holds x's recommendation for s, y has shown no one x's recommendation for s and no one sees x's recommendation of y for s.

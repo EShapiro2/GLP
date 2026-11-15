@@ -1,0 +1,6 @@
+REC: Recommendations
+REC extends GKK.
+Alice, Bob and Carol are persons.
+1. ◆ Recommend: Alice may recommend Bob, whom she knows, for something, a skill or a service, once for each thing; Bob keeps the recommendation.
+2. ■ Show: Bob may show a recommendation he holds to Carol, whom he knows, once; Carol then sees who recommended Bob and for what.
+3. ■ Withdraw: Alice may withdraw a recommendation; it is then gone from Bob and from everyone Bob showed it to, and Alice may not make it again.

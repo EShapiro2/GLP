@@ -1,0 +1,21 @@
+GDO: Grassroots Directed Overlay
+1. ○ Establish.  Alice may establish an identity.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+6. ■ Point friend.  Alice may point to Bob, provided Alice and Bob are friends.
+7. ■ Point transitive.  Alice may point to Carol, provided Alice knows Carol, Alice points to Bob and Bob points to Carol.
+8. ■ Unpoint.  Alice may cease pointing to Bob.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+Point friend: Alice [Point friend]
+Point transitive: Alice [Point transitive]
+Unpoint: Alice [Unpoint]

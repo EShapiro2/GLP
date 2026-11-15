@@ -1,0 +1,7 @@
+SC: Shareholding Corporation
+SC instantiates GCorp with shareholding corporation bylaws and restricts and extends it.
+*Share* is a denomination, and a *share* of Orga is an Orga-coin denominated in Share. A *shareholding corporation* is a corporation whose bylaws name two roles, *shareholder*, held by every person who holds a share of Orga, and *director*, held by its first officer; the shareholders decide the issue of shares and the appointment and the removal of directors, by a majority of the shares they hold, and the directors jointly decide the other acts of Orga.
+Orga is a shareholding corporation.
+1. ■ Issue shares: Those who decide the issue of shares may issue a number of shares of Orga to a person known to Orga; the first shares are issued to its first officer.
+2. ■ Dividend. Set dividend: The directors may set a dividend, a number of Dollars a share. Claim: A shareholder may then claim it from Orga, once, in Dollar-denominated coins for the shares they hold.
+3. ■ Redeem: GC:4 and GB:3, only if the coin is of a denomination other than Share.

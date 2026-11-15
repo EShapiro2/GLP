@@ -1,0 +1,4 @@
+GCoop: Grassroots Cooperative
+GCoop extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+x is a member of z: x is a participant of z.
+GCoop:0 - | A *cooperative* is an organisation whose bylaws name two roles, *member*, held by every participant, and *board member*; the members decide by a majority of the members, one member one vote, but for the acts the bylaws delegate to the board or to another role.

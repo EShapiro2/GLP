@@ -1,0 +1,90 @@
+GAS: Grassroots App Store
+1. ■ Establish.  Alice may establish an identity, and then Alice is a person.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+4. ■ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person.
+5. ■ Person unfriend.  Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
+6. ■ Sign.  Alice may create an item by signing it.
+7. ■ Forward.  Alice may forward an item of Carol to Bob, provided Alice holds an item of Carol and Alice and Bob are friends.
+8. ◆ Publish.  Carol may publish a program by signing it.
+9. ■ Trust.  Alice may declare trust in Carol as a developer, provided Alice knows Carol.
+10. ■ Untrust.  Alice may withdraw her declaration of trust in Carol as a developer.
+11. ■ Offer.  Carol may offer a program of Dave to Alice, provided Carol holds a program of Dave and Carol and Alice are friends.
+12. ■ Install own.  Alice may install her own program, provided Alice holds a program of Alice.
+13. ■ Install.  Alice may install a program of Carol, provided Alice holds a program of Carol and Alice trusts Carol as a developer.
+14. ■ Invite.  Alice may invite Bob to join in a program of Carol, with the consent of Bob, provided Alice and Bob are friends, Alice has a program of Carol installed and Bob trusts Carol as a developer.
+15. ■ Leave.  Alice may leave a program of Carol.
+16. ■ Enter.  Alice may create Carol, and Carol must consent, provided Alice is a person.
+17. ■ Make guardian.  The guardians of Carol may make Bob a guardian of Carol, with the consent of Bob, provided Carol is a ward, Carol is not retired and Bob is a person.
+18. ■ Resign.  Bob may end his guardianship of Carol.
+19. ■ End guardian.  The guardians of Carol may end Bob's guardianship of Carol.
+20. ■ Guardian unfriend.  Bob may end his friendship with his ward Carol.
+21. ■ Ward acquaint.  Carol and Bob may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian and Bob is a person.
+22. ■ Ward befriend.  Carol and Bob may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Bob is a person, Carol and Bob know each other and Alice and Bob are friends.
+23. ■ Ward end.  Carol may end her friendship with Bob, provided Bob is not a guardian of Carol.
+24. ■ Unfriend.  Bob may end his friendship with Carol, provided Bob is not a guardian of Carol.
+25. ■ Ward unfriend.  Alice may end the friendship of Carol and Bob, provided Carol has Alice as a guardian and Bob is not a guardian of Carol.
+26. ■ Wards acquaint.  Carol and Dave may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian, Dave is a ward and Dave has Bob as a guardian.
+27. ■ Wards befriend.  Carol and Dave may jointly become friends, with the consent of Alice and Bob, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Bob as a guardian, Carol and Dave know each other, Alice knows Dave and Alice and Bob are friends.
+28. ■ Wards of one guardian befriend.  Carol and Dave may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Alice as a guardian and Carol and Dave know each other.
+29. ■ Retire.  The guardians of Carol may retire Carol.
+30. ■ Open store.  Carol may make Dave a store, provided Carol is a guardian of Dave.
+31. ○ List.  Carol may list in Dave a program of Bob, provided Carol is a guardian of Dave, Dave is a store and Carol trusts Bob as a developer.
+32. ○ Delist.  Carol may delist from Dave a program of Bob, provided Carol is a guardian of Dave.
+33. ■ Trust store.  Alice may declare trust in Dave, provided Carol is a guardian of Dave and Alice knows Carol.
+34. ■ Untrust store.  Alice may withdraw her declaration of trust in Dave.
+35. ■ Install from store.  Alice may install from a store a program of Bob, provided Dave lists a program of Bob and Alice trusts the store Dave.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Person unfriend: Alice [Person unfriend]
+Sign: Alice [Sign]
+Forward: Alice [Forward]
+Publish: Carol [Publish]
+Trust: Alice [Trust]
+Untrust: Alice [Untrust]
+Offer: Carol [Offer]
+Install own: Alice [Install own]
+Install: Alice [Install]
+Invite: Alice [Invite]
+  Bob: Alice asks for your consent to invite.
+Leave: Alice [Leave]
+Enter: Alice [Enter] <carol>
+  Carol: Alice asks for your consent to enter.
+Make guardian: Bob [Make guardian] <carol> <decider>
+  Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
+Resign: Bob [Resign]
+End guardian: Decider [End guardian] <bob>
+  Codecider: Decider asks for your consent to end guardian.
+Guardian unfriend: Bob [Guardian unfriend]
+Ward acquaint: Carol [Ward acquaint] <bob>
+  Bob: Carol asks for your consent to ward acquaint.
+Ward befriend: Carol [Ward befriend]
+  Bob: Carol asks for your consent to ward befriend.
+  Alice: Carol asks for your consent to ward befriend.
+Ward end: Carol [Ward end]
+Unfriend: Bob [Unfriend]
+Ward unfriend: Alice [Ward unfriend] <carol> <bob>
+Wards acquaint: Carol [Wards acquaint] <dave>
+  Dave: Carol asks for your consent to wards acquaint.
+Wards befriend: Carol [Wards befriend] <bob>
+  Dave: Carol asks for your consent to wards befriend.
+  Alice: Carol asks for your consent to wards befriend.
+  Bob: Carol asks for your consent to wards befriend.
+Wards of one guardian befriend: Carol [Wards of one guardian befriend]
+  Dave: Carol asks for your consent to wards of one guardian befriend.
+  Alice: Carol asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+Open store: Carol [Open store]
+List: Carol [List]
+Delist: Carol [Delist]
+Trust store: Alice [Trust store] <dave>
+Untrust store: Alice [Untrust store]
+Install from store: Alice [Install from store] <bob>
