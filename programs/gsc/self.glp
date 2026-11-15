@@ -5515,7 +5515,7 @@ imported procedure compile#compile_named(Constant?).
 exported procedure compile_named(Constant?).
 compile_named(Nm) :- compile # compile_named(Nm?).
 
-imported procedure compile#compile_contract(Constant?, NDeclared?).
+imported procedure compile#compile_contract(Constant?, NDeclared?, Preds?, SParams?).
 exported procedure compile_contract(Constant?, WDeclared?).
 compile_contract(Nm, D) :- ground(D?) |
     read_faults(D?, F),
@@ -5523,7 +5523,11 @@ compile_contract(Nm, D) :- ground(D?) |
 
 imported procedure compile#compile_malformed(Constant?, Faults?).
 procedure compile_read(Faults?, Constant?, WDeclared?).
-compile_read([], Nm, D) :- unnamed(D?, D0), compile # compile_contract(Nm?, D0?).
+compile_read([], Nm, D) :- ground(D?) |
+    unnamed(D?, D0),
+    env_preds(D?, Ev),
+    param_list(D?, Pm),
+    compile # compile_contract(Nm?, D0?, Ev?, Pm?).
 compile_read([F|Fs], Nm, _) :- compile # compile_malformed(Nm?, [F?|Fs?]).
 
 imported procedure compile#compile_variant(Constant?, WContract?).
@@ -5534,14 +5538,18 @@ imported procedure compile#compile_schema(Constant?, Constant?).
 exported procedure compile_schema(Constant?, Constant?).
 compile_schema(Nm, Sn) :- compile # compile_schema(Nm?, Sn?).
 
-imported procedure compile#compile_schema_in(Constant?, NDeclared?, Constant?).
+imported procedure compile#compile_schema_in(Constant?, NDeclared?, Preds?, SParams?, Constant?).
 exported procedure compile_schema_in(Constant?, WDeclared?, Constant?).
 compile_schema_in(Nm, D, Sn) :- ground(D?) |
     read_faults(D?, F),
     compile_s_read(F?, Nm?, D?, Sn?).
 
 procedure compile_s_read(Faults?, Constant?, WDeclared?, Constant?).
-compile_s_read([], Nm, D, Sn) :- unnamed(D?, D0), compile # compile_schema_in(Nm?, D0?, Sn?).
+compile_s_read([], Nm, D, Sn) :- ground(D?) |
+    unnamed(D?, D0),
+    env_preds(D?, Ev),
+    param_list(D?, Pm),
+    compile # compile_schema_in(Nm?, D0?, Ev?, Pm?, Sn?).
 compile_s_read([F|Fs], Nm, _, _) :- compile # compile_malformed(Nm?, [F?|Fs?]).
 
 imported procedure compile#compile_schema_variant(Constant?, WContract?, Constant?).

@@ -1,10 +1,10 @@
 # A run of the cascade on CSSN
 
-- Contract: `CSSN` (`cssn` to the checker), its owner's two files `programs/cssn/CSSN.txt` and `programs/cssn/CSSN.glp`, copied here as they stood at `b9c3aaf8`.
+- Contract: `CSSN` (`cssn` to the checker), its owner's two files `programs/cssn/CSSN.txt` and `programs/cssn/CSSN.glp`, copied here as they stood at `ba4c7f84`.
 - The paper: `/Users/udi/Grassroots/CSSN (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/cssn/CSSN.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/cssn/CSSN.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 18:29 UTC by `cascade.sh cssn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `b9c3aaf8`; each artefact's source and tool:
+- Run on 2026-11-15 20:12 UTC by `cascade.sh cssn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `ba4c7f84`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
