@@ -5,16 +5,39 @@
 % Last changed: 2026-11-12, by GO #5.
 % Schemas: GO.glp beside this file.
 GO: Grassroots Organisation
-GO instantiates GnW and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-An organisation is a ward with participants, which include its guardians, referred to as its officers, each with a role.  The state of the ward holds its bylaws and its register, recording the participants and the officers in each role.  The bylaws define the roles of the organisation, each with its powers and the acts by which a participant is appointed to it and removed from it, and name for each act of the organisation the officers and/or persons who decide it and the rule by which they decide it jointly, including admitting and removing a participant, and appointing an officer when there is none.
-Alice and Bob are persons, Orga a ward.
-1. ■ Founding.  Alice, or an organisation with Alice, may create an organisation, Orga, as a ward, choosing its bylaws, with Alice its first officer.
-2. ■ Acts of the organisation.  An officer, or a person the bylaws name, may propose an act of Orga, and the officers and/or persons the bylaws name for it may vote on it; an officer the bylaws name for the act may take it for Orga once their votes decide it according to the bylaws.
-3. ■ Participation.  Bob becomes a participant of Orga by an act of Bob and Orga; his participation ends by an act of Bob or of Orga, and with it every role he holds.
-4. ■ Officers.  A participant may be appointed to a role by an act of Orga and the participant, or removed from it by an act of Orga or of the participant, and is a guardian of Orga while they hold a role.
-5. ■ Amendment.  The bylaws may be amended by an act of Orga.
-6. ○ Accountability.  Orga is accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga is accountable for it with Orga.
-Pragmas
+GO instantiates GnW with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of GO, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
+Alice and Bob are persons, Orga an organisation.
+1. ■ Found: An organisation may create Orga (GnW:1) with the consent of Alice; Alice is then its first officer.
+2. ■ Acts of the organisation. Propose: An officer, or a person the bylaws name, may propose an act of Orga. Vote: Those who decide the act may vote on it. Act: An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.
+3. ■ Participation. Join: Bob may become a participant of Orga with the consent of those who decide for Orga. Leave, Expel: Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
+4. ■ Officers. Appoint: GnW:2, only if Bob is a participant; the decision names his role.
+5. ■ Amend: Those who decide it may amend the bylaws.
+6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
+Logic pragmas
+GO instantiates GnW with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of GO, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
+Alice and Bob are persons, Gov and Orga organisations, Motion an act of Orga, Role a role.
+1. ■ Found: Gov may create Orga with Alice as its first officer in the role Role, with the consent of Alice, and Orga must consent, provided Alice is a person.
+2. ■ Acts of the organisation. Propose: Bob may propose Motion in Orga, provided Bob is entitled to propose Motion in Orga. Vote: Those who decide Motion for Orga may vote on Motion in Orga, provided Orga is an organisation and Orga has Motion proposed. Act: Alice may take Motion for Orga, provided Alice is entitled to take Motion for Orga and the votes decide Motion according to the bylaws of Orga.
+3. ■ Participation. Join: Bob may become a participant of Orga, with the consent of those who decide for Orga. Leave: Bob may end his participation in Orga, provided Bob is not an officer of Orga. Officer leave: Bob may end his participation and his office in Orga. Expel: Those who decide for Orga may end Bob's participation in Orga, provided Bob is not an officer of Orga. Officer expel: Those who decide for Orga may end Bob's participation and Bob's office in Orga. Every role Bob holds in Orga ends with his participation.
+4. ■ Officers. Appoint: GnW:2 Make guardian, only if Bob is a participant of Orga, and then Bob holds the role Role in Orga and Orga has Bob in the role Role. The decision names his role. Resign: GnW:2 Resign, and then Bob holds no role in Orga and Orga has Bob in no role. End officer: GnW:2 End guardian, and then Bob holds no role in Orga and Orga has Bob in no role. Officer unfriend: GnW:2 Guardian unfriend, and then Bob holds no role in Orga and Orga has Bob in no role. Retire: GnW:5, and then no one holds any role in Orga and Orga has no one in any role.
+5. ■ Amend: Those who decide the amendment of the bylaws of Orga may amend the bylaws of Orga, provided Orga is an organisation.
+6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
+Logic pragmas.
+Vocabulary: z has y as its first officer = first_officer(z,y); y holds the role r in z = role(y,z,r); z has y in the role r = has_role(z,y,r); x is a participant of z = participant(x,z); z has x as a participant = has_participant(z,x); x is entitled to propose m in z = proposer(x,z,m); z has m proposed = proposed(z,m); z has a vote on m = vote(z,m); the votes decide m according to the bylaws of z = decided(z,m); x is entitled to take m for z = taker(x,z,m); z has m taken = taken(z,m); z has its bylaws amended = amended(z).
+Roles: those who decide m for z = act_deciders(z,m); those who decide the amendment of the bylaws of z = amenders(z).
+After x creates z with y as its first officer in the role r, which requires z does not have an identity: z has an identity, z knows z, z is an organisation, x is the creator of z, z has y as its first officer, y is an officer of z, z has y as an officer, y holds the role r in z, z has y in the role r, y is a participant of z, z has y as a participant, y and z know each other and y and z are friends.
+After x proposes m in z, which requires z does not have m proposed: z has m proposed.
+After g votes on m in z: z has a vote on m.
+After x takes m for z, which requires z does not have m taken: z has m taken.
+After y becomes a participant of z, which requires y is not a participant of z: y is a participant of z and z has y as a participant.
+After y ends y's participation in z: no longer y is a participant of z and no longer z has y as a participant.
+After g ends y's participation in z: no longer y is a participant of z and no longer z has y as a participant.
+After y ends y's participation and y's office in z: no longer y is a participant of z, no longer z has y as a participant, no longer y is an officer of z, no longer z has y as an officer, y holds no role in z and z has y in no role.
+After g ends y's participation and y's office in z: no longer y is a participant of z, no longer z has y as a participant, no longer y is an officer of z, no longer z has y as an officer, y holds no role in z and z has y in no role.
+After g amends the bylaws of z: z has its bylaws amended.
+Interface pragmas
 Look: 🏛️, governance
 Organisations: the organisations Alice participates in, and her roles in each.
 Identity: Alice [Establish]
