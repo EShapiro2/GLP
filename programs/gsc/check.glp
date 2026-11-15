@@ -975,10 +975,172 @@ item_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     item_schemas(Ss?, F2),
     faults_app(F1?, F2?, R).
 
+% --- a contract supplies what its acts require (GSC, Section 3.2) -----------
+% "A contract is required to supply what its acts require: the predicate of
+% every atom that a role of a schema requires, the anchor of a quantifier
+% among them, or that occurs in a safe formula of a body, is the predicate of
+% an atom that some schema of the contract adds, an environment predicate, a
+% predicate the contract declares reflexive or a parameter of it ... the
+% checker refuses it" (Section 3.2, before Proposition Turing completeness).
+% Each predicate a schema so requires that is none of them is a fault
+% unsupplied(Schema, Pred), in the order of the schemas and, in a schema, of
+% its roles, a listed role's anchor before its atoms, then the anchors of the
+% quantified conjuncts of its head, then the safe formulas of its body, a
+% predicate once.  An agent role requires =(i) u -(i), a cleared atom
+% requiring none, and what it forbids is not required (def:schema).  A
+% quantified conjunct of a body is a safe formula of it (def:role), so every
+% atom of it counts, its anchor and the literals of its conclusion, which are
+% a listed role's =(i) and not(i) where it binds one.  An atom a schema adds
+% is one a role adds or a conditional atom of a quantified conjunct of its
+% head (def:schema: "where ... speak of an atom a schema adds or deletes, a
+% conditional one is included").  A cardinality's and a sum's anchored safe
+% formula in a constraint of a safe formula of a body occurs in that formula.
+% The condition of a quantified conjunct of a head, and the schema's own
+% constraint, are no safe formula of a body, and are not read.
+
+procedure sup_atoms_preds(Atoms?, Preds?, Preds).
+sup_atoms_preds([], T, T?).
+sup_atoms_preds([atom(P, _)|Xs], T, [P?|R?]) :- sup_atoms_preds(Xs?, T?, R).
+
+procedure sup_mult_pred(Mult?, Constant).
+sup_mult_pred(atom(P, _), P?).
+sup_mult_pred(times(_, atom(P, _)), P?).
+sup_mult_pred(rest(_, _, atom(P, _)), P?).
+
+% The predicates of the atoms of a safe formula, its anchors among them.
+procedure sup_form_preds(Form?, Preds?, Preds).
+sup_form_preds(fa(_, M), T, [P?|T?]) :- sup_mult_pred(M?, P).
+sup_form_preds(fnot(F), T, R?) :- sup_form_preds(F?, T?, R).
+sup_form_preds(fand(A, B), T, R?) :- sup_form_preds(B?, T?, R1), sup_form_preds(A?, R1?, R).
+sup_form_preds(for(A, B), T, R?) :- sup_form_preds(B?, T?, R1), sup_form_preds(A?, R1?, R).
+sup_form_preds(fexists(_, _, atom(P, _), F), T, [P?|R?]) :- sup_form_preds(F?, T?, R).
+sup_form_preds(fforall(_, _, atom(P, _), F, G), T, [P?|R?]) :-
+    sup_forms_preds(G?, T?, R1),
+    sup_form_preds(F?, R1?, R).
+sup_form_preds(fcons(C), T, R?) :-
+    cons_anchored(C?, [], An),
+    sup_forms_preds(An?, T?, R).
+
+procedure sup_forms_preds(Forms?, Preds?, Preds).
+sup_forms_preds([], T, T?).
+sup_forms_preds([F|Fs], T, R?) :- sup_forms_preds(Fs?, T?, R1), sup_form_preds(F?, R1?, R).
+
+% A listed role's anchor, and what it forbids, in the conclusion of a
+% quantified conjunct of the body.
+procedure sup_anchor(RoleSpec?, Preds?, Preds).
+sup_anchor(rs(_, _, _, _, _), T, T?).
+sup_anchor(crs(listed(_, Rho, _), _, _, _, _, _), T, [Rho?|T?]).
+sup_anchor(crs(qlisted(_, Rho, _, _), _, _, _, _, _), T, [Rho?|T?]).
+
+procedure sup_listed_forb(RoleSpec?, Preds?, Preds).
+sup_listed_forb(rs(_, _, _, _, _), T, T?).
+sup_listed_forb(crs(_, _, _, _, _, N), T, R?) :- sup_atoms_preds(N?, T?, R).
+
+procedure sup_roles_required(RoleSpecs?, Preds?, Preds).
+sup_roles_required([], T, T?).
+sup_roles_required([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    rs_req(RS?, Q),
+    sup_roles_required(Rs?, T?, R1),
+    sup_listed_forb(RS?, R1?, R2),
+    sup_atoms_preds(Q?, R2?, R3),
+    sup_anchor(RS?, R3?, R).
+
+procedure sup_conj_anchors(Conjuncts?, Preds?, Preds).
+sup_conj_anchors([], T, T?).
+sup_conj_anchors([conjunct(_, _, atom(P, _), _, _, _, _)|Cs], T, [P?|R?]) :-
+    sup_conj_anchors(Cs?, T?, R).
+
+% The predicates a schema requires, each once, in the order of first
+% occurrence.
+procedure sup_required(Schema?, Preds).
+sup_required(S, R?) :- ground(S?) |
+    sch_roles(S?, Rs),
+    sch_conjs(S?, Cj),
+    sch_forms(S?, Fs),
+    sup_forms_preds(Fs?, [], P3),
+    sup_conj_anchors(Cj?, P3?, P2),
+    sup_roles_required(Rs?, P2?, P1),
+    preds_dedup(P1?, R).
+
+% The predicates of the atoms the schemas of a contract add.
+procedure sup_hms_preds(HMults?, Preds?, Preds).
+sup_hms_preds([], T, T?).
+sup_hms_preds([hm(_, M)|Ms], T, [P?|R?]) :-
+    sup_mult_pred(M?, P),
+    sup_hms_preds(Ms?, T?, R).
+
+procedure sup_conj_added(Conjuncts?, Preds?, Preds).
+sup_conj_added([], T, T?).
+sup_conj_added([conjunct(_, _, _, _, P, _, _)|Cs], T, R?) :-
+    sup_conj_added(Cs?, T?, R1),
+    sup_hms_preds(P?, R1?, R).
+
+procedure sup_roles_added(RoleSpecs?, Preds?, Preds).
+sup_roles_added([], T, T?).
+sup_roles_added([RS|Rs], T, R?) :-
+    rs_add(RS?, P),
+    sup_roles_added(Rs?, T?, R1),
+    sup_atoms_preds(P?, R1?, R).
+
+procedure sup_added(Contract?, Preds?, Preds).
+sup_added([], T, T?).
+sup_added([S|Ss], T, R?) :- ground(S?), ground(Ss?), ground(T?) |
+    sch_roles(S?, Rs),
+    sch_conjs(S?, Cj),
+    sup_added(Ss?, T?, R1),
+    sup_conj_added(Cj?, R1?, R2),
+    sup_roles_added(Rs?, R2?, R).
+
+procedure sup_fault(Ans?, Constant?, Constant?, Faults?, Faults).
+sup_fault(yes, _, _, T, T?).
+sup_fault(no, Nm, P, T, [unsupplied(Nm?, P?)|T?]).
+
+% P is a parameter of the contract, a predicate: a constant parameter,
+% val(C), is no predicate.
+procedure sup_param(SParams?, Constant?, Ans).
+sup_param([], _, no).
+sup_param([val(_)|Ps], P, R?) :- sup_param(Ps?, P?, R).
+sup_param([X|Ps], P, R?) :- otherwise, ground(X?), ground(Ps?), ground(P?) |
+    same_param(X?, P?, A),
+    sup_param1(A?, Ps?, P?, R).
+
+procedure sup_param1(Ans?, SParams?, Constant?, Ans).
+sup_param1(yes, _, _, yes).
+sup_param1(no, Ps, P, R?) :- sup_param(Ps?, P?, R).
+
+% Sp the predicates of the atoms the schemas add, the reflexive and the
+% environment predicates, and Pm the parameters.
+procedure sup_faults(Preds?, Preds?, SParams?, Constant?, Faults).
+sup_faults([], _, _, _, []).
+sup_faults([P|Ps], Sp, Pm, Nm, R?) :- ground(P?), ground(Ps?), ground(Sp?), ground(Pm?), ground(Nm?) |
+    pred_member(P?, Sp?, A1),
+    sup_param(Pm?, P?, A2),
+    or_yes(A1?, A2?, A),
+    sup_faults(Ps?, Sp?, Pm?, Nm?, R1),
+    sup_fault(A?, Nm?, P?, R1?, R).
+
+procedure sup_schemas1(Contract?, Preds?, SParams?, Faults).
+sup_schemas1([], _, _, []).
+sup_schemas1([S|Ss], Sp, Pm, R?) :- ground(S?), ground(Ss?), ground(Sp?), ground(Pm?) |
+    sch_name(S?, Nm),
+    sup_required(S?, Rq),
+    sup_faults(Rq?, Sp?, Pm?, Nm?, F1),
+    sup_schemas1(Ss?, Sp?, Pm?, F2),
+    faults_app(F1?, F2?, R).
+
+% Rf the reflexive predicates, Ev the environment predicates and Pm the
+% parameters of the contract.
+procedure sup_schemas(Contract?, Preds?, Preds?, SParams?, Faults).
+sup_schemas(C, Rf, Ev, Pm, R?) :- ground(C?), ground(Rf?), ground(Ev?), ground(Pm?) |
+    preds_app(Rf?, Ev?, S2),
+    sup_added(C?, S2?, Sp),
+    sup_schemas1(C?, Sp?, Pm?, R).
+
 % A malformed contract is refused; a contract that is not is decided by
 % def:syntactically-grassroots.  The faults are given in the order: the
 % head, the numbers, the items, the name terms, the listed roles, the form of a schema,
-% the reflexive predicates, the signed terms.  The head and the numbers are
+% the reflexive predicates, the signed terms, what the contract does not
+% supply.  The head and the numbers are
 % decided on the contract as written, the rest on its plain form (self.glp,
 % plain_decl), and so are traceable provenance and volition;
 % def:unobstructed is decided on the contract as written (unobstructed.glp).
@@ -987,42 +1149,55 @@ check_formed([], C, NC, Rf, Ev, V?) :- ground(C?), ground(NC?), ground(Rf?), gro
     check_contract(C?, NC?, Rf?, Ev?, V).
 check_formed([F|Fs], _, _, _, _, malformed([F?|Fs?])).
 
-procedure check_decl(Contract?, NContract?, Preds?, Preds?, Faults?, Verdict).
-check_decl(C, NC, Rf, Ev, MHN, V?) :- ground(C?), ground(NC?), ground(Rf?), ground(Ev?), ground(MHN?) |
+procedure check_decl(Contract?, NContract?, Preds?, Preds?, SParams?, Faults?, Verdict).
+check_decl(C, NC, Rf, Ev, Pm, MHN, V?) :-
+    ground(C?), ground(NC?), ground(Rf?), ground(Ev?), ground(Pm?), ground(MHN?) |
     form_schemas(C?, M0),
     refl_schemas(C?, Rf?, M1),
     sgn_schemas(C?, M2),
     nt_schemas(C?, MT),
     listed_schemas(C?, ML),
-    faults_app(M1?, M2?, M12),
+    sup_schemas(C?, Rf?, Ev?, Pm?, MU),
+    faults_app(M2?, MU?, M2U),
+    faults_app(M1?, M2U?, M12),
     faults_app(ML?, M0?, ML0),
     faults_app(MT?, ML0?, MT0),
     faults_app(MHN?, MT0?, MH0),
     faults_app(MH0?, M12?, M),
     check_formed(M?, C?, NC?, Rf?, Ev?, V).
 
-procedure check_ndecl(NContract?, Preds?, Preds?, Verdict).
-check_ndecl(NC, Rf, Ev, V?) :- ground(NC?), ground(Rf?), ground(Ev?) |
+procedure check_ndecl(NContract?, Preds?, Preds?, SParams?, Verdict).
+check_ndecl(NC, Rf, Ev, Pm, V?) :- ground(NC?), ground(Rf?), ground(Ev?), ground(Pm?) |
     plain_contract(NC?, C),
     head_schemas(NC?, MH),
     num_schemas(NC?, MN),
     item_schemas(NC?, MI),
     faults_app(MN?, MI?, MNI),
     faults_app(MH?, MNI?, MHN),
-    check_decl(C?, NC?, Rf?, Ev?, MHN?, V).
+    check_decl(C?, NC?, Rf?, Ev?, Pm?, MHN?, V).
 
 exported procedure check(NDeclared?, Verdict).
 check(D, V?) :- ground(D?) |
     ndecl_schemas(D?, NC),
     ndecl_reflexive(D?, Rf),
-    check_ndecl(NC?, Rf?, [], V).
+    check_ndecl(NC?, Rf?, [], [], V).
+
+% The verdict on a contract naming environment predicates Ev and parameters
+% Pm, predicates of a parametric contract (GSC, Definition Parametric
+% contract): a predicate a schema requires may be one of either (Section 3.2,
+% "A contract is required to supply what its acts require").
+exported procedure check_env_params(NDeclared?, Preds?, SParams?, Verdict).
+check_env_params(D, Ev, Pm, V?) :- ground(D?), ground(Ev?), ground(Pm?) |
+    ndecl_schemas(D?, NC),
+    ndecl_reflexive(D?, Rf),
+    check_ndecl(NC?, Rf?, Ev?, Pm?, V).
 
 % The verdict on a contract naming environment predicates Ev (GSC 25b6b3c, the appendix "Values in Speech-Act Schemas": "an unobstructed introductory act requires no environment atom, clause 1 of Definition unobstructed admitting only atoms a schema adds, and forbids none"): an introductory act requiring or forbidding an atom of one is obstructed (unobstructed.glp, intro_result_env).
 exported procedure check_env(NDeclared?, Preds?, Verdict).
 check_env(D, Ev, V?) :- ground(D?), ground(Ev?) |
     ndecl_schemas(D?, NC),
     ndecl_reflexive(D?, Rf),
-    check_ndecl(NC?, Rf?, Ev?, V).
+    check_ndecl(NC?, Rf?, Ev?, [], V).
 
 exported procedure check_named(Constant?, Verdict).
 check_named(Nm, V?) :- ground(Nm?) |
