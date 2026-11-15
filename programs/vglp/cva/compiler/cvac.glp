@@ -1930,7 +1930,7 @@ var_types([const(_)|Vs], ['Constant'|Ts?]) :- var_types(Vs?, Ts).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 var_types([ilist(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
 
-%% Whether the contract requires the day: a schema requires the atom today(d) at a role (vGLP, Section 5.4, "Act schemas as local specifications": "A contract may require the day: the compiled agent reads, with its triggers, a calendar, a stream of dates the device writes, one a day, and holds today(d), d the last date read, beside its app state, which no schema adds or deletes and which a schema may require at a role").
+%% Whether the contract requires the day: a schema requires the atom today(d) at a role (vGLP, Section 5.4, "Speech-act schemas as local specifications": "we assume that every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition").
 procedure day_required(Contract?, YesNo).
 day_required(C, D?) :- ground(C?) |
     contract_preds(C?, [], Pr),
@@ -1989,7 +1989,7 @@ procedure stands_any(PStands?, YesNo).
 stands_any([], no).
 stands_any([_|_], yes).
 
-%% The environment predicates the contract declares, the day, today, apart: its agent reads the day from the calendar (day_required).
+%% The environment predicates the contract declares, the day, today, apart: its agent reads the day from its phone (day_required).
 procedure worded_env(Worded?, Preds).
 worded_env(words(_, Ev, _, _), E?) :- drop_pred(today, Ev?, E).
 procedure worded_lx(Worded?, Lxs).
