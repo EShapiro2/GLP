@@ -1048,7 +1048,7 @@ not_speech(_, yes) :- otherwise | true.
 %% (1) A wildcard among the arguments of an atom a role requires, an agent role or a listed role, is written as a variable of the schema that no atom of it names, '_1', '_2', ..., in the order of the schema, of the kind its place has (wild_made), and listed in the schema's head: it occurs in that one atom, required at one role, so it is local to that role (local.glp, locals_of: "A variable that occurs only in atoms the schema requires or deletes at one role ... is local to that role"), "a schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state", the class term and the request do not name it, no field is for it, and, no atom added or deleted naming it, the effect does not depend on it.
 %% (2) A wildcard among the arguments of the anchor of a quantifier of a safe formula, or of a quantified conjunct that binds no listed role, is written as such a variable among the variables its quantifier binds: the printed text matches the anchor into the state of its holder under the binding, which leaves the variable free, so it matches any value (the printed text's match_into); an instance of a conjunct is "restricted to the variables the conjunct's literals name and without repetition" (hm_named; the printed text's inst_at), and no literal names the variable.
 %% (3) A wildcard among the arguments of the anchor of a listed role stays the wildcard, the anchor being no atom the printed text matches: the people of the role are those at the role's place of the atoms of the anchor's predicate in the base's state whose other arguments are the image of the anchor's, the wildcard met by any value, each person once (the printed text's list_at, vals_meet; listed_wild).
-%% (4) A wildcard in a negated atom, forbidden or cleared, is as it was, and so is one in the name term N._ and one in an atom of a safe formula that is not the anchor of a quantifier.  Refused with the reason (wild_faults): a wildcard at an argument of a predicate to which no other atom of the contract gives a type; one in a required atom or an anchor at an argument that is a community name, an item or a constant, a constant the contract names or a variable over the constants, or, in an anchor, a real, the compiler writing a wildcard as an agent, a speech-act or a numeric variable only; one in the anchor of a count or a sum, or in an atom of its condition; and one in the anchor of a quantifier that binds a listed role in a safe formula across roles.
+%% (4) A wildcard in a negated atom, forbidden or cleared, is as it was, and so is one in the name term N._.  A wildcard in an atom of a safe formula that is not the anchor of a quantifier makes the atom the quantifier exists Ws (M) (wild_fa), so that the atom holds where the state has an atom it matches, and its negation where it has none.  Refused with the reason (wild_faults): a wildcard at an argument of a predicate to which no other atom of the contract gives a type; one in a required atom, an anchor or an atom of a safe formula at an argument that is a community name, an item or a constant, a constant the contract names or a variable over the constants, or, in an anchor, a real, the compiler writing a wildcard as an agent, a speech-act or a numeric variable only; one in the anchor of a count or a sum, or in an atom of its condition; and one in the anchor of a quantifier that binds a listed role in a safe formula across roles.
 %% The types of the arguments of the contract's predicates, a signature for each predicate and number of arguments, the wildcard's place taking the type another atom of the contract gives it, and wild where none does (wild_sigs), a person where one atom writes a person and another a variable a quantifier binds (peer_sigs).
 procedure wild_table(QContract?, Sigs).
 wild_table(C, Gs?) :-
@@ -1261,9 +1261,12 @@ wild_forms([F|Fs], Gs, K, [F1?|Fs1?], K2?, Vs?) :- ground(Gs?) |
     wild_form(F?, Gs?, K?, F1, K1, V1),
     wild_forms(Fs?, Gs?, K1?, Fs1, K2, V2),
     app(V1?, V2?, Vs).
-%% A safe formula with the wildcards of the anchors of its quantifiers among the variables they bind, but of a quantifier that binds a listed role, fforall([role(I)], ...); its other atoms, and its constraints, as they are.
+%% A safe formula with the wildcards of the anchors of its quantifiers among the variables they bind, but of a quantifier that binds a listed role, fforall([role(I)], ...), whose anchor and conclusion are as they are; its constraints as they are; and an atom of it with a wildcard, fa(H, M), the quantifier exists Ws M, Ws the wildcards as variables (wild_fa).
 procedure wild_form(Form?, Sigs?, Integer?, Form, Integer, Args).
-wild_form(fa(H, M), _, K, fa(H?, M?), K?, []).
+wild_form(fa(H, M), Gs, K, F1?, K1?, Vs?) :-
+    wild_atom(M?, Gs?, bound, K?, M1, K1, V0),
+    wild_twice(V0?, V0a, Vs),
+    wild_fa(V0a?, H?, M1?, F1).
 wild_form(fcons(C), _, K, fcons(C?), K?, []).
 wild_form(fnot(F), Gs, K, fnot(F1?), K1?, Vs?) :- wild_form(F?, Gs?, K?, F1, K1, Vs).
 wild_form(fand(F, G), Gs, K, fand(F1?, G1?), K2?, Vs?) :- ground(Gs?) |
@@ -1280,10 +1283,8 @@ wild_form(fexists(Xs, H, A, F), Gs, K, fexists(Xs1?, H?, A1?, F1?), K2?, Vs?) :-
     app(Xs?, V0a?, Xs1),
     wild_form(F?, Gs?, K1?, F1, K2, V1),
     app(V0b?, V1?, Vs).
-wild_form(fforall([role(I)], H, A, F, Ps), Gs, K, fforall([role(I?)], H?, A?, F1?, Ps1?), K2?, Vs?) :- ground(Gs?) |
-    wild_form(F?, Gs?, K?, F1, K1, V1),
-    wild_forms(Ps?, Gs?, K1?, Ps1, K2, V2),
-    app(V1?, V2?, Vs).
+wild_form(fforall([role(I)], H, A, F, Ps), Gs, K, fforall([role(I?)], H?, A?, F1?, Ps?), K1?, Vs?) :-
+    wild_form(F?, Gs?, K?, F1, K1, Vs).
 wild_form(fforall(Xs, H, A, F, Ps), Gs, K, fforall(Xs1?, H?, A1?, F1?, Ps1?), K3?, Vs?) :- otherwise, ground(Gs?) |
     wild_atom(A?, Gs?, bound, K?, A1, K1, V0),
     wild_twice(V0?, V0a, V0b),
@@ -1292,6 +1293,10 @@ wild_form(fforall(Xs, H, A, F, Ps), Gs, K, fforall(Xs1?, H?, A1?, F1?, Ps1?), K3
     wild_forms(Ps?, Gs?, K2?, Ps1, K3, V2),
     app(V1?, V2?, V12),
     app(V0b?, V12?, Vs).
+%% An atom of a safe formula with wildcards, as the quantifier exists Ws (M), its anchor the atom with each wildcard a variable Ws binds: it holds in a state that has an atom M matches, "a variable of its own, standing for some value", and its negation, not M, where the state has none, "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, ... every atom of the state that it matches" (vGLP, Section 5.4, "Speech-act schemas as local specifications"); before, the printed text took the wildcard for a value no atom has, the atom held in no state and its negation in every one.
+procedure wild_fa(Args?, Arg?, Atom?, Form).
+wild_fa([], H, M, fa(H?, M?)).
+wild_fa([V|Vs], H, M, fexists([V?|Vs?], H?, M?, fcons(true))).
 %% What the compiler does not take of a wildcard, the lines saying why ((4), above).
 UPlace  ::= up(Constant, Integer).
 UPlaces ::= [] ; [UPlace | UPlaces].
@@ -1380,7 +1385,12 @@ wild_schema_faults([qschema(S, _, _, C, Rs, Cj, Fs)|Ss], Gs, L?) :- ground(S?), 
     kept_atoms(Rs?, Ka),
     cj_anchors(Cj?, Aa1),
     forms_anchors(Fs?, Aa2),
-    app(Aa1?, Aa2?, Aa),
+    conj_phis(Cj?, Ph),
+    forms_fas(Ph?, Fa1),
+    forms_fas(Fs?, Fa2),
+    app(Fa1?, Fa2?, Fa),
+    app(Aa2?, Fa?, Aa2f),
+    app(Aa1?, Aa2f?, Aa),
     app(Ka?, Aa?, Ra),
     wild_resid(Ra?, Gs?, R),
     resid_lines(R?, S?, L1),
@@ -1417,6 +1427,19 @@ form_anchors(for(F, G), As?) :- form_anchors(F?, A1), form_anchors(G?, A2), app(
 form_anchors(fexists(_, _, A, F), [A?|As?]) :- form_anchors(F?, As).
 form_anchors(fforall([role(_)], _, _, F, Ps), As?) :- form_anchors(F?, A1), forms_anchors(Ps?, A2), app(A1?, A2?, As).
 form_anchors(fforall(_, _, A, F, Ps), [A?|As?]) :- otherwise | form_anchors(F?, A1), forms_anchors(Ps?, A2), app(A1?, A2?, As).
+%% The atoms of the safe formulas that are no anchors, but those of the conclusion of a quantifier that binds a listed role, which are the listed role's (its role's atoms).
+procedure forms_fas(Forms?, Atoms).
+forms_fas([], []).
+forms_fas([F|Fs], As?) :- form_fas(F?, A1), forms_fas(Fs?, A2), app(A1?, A2?, As).
+procedure form_fas(Form?, Atoms).
+form_fas(fa(_, M), [M?]).
+form_fas(fcons(_), []).
+form_fas(fnot(F), As?) :- form_fas(F?, As).
+form_fas(fand(F, G), As?) :- form_fas(F?, A1), form_fas(G?, A2), app(A1?, A2?, As).
+form_fas(for(F, G), As?) :- form_fas(F?, A1), form_fas(G?, A2), app(A1?, A2?, As).
+form_fas(fexists(_, _, _, F), As?) :- form_fas(F?, As).
+form_fas(fforall([role(_)], _, _, F, _), As?) :- form_fas(F?, As).
+form_fas(fforall(_, _, _, F, Ps), As?) :- otherwise | form_fas(F?, A1), forms_fas(Ps?, A2), app(A1?, A2?, As).
 %% The atoms of the constraints inside the conjuncts' conditions and the safe formulas, the anchors of their counts and sums and the atoms of those's conditions.
 procedure wcj_cons(Conjuncts?, Atoms).
 wcj_cons([], []).
@@ -1458,7 +1481,7 @@ resid_args([_|As], [_|Ks], B?) :- otherwise | resid_args(As?, Ks?, B).
 resid_args([_|_], [], no).
 procedure resid_lines(YesNo?, Constant?, Lines).
 resid_lines(no, _, []).
-resid_lines(yes, S, ['%% it has a wildcard, in an atom a role requires or in the anchor of a quantifier, at an argument that is a community name, an item or a constant, or, in an anchor, a real: such a wildcard "is a variable of its own, standing for some value" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), and the compiler writes it as an agent, a speech-act or a value variable over numbers only: the schemas\' term form has no variable over community names or items, a wildcard is not yet written as a variable over the constants, const(X), and a real variable a quantifier binds is not carried as a real:', T?]) :-
+resid_lines(yes, S, ['%% it has a wildcard, in an atom a role requires, in the anchor of a quantifier or in an atom of a safe formula, at an argument that is a community name, an item or a constant, or, in an anchor, a real: such a wildcard "is a variable of its own, standing for some value" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), and the compiler writes it as an agent, a speech-act or a value variable over numbers only: the schemas\' term form has no variable over community names or items, a wildcard is not yet written as a variable over the constants, const(X), and a real variable a quantifier binds is not carried as a real:', T?]) :-
     ground(S?) | said('%% the schema', S?, T).
 procedure count_lines(YesNo?, Constant?, Lines).
 count_lines(no, _, []).

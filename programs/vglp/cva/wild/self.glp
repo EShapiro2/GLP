@@ -16,7 +16,9 @@
 %% answering yes, and it commits, her state gaining accepted(carol) and keeping
 %% both bonds.  carol, who has accepted no one, first requests vow(carol), not
 %% exists g accepted(g), and gains vowed; alice, having accepted carol, requests
-%% vow(alice): refused, unable.  bob requests boast(bob), exists r
+%% vow(alice): refused, unable.  carol, who holds no role in anyone, requests
+%% rest(carol), not role(_, _) or retired, and gains rested; alice, holding a
+%% role in carol and not retired, requests rest(alice): refused, unable.  bob requests boast(bob), exists r
 %% role(_, r), holding no role: refused, unable.  carol appoints bob chair and
 %% then clerk, and alice chair, each answering yes; bob requests boast(bob) again,
 %% and gains officer.  carol reports to alice, report(carol, alice): its
@@ -48,6 +50,9 @@ play_wild(LA?, LB?, LC?, N?) :-
           own([A3], propose(vow(A3?))),
           wait(refused(vow(alice), alice, unable)),
           approval(appoint(carol, alice, speech(utterance(chair), carol)), yes),
+          wait(holds(role(carol, speech(utterance(chair), carol)))),
+          own([A4], propose(rest(A4?))),
+          wait(refused(rest(alice), alice, unable)),
           approval(report(carol, alice, [speech(utterance(chair), carol), speech(utterance(clerk), carol)]), yes)],
          [own([B1], propose(boast(B1?))),
           wait(refused(boast(bob), bob, unable)),
@@ -58,6 +63,8 @@ play_wild(LA?, LB?, LC?, N?) :-
           wait(holds(officer))],
          [own([V1], propose(vow(V1?))),
           wait(holds(vowed)),
+          own([V2], propose(rest(V2?))),
+          wait(holds(rested)),
           own([C1], propose(issue(C1?, alice, 7))),
           wait(holds(issued(alice, 7))),
           own([C0], propose(issue(C0?, alice, 9))),
