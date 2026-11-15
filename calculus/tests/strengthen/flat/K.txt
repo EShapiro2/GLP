@@ -1,0 +1,4 @@
+K: Base (flat text)
+K:0 - | Alice and Bob are persons.
+K:1 ■ Meet: Alice and Bob may jointly Alice has met Bob and Bob has met Alice, provided not Alice has met Bob.
+K:2 ■ Part: Alice may no longer Alice has met Bob and no longer Bob has met Alice.

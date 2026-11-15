@@ -67,8 +67,8 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET DL"
-FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
+ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS CALC SGLP QD QF NET DL"
+FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CALC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
 RUN_WANTED=" "
@@ -4243,6 +4243,13 @@ check "CVA pragmas: ... the inherited button that stands, with its question, rea
 check "CVA pragmas: ... the extending contract's [Link], no field, its Bob bound by friend(Bob), on its own tab (inherit)" "act('link', '\"Link\"', \[\], none, '\"Linked\"', by(\[1\]))" "$cva_px_inherit"
 check_not "CVA pragmas: ... no act of mint (inherit)" "act('mint'" "$cva_px_inherit"
 check "CVA pragmas: a line leaving unnamed a variable no required atom binds, refused, the variable named (unnamed)" 'the pragma "Minting" leaves unnamed the variable k of mint' "$cva_px_unnamed"
+# A schema whose name the term quotes, being no plain atom, as 'no-show' of the act No-show: its button [No-show] names it, the name in lower case and each space an underscore (programs/vglp/cva/compiler/README.md, 2), and the act is written with that name (quoted).
+cva_pq=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XH' 'Alice is a person.' '1. ■ No-show. Alice may mint coins.' 'Pragmas' 'Coins: the coins Alice holds.' 'No-show: Alice [No-show] <amount>' > "$cva_pq/XH.txt"
+cva_pq_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_pq/XH.txt" "[schema('no-show', ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])]" 2>&1; echo "exit $?")
+rm -rf "$cva_pq"
+check "CVA pragmas: a button names a schema whose name the term quotes (quoted)" "act('no-show', '\"No-show\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))" "$cva_pq_out"
+check "CVA pragmas: ... and pragmas.sh exits 0 (quoted)" "^exit 0$" "$cva_pq_out"
 # The line saying what a contract is written from, with several relations, each with the contracts after it (GSC, Section 8, Relations among Contracts: amends, extends, instantiates, implements and restricts; GAI.txt, "GAI extends GnW and amends GFP (...)."; GAI #12, Code_inbox.md, 2026-11-08 08:10 UTC): XR extends XB2 and amends XC2, and has the pragmas of both with its own (two); XS implements XC2 (implements); XQ's "copies" is no relation, and the name read is refused (norel).
 cva_pr2=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XB2' 'Alice and Bob are persons.' '1. ■ Friendship. Alice and Bob may jointly decide to become friends.' 'Pragmas' 'Friends: the friends of Alice.' 'Friendship: Alice [Befriend]' '  Bob: Alice asks to be your friend.' > "$cva_pr2/XB2.txt"
@@ -10235,6 +10242,35 @@ fi
 echo ""
 
 fi  # Section Q
+
+if _section CALC; then
+# =============================================================================
+# Section CALC: the tools of the Grassroots Contracts Calculus (Calculus)
+# =============================================================================
+#
+# calculus/tools is Calculus's: the programs, in Python 3 with its standard
+# library, that compile a contract's Logic pragmas to its speech-act schemas
+# and back and apply the relations among contracts (calculus/README.md of the
+# branch Calculus; calculus/MIGRATION.md, Code, 2).  calculus/tools/tests.py
+# runs gcsas.py on every case of calculus/tests and holds what it prints and
+# the expanded schemas it writes to the case's expect.txt, printing a line
+# "<case> same" or "<case> DIFFERS" for each.  Each case is a check here; a
+# run that prints no case line is a failure, since its checks did not run.
+echo "=== Section CALC: the tools of the Calculus (calculus/tools) ==="
+echo ""
+CALC_OUT=$(cd "$GLP_DIR" && python3 calculus/tools/tests.py 2>&1; echo "exit $?")
+CALC_CASES=0
+for calc_case in "$GLP_DIR"/calculus/tests/*/; do
+    calc_name=$(basename "$calc_case")
+    CALC_CASES=$((CALC_CASES + 1))
+    check "CALC $calc_name: gcsas.py prints the case's expect.txt" "^$calc_name  *same\$" "$CALC_OUT"
+done
+if [ "$CALC_CASES" -eq 0 ]; then
+    _check_fail "CALC: calculus/tests has cases" "none found under $GLP_DIR/calculus/tests"
+fi
+check "CALC: tests.py exits 0" "^exit 0\$" "$CALC_OUT"
+echo ""
+fi  # Section CALC
 
 if _section NET; then
 # =============================================================================

@@ -2036,21 +2036,85 @@ linked_l1(no, Ps, Rs1, B1, Rs2, B2, Rf, L?) :- linked_l(Ps?, Rs1?, B1?, Rs2?, B2
 procedure mates_onto(Contract?, Deltas?, Preds?, Ones?, LMates).
 mates_onto([], _, _, _, []).
 mates_onto([schema(Nm, _, Rs)|Ss], Pt, Rf, Os, M?) :- ground(Nm?), ground(Rs?), ground(Pt?), ground(Rf?), ground(Os?) |
-    deltas_people(Pt?, Q),
-    rs_count(Rs?, K),
-    role_assigns(1, K?, Q?, [[]], As),
-    ones_pairs(Os?, Nm?, Ps),
-    lmates_assigns(As?, Nm?, Rs?, Pt?, Rf?, Ps?, M1),
+    same_preds(Rs?, Pt?, Sp),
+    mates_onto_s(Sp?, Nm?, Rs?, Pt?, Rf?, Os?, M1),
     mates_onto(Ss?, Pt?, Rf?, Os?, M2),
     app(M1?, M2?, M).
 mates_onto([cschema(_, _, _, _)|Ss], Pt, Rf, Os, M?) :- mates_onto(Ss?, Pt?, Rf?, Os?, M).
 mates_onto([nschema(_, _, _, _)|Ss], Pt, Rf, Os, M?) :- mates_onto(Ss?, Pt?, Rf?, Os?, M).
-procedure role_assigns(Integer?, Integer?, Ints?, Bindings?, Bindings).
-role_assigns(I, K, _, Acc, Acc?) :- I? > K? | true.
-role_assigns(I, K, Q, Acc, R?) :- I? =< K?, ground(Q?) |
-    assign_role(Acc?, I?, Q?, Acc1),
+%% A schema whose deleted and added atoms have other predicates than Pt's has no schema-binding onto Pt, every atom a schema-binding deletes or adds being one of Pt's and every one of Pt's being one it deletes or adds (deltas_same): it is passed over before its roles are sent onto the participants.
+procedure mates_onto_s(YesNo?, Constant?, RoleSpecs?, Deltas?, Preds?, Ones?, LMates).
+mates_onto_s(no, _, _, _, _, _, []).
+mates_onto_s(yes, Nm, Rs, Pt, Rf, Os, M?) :- ground(Nm?), ground(Rs?), ground(Pt?), ground(Os?) |
+    role_cands(Rs?, Pt?, Cs),
+    cand_assigns(1, Cs?, [[]], As),
+    ones_pairs(Os?, Nm?, Ps),
+    lmates_assigns(As?, Nm?, Rs?, Pt?, Rf?, Ps?, M).
+procedure same_preds(RoleSpecs?, Deltas?, YesNo).
+same_preds(Rs, Pt, S?) :- ground(Rs?), ground(Pt?) |
+    rs_dels(Rs?, Ds),
+    rs_adds(Rs?, As),
+    atoms_preds(Ds?, P1),
+    atoms_preds(As?, P2),
+    deltas_preds(Pt?, Q1, Q2),
+    set_same(P1?, Q1?, E1),
+    set_same(P2?, Q2?, E2),
+    and(E1?, E2?, S).
+%% The roles of a schema sent onto the participants of Pt: a role only to a participant at whom Pt deletes and adds atoms of the predicates the role deletes and adds, each atom of a role being matched with one of the atoms Pt deletes or adds at the role's person (match_deltas_l).  The participants are taken in Pt's order, so the schema-bindings come in the order of all the assignments of the roles to the participants, those passed over left out.
+IntsList ::= [] ; [Ints | IntsList].
+procedure role_cands(RoleSpecs?, Deltas?, IntsList).
+role_cands([], _, []).
+role_cands([R|Rs], Pt, [C?|Cs?]) :- ground(R?), ground(Pt?) |
+    rs_lists(R?, A, D, _, _),
+    atoms_preds(D?, Pd),
+    atoms_preds(A?, Pa),
+    cands_at(Pt?, Pd?, Pa?, C),
+    role_cands(Rs?, Pt?, Cs).
+procedure cands_at(Deltas?, Preds?, Preds?, Ints).
+cands_at([], _, _, []).
+cands_at([delta(P, D, A)|Ds], Pd, Pa, C?) :- ground(Pd?), ground(Pa?), integer(P?) |
+    gas_preds(D?, Qd),
+    gas_preds(A?, Qa),
+    set_sub(Pd?, Qd?, E1),
+    set_sub(Pa?, Qa?, E2),
+    and(E1?, E2?, E),
+    cands_at(Ds?, Pd?, Pa?, C1),
+    keep_int(E?, P?, C1?, C).
+procedure cand_assigns(Integer?, IntsList?, Bindings?, Bindings).
+cand_assigns(_, [], Acc, Acc?).
+cand_assigns(I, [C|Cs], Acc, R?) :- integer(I?), ground(C?) |
+    assign_role(Acc?, I?, C?, Acc1),
     I1 := I? + 1,
-    role_assigns(I1?, K?, Q?, Acc1?, R).
+    cand_assigns(I1?, Cs?, Acc1?, R).
+procedure atom_pred(Atom?, Constant).
+atom_pred(atom(P, _), P?).
+atom_pred(times(_, A), P?) :- atom_pred(A?, P).
+atom_pred(rest(_, _, A), P?) :- atom_pred(A?, P).
+procedure atoms_preds(Atoms?, Preds).
+atoms_preds([], []).
+atoms_preds([A|As], [P?|Ps?]) :- atom_pred(A?, P), atoms_preds(As?, Ps).
+procedure gas_preds(GAs?, Preds).
+gas_preds([], []).
+gas_preds([ga(P, _)|Gs], [P?|Ps?]) :- gas_preds(Gs?, Ps).
+procedure deltas_preds(Deltas?, Preds, Preds).
+deltas_preds([], [], []).
+deltas_preds([delta(_, D, A)|Ds], P1?, P2?) :-
+    gas_preds(D?, X1),
+    gas_preds(A?, X2),
+    deltas_preds(Ds?, Y1, Y2),
+    app(X1?, Y1?, P1),
+    app(X2?, Y2?, P2).
+procedure set_same(Preds?, Preds?, YesNo).
+set_same(X, Y, E?) :- ground(X?), ground(Y?) |
+    set_sub(X?, Y?, E1),
+    set_sub(Y?, X?, E2),
+    and(E1?, E2?, E).
+procedure set_sub(Preds?, Preds?, YesNo).
+set_sub([], _, yes).
+set_sub([X|Xs], Ys, B?) :- ground(Ys?) | mem(X?, Ys?, B1), set_sub1(B1?, Xs?, Ys?, B).
+procedure set_sub1(YesNo?, Preds?, Preds?, YesNo).
+set_sub1(no, _, _, no).
+set_sub1(yes, Xs, Ys, B?) :- set_sub(Xs?, Ys?, B).
 procedure assign_role(Bindings?, Integer?, Ints?, Bindings).
 assign_role([], _, _, []).
 assign_role([B|Bs], I, Q, R?) :- ground(B?), integer(I?), ground(Q?) |

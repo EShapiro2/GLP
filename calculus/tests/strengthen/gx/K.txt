@@ -1,0 +1,4 @@
+K: Base
+Of K: Alice and Bob are persons.
+K:1. ■ Meet: Alice and Bob may jointly meet.
+K:2. ■ Part: Alice may part from Bob.

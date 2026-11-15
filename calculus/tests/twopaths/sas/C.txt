@@ -1,0 +1,5 @@
+C: Base
+Vocabulary: x is marked = q(x).
+After x marks herself: x is marked.
+C:0 - | Alice is a person.
+C:1 ■ Mark: q(Alice) <- guarded by Alice.

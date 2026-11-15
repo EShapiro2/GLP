@@ -1,0 +1,6 @@
+B: Possibly one
+Alice and Bob are persons, Alice and Bob possibly one person.
+1. ■ Greet: Alice may greet Bob.
+Logic pragmas.
+Vocabulary: y is greeted by x = greeted(y,x).
+After x greets y: y is greeted by x.

@@ -6,6 +6,10 @@ What a contract writer needs, in one place (Udi, 2026-11-01: "everything that co
 
 A grassroots contract is defined in GSC's paper (arXiv 2609.06231), and its speech-act schemas are written by GSC's guide, `speech-act-schemas-guide.md` beside this file; GSC and the owners write the guide, committing it path-limited on `main` as they do a contract, and an owner adds to it whatever its contract teaches (Udi, 2026-10-24).  The contract is the source of all truth for its platform and its app: the schemas and the pragmas are compiled down the abstraction cascade to a running app with no manual intervention.
 
+## The Calculus
+
+The Calculus is the authority on the contracts and on the relations among them (`organisation/claude.md`, Sessions; Udi, 2026-11-15).  Its 61 contracts are published on the branch `Calculus` of GLP, in `calculus/`, each with every artefact the standard asks: the contract, its Logic pragmas, its schemas, the full contract and full schemas, and what the cascade makes of them, all but the contract and its pragmas printed by its tools.  An owner adopts the Calculus's text of its contract by the migration plan, `calculus/MIGRATION.md` on that branch: from then its `NAME.txt` is the contract with its Logic pragmas and its Interface pragmas, its `NAME.glp` is printed by the tools and never written by hand, and its first line states one of the Calculus's five relations, none of them amends.  Until it adopts, its `NAME.txt` below is the contract in force.  An owner that thinks a text of the Calculus wrong discusses it with Calculus, and any change to a contract as written in the Calculus goes to Udi.
+
 ## The two files
 
 A contract named NAME lives in one copy, in its owner's directory under `programs/`, as two files.
