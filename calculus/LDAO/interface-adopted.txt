@@ -1,0 +1,3 @@
+Interface pragmas
+Delegate: Carol [Delegate]
+Revoke: Carol [Revoke] <alice>

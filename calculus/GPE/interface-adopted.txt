@@ -1,0 +1,4 @@
+Interface pragmas
+Open place: Alice [Open place] [Close place]
+Encounter: Alice [Encounter]
+  Bob: Alice asks for your consent to encounter.

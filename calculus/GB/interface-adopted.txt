@@ -1,0 +1,21 @@
+Interface pragmas
+Issue bond: Alice [Issue bond] <day> <sum>
+Swap: Alice [Swap] <sum> <dave> <total>
+  Bob: Alice asks for your consent to swap.
+  Alice [Swap coin for bond] <sum> <dave> <day> <total>
+  Bob: Alice asks for your consent to swap coin for bond.
+  Alice [Swap bonds] <sum> <dave> <term> <total>
+  Bob: Alice asks for your consent to swap bonds.
+Redeem: Alice [Redeem] <carol> [Redeem coin against bond] <carol> <day> [Redeem bond] <carol> [Redeem bond against bond] <carol> <term>
+Escrow: Alice [Deposit] <sum> <cond>
+  Carol: Alice asks for your consent to deposit.
+  Alice [Deposit bond] <sum> <cond>
+  Carol: Alice asks for your consent to deposit bond.
+  Carol [Release] <sum>
+  Bob: Carol asks for your consent to release.
+  Carol [Release bond] <sum>
+  Bob: Carol asks for your consent to release bond.
+  Carol [Return] <sum>
+  Alice: Carol asks for your consent to return.
+  Carol [Return bond] <sum>
+  Alice: Carol asks for your consent to return bond.

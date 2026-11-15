@@ -1,15 +1,19 @@
-The republication is in two parts.
+The republication is in parts.
 
-Part 1, this commit: the 37 contracts outside GO's family, from Calculus code 2754268, each certified by GLP's checker and
-compiled to a platform.glp that loads, at one run on GLP migration 1119642:
-AGORA CSSN DAO DGC FDAO GAI GAS GB GC GD-S GD GDC GDO-L GDO-LB GDO GDS GFF-FR-BC GFF-FR GFF-PS GFF GFP GKK GPD GPE GRV
-GSG GSN GSNP GSNW GSV GnW JOINT LDAO LIB REC SGSG STAY.
-An owner who adopted one of them before takes it again: python3 calculus/tools/adopt.py --write NAME <dir>.
+Part 1, commit 79ec48f, from Calculus code 2754268, run on GLP migration 1119642: the 37 contracts outside GO's family,
+each certified by GLP's checker and compiled to a platform.glp that loads.
 
-Part 2, to come: GO's family and GRA's, 24 contracts, which are in this directory as first published (f1d2f99) and are
-not to be adopted from it now:
-CB CMB CnC GAN GBCC GBank GCC GCoop GCorp GDAO GLDAO GNG GNL GNM GNO GO MCS SC SCB SPLLC TC WC GRA GRA-SS.
-They wait on const(X) and the wildcard of vGLP on migration, and on the acts of an organisation being written as GO's
-paper has them.  ORH is held out.
+Part 1 again for nine of them, and GRA's two, this commit, from Calculus code cddaa8b, run on GLP migration 04f9bdc and
+checked on GLP branch GSC-supplied 020fe5ea (GSC, Section 3.2): CSSN GAI GAS GDS GRV GSNP GSNW GSV GnW, and GRA GRA-SS.
+The cause: in a contract with wards the term wrote every guard as a person or a ward with a guardian, so a ward could
+take a person's act by itself; a guard its contract declares a person is now a person.  GRA and GRA-SS are certified and
+parametric in the terms of a call, with no platform until instantiated.
+An owner who adopted one of the eleven takes it again: python3 calculus/tools/adopt.py --write NAME <dir>.
+The other 28 of part 1 are as at 79ec48f (GSNP as at 029de9f before this); each of the 37 now has interface-adopted.txt
+where it has an act of its own with a line: the Interface lines in the form an adopted file takes, a proposal to the owner.
 
-In STATE.txt, STATUS.txt and VERDICTS.txt the lines of the 37 are of this run and the lines of the 24 of the first.
+To come: GO's family, 22 contracts, which are in this directory as first published (f1d2f99) and are not to be adopted
+from it: CB CMB CnC GAN GBCC GBank GCC GCoop GCorp GDAO GLDAO GNG GNL GNM GNO GO MCS SC SCB SPLLC TC WC.
+They wait on the listing of every body that decides an act (GSC's check refuses them: amenders, treasurers, directors,
+governors, share_deciders), on an organisation as a party to the currencies' acts, and on vGLP's wildcard on migration.
+ORH is held out until GSC's rule on an environment predicate as a mark.

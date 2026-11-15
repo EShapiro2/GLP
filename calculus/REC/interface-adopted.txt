@@ -1,0 +1,4 @@
+Interface pragmas
+Recommend: Alice [Recommend] <skill>
+Show: Bob [Show]
+Withdraw: Alice [Withdraw] <bob> <skill>

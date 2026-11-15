@@ -1,0 +1,7 @@
+Interface pragmas
+Found: Alice [Found] <delos>
+Join: Alice [Join]
+  Bob: Alice asks for your consent to join.
+Proposing: Carol [Propose] <prop>
+Voting: Carol [Vote for] [Vote against]
+Deciding: Alice [Pass] <votes> [Reject] <votes>

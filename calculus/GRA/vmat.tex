@@ -17,13 +17,6 @@ c_
 \mathit{
 identity
 }
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
 \}
 ,\\
 &
@@ -595,6 +588,13 @@ identity
 }
 ,
 \mathit{
+bound
+}
+(
+D
+)
+,
+\mathit{
 furthest
 }
 (
@@ -627,7 +627,7 @@ X1
 )
 )
 >
-N
+D
 ,\\
 &
 \text{guarded by } \{
@@ -662,6 +662,10 @@ Trip
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+rider
 }
  \in c_
 {
@@ -732,6 +736,15 @@ c_
 \{
 \mathit{
 call
+}
+(
+\Alice
+,
+Trip
+)
+,
+\mathit{
+direct_call
 }
 (
 \Alice
@@ -846,7 +859,7 @@ identity
 }
 ,
 \mathit{
-call
+direct_call
 }
 (
 Alice
@@ -933,6 +946,10 @@ c_
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+driver
 }
 ,
 \mathit{
@@ -1210,6 +1227,17 @@ identity
 }
 ,
 \mathit{
+ride
+}
+,
+\mathit{
+rides_with
+}
+(
+\Bob
+)
+,
+\mathit{
 at_pickup
 }
 (
@@ -1223,6 +1251,17 @@ at_pickup
 \mathit{
 identity
 }
+,
+\mathit{
+ride
+}
+,
+\mathit{
+rides_with
+}
+(
+\Alice
+)
 ,
 \mathit{
 at_pickup
@@ -1272,6 +1311,7 @@ c'_
 \Alice
 }
  := 
+(
 (c_
 {
 \Alice
@@ -1297,12 +1337,22 @@ rides_with
 {
 \Alice
 }
+) \uplus 
+\{
+\mathit{
+released
+}
+(
+\Bob
+)
+\}
 , \qquad 
 c'_
 {
 \Bob
 }
  := 
+(
 (c_
 {
 \Bob
@@ -1328,6 +1378,15 @@ rides_with
 {
 \Bob
 }
+) \uplus 
+\{
+\mathit{
+released
+}
+(
+\Alice
+)
+\}
 ,\\
 &
 \text{where } K_
@@ -1438,6 +1497,7 @@ c'_
 \Alice
 }
  := 
+(
 (c_
 {
 \Alice
@@ -1463,12 +1523,22 @@ rides_with
 {
 \Alice
 }
+) \uplus 
+\{
+\mathit{
+released
+}
+(
+\Bob
+)
+\}
 , \qquad 
 c'_
 {
 \Bob
 }
  := 
+(
 (c_
 {
 \Bob
@@ -1494,6 +1564,15 @@ rides_with
 {
 \Bob
 }
+) \uplus 
+\{
+\mathit{
+released
+}
+(
+\Alice
+)
+\}
 ,\\
 &
 \text{where } K_

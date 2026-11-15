@@ -15,6 +15,7 @@ This directory is published by the project Calculus.  It holds grassroots contra
 - `term.glp.txt`: the full schemas as the term GLP's checker of speech-act schemas reads;
 - `verdict.txt`: the checker's verdict;
 - `vmat.tex`, `interface.txt`, `platform.vglp`, `platform.glp`: the VMAT form, the Interface pragmas printed from the acts, the platform in vGLP and the program in GLP.
+- `interface-adopted.txt`: the lines of `interface.txt` keyed by the titles of the contract's own clauses, the form an owner's adopted `NAME.txt` takes after its line `Interface pragmas`; it is a proposal to the owner, who may change its lines.
 
 ## The rest
 

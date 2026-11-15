@@ -1,0 +1,4 @@
+Interface pragmas
+Distrust: Alice [Distrust] [Distrust friend]
+Propagate: Alice [Propagate] <carol>
+Cease: Alice [Cease]

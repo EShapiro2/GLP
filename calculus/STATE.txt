@@ -38,8 +38,8 @@ GNO GO yes yes no
 GO GO yes yes no
 GPD GSA yes yes no
 GPE GSA yes yes no
-GRA GRH yes yes no
-GRA-SS GRH yes yes no
+GRA GRH yes parametric no
+GRA-SS GRH yes parametric no
 GRV GNA yes yes no
 GSG GSC yes yes no
 GSN GSC yes yes no

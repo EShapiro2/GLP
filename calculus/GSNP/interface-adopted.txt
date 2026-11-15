@@ -1,0 +1,8 @@
+Interface pragmas
+Agent message: Alice [Message] [Create] <grupo> [Close]
+  Alice [Join]
+  Bob: Alice asks for your consent to join.
+  Alice [Remove]
+  Bob [Leave] [Post]
+  Alf [Agent message]
+Post forward: Bob [Post forward]
