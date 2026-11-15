@@ -15,18 +15,19 @@ After x rejects j of y raising to w the dispute over z-coins, which requires x h
 After x cancels x's engagement of y for j in z: no longer x and y have an engagement for j and no longer z-coins are locked between the provider y and the customer x.
 After y cancels y's engagement by x for j in z: no longer x and y have an engagement for j and no longer z-coins are locked between the provider y and the customer x.
 GNG:0 - | A *worker* is a provider and a *client* a customer. A *job* names the work, its price in Orga-coins and its deadline; its terms say what is released to whom on cancellation.
-GNG:0 - | Alice, Bob and Carol are persons, Orga a network organisation, Job a job, Skill a skill or a service; in clause 1 Carol is a worker, in clause 4 an arbiter, and in clause 6 Skill is the job.
+GNG:0 - | Alice, Bob and Carol are persons, Orga a network organisation, Kept a number, Job a job, Skill a skill or a service; in clause 1 Carol is a worker, in clause 4 an arbiter, and in clause 6 Skill is the job.
+GNG:0 - | Environment: no delivery of j is attested by the deadline, for x.
 GNG:1 ■ | Job.
-GNG:1 ■ Post: posted(Alice,Job,Orga) <- customer(Alice,Orga), ~posted(Alice,Job,Orga) guarded by Alice.
+GNG:1 ■ Post: posted(Alice,Job,Orga) <- accepts(Alice,Orga,Dollar), ~posted(Alice,Job,Orga) guarded by Alice.
 GNG:1 ■ | Alice posts the job to the workers she points to.
-GNG:1 ■ Send job: received(Bob,Job,Alice,Orga) <- posted(Alice,Job,Orga), points_to(Alice,Bob), provider(Bob,Orga), ~received(Bob,Job,Alice,Orga).
-GNG:1 ■ Pass: received(Carol,Job,Alice,Orga) <- provider(Bob,Orga), received(Bob,Job,Alice,Orga), points_to(Bob,Carol), provider(Carol,Orga), ~received(Carol,Job,Alice,Orga) guarded by Bob.
-GNG:1 ■ Withdraw: ~posted(Alice,Job,Orga) <- posted(Alice,Job,Orga) guarded by Alice.
-GNG:2 ■ Engage: engaged(Alice,Bob,Job), engaged_by(Bob,Alice,Job), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- provider(Bob,Orga), posted(Alice,Job,Orga), knows(Alice,Bob), knows(Bob,Alice), ~engaged(Alice,Bob,Job), ~engaged_by(Bob,Alice,Job) guarded by Alice, Bob.
+GNG:1 ■ Send job: received(Bob,Job,Alice,Orga) <- posted(Alice,Job,Orga), points_to(Alice,Bob), stake(Orga,S), coin(Bob,Orga,*Held), ge(Held,S), ~received(Bob,Job,Alice,Orga).
+GNG:1 ■ Pass: received(Carol,Job,Alice,Orga) <- stake(Orga,S), coin(Bob,Orga,*Held), ge(Held,S), received(Bob,Job,Alice,Orga), points_to(Bob,Carol), stake(Orga,S), coin(Carol,Orga,*Kept), ge(Kept,S), ~received(Carol,Job,Alice,Orga) guarded by Bob.
+GNG:1 ■ Withdraw job: ~posted(Alice,Job,Orga) <- posted(Alice,Job,Orga) guarded by Alice.
+GNG:2 ■ Engage: engaged(Alice,Bob,Job), engaged_by(Bob,Alice,Job), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- stake(Orga,S), coin(Bob,Orga,*Held), ge(Held,S), posted(Alice,Job,Orga), knows(Alice,Bob), knows(Bob,Alice), ~engaged(Alice,Bob,Job), ~engaged_by(Bob,Alice,Job) guarded by Alice, Bob.
 GNG:2 ■ | Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 GNG:3 ◆ Deliver: delivered(Bob,Job,Alice) <- engaged(Alice,Bob,Job), engaged_by(Bob,Alice,Job), ~delivered(Bob,Job,Alice) guarded by Bob.
 GNG:4 ■ | Acceptance.
-GNG:4 ■ Accept: accepted(Alice,Job,Bob), ~engaged(Alice,Bob,Job), ~engaged_by(Bob,Alice,Job), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- delivered(Bob,Job,Alice), engaged(Alice,Bob,Job), engaged_by(Bob,Alice,Job), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Alice.
+GNG:4 ■ Accept work: accepted(Alice,Job,Bob), ~engaged(Alice,Bob,Job), ~engaged_by(Bob,Alice,Job), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- delivered(Bob,Job,Alice), engaged(Alice,Bob,Job), engaged_by(Bob,Alice,Job), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Alice.
 GNG:4 ■ | The payment and the deposit are then released to Bob.
 GNG:4 ■ Reject: rejected(Alice,Job,Bob), dispute(Carol,Alice,Bob,Orga) <- delivered(Bob,Job,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga), role(Carol,Orga,Arbiter), has_role(Orga,Carol,Arbiter), ~rejected(Alice,Job,Bob), ~dispute(Carol,Alice,Bob,Orga) guarded by Alice.
 GNG:4 ■ | Alice raises the dispute by GNO:2.

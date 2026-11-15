@@ -10,13 +10,14 @@ After x is shown d of y, which requires x has not been shown d of y: x has been 
 After x attests a view of d of y: x has attested a view of d of y.
 After x attests a click of d of y: x has attested a click of d of y.
 GAN:0 - | An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the Orga-coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
-GAN:0 - | Alice, Bob and Carol are persons, Orga a network organisation, Ad an ad; in clause 1 Carol is a member.
+GAN:0 - | Alice, Bob and Carol are persons, Orga a network organisation, Mark a fiat currency, Ad an ad; in clause 1 Carol is a member.
+GAN:0 - | Environment: d is for the profile of x.
 GAN:1 ■ | Posting.
-GAN:1 ■ Post: posted(Bob,Ad,Orga), budget_locked(Bob,Ad,Orga) <- provider(Bob,Orga), ~posted(Bob,Ad,Orga) guarded by Bob.
+GAN:1 ■ Post: posted(Bob,Ad,Orga), budget_locked(Bob,Ad,Orga) <- stake(Orga,S), coin(Bob,Orga,*Held), ge(Held,S), ~posted(Bob,Ad,Orga) guarded by Bob.
 GAN:1 ■ | Bob posts the ad to the members he points to, and its budget is then locked on top of his stake.
-GAN:1 ■ Send ad: received(Alice,Ad,Bob,Orga) <- posted(Bob,Ad,Orga), points_to(Bob,Alice), customer(Alice,Orga), ~received(Alice,Ad,Bob,Orga).
-GAN:1 ■ Pass: received(Carol,Ad,Bob,Orga) <- customer(Alice,Orga), received(Alice,Ad,Bob,Orga), points_to(Alice,Carol), customer(Carol,Orga), ~received(Carol,Ad,Bob,Orga) guarded by Alice.
-GAN:2 ■ Show: ad_shown(Alice,Ad,Bob) <- customer(Alice,Orga), received(Alice,Ad,Bob,Orga), for_profile(Alice,Ad), ~ad_shown(Alice,Ad,Bob).
+GAN:1 ■ Send ad: received(Alice,Ad,Bob,Orga) <- posted(Bob,Ad,Orga), points_to(Bob,Alice), accepts(Alice,Orga,Dollar), ~received(Alice,Ad,Bob,Orga).
+GAN:1 ■ Pass: received(Carol,Ad,Bob,Orga) <- accepts(Alice,Orga,Dollar), received(Alice,Ad,Bob,Orga), points_to(Alice,Carol), accepts(Carol,Orga,Mark), ~received(Carol,Ad,Bob,Orga) guarded by Alice.
+GAN:2 ■ Show: ad_shown(Alice,Ad,Bob) <- accepts(Alice,Orga,Dollar), received(Alice,Ad,Bob,Orga), for_profile(Alice,Ad), ~ad_shown(Alice,Ad,Bob).
 GAN:3 ◆ | Viewing and clicking.
 GAN:3 ◆ View: viewed(Alice,Ad,Bob) <- ad_shown(Alice,Ad,Bob) guarded by Alice.
 GAN:3 ◆ Click: clicked(Alice,Ad,Bob) <- ad_shown(Alice,Ad,Bob) guarded by Alice.

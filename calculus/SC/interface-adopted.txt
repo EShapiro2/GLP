@@ -1,0 +1,7 @@
+Interface pragmas
+Issue shares: Alice [Issue shares] <bob> <sum>
+  Erin [Vote on issue] <bob> <sum> [Vote on first issue] <orga> <bob> <sum>
+Dividend: Alice [Set dividend] <div> <votes>
+  Erin [Vote on dividend] <div>
+  Bob [Claim] <total> <div>
+Redeem: Alice [Redeem] [Redeem coin against bond] <day>

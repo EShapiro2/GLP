@@ -1,15 +1,16 @@
 MCS: Mutual Credit Society
-MCS instantiates GBank with mutual credit society bylaws, and restricts and extends it.
-Vocabulary: the z-coins y holds and the y-coins z holds have been redeemed against each other = redeemed(z,y); every member of z is then in the red by at most 1000 coins, for x = credit_limit(x,z).
+MCS instantiates GBank with mutual credit society bylaws; participant(x,z) for proposer(x,z,m); participant(x,z) for taker(x,z,m); participant(x,z) for voter(x,z,m); vote(z,>=Votes,m), sum(More,Votes,1), has_participant(z,<More) for decided(z,m), and restricts and extends it.
+Vocabulary: every member of z is then in the red by at most 1000 coins, for x = credit_limit(x,z).
 y is a member of z: y is a participant of z.
 After y redeems with z an x-coin against a z-coin: no longer y holds an x-coin, z holds an x-coin, no longer z holds a z-coin and y holds a z-coin.
 MCS:0 - | A *mutual credit society* is a bank whose bylaws name one role, *member*, held by every participant; the members jointly decide its acts. A member is *in the red* by their coins in circulation less the other persons' coins they hold.
-MCS:0 - | Alice and Bob are persons, Orga a mutual credit society.
-MCS:1 ■ Leave: GO:3 Leave <- redeemed(Orga,Bob).
-MCS:1 ■ Officer leave: GO:3 Officer leave <- redeemed(Orga,Bob).
-MCS:1 ■ Expel: GO:3 Expel <- redeemed(Orga,Bob).
-MCS:1 ■ Officer expel: GO:3 Officer expel <- redeemed(Orga,Bob).
-MCS:2 ■ Redeem: ~coin(Bob,Alice), coin(Orga,Alice), ~coin(Orga,Orga), coin(Bob,Orga) <- participant(Bob,Orga), participant(Alice,Orga), coin(Bob,Alice), coin(Orga,Orga) guarded by Bob.
+MCS:0 - | Alice and Bob are persons, Orga a mutual credit society, Votes and More numbers.
+MCS:0 - | Environment: every member of z is then in the red by at most 1000 coins, for x.
+MCS:1 ■ Leave: GO:3 Leave <- coin(Bob,Orga,#0).
+MCS:1 ■ Leave owed nothing: GO:3 Leave <- coin(Orga,Bob,#0).
+MCS:1 ■ Officer leave: GO:3 Officer leave <- coin(Bob,Orga,#0).
+MCS:1 ■ Officer leave owed nothing: GO:3 Officer leave <- coin(Orga,Bob,#0).
+MCS:2 ■ Redeem member's coin: ~coin(Bob,Alice), coin(Orga,Alice), ~coin(Orga,Orga), coin(Bob,Orga) <- participant(Bob,Orga), participant(Alice,Orga), coin(Bob,Alice), coin(Orga,Orga) guarded by Bob.
 MCS:3 ■ | Credit limit.
 MCS:3 ■ Swap: DGC:2 <- credit_limit(Actor,Orga).
 MCS:3 ■ Pay: GC:3 <- credit_limit(Actor,Orga).

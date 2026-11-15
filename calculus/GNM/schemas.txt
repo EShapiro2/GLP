@@ -13,14 +13,14 @@ After x attests the delivery of the good of l by y in z: x has attested the deli
 After x cancels x's order of l from y in z: no longer x and y have an order of l and no longer z-coins are locked between the provider y and the customer x.
 After y cancels y's order of l by x in z: no longer x and y have an order of l and no longer z-coins are locked between the provider y and the customer x.
 GNM:0 - | A *seller* is a provider and a *buyer* a customer. A *listing* names a good, its price in Orga-coins and how it is delivered; its terms say what is released to whom on cancellation.
-GNM:0 - | Alice, Bob and Carol are persons, Orga a network organisation, Listing a listing, Skill a skill or a service; in clause 1 Carol is a buyer, and in clause 5 Skill is the listing.
+GNM:0 - | Alice, Bob and Carol are persons, Orga a network organisation, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a buyer, and in clause 5 Skill is the listing.
 GNM:1 ■ | Listing.
-GNM:1 ■ Post: posted(Bob,Listing,Orga) <- provider(Bob,Orga), ~posted(Bob,Listing,Orga) guarded by Bob.
+GNM:1 ■ Post: posted(Bob,Listing,Orga) <- stake(Orga,S), coin(Bob,Orga,*Held), ge(Held,S), ~posted(Bob,Listing,Orga) guarded by Bob.
 GNM:1 ■ | Bob posts the listing to the buyers he points to.
-GNM:1 ■ Send listing: received(Alice,Listing,Bob,Orga) <- posted(Bob,Listing,Orga), points_to(Bob,Alice), customer(Alice,Orga), ~received(Alice,Listing,Bob,Orga).
-GNM:1 ■ Pass: received(Carol,Listing,Bob,Orga) <- customer(Alice,Orga), received(Alice,Listing,Bob,Orga), points_to(Alice,Carol), customer(Carol,Orga), ~received(Carol,Listing,Bob,Orga) guarded by Alice.
-GNM:1 ■ Withdraw: ~posted(Bob,Listing,Orga) <- posted(Bob,Listing,Orga) guarded by Bob.
-GNM:2 ■ Order: ordered(Alice,Listing,Bob), ordered_from(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- customer(Alice,Orga), posted(Bob,Listing,Orga), knows(Alice,Bob), knows(Bob,Alice), ~ordered(Alice,Listing,Bob), ~ordered_from(Bob,Listing,Alice) guarded by Alice, Bob.
+GNM:1 ■ Send listing: received(Alice,Listing,Bob,Orga) <- posted(Bob,Listing,Orga), points_to(Bob,Alice), accepts(Alice,Orga,Dollar), ~received(Alice,Listing,Bob,Orga).
+GNM:1 ■ Pass: received(Carol,Listing,Bob,Orga) <- accepts(Alice,Orga,Dollar), received(Alice,Listing,Bob,Orga), points_to(Alice,Carol), accepts(Carol,Orga,Mark), ~received(Carol,Listing,Bob,Orga) guarded by Alice.
+GNM:1 ■ Withdraw listing: ~posted(Bob,Listing,Orga) <- posted(Bob,Listing,Orga) guarded by Bob.
+GNM:2 ■ Order: ordered(Alice,Listing,Bob), ordered_from(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- accepts(Alice,Orga,Dollar), posted(Bob,Listing,Orga), knows(Alice,Bob), knows(Bob,Alice), ~ordered(Alice,Listing,Bob), ~ordered_from(Bob,Listing,Alice) guarded by Alice, Bob.
 GNM:2 ■ | Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 GNM:3 ◆ Deliver: delivered(Alice,Listing,Bob), ~ordered(Alice,Listing,Bob), ~ordered_from(Bob,Listing,Alice), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- ordered(Alice,Listing,Bob), ordered_from(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Alice.
 GNM:3 ◆ | The payment and the deposit are then released to Bob.

@@ -1,0 +1,25 @@
+Interface pragmas
+Leave, Expel: Bob [Leave] <decider>
+  Decider: Bob asks for your consent to leave.
+  Codecider: Bob asks for your consent to leave.
+  Bob [Officer leave] <decider>
+  Decider: Bob asks for your consent to officer leave.
+  Codecider: Bob asks for your consent to officer leave.
+  Bob [Expel] <decider> <deciderb>
+  Decider: Bob asks for your consent to expel.
+  DeciderB: Bob asks for your consent to expel.
+  Codecider: Bob asks for your consent to expel.
+  CodeciderB: Bob asks for your consent to expel.
+  Bob [Officer expel] <decider> <deciderb>
+  Decider: Bob asks for your consent to officer expel.
+  DeciderB: Bob asks for your consent to officer expel.
+  Codecider: Bob asks for your consent to officer expel.
+  CodeciderB: Bob asks for your consent to officer expel.
+Bank deposit: Bob [Bank deposit] <sum>
+Loan: Alice [Loan] <bob> <sum> <day> <total>
+  Bob: Alice asks for your consent to loan.
+  Alice [Loan by the directors] <bob> <sum> <day> <total> <votes>
+  Bob: Alice asks for your consent to loan by the directors.
+  Erin [Vote to lend] <bob> <sum> <day>
+Set lending limit: Alice [Set lending limit] <carol> <limit> <votes>
+  Erin [Vote on lending limit] <carol> <limit>

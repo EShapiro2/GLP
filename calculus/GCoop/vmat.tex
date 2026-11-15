@@ -756,6 +756,13 @@ person
 }
 ,
 \mathit{
+friend
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
 participant
 }
 (
@@ -902,27 +909,7 @@ officer
 {
 \Alice
 }
-,\\
-&
-\text{where } K_
-{
-\Alice
-}
- \text{ holds every atom of } c_
-{
-\Alice
-}
- \text{, with its multiplicity, that matches } 
-\mathit{
-role
-}
-(
-\Bob
-,
-\ast
-)
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -945,6 +932,25 @@ has_officer
 {
 \Bob
 }
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+role
+}
+(
+\Bob
+,
+\ast
+)
 ,\\
 &
 \text{where } K_
@@ -972,6 +978,10 @@ identity
 }
 ,
 \mathit{
+person
+}
+,
+\mathit{
 officer
 }
 (
@@ -996,39 +1006,6 @@ has_officer
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -1062,6 +1039,21 @@ officer
 {
 \Alice
 }
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_officer
+}
+(
+\ast
+)
+]
+)
+)
 ,\\
 &
 \text{where } K_
@@ -1080,6 +1072,94 @@ role
 \Bob
 ,
 \ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_officer
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+officer
+}
+(
+\Bob
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_officer
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+role
+}
+(
+\Bob
+,
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_officer
+}
+(
+\ast
+)
+]
+)
 )
 ,\\
 &
@@ -1238,6 +1318,47 @@ c_
 {
 \mathit{Carol}
 }
+ \qquad (
+\mathit{Carol}
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_officer
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \qquad (
+\mathit{Carol}
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_officer
+}
+(
+\ast
+)
+]
+)
+)
 ,\\
 &
 c'_
@@ -1360,6 +1481,48 @@ has_officer
 )
 ,\\
 &
+\text{provided } 
+\forall 
+\mathit{Dave}
+\,(
+\mathit{
+has_officer
+}
+(
+\Bob
+,
+\mathit{Dave}
+)
+\land
+\mathit{Dave}
+\neq
+\Alice
+\rightarrow
+\mathit{
+identity
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+person
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+officer
+}
+(
+\mathit{Dave}
+,
+\Bob
+)
+)
+,\\
+&
 \text{guarded by } \{
 \mathit{Carol}
 ,
@@ -1400,27 +1563,7 @@ officer
 {
 \Alice
 }
-,\\
-&
-\text{where } K_
-{
-\Alice
-}
- \text{ holds every atom of } c_
-{
-\Alice
-}
- \text{, with its multiplicity, that matches } 
-\mathit{
-role
-}
-(
-\Bob
-,
-\ast
-)
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -1454,6 +1597,25 @@ has_officer
 &
 \text{where } K_
 {
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+role
+}
+(
+\Bob
+,
+\ast
+)
+,\\
+&
+\text{where } K_
+{
 \Bob
 }
  \text{ holds every atom of } c_
@@ -1474,6 +1636,10 @@ has_role
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
 ,
 \mathit{
@@ -1517,45 +1683,12 @@ has_officer
 }
 ,\\
 &
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 \}
 \end{align*}
 \iffalse
-ward_acquaint
+organisation_acquaint
 \fi
 \begin{align*}
 &
@@ -1638,7 +1771,7 @@ person
 \}
 \end{align*}
 \iffalse
-ward_befriend
+organisation_befriend
 \fi
 \begin{align*}
 &
@@ -1660,8 +1793,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -1680,8 +1812,7 @@ friend
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -1756,6 +1887,10 @@ friend
 (
 \Bob
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -1793,39 +1928,6 @@ friend
 }
 ,\\
 &
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 ,
@@ -1835,7 +1937,7 @@ G1
 \}
 \end{align*}
 \iffalse
-ward_end
+organisation_end
 \fi
 \begin{align*}
 &
@@ -1984,8 +2086,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2009,6 +2110,10 @@ friend
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
 ,
 \mathit{
@@ -2051,45 +2156,12 @@ officer
 }
 ,\\
 &
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 \}
 \end{align*}
 \iffalse
-ward_unfriend
+organisation_unfriend
 \fi
 \begin{align*}
 &
@@ -2111,8 +2183,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2131,8 +2202,7 @@ friend
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -2184,6 +2254,10 @@ friend
  \text{ and } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
  \in c_
 {
@@ -2204,45 +2278,12 @@ officer
 }
 ,\\
 &
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \mathit{Carol}
 \}
 \end{align*}
 \iffalse
-wards_acquaint
+organisations_acquaint
 \fi
 \begin{align*}
 &
@@ -2332,7 +2373,7 @@ Bob
 \}
 \end{align*}
 \iffalse
-wards_befriend
+organisations_befriend
 \fi
 \begin{align*}
 &
@@ -2354,8 +2395,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2374,8 +2414,7 @@ friend
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -2385,8 +2424,7 @@ c_
 {
 \mathit{Carol}
 }
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Dave}
@@ -2468,6 +2506,10 @@ friend
 (
 \mathit{Dave}
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -2483,6 +2525,10 @@ friend
 (
 \mathit{Carol}
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Dave}
@@ -2525,72 +2571,6 @@ friend
 \Bob
 }
  = \emptyset
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Dave}
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\mathit{Dave}
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_officer
-}
-(
-\mathit{Dave}
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -2604,7 +2584,7 @@ G2
 \}
 \end{align*}
 \iffalse
-wards_of_one_guardian_befriend
+organisations_of_one_officer_befriend
 \fi
 \begin{align*}
 &
@@ -2626,8 +2606,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2646,8 +2625,7 @@ friend
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -2715,6 +2693,10 @@ knows
 \mathit{
 identity
 }
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -2757,39 +2739,6 @@ friend
 \Bob
 }
  = \emptyset
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -8110,15 +8059,6 @@ friend
 \mathit{
 identity
 }
-,
-\mathit{
-role
-}
-(
-\Alice
-,
-\ast
-)
  \in c_
 q
  \qquad (
@@ -8391,8 +8331,7 @@ proposed
 Motion
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -8425,6 +8364,10 @@ proposer
 ,
 Motion
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Bob
@@ -8442,39 +8385,6 @@ Motion
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Bob
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -8501,65 +8411,12 @@ c_
 vote
 }
 (
+\Bob
+,
 Motion
 )
 \}
- \qquad (
-\Alice
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-act_deciders
-}
-(
-\ast
-,
-Motion
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-vote
-}
-(
-Motion
-)
-\}
- \qquad (
-\Alice
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-act_deciders
-}
-(
-\ast
-,
-Motion
-)
-]
-)
-)
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -8569,36 +8426,6 @@ c_
 {
 \Bob
 }
-,\\
-&
-c'_
-q
- := 
-c_
-q
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-act_deciders
-}
-(
-\ast
-,
-Motion
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-,\ 
-q \neq 
-\Bob
-)
 ,\\
 &
 \text{provided } 
@@ -8616,15 +8443,6 @@ proposed
 (
 Motion
 )
-,
-\mathit{
-act_deciders
-}
-(
-\Bob
-,
-Motion
-)
  \in c_
 {
 \Alice
@@ -8635,44 +8453,40 @@ identity
 }
 ,
 \mathit{
+voter
+}
+(
+\Alice
+,
+Motion
+)
+,
+\mathit{
 person
 }
  \in c_
 {
 \Bob
 }
- \text{ and } 
+,\\
+&
+\text{provided } 
 \mathit{
-identity
-}
-,
-\mathit{
-person
-}
- \in c_
-q
- \qquad (
-q \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-act_deciders
+vote
 }
 (
-\ast
+\Bob
 ,
 Motion
 )
-]
-)
-)
+ \notin c_
+{
+\Alice
+}
 ,\\
 &
 \text{guarded by } \{
 \Bob
-,
-\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -8698,8 +8512,7 @@ taken
 Motion
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -8739,6 +8552,10 @@ taker
 ,
 Motion
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Bob
@@ -8756,39 +8573,6 @@ Motion
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Bob
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -8949,47 +8733,6 @@ c_
 {
 \mathit{Carol}
 }
- \qquad (
-\mathit{Carol}
- \notin 
-\mathrm{ext}_c(
-\Bob
-[
-\mathit{
-has_officer
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
- \qquad (
-\mathit{Carol}
- \in 
-\mathrm{ext}_c(
-\Bob
-[
-\mathit{
-has_officer
-}
-(
-\ast
-)
-]
-)
-)
 ,\\
 &
 c'_
@@ -9026,6 +8769,10 @@ q \neq
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
  \in c_
 {
@@ -9111,77 +8858,6 @@ participant
 }
 ,\\
 &
-\text{provided } 
-\forall 
-\mathit{Dave}
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-\mathit{Dave}
-)
-\rightarrow
-\mathit{
-identity
-}
-(
-\mathit{Dave}
-)
-\land
-\mathit{
-person
-}
-(
-\mathit{Dave}
-)
-\land
-\mathit{
-officer
-}
-(
-\mathit{Dave}
-,
-\Bob
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 ,
@@ -9213,8 +8889,7 @@ participant
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -9238,6 +8913,10 @@ has_participant
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
 ,
 \mathit{
@@ -9280,39 +8959,6 @@ officer
 }
 ,\\
 &
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 \}
@@ -9351,27 +8997,7 @@ officer
 {
 \Alice
 }
-,\\
-&
-\text{where } K_
-{
-\Alice
-}
- \text{ holds every atom of } c_
-{
-\Alice
-}
- \text{, with its multiplicity, that matches } 
-\mathit{
-role
-}
-(
-\Bob
-,
-\ast
-)
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -9405,6 +9031,25 @@ has_officer
 &
 \text{where } K_
 {
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+role
+}
+(
+\Bob
+,
+\ast
+)
+,\\
+&
+\text{where } K_
+{
 \Bob
 }
  \text{ holds every atom of } c_
@@ -9425,6 +9070,10 @@ has_role
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
 ,
 \mathit{
@@ -9466,39 +9115,6 @@ has_officer
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -10185,56 +9801,15 @@ c_
 \mathit{
 amended
 }
+,
+\mathit{
+taken
+}
+(
+Motion
+)
 \}
- \qquad (
-\Alice
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-amenders
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-amended
-}
-\}
- \qquad (
-\Alice
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-amenders
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -10244,34 +9819,6 @@ c_
 {
 \Bob
 }
-,\\
-&
-c'_
-q
- := 
-c_
-q
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-amenders
-}
-(
-\ast
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-,\ 
-q \neq 
-\Bob
-)
 ,\\
 &
 \text{provided } 
@@ -10284,10 +9831,17 @@ organisation
 }
 ,
 \mathit{
-amenders
+proposed
 }
 (
-\Bob
+Motion
+)
+,
+\mathit{
+decided
+}
+(
+Motion
 )
  \in c_
 {
@@ -10299,42 +9853,38 @@ identity
 }
 ,
 \mathit{
+taker
+}
+(
+\Alice
+,
+Motion
+)
+,
+\mathit{
 person
 }
  \in c_
 {
 \Bob
 }
- \text{ and } 
+,\\
+&
+\text{provided } 
 \mathit{
-identity
-}
-,
-\mathit{
-person
-}
- \in c_
-q
- \qquad (
-q \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-amenders
+taken
 }
 (
-\ast
+Motion
 )
-]
-)
-)
+ \notin c_
+{
+\Alice
+}
 ,\\
 &
 \text{guarded by } \{
 \Bob
-,
-\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -10373,43 +9923,14 @@ issued_in
 (
 Dollar
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -10455,8 +9976,7 @@ knows
 Dave
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -10515,6 +10035,10 @@ Carol
 Dave
 )
 ,
+\mathit{
+person
+}
+,
 Sum
 \cdot
 \text{\textcent}
@@ -10539,6 +10063,10 @@ knows
 \Alice
 )
 ,
+\mathit{
+person
+}
+,
 Total
 \cdot
 \text{\textcent}
@@ -10550,72 +10078,6 @@ Dave
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Bob
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -10647,8 +10109,7 @@ Sum
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -10682,6 +10143,10 @@ knows
 \Bob
 )
 ,
+\mathit{
+person
+}
+,
 Sum
 \cdot
 \text{\textcent}
@@ -10701,39 +10166,6 @@ identity
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -10775,8 +10207,7 @@ knows
 Carol
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -10823,6 +10254,10 @@ one_denomination
 Carol
 )
 ,
+\mathit{
+person
+}
+,
 \text{\textcent}
 (
 \Bob
@@ -10844,39 +10279,6 @@ Carol
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -10923,43 +10325,14 @@ today
 (
 Today
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{provided } 
@@ -11015,8 +10388,7 @@ knows
 Dave
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -11079,6 +10451,10 @@ Carol
 Dave
 )
 ,
+\mathit{
+person
+}
+,
 Sum
 \cdot
 \text{\textcent}
@@ -11103,6 +10479,10 @@ knows
 \Alice
 )
 ,
+\mathit{
+person
+}
+,
 Total
 \cdot
 \mathit{
@@ -11118,72 +10498,6 @@ Day
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Bob
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -11239,8 +10553,7 @@ knows
 Dave
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -11307,6 +10620,10 @@ Carol
 Dave
 )
 ,
+\mathit{
+person
+}
+,
 Sum
 \cdot
 \mathit{
@@ -11335,6 +10652,10 @@ knows
 \Alice
 )
 ,
+\mathit{
+person
+}
+,
 Total
 \cdot
 \mathit{
@@ -11350,72 +10671,6 @@ Term
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Bob
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -11463,8 +10718,7 @@ knows
 Carol
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -11515,6 +10769,10 @@ one_denomination
 Carol
 )
 ,
+\mathit{
+person
+}
+,
 \text{\textcent}
 (
 \Bob
@@ -11540,39 +10798,6 @@ Day
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -11618,8 +10843,7 @@ knows
 Carol
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -11662,13 +10886,6 @@ knows
 )
 ,
 \mathit{
-today
-}
-(
-Today
-)
-,
-\mathit{
 one_denomination
 }
 (
@@ -11676,6 +10893,10 @@ one_denomination
 ,
 Carol
 )
+,
+\mathit{
+person
+}
 ,
 \mathit{
 bond
@@ -11694,6 +10915,13 @@ Day
 identity
 }
 ,
+\mathit{
+today
+}
+(
+Today
+)
+,
 \text{\textcent}
 (
 Carol
@@ -11702,39 +10930,6 @@ Carol
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{provided } 
@@ -11790,8 +10985,7 @@ knows
 Carol
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -11838,13 +11032,6 @@ knows
 )
 ,
 \mathit{
-today
-}
-(
-Today
-)
-,
-\mathit{
 one_denomination
 }
 (
@@ -11852,6 +11039,10 @@ one_denomination
 ,
 Carol
 )
+,
+\mathit{
+person
+}
 ,
 \mathit{
 bond
@@ -11871,6 +11062,13 @@ identity
 }
 ,
 \mathit{
+today
+}
+(
+Today
+)
+,
+\mathit{
 bond
 }
 (
@@ -11882,39 +11080,6 @@ Term
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{provided } 
@@ -11947,11 +11112,10 @@ Sum
 \cdot
 \text{\textcent}
 (
-Dave
+\mathit{Carol}
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -11969,7 +11133,7 @@ Sum
 escrow_coin
 }
 (
-Dave
+\mathit{Carol}
 ,
 \Alice
 ,
@@ -11977,7 +11141,30 @@ Bob
 ,
 Cond
 )
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
 \}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
@@ -12000,11 +11187,15 @@ knows
 Bob
 )
 ,
+\mathit{
+person
+}
+,
 Sum
 \cdot
 \text{\textcent}
 (
-Dave
+\mathit{Carol}
 )
 \}
  \subseteq c_
@@ -12024,7 +11215,32 @@ knows
 )
 ,
 \mathit{
-escrow_one_denomination
+person
+}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+issued_in
+}
+(
+Dollar
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+escrow_denomination
 }
 (
 \Alice
@@ -12032,77 +11248,13 @@ escrow_one_denomination
 Bob
 ,
 Cond
+,
+\ast
 )
- \in c_
+ \notin c_
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Bob
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -12133,13 +11285,12 @@ Sum
 bond
 }
 (
-Dave
+\mathit{Carol}
 ,
 Day
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -12157,7 +11308,7 @@ Sum
 escrow_bond
 }
 (
-Dave
+\mathit{Carol}
 ,
 Day
 ,
@@ -12167,7 +11318,30 @@ Bob
 ,
 Cond
 )
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
 \}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
@@ -12190,13 +11364,17 @@ knows
 Bob
 )
 ,
+\mathit{
+person
+}
+,
 Sum
 \cdot
 \mathit{
 bond
 }
 (
-Dave
+\mathit{Carol}
 ,
 Day
 )
@@ -12218,7 +11396,34 @@ knows
 )
 ,
 \mathit{
-escrow_one_denomination
+person
+}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+issued_bond_in
+}
+(
+Dollar
+,
+Day
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+escrow_denomination
 }
 (
 \Alice
@@ -12226,77 +11431,13 @@ escrow_one_denomination
 Bob
 ,
 Cond
+,
+\ast
 )
- \in c_
+ \notin c_
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Bob
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -12336,8 +11477,7 @@ Alice
 Cond
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -12379,22 +11519,8 @@ knows
 )
 ,
 \mathit{
-met
+person
 }
-(
-Cond
-)
-,
-\mathit{
-escrow_one_denomination
-}
-(
-Alice
-,
-\Bob
-,
-Cond
-)
 ,
 Sum
 \cdot
@@ -12426,76 +11552,14 @@ knows
 (
 \Alice
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Bob
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -12537,8 +11601,7 @@ Alice
 Cond
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -12584,22 +11647,8 @@ knows
 )
 ,
 \mathit{
-met
+person
 }
-(
-Cond
-)
-,
-\mathit{
-escrow_one_denomination
-}
-(
-Alice
-,
-\Bob
-,
-Cond
-)
 ,
 Sum
 \cdot
@@ -12633,76 +11682,14 @@ knows
 (
 \Alice
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Bob
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -12742,8 +11729,7 @@ Bob
 Cond
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -12785,22 +11771,8 @@ knows
 )
 ,
 \mathit{
-failed
+person
 }
-(
-Cond
-)
-,
-\mathit{
-escrow_one_denomination
-}
-(
-\Bob
-,
-Bob
-,
-Cond
-)
 ,
 Sum
 \cdot
@@ -12832,76 +11804,14 @@ knows
 (
 \Alice
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Bob
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -12943,8 +11853,7 @@ Bob
 Cond
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -12990,22 +11899,8 @@ knows
 )
 ,
 \mathit{
-failed
+person
 }
-(
-Cond
-)
-,
-\mathit{
-escrow_one_denomination
-}
-(
-\Bob
-,
-Bob
-,
-Cond
-)
 ,
 Sum
 \cdot
@@ -13039,76 +11934,14 @@ knows
 (
 \Alice
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Bob
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Bob
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_officer
-}
-(
-\Bob
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -13153,6 +11986,10 @@ Dollar
 \mathit{
 identity
 }
+,
+\mathit{
+person
+}
  \in c_
 {
 \Alice
@@ -13172,45 +12009,12 @@ issued_in
 }
 ,\\
 &
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 \}
 \end{align*}
 \iffalse
-issue_bond_2
+issue_denominated_bond
 \fi
 \begin{align*}
 &
@@ -13258,43 +12062,14 @@ today
 (
 Today
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{provided } 
@@ -13305,6 +12080,348 @@ Today
 &
 \text{guarded by } \{
 \Alice
+\}
+\end{align*}
+\iffalse
+deposit_more
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\mathit{Carol}
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+\mathit{Carol}
+,
+\Alice
+,
+Bob
+,
+Cond
+)
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Bob
+)
+,
+\mathit{
+person
+}
+,
+Sum
+\cdot
+\text{\textcent}
+(
+\mathit{Carol}
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+issued_in
+}
+(
+Dollar
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+deposit_bond_more
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+\mathit{Carol}
+,
+Day
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_bond
+}
+(
+\mathit{Carol}
+,
+Day
+,
+\Alice
+,
+Bob
+,
+Cond
+)
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Bob
+)
+,
+\mathit{
+person
+}
+,
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+\mathit{Carol}
+,
+Day
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+escrow_denomination
+}
+(
+\Alice
+,
+Bob
+,
+Cond
+,
+Dollar
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+issued_bond_in
+}
+(
+Dollar
+,
+Day
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
 \}
 \end{align*}
 \iffalse
@@ -13323,6 +12440,8 @@ c_
 }
  \uplus 
 \{
+Limit
+\cdot
 \mathit{
 accepts
 }
@@ -13332,8 +12451,7 @@ accepts
 Dollar
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -13354,6 +12472,10 @@ identity
 (
 \Bob
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Alice
@@ -13373,39 +12495,6 @@ Dollar
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -13428,6 +12517,8 @@ c_
 }
  \uplus 
 \{
+Limit
+\cdot
 \mathit{
 accepts
 }
@@ -13437,8 +12528,7 @@ accepts
 Dollar
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -13461,8 +12551,12 @@ bond
 (
 \Bob
 ,
-\ast
+Day
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \Alice
@@ -13478,7 +12572,7 @@ issued_bond_in
 (
 Dollar
 ,
-\ast
+Due
 )
  \in c_
 {
@@ -13486,45 +12580,12 @@ Dollar
 }
 ,\\
 &
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 \}
 \end{align*}
 \iffalse
-pay_2
+pay_accepted_coins
 \fi
 \begin{align*}
 &
@@ -13544,8 +12605,7 @@ c_
 \mathit{Carol}
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -13573,8 +12633,7 @@ Dollar
 \mathit{Carol}
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -13597,6 +12656,10 @@ knows
 (
 \Bob
 )
+,
+\mathit{
+person
+}
 ,
 \text{\textcent}
 (
@@ -13638,39 +12701,6 @@ Dollar
 {
 \mathit{Carol}
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-organisation
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_officer
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{

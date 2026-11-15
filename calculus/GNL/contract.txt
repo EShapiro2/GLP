@@ -2,7 +2,7 @@ GNL: Network Lodging
 GNL extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation), and restricts GNO and REC.
 A *host* is a provider and a *traveller* a customer. A *listing* names a place, the nights offered and the price a night in Orga-coins; its terms say what is released to whom on cancellation.
 Alice and Bob are persons, Orga a network organisation.
-1. ■ Listing. Post: Bob, a host, may post a listing to the travellers he points to. Pass: A traveller may pass it to the travellers they point to. Withdraw: Bob may withdraw it.
+1. ■ Listing. Post: Bob, a host, may post a listing to the travellers he points to. Pass: A traveller may pass it to the travellers they point to. Withdraw listing: Bob may withdraw it.
 2. ■ Book: Alice, a traveller, may book nights of Bob's listing with the consent of Bob, provided Alice and Bob know each other; Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
 3. ■ Check-in and checkout. Check in: Alice may record her check-in when she is at the place on the first night. Check out: Alice may record her checkout when she leaves it after the last night; the payment and the deposit are then released to Bob.
 4. ■ Cancelling. Cancel: Alice or Bob may cancel a booking before the first night, and the payment and the deposit are then released to Alice and to Bob as the terms say. No-show: If no check-in is recorded on the first night while Alice is at the place, she may cancel and both are then released to her.

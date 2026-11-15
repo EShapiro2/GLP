@@ -19,8 +19,14 @@ at the redeemer (Currencies' finding).  An owner who adopted one of the three ta
 GRA-SS again, from Calculus code 1337fb6, run on GLP migration 9fc1d3a and checked on GSC-supplied 020fe5e: it fills
 GRA's two parameters and declares none, so it is certified with a platform that loads (GRH's finding).  GRA stays parametric.
 
-To come: GO's family, 22 contracts, which are in this directory as first published (f1d2f99) and are not to be adopted
-from it: CB CMB CnC GAN GBCC GBank GCC GCoop GCorp GDAO GLDAO GNG GNL GNM GNO GO MCS SC SCB SPLLC TC WC.
-They wait on the listing of every body that decides an act (GSC's check refuses them: amenders, treasurers, directors,
-governors, share_deciders), on an organisation as a party to the currencies' acts, and on vGLP's wildcard on migration.
-ORH is held out until GSC's rule on an environment predicate as a mark.
+Part 2, this commit, from Calculus code f2c610d, run on GLP migration f130e16 (with vGLP's wildcard and const) and
+checked on GSC-supplied 020fe5e: GO's family, 22 contracts, each certified: CB CMB CnC GAN GBCC GBank GCC GCoop GCorp
+GDAO GLDAO GNG GNL GNM GNO GO MCS SC SCB SPLLC TC WC.  Fifteen have a platform.glp that loads; seven are parametric
+in the bylaws and have none until instantiated: GAN GBank GCoop GCorp GNO GO TC.  They may now be adopted.
+What changed since the first publication: every act of an organisation is voted, each one entitled casting a vote and
+an officer the bylaws name taking the act on the count; Amend is a motion of GO:2; the treasurers, directors and
+governors are listed by their roles; SC's issue of shares is voted by the shareholders, the weighing of shares the
+platform's; Retire clears every role of the one retired.
+
+To come: an organisation as a party to the currencies' acts (GBank, GCorp, GCoop), which waits on a sentence of the
+contracts' text; ORH, held out until GSC's rule on an environment predicate as a mark.

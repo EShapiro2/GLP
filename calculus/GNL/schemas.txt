@@ -14,14 +14,15 @@ After x records x's checkout from l of y in z: no longer x is checked in at l of
 After x cancels x's booking of l of y in z: no longer x and y have a booking of l and no longer z-coins are locked between the provider y and the customer x.
 After y cancels y's booking of l by x in z: no longer x and y have a booking of l and no longer z-coins are locked between the provider y and the customer x.
 GNL:0 - | A *host* is a provider and a *traveller* a customer. A *listing* names a place, the nights offered and the price a night in Orga-coins; its terms say what is released to whom on cancellation.
-GNL:0 - | Alice, Bob and Carol are persons, Orga a network organisation, Listing a listing, Skill a skill or a service; in clause 1 Carol is a traveller, in clause 5 an arbiter, and in clause 6 Skill is the listing.
+GNL:0 - | Alice, Bob and Carol are persons, Orga a network organisation, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a traveller, in clause 5 an arbiter, and in clause 6 Skill is the listing.
+GNL:0 - | Environment: x is at the place of l on the first night; x leaves the place of l after the last night; it is before the first night of l, for x; no check-in at l is recorded on the first night while x is at the place.
 GNL:1 ■ | Listing.
-GNL:1 ■ Post: posted(Bob,Listing,Orga) <- provider(Bob,Orga), ~posted(Bob,Listing,Orga) guarded by Bob.
+GNL:1 ■ Post: posted(Bob,Listing,Orga) <- stake(Orga,S), coin(Bob,Orga,*Held), ge(Held,S), ~posted(Bob,Listing,Orga) guarded by Bob.
 GNL:1 ■ | Bob posts the listing to the travellers he points to.
-GNL:1 ■ Send listing: received(Alice,Listing,Bob,Orga) <- posted(Bob,Listing,Orga), points_to(Bob,Alice), customer(Alice,Orga), ~received(Alice,Listing,Bob,Orga).
-GNL:1 ■ Pass: received(Carol,Listing,Bob,Orga) <- customer(Alice,Orga), received(Alice,Listing,Bob,Orga), points_to(Alice,Carol), customer(Carol,Orga), ~received(Carol,Listing,Bob,Orga) guarded by Alice.
-GNL:1 ■ Withdraw: ~posted(Bob,Listing,Orga) <- posted(Bob,Listing,Orga) guarded by Bob.
-GNL:2 ■ Book: booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- customer(Alice,Orga), posted(Bob,Listing,Orga), knows(Alice,Bob), knows(Bob,Alice), ~booked(Alice,Listing,Bob), ~booked_by(Bob,Listing,Alice) guarded by Alice, Bob.
+GNL:1 ■ Send listing: received(Alice,Listing,Bob,Orga) <- posted(Bob,Listing,Orga), points_to(Bob,Alice), accepts(Alice,Orga,Dollar), ~received(Alice,Listing,Bob,Orga).
+GNL:1 ■ Pass: received(Carol,Listing,Bob,Orga) <- accepts(Alice,Orga,Dollar), received(Alice,Listing,Bob,Orga), points_to(Alice,Carol), accepts(Carol,Orga,Mark), ~received(Carol,Listing,Bob,Orga) guarded by Alice.
+GNL:1 ■ Withdraw listing: ~posted(Bob,Listing,Orga) <- posted(Bob,Listing,Orga) guarded by Bob.
+GNL:2 ■ Book: booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- accepts(Alice,Orga,Dollar), posted(Bob,Listing,Orga), knows(Alice,Bob), knows(Bob,Alice), ~booked(Alice,Listing,Bob), ~booked_by(Bob,Listing,Alice) guarded by Alice, Bob.
 GNL:2 ■ | Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
 GNL:3 ■ | Check-in and checkout.
 GNL:3 ■ Check in: checked_in(Alice,Listing,Bob) <- booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), at_place(Alice,Listing), ~checked_in(Alice,Listing,Bob) guarded by Alice.
