@@ -2066,8 +2066,7 @@ guardian
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2091,6 +2090,10 @@ has_guardian
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
 ,
 \mathit{
@@ -2118,39 +2121,6 @@ has_guardian
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-ai_agent
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_guardian
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -2552,8 +2522,7 @@ guardian
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2584,6 +2553,10 @@ has_guardian
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
 ,
 \mathit{
@@ -2625,39 +2598,6 @@ has_guardian
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-ai_agent
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_guardian
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -2786,8 +2726,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2806,8 +2745,7 @@ friend
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -2889,6 +2827,10 @@ friend
 (
 \Bob
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -2924,39 +2866,6 @@ friend
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-ai_agent
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_guardian
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -3124,8 +3033,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -3149,6 +3057,10 @@ friend
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
 ,
 \mathit{
@@ -3189,39 +3101,6 @@ guardian
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-ai_agent
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_guardian
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -3251,8 +3130,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -3271,8 +3149,7 @@ friend
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -3325,6 +3202,10 @@ friend
 \mathit{
 identity
 }
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -3342,39 +3223,6 @@ guardian
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-ai_agent
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_guardian
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -3526,8 +3374,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -3546,8 +3393,7 @@ friend
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -3557,8 +3403,7 @@ c_
 {
 \mathit{Carol}
 }
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Dave}
@@ -3654,6 +3499,10 @@ friend
 (
 \mathit{Dave}
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -3669,6 +3518,10 @@ friend
 (
 \mathit{Carol}
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Dave}
@@ -3711,72 +3564,6 @@ friend
 \Bob
 }
  = \emptyset
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-ai_agent
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_guardian
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Dave}
-)
-\lor
-(
-\mathit{
-ai_agent
-}
-(
-\mathit{Dave}
-)
-\land
-\exists 
-G2
-\,(
-\mathit{
-has_guardian
-}
-(
-\mathit{Dave}
-,
-G2
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -3812,8 +3599,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -3832,8 +3618,7 @@ friend
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -3915,6 +3700,10 @@ Seal
 \mathit{
 identity
 }
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -3957,39 +3746,6 @@ friend
 \Bob
 }
  = \emptyset
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{
-ai_agent
-}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_guardian
-}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
