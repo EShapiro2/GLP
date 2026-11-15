@@ -1283,10 +1283,10 @@ int _compareCharacterCodes(String a, String b) {
 }
 
 /// The time guards' suspension (`wait/1`, `wait_until/1`): the goal suspends
-/// on a reader the runtime binds when a timer of [milliseconds] fires, and
-/// succeeds when it is re-tried after that.  A goal that already waits keeps
-/// suspending on its reader until the timer has fired.
-GuardResult _waitOnTimer(RunnerContext cx, num milliseconds) {
+/// on a reader the runtime binds when the machine's clock reads [deadline],
+/// and succeeds when it is re-tried after that.  A goal that already waits
+/// keeps suspending on its reader until the timer has fired.
+GuardResult _waitOnTimer(RunnerContext cx, int deadline) {
   // Check if this goal already has a pending wait
   final existingReader = cx.rt.getWaitReader(cx.goalId);
   if (existingReader != null) {
@@ -1316,19 +1316,17 @@ GuardResult _waitOnTimer(RunnerContext cx, num milliseconds) {
   // or ended, cancels it ([Runtime.releaseWait]).
   final rt = cx.rt;
   final goalId = cx.goalId;
-  rt.setWaitTimer(
-      goalId,
-      Timer(Duration(milliseconds: milliseconds.toInt()), () {
-        rt.waitTimerFired(goalId);
-        // Bind writer to 0 (any value works)
-        final reactivated = rt.heap.bindVariableConst(writerAddr, 0);
-        // Enqueue reactivated goals and clean up suspended map
-        for (final goalRef in reactivated) {
-          rt.enqueueReactivatedGoal(goalRef);
-        }
-        // Decrement pending timer count
-        rt.decrementPendingTimers();
-      }));
+  rt.startWaitTimer(goalId, deadline, () {
+    rt.waitTimerFired(goalId);
+    // Bind writer to 0 (any value works)
+    final reactivated = rt.heap.bindVariableConst(writerAddr, 0);
+    // Enqueue reactivated goals and clean up suspended map
+    for (final goalRef in reactivated) {
+      rt.enqueueReactivatedGoal(goalRef);
+    }
+    // Decrement pending timer count
+    rt.decrementPendingTimers();
+  });
 
   // Suspend on the timer's reader, which the runtime binds: it is no
   // reader of the guard's argument ([_guardUndecided] decides those).
@@ -1845,7 +1843,9 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       final duration = operands.evaluateNumeric(args[0]);
       if (duration == null) return blockedOrFail();
       if (duration <= 0) return GuardResult.success;
-      return _waitOnTimer(cx, duration);
+      // A wait that has begun keeps the time it ends at, on the machine's
+      // clock; the time given here is used only where it begins.
+      return _waitOnTimer(cx, cx.rt.machineNow + duration.toInt());
 
     case 'wait_until':
       // wait_until(Timestamp) - Suspend until absolute time has passed
@@ -1857,12 +1857,12 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (args.isEmpty) return GuardResult.failure;
       final timestamp = operands.evaluateNumeric(args[0]);
       if (timestamp == null) return blockedOrFail();
-      final now = DateTime.now().millisecondsSinceEpoch;
-      if (now >= timestamp) return GuardResult.success;
+      // The current time is the machine's clock's (GLP-Spec
+      // appendix-guards.tex, "Clock access (now/1, set_clock/1)").
+      if (cx.rt.machineNow >= timestamp) return GuardResult.success;
 
       // Time hasn't arrived yet — use timer-based suspension (same as wait)
-      final remaining = timestamp.toInt() - now;
-      return _waitOnTimer(cx, remaining);
+      return _waitOnTimer(cx, timestamp.ceil());
 
     case 'when_idle':
       // GLP-Spec appendix-guards.tex (e3a8d52), the time guards: "when_idle

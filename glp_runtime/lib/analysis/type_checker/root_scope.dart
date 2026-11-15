@@ -141,6 +141,7 @@ const Set<String> builtinProcedures = {
   '_term_to_string/2',
   // Time and random
   '_now/1',
+  '_set_clock/1',
   '_random/4',
   '_split_random_seed/3',
   // Simulated time
