@@ -85,13 +85,13 @@ certified(M, CK?, CSig?) :-
     module(M?) |
     decompose_module(M?, CK, Src, _),
     self_key(K),
-    sign(creator_cert(Src?, [establish, acquaint, introduce, mint, mint_bond, first_date, advance, swap, swap_cb, swap_bc, swap_bb, pay, redeem, redeem_cb, redeem_bc, redeem_bb, deposit_c, deposit_b, release_c, release_b, return_c, return_b], syntactically_grassroots), K?, CSig).
+    sign(creator_cert(Src?, [establish, acquaint, introduce, issue, swap, pay, redeem, issue_bond, swap_coin_for_bond, swap_bonds, redeem_coin_against_bond, redeem_bond, redeem_bond_against_bond, deposit, deposit_bond, release, release_bond, return, return_bond], syntactically_grassroots), K?, CSig).
 
 %% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/5, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/6, person_at/8) and core/self.glp (hold_person/1), which do not export them, as in gc_phone.glp.
 procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
 miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
     module(M?) |
-    opaque_type(miniapp/3, M?, H0),
+    opaque_type(miniapp/4, M?, H0),
     opaque_type(miniapp_person/5, M?, H),
     person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
 
