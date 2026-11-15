@@ -6,12 +6,13 @@
 % Schemas: GCoop.glp beside this file.
 GCoop: Grassroots Cooperative
 GCoop extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-A cooperative is an organisation with two roles, member, held by every participant, and board member; the members decide by a majority of the members, one member one vote, and the board members jointly decide the acts the members delegate to the board.
-Alice and Bob are persons, Orga a cooperative.
-1. ■ Founding.  Alice may found Orga and become its first member.
-2. ■ Membership.  Bob becomes a member of Orga by an act of Bob and the members; his membership ends by an act of Bob or of the other members.
-3. ■ Board.  The members may elect a member to the board, and remove one from it.
-Pragmas
+A *cooperative* is an organisation whose bylaws name two roles, *member*, held by every participant, and *board member*; the members decide by a majority of the members, one member one vote, but for the acts the bylaws delegate to the board or to another role.
+Logic pragmas
+GCoop extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A *cooperative* is an organisation whose bylaws name two roles, *member*, held by every participant, and *board member*; the members decide by a majority of the members, one member one vote, but for the acts the bylaws delegate to the board or to another role.
+Logic pragmas.
+x is a member of z: x is a participant of z.
+Interface pragmas
 Look: 🌱, sharing
 Organisations: the organisations Alice participates in, and her roles in each.
 Coins: the coins Alice holds.

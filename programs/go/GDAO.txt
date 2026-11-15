@@ -5,12 +5,12 @@
 % Last changed: 2026-11-12, by GO #5.
 % Schemas: GDAO.glp beside this file.
 GDAO: Grassroots DAO
-GDAO instantiates GCoop and restricts it.
-A DAO is a cooperative with one role besides member, steward; the steward decides the admission of a member, and the members decide every other act of the DAO by a majority of the members.
-Alice and Bob are persons, Orga a DAO.
-1. ■ Founding.  Alice may found Orga and become its steward and first member.
-2. ■ Joining.  Bob becomes a member of Orga by an act of Bob and the steward.
-Pragmas
+GDAO instantiates GCoop with DAO bylaws.
+A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer, and delegate to the steward the admission of a member.
+Logic pragmas
+GDAO instantiates GCoop with DAO bylaws.
+A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer, and delegate to the steward the admission of a member.
+Interface pragmas
 Look: 🗳️, governance
 Organisations: the organisations Alice participates in, and her roles in each.
 Coins: the coins Alice holds.

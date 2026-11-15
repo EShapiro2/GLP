@@ -6,8 +6,11 @@
 % Schemas: GBank.glp beside this file.
 GBank: Grassroots Bank
 GBank extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-A bank is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
-Pragmas
+A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
+Logic pragmas
+GBank extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
+Interface pragmas
 Look: 🏦, money
 Organisations: the organisations Alice participates in, and her roles in each.
 Coins: the coins Alice holds.

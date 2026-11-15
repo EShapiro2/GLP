@@ -6,8 +6,11 @@
 % Schemas: GCorp.glp beside this file.
 GCorp: Grassroots Corporation
 GCorp extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-A corporation is an organisation that holds, pays and issues Dollar-denominated coins and bonds.
-Pragmas
+A *corporation* is an organisation that holds, pays and issues Dollar-denominated coins and bonds.
+Logic pragmas
+GCorp extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A *corporation* is an organisation that holds, pays and issues Dollar-denominated coins and bonds.
+Interface pragmas
 Look: 🏢, money
 Organisations: the organisations Alice participates in, and her roles in each.
 Coins: the coins Alice holds.

@@ -5,12 +5,22 @@
 % Last changed: 2026-11-12, by GO #5.
 % Schemas: WC.glp beside this file.
 WC: Workers' Cooperative
-WC instantiates GCoop and restricts it.
-A workers' cooperative is a cooperative whose members work for Orga.
-Alice and Bob are persons, Orga a workers' cooperative.
-1. ■ Pay.  Orga may pay Bob, a member, Dollar-denominated coins for his work, as the members decide.
-2. ■ Distribution.  The members may decide to distribute Dollar-denominated coins Orga holds, which Orga then pays to the members equally.
-Pragmas
+WC instantiates GCoop with bylaws that delegate no act and extends it.
+A *workers' cooperative* is a cooperative whose members work for it.
+Bob is a person, Orga a workers' cooperative.
+1. ■ Pay: Orga may pay Bob, a member, Dollar-denominated coins for his work.
+2. ■ Distribute: Orga may distribute Dollar-denominated coins it holds to the members equally.
+Logic pragmas
+WC instantiates GCoop with bylaws that delegate no act, and extends it.
+A *workers' cooperative* is a cooperative whose members work for it.
+Bob and Carol are persons, Orga a workers' cooperative, Dollar a fiat currency, Sum a number, Carol possibly Bob or Orga.
+1. ■ Pay: Orga may pay Bob Sum Carol-coins for Bob's work, provided Bob is a member of Orga and Carol has issued coins of the denomination Dollar.
+2. ■ Distribute: Orga may distribute a Carol-coin to Bob, provided Bob is a member of Orga, Carol has issued coins of the denomination Dollar and Orga has distributed no more coins to Bob than to any other member.
+Logic pragmas.
+Vocabulary: z has distributed a coin to y = distributed(z,y); z has distributed no more coins to y than to any other member = least_share(z,y).
+After z pays y n w-coins for y's work: no longer z holds n w-coins and y holds n w-coins.
+After z distributes a w-coin to y: no longer z holds a w-coin, y holds a w-coin and z has distributed a coin to y.
+Interface pragmas
 Look: 🛠️, sharing
 Organisations: the organisations Alice participates in, and her roles in each.
 Coins: the coins Alice holds.

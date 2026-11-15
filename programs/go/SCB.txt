@@ -5,17 +5,30 @@
 % Last changed: 2026-11-12, by GO #5.
 % Schemas: SCB.glp beside this file.
 SCB: Sovereign Central Bank
-SCB instantiates GBank and restricts it.
-A central bank is an organisation that is the sovereign of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar.  It has two roles, governor and committee member; the governors jointly decide the acts of the bank, and the committee members, the monetary policy committee, set by a majority the policy rate for each term, the return over that term at which the bank lends its coins against bonds.  A participant who holds no role is a counterparty.
-Gov is an organisation, Alice and Bob persons, Orga a central bank.
-1. ■ Founding.  Gov, with Alice, may found Orga as the sovereign of the Dollar, with Alice its first governor.
-2. ■ Counterparties.  Bob becomes a counterparty of Orga and ceases to be one by an act of Bob and the governors.
-3. ■ Officers.  The bylaws name the officers of Gov as the persons who decide the appointment and the removal of a governor or a committee member.
-4. ■ Policy rate.  The committee members may set the policy rate for a term.
-5. ■ Lending.  Bob, a counterparty, and Orga may jointly decide to swap Orga-coins for Bob-bonds of a term, as many bonds as the coins and the interest on them at the policy rate for that term.
-6. ■ Open market.  Bob, a counterparty, and Orga may jointly decide to swap coins and bonds they hold.
-7. ○ Authority.  Gov founds Orga and appoints and removes its officers as the law of the Dollar provides.
-Pragmas
+SCB instantiates GBank with central bank bylaws and restricts and extends it.
+A *central bank* is a bank created by an organisation, Gov (GO:1), as the *sovereign* of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar. Its bylaws name two roles, *governor*, held by its first officer, and *committee member*; the governors jointly decide the acts of the bank, but the officers of Gov decide the appointment and the removal of its officers, and the committee members, the monetary policy committee, set by a majority the *policy rate* for each term, the return over that term at which the bank lends its coins against bonds. A participant who holds no role is a *counterparty*.
+Gov is an organisation, Bob a person, Orga a central bank.
+1. ■ Leave, Expel: GO:3, only with the consent of both Bob and the governors.
+2. ■ Set policy rate: The committee members may set the policy rate for a term.
+3. ■ Lend: Bob, a counterparty, and Orga may jointly swap Orga-coins for Bob-bonds of a term, as many bonds as the coins and the interest on them at the policy rate for that term.
+4. ■ Open market: Bob, a counterparty, and Orga may jointly swap coins and bonds they hold (DGC:2).
+5. ○ Authority. Gov will create Orga and appoint and remove its officers as the law of the Dollar provides.
+Logic pragmas
+SCB instantiates GBank with central bank bylaws, and restricts and extends it.
+A *central bank* is a bank created by an organisation, Gov (GO:1), as the *sovereign* of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar. Its bylaws name two roles, *governor*, held by its first officer, and *committee member*; the governors jointly decide the acts of the bank, but the officers of Gov decide the appointment and the removal of its officers, and the committee members, the monetary policy committee, set by a majority the *policy rate* for each term, the return over that term at which the bank lends its coins against bonds. A participant who holds no role is a *counterparty*.
+Gov is an organisation, Bob a person, Orga a central bank, Term a term, Rate, Sum, Interest and Total numbers.
+1. ■ Leave: GO:3 Leave, only if Orga is an organisation, with the consent of the governors of Orga. Officer leave: GO:3 Officer leave, only if Orga is an organisation, with the consent of the governors of Orga. Expel: GO:3 Expel, only if Orga is an organisation, with the consent of Bob and the governors of Orga. Officer expel: GO:3 Officer expel, only if Orga is an organisation, with the consent of Bob and the governors of Orga.
+2. ■ Set policy rate: The committee members of Orga may set the policy rate of Orga for Term at Rate, provided Orga is an organisation.
+3. ■ Lend: Bob and Orga may jointly swap Sum Orga-coins for Total Bob-bonds due Term, provided Bob is a counterparty of Orga, Orga has the policy rate for Term at the number Rate, Interest is Sum times Rate and Total is Sum plus Interest. Bob and Orga swap as many bonds as the coins and the interest on them at the policy rate for that term.
+4. ■ Open market. Bob, a counterparty, and Orga may jointly swap coins and bonds they hold (DGC:2).
+5. ○ Authority. Gov will create Orga and appoint and remove its officers as the law of the Dollar provides.
+Logic pragmas.
+Vocabulary: y is a counterparty of z = counterparty(y,z); z has the policy rate for e at the number n = policy_rate(z,e,n).
+Roles: the governors of z = governors(z); the committee members of z = committee_members(z).
+the earlier policy rate of z for e has ended: z has the policy rate for e at no number.
+After g sets the policy rate of z for e at n: the earlier policy rate of z for e has ended and z has the policy rate for e at the number n.
+After y and z swap n z-coins for m y-bonds due e: no longer z holds n z-coins, y holds n z-coins, no longer y holds m y-bonds due e and z holds m y-bonds due e.
+Interface pragmas
 Look: 🏛️, money
 Organisations: the organisations Alice participates in, and her roles in each.
 Coins: the coins Alice holds.
