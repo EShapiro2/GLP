@@ -5,9 +5,10 @@
                                         owner's NAME.txt in GLP ($GLP_DIR), keeping its % lines and its Interface pragmas
     python3 adopt.py --paths            writes PATHS.txt beside this directory: a line "NAME path" for each contract, the
                                         path in GLP of its adopted file, or calculus/NAME/ where GLP has none
-    python3 adopt.py NAME               writes NAME.glp beside NAME's adopted file, and schemas.txt, full-contract.txt,
-                                        full-pragmas.txt, flat.txt, full-schemas.txt and term.glp.txt into cascade/NAME/
-                                        of GLP, compiled from the contracts of PATHS.txt
+    python3 adopt.py NAME               writes NAME.glp beside NAME's adopted file, and into cascade/NAME/ of GLP NAME.txt,
+                                        a copy of the adopted file, NAME.glp, schemas.txt, full-contract.txt,
+                                        full-pragmas.txt, flat.txt and full-schemas.txt, compiled from the contracts of
+                                        PATHS.txt
     python3 adopt.py --check NAME       prints nothing and exits 0 where those files are what it would write; else
                                         names each that differs, and exits 1
     python3 adopt.py --split-check      writes every contract's adopted file into a temporary directory and checks
@@ -201,23 +202,31 @@ def compiled(name):
 
 
 def targets(name):
+    """What adopt.py NAME writes: NAME.glp beside the adopted file; and into cascade/NAME/, under the owner's names,
+    NAME.txt, a copy of the adopted file as it stands, NAME.glp, and the five files of the Calculus's compilers.  The
+    rest of the record of a run (verdict.txt, vmat.tex, platform.vglp, platform.glp, run.log, interface.glp,
+    manifest.md) is cascade.sh's.  A contract not yet adopted has no NAME.txt and no NAME.glp beside it."""
     out, path = compiled(name)
-    files = {os.path.join(GLP, 'cascade', name, f): t for f, t in out.items()}
+    glp = module(name, out.pop('term.glp.txt'))
+    rec = os.path.join(GLP, 'cascade', name)
+    files = {os.path.join(rec, f): t for f, t in out.items()}
+    files[os.path.join(rec, name + '.glp')] = glp
     if path.endswith('.txt'):
-        files[os.path.join(GLP, os.path.dirname(path), name + '.glp')] = module(name, out['term.glp.txt'])
+        files[os.path.join(GLP, os.path.dirname(path), name + '.glp')] = glp
+        files[os.path.join(rec, name + '.txt')] = read(os.path.join(GLP, path))
     return files
 
 
 def module(name, term):
-    """NAME.glp: the full schemas, the term of term.glp.txt, in the form of programs/gsc/README.md, "Writing a
+    """NAME.glp: the full schemas, the Calculus's term.glp.txt, in the form of programs/gsc/README.md, "Writing a
     contract": a file of its own, procedure contract_named(Constant?, SDeclared), one clause returning the contract
     under its name, the name in lower case with every other character an underscore, as cascade.py names it."""
     ident = re.sub(r'[^a-z0-9]', '_', name.lower())
-    return ('%%%% %s.glp --- printed by adopt.py from %s.txt beside this file: the contract\'s full schemas, the term of\n'
-            '%%%% term.glp.txt in cascade/%s/, complete in itself.  Not to be edited: edit %s.txt and run adopt.py %s.\n'
-            '%% contract_named(%s, C): the contract, %s.\n'
-            'procedure contract_named(Constant?, SDeclared).\n'
-            'contract_named(%s, %s).\n') % (name, name, name, name, name, ident, name, ident, term.rstrip('\n'))
+    head = ('%%%% %s.glp --- printed by adopt.py from %s.txt: the contract\'s full schemas, the Calculus\'s term.glp.txt,\n'
+            '%%%% complete in itself.  Not to be edited: edit %s.txt and run adopt.py %s.\n' % (name, name, name, name))
+    return head + ('%% contract_named(%s, C): the contract, %s.\n'
+                   'procedure contract_named(Constant?, SDeclared).\n'
+                   'contract_named(%s, %s).\n' % (ident, name, ident, term.rstrip('\n')))
 
 
 def main():
