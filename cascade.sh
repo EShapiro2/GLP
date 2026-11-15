@@ -455,7 +455,7 @@ else
         Tn=$(printf '%s' "$TF" | tr 'A-Z-' 'a-z_')
         [ -f "$TD/$TF.glp" ] || { say "the third contract the contracts amend, $TF, has no $TF.glp beside its $TF.txt"; exit 1; }
         read_contract "$Tn" "$TD" "$TF"
-        if ! P=$(bash "$PRAG" "${THIRD[0]}" "$RD" 2> "$WORK/pr.err"); then
+        if ! P=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$PRAG" "${THIRD[0]}" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
             say "the pragmas of $TF, the third contract the contracts amend, were not read: $(head -1 "$WORK/pr.err")"
             exit 1
         fi
@@ -468,7 +468,7 @@ else
         cp "${SRCS[i]}/${FILES[i]}.glp" "$OUT/${FILES[i]}.glp"
         read_contract "${NAMES[i]}" "${SRCS[i]}" "${FILES[i]}"
         P=no_pragmas
-        if [ "${CTXTS[i]}" = "${FILES[i]}.txt" ] && ! P=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${SRCS[i]}/${CTXTS[i]}" "$RD" 2> "$WORK/pr.err"); then
+        if [ "${CTXTS[i]}" = "${FILES[i]}.txt" ] && ! P=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${SRCS[i]}/${CTXTS[i]}" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
             say "the pragmas of ${FILES[i]} were not read: $(head -1 "$WORK/pr.err")"
             exit 1
         fi
@@ -553,7 +553,7 @@ if [ "$PARAMETRIC" = 1 ]; then
 fi
 if [ "$PARAMETRIC" = 0 ] && [ ${#NAMES[@]} -eq 1 ]; then
     PR=no_pragmas
-    if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "$RD" 2> "$WORK/pr.err"); then
+    if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
         say "its pragmas were not read: $(head -1 "$WORK/pr.err")"
         exit 1
     fi
