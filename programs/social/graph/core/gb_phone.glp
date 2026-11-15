@@ -1,4 +1,4 @@
-%% gb_phone.glp --- one smartphone of programs/apps/gb_boot.glp and of gb_village_boot.glp: the super-app's agent on the isolate's network under the person's own key, the mini-app read from its certified artefact beside this program and installed, and the person's acts by their part in the boot's script, toward the peers whose keys the person told the agent.  The boot defines no agent/2: graph/core's agent/2 (self.glp) answers the initial goal and starts gb_phone/4, the entry the person goal's first act names (IGLP 30c04c5, Implementation Notes, "Boot"); so the phone is a module of the program the boot loads, as gc_phone.glp is.  The script, the mini-app and its contract are the app's owner's (programs/apps/gb).  GB requires the day: the super-app writes the calendar of every mini-app installed from the smartphone's clock, one date a day (GSG paper, Section 3; core/agent.glp, date/1), and here the phone writes the first day on it after installing the mini-app, as the plays of programs/apps/gb write it; the days after the first, which those plays write off another person's screen, have no source on a phone under the boot harness, which waits on no clock.
+%% gb_phone.glp --- one smartphone of programs/apps/gb_boot.glp and of gb_village_boot.glp: the super-app's agent on the isolate's network under the person's own key, the mini-app read from its certified artefact beside this program and installed, and the person's acts by their part in the boot's script, toward the peers whose keys the person told the agent.  The boot defines no agent/2: graph/core's agent/2 (self.glp) answers the initial goal and starts gb_phone/4, the entry the person goal's first act names (IGLP 30c04c5, Implementation Notes, "Boot"); so the phone is a module of the program the boot loads, as gc_phone.glp is.  The script, the mini-app and its contract are the app's owner's (programs/apps/gb).  GB requires the day: the mini-app's agent reads it from the phone's clock by now/1, and the mini-app's scripted person sets that clock by its steps clock(T), as in the plays of programs/apps/gb (programs/apps/gb/person.glp), each phone's clock its own.
 
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
@@ -27,7 +27,7 @@ gb_phone(market_escrow, Me, [Charlie, Frank], NetIn) :-
 %% A person who knows other peers than the plays give has no smartphone here.
 gb_phone(_, _, _, _) :- otherwise | true.
 
-%% person_gb(Me, Role, Ps, Calls, Accepts, NetIn): one person's smartphone: the super-app's agent on the isolate's network under the person's own key, its home answering the requests to connect (scripted_home/5), the mini-app installed from its artefact and the first day written on its calendar, and the person's acts toward the peers Ps they know, Calls those they connect to and invite and Accepts those whose invitation they consent to in advance; the mini-app's scripted person runs under the role with the peers' keys, by which the script names them.
+%% person_gb(Me, Role, Ps, Calls, Accepts, NetIn): one person's smartphone: the super-app's agent on the isolate's network under the person's own key, its home answering the requests to connect (scripted_home/5), the mini-app installed from its artefact, and the person's acts toward the peers Ps they know, Calls those they connect to and invite and Accepts those whose invitation they consent to in advance; the mini-app's scripted person runs under the role with the peers' keys, by which the script names them.
 procedure person_gb(Key?, Constant?, List(Key)?, List(Key)?, List(Key)?, NetInStream?).
 person_gb(Me, Role, Ps, Calls, Accepts, NetIn) :-
     agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
@@ -91,7 +91,7 @@ certified(M, CK?, CSig?) :-
 procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).
 miniapp_person_run(M, Id, Role, Ps, PEnd, Screen?) :-
     module(M?) |
-    opaque_type(miniapp/4, M?, H0),
+    opaque_type(miniapp/3, M?, H0),
     opaque_type(miniapp_person/5, M?, H),
     person_at(H0?, H?, M?, Id?, Role?, Ps?, PEnd?, Screen).
 
