@@ -1,7 +1,7 @@
 % DGC: Denominated Grassroots Currencies --- the contract, the one copy, its owner's (organisation/claude.md, "Sessions").
 % Owner: Currencies (SGC).
 % Paper: SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727
-% Adopted from the Calculus, branch Calculus of GLP, c475902, by calculus/MIGRATION.md (Udi, 2026-11-15): the contract and its Logic pragmas are the Calculus's text, which Udi approved; DGC.glp and cascade/DGC/ are printed by calculus/tools/adopt.py, never written by hand; the Interface pragmas are the owner's, a line for each act of the full contract, the fields those vGLP's compiler computes (Currencies #19, 2026-11-15).
+% Adopted from the Calculus, branch Calculus of GLP, c475902, by calculus/MIGRATION.md (Udi, 2026-11-15): the contract and its Logic pragmas are the Calculus's text, which Udi approved; DGC.glp and cascade/DGC/ are printed by calculus/tools/adopt.py, never written by hand; the Interface pragmas are the owner's, a line for each clause with acts of its own, the fields those of calculus/NAME/interface.txt (Currencies #19, 2026-11-15).
 DGC: Denominated Grassroots Currencies
 DGC extends GB and GDC, and restricts GB.
 A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
@@ -26,35 +26,6 @@ After x issues n f-denominated x-bonds due e: x holds n x-bonds due e and x has 
 After x accepts one more f-denominated z-coin in payment: x accepts an f-denominated z-coin in payment.
 After x pays y a z-coin that y accepts as denominated by f: no longer x holds a z-coin, y holds a z-coin and no longer y accepts an f-denominated z-coin in payment.
 Interface pragmas
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
-Issue: Alice [Issue] <amount>
-Swap: Alice [Swap] <amount given> <amount wanted>
-  Bob: Alice asks to swap coins with you.
-Pay: Alice [Pay] <amount>
-Redeem: Alice [Redeem]
-Issue bond: Alice [Issue bond] <maturity> <amount>
-Swap coin for bond: Alice [Swap coin for bond] <amount given> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap coins for bonds with you.
-Swap bonds: Alice [Swap bonds] <amount given> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap bonds with you.
-Redeem coin against bond: Alice [Redeem coin against bond] <maturity wanted>
-Redeem bond: Alice [Redeem bond]
-Redeem bond against bond: Alice [Redeem bond against bond] <maturity wanted>
-Deposit: Alice [Deposit] <amount> <condition>
-  Carol: Alice asks to deposit coins with you.
-Deposit bond: Alice [Deposit bond] <amount> <condition>
-  Carol: Alice asks to deposit bonds with you.
-Release: Carol [Release] <amount>
-  Bob: Carol asks to release coins to you.
-Release bond: Carol [Release bond] <amount>
-  Bob: Carol asks to release bonds to you.
-Return: Carol [Return] <amount>
-  Alice: Carol asks to return coins to you.
-Return bond: Carol [Return bond] <amount>
-  Alice: Carol asks to return bonds to you.
-First issue: Alice [First issue] <amount> <denomination>
-Issue bond 2: Alice [Issue bond 2] <maturity> <amount> <denomination>
-Accept: Alice [Accept]
-Accept by bond: Alice [Accept by bond]
-Pay 2: Alice [Pay 2] <denomination>
+Issue bond: Alice [Issue bond] <maturity> <amount> <denomination>
+Accept: Alice [Accept] [Accept by bond]
+Pay: Alice [Pay] <denomination>

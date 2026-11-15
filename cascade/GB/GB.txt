@@ -1,7 +1,7 @@
 % GB: Grassroots Bonds --- the contract, the one copy, its owner's (organisation/claude.md, "Sessions").
 % Owner: Currencies (GB).
 % Paper: GB, Grassroots Bonds: Financing by the People, for the People, https://arxiv.org/abs/2603.13671
-% Adopted from the Calculus, branch Calculus of GLP, c475902, by calculus/MIGRATION.md (Udi, 2026-11-15): the contract and its Logic pragmas are the Calculus's text, which Udi approved; GB.glp and cascade/GB/ are printed by calculus/tools/adopt.py, never written by hand; the Interface pragmas are the owner's, a line for each act of the full contract, the fields those vGLP's compiler computes (Currencies #19, 2026-11-15).
+% Adopted from the Calculus, branch Calculus of GLP, c475902, by calculus/MIGRATION.md (Udi, 2026-11-15): the contract and its Logic pragmas are the Calculus's text, which Udi approved; GB.glp and cascade/GB/ are printed by calculus/tools/adopt.py, never written by hand; the Interface pragmas are the owner's, a line for each clause with acts of its own, the fields those of calculus/NAME/interface.txt (Currencies #19, 2026-11-15).
 GB: Grassroots Bonds
 GB extends GC.
 A *bond* is a unit of debt, due at its maturity date, that includes its issuer's public key and its maturity date and is signed by their private key. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
@@ -33,30 +33,14 @@ After z and y release n w-bonds due e that x deposited on k: no longer z holds n
 After z and x return n w-coins deposited for y on k: no longer z holds n w-coins in escrow from x for y on k, x holds n w-coins and x knows w.
 After z and x return n w-bonds due e deposited for y on k: no longer z holds n w-bonds due e in escrow from x for y on k, x holds n w-bonds due e and x knows w.
 Interface pragmas
-Coins: the coins Alice holds.
 Bonds: the bonds Alice holds.
-Issue: Alice [Issue] <amount>
-Swap: Alice [Swap] <amount given> <issuer wanted> <amount wanted>
-  Bob: Alice asks to swap coins with you.
-Pay: Alice [Pay] <amount>
-Redeem: Alice [Redeem] <issuer wanted>
 Issue bond: Alice [Issue bond] <maturity> <amount>
-Swap coin for bond: Alice [Swap coin for bond] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap coins for bonds with you.
-Swap bonds: Alice [Swap bonds] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap bonds with you.
-Redeem coin against bond: Alice [Redeem coin against bond] <issuer wanted> <maturity wanted>
-Redeem bond: Alice [Redeem bond] <issuer wanted>
-Redeem bond against bond: Alice [Redeem bond against bond] <issuer wanted> <maturity wanted>
-Deposit: Alice [Deposit] <amount> <condition>
-  Carol: Alice asks to deposit coins with you.
-Deposit bond: Alice [Deposit bond] <amount> <condition>
-  Carol: Alice asks to deposit bonds with you.
-Release: Carol [Release] <amount>
-  Bob: Carol asks to release coins to you.
-Release bond: Carol [Release bond] <amount>
-  Bob: Carol asks to release bonds to you.
-Return: Carol [Return] <amount>
-  Alice: Carol asks to return coins to you.
-Return bond: Carol [Return bond] <amount>
-  Alice: Carol asks to return bonds to you.
+Swap: Alice [Swap coin for bond] <amount given> <issuer wanted> <maturity wanted> <amount wanted> [Swap bonds] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins or bonds with you.
+Redeem: Alice [Redeem coin against bond] <issuer wanted> <maturity wanted> [Redeem bond] <issuer wanted> [Redeem bond against bond] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount> <condition> [Deposit bond] <amount> <condition>
+  Carol: Alice asks to deposit coins or bonds with you.
+  Carol [Release] <amount> [Release bond] <amount>
+  Bob: Carol asks to release coins or bonds to you.
+  Carol [Return] <amount> [Return bond] <amount>
+  Alice: Carol asks to return coins or bonds to you.
