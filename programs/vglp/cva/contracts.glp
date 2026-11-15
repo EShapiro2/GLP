@@ -576,6 +576,9 @@ pragmas_named(wild, pragmas([list('"Bonds"', [bond]), list('"Accepted"', [accept
      act(unpoint, '"Unpoint"', [], none, '"Bonds"', by([1])),
      act(office, '"Office"', ['""', '"bob"', '"title"'], said([[], [person(1), text('" gives you an office."')]]), '"Bonds"', by([1])),
      act(serve, '"Serve"', [], said([[], [person(1), text('" asks to serve you."')]]), '"Bonds"', by([1])),
+     act(enrol, '"Enrol"', ['""', '"alice"', '"group"'], said([[], [person(1), text('" enrols with you."')]]), '"Bonds"', by([1])),
+     act(arrive, '"Arrive"', [], none, '"Bonds"', by([1])),
+     act(leave, '"Leave"', [], none, '"Bonds"', by([1])),
      act(dissolve, '"Dissolve"', [], none, '"Bonds"', by([1])),
      act(retire, '"Retire"', [], none, '"Bonds"', by([1]))])).
 pragmas_named(roles, pragmas([list('"Roles"', [role]), list('"Contacts"', [knows])],
@@ -1027,7 +1030,7 @@ backed([schema(acquaint, [],
           [fforall([role(3)], role(1), atom(officer, [role(3)]), fcons(true),
              [fcons(le(cardinality([], role(1), atom(owes, [role(3)]), fcons(true)), cardinality([], role(3), atom(reserve, []), fcons(true))))])])]).
 
-%% wild: a wildcard in an unnegated atom (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in an unnegated atom of B, or in the anchor of a quantifier, is a variable of its own, standing for some value: the machine of the person who holds the atom finds one in its state, and the act neither names nor records it, as an act that requires a bond of some maturity"), written in the clause syntax, sas/7, as an owner writes a contract, which compile.sh has GSC's reader read, as_read/2, and GSC's checker certify, check/2, syntactically grassroots:
+%% wild: a wildcard in an unnegated atom (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in an unnegated atom of B, or in the anchor of a quantifier, is a variable of its own, standing for some value: the machine of the person who holds the atom finds one in its state, and the act neither names nor records it, as an act that requires a bond of some maturity"), written in the clause syntax, sas/7, as an owner writes a contract, which compile.sh has GSC's reader read, as_read/2, and GSC's checker certify, check/2, syntactically grassroots:  And enrol, arrive and leave: leave(Carol) lists the leaders of Carol's groups by the anchor member(Carol, _, E), the wildcard at the group's place before the listed role, clears listed(E, Carol, _) at each, and requires here(E) of each, a condition across roles (GSNW's and CSSN's Retire, Calculus #6, vGLP_inbox, 2026-11-15 21:44 UTC); wild/self.glp's play_leave and play_absent play it.
 %%
 %%   issue(c?, a? ; d)   :  at c  not issued(a, d), +issued(a, d)       at a  not bond(c, d), +bond(c, d)
 %%   accept(a?, c?)      :  at a  bond(c, _), not accepted(c), +accepted(c)
@@ -1092,6 +1095,18 @@ wild([sas(issue, ['Carol', 'Alice'], ['D'],
           [atom(serving, ['Bob', 'Carol']), atom(served_by, ['Carol', 'Bob'])],
           [atom(office, ['Bob', 'Carol', '_']), not(atom(serving, ['Bob', 'Carol'])), not(atom(served_by, ['Carol', 'Bob']))],
           true, ['Bob', 'Carol']),
+      sas(enrol, ['Carol', 'Alice'], ['Grupo'],
+          [atom(member, ['Carol', 'Grupo', 'Alice']), atom(listed, ['Alice', 'Carol', 'Grupo'])],
+          [not(atom(member, ['Carol', 'Grupo', 'Alice'])), not(atom(listed, ['Alice', 'Carol', 'Grupo']))],
+          true, ['Carol', 'Alice']),
+      sas(arrive, ['Alice'], [],
+          [atom(here, ['Alice'])],
+          [not(atom(here, ['Alice']))],
+          true, ['Alice']),
+      sas(leave, ['Carol'], [],
+          [atom(left, ['Carol']), forall(['E'], atom(member, ['Carol', '_', 'E']), true, [not(atom(listed, ['E', 'Carol', '_']))]), not(atom(member, ['Carol', '_', '_']))],
+          [not(atom(left, ['Carol'])), forall(['E'], atom(member, ['Carol', '_', 'E']), true, [atom(here, ['E'])])],
+          true, ['Carol']),
       sas(dissolve, ['Carol'], [],
           [atom(dissolved, ['Carol']), forall(['E'], atom(has_office, ['Carol', 'E', '_']), true, [not(atom(office, ['E', 'Carol', '_']))]), not(atom(has_office, ['Carol', '_', '_']))],
           [not(atom(dissolved, ['Carol'])), forall(['E'], atom(has_office, ['Carol', 'E', '_']), true, [atom(office, ['E', 'Carol', '_'])])],

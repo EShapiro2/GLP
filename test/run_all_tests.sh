@@ -4961,6 +4961,29 @@ check "CVA wild: GSN's member has one alternative in Atom, member(Speech, Peer)"
 check_not "CVA wild: ... and none with the wildcard's place dropped, member(Speech)" "^member(Speech)$" "$(cat "$CVA/social_network/platform.vglp")"
 check "CVA wild: GSN's close holds at a listed member who is a member of the leader's group, member(g, alice)" "B1 = \[\[b(role(1), p(alice)), " "$cva_wild_n"
 check "CVA wild: ... and under no binding at a listed person who is no member" "B2 = \[\]$" "$cva_wild_n"
+# A wildcard in the anchor of a quantifier that binds a listed role, with a condition across roles (GSNW's and CSSN's Retire, member(Carol, _, E); Calculus #6 and Helper #4, 2026-11-15): wild's leave.
+cva_wild_leave=$("$REPL_RUN" <<HEREDOC
+$CVA/wild/
+:limit 30000000
+play_leave(A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA wild leave: carol, a member of two groups alice leads and one bob leads, leaves: her machine lists alice and bob, alice once" "sent(carol, alice, start(attempt(carol, 8, 8, leave(carol, \[alice, bob\]), none)))" "$cva_wild_leave"
+check "CVA wild leave: each leader votes yes with the reading of the atom the condition requires of her, here" "sent(alice, carol, vote(attempt(carol, 8, 8, leave(carol, \[alice, bob\]), none), yes(\[\[\]\], \[g(here, \[\])\])))" "$cva_wild_leave"
+check "CVA wild leave: it commits, and carol holds no membership" "view(carol, \[left\], \[alice, bob\], \[\], " "$cva_wild_leave"
+check "CVA wild leave: every listing of carol is cleared at alice, both groups" "A = \[.*view(alice, \[listed(carol, speech(utterance(g2), carol)), listed(carol, speech(utterance(g1), carol)), here\], \[carol\], \[\], \[tab('Bonds', bond), tab('Accepted', accepted), tab('Roles', role), tab('Titles', title)\]), view(alice, \[here\], \[carol\], \[\], " "$cva_wild_leave"
+check "CVA wild leave: ... and at bob" "B = \[.*view(bob, \[listed(carol, speech(utterance(g1), carol)), here\], \[carol\], \[\], \[tab('Bonds', bond), tab('Accepted', accepted), tab('Roles', role), tab('Titles', title)\]), view(bob, \[here\], \[carol\], \[\], " "$cva_wild_leave"
+cva_wild_absent=$("$REPL_RUN" <<HEREDOC
+$CVA/wild/
+:limit 30000000
+play_absent(A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA wild leave: a leader who does not hold what the condition requires votes no, unable, and the leave is refused" "sent(bob, carol, vote(attempt(carol, 6, 6, leave(carol, \[alice, bob\]), none), no(unable(\[here\], \[\]))))" "$cva_wild_absent"
+check "CVA wild leave: ... carol told, her memberships kept" "refused(leave(carol), bob, unable(\[here\], \[\]))" "$cva_wild_absent"
+check_not "CVA wild leave: ... and nothing committed of it" "view(carol, \[left\]" "$cva_wild_absent"
 # What the compiler refuses of a wildcard, each with its line (cvac.glp, wild_faults): one at an argument no other atom of the contract types; one in a required atom at a constant's place, the term form having no variable over constants; and one in the anchor of a count.
 cva_wild_pr="pragmas([list('\"T\"', [done])], [act(a, '\"A\"', [], none, '\"T\"', by([1])), act(b, '\"B\"', [], none, '\"T\"', by([1]))])"
 cva_wild_f=$("$REPL_RUN" <<HEREDOC 2>&1 | sed -e 's/^\(GLP> \)*//'

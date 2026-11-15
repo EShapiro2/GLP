@@ -1048,7 +1048,7 @@ not_speech(_, yes) :- otherwise | true.
 %% (1) A wildcard among the arguments of an atom a role requires, an agent role or a listed role, is written as a variable of the schema that no atom of it names, '_1', '_2', ..., in the order of the schema, of the kind its place has (wild_made), and listed in the schema's head: it occurs in that one atom, required at one role, so it is local to that role (local.glp, locals_of: "A variable that occurs only in atoms the schema requires or deletes at one role ... is local to that role"), "a schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state", the class term and the request do not name it, no field is for it, and, no atom added or deleted naming it, the effect does not depend on it.
 %% (2) A wildcard among the arguments of the anchor of a quantifier of a safe formula, or of a quantified conjunct that binds no listed role, is written as such a variable among the variables its quantifier binds: the printed text matches the anchor into the state of its holder under the binding, which leaves the variable free, so it matches any value (the printed text's match_into); an instance of a conjunct is "restricted to the variables the conjunct's literals name and without repetition" (hm_named; the printed text's inst_at), and no literal names the variable.
 %% (3) A wildcard among the arguments of the anchor of a listed role stays the wildcard, the anchor being no atom the printed text matches: the people of the role are those at the role's place of the atoms of the anchor's predicate in the base's state whose other arguments are the image of the anchor's, the wildcard met by any value, each person once (the printed text's list_at, vals_meet; listed_wild).
-%% (4) A wildcard in a negated atom, forbidden or cleared, is as it was, and so is one in the name term N._.  A wildcard in an atom of a safe formula that is not the anchor of a quantifier makes the atom the quantifier exists Ws (M) (wild_fa), so that the atom holds where the state has an atom it matches, and its negation where it has none.  Refused with the reason (wild_faults): a wildcard at an argument of a predicate to which no other atom of the contract gives a type; one in a required atom, an anchor or an atom of a safe formula at an argument that is a community name or an item, or, in an anchor that is not a listed role's or in an atom of a safe formula, a constant or a real, a variable a quantifier binds not being carried as one (a wildcard at a constant's place in an atom a role requires is a variable over the constants, const(X), and in a listed role's anchor it stays the wildcard, (3)); one in the anchor of a count or a sum, or in an atom of its condition; and one in the anchor of a quantifier that binds a listed role in a safe formula across roles.
+%% (4) A wildcard in a negated atom, forbidden or cleared, is as it was, and so is one in the name term N._.  A wildcard in an atom of a safe formula that is not the anchor of a quantifier makes the atom the quantifier exists Ws (M) (wild_fa), so that the atom holds where the state has an atom it matches, and its negation where it has none.  Refused with the reason (wild_faults): a wildcard at an argument of a predicate to which no other atom of the contract gives a type; one in a required atom, an anchor or an atom of a safe formula at an argument that is a community name or an item, or, in an anchor that is not a listed role's or in an atom of a safe formula, a constant or a real, a variable a quantifier binds not being carried as one (a wildcard at a constant's place in an atom a role requires is a variable over the constants, const(X), and in a listed role's anchor it stays the wildcard, (3)); one in the anchor of a count or a sum, or in an atom of its condition.  A wildcard in the anchor of a quantifier that binds a listed role in a safe formula across roles, of the part's condition, is carried: the reading of the base holds the atoms of its state the anchor matches, the wildcard matching any value, as a variable a quantifier binds does, and the people the quantifier ranges over are those the attempt lists, each once (vGLP, Section 5.4: "a wildcard in an unnegated atom of B, or in the anchor of a quantifier, is a variable of its own"; GSNW's and CSSN's Retire, member(Carol, _, E), Calculus #6 and Helper #4, vGLP_inbox, 2026-11-15 21:44 and 21:47 UTC; refused until then).
 %% The types of the arguments of the contract's predicates, a signature for each predicate and number of arguments, the wildcard's place taking the type another atom of the contract gives it, and wild where none does (wild_sigs), a person where one atom writes a person and another a variable a quantifier binds (peer_sigs).
 procedure wild_table(QContract?, Sigs).
 wild_table(C, Gs?) :-
@@ -1403,11 +1403,8 @@ wild_schema_faults([qschema(S, _, _, C, Rs, Cj, Fs)|Ss], Gs, L?) :- ground(S?), 
     app(Ca1?, Ca23?, Ca),
     atoms_any(Ca?, Cw),
     count_lines(Cw?, S?, L2),
-    cross_listed(Fs?, X),
-    cross_lines(X?, S?, L3),
     wild_schema_faults(Ss?, Gs?, L4),
-    lapp(L3?, L4?, L34),
-    lapp(L2?, L34?, L24),
+    lapp(L2?, L4?, L24),
     lapp(L1?, L24?, L).
 procedure kept_atoms(RoleSpecs?, Atoms).
 kept_atoms([], []).
@@ -1488,20 +1485,6 @@ resid_lines(yes, S, ['%% it has a wildcard, in an atom a role requires, in the a
 procedure count_lines(YesNo?, Constant?, Lines).
 count_lines(no, _, []).
 count_lines(yes, S, ['%% it has a wildcard in the anchor of a count or a sum, or in an atom of its condition: a constraint is over "the count and the sum of the instances of a quantifier, each instance counted as many times as its anchor\'s multiplicity" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), and the paper does not say whether two atoms that differ at the wildcard are one instance or two:', T?]) :-
-    ground(S?) | said('%% the schema', S?, T).
-%% Whether a safe formula across roles binds a listed role by a quantifier whose anchor has a wildcard.
-procedure cross_listed(Forms?, YesNo).
-cross_listed([], no).
-cross_listed([fforall([role(I)], H, A, F, Ps)|Fs], B?) :- ground(I?), ground(H?), ground(A?), ground(F?), ground(Ps?) |
-    atom_any(A?, W),
-    local # form_cross(fforall([role(I?)], H?, A?, F?, Ps?), X),
-    and(W?, X?, B1),
-    cross_listed(Fs?, B2),
-    or(B1?, B2?, B).
-cross_listed([_|Fs], B?) :- otherwise | cross_listed(Fs?, B).
-procedure cross_lines(YesNo?, Constant?, Lines).
-cross_lines(no, _, []).
-cross_lines(yes, S, ['%% it has a wildcard in the anchor of a quantifier that binds a listed role in a safe formula across roles, of the part\'s condition, where each participant reads the atoms of its state the formula\'s atoms match: vGLP Section 5.4 does not say what a reading holds of an anchor with a wildcard, and the compiler does not carry it:', T?]) :-
     ground(S?) | said('%% the schema', S?, T).
 %% Whether a listed role's anchor has a wildcard among its arguments ((3), above): the shared text then prints vals_meet, and compares the anchor's other arguments by it (wild_shared).
 procedure listed_wild(Contract?, YesNo).
