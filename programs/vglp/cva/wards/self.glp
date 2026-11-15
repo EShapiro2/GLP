@@ -1,0 +1,106 @@
+%% ---------------------------------------------------------------------------
+%% The plays of the canonical CVA platform of vGLP's contract wards
+%% (../contracts.glp, contract_named(wards, C): a ward's guardians acting
+%% jointly, GnW's make_guardian and wards_acquaint with no identity),
+%% platform.vglp, which programs/vglp/cva/compile.sh prints from it: a guarded
+%% part with three guards, one of them of a listed role, whose opener is the
+%% person in the base of its schema, the ward, its second role and no guard;
+%% and a guarded part with four guards and no opener (vGLP, Section 3.2,
+%% Definitions "Local Specification, Part, Guard Set, Opener, Request",
+%% "Attempt" and "Proposing"; Section 5.4, "Speech-act schemas as local
+%% specifications": "the opener of a guarded part determined by a schema whose
+%% base is not a guarding role is the person in the base, who is not a guard of
+%% the part, as the ward whose state lists her guardians opens the acts they
+%% take jointly"; "The compilation": "the Request of rho_N to the opener of the
+%% guarded parts with an opener named N").  It runs four agents, their persons
+%% scripted and paced on their screens (../self.glp), and gives each person's
+%% log and the network's log of the cargoes it carries.
+%%
+%% play_wards: alice adopts carol and bob adopts dave, each child asked and
+%% answering yes; carol befriends dave and bob, and bob befriends alice, so
+%% that the agents know each other.  alice, carol's one parent, requests
+%% coparent(bob, carol, alice), the request name of coparent, whose parts have
+%% the opener carol: her machine takes the Request of rho_N to carol's.
+%% carol's machine holds it, completes the list of her parents from its
+%% parent atoms and proposes coparent(bob, carol, alice, [alice]), naming the
+%% request; alice's machine votes yes unasked, the request it names pending at
+%% her, bob is asked and answers yes, and it commits.  bob, now a parent,
+%% requests coparent(dave, carol, bob): carol's machine proposes
+%% coparent(dave, carol, bob, [alice, bob]); dave and alice, the other guards,
+%% are asked and answer yes, and it commits.  alice befriends dave and
+%% requests pair(carol, dave, alice, bob), of four guards, its base alice, who
+%% proposes it: carol, dave and bob are asked, each answers yes, and it
+%% commits (CSSN #16, Code_inbox.md, 2026-11-15 17:05 UTC, 1 and 2).
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_wards(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
+    Stream(Sent(Cargo))).
+play_wards(LA?, LB?, LC?, LD?, N?) :-
+    quartet([own([A1], propose(adopt(A1?, carol))),
+             wait(holds(parenting(carol))),
+             approval(befriend(bob, alice), yes),
+             wait(holds(friend(bob))),
+             own([A2], propose(coparent(bob, carol, A2?))),
+             approval(coparent(dave, carol, bob, [alice, bob]), yes),
+             own([A3], propose(befriend(A3?, dave))),
+             wait(holds(friend(dave))),
+             own([A4], propose(pair(carol, dave, A4?, bob)))],
+            [own([B1], propose(adopt(B1?, dave))),
+             approval(befriend(carol, bob), yes),
+             wait(holds(friend(carol))),
+             own([B2], propose(befriend(B2?, alice))),
+             approval(coparent(bob, carol, alice, [alice]), yes),
+             wait(holds(parenting(carol))),
+             own([B3], propose(coparent(dave, carol, B3?))),
+             approval(pair(carol, dave, alice, bob), yes)],
+            [approval(adopt(alice, carol), yes),
+             wait(holds(parent(alice))),
+             own([C1], propose(befriend(C1?, dave))),
+             wait(holds(friend(dave))),
+             own([C2], propose(befriend(C2?, bob))),
+             approval(pair(carol, dave, alice, bob), yes)],
+            [approval(adopt(bob, dave), yes),
+             approval(befriend(carol, dave), yes),
+             approval(coparent(dave, carol, bob, [alice, bob]), yes),
+             approval(befriend(alice, dave), yes),
+             approval(pair(carol, dave, alice, bob), yes)],
+            LA, LB, LC, LD, N).
+
+%% alice, bob, carol and dave, each with its dispatcher and scripted person,
+%% their networks joined.
+procedure quartet(ScriptSteps?, ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog),
+    Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+quartet(SA, SB, SC, SD, LA?, LB?, LC?, LD?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    platform # agent(dave, InD?, OutD, TD, AsD),
+    platform # dispatch(AsD?, ch(GD?, DD), MD),
+    to_person(MD?, TD?),
+    person(DD?, GD, ps(nosess, [], [], SD?), LD),
+    merge(OutA?, OutB?, Net1),
+    merge(OutC?, OutD?, Net2),
+    merge(Net1?, Net2?, Net),
+    route4(Net?, alice, InA, bob, InB, carol, InC, dave, InD, N).
