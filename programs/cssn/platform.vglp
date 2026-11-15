@@ -198,8 +198,6 @@ member(Speech, Peer)
 ;
 listed(Peer, Speech)
 ;
-member(Speech)
-;
 posted(Speech, Peer, Speech)
 ;
 group_delivered(Peer, Speech, Speech, Peer)
@@ -235,8 +233,6 @@ atom_of(g(leader, [s(V1)]), shown(leader(V1?)))
 atom_of(g(member, [s(V1), p(V2)]), shown(member(V1?, V2?)))
 .
 atom_of(g(listed, [p(V1), s(V2)]), shown(listed(V1?, V2?)))
-.
-atom_of(g(member, [s(V1)]), shown(member(V1?)))
 .
 atom_of(g(posted, [s(V1), p(V2), s(V3)]), shown(posted(V1?, V2?, V3?)))
 .
@@ -423,15 +419,15 @@ schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 procedure schema_forms(Constant?, SForms).
 schema_forms(end_parent, [sform(cond, fforall([role(4)], role(2), atom(has_parent, [role(2), role(4)]), fcons(ne(role(4), role(1))), [fa(role(4), atom(identity, [role(4)])), fa(role(4), atom(person, [role(4)])), fa(role(4), atom(parent, [role(4), role(2)]))]))])
 .
-schema_forms(child_end, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true)))))])
+schema_forms(child_end, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([pvar('G1')], role(1), atom(has_parent, [pvar('G1')]), fcons(true)))))])
 .
-schema_forms(child_message, [sform(at(2), for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(child, [])), fexists([svar('G1')], role(2), atom(has_parent, [svar('G1')]), fcons(true)))))])
+schema_forms(child_message, [sform(at(2), for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(child, [])), fexists([pvar('G1')], role(2), atom(has_parent, [pvar('G1')]), fcons(true)))))])
 .
-schema_forms(child_post, [sform(at(2), for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(child, [])), fexists([svar('G1')], role(2), atom(has_parent, [svar('G1')]), fcons(true)))))])
+schema_forms(child_post, [sform(at(2), for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(child, [])), fexists([pvar('G1')], role(2), atom(has_parent, [pvar('G1')]), fcons(true)))))])
 .
-schema_forms(child_close, [sform(cond, fforall([role(2)], role(1), atom(listed, [role(1), role(2), svar('Grupo')]), fcons(true), [fa(role(2), atom(identity, [role(2)])), fa(role(2), atom(member, [role(2), svar('Grupo'), role(1)]))])), sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true)))))])
+schema_forms(child_close, [sform(cond, fforall([role(2)], role(1), atom(listed, [role(1), role(2), svar('Grupo')]), fcons(true), [fa(role(2), atom(identity, [role(2)])), fa(role(2), atom(member, [role(2), svar('Grupo'), role(1)]))])), sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([pvar('G1')], role(1), atom(has_parent, [pvar('G1')]), fcons(true)))))])
 .
-schema_forms(child_join, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true)))))])
+schema_forms(child_join, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([pvar('G1')], role(1), atom(has_parent, [pvar('G1')]), fcons(true)))))])
 .
 schema_forms(_, []) :- otherwise | true.
 
