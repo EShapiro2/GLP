@@ -29,6 +29,7 @@ Interface pragmas
 Look: 📇, network
 Open directory: Carol [Open directory]
 Listing: Alice [List] <dora> [Delist] <dora>
+Lookup: Bob [Lookup]
 Implementation pragmas
 Listing: Alice's app asks her for the email address, for a name if she chooses, and whether she is shown on Dora's page, and sends them with the listing.
 Listing: the directory verifies an email address by sending it a message with a link, which Alice opens.
