@@ -67,8 +67,8 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS SGLP QD QF NET DL"
-FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC"
+ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS CALC SGLP QD QF NET DL"
+FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CALC"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
 RUN_WANTED=" "
@@ -10242,6 +10242,35 @@ fi
 echo ""
 
 fi  # Section Q
+
+if _section CALC; then
+# =============================================================================
+# Section CALC: the tools of the Grassroots Contracts Calculus (Calculus)
+# =============================================================================
+#
+# calculus/tools is Calculus's: the programs, in Python 3 with its standard
+# library, that compile a contract's Logic pragmas to its speech-act schemas
+# and back and apply the relations among contracts (calculus/README.md of the
+# branch Calculus; calculus/MIGRATION.md, Code, 2).  calculus/tools/tests.py
+# runs gcsas.py on every case of calculus/tests and holds what it prints and
+# the expanded schemas it writes to the case's expect.txt, printing a line
+# "<case> same" or "<case> DIFFERS" for each.  Each case is a check here; a
+# run that prints no case line is a failure, since its checks did not run.
+echo "=== Section CALC: the tools of the Calculus (calculus/tools) ==="
+echo ""
+CALC_OUT=$(cd "$GLP_DIR" && python3 calculus/tools/tests.py 2>&1; echo "exit $?")
+CALC_CASES=0
+for calc_case in "$GLP_DIR"/calculus/tests/*/; do
+    calc_name=$(basename "$calc_case")
+    CALC_CASES=$((CALC_CASES + 1))
+    check "CALC $calc_name: gcsas.py prints the case's expect.txt" "^$calc_name  *same\$" "$CALC_OUT"
+done
+if [ "$CALC_CASES" -eq 0 ]; then
+    _check_fail "CALC: calculus/tests has cases" "none found under $GLP_DIR/calculus/tests"
+fi
+check "CALC: tests.py exits 0" "^exit 0\$" "$CALC_OUT"
+echo ""
+fi  # Section CALC
 
 if _section NET; then
 # =============================================================================

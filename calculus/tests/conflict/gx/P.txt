@@ -1,0 +1,4 @@
+P: First
+Of C: Alice is a person.
+Of P: Alice is a person.
+C:1. ■ Mark: Alice may mark Alice-self.

@@ -1,0 +1,8 @@
+L: Lists
+L extends and strengthens K.
+Alice and Bob are persons, Tag a tag.
+1. ■ Meet: K:1, and then Alice lists Bob. Part: K:2, and then no longer Alice lists Bob and Alice has no tag of Bob.
+2. ■ Tag: Alice may tag Bob with Tag, provided Alice lists Bob.
+Logic pragmas.
+Vocabulary: x lists y = lists(x,y); x has the tag t of y = tag(x,t,y).
+After x tags y with t: x has the tag t of y.
