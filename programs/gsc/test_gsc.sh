@@ -134,7 +134,7 @@ check_eq "as_read gives an environment contract its wrapper, each schema inside 
 check_eq "as_read descends an environment contract's reflexive body as unnamed/2 does" \
       "environment([today], reflexive([friend], $GKKV))" "$(asread "environment([today], reflexive([friend], $GKKT))")"
 # GAI and GSNP are instances of GnW, instance_named(gai, gnw, ...) and instance_named(gsnp, gnw, ...) (GLP 6154e1e6; Udi, 2026-11-10, to GAI #13 and to GSC #14): each read as its instance of GnW's term.
-GNWI=$(term "$GLP_DIR/programs/gsc/GnW.glp" gnw)
+GNWI=$(term "$GLP_DIR/programs/gsc/gnw_parametric.glp" gnw_parametric)   # GnW as GSC wrote it by hand until its adoption from the Calculus (2026-11-15), the tests' fixture; GnW.glp is printed from GnW.txt and is no parametric term
 GSNPT=$(instance "$GLP_DIR/programs/gai/GSNP.glp" gsnp "$GNWI")
 check "GSNP's contract is reflexive, in the clause syntax" "reflexive([friend, knows], [sas(" "$GSNPT"
 GSNPV=$(asread "$GSNPT")
@@ -2384,7 +2384,7 @@ check_eq "the same constants written bare are variables not in the head" "V = ma
 # its instance with child for ward, parenting for guardian_of and parent_of
 # for guarded_by is certified with child its ward mark; an addition named
 # establish replaces the base's, and sign is put after the base's schemas.
-GNWT=$(term "$GLP_DIR/programs/gsc/GnW.glp" gnw)
+GNWT=$(term "$GLP_DIR/programs/gsc/gnw_parametric.glp" gnw_parametric)   # GnW as GSC wrote it by hand until its adoption from the Calculus (2026-11-15), the tests' fixture; GnW.glp is printed from GnW.txt and is no parametric term
 GNWP="$GNWT"   # GnW.glp's term is parametric(...) since GLP 829e65c3 (GSC #14)
 GNWB="[ward = child, guardian_of = parenting, guarded_by = parent_of]"
 EST2="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
@@ -2612,6 +2612,16 @@ out=$(run "check([$SGB], V1)." "check([$SGB, $RESIGN], V2).")
 check "a contract whose items are signed by their role is certified" "V1 = syntactically_grassroots" "$out"
 check "a signed term whose signer is no role of its schema is malformed, not a failure of check/2" \
       "V2 = malformed([signed(resign, 1, atom(item, [sgn('Item', 0)]), not_agent_role), signed(resign, 1, atom(item, [sgn('Item', 0)]), not_required)])" "$out"
+
+# GKK, GSG and GnW as adopted from the Calculus (2026-11-15, GLP branch Calculus c475902): each NAME.glp is the full schemas, printed from NAME.txt by calculus/tools/adopt.py, and is certified.
+AGKK=$(term "$GLP_DIR/programs/gsc/GKK.glp" gkk)
+AGSG=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
+AGNW=$(term "$GLP_DIR/programs/gsc/GnW.glp" gnw)
+out=$(run "check($AGKK, V1)." "check($AGSG, V2)." "check($AGNW, V3).")
+check "GKK as adopted is certified" "V1 = syntactically_grassroots" "$out"
+check "GSG as adopted is certified" "V2 = syntactically_grassroots" "$out"
+check "GnW as adopted is certified with wards, ward its mark, guardian and has_guardian its guardianship" \
+      "V3 = syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

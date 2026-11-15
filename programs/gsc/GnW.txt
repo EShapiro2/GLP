@@ -1,42 +1,68 @@
 % GnW: Guardians 'n' Wards --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: GSC (Udi, 2026-11-10, to GSC #14: GAI, CSSN and GO all build on it and none is the base of the others; GAI's from 2026-10-20 until that day, and GSC's, named Wards, before).  The paper, /Users/udi/Grassroots/GSC/main.tex, prints it in its box in Section 2, Guardians and Wards, and cites a clause as GnW:1; GAI's wards are AI agents and their guardians the persons operating them, CSSN's children and their parents, GO's organisations and their officers.
 % Paper: GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231
-% Extends: GnW amends GSG, Grassroots Social Graph, GSC's (GSG.txt beside this file), in the terms of GSC's paper, Section Relations among Contracts: it deletes establish, acquaint, introduce, befriend and unfriend and adds its own, establish adding person and a person's acts requiring it at their roles, unfriend not by a guardian with her ward, and the twelve schemas of GnW:1 to GnW:5; through GSG it extends GKK, Grassroots Keys and Knowledge, GSC's.  It cites their clauses whole, GKK:1 to GKK:3 and GSG:1 to GSG:3, and restates none.
-% Parameters: ward, creator, created, guardian_of, guarded_by and retired, predicates (GSC's paper, Definition Parametric contract; Udi, 2026-11-10, to GSC #14, on CSSN #14's proposal): a contract with wards of its own kind instantiates them, as CSSN for a child and her parents, GAI for an AI agent and its guardians and GO for an organisation and its officers, and restates no schema of GnW.  person is no parameter.  A parametric contract has no realisation: no app runs GnW, each runs an instance.  The term form of a predicate parameter is Code's to give.
+% Extends: GnW extends and restricts GSG, Grassroots Social Graph, GSC's (GSG.txt beside this file), by the relations of the Calculus (GLP calculus/README.md, The relations).
+% Parameters: the decision rule, which says who decides for a ward and how (the contract's definitions).
 % Defines: ward, guardian, creator, and relation, a friendship or the membership of a group; and the conditions on a contract with wards, GSC's paper, Section "Contracts with Wards".  Person and knowing are defined with GKK, friend with GSG.  Alice and Bob are persons, Carol and Dave wards, variables naming distinct agents, but for Alice and Bob in clause 4, possibly one person.
-% Last changed: 2026-11-11, the names last before clause 1, after the definitions, as the paper's box has them (Udi, 2026-11-09 and 2026-11-11, to GSC #16; GSC 37d18ac).  2026-11-10 (fifth), the pragma 'Carol [Ward end]' without the field, Carol's state binding Bob (Code #27's finding).  2026-11-10 (fourth), parametric in its six predicates of wards (Udi, to GSC #14).  2026-11-10 (third), the schemas stated positively: a mark person, added by establish, required at a person's roles, no schema forbidding ward or retired (Udi, to GSC #14 and to GO #3); the clauses and pragmas unchanged.  2026-11-10 (second), GnW:2 and GnW:5 in Udi's wording of 2026-11-09 from GO's paper, a guardian added by him and the guardians, removed by the other guardians, and the ward retired by her guardians; Erin, a third person, in the declaration, for the guardians of Carol; a ward takes no act without a guardian, the creator a guardian who may cease to be one; seventeen schemas, ward_end added, retired_of gone (Udi, to GSC #14, on GO #3's proposals of 11:41 UTC).  2026-11-10, GnW:1 without 'to be operated by a non-person agent', which does not fit a child (Udi, to GSC #14); GSC's (Udi, to GSC #14): the file moved from programs/gai, its own schemas, GnW.glp, and its own pragmas, each button bearing its act's name; the clauses unchanged.  2026-11-08, GnW:3 and GnW:4: a ward comes to know any agent by an act of the two, a relation still taking a guardian; an extension that confines a ward to the agents its guardian knows, CSSN's, restricts GnW (GSA #2's proposal, Udi's yes, 2026-11-08, to GAI #12).  2026-11-07, the first line saying what GnW extends (Coordination #12, to_all 2026-11-05); trust in a ward defined after the declaration, 'Bob trusts Carol, a ward of Alice, when he trusts Alice', since a ward signs no undertaking and their guardian signs it for them (GSG's trust, Udi, 2026-11-07, to GSC #13; the definition Udi's yes to GAI #12); she for Alice and Carol, he for Bob, in the clauses (Udi, 2026-11-07, to GSC #13).  2026-10-30, Udi's revision in Coordination Appendix E (Coordination #11, to_all 10:18 UTC), five clauses, with CSSN #13's proposals 2 to 5 that Udi agreed (2026-10-30 13:37 local, to GAI #10), and its sixth, the last sentence of clause 3 (Udi, 13:58 local, to GAI #10); clause 2 in Udi's wording (GAI fce54cd, 2026-10-30 20:37 local), Bob may end their own guardianship: a guardian ending their friendship with the ward ends their guardianship; a ward and an agent know each other before they enter a relation; a guardian may end any relation of their ward; the creator retires the ward by ending their friendship with them.  Earlier versions are in git.
-% Schemas: GnW.glp beside this file, seventeen schemas over ten predicates: establish; acquaint, introduce, befriend and unfriend amended; enter; make_guardian, end_guardian, resign and guardian_unfriend; ward_acquaint, ward_befriend, ward_unfriend and ward_end; wards_acquaint and wards_befriend; retire.  The relation they write is the friendship; a contract with groups adds the membership.  A contract extending GnW may add to a ward's acts what its wards carry, as GAI adds the attestation of an AI agent, may restrict them, as CSSN confines a child to the agents a parent knows, and may have wards that guard nothing, as GO's organisations.
+% Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus c475902; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GSC's, a line for each act, named by the act, its persons those of the schemas, the deciders Decider and Codecider.  Git holds what the file said before.
+% Schemas: GnW.glp beside this file, the full schemas, GKK's and GSG's with GnW's, knows reflexive, printed by calculus/tools/adopt.py GnW from the Logic pragmas and never written by hand; adopt.py --check GnW holds it and cascade/GnW/ to what the tools print.  GnW as GSC wrote it by hand, parametric in six predicates, is the tests' fixture gnw_parametric.glp.
 GnW: Guardians 'n' Wards
-GnW amends GSG.
-A relation is a friendship or the membership of a group.  Bob trusts Carol, a ward of Alice, when he trusts Alice.
+GnW extends and restricts GSG.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
 Alice, Bob and Erin are persons, Carol and Dave wards.
-1. ■ Creation.  Alice may create a ward, Carol, and establish Carol's identity by choosing Carol's key pair.  Alice is then the creator, a guardian and a friend of Carol, a friendship Carol may not end.
-2. ■ Joint guardianship.  Bob, a friend of a guardian of Carol, may become a guardian and a friend of Carol by an act of Bob and the guardians of Carol; Bob's guardianship ends by an act of Bob, by an act of the other guardians of Carol, or when Bob ends his friendship with Carol.  Carol may not end a friendship with her guardian.
-3. ■ Ward and person.  Carol, a ward of Alice, and Bob may come to know each other by an act of both.  Carol enters a relation with Bob provided they know each other and Alice and Bob are friends, by an act of Carol, Alice and Bob.  Carol, and the agent in a relation with Carol, may end it, as may Alice.
-4. ■ Ward and ward.  Carol, a ward of Alice, and Dave, a ward of Bob, may come to know each other by an act of both.  Carol enters a relation with Dave provided they know each other, Alice knows Dave and is a friend of Bob, by an act of Carol, Alice, Dave and Bob, Alice and Bob possibly one person.
-5. ■ Retiring.  The guardians of Carol may retire Carol; every guardianship and relation of Carol then ends and Carol takes no act.
-Pragmas
+1. ■ Enter: Alice may create a ward, Carol, and establish Carol's identity by choosing Carol's key pair. Alice is then the creator, a guardian and a friend of Carol.
+2. ■ Guardian decisions. Make guardian: Those who decide for Carol may make Bob a guardian and a friend of Carol, with the consent of Bob. Resign: Bob may end his guardianship of Carol. End guardian: Those who decide for Carol may end Bob's guardianship. Guardian unfriend: Bob may end his friendship with Carol, which ends his guardianship. Carol may not end a friendship with her guardian.
+3. ■ Ward and person. Ward acquaint: Carol, a ward of Alice, and Bob may jointly come to know each other. Ward befriend: Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends. Ward end, Unfriend, Ward unfriend: Carol, Bob or Alice may end the relation of Bob and Carol.
+4. ■ Wards. Wards acquaint: Carol, a ward of Alice, and Dave, a ward of Bob, may jointly come to know each other. Wards befriend: Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+5. ■ Retire: Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
+Logic pragmas
+GnW extends and restricts GSG.
+Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
+Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+1. ■ Enter: Alice may create Carol, and Carol must consent, provided Alice is a person. Alice chooses Carol's key pair.
+2. ■ Guardian decisions. Make guardian: Those who decide for Carol may make Bob a guardian of Carol, with the consent of Bob, provided Carol is a ward, Carol is not retired and Bob is a person. Resign: Bob may end his guardianship of Carol. End guardian: Those who decide for Carol may end Bob's guardianship of Carol. Guardian unfriend: Bob may end his friendship with his ward Carol. Carol may not end a friendship with her guardian.
+3. ■ Ward and person. Establish: GKK:1, and then Alice is a person. Acquaint: GKK:2, only if Alice is a person and Bob is a person. Introduce: GKK:3, only if Alice is a person, Bob is a person and Carol is a person. Befriend: GSG:1, only if Alice is a person and Bob is a person. Person unfriend: GSG:2, only if Alice is a person and Bob is a person. Ward acquaint: Carol and Bob may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian and Bob is a person. Ward befriend: Carol and Bob may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Bob is a person, Carol and Bob know each other and Alice and Bob are friends. Ward end: Carol may end her friendship with Bob, provided Bob is not a guardian of Carol. Unfriend: Bob may end his friendship with Carol, provided Bob is not a guardian of Carol. Ward unfriend: Alice may end the friendship of Carol and Bob, provided Carol has Alice as a guardian and Bob is not a guardian of Carol.
+4. ■ Wards. Wards acquaint: Carol and Dave may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian, Dave is a ward and Dave has Bob as a guardian. Wards befriend: Carol and Dave may jointly become friends, with the consent of Alice and Bob, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Bob as a guardian, Carol and Dave know each other, Alice knows Dave and Alice and Bob are friends. Wards of one guardian befriend: Carol and Dave may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Alice as a guardian and Carol and Dave know each other.
+5. ■ Retire: Those who decide for Carol may retire Carol. Carol can then take no act.
+Logic pragmas.
+Vocabulary: x is a person = person(x); z is a ward = ward(z); x has y as a guardian = has_guardian(x,y); y is a guardian of x = guardian(y,x); y is the creator of x = creator(y,x); x is retired = retired(x).
+Roles: those who decide for z = deciders(z), listed by z has y as a guardian and y is a guardian of z.
+z has no guardians: no one is a guardian of z and z has no one as a guardian.
+z has no friends: z counts no one as a friend and no one counts z as a friend.
+After x creates z, which requires z does not have an identity: z has an identity, z knows z, z is a ward, z has x as a guardian, x is the creator of z, x is a guardian of z, x and z know each other and x and z are friends.
+After g makes y a guardian of z, which requires y is not a guardian of z and z does not have y as a guardian: y is a guardian of z, z has y as a guardian, y and z know each other and y and z are friends.
+After y ends y's guardianship of z: no longer y is a guardian of z and no longer z has y as a guardian.
+After g ends y's guardianship of z: no longer y is a guardian of z and no longer z has y as a guardian.
+After y ends y's friendship with y's ward z: y and z are no longer friends, no longer y is a guardian of z and no longer z has y as a guardian.
+After g ends the friendship of x and y: x and y are no longer friends.
+After g retires z, which requires z is not retired: z is retired, z has no guardians and z has no friends.
+Interface pragmas
 Wards: the wards Alice is a guardian of.
-Creation: Alice [Enter] <name>
+Enter: Alice [Enter] <name>
   Carol: Alice asks to be your guardian.
-Joint guardianship: Alice [Make guardian]
-  Bob: Alice asks you to be a guardian of her ward Carol.
-  Erin: Alice asks that Bob be a guardian of your ward Carol.
-  Alice [End guardian] <person>
-  Erin: Alice asks to end Bob's guardianship of your ward Carol.
-  Bob [Resign] [Guardian unfriend]
-Ward and person: Bob [Ward acquaint] <person>
+Make guardian: Decider [Make guardian] <person>
+  Bob: Decider asks you to be a guardian of the ward Carol.
+  Codecider: Decider asks that Bob be a guardian of your ward Carol.
+Resign: Bob [Resign]
+End guardian: Decider [End guardian] <person>
+  Codecider: Decider asks to end Bob's guardianship of your ward Carol.
+Guardian unfriend: Bob [Guardian unfriend]
+Ward acquaint: Bob [Ward acquaint] <person>
   Carol: Bob wishes that you know each other.
-  Alice [Ward befriend]
+Ward befriend: Alice [Ward befriend]
   Carol: Alice asks that you and Bob befriend.
   Bob: Alice asks that you and her ward Carol befriend.
-  Alice [Ward unfriend] <person>
-  Carol [Ward end]
-Ward and ward: Carol [Wards acquaint] <person>
+Ward end: Carol [Ward end]
+Unfriend: Bob [Unfriend]
+Ward unfriend: Alice [Ward unfriend] <person>
+Wards acquaint: Carol [Wards acquaint] <person>
   Dave: Carol wishes that you know each other.
-  Alice [Wards befriend]
+Wards befriend: Alice [Wards befriend]
   Carol: Alice asks that you and Dave befriend.
   Dave: Alice asks that you and Carol befriend.
   Bob: Alice asks that Carol and your ward Dave befriend.
-Retiring: Alice [Retire]
-  Erin: Alice asks to retire your ward Carol.
+Wards of one guardian befriend: Alice [Wards of one guardian befriend]
+  Carol: Alice asks that you and Dave befriend.
+  Dave: Alice asks that you and Carol befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks to retire your ward Carol.
