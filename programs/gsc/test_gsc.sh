@@ -2752,6 +2752,11 @@ check "the faults are in the order of the schemas and of first occurrence, a pre
 out=$(run "compile_contract(t, [$SUPK, $SUPN]).")
 check "a contract that does not supply what an act requires is not compiled, the fault named" \
       "requires an atom of" "$out"
+out=$(run "compile_contract(t, environment([badge], [$SUPK, $SUPN]))." "compile_contract(t, parametric([badge], [$SUPK, $SUPN]))." \
+          "compile_contract(t, environment([badge], reflexive([knows], [$SUPK, $SUPN])))." "compile_schema_in(t, environment([badge], [$SUPK, $SUPN]), note).")
+check_not "compile_contract takes an environment predicate, a parameter and either around reflexive as supplying what an act requires, as check/2 does" \
+      "requires an atom of" "$out"
+check "a contract supplied by its environment is compiled" "begin{align" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
