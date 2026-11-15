@@ -82,7 +82,7 @@ interface([
   type('RoleAsk', [q('Peer', 'Integer', 'List'('Word')), ql('List'('Peer'), 'Integer', 'List'('Word'))]),
   type('Asked', [asked('Integer', 'List'('Word'))]),
   type('Close', [close]),
-  type('Trigger', [req('Request'), again('Proposal'), greeted('Proposal'), net('Net'), answered('Attempt', 'YesNo'), recheck, own, day('Integer')]),
+  type('Trigger', [req('Request'), again('Proposal'), greeted('Proposal'), net('Net'), answered('Attempt', 'YesNo'), recheck, own]),
   type('MeetPeer', [peer('Peer'), nopeer]),
   type('Var', [role('Integer'), pvar('Constant'), svar('Constant'), sgn('Constant', 'Integer'), nterm('NTerm'), num('Constant'), any, item_of('Var'), val('Constant'), inst('Integer', 'Integer', 'Var')]),
   type('NTerm', [own('Integer'), own_var('Constant'), ext('NTerm', 'Constant'), ext_any('NTerm'), own_iv('Var'), ext_iv('NTerm', 'Var')]),
