@@ -1,0 +1,19 @@
+stay: adopted: STAY.glp and schemas.txt, full-contract.txt, full-pragmas.txt, flat.txt, full-schemas.txt as calculus/tools/adopt.py prints them
+stay: verdict: syntactically_grassroots
+stay: VMAT form: 11 displays
+stay: platform.vglp: 7144 lines
+stay: platform.glp: 4934 lines
+stay: interface.glp: 1304 items
+stay: run: vGLP keeps no plays for stay
+STAY.glp: as printed
+STAY.txt: as printed
+flat.txt: as printed
+full-contract.txt: as printed
+full-pragmas.txt: as printed
+full-schemas.txt: as printed
+interface.glp: as printed
+platform.glp: as printed
+platform.vglp: as printed
+schemas.txt: as printed
+verdict.txt: as printed
+vmat.tex: as printed

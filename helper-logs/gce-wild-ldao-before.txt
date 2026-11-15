@@ -1,0 +1,33 @@
+ldao: adopted: LDAO.glp and schemas.txt, full-contract.txt, full-pragmas.txt, flat.txt, full-schemas.txt as calculus/tools/adopt.py prints them
+ldao: verdict: syntactically_grassroots
+ldao: VMAT form: 19 displays
+ldao: platform.vglp: 7348 lines
+ldao: platform.glp: 4981 lines
+ldao: interface.glp: 1302 items
+ldao: run: vGLP keeps no plays for ldao
+LDAO.glp: as printed
+LDAO.txt: as printed
+flat.txt: as printed
+full-contract.txt: as printed
+full-pragmas.txt: as printed
+full-schemas.txt: as printed
+interface.glp: as printed
+platform.glp: NOT as printed
+280,281c280,281
+< schema_numeric(pass, numeric([cj(at(1), ge(cardinality([svar('X1')], role(1), atom(vote_for, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], [])).
+< schema_numeric(reject, numeric([cj(at(1), ge(cardinality([svar('X1')], role(1), atom(vote_against, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], [])).
+---
+> schema_numeric(pass, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote_for, [pvar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(listed, [pvar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], [])).
+> schema_numeric(reject, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote_against, [pvar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(listed, [pvar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], [])).
+platform.vglp: NOT as printed
+243c243
+< schema_numeric(pass, numeric([cj(at(1), ge(cardinality([svar('X1')], role(1), atom(vote_for, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], []))
+---
+> schema_numeric(pass, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote_for, [pvar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(listed, [pvar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], []))
+245c245
+< schema_numeric(reject, numeric([cj(at(1), ge(cardinality([svar('X1')], role(1), atom(vote_against, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], []))
+---
+> schema_numeric(reject, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote_against, [pvar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(listed, [pvar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], []))
+schemas.txt: as printed
+verdict.txt: as printed
+vmat.tex: as printed

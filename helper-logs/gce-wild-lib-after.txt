@@ -1,0 +1,19 @@
+lib: adopted: LIB.glp and schemas.txt, full-contract.txt, full-pragmas.txt, flat.txt, full-schemas.txt as calculus/tools/adopt.py prints them
+lib: verdict: syntactically_grassroots
+lib: VMAT form: 6 displays
+lib: platform.vglp: 6951 lines
+lib: platform.glp: 4847 lines
+lib: interface.glp: 1297 items
+lib: run: vGLP keeps no plays for lib
+LIB.glp: as printed
+LIB.txt: as printed
+flat.txt: as printed
+full-contract.txt: as printed
+full-pragmas.txt: as printed
+full-schemas.txt: as printed
+interface.glp: as printed
+platform.glp: as printed
+platform.vglp: as printed
+schemas.txt: as printed
+verdict.txt: as printed
+vmat.tex: as printed

@@ -1,0 +1,49 @@
+lib: adopted: LIB.glp and schemas.txt, full-contract.txt, full-pragmas.txt, flat.txt, full-schemas.txt as calculus/tools/adopt.py prints them
+lib: verdict: syntactically_grassroots
+lib: VMAT form: 6 displays
+lib: platform.vglp: 6951 lines
+lib: platform.glp: 4847 lines
+lib: interface.glp: 1297 items
+lib: run: vGLP keeps no plays for lib
+LIB.glp: as printed
+LIB.txt: as printed
+flat.txt: as printed
+full-contract.txt: as printed
+full-pragmas.txt: as printed
+full-schemas.txt: as printed
+interface.glp: NOT as printed
+10,11c10,11
+<   type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), shelve('Peer', 'Speech'), lend('Peer', 'Peer', 'Speech', 'Integer'), return('Peer', 'Peer', 'Speech')]),
+<   type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), shelve('Peer', 'Speech'), lend('Peer', 'Peer', 'Speech', 'Integer'), return('Peer', 'Peer', 'Speech')]),
+---
+>   type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), shelve('Peer', 'Speech'), lend('Peer', 'Peer', 'Speech', 'Integer'), return('Peer', 'Peer', 'Speech', 'Integer')]),
+>   type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), shelve('Peer', 'Speech'), lend('Peer', 'Peer', 'Speech', 'Integer'), return('Peer', 'Peer', 'Speech', 'Integer')]),
+1289c1289
+<   compiled(join_proposal_return_3, 4),
+---
+>   compiled(join_proposal_return_4, 5),
+platform.glp: NOT as printed
+5,6c5,6
+< Class ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; shelve(Peer, Speech) ; lend(Peer, Peer, Speech, Integer) ; return(Peer, Peer, Speech).
+< Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; shelve(Peer, Speech) ; lend(Peer, Peer, Speech, Integer) ; return(Peer, Peer, Speech).
+---
+> Class ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; shelve(Peer, Speech) ; lend(Peer, Peer, Speech, Integer) ; return(Peer, Peer, Speech, Integer).
+> Proposal ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; shelve(Peer, Speech) ; lend(Peer, Peer, Speech, Integer) ; return(Peer, Peer, Speech, Integer).
+231c231
+< contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(shelve, [svar('Tome')], [rs(guarded, [atom(shelved, [svar('Tome')]), atom(shelf, [svar('Tome')])], [], [atom(identity, [])], [atom(shelved, [svar('Tome')])])]), schema(lend, [svar('Tome'), num('Day')], [rs(guarded, [], [atom(shelf, [svar('Tome')])], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(borrowed, [svar('Tome'), role(1), num('Day')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, [svar('Tome')], [rs(guarded, [], [atom(borrowed, [svar('Tome'), role(2), num('Day')])], [atom(identity, [])], []), rs(unguarded, [atom(shelf, [svar('Tome')])], [], [atom(identity, [])], [])])]).
+---
+> contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(shelve, [svar('Tome')], [rs(guarded, [atom(shelved, [svar('Tome')]), atom(shelf, [svar('Tome')])], [], [atom(identity, [])], [atom(shelved, [svar('Tome')])])]), schema(lend, [svar('Tome'), num('Day')], [rs(guarded, [], [atom(shelf, [svar('Tome')])], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(borrowed, [svar('Tome'), role(1), num('Day')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, [svar('Tome'), num('Day')], [rs(guarded, [], [atom(borrowed, [svar('Tome'), role(2), num('Day')])], [atom(identity, [])], []), rs(unguarded, [atom(shelf, [svar('Tome')])], [], [atom(identity, [])], [])])]).
+platform.vglp: NOT as printed
+25c25
+< return(Peer, Peer, Speech)
+---
+> return(Peer, Peer, Speech, Integer)
+39c39
+< return(Peer, Peer, Speech)
+---
+> return(Peer, Peer, Speech, Integer)
+46c46
+< Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Shelve", [act(shelve, 1, [1], [req(identity, []), forb(shelved, [at(2)])], [], [field(2, "tome", text)], [], [])]), button("Lend", [act(lend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(today, [any]), req(shelf, [at(3)])], [2, 3], [field(4, "day", number)], [], [])]), button("Return", [act(return, 1, [1, 2], [req(identity, []), req(borrowed, [at(3), at(2), any])], [3, 2], [], [], [])])])
+schemas.txt: as printed
+verdict.txt: as printed
+vmat.tex: as printed
