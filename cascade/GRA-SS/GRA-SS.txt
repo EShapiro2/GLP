@@ -1,0 +1,30 @@
+% GRA-SS: Grassroots Ride Auction, Second-Score Restriction --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GRH (Udi, 2026-11-06, to GRH #1).  The paper, /Users/udi/Grassroots/GRH/main_GRH.tex, prints it in its box in Section The Ride, sections/ride.tex, and cites a clause as GRA-SS:1.
+% Paper: GRH, Grassroots Ride-Hailing, in preparation
+% Instantiates and restricts: GRA, Grassroots Ride Auction, GRH's (programs/lbm), in the terms of the Calculus: it instantiates GRA with second-score terms and restricts it, each of its clauses a clause of GRA or of GDO-LB with a condition added.
+% Defines: the terms of a call, the score of a bid, an admissible bid.
+% Last changed: 2026-11-15, by GRH #3: adopted from the Calculus as republished (branch Calculus of GLP 2503050, calculus/GRA-SS; calculus/MIGRATION.md, Udi confirming it, 2026-11-15): the first line, GRA-SS instantiates GRA with second-score terms and restricts it; the definitions on their line before the names; the clauses titled Point transitive, Award, Arrive and Cancel; and the Logic pragmas after them.  2026-11-08, by GRH #2 Cowork: GRA-SS:1 restricts GDO-LB:2, GRA extending GDO-LB (Udi, 2026-11-08); GRA-SS.glp holds GDO-LB's pointing schemas.  2026-11-06, renamed GRA-SS, Second-Score Restriction, from GRA-SI, Second-Score Instance, since it restricts GRA (Udi, to GRH #1); written by GRH #1 Cowork from the Second-Score Instance that GRA's box held, the clauses as Udi approved them that day.
+% Schemas: GRA-SS.glp beside this file, the full schemas, printed from the Logic pragmas by calculus/tools/adopt.py and never written by hand.
+% Pragmas: the Interface pragmas are GRA's, GRA-SS having GRA's acts; it writes GRA's tab.
+GRA-SS: Grassroots Ride Auction, Second-Score Restriction
+GRA-SS instantiates GRA with second-score terms and restricts it.
+*Second-score terms* state a maximum pickup delay T ≥ 0, a willingness to pay W(τ) = A − λτ with A, λ ≥ 0, and a deposit D ≥ 0. The award is at time t₀. A bid (p, τ) is the fare p ≥ 0 the bidder asks and the pickup delay τ ≥ 0 the bidder promises. Its *score* is W(τ) − p, and it is *admissible* iff τ ≤ T and its score is at least 0.
+Alice is a rider, Bob a driver and Carol a person.
+1. ■ Point transitive: GDO-LB:2, only if Carol is a driver.
+2. ■ Award. Award, Close: GRA:3, where the terms select the bidder whose admissible bid has the highest score, ties broken as the terms say, or no bidder if no bid is admissible. They set the fare P = W(τ) − s₂, where τ is that bid's pickup delay and s₂ is the highest score among the other admissible bids, or 0 if there is none, and they set the deposit D.
+3. ■ Arrive: GRA:5, where the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}.
+4. ■ Cancel: GRA:6, where the fare and the deposit are released to Alice if Alice was at the pickup point from t₀ to t₀ + T, and otherwise the fare to Alice and the deposit to Bob.
+Logic pragmas
+GRA-SS instantiates GRA with second-score terms, and restricts it.
+*Second-score terms* state a maximum pickup delay T ≥ 0, a willingness to pay W(τ) = A − λτ with A, λ ≥ 0, and a deposit D ≥ 0. The award is at time t₀. A bid (p, τ) is the fare p ≥ 0 the bidder asks and the pickup delay τ ≥ 0 the bidder promises. Its *score* is W(τ) − p, and it is *admissible* iff τ ≤ T and its score is at least 0.
+Alice is a rider, Bob a driver and Carol a person.
+1. ■ Point transitive: GDO-LB:2, only if Carol is a driver.
+2. ■ Award. Award: GRA:3 Award, only if Bob is the bidder on Alice's call Trip whose admissible bid has the highest score, ties broken as the terms say, the terms of Alice's call Trip set the deposit D and the terms of Alice's call Trip set the fare P = W(τ) − s₂, where τ is the pickup delay of Bob's bid and s₂ is the highest score among the other admissible bids, or 0 if there is none. Close: GRA:3 Close, only if no bid on Alice's call Trip is admissible.
+3. ■ Arrive: GRA:5, only if the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}.
+4. ■ Cancel: GRA:6, only if the fare and the deposit are released to Alice if Alice was at the pickup point from t₀ to t₀ + T, and otherwise the fare to Alice and the deposit to Bob.
+Logic pragmas.
+Vocabulary: y is the bidder on x's call c whose admissible bid has the highest score, ties broken as the terms say = highest_score(x,y,c); no bid on x's call c is admissible = none_admissible(x,c); the terms of x's call c set the deposit D = sets_deposit(x,c); the terms of x's call c set the fare P = W(τ) − s₂, where τ is the pickup delay of y's bid and s₂ is the highest score among the other admissible bids, or 0 if there is none = second_score_fare(x,y,c); the refund min{P, λδ} is released to x, and the rest of the fare and the deposit to y, with δ = max{0, t_pickup − t₀ − τ} = refund(x,y); the fare and the deposit are released to x if x was at the pickup point from t₀ to t₀ + T, and otherwise the fare to x and the deposit to y = cancel_release(x,y).
+Environment: y is the bidder on x's call c whose admissible bid has the highest score, ties broken as the terms say; no bid on x's call c is admissible.
+Parameters: the terms of x's call c set the deposit D; the terms of x's call c set the fare P = W(τ) − s₂, where τ is the pickup delay of y's bid and s₂ is the highest score among the other admissible bids, or 0 if there is none; the fare and the deposit are released to x if x was at the pickup point from t₀ to t₀ + T, and otherwise the fare to x and the deposit to y; the refund min{P, λδ} is released to x, and the rest of the fare and the deposit to y, with δ = max{0, t_pickup − t₀ − τ}.
+Interface pragmas
+Rides: the persons Alice rides with.
