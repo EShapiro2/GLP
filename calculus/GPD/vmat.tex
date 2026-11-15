@@ -395,7 +395,7 @@ c_
 item
 }
 (
-\Alice
+Item
 )
 \}
 ,\\
@@ -405,6 +405,19 @@ item
 identity
 }
  \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+item
+}
+(
+Item
+)
+ \notin c_
 {
 \Alice
 }
@@ -434,7 +447,11 @@ c_
 item
 }
 (
-Carol
+\mathrm{sgn}(
+Item
+,
+\Bob
+)
 )
 \}
 , \qquad 
@@ -473,7 +490,7 @@ identity
 item
 }
 (
-Carol
+Item
 )
 ,
 \mathit{
@@ -512,6 +529,8 @@ c_
 program
 }
 (
+Prog
+,
 \Alice
 )
 \}
@@ -522,6 +541,21 @@ program
 identity
 }
  \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+program
+}
+(
+Prog
+,
+\Alice
+)
+ \notin c_
 {
 \Alice
 }
@@ -656,6 +690,8 @@ c_
 program
 }
 (
+Prog
+,
 Dave
 )
 \}
@@ -695,6 +731,8 @@ identity
 program
 }
 (
+Prog
+,
 Dave
 )
 ,
@@ -734,6 +772,8 @@ c_
 installed
 }
 (
+Prog
+,
 \Alice
 )
 \}
@@ -748,6 +788,8 @@ identity
 program
 }
 (
+Prog
+,
 \Alice
 )
  \in c_
@@ -761,6 +803,8 @@ program
 installed
 }
 (
+Prog
+,
 \Alice
 )
  \notin c_
@@ -793,6 +837,8 @@ c_
 installed
 }
 (
+Prog
+,
 Carol
 )
 \}
@@ -807,6 +853,8 @@ identity
 program
 }
 (
+Prog
+,
 Carol
 )
 ,
@@ -827,6 +875,8 @@ Carol
 installed
 }
 (
+Prog
+,
 Carol
 )
  \notin c_
@@ -859,6 +909,8 @@ c_
 program
 }
 (
+Prog
+,
 Carol
 )
 ,
@@ -866,6 +918,8 @@ Carol
 installed
 }
 (
+Prog
+,
 Carol
 )
 ,
@@ -873,6 +927,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \Bob
@@ -894,6 +950,8 @@ c_
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \Alice
@@ -939,6 +997,8 @@ friend
 installed
 }
 (
+Prog
+,
 Carol
 )
  \in c_
@@ -973,6 +1033,8 @@ c'_
 installed
 }
 (
+Prog
+,
 Carol
 )
 \}
@@ -990,6 +1052,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1012,6 +1076,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1026,6 +1092,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1050,6 +1118,8 @@ c'_
 installed
 }
 (
+Prog
+,
 Carol
 )
 ,
@@ -1057,6 +1127,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \Alice
@@ -1076,6 +1148,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1098,6 +1172,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1112,6 +1188,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1132,6 +1210,8 @@ q
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \Alice
@@ -1147,6 +1227,8 @@ q
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1168,6 +1250,8 @@ identity
 installed
 }
 (
+Prog
+,
 Carol
 )
  \in c_
@@ -1183,6 +1267,8 @@ identity
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \Alice
@@ -1198,6 +1284,8 @@ q \in
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1217,6 +1305,8 @@ participant
 (
 \Alice
 ,
+Prog
+,
 Carol
 ,
 \Bob
@@ -1235,6 +1325,8 @@ participant
 (
 \Bob
 ,
+Prog
+,
 Carol
 ,
 \Alice
@@ -1252,6 +1344,8 @@ participant
 (
 \Alice
 ,
+Prog
+,
 Carol
 ,
 \Bob
@@ -1263,6 +1357,8 @@ participant
 }
 (
 \Bob
+,
+Prog
 ,
 Carol
 ,

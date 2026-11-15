@@ -1,9 +1,8 @@
 GB: Grassroots Bonds
 GB extends GC.
-A *bond* is a unit of debt, due at its maturity date, that includes its issuer's public key and its maturity date and is signed by their private key. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most its holder's date.
+A *bond* is a unit of debt, due at its maturity date, that includes its issuer's public key and its maturity date and is signed by their private key. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
 Alice, Bob and Carol are persons.
-1. ■ Issue bond: Alice may issue Alice-bonds of a maturity later than her own date.
+1. ■ Issue bond: Alice may issue Alice-bonds of a maturity later than the current date.
 2. ■ Swap: Alice and Bob, who know each other, may jointly swap coins and bonds they hold.
 3. ■ Redeem: Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
 4. ■ Escrow. Deposit: Alice may deposit coins and bonds with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob if the condition is met. Return: Carol and Alice may jointly return them to Alice if it fails. Each act is between two parties who know each other.
-5. ○ Date. Alice keeps her date at the current date.

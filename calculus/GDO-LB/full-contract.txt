@@ -1,6 +1,6 @@
 % Written by tools/expand.py from rev/; do not edit.
 GDO-LB: Location-Based GDO
-An *identity* is a unique key pair, chosen by the person who has it.
+An *identity* is a unique key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A person has a *location*. d > 0, an integer, and e > 0 are parameters of GDO-LB.
 Alice, Bob and Carol are persons. A party to a contract must have an identity. Alice and Bob are persons.

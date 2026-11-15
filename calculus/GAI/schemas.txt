@@ -3,7 +3,7 @@ GAI instantiates GnW with guardians(z) for deciders(z), an AI agent for a ward a
 Vocabulary: z holds the attestation t = attestation(z,t); y holds a record of z's attestation t = attestation_record(y,z,t).
 Roles: the guardians of z = guardians(z), listed by z has y as a guardian, y is a guardian of z and y holds a record of z's attestation Proof.
 GAI:0 - | The *developer* of an AI agent is the signer of its code.
-GAI:0 - | Alice, Bob and Erin are persons, Alf an AI agent, Proof and Seal attestations; in clause 2 Carol and Dave are AI agents and Erin is possibly Alf or Bob.
+GAI:0 - | Alice and Bob are persons, Alf an AI agent, Proof and Seal attestations, Item an item; in clause 2 Carol and Dave are AI agents.
 GAI:1 ○ | AI developer and guardian accountability.
 GAI:1 ○ | The developer of Alf will be accountable for Alf's defects.
 GAI:1 ○ | Every guardian of Alf will be accountable for operating it recklessly.
@@ -19,6 +19,6 @@ GAI:2 ■ Wards befriend: GnW:4 Wards befriend <- attestation(Carol,Proof), atte
 GAI:2 ■ Wards of one guardian befriend: GnW:4 Wards of one guardian befriend <- attestation(Carol,Proof), attestation(Dave,Seal).
 GAI:2 ■ Sign: GFP:1 <- person(Alice).
 GAI:2 ■ Forward: GFP:2 <- person(Alice).
-GAI:2 ■ Agent sign: item(Alf,Alf) <- ai_agent(Alf), attestation(Alf,Proof) guarded by Alf.
-GAI:2 ■ Agent forward: item(Bob,Erin) <- ai_agent(Alf), attestation(Alf,Proof), item(Alf,Erin), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf possibly Alf=Erin, Bob=Erin.
+GAI:2 ■ Agent sign: item(Alf,Item) <- ai_agent(Alf), attestation(Alf,Proof), ~item(Alf,Item) guarded by Alf.
+GAI:2 ■ Agent forward: item(Bob,Item@Alf) <- ai_agent(Alf), attestation(Alf,Proof), item(Alf,Item), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
 GAI:2 ■ | Every act of Alf requires this attestation and names its developer and its principal.

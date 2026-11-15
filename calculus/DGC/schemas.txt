@@ -8,7 +8,7 @@ After x accepts one more f-denominated z-coin in payment: x accepts an f-denomin
 After x pays y a z-coin that y accepts as denominated by f: no longer x holds a z-coin, y holds a z-coin and no longer y accepts an f-denominated z-coin in payment.
 DGC:0 - | A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
 DGC:0 - | Alice, Bob, Carol and Dave are persons, Dollar a fiat currency, Day a maturity date, Today a date, Cond a condition Alice, Bob and Carol agree, Sum a number; in clause 4 Carol is possibly Alice or Bob.
-DGC:1 ■ Issue bond: bond(Alice,Alice,Day,*Sum), issued_bond_in(Alice,Dollar,Day) <- date(Alice,Today), gt(Day,Today) guarded by Alice.
+DGC:1 ■ Issue bond: bond(Alice,Alice,Day,*Sum), issued_bond_in(Alice,Dollar,Day) <- today(Alice,Today), gt(Day,Today) guarded by Alice.
 DGC:2 ■ Swap: GB:2 <- one_denomination(Actor,Carol,Dave).
 DGC:2 ■ Redeem: GB:3 <- one_denomination(Actor,Bob,Carol).
 DGC:2 ■ Escrow: GB:4 <- escrow_one_denomination(Carol,Alice,Bob,Cond).

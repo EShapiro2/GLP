@@ -1,5 +1,5 @@
 GFP: Grassroots Forwarding with Provenance (flat text)
-GKK:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
 GKK:1 ○ Establish: Alice may Alice has an identity and Alice knows Alice, provided not Alice has an identity.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -13,7 +13,6 @@ GSG:2 ■ Unfriend: Alice may no longer Alice counts Bob as a friend and no long
 GSG:3 ○ | Loss of Trust.
 GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 GFP:0 - | The *author* of an item is its first signer.
-GFP:0 - | Alice, Bob and Carol are persons, Carol possibly Alice or Bob.
-GFP:1 ■ Sign: Alice may Alice holds an item of Alice.
-GFP:2 ■ Forward: Alice may Bob holds an item of Carol, provided Alice holds an item of Carol, Alice counts Bob as a friend and Bob counts Alice as a friend. Possibly one: Alice=Carol, Bob=Carol.
-GFP:2 ■ | Alice adds her signature to the signatures the item carries.
+GFP:0 - | Alice and Bob are persons, Item an item.
+GFP:1 ■ Sign: Alice may Alice holds the item Item, provided not Alice holds the item Item.
+GFP:2 ■ Forward: Alice may Bob holds the item Item signed by Alice, provided Alice holds the item Item, Alice counts Bob as a friend and Bob counts Alice as a friend.

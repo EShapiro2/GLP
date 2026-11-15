@@ -6,12 +6,12 @@ GB: Grassroots Bonds
 5. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
 6. ■ Pay.  Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.
 7. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
-8. ■ Issue bond.  Alice may issue Sum Alice-bonds due Day, provided Alice's date is Today and Day is more than Today.
+8. ■ Issue bond.  Alice may issue Sum Alice-bonds due Day, provided the current date is Today and Day is more than Today.
 9. ■ Swap coin for bond.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-bonds due Day, provided Alice and Bob know each other.
 10. ■ Swap bonds.  Alice and Bob may jointly swap Sum Carol-bonds due Day for Total Dave-bonds due Term, provided Alice and Bob know each other.
 11. ■ Redeem coin against bond.  Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob.
-12. ■ Redeem bond.  Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, Alice's date is Today and Day is at most Today.
-13. ■ Redeem bond against bond.  Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, Alice's date is Today and Day is at most Today.
+12. ■ Redeem bond.  Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today and Day is at most Today.
+13. ■ Redeem bond against bond.  Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today and Day is at most Today.
 14. ■ Deposit.  Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.
 15. ■ Deposit bond.  Alice may deposit Sum Dave-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.
 16. ■ Release.  Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other and Carol finds Cond met.

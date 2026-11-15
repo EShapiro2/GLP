@@ -1,6 +1,6 @@
 % Written by tools/expand.py from rev/; do not edit.
 GSN: Grassroots Social Network
-An *identity* is a unique key pair, chosen by the person who has it.
+An *identity* is a unique key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A *message*, a parameter of GSN, is what a person sends.
 Alice, Bob and Carol are persons. A party to a contract must have an identity. Alice and Bob are persons.

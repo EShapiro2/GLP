@@ -4,16 +4,16 @@ GPD: Grassroots Programs Dissemination
 3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.
 5. ■ Unfriend.  Alice may end her friendship with Bob.
-6. ■ Sign.  Alice may create an item by signing it.
-7. ■ Forward.  Alice may forward an item of Carol to Bob, provided Alice holds an item of Carol and Alice and Bob are friends.
-8. ◆ Publish.  Carol may publish a program by signing it.
+6. ■ Sign.  Alice may create Item by signing it.
+7. ■ Forward.  Alice may forward Item to Bob, adding her signature to the signatures Item carries, provided Alice holds the item Item and Alice and Bob are friends.
+8. ◆ Publish.  Carol may publish Prog by signing it.
 9. ■ Trust.  Alice may declare trust in Carol as a developer, provided Alice knows Carol.
 10. ■ Untrust.  Alice may withdraw her declaration of trust in Carol as a developer.
-11. ■ Offer.  Carol may offer a program of Dave to Alice, provided Carol holds a program of Dave and Carol and Alice are friends.
-12. ■ Install own.  Alice may install her own program, provided Alice holds a program of Alice.
-13. ■ Install.  Alice may install a program of Carol, provided Alice holds a program of Carol and Alice trusts Carol as a developer.
-14. ■ Invite.  Alice may invite Bob to join in a program of Carol, with the consent of Bob, provided Alice and Bob are friends, Alice has a program of Carol installed and Bob trusts Carol as a developer.
-15. ■ Leave.  Alice may leave a program of Carol.
+11. ■ Offer.  Carol may offer Prog of Dave to Alice, provided Carol holds Prog of Dave and Carol and Alice are friends.
+12. ■ Install own.  Alice may install her own Prog, provided Alice holds Prog of Alice.
+13. ■ Install.  Alice may install Prog of Carol, provided Alice holds Prog of Carol and Alice trusts Carol as a developer.
+14. ■ Invite.  Alice may invite Bob to join in Prog of Carol, with the consent of Bob, provided Alice and Bob are friends, Alice has Prog of Carol installed and Bob trusts Carol as a developer.
+15. ■ Leave.  Alice may leave Prog of Carol.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -23,9 +23,9 @@ Introduce: Alice [Introduce]
 Befriend: Alice [Befriend]
   Bob: Alice asks for your consent to befriend.
 Unfriend: Alice [Unfriend]
-Sign: Alice [Sign]
+Sign: Alice [Sign] <item>
 Forward: Alice [Forward]
-Publish: Carol [Publish]
+Publish: Carol [Publish] <prog>
 Trust: Alice [Trust]
 Untrust: Alice [Untrust]
 Offer: Carol [Offer]

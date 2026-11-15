@@ -1,5 +1,5 @@
 CSSN: Child-Safe Social Network (expanded schemas)
-GKK:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
 GKK:1+GnW:3 ■ Establish: identity(Alice), knows(Alice,Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -13,8 +13,8 @@ GSG:2+GSN:3+GnW:3 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice), ~member(
 GSG:3 ○ | Loss of Trust.
 GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 GSN:0 - | A *message*, a parameter of GSN, is what a person sends.
-GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Bob and Carol possibly Alice or one person.
-GSN:1+GSNW:1 ■ Message: message(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice), person(Alice) guarded by Alice possibly Alice=Bob.
+GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+GSN:1+GSNW:1 ■ Message: message(Bob,Alice,Text) <- friend(Alice,Bob), friend(Bob,Alice), person(Alice) guarded by Alice possibly Alice=Bob.
 GSN:2 ■ | Group.
 GSN:2+GSNW:2 ■ Create: leader(Alice,Grupo), member(Alice,Grupo,Alice), listed(Alice,Alice,Grupo) <- ~leader(Alice,Grupo), person(Alice) guarded by Alice.
 GSN:2 ■ | Alice is then its leader and first member.
@@ -24,8 +24,8 @@ GSN:3+GSNW:3+CSSN:3 ■ Join: member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) <
 GSN:3 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Alice possibly Alice=Bob.
 GSN:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Bob possibly Alice=Bob.
 GSN:4 ■ | Group messaging.
-GSN:4+GSNW:1 ■ Post: posted(Bob,Grupo) <- member(Bob,Grupo,_), person(Bob) guarded by Bob.
-GSN:4 ■ Deliver: group_message(Carol,Bob,Grupo), group_delivered(Alice,Bob,Grupo,Carol) <- leader(Alice,Grupo), posted(Bob,Grupo), listed(Alice,Bob,Grupo), listed(Alice,Carol,Grupo) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+GSN:4+GSNW:1 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo), person(Bob) guarded by Bob possibly Alice=Bob.
+GSN:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
 GnW:0 - | Bob *trusts* Carol, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a child and how.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave children; in clause 4 Alice and Bob are possibly one person.
 GnW:1+CSSN:1 ◆ Enter: identity(Carol), knows(Carol,Carol), child(Carol), has_parent(Carol,Alice), creator(Alice,Carol), parent(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol), legal_parent(Alice,Carol) guarded by Alice, Carol must Carol.
@@ -48,10 +48,10 @@ GnW:4 ■ Wards befriend: friend(Carol,Dave), friend(Dave,Carol) <- child(Carol)
 GnW:4 ■ Wards of one guardian befriend: friend(Carol,Dave), friend(Dave,Carol) <- child(Carol), ~retired(Carol), has_parent(Carol,Alice), child(Dave), ~retired(Dave), has_parent(Dave,Alice), knows(Carol,Dave), knows(Dave,Carol), ~friend(Carol,Dave), ~friend(Dave,Carol) guarded by Carol, Dave, Alice.
 GnW:5+GSNW:3 ■ Retire: retired(Carol), ~parent(_,Carol), ~has_parent(Carol,_), ~friend(Carol,_), ~friend(_,Carol), ~member(Carol,_,_), ~listed(_,Carol,_) <- ~retired(Carol) guarded by parents(Carol).
 GnW:5 ■ | Carol can then take no act.
-GSNW:0 - | Alice and Bob are persons, Carol a child, Grupo a group.
+GSNW:0 - | Alice and Bob are persons, Carol a child, Grupo a group, Text a message.
 GSNW:1 ■ | A child's messages.
-GSNW:1 ■ Ward message: message(Bob,Carol) <- child(Carol), ~retired(Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
-GSNW:1 ■ Ward post: posted(Carol,Grupo) <- child(Carol), ~retired(Carol), member(Carol,Grupo,_) guarded by Carol.
+GSNW:1 ■ Ward message: message(Bob,Carol,Text) <- child(Carol), ~retired(Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+GSNW:1 ■ Ward post: posted(Alice,Text,Carol,Grupo) <- child(Carol), ~retired(Carol), member(Carol,Grupo,Alice), ~posted(Alice,Text,Carol,Grupo) guarded by Carol.
 GSNW:2 ■ | A child's group.
 GSNW:2+CSSN:3 ■ Child create: leader(Carol,Grupo), member(Carol,Grupo,Carol), listed(Carol,Carol,Grupo) <- child(Carol), ~retired(Carol), ~leader(Carol,Grupo), has_parent(Carol,Alice) guarded by Carol, Alice.
 GSNW:2 ■ Ward close: ~leader(Carol,Grupo), ~listed(Carol,_,Grupo), ~member(_,Grupo,_) <- child(Carol), ~retired(Carol), leader(Carol,Grupo) guarded by Carol.

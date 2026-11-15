@@ -1,6 +1,6 @@
 % Written by tools/expand.py from rev/; do not edit.
 GO: Grassroots Organisation
-An *identity* is a unique key pair, chosen by the person who has it.
+An *identity* is a unique key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an organisation and how. Here: bylaws.
 An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of GO, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.

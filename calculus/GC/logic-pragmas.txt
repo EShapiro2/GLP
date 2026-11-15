@@ -10,6 +10,6 @@ Alice, Bob, Carol and Dave are persons, Sum and Total numbers, Carol and Dave po
 Logic pragmas.
 Vocabulary: x holds a y-coin = coin(x,y); x holds n y-coins = coin(x,y,*n); x holds exactly n y-coins = coin(x,y,#n).
 After x issues n x-coins: x holds n x-coins.
-After x and y swap n z-coins for m w-coins: no longer x holds n z-coins, y holds n z-coins, no longer y holds m w-coins and x holds m w-coins.
+After x and y swap n z-coins for m w-coins: no longer x holds n z-coins, y holds n z-coins, no longer y holds m w-coins, x holds m w-coins, y knows z and x knows w.
 After x pays y n y-coins: no longer x holds n y-coins and y holds n y-coins.
-After x redeems a y-coin against a z-coin: no longer x holds a y-coin, y holds a y-coin, no longer y holds a z-coin and x holds a z-coin.
+After x redeems a y-coin against a z-coin: no longer x holds a y-coin, y holds a y-coin, no longer y holds a z-coin, x holds a z-coin and x knows z.

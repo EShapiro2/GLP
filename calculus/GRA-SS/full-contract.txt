@@ -1,6 +1,6 @@
 % Written by tools/expand.py from rev/; do not edit.
 GRA-SS: Grassroots Ride Auction, Second-Score Restriction
-An *identity* is a unique key pair, chosen by the person who has it.
+An *identity* is a unique key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A person has a *location*. d > 0, an integer, and e > 0 are parameters of GDO-LB.
 A *pickup delay* is measured from the award. The *terms* of a call, a parameter of GRA, state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released. Here: second-score terms.

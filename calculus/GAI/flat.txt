@@ -1,5 +1,5 @@
 GAI: Accountable AI Agents (flat text)
-GKK:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
 GKK:1+GnW:3 ■ Establish: Alice may Alice has an identity, Alice knows Alice and Alice is a person, provided not Alice has an identity.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -35,17 +35,16 @@ GnW:4+GAI:2 ■ Wards of one guardian befriend: Carol, Dave and Alice may jointl
 GnW:5 ■ Retire: The guardians of Carol may Carol is retired, no longer anyone is a guardian of Carol, no longer Carol has anyone as a guardian, no longer Carol counts anyone as a friend and no longer anyone counts Carol as a friend, provided not Carol is retired.
 GnW:5 ■ | Carol can then take no act.
 GFP:0 - | The *author* of an item is its first signer.
-GFP:0 - | Alice, Bob and Carol are persons, Carol possibly Alice or Bob.
-GFP:1+GAI:2 ■ Sign: Alice may Alice holds an item of Alice, provided Alice is a person.
-GFP:2+GAI:2 ■ Forward: Alice may Bob holds an item of Carol, provided Alice holds an item of Carol, Alice counts Bob as a friend, Bob counts Alice as a friend and Alice is a person. Possibly one: Alice=Carol, Bob=Carol.
-GFP:2 ■ | Alice adds her signature to the signatures the item carries.
+GFP:0 - | Alice and Bob are persons, Item an item.
+GFP:1+GAI:2 ■ Sign: Alice may Alice holds the item Item, provided not Alice holds the item Item and Alice is a person.
+GFP:2+GAI:2 ■ Forward: Alice may Bob holds the item Item signed by Alice, provided Alice holds the item Item, Alice counts Bob as a friend, Bob counts Alice as a friend and Alice is a person.
 GAI:0 - | The *developer* of an AI agent is the signer of its code.
-GAI:0 - | Alice, Bob and Erin are persons, Alf an AI agent, Proof and Seal attestations; in clause 2 Carol and Dave are AI agents and Erin is possibly Alf or Bob.
+GAI:0 - | Alice and Bob are persons, Alf an AI agent, Proof and Seal attestations, Item an item; in clause 2 Carol and Dave are AI agents.
 GAI:1 ○ | AI developer and guardian accountability.
 GAI:1 ○ | The developer of Alf will be accountable for Alf's defects.
 GAI:1 ○ | Every guardian of Alf will be accountable for operating it recklessly.
 GAI:2 ■ | AI acts.
 GAI:2 ■ | The principal of Alf attests at its creation, signed over Alf's public key, that Alf runs code signed by its developer.
-GAI:2 ■ Agent sign: Alf may Alf holds an item of Alf, provided Alf is an AI agent and Alf holds the attestation Proof.
-GAI:2 ■ Agent forward: Alf may Bob holds an item of Erin, provided Alf is an AI agent, Alf holds the attestation Proof, Alf holds an item of Erin, Alf counts Bob as a friend and Bob counts Alf as a friend. Possibly one: Alf=Erin, Bob=Erin.
+GAI:2 ■ Agent sign: Alf may Alf holds the item Item, provided Alf is an AI agent, Alf holds the attestation Proof and not Alf holds the item Item.
+GAI:2 ■ Agent forward: Alf may Bob holds the item Item signed by Alf, provided Alf is an AI agent, Alf holds the attestation Proof, Alf holds the item Item, Alf counts Bob as a friend and Bob counts Alf as a friend.
 GAI:2 ■ | Every act of Alf requires this attestation and names its developer and its principal.

@@ -1,12 +1,12 @@
 GSNW: Grassroots Social Network with Wards
 GSNW extends, restricts and strengthens GSN and GnW.
 After y closes the group g of z: no longer z is the leader of g, z has no one as a member of the group g and no one is a member of g.
-GSNW:0 - | Alice and Bob are persons, Carol a ward, Grupo a group.
+GSNW:0 - | Alice and Bob are persons, Carol a ward, Grupo a group, Text a message.
 GSNW:1 ■ | A ward's messages.
 GSNW:1 ■ Message: GSN:1 <- person(Alice).
 GSNW:1 ■ Post: GSN:4 Post <- person(Bob).
-GSNW:1 ■ Ward message: message(Bob,Carol) <- ward(Carol), ~retired(Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
-GSNW:1 ■ Ward post: posted(Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,_) guarded by Carol.
+GSNW:1 ■ Ward message: message(Bob,Carol,Text) <- ward(Carol), ~retired(Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+GSNW:1 ■ Ward post: posted(Alice,Text,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Alice), ~posted(Alice,Text,Carol,Grupo) guarded by Carol.
 GSNW:2 ■ | A ward's group.
 GSNW:2 ■ Create: GSN:2 Create <- person(Alice).
 GSNW:2 ■ Close: GSN:2 Close <- person(Alice).

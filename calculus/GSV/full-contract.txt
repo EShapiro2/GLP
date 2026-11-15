@@ -1,6 +1,6 @@
 % Written by tools/expand.py from rev/; do not edit.
 GSV: Grassroots Services
-An *identity* is a unique key pair, chosen by the person who has it.
+An *identity* is a unique key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. Here: the guardians deciding jointly.
 A *service* is a ward operated by a machine at an address every person can reach.

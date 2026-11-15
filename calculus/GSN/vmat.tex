@@ -460,6 +460,8 @@ message
 }
 (
 \Bob
+,
+Text
 )
 \}
 , \qquad 
@@ -1175,12 +1177,34 @@ c_
 posted
 }
 (
+Text
+,
+\Bob
+,
 Grupo
 )
 \}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
 ,\\
 &
 \text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
 \mathit{
 identity
 }
@@ -1191,16 +1215,33 @@ member
 (
 Grupo
 ,
-\ast
+\Alice
 )
  \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+posted
+}
+(
+Text
+,
+\Bob
+,
+Grupo
+)
+ \notin c_
 {
 \Alice
 }
 ,\\
 &
 \text{guarded by } \{
-\Alice
+\Bob
 \}
 \end{align*}
 \iffalse
@@ -1223,7 +1264,9 @@ c_
 group_delivered
 }
 (
-\mathit{Carol}
+Bob
+,
+Text
 ,
 Grupo
 ,
@@ -1246,21 +1289,15 @@ c_
 group_message
 }
 (
-\mathit{Carol}
+Bob
+,
+Text
 ,
 Grupo
+,
+\Alice
 )
 \}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
 ,\\
 &
 \text{provided } 
@@ -1276,10 +1313,21 @@ Grupo
 )
 ,
 \mathit{
+posted
+}
+(
+Text
+,
+Bob
+,
+Grupo
+)
+,
+\mathit{
 listed
 }
 (
-\mathit{Carol}
+Bob
 ,
 Grupo
 )
@@ -1304,20 +1352,24 @@ identity
 {
 \Bob
 }
- \text{ and } 
+,\\
+&
+\text{provided } 
 \mathit{
-identity
-}
-,
-\mathit{
-posted
+group_delivered
 }
 (
+Bob
+,
+Text
+,
 Grupo
+,
+\Bob
 )
- \in c_
+ \notin c_
 {
-\mathit{Carol}
+\Alice
 }
 ,\\
 &

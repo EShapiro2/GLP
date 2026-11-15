@@ -1,5 +1,5 @@
 GSN: Grassroots Social Network (expanded schemas)
-GKK:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
 GKK:1 ○ Establish: identity(Alice), knows(Alice,Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -13,8 +13,8 @@ GSG:2+GSN:3 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice), ~member(Alice,
 GSG:3 ○ | Loss of Trust.
 GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 GSN:0 - | A *message*, a parameter of GSN, is what a person sends.
-GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Bob and Carol possibly Alice or one person.
-GSN:1 ■ Message: message(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice possibly Alice=Bob.
+GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+GSN:1 ■ Message: message(Bob,Alice,Text) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice possibly Alice=Bob.
 GSN:2 ■ | Group.
 GSN:2 ■ Create: leader(Alice,Grupo), member(Alice,Grupo,Alice), listed(Alice,Alice,Grupo) <- ~leader(Alice,Grupo) guarded by Alice.
 GSN:2 ■ | Alice is then its leader and first member.
@@ -24,5 +24,5 @@ GSN:3 ■ Join: member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) <- leader(Alice
 GSN:3 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Alice possibly Alice=Bob.
 GSN:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Bob possibly Alice=Bob.
 GSN:4 ■ | Group messaging.
-GSN:4 ■ Post: posted(Bob,Grupo) <- member(Bob,Grupo,_) guarded by Bob.
-GSN:4 ■ Deliver: group_message(Carol,Bob,Grupo), group_delivered(Alice,Bob,Grupo,Carol) <- leader(Alice,Grupo), posted(Bob,Grupo), listed(Alice,Bob,Grupo), listed(Alice,Carol,Grupo) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+GSN:4 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+GSN:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.

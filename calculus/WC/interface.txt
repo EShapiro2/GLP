@@ -32,12 +32,12 @@ WC: Workers' Cooperative
 31. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other and the coins and bonds of Carol and Dave are of one denomination.
 32. ■ Pay.  Alice may pay Bob Sum Bob-coins for Bob's work, provided Alice knows Bob.
 33. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob and the coins and bonds of Bob and Carol are of one denomination.
-34. ■ Issue bond.  Alice may issue Sum Alice-bonds due Day, provided Alice's date is Today and Day is more than Today.
+34. ■ Issue bond.  Alice may issue Sum Alice-bonds due Day, provided the current date is Today and Day is more than Today.
 35. ■ Swap coin for bond.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-bonds due Day, provided Alice and Bob know each other and the coins and bonds of Carol and Dave are of one denomination.
 36. ■ Swap bonds.  Alice and Bob may jointly swap Sum Carol-bonds due Day for Total Dave-bonds due Term, provided Alice and Bob know each other and the coins and bonds of Carol and Dave are of one denomination.
 37. ■ Redeem coin against bond.  Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob and the coins and bonds of Bob and Carol are of one denomination.
-38. ■ Redeem bond.  Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, Alice's date is Today, Day is at most Today and the coins and bonds of Bob and Carol are of one denomination.
-39. ■ Redeem bond against bond.  Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, Alice's date is Today, Day is at most Today and the coins and bonds of Bob and Carol are of one denomination.
+38. ■ Redeem bond.  Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today, Day is at most Today and the coins and bonds of Bob and Carol are of one denomination.
+39. ■ Redeem bond against bond.  Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today, Day is at most Today and the coins and bonds of Bob and Carol are of one denomination.
 40. ■ Deposit.  Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob and the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
 41. ■ Deposit bond.  Alice may deposit Sum Dave-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob and the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
 42. ■ Release.  Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other, Carol finds Cond met and the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
@@ -45,7 +45,7 @@ WC: Workers' Cooperative
 44. ■ Return.  Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other, Carol finds Cond failed and the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
 45. ■ Return bond.  Carol and Alice may jointly return Sum Dave-bonds due Day deposited for Bob on Cond, provided Carol and Alice know each other, Carol finds Cond failed and the coins and bonds that Carol holds in escrow from Alice for Bob on Cond are of one denomination.
 46. ■ First issue.  Alice may issue Sum Dollar-denominated Alice-coins, provided Alice has issued coins of no denomination.
-47. ■ Issue bond 2.  Alice may issue Sum Dollar-denominated Alice-bonds due Day, provided Alice's date is Today and Day is more than Today.
+47. ■ Issue bond 2.  Alice may issue Sum Dollar-denominated Alice-bonds due Day, provided the current date is Today and Day is more than Today.
 48. ■ Accept.  Alice may accept one more Dollar-denominated Carol-coin in payment, provided Alice holds a Dollar-denominated Carol-coin.
 49. ■ Accept by bond.  Alice may accept one more Dollar-denominated Carol-coin in payment, provided Alice holds a Carol-bond due someone and Carol has issued a Dollar-denominated bond due someone.
 50. ■ Pay 2.  Alice may pay Bob a Carol-coin that Bob accepts as denominated by Dollar, provided Alice knows Bob and Carol has issued coins of the denomination Dollar.

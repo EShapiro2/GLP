@@ -22,9 +22,9 @@ befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
 ;
-sign(Peer)
+sign(Peer, Speech)
 ;
-forward(Peer, Peer, Peer)
+forward(Peer, Peer, Speech)
 .
 
 Proposal ::=
@@ -38,16 +38,16 @@ befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
 ;
-sign(Peer)
+sign(Peer, Speech)
 ;
-forward(Peer, Peer, Peer)
+forward(Peer, Peer, Speech)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "bob", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)])], [2], [], [], [])]), button("Sign", [act(sign, 1, [1], [req(identity, [])], [], [], [], [])]), button("Forward", [act(forward, 2, [1, 2], [req(identity, []), req(item, [at(3)]), req(friend, [at(1)])], [3, 1], [], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "bob", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)])], [2], [], [], [])]), button("Sign", [act(sign, 1, [1], [req(identity, []), forb(item, [at(2)])], [], [field(2, "item", text)], [], [])]), button("Forward", [act(forward, 2, [1, 2], [req(identity, []), req(item, [at(3)]), req(friend, [at(1)])], [3, 1], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -68,7 +68,7 @@ knows(Peer)
 ;
 friend(Peer)
 ;
-item(Peer)
+item(Speech)
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -78,12 +78,12 @@ atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
 .
 atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
 .
-atom_of(g(item, [p(V1)]), shown(item(V1?)))
+atom_of(g(item, [s(V1)]), shown(item(V1?)))
 .
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(sign, [], [rs(guarded, [atom(item, [role(1)])], [], [atom(identity, [])], [])]), schema(forward, [pvar('Carol')], [rs(unguarded, [atom(item, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [pvar('Carol')]), atom(friend, [role(1)])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(sign, [svar('Item')], [rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, [])], [atom(item, [svar('Item')])])]), schema(forward, [svar('Item')], [rs(unguarded, [atom(item, [sgn('Item', 2)])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [svar('Item')]), atom(friend, [role(1)])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -97,9 +97,9 @@ schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)]
 .
 schema_entry(unfriend, schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]))
 .
-schema_entry(sign, schema(sign, [], [rs(guarded, [atom(item, [role(1)])], [], [atom(identity, [])], [])]))
+schema_entry(sign, schema(sign, [svar('Item')], [rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, [])], [atom(item, [svar('Item')])])]))
 .
-schema_entry(forward, schema(forward, [pvar('Carol')], [rs(unguarded, [atom(item, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [pvar('Carol')]), atom(friend, [role(1)])], [])]))
+schema_entry(forward, schema(forward, [svar('Item')], [rs(unguarded, [atom(item, [sgn('Item', 2)])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [svar('Item')]), atom(friend, [role(1)])], [])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -165,9 +165,9 @@ binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(unfriend(V1, V2), unfriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
-binding_of(sign(V1), sign, [b(role(1), p(V1?))])
+binding_of(sign(V1, V2), sign, [b(role(1), p(V1?)), b(svar('Item'), s(V2?))])
 .
-binding_of(forward(V1, V2, V3), forward, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?))])
+binding_of(forward(V1, V2, V3), forward, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V3?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -221,13 +221,15 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 .
-class_of(sign, B, D, sign(V1?))
+class_of(sign, B, D, sign(V1?, V2?))
 :-
 ground(B?)
 ,
 ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar('Item'), B?, D?, V2)
 .
 class_of(forward, B, D, forward(V1?, V2?, V3?))
 :-
@@ -239,7 +241,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_peer(pvar('Carol'), B?, D?, V3)
+val_speech(svar('Item'), B?, D?, V3)
 .
 
 procedure name_class(Proposal?, GAtoms?, Class).
@@ -253,7 +255,7 @@ name_class(befriend(V1, V2), _, befriend(V1?, V2?))
 .
 name_class(unfriend(V1, V2), _, unfriend(V1?, V2?))
 .
-name_class(sign(V1), _, sign(V1?))
+name_class(sign(V1, V2), _, sign(V1?, V2?))
 .
 name_class(forward(V1, V2, V3), _, forward(V1?, V2?, V3?))
 .
@@ -269,7 +271,7 @@ request_name(befriend(V1, V2), pname(befriend(V1?, V2?)))
 .
 request_name(unfriend(V1, V2), pname(unfriend(V1?, V2?)))
 .
-request_name(sign(V1), pname(sign(V1?)))
+request_name(sign(V1, V2), pname(sign(V1?, V2?)))
 .
 request_name(forward(V1, V2, V3), pname(forward(V1?, V2?, V3?)))
 .
@@ -362,7 +364,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("GFP: Grassroots Forwarding with Provenance\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.\n5. ■ Unfriend.  Alice may end her friendship with Bob.\n6. ■ Sign.  Alice may create an item by signing it.\n7. ■ Forward.  Alice may forward an item of Carol to Bob, provided Alice holds an item of Carol and Alice and Bob are friends.", with([schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(sign, ['Alice'], [], [rs(guarded, [atom(item, [role(1)])], [], [atom(identity, [])], [])]), schema(forward, ['Bob', 'Alice'], [pvar('Carol')], [rs(unguarded, [atom(item, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [pvar('Carol')]), atom(friend, [role(1)])], [])])], pragmas([], [act(establish, "Establish", [], none, "", by([1])), act(acquaint, "Acquaint", ["", "bob"], said([[], [person(1), text(" asks for your consent to acquaint.")]]), "", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks for your consent to introduce.")], []]), "", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks for your consent to befriend.")]]), "", by([1])), act(unfriend, "Unfriend", [], none, "", by([1])), act(sign, "Sign", [], none, "", by([1])), act(forward, "Forward", [], none, "", by([2]))], [], nolook, version(1, 1))))
+contract("GFP: Grassroots Forwarding with Provenance\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.\n5. ■ Unfriend.  Alice may end her friendship with Bob.\n6. ■ Sign.  Alice may create Item by signing it.\n7. ■ Forward.  Alice may forward Item to Bob, adding her signature to the signatures Item carries, provided Alice holds the item Item and Alice and Bob are friends.", with([schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(sign, ['Alice'], [svar('Item')], [rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, [])], [atom(item, [svar('Item')])])]), schema(forward, ['Bob', 'Alice'], [svar('Item')], [rs(unguarded, [atom(item, [sgn('Item', 2)])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [svar('Item')]), atom(friend, [role(1)])], [])])], pragmas([], [act(establish, "Establish", [], none, "", by([1])), act(acquaint, "Acquaint", ["", "bob"], said([[], [person(1), text(" asks for your consent to acquaint.")]]), "", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks for your consent to introduce.")], []]), "", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks for your consent to befriend.")]]), "", by([1])), act(unfriend, "Unfriend", [], none, "", by([1])), act(sign, "Sign", ["", "item"], none, "", by([1])), act(forward, "Forward", [], none, "", by([2]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).

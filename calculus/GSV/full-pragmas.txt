@@ -1,5 +1,5 @@
 GSV: Grassroots Services
-Of GKK: An *identity* is a unique key pair, chosen by the person who has it. Alice, Bob and Carol are persons. A party to a contract must have an identity.
+Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity.
 Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
 Of GnW: Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
 Of GSV: A *service* is a ward operated by a machine at an address every person can reach. Alice is a person, Dave a service.

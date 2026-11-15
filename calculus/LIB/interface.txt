@@ -3,7 +3,7 @@ LIB: Grassroots Library
 2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
 3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 4. ◆ Shelve.  Alice may put Tome on her shelf under a new name of hers.
-5. ■ Lend.  Alice may lend Bob Tome from her shelf until Day, with the consent of Bob, provided Alice and Bob know each other, Alice's date is Today and Day is more than Today.
+5. ■ Lend.  Alice may lend Bob Tome from her shelf until Day, with the consent of Bob, provided Alice and Bob know each other, the current date is Today and Day is more than Today.
 6. ■ Return.  Bob may return Tome borrowed from Alice until Day.
 Pragmas
 Establish: Alice [Establish]

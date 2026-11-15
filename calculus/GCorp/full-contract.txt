@@ -1,11 +1,11 @@
 % Written by tools/expand.py from rev/; do not edit.
 GCorp: Grassroots Corporation
-An *identity* is a unique key pair, chosen by the person who has it.
+An *identity* is a unique key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an organisation and how. Here: bylaws.
 An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of GO, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
 A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice.
-A *bond* is a unit of debt, due at its maturity date, that includes its issuer's public key and its maturity date and is signed by their private key. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most its holder's date.
+A *bond* is a unit of debt, due at its maturity date, that includes its issuer's public key and its maturity date and is signed by their private key. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
 *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
 A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
 A *corporation* is an organisation that holds, pays and issues Dollar-denominated coins and bonds.
@@ -31,11 +31,10 @@ GC:2, DGC:2. ■ Swap: Alice and Bob, who know each other, may jointly swap coin
 GC:3. ■ Pay: Alice may pay Bob-coins she holds to Bob, whom she knows.
 GC:4, DGC:2. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows, only if the coins and bonds are of one denomination.
 GC:5. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
-GB:1. ■ Issue bond: Alice may issue Alice-bonds of a maturity later than her own date.
+GB:1. ■ Issue bond: Alice may issue Alice-bonds of a maturity later than the current date.
 GB:2, DGC:2. ■ Swap: Alice and Bob, who know each other, may jointly swap coins and bonds they hold, only if the coins and bonds are of one denomination.
 GB:3, DGC:2. ■ Redeem: Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows, only if the coins and bonds are of one denomination.
 GB:4, DGC:2. ■ Escrow. Deposit: Alice may deposit coins and bonds with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination. Release: Carol and Bob may jointly release them to Bob if the condition is met, only if the coins and bonds are of one denomination. Return: Carol and Alice may jointly return them to Alice if it fails, only if the coins and bonds are of one denomination. Each act is between two parties who know each other.
-GB:5. ○ Date. Alice keeps her date at the current date.
 GDC:1. ■ Issue: Alice may issue Alice-coins denominated by a fiat currency.
 GDC:2. ○ Denomination. A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
 GDC:3. ○ Pricing. Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.

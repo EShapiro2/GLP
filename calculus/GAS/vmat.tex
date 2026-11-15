@@ -446,7 +446,7 @@ c_
 item
 }
 (
-\Alice
+Item
 )
 \}
 ,\\
@@ -456,6 +456,19 @@ item
 identity
 }
  \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+item
+}
+(
+Item
+)
+ \notin c_
 {
 \Alice
 }
@@ -518,7 +531,11 @@ c_
 item
 }
 (
-Carol
+\mathrm{sgn}(
+Item
+,
+\Bob
+)
 )
 \}
 ,\\
@@ -558,7 +575,7 @@ identity
 item
 }
 (
-Carol
+Item
 )
 ,
 \mathit{
@@ -630,6 +647,8 @@ c_
 program
 }
 (
+Prog
+,
 \Alice
 )
 \}
@@ -640,6 +659,21 @@ program
 identity
 }
  \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+program
+}
+(
+Prog
+,
+\Alice
+)
+ \notin c_
 {
 \Alice
 }
@@ -873,6 +907,8 @@ c_
 program
 }
 (
+Prog
+,
 Dave
 )
 \}
@@ -913,6 +949,8 @@ identity
 program
 }
 (
+Prog
+,
 Dave
 )
 ,
@@ -985,6 +1023,8 @@ c_
 installed
 }
 (
+Prog
+,
 \Alice
 )
 \}
@@ -999,6 +1039,8 @@ identity
 program
 }
 (
+Prog
+,
 \Alice
 )
  \in c_
@@ -1012,6 +1054,8 @@ program
 installed
 }
 (
+Prog
+,
 \Alice
 )
  \notin c_
@@ -1077,6 +1121,8 @@ c_
 installed
 }
 (
+Prog
+,
 Carol
 )
 \}
@@ -1091,6 +1137,8 @@ identity
 program
 }
 (
+Prog
+,
 Carol
 )
 ,
@@ -1111,6 +1159,8 @@ Carol
 installed
 }
 (
+Prog
+,
 Carol
 )
  \notin c_
@@ -1176,6 +1226,8 @@ c_
 program
 }
 (
+Prog
+,
 Carol
 )
 ,
@@ -1183,6 +1235,8 @@ Carol
 installed
 }
 (
+Prog
+,
 Carol
 )
 ,
@@ -1190,6 +1244,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \Bob
@@ -1212,6 +1268,8 @@ c_
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \Alice
@@ -1257,6 +1315,8 @@ friend
 installed
 }
 (
+Prog
+,
 Carol
 )
  \in c_
@@ -1357,6 +1417,8 @@ c'_
 installed
 }
 (
+Prog
+,
 Carol
 )
 \}
@@ -1374,6 +1436,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1396,6 +1460,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1410,6 +1476,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1434,6 +1502,8 @@ c'_
 installed
 }
 (
+Prog
+,
 Carol
 )
 ,
@@ -1441,6 +1511,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \Alice
@@ -1460,6 +1532,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1482,6 +1556,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1496,6 +1572,8 @@ Carol
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1516,6 +1594,8 @@ q
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \Alice
@@ -1531,6 +1611,8 @@ q
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1552,6 +1634,8 @@ identity
 installed
 }
 (
+Prog
+,
 Carol
 )
  \in c_
@@ -1567,6 +1651,8 @@ identity
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \Alice
@@ -1582,6 +1668,8 @@ q \in
 participant
 }
 (
+Prog
+,
 Carol
 ,
 \ast
@@ -1601,6 +1689,8 @@ participant
 (
 \Alice
 ,
+Prog
+,
 Carol
 ,
 \Bob
@@ -1618,6 +1708,8 @@ participant
 }
 (
 \Bob
+,
+Prog
 ,
 Carol
 ,
@@ -1669,6 +1761,8 @@ participant
 (
 \Alice
 ,
+Prog
+,
 Carol
 ,
 \Bob
@@ -1680,6 +1774,8 @@ participant
 }
 (
 \Bob
+,
+Prog
 ,
 Carol
 ,
@@ -5775,6 +5871,8 @@ c_
 lists_program
 }
 (
+Prog
+,
 Bob
 )
 \}
@@ -5832,6 +5930,8 @@ Bob
 lists_program
 }
 (
+Prog
+,
 Bob
 )
  \notin c_
@@ -5897,6 +5997,8 @@ c_
 lists_program
 }
 (
+Prog
+,
 Bob
 )
 \}
@@ -5922,6 +6024,8 @@ identity
 lists_program
 }
 (
+Prog
+,
 Bob
 )
  \in c_
@@ -6002,7 +6106,7 @@ c_
 trusts_store
 }
 (
-Dave
+\Bob
 )
 \}
 ,\\
@@ -6018,10 +6122,28 @@ c_
 }
 ,\\
 &
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
 \text{provided } 
 \mathit{
 identity
 }
+,
+\mathit{
+knows
+}
+(
+\mathit{Carol}
+)
 ,
 \mathit{
 knows
@@ -6039,14 +6161,26 @@ identity
 }
 ,
 \mathit{
-guardian
+store
 }
-(
-Dave
-)
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+guardian
+}
+(
+\Bob
+)
+ \in c_
+{
+\mathit{Carol}
 }
 ,\\
 &
@@ -6055,7 +6189,7 @@ Dave
 trusts_store
 }
 (
-Dave
+\Bob
 )
  \notin c_
 {
@@ -6199,6 +6333,8 @@ c_
 program
 }
 (
+Prog
+,
 Bob
 )
 ,
@@ -6206,6 +6342,8 @@ Bob
 installed
 }
 (
+Prog
+,
 Bob
 )
 \}
@@ -6246,6 +6384,8 @@ identity
 lists_program
 }
 (
+Prog
+,
 Bob
 )
  \in c_
@@ -6259,6 +6399,8 @@ Bob
 installed
 }
 (
+Prog
+,
 Bob
 )
  \notin c_

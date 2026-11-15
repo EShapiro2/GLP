@@ -22,25 +22,25 @@ befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
 ;
-sign(Peer)
+sign(Peer, Speech)
 ;
-forward(Peer, Peer, Peer)
+forward(Peer, Peer, Speech)
 ;
-publish(Peer)
+publish(Peer, Speech)
 ;
 trust(Peer, Peer)
 ;
 untrust(Peer)
 ;
-offer(Peer, Peer, Peer)
+offer(Peer, Peer, Speech, Peer)
 ;
-install_own(Peer)
+install_own(Peer, Speech)
 ;
-install(Peer, Peer)
+install(Peer, Speech, Peer)
 ;
-invite(Peer, Peer, Peer)
+invite(Peer, Peer, Speech, Peer)
 ;
-leave(Peer, List(Peer), Peer)
+leave(Peer, List(Peer), Speech, Peer)
 .
 
 Proposal ::=
@@ -54,32 +54,32 @@ befriend(Peer, Peer)
 ;
 unfriend(Peer, Peer)
 ;
-sign(Peer)
+sign(Peer, Speech)
 ;
-forward(Peer, Peer, Peer)
+forward(Peer, Peer, Speech)
 ;
-publish(Peer)
+publish(Peer, Speech)
 ;
 trust(Peer, Peer)
 ;
 untrust(Peer)
 ;
-offer(Peer, Peer, Peer)
+offer(Peer, Peer, Speech, Peer)
 ;
-install_own(Peer)
+install_own(Peer, Speech)
 ;
-install(Peer, Peer)
+install(Peer, Speech, Peer)
 ;
-invite(Peer, Peer, Peer)
+invite(Peer, Peer, Speech, Peer)
 ;
-leave(Peer, Peer)
+leave(Peer, Speech, Peer)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "bob", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)])], [2], [], [], [])]), button("Sign", [act(sign, 1, [1], [req(identity, [])], [], [], [], [])]), button("Forward", [act(forward, 2, [1, 2], [req(identity, []), req(item, [at(3)]), req(friend, [at(1)])], [3, 1], [], [], [])]), button("Publish", [act(publish, 1, [1], [req(identity, [])], [], [], [], [])]), button("Trust", [act(trust, 1, [1], [req(identity, []), req(knows, [at(2)]), forb(trusts_developer, [at(2)])], [2], [], [], [])]), button("Untrust", [act(untrust, 1, [1], [req(identity, []), req(trusts_developer, [any])], [], [], [], [])]), button("Offer", [act(offer, 2, [1, 2], [req(identity, []), req(program, [at(3)]), req(friend, [at(1)])], [3, 1], [], [], [])]), button("Install own", [act(install_own, 1, [1], [req(identity, []), req(program, [at(1)]), forb(installed, [at(1)])], [], [], [], [])]), button("Install", [act(install, 1, [1], [req(identity, []), req(program, [at(2)]), req(trusts_developer, [at(2)]), forb(installed, [at(2)])], [2], [], [], [])]), button("Invite", [act(invite, 2, [1, 2], [req(identity, []), req(friend, [at(1)]), req(installed, [at(3)])], [1, 3], [], [], [])]), button("Leave", [act(leave, 1, [1], [req(identity, []), req(installed, [at(2)])], [2], [], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "bob", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)])], [2], [], [], [])]), button("Sign", [act(sign, 1, [1], [req(identity, []), forb(item, [at(2)])], [], [field(2, "item", text)], [], [])]), button("Forward", [act(forward, 2, [1, 2], [req(identity, []), req(item, [at(3)]), req(friend, [at(1)])], [3, 1], [], [], [])]), button("Publish", [act(publish, 1, [1], [req(identity, []), forb(program, [at(2), at(1)])], [], [field(2, "prog", text)], [], [])]), button("Trust", [act(trust, 1, [1], [req(identity, []), req(knows, [at(2)]), forb(trusts_developer, [at(2)])], [2], [], [], [])]), button("Untrust", [act(untrust, 1, [1], [req(identity, []), req(trusts_developer, [any])], [], [], [], [])]), button("Offer", [act(offer, 2, [1, 2], [req(identity, []), req(program, [at(3), at(4)]), req(friend, [at(1)])], [3, 4, 1], [], [], [])]), button("Install own", [act(install_own, 1, [1], [req(identity, []), req(program, [at(2), at(1)]), forb(installed, [at(2), at(1)])], [2], [], [], [])]), button("Install", [act(install, 1, [1], [req(identity, []), req(program, [at(2), at(3)]), req(trusts_developer, [at(3)]), forb(installed, [at(2), at(3)])], [2, 3], [], [], [])]), button("Invite", [act(invite, 2, [1, 2], [req(identity, []), req(friend, [at(1)]), req(installed, [at(3), at(4)])], [1, 3, 4], [], [], [])]), button("Leave", [act(leave, 1, [1], [req(identity, []), req(installed, [at(2), at(3)])], [2, 3], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -100,15 +100,15 @@ knows(Peer)
 ;
 friend(Peer)
 ;
-item(Peer)
+item(Speech)
 ;
-program(Peer)
+program(Speech, Peer)
 ;
 trusts_developer(Peer)
 ;
-installed(Peer)
+installed(Speech, Peer)
 ;
-participant(Peer, Peer)
+participant(Speech, Peer, Peer)
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -118,20 +118,20 @@ atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
 .
 atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
 .
-atom_of(g(item, [p(V1)]), shown(item(V1?)))
+atom_of(g(item, [s(V1)]), shown(item(V1?)))
 .
-atom_of(g(program, [p(V1)]), shown(program(V1?)))
+atom_of(g(program, [s(V1), p(V2)]), shown(program(V1?, V2?)))
 .
 atom_of(g(trusts_developer, [p(V1)]), shown(trusts_developer(V1?)))
 .
-atom_of(g(installed, [p(V1)]), shown(installed(V1?)))
+atom_of(g(installed, [s(V1), p(V2)]), shown(installed(V1?, V2?)))
 .
-atom_of(g(participant, [p(V1), p(V2)]), shown(participant(V1?, V2?)))
+atom_of(g(participant, [s(V1), p(V2), p(V3)]), shown(participant(V1?, V2?, V3?)))
 .
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(sign, [], [rs(guarded, [atom(item, [role(1)])], [], [atom(identity, [])], [])]), schema(forward, [pvar('Carol')], [rs(unguarded, [atom(item, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [pvar('Carol')]), atom(friend, [role(1)])], [])]), schema(publish, [], [rs(guarded, [atom(program, [role(1)])], [], [atom(identity, [])], [])]), schema(trust, [pvar('Carol')], [rs(guarded, [atom(trusts_developer, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')])], [atom(trusts_developer, [pvar('Carol')])])]), schema(untrust, [], [rs(guarded, [], [atom(trusts_developer, [pvar('Carol')])], [atom(identity, [])], [])]), schema(offer, [pvar('Dave')], [rs(unguarded, [atom(program, [pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(program, [pvar('Dave')]), atom(friend, [role(1)])], [])]), schema(install_own, [], [rs(guarded, [atom(installed, [role(1)])], [], [atom(identity, []), atom(program, [role(1)])], [atom(installed, [role(1)])])]), schema(install, [pvar('Carol')], [rs(guarded, [atom(installed, [pvar('Carol')])], [], [atom(identity, []), atom(program, [pvar('Carol')]), atom(trusts_developer, [pvar('Carol')])], [atom(installed, [pvar('Carol')])])]), schema(invite, [pvar('Carol')], [rs(guarded, [atom(program, [pvar('Carol')]), atom(installed, [pvar('Carol')]), atom(participant, [pvar('Carol'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(trusts_developer, [pvar('Carol')])], []), rs(guarded, [atom(participant, [pvar('Carol'), role(1)])], [], [atom(identity, []), atom(friend, [role(1)]), atom(installed, [pvar('Carol')])], [])]), lschema(leave, [pvar('Carol')], [rs(guarded, [], [atom(installed, [pvar('Carol')]), atom(participant, [pvar('Carol'), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(participant, [pvar('Carol'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, participant, [pvar('Carol'), role(2)], fcons(true), [], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(sign, [svar('Item')], [rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, [])], [atom(item, [svar('Item')])])]), schema(forward, [svar('Item')], [rs(unguarded, [atom(item, [sgn('Item', 2)])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [svar('Item')]), atom(friend, [role(1)])], [])]), schema(publish, [svar('Prog')], [rs(guarded, [atom(program, [svar('Prog'), role(1)])], [], [atom(identity, [])], [atom(program, [svar('Prog'), role(1)])])]), schema(trust, [pvar('Carol')], [rs(guarded, [atom(trusts_developer, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')])], [atom(trusts_developer, [pvar('Carol')])])]), schema(untrust, [], [rs(guarded, [], [atom(trusts_developer, [pvar('Carol')])], [atom(identity, [])], [])]), schema(offer, [svar('Prog'), pvar('Dave')], [rs(unguarded, [atom(program, [svar('Prog'), pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(program, [svar('Prog'), pvar('Dave')]), atom(friend, [role(1)])], [])]), schema(install_own, [svar('Prog')], [rs(guarded, [atom(installed, [svar('Prog'), role(1)])], [], [atom(identity, []), atom(program, [svar('Prog'), role(1)])], [atom(installed, [svar('Prog'), role(1)])])]), schema(install, [svar('Prog'), pvar('Carol')], [rs(guarded, [atom(installed, [svar('Prog'), pvar('Carol')])], [], [atom(identity, []), atom(program, [svar('Prog'), pvar('Carol')]), atom(trusts_developer, [pvar('Carol')])], [atom(installed, [svar('Prog'), pvar('Carol')])])]), schema(invite, [svar('Prog'), pvar('Carol')], [rs(guarded, [atom(program, [svar('Prog'), pvar('Carol')]), atom(installed, [svar('Prog'), pvar('Carol')]), atom(participant, [svar('Prog'), pvar('Carol'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(trusts_developer, [pvar('Carol')])], []), rs(guarded, [atom(participant, [svar('Prog'), pvar('Carol'), role(1)])], [], [atom(identity, []), atom(friend, [role(1)]), atom(installed, [svar('Prog'), pvar('Carol')])], [])]), lschema(leave, [svar('Prog'), pvar('Carol')], [rs(guarded, [], [atom(installed, [svar('Prog'), pvar('Carol')]), atom(participant, [svar('Prog'), pvar('Carol'), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(participant, [svar('Prog'), pvar('Carol'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, participant, [svar('Prog'), pvar('Carol'), role(2)], fcons(true), [], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -145,25 +145,25 @@ schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)]
 .
 schema_entry(unfriend, schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]))
 .
-schema_entry(sign, schema(sign, [], [rs(guarded, [atom(item, [role(1)])], [], [atom(identity, [])], [])]))
+schema_entry(sign, schema(sign, [svar('Item')], [rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, [])], [atom(item, [svar('Item')])])]))
 .
-schema_entry(forward, schema(forward, [pvar('Carol')], [rs(unguarded, [atom(item, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [pvar('Carol')]), atom(friend, [role(1)])], [])]))
+schema_entry(forward, schema(forward, [svar('Item')], [rs(unguarded, [atom(item, [sgn('Item', 2)])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [svar('Item')]), atom(friend, [role(1)])], [])]))
 .
-schema_entry(publish, schema(publish, [], [rs(guarded, [atom(program, [role(1)])], [], [atom(identity, [])], [])]))
+schema_entry(publish, schema(publish, [svar('Prog')], [rs(guarded, [atom(program, [svar('Prog'), role(1)])], [], [atom(identity, [])], [atom(program, [svar('Prog'), role(1)])])]))
 .
 schema_entry(trust, schema(trust, [pvar('Carol')], [rs(guarded, [atom(trusts_developer, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')])], [atom(trusts_developer, [pvar('Carol')])])]))
 .
 schema_entry(untrust, schema(untrust, [], [rs(guarded, [], [atom(trusts_developer, [pvar('Carol')])], [atom(identity, [])], [])]))
 .
-schema_entry(offer, schema(offer, [pvar('Dave')], [rs(unguarded, [atom(program, [pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(program, [pvar('Dave')]), atom(friend, [role(1)])], [])]))
+schema_entry(offer, schema(offer, [svar('Prog'), pvar('Dave')], [rs(unguarded, [atom(program, [svar('Prog'), pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(program, [svar('Prog'), pvar('Dave')]), atom(friend, [role(1)])], [])]))
 .
-schema_entry(install_own, schema(install_own, [], [rs(guarded, [atom(installed, [role(1)])], [], [atom(identity, []), atom(program, [role(1)])], [atom(installed, [role(1)])])]))
+schema_entry(install_own, schema(install_own, [svar('Prog')], [rs(guarded, [atom(installed, [svar('Prog'), role(1)])], [], [atom(identity, []), atom(program, [svar('Prog'), role(1)])], [atom(installed, [svar('Prog'), role(1)])])]))
 .
-schema_entry(install, schema(install, [pvar('Carol')], [rs(guarded, [atom(installed, [pvar('Carol')])], [], [atom(identity, []), atom(program, [pvar('Carol')]), atom(trusts_developer, [pvar('Carol')])], [atom(installed, [pvar('Carol')])])]))
+schema_entry(install, schema(install, [svar('Prog'), pvar('Carol')], [rs(guarded, [atom(installed, [svar('Prog'), pvar('Carol')])], [], [atom(identity, []), atom(program, [svar('Prog'), pvar('Carol')]), atom(trusts_developer, [pvar('Carol')])], [atom(installed, [svar('Prog'), pvar('Carol')])])]))
 .
-schema_entry(invite, schema(invite, [pvar('Carol')], [rs(guarded, [atom(program, [pvar('Carol')]), atom(installed, [pvar('Carol')]), atom(participant, [pvar('Carol'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(trusts_developer, [pvar('Carol')])], []), rs(guarded, [atom(participant, [pvar('Carol'), role(1)])], [], [atom(identity, []), atom(friend, [role(1)]), atom(installed, [pvar('Carol')])], [])]))
+schema_entry(invite, schema(invite, [svar('Prog'), pvar('Carol')], [rs(guarded, [atom(program, [svar('Prog'), pvar('Carol')]), atom(installed, [svar('Prog'), pvar('Carol')]), atom(participant, [svar('Prog'), pvar('Carol'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(trusts_developer, [pvar('Carol')])], []), rs(guarded, [atom(participant, [svar('Prog'), pvar('Carol'), role(1)])], [], [atom(identity, []), atom(friend, [role(1)]), atom(installed, [svar('Prog'), pvar('Carol')])], [])]))
 .
-schema_entry(leave, lschema(leave, [pvar('Carol')], [rs(guarded, [], [atom(installed, [pvar('Carol')]), atom(participant, [pvar('Carol'), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(participant, [pvar('Carol'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, participant, [pvar('Carol'), role(2)], fcons(true), [], [])]))
+schema_entry(leave, lschema(leave, [svar('Prog'), pvar('Carol')], [rs(guarded, [], [atom(installed, [svar('Prog'), pvar('Carol')]), atom(participant, [svar('Prog'), pvar('Carol'), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(participant, [svar('Prog'), pvar('Carol'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, participant, [svar('Prog'), pvar('Carol'), role(2)], fcons(true), [], [])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -201,12 +201,12 @@ schema_numeric(leave, numeric([cj(every, true)], [], []))
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
 procedure schema_forms(Constant?, SForms).
-schema_forms(leave, [sform(cond, fforall([role(2)], role(1), atom(participant, [role(1), pvar('Carol'), role(2)]), fcons(true), [fa(role(2), atom(identity, [role(2)])), fa(role(2), atom(participant, [role(2), pvar('Carol'), role(1)]))]))])
+schema_forms(leave, [sform(cond, fforall([role(2)], role(1), atom(participant, [role(1), svar('Prog'), pvar('Carol'), role(2)]), fcons(true), [fa(role(2), atom(identity, [role(2)])), fa(role(2), atom(participant, [role(2), svar('Prog'), pvar('Carol'), role(1)]))]))])
 .
 schema_forms(_, []) :- otherwise | true.
 
 procedure schema_held(Constant?, HPats).
-schema_held(leave, [hp(1, [atom(participant, [pvar('Carol'), pvar('~2')])]), hp(2, [atom(identity, []), atom(participant, [pvar('Carol'), role(1)])])])
+schema_held(leave, [hp(1, [atom(participant, [svar('Prog'), pvar('Carol'), pvar('~3')])]), hp(2, [atom(identity, []), atom(participant, [svar('Prog'), pvar('Carol'), role(1)])])])
 .
 schema_held(_, []) :- otherwise | true.
 
@@ -265,27 +265,27 @@ binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(unfriend(V1, V2), unfriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
-binding_of(sign(V1), sign, [b(role(1), p(V1?))])
+binding_of(sign(V1, V2), sign, [b(role(1), p(V1?)), b(svar('Item'), s(V2?))])
 .
-binding_of(forward(V1, V2, V3), forward, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?))])
+binding_of(forward(V1, V2, V3), forward, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V3?))])
 .
-binding_of(publish(V1), publish, [b(role(1), p(V1?))])
+binding_of(publish(V1, V2), publish, [b(role(1), p(V1?)), b(svar('Prog'), s(V2?))])
 .
 binding_of(trust(V1, V2), trust, [b(role(1), p(V1?)), b(pvar('Carol'), p(V2?))])
 .
 binding_of(untrust(V1), untrust, [b(role(1), p(V1?)), b(pvar('Carol'), lv(untrust, 'Carol'))])
 .
-binding_of(offer(V1, V2, V3), offer, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?))])
+binding_of(offer(V1, V2, V3, V4), offer, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prog'), s(V3?)), b(pvar('Dave'), p(V4?))])
 .
-binding_of(install_own(V1), install_own, [b(role(1), p(V1?))])
+binding_of(install_own(V1, V2), install_own, [b(role(1), p(V1?)), b(svar('Prog'), s(V2?))])
 .
-binding_of(install(V1, V2), install, [b(role(1), p(V1?)), b(pvar('Carol'), p(V2?))])
+binding_of(install(V1, V2, V3), install, [b(role(1), p(V1?)), b(svar('Prog'), s(V2?)), b(pvar('Carol'), p(V3?))])
 .
-binding_of(invite(V1, V2, V3), invite, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?))])
+binding_of(invite(V1, V2, V3, V4), invite, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prog'), s(V3?)), b(pvar('Carol'), p(V4?))])
 .
-binding_of(leave(V1, V2, V3), leave, B?)
+binding_of(leave(V1, V2, V3, V4), leave, B?)
 :-
-listed_binding(leave, [b(role(1), p(V1?)), b(pvar('Carol'), p(V3?))], [ppl(V2?)], B)
+listed_binding(leave, [b(role(1), p(V1?)), b(svar('Prog'), s(V3?)), b(pvar('Carol'), p(V4?))], [ppl(V2?)], B)
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -339,13 +339,15 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 .
-class_of(sign, B, D, sign(V1?))
+class_of(sign, B, D, sign(V1?, V2?))
 :-
 ground(B?)
 ,
 ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar('Item'), B?, D?, V2)
 .
 class_of(forward, B, D, forward(V1?, V2?, V3?))
 :-
@@ -357,15 +359,17 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_peer(pvar('Carol'), B?, D?, V3)
+val_speech(svar('Item'), B?, D?, V3)
 .
-class_of(publish, B, D, publish(V1?))
+class_of(publish, B, D, publish(V1?, V2?))
 :-
 ground(B?)
 ,
 ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar('Prog'), B?, D?, V2)
 .
 class_of(trust, B, D, trust(V1?, V2?))
 :-
@@ -385,7 +389,7 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 .
-class_of(offer, B, D, offer(V1?, V2?, V3?))
+class_of(offer, B, D, offer(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
 ,
@@ -395,27 +399,11 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_peer(pvar('Dave'), B?, D?, V3)
-.
-class_of(install_own, B, D, install_own(V1?))
-:-
-ground(B?)
+val_speech(svar('Prog'), B?, D?, V3)
 ,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
+val_peer(pvar('Dave'), B?, D?, V4)
 .
-class_of(install, B, D, install(V1?, V2?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-,
-val_peer(pvar('Carol'), B?, D?, V2)
-.
-class_of(invite, B, D, invite(V1?, V2?, V3?))
+class_of(install_own, B, D, install_own(V1?, V2?))
 :-
 ground(B?)
 ,
@@ -423,11 +411,35 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 ,
-val_peer(role(2), B?, D?, V2)
+val_speech(svar('Prog'), B?, D?, V2)
+.
+class_of(install, B, D, install(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar('Prog'), B?, D?, V2)
 ,
 val_peer(pvar('Carol'), B?, D?, V3)
 .
-class_of(leave, B, D, leave(V1?, V2?, V3?))
+class_of(invite, B, D, invite(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_speech(svar('Prog'), B?, D?, V3)
+,
+val_peer(pvar('Carol'), B?, D?, V4)
+.
+class_of(leave, B, D, leave(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
 ,
@@ -437,7 +449,9 @@ val_peer(role(1), B?, D?, V1)
 ,
 copies_of(B?, 2, V2)
 ,
-val_peer(pvar('Carol'), B?, D?, V3)
+val_speech(svar('Prog'), B?, D?, V3)
+,
+val_peer(pvar('Carol'), B?, D?, V4)
 .
 
 procedure name_class(Proposal?, GAtoms?, Class).
@@ -451,27 +465,27 @@ name_class(befriend(V1, V2), _, befriend(V1?, V2?))
 .
 name_class(unfriend(V1, V2), _, unfriend(V1?, V2?))
 .
-name_class(sign(V1), _, sign(V1?))
+name_class(sign(V1, V2), _, sign(V1?, V2?))
 .
 name_class(forward(V1, V2, V3), _, forward(V1?, V2?, V3?))
 .
-name_class(publish(V1), _, publish(V1?))
+name_class(publish(V1, V2), _, publish(V1?, V2?))
 .
 name_class(trust(V1, V2), _, trust(V1?, V2?))
 .
 name_class(untrust(V1), _, untrust(V1?))
 .
-name_class(offer(V1, V2, V3), _, offer(V1?, V2?, V3?))
+name_class(offer(V1, V2, V3, V4), _, offer(V1?, V2?, V3?, V4?))
 .
-name_class(install_own(V1), _, install_own(V1?))
+name_class(install_own(V1, V2), _, install_own(V1?, V2?))
 .
-name_class(install(V1, V2), _, install(V1?, V2?))
+name_class(install(V1, V2, V3), _, install(V1?, V2?, V3?))
 .
-name_class(invite(V1, V2, V3), _, invite(V1?, V2?, V3?))
+name_class(invite(V1, V2, V3, V4), _, invite(V1?, V2?, V3?, V4?))
 .
-name_class(leave(V1, V3), St, C?)
+name_class(leave(V1, V3, V4), St, C?)
 :-
-listed_class(leave, [b(role(1), p(V1?)), b(pvar('Carol'), p(V3?))], St?, C)
+listed_class(leave, [b(role(1), p(V1?)), b(svar('Prog'), s(V3?)), b(pvar('Carol'), p(V4?))], St?, C)
 .
 
 procedure request_name(Class?, PName).
@@ -485,25 +499,25 @@ request_name(befriend(V1, V2), pname(befriend(V1?, V2?)))
 .
 request_name(unfriend(V1, V2), pname(unfriend(V1?, V2?)))
 .
-request_name(sign(V1), pname(sign(V1?)))
+request_name(sign(V1, V2), pname(sign(V1?, V2?)))
 .
 request_name(forward(V1, V2, V3), pname(forward(V1?, V2?, V3?)))
 .
-request_name(publish(V1), pname(publish(V1?)))
+request_name(publish(V1, V2), pname(publish(V1?, V2?)))
 .
 request_name(trust(V1, V2), pname(trust(V1?, V2?)))
 .
 request_name(untrust(V1), pname(untrust(V1?)))
 .
-request_name(offer(V1, V2, V3), pname(offer(V1?, V2?, V3?)))
+request_name(offer(V1, V2, V3, V4), pname(offer(V1?, V2?, V3?, V4?)))
 .
-request_name(install_own(V1), pname(install_own(V1?)))
+request_name(install_own(V1, V2), pname(install_own(V1?, V2?)))
 .
-request_name(install(V1, V2), pname(install(V1?, V2?)))
+request_name(install(V1, V2, V3), pname(install(V1?, V2?, V3?)))
 .
-request_name(invite(V1, V2, V3), pname(invite(V1?, V2?, V3?)))
+request_name(invite(V1, V2, V3, V4), pname(invite(V1?, V2?, V3?, V4?)))
 .
-request_name(leave(V1, _, V3), pname(leave(V1?, V3?)))
+request_name(leave(V1, _, V3, V4), pname(leave(V1?, V3?, V4?)))
 .
 request_name(_, nopname) :- otherwise | true.
 
@@ -544,7 +558,7 @@ ground(Me?)
 |
 ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to befriend.")])], Me?, Ws)
 .
-sentence_of(invite(V1, V2, _), Me, Ws?)
+sentence_of(invite(V1, V2, _, _), Me, Ws?)
 :-
 ground(V1?)
 ,
@@ -604,7 +618,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("GPD: Grassroots Programs Dissemination\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.\n5. ■ Unfriend.  Alice may end her friendship with Bob.\n6. ■ Sign.  Alice may create an item by signing it.\n7. ■ Forward.  Alice may forward an item of Carol to Bob, provided Alice holds an item of Carol and Alice and Bob are friends.\n8. ◆ Publish.  Carol may publish a program by signing it.\n9. ■ Trust.  Alice may declare trust in Carol as a developer, provided Alice knows Carol.\n10. ■ Untrust.  Alice may withdraw her declaration of trust in Carol as a developer.\n11. ■ Offer.  Carol may offer a program of Dave to Alice, provided Carol holds a program of Dave and Carol and Alice are friends.\n12. ■ Install own.  Alice may install her own program, provided Alice holds a program of Alice.\n13. ■ Install.  Alice may install a program of Carol, provided Alice holds a program of Carol and Alice trusts Carol as a developer.\n14. ■ Invite.  Alice may invite Bob to join in a program of Carol, with the consent of Bob, provided Alice and Bob are friends, Alice has a program of Carol installed and Bob trusts Carol as a developer.\n15. ■ Leave.  Alice may leave a program of Carol.", with([schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(sign, ['Alice'], [], [rs(guarded, [atom(item, [role(1)])], [], [atom(identity, [])], [])]), schema(forward, ['Bob', 'Alice'], [pvar('Carol')], [rs(unguarded, [atom(item, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [pvar('Carol')]), atom(friend, [role(1)])], [])]), schema(publish, ['Carol'], [], [rs(guarded, [atom(program, [role(1)])], [], [atom(identity, [])], [])]), schema(trust, ['Alice'], [pvar('Carol')], [rs(guarded, [atom(trusts_developer, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')])], [atom(trusts_developer, [pvar('Carol')])])]), schema(untrust, ['Alice'], [pvar('Carol')], [rs(guarded, [], [atom(trusts_developer, [pvar('Carol')])], [atom(identity, [])], [])]), schema(offer, ['Alice', 'Carol'], [pvar('Dave')], [rs(unguarded, [atom(program, [pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(program, [pvar('Dave')]), atom(friend, [role(1)])], [])]), schema(install_own, ['Alice'], [], [rs(guarded, [atom(installed, [role(1)])], [], [atom(identity, []), atom(program, [role(1)])], [atom(installed, [role(1)])])]), schema(install, ['Alice'], [pvar('Carol')], [rs(guarded, [atom(installed, [pvar('Carol')])], [], [atom(identity, []), atom(program, [pvar('Carol')]), atom(trusts_developer, [pvar('Carol')])], [atom(installed, [pvar('Carol')])])]), schema(invite, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(program, [pvar('Carol')]), atom(installed, [pvar('Carol')]), atom(participant, [pvar('Carol'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(trusts_developer, [pvar('Carol')])], []), rs(guarded, [atom(participant, [pvar('Carol'), role(1)])], [], [atom(identity, []), atom(friend, [role(1)]), atom(installed, [pvar('Carol')])], [])]), qschema(leave, ['Alice', 'E1'], [pvar('Carol')], [pvar('E1'), svar('E1'), num('E1'), pvar('E1'), svar('E1'), num('E1')], true, [rs(guarded, [], [atom(installed, [pvar('Carol')]), atom(participant, [pvar('Carol'), any])], [atom(identity, [])], []), crs(qlisted(1, participant, [pvar('Carol'), role(2)], [role(2)]), unguarded, [], [atom(participant, [pvar('Carol'), role(1)])], [atom(identity, [])], [])], [conjunct([role(2)], 1, atom(participant, [pvar('Carol'), role(2)]), fcons(true), [], [], [fnot(fa(role(2), atom(participant, [pvar('Carol'), role(1)])))])], [fforall([role(2)], role(1), atom(participant, [pvar('Carol'), role(2)]), fcons(true), [fa(role(2), atom(identity, [])), fa(role(2), atom(participant, [pvar('Carol'), role(1)]))])])], pragmas([], [act(establish, "Establish", [], none, "", by([1])), act(acquaint, "Acquaint", ["", "bob"], said([[], [person(1), text(" asks for your consent to acquaint.")]]), "", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks for your consent to introduce.")], []]), "", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks for your consent to befriend.")]]), "", by([1])), act(unfriend, "Unfriend", [], none, "", by([1])), act(sign, "Sign", [], none, "", by([1])), act(forward, "Forward", [], none, "", by([2])), act(publish, "Publish", [], none, "", by([1])), act(trust, "Trust", [], none, "", by([1])), act(untrust, "Untrust", [], none, "", by([1])), act(offer, "Offer", [], none, "", by([2])), act(install_own, "Install own", [], none, "", by([1])), act(install, "Install", [], none, "", by([1])), act(invite, "Invite", [], said([[person(2), text(" asks for your consent to invite.")], []]), "", by([2])), act(leave, "Leave", [], none, "", by([1]))], [], nolook, version(1, 1))))
+contract("GPD: Grassroots Programs Dissemination\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.\n5. ■ Unfriend.  Alice may end her friendship with Bob.\n6. ■ Sign.  Alice may create Item by signing it.\n7. ■ Forward.  Alice may forward Item to Bob, adding her signature to the signatures Item carries, provided Alice holds the item Item and Alice and Bob are friends.\n8. ◆ Publish.  Carol may publish Prog by signing it.\n9. ■ Trust.  Alice may declare trust in Carol as a developer, provided Alice knows Carol.\n10. ■ Untrust.  Alice may withdraw her declaration of trust in Carol as a developer.\n11. ■ Offer.  Carol may offer Prog of Dave to Alice, provided Carol holds Prog of Dave and Carol and Alice are friends.\n12. ■ Install own.  Alice may install her own Prog, provided Alice holds Prog of Alice.\n13. ■ Install.  Alice may install Prog of Carol, provided Alice holds Prog of Carol and Alice trusts Carol as a developer.\n14. ■ Invite.  Alice may invite Bob to join in Prog of Carol, with the consent of Bob, provided Alice and Bob are friends, Alice has Prog of Carol installed and Bob trusts Carol as a developer.\n15. ■ Leave.  Alice may leave Prog of Carol.", with([schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(knows, [role(1)])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(sign, ['Alice'], [svar('Item')], [rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, [])], [atom(item, [svar('Item')])])]), schema(forward, ['Bob', 'Alice'], [svar('Item')], [rs(unguarded, [atom(item, [sgn('Item', 2)])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(item, [svar('Item')]), atom(friend, [role(1)])], [])]), schema(publish, ['Carol'], [svar('Prog')], [rs(guarded, [atom(program, [svar('Prog'), role(1)])], [], [atom(identity, [])], [atom(program, [svar('Prog'), role(1)])])]), schema(trust, ['Alice'], [pvar('Carol')], [rs(guarded, [atom(trusts_developer, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')])], [atom(trusts_developer, [pvar('Carol')])])]), schema(untrust, ['Alice'], [pvar('Carol')], [rs(guarded, [], [atom(trusts_developer, [pvar('Carol')])], [atom(identity, [])], [])]), schema(offer, ['Alice', 'Carol'], [svar('Prog'), pvar('Dave')], [rs(unguarded, [atom(program, [svar('Prog'), pvar('Dave')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(program, [svar('Prog'), pvar('Dave')]), atom(friend, [role(1)])], [])]), schema(install_own, ['Alice'], [svar('Prog')], [rs(guarded, [atom(installed, [svar('Prog'), role(1)])], [], [atom(identity, []), atom(program, [svar('Prog'), role(1)])], [atom(installed, [svar('Prog'), role(1)])])]), schema(install, ['Alice'], [svar('Prog'), pvar('Carol')], [rs(guarded, [atom(installed, [svar('Prog'), pvar('Carol')])], [], [atom(identity, []), atom(program, [svar('Prog'), pvar('Carol')]), atom(trusts_developer, [pvar('Carol')])], [atom(installed, [svar('Prog'), pvar('Carol')])])]), schema(invite, ['Bob', 'Alice'], [svar('Prog'), pvar('Carol')], [rs(guarded, [atom(program, [svar('Prog'), pvar('Carol')]), atom(installed, [svar('Prog'), pvar('Carol')]), atom(participant, [svar('Prog'), pvar('Carol'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(trusts_developer, [pvar('Carol')])], []), rs(guarded, [atom(participant, [svar('Prog'), pvar('Carol'), role(1)])], [], [atom(identity, []), atom(friend, [role(1)]), atom(installed, [svar('Prog'), pvar('Carol')])], [])]), qschema(leave, ['Alice', 'E1'], [svar('Prog'), pvar('Carol')], [pvar('E1'), svar('E1'), num('E1'), pvar('E1'), svar('E1'), num('E1')], true, [rs(guarded, [], [atom(installed, [svar('Prog'), pvar('Carol')]), atom(participant, [svar('Prog'), pvar('Carol'), any])], [atom(identity, [])], []), crs(qlisted(1, participant, [svar('Prog'), pvar('Carol'), role(2)], [role(2)]), unguarded, [], [atom(participant, [svar('Prog'), pvar('Carol'), role(1)])], [atom(identity, [])], [])], [conjunct([role(2)], 1, atom(participant, [svar('Prog'), pvar('Carol'), role(2)]), fcons(true), [], [], [fnot(fa(role(2), atom(participant, [svar('Prog'), pvar('Carol'), role(1)])))])], [fforall([role(2)], role(1), atom(participant, [svar('Prog'), pvar('Carol'), role(2)]), fcons(true), [fa(role(2), atom(identity, [])), fa(role(2), atom(participant, [svar('Prog'), pvar('Carol'), role(1)]))])])], pragmas([], [act(establish, "Establish", [], none, "", by([1])), act(acquaint, "Acquaint", ["", "bob"], said([[], [person(1), text(" asks for your consent to acquaint.")]]), "", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks for your consent to introduce.")], []]), "", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks for your consent to befriend.")]]), "", by([1])), act(unfriend, "Unfriend", [], none, "", by([1])), act(sign, "Sign", ["", "item"], none, "", by([1])), act(forward, "Forward", [], none, "", by([2])), act(publish, "Publish", ["", "prog"], none, "", by([1])), act(trust, "Trust", [], none, "", by([1])), act(untrust, "Untrust", [], none, "", by([1])), act(offer, "Offer", [], none, "", by([2])), act(install_own, "Install own", [], none, "", by([1])), act(install, "Install", [], none, "", by([1])), act(invite, "Invite", [], said([[person(2), text(" asks for your consent to invite.")], []]), "", by([2])), act(leave, "Leave", [], none, "", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).

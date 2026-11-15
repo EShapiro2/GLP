@@ -1,5 +1,5 @@
 GD: Grassroots Distrust (flat text)
-GKK:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
 GKK:1 ○ Establish: Alice may Alice has an identity and Alice knows Alice, provided not Alice has an identity.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.

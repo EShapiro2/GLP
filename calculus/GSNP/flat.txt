@@ -1,5 +1,5 @@
 GSNP: Grassroots Social Network with Provenance (flat text)
-GKK:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
 GKK:1+GnW:3 ■ Establish: Alice may Alice has an identity, Alice knows Alice and Alice is a person, provided not Alice has an identity.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -13,8 +13,8 @@ GSG:2+GSN:3+GnW:3 ■ Unfriend: Alice may no longer Alice counts Bob as a friend
 GSG:3 ○ | Loss of Trust.
 GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 GSN:0 - | A *message*, a parameter of GSN, is what a person sends.
-GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Bob and Carol possibly Alice or one person.
-GSN:1 ■ Message: Alice may Bob holds an item of Alice, provided Alice counts Bob as a friend and Bob counts Alice as a friend. Possibly one: Alice=Bob.
+GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+GSN:1+GSNP:1 ■ Message: Alice may Bob holds the item Text signed by Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend and Alice holds the item Text. Possibly one: Alice=Bob.
 GSN:2 ■ | Group.
 GSN:2 ■ Create: Alice may Alice is the leader of Grupo, Alice is a member of the group Grupo of Alice and Alice has Alice as a member of the group Grupo, provided not Alice is the leader of Grupo.
 GSN:2 ■ | Alice is then its leader and first member.
@@ -24,8 +24,8 @@ GSN:3 ■ Join: Alice and Bob may jointly Bob is a member of the group Grupo of 
 GSN:3 ■ Remove: Alice may no longer Bob is a member of the group Grupo of Alice and no longer Alice has Bob as a member of the group Grupo, provided Alice is the leader of Grupo. Possibly one: Alice=Bob.
 GSN:3 ■ Leave: Bob may no longer Bob is a member of the group Grupo of Alice and no longer Alice has Bob as a member of the group Grupo. Possibly one: Alice=Bob.
 GSN:4 ■ | Group messaging.
-GSN:4 ■ Post: Bob may Bob has posted a message to Grupo, provided Bob is a member of the group Grupo of someone.
-GSN:4 ■ Deliver: Carol holds an item of Bob and Alice has delivered a message of Bob in Grupo to Carol, provided Alice is the leader of Grupo, Bob has posted a message to Grupo, Alice has Bob as a member of the group Grupo and Alice has Carol as a member of the group Grupo. Possibly one: Alice=Bob, Alice=Carol, Bob=Carol.
+GSN:4+GSNP:1 ■ Post: Bob may Alice has the post Text of Bob in Grupo, provided Bob is a member of the group Grupo of Alice, not Alice has the post Text of Bob in Grupo and Bob holds the item Text. Possibly one: Alice=Bob.
+GSN:4 ■ Deliver: Alice has delivered the message Text of Bob in Grupo to Carol and Carol holds the item Text signed by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, Alice has Bob as a member of the group Grupo, Alice has Carol as a member of the group Grupo and not Alice has delivered the message Text of Bob in Grupo to Carol. Possibly one: Alice=Bob, Alice=Carol, Bob=Carol.
 GnW:0 - | Bob *trusts* Carol, an AI agent of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an AI agent and how.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave AI agents; in clause 4 Alice and Bob are possibly one person.
 GnW:1+GAI:2 ■ Enter: Alice and Carol may jointly Carol has an identity, Carol knows Carol, Carol is an AI agent, Carol has Alice as a guardian, Alice is the principal of Carol, Alice is a guardian of Carol, Alice knows Carol, Carol knows Alice, Alice counts Carol as a friend, Carol counts Alice as a friend, Carol holds the attestation Proof and Alice holds a record of Carol's attestation Proof, provided Alice is a person and not Carol has an identity. Must consent: Carol.
@@ -49,21 +49,19 @@ GnW:4+GAI:2 ■ Wards of one guardian befriend: Carol, Dave and Alice may jointl
 GnW:5 ■ Retire: The guardians of Carol may Carol is retired, no longer anyone is a guardian of Carol, no longer Carol has anyone as a guardian, no longer Carol counts anyone as a friend and no longer anyone counts Carol as a friend, provided not Carol is retired.
 GnW:5 ■ | Carol can then take no act.
 GFP:0 - | The *author* of an item is its first signer.
-GFP:0 - | Alice, Bob and Carol are persons, Carol possibly Alice or Bob.
-GFP:1+GAI:2 ■ Sign: Alice may Alice holds an item of Alice, provided Alice is a person.
-GFP:2+GAI:2 ■ Forward: Alice may Bob holds an item of Carol, provided Alice holds an item of Carol, Alice counts Bob as a friend, Bob counts Alice as a friend and Alice is a person. Possibly one: Alice=Carol, Bob=Carol.
-GFP:2 ■ | Alice adds her signature to the signatures the item carries.
+GFP:0 - | Alice and Bob are persons, Item an item.
+GFP:1+GAI:2 ■ Sign: Alice may Alice holds the item Item, provided not Alice holds the item Item and Alice is a person.
+GFP:2+GAI:2 ■ Forward: Alice may Bob holds the item Item signed by Alice, provided Alice holds the item Item, Alice counts Bob as a friend, Bob counts Alice as a friend and Alice is a person.
 GAI:0 - | The *developer* of an AI agent is the signer of its code.
-GAI:0 - | Alice, Bob and Erin are persons, Alf an AI agent, Proof and Seal attestations; in clause 2 Carol and Dave are AI agents and Erin is possibly Alf or Bob.
+GAI:0 - | Alice and Bob are persons, Alf an AI agent, Proof and Seal attestations, Item an item; in clause 2 Carol and Dave are AI agents.
 GAI:1 ○ | AI developer and guardian accountability.
 GAI:1 ○ | The developer of Alf will be accountable for Alf's defects.
 GAI:1 ○ | Every guardian of Alf will be accountable for operating it recklessly.
 GAI:2 ■ | AI acts.
 GAI:2 ■ | The principal of Alf attests at its creation, signed over Alf's public key, that Alf runs code signed by its developer.
-GAI:2 ■ Agent sign: Alf may Alf holds an item of Alf, provided Alf is an AI agent and Alf holds the attestation Proof.
-GAI:2 ■ Agent forward: Alf may Bob holds an item of Erin, provided Alf is an AI agent, Alf holds the attestation Proof, Alf holds an item of Erin, Alf counts Bob as a friend and Bob counts Alf as a friend. Possibly one: Alf=Erin, Bob=Erin.
+GAI:2 ■ Agent sign: Alf may Alf holds the item Item, provided Alf is an AI agent, Alf holds the attestation Proof and not Alf holds the item Item.
+GAI:2 ■ Agent forward: Alf may Bob holds the item Item signed by Alf, provided Alf is an AI agent, Alf holds the attestation Proof, Alf holds the item Item, Alf counts Bob as a friend and Bob counts Alf as a friend.
 GAI:2 ■ | Every act of Alf requires this attestation and names its developer and its principal.
-GSNP:0 - | Alf is an AI agent, Bob and Carol are persons, Grupo a group, Carol possibly Bob.
-GSNP:1 ■ Agent message: Alf may Bob holds an item of Alf, provided Alf counts Bob as a friend and Bob counts Alf as a friend.
-GSNP:2 ■ Post forward: Bob may Bob has forwarded an item of Carol to Grupo, provided Bob is a member of the group Grupo of someone, not Bob is the leader of Grupo and Bob holds an item of Carol. Possibly one: Bob=Carol.
-GSNP:2 ■ | Bob adds his signature to the signatures the item carries.
+GSNP:0 - | Alf is an AI agent, Alice and Bob are persons, Grupo a group, Text a message, Item an item.
+GSNP:1 ■ Agent message: Alf may Bob holds the item Text signed by Alf, provided Alf holds the item Text, Alf counts Bob as a friend and Bob counts Alf as a friend.
+GSNP:2 ■ Post forward: Bob may Alice has the post Item of Bob in Grupo, provided Bob is a member of the group Grupo of Alice, not Bob is the leader of Grupo and Bob holds the item Item.

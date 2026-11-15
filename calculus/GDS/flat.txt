@@ -1,5 +1,5 @@
 GDS: Grassroots Directory Service (flat text)
-GKK:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
 GKK:1+GnW:3 ■ Establish: Alice may Alice has an identity, Alice knows Alice and Alice is a person, provided not Alice has an identity.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -39,7 +39,7 @@ GSV:0 - | Alice is a person, Dave a service.
 GRV:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
 GRV:0 - | Alice, Bob and Carol are persons, Dave a service, Link an invitation link.
 GRV:1 ■ Open server: Carol may Dave is a rendezvous server, provided Carol is a guardian of Dave and not Dave is a rendezvous server.
-GRV:2 ■ Invite by link: Alice may Dave has Link registered for Alice, provided Alice has signed Link as an invitation link that names Dave, Dave is a rendezvous server and not Dave has Link registered for Alice.
+GRV:2 ■ Invite by link: Alice may Dave has Link registered for Alice, provided Alice has signed Link as an invitation link that names Dave, Alice knows Dave, Dave is a rendezvous server and not Dave has Link registered for Alice.
 GRV:2 ■ | Link has a new serial.
 GRV:3 ■ Use link: Bob may no longer Dave has Link registered for Alice, Alice has the address of Bob and Bob has the address of Alice, provided Bob knows Dave and not Dave holds Link expired.
 GRV:3 ■ | The link is then spent.

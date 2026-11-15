@@ -1,5 +1,5 @@
 GSNP: Grassroots Social Network with Provenance (expanded schemas)
-GKK:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
 GKK:1+GnW:3 ■ Establish: identity(Alice), knows(Alice,Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -13,8 +13,8 @@ GSG:2+GSN:3+GnW:3 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice), ~member(
 GSG:3 ○ | Loss of Trust.
 GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 GSN:0 - | A *message*, a parameter of GSN, is what a person sends.
-GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Bob and Carol possibly Alice or one person.
-GSN:1 ■ Message: item(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice possibly Alice=Bob.
+GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+GSN:1+GSNP:1 ■ Message: item(Bob,Text@Alice) <- friend(Alice,Bob), friend(Bob,Alice), item(Alice,Text) guarded by Alice possibly Alice=Bob.
 GSN:2 ■ | Group.
 GSN:2 ■ Create: leader(Alice,Grupo), member(Alice,Grupo,Alice), listed(Alice,Alice,Grupo) <- ~leader(Alice,Grupo) guarded by Alice.
 GSN:2 ■ | Alice is then its leader and first member.
@@ -24,8 +24,8 @@ GSN:3 ■ Join: member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) <- leader(Alice
 GSN:3 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Alice possibly Alice=Bob.
 GSN:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Bob possibly Alice=Bob.
 GSN:4 ■ | Group messaging.
-GSN:4 ■ Post: posted(Bob,Grupo) <- member(Bob,Grupo,_) guarded by Bob.
-GSN:4 ■ Deliver: item(Carol,Bob), group_delivered(Alice,Bob,Grupo,Carol) <- leader(Alice,Grupo), posted(Bob,Grupo), listed(Alice,Bob,Grupo), listed(Alice,Carol,Grupo) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+GSN:4+GSNP:1 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo), item(Bob,Text) guarded by Bob possibly Alice=Bob.
+GSN:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), item(Carol,Text@Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
 GnW:0 - | Bob *trusts* Carol, an AI agent of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an AI agent and how.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave AI agents; in clause 4 Alice and Bob are possibly one person.
 GnW:1+GAI:2 ■ Enter: identity(Carol), knows(Carol,Carol), ai_agent(Carol), has_guardian(Carol,Alice), principal(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice), attestation(Carol,Proof), attestation_record(Alice,Carol,Proof) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
@@ -49,21 +49,19 @@ GnW:4+GAI:2 ■ Wards of one guardian befriend: friend(Carol,Dave), friend(Dave,
 GnW:5 ■ Retire: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~friend(Carol,_), ~friend(_,Carol) <- ~retired(Carol) guarded by guardians(Carol).
 GnW:5 ■ | Carol can then take no act.
 GFP:0 - | The *author* of an item is its first signer.
-GFP:0 - | Alice, Bob and Carol are persons, Carol possibly Alice or Bob.
-GFP:1+GAI:2 ■ Sign: item(Alice,Alice) <- person(Alice) guarded by Alice.
-GFP:2+GAI:2 ■ Forward: item(Bob,Carol) <- item(Alice,Carol), friend(Alice,Bob), friend(Bob,Alice), person(Alice) guarded by Alice possibly Alice=Carol, Bob=Carol.
-GFP:2 ■ | Alice adds her signature to the signatures the item carries.
+GFP:0 - | Alice and Bob are persons, Item an item.
+GFP:1+GAI:2 ■ Sign: item(Alice,Item) <- ~item(Alice,Item), person(Alice) guarded by Alice.
+GFP:2+GAI:2 ■ Forward: item(Bob,Item@Alice) <- item(Alice,Item), friend(Alice,Bob), friend(Bob,Alice), person(Alice) guarded by Alice.
 GAI:0 - | The *developer* of an AI agent is the signer of its code.
-GAI:0 - | Alice, Bob and Erin are persons, Alf an AI agent, Proof and Seal attestations; in clause 2 Carol and Dave are AI agents and Erin is possibly Alf or Bob.
+GAI:0 - | Alice and Bob are persons, Alf an AI agent, Proof and Seal attestations, Item an item; in clause 2 Carol and Dave are AI agents.
 GAI:1 ○ | AI developer and guardian accountability.
 GAI:1 ○ | The developer of Alf will be accountable for Alf's defects.
 GAI:1 ○ | Every guardian of Alf will be accountable for operating it recklessly.
 GAI:2 ■ | AI acts.
 GAI:2 ■ | The principal of Alf attests at its creation, signed over Alf's public key, that Alf runs code signed by its developer.
-GAI:2 ■ Agent sign: item(Alf,Alf) <- ai_agent(Alf), attestation(Alf,Proof) guarded by Alf.
-GAI:2 ■ Agent forward: item(Bob,Erin) <- ai_agent(Alf), attestation(Alf,Proof), item(Alf,Erin), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf possibly Alf=Erin, Bob=Erin.
+GAI:2 ■ Agent sign: item(Alf,Item) <- ai_agent(Alf), attestation(Alf,Proof), ~item(Alf,Item) guarded by Alf.
+GAI:2 ■ Agent forward: item(Bob,Item@Alf) <- ai_agent(Alf), attestation(Alf,Proof), item(Alf,Item), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
 GAI:2 ■ | Every act of Alf requires this attestation and names its developer and its principal.
-GSNP:0 - | Alf is an AI agent, Bob and Carol are persons, Grupo a group, Carol possibly Bob.
-GSNP:1 ■ Agent message: item(Bob,Alf) <- friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
-GSNP:2 ■ Post forward: forwarded(Bob,Carol,Grupo) <- member(Bob,Grupo,_), ~leader(Bob,Grupo), item(Bob,Carol) guarded by Bob possibly Bob=Carol.
-GSNP:2 ■ | Bob adds his signature to the signatures the item carries.
+GSNP:0 - | Alf is an AI agent, Alice and Bob are persons, Grupo a group, Text a message, Item an item.
+GSNP:1 ■ Agent message: item(Bob,Text@Alf) <- item(Alf,Text), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
+GSNP:2 ■ Post forward: posted(Alice,Item,Bob,Grupo) <- member(Bob,Grupo,Alice), ~leader(Bob,Grupo), item(Bob,Item) guarded by Bob.

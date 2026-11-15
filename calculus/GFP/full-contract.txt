@@ -1,6 +1,6 @@
 % Written by tools/expand.py from rev/; do not edit.
 GFP: Grassroots Forwarding with Provenance
-An *identity* is a unique key pair, chosen by the person who has it.
+An *identity* is a unique key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 The *author* of an item is its first signer.
 Alice, Bob and Carol are persons. A party to a contract must have an identity. Alice and Bob are persons.

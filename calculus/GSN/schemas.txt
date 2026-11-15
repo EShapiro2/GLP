@@ -1,18 +1,18 @@
 GSN: Grassroots Social Network
 GSN extends and strengthens GSG.
-Vocabulary: y has a message from x = message(y,x); x is the leader of g = leader(x,g); x is a member of the group g of y = member(x,g,y); x has y as a member of the group g = listed(x,y,g); x has posted a message to g = posted(x,g); z has a message of x in g = group_message(z,x,g); y has delivered a message of x in g to z = group_delivered(y,x,g,z).
+Vocabulary: y has the message t from x = message(y,x,t); x is the leader of g = leader(x,g); x is a member of the group g of y = member(x,g,y); x has y as a member of the group g = listed(x,y,g); y has the post t of x in g = posted(y,t,x,g); z has the message t of x in g delivered by y = group_message(z,x,t,g,y); y has delivered the message t of x in g to z = group_delivered(y,x,t,g,z).
 x is a member of g: x is a member of the group g of someone.
-After x sends a message to y: y has a message from x.
+After x sends t to y: y has the message t from x.
 After x creates g, which requires x is not the leader of g: x is the leader of g, x is a member of the group g of x and x has x as a member of the group g.
 After x closes g by leaving it: no longer x is the leader of g, x has no one as a member of the group g and no one is a member of g.
 After x adds y to g, which requires y is not a member of g: y is a member of the group g of x and x has y as a member of the group g.
 After x ends y's membership in g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
 After y ends y's membership in x's g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
-After x sends a message to the group g: x has posted a message to g.
-After y delivers a message of x in g to z: z has a message of x in g and y has delivered a message of x in g to z.
+After x sends t to the group g of y, which requires y does not have the post t of x in g: y has the post t of x in g.
+After y delivers t of x in g to z, which requires y has not delivered the message t of x in g to z: y has delivered the message t of x in g to z and z has the message t of x in g delivered by y.
 GSN:0 - | A *message*, a parameter of GSN, is what a person sends.
-GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Bob and Carol possibly Alice or one person.
-GSN:1 ■ Message: message(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice possibly Alice=Bob.
+GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+GSN:1 ■ Message: message(Bob,Alice,Text) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice possibly Alice=Bob.
 GSN:2 ■ | Group.
 GSN:2 ■ Create: leader(Alice,Grupo), member(Alice,Grupo,Alice), listed(Alice,Alice,Grupo) <- ~leader(Alice,Grupo) guarded by Alice.
 GSN:2 ■ | Alice is then its leader and first member.
@@ -23,5 +23,5 @@ GSN:3 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- leader(A
 GSN:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Bob possibly Alice=Bob.
 GSN:3 ■ Unfriend: GSG:2 + ~member(Alice,_,Bob), ~member(Bob,_,Alice), ~listed(Alice,Bob,_), ~listed(Bob,Alice,_) <-.
 GSN:4 ■ | Group messaging.
-GSN:4 ■ Post: posted(Bob,Grupo) <- member(Bob,Grupo,_) guarded by Bob.
-GSN:4 ■ Deliver: group_message(Carol,Bob,Grupo), group_delivered(Alice,Bob,Grupo,Carol) <- leader(Alice,Grupo), posted(Bob,Grupo), listed(Alice,Bob,Grupo), listed(Alice,Carol,Grupo) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+GSN:4 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+GSN:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.

@@ -1,5 +1,5 @@
 JOINT: Joint Accounts (expanded schemas)
-GKK:0 - | An *identity* is a unique key pair, chosen by the person who has it.
+GKK:0 - | An *identity* is a unique key pair.
 GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
 GKK:1 ○ Establish: identity(Alice), knows(Alice,Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -8,9 +8,9 @@ GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), kno
 GC:0 - | A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice.
 GC:0 - | Alice, Bob, Carol and Dave are persons, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
 GC:1 ■ Issue: coin(Alice,Alice,*Sum) <- guarded by Alice.
-GC:2 ■ Swap: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~coin(Bob,Dave,*Total), coin(Alice,Dave,*Total) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), coin(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+GC:2 ■ Swap: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~coin(Bob,Dave,*Total), coin(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), coin(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
 GC:3 ■ Pay: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum) guarded by Alice.
-GC:4 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
+GC:4 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
 GC:5 ○ | Pricing.
 GC:5 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 JOINT:0 - | Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.

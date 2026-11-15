@@ -510,7 +510,11 @@ c_
 item
 }
 (
+\mathrm{sgn}(
+Text
+,
 \Bob
+)
 )
 \}
 ,\\
@@ -551,6 +555,13 @@ friend
 }
 (
 \Alice
+)
+,
+\mathit{
+item
+}
+(
+Text
 )
  \in c_
 {
@@ -1525,12 +1536,35 @@ c_
 posted
 }
 (
+Text
+,
+\Bob
+,
 Grupo
 )
 \}
 ,\\
 &
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
 \text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
 \mathit{
 identity
 }
@@ -1541,9 +1575,33 @@ member
 (
 Grupo
 ,
-\ast
+\Alice
+)
+,
+\mathit{
+item
+}
+(
+Text
 )
  \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+posted
+}
+(
+Text
+,
+\Bob
+,
+Grupo
+)
+ \notin c_
 {
 \Alice
 }
@@ -1555,7 +1613,7 @@ Grupo
 person
 }
 (
-\Alice
+\Bob
 )
 \lor
 (
@@ -1563,7 +1621,7 @@ person
 ai_agent
 }
 (
-\Alice
+\Bob
 )
 \land
 \exists 
@@ -1573,7 +1631,7 @@ G1
 has_guardian
 }
 (
-\Alice
+\Bob
 ,
 G1
 )
@@ -1583,7 +1641,7 @@ G1
 ,\\
 &
 \text{guarded by } \{
-\Alice
+\Bob
 \}
 \end{align*}
 \iffalse
@@ -1606,7 +1664,9 @@ c_
 group_delivered
 }
 (
-\mathit{Carol}
+Bob
+,
+Text
 ,
 Grupo
 ,
@@ -1629,19 +1689,13 @@ c_
 item
 }
 (
-\mathit{Carol}
+\mathrm{sgn}(
+Text
+,
+\Alice
+)
 )
 \}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
 ,\\
 &
 \text{provided } 
@@ -1657,10 +1711,21 @@ Grupo
 )
 ,
 \mathit{
+posted
+}
+(
+Text
+,
+Bob
+,
+Grupo
+)
+,
+\mathit{
 listed
 }
 (
-\mathit{Carol}
+Bob
 ,
 Grupo
 )
@@ -1685,20 +1750,24 @@ identity
 {
 \Bob
 }
- \text{ and } 
+,\\
+&
+\text{provided } 
 \mathit{
-identity
-}
-,
-\mathit{
-posted
+group_delivered
 }
 (
+Bob
+,
+Text
+,
 Grupo
+,
+\Bob
 )
- \in c_
+ \notin c_
 {
-\mathit{Carol}
+\Alice
 }
 ,\\
 &
@@ -6078,7 +6147,7 @@ c_
 item
 }
 (
-\Alice
+Item
 )
 \}
 ,\\
@@ -6092,6 +6161,19 @@ identity
 person
 }
  \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+item
+}
+(
+Item
+)
+ \notin c_
 {
 \Alice
 }
@@ -6121,7 +6203,11 @@ c_
 item
 }
 (
-Carol
+\mathrm{sgn}(
+Item
+,
+\Bob
+)
 )
 \}
 , \qquad 
@@ -6160,7 +6246,7 @@ identity
 item
 }
 (
-Carol
+Item
 )
 ,
 \mathit{
@@ -6203,7 +6289,7 @@ c_
 item
 }
 (
-\Alice
+Item
 )
 \}
 ,\\
@@ -6224,6 +6310,19 @@ attestation
 Proof
 )
  \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+item
+}
+(
+Item
+)
+ \notin c_
 {
 \Alice
 }
@@ -6286,7 +6385,11 @@ c_
 item
 }
 (
-Erin
+\mathrm{sgn}(
+Item
+,
+\Bob
+)
 )
 \}
 ,\\
@@ -6337,7 +6440,7 @@ Proof
 item
 }
 (
-Erin
+Item
 )
 ,
 \mathit{
@@ -6409,7 +6512,11 @@ c_
 item
 }
 (
+\mathrm{sgn}(
+Text
+,
 \Bob
+)
 )
 \}
 ,\\
@@ -6444,6 +6551,13 @@ friend
 \mathit{
 identity
 }
+,
+\mathit{
+item
+}
+(
+Text
+)
 ,
 \mathit{
 friend
@@ -6511,17 +6625,38 @@ c_
  \uplus 
 \{
 \mathit{
-forwarded
+posted
 }
 (
-Carol
+Item
+,
+\Bob
 ,
 Grupo
 )
 \}
 ,\\
 &
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
 \text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
 \mathit{
 identity
 }
@@ -6532,18 +6667,18 @@ member
 (
 Grupo
 ,
-\ast
+\Alice
 )
 ,
 \mathit{
 item
 }
 (
-Carol
+Item
 )
  \in c_
 {
-\Alice
+\Bob
 }
 ,\\
 &
@@ -6556,7 +6691,7 @@ Grupo
 )
  \notin c_
 {
-\Alice
+\Bob
 }
 ,\\
 &
@@ -6566,7 +6701,7 @@ Grupo
 person
 }
 (
-\Alice
+\Bob
 )
 \lor
 (
@@ -6574,7 +6709,7 @@ person
 ai_agent
 }
 (
-\Alice
+\Bob
 )
 \land
 \exists 
@@ -6584,7 +6719,7 @@ G1
 has_guardian
 }
 (
-\Alice
+\Bob
 ,
 G1
 )
@@ -6594,6 +6729,6 @@ G1
 ,\\
 &
 \text{guarded by } \{
-\Alice
+\Bob
 \}
 \end{align*}

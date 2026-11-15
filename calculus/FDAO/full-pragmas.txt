@@ -1,5 +1,5 @@
 FDAO: Funded DAO
-Of GKK: An *identity* is a unique key pair, chosen by the person who has it. Alice, Bob and Carol are persons. A party to a contract must have an identity.
+Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity.
 Of DAO: Alice, Bob and Carol are persons, Delos a DAO and Prop a proposal, Carol possibly Alice or Bob.
 Of GC: A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice. Alice, Bob, Carol and Dave are persons, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
 Of FDAO: Alice, Bob, Carol and Dave are persons, Delos a DAO and Prop a proposal, Sum a number, Carol possibly Alice or Bob, Dave possibly Alice, Bob or Carol.

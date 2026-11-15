@@ -1,6 +1,6 @@
 % Written by tools/expand.py from rev/; do not edit.
 GFF-FR-BC: Fault-Resilient GFF with Back-Channels
-An *identity* is a unique key pair, chosen by the person who has it.
+An *identity* is a unique key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice.
 A *feed* is named by its author.

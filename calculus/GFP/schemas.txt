@@ -1,10 +1,9 @@
 GFP: Grassroots Forwarding with Provenance
 GFP extends GSG.
-Vocabulary: x holds an item of y = item(x,y).
-After x creates an item by signing it: x holds an item of x.
-After x forwards an item of z to y: y holds an item of z.
+Vocabulary: x holds the item t = item(x,t).
+After x creates t by signing it, which requires x does not hold the item t: x holds the item t.
+After x forwards t to y, adding x's signature to the signatures t carries: y holds the item t signed by x.
 GFP:0 - | The *author* of an item is its first signer.
-GFP:0 - | Alice, Bob and Carol are persons, Carol possibly Alice or Bob.
-GFP:1 ■ Sign: item(Alice,Alice) <- guarded by Alice.
-GFP:2 ■ Forward: item(Bob,Carol) <- item(Alice,Carol), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice possibly Alice=Carol, Bob=Carol.
-GFP:2 ■ | Alice adds her signature to the signatures the item carries.
+GFP:0 - | Alice and Bob are persons, Item an item.
+GFP:1 ■ Sign: item(Alice,Item) <- ~item(Alice,Item) guarded by Alice.
+GFP:2 ■ Forward: item(Bob,Item@Alice) <- item(Alice,Item), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.

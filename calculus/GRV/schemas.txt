@@ -9,7 +9,7 @@ After d matches x and y: no longer d has the signature of y over the friendship 
 GRV:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
 GRV:0 - | Alice, Bob and Carol are persons, Dave a service, Link an invitation link.
 GRV:1 ■ Open server: rendezvous_server(Dave) <- guardian(Carol,Dave), ~rendezvous_server(Dave) guarded by Carol.
-GRV:2 ■ Invite by link: registered(Dave,Link,Alice) <- link(Alice,Link,Dave), rendezvous_server(Dave), ~registered(Dave,Link,Alice) guarded by Alice.
+GRV:2 ■ Invite by link: registered(Dave,Link,Alice) <- link(Alice,Link,Dave), knows(Alice,Dave), rendezvous_server(Dave), ~registered(Dave,Link,Alice) guarded by Alice.
 GRV:2 ■ | Link has a new serial.
 GRV:3 ■ Use link: ~registered(Dave,Link,Alice), address(Alice,Bob), address(Bob,Alice) <- knows(Bob,Dave), ~expired(Dave,Link), registered(Dave,Link,Alice) guarded by Bob.
 GRV:3 ■ | The link is then spent.
