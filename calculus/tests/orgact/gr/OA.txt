@@ -1,0 +1,7 @@
+OA: An Organisation's Act
+Alice, Bob and Carol are persons, Orga an organisation, Iris an issuer, Sum, Votes and Double numbers.
+1. ■ Pay: Alice may pay Bob Sum Iris-coins of Orga, provided Alice is a participant of Orga, Orga holds at least Votes persons's vote to pay Bob Sum Iris-coins, Double is Votes times 2 and Orga has fewer than Double persons as a participant. Vote to pay: Carol may vote to pay Bob Sum Iris-coins of Orga, provided Carol is a participant of Orga and Orga has Bob as a participant.
+Logic pragmas.
+Vocabulary: x is a participant of z = participant(x,z); z has x as a participant = has_participant(z,x); x holds n y-coins = coin(x,y,*n); z holds v's vote to pay y n w-coins = vote_pay(z,v,y,w,n).
+After v votes to pay y n w-coins of z, which requires z does not hold v's vote to pay y n w-coins: z holds v's vote to pay y n w-coins.
+After x pays y n w-coins of z: no longer z holds n w-coins, y holds n w-coins and z holds no one's vote to pay y n w-coins.
