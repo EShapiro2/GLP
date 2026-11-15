@@ -17,9 +17,16 @@ if [ -d "$LOGS" ]; then
 	  echo "sweep: dropping the old debugging logs in $LOGS failed" >&2
 fi
 cd /srv/glp
-old=$(git rev-parse HEAD)
+# A pull that changes this script runs the new one at once, from here: the
+# shell has read the old one, which would otherwise run to the end and leave
+# the change to the next sweep (Code #28, 2026-11-12 09:34 UTC).  SWEEP_OLD
+# carries the commit before the pull, so the new run restarts the server.
+old=${SWEEP_OLD:-$(git rev-parse HEAD)}
 sudo -u glp git pull -q --ff-only
 new=$(git rev-parse HEAD)
+if [ -z "$SWEEP_OLD" ] && ! git diff --quiet "$old" "$new" -- servers/peoplesweb/deploy/sweep.sh; then
+	SWEEP_OLD=$old exec sh servers/peoplesweb/deploy/sweep.sh
+fi
 # The papers (tools/papers_sync.py): pulled from their repositories with the
 # read-only token in /etc/glp/github-token, rebuilt where changed, into
 # /var/lib/glp/papers; a failure there keeps the papers as last built and
