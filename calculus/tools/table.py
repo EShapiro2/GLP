@@ -88,6 +88,7 @@ def main():
             '\\hline', '\\end{longtable}', '}', '']
     open(os.path.join(ROOT, 'sections', 'contracts-table.tex'), 'w', encoding='utf-8').write('\n'.join(out))
     print('%d contracts; own clauses %d, words %d; expanded clauses %d, words %d' % (len(rows), sum(r[2] for r in rows), sum(r[3] for r in rows), sum(r[4] for r in rows), sum(r[5] for r in rows)))
+    open(os.path.join(ROOT, 'LAYERS.txt'), 'w', encoding='utf-8').write(''.join('%d %s\n' % (k, ' '.join(l)) for k, l in enumerate(lays)))      # the order of adoption: a line for each layer
     bad = [r[0] for r in rows if r[0] != 'GKK' and not r[1]]
     if bad: print('no first line found:', bad); sys.exit(1)
 if __name__ == '__main__':
