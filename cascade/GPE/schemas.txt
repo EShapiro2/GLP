@@ -1,19 +1,11 @@
-Environment predicates: nearby
-
-establish: identity(Alice) <-
-    not identity(Alice) guarded by Alice
-
-acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), identity(Bob) guarded by Alice, Bob
-
-introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
-
-open_place: open(Alice) <-
-    identity(Alice), not open(Alice) guarded by Alice
-
-close_place: not open(Alice) <-
-    identity(Alice), open(Alice) guarded by Alice
-
-encounter: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), open(Alice), nearby(Alice, Bob), not knows(Alice, Bob), identity(Bob), open(Bob), nearby(Bob, Alice), not knows(Bob, Alice) guarded by Alice, Bob
+GPE: Grassroots Physical Encounters
+GPE extends GKK (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Vocabulary: x is nearby y = nearby(x,y); x has declared the place open = open_place(x).
+x and y are nearby each other: x is nearby y and y is nearby x.
+After x declares x's place open, which requires x has not declared the place open: x has declared the place open.
+After x closes x's place: no longer x has declared the place open.
+GPE:0 - | A person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is.
+GPE:0 - | Alice and Bob are persons.
+GPE:1 ■ Open place: open_place(Alice) <- ~open_place(Alice) guarded by Alice.
+GPE:1 ■ Close place: ~open_place(Alice) <- open_place(Alice) guarded by Alice.
+GPE:2 ■ Encounter: knows(Alice,Bob), knows(Bob,Alice) <- nearby(Alice,Bob), nearby(Bob,Alice), open_place(Alice), open_place(Bob) guarded by Alice, Bob.
