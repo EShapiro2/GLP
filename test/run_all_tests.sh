@@ -4250,6 +4250,13 @@ cva_pq_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_pq/XH.txt" "[schema('no-show'
 rm -rf "$cva_pq"
 check "CVA pragmas: a button names a schema whose name the term quotes (quoted)" "act('no-show', '\"No-show\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))" "$cva_pq_out"
 check "CVA pragmas: ... and pragmas.sh exits 0 (quoted)" "^exit 0$" "$cva_pq_out"
+# A button whose text has a character that is no letter, digit, underscore, hyphen or space names the schema without it: [Redeem member's coin] the schema redeem_members_coin (README.md, 2; Calculus #6, vGLP_inbox.md, 2026-11-15 16:04 UTC) (apostrophe).
+cva_pap=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XA' 'Alice is a person.' "1. ■ Redeem member's coin: Alice may mint coins." 'Pragmas' 'Coins: the coins Alice holds.' "Redeem member's coin: Alice [Redeem member's coin] <amount>" > "$cva_pap/XA.txt"
+cva_pap_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_pap/XA.txt" "[schema(redeem_members_coin, ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])]" 2>&1; echo "exit $?")
+rm -rf "$cva_pap"
+check "CVA pragmas: a button with an apostrophe names the schema without it (apostrophe)" "act('redeem_members_coin', " "$cva_pap_out"
+check "CVA pragmas: ... and pragmas.sh exits 0 (apostrophe)" "^exit 0$" "$cva_pap_out"
 # An adopted contract of the Calculus (calculus/README.md, "Adopting a contract"; Code_inbox.md, 2026-11-15 13:22 UTC, Calculus #6): a clause titled by its act ends its title with a colon; the lines from the line "Logic pragmas" to "Interface pragmas" are skipped, the contract's text ending at that line (adopted); and a first line in the Calculus's form, an instantiation's words after "with", relations joined by commas and "and", "strengthens" among them, "them" for the contracts named before (firstline).
 cva_pa=$(mktemp -d)
 printf '%s\n' '% Owner: vGLP.' 'XJ: Test' 'Alice is a person.' '1. ■ Mint: Alice may mint coins.' 'Logic pragmas' 'Alice is a person.' '1. ■ Mint: Alice may mint coins, provided nothing.' 'Logic pragmas.' 'Vocabulary: x holds a coin = coin(x).' 'Interface pragmas' 'Coins: the coins Alice holds.' 'Mint: Alice [Mint] <amount>' > "$cva_pa/XJ.txt"
