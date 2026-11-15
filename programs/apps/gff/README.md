@@ -39,7 +39,7 @@ printf '../programs/apps/gff\n:limit 300000000\nplay_feeds(A, B, C, D).\n:quit\n
 4. Once both have reached carol, dave follows alice's feed through carol likewise, and both items reach him from carol.
 5. Once both have reached dave, carol introduces dave to bob (GKK:3); once bob knows dave, carol introduces bob to dave; once dave knows bob, dave adds an alice-pointer to bob, bob having an alice-pointer to alice and knowing dave (GFF:3, labeled_point_transitive).
 6. Once dave has it, alice posts a third item, which reaches bob, carol and dave, each once.
-7. Once the third item has reached dave, carol removes her alice-pointer to bob, Labeled unpoint (GDO-L:3, labeled_unpoint), her machine finding the pointer, the one she has to a person who is not its label.
+7. Once the third item has reached dave, carol removes her alice-pointer to bob, Labeled unpoint (GDO-L:3, labeled_unpoint), naming bob and the label alice.
 8. Once carol's screen shows it gone, alice posts a fourth item, which reaches bob, and from bob dave, and not carol.
 
 The run then suspends: each agent has taken its own transactions until none holds, and no trigger is left.  The persons' screens are the views their agents write, with each answer the person gives (`gave(C, A)`).
