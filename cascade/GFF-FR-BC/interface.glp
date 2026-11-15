@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), point_friend('Peer', 'Peer'), point_transitive('Peer', 'Peer', 'Peer'), unpoint('Peer'), labeled_point_friend('Peer', 'Peer', 'Peer'), labeled_point_transitive('Peer', 'Peer', 'Peer', 'Peer'), labeled_point_transitive_friend('Peer', 'Peer', 'Peer', 'Peer'), labeled_unpoint('Peer'), labeled_unpoint_self('Peer', 'Peer'), post('Peer', 'Speech'), deliver('Peer', 'Peer', 'Speech', 'Peer'), redundant_point('Peer', 'Peer', 'Peer', 'Integer'), back_forward('Peer', 'Peer', 'Speech', 'Peer')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), point_friend('Peer', 'Peer'), point_transitive('Peer', 'Peer', 'Peer'), unpoint('Peer'), labeled_point_friend('Peer', 'Peer', 'Peer'), labeled_point_transitive('Peer', 'Peer', 'Peer', 'Peer'), labeled_point_transitive_friend('Peer', 'Peer', 'Peer', 'Peer'), labeled_unpoint('Peer'), labeled_unpoint_self('Peer', 'Peer'), post('Peer', 'Speech')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), point_friend('Peer', 'Peer'), point_transitive('Peer', 'Peer', 'Peer'), unpoint('Peer', 'Peer'), labeled_point_friend('Peer', 'Peer', 'Peer'), labeled_point_transitive('Peer', 'Peer', 'Peer', 'Peer'), labeled_point_transitive_friend('Peer', 'Peer', 'Peer', 'Peer'), labeled_unpoint('Peer', 'Peer', 'Peer'), labeled_unpoint_self('Peer', 'Peer'), post('Peer', 'Speech'), deliver('Peer', 'Peer', 'Speech', 'Peer'), redundant_point('Peer', 'Peer', 'Peer', 'Integer'), back_forward('Peer', 'Peer', 'Speech', 'Peer')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), point_friend('Peer', 'Peer'), point_transitive('Peer', 'Peer', 'Peer'), unpoint('Peer', 'Peer'), labeled_point_friend('Peer', 'Peer', 'Peer'), labeled_point_transitive('Peer', 'Peer', 'Peer', 'Peer'), labeled_point_transitive_friend('Peer', 'Peer', 'Peer', 'Peer'), labeled_unpoint('Peer', 'Peer', 'Peer'), labeled_unpoint_self('Peer', 'Peer'), post('Peer', 'Speech')]),
   type('Request', [propose('Proposal')]),
   type('RequestMenu', [social_menu('List'('MenuEntry'))]),
   type('MenuEntry', [button('String', 'List'('MenuAct')), label('Constant', 'String'), label('Constant', 'Integer', 'String')]),
@@ -1280,11 +1280,11 @@ interface([
   compiled(join_proposal_unfriend_2, 3),
   compiled(join_proposal_point_friend_2, 3),
   compiled(join_proposal_point_transitive_3, 4),
-  compiled(join_proposal_unpoint_1, 2),
+  compiled(join_proposal_unpoint_2, 3),
   compiled(join_proposal_labeled_point_friend_3, 4),
   compiled(join_proposal_labeled_point_transitive_4, 5),
   compiled(join_proposal_labeled_point_transitive_friend_4, 5),
-  compiled(join_proposal_labeled_unpoint_1, 2),
+  compiled(join_proposal_labeled_unpoint_3, 4),
   compiled(join_proposal_labeled_unpoint_self_2, 3),
   compiled(join_utterance_utterance_1, 2),
   compiled(join_utterance_program_1, 2),

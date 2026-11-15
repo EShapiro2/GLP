@@ -9,15 +9,15 @@ Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; Speech.
 Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
             ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; point_friend(Peer, Peer) ; point_transitive(Peer, Peer, Peer) ; unpoint(Peer)
+            ; point_friend(Peer, Peer) ; point_transitive(Peer, Peer, Peer) ; unpoint(Peer, Peer)
             ; labeled_point_friend(Peer, Peer, Peer) ; labeled_point_transitive(Peer, Peer, Peer, Peer)
-            ; labeled_point_transitive_friend(Peer, Peer, Peer, Peer) ; labeled_unpoint(Peer) ; labeled_unpoint_self(Peer, Peer)
+            ; labeled_point_transitive_friend(Peer, Peer, Peer, Peer) ; labeled_unpoint(Peer, Peer, Peer) ; labeled_unpoint_self(Peer, Peer)
             ; post(Peer, Speech) ; deliver(Peer, Peer, Speech, Peer).
 Proposal  ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer)
             ; befriend(Peer, Peer) ; unfriend(Peer, Peer)
-            ; point_friend(Peer, Peer) ; point_transitive(Peer, Peer, Peer) ; unpoint(Peer)
+            ; point_friend(Peer, Peer) ; point_transitive(Peer, Peer, Peer) ; unpoint(Peer, Peer)
             ; labeled_point_friend(Peer, Peer, Peer) ; labeled_point_transitive(Peer, Peer, Peer, Peer)
-            ; labeled_point_transitive_friend(Peer, Peer, Peer, Peer) ; labeled_unpoint(Peer) ; labeled_unpoint_self(Peer, Peer)
+            ; labeled_point_transitive_friend(Peer, Peer, Peer, Peer) ; labeled_unpoint(Peer, Peer, Peer) ; labeled_unpoint_self(Peer, Peer)
             ; post(Peer, Speech).
 Request   ::= propose(Proposal).
 YesNo     ::= yes ; no.
