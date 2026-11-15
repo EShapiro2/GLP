@@ -84,6 +84,7 @@
 #   wc          WC    GO          programs/go               ---
 #   gdo_lb      GDO-LB GRH        programs/lbm              ---
 #   gra_ss      GRA-SS GRH        programs/lbm              ---
+#   sgsg        SGSG  SPM         programs/social/spm       ---
 #   gff_ps      GFF-PS GFF        programs/gff              ---
 #   gff_fr      GFF-FR GFF        programs/gff              ---
 #   gff_fr_bc   GFF-FR-BC GFF     programs/gff              ---
@@ -261,7 +262,8 @@ case "$1" in
     wc) FILE=WC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     gdo_lb) FILE=GDO-LB; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
     gra_ss) FILE=GRA-SS; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
-    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gdo_lb gra_ss gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint cb cc cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc" >&2; exit 2 ;;
+    sgsg) FILE=SGSG; OWNER="programs/social/spm"; PAPER="/Users/udi/Grassroots/SPM"; PLAYDIR="" ;;   # SPM's, adopted from the Calculus (SPM #1, 2026-11-15)
+    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gdo_lb gra_ss gff_i gff_ps gff_fr gff_fr_bc sgsg dao ldao fdao rec stay lib joint cb cc cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not
