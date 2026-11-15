@@ -34,6 +34,16 @@ SIGNED = r"%s(?: signed by %s)+" % (NAME, NAME)   # a place holding a thing with
 COUNTS = {"fewer than": "<", "more than": ">", "at most": "<=", "at least": ">="}   # 'fewer than D persons' in a place: <D
 COUNTW = r"(?:%s) (?:[A-Z][A-Za-z]*|\d+) persons" % "|".join(COUNTS)
 SIGNS = {v: k for k, v in COUNTS.items()}
+POSS_IN = re.compile(r"the (\w+?)s of ((?:%s) (?:[A-Z][A-Za-z]*|\d+) persons)" % "|".join(COUNTS))   # 'the votes of at least V persons' is read as 'at least V persons's vote'
+POSS_OUT = re.compile(r"((?:%s) (?:[A-Z][A-Za-z]*|\d+) persons)'s (\w+)" % "|".join(COUNTS))      # and printed so (GO #6, Calculus #6, 2026-11-15 16:37 UTC)
+
+
+def poss_in(l):
+    return POSS_IN.sub(lambda m: "%s's %s" % (m.group(2), m.group(1)), l)
+
+
+def poss_out(l):
+    return POSS_OUT.sub(lambda m: "the %ss of %s" % (m.group(2), m.group(1)), l)
 
 
 def count_code(v):
@@ -457,7 +467,7 @@ def strip_refs(s):
 def read_gr(name, d="gr"):
     c = Contract()
     c.name = name
-    lines = [l.rstrip("\n") for l in open(os.path.join(ROOT, d, name + ".txt"), encoding="utf-8") if l.strip()]
+    lines = [poss_in(l.rstrip("\n")) for l in open(os.path.join(ROOT, d, name + ".txt"), encoding="utf-8") if l.strip()]
     c.title = lines[0]
     c.params = params_of(lines, name)
     c.first = None
@@ -982,11 +992,11 @@ def write_sas(w, n, sas):
 def put(d, n, lines):
     os.makedirs(os.path.join(ROOT, d), exist_ok=True)
     with open(os.path.join(ROOT, d, n + ".txt"), "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
+        f.write("\n".join(poss_out(l) for l in lines) + "\n")
 
 
 def get(d, n):
-    return [l.rstrip("\n") for l in open(os.path.join(ROOT, d, n + ".txt"), encoding="utf-8") if l.strip()]
+    return [poss_in(l.rstrip("\n")) for l in open(os.path.join(ROOT, d, n + ".txt"), encoding="utf-8") if l.strip()]
 
 
 # ---- the kinds of names; a citation in the names of its own contract -----------------
@@ -1339,6 +1349,8 @@ def instantiate_text(w, entries, items, p, n):
                     if kind == "state":
                         e["effects"], e["conds"] = sub_phrases(e["effects"], [(rx, new)], lex, True), sub_phrases(e["conds"], [(rx, new)], lex)
                         for x in extras(new):
+                            if re.fullmatch(NAME, x):    # a name the first line writes, a count or a constant, stays, as in instantiate_schemas
+                                continue
                             xr = r"(?<![A-Za-z])%s(?![A-Za-z])" % x
                             if not any(re.search(xr, ph) for _, ph in e["effects"]):
                                 e["conds"] = [(c, re.sub(xr, "anyone" if c else "someone", ph)) for c, ph in e["conds"]]

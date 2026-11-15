@@ -7,7 +7,7 @@ of the abstraction cascade in the GLP repository, as its cascade.sh runs them on
 For each it writes cascade/NAME/: verdict.txt, the verdict of GLP's checker (programs/gsc, check/2); vmat.tex, the
 VMAT form (programs/gsc, compile_contract/2); platform.vglp, the canonical platform (programs/vglp/cva/compiler,
 compile/5, with no introduction named and no Interface pragmas); platform.glp, the platform compiled to GLP (the
-REPL's :emit), counted compiled only if it then loads in GLP, the load's lines in run.log; and prints a line.  A
+REPL's :emit), counted compiled only if it then loads in GLP, the load's lines in run.log; interface-adopted.txt, the Interface pragmas of NAME.txt keyed by the titles of the contract's own clauses, as an owner's adopted file has them (tools/ifadopt.py), where they are read; and prints a line.  A
 parametric contract, a term parametric(...), gets its verdict and its VMAT form and no platform.  cascade/STATUS.txt has the lines of the last run of all.  Needs the Dart SDK on
 the PATH and a clone of GLP beside this directory, or $GLP_DIR; it writes a scratch directory under the clone's
 programs/tests/cascade_emit/ and removes it.
@@ -119,7 +119,7 @@ def run(n):
     if any(l.startswith('% not compiled') for l in vm):
         res = 'certified; VMAT not compiled: ' + next(l for l in vm if l.startswith('% not compiled'))[:80]
     if ct.startswith('parametric('):      # a parametric contract is certified and has no platform until it is instantiated (vGLP, 5.4; vGLP #28, 2026-11-15)
-        for f in ('platform.vglp', 'platform.glp', 'run.log', n + '.txt'):
+        for f in ('platform.vglp', 'platform.glp', 'run.log', n + '.txt', 'interface-adopted.txt'):
             if os.path.exists(os.path.join(out, f)):
                 os.remove(os.path.join(out, f))
         return res + '; ' + PARAMETRIC
@@ -135,7 +135,11 @@ def run(n):
         if not k:
             break
     if pr.returncode != 0:
+        if os.path.exists(os.path.join(out, 'interface-adopted.txt')):
+            os.remove(os.path.join(out, 'interface-adopted.txt'))
         return res + '; its Interface pragmas were not read: ' + pr.stderr.strip().split('\n')[0][:200]
+    import ifadopt
+    ifadopt.write(n)          # the same lines keyed by the titles of the contract's own clauses, for its owner's adopted file
     lines = repl('%s\n:limit 1000000000\ncompile(%s, %s, %s, no_introduction, %s).\n:quit\n' % (GLP + '/programs/vglp/cva/compiler/', name, rd, vt, pr.stdout.strip()))
     if '%% compile begin' not in lines or '%% compile end' not in lines:
         return res + '; no platform printed: ' + ' '.join(l for l in lines if 'rror' in l or '✗' in l)[:120]
