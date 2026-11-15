@@ -6218,7 +6218,7 @@ check "CVA bonds: ... the bond maturing at 10, her date past it: her machine vot
 check "CVA bonds: ... bob holds coin(alice) in its place" "B = \[.*view(bob, \[coin(alice), bond(alice, 1000000), knows(alice), identity\], \[alice\], \[\], \[tab('Contacts', knows)\])" "$cva_bonds"
 check_not "CVA bonds: ... alice asked on no redemption and on no swap back" "A = \[.*gave(redeem_bc\|A = \[.*gave(swap_cb(alice\|A = \[.*gave(attempt(bob, 1[24]" "$cva_bonds"
 
-# The day (vGLP 1423679, Section 5.4, "Act schemas as local specifications": "A contract may require the day: the compiled agent reads, with its triggers, a calendar, a stream of dates the device writes, one a day, and holds today(d), d the last date read, beside its app state, which no schema adds or deletes and which a schema may require at a role and constrain a numeric variable by ..., so that it is proposed once a day"; "The compilation": the agent goal reads "where the contract requires the day, the calendar, on each date of which it replaces today(d) and puts up again the starts and requests it holds"; vGLP #20 Cowork to Code, 2026-10-23 23:35 UTC, item 12).  vGLP's contract days (programs/vglp/cva/contracts.glp): dawn(p?), adding dated and date(0), and advance(p ; t, d), unguarded, requiring today(d) and date(t) with d > t; its play gives alice a calendar of the dates 1, 2 and 3, each written once her view shows the date before it (days/self.glp).
+# The day (vGLP, Section 5.4, "Speech-act schemas as local specifications": "we assume that every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition"; "a day that an act records is among its arguments, named by its proposer, and each participant that requires it checks it against the date of its own phone"; "while the day does not allow it the machine refuses it as unable").  vGLP's contract days (programs/vglp/cva/contracts.glp): dawn(p?), adding dated and date(0), and advance(p? ; t, d), requiring today(d) and date(t) with d > t; its agent takes no calendar and reads the date by now/1 at each trigger, and its play sets the machine's clock by GLP's set_clock/1 (the scripted person's step clock(T); days/self.glp).
 cva_days_load=$("$REPL_RUN" <<HEREDOC
 $CVA/days/
 :quit
@@ -6228,14 +6228,17 @@ check "CVA days: the platform and its play load, compiled by the canonical compi
 check_not "CVA days: no type errors" "Type checking failed" "$cva_days_load"
 cva_days=$("$REPL_RUN" <<HEREDOC
 $CVA/days/
-:limit 600000
+:limit 6000000
 play_days(A).
 :quit
 HEREDOC
 2>&1)
-check "CVA days: alice takes her first date, date(0), and on each date of her calendar her machine advances her date once, date(d) replacing date(t), an own transaction of an unguarded part it opens, proposed once a day" "A = \[view(alice, \[\], \[\], \[\], \[tab('Dates', date)\]), view(alice, \[\], \[\], \[dawn(alice)\], \[tab('Dates', date)\]), view(alice, \[dated, date(0)\], \[\], \[\], \[tab('Dates', date)\]), view(alice, \[date(1), dated\], \[\], \[\], \[tab('Dates', date)\]), view(alice, \[date(2), dated\], \[\], \[\], \[tab('Dates', date)\]), view(alice, \[date(3), dated\], \[\], \[\], \[tab('Dates', date)\]) | " "$cva_days"
+check "CVA days: on day 1 alice takes her first date, date(0), and advances to the day her request names, date(1) replacing date(0); the same request again and one naming day 3 are refused as unable, the day not allowing them; on day 3 her request naming it commits, date(3) replacing date(1)" "A = \[view(alice, \[\], \[\], \[\], \[tab('Dates', date)\]), view(alice, \[\], \[\], \[dawn(alice)\], \[tab('Dates', date)\]), view(alice, \[dated, date(0)\], \[\], \[\], \[tab('Dates', date)\]), view(alice, \[dated, date(0)\], \[\], \[advance(alice, 1)\], \[tab('Dates', date)\]), view(alice, \[date(1), dated\], \[\], \[\], \[tab('Dates', date)\]), refused(advance(alice, 1), alice, unable), refused(advance(alice, 3), alice, unable), view(alice, \[date(1), dated\], \[\], \[advance(alice, 3)\], \[tab('Dates', date)\]), view(alice, \[date(3), dated\], \[\], \[\], \[tab('Dates', date)\]) | " "$cva_days"
 check_not "CVA days: ... the view never shows today(d), no atom of the machine state the platform mapping reads" "A = .*today(" "$cva_days"
-check "CVA days: ... and the run suspends, the calendar ended" "→ suspended" "$cva_days"
+check "CVA days: ... and the run suspends" "→ suspended" "$cva_days"
+check "CVA days: the agent takes no calendar, its arguments those of any agent" "^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).$" "$(cat "$CVA/days/platform.vglp")"
+check "CVA days: ... and reads the date of its phone, the time in whole days, at each trigger" "^    D := floor(T? / 86400000),$" "$(cat "$CVA/days/platform.vglp")"
+check_not "CVA days: ... a contract that does not require the day reads no date (nudge)" "now(T)" "$(cat "$CVA/nudge/platform.vglp")"
 
 # A constraint in GSC's form, "a conjunction of linear equalities and inequalities over its value variables and values" (GSC bcc1891, Definition "Schema with values"; programs/gsc at GSC-unob3 62fb0342), its equality giving the variable of an added atom its value once the atoms its first role requires bind the others (vGLP, Section 5.4, "Act schemas as local specifications": "or the constraint gives the variable finitely many values once those are bound").  vGLP's contract linear (programs/vglp/cva/contracts.glp): start and refuel, as numbers has them; climb(p ; t, t1) | t1 = t + 2 and t < 6, and mark(p ; t, m) | 3m = t + 3, each unguarded and opened by p, t local to p's role (linear/self.glp).
 cva_linear_load=$("$REPL_RUN" <<HEREDOC
