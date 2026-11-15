@@ -37,31 +37,30 @@ After y ends y's friendship with y's ward z: y and z are no longer friends, no l
 After g ends the friendship of x and y: x and y are no longer friends.
 After g retires z, which requires z is not retired: z is retired, z has no guardians and z has no friends.
 Interface pragmas
-Wards: the wards Alice is a guardian of.
+Guardianships: those Alice is a guardian of.
 Enter: Alice [Enter] <name>
   Carol: Alice asks to be your guardian.
-Make guardian: Decider [Make guardian] <person>
+Guardian decisions: Decider [Make guardian] <person>
   Bob: Decider asks you to be a guardian of the ward Carol.
   Codecider: Decider asks that Bob be a guardian of your ward Carol.
-Resign: Bob [Resign]
-End guardian: Decider [End guardian] <person>
+  Decider [End guardian] <person>
   Codecider: Decider asks to end Bob's guardianship of your ward Carol.
-Guardian unfriend: Bob [Guardian unfriend]
-Ward acquaint: Bob [Ward acquaint] <person>
+  Bob [Resign] [Guardian unfriend]
+Ward and person: Bob [Ward acquaint] <person>
   Carol: Bob wishes that you know each other.
-Ward befriend: Alice [Ward befriend]
+  Alice [Ward befriend] <ward>
   Carol: Alice asks that you and Bob befriend.
   Bob: Alice asks that you and her ward Carol befriend.
-Ward end: Carol [Ward end]
-Unfriend: Bob [Unfriend]
-Ward unfriend: Alice [Ward unfriend] <person>
-Wards acquaint: Carol [Wards acquaint] <person>
+  Alice [Ward unfriend] <ward> <person>
+  Carol [Ward end]
+  Bob [Unfriend]
+Wards: Carol [Wards acquaint] <person>
   Dave: Carol wishes that you know each other.
-Wards befriend: Alice [Wards befriend]
+  Alice [Wards befriend] <ward>
   Carol: Alice asks that you and Dave befriend.
   Dave: Alice asks that you and Carol befriend.
   Bob: Alice asks that Carol and your ward Dave befriend.
-Wards of one guardian befriend: Alice [Wards of one guardian befriend]
+  Alice [Wards of one guardian befriend] <ward> <other ward>
   Carol: Alice asks that you and Dave befriend.
   Dave: Alice asks that you and Carol befriend.
 Retire: Decider [Retire]

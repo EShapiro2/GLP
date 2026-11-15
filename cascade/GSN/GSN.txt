@@ -35,12 +35,11 @@ After y delivers t of x in g to z, which requires y has not delivered the messag
 Interface pragmas
 Groups: the groups Alice is a member of.
 Messages: the messages Alice received.
-Posts: the posts Alice received in her groups.
+Posts: the group messages Alice received.
 Message: Alice [Message] <text>
-Create: Alice [Create] <name>
-Close: Alice [Close]
-Join: Alice [Join]
+Group: Alice [Create] <name> [Close]
+Joining and Leaving: Alice [Join]
   Bob: Alice asks you to join her group.
-Remove: Alice [Remove]
-Leave: Bob [Leave]
-Post: Bob [Post] <text>
+  Alice [Remove]
+  Bob [Leave]
+Group messaging: Bob [Post] <text>
