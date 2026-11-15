@@ -43,7 +43,7 @@ sudo -u glp env PAPERS_DIR=/var/lib/glp/papers python3 -I servers/peoplesweb/too
 # delete (deploy/test.sh).
 rsync -a --delete --exclude /test/ servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
 [ "$old" = "$new" ] || systemctl restart peoplesweb
-# The test site, peoplesweb.org/test: the site as the branch GSA-site has it,
+# The test site, peoplesweb.org/test: the site as the branch Website-site has it,
 # over the repository as main has it.  Last, so that a failure there leaves
 # the live site published.
 sh servers/peoplesweb/deploy/test.sh || echo "sweep: the test site, peoplesweb.org/test, was not built" >&2

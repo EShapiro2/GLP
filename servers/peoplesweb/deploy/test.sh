@@ -1,7 +1,7 @@
 #!/bin/sh
 # The test site, peoplesweb.org/test (Udi, 2026-11-12, to GSA #5: a change to
 # the site is shown first on a test site under /test, and made live on his
-# approval).  It is the site as the branch GSA-site of GLP has it: that
+# approval).  It is the site as the branch Website-site of GLP has it: that
 # branch's servers/peoplesweb, its pages and its build, run over the
 # repository as main has it, so the test site shows the live site's contracts,
 # papers and apps.  deploy/sweep.sh runs this after it publishes the live
@@ -19,7 +19,7 @@
 # where it cannot be fetched or does not build, the test site stays as it was
 # and the sweep says so.
 set -e
-BRANCH=${TEST_BRANCH:-GSA-site}
+BRANCH=${TEST_BRANCH:-Website-site}
 GLP=${GLP_ROOT:-/srv/glp}
 WORK=${TEST_WORK:-/var/lib/glp/test}
 WWW=${TEST_WWW:-/var/www/peoplesweb.org/test}
