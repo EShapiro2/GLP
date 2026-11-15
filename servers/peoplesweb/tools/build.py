@@ -281,6 +281,41 @@ for n in compiled:
         json.dump(s, f)
 
 
+# The Calculus (calculus/MIGRATION.md, the section Website, agreed by
+# Website #2, 2026-11-15): until its owner adopts a contract, the Calculus's
+# text of it is on the branch Calculus of GLP, which deploy/sweep.sh unpacks
+# into CALCULUS_DIR; after its adoption it is on main, and its printed
+# artefacts in cascade/NAME/.  calculus/STATE.txt has a line for each
+# contract: its name, its owner, and yes or no for certified by GLP's checker,
+# compiled to GLP, and adopted by its owner.
+CALC = os.environ.get('CALCULUS_DIR') or os.path.join(GLP, 'calculus')
+calc_state = {}
+if os.path.exists(os.path.join(CALC, 'STATE.txt')):
+    for l in read(os.path.join(CALC, 'STATE.txt')).split('\n'):
+        f = l.split()
+        if len(f) == 5:
+            calc_state[f[0]] = {'owner': f[1], 'certified': f[2] == 'yes', 'compiled': f[3] == 'yes', 'adopted': f[4] == 'yes'}
+
+
+def calculus_of(n):
+    """What the site shows of contract n from the Calculus: its state, and,
+    until its owner adopts it, the text proposed; the full contract, from the
+    branch until adoption and from cascade/n/ after it."""
+    st = calc_state.get(n)
+    if st is None:
+        return None
+    v = dict(st)
+    src = os.path.join(GLP, 'cascade', n) if st['adopted'] else os.path.join(CALC, n)
+    if not st['adopted'] and os.path.exists(os.path.join(CALC, n, 'contract.txt')):
+        v['proposed'] = read(os.path.join(CALC, n, 'contract.txt')).strip()
+    fc = os.path.join(src, 'full-contract.txt')
+    if os.path.exists(fc):
+        os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
+        shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))
+        v['full'] = f'stack/{n}/full-contract.txt'
+    return v
+
+
 about = json.loads(read(os.path.join(HERE, 'web', 'about.json')))
 look = json.loads(read(os.path.join(GLP, 'programs', 'apps', 'look.json')))
 # The papers' PDFs: those tools/papers_sync.py keeps current in PAPERS_DIR on
@@ -359,18 +394,11 @@ for n in sorted(set(compiled) | set(cat)):
             os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
             shutil.copy(os.path.join(d, f), os.path.join(WWW, 'stack', n, f))
             c['layers'][k] = {'file': f'stack/{n}/{f}', 'lines': read(os.path.join(d, f)).count('\n')}
-    # The full contract, the Full contract button's text (Udi, 2026-11-15, to
-    # Calculus #6, verbatim: "i want the web to include for each contract a
-    # button you press 'full contract' that show the full contract"): the
-    # contract with every clause it has from the contracts it is written
-    # from, each labelled by its origin, which the Calculus prints into
-    # calculus/<NAME>/full-contract.txt (Calculus #6 to Website, 2026-11-15
-    # 12:33 UTC).  A contract with no such file has no button.
-    fc = os.path.join(GLP, 'calculus', n, 'full-contract.txt')
-    if os.path.exists(fc):
-        os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
-        shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))
-        c['full'] = f'stack/{n}/full-contract.txt'
+    # The Full contract button's text (Udi, 2026-11-15, to Calculus #6,
+    # verbatim: "i want the web to include for each contract a button you
+    # press 'full contract' that show the full contract"), and the Calculus's
+    # proposed text and state.
+    c['calculus'] = calculus_of(n)
     # A contract that builds on one with no platform is drawn building on the nearest shown ones.
     ps = nearest(n)
     c['extends'] = [p for p in ps if not any(p in set(ancestors(q)) for q in ps if q != p)]
@@ -400,6 +428,24 @@ for c in contracts:
 with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
     json.dump({c['id']: c['checks'] for c in contracts if c['checks']}, f, ensure_ascii=False, indent=1)
 
+# A contract the Calculus has and its owner has not written, SGSG today: listed
+# from the Calculus with its proposed text and nothing in force, until its
+# owner adopts it (calculus/MIGRATION.md, Website, item 2).
+for n in sorted(set(calc_state) - set(cat)):
+    v = calculus_of(n)
+    if not v or 'proposed' not in v:
+        continue
+    lines = v['proposed'].split('\n')
+    title = lines[0].split(': ', 1)[1] if ': ' in lines[0] else n
+    m = next((re.match(re.escape(n) + r' extends ([^.]+)\.', l) for l in lines if l.startswith(n + ' extends ')), None)
+    ext = [x for x in re.findall(r'[A-Z][A-Za-z]*(?:-[A-Z][A-Za-z]*)*', m.group(1)) if x in cat] if m else []
+    _a = about.get(n, ['📄', 'other', ''])
+    contracts.append({'id': n, 'title': title, 'label': f'{n}: {title}', 'preamble': '', 'clauses': [], 'pragmas': [],
+                      'extends': ext, 'rels': {x: 'extends' for x in ext}, 'relation': 'extends', 'owner': '' if v['owner'] == 'none' else v['owner'],
+                      'source': 'calculus', 'icon': _a[0], 'family': _a[1], 'about': _a[2] or title + '.',
+                      'cascade': False, 'dir': '', 'paper': {}, 'schemaHeader': [], 'schemas': [], 'verdict': '',
+                      'live': False, 'noteBefore': '', 'layers': {}, 'record': False, 'notCompiled': [],
+                      'checks': [], 'artefact': None, 'calculus': v})
 commit = subprocess.run(['git', '-C', GLP, 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
 for f in os.listdir(os.path.join(HERE, 'web')):
     if f.endswith(('.html', '.js', '.png', '.ico', '.jpg')):
