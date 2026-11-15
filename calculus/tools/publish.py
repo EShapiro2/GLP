@@ -11,7 +11,7 @@ Figure 1 of the paper, and the programs that print them.
     DIR/NAME/full-schemas.txt       its expanded schemas (sasx/)
     DIR/NAME/term.glp.txt           the expanded schemas as the term GLP's checker reads (glp/)
     DIR/NAME/verdict.txt, vmat.tex, interface.txt, platform.vglp, platform.glp    the abstraction cascade (cascade/NAME/)
-    DIR/README.md, OWNERS.md, MIGRATION.md, STATE.txt (a line for each contract: name, owner, certified, compiled, adopted), STATUS.txt, VERDICTS.txt, tools/, tests/
+    DIR/README.md, OWNERS.md, MIGRATION.md, STATE.txt (a line for each contract: name, owner, certified, compiled (yes, no or parametric), adopted), STATUS.txt, VERDICTS.txt, tools/, tests/
 """
 import os, shutil, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -31,10 +31,10 @@ def state(out, names):
     for l in open(os.path.join(ROOT, 'glp', 'VERDICTS.txt'), encoding='utf-8'):
         if l.strip(): cert[l.split()[0]] = l.split(None, 1)[1].startswith('syntactically_grassroots')
     for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8'):
-        if l.strip(): comp[l.split()[0]] = 'platform.glp' in l
+        if l.strip(): comp[l.split()[0]] = 'parametric' if 'a parametric contract' in l else 'platform.glp' in l
     own['SGSG'] = 'SPM'      # it has no text in GLP yet; SPM's paper has it
     own['AGORA'] = 'Currencies'      # Udi, 2026-11-15; its owner line in GLP names Talmon, for Currencies to correct
-    yn = lambda b: 'yes' if b else 'no'
+    yn = lambda b: b if isinstance(b, str) else 'yes' if b else 'no'      # compiled: yes, no, or parametric, certified with no platform until instantiated
     with open(os.path.join(out, 'STATE.txt'), 'w', encoding='utf-8') as f:
         for n in names:
             f.write('%s %s %s %s %s\n' % (n, own.get(n, 'none'), yn(cert.get(n)), yn(comp.get(n)), yn(same.get(n))))
@@ -53,7 +53,8 @@ def main(out, hold=()):
         c = os.path.join(ROOT, 'cascade', n)
         for f in sorted(os.listdir(c)) if os.path.isdir(c) else []:
             shutil.copyfile(os.path.join(c, f), os.path.join(d, 'interface.txt' if f == n + '.txt' else f))
-        for f in ('verdict.txt', 'platform.glp'):
+        param = any(l.split()[:1] == [n] and 'a parametric contract' in l for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8'))
+        for f in ('verdict.txt',) if param else ('verdict.txt', 'platform.glp'):      # a parametric contract has no platform until instantiated
             if not os.path.exists(os.path.join(d, f)): missing.append('%s: %s' % (n, f))
     for f, g in (('README-PUBLIC.md', 'README.md'), ('OWNERS.md', 'OWNERS.md'), ('LAYERS.txt', 'LAYERS.txt'), ('MIGRATION.md', 'MIGRATION.md'), ('cascade/STATUS.txt', 'STATUS.txt'), ('glp/VERDICTS.txt', 'VERDICTS.txt')):
         if os.path.exists(os.path.join(ROOT, f)): shutil.copyfile(os.path.join(ROOT, f), os.path.join(out, g))
