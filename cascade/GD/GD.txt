@@ -3,7 +3,7 @@
 % Paper: SRC, Trust, Distrust and Committed Dynamics for Sybil-Resilient Communities in Social Graphs, in preparation
 % Extends: GSG, Grassroots Social Graph, GSC's (programs/gsc), and through it GKK, Grassroots Keys and Knowledge, GSC's, by the relations of the Calculus (calculus/README.md, "The relations"): it adds the schemas of GD:1 to GD:3 and deletes none.  GD-S restricts it (GD-S.txt beside this file).
 % Defines: a declaration of distrust.  Person, knowing and friend are defined with GKK and GSG; Alice, Bob and Carol are variables naming distinct persons.
-% Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus e061185; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GGGA's, their lines named by the clauses' new titles, clause 1 with a button for each of its two acts (GGGA #4).  Git holds what the file said before.
+% Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 029de9f; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GGGA's, their lines named by the clauses' new titles, clause 1 with a button for each of its two acts (GGGA #4).  Git holds what the file said before.
 % Schemas: GD.glp beside this file, the full schemas, GKK's three, GSG's two and four over the predicate distrusts, printed by calculus/tools/adopt.py GD from the Logic pragmas and never written by hand; adopt.py --check GD holds it and cascade/GD/ to what the tools print.
 GD: Grassroots Distrust
 GD extends GSG.
@@ -14,7 +14,7 @@ Alice, Bob and Carol are persons.
 Logic pragmas
 GD extends GSG.
 Alice, Bob and Carol are persons.
-1. ■ Distrust: Alice may declare distrust of Carol, provided Alice knows Carol and Alice and Carol are not friends. Distrust friend: Alice may declare distrust of her friend Carol.
+1. ■ Distrust: Alice may declare distrust of Carol, provided Alice knows Carol and Alice and Carol are not friends. Distrust friend: Alice may declare distrust of her friend Carol, provided Alice knows Carol.
 2. ■ Propagate: Alice may declare distrust of Carol, provided Alice does not know Carol, Alice and Bob are friends and Bob has declared distrust of Carol.
 3. ■ Cease: Alice may withdraw her declaration of distrust of Carol.
 Logic pragmas.
