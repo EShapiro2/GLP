@@ -1,0 +1,3 @@
+K: Base
+Of K: Alice, Bob and Carol are persons.
+K:1. ■ Give: Bob may take a token, with the consent of Alice. Take: Alice may take a token.

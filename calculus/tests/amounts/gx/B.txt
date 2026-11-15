@@ -1,0 +1,5 @@
+B: Bank
+Of B: Bob is a person, Orga a bank, Sum, Line, Held and Total numbers.
+B:1. ■ Issue: Bob may issue Sum Bob-coins.
+B:2. ■ Set: Orga may set Bob's line at Line.
+B:3. ■ Credit: Bob may give Orga Sum Bob-coins, provided Orga holds exactly Held Bob-coins, Orga has Bob's line at the number Line, Total is Held plus Sum and Total is at most Line. Double: Bob may give Orga 2 Bob-coins, provided Line is more than 2.

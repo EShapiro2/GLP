@@ -1,0 +1,26 @@
+C          commute yes; return yes; recover same
+P          commute yes; return yes; recover same
+Q          commute yes; return yes; recover same
+D          commute yes; return yes; recover same
+4 contracts, 0 with a fault
+--- sasx/C.txt
+C: Base (expanded schemas)
+C:0 - | Alice is a person.
+C:1 ■ Mark: q(Alice) <- guarded by Alice.
+--- sasx/D.txt
+D: Both (expanded schemas)
+C:0 - | Alice is a person.
+C:1+P:1+Q:1 ■ Mark: q(Alice), ~p(Alice) <- p(Alice), p(Alice) guarded by Alice.
+P:0 - | Alice is a person.
+Q:0 - | Alice is a person.
+D:0 - | Alice is a person.
+--- sasx/P.txt
+P: Strengthens (expanded schemas)
+C:0 - | Alice is a person.
+C:1+P:1 ■ Mark: q(Alice), ~p(Alice) <- p(Alice) guarded by Alice.
+P:0 - | Alice is a person.
+--- sasx/Q.txt
+Q: Restricts (expanded schemas)
+C:0 - | Alice is a person.
+C:1+Q:1 ■ Mark: q(Alice) <- p(Alice) guarded by Alice.
+Q:0 - | Alice is a person.
