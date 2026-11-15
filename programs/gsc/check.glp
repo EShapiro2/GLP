@@ -502,11 +502,12 @@ head_schema(S, R?) :- ground(S?) |
     nsch_occ_vars(S?, Os),
     head_schema1(Nm?, H?, Bd?, Os?, R).
 
-% A value variable's type is its head's, real(X) or num(X) (self.glp, Arg),
+% A value variable's type is its head's, real(X), const(X) or num(X) (self.glp, Arg),
 % and its atoms write num(X) of either, so the head is compared as num(X).
 procedure head_untyped(Args?, Args).
 head_untyped([], []).
 head_untyped([real(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
+head_untyped([const(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
 head_untyped([A|As], [A?|R?]) :- otherwise | head_untyped(As?, R).
 
 procedure head_schemas(NContract?, Faults).
@@ -986,11 +987,12 @@ item_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
 % unsupplied(Schema, Pred), in the order of the schemas and, in a schema, of
 % its roles, a listed role's anchor before its atoms, then the anchors of the
 % quantified conjuncts of its head, then the safe formulas of its body, a
-% predicate once.  An agent role requires =(i) u -(i), a cleared atom
-% requiring none, and what it forbids is not required (def:schema).  A
-% quantified conjunct of a body is a safe formula of it (def:role), so every
-% atom of it counts, its anchor and the literals of its conclusion, which are
-% a listed role's =(i) and not(i) where it binds one.  An atom a schema adds
+% predicate once.  A role requires =(i) u -(i), a cleared atom requiring
+% none, and what it forbids is not required (def:schema), an agent role's and
+% a listed role's alike; an atom negated in a safe formula of a body is not
+% required either.  A quantified conjunct of a body is a safe formula of it
+% (def:role), so its anchor and the unnegated literals of its conclusion
+% count.  An atom a schema adds
 % is one a role adds or a conditional atom of a quantified conjunct of its
 % head (def:schema: "where ... speak of an atom a schema adds or deletes, a
 % conditional one is included").  A cardinality's and a sum's anchored safe
@@ -1007,43 +1009,63 @@ sup_mult_pred(atom(P, _), P?).
 sup_mult_pred(times(_, atom(P, _)), P?).
 sup_mult_pred(rest(_, _, atom(P, _)), P?).
 
-% The predicates of the atoms of a safe formula, its anchors among them.
-procedure sup_form_preds(Form?, Preds?, Preds).
-sup_form_preds(fa(_, M), T, [P?|T?]) :- sup_mult_pred(M?, P).
-sup_form_preds(fnot(F), T, R?) :- sup_form_preds(F?, T?, R).
-sup_form_preds(fand(A, B), T, R?) :- sup_form_preds(B?, T?, R1), sup_form_preds(A?, R1?, R).
-sup_form_preds(for(A, B), T, R?) :- sup_form_preds(B?, T?, R1), sup_form_preds(A?, R1?, R).
-sup_form_preds(fexists(_, _, atom(P, _), F), T, [P?|R?]) :- sup_form_preds(F?, T?, R).
-sup_form_preds(fforall(_, _, atom(P, _), F, G), T, [P?|R?]) :-
-    sup_forms_preds(G?, T?, R1),
-    sup_form_preds(F?, R1?, R).
-sup_form_preds(fcons(C), T, R?) :-
+% The predicates of the atoms that occur unnegated in a safe formula, its
+% anchors among them: an atom under an even number of negations of the
+% formula is unnegated, U then yes, and one under an odd number is not
+% required, "something an act forbids being not something it needs" (GSC
+% #17, 2026-11-15, Section 3.2: "occurs unnegated in a safe formula of a
+% body").  Only the negations of the formula are counted: a quantifier's
+% anchor, its condition and its conclusion are read as the quantifier is, and
+% so is the anchored formula of a cardinality or a sum of a constraint, the
+% connectives of the constraint not counted.
+procedure sup_fa_pred(Ans?, Mult?, Preds?, Preds).
+sup_fa_pred(yes, M, T, [P?|T?]) :- sup_mult_pred(M?, P).
+sup_fa_pred(no, _, T, T?).
+
+procedure sup_anchor_pred(Ans?, Atom?, Preds?, Preds).
+sup_anchor_pred(yes, atom(P, _), T, [P?|T?]).
+sup_anchor_pred(no, _, T, T?).
+
+procedure sup_form_preds(Form?, Ans?, Preds?, Preds).
+sup_form_preds(fa(_, M), U, T, R?) :- sup_fa_pred(U?, M?, T?, R).
+sup_form_preds(fnot(F), U, T, R?) :- flip(U?, U1), sup_form_preds(F?, U1?, T?, R).
+sup_form_preds(fand(A, B), U, T, R?) :- ground(U?) |
+    sup_form_preds(B?, U?, T?, R1),
+    sup_form_preds(A?, U?, R1?, R).
+sup_form_preds(for(A, B), U, T, R?) :- ground(U?) |
+    sup_form_preds(B?, U?, T?, R1),
+    sup_form_preds(A?, U?, R1?, R).
+sup_form_preds(fexists(_, _, A, F), U, T, R?) :- ground(U?) |
+    sup_form_preds(F?, U?, T?, R1),
+    sup_anchor_pred(U?, A?, R1?, R).
+sup_form_preds(fforall(_, _, A, F, G), U, T, R?) :- ground(U?) |
+    sup_forms_preds(G?, U?, T?, R1),
+    sup_form_preds(F?, U?, R1?, R2),
+    sup_anchor_pred(U?, A?, R2?, R).
+sup_form_preds(fcons(C), U, T, R?) :-
     cons_anchored(C?, [], An),
-    sup_forms_preds(An?, T?, R).
+    sup_forms_preds(An?, U?, T?, R).
 
-procedure sup_forms_preds(Forms?, Preds?, Preds).
-sup_forms_preds([], T, T?).
-sup_forms_preds([F|Fs], T, R?) :- sup_forms_preds(Fs?, T?, R1), sup_form_preds(F?, R1?, R).
+procedure sup_forms_preds(Forms?, Ans?, Preds?, Preds).
+sup_forms_preds([], _, T, T?).
+sup_forms_preds([F|Fs], U, T, R?) :- ground(U?) |
+    sup_forms_preds(Fs?, U?, T?, R1),
+    sup_form_preds(F?, U?, R1?, R).
 
-% A listed role's anchor, and what it forbids, in the conclusion of a
-% quantified conjunct of the body.
+% A listed role's anchor; what it forbids, the negated literals of the
+% conclusion of a quantified conjunct of the body, is not required.
 procedure sup_anchor(RoleSpec?, Preds?, Preds).
 sup_anchor(rs(_, _, _, _, _), T, T?).
 sup_anchor(crs(listed(_, Rho, _), _, _, _, _, _), T, [Rho?|T?]).
 sup_anchor(crs(qlisted(_, Rho, _, _), _, _, _, _, _), T, [Rho?|T?]).
-
-procedure sup_listed_forb(RoleSpec?, Preds?, Preds).
-sup_listed_forb(rs(_, _, _, _, _), T, T?).
-sup_listed_forb(crs(_, _, _, _, _, N), T, R?) :- sup_atoms_preds(N?, T?, R).
 
 procedure sup_roles_required(RoleSpecs?, Preds?, Preds).
 sup_roles_required([], T, T?).
 sup_roles_required([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
     rs_req(RS?, Q),
     sup_roles_required(Rs?, T?, R1),
-    sup_listed_forb(RS?, R1?, R2),
-    sup_atoms_preds(Q?, R2?, R3),
-    sup_anchor(RS?, R3?, R).
+    sup_atoms_preds(Q?, R1?, R2),
+    sup_anchor(RS?, R2?, R).
 
 procedure sup_conj_anchors(Conjuncts?, Preds?, Preds).
 sup_conj_anchors([], T, T?).
@@ -1057,7 +1079,7 @@ sup_required(S, R?) :- ground(S?) |
     sch_roles(S?, Rs),
     sch_conjs(S?, Cj),
     sch_forms(S?, Fs),
-    sup_forms_preds(Fs?, [], P3),
+    sup_forms_preds(Fs?, yes, [], P3),
     sup_conj_anchors(Cj?, P3?, P2),
     sup_roles_required(Rs?, P2?, P1),
     preds_dedup(P1?, R).

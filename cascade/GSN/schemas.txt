@@ -1,44 +1,29 @@
-establish: identity(Alice) <-
-    not identity(Alice) guarded by Alice
-
-acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), identity(Bob) guarded by Alice, Bob
-
-introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
-
-befriend: friend(Alice, Bob), friend(Bob, Alice) <-
-    identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
-
-unfriend: not friend(Alice, Bob), not listed(Alice, Bob, _), not member(Alice, <Bob>._), not friend(Bob, Alice), not listed(Bob, Alice, _), not member(Bob, <Alice>._) <-
-    identity(Alice), friend(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
-
-message: received(Bob, x, Alice) <-
-    identity(Alice), friend(Alice, Bob), identity(Bob) guarded by Alice
-
-create: member(Alice, <Alice>.n), listed(Alice, Alice, n) <-
-    identity(Alice), not member(Alice, <Alice>.n), not closed(Alice, n) guarded by Alice
-
-join: listed(Alice, Bob, n), member(Bob, <Alice>.n) <-
-    identity(Alice), member(Alice, <Alice>.n), friend(Alice, Bob), identity(Bob), not member(Bob, <Alice>.n) guarded by Alice, Bob
-
-leave: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
-    identity(Alice), listed(Alice, Bob, n), identity(Bob), member(Bob, <Alice>.n) guarded by Bob
-
-remove: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
-    identity(Alice), listed(Alice, Bob, n), identity(Bob), member(Bob, <Alice>.n) guarded by Alice
-
-close: closed(Alice, n), not listed(Alice, Alice, n), not member(Alice, <Alice>.n), forall Bob (listed(Alice, Bob, n) -> not member(Bob, <Alice>.n)) <-
-    identity(Alice), listed(Alice, Alice, n), member(Alice, <Alice>.n), forall Bob (listed(Alice, Bob, n) -> identity(Bob), member(Bob, <Alice>.n)) guarded by Alice
-
-post_own: posted(Alice, x, n) <-
-    identity(Alice), member(Alice, <Alice>.n), not posted(Alice, x, n) guarded by Alice
-
-post: posted(Alice, x, n) <-
-    identity(Bob), member(Bob, <Alice>.n), identity(Alice), member(Alice, <Alice>.n), listed(Alice, Bob, n), friend(Alice, Bob), not posted(Alice, x, n) guarded by Bob
-
-deliver: delivered(Alice, x, Bob, n), received_in(Bob, x, Alice, n) <-
-    identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, x, Bob, n), identity(Bob), member(Bob, <Alice>.n)
-
-deliver_leader: received_in(Alice, x, Alice, n) <-
-    identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), not received_in(Alice, x, Alice, n)
+GSN: Grassroots Social Network
+GSN extends and strengthens GSG.
+Vocabulary: y has the message t from x = message(y,x,t); x is the leader of g = leader(x,g); x is a member of the group g of y = member(x,g,y); x has y as a member of the group g = listed(x,y,g); y has the post t of x in g = posted(y,t,x,g); z has the message t of x in g delivered by y = group_message(z,x,t,g,y); y has delivered the message t of x in g to z = group_delivered(y,x,t,g,z).
+x is a member of g: x is a member of the group g of someone.
+After x sends t to y: y has the message t from x.
+After x creates g, which requires x is not the leader of g: x is the leader of g, x is a member of the group g of x and x has x as a member of the group g.
+After x closes g by leaving it: no longer x is the leader of g, x has no one as a member of the group g and no one is a member of the group g of x.
+After x adds y to g, which requires y is not a member of g: y is a member of the group g of x and x has y as a member of the group g.
+After x ends y's membership in g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
+After y ends y's membership in x's g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
+After x sends t to the group g of y, which requires y does not have the post t of x in g: y has the post t of x in g.
+After y delivers t of x in g to z, which requires y has not delivered the message t of x in g to z: y has delivered the message t of x in g to z and z has the message t of x in g delivered by y.
+After y delivers t of x in g to the leader y, which requires y has not delivered the message t of x in g to y: y has delivered the message t of x in g to y and y has the message t of x in g delivered by y.
+GSN:0 - | A *message*, a parameter of GSN, is what a person sends.
+GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+GSN:1 ■ Message: message(Bob,Alice,Text) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice possibly Alice=Bob.
+GSN:2 ■ | Group.
+GSN:2 ■ Create: leader(Alice,Grupo), member(Alice,Grupo,Alice), listed(Alice,Alice,Grupo) <- ~leader(Alice,Grupo) guarded by Alice.
+GSN:2 ■ | Alice is then its leader and first member.
+GSN:2 ■ Close: ~leader(Alice,Grupo), ~listed(Alice,_,Grupo), ~member(_,Grupo,Alice) <- leader(Alice,Grupo) guarded by Alice.
+GSN:3 ■ | Joining and Leaving.
+GSN:3 ■ Join: member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_) guarded by Alice, Bob possibly Alice=Bob.
+GSN:3 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Alice possibly Alice=Bob.
+GSN:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+GSN:3 ■ Unfriend: GSG:2 + ~member(Alice,_,Bob), ~member(Bob,_,Alice), ~listed(Alice,Bob,_), ~listed(Bob,Alice,_) <-.
+GSN:4 ■ | Group messaging.
+GSN:4 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+GSN:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+GSN:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.

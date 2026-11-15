@@ -301,8 +301,12 @@ SNT    ::= own(Constant) ; ext(SNT, Constant).
 % 5.4: "a text by the type its variable carries in the schema where it
 % carries one, as an email address or a person's name, which constrains
 % nothing and which the field's widget is told").
+% const(X) is the value variable X whose values are constants, as val(C) is a
+% constant value (GSC, the appendix "Values in Speech-Act Schemas": "a value
+% variable of a schema has a type, which the schema's term form writes").
 SArg   ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-         ; real(Constant) ; sgn(Constant, Constant) ; item_of(Constant)
+         ; real(Constant) ; const(Constant)
+         ; sgn(Constant, Constant) ; item_of(Constant)
          ; typed(Constant, Constant)
          ; val(Constant).
 SArgs  ::= [] ; [SArg | SArgs].
@@ -334,8 +338,13 @@ PNames ::= [] ; [Constant | PNames].
 Preds ::= [] ; [Constant | Preds].
 SSchema    ::= sas(Constant, Names, PNames, SLits, SLits, SConstraint, PNames).
 SContract  ::= [] ; [SSchema | SContract].
-SDeclared  ::= SContract ; reflexive(Preds, SContract)
-             ; environment(Preds, SContract)
+% A contract may declare reflexive predicates, environment predicates and
+% parameters together (GSC, Section 8, "Reflexive predicates"; the appendix
+% Values, "Environment predicates"; Definition Parametric contract), in one
+% order: the parameters outermost, then the environment predicates, then the
+% reflexive ones, as programs/gsc reads it (WDeclared).
+SBody      ::= SContract ; reflexive(Preds, SContract).
+SDeclared  ::= SBody ; environment(Preds, SBody)
              ; parametric(SParams, SDeclared).
 % A parametric contract and an instance of it (GSC, Definition Parametric
 % contract, "The term of a parametric contract names its parameters, and that
@@ -354,7 +363,7 @@ SParams   ::= [] ; [SParam | SParams].
 % added arguments in order, as extended(guardian_of, officer_of, [num]) (GSC
 % 220151a, Definition Parametric contract: "or, for a predicate that is not
 % a mark, of the same kinds with further value arguments"; GSC #16, 2026-11-11).
-VType     ::= num ; real.
+VType     ::= num ; real ; const.
 VTypes    ::= [] ; [VType | VTypes].
 SBinding  ::= (Constant = Constant) ; extended(Constant, Constant, VTypes).
 SBindings ::= [] ; [SBinding | SBindings].

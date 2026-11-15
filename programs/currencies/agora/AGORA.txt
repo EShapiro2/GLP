@@ -1,35 +1,55 @@
-% Withdrawal's pragmas name the post's fields as Posting's do, pressed in a market's row, since vGLP's compiler fills an act's places from the fields and the row (vGLP 305c8d0; Code #22, 2026-11-03 19:46 UTC; Currencies #15, 2026-11-04).
-% AGORA: Grassroots Barter --- an experimental contract by Nimrod Talmon with Claude; version 2, 2026-10-31, over GB; the keeper's own wall and posts added the same day.
-% Owner: Talmon.  No paper (just an example of a grassroots contract).
-% Paper: none; an example over GB (Udi, 2026-11-01).
-% Extends: GB, Grassroots Bonds, Currencies' (programs/currencies/bonds), and through it GKK.  It cites their clauses whole and restates none.
-% Defines: item, a one-of-a-kind thing named by its maker; Alice-item, an item Alice made; instrument, a coin, a bond or an item; market, keeper, member, wall.  Whoever holds a Bob-item knows Bob, as a holder of a Bob-coin knows Bob.
-% Pragmas (2026-11-06): the fields of a line are the variables of its acts that the atoms the proposer's role requires do not bind, in the schemas' order (vGLP's paper at 40f8444, Section 5.4; Code #23, 2026-11-05 11:39 and 14:05 UTC); what the proposer's state binds, the row fills.  Rewritten so by Currencies #15.
-% Schemas: AGORA.glp beside this file.  Clause 6 is realised by the barter schemas (an item for an item, a coin or a bond, and back) and the item escrow schemas, GB's swap and escrow with an item in place of a coin or a bond.  A member who sees an offer and does not yet know its poster's acquaintance first meets them (GKK:2): GB's swap asks that the two know each other.
+% AGORA: Grassroots Barter --- the contract, the one copy, its owner's (organisation/claude.md, "Sessions").
+% Owner: Currencies (Udi, 2026-11-15, to Calculus #6, reported by Calculus: calculus/MIGRATION.md); written by Nimrod Talmon with Claude, 2026-10-31.
+% Paper: none; an example over GB (Udi, 2026-11-01)
+% Adopted from the Calculus, branch Calculus of GLP, c475902, by calculus/MIGRATION.md (Udi, 2026-11-15): the contract and its Logic pragmas are the Calculus's text, which Udi approved; AGORA.glp and cascade/AGORA/ are printed by calculus/tools/adopt.py, never written by hand; the Interface pragmas are the owner's, a line for each clause with acts of its own, the fields those of calculus/NAME/interface.txt (Currencies #19, 2026-11-15).
 AGORA: Grassroots Barter
-Alice, Bob and Carol are persons.  AGORA extends GB.  An instrument is a coin, a bond or an item.
-1. ■ Making.  Alice may make an Alice-item, one of a kind, which they then hold.
-2. ■ Market.  Alice may open a market under a name of their own not used before; Alice is its keeper and first member.
-3. ■ Joining.  Alice, the keeper of a market, may admit Bob, whom they know, by an act of both; Bob thereby agrees to come to know whoever posts to the market.
-4. ■ Posting.  Bob, a member of a market, may post to its wall an item they hold at the time, or something they want, each at most once, and so may Alice, its keeper; the keeper sees every post on their own wall and delivers it to every other member, the poster included, who thereby knows its poster.
-5. ■ Withdrawal.  Bob may withdraw a post of theirs; Alice, the keeper, removes it from their own wall and from the wall of every member it was delivered to, and Bob may not post it to that market again.
-6. ■ Trading.  GB's swap and escrow apply to items as to coins and bonds; a post is not withdrawn when its item is traded.
-Pragmas
+AGORA extends GB.
+An *item* is a one-of-a-kind thing named by its maker.
+Alice, Bob and Carol are persons.
+1. ■ Make: Alice may make an item, which she then holds.
+2. ■ Open: Alice may open a market under a new name of hers; Alice is then its keeper and first member.
+3. ■ Join: Alice, the keeper of a market, may admit Bob, whom she knows, with the consent of Bob.
+4. ■ Posting. Offer, Want: A member of a market may post to its wall an item they hold, or something they want, each once; its keeper sees the post on their own wall. Deliver: The keeper delivers it to every member but the keeper, the poster included; each member then knows its poster.
+5. ■ Withdraw: A member may withdraw a post of theirs; the keeper removes it from their own wall and from the wall of every member it was delivered to, and the member may not post it to that market again.
+6. ■ Swap, Escrow: GB:2 and GB:4 apply to items as to coins and bonds.
+Logic pragmas
+AGORA extends GB.
+An *item* is a one-of-a-kind thing named by its maker.
+Alice, Bob, Carol and Dave are persons, Item and Thing items, Wish something wanted, Mart a market, Day a maturity date, Cond a condition Alice, Bob and Carol agree, Sum a number; in clauses 4 and 5 Carol is possibly Alice, and in clause 6 Dave is possibly Alice or Bob.
+1. ■ Make: Alice may make the item Item.
+2. ■ Open: Alice may open Mart under a new name of hers.
+3. ■ Join: Alice may admit Bob to Mart, with the consent of Bob, provided Alice is the keeper of Mart and Alice knows Bob.
+4. ■ Posting. Offer: Carol may post Item to the wall of Alice's Mart, provided Carol is a member of the market Mart of Alice, Alice is the keeper of Mart and Carol holds the item Item. Want: Carol may post Wish to the wall of Alice's Mart, provided Carol is a member of the market Mart of Alice and Alice is the keeper of Mart. Deliver: Alice delivers Carol's post of Item in Mart to Bob, provided Alice is the keeper of Mart, Alice sees Carol's post of Item on the wall of Mart and Alice has Bob as a member of Mart. Deliver to poster: Alice delivers Carol's post of Item in Mart back to Carol, provided Alice is the keeper of Mart, Alice sees Carol's post of Item on the wall of Mart and Carol is not the keeper of Mart.
+5. ■ Withdraw: Carol may withdraw her post of Item in Alice's Mart. Carol may not post Item to Mart again.
+6. ■ Swap item for coin: Alice and Bob may jointly swap the item Item for Sum Dave-coins, provided Alice and Bob know each other. Swap item for bond: Alice and Bob may jointly swap the item Item for Sum Dave-bonds due Day, provided Alice and Bob know each other. Swap items: Alice and Bob may jointly swap the item Item for the item Thing, provided Alice and Bob know each other. Deposit item: Alice may deposit the item Item with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release item: Carol and Bob may jointly release the item Item that Alice deposited on Cond, provided Carol and Bob know each other and Carol finds Cond met. Return item: Carol and Alice may jointly return the item Item deposited for Bob on Cond, provided Carol and Alice know each other and Carol finds Cond failed.
+Logic pragmas.
+Vocabulary: x has made i = made(x,i); x holds the item i = item(x,i); x is the keeper of m = keeper(x,m); x is a member of the market m of y = member(x,m,y); x has y as a member of m = has_member(x,y,m); y has posted i to m = posted(y,i,m); x sees y's post of i on the wall of m = post(x,y,i,m); x has delivered y's post of i in m to z = delivered_post(x,y,i,m,z); z holds the item i in escrow from x for y on k = escrow_item(z,i,x,y,k).
+x is a member of m: x is a member of the market m of someone.
+After x makes the item i, which requires x has not made i: x has made i and x holds the item i.
+After x opens m under a new name of x's, which requires x is not the keeper of m: x is the keeper of m, x is a member of the market m of x and x has x as a member of m.
+After x admits y to m, which requires y is not a member of m: y is a member of the market m of x and x has y as a member of m.
+After y posts i to the wall of x's m, which requires y has not posted i to m: y has posted i to m and x sees y's post of i on the wall of m.
+After x delivers y's post of i in m to z, which requires x has not delivered y's post of i in m to z: x has delivered y's post of i in m to z, z sees y's post of i on the wall of m and z knows y.
+After x delivers y's post of i in m back to y, which requires x has not delivered y's post of i in m to y: x has delivered y's post of i in m to y and y sees y's post of i on the wall of m.
+After y withdraws y's post of i in x's m: no longer x sees y's post of i on the wall of m, no one sees y's post of i on the wall of m and x has delivered y's post of i in m to no one.
+After x and y swap the item i for n w-coins: no longer x holds the item i, y holds the item i, no longer y holds n w-coins and x holds n w-coins.
+After x and y swap the item i for n w-bonds due e: no longer x holds the item i, y holds the item i, no longer y holds n w-bonds due e and x holds n w-bonds due e.
+After x and y swap the item i for the item j: no longer x holds the item i, y holds the item i, no longer y holds the item j and x holds the item j.
+After x deposits the item i with z for y on k: no longer x holds the item i and z holds the item i in escrow from x for y on k.
+After z and y release the item i that x deposited on k: no longer z holds the item i in escrow from x for y on k and y holds the item i.
+After z and x return the item i deposited for y on k: no longer z holds the item i in escrow from x for y on k and x holds the item i.
+Interface pragmas
 Items: the items Alice holds.
 Markets: the markets Alice is a member of.
-Offers: the wall offers Alice sees.
-Wants: the wall wants Alice sees.
-Making: Alice [Make] <item>
-Market: Alice [Open] <market>
-Joining: Alice [Admit]
-  Bob: Alice invites you to their market.
-Posting: Bob [Offer] [Want] <description>
-  Alice [Offer own] [Want own] <description>
-Withdrawal: Bob [Withdraw offer] <maker> <item> [Withdraw want] <description>
-  Alice [Withdraw own offer] [Withdraw own want]
-Trading: Alice [Barter] <amount given> <maker wanted> <maturity wanted> <amount wanted> <item wanted>
-  Bob: Alice asks to trade with you.
-  Alice [Deposit item]
+Make: Alice [Make] <item>
+Open: Alice [Open] <market>
+Join: Alice [Join]
+  Bob: Alice invites you to her market.
+Posting: Carol [Offer] [Want] <description>
+Withdraw: Carol [Withdraw] <keeper> <item> <market>
+Swap, Escrow: Alice [Swap item for coin] <issuer wanted> <amount wanted> [Swap item for bond] <issuer wanted> <maturity wanted> <amount wanted> [Swap items] <item wanted>
+  Bob: Alice asks to swap an item with you.
+  Alice [Deposit item] <condition>
   Carol: Alice asks to deposit an item with you.
   Carol [Release item]
   Bob: Carol asks to release an item to you.

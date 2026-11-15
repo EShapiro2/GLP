@@ -27,9 +27,10 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
 %% ilist(K, T) is no argument of an atom: it is the place, after the variables, of the list of the instances of the K-th conjunct of a schema, each of the type T, that its base finds and the attempt names, which the compiler appends to a schema's head when it prints the class term (cvac.glp, inst_heads; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them").
 %% A value variable has a type, a whole number or a real, which the schema writes with it among its variables: num(X) whole and real(X) real, an atom, a multiplicity and a constraint writing num(X) of either (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"; programs/gsc/self.glp, Arg).  The compiler takes a schema's real(X) as num(X) for every check, and prints its type, Real, from the table of the real variables (cvac.glp, real_lx, real_heads).
 %% val(C), a constant the contract names, a value or an utterance, as an act's name or the name of a contract's bylaws (vGLP 0eeea71, Section 5.4, "Speech-act schemas as local specifications": "an argument of an atom may be a value --- a whole number, a real, a string, or a program, a GLP module as text, which the runtime recognises, or a constant the contract names, a value or an utterance"; programs/gsc/self.glp, Arg): no variable, so no field and no place in a class term, and printed as C.
+%% const(X), a value variable over the constants (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, a multiplicity and a count being whole numbers, and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"): among a schema's variables, and where it occurs, const(X) or num(X).  The compiler takes it as num(X) for every check, as it takes a real variable, and prints its type, Constant, from the table of such variables (cvac.glp, consts_off, real_lx, real_heads); its place in an atom is of the kind const, as the place of val(C) is, its value held as v(C); it is a variable, so the schema-binding binds it, a request names it and a field takes it, a text, or it is local to a role, whose state binds it (README.md, 30).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
             ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String)
-            ; item_of(Arg) ; val(Constant).
+            ; item_of(Arg) ; val(Constant) ; const(Constant).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args) ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -102,6 +103,19 @@ WSchema   ::= schema(Constant, Args, RoleSpecs)
 WContract ::= [] ; [WSchema | WContract].
 WBody     ::= WContract ; reflexive(Preds, WContract).
 WDeclared ::= WBody ; environment(Preds, WBody).
+%% A contract as it is offered to the compiler: a contract, or a parametric one, parametric(Params, Body), a relation of its schemas left open (GSC, Definition Parametric contract), which is certified and has no platform until it is instantiated (vGLP, Section 5.4: the compiler takes a contract whose schemas are given; Udi, 2026-11-10, of GO, reported by vGLP #25: "GO is parametric, not sure it can be executed on its own, without instantiating it further"): the compiler prints the line saying so (not_instantiated).
+WOffered  ::= WDeclared ; parametric(Preds, WDeclared).
+WDeclOpt  ::= wdecl(WDeclared) ; wparam.
+procedure wdeclared_of(WOffered?, WDeclOpt).
+wdeclared_of(parametric(_, _), wparam).
+wdeclared_of([], wdecl([])).
+wdeclared_of([S|Ss], wdecl([S?|Ss?])).
+wdeclared_of(reflexive(Rf, C), wdecl(reflexive(Rf?, C?))).
+wdeclared_of(environment(Ps, B), wdecl(environment(Ps?, B?))).
+procedure not_instantiated(Constant?).
+not_instantiated(Nm) :- ground(Nm?) |
+    said('%% not compiled', Nm?, H),
+    send_to_user(['%% compile begin', H?, '%% a parametric contract is certified and has no platform until it is instantiated: the compiler takes a contract whose schemas are given (vGLP, Section 5.4, "Speech-act schemas as local specifications")', '%% compile end']).
 procedure unnamed(WDeclared?, Declared).
 unnamed([], []).
 unnamed([S|Ss], C?) :- ground(S?), ground(Ss?) | unnamed_c([S?|Ss?], C).
@@ -238,7 +252,8 @@ Strings   ::= [] ; [String | Strings].
 PList     ::= list(String, Strings).
 PLists    ::= [] ; [PList | PLists].
 %% An act whose schema types a speech-act variable a field names, typed(T, x) (programs/self.glp, SArg), carries a seventh argument, the types of its fields, ft(K, T) for its K-th field (pragmas.sh; vGLP 37fe038, Section 5.4: "a text by the type its variable carries in the schema where it carries one, as an email address or a person's name, which constrains nothing and which the field's widget is told"); the compiler reads every act as one with that argument, [] for an act with none (cvac.glp, norm_acts).
-FType     ::= ft(Integer, Constant).
+%% consents(I): the person in the guarding role I of the act's schema must consent to it and is not asked (vGLP, Section 5.4, "The contract's words"; pragmas.sh).
+FType     ::= ft(Integer, Constant) ; consents(Integer).
 FTypes    ::= [] ; [FType | FTypes].
 PAct      ::= act(Constant, String, Strings, Said, String, Proposer)
             ; act(Constant, String, Strings, Said, String, Proposer, FTypes).
@@ -266,17 +281,26 @@ Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStan
 StandAct  ::= makes(Constant) ; withdraws(Constant) ; plain.
 
 imported procedure cvac#compile(Constant?, Declared?, Verdict?).
-exported procedure compile(Constant?, WDeclared?, Verdict?).
-compile(Nm, D, V) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?).
+exported procedure compile(Constant?, WOffered?, Verdict?).
+compile(Nm, O, V) :- wdeclared_of(O?, R), compile_w3(R?, Nm?, V?).
+procedure compile_w3(WDeclOpt?, Constant?, Verdict?).
+compile_w3(wparam, Nm, _) :- not_instantiated(Nm?).
+compile_w3(wdecl(D), Nm, V) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?).
 imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?).
-exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?).
-compile(Nm, D, V, I) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?).
+exported procedure compile(Constant?, WOffered?, Verdict?, Intro?).
+compile(Nm, O, V, I) :- wdeclared_of(O?, R), compile_w4(R?, Nm?, V?, I?).
+procedure compile_w4(WDeclOpt?, Constant?, Verdict?, Intro?).
+compile_w4(wparam, Nm, _, _) :- not_instantiated(Nm?).
+compile_w4(wdecl(D), Nm, V, I) :- unnamed(D?, D0), cvac # compile(Nm?, D0?, V?, I?).
 %% compile(Name, Contract, Verdict, Intro, Pragmas): the same, with the contract's pragmas, so that the platform printed carries the contract's words (vGLP, Sections 5.4 and 6.2).
 %% The contract's environment predicates, environment(Preds, Body) (programs/gsc/self.glp, WDeclared), go to the compiler beside the contract: "An environment predicate is the day, by the calendar, or a value the contract declares and does not fix ...: given when the platform is deployed, held from startup" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
 %% The contract as read, with its names, goes to the compiler whole besides, which prints it in the platform's contract(Text, Schemas) (cvac.glp, export_lines).
 imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?, WDeclared?).
-exported procedure compile(Constant?, WDeclared?, Verdict?, Intro?, Pragmas?).
-compile(Nm, D, V, I, P) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?).
+exported procedure compile(Constant?, WOffered?, Verdict?, Intro?, Pragmas?).
+compile(Nm, O, V, I, P) :- wdeclared_of(O?, R), compile_w5(R?, Nm?, V?, I?, P?).
+procedure compile_w5(WDeclOpt?, Constant?, Verdict?, Intro?, Pragmas?).
+compile_w5(wparam, Nm, _, _, _) :- not_instantiated(Nm?).
+compile_w5(wdecl(D), Nm, V, I, P) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?).
 procedure env_of(WDeclared?, Preds).
 env_of(environment(Ps, _), Ps?).
 env_of(_, []) :- otherwise | true.
@@ -390,6 +414,8 @@ procedure is_nvar(Arg?, YesNo).
 is_nvar(num(X), no) :- number(X?) | true.
 is_nvar(num(X), yes) :- otherwise, ground(X?) | true.
 is_nvar(real(_), yes).
+%% A variable over the constants is num(X) to the checks (cvac.glp, reals_off, consts_off); the clause covers the type.
+is_nvar(const(_), yes).
 is_nvar(role(_), no).
 is_nvar(pvar(_), no).
 is_nvar(svar(_), no).
@@ -428,6 +454,8 @@ expr_args(minus(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(mul(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(num(X), [num(X?)]).
 expr_args(real(X), [num(X?)]).
+%% A variable over the constants is num(X) to the checks (cvac.glp, consts_off); the clause covers the type.
+expr_args(const(X), [num(X?)]).
 expr_args(role(I), [role(I?)]).
 expr_args(pvar(X), [pvar(X?)]).
 expr_args(svar(X), [svar(X?)]).
@@ -465,10 +493,12 @@ TSchemas  ::= [] ; [TSchema | TSchemas].
 %% And each conjunct of a schema with conditional literals at a role other than the one holding its anchor that binds no listed role, ix(Schema, K, Base, Xs, A, Phi, CAdd, CDel), the K-th of its schema in conjunct order (cvac.glp, ix_conjs).
 %% And each conjunct binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, lc(Schema, Base, Xs, A, Phi, CAdd, CDel) (cvac.glp, lc_conjs).
 %% And each real variable X of a schema S, rl(S, X) (cvac.glp, real_lx).
+%% And each variable X over the constants of a schema S, cn(S, X) (cvac.glp, real_lx).
 Lx        ::= lx(Constant, Integer, Form, HMults, HMults)
             ; ix(Constant, Integer, Integer, Args, Atom, Form, HMults, HMults)
             ; lc(Constant, Integer, Args, Atom, Form, HMults, HMults)
-            ; rl(Constant, Constant).
+            ; rl(Constant, Constant)
+            ; cn(Constant, Constant).
 Lxs       ::= [] ; [Lx | Lxs].
 procedure listed_ixs(RoleSpecs?, Integer?, Ints).
 listed_ixs([], _, []).
