@@ -5,91 +5,20 @@
 % Last changed: 2026-11-12, by GO #5.
 % Schemas: ORH.glp beside this file.
 ORH: Ride-Hailing Organisation
-ORH extends GNO and amends GRA-SS (GRH, Grassroots Ride-Hailing, in preparation).
-A driver is a provider and a rider a customer.
-Alice and Bob are persons, Orga a ride-hailing organisation.
-1. ■ Driving.  GRA-SS, where Bob bids and drives as a driver while his stake is at least S, the fare and the deposit in Orga-coins, and the deposit locked on top of his stake.
-2. ■ Riding.  GRA-SS, where Alice calls as a rider while she accepts Orga-coins and holds the fare.
-Pragmas
+ORH extends GNO and restricts and strengthens GRA-SS (GRH, Grassroots Ride-Hailing, in preparation).
+A *driver* is a provider and a *rider* a customer.
+Alice and Bob are persons, Orga a network organisation.
+1. ■ Award: GRA-SS:2, only if the fare and the deposit are in Orga-coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (GNO:2).
+Logic pragmas
+ORH extends GNO and restricts and strengthens GRA-SS (GRH, Grassroots Ride-Hailing, in preparation).
+A *driver* is a provider and a *rider* a customer.
+Alice and Bob are persons, Orga a network organisation.
+1. ■ Award: GRA-SS:2 Award, only if the fare and the deposit of Alice's call Trip are in Orga-coins, Alice holds the fare of Alice's call Trip in Orga-coins and Bob holds the deposit of Alice's call Trip on top of Bob's stake in Orga, and then Bob has Orga-coins locked as the provider of Alice and Alice has Orga-coins locked as the customer of Bob. Arrive: GRA:5, and then no longer Bob has Orga-coins locked as the provider of Alice and no longer Alice has Orga-coins locked as the customer of Bob. Cancel: GRA:6, and then no longer Bob has Orga-coins locked as the provider of Alice and no longer Alice has Orga-coins locked as the customer of Bob.
+Logic pragmas.
+Vocabulary: the fare and the deposit of x's call c are in z-coins = in_coins(x,z,c); x holds the fare of x's call c = holds_fare(x,c); y holds the deposit of x's call c = holds_deposit(y,x,c).
+x holds the fare of x's call c in z-coins: x holds the fare of x's call c and x holds a z-coin.
+y holds the deposit of x's call c on top of y's stake in z: y holds the deposit of x's call c and y is a provider of z.
+Environment: the fare and the deposit of x's call c are in z-coins; x holds the fare of x's call c; y holds the deposit of x's call c.
+Interface pragmas
 Look: 🚕, network
-Organisations: the organisations Alice participates in, and her roles in each.
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
-Rides: every ride of Alice.
-Identity: Alice [Establish]
-Acquaintance: Alice [Acquaint] <person Bob>
-  Bob: Alice asks you to approve this: acquaint.
-Introduction: Alice [Introduce]
-  Bob: Alice asks you to approve this: introduce.
-Friendship: Alice [Befriend]
-  Bob: Alice asks you to approve this: befriend.
-Ending a friendship: Alice [Unfriend]
-Acts of the organisation: Alice [Sign] <act>
-  Bob [Propose]
-  Bob [Vote] <act>
-  Otto [Move org acquaint] <motion>
-  Otto [Move orgs acquaint] <motion>
-  Bruno [Moveb orgs acquaint] <motion of the other organisation>
-  Otto [Move org befriend] <role> <motion>
-  Otto [Move org unfriend] <motion>
-  Otto [Move orgs befriend] <role> <role> <motion>
-  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
-  Otto [Move retire] <motion>
-  Otto [Move join] <motion>
-  Otto [Move appoint] <role> <motion>
-  Otto [Move dismiss] <role> <motion>
-  Otto [Move amend] <bylaws> <new bylaws> <motion>
-  Otto [Move cc join] <denomination> <stake> <motion>
-  Otto [Move cc remove] <denomination> <motion>
-  Otto [Move gbcc record first] <maturity> <motion>
-  Otto [Move gbcc record] <maturity> <profile> <motion>
-  Otto [Move gno stake] <stake> <motion>
-Creation: Alice [Found] <organisation> <denomination>
-  Orga: Alice asks you to approve this: found.
-Ward and person: Otto [Org acquaint] <person Bob>
-  Bob: Otto asks you to approve this: org acquaint.
-  Otto [Org befriend] <person Bob> <person Alice> <role>
-  Bob: Otto asks you to approve this: org befriend.
-  Alice: Otto asks you to approve this: org befriend.
-  Otto [Org unfriend] <person Bob>
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
-  Bruno: Otto asks you to approve this: orgs acquaint.
-  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
-  Bruno: Otto asks you to approve this: orgs befriend.
-  Alice: Otto asks you to approve this: orgs befriend.
-  Bob: Otto asks you to approve this: orgs befriend.
-Joint guardianship: Bob [Officer unfriend]
-  Otto [Appoint] <person Bob> <role>
-  Bob: Otto asks you to approve this: appoint.
-  Otto [Dismiss] <person Bob> <role>
-  Bob [Resign role]
-Retiring: Otto [Retire]
-Participation: Bob [Join] <person Otto>
-  Otto: Bob asks you to approve this: join.
-Amendment: Otto [Amend] <new bylaws>
-Minting: Alice [Mint coin] <denomination> <amount>
-  Alice [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
-  Bob: Alice asks you to approve this: swap.
-Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount>
-  Alice [Payout] <amount>
-  Alice [Spend] <person Bob> <amount>
-Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Escrow: Alice [Deposit] <amount>
-  Carol: Alice asks you to approve this: deposit.
-  Carol [Release] <amount>
-  Bob: Carol asks you to approve this: release.
-  Carol [Return] <amount>
-  Alice: Carol asks you to approve this: return.
-Treasurers: Otto [Cc join] <person Bob>
-  Bob: Otto asks you to approve this: cc join.
-  Bob [Cc resign]
-  Otto [Cc remove] <person Bob>
-Drawing: Alice [Cc draw] <amount>
-Account: Otto [Gbcc record first] <person Alice> <Dollars>
-  Otto [Gbcc record] <person Alice>
-Stake: Otto [Gno stake] <stake>
-Arbitration: Alice [Gno raise c] <deal> <person Carol>
-  Bob [Gno raise p] <deal> <person Carol>
-  Carol [Gno arbitrate] <deal> <person Alice> <person Bob> <fee> <to customer> <to provider>
+Award: Alice [Award] [Cancel]

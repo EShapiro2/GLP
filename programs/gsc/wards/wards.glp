@@ -3032,9 +3032,31 @@ procedure admissible_marks(Preds?, Contract?, Constant?, Constant?, Preds).
 admissible_marks([], _, _, _, []).
 admissible_marks([Mk|Ms], C, Io, F, R?) :-
     ground(Mk?), ground(Ms?), ground(C?), ground(Io?), ground(F?) |
-    mark_admissible(C?, Io?, F?, Mk?, A),
+    mark_admissible(C?, Io?, F?, Mk?, A0),
+    mark_added(C?, Mk?, A1),
+    both_yes(A0?, A1?, A),
     admissible_marks(Ms?, C?, Io?, F?, R1),
     keep_mark(A?, Mk?, R1?, R).
+
+% Some schema adds each type in M (Definition Types, def:kinds, clause 2,
+% GSC a3c95d9: "and some schema adds each type in M"): a mark that no schema
+% adds, an environment predicate among them, is the type of no ward, and is
+% left out.
+procedure mark_added(Contract?, Constant?, Ans).
+mark_added([], _, no).
+mark_added([S|Ss], Mk, R?) :- ground(S?), ground(Ss?), ground(Mk?) |
+    sch_roles(S?, Rs),
+    roles_add_mark(Rs?, Mk?, A1),
+    mark_added(Ss?, Mk?, A2),
+    or_yes(A1?, A2?, R).
+
+procedure roles_add_mark(RoleSpecs?, Constant?, Ans).
+roles_add_mark([], _, no).
+roles_add_mark([RS|Rs], Mk, R?) :- ground(RS?), ground(Rs?), ground(Mk?) |
+    rs_add(RS?, P),
+    atoms_member(P?, atom(Mk?, []), A1),
+    roles_add_mark(Rs?, Mk?, A2),
+    or_yes(A1?, A2?, R).
 
 procedure keep_mark(Ans?, Constant?, Preds?, Preds).
 keep_mark(yes, Mk, R, [Mk?|R?]).

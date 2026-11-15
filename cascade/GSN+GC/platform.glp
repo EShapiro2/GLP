@@ -77,7 +77,7 @@ Word ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Numb
 RoleAsk ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).
 Asked ::= asked(Integer, List(Word)).
 Close ::= close.
-Trigger ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
+Trigger ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.
 MeetPeer ::= peer(Peer) ; nopeer.
 Var ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any ; item_of(Var) ; val(Constant) ; inst(Integer, Integer, Var).
 NTerm ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant) ; ext_any(NTerm) ; own_iv(Var) ; ext_iv(NTerm, Var).
@@ -484,7 +484,6 @@ step(net(msg(_, intro(_, Q))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, 
 step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(To?), ground(F?), ground(X?), ground(St?) | st_app(St?, Ap0), message_cond(X?, St?, Cd, St1), dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
 step(answered(At, YN), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(At?), ground(YN?), ground(St?) | st_app(St?, Ap0), close_approval(At?, Approvals?, Approvals1), answer_cond(At?, St?, Cd, St1), dispatch_answer(Cd?, YN?, At?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals1?, H?, St1?, D).
 step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(St?) | st_pends(St?, Pd), st_view(St?, V), st_trie(St?, Tr), recheck_find(Pd?, V?, Tr?, St?, F), recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
-step(day(D), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D1?) :- integer(D?), ground(St?) | st_app(St?, Ap0), st_app(St?, Ap), set_today(D?, Ap?, Ap1), set_app(St?, Ap1?, St1), next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D1).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
 
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
