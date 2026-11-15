@@ -304,8 +304,10 @@ sgn_carrying1([_|_], A, Xs, Nm, I, W, T, [signed(Nm?, I?, A?, W?)|R?]) :-
 % requires an atom with y among its arguments.
 procedure sgn_required(Args?, RoleSpecs?, Ans).
 sgn_required([], _, yes).
+% A signer that is no role of the schema, read as sgn(Y, 0) (self.glp, sas_arg), requires nothing.
+sgn_required([sgn(_, J)|_], _, no) :- J? < 1 | true.
 sgn_required([sgn(Y, J)|Ss], Rs, R?) :-
-    ground(Y?), integer(J?), ground(Ss?), ground(Rs?) |
+    J? >= 1, ground(Y?), integer(J?), ground(Ss?), ground(Rs?) |
     nth_rs(Rs?, J?, RS),
     req_occurs(RS?, svar(Y?), A),
     sgn_required1(A?, Ss?, Rs?, R).
@@ -327,7 +329,9 @@ sgn_agent1(yes, Ss, Rs, R?) :- ground(Ss?), ground(Rs?) | sgn_agent(Ss?, Rs?, R)
 
 procedure sgn_agent(Args?, RoleSpecs?, Ans).
 sgn_agent([], _, yes).
-sgn_agent([sgn(_, J)|Ss], Rs, R?) :- integer(J?), ground(Ss?), ground(Rs?) |
+% A signer that is no role of the schema, read as sgn(Y, 0), is no agent role.
+sgn_agent([sgn(_, J)|_], _, no) :- J? < 1 | true.
+sgn_agent([sgn(_, J)|Ss], Rs, R?) :- J? >= 1, integer(J?), ground(Ss?), ground(Rs?) |
     nth_rs(Rs?, J?, RS),
     is_party_role(RS?, A),
     sgn_agent1(A?, Ss?, Rs?, R).

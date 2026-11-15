@@ -2604,5 +2604,13 @@ out=$(run "instantiate($GNWP, $GNWB, [$FLAGS, $NOTEPQ], D), check(D?, V).")
 check "an instance of GnW with nine marks no ward bears is certified with child its ward mark, the search leaving them out" \
       "V = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)]" "$out"
 
+# A signed term whose signer is no role of its schema (reported by Helper #1 for Calculus #6, 2026-11-15: check/2 failed, with no verdict): resign adds item(sgn(Item, Bob)) at Alice, Bob an agent variable holding no atom and no guard; the paper's Definition Speech-act schema has the signer an agent role, so the contract is malformed, the fault not_agent_role, and not_required as no role of the signer requires an atom with Item.
+SGB="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(sign, ['Alice'], ['Item'], [atom(item, ['Alice', 'Item'])], [atom(identity, ['Alice']), not(atom(item, ['Alice', 'Item']))], true, ['Alice'])"
+RESIGN="sas(resign, ['Alice', 'Bob'], ['Bob', 'Item'], [atom(item, ['Alice', sgn('Item', 'Bob')])], [atom(identity, ['Alice']), atom(item, ['Alice', 'Item'])], true, ['Alice'])"
+out=$(run "check([$SGB], V1)." "check([$SGB, $RESIGN], V2).")
+check "a contract whose items are signed by their role is certified" "V1 = syntactically_grassroots" "$out"
+check "a signed term whose signer is no role of its schema is malformed, not a failure of check/2" \
+      "V2 = malformed([signed(resign, 1, atom(item, [sgn('Item', 0)]), not_agent_role), signed(resign, 1, atom(item, [sgn('Item', 0)]), not_required)])" "$out"
+
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
