@@ -27,9 +27,10 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
 %% ilist(K, T) is no argument of an atom: it is the place, after the variables, of the list of the instances of the K-th conjunct of a schema, each of the type T, that its base finds and the attempt names, which the compiler appends to a schema's head when it prints the class term (cvac.glp, inst_heads; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them").
 %% A value variable has a type, a whole number or a real, which the schema writes with it among its variables: num(X) whole and real(X) real, an atom, a multiplicity and a constraint writing num(X) of either (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"; programs/gsc/self.glp, Arg).  The compiler takes a schema's real(X) as num(X) for every check, and prints its type, Real, from the table of the real variables (cvac.glp, real_lx, real_heads).
 %% val(C), a constant the contract names, a value or an utterance, as an act's name or the name of a contract's bylaws (vGLP 0eeea71, Section 5.4, "Speech-act schemas as local specifications": "an argument of an atom may be a value --- a whole number, a real, a string, or a program, a GLP module as text, which the runtime recognises, or a constant the contract names, a value or an utterance"; programs/gsc/self.glp, Arg): no variable, so no field and no place in a class term, and printed as C.
+%% const(X), a value variable over the constants (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, a multiplicity and a count being whole numbers, and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"): among a schema's variables, and where it occurs, const(X) or num(X).  The compiler takes it as num(X) for every check, as it takes a real variable, and prints its type, Constant, from the table of such variables (cvac.glp, consts_off, real_lx, real_heads); its place in an atom is of the kind const, as the place of val(C) is, its value held as v(C); it is a variable, so the schema-binding binds it, a request names it and a field takes it, a text, or it is local to a role, whose state binds it (README.md, 30).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
             ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String)
-            ; item_of(Arg) ; val(Constant).
+            ; item_of(Arg) ; val(Constant) ; const(Constant).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args) ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -413,6 +414,8 @@ procedure is_nvar(Arg?, YesNo).
 is_nvar(num(X), no) :- number(X?) | true.
 is_nvar(num(X), yes) :- otherwise, ground(X?) | true.
 is_nvar(real(_), yes).
+%% A variable over the constants is num(X) to the checks (cvac.glp, reals_off, consts_off); the clause covers the type.
+is_nvar(const(_), yes).
 is_nvar(role(_), no).
 is_nvar(pvar(_), no).
 is_nvar(svar(_), no).
@@ -451,6 +454,8 @@ expr_args(minus(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(mul(X, Y), A?) :- exprs_args(X?, Y?, A).
 expr_args(num(X), [num(X?)]).
 expr_args(real(X), [num(X?)]).
+%% A variable over the constants is num(X) to the checks (cvac.glp, consts_off); the clause covers the type.
+expr_args(const(X), [num(X?)]).
 expr_args(role(I), [role(I?)]).
 expr_args(pvar(X), [pvar(X?)]).
 expr_args(svar(X), [svar(X?)]).
@@ -488,10 +493,12 @@ TSchemas  ::= [] ; [TSchema | TSchemas].
 %% And each conjunct of a schema with conditional literals at a role other than the one holding its anchor that binds no listed role, ix(Schema, K, Base, Xs, A, Phi, CAdd, CDel), the K-th of its schema in conjunct order (cvac.glp, ix_conjs).
 %% And each conjunct binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, lc(Schema, Base, Xs, A, Phi, CAdd, CDel) (cvac.glp, lc_conjs).
 %% And each real variable X of a schema S, rl(S, X) (cvac.glp, real_lx).
+%% And each variable X over the constants of a schema S, cn(S, X) (cvac.glp, real_lx).
 Lx        ::= lx(Constant, Integer, Form, HMults, HMults)
             ; ix(Constant, Integer, Integer, Args, Atom, Form, HMults, HMults)
             ; lc(Constant, Integer, Args, Atom, Form, HMults, HMults)
-            ; rl(Constant, Constant).
+            ; rl(Constant, Constant)
+            ; cn(Constant, Constant).
 Lxs       ::= [] ; [Lx | Lxs].
 procedure listed_ixs(RoleSpecs?, Integer?, Ints).
 listed_ixs([], _, []).
