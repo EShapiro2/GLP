@@ -224,6 +224,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
     </div>
     <div class="sh"><h2>Grassroots Contracts</h2><span id="hint">drag to turn, scroll to zoom</span></div>
     <div class="card" id="mapcard"><svg id="graph"></svg><div id="tip"></div></div>
+    <p class="small" style="text-align:center;margin-top:28px">The content of this site is derived from the GLP repository, <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener">https://github.com/EShapiro2/GLP</a>.</p>
   </section>
   <section id="tab-contracts" class="tab">
     <div class="pt"><h1>Contracts</h1><p id="ccount"></p></div>
@@ -327,8 +328,8 @@ function citeHtml(P){
 // surface, its name horizontal; each arrow painted on the surface too, along
 // the great circle from a contract to one built on it, turning with the globe
 // (Udi, 2026-11-10); extends widens from a point to its tip, restricts
-// narrows to one, amends keeps one width and is barred, implements is dashed
-// and instantiates dotted; drag turns the globe, the wheel zooms, the far side
+// narrows to one, strengthens keeps one wide width, amends keeps one width and
+// is barred, implements is dashed, instantiates dotted and composes dash-dotted; drag turns the globe, the wheel zooms, the far side
 // is hidden.
 const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {}, RING = [], WAY = {};
 function depthOf(id){
@@ -641,8 +642,8 @@ function drawGlobe(){
     const side = (a, e) => { const P = at(a); return add3(P.map(x => x*Math.cos(e)), nrm(crs(P, tan(a))), Math.sin(e)); };
     const a0 = edgeAngle(p, tan(0)), a1 = total - edgeAngle(q, tan(total));
     const u = 1/265, hl = (rel === 'restricts' ? 7 : rel === 'amends' ? 9 : 10) * u;
-    const hw = (rel === 'restricts' ? 2.8 : rel === 'amends' || rel === 'implements' || rel === 'instantiates' ? 6.5 : 7.5) * u;
-    const [w0, w1] = rel === 'restricts' ? [4.2*u, 0.4*u] : rel === 'amends' ? [2.2*u, 2.2*u] : [0.4*u, 4.2*u];
+    const hw = (rel === 'restricts' ? 2.8 : rel === 'amends' || rel === 'implements' || rel === 'instantiates' || rel === 'composes' ? 6.5 : 7.5) * u;
+    const [w0, w1] = rel === 'restricts' ? [4.2*u, 0.4*u] : rel === 'amends' ? [2.2*u, 2.2*u] : rel === 'strengthens' ? [3.4*u, 3.4*u] : [0.4*u, 4.2*u];
     const aB = a1 - hl;
     if (aB <= a0) return '';
     const front = a => projv(at(a))[2] > 0.02;
@@ -660,7 +661,7 @@ function drawGlobe(){
     }
     if (run.length) runs.push(run);
     const xy = v => { const [X0, Y0] = projv(v); return X0.toFixed(1) + ',' + Y0.toFixed(1); };
-    const dash = rel === 'implements' ? `${7*k} ${4*k}` : rel === 'instantiates' ? `0.1 ${4.5*k}` : null;
+    const dash = rel === 'implements' ? `${7*k} ${4*k}` : rel === 'instantiates' ? `0.1 ${4.5*k}` : rel === 'composes' ? `${8*k} ${4*k} 0.1 ${4*k}` : null;
     let out = '';
     for (const r of runs){
       if (r.length < 2) continue;
@@ -700,13 +701,19 @@ function drawGlobe(){
       <text x="${X.toFixed(1)}" y="${(Y + 0.36*fs).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}">${c.id}</text></g>`;
   });
   // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
-  const KEY = ['extends', 'restricts', 'amends', 'implements', 'instantiates'].map(r => [r, r]);
+  // The key has each relation the globe draws: of the five of the Calculus
+  // (calculus/README.md, The relations), of implements, GSC's, and of amends,
+  // while a text in force still states it.
+  const USED = new Set(D.contracts.flatMap(c => [c.relation, ...Object.values(c.rels || {})]));
+  const KEY = ['extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r]);
   const nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
   s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="150" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   KEY.forEach(([r, t], i) => { const y = ky + 24*i, p = [kx, y], q = [kx + 54, y];
     s += r === 'restricts' ? taper(p, q, 4.2*kk, 0.4*kk, 7*kk, 2.8*kk, kc, 0, 0)
       : r === 'amends' ? taper(p, q, 2.2*kk, 2.2*kk, 9*kk, 6.5*kk, kc, 0, 0) + cross(p, q, 6*kk, kc, 0, 0, kk)
       : r === 'implements' ? stroked(p, q, `${7*kk} ${4*kk}`, kc, 0, 0, kk)
+      : r === 'strengthens' ? taper(p, q, 3.4*kk, 3.4*kk, 10*kk, 7.5*kk, kc, 0, 0)
+      : r === 'composes' ? stroked(p, q, `${8*kk} ${4*kk} 0.1 ${4*kk}`, kc, 0, 0, kk)
       : r === 'instantiates' ? stroked(p, q, `0.1 ${4.5*kk}`, kc, 0, 0, kk)
       : taper(p, q, 0.4*kk, 4.2*kk, 10*kk, 7.5*kk, kc, 0, 0);
     s += `<text x="${kx + 66}" y="${y + 4}" font-size="12.5" fill="#33404d">${t}</text>`; });

@@ -193,7 +193,11 @@ for m in re.finditer(r'^#\s+[a-z]+\s+([A-Z][A-Za-z]*)\s+(\S+)\s+programs/', read
     owners[m.group(1)] = m.group(2)
 
 
-RELATIONS = ('extends', 'restricts', 'amends', 'implements', 'instantiates')
+# The five relations of the Calculus (calculus/README.md, The relations):
+# extends, restricts, strengthens, instantiates and composes, the last read
+# apart below; implements is GSC's, and amends stands while a text in force
+# states it.
+RELATIONS = ('extends', 'restricts', 'strengthens', 'amends', 'implements', 'instantiates')
 
 
 def extends_of(c, lines):
@@ -214,18 +218,22 @@ def extends_of(c, lines):
             # GFP and restricts the composition'), each checked on its own
             # (GSC #16, 2026-11-11 19:45 UTC, from GSC's Section 9).
             c['relation'], c['rels'], cur = m.group(1), {}, m.group(1)
-            c['rels_of'], inst, comp = [], None, None
+            c['rels_of'], inst, comp, pend = [], None, None, []
             for part in re.split(r'\b(' + '|'.join(RELATIONS + ('composes',)) + r')\b', m.group(2)):
                 if part in RELATIONS + ('composes',):
                     cur = part
                     continue
                 named = [t for t in re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b", part) if t in texts and t != c['id']]
+                # 'GDC extends and restricts GC': the contract named takes the
+                # first of the relations written before it.
+                first = pend[0] if pend and not (inst or comp) else cur
                 for t in named:
-                    c['rels'].setdefault(t, cur)
+                    c['rels'].setdefault(t, first)
                     if cur == 'instantiates':
                         inst = inst or t
                     if cur == 'composes':
                         comp = comp or inst or t
+                pend = [] if named else pend + [cur]
                 # 'GAS composes GPD with GSV, restricts the composition, and
                 # extends it': a composition with no instance, named by the
                 # first contract composed (GSC's Section 2, GSC 220151a).
