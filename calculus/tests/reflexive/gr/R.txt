@@ -1,0 +1,7 @@
+R: Notes
+R extends K.
+Alice and Bob are persons, Bob possibly Alice.
+1. ■ Note: Alice may note Bob, provided Alice knows Bob. Note self: Alice may note her own name, provided Alice knows Alice.
+Logic pragmas.
+After x notes y: x has noted y.
+After x notes x's own name: x has noted x.

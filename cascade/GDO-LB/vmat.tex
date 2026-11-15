@@ -17,6 +17,13 @@ c_
 \mathit{
 identity
 }
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
 \}
 ,\\
 &
@@ -116,6 +123,15 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
 , \qquad 
 c'_
 {
@@ -126,15 +142,6 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-knows
-}
-(
-Carol
-)
-\}
 ,\\
 &
 \text{provided } 
@@ -147,13 +154,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-knows
-}
-(
-Carol
 )
  \in c_
 {
@@ -169,6 +169,13 @@ knows
 }
 (
 \Alice
+)
+,
+\mathit{
+knows
+}
+(
+Carol
 )
  \in c_
 {
@@ -391,184 +398,7 @@ points_to
 \Bob
 )
 \}
- \qquad (
-\Alice
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-\Alice
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-points_to
-}
-(
-\Bob
-)
-\}
- \qquad (
-\Alice
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-\Alice
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-points_to
-}
-(
-\Bob
-)
-\}
- \qquad (
-\Alice
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-\Alice
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-points_to
-}
-(
-\Bob
-)
-\}
- \qquad (
-\Alice
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-\Alice
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -578,281 +408,6 @@ c_
 {
 \Bob
 }
- \qquad (
-\Bob
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-\Bob
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \qquad (
-\Bob
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-\Bob
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \qquad (
-\Bob
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-\Bob
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \qquad (
-\Bob
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-\Bob
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-q
- := 
-c_
-q
- \qquad (
-q
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-,\ 
-q \neq 
-\Bob
-)
-,\\
-&
-c'_
-q
- := 
-c_
-q
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-q
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-,\ 
-q \neq 
-\Bob
-)
-,\\
-&
-c'_
-q
- := 
-c_
-q
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-,\ 
-q \neq 
-\Bob
-)
 ,\\
 &
 \text{provided } 
@@ -868,24 +423,10 @@ friend
 )
 ,
 \mathit{
-location
+may_point_friend
 }
 (
-xa
-)
-,
-\mathit{
-degree
-}
-(
-dd
-)
-,
-\mathit{
-threshold
-}
-(
-ee
+\Bob
 )
  \in c_
 {
@@ -897,10 +438,10 @@ identity
 }
 ,
 \mathit{
-location
+friend
 }
 (
-xb
+\Alice
 )
  \in c_
 {
@@ -919,123 +460,6 @@ points_to
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-(
-\mathrm{cardinality}(
-c3
-,
-\mathit{
-points_to
-}
-(
-\Alice
-,
-c3
-)
-)
-<
-dd
-\land
-\forall 
-\mathit{Carol}
-\,(
-\mathit{
-friend
-}
-(
-\Alice
-,
-\mathit{Carol}
-)
-\land
-\neg 
-\mathit{
-points_to
-}
-(
-\Alice
-,
-\mathit{Carol}
-)
-\rightarrow
-\forall 
-xc
-\,(
-\mathit{
-location
-}
-(
-\mathit{Carol}
-,
-xc
-)
-\rightarrow
-\mathrm{
-dist
-}(
-xa
-,
-xb
-)
-\le
-\mathrm{
-dist
-}(
-xa
-,
-xc
-)
-)
-)
-)
-\lor
-\exists 
-\mathit{Dave}
-\,(
-\mathit{
-points_to
-}
-(
-\Alice
-,
-\mathit{Dave}
-)
-\land
-\exists 
-x2
-\,(
-\mathit{
-location
-}
-(
-\mathit{Dave}
-,
-x2
-)
-\land
-\mathrm{
-dist
-}(
-xa
-,
-x2
-)
--
-\mathrm{
-dist
-}(
-xa
-,
-xb
-)
->
-ee
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -1062,61 +486,10 @@ c_
 points_to
 }
 (
-\mathit{Carol}
+Carol
 )
 \}
- \qquad (
-\Alice
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-points_to
-}
-(
-\mathit{Carol}
-)
-\}
- \qquad (
-\Alice
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -1126,130 +499,6 @@ c_
 {
 \Bob
 }
- \qquad (
-\Bob
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \qquad (
-\Bob
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
- \qquad (
-\mathit{Carol}
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
- \qquad (
-\mathit{Carol}
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-q
- := 
-c_
-q
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-,\ 
-q \neq 
-\Bob
-,\ 
-q \neq 
-\mathit{Carol}
-)
 ,\\
 &
 \text{provided } 
@@ -1261,7 +510,7 @@ identity
 knows
 }
 (
-\mathit{Carol}
+Carol
 )
 ,
 \mathit{
@@ -1272,17 +521,10 @@ points_to
 )
 ,
 \mathit{
-location
+closer
 }
 (
-xa
-)
-,
-\mathit{
-threshold
-}
-(
-ee
+Carol
 )
  \in c_
 {
@@ -1297,23 +539,12 @@ identity
 points_to
 }
 (
-\mathit{Carol}
+Carol
 )
  \in c_
 {
 \Bob
 }
- \text{ and } 
-\mathit{
-location
-}
-(
-xc
-)
- \in c_
-{
-\mathit{Carol}
-}
 ,\\
 &
 \text{provided } 
@@ -1321,58 +552,12 @@ xc
 points_to
 }
 (
-\mathit{Carol}
+Carol
 )
  \notin c_
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-\exists 
-\mathit{Dave}
-\,(
-\mathit{
-points_to
-}
-(
-\Alice
-,
-\mathit{Dave}
-)
-\land
-\exists 
-x2
-\,(
-\mathit{
-location
-}
-(
-\mathit{Dave}
-,
-x2
-)
-\land
-\mathrm{
-dist
-}(
-xa
-,
-x2
-)
--
-\mathrm{
-dist
-}(
-xa
-,
-xc
-)
->
-ee
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -1399,139 +584,9 @@ c_
 points_to
 }
 (
-\Bob
+Bob
 )
 \}
- \qquad (
-\Alice
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-points_to
-}
-(
-\Bob
-)
-\}
- \qquad (
-\Alice
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \qquad (
-\Bob
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \qquad (
-\Bob
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-q
- := 
-c_
-q
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-points_to
-}
-(
-\ast
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-,\ 
-q \neq 
-\Bob
-)
 ,\\
 &
 \text{provided } 
@@ -1540,93 +595,34 @@ identity
 }
 ,
 \mathit{
-location
+bound
 }
 (
-xa
+D
 )
 ,
 \mathit{
-degree
+furthest
 }
 (
-dd
+Bob
 )
 ,
 \mathit{
 points_to
 }
 (
-\Bob
+Bob
 )
  \in c_
 {
 \Alice
 }
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-location
-}
-(
-xb
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\forall 
-\mathit{Carol}
-\,(
-\mathit{
-points_to
-}
-(
-\Alice
-,
-\mathit{Carol}
-)
-\rightarrow
-\forall 
-xc
-\,(
-\mathit{
-location
-}
-(
-\mathit{Carol}
-,
-xc
-)
-\rightarrow
-\mathrm{
-dist
-}(
-xa
-,
-xc
-)
-\le
-\mathrm{
-dist
-}(
-xa
-,
-xb
-)
-)
-)
 ,\\
 &
 \text{provided } 
 \mathrm{cardinality}(
-c3
+X1
 ,
 \mathit{
 points_to
@@ -1634,11 +630,11 @@ points_to
 (
 \Alice
 ,
-c3
+X1
 )
 )
 >
-dd
+D
 ,\\
 &
 \text{guarded by } \{

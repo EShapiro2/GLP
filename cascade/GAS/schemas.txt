@@ -1,9 +1,9 @@
 GAS: Grassroots App Store
 GAS composes GPD with GSV (GNA, GLP Networking API and Services, in preparation) and extends the composition.
-Vocabulary: d is a store = store(d); d lists p of y = lists_program(d,p,y); x trusts the store d = trusts_store(x,d).
+Vocabulary: d is a store = store(d); d lists p of y = lists_program(d,p,y); d has p of y signed by x = listing_signed(d,p,y,x); x trusts the store d = trusts_store(x,d).
 After x makes d a store, which requires d is not a store: d is a store.
-After x lists in d p of y, which requires d does not list p of y: d lists p of y.
-After x delists from d p of y: no longer d lists p of y.
+After x lists in d p of y, which requires d does not list p of y: d lists p of y and d has p of y signed by x.
+After x delists from d p of y: no longer d lists p of y and d has p of y signed by no one.
 After x declares trust in d, which requires x does not trust the store d: x trusts the store d.
 After x withdraws x's declaration of trust in d: no longer x trusts the store d.
 After x installs from a store p of z, which requires x does not have p of z installed: x holds p of z and x has p of z installed.
@@ -11,9 +11,9 @@ GAS:0 - | A *store* is a service holding a list of programs. Alice *trusts* a st
 GAS:0 - | Alice, Bob and Carol are persons, Dave a service, Prog a program.
 GAS:1 ■ Open store: store(Dave) <- guardian(Carol,Dave), ~store(Dave) guarded by Carol.
 GAS:2 ○ | Listing.
-GAS:2 ○ List: lists_program(Dave,Prog,Bob) <- guardian(Carol,Dave), store(Dave), trusts_developer(Carol,Bob), ~lists_program(Dave,Prog,Bob) guarded by Carol.
+GAS:2 ○ List: lists_program(Dave,Prog,Bob), listing_signed(Dave,Prog,Bob,Carol) <- guardian(Carol,Dave), store(Dave), trusts_developer(Carol,Bob), program(Carol,Prog,Bob), ~lists_program(Dave,Prog,Bob) guarded by Carol.
 GAS:2 ○ | Carol lists it after adding her signature to its signatures.
-GAS:2 ○ Delist: ~lists_program(Dave,Prog,Bob) <- guardian(Carol,Dave), lists_program(Dave,Prog,Bob) guarded by Carol.
+GAS:2 ○ Delist: ~lists_program(Dave,Prog,Bob), ~listing_signed(Dave,Prog,Bob,_) <- guardian(Carol,Dave), lists_program(Dave,Prog,Bob) guarded by Carol.
 GAS:2 ○ | Carol will delist it if she ceases to trust Bob as a developer.
 GAS:3 ■ | Store trust.
 GAS:3 ■ Trust store: trusts_store(Alice,Dave) <- store(Dave), guardian(Carol,Dave), knows(Alice,Carol), knows(Alice,Dave), ~trusts_store(Alice,Dave) guarded by Alice.

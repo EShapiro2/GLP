@@ -23,11 +23,11 @@ GPD:1 ◆ | Carol attests that its schemas say what its clauses say, that it is 
 GPD:2 ■ | Developer Trust.
 GPD:2 ■ Trust: Alice may Alice trusts Carol as a developer, provided Alice knows Carol and not Alice trusts Carol as a developer. Possibly one: Alice=Carol.
 GPD:2 ■ Untrust: Alice may no longer Alice trusts Carol as a developer. Possibly one: Alice=Carol.
-GPD:3 ■ Offer: Carol may Alice holds Prog of Dave, provided Carol holds Prog of Dave, Carol counts Alice as a friend and Alice counts Carol as a friend. Possibly one: Alice=Carol, Alice=Dave, Carol=Dave.
+GPD:3 ■ Offer: Carol may Alice holds Prog signed by Carol of Dave, provided Carol holds Prog of Dave, Carol counts Alice as a friend and Alice counts Carol as a friend. Possibly one: Alice=Carol, Alice=Dave, Carol=Dave.
 GPD:3 ■ | Carol offers it by forwarding it to Alice.
 GPD:4 ■ Install own: Alice may Alice has Prog of Alice installed, provided Alice holds Prog of Alice and not Alice has Prog of Alice installed.
 GPD:4 ■ Install: Alice may Alice has Prog of Carol installed, provided Alice holds Prog of Carol, Alice trusts Carol as a developer and not Alice has Prog of Carol installed. Possibly one: Alice=Carol.
-GPD:5 ■ Invite: Alice and Bob may jointly Bob holds Prog of Carol, Bob has Prog of Carol installed, Alice is a participant of Prog of Carol with Bob and Bob is a participant of Prog of Carol with Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has Prog of Carol installed and Bob trusts Carol as a developer. Possibly one: Alice=Carol, Bob=Carol.
+GPD:5 ■ Invite: Alice and Bob may jointly Bob holds Prog signed by Alice of Carol, Bob has Prog signed by Alice of Carol installed, Alice is a participant of Prog of Carol with Bob and Bob is a participant of Prog of Carol with Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has Prog of Carol installed and Bob trusts Carol as a developer. Possibly one: Alice=Carol, Bob=Carol.
 GPD:5 ■ | Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
 GPD:6 ■ Leave: Alice may no longer Alice has Prog of Carol installed, no longer Alice is a participant of Prog of Carol with anyone and no longer anyone is a participant of Prog of Carol with Alice. Possibly one: Alice=Carol.
 GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
@@ -58,9 +58,9 @@ GAS:0 - | A *store* is a service holding a list of programs. Alice *trusts* a st
 GAS:0 - | Alice, Bob and Carol are persons, Dave a service, Prog a program.
 GAS:1 ■ Open store: Carol may Dave is a store, provided Carol is a guardian of Dave and not Dave is a store.
 GAS:2 ○ | Listing.
-GAS:2 ○ List: Carol may Dave lists Prog of Bob, provided Carol is a guardian of Dave, Dave is a store, Carol trusts Bob as a developer and not Dave lists Prog of Bob.
+GAS:2 ○ List: Carol may Dave lists Prog of Bob and Dave has Prog of Bob signed by Carol, provided Carol is a guardian of Dave, Dave is a store, Carol trusts Bob as a developer, Carol holds Prog of Bob and not Dave lists Prog of Bob.
 GAS:2 ○ | Carol lists it after adding her signature to its signatures.
-GAS:2 ○ Delist: Carol may no longer Dave lists Prog of Bob, provided Carol is a guardian of Dave.
+GAS:2 ○ Delist: Carol may no longer Dave lists Prog of Bob and no longer Dave has Prog of Bob signed by anyone, provided Carol is a guardian of Dave.
 GAS:2 ○ | Carol will delist it if she ceases to trust Bob as a developer.
 GAS:3 ■ | Store trust.
 GAS:3 ■ Trust store: Alice may Alice trusts the store Dave, provided Dave is a store, Carol is a guardian of Dave, Alice knows Carol, Alice knows Dave and not Alice trusts the store Dave.

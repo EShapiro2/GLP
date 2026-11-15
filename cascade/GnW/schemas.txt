@@ -4,7 +4,7 @@ Vocabulary: x is a person = person(x); z is a ward = ward(z); x has y as a guard
 Roles: those who decide for z = deciders(z), listed by z has y as a guardian and y is a guardian of z.
 z has no guardians: no one is a guardian of z and z has no one as a guardian.
 z has no friends: z counts no one as a friend and no one counts z as a friend.
-After x creates z, which requires z does not have an identity: z has an identity, z knows z, z is a ward, z has x as a guardian, x is the creator of z, x is a guardian of z, x and z know each other and x and z are friends.
+After x creates z, which requires z does not have an identity: z has an identity, z is a ward, z has x as a guardian, x is the creator of z, x is a guardian of z, x and z know each other and x and z are friends.
 After g makes y a guardian of z, which requires y is not a guardian of z and z does not have y as a guardian: y is a guardian of z, z has y as a guardian, y and z know each other and y and z are friends.
 After y ends y's guardianship of z: no longer y is a guardian of z and no longer z has y as a guardian.
 After g ends y's guardianship of z: no longer y is a guardian of z and no longer z has y as a guardian.
@@ -13,12 +13,12 @@ After g ends the friendship of x and y: x and y are no longer friends.
 After g retires z, which requires z is not retired: z is retired, z has no guardians and z has no friends.
 GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
-GnW:1 ■ Enter: identity(Carol), knows(Carol,Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
+GnW:1 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.
 GnW:2 ■ | Guardian decisions.
-GnW:2 ■ Make guardian: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by deciders(Carol), Bob.
+GnW:2 ■ Make guardian: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), has_guardian(Carol,Alice), friend(Bob,Alice), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by deciders(Carol), Bob.
 GnW:2 ■ Resign: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by Bob.
-GnW:2 ■ End guardian: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by deciders(Carol).
+GnW:2 ■ End guardian: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by deciders(Carol,-Bob).
 GnW:2 ■ Guardian unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- friend(Bob,Carol), friend(Carol,Bob), guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by Bob.
 GnW:2 ■ | Carol may not end a friendship with her guardian.
 GnW:3 ■ | Ward and person.
