@@ -104,6 +104,7 @@ if (defined $term && $term ne "") {
         # A schema with quantifiers, qschema(Name, Names, Vars, Bound, Constraint, Roles, Conjuncts, Forms), or with no Names (programs/gsc/self.glp), carries its roles sixth, or fifth, and not last.
         my $named = ($kw eq "schema" && @args == 4) || ($kw eq "qschema" && @args == 8) || ($kw ne "schema" && $kw ne "qschema" && @args == 5);
         my ($n, $a) = @args[0, $named ? 2 : 1];
+        $n =~ s/^\x27(.*)\x27$/$1/;    # a quoted name, as \x27no-show\x27 of [No-show], is the name without its quotes
         next if !defined $a || exists $svars{$n};
         push @snames, $n;
         my $rarg = $kw eq "qschema" ? $args[$named ? 5 : 4] : $args[-1];
@@ -162,7 +163,7 @@ sub find_schemas {
     my ($t) = @_;
     return if @$t == 1;
     if ($t->[0] =~ /^[ncq]?schema$/ && @{ $t->[1][0] } == 1) {
-        my $n = $t->[1][0][0];
+        (my $n = $t->[1][0][0]) =~ s/^\x27(.*)\x27$/$1/;
         return if exists $roles{$n};
         my $q = $t->[0] eq "qschema";
         my $named = ($t->[0] eq "schema" && @{ $t->[1] } == 4) || ($q && @{ $t->[1] } == 8) || (!$q && $t->[0] ne "schema" && @{ $t->[1] } == 5);
