@@ -907,7 +907,11 @@ c_
 program
 }
 (
+\mathrm{sgn}(
 Prog
+,
+\Bob
+)
 ,
 Dave
 )
@@ -1226,7 +1230,11 @@ c_
 program
 }
 (
+\mathrm{sgn}(
 Prog
+,
+\Bob
+)
 ,
 Carol
 )
@@ -1235,7 +1243,11 @@ Carol
 installed
 }
 (
+\mathrm{sgn}(
 Prog
+,
+\Bob
+)
 ,
 Carol
 )
@@ -5875,6 +5887,17 @@ Prog
 ,
 Bob
 )
+,
+\mathit{
+listing_signed
+}
+(
+Prog
+,
+Bob
+,
+\Bob
+)
 \}
 ,\\
 &
@@ -5917,6 +5940,15 @@ guardian
 trusts_developer
 }
 (
+Bob
+)
+,
+\mathit{
+program
+}
+(
+Prog
+,
 Bob
 )
  \in c_
@@ -5987,7 +6019,7 @@ c'_
 \Alice
 }
  := 
-c_
+(c_
 {
 \Alice
 }
@@ -6002,6 +6034,31 @@ Prog
 Bob
 )
 \}
+) \setminus K_
+{
+\Alice
+}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+listing_signed
+}
+(
+Prog
+,
+Bob
+,
+\ast
+)
 ,\\
 &
 c'_
