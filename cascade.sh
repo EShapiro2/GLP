@@ -56,7 +56,6 @@
 #   dgc         DGC   Currencies  programs/currencies/sovereign ---
 #   gcc         GCC   Currencies  programs/currencies/gcc   ---
 #   gdc         GDC   Currencies  programs/currencies/gdc   ---
-#   bcc         BCC   Currencies  programs/currencies/bcc   ---
 #   gra         GRA   GRH         programs/lbm              ---
 #   cb          CB    GO          programs/go               ---
 #   cc          CC    GO          programs/go               ---
@@ -220,7 +219,6 @@ case "$1" in
     dgc)  FILE=DGC;  OWNER="programs/currencies/sovereign"; PAPER="/Users/udi/Grassroots/SGC"; PLAYDIR="" ;;
     gcc)  FILE=GCC;  OWNER="programs/currencies/gcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     gdc)  FILE=GDC;  OWNER="programs/currencies/gdc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
-    bcc)  FILE=BCC;  OWNER="programs/currencies/bcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     gra)  FILE=GRA;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/GRH";  PLAYDIR="" ;;
     gff_ps) FILE=GFF-PS; OWNER="programs/gff";             PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
     gff_fr) FILE=GFF-FR; OWNER="programs/gff";             PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
@@ -261,7 +259,7 @@ case "$1" in
     gdo_lb) FILE=GDO-LB; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
     gra_ss) FILE=GRA-SS; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
     sgsg) FILE=SGSG; OWNER="programs/social/spm"; PAPER="/Users/udi/Grassroots/SPM"; PLAYDIR="" ;;   # SPM's, adopted from the Calculus (SPM #1, 2026-11-15)
-    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gdo_lb gra_ss gff_ps gff_fr gff_fr_bc sgsg dao ldao fdao rec stay lib joint cb cc cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc" >&2; exit 2 ;;
+    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gff agora gdo dgc gcc gdc gra gd gd_s gdo_l gdo_lb gra_ss gff_ps gff_fr gff_fr_bc sgsg dao ldao fdao rec stay lib joint cb cc cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not
