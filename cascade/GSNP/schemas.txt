@@ -1,94 +1,23 @@
-Reflexive predicates: friend, knows
-
-establish: identity(Alice), person(Alice) <-
-    not identity(Alice) guarded by Alice
-
-acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), person(Alice), identity(Bob), person(Bob) guarded by Alice, Bob
-
-introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), person(Alice), identity(Bob), knows(Bob, Alice), person(Bob), identity(Carol), person(Carol) guarded by Alice, Bob
-
-befriend: friend(Alice, Bob), friend(Bob, Alice) <-
-    identity(Alice), knows(Alice, Bob), person(Alice), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), person(Bob), not friend(Bob, Alice) guarded by Alice, Bob
-
-unfriend: not friend(Alice, Bob), not listed(Alice, Bob, _), not member(Alice, <Bob>._), not friend(Bob, Alice), not listed(Bob, Alice, _), not member(Bob, <Alice>._) <-
-    identity(Alice), person(Alice), friend(Alice, Bob), not operator_of(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
-
-enter: principal_of(Alice, Carol), operator_of(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), agent_of(Alice, Carol, y), identity(Carol), agent(Carol), principal(Carol, Alice), operated_by(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice), attestation(Carol, y) <-
-    identity(Alice), person(Alice), item(Alice, y), not identity(Carol), author(y) = Alice guarded by Alice, Carol
-
-make_guardian: operator_of(Bob, Carol), friend(Bob, Carol), knows(Bob, Carol), agent_of(Bob, Carol, y), operated_by(Carol, Bob), friend(Carol, Bob), knows(Carol, Bob) <-
-    identity(Bob), person(Bob), not operator_of(Bob, Carol), identity(Alice), person(Alice), operator_of(Alice, Carol), friend(Alice, Bob), agent_of(Alice, Carol, y), identity(Carol), agent(Carol), operated_by(Carol, Alice), not operated_by(Carol, Bob), not friend(Carol, Bob), forall Erin (operated_by(Carol, Erin) -> identity(Erin), person(Erin), operator_of(Erin, Carol)) guarded by Bob, Alice, Erin
-
-end_guardian: not operator_of(Bob, Carol), not operated_by(Carol, Bob) <-
-    identity(Alice), person(Alice), operator_of(Alice, Carol), identity(Bob), person(Bob), operator_of(Bob, Carol), identity(Carol), operated_by(Carol, Alice), operated_by(Carol, Bob), forall Erin (operated_by(Carol, Erin), Erin != Bob -> identity(Erin), person(Erin), operator_of(Erin, Carol)) guarded by Alice, Erin
-
-resign: not operator_of(Bob, Carol), not operated_by(Carol, Bob) <-
-    identity(Bob), person(Bob), operator_of(Bob, Carol), identity(Carol), operated_by(Carol, Bob) guarded by Bob
-
-guardian_unfriend: not friend(Bob, Carol), not operator_of(Bob, Carol), not friend(Carol, Bob), not operated_by(Carol, Bob) <-
-    identity(Bob), person(Bob), friend(Bob, Carol), operator_of(Bob, Carol), identity(Carol), friend(Carol, Bob), operated_by(Carol, Bob) guarded by Bob
-
-agent_acquaint: knows(Carol, Bob), knows(Bob, Carol), agent_of(Bob, Carol, y) <-
-    identity(Carol), agent(Carol), operated_by(Carol, Alice), attestation(Carol, y), identity(Bob), person(Bob) guarded by Carol, Bob
-
-agent_befriend: friend(Carol, Bob), friend(Bob, Carol) <-
-    identity(Carol), agent(Carol), operated_by(Carol, Alice), knows(Carol, Bob), not friend(Carol, Bob), identity(Bob), knows(Bob, Carol), person(Bob), not friend(Bob, Carol), identity(Alice), person(Alice), operator_of(Alice, Carol), friend(Alice, Bob) guarded by Carol, Bob, Alice
-
-agent_unfriend: not friend(Carol, Bob), not friend(Bob, Carol) <-
-    identity(Carol), operated_by(Carol, Alice), friend(Carol, Bob), not operated_by(Carol, Bob), identity(Bob), friend(Bob, Carol), identity(Alice), person(Alice), operator_of(Alice, Carol) guarded by Alice
-
-agent_end: not friend(Carol, Bob), not friend(Bob, Carol) <-
-    identity(Carol), agent(Carol), operated_by(Carol, Alice), friend(Carol, Bob), not operated_by(Carol, Bob), identity(Bob), friend(Bob, Carol) guarded by Carol
-
-agents_acquaint: knows(Carol, Dave), agent_of(Carol, Dave, z), knows(Dave, Carol), agent_of(Dave, Carol, y) <-
-    identity(Carol), agent(Carol), operated_by(Carol, Alice), attestation(Carol, y), identity(Dave), agent(Dave), operated_by(Dave, Bob), attestation(Dave, z) guarded by Carol, Dave
-
-agents_befriend: friend(Carol, Dave), friend(Dave, Carol) <-
-    identity(Carol), agent(Carol), operated_by(Carol, Alice), knows(Carol, Dave), not friend(Carol, Dave), identity(Dave), agent(Dave), operated_by(Dave, one(Bob, Alice)), knows(Dave, Carol), not friend(Dave, Carol), identity(Alice), person(Alice), operator_of(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), identity(one(Bob, Alice)), person(one(Bob, Alice)), operator_of(one(Bob, Alice), Dave) guarded by Carol, Dave, Alice, one(Bob, Alice)
-
-retire: retired_agent(Carol), not friend(Carol, _), not operated_by(Carol, _), forall Bob (friend(Carol, Bob) -> not friend(Bob, Carol)), forall Erin (operated_by(Carol, Erin) -> not operator_of(Erin, Carol)) <-
-    identity(Carol), agent(Carol), operated_by(Carol, Alice), identity(Alice), person(Alice), operator_of(Alice, Carol), forall Bob (friend(Carol, Bob) -> identity(Bob), friend(Bob, Carol)), forall Erin (operated_by(Carol, Erin) -> identity(Erin), person(Erin), operator_of(Erin, Carol)) guarded by Alice, Erin
-
-sign: item(Alice, x) <-
-    identity(Alice), not item(Alice, x), (person(Alice) or (agent(Alice) and exists G (operated_by(Alice, G)))) guarded by Alice
-
-forward: item(Bob, sgn(x, Alice)) <-
-    identity(Alice), item(Alice, x), friend(Alice, Bob), identity(Bob), (person(Alice) or (agent(Alice) and exists G (operated_by(Alice, G)))) guarded by Alice
-
-message: item(Bob, x) <-
-    identity(Alice), item(Alice, x), friend(Alice, Bob), identity(Bob), (person(Alice) or (agent(Alice) and exists G (operated_by(Alice, G)))), author(x) = Alice guarded by Alice
-
-create: member(Alice, <Alice>.n), listed(Alice, Alice, n) <-
-    identity(Alice), person(Alice), not member(Alice, <Alice>.n), not closed(Alice, n) guarded by Alice
-
-join: listed(Alice, Bob, n), member(Bob, <Alice>.n) <-
-    identity(Alice), member(Alice, <Alice>.n), friend(Alice, Bob), person(Alice), identity(Bob), person(Bob), not member(Bob, <Alice>.n) guarded by Alice, Bob
-
-leave: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
-    identity(Alice), listed(Alice, Bob, n), identity(Bob), person(Bob), member(Bob, <Alice>.n) guarded by Bob
-
-remove: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
-    identity(Alice), person(Alice), listed(Alice, Bob, n), identity(Bob), member(Bob, <Alice>.n) guarded by Alice
-
-close: closed(Alice, n), not listed(Alice, Alice, n), not member(Alice, <Alice>.n), forall Bob (listed(Alice, Bob, n) -> not member(Bob, <Alice>.n)) <-
-    identity(Alice), person(Alice), listed(Alice, Alice, n), member(Alice, <Alice>.n), forall Bob (listed(Alice, Bob, n) -> identity(Bob), member(Bob, <Alice>.n)) guarded by Alice
-
-post_own: posted(Alice, x, n) <-
-    identity(Alice), person(Alice), item(Alice, x), member(Alice, <Alice>.n), not posted(Alice, x, n), author(x) = Alice guarded by Alice
-
-post: posted(Alice, x, n) <-
-    identity(Bob), person(Bob), item(Bob, x), member(Bob, <Alice>.n), identity(Alice), member(Alice, <Alice>.n), listed(Alice, Bob, n), friend(Alice, Bob), not posted(Alice, x, n), author(x) = Bob guarded by Bob
-
-post_forward: posted(Alice, sgn(x, Bob), n) <-
-    identity(Bob), person(Bob), item(Bob, x), member(Bob, <Alice>.n), identity(Alice), member(Alice, <Alice>.n), listed(Alice, Bob, n), friend(Alice, Bob) guarded by Bob
-
-deliver: delivered(Alice, y, Bob, n), item(Bob, sgn(y, Alice)) <-
-    identity(Alice), member(Alice, <Alice>.n), posted(Alice, y, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, y, Bob, n), identity(Bob), member(Bob, <Alice>.n), author(y) != Alice
-
-deliver_own: delivered(Alice, y, Bob, n), item(Bob, y) <-
-    identity(Alice), member(Alice, <Alice>.n), posted(Alice, y, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, y, Bob, n), identity(Bob), member(Bob, <Alice>.n), author(y) = Alice
-
-deliver_leader: delivered(Alice, y, Alice, n), item(Alice, y) <-
-    identity(Alice), member(Alice, <Alice>.n), posted(Alice, y, n), not delivered(Alice, y, Alice, n), author(y) != Alice
+GSNP: Grassroots Social Network with Provenance
+GSNP instantiates GSN with item(y,t) for message(y,x,t); item(z,t@y) for group_message(z,x,t,g,y), composes it with GAI (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231), and extends the composition.
+After x sends t to y: y holds the item t.
+After y delivers t as its author in g to z, which requires y has not delivered the message t of y in g to z: y has delivered the message t of y in g to z and z holds the item t.
+After x forwards t to the group g of y, adding x's signature to the signatures t carries: y has the post t signed by x of x in g.
+GSNP:0 - | Alf is an AI agent, Alice and Bob are persons, Grupo a group, Text a message, Item an item, Proof an attestation.
+GSNP:1 ■ Message: GSN:1 <- person(Alice), item(Alice,Text), author(Alice,Text).
+GSNP:1 ■ Post: GSN:4 Post <- person(Bob), item(Bob,Text), author(Bob,Text).
+GSNP:1 ■ Agent message: item(Bob,Text) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), item(Alf,Text), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
+GSNP:1 ■ Guardian unfriend: GnW:2 Guardian unfriend + ~member(Bob,_,Alf), ~member(Alf,_,Bob), ~listed(Bob,Alf,_), ~listed(Alf,Bob,_) <-.
+GSNP:1 ■ AI agent end: GnW:3 Ward end + ~member(Alf,_,Bob), ~member(Bob,_,Alf), ~listed(Alf,Bob,_), ~listed(Bob,Alf,_) <-.
+GSNP:1 ■ Unfriend: GnW:3 Unfriend + ~member(Bob,_,Alf), ~member(Alf,_,Bob), ~listed(Bob,Alf,_), ~listed(Alf,Bob,_) <-.
+GSNP:1 ■ AI agent unfriend: GnW:3 Ward unfriend + ~member(Alf,_,Bob), ~member(Bob,_,Alf), ~listed(Alf,Bob,_), ~listed(Bob,Alf,_) <-.
+GSNP:1 ■ Create: GSN:2 Create <- person(Alice).
+GSNP:1 ■ Close: GSN:2 Close <- person(Alice).
+GSNP:1 ■ Join: GSN:3 Join <- person(Alice), person(Bob).
+GSNP:1 ■ Remove: GSN:3 Remove <- person(Alice).
+GSNP:1 ■ Leave: GSN:3 Leave <- person(Bob).
+GSNP:1 ■ Retire: GnW:5 Retire + ~member(Alf,_,_), ~listed(_,Alf,_) <-.
+GSNP:1 ■ Deliver: GSN:4 Deliver <- ~author(Alice,Text).
+GSNP:1 ■ Deliver leader: GSN:4 Deliver leader <- ~author(Alice,Text).
+GSNP:1 ■ Deliver own: group_delivered(Alice,Alice,Text,Grupo,Carol), item(Carol,Text) <- leader(Alice,Grupo), posted(Alice,Text,Alice,Grupo), listed(Alice,Carol,Grupo), author(Alice,Text), ~group_delivered(Alice,Alice,Text,Grupo,Carol).
+GSNP:2 ■ Post forward: posted(Alice,Item@Bob,Bob,Grupo) <- person(Bob), member(Bob,Grupo,Alice), ~leader(Bob,Grupo), item(Bob,Item) guarded by Bob.
