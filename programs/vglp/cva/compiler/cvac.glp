@@ -14,7 +14,8 @@
 
 Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Line) ; standless_only(Line)
         ; day_only(Line) ; dayless_only(Line) ; env_only(Line) ; envless_only(Line)
-        ; wild_only(Line) ; wildless_only(Line).
+        ; wild_only(Line) ; wildless_only(Line)
+        ; const_only(Line) ; constless_only(Line).
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
 imported procedure local#faults(Contract?, Preds?, NumInfos?, Ones?, Strings).
@@ -245,8 +246,75 @@ procedure q_faults(QContract?, Lines).
 q_faults([], []).
 q_faults([S|Ss], L?) :- ground(S?) |
     q_schema(S?, L1),
+    const_faults(S?, L0),
     q_faults(Ss?, L2),
-    lapp(L1?, L2?, L).
+    lapp(L0?, L2?, L02),
+    lapp(L1?, L02?, L).
+%% (4) A variable over the constants, const(X) among a schema's variables (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, a multiplicity and a count being whole numbers, and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"), is taken where it is an argument of an atom, bound by the schema-binding or local to a role.  It is no number, so one written as a multiplicity is refused; one in a constraint, or in the constraint of a safe formula or of a conjunct's condition, is refused, the printed text comparing numbers, persons, speech acts and community names and no value such a variable takes (con_holds, expr_term1); and one a quantifier binds is refused, the instances of a conjunct being printed of the types Peer, Speech and Integer (kind_type).
+procedure const_faults(QSchema?, Lines).
+const_faults(schema(S, Hd, Rs), L?) :- hd_consts(Hd?, Xs), const_check(Xs?, [], true, Rs?, [], [], S?, L).
+const_faults(cschema(S, Hd, _, Rs), L?) :- hd_consts(Hd?, Xs), const_check(Xs?, [], true, Rs?, [], [], S?, L).
+const_faults(nschema(S, Hd, C, Rs), L?) :- hd_consts(Hd?, Xs), const_check(Xs?, [], C?, Rs?, [], [], S?, L).
+const_faults(qschema(S, Hd, Bd, C, Rs, Cj, Fs), L?) :- hd_consts(Hd?, Xs), hd_consts(Bd?, Bs), const_check(Xs?, Bs?, C?, Rs?, Cj?, Fs?, S?, L).
+%% The names of the variables over the constants among a schema's variables.
+procedure hd_consts(Args?, Preds).
+hd_consts([], []).
+hd_consts([const(X)|As], [X?|Xs?]) :- hd_consts(As?, Xs).
+hd_consts([_|As], Xs?) :- otherwise | hd_consts(As?, Xs).
+procedure const_check(Preds?, Preds?, Constraint?, RoleSpecs?, Conjuncts?, Forms?, Constant?, Lines).
+const_check([], [], _, _, _, _, _, []).
+const_check(Xs, Bs, C, Rs, Cj, Fs, S, L?) :- otherwise, ground(Xs?), ground(Bs?), ground(S?) |
+    app(Xs?, Bs?, Ys),
+    app(Xs?, Bs?, Ys1),
+    co_roles(Rs?, Rs1),
+    rs_atoms(Rs1?, As),
+    mult_args(As?, Ms),
+    names_in(Ms?, Ys?, M),
+    co_con(C?, C1),
+    con_args(C1?, Ca),
+    co_forms(Fs?, Fs1),
+    co_conjs(Cj?, Cj1),
+    conj_phis(Cj1?, Ps),
+    app(Fs1?, Ps?, Fp),
+    forms_cons(Fp?, Fa),
+    app(Ca?, Fa?, Cf),
+    names_in(Cf?, Ys1?, K),
+    any_name(Bs?, Q),
+    const_fault(M?, S?, '%% it has a variable over the constants as a multiplicity, and a multiplicity is a whole number (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a multiplicity and a count being whole numbers"):', L1),
+    const_fault(K?, S?, '%% it has a variable over the constants in a constraint, or in the constraint of a safe formula, which the compiler does not carry: the printed text compares numbers, persons, speech acts and community names, and no value a variable over the constants takes:', L2),
+    const_fault(Q?, S?, '%% it has a variable over the constants that a quantifier binds, which the compiler does not carry yet: the instances of a conjunct are printed of the types Peer, Speech and Integer:', L3),
+    lapp(L2?, L3?, L23),
+    lapp(L1?, L23?, L).
+procedure const_fault(YesNo?, Constant?, String?, Lines).
+const_fault(no, _, _, []).
+const_fault(yes, S, H, [H?, T?]) :- ground(S?) | said('%% the schema', S?, T).
+%% The multiplicities of the atoms, as arguments.
+procedure mult_args(Atoms?, Args).
+mult_args([], []).
+mult_args([atom(_, _)|As], Ms?) :- mult_args(As?, Ms).
+mult_args([times(K, A)|As], [K?|Ms?]) :- mult_args([A?|As?], Ms).
+mult_args([rest(K, J, A)|As], [K?, J?|Ms?]) :- mult_args([A?|As?], Ms).
+%% Whether an argument among As is a value variable num(X), X among the names Xs.
+procedure names_in(Args?, Preds?, YesNo).
+names_in([], _, no).
+names_in([num(X)|As], Xs, B?) :- ground(Xs?) | mem(X?, Xs?, B1), names_in(As?, Xs?, B2), or(B1?, B2?, B).
+names_in([_|As], Xs, B?) :- otherwise | names_in(As?, Xs?, B).
+%% The conditions of the conjuncts.
+procedure conj_phis(Conjuncts?, Forms).
+conj_phis([], []).
+conj_phis([conjunct(_, _, _, F, _, _, _)|Cs], [F?|Fs?]) :- conj_phis(Cs?, Fs).
+%% The arguments the constraints of safe formulas name (self.glp, con_args).
+procedure forms_cons(Forms?, Args).
+forms_cons([], []).
+forms_cons([F|Fs], A?) :- form_cons(F?, A1), forms_cons(Fs?, A2), app(A1?, A2?, A).
+procedure form_cons(Form?, Args).
+form_cons(fa(_, _), []).
+form_cons(fnot(F), A?) :- form_cons(F?, A).
+form_cons(fand(F, G), A?) :- form_cons(F?, A1), form_cons(G?, A2), app(A1?, A2?, A).
+form_cons(for(F, G), A?) :- form_cons(F?, A1), form_cons(G?, A2), app(A1?, A2?, A).
+form_cons(fexists(_, _, _, F), A?) :- form_cons(F?, A).
+form_cons(fforall(_, _, _, F, Gs), A?) :- form_cons(F?, A1), forms_cons(Gs?, A2), app(A1?, A2?, A).
+form_cons(fcons(C), A?) :- con_args(C?, A).
 procedure q_schema(QSchema?, Lines).
 q_schema(schema(_, _, _), []).
 q_schema(cschema(_, _, _, _), []).
@@ -452,6 +520,8 @@ expr_beyond(nterm(_), no).
 expr_beyond(sgn(_, _), no).
 expr_beyond(num(_), no).
 expr_beyond(real(_), no).
+%% A variable over the constants is num(X) to the checks (consts_off); the clause covers the type.
+expr_beyond(const(_), no).
 expr_beyond(any, no).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 expr_beyond(ilist(_, _), no).
@@ -484,6 +554,8 @@ reals_off([qschema(S, Hd, Bd, Cn, Rs, Cj, Fs)|Ss], [qschema(S?, Hd1?, Bd1?, Cn?,
 procedure nums_of(Args?, Args).
 nums_of([], []).
 nums_of([real(X)|As], [num(X?)|Bs?]) :- nums_of(As?, Bs).
+%% A variable over the constants is num(X) likewise, its type printed from the table cn(S, X) (consts_off, below).
+nums_of([const(X)|As], [num(X?)|Bs?]) :- nums_of(As?, Bs).
 nums_of([A|As], [A?|Bs?]) :- otherwise | nums_of(As?, Bs).
 procedure real_lx(QContract?, Lxs).
 real_lx([], []).
@@ -494,13 +566,16 @@ real_lx([qschema(S, Hd, _, _, _, _, _)|Ss], L?) :- ground(S?) | hd_reals(Hd?, S?
 procedure hd_reals(Args?, Constant?, Lxs).
 hd_reals([], _, []).
 hd_reals([real(X)|As], S, [rl(S?, X?)|L?]) :- ground(S?) | hd_reals(As?, S?, L).
+hd_reals([const(X)|As], S, [cn(S?, X?)|L?]) :- ground(S?) | hd_reals(As?, S?, L).
 hd_reals([_|As], S, L?) :- otherwise | hd_reals(As?, S?, L).
 %% The contract with each real variable of a schema's head written real(X) again, for the printers of the class term and the request type.
 procedure real_heads(Contract?, Lxs?, Contract).
 real_heads([], _, []).
 real_heads([schema(S, Hd, Rs)|Ss], Lx, [schema(S?, Hd1?, Rs?)|Cs?]) :- ground(S?), ground(Lx?) |
     reals_of(Lx?, S?, Xs),
-    reals_on(Hd?, Xs?, Hd1),
+    reals_on(Hd?, Xs?, Hd0),
+    consts_of(Lx?, S?, Ys),
+    consts_on(Hd0?, Ys?, Hd1),
     real_heads(Ss?, Lx?, Cs).
 real_heads([cschema(S, Hd, Rc, Rs)|Ss], Lx, [cschema(S?, Hd?, Rc?, Rs?)|Cs?]) :- real_heads(Ss?, Lx?, Cs).
 real_heads([nschema(S, Hd, Cn, Rs)|Ss], Lx, [nschema(S?, Hd?, Cn?, Rs?)|Cs?]) :- real_heads(Ss?, Lx?, Cs).
@@ -523,6 +598,115 @@ procedure real_atom(Atom?, Preds?, Atom).
 real_atom(atom(F, As), Xs, atom(F?, As1?)) :- reals_on(As?, Xs?, As1).
 real_atom(times(K, A), Xs, times(K?, A1?)) :- real_atom(A?, Xs?, A1).
 real_atom(rest(K, J, A), Xs, rest(K?, J?, A1?)) :- real_atom(A?, Xs?, A1).
+%% A variable over the constants, const(X) among a schema's variables (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, a multiplicity and a count being whole numbers, and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"), is num(X) to every check and every place of the shared text, as a real variable is (reals_off): where the schema writes const(X) in an atom, a constraint or a safe formula, the compiler reads num(X) (consts_off, which decl_schemas calls), the variables of the head left as written for the table; its type, Constant, is printed from the table cn(S, X) (real_lx) into the class term and the request type (real_heads, consts_on) and into the atoms (contract_ratoms, const_atoms), its place in an atom of the kind const, as the place of a constant the contract names, val(C), so that the agent holds its value as v(C); and the shared text's lines const_only(L) are printed only for a contract with such a variable (const_lines).  GSC's form of it was not written when this was built (GSC-const): the compiler takes const(X) among the variables, and const(X) or num(X) where the variable occurs.
+procedure consts_off(QContract?, QContract).
+consts_off([], []).
+consts_off([schema(S, Hd, Rs)|Ss], [schema(S?, Hd?, Rs1?)|Ns?]) :- co_roles(Rs?, Rs1), consts_off(Ss?, Ns).
+consts_off([cschema(S, Hd, Rc, Rs)|Ss], [cschema(S?, Hd?, Rc?, Rs1?)|Ns?]) :- co_roles(Rs?, Rs1), consts_off(Ss?, Ns).
+consts_off([nschema(S, Hd, Cn, Rs)|Ss], [nschema(S?, Hd?, Cn1?, Rs1?)|Ns?]) :- co_con(Cn?, Cn1), co_roles(Rs?, Rs1), consts_off(Ss?, Ns).
+consts_off([qschema(S, Hd, Bd, Cn, Rs, Cj, Fs)|Ss], [qschema(S?, Hd?, Bd?, Cn1?, Rs1?, Cj1?, Fs1?)|Ns?]) :- co_con(Cn?, Cn1), co_roles(Rs?, Rs1), co_conjs(Cj?, Cj1), co_forms(Fs?, Fs1), consts_off(Ss?, Ns).
+procedure co_arg(Arg?, Arg).
+co_arg(const(X), num(X?)).
+co_arg(item_of(A), item_of(A1?)) :- co_arg(A?, A1).
+co_arg(A, A?) :- otherwise | true.
+procedure co_args(Args?, Args).
+co_args([], []).
+co_args([A|As], [B?|Bs?]) :- co_arg(A?, B), co_args(As?, Bs).
+procedure co_atom(Atom?, Atom).
+co_atom(atom(F, As), atom(F?, Bs?)) :- co_args(As?, Bs).
+co_atom(times(K, A), times(K1?, A1?)) :- co_arg(K?, K1), co_atom(A?, A1).
+co_atom(rest(K, J, A), rest(K1?, J1?, A1?)) :- co_arg(K?, K1), co_arg(J?, J1), co_atom(A?, A1).
+procedure co_atoms(Atoms?, Atoms).
+co_atoms([], []).
+co_atoms([A|As], [B?|Bs?]) :- co_atom(A?, B), co_atoms(As?, Bs).
+procedure co_roles(RoleSpecs?, RoleSpecs).
+co_roles([], []).
+co_roles([rs(G, P, M, K, N)|Rs], [rs(G?, P1?, M1?, K1?, N1?)|Rs1?]) :- co_atoms(P?, P1), co_atoms(M?, M1), co_atoms(K?, K1), co_atoms(N?, N1), co_roles(Rs?, Rs1).
+co_roles([crs(Kd, G, P, M, K, N)|Rs], [crs(Kd1?, G?, P1?, M1?, K1?, N1?)|Rs1?]) :- co_kind(Kd?, Kd1), co_atoms(P?, P1), co_atoms(M?, M1), co_atoms(K?, K1), co_atoms(N?, N1), co_roles(Rs?, Rs1).
+procedure co_kind(RoleKind?, RoleKind).
+co_kind(listed(I, R, As), listed(I?, R?, Bs?)) :- co_args(As?, Bs).
+co_kind(qlisted(I, R, As, Xs), qlisted(I?, R?, Bs?, Xs?)) :- co_args(As?, Bs).
+co_kind(seated(N, R), seated(N?, R?)).
+co_kind(constituent(N, R), constituent(N?, R?)).
+procedure co_con(Constraint?, Constraint).
+co_con(true, true).
+co_con(and(A, B), and(A1?, B1?)) :- co_con(A?, A1), co_con(B?, B1).
+co_con(or(A, B), or(A1?, B1?)) :- co_con(A?, A1), co_con(B?, B1).
+co_con(implies(A, B), implies(A1?, B1?)) :- co_con(A?, A1), co_con(B?, B1).
+co_con(not(A), not(A1?)) :- co_con(A?, A1).
+co_con(eq(X, Y), eq(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
+co_con(ne(X, Y), ne(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
+co_con(le(X, Y), le(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
+co_con(lt(X, Y), lt(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
+co_con(ge(X, Y), ge(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
+co_con(gt(X, Y), gt(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
+co_con(succ(X, Y), succ(X1?, Y1?)) :- co_arg(X?, X1), co_arg(Y?, Y1).
+co_con(signed(U, Y), signed(U?, Y?)).
+co_con(unsigned(U, Y), unsigned(U?, Y?)).
+co_con(rel(R, Es), rel(R?, Es1?)) :- co_exprs(Es?, Es1).
+co_con(program(E), program(E1?)) :- co_expr(E?, E1).
+procedure co_exprs(Exprs?, Exprs).
+co_exprs([], []).
+co_exprs([E|Es], [E1?|Es1?]) :- co_expr(E?, E1), co_exprs(Es?, Es1).
+procedure co_expr(Expr?, Expr).
+co_expr(const(X), num(X?)).
+co_expr(plus(X, Y), plus(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
+co_expr(minus(X, Y), minus(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
+co_expr(mul(X, Y), mul(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
+co_expr(fn(F, Es), fn(F?, Es1?)) :- co_exprs(Es?, Es1).
+co_expr(cardinality(Xs, H, A, F), cardinality(Xs?, H?, A1?, F1?)) :- co_atom(A?, A1), co_form(F?, F1).
+co_expr(sum(Xs, H, A, F, U), sum(Xs?, H?, A1?, F1?, U1?)) :- co_atom(A?, A1), co_form(F?, F1), co_expr(U?, U1).
+co_expr(E, E?) :- otherwise | true.
+procedure co_forms(Forms?, Forms).
+co_forms([], []).
+co_forms([F|Fs], [F1?|Fs1?]) :- co_form(F?, F1), co_forms(Fs?, Fs1).
+procedure co_form(Form?, Form).
+co_form(fa(H, M), fa(H?, M1?)) :- co_atom(M?, M1).
+co_form(fnot(F), fnot(F1?)) :- co_form(F?, F1).
+co_form(fand(F, G), fand(F1?, G1?)) :- co_form(F?, F1), co_form(G?, G1).
+co_form(for(F, G), for(F1?, G1?)) :- co_form(F?, F1), co_form(G?, G1).
+co_form(fexists(Xs, H, A, F), fexists(Xs?, H?, A1?, F1?)) :- co_atom(A?, A1), co_form(F?, F1).
+co_form(fforall(Xs, H, A, F, Gs), fforall(Xs?, H?, A1?, F1?, Gs1?)) :- co_atom(A?, A1), co_form(F?, F1), co_forms(Gs?, Gs1).
+co_form(fcons(C), fcons(C1?)) :- co_con(C?, C1).
+procedure co_conjs(Conjuncts?, Conjuncts).
+co_conjs([], []).
+co_conjs([conjunct(Xs, I, A, F, CA, CD, Ls)|Cs], [conjunct(Xs?, I?, A1?, F1?, CA1?, CD1?, Ls1?)|Cs1?]) :- co_atom(A?, A1), co_form(F?, F1), co_hms(CA?, CA1), co_hms(CD?, CD1), co_forms(Ls?, Ls1), co_conjs(Cs?, Cs1).
+procedure co_hms(HMults?, HMults).
+co_hms([], []).
+co_hms([hm(J, M)|Hs], [hm(J?, M1?)|Hs1?]) :- co_atom(M?, M1), co_hms(Hs?, Hs1).
+%% The variables over the constants of the schema S, from the table (real_lx).
+procedure consts_of(Lxs?, Constant?, Preds).
+consts_of([], _, []).
+consts_of([cn(S1, X)|Lx], S, [X?|Xs?]) :- S1? =?= S? | consts_of(Lx?, S?, Xs).
+consts_of([_|Lx], S, Xs?) :- otherwise | consts_of(Lx?, S?, Xs).
+%% The arguments with each num(X) of a variable X over the constants written const(X), for the printers of the class term, the request type and the type Atom.
+procedure consts_on(Args?, Preds?, Args).
+consts_on([], _, []).
+consts_on([num(X)|As], Xs, [A?|Bs?]) :- ground(X?), ground(Xs?) | mem(X?, Xs?, In), const_if(In?, X?, A), consts_on(As?, Xs?, Bs).
+consts_on([A|As], Xs, [A?|Bs?]) :- otherwise | consts_on(As?, Xs?, Bs).
+procedure const_if(YesNo?, Constant?, Arg).
+const_if(yes, X, const(X?)).
+const_if(no, X, num(X?)).
+procedure const_atoms(Atoms?, Preds?, Atoms).
+const_atoms([], _, []).
+const_atoms([M|Ms], Xs, [M1?|Ns?]) :- ground(Xs?) | const_atom(M?, Xs?, M1), const_atoms(Ms?, Xs?, Ns).
+procedure const_atom(Atom?, Preds?, Atom).
+const_atom(atom(F, As), Xs, atom(F?, As1?)) :- consts_on(As?, Xs?, As1).
+const_atom(times(K, A), Xs, times(K?, A1?)) :- const_atom(A?, Xs?, A1).
+const_atom(rest(K, J, A), Xs, rest(K?, J?, A1?)) :- const_atom(A?, Xs?, A1).
+%% Whether the contract has a variable over the constants, by the table.
+procedure lx_consts(Lxs?, YesNo).
+lx_consts([], no).
+lx_consts([cn(_, _)|_], yes).
+lx_consts([_|Lx], B?) :- otherwise | lx_consts(Lx?, B).
+%% The shared text's lines, a line const_only(L) printed as L where the contract has a variable over the constants and left out where it has none, and a line constless_only(L) the other way about, so that a platform with none prints what it printed before such variables were built.
+procedure const_lines(Lines?, YesNo?, Lines).
+const_lines([], _, []).
+const_lines([const_only(L)|Ls], yes, [L?|Ls1?]) :- const_lines(Ls?, yes, Ls1).
+const_lines([const_only(_)|Ls], no, Ls1?) :- const_lines(Ls?, no, Ls1).
+const_lines([constless_only(_)|Ls], yes, Ls1?) :- const_lines(Ls?, yes, Ls1).
+const_lines([constless_only(L)|Ls], no, [L?|Ls1?]) :- const_lines(Ls?, no, Ls1).
+const_lines([L|Ls], C, [L?|Ls1?]) :- otherwise | const_lines(Ls?, C?, Ls1).
 %% The schemas, each listed role's arguments taken whole: listed(B, Rho, As), As the anchor's arguments after its holder with the listed role itself, role(I), among them, at its place (norm_roles); GSC's reader writes the role at the anchor's second argument without it, listed(B, Rho, [u_2, ..., u_r]), and a role elsewhere among the arguments as qlisted(B, Rho, As, [role(I)]), which q_roles takes as it is, "the variable at any of the anchor's arguments" (vGLP b413fe1, Section 5.4, "Speech-act schemas as local specifications").
 %% A wildcard in an atom a role requires, or in the anchor of a quantifier, is a variable of its own (wild_schemas, below), so the schemas every procedure of the compiler reads are those with each such wildcard written as that variable.
 procedure decl_schemas(Declared?, QContract).
@@ -533,8 +717,8 @@ decl_schemas(D, R?) :- ground(D?) |
     wild_schemas(C0?, Gs?, R).
 procedure decl_norm(Declared?, QContract).
 decl_norm([], []).
-decl_norm([S|Ss], R?) :- norm_schemas([S?|Ss?], R).
-decl_norm(reflexive(_, C), R?) :- norm_schemas(C?, R).
+decl_norm([S|Ss], R?) :- norm_schemas([S?|Ss?], R0), consts_off(R0?, R).
+decl_norm(reflexive(_, C), R?) :- norm_schemas(C?, R0), consts_off(R0?, R).
 procedure norm_schemas(QContract?, QContract).
 norm_schemas([], []).
 norm_schemas([schema(S, Hd, Rs)|Ss], [schema(S?, Hd?, Rs1?)|R?]) :- norm_roles(Rs?, 1, Rs1), norm_schemas(Ss?, R).
@@ -557,7 +741,7 @@ role_in(no, I, As, [role(I?)|As?]).
 %% (1) A wildcard among the arguments of an atom a role requires, an agent role or a listed role, is written as a variable of the schema that no atom of it names, '_1', '_2', ..., in the order of the schema, of the kind its place has (wild_made), and listed in the schema's head: it occurs in that one atom, required at one role, so it is local to that role (local.glp, locals_of: "A variable that occurs only in atoms the schema requires or deletes at one role ... is local to that role"), "a schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state", the class term and the request do not name it, no field is for it, and, no atom added or deleted naming it, the effect does not depend on it.
 %% (2) A wildcard among the arguments of the anchor of a quantifier of a safe formula, or of a quantified conjunct that binds no listed role, is written as such a variable among the variables its quantifier binds: the printed text matches the anchor into the state of its holder under the binding, which leaves the variable free, so it matches any value (the printed text's match_into); an instance of a conjunct is "restricted to the variables the conjunct's literals name and without repetition" (hm_named; the printed text's inst_at), and no literal names the variable.
 %% (3) A wildcard among the arguments of the anchor of a listed role stays the wildcard, the anchor being no atom the printed text matches: the people of the role are those at the role's place of the atoms of the anchor's predicate in the base's state whose other arguments are the image of the anchor's, the wildcard met by any value, each person once (the printed text's list_at, vals_meet; listed_wild).
-%% (4) A wildcard in a negated atom, forbidden or cleared, is as it was, and so is one in the name term N._ and one in an atom of a safe formula that is not the anchor of a quantifier.  Refused with the reason (wild_faults): a wildcard at an argument of a predicate to which no other atom of the contract gives a type; one in a required atom or an anchor at an argument that is a community name, an item or a constant, or, in an anchor, a real, the term form having no variable of those; one in the anchor of a count or a sum, or in an atom of its condition; and one in the anchor of a quantifier that binds a listed role in a safe formula across roles.
+%% (4) A wildcard in a negated atom, forbidden or cleared, is as it was, and so is one in the name term N._ and one in an atom of a safe formula that is not the anchor of a quantifier.  Refused with the reason (wild_faults): a wildcard at an argument of a predicate to which no other atom of the contract gives a type; one in a required atom or an anchor at an argument that is a community name, an item or a constant, a constant the contract names or a variable over the constants, or, in an anchor, a real, the compiler writing a wildcard as an agent, a speech-act or a numeric variable only; one in the anchor of a count or a sum, or in an atom of its condition; and one in the anchor of a quantifier that binds a listed role in a safe formula across roles.
 %% The types of the arguments of the contract's predicates, a signature for each predicate and number of arguments, the wildcard's place taking the type another atom of the contract gives it, and wild where none does (wild_sigs), a person where one atom writes a person and another a variable a quantifier binds (peer_sigs).
 procedure wild_table(QContract?, Sigs).
 wild_table(C, Gs?) :-
@@ -566,20 +750,20 @@ wild_table(C, Gs?) :-
     dedup(Gs0?, Gs1),
     wild_sigs(Gs1?, Gs2),
     peer_sigs_all(Gs2?, Gs).
-%% Every atom the schemas write: those of their roles, the anchors of their listed roles, and those of their constraints, conjuncts and safe formulas, each argument of a real variable written real(X).
+%% Every atom the schemas write: those of their roles, the anchors of their listed roles, and those of their constraints, conjuncts and safe formulas, each argument of a real variable written real(X) and each of a variable over the constants const(X).
 procedure q_all_atoms(QContract?, Atoms).
 q_all_atoms([], []).
 q_all_atoms([S|Ss], As?) :- qs_atoms(S?, A1), q_all_atoms(Ss?, A2), app(A1?, A2?, As).
 procedure qs_atoms(QSchema?, Atoms).
-qs_atoms(schema(_, Hd, Rs), As?) :- qr_atoms(Rs?, yes, A0), hd_real_names(Hd?, Xs), real_atoms(A0?, Xs?, As).
-qs_atoms(cschema(_, Hd, _, Rs), As?) :- qr_atoms(Rs?, yes, A0), hd_real_names(Hd?, Xs), real_atoms(A0?, Xs?, As).
-qs_atoms(nschema(_, Hd, C, Rs), As?) :-
+qs_atoms(schema(_, Hd, Rs), As?) :- ground(Hd?) | qr_atoms(Rs?, yes, A0), hd_real_names(Hd?, Xs), real_atoms(A0?, Xs?, Ar), hd_const_names(Hd?, Cs), const_atoms(Ar?, Cs?, As).
+qs_atoms(cschema(_, Hd, _, Rs), As?) :- ground(Hd?) | qr_atoms(Rs?, yes, A0), hd_real_names(Hd?, Xs), real_atoms(A0?, Xs?, Ar), hd_const_names(Hd?, Cs), const_atoms(Ar?, Cs?, As).
+qs_atoms(nschema(_, Hd, C, Rs), As?) :- ground(Hd?) |
     qr_atoms(Rs?, yes, A1),
     c_atoms(C?, A2),
     app(A1?, A2?, A0),
     hd_real_names(Hd?, Xs),
-    real_atoms(A0?, Xs?, As).
-qs_atoms(qschema(_, Hd, _, C, Rs, Cj, Fs), As?) :-
+    real_atoms(A0?, Xs?, Ar), hd_const_names(Hd?, Cs), const_atoms(Ar?, Cs?, As).
+qs_atoms(qschema(_, Hd, _, C, Rs, Cj, Fs), As?) :- ground(Hd?) |
     qr_atoms(Rs?, yes, A1),
     c_atoms(C?, A2),
     cj_atoms(Cj?, yes, A3),
@@ -588,7 +772,7 @@ qs_atoms(qschema(_, Hd, _, C, Rs, Cj, Fs), As?) :-
     app(A2?, A34?, A24),
     app(A1?, A24?, A0),
     hd_real_names(Hd?, Xs),
-    real_atoms(A0?, Xs?, As).
+    real_atoms(A0?, Xs?, Ar), hd_const_names(Hd?, Cs), const_atoms(Ar?, Cs?, As).
 %% The atoms of the roles, with the atoms they delete (yes) or without (no), and the anchors of the listed roles.
 procedure qr_atoms(RoleSpecs?, YesNo?, Atoms).
 qr_atoms([], _, []).
@@ -623,6 +807,11 @@ cj_atoms([conjunct(_, _, A, Phi, CA, CD, Lits)|Cs], Dl, [A?|As?]) :- ground(Dl?)
 procedure cj_deleted(YesNo?, HMults?, Forms?, Atoms).
 cj_deleted(yes, CD, Lits, As?) :- hm_atoms(CD?, A1), fs_atoms(Lits?, A2), app(A1?, A2?, As).
 cj_deleted(no, _, _, []).
+%% The variables over the constants of a schema's head, const(X), which its atoms write num(X) (consts_off): their places are of the kind const (const_atoms).
+procedure hd_const_names(Args?, Preds).
+hd_const_names([], []).
+hd_const_names([const(X)|As], [X?|Xs?]) :- hd_const_names(As?, Xs).
+hd_const_names([_|As], Xs?) :- otherwise | hd_const_names(As?, Xs).
 procedure hd_real_names(Args?, Preds).
 hd_real_names([], []).
 hd_real_names([real(X)|As], [X?|Xs?]) :- hd_real_names(As?, Xs).
@@ -725,7 +914,7 @@ wild_args([any|As], [Kd|Ks], Md, K, [A?|As1?], K2?, Vs?) :- ground(Md?) |
     app(V1?, V2?, Vs).
 wild_args([A|As], [_|Ks], Md, K, [A?|As1?], K1?, Vs?) :- otherwise | wild_args(As?, Ks?, Md?, K?, As1, K1, Vs).
 wild_args([A|As], [], _, K, [A?|As?], K?, []).
-%% The K-th wildcard of a schema as a variable of the kind of its place, '_K': an agent variable at a person's place, a speech-act variable at a speech act's, a value variable at a number's, a real one, in the head, at a real's; and the wildcard still, where its place has no type (wild), or one of which the term form has no variable.
+%% The K-th wildcard of a schema as a variable of the kind of its place, '_K': an agent variable at a person's place, a speech-act variable at a speech act's, a value variable at a number's, a real one, in the head, at a real's; and the wildcard still, where its place has no type (wild), or is a community name's, an item's or a constant's, or, in an anchor, a real's (wild_faults).
 procedure wild_var(Kind?, WMode?, Integer?, Arg, Integer, Args).
 wild_var(Kd, Md, K, A?, K1?, Vs?) :- integer(K?) |
     term_to_string(K?, Kt),
@@ -889,8 +1078,8 @@ wild_schema_faults([qschema(S, _, _, C, Rs, Cj, Fs)|Ss], Gs, L?) :- ground(S?), 
     wild_resid(Ra?, Gs?, R),
     resid_lines(R?, S?, L1),
     c_atoms(C?, Ca1),
-    cj_cons(Cj?, Ca2),
-    forms_cons(Fs?, Ca3),
+    wcj_cons(Cj?, Ca2),
+    wforms_cons(Fs?, Ca3),
     app(Ca2?, Ca3?, Ca23),
     app(Ca1?, Ca23?, Ca),
     atoms_any(Ca?, Cw),
@@ -922,20 +1111,20 @@ form_anchors(fexists(_, _, A, F), [A?|As?]) :- form_anchors(F?, As).
 form_anchors(fforall([role(_)], _, _, F, Ps), As?) :- form_anchors(F?, A1), forms_anchors(Ps?, A2), app(A1?, A2?, As).
 form_anchors(fforall(_, _, A, F, Ps), [A?|As?]) :- otherwise | form_anchors(F?, A1), forms_anchors(Ps?, A2), app(A1?, A2?, As).
 %% The atoms of the constraints inside the conjuncts' conditions and the safe formulas, the anchors of their counts and sums and the atoms of those's conditions.
-procedure cj_cons(Conjuncts?, Atoms).
-cj_cons([], []).
-cj_cons([conjunct(_, _, _, Phi, _, _, _)|Cs], As?) :- form_cons(Phi?, A1), cj_cons(Cs?, A2), app(A1?, A2?, As).
-procedure forms_cons(Forms?, Atoms).
-forms_cons([], []).
-forms_cons([F|Fs], As?) :- form_cons(F?, A1), forms_cons(Fs?, A2), app(A1?, A2?, As).
-procedure form_cons(Form?, Atoms).
-form_cons(fa(_, _), []).
-form_cons(fcons(C), As?) :- c_atoms(C?, As).
-form_cons(fnot(F), As?) :- form_cons(F?, As).
-form_cons(fand(F, G), As?) :- form_cons(F?, A1), form_cons(G?, A2), app(A1?, A2?, As).
-form_cons(for(F, G), As?) :- form_cons(F?, A1), form_cons(G?, A2), app(A1?, A2?, As).
-form_cons(fexists(_, _, _, F), As?) :- form_cons(F?, As).
-form_cons(fforall(_, _, _, F, Ps), As?) :- form_cons(F?, A1), forms_cons(Ps?, A2), app(A1?, A2?, As).
+procedure wcj_cons(Conjuncts?, Atoms).
+wcj_cons([], []).
+wcj_cons([conjunct(_, _, _, Phi, _, _, _)|Cs], As?) :- wform_cons(Phi?, A1), wcj_cons(Cs?, A2), app(A1?, A2?, As).
+procedure wforms_cons(Forms?, Atoms).
+wforms_cons([], []).
+wforms_cons([F|Fs], As?) :- wform_cons(F?, A1), wforms_cons(Fs?, A2), app(A1?, A2?, As).
+procedure wform_cons(Form?, Atoms).
+wform_cons(fa(_, _), []).
+wform_cons(fcons(C), As?) :- c_atoms(C?, As).
+wform_cons(fnot(F), As?) :- wform_cons(F?, As).
+wform_cons(fand(F, G), As?) :- wform_cons(F?, A1), wform_cons(G?, A2), app(A1?, A2?, As).
+wform_cons(for(F, G), As?) :- wform_cons(F?, A1), wform_cons(G?, A2), app(A1?, A2?, As).
+wform_cons(fexists(_, _, _, F), As?) :- wform_cons(F?, As).
+wform_cons(fforall(_, _, _, F, Ps), As?) :- wform_cons(F?, A1), wforms_cons(Ps?, A2), app(A1?, A2?, As).
 %% Whether an atom of As has the wildcard among its arguments.
 procedure atoms_any(Atoms?, YesNo).
 atoms_any([], no).
@@ -962,7 +1151,7 @@ resid_args([_|As], [_|Ks], B?) :- otherwise | resid_args(As?, Ks?, B).
 resid_args([_|_], [], no).
 procedure resid_lines(YesNo?, Constant?, Lines).
 resid_lines(no, _, []).
-resid_lines(yes, S, ['%% it has a wildcard, in an atom a role requires or in the anchor of a quantifier, at an argument that is a community name, an item or a constant, or, in an anchor, a real: such a wildcard "is a variable of its own, standing for some value" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), and the schemas\' term form has no variable of that type for the compiler to write it as:', T?]) :-
+resid_lines(yes, S, ['%% it has a wildcard, in an atom a role requires or in the anchor of a quantifier, at an argument that is a community name, an item or a constant, or, in an anchor, a real: such a wildcard "is a variable of its own, standing for some value" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), and the compiler writes it as an agent, a speech-act or a value variable over numbers only: the schemas\' term form has no variable over community names or items, a wildcard is not yet written as a variable over the constants, const(X), and a real variable a quantifier binds is not carried as a real:', T?]) :-
     ground(S?) | said('%% the schema', S?, T).
 procedure count_lines(YesNo?, Constant?, Lines).
 count_lines(no, _, []).
@@ -1239,10 +1428,15 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     worded_stands(W?, Wsd),
     stands_any(Wsd?, Sd),
     listed_wild(C?, Wl),
-    wild_shared(Fx?, Wl?, Fx0),
+    wild_shared(Fx?, Wl?, Fx00),
+    worded_lx(W?, Lx9),
+    lx_consts(Lx9?, Kn),
+    const_lines(Fx00?, Kn?, Fx0),
     shared_lines(Fx0?, Gd?, Dy?, En?, Sd?, Fx1),
     proved_rules(C?, Rl),
-    widget_lines(W?, C?, Ps?, ctx(Rf?, Rl?), Lw),
+    worded_lx(W?, Lx7),
+    real_heads(C?, Lx7?, Ch),
+    widget_lines(W?, C?, Ch?, Ps?, ctx(Rf?, Rl?), Lw),
     lapp(Lr0?, Lw?, Lr),
     worded_lx(W?, Lx3),
     atom_parts(C?, Nt?, Lx3?, La0),
@@ -1351,6 +1545,7 @@ var_types_l([val(_)|Vs], Lis, Ts?) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([any|Vs], Lis, Ts?) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([num(_)|Vs], Lis, ['Integer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([real(_)|Vs], Lis, ['Real'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
+var_types_l([const(_)|Vs], Lis, ['Constant'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 %% The place of the instances of a conjunct, the list of them, each a person, the one agent variable its quantifier binds, in the order of identifiers (inst_heads).
 var_types_l([ilist(_, T)|Vs], Lis, [L?|Ts?]) :- ground(T?) | string_concat(['List(', T?, ')'], L), var_types_l(Vs?, Lis?, Ts).
 procedure role_type(YesNo?, String).
@@ -1383,6 +1578,8 @@ var_types([any|Vs], Ts?) :- var_types(Vs?, Ts).
 %% A numeric variable the schema-binding binds, a number in the class term and in the request, so the request form takes it, a number field (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "a request names it, so the request form takes it").
 var_types([num(_)|Vs], ['Integer'|Ts?]) :- var_types(Vs?, Ts).
 var_types([real(_)|Vs], ['Real'|Ts?]) :- var_types(Vs?, Ts).
+%% A variable over the constants the schema-binding binds, a constant in the class term and in the request, the name its proposer types (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a variable over the constants taking the name its proposer types").
+var_types([const(_)|Vs], ['Constant'|Ts?]) :- var_types(Vs?, Ts).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 var_types([ilist(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
 
@@ -1619,7 +1816,9 @@ contract_ratoms([], _, []).
 contract_ratoms([schema(S, _, Rs)|Ss], Lx, As?) :- ground(S?), ground(Lx?) |
     rs_atoms(Rs?, A0),
     reals_of(Lx?, S?, Xs),
-    real_atoms(A0?, Xs?, A1),
+    real_atoms(A0?, Xs?, A10),
+    consts_of(Lx?, S?, Ys),
+    const_atoms(A10?, Ys?, A1),
     contract_ratoms(Ss?, Lx?, A2),
     app(A1?, A2?, As).
 contract_ratoms([cschema(_, _, _, Rs)|Ss], Lx, As?) :- rs_atoms(Rs?, A1), contract_ratoms(Ss?, Lx?, A2), app(A1?, A2?, As).
@@ -1658,6 +1857,8 @@ arg_kinds([item_of(_)|Xs], [item|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([val(_)|Xs], [const|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([num(_)|Xs], [num|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([real(_)|Xs], [real|Ks?]) :- arg_kinds(Xs?, Ks).
+%% A variable over the constants (const_atoms), of the kind const, as a constant the contract names is: its place is of the type Constant, and the agent holds its value as v(C).
+arg_kinds([const(_)|Xs], [const|Ks?]) :- arg_kinds(Xs?, Ks).
 %% The wildcard's place is of the type the contract gives that place of the predicate in another atom: it is wild here, and takes that type from the signatures of the predicate's other atoms (wild_sigs), a predicate having one type at each argument; a wildcard a role requires, and one in an anchor, is by then a variable of its place's kind (wild_schemas), so the wildcards met here are those of the atoms a role forbids, of the anchors of the listed roles and of the atoms of the safe formulas.
 arg_kinds([any|Xs], [wild|Ks?]) :- arg_kinds(Xs?, Ks).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
@@ -1817,6 +2018,8 @@ bind_terms([V|Vs], I, [X?|Bs?]) :- ground(V?), integer(I?) |
 %% A real variable is num(X) in the binding, the atoms and the constraint writing num(X) of it (reals_off).
 procedure bind_key(Arg?, Arg).
 bind_key(real(X), num(X?)).
+%% And so is a variable over the constants (consts_off), its value in the binding a constant, v(C).
+bind_key(const(X), num(X?)).
 bind_key(A, A?) :- otherwise | true.
 procedure wrapped(Arg?, Found?, String).
 wrapped(role(_), named(_, Q), W?) :- call_text(p, [Q?], W).
@@ -1825,6 +2028,7 @@ wrapped(svar(_), named(_, Q), W?) :- call_text(s, [Q?], W).
 wrapped(nterm(_), named(_, Q), W?) :- call_text(p, [Q?], W).
 wrapped(num(_), named(_, Q), W?) :- call_text(n, [Q?], W).
 wrapped(real(_), named(_, Q), W?) :- call_text(r, [Q?], W).
+wrapped(const(_), named(_, Q), W?) :- call_text(v, [Q?], W).
 wrapped(_, unnamed, 'p(unnamed)').
 procedure var_names(Args?, Integer?, Strings, Strings).
 var_names([], _, [], []).
@@ -1892,6 +2096,8 @@ val_goal(pvar(X), N, G?) :- ground(X?), ground(N?) | term_to_string(pvar(X?), Vt
 val_goal(nterm(_), N, G?) :- ground(N?) | call_text(val_peer, [unnamed, 'B?', 'D?', N?], G).
 val_goal(num(X), N, G?) :- ground(X?), ground(N?) | term_to_string(num(X?), Vt), call_text(val_num, [Vt?, 'B?', N?], G).
 val_goal(real(X), N, G?) :- ground(X?), ground(N?) | term_to_string(num(X?), Vt), call_text(val_real, [Vt?, 'B?', N?], G).
+%% The constant of a variable over the constants (the shared text's val_const, a line const_only).
+val_goal(const(X), N, G?) :- ground(X?), ground(N?) | term_to_string(num(X?), Vt), call_text(val_const, [Vt?, 'B?', N?], G).
 %% A signed term is no variable of a schema (schema_vars); the clause covers
 %% the type.
 val_goal(sgn(_, _), N, G?) :- ground(N?) | call_text(val_peer, [unnamed, 'B?', 'D?', N?], G).
@@ -2639,6 +2845,7 @@ lx_atoms([lx(_, _, _, CA, CD)|Ls], As?) :-
     app(A2?, A3?, A23),
     app(A1?, A23?, As).
 lx_atoms([rl(_, _)|Ls], As?) :- lx_atoms(Ls?, As).
+lx_atoms([cn(_, _)|Ls], As?) :- lx_atoms(Ls?, As).
 lx_atoms([lc(_, _, _, A, Phi, CA, CD)|Ls], [A?|As?]) :-
     f_atoms(Phi?, A0),
     hm_atoms(CA?, A1),
@@ -2790,6 +2997,7 @@ a_field(pvar(_), _, _, yes).
 a_field(svar(_), _, _, yes).
 a_field(num(_), _, _, yes).
 a_field(real(_), _, _, yes).
+a_field(const(_), _, _, yes).
 a_field(nterm(_), _, _, no).
 a_field(sgn(_, _), _, _, no).
 a_field(item_of(_), _, _, no).
@@ -2818,6 +3026,7 @@ a_person(pvar(_), _, _, yes).
 a_person(svar(_), _, _, no).
 a_person(num(_), _, _, no).
 a_person(real(_), _, _, no).
+a_person(const(_), _, _, no).
 a_person(nterm(_), _, _, no).
 a_person(sgn(_, _), _, _, no).
 a_person(item_of(_), _, _, no).
@@ -2826,11 +3035,11 @@ a_person(any, _, _, no).
 a_person(ilist(_, _), _, _, no).
 
 %% The two widget declarations every platform carries (vGLP, Section 6.2, "The words a platform shows": "The compiler prints three widget declarations for a platform: for its request type, a menu of the buttons and the fields of the contract's acts; for its approval type, the question with the buttons yes and no"), so that no app writes a self.vglp: the approval question drawn by the construct family's approval_sentence, the request question by its social_menu.  With pragmas, the request type's declaration carries the buttons the contract's pragmas give, button(B, Acts), B the label in brackets and Acts the acts it names (Section 5.4, "The contract's words": "A button is of the acts it names"); each act, for each guarding role at which it is proposed, act(F, M, Pre, Binds, Fields, Same, Text): F its schema, M the place of the proposer in its request, Pre the atoms its schema requires and forbids at the proposer's role and what the schemas prove, Binds the places of its request those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, in the schema's order, Same its places possibly one person and Text the text of its request form (Section 6.2: the request widget "draws one button for each way the viewer's state, in the last view written, satisfies the act at the proposer's role, with the values that way binds and the act's fields").  It carries no tab and no row: where the construct family draws a button is its own choice, from the atoms that bind the way (Section 6.2: "How the buttons of one act are arranged, each beside the atoms that bind it or as one button with a picker, is the construct family's").  The approval question's two answers are given by no pragma, so its declaration carries no label, and the construct family draws the name of each (Section 6.2: "A construct family draws the label it is given, and the name of the type where it is given none").  The grammar is README.md's beside this file, 6.
-procedure widget_lines(Worded?, Contract?, Preds?, DrawCtx?, Lines).
-widget_lines(_, _, [], _, ['', '%% The widget declaration of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence; a contract with no guarded part has no request question.', 'Approval =::= approval_sentence.']).
-widget_lines(words(pragmas(_, As, _, _, _, _), _, _, _), C, Ps, Rf, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent\'s own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract\'s pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer\'s role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument\'s place, at(K), a group\'s, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).', 'Approval =::= approval_sentence.', T?, '.', '', '%% The types of the request widget\'s term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu\'s one alternative is T\'s.', 'RequestMenu ::= social_menu(List(MenuEntry)).', 'MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).', 'MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuField ::= field(Integer, String, MenuFieldType).', 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuWord ::= say(String) ; at(Integer).']) :-
-    ground(As?), ground(C?), ground(Ps?), ground(Rf?) |
-    act_buttons(As?, C?, Ps?, Rf?, [], Bs),
+procedure widget_lines(Worded?, Contract?, Contract?, Preds?, DrawCtx?, Lines).
+widget_lines(_, _, _, [], _, ['', '%% The widget declaration of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence; a contract with no guarded part has no request question.', 'Approval =::= approval_sentence.']).
+widget_lines(words(pragmas(_, As, _, _, _, _), _, _, _), C, Ch, Ps, Rf, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent\'s own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract\'s pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer\'s role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument\'s place, at(K), a group\'s, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).', 'Approval =::= approval_sentence.', T?, '.', '', '%% The types of the request widget\'s term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu\'s one alternative is T\'s.', 'RequestMenu ::= social_menu(List(MenuEntry)).', 'MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).', 'MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuField ::= field(Integer, String, MenuFieldType).', 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuWord ::= say(String) ; at(Integer).']) :-
+    ground(As?), ground(C?), ground(Ch?), ground(Ps?), ground(Rf?) |
+    act_buttons(As?, C?, Ch?, Ps?, Rf?, [], Bs),
     button_texts(Bs?, Bt),
     list_text(Bt?, Bl),
     call_text('Request? =::= social_menu', [Bl?], T).
@@ -2879,14 +3088,16 @@ WAct      ::= act(Constant, Integer, Ints, Preconds, Ints, WFields, Preconds, FW
 WActs     ::= [] ; [WAct | WActs].
 WButton   ::= button(String, WActs).
 WButtons  ::= [] ; [WButton | WButtons].
-procedure act_buttons(TActs?, Contract?, Preds?, DrawCtx?, WButtons?, WButtons).
-act_buttons([], _, _, _, Bs, Bs?).
-act_buttons([act(N, B, Fs, Q, _, By, Ft)|As], C, Ps, Rf, Bs0, Bs?) :- ground(N?), ground(B?), ground(Fs?), ground(Q?), ground(By?), ground(Ft?), ground(C?), ground(Ps?), ground(Rf?), ground(Bs0?) |
+%% Ch is the contract C with each real variable of a head written real(X) and each variable over the constants const(X) (real_heads), which gives a field its type (field_type).
+procedure act_buttons(TActs?, Contract?, Contract?, Preds?, DrawCtx?, WButtons?, WButtons).
+act_buttons([], _, _, _, _, Bs, Bs?).
+act_buttons([act(N, B, Fs, Q, _, By, Ft)|As], C, Ch, Ps, Rf, Bs0, Bs?) :- ground(N?), ground(B?), ground(Fs?), ground(Q?), ground(By?), ground(Ft?), ground(C?), ground(Ch?), ground(Ps?), ground(Rf?), ground(Bs0?) |
     mem(N?, Ps?, In),
     find_schema(N?, C?, Sf),
-    schema_acts(In?, Sf?, N?, Fs?, Ft?, Q?, By?, Rf?, Ws),
+    find_schema(N?, Ch?, Sh),
+    schema_acts(In?, Sf?, Sh?, N?, Fs?, Ft?, Q?, By?, Rf?, Ws),
     add_button(Bs0?, B?, Ws?, Bs1),
-    act_buttons(As?, C?, Ps?, Rf?, Bs1?, Bs).
+    act_buttons(As?, C?, Ch?, Ps?, Rf?, Bs1?, Bs).
 %% The acts Ws joined to the button labelled B, or a new button after the others; nothing where Ws is empty.  One name is one button (Section 5.4, "The contract's words": "A button is of the acts it names"), so every act of a name joins one button.
 procedure add_button(WButtons?, String?, WActs?, WButtons).
 add_button(Bs, _, [], Bs?).
@@ -2894,14 +3105,15 @@ add_button([], B, [W|Ws], [button(B?, [W?|Ws?])]).
 add_button([button(B1, Xs)|Bs], B, [W|Ws], [button(B1?, Ys?)|Bs?]) :- ground(B1?), ground(B?), B1? =?= B? | app(Xs?, [W?|Ws?], Ys).
 add_button([X|Bs], B, [W|Ws], [X?|Bs1?]) :- otherwise | add_button(Bs?, B?, [W?|Ws?], Bs1).
 %% The acts of a schema the request type proposes, one for each guarding role at which it is proposed (proposer_roles).
-procedure schema_acts(YesNo?, SFound?, Constant?, Strings?, FTypes?, Said?, Proposer?, DrawCtx?, WActs).
-schema_acts(no, _, _, _, _, _, _, _, []).
-schema_acts(yes, nosfound, _, _, _, _, _, _, []).
-schema_acts(yes, sfound(Hd, Rs), S, Fs, Ft, Q, By, Rf, Ws?) :- ground(Hd?), ground(Rs?), ground(S?), ground(Fs?), ground(Ft?), ground(Q?), ground(By?), ground(Rf?) |
+procedure schema_acts(YesNo?, SFound?, SFound?, Constant?, Strings?, FTypes?, Said?, Proposer?, DrawCtx?, WActs).
+schema_acts(no, _, _, _, _, _, _, _, _, []).
+schema_acts(yes, nosfound, _, _, _, _, _, _, _, []).
+schema_acts(yes, sfound(_, _), nosfound, _, _, _, _, _, _, []).
+schema_acts(yes, sfound(Hd, Rs), sfound(Hh, _), S, Fs, Ft, Q, By, Rf, Ws?) :- ground(Hd?), ground(Hh?), ground(Rs?), ground(S?), ground(Fs?), ground(Ft?), ground(Q?), ground(By?), ground(Rf?) |
     schema_vars(Rs?, Hd?, Vs0),
     listed_ixs(Rs?, 1, Lis),
     drop_listed(Vs0?, Lis?, Vs),
-    schema_vars(Rs?, Hd?, Us0),
+    schema_vars(Rs?, Hh?, Us0),
     listed_ixs(Rs?, 1, Lis1),
     drop_listed(Us0?, Lis1?, Us),
     field_places(Hd?, Rs?, Fp),
@@ -2941,6 +3153,8 @@ field_type(pvar(_), _, agent).
 field_type(svar(_), _, text).
 field_type(num(_), _, number).
 field_type(real(_), _, number).
+%% A variable over the constants, a text, the name its proposer types (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a variable over the constants taking the name its proposer types"), which the request carries as the constant of that name.
+field_type(const(_), _, text).
 %% A name term, a signed term and the wildcard are at no place a field may name (field_places); the clauses cover the type.
 field_type(nterm(_), _, text).
 field_type(sgn(_, _), _, text).
@@ -3359,8 +3573,10 @@ nth_arg(_, [], role(0)).
 
 %% The lists and the sentences, printed for a contract with pragmas: tabs(Ts), the lists its app shows, tab(Name, P), P the predicate whose atoms the list holds; and sentence_of(C, Me, Ws), the sentence the contract puts to the agent Me on an attempt of the part C, its roles and variables filled in from the binding C names, or [] where it puts none: where the pragma of C's clause has no sentence, or where the sentence names Me, the sentence being put to the guarding roles whose persons it does not name (README.md beside this file, "The pragmas").
 procedure word_lines(Worded?, Contract?, NumInfos?, Lines).
-word_lines(words(pragmas(Ls, As, Ss, Lk, Vn, Tx), _, Lx, Dn), C, Nt, L?) :- ground(Ls?), ground(As?), ground(C?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Dn?) |
-    export_lines(Dn?, pragmas(Ls?, As?, Ss?, Lk?, Vn?), Tx?, Vn?, Lex),
+word_lines(words(pragmas(Ls, As, Ss, Lk, Vn, Tx), _, Lx, Dn), C, Nt, L?) :- ground(Ls?), ground(As?), ground(C?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Dn?), ground(Lx?) |
+    export_lines(Dn?, pragmas(Ls?, As?, Ss?, Lk?, Vn?), Tx?, Vn?, Lex0),
+    lx_consts(Lx?, Kn),
+    rarg_lines(Lex0?, Kn?, Lex),
     contract_preds_lx(C?, Nt?, Lx?, Pr),
     mult_preds(C?, Mp),
     tab_terms(Ls?, Pr?, Mp?, Ts),
@@ -3386,6 +3602,12 @@ export_lines(Dn, Pr, Tx, Vn, L?) :- ground(Pr?) |
     export_tail(Dn?, Pr?, Tx?, Vn?, Tl),
     lapp(Hd?, Ma?, L1),
     lapp(L1?, Tl?, L).
+%% The type of an argument of the contract as read has the alternative const(Constant) only where the contract has a variable over the constants (lx_consts), so that a platform with none prints as before.
+procedure rarg_lines(Lines?, YesNo?, Lines).
+rarg_lines(Ls, no, Ls?).
+rarg_lines([], yes, []).
+rarg_lines([L|Ls], yes, ['RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant) ; const(Constant).'|Ls?]) :- L? =?= 'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).' | true.
+rarg_lines([L|Ls], yes, [L?|Ls1?]) :- otherwise | rarg_lines(Ls?, yes, Ls1).
 procedure export_head(Lines).
 export_head(['',
         '% The contract the platform is compiled from (vGLP, Section 5.4, "The contract\'s words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC\'s reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC\'s reader\'s and the pragmas\', named with an R before them.',

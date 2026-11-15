@@ -3938,6 +3938,7 @@ check "CVA compiler: vGLP's leaves, a listed role at the third argument of its a
 check "CVA compiler: vGLP's readings, variables read at a role and a condition across roles, certified by GSC's check/2, compiled to the platform it prints (vGLP 566c186, 6abbed9, 7892aeb)" "readings/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's backed, a safe formula across roles, certified by GSC's check/2, compiled to the platform it prints (vGLP 5f55cf3)" "backed/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's consts, constants the contract names, val(cb) and val(cc), arguments of atoms, compiled to the platform it prints (vGLP 0eeea71)" "consts/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's roles, a value variable over the constants, const(r), an argument of an atom another act requires as a constant the contract names, compiled to the platform it prints (vGLP, Section 5.4; compiler/README.md, 30)" "roles/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's wild, a wildcard in an atom a role requires and in the anchor of a quantifier, written in the clause syntax, read by GSC's as_read/2 and certified by GSC's check/2, compiled to the platform it prints (vGLP, Section 5.4)" "wild/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 # "The platform's own words are four ... Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3): each of vGLP's contracts carries a pragmas term beside it, pragmas_named/2, which compile.sh gives the compiler.
@@ -4290,6 +4291,39 @@ HEREDOC
 check "CVA compiler: the platform of a contract with a person who must consent holds schema_consents(enter, [1]) (consent)" "^schema_consents(enter, \[1\])" "$cva_pc_c"
 check "CVA compiler: ... a called person who consents is not asked, greet_or_consent(yes, ...) giving their yes (consent)" "^greet_or_consent(yes, _, N, _, \[greeted(N?)\])\." "$cva_pc_c"
 check_not "CVA compiler: ... and it is compiled (consent)" "not compiled" "$cva_pc_c"
+# A value variable over the constants, const(X) (vGLP, Section 5.4, "Speech-act schemas as local specifications"; compiler/README.md, 30): pragmas.sh gives it a field, a variable of the schema the atoms its proposer's role requires do not bind; the compiler types its place Constant, as the place of the constant another act requires, and refuses it as a multiplicity and in a constraint (constvar).  The term is the form the compiler was built to, GSC's reader not writing it yet.
+cva_cv=$(mktemp -d)
+printf '%s\n' '% Owner: vGLP.' 'XR: Test' 'Alice and Bob are persons.' '1. ■ Appoint: Alice may appoint Bob to a role.' '2. ■ Arbitrate: Bob, an arbiter, may arbitrate.' 'Interface pragmas' 'Roles: the roles of Bob.' 'Appoint: Alice [Appoint] <bob> <role>' 'Arbitrate: Bob [Arbitrate]' > "$cva_cv/XR.txt"
+cva_cv_read="[schema(appoint, ['Alice', 'Bob'], [const('R')], [rs(guarded, [], [], [], []), rs(unguarded, [atom(role, [const('R')])], [], [], [])]), schema(arbitrate, ['Bob'], [], [rs(guarded, [atom(done, [])], [], [atom(role, [val(arbiter)])], [])])]"
+cva_cv_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_cv/XR.txt" "$cva_cv_read" 2>&1; echo "exit $?")
+cva_cv_pr=$(printf '%s\n' "$cva_cv_out" | grep '^pragmas(')
+rm -rf "$cva_cv"
+check "CVA pragmas: a variable over the constants is named by a field (constvar)" "act('appoint', '\"Appoint\"', \['\"\"', '\"bob\"', '\"role\"'\], none, '\"Roles\"', by(\[1\]))" "$cva_cv_out"
+check "CVA pragmas: ... and pragmas.sh exits 0 (constvar)" "^exit 0$" "$cva_cv_out"
+cva_cv_mult="[schema(appoint, [const(r)], [rs(guarded, [], [], [], []), rs(unguarded, [times(const(r), atom(role, [role(1)]))], [], [], [])])]"
+cva_cv_con="[nschema(appoint, [const(r)], eq(const(r), val(arbiter)), [rs(guarded, [], [], [], []), rs(unguarded, [atom(role, [const(r)])], [], [], [])])]"
+cva_cv_num="[schema(appoint, [const(r)], [rs(guarded, [], [], [], []), rs(unguarded, [atom(role, [num(r)])], [], [], [])])]"
+cva_cv_pr1="pragmas([list('\"Roles\"', [role])], [act(appoint, '\"Appoint\"', ['\"\"', '\"bob\"', '\"role\"'], none, '\"Roles\"', by([1]))])"
+cva_cv_c=$("$REPL_RUN" <<HEREDOC 2>&1 | sed -e 's/^\(GLP> \)*//'
+$CVA/compiler/
+:limit 1000000000
+compile(xr, $cva_cv_read, syntactically_grassroots, no_introduction, $cva_cv_pr).
+compile(xr_mult, $cva_cv_mult, syntactically_grassroots, no_introduction, $cva_cv_pr1).
+compile(xr_con, $cva_cv_con, syntactically_grassroots, no_introduction, $cva_cv_pr1).
+compile(xr_num, $cva_cv_num, syntactically_grassroots, no_introduction, $cva_cv_pr1).
+:quit
+HEREDOC
+)
+check "CVA compiler: the place of a variable over the constants is of the type Constant, in the schema that adds it and the one that requires a constant there (constvar)" "^role(Constant)$" "$cva_cv_c"
+check "CVA compiler: ... the request names it as a constant (constvar)" "^appoint(Peer, Peer, Constant)$" "$cva_cv_c"
+check "CVA compiler: ... its field a text (constvar)" 'field(3, "role", text)' "$cva_cv_c"
+check_not "CVA compiler: ... and the contract is compiled (constvar)" "not compiled(xr)" "$cva_cv_c"
+check "CVA compiler: a variable over the constants as a multiplicity is refused, a multiplicity being a whole number (constvar)" "^%% not compiled(xr_mult)$" "$cva_cv_c"
+check "CVA compiler: ... with the reason (constvar)" "^%% it has a variable over the constants as a multiplicity" "$cva_cv_c"
+check "CVA compiler: a variable over the constants in a constraint is refused (constvar)" "^%% not compiled(xr_con)$" "$cva_cv_c"
+check "CVA compiler: ... with the reason (constvar)" "^%% it has a variable over the constants in a constraint" "$cva_cv_c"
+check_not "CVA compiler: a variable over the constants written num(X) where it occurs, as a real one is, is compiled the same (constvar)" "not compiled(xr_num)" "$cva_cv_c"
+check "CVA compiler: ... its place of the type Constant in each of the two compiled (constvar)" "^2$" "$(printf '%s\n' "$cva_cv_c" | grep -c '^role(Constant)$')"
 # A parametric contract, parametric(Params, Body), is certified and has no platform until it is instantiated (vGLP, Section 5.4; compiler/self.glp, WOffered; Calculus #6, vGLP_inbox.md, 2026-11-15 14:49 UTC, of GO, GBank, GCoop, GCorp and GRA): the compiler says so, with no type error (parametric).
 cva_pp=$("$REPL_RUN" <<HEREDOC 2>&1 | sed -e 's/^\(GLP> \)*//'
 $CVA/compiler/
@@ -4723,6 +4757,43 @@ check "CVA consts: alice adopts cc, and her state holds bylaws(cc)" "view(alice,
 check "CVA consts: ... then cb, bylaws(cb) beside it, the two constants two atoms" "view(alice, \[bylaws(cb), bylaws(cc)\]" "$cva_consts"
 check "CVA consts: ... and amend, whose bylaws(cb) her state holds, adds amended(cb)" "view(alice, \[amended(cb), bylaws(cb), bylaws(cc)\]" "$cva_consts"
 
+# A value variable over the constants (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, ..., and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"; compiler/README.md, 30): vGLP's roles, appoint(a?, b ; r) adding role(a, r) at b, r written const(r), arbitrate(b? ; o) requiring role(o, arbiter), arbiter written val(arbiter), and resign(b? ; o, r) deleting role(o, r), o and r local.
+cva_roles_load=$("$REPL_RUN" <<HEREDOC
+$CVA/roles/
+:quit
+HEREDOC
+2>&1)
+check "CVA roles: the platform and its plays load, compiled by the canonical compilation" "Loaded program: .*cva/roles" "$cva_roles_load"
+check_not "CVA roles: no type errors" "Type checking failed\|Duplicate functor" "$cva_roles_load"
+check "CVA roles: the place of a variable over the constants and of a constant the contract names is of the one type Constant, role(Peer, Constant)" "^role(Peer, Constant)$" "$(cat "$CVA/roles/platform.vglp")"
+check "CVA roles: ... and Atom has that alternative once" "^1$" "$(grep -c '^role(' "$CVA/roles/platform.vglp")"
+check "CVA roles: the class term and the request name the variable as a constant, appoint(Peer, Peer, Constant)" "^appoint(Peer, Peer, Constant)$" "$(cat "$CVA/roles/platform.vglp")"
+check "CVA roles: the binding a class term names holds its constant as v(C), as a constant the contract names is held" "^binding_of(appoint(V1, V2, V3), appoint, \[b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(r), v(V3?))\])$" "$(cat "$CVA/roles/platform.vglp")"
+check "CVA roles: its field is a text, the name its proposer types" 'act(appoint, 1, \[1, 2\], \[req(knows, \[at(2)\])\], \[2\], \[field(3, "Role", text)\], \[\], \[\])' "$(cat "$CVA/roles/platform.vglp")"
+check "CVA roles: the shared text matches a value variable with a constant only in a platform with such a variable (roles)" "^kind_ok(num(_), v(_), yes)\.$" "$(cat "$CVA/roles/platform.vglp")"
+check_not "CVA roles: ... and in no other (consts)" "^kind_ok(num(_), v(_), yes)\.$" "$(cat "$CVA/consts/platform.vglp")"
+cva_roles=$("$REPL_RUN" <<HEREDOC
+$CVA/roles/
+:limit 20000000
+play_roles(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA roles: alice appoints bob, typing arbiter, and his state holds role(alice, arbiter)" "view(bob, \[role(alice, arbiter), knows(alice)\]" "$cva_roles"
+check "CVA roles: ... the attempt naming the constant" "start(attempt(alice, [0-9]*, [0-9]*, appoint(alice, bob, arbiter), none))" "$cva_roles"
+check "CVA roles: ... which is the atom arbitrate requires: bob's arbitrate commits, and his state holds done" "view(bob, \[done, role(alice, arbiter), knows(alice)\]" "$cva_roles"
+check "CVA roles: ... and resign, its variable over the constants local to bob's role, deletes the role his machine finds" "view(bob, \[done, knows(alice)\]" "$cva_roles"
+check_not "CVA roles: ... nothing refused" "refused(" "$cva_roles"
+cva_roles_other=$("$REPL_RUN" <<HEREDOC
+$CVA/roles/
+:limit 20000000
+play_roles_other(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA roles: alice typing clerk, bob's state holds role(alice, clerk)" "view(bob, \[role(alice, clerk), knows(alice)\]" "$cva_roles_other"
+check "CVA roles: ... which is not the atom arbitrate requires: his arbitrate is refused, unable" "refused(arbitrate(bob), bob, unable)" "$cva_roles_other"
+check_not "CVA roles: ... and his state never holds done" "view(bob, \[done" "$cva_roles_other"
 # A wildcard in an unnegated atom (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in an unnegated atom of B, or in the anchor of a quantifier, is a variable of its own, standing for some value: the machine of the person who holds the atom finds one in its state, and the act neither names nor records it, as an act that requires a bond of some maturity"): vGLP's wild, accept requiring bond(c, _) at Alice, boast an exists and report a conjunct with the wildcard in the anchor, and retire a listed role by has_role(c, e, _), each listed person required to hold role(c, _) and losing every role(c, _).
 cva_wild_load=$("$REPL_RUN" <<HEREDOC
 $CVA/wild/
@@ -4806,6 +4877,7 @@ $CVA/compiler/
 :limit 1000000000
 compile(t1, [schema(a, [], [rs(guarded, [atom(done, [])], [], [atom(tag, [any])], [atom(done, [])])]), schema(b, [], [rs(guarded, [atom(done2, [])], [], [], [atom(done2, [])])])], syntactically_grassroots, no_introduction, $cva_wild_pr).
 compile(t2, [schema(a, [], [rs(guarded, [atom(bylaws, [val(cb)])], [], [], [atom(bylaws, [val(cb)])])]), schema(b, [], [rs(guarded, [atom(done, [])], [], [atom(bylaws, [any])], [atom(done, [])])])], syntactically_grassroots, no_introduction, $cva_wild_pr).
+compile(t4, [schema(a, [const(r)], [rs(guarded, [atom(role, [role(1), num(r)])], [], [], [atom(role, [role(1), num(r)])])]), schema(b, [], [rs(guarded, [atom(done, [])], [], [atom(role, [role(1), any])], [atom(done, [])])])], syntactically_grassroots, no_introduction, $cva_wild_pr).
 compile(t3, [schema(a, [svar(x)], [rs(guarded, [atom(noted, [svar(x), role(1)])], [], [], [atom(noted, [svar(x), role(1)])])]), qschema(b, [], [svar(x)], gt(cardinality([svar(x)], role(1), atom(noted, [svar(x), any]), fcons(true)), num(0)), [rs(guarded, [atom(done, [])], [], [], [atom(done, [])])], [], [])], syntactically_grassroots, no_introduction, $cva_wild_pr).
 :quit
 HEREDOC
@@ -4814,6 +4886,7 @@ check "CVA compiler: a wildcard at an argument of a predicate no other atom of t
 check "CVA compiler: ... the contract not compiled (wild)" "^%% not compiled(t1)$" "$cva_wild_f"
 check "CVA compiler: a wildcard in a required atom at a constant's place is refused, the term form having no variable of that type (wild)" "^%% not compiled(t2)$" "$cva_wild_f"
 check "CVA compiler: ... with the reason (wild)" "at an argument that is a community name, an item or a constant" "$cva_wild_f"
+check "CVA compiler: ... and one at the place of a variable over the constants, const(r), likewise (wild)" "^%% not compiled(t4)$" "$cva_wild_f"
 check "CVA compiler: a wildcard in the anchor of a count is refused (wild)" "^%% not compiled(t3)$" "$cva_wild_f"
 check "CVA compiler: ... with the reason (wild)" "it has a wildcard in the anchor of a count or a sum" "$cva_wild_f"
 

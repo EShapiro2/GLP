@@ -2650,5 +2650,57 @@ check "an instance of a parametric contract declaring both keeps both declaratio
 check "and is certified" "V2 = syntactically_grassroots" "$out"
 check "an instance of a parametric contract declaring environment predicates alone keeps them" "E = environment([today], [sas(establish, " "$out"
 
+# A value variable over constants, const(X) (GSC #17, 2026-11-15; the appendix "Values in Speech-Act Schemas": "Which types the values have --- numbers, strings, dates --- is the realisation's; the contract is parametric in them, and a value variable of a schema has a type, which the schema's term form writes"; Section 3.2: "Speech-act schemas allow values of any type").  The adopted GKK with appoint, which adds role(Bob, Alice, Role) at Bob, Role the name of a role its appointers choose, and act_as, guarded by Bob, which requires role(Bob, Alice, val('Treasurer')): certified, the variable read as a value variable, num(X) in the atom and const(X) among the schema's variables, and printed by its name; written const(X) and num(X), or const(X) and real(X), or const(X) and as a multiplicity, it is of two types; it stands in an inequality of a constraint, and in an equality with a constant; in the matches of def:unobstructed it meets a constant value, so a schema of arity one adding tag(Alice, const('T')) supplies tag(Alice, val(member)) the introductory act requires, and one adding it at another's role blocks tag(Alice, val(banned)) the act forbids, where the same schemas written num('T') do neither; and a parametric contract's predicate is extended with a value argument of the type (extended(P, Q, [const])).
+CKB="${AGKK%]}"
+C_APPOINT="sas(appoint, ['Alice', 'Bob'], ['Role'], [atom(role, ['Bob', 'Alice', const('Role')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+C_ACTAS="sas(act_as, ['Bob', 'Alice'], ['Alice'], [atom(acted, ['Bob', 'Alice'])], [atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), atom(role, ['Bob', 'Alice', val('Treasurer')])], true, ['Bob'])"
+c_two() { # c_two <type> ; appoint with Role written const(X) in one atom and <type>(X) in another
+  printf '%s' "sas(appoint, ['Alice', 'Bob'], ['Role'], [atom(role, ['Bob', 'Alice', const('Role')]), atom(roled, ['Alice', 'Bob', $1('Role')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+}
+C_MULT="sas(appoint, ['Alice', 'Bob'], ['Role'], [times(const('Role'), atom(role, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+C_REAPPOINT="sas(reappoint, ['Alice', 'Bob'], ['Role', 'New'], [not(atom(role, ['Bob', 'Alice', const('Role')])), atom(role, ['Bob', 'Alice', const('New')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(role, ['Bob', 'Alice', const('Role')])], ne(const('Role'), const('New')), ['Alice', 'Bob'])"
+C_TREASURE="sas(treasure, ['Alice', 'Bob'], ['Role'], [atom(treasurer, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(role, ['Bob', 'Alice', const('Role')])], eq(const('Role'), val('Treasurer')), ['Alice', 'Bob'])"
+out=$(run "check($CKB, $C_APPOINT, $C_ACTAS], V1)." "as_read($CKB, $C_APPOINT, $C_ACTAS], R)." \
+          "check($CKB, $(c_two num)], V2)." "check($CKB, $(c_two real)], V3)." "check($CKB, $C_MULT], V4)." \
+          "check($CKB, $C_APPOINT, $C_ACTAS, $C_REAPPOINT, $C_TREASURE], V5)." \
+          "notation_contract($CKB, $C_APPOINT, $C_ACTAS, $C_REAPPOINT])." \
+          "compile_schema_in(t, $CKB, $C_APPOINT, $C_ACTAS, $C_REAPPOINT], reappoint).")
+check "a contract adding role with a variable over constants and requiring it with a constant is certified" "V1 = syntactically_grassroots" "$out"
+check "the variable over constants is read as a value variable, const(X) among the schema's variables and num(X) in its atom" \
+      "schema(appoint, ['Alice', 'Bob'], [const('Role')], [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(role, [role(1), num('Role')])], [], [atom(identity, [])], [])])" "$out"
+check "the constant beside it is read as a constant value" "atom(role, [pvar('Alice'), val('Treasurer')])" "$out"
+check "a variable written const(X) and num(X) is of two types" "V2 = malformed([value_type(appoint, 'Role')])" "$out"
+check "a variable written const(X) and real(X) is of two types" "V3 = malformed([value_type(appoint, 'Role')])" "$out"
+check "a variable written const(X) as a multiplicity is of two types" "V4 = malformed([value_type(appoint, 'Role')])" "$out"
+check "variables over constants in an inequality of a constraint, and in an equality with a constant, are certified" "V5 = syntactically_grassroots" "$out"
+check "the notation prints the variable over constants by its name" \
+      "appoint:role(Bob,Alice,Role)<-identity(Alice),knows(Alice,Bob),identity(Bob)guardedbyAlice,Bob" "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
+check "and the inequality of two" \
+      "identity(Bob),role(Bob,Alice,Role),Role!=NewguardedbyAlice,Bob" "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
+check "the compilation prints the variable over constants by its name" \
+      'c'"'"'_{\Bob}:=(c_{\Bob}\setminus\{\mathit{role}(\Alice,Role)\})\uplus\{\mathit{role}(\Alice,New)\}' "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
+C_EST="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+c_supply() { # c_supply <type> ; acquaint requires tag(Alice, val(member)), which tag, of arity one, adds with a variable of the type
+  printf '%s' "[$C_EST, sas(tag, ['Alice'], ['T'], [atom(tag, ['Alice', $1('T')])], [], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(tag, ['Alice', val(member)])], true, ['Alice', 'Bob'])]"
+}
+c_block() { # c_block <type> ; acquaint forbids tag(Alice, val(banned)), which tag adds at Alice with a variable of the type, at a binding with Carol anyone
+  printf '%s' "[$C_EST, sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), not(atom(tag, ['Alice', val(banned)]))], true, ['Alice', 'Bob']), sas(tag, ['Carol', 'Alice'], ['T'], [atom(tag, ['Alice', $1('T')]), atom(tagged, ['Carol', 'Alice'])], [atom(identity, ['Carol']), atom(identity, ['Alice']), atom(knows, ['Carol', 'Alice'])], true, ['Carol', 'Alice'])]"
+}
+C_INTRO="[$C_EST, sas(tag, ['Alice'], ['T'], [atom(tag, ['Alice', const('T')])], [], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], ['T'], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(tag, ['Alice', const('T')])], true, ['Alice', 'Bob'])]"
+out=$(run "check($(c_supply const), V1)." "check($(c_supply num), V2)." "check($(c_block const), V3)." "check($(c_block num), V4)." "check($C_INTRO, V5).")
+check "a constant the introductory act requires is supplied by a schema of arity one adding it with a variable over constants" "V1 = syntactically_grassroots" "$out"
+check "and not by one adding it with a variable over the whole numbers" \
+      "V2 = not_grassroots([obstructed(acquaint, 1, atom(tag, [val(member)]), unobtainable)])" "$out"
+check "a constant the introductory act forbids is blocked by a schema adding it with a variable over constants" \
+      "V3 = not_grassroots([obstructed(acquaint, 1, atom(tag, [val(banned)]), blocked_by(tag, 2, atom(tag, [num('T')])))])" "$out"
+check "and not by one adding it with a variable over the whole numbers" "V4 = syntactically_grassroots" "$out"
+check "a variable over constants of the introductory act is a value its introduction chooses" "V5 = syntactically_grassroots" "$out"
+GNWC="[ward = org, extended(guardian_of, officer_of, [const]), extended(guarded_by, officer, [const])]"
+out=$(run "instance_faults($GNWP, $GNWC, F)." "instantiate($GNWP, $GNWC, [], D), check(D?, V)." "instantiate($GNWP, $GNWC, [], D).")
+check "an instance of GnW with officers each holding a role, a variable over constants, has no fault" "F = []" "$out"
+check "it is certified with wards, its guardianship the office" \
+      "V = syntactically_grassroots_with_wards(acquaint, [org], [guardianship(org, officer_of, officer)]" "$out"
+check "its atoms of the office carry the variable over constants" "atom(officer_of, ['Bob', 'Carol', const(iv" "$out"
+
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
