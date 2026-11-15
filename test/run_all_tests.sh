@@ -2825,6 +2825,29 @@ k_holds "CSSN village act 8: ... and eve and frank are friends, with no parent a
 k_holds "CSSN village act 8: eve and bob remain friends" E "friend(bob)"
 k_never "CSSN village: a parent's state does not change by the child's acts" A "friend(dave)"
 
+# The scenario of the app (CSSN, Section 4.6, "In the Grassroots App"), all four persons scripted, person.glp's fig_alice to fig_dave (play_figure, plays.glp): each parent comes to know the other's child by a child acquaintance before the children come to know each other (CSSN:2), then the children befriend (GnW:4) and Carol ends the friendship (GnW:3).
+echo "--- CSSN, the app's scenario of four ---"
+k_f=$("$REPL_RUN" <<HEREDOC 2>&1
+$CSSN_DIR
+:limit 100000000
+play_figure(A, B, C, D).
+:quit
+HEREDOC
+)
+k_fscreen() { echo "$k_f" | sed -e 's/^\(GLP> \)*//' | grep "^$1 = " | head -1; }
+k_fshows() {   # k_fshows <name> <agent's variable> <text on the screen>
+    if k_fscreen "$2" | grep -qF -- "$3"; then _check_pass "$1"; else _check_fail "$1" "$2's screen lacks: $3"; fi
+}
+check_not "CSSN figure: no failed goal" "→ failed\|ERROR\|Error" "$k_f"
+check "CSSN figure: the run suspends" "→ suspended" "$k_f"
+check_not "CSSN figure: no attempt refused" "refused(" "$k_f"
+k_fshows "CSSN figure: alice requests that carol and bob come to know each other (CSSN:2)" A "did(propose(child_acquaint(carol, bob, alice)))"
+k_fshows "CSSN figure: bob requests that dave and alice come to know each other, alice approving" A "gave(child_acquaint(dave, alice, bob), yes)"
+k_fshows "CSSN figure: alice, knowing dave, requests that carol and dave come to know each other" A "did(propose(children_acquaint(carol, dave, alice, bob)))"
+k_fshows "CSSN figure: ... bob approving" B "gave(children_acquaint(carol, dave, alice, bob), yes)"
+k_fshows "CSSN figure: alice requests that carol and dave befriend, dave approving" D "gave(children_befriend(carol, dave, alice, bob), yes)"
+k_fshows "CSSN figure: carol ends the friendship with dave" C "did(propose(child_end(carol, dave)))"
+
 echo ""
 
 fi  # Section K
