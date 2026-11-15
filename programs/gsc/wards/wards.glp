@@ -21,7 +21,9 @@
 % M; for each, the guardianship candidates of each other mark are found
 % once, the four clauses of def:guardianship asking of M nothing but the mark
 % and of the kinds nothing but f; the nonempty sets M of marks having
-% candidates are then tried in turn, each meeting clauses 2 and 3 of
+% candidates, and meeting on their own clauses 2 and 3 of def:kinds as far as
+% a single mark decides them (admissible_marks), are then tried in turn, in
+% the order of the marks and each as it is built (try_subsets), each meeting clauses 2 and 3 of
 % def:kinds, and each choice of one guardianship per mark with which C has
 % guardianships (the last sentence of def:guardianship); the first with an
 % introductory act unobstructed among the free and the relay acts of every
@@ -2863,27 +2865,90 @@ try_sets([M|Ms], C, Rf, AF, Io, F, W?) :-
     kinds_schemas(C?, Io?, F?, M?, A),
     try_set1(A?, M?, Ms?, C?, Rf?, AF?, Io?, F?, W).
 
-% The nonempty subsets of a list of marks, those holding its first mark
-% first.
-procedure prepend_mark(Constant?, PredSets?, PredSets?, PredSets).
-prepend_mark(_, [], T, T?).
-prepend_mark(P, [S|Ss], T, [[P?|S?]|R?]) :- ground(Ss?), ground(T?) |
-    prepend_mark(P?, Ss?, T?, R).
+% The nonempty subsets of a list of marks, tried one at a time, those
+% holding its first mark first, each holding its marks in the order of the
+% list; the first with an introduction with wards is the answer.  Rev holds
+% the marks chosen so far, the last first.
+procedure try_subsets(Preds?, Preds?, Contract?, Preds?, Preds?, Constant?, Constant?, Wards).
+try_subsets([], Rev, C, Rf, AF, Io, F, W?) :-
+    ground(Rev?), ground(C?), ground(Rf?), ground(AF?), ground(Io?), ground(F?) |
+    try_chosen(Rev?, C?, Rf?, AF?, Io?, F?, W).
+try_subsets([P|Ps], Rev, C, Rf, AF, Io, F, W?) :-
+    ground(P?), ground(Ps?), ground(Rev?), ground(C?), ground(Rf?), ground(AF?),
+    ground(Io?), ground(F?) |
+    try_subsets(Ps?, [P?|Rev?], C?, Rf?, AF?, Io?, F?, W1),
+    try_subsets1(W1?, Ps?, Rev?, C?, Rf?, AF?, Io?, F?, W).
 
-procedure subsets1(PredSets?, Constant?, PredSets).
-subsets1(Ss, P, R?) :- ground(Ss?), ground(P?) |
-    prepend_mark(P?, Ss?, Ss?, R).
+procedure try_subsets1(Wards?, Preds?, Preds?, Contract?, Preds?, Preds?, Constant?, Constant?,
+                       Wards).
+try_subsets1(introduction_with_wards(Nm, M, Gs, Rs, K), _, _, _, _, _, _, _,
+             introduction_with_wards(Nm?, M?, Gs?, Rs?, K?)).
+try_subsets1(no_introduction_with_wards, Ps, Rev, C, Rf, AF, Io, F, W?) :-
+    ground(Ps?), ground(Rev?), ground(C?), ground(Rf?), ground(AF?), ground(Io?),
+    ground(F?) |
+    try_subsets(Ps?, Rev?, C?, Rf?, AF?, Io?, F?, W).
 
-procedure subsets(Preds?, PredSets).
-subsets([], [[]]).
-subsets([P|Ps], R?) :- ground(P?), ground(Ps?) |
-    subsets(Ps?, Ss),
-    subsets1(Ss?, P?, R).
+% The set of the marks chosen, none being no set.
+procedure try_chosen(Preds?, Contract?, Preds?, Preds?, Constant?, Constant?, Wards).
+try_chosen([], _, _, _, _, _, no_introduction_with_wards).
+try_chosen([P|Rev], C, Rf, AF, Io, F, W?) :-
+    ground(P?), ground(Rev?), ground(C?), ground(Rf?), ground(AF?), ground(Io?),
+    ground(F?) |
+    rev_preds([P?|Rev?], [], M),
+    try_sets([M?], C?, Rf?, AF?, Io?, F?, W).
 
-procedure nonempty_sets(PredSets?, PredSets).
-nonempty_sets([], []).
-nonempty_sets([[]|Ss], R?) :- ground(Ss?) | nonempty_sets(Ss?, R).
-nonempty_sets([[P|Ps]|Ss], [[P?|Ps?]|R?]) :- ground(Ss?) | nonempty_sets(Ss?, R).
+procedure rev_preds(Preds?, Preds?, Preds).
+rev_preds([], A, A?).
+rev_preds([P|Ps], A, R?) :- ground(P?), ground(Ps?), ground(A?) |
+    rev_preds(Ps?, [P?|A?], R).
+
+% The marks that can be in M for iota Io and f F.  Clauses 2 and 3 of
+% def:kinds, as kinds_role decides them, ask of every role of every schema
+% that where it adds a mark in M it adds iota, and that where it deletes a
+% mark in M it adds f; each holds of M exactly when it holds of each mark of
+% M, so a mark added at a role that does not add iota, or deleted at a role
+% that does not add f, is in no M that meets them, and is left out.
+procedure admissible_marks(Preds?, Contract?, Constant?, Constant?, Preds).
+admissible_marks([], _, _, _, []).
+admissible_marks([Mk|Ms], C, Io, F, R?) :-
+    ground(Mk?), ground(Ms?), ground(C?), ground(Io?), ground(F?) |
+    mark_admissible(C?, Io?, F?, Mk?, A),
+    admissible_marks(Ms?, C?, Io?, F?, R1),
+    keep_mark(A?, Mk?, R1?, R).
+
+procedure keep_mark(Ans?, Constant?, Preds?, Preds).
+keep_mark(yes, Mk, R, [Mk?|R?]).
+keep_mark(no, _, R, R?).
+
+procedure mark_admissible(Contract?, Constant?, Constant?, Constant?, Ans).
+mark_admissible([], _, _, _, yes).
+mark_admissible([S|Ss], Io, F, Mk, R?) :-
+    ground(S?), ground(Ss?), ground(Io?), ground(F?), ground(Mk?) |
+    sch_roles(S?, Rs),
+    mark_roles_ok(Rs?, Io?, F?, Mk?, A1),
+    mark_admissible(Ss?, Io?, F?, Mk?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure mark_roles_ok(RoleSpecs?, Constant?, Constant?, Constant?, Ans).
+mark_roles_ok([], _, _, _, yes).
+mark_roles_ok([RS|Rs], Io, F, Mk, R?) :-
+    ground(RS?), ground(Rs?), ground(Io?), ground(F?), ground(Mk?) |
+    rs_add(RS?, P),
+    rs_del(RS?, D),
+    mark_role_ok(P?, D?, Io?, F?, Mk?, A1),
+    mark_roles_ok(Rs?, Io?, F?, Mk?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure mark_role_ok(Atoms?, Atoms?, Constant?, Constant?, Constant?, Ans).
+mark_role_ok(P, D, Io, F, Mk, R?) :-
+    ground(P?), ground(D?), ground(Io?), ground(F?), ground(Mk?) |
+    atoms_member(P?, atom(Mk?, []), AM),
+    atoms_member(P?, atom(Io?, []), AI),
+    atoms_member(D?, atom(Mk?, []), DM),
+    atoms_member(P?, atom(F?, []), AF),
+    if_then(AM?, AI?, B1),
+    if_then(DM?, AF?, B2),
+    both_yes(B1?, B2?, R).
 
 % The marks with a guardianship candidate on their own, for the mark f F.
 procedure marks_with_cands1(Guardianships?, Constant?, Preds?, Contract?, Preds?, Constant?,
@@ -2914,10 +2979,9 @@ try_f(yes, Io, F, Marks, C, Rf, AF, W?) :-
     ground(Io?), ground(F?), ground(Marks?), ground(C?), ground(Rf?),
     ground(AF?) |
     preds_diff(Marks?, [Io?, F?], Rest),
-    marks_with_cands(Rest?, C?, AF?, F?, MC),
-    subsets(MC?, Ss),
-    nonempty_sets(Ss?, Sets),
-    try_sets(Sets?, C?, Rf?, AF?, Io?, F?, W).
+    admissible_marks(Rest?, C?, Io?, F?, Adm),
+    marks_with_cands(Adm?, C?, AF?, F?, MC),
+    try_subsets(MC?, [], C?, Rf?, AF?, Io?, F?, W).
 
 procedure try_fs1(Wards?, Preds?, Constant?, Preds?, Contract?, Preds?, Preds?, Wards).
 try_fs1(introduction_with_wards(Nm, M, Gs, Rs, K), _, _, _, _, _, _,
