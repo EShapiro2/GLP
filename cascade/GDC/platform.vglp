@@ -73,8 +73,6 @@ knows(Peer)
 coin(Peer)
 ;
 issued_in(Speech)
-;
-issued_in
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -85,8 +83,6 @@ atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
 atom_of(g(coin, [p(V1)]), shown(coin(V1?)))
 .
 atom_of(g(issued_in, [s(V1)]), shown(issued_in(V1?)))
-.
-atom_of(g(issued_in, []), shown(issued_in))
 .
 atom_of(_, unshown) :- otherwise | true.
 
