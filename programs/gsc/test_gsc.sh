@@ -146,8 +146,11 @@ check "GAI's contract is grassroots with wards, its relay acts agent_acquaint, a
       "V = syntactically_grassroots_with_wards(acquaint, [agent], [guardianship(agent, operator_of, operated_by)], [relay(agent_acquaint, ward(1, agent, no_guardian), free(2)), relay(agents_acquaint, ward(1, agent, no_guardian), ward(2, agent, no_guardian))], [identity, person])" \
       "$(run "check($GAIT, V).")"
 DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
-check "DGC's contract is an environment contract" "environment([today], [schema(" "$DGCT"
-check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCT" "$(asread "$DGCT")"
+# DGC is adopted from the Calculus by Currencies (2026-11-15): DGC.glp is the full schemas in the clause syntax, an environment declaration over them; as_read gives it in the checker's form, and gives a contract in the checker's form as it is.
+check "DGC's contract is an environment contract" "environment([today], [sas(" "$DGCT"
+DGCV=$(asread "$DGCT")
+check "as_read gives DGC its wrapper, each schema in the checker's form" "environment([today], [schema(" "$DGCV"
+check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCV" "$(asread "$DGCV")"
 check "GSN's close as the checker reads it deletes member(<Alice>.n) at Alice, as Section 3.2 writes it" \
       "cschema(close, ['Alice', 'Bob'], [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])" "$GSNV"
 # A listed role is named by the variable its quantifier binds, the clause's
@@ -1239,14 +1242,14 @@ one_schema() { # one_schema <name> ; from the notation on stdin, the lines of th
   awk -v s="$1: " 'index($0, s) == 1 { on = 1 } on && /^$/ { exit } on'
 }
 gsg_notation=$(cat <<'EOF'
-establish: identity(Alice) <-
+establish: identity(Alice), knows(Alice, Alice) <-
     not identity(Alice) guarded by Alice
 
 acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
     identity(Alice), identity(Bob) guarded by Alice, Bob
 
 introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
+    identity(Bob), knows(Bob, Alice), identity(Alice), knows(Alice, Bob), knows(Alice, Carol) guarded by Bob, Alice
 
 befriend: friend(Alice, Bob), friend(Bob, Alice) <-
     identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
