@@ -32,6 +32,7 @@ def state(out, names):
         if l.strip(): cert[l.split()[0]] = l.split(None, 1)[1].startswith('syntactically_grassroots')
     for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8'):
         if l.strip(): comp[l.split()[0]] = 'platform.glp' in l
+    own['SGSG'] = 'SPM'      # it has no text in GLP yet; SPM's paper has it
     own['AGORA'] = 'Currencies'      # Udi, 2026-11-15; its owner line in GLP names Talmon, for Currencies to correct
     yn = lambda b: 'yes' if b else 'no'
     with open(os.path.join(out, 'STATE.txt'), 'w', encoding='utf-8') as f:
@@ -54,7 +55,7 @@ def main(out, hold=()):
             shutil.copyfile(os.path.join(c, f), os.path.join(d, 'interface.txt' if f == n + '.txt' else f))
         for f in ('verdict.txt', 'platform.glp'):
             if not os.path.exists(os.path.join(d, f)): missing.append('%s: %s' % (n, f))
-    for f, g in (('README-PUBLIC.md', 'README.md'), ('OWNERS.md', 'OWNERS.md'), ('MIGRATION.md', 'MIGRATION.md'), ('cascade/STATUS.txt', 'STATUS.txt'), ('glp/VERDICTS.txt', 'VERDICTS.txt')):
+    for f, g in (('README-PUBLIC.md', 'README.md'), ('OWNERS.md', 'OWNERS.md'), ('LAYERS.txt', 'LAYERS.txt'), ('MIGRATION.md', 'MIGRATION.md'), ('cascade/STATUS.txt', 'STATUS.txt'), ('glp/VERDICTS.txt', 'VERDICTS.txt')):
         if os.path.exists(os.path.join(ROOT, f)): shutil.copyfile(os.path.join(ROOT, f), os.path.join(out, g))
     state(out, names)
     for d in ('tools', 'tests'):
