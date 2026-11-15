@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), person_unfriend('Peer', 'Peer'), enter('Peer', 'Peer'), make_guardian('Peer', 'Peer', 'Peer', 'List'('Peer')), resign('Peer', 'Peer'), end_guardian('Peer', 'Peer', 'Peer', 'List'('Peer')), guardian_unfriend('Peer', 'Peer'), ward_acquaint('Peer', 'Peer'), ward_befriend('Peer', 'Peer', 'Peer'), ward_end('Peer', 'Peer'), unfriend('Peer', 'Peer'), ward_unfriend('Peer', 'Peer', 'Peer'), wards_acquaint('Peer', 'Peer'), wards_befriend('Peer', 'Peer', 'Peer', 'Peer'), wards_of_one_guardian_befriend('Peer', 'Peer', 'Peer'), retire('Peer', 'Peer', 'List'('Peer'), 'List'('Peer'), 'List'('Peer')), open_server('Peer', 'Peer'), invite_by_link('Peer', 'Peer', 'Speech'), use_link('Peer', 'Peer', 'Peer', 'Speech'), present('Peer', 'Peer', 'Peer'), match('Peer', 'Peer', 'Peer')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), person_unfriend('Peer', 'Peer'), enter('Peer', 'Peer'), make_guardian('Peer', 'Peer', 'Peer'), resign('Peer', 'Peer'), end_guardian('Peer', 'Peer', 'Peer'), guardian_unfriend('Peer', 'Peer'), ward_acquaint('Peer', 'Peer'), ward_befriend('Peer', 'Peer', 'Peer'), ward_end('Peer', 'Peer'), unfriend('Peer', 'Peer'), ward_unfriend('Peer', 'Peer', 'Peer'), wards_acquaint('Peer', 'Peer'), wards_befriend('Peer', 'Peer', 'Peer', 'Peer'), wards_of_one_guardian_befriend('Peer', 'Peer', 'Peer'), retire('Peer', 'Peer'), open_server('Peer', 'Peer'), invite_by_link('Peer', 'Peer', 'Speech'), use_link('Peer', 'Peer', 'Peer', 'Speech'), present('Peer', 'Peer', 'Peer')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), person_unfriend('Peer', 'Peer'), enter('Peer', 'Peer'), make_guardian('Peer', 'Peer', 'Peer', 'List'('Peer')), resign('Peer', 'Peer'), end_guardian('Peer', 'Peer', 'Peer', 'List'('Peer')), guardian_unfriend('Peer', 'Peer'), ward_acquaint('Peer', 'Peer'), ward_befriend('Peer', 'Peer', 'Peer'), ward_end('Peer', 'Peer'), unfriend('Peer', 'Peer'), ward_unfriend('Peer', 'Peer', 'Peer'), wards_acquaint('Peer', 'Peer'), wards_befriend('Peer', 'Peer', 'Peer', 'Peer'), wards_of_one_guardian_befriend('Peer', 'Peer', 'Peer'), retire('Peer', 'Peer', 'List'('Peer'), 'List'('Peer'), 'List'('Peer')), open_server('Peer', 'Peer'), sign_link('Peer', 'Speech', 'Peer'), invite_by_link('Peer', 'Peer', 'Speech'), use_link('Peer', 'Peer', 'Peer', 'Speech'), present('Peer', 'Peer', 'Peer'), match('Peer', 'Peer', 'Peer')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), person_unfriend('Peer', 'Peer'), enter('Peer', 'Peer'), make_guardian('Peer', 'Peer', 'Peer'), resign('Peer', 'Peer'), end_guardian('Peer', 'Peer', 'Peer'), guardian_unfriend('Peer', 'Peer'), ward_acquaint('Peer', 'Peer'), ward_befriend('Peer', 'Peer', 'Peer'), ward_end('Peer', 'Peer'), unfriend('Peer', 'Peer'), ward_unfriend('Peer', 'Peer', 'Peer'), wards_acquaint('Peer', 'Peer'), wards_befriend('Peer', 'Peer', 'Peer', 'Peer'), wards_of_one_guardian_befriend('Peer', 'Peer', 'Peer'), retire('Peer', 'Peer'), open_server('Peer', 'Peer'), sign_link('Peer', 'Speech', 'Peer'), invite_by_link('Peer', 'Peer', 'Speech'), use_link('Peer', 'Peer', 'Peer', 'Speech'), present('Peer', 'Peer', 'Peer')]),
   type('Request', [propose('Proposal')]),
   type('RequestMenu', [social_menu('List'('MenuEntry'))]),
   type('MenuEntry', [button('String', 'List'('MenuAct')), label('Constant', 'String'), label('Constant', 'Integer', 'String')]),
@@ -18,7 +18,7 @@ interface([
   type('MenuField', [field('Integer', 'String', 'MenuFieldType')]),
   type('MenuFieldType', [person, key, agent, text, number]),
   type('MenuWord', [say('String'), at('Integer')]),
-  type('Atom', [identity, person, knows('Peer'), friend('Peer'), ward, has_guardian('Peer'), creator('Peer'), guardian('Peer'), retired, rendezvous_server, registered('Speech', 'Peer'), link('Speech', 'Peer'), expired('Speech'), address('Peer'), presented('Peer', 'Peer')]),
+  type('Atom', [identity, person, knows('Peer'), friend('Peer'), ward, has_guardian('Peer'), creator('Peer'), guardian('Peer'), retired, rendezvous_server, link('Speech', 'Peer'), registered('Speech', 'Peer'), spent('Speech', 'Peer'), expired('Speech'), address('Peer'), presented('Peer', 'Peer')]),
   type('RNameTerm', [own('Integer'), own_var('Constant'), nvar('Constant'), ext('RNameTerm', 'Constant'), ext_any('RNameTerm')]),
   type('RArg', [role('Integer'), pvar('Constant'), svar('Constant'), nterm('RNameTerm'), sgn('Constant', 'Integer'), num('Constant'), real('Constant'), any, ilist('Integer', 'String'), item_of('RArg'), val('Constant')]),
   type('RArgs', [[], ['RArg' | 'RArgs']]),
@@ -1299,6 +1299,7 @@ interface([
   compiled(form_utterance, 2),
   compiled(join_speech_speech_2, 3),
   compiled(form_speech, 2),
+  compiled(join_proposal_sign_link_3, 4),
   compiled(join_proposal_invite_by_link_3, 4),
   compiled(join_proposal_use_link_4, 5),
   compiled(join_proposal_present_3, 4),

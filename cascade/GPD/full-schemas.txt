@@ -23,10 +23,10 @@ GPD:1 ◆ | Carol attests that its schemas say what its clauses say, that it is 
 GPD:2 ■ | Developer Trust.
 GPD:2 ■ Trust: trusts_developer(Alice,Carol) <- knows(Alice,Carol), ~trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
 GPD:2 ■ Untrust: ~trusts_developer(Alice,Carol) <- trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
-GPD:3 ■ Offer: program(Alice,Prog,Dave) <- program(Carol,Prog,Dave), friend(Carol,Alice), friend(Alice,Carol) guarded by Carol possibly Alice=Carol, Alice=Dave, Carol=Dave.
+GPD:3 ■ Offer: program(Alice,Prog@Carol,Dave) <- program(Carol,Prog,Dave), friend(Carol,Alice), friend(Alice,Carol) guarded by Carol possibly Alice=Carol, Alice=Dave, Carol=Dave.
 GPD:3 ■ | Carol offers it by forwarding it to Alice.
 GPD:4 ■ Install own: installed(Alice,Prog,Alice) <- program(Alice,Prog,Alice), ~installed(Alice,Prog,Alice) guarded by Alice.
 GPD:4 ■ Install: installed(Alice,Prog,Carol) <- program(Alice,Prog,Carol), trusts_developer(Alice,Carol), ~installed(Alice,Prog,Carol) guarded by Alice possibly Alice=Carol.
-GPD:5 ■ Invite: program(Bob,Prog,Carol), installed(Bob,Prog,Carol), participant(Alice,Prog,Carol,Bob), participant(Bob,Prog,Carol,Alice) <- friend(Alice,Bob), friend(Bob,Alice), installed(Alice,Prog,Carol), trusts_developer(Bob,Carol) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+GPD:5 ■ Invite: program(Bob,Prog@Alice,Carol), installed(Bob,Prog@Alice,Carol), participant(Alice,Prog,Carol,Bob), participant(Bob,Prog,Carol,Alice) <- friend(Alice,Bob), friend(Bob,Alice), installed(Alice,Prog,Carol), trusts_developer(Bob,Carol) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
 GPD:5 ■ | Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
 GPD:6 ■ Leave: ~installed(Alice,Prog,Carol), ~participant(Alice,Prog,Carol,_), ~participant(_,Prog,Carol,Alice) <- installed(Alice,Prog,Carol) guarded by Alice possibly Alice=Carol.

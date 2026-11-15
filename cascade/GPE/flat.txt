@@ -7,6 +7,7 @@ GKK:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alic
 GKK:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice and Alice knows Carol.
 GPE:0 - | A person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is.
 GPE:0 - | Alice and Bob are persons.
+GPE:0 - | Environment: x is nearby y.
 GPE:1 ■ Open place: Alice may Alice has declared the place open, provided not Alice has declared the place open.
 GPE:1 ■ Close place: Alice may no longer Alice has declared the place open.
-GPE:2 ■ Encounter: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is nearby Bob, Bob is nearby Alice, Alice has declared the place open and Bob has declared the place open.
+GPE:2 ■ Encounter: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided not Alice knows Bob, not Bob knows Alice, Alice is nearby Bob, Bob is nearby Alice, Alice has declared the place open and Bob has declared the place open.
