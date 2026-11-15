@@ -1,10 +1,10 @@
 # A run of the cascade on GCC
 
-- Contract: `GCC` (`gcc` to the checker), its owner's two files `programs/currencies/gcc/GCC.txt` and `programs/currencies/gcc/GCC.glp`, copied here as they stood at `bc814e43`.
+- Contract: `GCC` (`gcc` to the checker), its owner's two files `programs/currencies/gcc/GCC.txt` and `programs/currencies/gcc/GCC.glp`, copied here as they stood at `0100436e`.
 - The paper: `/Users/udi/Grassroots/GCC (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/currencies/gcc/GCC.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/currencies/gcc/GCC.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 20:33 UTC by `cascade.sh gcc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `bc814e43`; each artefact's source and tool:
+- Run on 2026-11-15 22:18 UTC by `cascade.sh gcc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `0100436e`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
