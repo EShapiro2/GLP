@@ -113,9 +113,9 @@ check "GKK as the checker reads it: establish forbidding the identity it adds, t
 GKK_SCHEMAS="${GKKT%]}"
 GSGT=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
 check "GSG's contract is read from programs/gsc/GSG.glp, GKK's schemas first" "$GKK_SCHEMAS" "$GSGT"
-GSNT=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
-# GKK and GSG are adopted from the Calculus (2026-11-15, GLP branch Calculus c475902) and GSN is not yet: until its adoption GSN.glp writes GKK's schemas as its owner wrote them, establish adding identity alone; at its adoption the expected term is $GKK_SCHEMAS again.
-check "GSN's contract, the network without provenance, is read from programs/gsc/GSN.glp, GKK's schemas first" \
+GSNT=$(term "$GLP_DIR/programs/gsc/gsn_fixture.glp" gsn_fixture)   # GSN as GSC wrote it by hand until its adoption (2026-11-15), the tests' fixture; GSN.glp is printed from GSN.txt
+# The fixture gsn_fixture.glp writes GKK's schemas as GSC wrote them by hand, establish adding identity alone; the adopted GSN.glp, which begins with the adopted GKK's schemas, is checked at the end of this script.
+check "GSN's contract as GSC wrote it by hand, the network without provenance, is read from programs/gsc/gsn_fixture.glp, GKK's schemas first" \
       "[sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'], " "$GSNT"
 GSGV=$(asread "$GSGT")
 GSNV=$(asread "$GSNT")
@@ -2622,6 +2622,16 @@ check "GKK as adopted is certified" "V1 = syntactically_grassroots" "$out"
 check "GSG as adopted is certified" "V2 = syntactically_grassroots" "$out"
 check "GnW as adopted is certified with wards, ward its mark, guardian and has_guardian its guardianship" \
       "V3 = syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])" "$out"
+
+# GFP and GSN as adopted from the Calculus (2026-11-15, GLP branch Calculus c475902): each begins with the adopted GKK's schemas and is certified; an item and a message are speech acts with a name, a forwarded item is signed over, and a post is delivered once to each member.
+AGFP=$(term "$GLP_DIR/programs/gsc/GFP.glp" gfp)
+AGSN=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
+check "GFP as adopted begins with the adopted GKK's schemas" "${AGKK%]}" "$AGFP"
+check "GSN as adopted begins with the adopted GKK's schemas" "${AGKK%]}" "$AGSN"
+check "GFP's forward adds the item signed over by the forwarder" "atom(item, ['Bob', sgn('Item', 'Alice')])" "$AGFP"
+out=$(run "check($AGFP, V1)." "check($AGSN, V2).")
+check "GFP as adopted is certified" "V1 = syntactically_grassroots" "$out"
+check "GSN as adopted is certified" "V2 = syntactically_grassroots" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
