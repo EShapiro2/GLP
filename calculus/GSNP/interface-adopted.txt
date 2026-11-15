@@ -4,5 +4,6 @@ Agent message: Alice [Message] [Create] <grupo> [Close]
   Bob: Alice asks for your consent to join.
   Alice [Remove]
   Bob [Leave] [Post]
+  Alice [Post own]
   Alf [Agent message]
 Post forward: Bob [Post forward]

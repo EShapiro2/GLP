@@ -26,5 +26,6 @@ GSN:3 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- leader(A
 GSN:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Bob possibly Alice=Bob.
 GSN:4 ■ | Group messaging.
 GSN:4 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+GSN:4 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo) guarded by Alice.
 GSN:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
 GSN:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.

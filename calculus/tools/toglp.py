@@ -21,6 +21,7 @@ ARITH = {'le': 'le', 'ge': 'ge', 'gt': 'gt', 'lt': 'lt'}
 # vGLP compiler README, 10); every other is declared in the Logic pragmas, 'Environment: ...'.
 ENV = ['today']
 CMP = {'<': 'lt', '>': 'gt', '<=': 'le', '>=': 'ge', '=': 'eq'}
+NOT = {'lt': 'ge', 'ge': 'lt', 'gt': 'le', 'le': 'gt', 'eq': 'ne', 'ne': 'eq'}   # the complement of a comparison, for a condition under 'not' (F07)
 
 
 def q(x):
@@ -119,6 +120,15 @@ def const_places(acts, consts):
     place in another schema is a value variable over the constants, const(X) (GSC #17, Calculus_inbox.md, 2026-11-15
     15:09 UTC: const(X) beside num(X) and real(X)), as GO's Role in Appoint and Found."""
     return frozenset((l[1], len(l[2]), i) for e in acts for l in e['head'] + e['body'] for i, a in enumerate(l[2]) if a.lstrip('*#') in consts)
+
+
+def binding_holds(e, x, y):
+    """Whether GSC's Definition Binding lets one agent take the roles x and y of the act e: both are roles of it, the
+    holder of an atom it requires or changes or one who decides it, and neither adds or deletes an atom of its effect
+    that names the other (as vGLP's compiler has it, programs/vglp/cva/compiler/local.glp, pair_ok)."""
+    rs = {l[2][0] for l in e['head'] + e['body'] if l[2]} | {g for g in e['guards'] if '(' not in g}
+    names = lambda a, b: any(l[2] and l[2][0] == a and b in [z.lstrip('*#') for z in l[2][1:]] for l in e['head'])
+    return x in rs and y in rs and not names(x, y) and not names(y, x)
 
 
 def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset()):
@@ -225,7 +235,9 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         return 'val(%s)' % q(a)      # a constant, as now
 
     def atom(l):
-        """An atom, and the constraints its counts and exact amounts add."""
+        """An atom, and the constraints its counts and exact amounts add; under 'not' a count or an exact amount is
+        the complement of its comparison (F07), and the atom itself is then not written."""
+        cmp = (lambda c: NOT[c]) if l[0] else (lambda c: c)
         args, cons, mult = list(l[2]), [], None
         if args and args[-1][:1] == '*':
             mult, args = args[-1][1:], args[:-1]
@@ -244,10 +256,10 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         at = 'atom(%s, [%s])' % (l[1], ', '.join(o for o, _ in out))
         for o, m in out:
             if m:
-                cons.append('%s(cardinality([%s], %s, true), %s)' % (CMP[m.group(1)], o, at, arg(m.group(2)) if not m.group(2).isdigit() else 'val(%s)' % m.group(2)))
+                cons.append('%s(cardinality([%s], %s, true), %s)' % (cmp(CMP[m.group(1)]), o, at, arg(m.group(2)) if not m.group(2).isdigit() else 'val(%s)' % m.group(2)))
                 return None, cons
         if exact is not None:
-            return None, ['eq(cardinality([], %s, true), %s)' % (at, arg(exact))]
+            return None, ['%s(cardinality([], %s, true), %s)' % (cmp('eq'), at, arg(exact))]
         if mult is not None:
             at = 'times(%s, %s)' % (arg(mult), at)
         return at, cons
@@ -273,9 +285,9 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             if l[1] == 'author':      # x is the author of t: the first signer of t, GSC's eq(author_of(t), x) (Section 3.2; GFP's author)
                 cons.append('%s(author_of(%s), %s)' % ('ne' if l[0] else 'eq', arg(l[2][1]), arg(l[2][0])))
             elif l[1] in ARITH:
-                cons.append('%s(%s, %s)' % (ARITH[l[1]], arg(l[2][0]), arg(l[2][1])))
+                cons.append('%s(%s, %s)' % (NOT[ARITH[l[1]]] if l[0] else ARITH[l[1]], arg(l[2][0]), arg(l[2][1])))
             elif l[1] in ('sum', 'product'):
-                cons.append('eq(%s, %s(%s, %s))' % (arg(l[2][0]), 'plus' if l[1] == 'sum' else 'mul', arg(l[2][1]), arg(l[2][2])))
+                cons.append('%s(%s, %s(%s, %s))' % ('ne' if l[0] else 'eq', arg(l[2][0]), 'plus' if l[1] == 'sum' else 'mul', arg(l[2][1]), arg(l[2][2])))
             elif holderless(l):
                 c = 'rel(%s, [%s])' % (l[1], ', '.join(arg(a) for a in l[2]))
                 cons.append('not(%s)' % c if l[0] else c)
@@ -301,11 +313,17 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             lists.append(f)
         lists[:] = [x.replace('[atom(identity, [%s])' % q(d), '[atom(identity, [%s]), atom(person, [%s])' % (q(d), q(d))) for x in lists for d in [None]] if False else lists
     idn = ['atom(identity, [%s])' % q(r) for r in roles + deciders if r not in made and 'not(atom(identity, [%s]))' % q(r) not in body]
-    same = dict(p.split('=') for p in e.get('same', []))
-    names = []
+    # Two roles the contract says are possibly one agent are written one(Name, Other), Name the later of the two
+    # (GLP programs/gsc/self.glp: "the schema's head writes the second name as one('Bob', 'Alice')"), where GSC's
+    # Definition Binding lets one agent take both: neither adds or deletes an atom naming the other (binding_holds).
+    same = [p.split('=') for p in e.get('same', []) if binding_holds(e, *p.split('='))]
+    names, plain = [], []
     for x in roles + deciders + [o for o in others if o in agents and o not in roles]:
-        y = next((b for a, b in same.items() if a == x and b in names), None) or next((a for a, b in same.items() if b == x and a in names), None)
-        names.append('one(%s, %s)' % (q(x), q(y)) if y else q(x))
+        ys = [b for a, b in same if a == x and b in plain] + [a for a, b in same if b == x and a in plain]
+        if len(ys) > 1:       # one(Name, Other) carries one Other a name (GLP programs/gsc/self.glp, RName): a pair is never dropped
+            raise ValueError('%s: %s is possibly one agent with %s, and the term writes one Other for a name, one(%s, Other)' % (e['name'], x, ' and '.join(ys), x))
+        names.append('one(%s, %s)' % (q(x), q(ys[0])) if ys else q(x))
+        plain.append(x)
     name = ident(e['name'])
     k = used.get(name, 0)
     used[name] = k + 1

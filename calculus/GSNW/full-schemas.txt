@@ -26,6 +26,7 @@ GSN:3 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- leader(A
 GSN:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Bob possibly Alice=Bob.
 GSN:4 ■ | Group messaging.
 GSN:4+GSNW:1 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo), person(Bob) guarded by Bob possibly Alice=Bob.
+GSN:4+GSNW:1 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo), person(Alice) guarded by Alice.
 GSN:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
 GSN:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.
 GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
@@ -54,6 +55,7 @@ GSNW:0 - | Alice and Bob are persons, Carol and Dave wards, Grupo a group, Text 
 GSNW:1 ■ | A ward's messages.
 GSNW:1 ■ Ward message: message(Bob,Carol,Text) <- ward(Carol), ~retired(Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
 GSNW:1 ■ Ward post: posted(Alice,Text,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Alice), ~posted(Alice,Text,Carol,Grupo) guarded by Carol possibly Alice=Carol.
+GSNW:1 ■ Ward post own: posted(Carol,Text,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Carol), ~posted(Carol,Text,Carol,Grupo) guarded by Carol.
 GSNW:2 ■ | A ward's group.
 GSNW:2 ■ Ward create: leader(Carol,Grupo), member(Carol,Grupo,Carol), listed(Carol,Carol,Grupo) <- ward(Carol), ~retired(Carol), ~leader(Carol,Grupo) guarded by Carol.
 GSNW:2 ■ Ward close: ~leader(Carol,Grupo), ~listed(Carol,_,Grupo), ~member(_,Grupo,Carol) <- ward(Carol), ~retired(Carol), leader(Carol,Grupo) guarded by Carol.

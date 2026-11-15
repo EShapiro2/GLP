@@ -31,7 +31,16 @@ platform's; Retire clears every role of the one retired.
 ORH, this commit, from Calculus code 858e306, run on GLP branch GSC-kinds a866c7a (migration 4470b07 and GSC's rule that
 a type no act adds is no type of ward): certified, with a platform.glp that loads.  All 62 are now published.
 
+GSN, GSNW, GSNP, CSSN, DAO and LDAO again, this commit, from Calculus code a42db49, run on GLP migration 3e1a4c6: each
+certified, with a platform.glp that loads.  The cause (CSSN's finding): where a contract says two of an act's roles are
+possibly one person, the term now marks them one(Name, Other) where GSC's Definition Binding lets one agent bear both,
+and where it does not (a role adds or deletes an atom naming the other) the contract has an act of one role beside the
+act: Post own (GSN), Ward post own (GSNW; CSSN's Child post own), Propose own, Vote own for and against (DAO), Delegate
+own, Delegate to the steward, Revoke own, Count own for and against (LDAO).  An owner who adopted one of the six takes
+it again.  The same change in the currencies and GO's family (Deposit own coins, Pay own accepted coins and the like)
+comes with the next entry.
+
 To come: a party, whoever has an identity, in GKK and the currencies, and a ward taking a party's act by those who
-decide for it (Udi, 2026-11-15), so that an organisation holds, pays and issues coins and bonds; and an act of one role
-wherever two roles a contract calls possibly one person cannot be bound to one by GSC's Definition Binding.  Both
-change terms and platforms; the contracts they touch are published again, and this file will say which.
+decide for it (Udi, 2026-11-15), so that an organisation holds, pays and issues coins and bonds; the acts of one role in
+the currencies; DGC's Accept by bond on one maturity; and mends of the tools after a review.  These change texts, terms
+and platforms; all 62 are then published again, at one commit, and this file will say so.

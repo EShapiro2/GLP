@@ -6,8 +6,10 @@ GSNW:0 - | Alice and Bob are persons, Carol and Dave wards, Grupo a group, Text 
 GSNW:1 ■ | A ward's messages.
 GSNW:1 ■ Message: GSN:1 <- person(Alice).
 GSNW:1 ■ Post: GSN:4 Post <- person(Bob).
+GSNW:1 ■ Post own: GSN:4 Post own <- person(Alice).
 GSNW:1 ■ Ward message: message(Bob,Carol,Text) <- ward(Carol), ~retired(Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
 GSNW:1 ■ Ward post: posted(Alice,Text,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Alice), ~posted(Alice,Text,Carol,Grupo) guarded by Carol possibly Alice=Carol.
+GSNW:1 ■ Ward post own: posted(Carol,Text,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Carol), ~posted(Carol,Text,Carol,Grupo) guarded by Carol.
 GSNW:2 ■ | A ward's group.
 GSNW:2 ■ Create: GSN:2 Create <- person(Alice).
 GSNW:2 ■ Close: GSN:2 Close <- person(Alice).

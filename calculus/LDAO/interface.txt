@@ -5,19 +5,27 @@ LDAO: Liquid DAO
 4. ■ Found.  Alice may found Delos under a new name of hers.
 5. ■ Join.  Alice may admit Bob to Delos, with the consent of Bob, provided Alice is the steward of Delos and Alice knows Bob.
 6. ■ Propose.  Carol may make the proposal Prop to Alice's Delos, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.
-7. ■ Deliver proposal.  Alice delivers Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Prop of Delos and Alice has Bob as a member of Delos.
-8. ■ Vote for.  Carol may vote for Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
-9. ■ Vote against.  Carol may vote against Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
-10. ■ Deliver vote for.  Alice delivers Carol's vote for Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos and Alice has Bob as a member of Delos.
-11. ■ Deliver vote against.  Alice delivers Carol's vote against Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos and Alice has Bob as a member of Delos.
-12. ■ Pass.  Alice may pass Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote for Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.
-13. ■ Reject.  Alice may reject Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote against Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.
-14. ■ Deliver pass.  Alice delivers to Bob the decision that Prop of Delos is passed, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Alice has Bob as a member of Delos.
-15. ■ Deliver reject.  Alice delivers to Bob the decision that Prop of Delos is rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected and Alice has Bob as a member of Delos.
-16. ■ Delegate.  Carol may make Dave her delegate in Alice's Delos, provided Carol is a member of Alice's Delos, Dave is a member of Alice's Delos, Carol knows Dave and Alice is the steward of Delos.
-17. ■ Revoke.  Carol may revoke her delegation to Dave in Alice's Delos.
-18. ■ Count for.  Alice counts Carol as voting for Prop of Delos, provided Alice holds the delegation of Carol to Dave in Delos, Alice holds Dave's vote for Prop of Delos and Alice has not decided Prop of Delos.
-19. ■ Count against.  Alice counts Carol as voting against Prop of Delos, provided Alice holds the delegation of Carol to Dave in Delos, Alice holds Dave's vote against Prop of Delos and Alice has not decided Prop of Delos.
+7. ■ Propose own.  Alice may make the proposal Prop to Alice's Delos, provided Alice is a member of Alice's Delos and Alice is the steward of Delos.
+8. ■ Deliver proposal.  Alice delivers Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Prop of Delos and Alice has Bob as a member of Delos.
+9. ■ Vote for.  Carol may vote for Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
+10. ■ Vote own for.  Alice may count Alice as voting for Prop of Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
+11. ■ Vote against.  Carol may vote against Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
+12. ■ Vote own against.  Alice may count Alice as voting against Prop of Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
+13. ■ Deliver vote for.  Alice delivers Carol's vote for Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos and Alice has Bob as a member of Delos.
+14. ■ Deliver vote against.  Alice delivers Carol's vote against Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos and Alice has Bob as a member of Delos.
+15. ■ Pass.  Alice may pass Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote for Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.
+16. ■ Reject.  Alice may reject Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote against Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.
+17. ■ Deliver pass.  Alice delivers to Bob the decision that Prop of Delos is passed, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Alice has Bob as a member of Delos.
+18. ■ Deliver reject.  Alice delivers to Bob the decision that Prop of Delos is rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected and Alice has Bob as a member of Delos.
+19. ■ Delegate.  Carol may make Dave her delegate in Alice's Delos, provided Carol is a member of Alice's Delos, Dave is a member of Alice's Delos, Carol knows Dave and Alice is the steward of Delos.
+20. ■ Delegate own.  Alice may make Dave her delegate in Alice's Delos, provided Alice is a member of Alice's Delos, Dave is a member of Alice's Delos, Alice knows Dave and Alice is the steward of Delos.
+21. ■ Delegate to the steward.  Carol may make Alice her delegate in Alice's Delos, provided Carol is a member of Alice's Delos, Alice is a member of Alice's Delos, Carol knows Alice and Alice is the steward of Delos.
+22. ■ Revoke.  Carol may revoke her delegation to Dave in Alice's Delos.
+23. ■ Revoke own.  Alice may revoke her delegation to Dave in Alice's Delos.
+24. ■ Count for.  Alice counts Carol as voting for Prop of Delos, provided Alice holds the delegation of Carol to Dave in Delos, Alice holds Dave's vote for Prop of Delos and Alice has not decided Prop of Delos.
+25. ■ Count own for.  Alice counts Alice as voting for Prop of Delos, provided Alice holds the delegation of Alice to Dave in Delos, Alice holds Dave's vote for Prop of Delos and Alice has not decided Prop of Delos.
+26. ■ Count against.  Alice counts Carol as voting against Prop of Delos, provided Alice holds the delegation of Carol to Dave in Delos, Alice holds Dave's vote against Prop of Delos and Alice has not decided Prop of Delos.
+27. ■ Count own against.  Alice counts Alice as voting against Prop of Delos, provided Alice holds the delegation of Alice to Dave in Delos, Alice holds Dave's vote against Prop of Delos and Alice has not decided Prop of Delos.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -28,9 +36,15 @@ Found: Alice [Found] <delos>
 Join: Alice [Join]
   Bob: Alice asks for your consent to join.
 Propose: Carol [Propose] <prop>
+Propose own: Alice [Propose own] <prop>
 Vote for: Carol [Vote for]
+Vote own for: Alice [Vote own for]
 Vote against: Carol [Vote against]
+Vote own against: Alice [Vote own against]
 Pass: Alice [Pass] <votes>
 Reject: Alice [Reject] <votes>
 Delegate: Carol [Delegate]
+Delegate own: Alice [Delegate own]
+Delegate to the steward: Carol [Delegate to the steward]
 Revoke: Carol [Revoke] <alice>
+Revoke own: Alice [Revoke own]

@@ -6,6 +6,7 @@ After x forwards t to the group g of y, adding x's signature to the signatures t
 GSNP:0 - | Alf is an AI agent, Alice and Bob are persons, Grupo a group, Text a message, Item an item, Proof an attestation.
 GSNP:1 ■ Message: GSN:1 <- person(Alice), item(Alice,Text), author(Alice,Text).
 GSNP:1 ■ Post: GSN:4 Post <- person(Bob), item(Bob,Text), author(Bob,Text).
+GSNP:1 ■ Post own: GSN:4 Post own <- person(Alice), item(Alice,Text), author(Alice,Text).
 GSNP:1 ■ Agent message: item(Bob,Text) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), item(Alf,Text), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
 GSNP:1 ■ Create: GSN:2 Create <- person(Alice).
 GSNP:1 ■ Close: GSN:2 Close <- person(Alice).

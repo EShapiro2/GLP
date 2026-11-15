@@ -11,10 +11,13 @@ DAO:1 ■ Found: steward(Alice,Delos), member(Alice,Delos,Alice), listed(Alice,A
 DAO:2 ■ Join: member(Bob,Delos,Alice), listed(Alice,Bob,Delos) <- steward(Alice,Delos), knows(Alice,Bob), ~member(Bob,Delos,Alice) guarded by Alice, Bob.
 DAO:3 ■ | Proposing.
 DAO:3 ■ Propose: proposed(Carol,Prop,Delos,Alice), proposal(Alice,Prop,Delos) <- member(Carol,Delos,Alice), steward(Alice,Delos), ~proposal(Alice,Prop,Delos) guarded by Carol possibly Alice=Carol.
+DAO:3 ■ Propose own: proposed(Alice,Prop,Delos,Alice), proposal(Alice,Prop,Delos) <- member(Alice,Delos,Alice), steward(Alice,Delos), ~proposal(Alice,Prop,Delos) guarded by Alice.
 DAO:3 ■ Deliver proposal: delivered(Alice,Prop,Delos,Bob), proposal(Bob,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered(Alice,Prop,Delos,Bob).
 DAO:4 ■ | Voting.
 DAO:4 ■ Vote for: voted(Carol,Prop,Delos), vote_for(Alice,Carol,Prop,Delos) <- member(Carol,Delos,Alice), proposal(Carol,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Carol,Prop,Delos) guarded by Carol possibly Alice=Carol.
+DAO:4 ■ Vote own for: voted(Alice,Prop,Delos), vote_for(Alice,Alice,Prop,Delos) <- member(Alice,Delos,Alice), proposal(Alice,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Alice,Prop,Delos) guarded by Alice.
 DAO:4 ■ Vote against: voted(Carol,Prop,Delos), vote_against(Alice,Carol,Prop,Delos) <- member(Carol,Delos,Alice), proposal(Carol,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Carol,Prop,Delos) guarded by Carol possibly Alice=Carol.
+DAO:4 ■ Vote own against: voted(Alice,Prop,Delos), vote_against(Alice,Alice,Prop,Delos) <- member(Alice,Delos,Alice), proposal(Alice,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Alice,Prop,Delos) guarded by Alice.
 DAO:4 ■ Deliver vote for: delivered_vote(Alice,Carol,Prop,Delos,Bob), vote_for(Bob,Carol,Prop,Delos) <- steward(Alice,Delos), vote_for(Alice,Carol,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_vote(Alice,Carol,Prop,Delos,Bob) possibly Alice=Carol, Bob=Carol.
 DAO:4 ■ Deliver vote against: delivered_vote(Alice,Carol,Prop,Delos,Bob), vote_against(Bob,Carol,Prop,Delos) <- steward(Alice,Delos), vote_against(Alice,Carol,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_vote(Alice,Carol,Prop,Delos,Bob) possibly Alice=Carol, Bob=Carol.
 DAO:5 ■ | Deciding.

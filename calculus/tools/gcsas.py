@@ -908,6 +908,8 @@ def compile_contract(w, n):
                     same = same_of(c, num, names_of(sas[-1]))
                     sas[-1]["same"] = same
                     sas[-1]["must"] = [g for _, g in musts]
+                    if not set(sas[-1]["must"]) <= set(sas[-1]["guards"]):      # one who must consent is one of those who take the act
+                        raise Err("%s: one who must consent is not among its guards: %s" % (m.group(1), ", ".join(sorted(set(sas[-1]["must"]) - set(sas[-1]["guards"])))))
                     own.append(dict(kind="act", label=label, mark=mark, name=m.group(1), same=same, must=[p for p, _ in musts], persons=list(dict.fromkeys(p for p, _ in persons + cons)),
                                     effects=[(x[0], wild(fill(x[1], x[2]), x[0])) for x in eff], conds=[(x[0], wild(fill(x[1], x[2]), x[0])) for x in cnd]))
                 else:
@@ -1173,6 +1175,15 @@ def instantiate_schemas(entries, items):
                             g = "%s(%s)" % (newl[0][1], ",".join([b.get(a, a) for a in newl[0][2]] + [x for x in ga if x.startswith("-")]))
                         gs.append(g)
                     e["guards"] = gs
+                    if e.get("must"):
+                        ms = []
+                        for g in e["must"]:
+                            if "(" in g and parse_atom(g)[1] == pred:
+                                ga = parse_atom(g)[2]
+                                b = dict(zip(args, [x for x in ga if not x.startswith("-")]))
+                                g = "%s(%s)" % (newl[0][1], ",".join([b.get(a, a) for a in newl[0][2]] + [x for x in ga if x.startswith("-")]))
+                            ms.append(g)
+                        e["must"] = ms
                 out.append(e)
             entries = out
         else:
@@ -1187,6 +1198,7 @@ def instantiate_schemas(entries, items):
                     e["head"] = [(x, fp(p), a) for x, p, a in e["head"]]
                     e["body"] = [(x, fp(p), a) for x, p, a in e["body"]]
                     e["guards"] = [fp(g) if "(" in g else g for g in e["guards"]]
+                    e["must"] = [fp(g) if "(" in g else g for g in e.get("must", [])]
                 out.append(e)
             entries = out
     return entries
@@ -1288,6 +1300,7 @@ def expand_schemas(w, n):
                 o["body"] = o["body"] + [(x, p, tuple(mp.get(a, a) for a in args)) for x, p, args in e["body"]] + \
                     [(False, p, args) for x, p, args in then if x and WILD not in args]
                 o["guards"] = o["guards"] + [g for g in (map_guard(g, mp) for g in e["guards"]) if g not in o["guards"]]
+                o["must"] = o.get("must", []) + [g for g in (map_guard(g, mp) for g in e.get("must", [])) if g not in o.get("must", [])]
                 o["label"], o["mark"] = o["label"] + "+" + e["label"], e["mark"]
                 if len(hit) == 1:
                     o["oname"], o["name"] = o["name"], e["name"]
@@ -1360,6 +1373,7 @@ def instantiate_text(w, entries, items, p, n):
                             r = rx.fullmatch(m.group(1))
                             return low(fill(new, r.groupdict())) + m.group(2) if r else x
                         e["persons"] = [role_sub(x) for x in e["persons"]]
+                        e["must"] = [role_sub(x) for x in e.get("must", [])]
                 out.append(e)
         else:
             new, old = item.split(" for ", 1)
@@ -1373,6 +1387,7 @@ def instantiate_text(w, entries, items, p, n):
                     e["effects"] = [(x, ft(s)) for x, s in e["effects"]]
                     e["conds"] = [(x, ft(s)) for x, s in e["conds"]]
                     e["persons"] = [ft(s) for s in e["persons"]]
+                    e["must"] = [ft(s) for s in e.get("must", [])]
                 out.append(e)
         entries = out
     return entries
@@ -1428,7 +1443,7 @@ def phi(lines, lex):
         must = []
         if " Must consent: " in rest:
             rest, mu = rest.rsplit(" Must consent: ", 1)
-            must = mu[:-1].split(", ")
+            must = [g for _, g in persons_of(mu[:-1], lex)]      # parsed as the guards are, a role by the role lexicon
         name, body = rest[:-1].split(": ", 1)
         conds = ""
         if ", provided " in body:
@@ -1469,10 +1484,11 @@ def guard_text(g, ir):
 
 
 def conditions(e):
-    """The body of a schema without the atoms it deletes."""
+    """The body of a schema without the atoms it deletes, each required by its deletion; a deletion with the wildcard,
+    which ends every atom it matches, requires none, so an atom of the body that matches it is a condition stated."""
     body = list(e["body"])
     for l in e["head"]:
-        if l[0]:
+        if l[0] and WILD not in l[2]:
             for i in range(len(body) - 1, -1, -1):
                 if body[i] == (False, l[1], l[2]):
                     del body[i]
@@ -1488,7 +1504,7 @@ def psi(entries, lex):
         if e["kind"] == "kept":
             out.append(flat_line(e))
         else:
-            out.append(flat_line(dict(e, persons=[guard_text(g, ir) for g in e["guards"]],
+            out.append(flat_line(dict(e, persons=[guard_text(g, ir) for g in e["guards"]], must=[guard_text(g, ir) for g in e.get("must", [])],
                                       effects=[(l[0], phrase_of(l, ib)) for l in e["head"]],
                                       conds=[(l[0], phrase_of(l, ib)) for l in conditions(e)])))
     return out

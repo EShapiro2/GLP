@@ -3,5 +3,9 @@ Found: Alice [Found] <delos>
 Join: Alice [Join]
   Bob: Alice asks for your consent to join.
 Proposing: Carol [Propose] <prop>
-Voting: Carol [Vote for] [Vote against]
+  Alice [Propose own] <prop>
+Voting: Carol [Vote for]
+  Alice [Vote own for]
+  Carol [Vote against]
+  Alice [Vote own against]
 Deciding: Alice [Pass] <votes> [Reject] <votes>

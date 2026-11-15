@@ -11,31 +11,33 @@ GSNW: Grassroots Social Network with Wards
 10. ■ Remove.  Alice may end Bob's membership in Grupo, provided Alice is the leader of Grupo.
 11. ■ Leave.  Bob may end his membership in Alice's Grupo.
 12. ■ Post.  Bob may send Text to the group Grupo of Alice, provided Bob is a member of the group Grupo of Alice and Bob is a person.
-13. ■ Deliver.  Alice delivers Text of Bob in Grupo to Carol, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo and Alice has Carol as a member of the group Grupo.
-14. ■ Deliver leader.  Alice delivers Text of Bob in Grupo to Alice, provided Alice is the leader of Grupo and Alice has the post Text of Bob in Grupo.
-15. ■ Enter.  Alice may create Carol, and Carol must consent, provided Alice is a person.
-16. ■ Make guardian.  Those who decide for Carol may make Bob a guardian of Carol, with the consent of Bob, provided Carol is a ward, Carol is not retired, Bob is a person, Carol has Alice as a guardian and Bob counts Alice as a friend.
-17. ■ Resign.  Bob may end his guardianship of Carol.
-18. ■ End guardian.  Those who decide for Carol, other than Bob, may end Bob's guardianship of Carol.
-19. ■ Guardian unfriend.  Bob may end his friendship with his ward Carol, and then Bob is a member of no group of Carol, Carol is a member of no group of Bob, Bob has Carol as a member of no group and Carol has Bob as a member of no group.
-20. ■ Ward acquaint.  Carol and Bob may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian and Bob is a person.
-21. ■ Ward befriend.  Carol and Bob may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Bob is a person, Carol and Bob know each other and Alice and Bob are friends.
-22. ■ Ward end.  Carol may end Bob's membership in _, provided Bob is not a guardian of Carol, and then no longer Carol counts Bob as a friend, no longer Bob counts Carol as a friend, Carol is a member of no group of Bob and Bob has Carol as a member of no group.
-23. ■ Unfriend.  Bob may end Carol's membership in _, provided Bob is not a guardian of Carol, and then no longer Bob counts Carol as a friend, no longer Carol counts Bob as a friend, Bob is a member of no group of Carol and Carol has Bob as a member of no group.
-24. ■ Ward unfriend.  Alice may withdraw Carol from Bob's _, provided Carol has Alice as a guardian and Bob is not a guardian of Carol, and then no longer Carol counts Bob as a friend, no longer Bob counts Carol as a friend, Bob is a member of no group of Carol and Carol has Bob as a member of no group.
-25. ■ Wards acquaint.  Carol and Dave may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian, Dave is a ward and Dave has Bob as a guardian.
-26. ■ Wards befriend.  Carol and Dave may jointly become friends, with the consent of Alice and Bob, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Bob as a guardian, Carol and Dave know each other, Alice knows Dave and Alice and Bob are friends.
-27. ■ Wards of one guardian befriend.  Carol and Dave may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Alice as a guardian and Carol and Dave know each other.
-28. ■ Retire.  Those who decide for Carol may retire Carol, and then Carol is a member of no group of anyone and no one has Carol as a member of any group.
-29. ■ Ward message.  Carol may send Text to Bob, provided Carol is a ward, Carol is not retired and Carol and Bob are friends.
-30. ■ Ward post.  Carol may send Text to the group Grupo of Alice, provided Carol is a ward, Carol is not retired and Carol is a member of the group Grupo of Alice.
-31. ■ Ward create.  Carol may create Grupo, provided Carol is a ward and Carol is not retired.
-32. ■ Ward close.  Carol may close Grupo by leaving it, provided Carol is a ward and Carol is not retired.
-33. ■ Guardian close.  Alice may close the group Grupo of Carol, provided Alice is a guardian of Carol.
-34. ■ Ward join.  Bob may add Carol to Grupo, with the consent of Carol and Alice, provided Bob is the leader of Grupo, Bob is a person, Bob and Carol are friends, Carol has Alice as a guardian, Alice is a guardian of Carol and Alice and Bob are friends.
-35. ■ Wards join.  Carol may add Dave to Grupo, with the consent of Dave, Alice and Bob, provided Carol is the leader of Grupo, Carol is a ward, Carol has Alice as a guardian, Alice is a guardian of Carol, Carol and Dave are friends, Dave is a ward, Dave has Bob as a guardian, Bob is a guardian of Dave, Alice knows Dave and Alice and Bob are friends.
-36. ■ Wards of one guardian join.  Carol may add Dave to Grupo, with the consent of Dave and Alice, provided Carol is the leader of Grupo, Carol is a ward, Carol has Alice as a guardian, Alice is a guardian of Carol, Carol and Dave are friends, Dave is a ward, Dave has Alice as a guardian and Alice is a guardian of Dave.
-37. ■ Ward withdraw.  Alice may withdraw Carol from Bob's Grupo, provided Carol has Alice as a guardian and Alice is a guardian of Carol.
+13. ■ Post own.  Alice may send Text to the group Grupo of Alice, provided Alice is a member of the group Grupo of Alice and Alice is a person.
+14. ■ Deliver.  Alice delivers Text of Bob in Grupo to Carol, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo and Alice has Carol as a member of the group Grupo.
+15. ■ Deliver leader.  Alice delivers Text of Bob in Grupo to Alice, provided Alice is the leader of Grupo and Alice has the post Text of Bob in Grupo.
+16. ■ Enter.  Alice may create Carol, and Carol must consent, provided Alice is a person.
+17. ■ Make guardian.  Those who decide for Carol may make Bob a guardian of Carol, with the consent of Bob, provided Carol is a ward, Carol is not retired, Bob is a person, Carol has Alice as a guardian and Bob counts Alice as a friend.
+18. ■ Resign.  Bob may end his guardianship of Carol.
+19. ■ End guardian.  Those who decide for Carol, other than Bob, may end Bob's guardianship of Carol.
+20. ■ Guardian unfriend.  Bob may end his friendship with his ward Carol, and then Bob is a member of no group of Carol, Carol is a member of no group of Bob, Bob has Carol as a member of no group and Carol has Bob as a member of no group.
+21. ■ Ward acquaint.  Carol and Bob may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian and Bob is a person.
+22. ■ Ward befriend.  Carol and Bob may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Bob is a person, Carol and Bob know each other and Alice and Bob are friends.
+23. ■ Ward end.  Carol may end Bob's membership in _, provided Bob is not a guardian of Carol, and then no longer Carol counts Bob as a friend, no longer Bob counts Carol as a friend, Carol is a member of no group of Bob and Bob has Carol as a member of no group.
+24. ■ Unfriend.  Bob may end Carol's membership in _, provided Bob is not a guardian of Carol, and then no longer Bob counts Carol as a friend, no longer Carol counts Bob as a friend, Bob is a member of no group of Carol and Carol has Bob as a member of no group.
+25. ■ Ward unfriend.  Alice may withdraw Carol from Bob's _, provided Carol has Alice as a guardian and Bob is not a guardian of Carol, and then no longer Carol counts Bob as a friend, no longer Bob counts Carol as a friend, Bob is a member of no group of Carol and Carol has Bob as a member of no group.
+26. ■ Wards acquaint.  Carol and Dave may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian, Dave is a ward and Dave has Bob as a guardian.
+27. ■ Wards befriend.  Carol and Dave may jointly become friends, with the consent of Alice and Bob, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Bob as a guardian, Carol and Dave know each other, Alice knows Dave and Alice and Bob are friends.
+28. ■ Wards of one guardian befriend.  Carol and Dave may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Alice as a guardian and Carol and Dave know each other.
+29. ■ Retire.  Those who decide for Carol may retire Carol, and then Carol is a member of no group of anyone and no one has Carol as a member of any group.
+30. ■ Ward message.  Carol may send Text to Bob, provided Carol is a ward, Carol is not retired and Carol and Bob are friends.
+31. ■ Ward post.  Carol may send Text to the group Grupo of Alice, provided Carol is a ward, Carol is not retired and Carol is a member of the group Grupo of Alice.
+32. ■ Ward post own.  Carol may send Text to the group Grupo of Carol, provided Carol is a ward, Carol is not retired and Carol is a member of the group Grupo of Carol.
+33. ■ Ward create.  Carol may create Grupo, provided Carol is a ward and Carol is not retired.
+34. ■ Ward close.  Carol may close Grupo by leaving it, provided Carol is a ward and Carol is not retired.
+35. ■ Guardian close.  Alice may close the group Grupo of Carol, provided Alice is a guardian of Carol.
+36. ■ Ward join.  Bob may add Carol to Grupo, with the consent of Carol and Alice, provided Bob is the leader of Grupo, Bob is a person, Bob and Carol are friends, Carol has Alice as a guardian, Alice is a guardian of Carol and Alice and Bob are friends.
+37. ■ Wards join.  Carol may add Dave to Grupo, with the consent of Dave, Alice and Bob, provided Carol is the leader of Grupo, Carol is a ward, Carol has Alice as a guardian, Alice is a guardian of Carol, Carol and Dave are friends, Dave is a ward, Dave has Bob as a guardian, Bob is a guardian of Dave, Alice knows Dave and Alice and Bob are friends.
+38. ■ Wards of one guardian join.  Carol may add Dave to Grupo, with the consent of Dave and Alice, provided Carol is the leader of Grupo, Carol is a ward, Carol has Alice as a guardian, Alice is a guardian of Carol, Carol and Dave are friends, Dave is a ward, Dave has Alice as a guardian and Alice is a guardian of Dave.
+39. ■ Ward withdraw.  Alice may withdraw Carol from Bob's Grupo, provided Carol has Alice as a guardian and Alice is a guardian of Carol.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -53,6 +55,7 @@ Join: Alice [Join]
 Remove: Alice [Remove]
 Leave: Bob [Leave]
 Post: Bob [Post] <text>
+Post own: Alice [Post own] <text>
 Enter: Alice [Enter] <carol>
 Make guardian: Bob [Make guardian] <carol>
   Decider: Bob asks for your consent to make guardian.
@@ -82,6 +85,7 @@ Retire: Decider [Retire]
   Codecider: Decider asks for your consent to retire.
 Ward message: Carol [Ward message] <text>
 Ward post: Carol [Ward post] <text>
+Ward post own: Carol [Ward post own] <text>
 Ward create: Carol [Ward create] <grupo>
 Ward close: Carol [Ward close]
 Guardian close: Alice [Guardian close] <grupo>

@@ -26,6 +26,7 @@ GSN:3+GSNP:1 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- l
 GSN:3+GSNP:1 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo), person(Bob) guarded by Bob possibly Alice=Bob.
 GSN:4 ■ | Group messaging.
 GSN:4+GSNP:1 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo), person(Bob), item(Bob,Text), author(Bob,Text) guarded by Bob possibly Alice=Bob.
+GSN:4+GSNP:1 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo), person(Alice), item(Alice,Text), author(Alice,Text) guarded by Alice.
 GSN:4+GSNP:1 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), item(Carol,Text@Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol), ~author(Alice,Text) possibly Alice=Bob, Alice=Carol, Bob=Carol.
 GSN:4+GSNP:1 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), item(Alice,Text@Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice), ~author(Alice,Text) possibly Alice=Bob.
 GnW:0 - | Bob *trusts* Carol, an AI agent of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an AI agent and how.

@@ -26,6 +26,7 @@ GSN:3 ■ Remove: Alice may no longer Bob is a member of the group Grupo of Alic
 GSN:3 ■ Leave: Bob may no longer Bob is a member of the group Grupo of Alice and no longer Alice has Bob as a member of the group Grupo. Possibly one: Alice=Bob.
 GSN:4 ■ | Group messaging.
 GSN:4+GSNW:1 ■ Post: Bob may Alice has the post Text of Bob in Grupo, provided Bob is a member of the group Grupo of Alice, not Alice has the post Text of Bob in Grupo and Bob is a person. Possibly one: Alice=Bob.
+GSN:4+GSNW:1 ■ Post own: Alice may Alice has the post Text of Alice in Grupo, provided Alice is a member of the group Grupo of Alice, not Alice has the post Text of Alice in Grupo and Alice is a person.
 GSN:4 ■ Deliver: Alice has delivered the message Text of Bob in Grupo to Carol and Carol has the message Text of Bob in Grupo delivered by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, Alice has Carol as a member of the group Grupo and not Alice has delivered the message Text of Bob in Grupo to Carol. Possibly one: Alice=Bob, Alice=Carol, Bob=Carol.
 GSN:4 ■ Deliver leader: Alice has delivered the message Text of Bob in Grupo to Alice and Alice has the message Text of Bob in Grupo delivered by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo and not Alice has delivered the message Text of Bob in Grupo to Alice. Possibly one: Alice=Bob.
 GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
@@ -54,6 +55,7 @@ GSNW:0 - | Alice and Bob are persons, Carol and Dave wards, Grupo a group, Text 
 GSNW:1 ■ | A ward's messages.
 GSNW:1 ■ Ward message: Carol may Bob has the message Text from Carol, provided Carol is a ward, not Carol is retired, Carol counts Bob as a friend and Bob counts Carol as a friend.
 GSNW:1 ■ Ward post: Carol may Alice has the post Text of Carol in Grupo, provided Carol is a ward, not Carol is retired, Carol is a member of the group Grupo of Alice and not Alice has the post Text of Carol in Grupo. Possibly one: Alice=Carol.
+GSNW:1 ■ Ward post own: Carol may Carol has the post Text of Carol in Grupo, provided Carol is a ward, not Carol is retired, Carol is a member of the group Grupo of Carol and not Carol has the post Text of Carol in Grupo.
 GSNW:2 ■ | A ward's group.
 GSNW:2 ■ Ward create: Carol may Carol is the leader of Grupo, Carol is a member of the group Grupo of Carol and Carol has Carol as a member of the group Grupo, provided Carol is a ward, not Carol is retired and not Carol is the leader of Grupo.
 GSNW:2 ■ Ward close: Carol may no longer Carol is the leader of Grupo, no longer Carol has anyone as a member of the group Grupo and no longer anyone is a member of the group Grupo of Carol, provided Carol is a ward and not Carol is retired.

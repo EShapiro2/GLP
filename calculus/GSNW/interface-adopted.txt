@@ -1,7 +1,8 @@
 Interface pragmas
 A ward's messages: Alice [Message] <text>
   Bob [Post] <text>
-  Carol [Ward message] <text> [Ward post] <text>
+  Alice [Post own] <text>
+  Carol [Ward message] <text> [Ward post] <text> [Ward post own] <text>
 A ward's group: Alice [Create] <grupo> [Close]
   Carol [Ward create] <grupo> [Ward close]
   Alice [Guardian close] <grupo>

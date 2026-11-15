@@ -7,3 +7,4 @@ Joining and Leaving: Alice [Unfriend]
   Alice [Remove]
   Bob [Leave]
 Group messaging: Bob [Post] <text>
+  Alice [Post own] <text>

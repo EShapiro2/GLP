@@ -29,6 +29,17 @@ def run(case):
     sx = os.path.join(d, 'sasx')
     for f in sorted(os.listdir(sx)) if os.path.isdir(sx) else []:
         out += ['--- sasx/' + f] + [l.rstrip('\n') for l in open(os.path.join(sx, f), encoding='utf-8')]
+    if os.path.exists(os.path.join(d, 'terms')) or os.path.exists(os.path.join(d, 'term')):      # a case of toglp.py: the term of each contract (F07, F09)
+        import toglp
+        root, toglp.ROOT = toglp.ROOT, d
+        try:
+            for f in sorted(os.listdir(sx)) if os.path.isdir(sx) else []:
+                try:
+                    out += ['--- term ' + f[:-4]] + toglp.contract_term(f[:-4])[0].split('\n')
+                except Exception as ex:
+                    out += ['--- term ' + f[:-4], 'EXCEPTION %s: %s' % (type(ex).__name__, ex)]
+        finally:
+            toglp.ROOT = root
     return out
 
 
