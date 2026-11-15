@@ -1,0 +1,37 @@
+GRA-SS: Grassroots Ride Auction, Second-Score Restriction
+1. ○ Establish.  Alice may establish an identity.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob may jointly become friends, provided Alice and Bob know each other.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+6. ■ Point friend.  Alice may point to Bob, provided Alice and Bob are friends and either Alice points to fewer than D persons and Bob is closest to Alice among all of Alice's unpointed friends, or Bob is closer to Alice by more than E than some person pointed to by Alice.
+7. ■ Point transitive.  Alice may point to Carol, provided Alice knows Carol, Alice points to Bob, Bob points to Carol, Carol is closer to Alice by more than E than some person pointed to by Alice and Carol is a driver.
+8. ■ Unpoint.  Alice may cease pointing to Bob, provided the bound is D, Alice points to more than D persons and Bob is furthest from Alice among the persons Alice points to.
+9. ■ Call.  Alice may call for bids on a ride as Trip, provided Alice is a rider and Alice does not have a ride.
+10. ■ Send call.  Alice's call Trip goes to Bob, provided Alice has the call Trip open and Alice points to Bob.
+11. ■ Forward call.  Bob forwards Alice's call Trip to Carol, provided Bob has received Alice's call Trip from Alice and Bob points to Carol.
+12. ■ Bid.  Bob may bid a fare and a pickup delay on Alice's call Trip, provided Bob is a driver, Bob has received Alice's call Trip and the bidding period of Alice's call Trip has not ended.
+13. ■ Award.  Alice may award the ride of her call Trip to Bob, provided the bidding period of Alice's call Trip has ended, Bob has a bid on Alice's call Trip, Bob is the bidder on Alice's call Trip whose admissible bid has the highest score, ties broken as the terms say, Bob is the bidder on Alice's call Trip whose admissible bid has the highest score, ties broken as the terms say, the terms of Alice's call Trip set the deposit D and the terms of Alice's call Trip set the fare P = W(τ) − s₂, where τ is the pickup delay of Bob's bid and s₂ is the highest score among the other admissible bids, or 0 if there is none.
+14. ■ Close.  Alice may close her call Trip, provided no bid on Alice's call Trip is admissible and no bid on Alice's call Trip is admissible.
+15. ■ Pickup.  The pickup of Alice and Bob is recorded, provided Alice and Bob have a ride and Alice and Bob are both at the pickup point.
+16. ■ Arrive.  The fare and the deposit are released to Alice and to Bob as the terms say, provided Alice and Bob are both at the destination and the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}.
+17. ■ Cancel.  The fare and the deposit are released to Alice and to Bob as the terms say, with the consent of Alice, provided no pickup of Alice's ride is recorded within the maximum pickup delay and the fare and the deposit are released to Alice if Alice was at the pickup point from t₀ to t₀ + T, and otherwise the fare to Alice and the deposit to Bob.
+18. ■ Withdraw.  Alice may close her call Trip, provided the bidding period of Alice's call Trip has not ended.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+Point friend: Alice [Point friend]
+Point transitive: Alice [Point transitive]
+Unpoint: Alice [Unpoint]
+Call: Alice [Call] <trip>
+Bid: Bob [Bid]
+Award: Alice [Award]
+Close: Alice [Close]
+Cancel: Alice [Cancel]
+Withdraw: Alice [Withdraw]

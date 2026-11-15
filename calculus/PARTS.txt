@@ -16,6 +16,9 @@ GB, DGC and AGORA again, from Calculus code dee832e, run on GLP migration 60e40c
 Redeem bond and Redeem bond against bond read the current date at the issuer, today(Bob, Today), where they read it
 at the redeemer (Currencies' finding).  An owner who adopted one of the three takes it again.
 
+GRA-SS again, from Calculus code 1337fb6, run on GLP migration 9fc1d3a and checked on GSC-supplied 020fe5e: it fills
+GRA's two parameters and declares none, so it is certified with a platform that loads (GRH's finding).  GRA stays parametric.
+
 To come: GO's family, 22 contracts, which are in this directory as first published (f1d2f99) and are not to be adopted
 from it: CB CMB CnC GAN GBCC GBank GCC GCoop GCorp GDAO GLDAO GNG GNL GNM GNO GO MCS SC SCB SPLLC TC WC.
 They wait on the listing of every body that decides an act (GSC's check refuses them: amenders, treasurers, directors,
