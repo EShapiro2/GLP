@@ -178,7 +178,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             holds = lambda v: []
             if p in rlist:          # the vocabulary says which states list the agents of the role
                 ls = [(pp, tuple({'z': a[0], 'y': '%s'}.get(x, x) for x in aa)) for _, pp, aa in rlist[p]]
-                fm = lambda l, v: 'atom(%s, [%s])' % (l[0], ', '.join(q(x if x != '%s' else v) for x in l[1]))
+                fm = lambda l, v: 'atom(%s, [%s])' % (l[0], ', '.join(('val(%s)' % q(x)) if x in consts else q(x if x != '%s' else v) for x in l[1]))
                 named = {x for l in e['head'] + e['body'] for x in l[2]}
                 # a state that lists the role and names a name the act does not name is left out of the act's list:
                 # GAI's record of an attestation, which GSC's def:relay, clause 2, asks of the acts that add a guardian
