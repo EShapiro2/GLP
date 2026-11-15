@@ -2609,6 +2609,11 @@ NOTEPQ="sas(note, ['Alice', 'Bob'], [], [atom(met, ['Alice', 'Bob']), atom(met, 
 out=$(run "instantiate($GNWP, $GNWB, environment([pp, qq], [$FLAGS, $NOTEPQ]), D), check(D?, V).")
 check "an instance of GnW with nine marks no ward bears is certified with child its ward mark, the search leaving them out" \
       "V = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)]" "$out"
+# Some schema adds each type in M (Definition Types, clause 2, GSC a3c95d9; Udi, 2026-11-15): rider, an environment predicate that no act adds and that ride requires at its reading role, is the type of no ward, though pp and qq, which no act adds, would give it a guardianship and no guarding role requires it.  Before the clause the search certified the instance with M = [child, rider] (as ORH's rider and driver were tried).
+RIDE="sas(ride, ['Alice', 'Bob'], [], [atom(rode, ['Alice', 'Bob'])], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(rode, ['Alice', 'Bob'])), atom(identity, ['Bob']), atom(rider, ['Bob'])], true, ['Alice'])"
+out=$(run "instantiate($GNWP, $GNWB, environment([pp, qq, rider], [$NOTEPQ, $RIDE]), D), check(D?, V).")
+check "a type no act adds, an environment predicate, is no type of ward: the instance is certified with child alone" \
+      "V = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)]" "$out"
 
 # A signed term whose signer is no role of its schema (reported by Helper #1 for Calculus #6, 2026-11-15: check/2 failed, with no verdict): resign adds item(sgn(Item, Bob)) at Alice, Bob an agent variable holding no atom and no guard; the paper's Definition Speech-act schema has the signer an agent role, so the contract is malformed, the fault not_agent_role, and not_required as no role of the signer requires an atom with Item.
 SGB="sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(sign, ['Alice'], ['Item'], [atom(item, ['Alice', 'Item'])], [atom(identity, ['Alice']), not(atom(item, ['Alice', 'Item']))], true, ['Alice'])"
