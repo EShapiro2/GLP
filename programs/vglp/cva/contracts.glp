@@ -201,6 +201,24 @@
 %%
 %% child_close's one guarding role is p, its listed role's base r its first role, and no other schema determines a transaction of its class, so the contract is a local specification (ibid.).  Its request name is child_close(r, p, n), whose parts, one for each list of the people r lists, have the opener r; the parent's Request of rho_N goes to the child's machine, which completes the list from its own listed atoms and proposes the part, naming the request.  wardclose/self.glp plays it.
 %%
+%% wards is a ward's guardians acting jointly, GnW's make_guardian and wards_acquaint (programs/gsc/GnW.glp; CSSN's make_parent and children_acquaint) with no identity, so that a contract compiled here has a schema whose base is neither its first role nor a guarding role, with three guarding roles, one of them listed, and a schema of four guarding roles (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the opener of a guarded part determined by a schema whose base is not a guarding role is the person in the base, who is not a guard of the part, as the ward whose state lists her guardians opens the acts they take jointly"; Definition "Local Specification, Part, Guard Set, Opener, Request"; Definition "Attempt": "the members of G_alpha \ {i} other than its requester are asked"; CSSN #16, Code_inbox.md, 2026-11-15 17:05 UTC):
+%%
+%%   befriend(p?, q?)   :  at p  not friend(q), +friend(q)
+%%                         at q  not friend(p), +friend(p)
+%%   adopt(p?, r?)      :  at p  not parenting(r), +parenting(r)
+%%                         at r  not parent(p), +parent(p)
+%%   coparent(q?, r, p?, r[parent(*)]?) :
+%%                         at q             not parenting(r), +parenting(r)
+%%                         at r             parent(p), not parent(q), not parenting(r), +parent(q)
+%%                         at p             parenting(r)
+%%                         at r[parent(*)]  parenting(r)
+%%   pair(c?, d?, a?, b?) :  at c  parent(a), not met(d), +met(d)
+%%                         at d  parent(b), not met(c), +met(c)
+%%                         at a  parenting(c), friend(b)
+%%                         at b  parenting(d), friend(a)
+%%
+%% coparent's base is r, its second role, the ward, who guards nothing; its guards are the person made a parent, q, the parent who decides, p, and every parent r lists; r is no parent of itself, so r is in no list of a part and guards none.  Its request name is coparent(q, r, p), whose parts, one for each list of r's parents, have the opener r: the Request of rho_N of the parent who decides goes to the ward's machine, which completes the list from its own parent atoms and proposes the part, naming the request, and q and the other parents are asked.  pair's four roles all guard, its base a, the parent its pragma names before its button, who proposes it, the other three asked.  wards/self.glp plays both.
+%%
 %% days is a contract that requires the day, so that a contract compiled here has an agent that reads a calendar, a stream of dates the device writes, and holds today(d), d the last date read, beside its app state, which no schema adds or deletes and which a schema requires and constrains a numeric variable by (vGLP, Section 5.4, "Act schemas as local specifications": "as GB's advance requires date(t) and today(d) with t<d ..., so that it is proposed once a day; what the first date is, the contract says"):
 %%
 %%   dawn(p?)      :  at p  not dated, +dated, +date(0)
@@ -346,6 +364,7 @@ contract_named(readings, C?) :- readings(C).
 contract_named(backed, C?) :- backed(C).
 contract_named(wild, C?) :- wild(C).
 contract_named(roles, C?) :- roles(C).
+contract_named(wards, C?) :- wards(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -381,6 +400,7 @@ introduction_named(readings, no_introduction).
 introduction_named(backed, no_introduction).
 introduction_named(wild, no_introduction).
 introduction_named(roles, no_introduction).
+introduction_named(wards, no_introduction).
 
 %% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
@@ -459,6 +479,11 @@ pragmas_named(wardclose, pragmas([list('"Friends"', [friend])],
      act(create, '"Create"', [], none, '"Friends"', by([1])),
      act(join, '"Join"', ['""', '""', '"Group"'], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(child_close, '"Child close"', ['""', '""', '"Group"'], none, '"Friends"', by([2]))])).
+pragmas_named(wards, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(adopt, '"Adopt"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(coparent, '"Coparent"', [], said([[person(3), text('" asks."')], [], [person(3), text('" asks."')]]), '"Friends"', by([3])),
+     act(pair, '"Pair"', [], said([[person(3), text('" asks."')], [person(3), text('" asks."')], [], [person(3), text('" asks."')]]), '"Friends"', by([3]))])).
 pragmas_named(numbers, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(start, '"Start"', [], none, '"Friends"', by([1])),
@@ -750,6 +775,24 @@ wardclose([schema(befriend, [],
               rs(guarded, [], [], [atom(parenting, [role(1)])], []),
               crs(listed(1, listed, [svar(n)]), unguarded,
                   [], [atom(member, [role(1), svar(n)])], [], [])])]).
+
+procedure wards(Contract).
+wards([schema(befriend, [],
+         [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+          rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+       schema(adopt, [],
+         [rs(guarded, [atom(parenting, [role(2)])], [], [], [atom(parenting, [role(2)])]),
+          rs(guarded, [atom(parent, [role(1)])], [], [], [atom(parent, [role(1)])])]),
+       cschema(coparent, [], [],
+         [rs(guarded, [atom(parenting, [role(2)])], [], [], [atom(parenting, [role(2)])]),
+          rs(unguarded, [atom(parent, [role(1)])], [], [atom(parent, [role(3)])], [atom(parent, [role(1)]), atom(parenting, [role(2)])]),
+          rs(guarded, [], [], [atom(parenting, [role(2)])], []),
+          crs(listed(2, parent, []), guarded, [], [], [atom(parenting, [role(2)])], [])]),
+       schema(pair, [],
+         [rs(guarded, [atom(met, [role(2)])], [], [atom(parent, [role(3)])], [atom(met, [role(2)])]),
+          rs(guarded, [atom(met, [role(1)])], [], [atom(parent, [role(4)])], [atom(met, [role(1)])]),
+          rs(guarded, [], [], [atom(parenting, [role(1)]), atom(friend, [role(4)])], []),
+          rs(guarded, [], [], [atom(parenting, [role(2)]), atom(friend, [role(3)])], [])])]).
 
 procedure numbers(Contract).
 numbers([schema(befriend, [],
