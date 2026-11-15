@@ -1,10 +1,10 @@
 # A run of the cascade on GAI
 
-- Contract: `GAI` (`gai` to the checker), its owner's two files `programs/gai/GAI.txt` and `programs/gai/GAI.glp`, copied here as they stood at `e77043c7`.
+- Contract: `GAI` (`gai` to the checker), its owner's two files `programs/gai/GAI.txt` and `programs/gai/GAI.glp`, copied here as they stood at `6e426c50`.
 - The paper: `/Users/udi/Grassroots/GAI (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gai/GAI.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gai/GAI.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 16:49 UTC by `cascade.sh gai`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `e77043c7`; each artefact's source and tool:
+- Run on 2026-11-15 16:52 UTC by `cascade.sh gai`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `6e426c50`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

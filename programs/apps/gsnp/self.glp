@@ -6,7 +6,7 @@
 
 Peer      ::= Key.
 Speech    ::= speech(Utterance, Peer).
-Utterance ::= utterance(String) ; Speech.
+Utterance ::= utterance(String) ; program(Module) ; Speech.
 Class ::=
 establish(Peer)
 ;
@@ -16,59 +16,67 @@ introduce(Peer, Peer, Peer)
 ;
 befriend(Peer, Peer)
 ;
-unfriend(Peer, Peer)
-;
-enter(Peer, Peer, Speech)
-;
-make_guardian(Peer, Peer, Peer, List(Peer))
-;
-end_guardian(Peer, Peer, Peer, List(Peer))
-;
-resign(Peer, Peer)
-;
-guardian_unfriend(Peer, Peer)
-;
-agent_acquaint(Peer, Peer)
-;
-agent_befriend(Peer, Peer, Peer)
-;
-agent_unfriend(Peer, Peer, Peer)
-;
-agent_end(Peer, Peer)
-;
-agents_acquaint(Peer, Peer, Speech)
-;
-agents_befriend(Peer, Peer, Peer, Peer)
-;
-retire(Peer, Peer, List(Peer), List(Peer))
-;
-sign(Peer, Speech)
-;
-forward(Peer, Peer, Speech)
+person_unfriend(Peer, Peer)
 ;
 message(Peer, Peer, Speech)
 ;
 create(Peer, Speech)
 ;
-join(Peer, Peer, Speech)
+close(Peer, List(Peer), Speech)
 ;
-leave(Peer, Peer, Speech)
+join(Peer, Peer, Speech)
 ;
 remove(Peer, Peer, Speech)
 ;
-close(Peer, List(Peer), Speech)
-;
-post_own(Peer, Speech, Speech)
+leave(Peer, Peer, Speech)
 ;
 post(Peer, Peer, Speech, Speech)
 ;
-post_forward(Peer, Peer, Speech, Speech)
+deliver(Peer, Peer, Peer, Speech, Speech)
 ;
-deliver(Peer, Peer, Speech, Speech)
+deliver_leader(Peer, Peer, Speech, Speech)
+;
+enter(Peer, Peer, Speech)
+;
+make_guardian(Peer, Peer, Peer, List(Peer), Speech)
+;
+resign(Peer, Peer)
+;
+end_guardian(Peer, Peer, Peer, List(Peer))
+;
+guardian_unfriend(Peer, Peer)
+;
+ai_agent_acquaint(Peer, Peer)
+;
+ai_agent_befriend(Peer, Peer, Peer)
+;
+ai_agent_end(Peer, Peer)
+;
+unfriend(Peer, Peer)
+;
+ai_agent_unfriend(Peer, Peer, Peer)
+;
+ai_agents_acquaint(Peer, Peer, Speech)
+;
+ai_agents_befriend(Peer, Peer, Peer, Peer)
+;
+ai_agents_of_one_guardian_befriend(Peer, Peer, Peer)
+;
+retire(Peer, Peer, List(Peer), List(Peer), List(Peer), List(Peer))
+;
+sign(Peer, Speech)
+;
+forward(Peer, Peer, Speech)
+;
+agent_sign(Peer, Speech)
+;
+agent_forward(Peer, Peer, Speech)
+;
+agent_message(Peer, Peer, Speech)
 ;
 deliver_own(Peer, Peer, Speech, Speech)
 ;
-deliver_leader(Peer, Speech, Speech)
+post_forward(Peer, Peer, Speech, Speech)
 .
 Proposal ::=
 establish(Peer)
@@ -79,29 +87,47 @@ introduce(Peer, Peer, Peer)
 ;
 befriend(Peer, Peer)
 ;
-unfriend(Peer, Peer)
+person_unfriend(Peer, Peer)
+;
+message(Peer, Peer, Speech)
+;
+create(Peer, Speech)
+;
+close(Peer, Speech)
+;
+join(Peer, Peer, Speech)
+;
+remove(Peer, Peer, Speech)
+;
+leave(Peer, Peer, Speech)
+;
+post(Peer, Peer, Speech, Speech)
 ;
 enter(Peer, Peer, Speech)
 ;
-make_guardian(Peer, Peer, Peer)
-;
-end_guardian(Peer, Peer, Peer)
+make_guardian(Peer, Peer, Peer, Speech)
 ;
 resign(Peer, Peer)
 ;
+end_guardian(Peer, Peer, Peer)
+;
 guardian_unfriend(Peer, Peer)
 ;
-agent_acquaint(Peer, Peer)
+ai_agent_acquaint(Peer, Peer)
 ;
-agent_befriend(Peer, Peer, Peer)
+ai_agent_befriend(Peer, Peer, Peer)
 ;
-agent_unfriend(Peer, Peer, Peer)
+ai_agent_end(Peer, Peer)
 ;
-agent_end(Peer, Peer)
+unfriend(Peer, Peer)
 ;
-agents_acquaint(Peer, Peer, Speech)
+ai_agent_unfriend(Peer, Peer, Peer)
 ;
-agents_befriend(Peer, Peer, Peer, Peer)
+ai_agents_acquaint(Peer, Peer, Speech)
+;
+ai_agents_befriend(Peer, Peer, Peer, Peer)
+;
+ai_agents_of_one_guardian_befriend(Peer, Peer, Peer)
 ;
 retire(Peer, Peer)
 ;
@@ -109,34 +135,24 @@ sign(Peer, Speech)
 ;
 forward(Peer, Peer, Speech)
 ;
-message(Peer, Peer, Speech)
+agent_sign(Peer, Speech)
 ;
-create(Peer, Speech)
+agent_forward(Peer, Peer, Speech)
 ;
-join(Peer, Peer, Speech)
-;
-leave(Peer, Peer, Speech)
-;
-remove(Peer, Peer, Speech)
-;
-close(Peer, Speech)
-;
-post_own(Peer, Speech, Speech)
-;
-post(Peer, Peer, Speech, Speech)
+agent_message(Peer, Peer, Speech)
 ;
 post_forward(Peer, Peer, Speech, Speech)
 .
 Request ::= propose(Proposal).
 YesNo     ::= yes ; no.
 Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
-Vote      ::= yes ; no(Reason).
-Decision  ::= commit ; abort(Peer, Reason) ; yield.
+Vote      ::= yes(Bindings) ; yes(Bindings, GAtoms) ; no(Reason).
+Decision  ::= commit(Binding) ; abort(Peer, Reason) ; yield.
 Rho       ::= one(Class) ; rho(Proposal).
 Names     ::= none ; request(Rho, Integer).
 Attempt   ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
-            ; yield(Attempt) ; request(Rho, Integer).
+            ; yield(Attempt) ; ready(Attempt) ; request(Rho, Integer).
 Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
 Atom ::=
@@ -148,33 +164,33 @@ knows(Peer)
 ;
 friend(Peer)
 ;
-operator_of(Peer)
-;
-principal_of(Peer)
-;
-agent_of(Peer, Speech)
-;
 item(Speech)
 ;
-agent
+leader(Speech)
 ;
-principal(Peer)
-;
-operated_by(Peer)
-;
-attestation(Speech)
-;
-retired_agent
-;
-member(CName)
+member(Speech, Peer)
 ;
 listed(Peer, Speech)
 ;
-closed(Speech)
+member(Speech)
 ;
-posted(Speech, Speech)
+posted(Speech, Peer, Speech)
 ;
-delivered(Speech, Peer, Speech)
+group_delivered(Peer, Speech, Speech, Peer)
+;
+ai_agent
+;
+has_guardian(Peer)
+;
+attestation(Speech)
+;
+principal(Peer)
+;
+guardian(Peer)
+;
+attestation_record(Peer, Speech)
+;
+retired
 .
 %% A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
 CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).

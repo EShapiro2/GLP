@@ -35,23 +35,23 @@ procedure script(Constant?, Key?, List(Key)?, Steps).
 script(alice, Me, [Bob, Alf], [own([A1], propose(establish(A1?))), wait(holds(identity)),
                                own([A2, A3], propose(sign(A2?, speech(utterance('Alf runs code signed by Acme Ltd'), A3?)))),
                                wait(holds(item(speech(utterance('Alf runs code signed by Acme Ltd'), Me?)))),
-                               own([A4, A5], propose(enter(A4?, Alf?, speech(utterance('Alf runs code signed by Acme Ltd'), A5?)))),
-                               wait(holds(principal_of(Alf?))),
+                               own([A4, A5], propose(enter(Alf?, A4?, speech(utterance('Alf runs code signed by Acme Ltd'), A5?)))),
+                               wait(holds(principal(Alf?))),
                                own([A6], propose(acquaint(A6?, Bob?))), wait(holds(knows(Bob?))),
                                approval(befriend(Bob?, Me?), yes), wait(holds(friend(Bob?))),
-                               own([A7], propose(agent_befriend(Alf?, Bob?, A7?))),
-                               wait(done(agent_befriend(Alf?, Bob?, Me?), 1)),
+                               own([A7], propose(ai_agent_befriend(Alf?, Bob?, A7?))),
+                               wait(done(ai_agent_befriend(Alf?, Bob?, Me?), 1)),
                                own([A8], propose(retire(Alf?, A8?)))]) :-
     ground(Me?), ground(Bob?), ground(Alf?) | true.
-script(alf, Me, [Alice, Bob], [approval(enter(Alice?, Me?, speech(utterance('Alf runs code signed by Acme Ltd'), Alice?)), yes),
-                               approval(agent_acquaint(Me?, Bob?), yes),
-                               approval(agent_befriend(Me?, Bob?, Alice?), yes)]) :-
+script(alf, Me, [Alice, Bob], [approval(enter(Me?, Alice?, speech(utterance('Alf runs code signed by Acme Ltd'), Alice?)), yes),
+                               approval(ai_agent_acquaint(Me?, Bob?), yes),
+                               approval(ai_agent_befriend(Me?, Bob?, Alice?), yes)]) :-
     ground(Me?), ground(Alice?), ground(Bob?) | true.
 script(bob, Me, [Alf, Alice], [own([B1], propose(establish(B1?))), wait(holds(identity)),
                                approval(acquaint(Alice?, Me?), yes), wait(holds(knows(Alice?))),
-                               own([B2], propose(agent_acquaint(Alf?, B2?))), wait(holds(knows(Alf?))),
+                               own([B2], propose(ai_agent_acquaint(Alf?, B2?))), wait(holds(knows(Alf?))),
                                own([B3], propose(befriend(B3?, Alice?))),
-                               approval(agent_befriend(Alf?, Me?, Alice?), yes)]) :-
+                               approval(ai_agent_befriend(Alf?, Me?, Alice?), yes)]) :-
     ground(Me?), ground(Alf?), ground(Alice?) | true.
 script(_, _, _, []) :- otherwise | true.
 
