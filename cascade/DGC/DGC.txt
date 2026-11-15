@@ -26,6 +26,15 @@ After x issues n f-denominated x-bonds due e: x holds n x-bonds due e and x has 
 After x accepts one more f-denominated z-coin in payment: x accepts an f-denominated z-coin in payment.
 After x pays y a z-coin that y accepts as denominated by f: no longer x holds a z-coin, y holds a z-coin and no longer y accepts an f-denominated z-coin in payment.
 Interface pragmas
-Issue bond: Alice [Issue bond] <maturity> <amount> <denomination>
+Issue bond: Alice [Issue bond 2] <maturity> <amount> <denomination>
+Swap, Redeem, Escrow: Alice [Swap] <amount given> <amount wanted> [Swap coin for bond] <amount given> <maturity wanted> <amount wanted> [Swap bonds] <amount given> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins or bonds with you.
+  Alice [Redeem] [Redeem coin against bond] <maturity wanted> [Redeem bond] [Redeem bond against bond] <maturity wanted>
+  Alice [Deposit] <amount> <condition> [Deposit bond] <amount> <condition>
+  Carol: Alice asks to deposit coins or bonds with you.
+  Carol [Release] <amount> [Release bond] <amount>
+  Bob: Carol asks to release coins or bonds to you.
+  Carol [Return] <amount> [Return bond] <amount>
+  Alice: Carol asks to return coins or bonds to you.
 Accept: Alice [Accept] [Accept by bond]
-Pay: Alice [Pay] <denomination>
+Pay: Alice [Pay 2] <denomination>
