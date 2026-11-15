@@ -1,15 +1,16 @@
 GBCC: Grassroots Backed Community Currency
 GBCC extends GCC and restricts it.
 Vocabulary: every treasurer of z stays backed, for x = all_stay_backed(x,z); x stays backed in z = stays_backed(z,x); z has a Dollar recorded as paid in by x = paid_in(z,x).
-Roles: the treasurers of z = treasurers(z).
+Roles: the treasurers of z = treasurers(z), listed by z has y in the role Treasurer and y holds the role Treasurer in z.
 After g records a Dollar as paid into the account of z by x: z has a Dollar recorded as paid in by x.
 GBCC:0 - | *f*, a fraction 0 ≤ f < 1, is a parameter of GBCC. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
 GBCC:0 - | Alice is a person, Orga a community currency.
+GBCC:0 - | Environment: every treasurer of z stays backed, for x; x stays backed in z.
 GBCC:1 ■ | Treasurers.
 GBCC:1 ■ Appoint: GO:4 Appoint <- all_stay_backed(Actor,Orga).
-GBCC:1 ■ Resign: GnW:2 Resign <- all_stay_backed(Actor,Orga).
-GBCC:1 ■ End guardian: GnW:2 End guardian <- all_stay_backed(Actor,Orga).
-GBCC:1 ■ Guardian unfriend: GnW:2 Guardian unfriend <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Resign: GO:4 Resign <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ End officer: GO:4 End officer <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Officer unfriend: GO:4 Officer unfriend <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Leave: GO:3 Leave <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Officer leave: GO:3 Officer leave <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Expel: GO:3 Expel <- all_stay_backed(Actor,Orga).
