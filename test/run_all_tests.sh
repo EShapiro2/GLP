@@ -9013,7 +9013,7 @@ APPS_ART=$(mktemp -d)
 apps_gsnp=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/apps/gsnp $APPS_ART
 $GLP_DIR/programs/apps/gsnp
-:limit 60000000
+:limit 6000000
 play_provenance(D, E, C, B, F).
 :quit
 HEREDOC
@@ -9043,7 +9043,7 @@ apps_gsnp_ag_art=$(mktemp -d)
 apps_gsnp_ag=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/apps/gsnp $apps_gsnp_ag_art
 $GLP_DIR/programs/apps/gsnp
-:limit 100000000
+:limit 9000000
 play_agents(K, A, R, B).
 :quit
 HEREDOC
@@ -9115,7 +9115,7 @@ APPS_ART=$(mktemp -d)
 apps_gai=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/apps/gai $APPS_ART
 $GLP_DIR/programs/apps/gai
-:limit 60000000
+:limit 6000000
 play_agents(A, R, B).
 :quit
 HEREDOC
