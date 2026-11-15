@@ -236,6 +236,8 @@ for my $n (keys %cons) {
 # The schemas a button realises: those bearing its name, the button in lower case, or its name with a suffix after an underscore (GSC #7, GSC docs/design-decisions.md, 2026-10-24: "the schemas realising it are those bearing its name or its name with a suffix after an underscore"), as [Enter] realises enter and enter_2 and [Swap] swap_cc, but for a schema another button of the contract names by its own name, as [Post own] names post_own and [Post] does not; the button alone where the term is not given or none is found.
 my %seen; my @order; my %extends;
 my %named_by_button;
+# The guarding roles of a schema whose persons must consent to its act and are not asked (below).
+my %consent_of;
 sub realising {
     my ($act) = @_;
     return ($act) if !@snames;
@@ -713,7 +715,12 @@ for my $f (@order) {
                             my $pl = $pp[ $rk{ $pr->{name} } - 1 ];
                             grep { $_ == $pl } @g or die "pragmas.sh: $f: the pragma \"$title\" names $pr->{name} as the proposer of $S, who is in no guarding role of it\n";
                             !exists $q{$pl} || @g == 1 or die "pragmas.sh: $f: the pragma \"$title\" asks $pr->{name}, the proposer of $S\n";
-                            my @un = grep { $_ != $pl && !exists $q{$_} } @g;
+                            # A person the clause says must consent to its act is a guard of it who is not asked (vGLP, Section 5.4, "The contract\x27s words": "A clause may say that a person, or a ward, must consent to its act: they are a guard of the act, so it is never taken against them, and they are not asked ... no pragma line puts a question to them"), as Carol of "Alice may create Carol, and Carol must consent": no line names them, a line that asks them is refused, and the act carries consents(I), I their role, with the types of its fields.
+                            my @mc = map { exists $rk{$_} ? $pp[ $rk{$_} - 1 ] : () } (($body{$title} // "") =~ /\b([A-Z][a-z]+) must consent\b/g);
+                            @mc = grep { my $p = $_; $p != $pl && grep { $_ == $p } @g } @mc;
+                            for my $p (@mc) { !exists $q{$p} or die "pragmas.sh: $f: the pragma \"$title\" asks a person who must consent to $S, and is not asked\n" }
+                            $consent_of{$S} = [@mc];
+                            my @un = grep { my $p = $_; $p != $pl && !exists $q{$p} && !grep { $_ == $p } @mc } @g;
                             !@un or die "pragmas.sh: $f: the pragma \"$title\" names no person in the guarding role " . join(", ", @un) . " of $S, who is then never asked\n";
                             # Two roles the clause says are possibly one person may be bound to one person, and a field offers that person for both places (GSC 316d875, Section 2; vGLP, Sections 5.4 and 6.2): same(K, J), K and J their places in the request, its listed roles left out.
                             my %rplace; { my $k = 0; my $jj = 0; for my $r (@{ $roles{$S} }) { $jj++; next if $r->{listed}; $k++; $rplace{$jj} = $k } }
@@ -909,6 +916,7 @@ for my $i (0 .. $#pending) {
         my @own = map { $mine{ $_->[2] } ? $fname{ $_->[2] } : "" } @sl;
         # The type of each field for a speech-act variable the schema types, typed(T, x), ft(K, T) for its K-th field, as a seventh argument of the act where it has one, the compiler printing T as the field\x27s kind (vGLP 37fe038, Section 5.4: "a text by the type its variable carries in the schema where it carries one").
         my @ft = map { ($mine{ $sl[$_][2] } && $sl[$_][0] eq "svar" && $ftype{$S}{ $sl[$_][2] }) ? "ft(" . ($_ + 1) . ", " . q_atom($ftype{$S}{ $sl[$_][2] }) . ")" : () } 0 .. $#sl;
+        push @ft, map { "consents($_)" } @{ $consent_of{$S} // [] };
         pop @own while @own && $own[-1] eq "";
         my $button = (grep { grep { $_ eq $S } @{ $pd->{reals}{$_} } } @{ $pd->{buttons} })[0];
         push @acts, "act(" . q_atom($S) . ", " . q_string($button) . ", ["
