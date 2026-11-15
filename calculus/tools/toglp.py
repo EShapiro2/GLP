@@ -121,7 +121,7 @@ def const_places(acts, consts):
     return frozenset((l[1], len(l[2]), i) for e in acts for l in e['head'] + e['body'] for i, a in enumerate(l[2]) if a.lstrip('*#') in consts)
 
 
-def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset()):
+def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset()):
     # A name of the act that holds, in what the act requires, the state that lists a role of those who decide, of the
     # same agent, is the one of them who decides, Decider: "Bob, a friend of a guardian of Carol" (GnW:2) is a friend
     # of the guardian who decides, as CSSN's make_guardian had it (Alice, a guardian, deciding).
@@ -178,7 +178,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             holds = lambda v: []
             if p in rlist:          # the vocabulary says which states list the agents of the role
                 ls = [(pp, tuple({'z': a[0], 'y': '%s'}.get(x, x) for x in aa)) for _, pp, aa in rlist[p]]
-                fm = lambda l, v: 'atom(%s, [%s])' % (l[0], ', '.join(q(x if x != '%s' else v) for x in l[1]))
+                fm = lambda l, v: 'atom(%s, [%s])' % (l[0], ', '.join(('val(%s)' % q(x)) if x in consts else q(x if x != '%s' else v) for x in l[1]))
                 named = {x for l in e['head'] + e['body'] for x in l[2]}
                 # a state that lists the role and names a name the act does not name is left out of the act's list:
                 # GAI's record of an attestation, which GSC's def:relay, clause 2, asks of the acts that add a guardian
@@ -291,6 +291,9 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         for g in [g for g in e['guards'] if '(' not in g]:
             if g in made or has('person', g) or any(has(m, g) and has(u, g) for m, u in marks.items()):
                 continue
+            if g in persons:        # a guard the act's own contract declares a person is a person, not a ward (GB:4's escrow agent, Calculus #6, 2026-11-15 17:23 UTC)
+                lists.append('atom(person, [%s])' % q(g))
+                continue
             f = 'atom(person, [%s])' % q(g)
             for m, u in marks.items():
                 k += 1
@@ -337,8 +340,15 @@ def contract_term(n):
     if refl:
         drop = lambda ls: [l for l in ls if not (l[1] in refl and len(l[2]) == 2 and l[2][0] == l[2][1])]
         acts = [dict(e, head=drop(e['head']), body=drop(e['body'])) for e in acts]
+    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES')))
+    pmemo = {}
+    def persons_of(e):      # the names the contract that wrote the act declares persons, and only persons
+        o = re.split(r'[:+]', e['label'])[0]
+        if o not in pmemo:
+            pmemo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if 'person' in ks and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
+        return pmemo[o]
     for e in acts:
-        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces)
+        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces, persons_of(e))
         if t is None:
             roles += 1
         else:

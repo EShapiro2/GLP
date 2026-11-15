@@ -37,6 +37,12 @@ class GoalRecord {
   /// restored from a saved state, whose timer did not survive.
   Timer? waitTimer;
 
+  /// The time on the machine's clock at which the wait the goal began ends,
+  /// and what its timer does when it fires; both null where [waitTimer] is.
+  /// set_clock/1 arms the timer again by them ([GlpRuntime.setClock]).
+  int? waitDeadline;
+  void Function()? waitFire;
+
   GoalRecord(this.id);
 
   void setProgram(Object? p) {
@@ -209,14 +215,49 @@ class GlpRuntime {
     _goals[goalId]?.waitReader = null;
   }
 
-  /// The timer of the wait the goal [goalId] began ([Runtime.setWaitReader]).
-  void setWaitTimer(int goalId, Timer timer) {
-    _goal(goalId).waitTimer = timer;
+  /// The machine's clock (GLP-Spec appendix-guards.tex, "Clock access
+  /// (now/1, set_clock/1)"): the system clock until set_clock(T) sets it to
+  /// T, from which it runs on.  Kept as what the machine's clock is ahead of
+  /// the system clock, in milliseconds; now/1 and the time guards read
+  /// [machineNow].
+  int _clockAhead = 0;
+  int get machineNow => DateTime.now().millisecondsSinceEpoch + _clockAhead;
+
+  /// set_clock(T): the machine's clock reads [t], Unix milliseconds, and runs
+  /// on from it.  A goal that waits by wait/1 or wait_until/1 waits for a
+  /// time on this clock, so its timer is armed again for what is left of its
+  /// wait, and fires at once where its time has come.
+  void setClock(int t) {
+    _clockAhead = t - DateTime.now().millisecondsSinceEpoch;
+    for (final rec in _goals.values) {
+      final timer = rec.waitTimer;
+      if (timer == null) continue;
+      timer.cancel();
+      rec.waitTimer = _waitTimer(rec.waitDeadline!, rec.waitFire!);
+    }
+  }
+
+  Timer _waitTimer(int deadline, void Function() fire) {
+    final left = deadline - machineNow;
+    return Timer(Duration(milliseconds: left > 0 ? left : 0), fire);
+  }
+
+  /// The goal [goalId] began a wait ([Runtime.setWaitReader]) that ends when
+  /// the machine's clock reads [deadline]; [fire] is run then.
+  void startWaitTimer(int goalId, int deadline, void Function() fire) {
+    final rec = _goal(goalId);
+    rec.waitDeadline = deadline;
+    rec.waitFire = fire;
+    rec.waitTimer = _waitTimer(deadline, fire);
   }
 
   /// The timer of [goalId]'s wait fired.
   void waitTimerFired(int goalId) {
-    _goals[goalId]?.waitTimer = null;
+    final rec = _goals[goalId];
+    if (rec == null) return;
+    rec.waitTimer = null;
+    rec.waitDeadline = null;
+    rec.waitFire = null;
   }
 
   /// The wait of the goal [goalId] is over though its timer has not fired:
@@ -238,6 +279,8 @@ class GlpRuntime {
     if (timer != null) {
       timer.cancel();
       rec.waitTimer = null;
+      rec.waitDeadline = null;
+      rec.waitFire = null;
       decrementPendingTimers();
     }
     rec.waitReader = null;

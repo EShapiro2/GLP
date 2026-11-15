@@ -33,7 +33,7 @@ play_feeds(A?, B?, C?, D?) :-
           [own([P1, P2], propose(post(P1?, speech(utterance('Third item'), P2?)))),
            wait(holds(item(speech(utterance('Third item'), alice), alice))) | TA2?], TA),
     watch(D2?, D, [holds(item(speech(utterance('Third item'), alice), alice))],
-          [own([C7], propose(labeled_unpoint(C7?))), wait(lacks(pointer(bob, alice)))], TC3),
+          [own([C7], propose(labeled_unpoint(C7?, bob, alice))), wait(lacks(pointer(bob, alice)))], TC3),
     watch(C1?, C, [holds(pointer(bob, alice)), lacks(pointer(bob, alice))],
           [own([P3, P4], propose(post(P3?, speech(utterance('Fourth item'), P4?)))),
            wait(holds(item(speech(utterance('Fourth item'), alice), alice)))], TA2).

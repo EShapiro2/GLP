@@ -1,10 +1,10 @@
 # A run of the cascade on AGORA
 
-- Contract: `AGORA` (`agora` to the checker), its owner's two files `programs/currencies/agora/AGORA.txt` and `programs/currencies/agora/AGORA.glp`, copied here as they stood at `2dfb7448`.
+- Contract: `AGORA` (`agora` to the checker), its owner's two files `programs/currencies/agora/AGORA.txt` and `programs/currencies/agora/AGORA.glp`, copied here as they stood at `bc814e43`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/currencies/agora/AGORA.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/currencies/agora/AGORA.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 17:29 UTC by `cascade.sh agora`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `2dfb7448`; each artefact's source and tool:
+- Run on 2026-11-15 20:32 UTC by `cascade.sh agora`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `bc814e43`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

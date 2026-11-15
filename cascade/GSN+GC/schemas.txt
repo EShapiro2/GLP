@@ -1,3 +1,5 @@
+Reflexive predicates: knows
+
 establish: identity(Alice) <-
     not identity(Alice) guarded by Alice
 
@@ -5,52 +7,49 @@ acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
     identity(Alice), identity(Bob) guarded by Alice, Bob
 
 introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
+    identity(Bob), knows(Bob, Alice), identity(Alice), knows(Alice, Bob), knows(Alice, Carol) guarded by Bob, Alice
 
 befriend: friend(Alice, Bob), friend(Bob, Alice) <-
     identity(Alice), knows(Alice, Bob), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), not friend(Bob, Alice) guarded by Alice, Bob
 
-unfriend: not friend(Alice, Bob), not listed(Alice, Bob, _), not member(Alice, <Bob>._), not friend(Bob, Alice), not listed(Bob, Alice, _), not member(Bob, <Alice>._) <-
+unfriend: not friend(Alice, Bob), not member(Alice, _, Bob), not listed(Alice, Bob, _), not friend(Bob, Alice), not member(Bob, _, Alice), not listed(Bob, Alice, _) <-
     identity(Alice), friend(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
 
-message: received(Bob, x, Alice) <-
-    identity(Alice), friend(Alice, Bob), identity(Bob) guarded by Alice
+message: message(Bob, Alice, Text) <-
+    identity(Bob), friend(Bob, Alice), identity(Alice), friend(Alice, Bob) guarded by Alice
 
-create: member(Alice, <Alice>.n), listed(Alice, Alice, n) <-
-    identity(Alice), not member(Alice, <Alice>.n), not closed(Alice, n) guarded by Alice
+create: leader(Alice, Grupo), member(Alice, Grupo, Alice), listed(Alice, Alice, Grupo) <-
+    identity(Alice), not leader(Alice, Grupo) guarded by Alice
 
-join: listed(Alice, Bob, n), member(Bob, <Alice>.n) <-
-    identity(Alice), member(Alice, <Alice>.n), friend(Alice, Bob), identity(Bob), not member(Bob, <Alice>.n) guarded by Alice, Bob
+close: not leader(Alice, Grupo), not listed(Alice, _, Grupo), forall Bob (listed(Alice, Bob, Grupo) -> not member(Bob, Grupo, Alice)) <-
+    identity(Alice), leader(Alice, Grupo), forall Bob (listed(Alice, Bob, Grupo) -> identity(Bob), member(Bob, Grupo, Alice)) guarded by Alice
 
-leave: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
-    identity(Alice), listed(Alice, Bob, n), identity(Bob), member(Bob, <Alice>.n) guarded by Bob
+join: member(Bob, Grupo, Alice), listed(Alice, Bob, Grupo) <-
+    identity(Bob), friend(Bob, Alice), not member(Bob, Grupo, _), identity(Alice), leader(Alice, Grupo), friend(Alice, Bob) guarded by Bob, Alice
 
-remove: not listed(Alice, Bob, n), not member(Bob, <Alice>.n) <-
-    identity(Alice), listed(Alice, Bob, n), identity(Bob), member(Bob, <Alice>.n) guarded by Alice
+remove: not member(Bob, Grupo, Alice), not listed(Alice, Bob, Grupo) <-
+    identity(Bob), member(Bob, Grupo, Alice), identity(Alice), leader(Alice, Grupo), listed(Alice, Bob, Grupo) guarded by Alice
 
-close: closed(Alice, n), not listed(Alice, Alice, n), not member(Alice, <Alice>.n), forall Bob (listed(Alice, Bob, n) -> not member(Bob, <Alice>.n)) <-
-    identity(Alice), listed(Alice, Alice, n), member(Alice, <Alice>.n), forall Bob (listed(Alice, Bob, n) -> identity(Bob), member(Bob, <Alice>.n)) guarded by Alice
+leave: not member(Bob, Grupo, Alice), not listed(Alice, Bob, Grupo) <-
+    identity(Bob), member(Bob, Grupo, Alice), identity(Alice), listed(Alice, Bob, Grupo) guarded by Bob
 
-post_own: posted(Alice, x, n) <-
-    identity(Alice), member(Alice, <Alice>.n), not posted(Alice, x, n) guarded by Alice
+post: posted(Alice, Text, Bob, Grupo) <-
+    identity(Alice), not posted(Alice, Text, Bob, Grupo), identity(Bob), member(Bob, Grupo, Alice) guarded by Bob
 
-post: posted(Alice, x, n) <-
-    identity(Bob), member(Bob, <Alice>.n), identity(Alice), member(Alice, <Alice>.n), listed(Alice, Bob, n), friend(Alice, Bob), not posted(Alice, x, n) guarded by Bob
+deliver: group_delivered(Alice, Bob, Text, Grupo, Carol), group_message(Carol, Bob, Text, Grupo, Alice) <-
+    identity(Alice), leader(Alice, Grupo), posted(Alice, Text, Bob, Grupo), listed(Alice, Carol, Grupo), not group_delivered(Alice, Bob, Text, Grupo, Carol), identity(Carol)
 
-deliver: delivered(Alice, x, Bob, n), received_in(Bob, x, Alice, n) <-
-    identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), listed(Alice, Bob, n), friend(Alice, Bob), not delivered(Alice, x, Bob, n), identity(Bob), member(Bob, <Alice>.n)
+deliver_leader: group_delivered(Alice, Bob, Text, Grupo, Alice), group_message(Alice, Bob, Text, Grupo, Alice) <-
+    identity(Alice), leader(Alice, Grupo), posted(Alice, Text, Bob, Grupo), not group_delivered(Alice, Bob, Text, Grupo, Alice)
 
-deliver_leader: received_in(Alice, x, Alice, n) <-
-    identity(Alice), member(Alice, <Alice>.n), posted(Alice, x, n), not received_in(Alice, x, Alice, n)
-
-mint: k.coin(Alice, Alice) <-
+issue: Sum.coin(Alice, Alice) <-
     identity(Alice) guarded by Alice
 
-swap: k1.coin(Alice, v), knows(Alice, v), not k.coin(Alice, u), k.coin(Bob, u), knows(Bob, u), not k1.coin(Bob, v) <-
-    identity(Alice), knows(Alice, Bob), k.coin(Alice, u), identity(Bob), knows(Bob, Alice), k1.coin(Bob, v) guarded by Alice, Bob
+swap: Total.coin(Alice, Dave), knows(Alice, Dave), not Sum.coin(Alice, Carol), Sum.coin(Bob, Carol), knows(Bob, Carol), not Total.coin(Bob, Dave) <-
+    identity(Alice), knows(Alice, Bob), Sum.coin(Alice, Carol), identity(Bob), knows(Bob, Alice), Total.coin(Bob, Dave) guarded by Alice, Bob
 
-pay: not k.coin(Alice, Bob), k.coin(Bob, Bob) <-
-    identity(Alice), knows(Alice, Bob), k.coin(Alice, Bob), identity(Bob) guarded by Alice
+pay: not Sum.coin(Alice, Bob), Sum.coin(Bob, Bob) <-
+    identity(Alice), knows(Alice, Bob), Sum.coin(Alice, Bob), identity(Bob) guarded by Alice
 
-redeem: coin(Alice, r), knows(Alice, r), not coin(Alice, Bob), coin(Bob, Bob), not coin(Bob, r) <-
-    identity(Alice), knows(Alice, Bob), coin(Alice, Bob), identity(Bob), coin(Bob, r) guarded by Alice
+redeem: coin(Alice, Carol), knows(Alice, Carol), not coin(Alice, Bob), coin(Bob, Bob), not coin(Bob, Carol) <-
+    identity(Alice), knows(Alice, Bob), coin(Alice, Bob), identity(Bob), coin(Bob, Carol) guarded by Alice

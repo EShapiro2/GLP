@@ -1,3 +1,3 @@
 OA: An Organisation's Act
 Of OA: Alice, Bob and Carol are persons, Orga an organisation, Iris an issuer, Sum, Votes and Double numbers.
-OA:1. ■ Pay: Alice may pay Bob Sum Iris-coins of Orga, provided Alice is a participant of Orga, Orga holds at least Votes persons's vote to pay Bob Sum Iris-coins, Double is Votes times 2 and Orga has fewer than Double persons as a participant. Vote to pay: Carol may vote to pay Bob Sum Iris-coins of Orga, provided Carol is a participant of Orga and Orga has Bob as a participant.
+OA:1. ■ Pay: Alice may pay Bob Sum Iris-coins of Orga, provided Alice is a participant of Orga, Orga holds the votes of at least Votes persons to pay Bob Sum Iris-coins, Double is Votes times 2 and Orga has fewer than Double persons as a participant. Vote to pay: Carol may vote to pay Bob Sum Iris-coins of Orga, provided Carol is a participant of Orga and Orga has Bob as a participant.

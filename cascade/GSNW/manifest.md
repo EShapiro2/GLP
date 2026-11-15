@@ -1,10 +1,10 @@
 # A run of the cascade on GSNW
 
-- Contract: `GSNW` (`gsnw` to the checker), its owner's two files `programs/cssn/GSNW.txt` and `programs/cssn/GSNW.glp`, copied here as they stood at `25fbd556`.
+- Contract: `GSNW` (`gsnw` to the checker), its owner's two files `programs/cssn/GSNW.txt` and `programs/cssn/GSNW.glp`, copied here as they stood at `ba4c7f84`.
 - The paper: `/Users/udi/Grassroots/CSSN (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/cssn/GSNW.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/cssn/GSNW.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 17:26 UTC by `cascade.sh gsnw`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `25fbd556`; each artefact's source and tool:
+- Run on 2026-11-15 20:09 UTC by `cascade.sh gsnw`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `ba4c7f84`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

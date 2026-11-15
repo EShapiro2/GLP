@@ -1,10 +1,10 @@
 # A run of the cascade on GFF-FR-BC
 
-- Contract: `GFF-FR-BC` (`gff_fr_bc` to the checker), its owner's two files `programs/gff/GFF-FR-BC.txt` and `programs/gff/GFF-FR-BC.glp`, copied here as they stood at `bf297941`.
+- Contract: `GFF-FR-BC` (`gff_fr_bc` to the checker), its owner's two files `programs/gff/GFF-FR-BC.txt` and `programs/gff/GFF-FR-BC.glp`, copied here as they stood at `bbc239fe`.
 - The paper: `/Users/udi/Grassroots/GFF (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gff/GFF-FR-BC.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gff/GFF-FR-BC.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-15 17:31 UTC by `cascade.sh gff_fr_bc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `bf297941`; each artefact's source and tool:
+- Run on 2026-11-15 20:11 UTC by `cascade.sh gff_fr_bc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `bbc239fe`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

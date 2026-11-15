@@ -15,9 +15,12 @@
 %% play_roles: alice asks to be acquainted with bob, and bob answers yes; she
 %% appoints him, typing arbiter, appoint(alice, bob, arbiter), and his state
 %% holds role(alice, arbiter), the atom arbitrate requires: bob arbitrates,
-%% arbitrate(bob), and his state holds done; then he resigns, resign(bob), his
-%% machine finding o and r in his state, and it holds role(alice, arbiter) no
-%% more.
+%% arbitrate(bob), and his state holds done; then he resigns,
+%% resign(bob, alice, arbiter), the request naming the role he resigns, o and
+%% r being variables of the atom the act deletes at its base (vGLP, Section
+%% 5.4: "the person who proposes chooses which of their own records the act
+%% removes, so the schema-binding binds that variable and the request names
+%% it"), and it holds role(alice, arbiter) no more.
 %%
 %% play_roles_other: the same, alice typing clerk: bob's state holds
 %% role(alice, clerk), which is not the atom arbitrate requires, and his
@@ -42,7 +45,7 @@ play_roles(LA?, LB?, N?) :-
           wait(holds(role(alice, arbiter))),
           own([B1], propose(arbitrate(B1?))),
           wait(holds(done)),
-          own([B2], propose(resign(B2?))),
+          own([B2], propose(resign(B2?, alice, arbiter))),
           wait(lacks(role(alice, arbiter)))],
          LA, LB, N).
 
