@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 6.3 and cites a clause as SC:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GCorp, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-12, by GO #5.
+% Last changed: 2026-11-16, by GO #8.
 % Schemas: SC.glp beside this file.
 SC: Shareholding Corporation
 SC instantiates GCorp with shareholding corporation bylaws, composes it with Shares, and extends the composition.
@@ -26,8 +26,16 @@ Environment: z has issued shares; the shareholders of z decided the issue of sha
 Interface pragmas
 Look: 📈, money
 Shareholdings: the shares Alice holds.
-Issue shares: Alice [Issue shares] <person> <amount>
-  Erin [Vote on issue] <person> <amount> [Vote on first issue] <organisation> <person> <amount>
+Officers: Decider [Appoint] <person> <role>
+  Bob: Decider asks you to be an officer of the organisation Carol.
+  Decider [End officer] <person>
+  Bob [Resign] [Officer unfriend]
+Issue: AliceOfficer [Issue shares by any officer for Alice] <decider> <amount>
+  Decider: AliceOfficer asks to issue the first shares of your organisation Alice.
+Swap: Alice [Swap coin for share] <amount given> <issuer wanted> <amount wanted>
+  Bob: Alice asks to swap coins for shares with you.
+  Alice [Swap bond for share] <maturity given> <amount given> <issuer wanted> <amount wanted>
+  Bob: Alice asks to swap bonds for shares with you.
 Dividend: Alice [Set dividend] <dividend> <votes>
   Erin [Vote on dividend] <dividend>
-  Bob [Claim] <total> <dividend>
+  Bob [Claim] <total> <dividend> [Claim own coins] <total> <dividend> [Claim coins of the corporation] <total> <dividend>
