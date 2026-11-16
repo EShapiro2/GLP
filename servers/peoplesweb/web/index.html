@@ -278,8 +278,8 @@ const notWhy = c => c.notCompiled && c.notCompiled.length ? 'The compiler refuse
 const STAGES = [
   ['Schemas', c => c.acts[0] > 0],
   ['Checked', c => /^syntactically_grassroots/.test(c.verdict || '')],
-  ['Platform', c => !!(c.layers && c.layers.platform && c.live)],
-  ['Compiled', c => !!(c.layers && c.layers.glp)],
+  ['Platform', c => !!(c.layers && c.layers.platform && (c.platform || c.live))],
+  ['Compiled', c => !!(c.layers && c.layers.glp && (c.platform || c.live))],
   ['Running', c => !!c.live]];
 
 /* ---------- help ---------- */
