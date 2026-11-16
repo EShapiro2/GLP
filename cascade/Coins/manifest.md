@@ -1,10 +1,10 @@
 # A run of the cascade on Coins
 
-- Contract: `Coins` (`coins` to the checker), its owner's two files `programs/currencies/coins/Coins.txt` and `programs/currencies/coins/Coins.glp`, copied here as they stood at `8290e067`.
+- Contract: `Coins` (`coins` to the checker), its owner's two files `programs/currencies/coins/Coins.txt` and `programs/currencies/coins/Coins.glp`, copied here as they stood at `9472b0b5`.
 - The paper: `/Users/udi/Grassroots/GC (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/currencies/coins/Coins.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/currencies/coins/Coins.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 18:51 UTC by `cascade.sh coins`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `8290e067`; each artefact's source and tool:
+- Run on 2026-11-16 19:05 UTC by `cascade.sh coins`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `9472b0b5`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
