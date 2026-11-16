@@ -5,7 +5,7 @@
 %% into vGLP by its compilation (Section 5.4, "The compilation").  Edit the
 %% contract or the compiler and run
 %% programs/vglp/cva/compile.sh, not this file.
-%% the canonical CVA platform of the contract(gc)
+%% the canonical CVA platform of the contract(coins)
 
 %% ===========================================================================
 %% The contract
