@@ -99,3 +99,6 @@ play_village(A?, B?, G?, F?, C?, D?, E?) :- plays # play_village(A, B, G, F, C, 
 imported procedure plays#play_figure(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 exported procedure play_figure(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 play_figure(A?, B?, C?, D?) :- plays # play_figure(A, B, C, D).
+imported procedure plays#play_resigned(Stream(Seen), Stream(Seen), Stream(Seen)).
+exported procedure play_resigned(Stream(Seen), Stream(Seen), Stream(Seen)).
+play_resigned(A?, B?, C?) :- plays # play_resigned(A, B, C).

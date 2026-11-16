@@ -2848,6 +2848,33 @@ k_fshows "CSSN figure: ... bob approving" B "gave(children_acquaint(carol, dave,
 k_fshows "CSSN figure: alice requests that carol and dave befriend, dave approving" D "gave(children_befriend(carol, dave, alice, bob), yes)"
 k_fshows "CSSN figure: carol ends the friendship with dave" C "did(propose(child_end(carol, dave)))"
 
+# The creator who resigned declares her child of age (CSSN:4, "The creator of Carol may declare Carol of age"; GnW:2, Resign; the audit's programs/cssn/CSSN.glp.md, Finding 2): play_resigned, plays.glp, person.glp's res_alice, res_bob and res_carol.  Alice creates Carol, makes Bob a parent of Carol, resigns, and declares Carol of age; Bob's guardianship ends and Carol is a person.
+echo "--- CSSN, the creator who resigned declares her child of age ---"
+k_r=$("$REPL_RUN" <<HEREDOC 2>&1
+$CSSN_DIR
+:limit 100000000
+play_resigned(A, B, C).
+:quit
+HEREDOC
+)
+k_rscreen() { echo "$k_r" | sed -e 's/^\(GLP> \)*//' | grep "^$1 = " | head -1; }
+k_rlast() { k_rscreen "$1" | sed -e 's/.*view([a-z]*, \[//' -e 's/\], \[.*//'; }
+k_rshows() { if k_rscreen "$2" | grep -qF -- "$3"; then _check_pass "$1"; else _check_fail "$1" "$2's screen lacks: $3"; fi; }
+k_rholds() { if k_rlast "$2" | grep -qF -- "$3"; then _check_pass "$1"; else _check_fail "$1" "$2's last view lacks: $3"; fi; }
+k_rlacks() { if k_rscreen "$2" | grep -qF -- "$3" && ! k_rlast "$2" | grep -qF -- "$3"; then _check_pass "$1"; else _check_fail "$1" "$2's screen never showed, or its last view still holds: $3"; fi; }
+check_not "CSSN resigned creator: no failed goal" "→ failed\|ERROR\|Error" "$k_r"
+check_not "CSSN resigned creator: no attempt refused" "refused(" "$k_r"
+k_rshows "CSSN resigned creator: alice makes bob a parent of carol, bob approving" B "gave(make_parent(bob, carol, alice, [alice]), yes)"
+k_rshows "CSSN resigned creator: alice resigns her guardianship of carol (GnW:2)" A "did(propose(resign(alice, carol)))"
+k_rlacks "CSSN resigned creator: ... and is a parent of carol no longer" A "parent(carol)"
+k_rholds "CSSN resigned creator: ... remaining her creator" A "creator(carol)"
+k_rshows "CSSN resigned creator: alice, the creator, declares carol of age (CSSN:4)" A "did(propose(of_age(carol, alice)))"
+k_rholds "CSSN resigned creator: carol is a person, of age" C "of_age, person"
+k_rlacks "CSSN resigned creator: ... a child no longer" C "child"
+k_rlacks "CSSN resigned creator: ... bob's guardianship ended, at carol" C "has_parent(bob)"
+k_rlacks "CSSN resigned creator: ... and at bob" B "parent(carol)"
+k_rholds "CSSN resigned creator: carol's friendships remain" C "friend(bob)"
+
 echo ""
 
 fi  # Section K

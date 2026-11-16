@@ -14,7 +14,7 @@ CSSN:3 ■ Child create: GSNW:2 Ward create <- has_parent(Carol,Alice) guarded b
 CSSN:3 ■ Join: GSN:3 Join <- person(Alice).
 CSSN:3 ■ Child add: GSNW:3 Ward add <- child(Bob).
 CSSN:3 ■ | Only a child, Dave, may join the group.
-CSSN:4 ○ Of age: of_age(Carol), ~child(Carol), ~parent(_,Carol), ~has_parent(Carol,_), person(Carol) <- creator(Alice,Carol), parent(Alice,Carol), has_parent(Carol,Alice), ~of_age(Carol), child(Carol) guarded by Alice.
+CSSN:4 ○ Of age: of_age(Carol), ~child(Carol), ~parent(_,Carol), ~has_parent(Carol,_), person(Carol) <- creator(Alice,Carol), has_parent(Carol,Bob), ~of_age(Carol), child(Carol) guarded by Alice.
 CSSN:4 ○ | Carol is then a person.
 CSSN:4 ○ | The creator will do so if the minor who operates Carol comes of age, and not before.
 CSSN:5 ○ | A minor who is not a ward.

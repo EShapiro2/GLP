@@ -234,6 +234,22 @@ script(fig_dave, Me, [Alice, Bob, Carol], [approval(enter(Me?, Bob?), yes),
                                            approval(children_acquaint(Carol?, Me?, Alice?, Bob?), yes),
                                            approval(children_befriend(Carol?, Me?, Alice?, Bob?), yes)]) :-
     ground(Me?), ground(Alice?), ground(Bob?), ground(Carol?) | true.
+%% The creator who resigned declares her child of age (CSSN:4: "The creator of Carol may declare Carol of age", with no condition on her guardianship; GnW:2, Resign): the roles res_alice, res_bob and res_carol of play_resigned (plays.glp).  Alice enters Carol, comes to know and befriends Bob, and makes him a parent of Carol, Bob approving; she resigns her guardianship, Bob remaining Carol's parent; and, the creator still, she declares Carol of age, which ends Bob's guardianship, and Carol is a person.
+script(res_alice, _, [Bob, Carol], [own([A1], propose(establish(A1?))), wait(holds(identity)),
+                                    own([A2], propose(enter(Carol?, A2?))), wait(holds(parent(Carol?))),
+                                    own([A3], propose(acquaint(A3?, Bob?))), wait(holds(knows(Bob?))),
+                                    own([A4], propose(befriend(A4?, Bob?))), wait(holds(friend(Bob?))),
+                                    own([A5], propose(make_parent(Bob?, Carol?, A5?))), at(Carol?, holds(has_parent(Bob?))),
+                                    own([A6], propose(resign(A6?, Carol?))), wait(lacks(parent(Carol?))),
+                                    own([A7], propose(of_age(Carol?, A7?))), at(Carol?, holds(person))]) :-
+    ground(Bob?), ground(Carol?) | true.
+script(res_bob, Me, [Alice, Carol], [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                                     approval(acquaint(Alice?, Me?), yes),
+                                     approval(befriend(Alice?, Me?), yes),
+                                     approval(make_parent(Me?, Carol?, Alice?, [Alice?]), yes)]) :-
+    ground(Me?), ground(Alice?), ground(Carol?) | true.
+script(res_carol, Me, [Alice, _], [approval(enter(Me?, Alice?), yes)]) :-
+    ground(Me?), ground(Alice?) | true.
 script(_, _, _, []) :- otherwise | true.
 
 %% The person.
