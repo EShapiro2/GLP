@@ -43,7 +43,7 @@ GnW:2 ■ | Carol may not end a friendship with her parent.
 GnW:3 ■ | Ward and person.
 GnW:3+CSSN:2 ■ Child acquaint: knows(Carol,Bob), knows(Bob,Carol) <- child(Carol), has_parent(Carol,Alice), person(Bob), knows(Alice,Bob), parent(Alice,Carol) guarded by Carol, Bob, Alice.
 GnW:3 ■ Child befriend: friend(Carol,Bob), friend(Bob,Carol) <- child(Carol), ~retired(Carol), has_parent(Carol,Alice), person(Bob), knows(Carol,Bob), knows(Bob,Carol), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Bob), ~friend(Bob,Carol) guarded by Carol, Bob, Alice.
-GnW:3+GSNW:3 ■ Child end: ~friend(Carol,Bob), ~friend(Bob,Carol), ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <- ~parent(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+GnW:3+GSNW:3 ■ Child end: ~friend(Carol,Bob), ~friend(Bob,Carol), ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <- ~has_parent(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
 GnW:3+GSNW:3 ■ Unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob), ~member(Bob,_,Carol), ~member(Carol,_,Bob), ~listed(Bob,Carol,_), ~listed(Carol,Bob,_) <- ~parent(Bob,Carol), friend(Bob,Carol), friend(Carol,Bob) guarded by Bob.
 GnW:3+GSNW:3 ■ Child unfriend: ~friend(Carol,Bob), ~friend(Bob,Carol), ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <- has_parent(Carol,Alice), ~parent(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Alice.
 GnW:4 ■ | Wards.
