@@ -1073,6 +1073,7 @@ function relsHtml(c){
   const mk = {agrees: '✓', given: '✓', disagrees: '✗', open: '–'};
   const say = {agrees: 'agrees with its schemas', given: 'agrees, given an invariant', disagrees: 'disagrees with its schemas', open: 'not checked'};
   return `<div class="sec"><div class="sh"><h2>Relations</h2></div><div class="card refs rels">${c.checks.map(r =>
+    r.line ? `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(r.line)}</b>: ${r.result === 'agrees' ? 'holds' : 'does not hold'}<div class="why">${esc(r.why)}</div></div></div>` :
     `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(c.id)} ${esc(r.rel)} ${r.of ? `its ${esc(r.of)} of ` : ''}<a data-go="${esc(r.base)}">${esc(r.base)}</a></b>: ${say[r.result]}<div class="why">${esc(r.why)}</div></div></div>`).join('')}</div></div>`;
 }
 // The app as a certified artefact, the .glpw the Grassroots App installs.

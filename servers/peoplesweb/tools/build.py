@@ -512,9 +512,25 @@ if os.environ.get('CERTIFY', '1') != '0':
     arts = certify.artefacts(os.path.join(WWW, 'artefacts'))
 else:
     checks, arts = {}, {}
+def relations_of(n):
+    """The Calculus's verdict on each relation contract n's first line states,
+    as calculus/tools print it into its record, cascade/n/relations.txt, one
+    line a relation: 'GSN extends GSG: holds', or 'CnC restricts it (GCoop
+    and TC): FAILS: <act>: <what>; ...' (Calculus #6, 2026-11-16 07:23 UTC).
+    The site prints each line and says nothing of its own; a record with no
+    such file has no verdict."""
+    f = os.path.join(GLP, 'cascade', n, 'relations.txt')
+    out = []
+    for l in read(f).split('\n') if os.path.exists(f) else []:
+        m = re.match(r'(.+?): (holds|FAILS)(?::\s*(.*))?$', l.strip())
+        if m and not l.startswith('%'):
+            out.append({'line': m.group(1), 'result': 'agrees' if m.group(2) == 'holds' else 'disagrees', 'why': m.group(3) or ''})
+    return out
+
+
 NOT_CHECKED = "the site's check does not yet follow the Calculus's definitions of the relations"
 for c in contracts:
-    c['checks'] = checks.get(c['id']) or (
+    c['checks'] = relations_of(c['id']) or checks.get(c['id']) or (
         [{'base': b, 'rel': r, 'result': 'open', 'why': NOT_CHECKED} for b, rs in (c.get('rels_all') or {k: [v] for k, v in (c.get('rels') or {}).items()}).items() for r in rs]
         + [{'base': x['base'], 'rel': x['rel'], 'of': x['of'], 'result': 'open', 'why': NOT_CHECKED} for x in c.get('rels_of', [])])
     a = arts.get(c['id'].lower().replace('-', '_'))
