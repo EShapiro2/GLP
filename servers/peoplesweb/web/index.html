@@ -36,6 +36,8 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .sh{display:flex;align-items:baseline;justify-content:space-between;margin:34px 0 12px}
 .sh h2{font-size:22px;letter-spacing:-.015em;margin:0;font-weight:700}
 .sh span{color:var(--mute);font-size:14px}
+.sh .hq{display:flex;flex-direction:column;align-items:stretch;gap:6px;width:max-content;margin-left:auto}.sh .hq img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid var(--line)}
+@media (max-width:640px){.sh .hq{align-items:flex-end}.sh .hq img{width:84px}}
 .card{background:var(--card);border-radius:20px;box-shadow:var(--shadow)}
 #mapcard{position:relative;overflow:hidden;padding:6px}
 #graph{display:block;width:100%;height:auto;touch-action:none;-webkit-user-select:none;user-select:none}
@@ -128,6 +130,7 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .q:hover{background:var(--blue);color:#fff}
 .rules{padding:20px 24px}
 .pre{color:var(--mute);font-style:italic;margin-bottom:6px;white-space:pre-line}
+.pre em{font-weight:600;color:var(--ink)}
 ol.cl{padding:0;margin:0;list-style:none}
 ol.cl li{display:grid;grid-template-columns:24px 22px 1fr;gap:2px;padding:10px 0;border-bottom:1px solid var(--line)}
 ol.cl li:last-child{border-bottom:none}
@@ -224,7 +227,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
       <h1>Social contracts that run.</h1>
       <p>Apps owned and run by the people who use them, on their own phones: no company, server or blockchain in the middle. Each app starts as a contract, a few rules in plain English saying who may do what, with whose agreement. Any group can start an app on its own, and separate groups can later join into one. Programs turn the contract into the app, and a theorem guarantees that every app built this way can grow like that, from the bottom up.</p>
     </div>
-    <div class="sh"><h2>Grassroots Contracts</h2><span id="hint">drag to turn, scroll to zoom</span></div>
+    <div class="sh"><h2>Grassroots Contracts</h2><span class="hq"><a href="qr.svg" target="_blank" rel="noopener" title="Scan to open peoplesweb.org"><img src="qr.svg" alt="QR code of peoplesweb.org" width="84" height="84"></a><span id="hint">drag to turn, scroll to zoom</span></span></div>
     <div class="card" id="mapcard"><svg id="graph"></svg><div id="tip"></div></div>
     <p class="small" style="text-align:center;margin-top:28px">The content of this site is derived from the GLP repository, <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener">https://github.com/EShapiro2/GLP</a>.</p>
   </section>
@@ -273,10 +276,10 @@ const notWhy = c => c.notCompiled && c.notCompiled.length ? 'The compiler refuse
 // The stages of the cascade a contract may have reached, in order, each
 // deciding of a contract whether it got that far (stripHtml; the globe's key).
 const STAGES = [
-  ['Schemas', c => c.schemas.length > 0],
+  ['Schemas', c => c.acts[0] > 0],
   ['Checked', c => /^syntactically_grassroots/.test(c.verdict || '')],
-  ['Platform', c => !!(c.layers && c.layers.platform && c.live)],
-  ['Compiled', c => !!(c.layers && c.layers.glp)],
+  ['Platform', c => !!(c.layers && c.layers.platform && (c.platform || c.live))],
+  ['Compiled', c => !!(c.layers && c.layers.glp && (c.platform || c.live))],
   ['Running', c => !!c.live]];
 
 /* ---------- help ---------- */
@@ -323,7 +326,7 @@ function citeHtml(P){
 
 /* ---------- the globe ---------- */
 // The contracts on a sphere (agreed with Udi, 2026-11-07): GKK at the north
-// pole, a ring per depth, the fullest on the equator; each contract's
+// pole, a ring per depth, the rings equally spaced; each contract's
 // longitude near its parents' and its children's, so a contract stands over
 // what is built on it and between what it is built on, and arrows cross as
 // little as can be (Udi, 2026-11-10); each contract an ellipse painted on the
@@ -341,15 +344,14 @@ function depthOf(id){
 }
 function layout(){
   D.contracts.forEach(c => depthOf(c.id));
-  // The rings' colatitudes: the ring with the most contracts on the equator
-  // (Udi, 2026-11-08), the rings above it evenly from the pole, those below
-  // it evenly as seen in the first view, tilted by V.tilt, down to near the
-  // globe's bottom edge, so the rings that face away are not run together.
-  const maxd0 = MAXD(), cnt = d => D.contracts.filter(c => DEPTH[c.id] === d).length;
-  let dm = 1; for (let d = 1; d <= maxd0; d++) if (cnt(d) > cnt(dm)) dm = d;
-  const deg = Math.PI/180, north = 90*deg / (dm + 0.6), c0 = Math.cos(90*deg + V.tilt), c1 = -0.93;
-  for (let d = 0; d <= maxd0; d++) RING[d] = d === 0 ? 0 : d <= dm ? north * (d + 0.6)
-    : Math.min(90*deg + north * (d - dm), Math.acos(c0 + (c1 - c0) * (d - dm) / (maxd0 - dm)) - V.tilt);
+  // The rings' colatitudes: equally spaced from the pole down to near the
+  // globe's bottom edge as the first view shows it, tilted by V.tilt (Udi,
+  // 2026-11-16, to Website #2: "try spacing layers more equally, not wait for
+  // the largest to be on the equator"; until then the fullest ring was on the
+  // equator, Udi, 2026-11-08, and the rings below it were crowded).
+  const maxd0 = MAXD(), thMax = Math.acos(-0.93) - V.tilt;
+  // The first ring half a step further from the pole, where a ring is short.
+  for (let d = 0; d <= maxd0; d++) RING[d] = d === 0 ? 0 : thMax * (d + 0.5) / (maxd0 + 0.5);
   // Where to start: each contract in the range of its first parent, the range
   // shared among its children by how many leaves each has below it.
   D.contracts.forEach(c => { const p = c.extends.find(x => C[x]); if (p) (KIDS[p] = KIDS[p] || []).push(c.id); });
@@ -378,12 +380,27 @@ function layout(){
   // children (going up) along their rings, a relation that passes more rings
   // weighing less; the order with the fewest crossings of the arrows between
   // neighbouring rings kept.
-  const crossings = () => { const I = {}; Lr.forEach(r => r.forEach((v, i) => I[v] = i)); let n = 0;
-    for (let d = 0; d < maxd; d++){
-      const es = []; Lr[d].forEach(u => DN[u].forEach(v => { if (DEPTH[v] === d + 1) es.push([I[u], I[v]]); }));
-      for (let i = 0; i < es.length; i++) for (let j = i + 1; j < es.length; j++)
-        if ((es[i][0] - es[j][0]) * (es[i][1] - es[j][1]) < 0) n++;
-    }
+  // The crossings counted are those of all the arrows, an arrow that passes
+  // several rings taken as straight between its two contracts' places along
+  // their rings (Udi, 2026-11-16: the globe of 66 contracts "is a total
+  // mess"; until then only the arrows between neighbouring rings were
+  // counted, and the long ones crossed as they fell).  GKK, at the pole, has
+  // every longitude: its arrow starts where it ends.
+  const EDG = []; D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => EDG.push([p, c.id])));
+  const place = () => { const P = {}; Lr.forEach(r => r.forEach((v, i) => P[v] = (i + 0.5) / r.length)); return P; };
+  const xs = (P, e, f) => {
+    const [u1, v1] = e, [u2, v2] = f, a1 = DEPTH[u1], b1 = DEPTH[v1], a2 = DEPTH[u2], b2 = DEPTH[v2];
+    const lo = Math.max(a1, a2), hi = Math.min(b1, b2);
+    if (lo >= hi || (a1 === 0 && a2 === 0)) return 0;
+    const at = (u, v, a, b2_, d) => { const pu = a === 0 ? P[v] : P[u]; return pu + (P[v] - pu) * (d - a) / (b2_ - a); };
+    return (at(u1, v1, a1, b1, lo) - at(u2, v2, a2, b2, lo)) * (at(u1, v1, a1, b1, hi) - at(u2, v2, a2, b2, hi)) < 0 ? 1 : 0; };
+  const crossings = () => { const P = place(); let n = 0;
+    for (let i = 0; i < EDG.length; i++) for (let j = i + 1; j < EDG.length; j++) n += xs(P, EDG[i], EDG[j]);
+    return n; };
+  // The crossings of the arrows at the contracts a and b with all the others.
+  const INC = {}; EDG.forEach(e => e.forEach(v => (INC[v] = INC[v] || []).push(e)));
+  const near = (P, a, b) => { let n = 0;
+    for (const e of [...(INC[a] || []), ...(INC[b] || []).filter(e => !e.includes(a))]) for (const f of EDG) if (e !== f) n += xs(P, e, f);
     return n; };
   // Then each pair of neighbours on a ring is swapped where that crosses fewer
   // arrows to the rings above and below, until no swap helps.  The whole is
@@ -404,22 +421,19 @@ function layout(){
       if (n < bestN){ bestN = n; best = Lr.map(r => r.slice()); }
     }
     best.forEach((r, d) => Lr[d] = r);
-    for (let pass = 0, swapped = true; swapped && pass < 50; pass++){
+    for (let pass = 0, swapped = true; swapped && pass < 30; pass++){
       swapped = false;
-      const I = {}; Lr.forEach(r => r.forEach((v, i) => I[v] = i));
-      const cost = (a, b) => { let n = 0;
-        for (const nb of [UP, DN]) for (const x of nb[a]) for (const y of nb[b])
-          if (span(x, a) === 1 && span(y, b) === 1 && DEPTH[x] === DEPTH[y] && I[x] > I[y]) n++;
-        return n; };
+      const P = place();
       for (let d = 1; d <= maxd; d++) for (let i = 0; i + 1 < Lr[d].length; i++){
-        const a = Lr[d][i], b = Lr[d][i+1];
-        if (cost(b, a) < cost(a, b)){ Lr[d][i] = b; Lr[d][i+1] = a; I[a] = i + 1; I[b] = i; swapped = true; }
+        const a = Lr[d][i], b = Lr[d][i+1], before = near(P, a, b), pa = P[a], pb = P[b];
+        P[a] = pb; P[b] = pa;
+        if (near(P, a, b) < before){ Lr[d][i] = b; Lr[d][i+1] = a; swapped = true; } else { P[a] = pa; P[b] = pb; }
       }
     }
     return crossings(); };
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   let best = null, bestN = Infinity;
-  for (let t = 0; t < 12; t++){
+  for (let t = 0; t < 10; t++){
     if (t){ const ord = {}; D.contracts.forEach(c => ord[c.id] = rnd());
       const pos = {}; (function walk(id, lo, hi){ pos[id] = (lo + hi) / 2;
         const ks = (KIDS[id] || []).slice().sort((a, b) => ord[a] - ord[b]), tot = ks.reduce((n, k) => n + leaves(k), 0);
@@ -539,7 +553,8 @@ const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
 // globe, the names drawn larger so they can be read and tapped, and the key
 // set below the globe (Udi, 2026-11-09).
 const NARROW = () => (($('#mapcard') && $('#mapcard').clientWidth) || innerWidth) < 640;
-const FS0 = () => NARROW() ? 16 : 11;
+// Smaller names and thinner arrows since the 66 contracts (Udi, 2026-11-16).
+const FS0 = () => NARROW() ? 13 : 9;
 // The globe fills the card's width, a sliver to each side (Udi, 2026-11-09):
 // on a wide card a radius of 548 in a view 1120 wide, on a phone 290 in a
 // view 600 wide; a zoom is relative to that.
@@ -571,7 +586,7 @@ function drawGlobe(){
   // relation's outline and its right side the second's; a third relation is a
   // slim arrow of its own outline along the middle, drawn darker (Udi,
   // 2026-11-15, to Website #2).
-  const RELCOL = {extends: '#3b7dd8', restricts: '#d64550', strengthens: '#2a9d6f', instantiates: '#8b5fd3', composes: '#e39a2d', implements: '#6b7785', amends: '#8d6e63'};
+  const RELCOL = {extends: '#3b7dd8', restricts: '#d64550', strengthens: '#2a9d6f', relaxes: '#17a5b8', instantiates: '#8b5fd3', composes: '#e39a2d', implements: '#6b7785', amends: '#8d6e63'};
   const SOLID = {extends: [0.4, 4.2, 7.5], restricts: [4.2, 0.4, 2.8], strengthens: [3.4, 3.4, 7.5], amends: [2.2, 2.2, 6.5]};
   const solids = rs => rs.length > 1 && rs.every(r => SOLID[r]);
   // The key's arrows, drawn flat in its corner, each a straight shaft and head:
@@ -598,7 +613,7 @@ function drawGlobe(){
   const stroked = (p, q, dash, fill, pad0, pad1, kz = k) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*kz, hw = 6.5*kz, cx = bx-ux*hl, cy = by-uy*hl;
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`
       + `<polygon points="${[[bx, by], [cx-uy*hw, cy+ux*hw], [cx+uy*hw, cy-ux*hw]].map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
-  const fs = Math.max(NARROW() ? 15 : 10, FS0()*k), rx = id => 0.33*fs*id.length + 0.8*fs, ry = 1.1*fs;
+  const fs = Math.max(NARROW() ? 12 : 8.5, FS0()*k), rx = id => 0.33*fs*id.length + 0.8*fs, ry = 1.1*fs;
   // Each arrow painted on the sphere: a smooth curve on the surface from the
   // contract to the one built on it, through the waypoints the layout keeps
   // for it on the rings it passes, so it goes between the names there; its
@@ -667,7 +682,7 @@ function drawGlobe(){
     // an arrow of two relations is coloured half and half along its length,
     // one of three a third each, the head in the last (Udi, 2026-11-15, to
     // Website #2).
-    const u = 1/265, rs = cols, hl = 10*u, hw = 6.5*u, w = 2.4*u;
+    const u = 1/265, rs = cols, hl = 8*u, hw = 4.6*u, w = 1.4*u;
     const aB = head ? a1 - hl : a1;
     if (aB <= a0) return '';
     const front = a => projv(at(a))[2] > 0.02;
@@ -705,7 +720,7 @@ function drawGlobe(){
   const composed = c => {
     const ps = c.extends.filter(p => C[p] && c.rels && c.rels[p] === 'composes'), of = (c.rels_of || []).filter(x => x.of === 'composition');
     if (ps.length === 1 && of.length && C[of[0].base] && !ps.includes(of[0].base)) ps.unshift(of[0].base);
-    return ps.length === 2 ? {ps, trunk: of.map(x => x.rel)} : null; };
+    return ps.length >= 2 ? {ps, trunk: of.map(x => x.rel)} : null; };
   const unit = id => vec(th(id), PHI[id]);
   D.contracts.forEach(c => {
     const cm = composed(c);
@@ -714,10 +729,13 @@ function drawGlobe(){
       s += paint(p, c.id, all && all.length ? all : (c.rels && c.rels[p]) || c.relation);
     });
     if (!cm) return;
-    const [A, B] = cm.ps.map(unit), Cv = unit(c.id), M = nrm(add3(add3(A.map(x => x*0.25), B, 0.25), Cv, 0.5)), K = nrm(add3(M.map(x => x*1.5), Cv, -0.5));
+    // The lines meet at one point, between the composed contracts and the
+    // composing one, however many are composed ('GA composes GPE with GAS
+    // and GDS' three).
+    const Ps = cm.ps.map(unit), Cv = unit(c.id), M = nrm(Ps.reduce((a, P) => add3(a, P, 0.5/Ps.length), Cv.map(x => x*0.5))), K = nrm(add3(M.map(x => x*1.5), Cv, -0.5));
     const leg = P => { const o = []; for (let i = 0; i <= 40; i++){ const t = i/40; o.push(nrm(add3(add3(P.map(x => x*(1-t)*(1-t)), K, 2*t*(1-t)), M, t*t))); } return o; };
     const trunk = []; for (let i = 0; i <= 30; i++) trunk.push(nrm(add3(M.map(x => x*(1 - i/30)), Cv, i/30)));
-    cm.ps.forEach((p, i) => { s += ribbon(leg(i ? B : A), p, null, [RELCOL[(c.rels && c.rels[p]) || 'composes']], false); });
+    cm.ps.forEach((p, i) => { s += ribbon(leg(Ps[i]), p, null, [RELCOL[(c.rels && c.rels[p]) || 'composes']], false); });
     s += ribbon(trunk, null, c.id, (cm.trunk.length ? cm.trunk : ['composes']).map(r => RELCOL[r] || RELCOL.composes), true);
   });
   D.contracts.forEach(c => {
@@ -745,7 +763,7 @@ function drawGlobe(){
   // while a text in force still states it.
   const ALL = D.contracts.flatMap(c => Object.values(c.rels_all || {}));
   const USED = new Set([...D.contracts.flatMap(c => [c.relation, ...Object.values(c.rels || {})]), ...ALL.flat()]);
-  const KEY = ['extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r])
+  const KEY = ['extends', 'restricts', 'strengthens', 'relaxes', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r])
     .concat([...new Set(ALL.filter(rs => rs.length > 1).sort((a, b) => a.length - b.length).map(rs => rs.join('|')))].map(x => [x.split('|'), x.split('|').join(', ').replace(/, ([^,]*)$/, ' and $1')]));
   const KW = Math.max(150, 84 + 6.6*Math.max(...KEY.map(([, t]) => t.length))), nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
   s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="${KW}" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
@@ -944,7 +962,7 @@ function route(){
 /* ---------- a contract ---------- */
 function page(c, hood){
   const kids = D.contracts.filter(k => k.extends.includes(c.id));
-  const own = c.schemas.filter(s => s.from === c.id).length;
+  const own = c.acts[1];
   const link = id => `<a data-go="${id}">${id}</a>`;
   $('#view').innerHTML = `
     <span class="crumbs" data-go="">‹ All contracts</span>
@@ -953,13 +971,13 @@ function page(c, hood){
       <div class="acts">${c.live ? `<a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a>` : ''}</div></div></div>
     <div class="stats">
       <div class="stat"><div class="k">Rules</div><div class="v">${c.clauses.length}</div><div class="s">in English</div></div>
-      <div class="stat"><div class="k">Speech acts</div><div class="v">${c.schemas.length ? own : '–'}</div><div class="s">${c.schemas.length ? 'of its own' : 'not compiled'}</div></div>
+      <div class="stat"><div class="k">Speech acts</div><div class="v">${c.acts[0] ? own : '–'}</div><div class="s">${c.acts[0] ? 'of its own' : 'not compiled'}</div></div>
       <div class="stat"><div class="k">Builds on</div><div class="v">${c.extends.length ? c.extends.map(link).join(', ') : '–'}</div><div class="s">${c.extends.length ? 'contract' + (c.extends.length > 1 ? 's' : '') : 'the base'}</div></div>
       <div class="stat"><div class="k">Used by</div><div class="v">${kids.length ? kids.map(k => link(k.id)).join(', ') : '–'}</div><div class="s">${kids.length ? 'contract' + (kids.length > 1 ? 's' : '') : 'none yet'}</div></div>
       <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(c.id)}</div></div>
     </div>
     ${stripHtml(c)}
-    <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2>${c.calculus && c.calculus.fullc ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
+    <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
       ${c.clauses.length || c.preamble ? `<div class="card rules" id="cbox">${boxHtml(c, false)}</div>` : `<p class="small">No text in force.</p>`}
       ${calcHtml(c)}
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
@@ -976,7 +994,8 @@ function page(c, hood){
   const tf = $('#tf');
   if (tf) tf.querySelectorAll('button').forEach(bt => bt.onclick = () => {
     tf.querySelectorAll('button').forEach(z => z.classList.toggle('on', z === bt));
-    $('#cbox').innerHTML = boxHtml(c, !!bt.dataset.f); });
+    if (!bt.dataset.f){ $('#cbox').innerHTML = boxHtml(c, null); return; }
+    detail(c).then(d => { if (bt.classList.contains('on') && d.fullc) $('#cbox').innerHTML = boxHtml(c, d.fullc); }); });
   const fd = $('#view').querySelector('details[data-full]');
   if (fd) fd.addEventListener('toggle', async () => {
     fd.querySelector('summary').textContent = fd.open ? 'Hide the full contract' : 'Full contract';
@@ -984,7 +1003,7 @@ function page(c, hood){
     try { const r = await fetch(fd.dataset.full); if (!r.ok) throw 0; fd.querySelector('.txt').textContent = (await r.text()).split('\n').filter(l => !l.startsWith('%')).join('\n').trim(); }
     catch (e){ fd.querySelector('.txt').textContent = 'Not available.'; }
   });
-  if (hood){ $('#hood').style.display = 'block'; hoodHtml(c); setTimeout(() => $('#hood').scrollIntoView({behavior:'smooth', block:'start'}), 60); }
+  if (hood){ $('#hood').style.display = 'block'; $('#hood').innerHTML = '<p class="small">Loading…</p>'; detail(c).then(d => { hoodHtml(c, d.schemas); $('#hood').scrollIntoView({behavior:'smooth', block:'start'}); }); }
 }
 
 // The Calculus (calculus/MIGRATION.md, the section Website): until its owner
@@ -996,26 +1015,35 @@ function page(c, hood){
 // contract, with every clause it has from the contracts it is written from,
 // each numbered by the contract it is from; the same form and the same box,
 // the two-state button above it choosing (Udi, 2026-11-16, to Website #2).
+// A contract's schemas and full contract, fetched when first asked for
+// (detail/<NAME>.json, tools/build.py).
+const DETAIL = {};
+const detail = c => DETAIL[c.id] || (DETAIL[c.id] = fetch(`detail/${encodeURIComponent(c.id)}.json`).then(r => r.json()).catch(() => ({schemas: [], fullc: null})));
+// A contract's text marks a term it defines with asterisks, *identity*: the
+// page shows the term emphasised and not the marks (Udi, 2026-11-16, to
+// Website #2): bold in the definitions, which are in italics, and in
+// italics in a clause.
+const term = s => esc(s).replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
 function boxHtml(c, full){
-  const x = full ? c.calculus.fullc : c;
+  const x = full || c;
   return `${!full && c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
-      <div class="pre">${esc(x.preamble)}</div>
-      <ol class="cl${full ? ' full' : ''}">${x.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}${cl.sep || '.'}</b> ${esc(cl.text)}</span></li>`).join('')}</ol>`;
+      <div class="pre">${term(x.preamble)}</div>
+      <ol class="cl${full ? ' full' : ''}">${x.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}${cl.sep || '.'}</b> ${term(cl.text)}</span></li>`).join('')}</ol>`;
 }
 function calcHtml(c){
   const k = c.calculus; if (!k) return '';
   const yn = b => b ? 'yes' : 'no';
   const br = `https://github.com/EShapiro2/GLP/tree/Calculus/calculus/${encodeURIComponent(c.id)}`;
   const full = k.full ? `<details class="fullc" data-full="${esc(k.full)}"><summary class="btn grey">Full contract</summary><div class="card rules txt">Loading…</div></details>` : '';
-  if (k.adopted) return k.fullc ? '' : full;
+  if (k.adopted) return k.hasFull ? '' : full;
   return `<div class="sh" style="margin-top:22px"><h2>Proposed by the Calculus</h2></div>
       <p class="small">The text of ${esc(c.id)} in the Calculus, published on the <a href="${br}" target="_blank" rel="noopener">branch Calculus</a> of GLP; ${k.owner && k.owner !== 'none' ? `its owner, ${esc(k.owner)}, has not adopted it yet` : 'it has no owner yet'} (<a href="https://github.com/EShapiro2/GLP/blob/Calculus/calculus/MIGRATION.md" target="_blank" rel="noopener">the migration plan</a>).  Certified by GLP's checker: ${yn(k.certified)}.  Compiled to GLP: ${yn(k.compiled)}.</p>
       ${k.proposed ? `<div class="card rules txt">${esc(k.proposed)}</div>` : ''}
       ${full}`;
 }
 
-function hoodHtml(c){
-  const own = c.schemas.filter(s => s.from === c.id), inh = c.schemas.filter(s => s.from !== c.id);
+function hoodHtml(c, schemas){
+  const own = schemas.filter(s => s.from === c.id), inh = schemas.filter(s => s.from !== c.id);
   const L = c.layers, col = FAM[famOf(c)][1];
   const n = i => `<span class="num" style="background:${col}">${i}</span>`;
   const codeLayer = (key, title, sum) => L[key] ? `<div class="sub2"><h4>${title}${Q(key)}</h4>

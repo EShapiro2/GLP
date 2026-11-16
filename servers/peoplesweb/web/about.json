@@ -158,5 +158,50 @@
   "🖥️",
   "network",
   "Services: a ward run by a machine at an address everyone can reach, as a rendezvous server, a directory and a store are."
+ ],
+ "Agora": [
+  "🧺",
+  "money",
+  "Barter: make things, post them on a market wall, trade them."
+ ],
+ "GN": [
+  "🧾",
+  "money",
+  ""
+ ],
+ "GS": [
+  "📈",
+  "money",
+  ""
+ ],
+ "CDC": [
+  "🏛️",
+  "governance",
+  ""
+ ],
+ "GA": [
+  "📱",
+  "os",
+  ""
+ ],
+ "Notes": [
+  "🧾",
+  "money",
+  ""
+ ],
+ "Coins": [
+  "🪙",
+  "money",
+  "Personal currencies: everyone can issue their own coins."
+ ],
+ "Bonds": [
+  "📜",
+  "money",
+  "Bonds with maturity dates, and escrow, on top of coins."
+ ],
+ "Shares": [
+  "📈",
+  "money",
+  ""
  ]
 }
