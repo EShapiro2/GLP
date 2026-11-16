@@ -235,11 +235,12 @@ for m in re.finditer(r'^#\s+[a-z]+\s+([A-Z][A-Za-z]*)\s+(\S+)\s+programs/', read
     owners[m.group(1)] = m.group(2)
 
 
-# The five relations of the Calculus (calculus/README.md, The relations):
-# extends, restricts, strengthens, instantiates and composes, the last read
+# The six relations of the Calculus (calculus/README.md, The relations):
+# extends, restricts, strengthens, relaxes (the sixth, Calculus #8,
+# 2026-11-16), instantiates and composes, the last read
 # apart below; implements is GSC's, and amends stands while a text in force
 # states it.
-RELATIONS = ('extends', 'restricts', 'strengthens', 'amends', 'implements', 'instantiates')
+RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implements', 'instantiates')
 
 
 def extends_of(c, lines):
@@ -247,7 +248,7 @@ def extends_of(c, lines):
     # The sentence is read to its full stop, each reference in parentheses
     # skipped, wherever it stands: 'GNL extends GNO, GDO (GRH, ...) and REC.'
     # extends REC too (style guide, 36; GO #4, 2026-11-10).
-    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS + ('composes',)) + r') ([^.]+)')
+    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS + ('composes',)) + r')\b([^.]+)')
     for l in [l for l in lines if not l.startswith('%')] + [l for l in lines if l.startswith('%')]:
         m = rel.search(re.sub(r'\([^()]*\)', '', l))
         if m:
@@ -558,7 +559,7 @@ for n in sorted(set(calc_state) - set(cat)):
                       'checks': [], 'artefact': None, 'calculus': v})
 commit = subprocess.run(['git', '-C', GLP, 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
 for f in os.listdir(os.path.join(HERE, 'web')):
-    if f.endswith(('.html', '.js', '.png', '.ico', '.jpg')):
+    if f.endswith(('.html', '.js', '.png', '.ico', '.jpg', '.svg')):
         shutil.copy(os.path.join(HERE, 'web', f), os.path.join(WWW, f))
 # The page an invitation link opens, peoplesweb.org/i (GNA, Section 6,
 # Invitation links), and the file that names the Grassroots App to iOS as the
@@ -587,6 +588,23 @@ if lost:
     print('directories: no entry answers for ' + ', '.join(lost))
 for f in faults:
     print('projects: ' + f)
+# What a contract's page shows only when asked, its speech-act schemas and its
+# full contract, is a file of its own, detail/<NAME>.json, which the page
+# fetches then; data.js, which every page loads, keeps their counts.  With
+# them in it data.js was 3.2 MB after the Calculus migration, the full schemas
+# of GO's family being some ninety a contract, and the home page was slow
+# (Udi, 2026-11-16, to Website #2).
+os.makedirs(os.path.join(WWW, 'detail'), exist_ok=True)
+for c in contracts:
+    sch = c.pop('schemas')
+    c.pop('schemaHeader', None)
+    c.pop('pragmas', None)
+    k = c.get('calculus') or {}
+    with open(os.path.join(WWW, 'detail', c['id'] + '.json'), 'w', encoding='utf-8') as f:
+        json.dump({'schemas': sch, 'fullc': k.pop('fullc', None)}, f, ensure_ascii=False)
+    if c.get('calculus') is not None:
+        c['calculus']['hasFull'] = os.path.exists(os.path.join(WWW, 'stack', c['id'], 'full-contract.txt'))
+    c['acts'] = [len(sch), sum(1 for s in sch if s.get('from') == c['id'])]
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
     data = {'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'projects': projects, 'code': code,
             'noPaper': [{'id': i, 'name': n, 'repo': r} for i, n, r in directories.NO_PAPER],
