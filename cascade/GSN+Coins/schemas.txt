@@ -1,6 +1,6 @@
 Reflexive predicates: knows
 
-establish: identity(Alice) <-
+establish: identity(Alice), person(Alice) <-
     not identity(Alice) guarded by Alice
 
 acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
@@ -51,8 +51,20 @@ issue: Sum.coin(Alice, Alice) <-
 swap: Total.coin(Alice, Dave), knows(Alice, Dave), not Sum.coin(Alice, Carol), Sum.coin(Bob, Carol), knows(Bob, Carol), not Total.coin(Bob, Dave) <-
     identity(Alice), knows(Alice, Bob), Sum.coin(Alice, Carol), identity(Bob), knows(Bob, Alice), Total.coin(Bob, Dave) guarded by Alice, Bob
 
-pay: not Sum.coin(Alice, Bob), Sum.coin(Bob, Bob) <-
+pay: not Sum.coin(Alice, Carol), Sum.coin(Bob, Carol), knows(Bob, Carol) <-
+    identity(Alice), knows(Alice, Bob), Sum.coin(Alice, Carol), identity(Bob) guarded by Alice, Bob
+
+pay_issuer: not Sum.coin(Alice, Bob), Sum.coin(Bob, Bob) <-
     identity(Alice), knows(Alice, Bob), Sum.coin(Alice, Bob), identity(Bob) guarded by Alice
+
+deposit: not Sum.coin(Alice, Dave), Sum.escrow_coin(Carol, Dave, Alice, Bob, Cond) <-
+    identity(Alice), knows(Alice, Carol), knows(Alice, Bob), Sum.coin(Alice, Dave), identity(Carol), knows(Carol, Alice) guarded by Alice, Carol
+
+release: not Sum.escrow_coin(Carol, Dave, Alice, Bob, Cond), Sum.coin(Bob, Dave), knows(Bob, Dave) <-
+    identity(Carol), knows(Carol, Bob), Sum.escrow_coin(Carol, Dave, Alice, Bob, Cond), identity(Bob), knows(Bob, Carol) guarded by Carol, Bob
+
+return: not Sum.escrow_coin(Carol, Dave, Alice, Bob, Cond), Sum.coin(Alice, Dave), knows(Alice, Dave) <-
+    identity(Carol), knows(Carol, Alice), Sum.escrow_coin(Carol, Dave, Alice, Bob, Cond), identity(Alice), knows(Alice, Carol) guarded by Carol, Alice
 
 redeem: coin(Alice, Carol), knows(Alice, Carol), not coin(Alice, Bob), coin(Bob, Bob), not coin(Bob, Carol) <-
     identity(Alice), knows(Alice, Bob), coin(Alice, Bob), identity(Bob), coin(Bob, Carol) guarded by Alice
