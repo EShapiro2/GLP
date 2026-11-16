@@ -37,4 +37,15 @@ void main() {
     expect(c.text, 'alice@example.org');
     expect(picked, 1);
   });
+
+  testWidgets('a value to omit, as the person\'s own key, is not offered', (tester) async {
+    TypedBefore.record('f', 'bob');
+    TypedBefore.record('f', 'carol');
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: typedBeforeChips('f', TextEditingController(),
+                omit: 'bob', keyOf: (v) => ValueKey('before:$v')))));
+    expect(find.byKey(const ValueKey('before:carol')), findsOneWidget);
+    expect(find.byKey(const ValueKey('before:bob')), findsNothing);
+  });
 }

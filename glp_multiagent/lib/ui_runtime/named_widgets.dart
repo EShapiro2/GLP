@@ -1730,6 +1730,8 @@ class _SocialTabState extends State<SocialTab> {
         b.acts.length == 1 ? kept[l]!.$2.place : union.indexOf(l) + 1;
     String fieldKey(String l) => 'field:$composer:${number(l)}';
     String pickKey(String l) => '$composer:${number(l)}';
+    String beforeKey(String l) =>
+        'menu:${formatTerm(me)}:${fieldKey(l)}';
     bool given(String l) => kept[l]!.$2.type == 'person'
         ? _picked[pickKey(l)] != null
         : _form(fieldKey(l)).text.trim().isNotEmpty;
@@ -1821,7 +1823,9 @@ class _SocialTabState extends State<SocialTab> {
                 autofillHints: autofillHintsFor(kept[l]!.$2.type),
                 onChanged: (_) => setState(() {}),
               ),
-              typedBeforeChips('menu:${fieldKey(l)}', _form(fieldKey(l)),
+              // "the values its person typed in it before" (vGLP, Section 6.2, Remark "Construct Families"): the store is this person's, and their own key is not offered, an act binding distinct roles to distinct agents (GSC, Definition Binding).
+              typedBeforeChips(beforeKey(l), _form(fieldKey(l)),
+                  omit: formatTerm(me),
                   keyOf: (v) => socialKey(_id, 'before:${fieldKey(l)}:$v'),
                   onPicked: () => setState(() {})),
               // An agent variable, "by key or picked among the persons the viewer knows", the viewer among them, a person in no role (programs/vglp/cva/compiler/README.md, 6; vGLP, Section 5.4, "The contract's words": "A field is typed, a person by key or picked among the persons the viewer knows").
@@ -1848,7 +1852,7 @@ class _SocialTabState extends State<SocialTab> {
                     for (final l in union) {
                       if (kept[l]!.$2.type != 'person') {
                         TypedBefore.record(
-                            'menu:${fieldKey(l)}', _form(fieldKey(l)).text);
+                            beforeKey(l), _form(fieldKey(l)).text);
                       }
                     }
                     setState(() {
