@@ -1,0 +1,44 @@
+Organisation
+Organisation instantiates Guardians with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Vocabulary: z has y as its first officer = first_officer(z,y); y holds the role r in z = role(y,z,r); z has y in the role r = has_role(z,y,r); x is a participant of z = participant(x,z); z has x as a participant = has_participant(z,x); x is entitled to propose m in z = proposer(x,z,m); z has m proposed = proposed(z,m); x is entitled to vote on m in z = voter(x,z,m); z holds x's vote on m = vote(z,x,m); the votes decide m according to the bylaws of z = decided(z,m); x is entitled to take m for z = taker(x,z,m); z has m taken = taken(z,m); z has its bylaws amended = amended(z).
+Roles: those who decide m for z = act_deciders(z,m); those who decide the officers of z = officer_deciders(z).
+After x creates z with y as its first officer in the role r, which requires z does not have an identity: z has an identity, z is an organisation, x is the creator of z, z has y as its first officer, y is an officer of z, z has y as an officer, y holds the role r in z, z has y in the role r, y is a participant of z, z has y as a participant, y and z know each other and y and z are friends.
+After x proposes m in z, which requires z does not have m proposed: z has m proposed.
+After x votes on m in z, which requires z does not hold x's vote on m: z holds x's vote on m.
+After x takes m for z, which requires z does not have m taken: z has m taken.
+After y becomes a participant of z, which requires y is not a participant of z: y is a participant of z and z has y as a participant.
+After y ends y's participation in z: no longer y is a participant of z and no longer z has y as a participant.
+After g ends y's participation in z: no longer y is a participant of z and no longer z has y as a participant.
+After y ends y's participation and y's office in z: no longer y is a participant of z, no longer z has y as a participant, no longer y is an officer of z, no longer z has y as an officer, y holds no role in z and z has y in no role.
+After g ends y's participation and y's office in z: no longer y is a participant of z, no longer z has y as a participant, no longer y is an officer of z, no longer z has y as an officer, y holds no role in z and z has y in no role.
+After x amends the bylaws of z as m says, which requires z does not have m taken: z has its bylaws amended and z has m taken.
+Organisation:0 - | An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
+Organisation:0 - | Alice and Bob are persons, Gov and Orga organisations, Motion an act of Orga, Role a role, Votes and Double numbers.
+Organisation:0 - | Parameters: x is entitled to propose m in z; x is entitled to vote on m in z; x is entitled to take m for z; the votes decide m according to the bylaws of z.
+Organisation:0 - | Default: those who decide for z for those who decide the officers of z.
+Organisation:0 - | Default: x is an officer of z for x is entitled to propose m in z.
+Organisation:0 - | Default: x is an officer of z for x is entitled to vote on m in z.
+Organisation:0 - | Default: x is an officer of z for x is entitled to take m for z.
+Organisation:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as an officer for the votes decide m according to the bylaws of z.
+Organisation:1 ■ Found: identity(Orga), organisation(Orga), creator(Gov,Orga), first_officer(Orga,Alice), officer(Alice,Orga), has_officer(Orga,Alice), role(Alice,Orga,Role), has_role(Orga,Alice,Role), participant(Alice,Orga), has_participant(Orga,Alice), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice) <- person(Alice), ~identity(Orga) guarded by Gov, Alice, Orga must Orga.
+Organisation:2 ■ | Acts of the organisation.
+Organisation:2 ■ Propose: proposed(Orga,Motion) <- proposer(Bob,Orga,Motion), ~proposed(Orga,Motion) guarded by Bob.
+Organisation:2 ■ Vote: vote(Orga,Bob,Motion) <- voter(Bob,Orga,Motion), organisation(Orga), proposed(Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.
+Organisation:2 ■ Act: taken(Orga,Motion) <- taker(Alice,Orga,Motion), decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
+Organisation:3 ■ | Participation.
+Organisation:3 ■ Join: participant(Bob,Orga), has_participant(Orga,Bob) <- ~participant(Bob,Orga) guarded by Bob, deciders(Orga).
+Organisation:3 ■ Leave: ~participant(Bob,Orga), ~has_participant(Orga,Bob) <- ~officer(Bob,Orga), participant(Bob,Orga), has_participant(Orga,Bob) guarded by Bob.
+Organisation:3 ■ Officer leave: ~participant(Bob,Orga), ~has_participant(Orga,Bob), ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- participant(Bob,Orga), has_participant(Orga,Bob), officer(Bob,Orga), has_officer(Orga,Bob) guarded by Bob.
+Organisation:3 ■ Expel: ~participant(Bob,Orga), ~has_participant(Orga,Bob) <- ~officer(Bob,Orga), participant(Bob,Orga), has_participant(Orga,Bob) guarded by deciders(Orga).
+Organisation:3 ■ Officer expel: ~participant(Bob,Orga), ~has_participant(Orga,Bob), ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- participant(Bob,Orga), has_participant(Orga,Bob), officer(Bob,Orga), has_officer(Orga,Bob) guarded by deciders(Orga).
+Organisation:3 ■ | Every role Bob holds in Orga ends with his participation.
+Organisation:4 ■ | Officers.
+Organisation:4 ■ Appoint: Guardians:2 Make guardian, decided by officer_deciders(Orga) in place of deciders(Orga) + role(Bob,Orga,Role), has_role(Orga,Bob,Role) <- participant(Bob,Orga).
+Organisation:4 ■ | The decision names his role.
+Organisation:4 ■ Resign: Guardians:2 Resign + ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <-.
+Organisation:4 ■ End officer: Guardians:2 End guardian, decided by officer_deciders(Orga) in place of deciders(Orga) + ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <-.
+Organisation:4 ■ Officer unfriend: Guardians:2 Guardian unfriend + ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <-.
+Organisation:4 ■ Retire: Guardians:5 + ~role(_,Orga,_), ~has_role(Orga,_,_) <-.
+Organisation:5 ■ Amend: amended(Orga), taken(Orga,Motion) <- taker(Alice,Orga,Motion), organisation(Orga), proposed(Orga,Motion), decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
+Organisation:6 ○ | Accountability.
+Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.

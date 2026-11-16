@@ -1,2 +1,0 @@
-GCC instantiates GBank: holds
-GCC extends it (GBank): holds

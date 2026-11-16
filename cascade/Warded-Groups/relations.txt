@@ -1,0 +1,3 @@
+Warded Groups extends Groups and Guardians: holds
+Warded Groups restricts Groups and Guardians: holds
+Warded Groups strengthens Groups and Guardians: holds

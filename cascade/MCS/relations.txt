@@ -1,3 +1,0 @@
-MCS instantiates GBank: holds
-MCS restricts it (GBank): holds
-MCS extends it (GBank): holds

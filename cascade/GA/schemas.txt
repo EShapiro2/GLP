@@ -1,2 +1,0 @@
-GA: Grassroots App
-GA composes GPE with GAS and GDS.

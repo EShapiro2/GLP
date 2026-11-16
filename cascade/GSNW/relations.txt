@@ -1,3 +1,0 @@
-GSNW extends GSN and GnW: holds
-GSNW restricts GSN and GnW: holds
-GSNW strengthens GSN and GnW: holds

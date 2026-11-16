@@ -1,1 +1,1 @@
-Notes extends GKK: holds
+Notes extends Knowledge: holds

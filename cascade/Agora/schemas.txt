@@ -1,4 +1,4 @@
-Agora: Grassroots Barter
+Agora
 Agora extends Bonds.
 Vocabulary: x has made i = made(x,i); x holds the item i = item(x,i); x is the keeper of m = keeper(x,m); x is a member of the market m of y = member(x,m,y); x has y as a member of m = has_member(x,y,m); y has posted i to m = posted(y,i,m); x sees y's post of i on the wall of m = post(x,y,i,m); x has delivered y's post of i in m to z = delivered_post(x,y,i,m,z); z holds the item i in escrow from x for y on k = escrow_item(z,i,x,y,k).
 x is a member of m: x is a member of the market m of someone.

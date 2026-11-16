@@ -1,3 +1,0 @@
-CSSN instantiates GSNW: holds
-CSSN restricts it (GSNW): holds
-CSSN extends it (GSNW): holds

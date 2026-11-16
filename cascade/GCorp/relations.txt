@@ -1,1 +1,0 @@
-GCorp extends GO and DGC: holds
