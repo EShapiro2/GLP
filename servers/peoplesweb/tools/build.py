@@ -490,12 +490,21 @@ for c in contracts:
 # through the REPL and cached (tools/certify.py); CERTIFY=0 skips both, for a
 # quick build of the pages alone.
 if os.environ.get('CERTIFY', '1') != '0':
-    checks = certify.relations([{'id': c['id'], 'path': texts[c['id']], 'rels': c.get('rels', {}), 'rels_of': c.get('rels_of', [])} for c in contracts])
+    # The relations are not checked for now (Udi, 2026-11-16, to Website #2):
+    # certify.relations checks them by GSC's definitions, 'an extension
+    # deletes nothing', and the Calculus, the authority on the relations since
+    # 2026-11-15, defines them otherwise, so its verdicts would mislead (28 of
+    # 102 'disagree' on the adopted contracts).  RELATIONS_CHECK=1 runs it,
+    # for when it follows the Calculus's definitions.
+    checks = certify.relations([{'id': c['id'], 'path': texts[c['id']], 'rels': c.get('rels', {}), 'rels_of': c.get('rels_of', [])} for c in contracts]) if os.environ.get('RELATIONS_CHECK') == '1' else {}
     arts = certify.artefacts(os.path.join(WWW, 'artefacts'))
 else:
     checks, arts = {}, {}
+NOT_CHECKED = "the site's check does not yet follow the Calculus's definitions of the relations"
 for c in contracts:
-    c['checks'] = checks.get(c['id'], [])
+    c['checks'] = checks.get(c['id']) or (
+        [{'base': b, 'rel': r, 'result': 'open', 'why': NOT_CHECKED} for b, rs in (c.get('rels_all') or {k: [v] for k, v in (c.get('rels') or {}).items()}).items() for r in rs]
+        + [{'base': x['base'], 'rel': x['rel'], 'of': x['of'], 'result': 'open', 'why': NOT_CHECKED} for x in c.get('rels_of', [])])
     a = arts.get(c['id'].lower().replace('-', '_'))
     c['artefact'] = ({'file': 'artefacts/' + a['file'], 'key': a['key']} if a and 'file' in a else {'why': a['why']} if a else None)
 with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
