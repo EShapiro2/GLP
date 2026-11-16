@@ -1,9 +1,9 @@
-% CnC: Consumers' Cooperative --- the contract, the one copy, its owner's (claude.md, "Sessions").
-% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7.2 and cites a clause as CnC:1.
+% Consumers' Cooperative --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 7.2 and cites a clause as Consumers' Cooperative:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GCoop and TC.
+% Extends: Cooperative and Trading Company.
 % Last changed: 2026-11-16, by GO #8.
-% Schemas: CnC.glp beside this file.
+% Schemas: Consumers-Cooperative.glp beside this file.
 Consumers' Cooperative
 Consumers' Cooperative instantiates Cooperative and Trading Company with bylaws that delegate no act and restricts and extends them.
 A *consumers' cooperative* is a cooperative that is a trading company. Its *fee* is a number of Dollars the members set, and the *cost* of a good is the coins Orga paid for it.
