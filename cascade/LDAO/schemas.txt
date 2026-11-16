@@ -7,7 +7,12 @@ After x counts y as voting for p of d, which requires y has not voted on p of d:
 After x counts y as voting against p of d, which requires y has not voted on p of d: y has voted on p of d and x holds y's vote against p of d.
 LDAO:0 - | Alice, Bob, Carol and Dave are persons, Delos a DAO and Prop a proposal, Carol or Dave possibly Alice.
 LDAO:1 ■ Delegate: delegating(Carol,Delos), delegation(Alice,Carol,Dave,Delos) <- member(Carol,Delos,Alice), member(Dave,Delos,Alice), knows(Carol,Dave), steward(Alice,Delos), ~delegating(Carol,Delos) guarded by Carol possibly Alice=Carol, Alice=Dave.
+LDAO:1 ■ Delegate own: delegating(Alice,Delos), delegation(Alice,Alice,Dave,Delos) <- member(Alice,Delos,Alice), member(Dave,Delos,Alice), knows(Alice,Dave), steward(Alice,Delos), ~delegating(Alice,Delos) guarded by Alice possibly Alice=Dave.
+LDAO:1 ■ Delegate to the steward: delegating(Carol,Delos), delegation(Alice,Carol,Alice,Delos) <- member(Carol,Delos,Alice), member(Alice,Delos,Alice), knows(Carol,Alice), steward(Alice,Delos), ~delegating(Carol,Delos) guarded by Carol possibly Alice=Carol.
 LDAO:2 ■ Revoke: ~delegating(Carol,Delos), ~delegation(Alice,Carol,Dave,Delos) <- delegating(Carol,Delos), delegation(Alice,Carol,Dave,Delos) guarded by Carol possibly Alice=Carol, Alice=Dave.
+LDAO:2 ■ Revoke own: ~delegating(Alice,Delos), ~delegation(Alice,Alice,Dave,Delos) <- delegating(Alice,Delos), delegation(Alice,Alice,Dave,Delos) guarded by Alice possibly Alice=Dave.
 LDAO:3 ■ Count for: voted(Carol,Prop,Delos), vote_for(Alice,Carol,Prop,Delos) <- delegation(Alice,Carol,Dave,Delos), vote_for(Alice,Dave,Prop,Delos), ~decided(Alice,Prop,Delos), ~voted(Carol,Prop,Delos) possibly Alice=Carol, Alice=Dave.
+LDAO:3 ■ Count own for: voted(Alice,Prop,Delos), vote_for(Alice,Alice,Prop,Delos) <- delegation(Alice,Alice,Dave,Delos), vote_for(Alice,Dave,Prop,Delos), ~decided(Alice,Prop,Delos), ~voted(Alice,Prop,Delos) possibly Alice=Dave.
 LDAO:3 ■ Count against: voted(Carol,Prop,Delos), vote_against(Alice,Carol,Prop,Delos) <- delegation(Alice,Carol,Dave,Delos), vote_against(Alice,Dave,Prop,Delos), ~decided(Alice,Prop,Delos), ~voted(Carol,Prop,Delos) possibly Alice=Carol, Alice=Dave.
+LDAO:3 ■ Count own against: voted(Alice,Prop,Delos), vote_against(Alice,Alice,Prop,Delos) <- delegation(Alice,Alice,Dave,Delos), vote_against(Alice,Dave,Prop,Delos), ~decided(Alice,Prop,Delos), ~voted(Alice,Prop,Delos) possibly Alice=Dave.
 LDAO:3 ■ | Carol can no longer vote on Prop.

@@ -1,0 +1,5 @@
+P: Willing
+P restricts C.
+Vocabulary: x is willing = w(x).
+P:0 - | Alice is a person.
+P:1 ■ Signal: C:1 <- w(Alice).

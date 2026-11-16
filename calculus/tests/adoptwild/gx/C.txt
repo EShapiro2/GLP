@@ -1,0 +1,3 @@
+C: Wildcard deletion
+Of C: Alice is a person.
+C:1. ■ Forget: Alice may forget, provided Alice knows someone.

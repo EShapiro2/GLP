@@ -1,5 +1,5 @@
 GD: Grassroots Distrust
-Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity. Reflexive: x knows y.
+Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
 Of GD: Alice, Bob and Carol are persons.
 GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.

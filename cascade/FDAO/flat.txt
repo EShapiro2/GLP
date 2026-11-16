@@ -1,6 +1,7 @@
 FDAO: Funded DAO (flat text)
 GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
+GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | Alice, Bob and Carol are persons.
 GKK:0 - | Reflexive: x knows y.
 GKK:1 ○ Establish: Alice may Alice has an identity, provided not Alice has an identity.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -11,10 +12,13 @@ DAO:1 ■ Found: Alice may Alice is the steward of Delos, Alice is a member of A
 DAO:2 ■ Join: Alice and Bob may jointly Bob is a member of Alice's Delos and Alice has Bob as a member of Delos, provided Alice is the steward of Delos, Alice knows Bob and not Bob is a member of Alice's Delos.
 DAO:3 ■ | Proposing.
 DAO:3 ■ Propose: Carol may Carol has proposed Prop to Alice's Delos and Alice holds Prop of Delos, provided Carol is a member of Alice's Delos, Alice is the steward of Delos and not Alice holds Prop of Delos. Possibly one: Alice=Carol.
+DAO:3 ■ Propose own: Alice may Alice has proposed Prop to Alice's Delos and Alice holds Prop of Delos, provided Alice is a member of Alice's Delos, Alice is the steward of Delos and not Alice holds Prop of Delos.
 DAO:3 ■ Deliver proposal: Alice has delivered Prop of Delos to Bob and Bob holds Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice has Bob as a member of Delos and not Alice has delivered Prop of Delos to Bob.
 DAO:4 ■ | Voting.
 DAO:4 ■ Vote for: Carol may Carol has voted on Prop of Delos and Alice holds Carol's vote for Prop of Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos, not Alice has decided Prop of Delos and not Carol has voted on Prop of Delos. Possibly one: Alice=Carol.
+DAO:4 ■ Vote own for: Alice may Alice has voted on Prop of Delos and Alice holds Alice's vote for Prop of Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos, not Alice has decided Prop of Delos and not Alice has voted on Prop of Delos.
 DAO:4 ■ Vote against: Carol may Carol has voted on Prop of Delos and Alice holds Carol's vote against Prop of Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos, not Alice has decided Prop of Delos and not Carol has voted on Prop of Delos. Possibly one: Alice=Carol.
+DAO:4 ■ Vote own against: Alice may Alice has voted on Prop of Delos and Alice holds Alice's vote against Prop of Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos, not Alice has decided Prop of Delos and not Alice has voted on Prop of Delos.
 DAO:4 ■ Deliver vote for: Alice has delivered Carol's vote on Prop of Delos to Bob and Bob holds Carol's vote for Prop of Delos, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos, Alice has Bob as a member of Delos and not Alice has delivered Carol's vote on Prop of Delos to Bob. Possibly one: Alice=Carol, Bob=Carol.
 DAO:4 ■ Deliver vote against: Alice has delivered Carol's vote on Prop of Delos to Bob and Bob holds Carol's vote against Prop of Delos, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos, Alice has Bob as a member of Delos and not Alice has delivered Carol's vote on Prop of Delos to Bob. Possibly one: Alice=Carol, Bob=Carol.
 DAO:5 ■ | Deciding.
@@ -25,7 +29,7 @@ DAO:5 ■ Deliver reject: Alice has delivered the decision on Prop of Delos to B
 DAO:6 ■ | Majority.
 DAO:6 ■ | The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.
 GC:0 - | A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice.
-GC:0 - | Alice, Bob, Carol and Dave are persons, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
+GC:0 - | Alice, Bob, Carol and Dave are parties, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
 GC:1 ■ Issue: Alice may Alice holds Sum Alice-coins.
 GC:2 ■ Swap: Alice and Bob may jointly no longer Alice holds Sum Carol-coins, Bob holds Sum Carol-coins, no longer Bob holds Total Dave-coins, Alice holds Total Dave-coins, Bob knows Carol and Alice knows Dave, provided Alice knows Bob and Bob knows Alice. Possibly one: Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
 GC:3 ■ Pay: Alice may no longer Alice holds Sum Bob-coins and Bob holds Sum Bob-coins, provided Alice knows Bob.

@@ -1,0 +1,4 @@
+SUB: A Restriction
+SUB extends ORG.
+Alice and Bob are persons, Erin a person, Sum a number.
+1. ■ Pay small: ORG:1 Pay for an organisation, only if Erin knows Bob.

@@ -1,0 +1,3 @@
+C: Required role consent
+Of C: Alice is a person.
+C:1. ■ Act: Alice may act, and those who decide for Alice must consent.

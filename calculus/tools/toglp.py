@@ -21,6 +21,7 @@ ARITH = {'le': 'le', 'ge': 'ge', 'gt': 'gt', 'lt': 'lt'}
 # vGLP compiler README, 10); every other is declared in the Logic pragmas, 'Environment: ...'.
 ENV = ['today']
 CMP = {'<': 'lt', '>': 'gt', '<=': 'le', '>=': 'ge', '=': 'eq'}
+NOT = {'lt': 'ge', 'ge': 'lt', 'gt': 'le', 'le': 'gt', 'eq': 'ne', 'ne': 'eq'}   # the complement of a comparison, for a condition under 'not' (F07)
 
 
 def q(x):
@@ -121,7 +122,69 @@ def const_places(acts, consts):
     return frozenset((l[1], len(l[2]), i) for e in acts for l in e['head'] + e['body'] for i, a in enumerate(l[2]) if a.lstrip('*#') in consts)
 
 
-def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset()):
+def extent(l, cleared, acts, dels=(), same=()):
+    """The extent of a deletion with the wildcard as its holder, l = P(_, a1, ...): a cleared atom c of the act, the
+    place k of c that names each holder, and, for each other wildcard place j of c, the wildcard place i of l that it
+    names, so that the act deletes P(x, ..., y at i, ...) at every agent x with c[k] = x and c[j] = y; that map is empty
+    today, the anchor keeping its other wildcards, as vGLP carries them (Calculus #6, 2026-11-15 21:44 UTC).  It is read off the acts that add P.
+    The names of an adding act are its variables: an atom m = P(h, ...) it adds is matched to l, h the holder; one that
+    does not match l is not deleted by it.  A matched m is covered when the same act adds an atom n of c's predicate
+    that matches c under the same binding, with n[k] the holder h, or when its holder is one at which the deleting act
+    deletes P itself (dels), or at a name the deleting act says is possibly that holder (same).  A name of the adding act the match leaves unbound stands for the deleting act's name that
+    is spelt the same, the contracts' common names.  A cleared atom that names P comes first, then one whose name contains it,
+    then the rest.  None where no cleared atom covers every matched P atom of every act that adds P: the extent
+    cannot be derived, and the deletion is refused."""
+    def match(m):
+        s = {}
+        for i in range(1, len(l[2])):
+            a, v = m[2][i], ('_', i) if l[2][i] == '_' else l[2][i]
+            if a not in s or s[a] == v:
+                s[a] = v
+            elif isinstance(s[a], tuple) and not isinstance(v, tuple):
+                s[a] = v
+            elif not (isinstance(v, tuple) and not isinstance(s[a], tuple)):
+                return None
+        return s
+    val = lambda s, a: s.get(a, a)          # an unbound name stands for the deleting act's name spelt the same
+    pairs_same = [set(x.split('=')) for x in same]
+    adds = []
+    for e in acts:
+        for m in e['head']:
+            if not m[0] and m[1] == l[1] and len(m[2]) == len(l[2]):
+                s = match(m)
+                if s is not None and not any(d[1] == m[1] and (val(s, m[2][0]) == d[2][0] or {val(s, m[2][0]), d[2][0]} in pairs_same) for d in dels):
+                    s.setdefault(m[2][0], ('h',))
+                    adds.append((e, m, s))
+    order = sorted(cleared, key=lambda c: (c[1] != l[1], l[1] not in c[1]))
+    for c in order:
+        for k in [j for j, a in enumerate(c[2]) if j and a == '_']:
+            def cover(e, m, s):
+                for n in e['head']:
+                    if n[0] or n[1] != c[1] or len(n[2]) != len(c[2]) or val(s, n[2][k]) != val(s, m[2][0]):
+                        continue
+                    if all(j == k or a == '_' or val(s, n[2][j]) == a for j, a in enumerate(c[2])):
+                        return n
+                return None
+            pairs = [(s, cover(e, m, s)) for e, m, s in adds]
+            if not adds or any(n is None for s, n in pairs):
+                continue
+            # The anchor's other wildcard places stay wildcards: vGLP carries the wildcard in the anchor, and not a quantifier
+            # binding another variable (Calculus #6, 2026-11-15 21:44 UTC); binds is kept empty.
+            binds = {}
+            return c, k, binds
+    return None
+
+
+def binding_holds(e, x, y):
+    """Whether GSC's Definition Binding lets one agent take the roles x and y of the act e: both are roles of it, the
+    holder of an atom it requires or changes or one who decides it, and neither adds or deletes an atom of its effect
+    that names the other (as vGLP's compiler has it, programs/vglp/cva/compiler/local.glp, pair_ok)."""
+    rs = {l[2][0] for l in e['head'] + e['body'] if l[2]} | {g for g in e['guards'] if '(' not in g}
+    names = lambda a, b: any(l[2] and l[2][0] == a and b in [z.lstrip('*#') for z in l[2][1:]] for l in e['head'])
+    return x in rs and y in rs and not names(x, y) and not names(y, x)
+
+
+def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset(), acts=()):
     # A name of the act that holds, in what the act requires, the state that lists a role of those who decide, of the
     # same agent, is the one of them who decides, Decider: "Bob, a friend of a guardian of Carol" (GnW:2) is a friend
     # of the guardian who decides, as CSSN's make_guardian had it (Alice, a guardian, deciding).
@@ -225,7 +288,9 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         return 'val(%s)' % q(a)      # a constant, as now
 
     def atom(l):
-        """An atom, and the constraints its counts and exact amounts add."""
+        """An atom, and the constraints its counts and exact amounts add; under 'not' a count or an exact amount is
+        the complement of its comparison (F07), and the atom itself is then not written."""
+        cmp = (lambda c: NOT[c]) if l[0] else (lambda c: c)
         args, cons, mult = list(l[2]), [], None
         if args and args[-1][:1] == '*':
             mult, args = args[-1][1:], args[:-1]
@@ -244,10 +309,10 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         at = 'atom(%s, [%s])' % (l[1], ', '.join(o for o, _ in out))
         for o, m in out:
             if m:
-                cons.append('%s(cardinality([%s], %s, true), %s)' % (CMP[m.group(1)], o, at, arg(m.group(2)) if not m.group(2).isdigit() else 'val(%s)' % m.group(2)))
+                cons.append('%s(cardinality([%s], %s, true), %s)' % (cmp(CMP[m.group(1)]), o, at, arg(m.group(2)) if not m.group(2).isdigit() else 'val(%s)' % m.group(2)))
                 return None, cons
         if exact is not None:
-            return None, ['eq(cardinality([], %s, true), %s)' % (at, arg(exact))]
+            return None, ['%s(cardinality([], %s, true), %s)' % (cmp('eq'), at, arg(exact))]
         if mult is not None:
             at = 'times(%s, %s)' % (arg(mult), at)
         return at, cons
@@ -259,23 +324,34 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             if where is head and l[0] and l[2] and l[2][0] == '_':
                 if not cleared:
                     return None
-                c = next((c for c in cleared if c[1] == l[1]), None) or next((c for c in cleared if l[1] in c[1] or c[1] in l[1]), None) or cleared[0]
+                ck = extent(l, cleared, acts, [d for d in e['head'] if d[0] and d[2] and d[2][0] != '_'], e.get('same', ()))
+                if ck is None:
+                    raise ValueError('%s: the deletion %s(%s) has no extent the acts that add %s give' % (e['name'], l[1], ','.join(l[2]), l[1]))
+                c, k, binds = ck
                 x = 'E%d' % (len(bound) + 1)
                 bound.append(x)
-                k = list(c[2]).index('_', 1)
-                anchor = 'atom(%s, [%s])' % (c[1], ', '.join(q(x) if i == k else arg(a) for i, a in enumerate(c[2])))
-                at = 'atom(%s, [%s])' % (l[1], ', '.join([q(x)] + [arg(a) for a in l[2][1:]]))
-                head.append('forall([%s], %s, true, [not(%s)])' % (q(x), anchor, at))
+                ys = {j: '%s_%d' % (x, j) for j in binds}      # the other wildcards of c, each the variable of the place of l it names
+                # written as the place's type has it: a value variable over the constants at a place of constants, const(X),
+                # a number at a place of numbers, num(X) (typecheck_places.py: a place of one type)
+                # (either place of the two: the variable is one, as const(Role) is at both role/3 and has_role/3)
+                def bv(j):
+                    ps = {(c[1], len(c[2]), j), (l[1], len(l[2]), binds[j])}
+                    return 'const(%s)' % q(ys[j]) if ps & cplaces else 'num(%s)' % q(ys[j]) if ps & places else q(ys[j])
+                anchor = 'atom(%s, [%s])' % (c[1], ', '.join(q(x) if i == k else bv(i) if i in ys else arg(a) for i, a in enumerate(c[2])))
+                lj = {i: j for j, i in binds.items()}
+                at = 'atom(%s, [%s])' % (l[1], ', '.join([q(x)] + [bv(lj[i]) if i in lj else arg(a) for i, a in enumerate(l[2]) if i]))
+                vs = ', '.join([q(x)] + [q(ys[j]) for j in sorted(ys)])
+                head.append('forall([%s], %s, true, [not(%s)])' % (vs, anchor, at))
                 # what a listed person loses, they hold; but an atom cleared with the wildcard is not required, a required
                 # atom having no wildcard (vGLP, Section 5.4: the wildcard only in a negated atom)
-                lists.append('forall([%s], %s, true, [atom(identity, [%s])%s])' % (q(x), anchor, q(x), '' if "'_'" in at else ', ' + at))
+                lists.append('forall([%s], %s, true, [atom(identity, [%s])%s])' % (vs, anchor, q(x), '' if "'_'" in at else ', ' + at))
                 continue
             if l[1] == 'author':      # x is the author of t: the first signer of t, GSC's eq(author_of(t), x) (Section 3.2; GFP's author)
                 cons.append('%s(author_of(%s), %s)' % ('ne' if l[0] else 'eq', arg(l[2][1]), arg(l[2][0])))
             elif l[1] in ARITH:
-                cons.append('%s(%s, %s)' % (ARITH[l[1]], arg(l[2][0]), arg(l[2][1])))
+                cons.append('%s(%s, %s)' % (NOT[ARITH[l[1]]] if l[0] else ARITH[l[1]], arg(l[2][0]), arg(l[2][1])))
             elif l[1] in ('sum', 'product'):
-                cons.append('eq(%s, %s(%s, %s))' % (arg(l[2][0]), 'plus' if l[1] == 'sum' else 'mul', arg(l[2][1]), arg(l[2][2])))
+                cons.append('%s(%s, %s(%s, %s))' % ('ne' if l[0] else 'eq', arg(l[2][0]), 'plus' if l[1] == 'sum' else 'mul', arg(l[2][1]), arg(l[2][2])))
             elif holderless(l):
                 c = 'rel(%s, [%s])' % (l[1], ', '.join(arg(a) for a in l[2]))
                 cons.append('not(%s)' % c if l[0] else c)
@@ -291,7 +367,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         for g in [g for g in e['guards'] if '(' not in g]:
             if g in made or has('person', g) or any(has(m, g) and has(u, g) for m, u in marks.items()):
                 continue
-            if g in persons:        # a guard the act's own contract declares a person is a person, not a ward (GB:4's escrow agent, Calculus #6, 2026-11-15 17:23 UTC)
+            if g in persons:        # a guard the act's own contract declares a person or a party is a person, not a ward (GB:4's escrow agent, Calculus #6, 2026-11-15 17:23 UTC; a party, Udi, 2026-11-15)
                 lists.append('atom(person, [%s])' % q(g))
                 continue
             f = 'atom(person, [%s])' % q(g)
@@ -301,11 +377,17 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             lists.append(f)
         lists[:] = [x.replace('[atom(identity, [%s])' % q(d), '[atom(identity, [%s]), atom(person, [%s])' % (q(d), q(d))) for x in lists for d in [None]] if False else lists
     idn = ['atom(identity, [%s])' % q(r) for r in roles + deciders if r not in made and 'not(atom(identity, [%s]))' % q(r) not in body]
-    same = dict(p.split('=') for p in e.get('same', []))
-    names = []
+    # Two roles the contract says are possibly one agent are written one(Name, Other), Name the later of the two
+    # (GLP programs/gsc/self.glp: "the schema's head writes the second name as one('Bob', 'Alice')"), where GSC's
+    # Definition Binding lets one agent take both: neither adds or deletes an atom naming the other (binding_holds).
+    same = [p.split('=') for p in e.get('same', []) if binding_holds(e, *p.split('='))]
+    names, plain = [], []
     for x in roles + deciders + [o for o in others if o in agents and o not in roles]:
-        y = next((b for a, b in same.items() if a == x and b in names), None) or next((a for a, b in same.items() if b == x and a in names), None)
-        names.append('one(%s, %s)' % (q(x), q(y)) if y else q(x))
+        ys = [b for a, b in same if a == x and b in plain] + [a for a, b in same if b == x and a in plain]
+        if len(ys) > 1:       # one(Name, Other) carries one Other a name (GLP programs/gsc/self.glp, RName): a pair is never dropped
+            raise ValueError('%s: %s is possibly one agent with %s, and the term writes one Other for a name, one(%s, Other)' % (e['name'], x, ' and '.join(ys), x))
+        names.append('one(%s, %s)' % (q(x), q(ys[0])) if ys else q(x))
+        plain.append(x)
     name = ident(e['name'])
     k = used.get(name, 0)
     used[name] = k + 1
@@ -332,6 +414,10 @@ def contract_term(n):
     places = num_places(acts, values)
     consts = {a.lstrip('*#') for e in acts for l in e['head'] + e['body'] for a in l[2]
               if re.fullmatch(gcsas.NAME, a.lstrip('*#')) and a.lstrip('*#') not in kinds and a.lstrip('*#') not in agents}
+    # a name some schema counts or computes with is a number, though no names line declares it: the numbers of a
+    # decision on the votes of an organisation, named for it, VotesAlice (gcsas.org_numbers)
+    consts -= {x for e in acts for x in schema_nums(e['head'] + e['body'], values, places)
+               if any(x.startswith(k) and x != k and 'number' in ks for k, ks in kinds.items())}
     cplaces = const_places(acts, consts)
     # A predicate the Logic pragmas declare reflexive, 'Reflexive: x knows y.' (GKK's, and so every contract's
     # written from GKK), is declared reflexive in the term, as GSC's GnW declares knows (GSC's Section "Contracts with
@@ -342,13 +428,15 @@ def contract_term(n):
         acts = [dict(e, head=drop(e['head']), body=drop(e['body'])) for e in acts]
     w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES')))
     pmemo = {}
-    def persons_of(e):      # the names the contract that wrote the act declares persons, and only persons
+    def persons_of(e):      # the names the contract that wrote the act declares persons or parties, and only those
         o = re.split(r'[:+]', e['label'])[0]
         if o not in pmemo:
-            pmemo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if 'person' in ks and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
-        return pmemo[o]
+            pmemo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if ks & {'person', 'party'} and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
+        # a party guards the act in its person's form as a person, its ward's form being the act derived 'for' it
+        # (gcsas.party_specs); who takes an act for a party, and who votes on it, is a person (GO:2's Act and Vote)
+        return pmemo[o] | frozenset((e.get('taken') or {}).values()) | {gcsas.VOTER}
     for e in acts:
-        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces, persons_of(e))
+        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces, persons_of(e), acts)
         if t is None:
             roles += 1
         else:
@@ -383,21 +471,28 @@ def main():
     allnames = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'sasx')) if f.endswith('.txt'))
     glp = os.environ.get('GLP_DIR') or next((d for d in (os.path.join(os.path.dirname(ROOT), 'GLP'), '/home/user/GLP') if os.path.isdir(d)), None)
     os.makedirs(os.path.join(ROOT, 'glp'), exist_ok=True)
-    lines = []
+    lines, bad = [], 0
     for n in args or allnames:
         t, acts, roles = contract_term(n)
-        open(os.path.join(ROOT, 'glp', n + '.glp.txt'), 'w', encoding='utf-8').write(t + '\n')
-        if roles:
+        p = os.path.join(ROOT, 'glp', n + '.glp.txt')
+        if roles:                   # no term is written, and none of an earlier run is left in its place
+            if os.path.exists(p):
+                os.remove(p)
+            bad += 1
             v = 'not translated: %d of its %d schemas end a state for everyone with no list of them' % (roles, acts)
         elif '--check' in sys.argv:
+            open(p, 'w', encoding='utf-8').write(t + '\n')
             v = check(t, glp)
+            bad += v.startswith('NO ANSWER')
         else:
+            open(p, 'w', encoding='utf-8').write(t + '\n')
             v = 'translated: %d schemas' % acts
         lines.append('%-10s %s' % (n, v))
         print(lines[-1], flush=True)
     if '--check' in sys.argv and not args:
         open(os.path.join(ROOT, 'glp', 'VERDICTS.txt'), 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
+    return 1 if bad else 0          # a contract not translated, or no answer of the checker; a verdict is no failure
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

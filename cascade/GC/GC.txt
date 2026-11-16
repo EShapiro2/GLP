@@ -5,7 +5,7 @@
 GC: Grassroots Coins
 GC extends GKK.
 A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice.
-Alice and Bob are persons.
+Alice and Bob are parties.
 1. ■ Issue: Alice may issue Alice-coins.
 2. ■ Swap: Alice and Bob, who know each other, may jointly swap coins they hold.
 3. ■ Pay: Alice may pay Bob-coins she holds to Bob, whom she knows.
@@ -14,7 +14,7 @@ Alice and Bob are persons.
 Logic pragmas
 GC extends GKK.
 A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice.
-Alice, Bob, Carol and Dave are persons, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
+Alice, Bob, Carol and Dave are parties, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
 1. ■ Issue: Alice may issue Sum Alice-coins.
 2. ■ Swap: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
 3. ■ Pay: Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.

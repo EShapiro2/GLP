@@ -1,9 +1,9 @@
 GAS: Grassroots App Store
-Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity. Reflexive: x knows y.
+Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
 Of GFP: The *author* of an item is its first signer. Alice and Bob are persons, Item an item.
 Of GPD: A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration. Alice, Bob, Carol and Dave are persons, Carol and Dave possibly Alice, Bob or one person, Prog a program.
-Of GnW: Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+Of GnW: Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. A ward takes an act of a party by those who decide for it. Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
 Of GSV: A *service* is a ward operated by a machine at an address every person can reach. Alice is a person, Dave a service.
 Of GAS: A *store* is a service holding a list of programs. Alice *trusts* a store when she has declared it and has not withdrawn the declaration. Alice, Bob and Carol are persons, Dave a service, Prog a program.
 GKK:1, GnW:3. ■ Establish: Alice may establish an identity, and then Alice is a person. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.

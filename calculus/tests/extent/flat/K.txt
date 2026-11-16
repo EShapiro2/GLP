@@ -1,0 +1,5 @@
+K: Wildcard extent (flat text)
+K:0 - | Alice, Bob and Carol are persons, Grupo a group.
+K:1 ■ Guard: Alice and Carol may jointly Alice is a guardian of Carol and Carol has Alice as a guardian.
+K:2 ■ Join: Bob and Carol may jointly Carol is a member of the group Grupo of Bob and Bob has Carol as a member of the group Grupo.
+K:3 ■ Retire: Alice may Carol is retired, no longer anyone is a guardian of Carol, no longer Carol has anyone as a guardian, no longer Carol is a member of the group anyone of anyone and no longer anyone has Carol as a member of the group anyone, provided Alice is a guardian of Carol.

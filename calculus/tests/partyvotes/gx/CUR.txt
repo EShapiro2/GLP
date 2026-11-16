@@ -1,0 +1,4 @@
+CUR: A Currency
+Of CUR: A *party* to a contract is whoever has an identity. Alice and Bob are parties, Sum and Total numbers.
+CUR:1. ■ Pay: Alice may pay Bob Sum Alice-coins, provided Alice knows Bob.
+CUR:2. ■ Swap: Alice and Bob may jointly swap Sum Alice-coins for Total Bob-coins.

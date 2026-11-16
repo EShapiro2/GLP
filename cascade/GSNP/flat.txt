@@ -1,6 +1,7 @@
 GSNP: Grassroots Social Network with Provenance (flat text)
 GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
+GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | Alice, Bob and Carol are persons.
 GKK:0 - | Reflexive: x knows y.
 GKK:1+GnW:3 ■ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -26,9 +27,10 @@ GSN:3+GSNP:1 ■ Remove: Alice may no longer Bob is a member of the group Grupo 
 GSN:3+GSNP:1 ■ Leave: Bob may no longer Bob is a member of the group Grupo of Alice and no longer Alice has Bob as a member of the group Grupo, provided Bob is a person. Possibly one: Alice=Bob.
 GSN:4 ■ | Group messaging.
 GSN:4+GSNP:1 ■ Post: Bob may Alice has the post Text of Bob in Grupo, provided Bob is a member of the group Grupo of Alice, not Alice has the post Text of Bob in Grupo, Bob is a person, Bob holds the item Text and Bob is the author of Text. Possibly one: Alice=Bob.
+GSN:4+GSNP:1 ■ Post own: Alice may Alice has the post Text of Alice in Grupo, provided Alice is a member of the group Grupo of Alice, not Alice has the post Text of Alice in Grupo, Alice is a person, Alice holds the item Text and Alice is the author of Text.
 GSN:4+GSNP:1 ■ Deliver: Alice has delivered the message Text of Bob in Grupo to Carol and Carol holds the item Text signed by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, Alice has Carol as a member of the group Grupo, not Alice has delivered the message Text of Bob in Grupo to Carol and not Alice is the author of Text. Possibly one: Alice=Bob, Alice=Carol, Bob=Carol.
 GSN:4+GSNP:1 ■ Deliver leader: Alice has delivered the message Text of Bob in Grupo to Alice and Alice holds the item Text signed by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, not Alice has delivered the message Text of Bob in Grupo to Alice and not Alice is the author of Text. Possibly one: Alice=Bob.
-GnW:0 - | Bob *trusts* Carol, an AI agent of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an AI agent and how.
+GnW:0 - | Bob *trusts* Carol, an AI agent of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an AI agent and how. An AI agent takes an act of a party by those who decide for it.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave AI agents; in clause 4 Alice and Bob are possibly one person.
 GnW:1+GAI:2 ■ Enter: Alice and Carol may jointly Carol has an identity, Carol is an AI agent, Carol has Alice as a guardian, Alice is the principal of Carol, Alice is a guardian of Carol, Alice knows Carol, Carol knows Alice, Alice counts Carol as a friend, Carol counts Alice as a friend, Carol holds the attestation Proof and Alice holds a record of Carol's attestation Proof, provided Alice is a person, not Carol has an identity, Alice holds the item Proof and Alice is the author of Proof. Must consent: Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.

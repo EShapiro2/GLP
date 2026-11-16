@@ -19,5 +19,7 @@ SC:2 ■ | Dividend.
 SC:2 ■ Set dividend: dividend(Orga,Div), ~vote_dividend(Orga,_,Div) <- role(Alice,Orga,Director), vote_dividend(Orga,>=Votes,Div), sum(More,Votes,1), has_role(Orga,<More,Director), ~dividend(Orga,Div) guarded by Alice.
 SC:2 ■ Vote on dividend: vote_dividend(Orga,Erin,Div) <- role(Erin,Orga,Director), ~vote_dividend(Orga,Erin,Div) guarded by Erin.
 SC:2 ■ Claim: ~coin(Orga,Carol,*Total), coin(Bob,Carol,*Total), paid_dividend(Orga,Bob,Div,Dollar) <- share(Bob,Orga), share(Bob,Orga,#Held), dividend(Orga,Div), product(Total,Held,Div), issued_in(Carol,Dollar), accepts(Bob,Carol,Dollar), ~paid_dividend(Orga,Bob,Div,Dollar), coin(Orga,Carol,*Total) guarded by Bob possibly Bob=Carol, Carol=Orga.
+SC:2 ■ Claim own coins: ~coin(Orga,Bob,*Total), coin(Bob,Bob,*Total), paid_dividend(Orga,Bob,Div,Dollar) <- share(Bob,Orga), share(Bob,Orga,#Held), dividend(Orga,Div), product(Total,Held,Div), issued_in(Bob,Dollar), accepts(Bob,Bob,Dollar), ~paid_dividend(Orga,Bob,Div,Dollar), coin(Orga,Bob,*Total) guarded by Bob.
+SC:2 ■ Claim coins of the corporation: ~coin(Orga,Orga,*Total), coin(Bob,Orga,*Total), paid_dividend(Orga,Bob,Div,Dollar) <- share(Bob,Orga), share(Bob,Orga,#Held), dividend(Orga,Div), product(Total,Held,Div), issued_in(Orga,Dollar), accepts(Bob,Orga,Dollar), ~paid_dividend(Orga,Bob,Div,Dollar), coin(Orga,Orga,*Total) guarded by Bob.
 SC:3 ■ Redeem: GB:3 Redeem <- other_denomination(Alice,Bob,Share).
 SC:3 ■ Redeem coin against bond: GB:3 Redeem coin against bond <- other_denomination(Alice,Bob,Share).

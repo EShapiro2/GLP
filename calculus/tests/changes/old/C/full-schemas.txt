@@ -1,0 +1,2 @@
+C: Gamma (expanded schemas)
+C:1 ■ Act: c(Alice) <- guarded by Alice.

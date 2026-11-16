@@ -1,6 +1,7 @@
 GSNP: Grassroots Social Network with Provenance (expanded schemas)
 GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
+GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | Alice, Bob and Carol are persons.
 GKK:0 - | Reflexive: x knows y.
 GKK:1+GnW:3 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -26,9 +27,10 @@ GSN:3+GSNP:1 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- l
 GSN:3+GSNP:1 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo), person(Bob) guarded by Bob possibly Alice=Bob.
 GSN:4 ■ | Group messaging.
 GSN:4+GSNP:1 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo), person(Bob), item(Bob,Text), author(Bob,Text) guarded by Bob possibly Alice=Bob.
+GSN:4+GSNP:1 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo), person(Alice), item(Alice,Text), author(Alice,Text) guarded by Alice.
 GSN:4+GSNP:1 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), item(Carol,Text@Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol), ~author(Alice,Text) possibly Alice=Bob, Alice=Carol, Bob=Carol.
 GSN:4+GSNP:1 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), item(Alice,Text@Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice), ~author(Alice,Text) possibly Alice=Bob.
-GnW:0 - | Bob *trusts* Carol, an AI agent of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an AI agent and how.
+GnW:0 - | Bob *trusts* Carol, an AI agent of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an AI agent and how. An AI agent takes an act of a party by those who decide for it.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave AI agents; in clause 4 Alice and Bob are possibly one person.
 GnW:1+GAI:2 ■ Enter: identity(Carol), ai_agent(Carol), has_guardian(Carol,Alice), principal(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice), attestation(Carol,Proof), attestation_record(Alice,Carol,Proof) <- person(Alice), ~identity(Carol), item(Alice,Proof), author(Alice,Proof) guarded by Alice, Carol must Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.

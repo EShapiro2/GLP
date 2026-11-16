@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""publish.py DIR [HELD ...] --- writes into DIR what is published: one directory for each contract, with every artefact of
+"""publish.py DIR [HELD ...] [--since OLD] --- writes into DIR what is published: one directory for each contract, with every artefact of
 Figure 1 of the paper, and the programs that print them.
 
     DIR/NAME/contract.txt           the contract, as approved (rev/)
@@ -13,9 +13,11 @@ Figure 1 of the paper, and the programs that print them.
     DIR/NAME/verdict.txt, vmat.tex, interface.txt, platform.vglp, platform.glp    the abstraction cascade (cascade/NAME/)
     DIR/NAME/interface-adopted.txt  the Interface pragmas of interface.txt keyed by the titles of the contract's own
                                     clauses, for its owner's adopted file, proposed to the owner (tools/ifadopt.py)
+    DIR/CHANGES.txt                 with --since OLD, a publication directory: what DIR asks of an owner who
+                                    adopted OLD (tools/changes.py)
     DIR/README.md, OWNERS.md, MIGRATION.md, STATE.txt (a line for each contract: name, owner, certified, compiled (yes, no or parametric), adopted), STATUS.txt, VERDICTS.txt, tools/, tests/
 """
-import os, shutil, sys
+import os, shutil, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAP = [('rev', '%s.txt', 'contract.txt'), ('gr', '%s.txt', 'logic-pragmas.txt'), ('sas', '%s.txt', 'schemas.txt'),
        ('exp', '%s.txt', 'full-contract.txt'), ('gx', '%s.txt', 'full-pragmas.txt'), ('flat', '%s.txt', 'flat.txt'),
@@ -43,6 +45,30 @@ def state(out, names):
 
 
 def main(out, hold=()):
+    """Built in a fresh directory beside OUT and moved into OUT only when nothing is missing; else OUT is left as it
+    was and the exit is 1."""
+    final = os.path.abspath(out)
+    out = tempfile.mkdtemp(prefix='.publish-', dir=os.path.dirname(final) or '.')
+    try:
+        missing, names = build(out, hold)
+        if missing:
+            print('%d contracts; missing: %s; nothing published in %s' % (len(names), '; '.join(missing), final), file=sys.stderr)
+            return 1
+        os.makedirs(final, exist_ok=True)
+        for e in sorted(os.listdir(out)):          # each entry replaces the one of the same name, whole
+            dst = os.path.join(final, e)
+            if os.path.isdir(dst) and not os.path.islink(dst):
+                shutil.rmtree(dst)
+            elif os.path.exists(dst):
+                os.remove(dst)
+            shutil.move(os.path.join(out, e), dst)
+        print('%d contracts in %s; missing: nothing' % (len(names), final))
+        return 0
+    finally:
+        shutil.rmtree(out, ignore_errors=True)
+
+
+def build(out, hold=()):
     names = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES'))
     names = [n for n in names if n not in hold]      # a contract with no certificate is held out
     missing = []
@@ -63,8 +89,16 @@ def main(out, hold=()):
     state(out, names)
     for d in ('tools', 'tests'):
         shutil.copytree(os.path.join(ROOT, d), os.path.join(out, d), dirs_exist_ok=True, ignore=shutil.ignore_patterns('__pycache__'))
-    print('%d contracts in %s; missing: %s' % (len(names), out, '; '.join(missing) or 'nothing'))
+    return missing, names
 
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2:])
+    since = sys.argv[sys.argv.index('--since') + 1] if '--since' in sys.argv else None
+    args = [a for i, a in enumerate(sys.argv[1:], 1) if a != '--since' and sys.argv[i - 1] != '--since']
+    r = main(args[0], args[1:])
+    if r == 0 and since:       # CHANGES.txt: what this publication asks of an owner who adopted the one in SINCE
+        sys.path.insert(0, os.path.join(ROOT, 'tools'))
+        import changes
+        open(os.path.join(args[0], 'CHANGES.txt'), 'w', encoding='utf-8').write(changes.changes(since, args[0]))
+        print('CHANGES.txt written in %s, since %s' % (args[0], since))
+    sys.exit(r)

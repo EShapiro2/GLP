@@ -271,25 +271,37 @@ def compiled(name):
     if name not in ps:
         die('%s is not in %s: not adopted in %s%s' % (name, PATHS if os.path.exists(PATHS) else 'the contracts found', GLP,
             '' if calc_ref() else '; its text is on the branch Calculus, not in this clone: git -C %s fetch origin Calculus, then adopt.py --paths' % GLP))
+    return compile_tree(name, written_from(name, ps)), ps[name].strip()
+
+
+def compile_tree(name, texts):
+    """{file: text} of what NAME compiles to, the Calculus's compilers run in a temporary directory on TEXTS,
+    {contract: (rev, gr)}, NAME and the contracts it is written from."""
     tmp = tempfile.mkdtemp(prefix='adopt-')
     try:
         for d in ('rev', 'gr', 'tools'):
             os.makedirs(os.path.join(tmp, d))
-        for n, (rev, gr) in written_from(name, ps).items():
+        for n, (rev, gr) in texts.items():
             for d, t in (('rev', rev), ('gr', gr)):
                 with open(os.path.join(tmp, d, n + '.txt'), 'w', encoding='utf-8', newline='') as f:
                     f.write(t)
         for t in ('gcsas.py', 'toglp.py', 'expand.py', 'revtex.py'):
             shutil.copy(os.path.join(TOOLS, t), os.path.join(tmp, 'tools', t))
         run = lambda *a: subprocess.run([sys.executable] + list(a), cwd=tmp, capture_output=True, text=True)
-        steps = [run('tools/gcsas.py', name), run('tools/expand.py', '--out', os.path.join(tmp, 'expanded.tex')), run('tools/toglp.py', name)]
         out = {}
+        for step in (('tools/gcsas.py', name), ('tools/expand.py', '--out', os.path.join(tmp, 'expanded.tex')), ('tools/toglp.py', name)):
+            r = run(*step)          # a step that fails stops it: nothing it printed is taken
+            if r.returncode != 0:
+                ls = [l.replace(tmp, '.') for l in (r.stdout + r.stderr).split('\n') if l.strip()]
+                why = [l for l in ls if l.startswith('FAIL') or 'ERROR' in l or ' NO' in l or 'not translated' in l or 'Traceback' in l] or ls[-1:]
+                die('%s: %s failed, exit %d; nothing written: %s' % (name, os.path.basename(step[0]), r.returncode, ' | '.join(why)[-400:]))
+        steps = []
         for d, pat, f in OUTS:
             p = os.path.join(tmp, d, pat % name)
             if not os.path.exists(p):
                 die('%s: no %s printed; %s' % (name, f, ' | '.join((r.stdout + r.stderr).strip()[-300:] for r in steps)))
             out[f] = read(p)
-        return out, ps[name].strip()
+        return out
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -361,6 +373,13 @@ def main():
             die('--out needs a directory')
         root = os.path.abspath(a[i + 1])
         a = a[:i] + a[i + 2:]
+    if a[:1] == ['--tree'] and len(a) == 3:       # the compile of NAME on DIR/rev and DIR/gr, a case of tests/
+        d = a[1]
+        names = sorted(f[:-4] for f in os.listdir(os.path.join(d, 'gr')) if f.endswith('.txt'))
+        texts = {n: (read(os.path.join(d, 'rev', n + '.txt')), read(os.path.join(d, 'gr', n + '.txt'))) for n in names}
+        out = compile_tree(a[2], texts)
+        print('%s: compiled; printed %s' % (a[2], ', '.join(sorted(out))))
+        return
     if not GLP:
         die('no clone of GLP: set GLP_DIR')
     if a[:1] == ['--write'] and len(a) == 3:

@@ -1,6 +1,7 @@
 CSSN: Child-Safe Social Network (flat text)
 GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
+GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | Alice, Bob and Carol are persons.
 GKK:0 - | Reflexive: x knows y.
 GKK:1+GnW:3 ■ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -26,9 +27,10 @@ GSN:3 ■ Remove: Alice may no longer Bob is a member of the group Grupo of Alic
 GSN:3 ■ Leave: Bob may no longer Bob is a member of the group Grupo of Alice and no longer Alice has Bob as a member of the group Grupo. Possibly one: Alice=Bob.
 GSN:4 ■ | Group messaging.
 GSN:4+GSNW:1 ■ Post: Bob may Alice has the post Text of Bob in Grupo, provided Bob is a member of the group Grupo of Alice, not Alice has the post Text of Bob in Grupo and Bob is a person. Possibly one: Alice=Bob.
+GSN:4+GSNW:1 ■ Post own: Alice may Alice has the post Text of Alice in Grupo, provided Alice is a member of the group Grupo of Alice, not Alice has the post Text of Alice in Grupo and Alice is a person.
 GSN:4 ■ Deliver: Alice has delivered the message Text of Bob in Grupo to Carol and Carol has the message Text of Bob in Grupo delivered by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, Alice has Carol as a member of the group Grupo and not Alice has delivered the message Text of Bob in Grupo to Carol. Possibly one: Alice=Bob, Alice=Carol, Bob=Carol.
 GSN:4 ■ Deliver leader: Alice has delivered the message Text of Bob in Grupo to Alice and Alice has the message Text of Bob in Grupo delivered by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo and not Alice has delivered the message Text of Bob in Grupo to Alice. Possibly one: Alice=Bob.
-GnW:0 - | Bob *trusts* Carol, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a child and how.
+GnW:0 - | Bob *trusts* Carol, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a child and how. A child takes an act of a party by those who decide for it.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave children; in clause 4 Alice and Bob are possibly one person.
 GnW:1+CSSN:1 ◆ Enter: Alice and Carol may jointly Carol has an identity, Carol is a child, Carol has Alice as a parent, Alice is the creator of Carol, Alice is a parent of Carol, Alice knows Carol, Carol knows Alice, Alice counts Carol as a friend and Carol counts Alice as a friend, provided Alice is a person and not Carol has an identity. Must consent: Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.
@@ -54,6 +56,7 @@ GSNW:0 - | Alice and Bob are persons, Carol and Dave children, Grupo a group, Te
 GSNW:1 ■ | A child's messages.
 GSNW:1 ■ Child message: Carol may Bob has the message Text from Carol, provided Carol is a child, not Carol is retired, Carol counts Bob as a friend and Bob counts Carol as a friend.
 GSNW:1 ■ Child post: Carol may Alice has the post Text of Carol in Grupo, provided Carol is a child, not Carol is retired, Carol is a member of the group Grupo of Alice and not Alice has the post Text of Carol in Grupo. Possibly one: Alice=Carol.
+GSNW:1 ■ Child post own: Carol may Carol has the post Text of Carol in Grupo, provided Carol is a child, not Carol is retired, Carol is a member of the group Grupo of Carol and not Carol has the post Text of Carol in Grupo.
 GSNW:2 ■ | A child's group.
 GSNW:2+CSSN:3 ■ Child create: Carol and Alice may jointly Carol is the leader of Grupo, Carol is a member of the group Grupo of Carol and Carol has Carol as a member of the group Grupo, provided Carol is a child, not Carol is retired, not Carol is the leader of Grupo and Carol has Alice as a parent.
 GSNW:2 ■ Child close: Carol may no longer Carol is the leader of Grupo, no longer Carol has anyone as a member of the group Grupo and no longer anyone is a member of the group Grupo of Carol, provided Carol is a child and not Carol is retired.
@@ -62,6 +65,9 @@ GSNW:3 ■ Child join: Bob, Carol and Alice may jointly Carol is a member of the
 GSNW:3 ■ Children join: Carol, Dave, Alice and Bob may jointly Dave is a member of the group Grupo of Carol and Carol has Dave as a member of the group Grupo, provided Carol is the leader of Grupo, Carol is a child, Carol has Alice as a parent, Alice is a parent of Carol, Carol counts Dave as a friend, Dave counts Carol as a friend, Dave is a child, Dave has Bob as a parent, Bob is a parent of Dave, Alice knows Dave, Alice counts Bob as a friend, Bob counts Alice as a friend and not Dave is a member of the group Grupo of anyone.
 GSNW:3 ■ Children of one parent join: Carol, Dave and Alice may jointly Dave is a member of the group Grupo of Carol and Carol has Dave as a member of the group Grupo, provided Carol is the leader of Grupo, Carol is a child, Carol has Alice as a parent, Alice is a parent of Carol, Carol counts Dave as a friend, Dave counts Carol as a friend, Dave is a child, Dave has Alice as a parent, Alice is a parent of Dave and not Dave is a member of the group Grupo of anyone.
 GSNW:3 ■ Child withdraw: Alice may no longer Carol is a member of the group Grupo of Bob and no longer Bob has Carol as a member of the group Grupo, provided Carol has Alice as a parent and Alice is a parent of Carol.
+GSNW:3+CSSN:3 ■ Child add: Carol, Bob and Alice may jointly Bob is a member of the group Grupo of Carol and Carol has Bob as a member of the group Grupo, provided Carol is the leader of Grupo, Carol is a child, not Carol is retired, Carol has Alice as a parent, Alice is a parent of Carol, Carol counts Bob as a friend, Bob counts Carol as a friend, Alice counts Bob as a friend, Bob counts Alice as a friend, not Bob is a member of the group Grupo of anyone and Bob is a child.
+GSNW:3 ■ Child leave: Carol may no longer Carol is a member of the group Grupo of Alice and no longer Alice has Carol as a member of the group Grupo, provided Carol is a child and not Carol is retired.
+GSNW:3 ■ Child remove: Carol may no longer Bob is a member of the group Grupo of Carol and no longer Carol has Bob as a member of the group Grupo, provided Carol is the leader of Grupo, Carol is a child and not Carol is retired.
 CSSN:0 - | Alice and Bob are persons, Carol and Dave children; in clause 2 Alice and Bob are possibly one person.
 CSSN:1 ◆ | Alice is a legal parent of the minor who operates Carol.
 CSSN:2 ■ | A child's acquaintances.

@@ -1,0 +1,72 @@
+ORG        commute yes; return yes; recover same
+CUR        commute yes; return yes; recover same
+OCUR       commute yes; return yes; recover same
+BYL        commute yes; return yes; recover same
+BYX        commute yes; return yes; recover same
+5 contracts, 0 with a fault
+--- sasx/BYL.txt
+BYL: Bylaws (expanded schemas)
+ORG:0 - | Bob is a person, Orga an organisation, Motion an act of Orga.
+ORG:0 - | Parameters: x is entitled to vote on m in z; the votes decide m according to the bylaws of z; x is entitled to take m for z.
+ORG:1 ■ Vote: vote(Orga,Bob,Motion) <- member(Bob,Orga), ~vote(Orga,Bob,Motion) guarded by Bob.
+ORG:2 ■ Retire: retired(Orga) <- ~retired(Orga) guarded by deciders(Orga).
+CUR:0 - | A *party* to a contract is whoever has an identity.
+CUR:0 - | Alice and Bob are parties, Sum and Total numbers.
+CUR:1 ■ Pay: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum) guarded by Alice.
+CUR:1 ■ Pay for Alice: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~vote_pay_alice(Alice,_,Bob,Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), member(AliceOfficer,Alice), vote_pay_alice(Alice,>=VotesAlice,Bob,Sum), product(DoubleAlice,VotesAlice,2), has_participant(Alice,<DoubleAlice) guarded by AliceOfficer taken for Alice by AliceOfficer.
+CUR:1 ■ Vote of Alice for Pay: vote_pay_alice(Alice,Voter,Bob,Sum) <- member(Voter,Alice), knows(Alice,Bob), ~vote_pay_alice(Alice,Voter,Bob,Sum) guarded by Voter.
+CUR:2 ■ Swap: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total) guarded by Alice, Bob.
+CUR:2 ■ Swap for Alice: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total), ~vote_swap_alice(Alice,_,Bob,Sum,Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), member(AliceOfficer,Alice), vote_swap_alice(Alice,>=VotesAlice,Bob,Sum,Total), product(DoubleAlice,VotesAlice,2), has_participant(Alice,<DoubleAlice) guarded by AliceOfficer, Bob taken for Alice by AliceOfficer.
+CUR:2 ■ Vote of Alice for Swap: vote_swap_alice(Alice,Voter,Bob,Sum,Total) <- member(Voter,Alice), knows(Alice,Bob), ~vote_swap_alice(Alice,Voter,Bob,Sum,Total) guarded by Voter.
+CUR:2 ■ Swap for Bob: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total), ~vote_swap_bob(Bob,_,Alice,Sum,Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), knows(BobOfficer,Alice), knows(BobOfficer,Bob), member(BobOfficer,Bob), vote_swap_bob(Bob,>=VotesBob,Alice,Sum,Total), product(DoubleBob,VotesBob,2), has_participant(Bob,<DoubleBob) guarded by Alice, BobOfficer taken for Bob by BobOfficer.
+CUR:2 ■ Vote of Bob for Swap: vote_swap_bob(Bob,Voter,Alice,Sum,Total) <- member(Voter,Bob), knows(Bob,Alice), ~vote_swap_bob(Bob,Voter,Alice,Sum,Total) guarded by Voter.
+CUR:2 ■ Swap for Alice and Bob: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total), ~vote_swap_alice(Alice,_,Bob,Sum,Total), ~vote_swap_bob(Bob,_,Alice,Sum,Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), knows(BobOfficer,Alice), knows(BobOfficer,Bob), member(AliceOfficer,Alice), vote_swap_alice(Alice,>=VotesAlice,Bob,Sum,Total), product(DoubleAlice,VotesAlice,2), has_participant(Alice,<DoubleAlice), member(BobOfficer,Bob), vote_swap_bob(Bob,>=VotesBob,Alice,Sum,Total), product(DoubleBob,VotesBob,2), has_participant(Bob,<DoubleBob) guarded by AliceOfficer, BobOfficer taken for Alice by AliceOfficer and for Bob by BobOfficer.
+BYL:0 - | Votes and Double are numbers.
+--- sasx/BYX.txt
+BYX: Bylaws, Restricted (expanded schemas)
+ORG:0 - | Bob is a person, Orga an organisation, Motion an act of Orga.
+ORG:0 - | Parameters: x is entitled to vote on m in z; the votes decide m according to the bylaws of z; x is entitled to take m for z.
+ORG:1 ■ Vote: vote(Orga,Bob,Motion) <- member(Bob,Orga), ~vote(Orga,Bob,Motion) guarded by Bob.
+ORG:2 ■ Retire: retired(Orga) <- ~retired(Orga) guarded by deciders(Orga).
+CUR:0 - | A *party* to a contract is whoever has an identity.
+CUR:0 - | Alice and Bob are parties, Sum and Total numbers.
+CUR:1+BYX:1 ■ Pay known: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum), knows(Bob,Alice) guarded by Alice.
+CUR:1+BYX:1 ■ Pay known for Alice: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~vote_pay_alice(Alice,_,Bob,Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), member(AliceOfficer,Alice), vote_pay_alice(Alice,>=VotesAlice,Bob,Sum), product(DoubleAlice,VotesAlice,2), has_participant(Alice,<DoubleAlice), knows(Bob,Alice) guarded by AliceOfficer taken for Alice by AliceOfficer.
+CUR:1 ■ Vote of Alice for Pay: vote_pay_alice(Alice,Voter,Bob,Sum) <- member(Voter,Alice), knows(Alice,Bob), ~vote_pay_alice(Alice,Voter,Bob,Sum) guarded by Voter.
+CUR:2 ■ Swap: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total) guarded by Alice, Bob.
+CUR:2 ■ Swap for Alice: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total), ~vote_swap_alice(Alice,_,Bob,Sum,Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), member(AliceOfficer,Alice), vote_swap_alice(Alice,>=VotesAlice,Bob,Sum,Total), product(DoubleAlice,VotesAlice,2), has_participant(Alice,<DoubleAlice) guarded by AliceOfficer, Bob taken for Alice by AliceOfficer.
+CUR:2 ■ Vote of Alice for Swap: vote_swap_alice(Alice,Voter,Bob,Sum,Total) <- member(Voter,Alice), knows(Alice,Bob), ~vote_swap_alice(Alice,Voter,Bob,Sum,Total) guarded by Voter.
+CUR:2 ■ Swap for Bob: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total), ~vote_swap_bob(Bob,_,Alice,Sum,Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), knows(BobOfficer,Alice), knows(BobOfficer,Bob), member(BobOfficer,Bob), vote_swap_bob(Bob,>=VotesBob,Alice,Sum,Total), product(DoubleBob,VotesBob,2), has_participant(Bob,<DoubleBob) guarded by Alice, BobOfficer taken for Bob by BobOfficer.
+CUR:2 ■ Vote of Bob for Swap: vote_swap_bob(Bob,Voter,Alice,Sum,Total) <- member(Voter,Bob), knows(Bob,Alice), ~vote_swap_bob(Bob,Voter,Alice,Sum,Total) guarded by Voter.
+CUR:2 ■ Swap for Alice and Bob: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total), ~vote_swap_alice(Alice,_,Bob,Sum,Total), ~vote_swap_bob(Bob,_,Alice,Sum,Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), knows(BobOfficer,Alice), knows(BobOfficer,Bob), member(AliceOfficer,Alice), vote_swap_alice(Alice,>=VotesAlice,Bob,Sum,Total), product(DoubleAlice,VotesAlice,2), has_participant(Alice,<DoubleAlice), member(BobOfficer,Bob), vote_swap_bob(Bob,>=VotesBob,Alice,Sum,Total), product(DoubleBob,VotesBob,2), has_participant(Bob,<DoubleBob) guarded by AliceOfficer, BobOfficer taken for Alice by AliceOfficer and for Bob by BobOfficer.
+BYL:0 - | Votes and Double are numbers.
+BYX:0 - | Alice and Bob are parties, Sum a number.
+--- sasx/CUR.txt
+CUR: A Currency (expanded schemas)
+CUR:0 - | A *party* to a contract is whoever has an identity.
+CUR:0 - | Alice and Bob are parties, Sum and Total numbers.
+CUR:1 ■ Pay: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum) guarded by Alice.
+CUR:2 ■ Swap: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total) guarded by Alice, Bob.
+--- sasx/OCUR.txt
+OCUR: Organisations in a Currency (expanded schemas)
+ORG:0 - | Bob is a person, Orga an organisation, Motion an act of Orga.
+ORG:0 - | Parameters: x is entitled to vote on m in z; the votes decide m according to the bylaws of z; x is entitled to take m for z.
+ORG:1 ■ Vote: vote(Orga,Bob,Motion) <- voter(Bob,Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.
+ORG:2 ■ Retire: retired(Orga) <- ~retired(Orga) guarded by deciders(Orga).
+CUR:0 - | A *party* to a contract is whoever has an identity.
+CUR:0 - | Alice and Bob are parties, Sum and Total numbers.
+CUR:1 ■ Pay: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum) guarded by Alice.
+CUR:1 ■ Pay for Alice: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~vote_pay_alice(Alice,_,Bob,Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), taker_pay_alice(AliceOfficer,Alice,Bob,Sum), decided_pay_alice(Alice,Bob,Sum) guarded by AliceOfficer taken for Alice by AliceOfficer.
+CUR:1 ■ Vote of Alice for Pay: vote_pay_alice(Alice,Voter,Bob,Sum) <- voter_pay_alice(Voter,Alice,Bob,Sum), knows(Alice,Bob), ~vote_pay_alice(Alice,Voter,Bob,Sum) guarded by Voter.
+CUR:2 ■ Swap: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total) guarded by Alice, Bob.
+CUR:2 ■ Swap for Alice: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total), ~vote_swap_alice(Alice,_,Bob,Sum,Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), taker_swap_alice(AliceOfficer,Alice,Bob,Sum,Total), decided_swap_alice(Alice,Bob,Sum,Total) guarded by AliceOfficer, Bob taken for Alice by AliceOfficer.
+CUR:2 ■ Vote of Alice for Swap: vote_swap_alice(Alice,Voter,Bob,Sum,Total) <- voter_swap_alice(Voter,Alice,Bob,Sum,Total), knows(Alice,Bob), ~vote_swap_alice(Alice,Voter,Bob,Sum,Total) guarded by Voter.
+CUR:2 ■ Swap for Bob: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total), ~vote_swap_bob(Bob,_,Alice,Sum,Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), knows(BobOfficer,Alice), knows(BobOfficer,Bob), taker_swap_bob(BobOfficer,Bob,Alice,Sum,Total), decided_swap_bob(Bob,Alice,Sum,Total) guarded by Alice, BobOfficer taken for Bob by BobOfficer.
+CUR:2 ■ Vote of Bob for Swap: vote_swap_bob(Bob,Voter,Alice,Sum,Total) <- voter_swap_bob(Voter,Bob,Alice,Sum,Total), knows(Bob,Alice), ~vote_swap_bob(Bob,Voter,Alice,Sum,Total) guarded by Voter.
+CUR:2 ■ Swap for Alice and Bob: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total), ~vote_swap_alice(Alice,_,Bob,Sum,Total), ~vote_swap_bob(Bob,_,Alice,Sum,Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), knows(BobOfficer,Alice), knows(BobOfficer,Bob), taker_swap_alice(AliceOfficer,Alice,Bob,Sum,Total), decided_swap_alice(Alice,Bob,Sum,Total), taker_swap_bob(BobOfficer,Bob,Alice,Sum,Total), decided_swap_bob(Bob,Alice,Sum,Total) guarded by AliceOfficer, BobOfficer taken for Alice by AliceOfficer and for Bob by BobOfficer.
+--- sasx/ORG.txt
+ORG: An Organisation (expanded schemas)
+ORG:0 - | Bob is a person, Orga an organisation, Motion an act of Orga.
+ORG:0 - | Parameters: x is entitled to vote on m in z; the votes decide m according to the bylaws of z; x is entitled to take m for z.
+ORG:1 ■ Vote: vote(Orga,Bob,Motion) <- voter(Bob,Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.
+ORG:2 ■ Retire: retired(Orga) <- ~retired(Orga) guarded by deciders(Orga).

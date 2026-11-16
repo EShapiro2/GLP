@@ -1,0 +1,2 @@
+B: Beta (expanded schemas)
+B:1 ■ Act: b(Alice) <- guarded by Alice.

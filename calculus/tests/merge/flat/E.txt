@@ -1,0 +1,6 @@
+E: Both, the other order (flat text)
+C:0 - | Alice is a person.
+C:1+Q:1+P:1 ■ Signal: Alice may Alice has signalled, provided Alice is qualified and Alice is willing.
+Q:0 - | Alice is a person.
+P:0 - | Alice is a person.
+E:0 - | Alice is a person.

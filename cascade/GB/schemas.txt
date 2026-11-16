@@ -14,7 +14,7 @@ After z and y release n w-bonds due e that x deposited on k: no longer z holds n
 After z and x return n w-coins deposited for y on k: no longer z holds n w-coins in escrow from x for y on k, x holds n w-coins and x knows w.
 After z and x return n w-bonds due e deposited for y on k: no longer z holds n w-bonds due e in escrow from x for y on k, x holds n w-bonds due e and x knows w.
 GB:0 - | A *bond* is a unit of debt, due at its maturity date, that includes its issuer's public key and its maturity date and is signed by their private key. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
-GB:0 - | Alice, Bob, Carol and Dave are persons, Day and Term maturity dates, Today a date, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clauses 2 and 3 Carol and Dave are possibly Alice, Bob or one person, and in clause 4 Dave is possibly Alice, Bob or Carol.
+GB:0 - | Alice, Bob, Carol and Dave are parties, Day and Term maturity dates, Today a date, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clauses 2 and 3 Carol and Dave are possibly Alice, Bob or one person, and in clause 4 Dave is possibly Alice, Bob or Carol.
 GB:1 ■ Issue bond: bond(Alice,Alice,Day,*Sum) <- today(Alice,Today), gt(Day,Today) guarded by Alice.
 GB:2 ■ Swap: GC:2 <-.
 GB:2 ■ Swap coin for bond: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~bond(Bob,Dave,Day,*Total), bond(Alice,Dave,Day,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), bond(Bob,Dave,Day,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.

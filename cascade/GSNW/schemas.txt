@@ -6,8 +6,10 @@ GSNW:0 - | Alice and Bob are persons, Carol and Dave wards, Grupo a group, Text 
 GSNW:1 ■ | A ward's messages.
 GSNW:1 ■ Message: GSN:1 <- person(Alice).
 GSNW:1 ■ Post: GSN:4 Post <- person(Bob).
+GSNW:1 ■ Post own: GSN:4 Post own <- person(Alice).
 GSNW:1 ■ Ward message: message(Bob,Carol,Text) <- ward(Carol), ~retired(Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
 GSNW:1 ■ Ward post: posted(Alice,Text,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Alice), ~posted(Alice,Text,Carol,Grupo) guarded by Carol possibly Alice=Carol.
+GSNW:1 ■ Ward post own: posted(Carol,Text,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Carol), ~posted(Carol,Text,Carol,Grupo) guarded by Carol.
 GSNW:2 ■ | A ward's group.
 GSNW:2 ■ Create: GSN:2 Create <- person(Alice).
 GSNW:2 ■ Close: GSN:2 Close <- person(Alice).
@@ -19,6 +21,9 @@ GSNW:3 ■ Ward join: member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) <- leader
 GSNW:3 ■ Wards join: member(Dave,Grupo,Carol), listed(Carol,Dave,Grupo) <- leader(Carol,Grupo), ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol), friend(Carol,Dave), friend(Dave,Carol), ward(Dave), has_guardian(Dave,Bob), guardian(Bob,Dave), knows(Alice,Dave), friend(Alice,Bob), friend(Bob,Alice), ~member(Dave,Grupo,_) guarded by Carol, Dave, Alice, Bob.
 GSNW:3 ■ Wards of one guardian join: member(Dave,Grupo,Carol), listed(Carol,Dave,Grupo) <- leader(Carol,Grupo), ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol), friend(Carol,Dave), friend(Dave,Carol), ward(Dave), has_guardian(Dave,Alice), guardian(Alice,Dave), ~member(Dave,Grupo,_) guarded by Carol, Dave, Alice.
 GSNW:3 ■ Ward withdraw: ~member(Carol,Grupo,Bob), ~listed(Bob,Carol,Grupo) <- has_guardian(Carol,Alice), guardian(Alice,Carol), member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) guarded by Alice.
+GSNW:3 ■ Ward add: member(Bob,Grupo,Carol), listed(Carol,Bob,Grupo) <- leader(Carol,Grupo), ward(Carol), ~retired(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol), friend(Carol,Bob), friend(Bob,Carol), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_) guarded by Carol, Bob, Alice.
+GSNW:3 ■ Ward leave: ~member(Carol,Grupo,Alice), ~listed(Alice,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Alice), listed(Alice,Carol,Grupo) guarded by Carol.
+GSNW:3 ■ Ward remove: ~member(Bob,Grupo,Carol), ~listed(Carol,Bob,Grupo) <- leader(Carol,Grupo), ward(Carol), ~retired(Carol), member(Bob,Grupo,Carol), listed(Carol,Bob,Grupo) guarded by Carol.
 GSNW:3 ■ Guardian unfriend: GnW:2 Guardian unfriend + ~member(Bob,_,Carol), ~member(Carol,_,Bob), ~listed(Bob,Carol,_), ~listed(Carol,Bob,_) <-.
 GSNW:3 ■ Ward end: GnW:3 Ward end + ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <-.
 GSNW:3 ■ Unfriend: GnW:3 Unfriend + ~member(Bob,_,Carol), ~member(Carol,_,Bob), ~listed(Bob,Carol,_), ~listed(Carol,Bob,_) <-.
