@@ -382,6 +382,18 @@ def calculus_of(n):
         os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
         shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))
         v['full'] = f'stack/{n}/full-contract.txt'
+        # The full contract in the form of the contract itself, for the page
+        # to show the two in one box (Udi, 2026-11-16, to Website #2): its
+        # lines before the clauses, and each clause with the contract and
+        # number it is from, 'GKK:1'; a line that opens with % is the tools'.
+        pre, cls = [], []
+        for l in [l for l in read(fc).split('\n') if l.strip() and not l.startswith('%')][1:]:
+            m = re.match(r'([A-Za-z]+(?:-[A-Za-z]+)*:\d+)\. (\S) (.+?)([.:])\s+(.*)$', l)
+            if m:
+                cls.append({'n': m.group(1), 'mod': m.group(2), 'name': m.group(3), 'sep': m.group(4), 'text': m.group(5)})
+            elif not cls:
+                pre.append(l.strip())
+        v['fullc'] = {'preamble': '\n'.join(pre), 'clauses': cls}
     return v
 
 
@@ -500,9 +512,25 @@ if os.environ.get('CERTIFY', '1') != '0':
     arts = certify.artefacts(os.path.join(WWW, 'artefacts'))
 else:
     checks, arts = {}, {}
+def relations_of(n):
+    """The Calculus's verdict on each relation contract n's first line states,
+    as calculus/tools print it into its record, cascade/n/relations.txt, one
+    line a relation: 'GSN extends GSG: holds', or 'CnC restricts it (GCoop
+    and TC): FAILS: <act>: <what>; ...' (Calculus #6, 2026-11-16 07:23 UTC).
+    The site prints each line and says nothing of its own; a record with no
+    such file has no verdict."""
+    f = os.path.join(GLP, 'cascade', n, 'relations.txt')
+    out = []
+    for l in read(f).split('\n') if os.path.exists(f) else []:
+        m = re.match(r'(.+?): (holds|FAILS)(?::\s*(.*))?$', l.strip())
+        if m and not l.startswith('%'):
+            out.append({'line': m.group(1), 'result': 'agrees' if m.group(2) == 'holds' else 'disagrees', 'why': m.group(3) or ''})
+    return out
+
+
 NOT_CHECKED = "the site's check does not yet follow the Calculus's definitions of the relations"
 for c in contracts:
-    c['checks'] = checks.get(c['id']) or (
+    c['checks'] = relations_of(c['id']) or checks.get(c['id']) or (
         [{'base': b, 'rel': r, 'result': 'open', 'why': NOT_CHECKED} for b, rs in (c.get('rels_all') or {k: [v] for k, v in (c.get('rels') or {}).items()}).items() for r in rs]
         + [{'base': x['base'], 'rel': x['rel'], 'of': x['of'], 'result': 'open', 'why': NOT_CHECKED} for x in c.get('rels_of', [])])
     a = arts.get(c['id'].lower().replace('-', '_'))
