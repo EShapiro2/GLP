@@ -1,8 +1,8 @@
 % GCoop: Grassroots Cooperative --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7, Grassroots Cooperatives and cites a clause as GCoop:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GO and DGC, Denominated Grassroots Currencies, SGC's (programs/currencies/sovereign).
-% Last changed: 2026-11-12, by GO #5.
+% Extends: CDC and DGC, Denominated Grassroots Currencies, SGC's (programs/currencies/sovereign).
+% Last changed: 2026-11-16, by GO #8.
 % Schemas: GCoop.glp beside this file.
 GCoop: Grassroots Cooperative
 GCoop extends CDC and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
@@ -16,6 +16,8 @@ Issue: AliceOfficer [Issue for Alice] <amount> <votes>
   Voter [Vote of Alice for Issue] <amount>
   AliceOfficer [First issue for Alice] <amount> <denomination> <votes>
   Voter [Vote of Alice for First issue] <amount> <denomination>
+Issue bond: AliceOfficer [Issue bond for Alice] <maturity> <amount> <votes>
+  Voter [Vote of Alice for Issue bond] <amount> <maturity>
 Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <amount given> <amount wanted> <votes>
   Bob: AliceOfficer asks to swap coins of the organisation Alice with you.
   Voter [Vote of Alice for Swap] <with> <amount given> <issuer given> <amount wanted> <issuer wanted>
@@ -24,8 +26,6 @@ Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <amount given> <amount wante
   Voter [Vote of Bob for Swap] <with> <amount wanted> <issuer wanted> <amount given> <issuer given>
   AliceOfficer [Swap for Alice and Bob] <officer of the other party> <amount given> <amount wanted> <votes> <votes of the other party>
   BobOfficer: AliceOfficer asks to swap coins of the organisation Alice with your organisation Bob.
-  AliceOfficer [Redeem for Alice] <votes>
-  Voter [Vote of Alice for Redeem] <issuer> <issuer wanted>
   AliceOfficer [Swap coin for bond for Alice] <amount given> <maturity wanted> <amount wanted> <votes>
   Bob: AliceOfficer asks to swap coins for bonds of the organisation Alice with you.
   Voter [Vote of Alice for Swap coin for bond] <with> <amount given> <issuer given> <amount wanted> <issuer wanted> <maturity wanted>
@@ -42,12 +42,6 @@ Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <amount given> <amount wante
   Voter [Vote of Bob for Swap bonds] <with> <amount wanted> <issuer wanted> <maturity wanted> <amount given> <issuer given> <maturity given>
   AliceOfficer [Swap bonds for Alice and Bob] <officer of the other party> <maturity given> <amount given> <maturity wanted> <amount wanted> <votes> <votes of the other party>
   BobOfficer: AliceOfficer asks to swap bonds of the organisation Alice with your organisation Bob.
-  AliceOfficer [Redeem coin against bond for Alice] <maturity wanted> <votes>
-  Voter [Vote of Alice for Redeem coin against bond] <issuer> <issuer wanted> <maturity wanted>
-  AliceOfficer [Redeem bond for Alice] <maturity> <votes>
-  Voter [Vote of Alice for Redeem bond] <issuer> <maturity> <issuer wanted>
-  AliceOfficer [Redeem bond against bond for Alice] <maturity> <maturity wanted> <votes>
-  Voter [Vote of Alice for Redeem bond against bond] <issuer> <maturity> <issuer wanted> <maturity wanted>
   AliceOfficer [Deposit for Alice] <amount> <condition> <denomination> <votes>
   Carol: AliceOfficer asks to deposit coins of the organisation Alice with you.
   Voter [Vote of Alice for Deposit] <amount> <denomination> <issuer> <deposited with> <for> <condition>
@@ -64,6 +58,14 @@ Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <amount given> <amount wante
   Voter [Vote of Carol for Deposit bond] <depositor> <amount> <denomination> <issuer> <maturity> <for> <condition>
   AliceOfficer [Deposit bond for Alice and Carol] <officer of the other party> <maturity> <amount> <condition> <denomination> <votes> <votes of the other party>
   CarolOfficer: AliceOfficer asks to deposit bonds of the organisation Alice with your organisation Carol.
+  AliceOfficer [Redeem for Alice] <votes>
+  Voter [Vote of Alice for Redeem] <issuer> <issuer wanted>
+  AliceOfficer [Redeem coin against bond for Alice] <maturity wanted> <votes>
+  Voter [Vote of Alice for Redeem coin against bond] <issuer> <issuer wanted> <maturity wanted>
+  AliceOfficer [Redeem bond for Alice] <maturity> <votes>
+  Voter [Vote of Alice for Redeem bond] <issuer> <maturity> <issuer wanted>
+  AliceOfficer [Redeem bond against bond for Alice] <maturity> <maturity wanted> <votes>
+  Voter [Vote of Alice for Redeem bond against bond] <issuer> <maturity> <issuer wanted> <maturity wanted>
   AliceOfficer [Deposit own coins for Alice] <amount> <condition> <denomination> <votes>
   Carol: AliceOfficer asks to deposit the organisation Alice's own coins with you.
   Alice [Deposit own coins for Carol] <officer of the other party> <amount> <condition> <votes of the other party>
@@ -100,10 +102,24 @@ Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <amount given> <amount wante
   CarolOfficer: Alice asks to deposit more bonds with your organisation Carol.
   AliceOfficer [Deposit bond more for Alice and Carol] <officer of the other party> <maturity> <amount> <condition> <denomination> <votes> <votes of the other party>
   CarolOfficer: AliceOfficer asks to deposit more bonds of the organisation Alice with your organisation Carol.
+Pay issuer: AliceOfficer [Pay issuer for Alice] <amount> <votes>
+  Voter [Vote of Alice for Pay issuer] <to> <amount>
 Pay: AliceOfficer [Pay for Alice] <amount> <votes>
-  Voter [Vote of Alice for Pay] <to> <amount>
-Issue bond: AliceOfficer [Issue bond for Alice] <maturity> <amount> <votes>
-  Voter [Vote of Alice for Issue bond] <amount> <maturity>
+  Bob: AliceOfficer asks to pay coins of the organisation Alice to you.
+  Voter [Vote of Alice for Pay] <to> <amount> <issuer>
+  Alice [Pay for Bob] <officer of the other party> <amount> <votes of the other party>
+  BobOfficer: Alice asks to pay coins to your organisation Bob.
+  Voter [Vote of Bob for Pay] <from> <amount> <issuer>
+  AliceOfficer [Pay for Alice and Bob] <officer of the other party> <amount> <votes> <votes of the other party>
+  BobOfficer: AliceOfficer asks to pay coins of the organisation Alice to your organisation Bob.
+  AliceOfficer [Pay bond for Alice] <maturity> <amount> <votes>
+  Bob: AliceOfficer asks to pay bonds of the organisation Alice to you.
+  Voter [Vote of Alice for Pay bond] <to> <amount> <issuer> <maturity>
+  Alice [Pay bond for Bob] <officer of the other party> <amount> <votes of the other party>
+  BobOfficer: Alice asks to pay bonds to your organisation Bob.
+  Voter [Vote of Bob for Pay bond] <from> <amount> <issuer> <maturity>
+  AliceOfficer [Pay bond for Alice and Bob] <officer of the other party> <maturity> <amount> <votes> <votes of the other party>
+  BobOfficer: AliceOfficer asks to pay bonds of the organisation Alice to your organisation Bob.
 Escrow: CarolOfficer [Release for Carol] <amount> <votes>
   Bob: CarolOfficer asks to release coins held by the organisation Carol to you.
   Voter [Vote of Carol for Release] <to> <amount> <issuer> <depositor> <condition>
