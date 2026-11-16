@@ -21,6 +21,6 @@ Default: those who decide for z for those who decide the issue of shares of z.
 Kind of note: share, shares of y for y-notes.
 Interface pragmas
 Look: 📈, money
-Issue shares: AliceOfficer [Issue shares for Alice] <amount>
+Issue shares: AliceOfficer [Issue shares for Alice] <decider> <amount>
   Decider: AliceOfficer asks to issue shares of your organisation Alice.
   Codecider: AliceOfficer asks to issue shares of your organisation Alice.

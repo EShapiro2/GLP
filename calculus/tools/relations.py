@@ -119,6 +119,9 @@ def path(n, what):
     NAME/contract.txt), whose second line is the first line; 'schemas' its expanded schemas (SCHEMAS/NAME.txt, or
     NAME/full-schemas.txt)."""
     if not published():
+        keep = os.path.join(ROOT, 'sasx-all', n + '.txt')      # the untakable acts kept (gcsas.py): a first line is judged on the acts before they are left out
+        if what == 'schemas' and SCHEMAS == 'sasx' and os.path.exists(keep):
+            return keep
         return os.path.join(ROOT, 'gr' if what == 'first' else SCHEMAS, n + '.txt')
     if what == 'schemas':
         return os.path.join(ROOT, n, 'full-schemas.txt')
