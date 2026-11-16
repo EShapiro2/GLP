@@ -1823,6 +1823,11 @@ void appsScreens(Screens screens) {
     await run.top(alice);
     await run.tap(alice, run.control(alice, 'act:ai_agent_befriend:bob'));
     await run.tap(alice, run.control(alice, 'pick:ai_agent_befriend:bob:1:alf'));
+    // The tap brought the picked chip into view and so scrolled Bob's name half under the tabs: the tab back at its top, Bob's row whole from his name, the form still in view (GAI #15, Code_inbox.md 2026-11-16 17:37 UTC).
+    await run.top(alice);
+    expect(run.control(alice, 'send:ai_agent_befriend:bob').hitTestable(),
+        findsOneWidget,
+        reason: 'AI agent befriend\'s form is not in view at the tab\'s top');
     run.plain(alice, allow: const {'Peer'});
     await run.shoot(alice, 'gai-c-alice-asked.png');
     await run.tap(alice, run.control(alice, 'send:ai_agent_befriend:bob'));
