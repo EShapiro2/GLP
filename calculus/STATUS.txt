@@ -1,7 +1,7 @@
 AGORA      certified; VMAT 36 displays; platform.vglp 8220 lines; platform.glp 5379 lines
 CB         certified; VMAT 148 displays; platform.vglp 13545 lines; platform.glp 7619 lines
 CMB        certified; VMAT 153 displays; platform.vglp 13785 lines; platform.glp 7710 lines
-CSSN       certified; VMAT 43 displays; platform.vglp 8374 lines; platform.glp 5441 lines
+CSSN       certified; VMAT 42 displays; platform.vglp 8332 lines; platform.glp 5425 lines
 CnC        certified; VMAT 151 displays; platform.vglp 13679 lines; platform.glp 7672 lines
 DAO        certified; VMAT 18 displays; platform.vglp 7400 lines; platform.glp 5036 lines
 DGC        certified; VMAT 32 displays; platform.vglp 8099 lines; platform.glp 5351 lines

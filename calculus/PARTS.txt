@@ -31,3 +31,10 @@ What changed since a687ab8:
 
 Not in this publication: the review's findings on the contracts themselves and on Theorem 8, which wait for its
 revised report.
+
+CSSN again, and the tools (commit after 3b5fd5d; Calculus code 6cfa460; CSSN run on migration 58a0593):
+An act whose requirements no binding can meet is no act of the contract: the tools leave out of a contract's term an
+act that requires of one name to be both a person and a ward of the contract's type.  Of the 62 it is CSSN's Child add
+alone (GSNW:3's Ward add restricted by CSSN:3, 'Only a child, Dave, may join the group'), which vGLP refused for
+having no button.  CSSN is certified, its platform.glp loads, and it has no child_add.  The other 61 are as at 3b5fd5d;
+toglp.py, supplied.py, changes.py and tests/ changed, and no other contract's term does.

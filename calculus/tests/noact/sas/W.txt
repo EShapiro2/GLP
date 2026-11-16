@@ -1,0 +1,11 @@
+W: No act no binding enables
+Vocabulary: x has an identity = identity(x); x is a person = person(x); x is a ward = ward(x); x has y as a guardian = has_guardian(x,y); x is a guardian of y = guardian(x,y); x has waved = waved(x); x has greeted = greeted(x).
+After x establishes an identity, which requires x does not have an identity: x has an identity and x is a person.
+After x enters y, which requires y does not have an identity: y has an identity, y is a ward, y has x as a guardian and x is a guardian of y.
+After x waves: x has waved.
+After x greets: x has greeted.
+W:0 - | Alice is a person, Carol a ward.
+W:1 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+W:2 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol) <- ~identity(Carol) guarded by Alice.
+W:3 ■ Wave: waved(Carol) <- person(Carol), ward(Carol) guarded by Carol.
+W:3 ■ Greet: greeted(Carol) <- guarded by Carol.

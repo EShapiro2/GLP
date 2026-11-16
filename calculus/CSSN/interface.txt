@@ -38,10 +38,9 @@ CSSN: Child-Safe Social Network
 37. ■ Children join.  Carol may add Dave to Grupo, with the consent of Dave, Alice and Bob, provided Carol is the leader of Grupo, Carol is a child, Carol has Alice as a parent, Alice is a parent of Carol, Carol and Dave are friends, Dave is a child, Dave has Bob as a parent, Bob is a parent of Dave, Alice knows Dave and Alice and Bob are friends.
 38. ■ Children of one parent join.  Carol may add Dave to Grupo, with the consent of Dave and Alice, provided Carol is the leader of Grupo, Carol is a child, Carol has Alice as a parent, Alice is a parent of Carol, Carol and Dave are friends, Dave is a child, Dave has Alice as a parent and Alice is a parent of Dave.
 39. ■ Child withdraw.  Alice may withdraw Carol from Bob's Grupo, provided Carol has Alice as a parent and Alice is a parent of Carol.
-40. ■ Child add.  Carol may add Bob to Grupo, with the consent of Bob and Alice, provided Carol is the leader of Grupo, Carol is a child, Carol is not retired, Carol has Alice as a parent, Alice is a parent of Carol, Carol and Bob are friends, Alice and Bob are friends and Bob is a child.
-41. ■ Child leave.  Carol may end her membership in Alice's Grupo, provided Carol is a child and Carol is not retired.
-42. ■ Child remove.  Carol may end Bob's membership in Grupo, provided Carol is the leader of Grupo, Carol is a child and Carol is not retired.
-43. ○ Of age.  Alice may declare Carol of age, provided Alice is the creator of Carol, Alice is a parent of Carol and Carol has Alice as a parent.
+40. ■ Child leave.  Carol may end her membership in Alice's Grupo, provided Carol is a child and Carol is not retired.
+41. ■ Child remove.  Carol may end Bob's membership in Grupo, provided Carol is the leader of Grupo, Carol is a child and Carol is not retired.
+42. ○ Of age.  Alice may declare Carol of age, provided Alice is the creator of Carol, Alice is a parent of Carol and Carol has Alice as a parent.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -108,9 +107,6 @@ Children of one parent join: Carol [Children of one parent join]
   Dave: Carol asks for your consent to children of one parent join.
   Alice: Carol asks for your consent to children of one parent join.
 Child withdraw: Alice [Child withdraw] <bob> <grupo>
-Child add: Carol [Child add]
-  Bob: Carol asks for your consent to child add.
-  Alice: Carol asks for your consent to child add.
 Child leave: Carol [Child leave]
 Child remove: Carol [Child remove]
 Of age: Alice [Of age]
