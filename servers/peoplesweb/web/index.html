@@ -130,6 +130,7 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .q:hover{background:var(--blue);color:#fff}
 .rules{padding:20px 24px}
 .pre{color:var(--mute);font-style:italic;margin-bottom:6px;white-space:pre-line}
+.pre em{font-weight:600;color:var(--ink)}
 ol.cl{padding:0;margin:0;list-style:none}
 ol.cl li{display:grid;grid-template-columns:24px 22px 1fr;gap:2px;padding:10px 0;border-bottom:1px solid var(--line)}
 ol.cl li:last-child{border-bottom:none}
@@ -1003,11 +1004,16 @@ function page(c, hood){
 // (detail/<NAME>.json, tools/build.py).
 const DETAIL = {};
 const detail = c => DETAIL[c.id] || (DETAIL[c.id] = fetch(`detail/${encodeURIComponent(c.id)}.json`).then(r => r.json()).catch(() => ({schemas: [], fullc: null})));
+// A contract's text marks a term it defines with asterisks, *identity*: the
+// page shows the term emphasised and not the marks (Udi, 2026-11-16, to
+// Website #2): bold in the definitions, which are in italics, and in
+// italics in a clause.
+const term = s => esc(s).replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
 function boxHtml(c, full){
   const x = full || c;
   return `${!full && c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
-      <div class="pre">${esc(x.preamble)}</div>
-      <ol class="cl${full ? ' full' : ''}">${x.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}${cl.sep || '.'}</b> ${esc(cl.text)}</span></li>`).join('')}</ol>`;
+      <div class="pre">${term(x.preamble)}</div>
+      <ol class="cl${full ? ' full' : ''}">${x.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}${cl.sep || '.'}</b> ${term(cl.text)}</span></li>`).join('')}</ol>`;
 }
 function calcHtml(c){
   const k = c.calculus; if (!k) return '';
