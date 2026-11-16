@@ -24,3 +24,43 @@ Look: 📈, money
 Issue shares: AliceOfficer [Issue shares for Alice] <decider> <amount>
   Decider: AliceOfficer asks to issue shares of your organisation Alice.
   Codecider: AliceOfficer asks to issue shares of your organisation Alice.
+Swap: Alice [Swap shares] <amount given> <issuer wanted> <amount wanted>
+  Bob: Alice asks to swap shares with you.
+  AliceOfficer [Swap shares for Alice] <amount given> <amount wanted> <votes>
+  Bob: AliceOfficer asks to swap shares of the organisation Alice with you.
+  Alice [Swap shares for Bob] <officer of the other party> <amount given> <issuer wanted> <amount wanted> <votes of the other party>
+  BobOfficer: Alice asks to swap shares with your organisation Bob.
+  AliceOfficer [Swap shares for Alice and Bob] <officer of the other party> <amount given> <amount wanted> <votes> <votes of the other party>
+  BobOfficer: AliceOfficer asks to swap shares of the organisation Alice with your organisation Bob.
+Pay: Alice [Pay share] <amount>
+  Bob: Alice asks to pay shares to you.
+  AliceOfficer [Pay share for Alice] <amount> <votes>
+  Bob: AliceOfficer asks to pay shares of the organisation Alice to you.
+  Alice [Pay share for Bob] <officer of the other party> <amount> <votes of the other party>
+  BobOfficer: Alice asks to pay shares to your organisation Bob.
+  AliceOfficer [Pay share for Alice and Bob] <officer of the other party> <amount> <votes> <votes of the other party>
+  BobOfficer: AliceOfficer asks to pay shares of the organisation Alice to your organisation Bob.
+Escrow: Alice [Deposit share] <amount> <condition>
+  Carol: Alice asks to deposit shares with you.
+  AliceOfficer [Deposit share for Alice] <amount> <condition> <votes>
+  Carol: AliceOfficer asks to deposit shares of the organisation Alice with you.
+  Alice [Deposit share for Carol] <officer of the other party> <amount> <condition> <votes of the other party>
+  CarolOfficer: Alice asks to deposit shares with your organisation Carol.
+  AliceOfficer [Deposit share for Alice and Carol] <officer of the other party> <amount> <condition> <votes> <votes of the other party>
+  CarolOfficer: AliceOfficer asks to deposit shares of the organisation Alice with your organisation Carol.
+  Carol [Release share] <amount>
+  Bob: Carol asks to release shares to you.
+  CarolOfficer [Release share for Carol] <amount> <votes>
+  Bob: CarolOfficer asks to release shares held by the organisation Carol to you.
+  Carol [Release share for Bob] <officer of the other party> <amount> <votes of the other party>
+  BobOfficer: Carol asks to release shares to your organisation Bob.
+  CarolOfficer [Release share for Carol and Bob] <officer of the other party> <condition> <amount> <votes> <votes of the other party>
+  BobOfficer: CarolOfficer asks to release shares held by the organisation Carol to your organisation Bob.
+  Carol [Return share] <amount>
+  Alice: Carol asks to return shares to you.
+  CarolOfficer [Return share for Carol] <amount> <votes>
+  Alice: CarolOfficer asks to return shares held by the organisation Carol to you.
+  Carol [Return share for Alice] <officer of the other party> <amount> <votes of the other party>
+  AliceOfficer: Carol asks to return shares to your organisation Alice.
+  CarolOfficer [Return share for Carol and Alice] <officer of the other party> <condition> <amount> <votes> <votes of the other party>
+  AliceOfficer: CarolOfficer asks to return shares held by the organisation Carol to your organisation Alice.
