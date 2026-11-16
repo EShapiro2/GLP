@@ -1,11 +1,11 @@
 # A run of the cascade on GRA
 
-- Contract: `GRA` (`gra` to the checker), its owner's two files `programs/lbm/GRA.txt` and `programs/lbm/GRA.glp`, copied here as they stood at `e37a7a3f`.
+- Contract: `GRA` (`gra` to the checker), its owner's two files `programs/lbm/GRA.txt` and `programs/lbm/GRA.glp`, copied here as they stood at `3850c43c`.
 - The paper: `/Users/udi/Grassroots/GRH (not on this machine)` at `unknown`, for the paper's own record.
 - Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
 - Adopted from the Calculus: `programs/lbm/GRA.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/lbm/GRA.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 18:20 UTC by `cascade.sh gra`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `e37a7a3f`; each artefact's source and tool:
+- Run on 2026-11-16 19:22 UTC by `cascade.sh gra`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `3850c43c`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
