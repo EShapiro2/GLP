@@ -191,7 +191,9 @@ def contract_text(path):
     lines = read(path).split('\n')
     meta = [l for l in lines if l.startswith('%')]
     body = [l for l in lines if l.strip() and not l.startswith('%')]
-    name, title = body[0].split(': ', 1)
+    # A title line is 'NAME: the name in full', or, where the name is the
+    # whole title, the name alone: 'Notes' (Calculus #8, 2026-11-16).
+    name, title = body[0].split(': ', 1) if ': ' in body[0] else (body[0].strip(), body[0].strip())
     # The pragmas follow the clauses.  A contract adopted from the Calculus
     # (calculus/MIGRATION.md) has its Logic pragmas after its clauses, under
     # 'Logic pragmas', and its Interface pragmas after them; an earlier text
@@ -226,7 +228,7 @@ for d, _, fs in os.walk(os.path.join(GLP, 'programs')):
         if f.endswith('.txt') and f[:-4] == f[:-4].strip() and re.fullmatch(r'[A-Z][A-Za-z]*(?:-[A-Z][A-Za-z]*)*', f[:-4]):
             p = os.path.join(d, f)
             first = next((l for l in read(p).split('\n') if l.strip() and not l.startswith('%')), '')
-            if first.startswith(f[:-4] + ': '):
+            if first.startswith(f[:-4] + ': ') or first.strip() == f[:-4]:
                 texts[f[:-4]] = p
 
 # The owners, as cascade.sh's table names them; else the first word of the % Owner line.
@@ -457,7 +459,7 @@ for n in sorted(set(compiled) | set(cat)):
     for p in c['extends']:
         if p in cat:
             t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
-    c['label'] = f"{n}: {t}" 
+    c['label'] = f"{n}: {t}" if t != n else n 
     c['cascade'] = n in compiled
     c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''
     c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
@@ -465,12 +467,19 @@ for n in sorted(set(compiled) | set(cat)):
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
     c['live'], c['noteBefore'], c['layers'] = n in compiled, '', {}
+    # Whether the record has a platform, whatever runs: on a test site built
+    # over a tree with no world (deploy/next.sh) nothing is live, and the
+    # table still counts the platforms printed and compiled.
+    c['platform'] = has_platform(n)
     # Why a contract with a record has no app: the compiler's reasons, as
     # cascade.sh writes them into platform.vglp in place of a platform; a
     # contract with no record has not been through the cascade.
     c['record'] = os.path.isdir(d)
     pv = os.path.join(d, 'platform.vglp')
-    c['notCompiled'] = [] if c['live'] or not os.path.exists(pv) else not_compiled(read(pv))
+    # Asked only of a record that has no platform: on a test site with no
+    # world nothing is live, and a whole platform read as its reasons made
+    # /next's data.js 8 MB (2026-11-16).
+    c['notCompiled'] = [] if c['live'] or has_platform(n) or not os.path.exists(pv) else not_compiled(read(pv))
     for k, f in LAYERS:
         if os.path.exists(os.path.join(d, f)):
             os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)

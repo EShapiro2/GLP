@@ -183,5 +183,25 @@
   "📱",
   "os",
   ""
+ ],
+ "Notes": [
+  "🧾",
+  "money",
+  ""
+ ],
+ "Coins": [
+  "🪙",
+  "money",
+  "Personal currencies: everyone can issue their own coins."
+ ],
+ "Bonds": [
+  "📜",
+  "money",
+  "Bonds with maturity dates, and escrow, on top of coins."
+ ],
+ "Shares": [
+  "📈",
+  "money",
+  ""
  ]
 }

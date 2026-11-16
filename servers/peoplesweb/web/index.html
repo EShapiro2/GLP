@@ -278,8 +278,8 @@ const notWhy = c => c.notCompiled && c.notCompiled.length ? 'The compiler refuse
 const STAGES = [
   ['Schemas', c => c.acts[0] > 0],
   ['Checked', c => /^syntactically_grassroots/.test(c.verdict || '')],
-  ['Platform', c => !!(c.layers && c.layers.platform && c.live)],
-  ['Compiled', c => !!(c.layers && c.layers.glp)],
+  ['Platform', c => !!(c.layers && c.layers.platform && (c.platform || c.live))],
+  ['Compiled', c => !!(c.layers && c.layers.glp && (c.platform || c.live))],
   ['Running', c => !!c.live]];
 
 /* ---------- help ---------- */
@@ -326,7 +326,7 @@ function citeHtml(P){
 
 /* ---------- the globe ---------- */
 // The contracts on a sphere (agreed with Udi, 2026-11-07): GKK at the north
-// pole, a ring per depth, the fullest on the equator; each contract's
+// pole, a ring per depth, the rings equally spaced; each contract's
 // longitude near its parents' and its children's, so a contract stands over
 // what is built on it and between what it is built on, and arrows cross as
 // little as can be (Udi, 2026-11-10); each contract an ellipse painted on the
@@ -344,15 +344,14 @@ function depthOf(id){
 }
 function layout(){
   D.contracts.forEach(c => depthOf(c.id));
-  // The rings' colatitudes: the ring with the most contracts on the equator
-  // (Udi, 2026-11-08), the rings above it evenly from the pole, those below
-  // it evenly as seen in the first view, tilted by V.tilt, down to near the
-  // globe's bottom edge, so the rings that face away are not run together.
-  const maxd0 = MAXD(), cnt = d => D.contracts.filter(c => DEPTH[c.id] === d).length;
-  let dm = 1; for (let d = 1; d <= maxd0; d++) if (cnt(d) > cnt(dm)) dm = d;
-  const deg = Math.PI/180, north = 90*deg / (dm + 0.6), c0 = Math.cos(90*deg + V.tilt), c1 = -0.93;
-  for (let d = 0; d <= maxd0; d++) RING[d] = d === 0 ? 0 : d <= dm ? north * (d + 0.6)
-    : Math.min(90*deg + north * (d - dm), Math.acos(c0 + (c1 - c0) * (d - dm) / (maxd0 - dm)) - V.tilt);
+  // The rings' colatitudes: equally spaced from the pole down to near the
+  // globe's bottom edge as the first view shows it, tilted by V.tilt (Udi,
+  // 2026-11-16, to Website #2: "try spacing layers more equally, not wait for
+  // the largest to be on the equator"; until then the fullest ring was on the
+  // equator, Udi, 2026-11-08, and the rings below it were crowded).
+  const maxd0 = MAXD(), thMax = Math.acos(-0.93) - V.tilt;
+  // The first ring half a step further from the pole, where a ring is short.
+  for (let d = 0; d <= maxd0; d++) RING[d] = d === 0 ? 0 : thMax * (d + 0.5) / (maxd0 + 0.5);
   // Where to start: each contract in the range of its first parent, the range
   // shared among its children by how many leaves each has below it.
   D.contracts.forEach(c => { const p = c.extends.find(x => C[x]); if (p) (KIDS[p] = KIDS[p] || []).push(c.id); });
@@ -381,12 +380,27 @@ function layout(){
   // children (going up) along their rings, a relation that passes more rings
   // weighing less; the order with the fewest crossings of the arrows between
   // neighbouring rings kept.
-  const crossings = () => { const I = {}; Lr.forEach(r => r.forEach((v, i) => I[v] = i)); let n = 0;
-    for (let d = 0; d < maxd; d++){
-      const es = []; Lr[d].forEach(u => DN[u].forEach(v => { if (DEPTH[v] === d + 1) es.push([I[u], I[v]]); }));
-      for (let i = 0; i < es.length; i++) for (let j = i + 1; j < es.length; j++)
-        if ((es[i][0] - es[j][0]) * (es[i][1] - es[j][1]) < 0) n++;
-    }
+  // The crossings counted are those of all the arrows, an arrow that passes
+  // several rings taken as straight between its two contracts' places along
+  // their rings (Udi, 2026-11-16: the globe of 66 contracts "is a total
+  // mess"; until then only the arrows between neighbouring rings were
+  // counted, and the long ones crossed as they fell).  GKK, at the pole, has
+  // every longitude: its arrow starts where it ends.
+  const EDG = []; D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => EDG.push([p, c.id])));
+  const place = () => { const P = {}; Lr.forEach(r => r.forEach((v, i) => P[v] = (i + 0.5) / r.length)); return P; };
+  const xs = (P, e, f) => {
+    const [u1, v1] = e, [u2, v2] = f, a1 = DEPTH[u1], b1 = DEPTH[v1], a2 = DEPTH[u2], b2 = DEPTH[v2];
+    const lo = Math.max(a1, a2), hi = Math.min(b1, b2);
+    if (lo >= hi || (a1 === 0 && a2 === 0)) return 0;
+    const at = (u, v, a, b2_, d) => { const pu = a === 0 ? P[v] : P[u]; return pu + (P[v] - pu) * (d - a) / (b2_ - a); };
+    return (at(u1, v1, a1, b1, lo) - at(u2, v2, a2, b2, lo)) * (at(u1, v1, a1, b1, hi) - at(u2, v2, a2, b2, hi)) < 0 ? 1 : 0; };
+  const crossings = () => { const P = place(); let n = 0;
+    for (let i = 0; i < EDG.length; i++) for (let j = i + 1; j < EDG.length; j++) n += xs(P, EDG[i], EDG[j]);
+    return n; };
+  // The crossings of the arrows at the contracts a and b with all the others.
+  const INC = {}; EDG.forEach(e => e.forEach(v => (INC[v] = INC[v] || []).push(e)));
+  const near = (P, a, b) => { let n = 0;
+    for (const e of [...(INC[a] || []), ...(INC[b] || []).filter(e => !e.includes(a))]) for (const f of EDG) if (e !== f) n += xs(P, e, f);
     return n; };
   // Then each pair of neighbours on a ring is swapped where that crosses fewer
   // arrows to the rings above and below, until no swap helps.  The whole is
@@ -407,22 +421,19 @@ function layout(){
       if (n < bestN){ bestN = n; best = Lr.map(r => r.slice()); }
     }
     best.forEach((r, d) => Lr[d] = r);
-    for (let pass = 0, swapped = true; swapped && pass < 50; pass++){
+    for (let pass = 0, swapped = true; swapped && pass < 30; pass++){
       swapped = false;
-      const I = {}; Lr.forEach(r => r.forEach((v, i) => I[v] = i));
-      const cost = (a, b) => { let n = 0;
-        for (const nb of [UP, DN]) for (const x of nb[a]) for (const y of nb[b])
-          if (span(x, a) === 1 && span(y, b) === 1 && DEPTH[x] === DEPTH[y] && I[x] > I[y]) n++;
-        return n; };
+      const P = place();
       for (let d = 1; d <= maxd; d++) for (let i = 0; i + 1 < Lr[d].length; i++){
-        const a = Lr[d][i], b = Lr[d][i+1];
-        if (cost(b, a) < cost(a, b)){ Lr[d][i] = b; Lr[d][i+1] = a; I[a] = i + 1; I[b] = i; swapped = true; }
+        const a = Lr[d][i], b = Lr[d][i+1], before = near(P, a, b), pa = P[a], pb = P[b];
+        P[a] = pb; P[b] = pa;
+        if (near(P, a, b) < before){ Lr[d][i] = b; Lr[d][i+1] = a; swapped = true; } else { P[a] = pa; P[b] = pb; }
       }
     }
     return crossings(); };
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   let best = null, bestN = Infinity;
-  for (let t = 0; t < 12; t++){
+  for (let t = 0; t < 10; t++){
     if (t){ const ord = {}; D.contracts.forEach(c => ord[c.id] = rnd());
       const pos = {}; (function walk(id, lo, hi){ pos[id] = (lo + hi) / 2;
         const ks = (KIDS[id] || []).slice().sort((a, b) => ord[a] - ord[b]), tot = ks.reduce((n, k) => n + leaves(k), 0);
@@ -542,7 +553,8 @@ const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
 // globe, the names drawn larger so they can be read and tapped, and the key
 // set below the globe (Udi, 2026-11-09).
 const NARROW = () => (($('#mapcard') && $('#mapcard').clientWidth) || innerWidth) < 640;
-const FS0 = () => NARROW() ? 16 : 11;
+// Smaller names and thinner arrows since the 66 contracts (Udi, 2026-11-16).
+const FS0 = () => NARROW() ? 13 : 9;
 // The globe fills the card's width, a sliver to each side (Udi, 2026-11-09):
 // on a wide card a radius of 548 in a view 1120 wide, on a phone 290 in a
 // view 600 wide; a zoom is relative to that.
@@ -601,7 +613,7 @@ function drawGlobe(){
   const stroked = (p, q, dash, fill, pad0, pad1, kz = k) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*kz, hw = 6.5*kz, cx = bx-ux*hl, cy = by-uy*hl;
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`
       + `<polygon points="${[[bx, by], [cx-uy*hw, cy+ux*hw], [cx+uy*hw, cy-ux*hw]].map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
-  const fs = Math.max(NARROW() ? 15 : 10, FS0()*k), rx = id => 0.33*fs*id.length + 0.8*fs, ry = 1.1*fs;
+  const fs = Math.max(NARROW() ? 12 : 8.5, FS0()*k), rx = id => 0.33*fs*id.length + 0.8*fs, ry = 1.1*fs;
   // Each arrow painted on the sphere: a smooth curve on the surface from the
   // contract to the one built on it, through the waypoints the layout keeps
   // for it on the rings it passes, so it goes between the names there; its
@@ -670,7 +682,7 @@ function drawGlobe(){
     // an arrow of two relations is coloured half and half along its length,
     // one of three a third each, the head in the last (Udi, 2026-11-15, to
     // Website #2).
-    const u = 1/265, rs = cols, hl = 10*u, hw = 6.5*u, w = 2.4*u;
+    const u = 1/265, rs = cols, hl = 8*u, hw = 4.6*u, w = 1.4*u;
     const aB = head ? a1 - hl : a1;
     if (aB <= a0) return '';
     const front = a => projv(at(a))[2] > 0.02;
