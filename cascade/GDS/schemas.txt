@@ -12,12 +12,12 @@ GDS:0 - | A *directory* is a service with a page every person can read.
 GDS:0 - | Alice, Bob and Carol are persons, Dora a service, Mail an email address, Name a name.
 GDS:1 ■ Open directory: directory(Dora) <- guardian(Carol,Dora), ~directory(Dora) guarded by Carol.
 GDS:2 ■ | Listing.
-GDS:2 ■ List: lists_shown(Dora,Alice,Mail,Name) <- directory(Dora), knows(Alice,Dora), ~lists_shown(Dora,Alice,Mail,Name) guarded by Alice, Dora.
-GDS:2 ■ List unshown: lists_unshown(Dora,Alice,Mail,Name) <- directory(Dora), knows(Alice,Dora), ~lists_unshown(Dora,Alice,Mail,Name) guarded by Alice, Dora.
+GDS:2 ■ List me: lists_shown(Dora,Alice,Mail,Name) <- directory(Dora), knows(Alice,Dora), ~lists_shown(Dora,Alice,Mail,Name) guarded by Alice, Dora.
+GDS:2 ■ List me unshown: lists_unshown(Dora,Alice,Mail,Name) <- directory(Dora), knows(Alice,Dora), ~lists_unshown(Dora,Alice,Mail,Name) guarded by Alice, Dora.
 GDS:2 ■ | Dora consents having verified Mail as an email address of Alice.
 GDS:2 ■ | Alice lists with a name if she chooses, shown on Dora's page or not, and her app then keeps Dora supplied with invitation links of hers.
-GDS:2 ■ Delist: ~lists_shown(Dora,Alice,Mail,Name) <- lists_shown(Dora,Alice,Mail,Name) guarded by Alice.
-GDS:2 ■ Delist unshown: ~lists_unshown(Dora,Alice,Mail,Name) <- lists_unshown(Dora,Alice,Mail,Name) guarded by Alice.
+GDS:2 ■ Delist me: ~lists_shown(Dora,Alice,Mail,Name) <- lists_shown(Dora,Alice,Mail,Name) guarded by Alice.
+GDS:2 ■ Delist me unshown: ~lists_unshown(Dora,Alice,Mail,Name) <- lists_unshown(Dora,Alice,Mail,Name) guarded by Alice.
 GDS:3 ■ Lookup: holds_link(Bob,Alice,Dora) <- knows(Bob,Dora), lists_shown(Dora,Alice,Mail,Name) guarded by Bob.
 GDS:3 ■ Lookup by address: holds_link(Bob,Alice,Dora) <- knows(Bob,Dora), lists_unshown(Dora,Alice,Mail,Name) guarded by Bob.
 GDS:3 ■ | Bob looks Alice up on Dora's page if she is shown there, and by her email address and name if not.

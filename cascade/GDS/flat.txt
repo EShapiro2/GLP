@@ -54,12 +54,12 @@ GDS:0 - | A *directory* is a service with a page every person can read.
 GDS:0 - | Alice, Bob and Carol are persons, Dora a service, Mail an email address, Name a name.
 GDS:1 ■ Open directory: Carol may Dora is a directory, provided Carol is a guardian of Dora and not Dora is a directory.
 GDS:2 ■ | Listing.
-GDS:2 ■ List: Alice and Dora may jointly Dora lists Alice by Mail under Name on its page, provided Dora is a directory, Alice knows Dora and not Dora lists Alice by Mail under Name on its page.
-GDS:2 ■ List unshown: Alice and Dora may jointly Dora lists Alice by Mail under Name off its page, provided Dora is a directory, Alice knows Dora and not Dora lists Alice by Mail under Name off its page.
+GDS:2 ■ List me: Alice and Dora may jointly Dora lists Alice by Mail under Name on its page, provided Dora is a directory, Alice knows Dora and not Dora lists Alice by Mail under Name on its page.
+GDS:2 ■ List me unshown: Alice and Dora may jointly Dora lists Alice by Mail under Name off its page, provided Dora is a directory, Alice knows Dora and not Dora lists Alice by Mail under Name off its page.
 GDS:2 ■ | Dora consents having verified Mail as an email address of Alice.
 GDS:2 ■ | Alice lists with a name if she chooses, shown on Dora's page or not, and her app then keeps Dora supplied with invitation links of hers.
-GDS:2 ■ Delist: Alice may no longer Dora lists Alice by Mail under Name on its page.
-GDS:2 ■ Delist unshown: Alice may no longer Dora lists Alice by Mail under Name off its page.
+GDS:2 ■ Delist me: Alice may no longer Dora lists Alice by Mail under Name on its page.
+GDS:2 ■ Delist me unshown: Alice may no longer Dora lists Alice by Mail under Name off its page.
 GDS:3 ■ Lookup: Bob may Bob holds an invitation link of Alice from Dora, provided Bob knows Dora and Dora lists Alice by Mail under Name on its page.
 GDS:3 ■ Lookup by address: Bob may Bob holds an invitation link of Alice from Dora, provided Bob knows Dora and Dora lists Alice by Mail under Name off its page.
 GDS:3 ■ | Bob looks Alice up on Dora's page if she is shown there, and by her email address and name if not.
