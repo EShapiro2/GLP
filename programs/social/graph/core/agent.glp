@@ -488,10 +488,9 @@ creator_check(false, _, _, _, refused).
 %% it is read by its shape; where it is unsigned --- a forgery --- the
 %% installation is refused, as under a key the person does not trust.
 procedure cert_signed(Signature?, String?, Module?, Verdict).
-cert_signed(signed(_, _, Cert), Src, M, V?) :- cert_check(Cert?, Src?, M?, V).
-cert_signed(unsigned, _, _, refused).
+cert_signed(Sg, Src, M, V?) :- cert_check(Sg?, Src?, M?, V).
 
-%% The signed term is untyped; the certification is read by its shape.  The
+%% The certification is read inside the signed term by its shape, its functor matched in the head and its source identity compared in the guard (TGLP, Type checking of guards); what is unsigned is refused with every other term.  The
 %% developer's warranty carries the checker's verdict as the checker prints it,
 %% and a program is installed only where that verdict certifies its contract
 %% (GSA paper, Section 3, "A grassroots program is compiled from its
@@ -501,12 +500,12 @@ cert_signed(unsigned, _, _, refused).
 %% wards_verdict1/4; compile.glp, compile_on/3).  not_grassroots(Faults),
 %% malformed(Faults) and any other term, the word grassroots among them, are
 %% refused.
-procedure cert_check(Term?, String?, Module?, Verdict).
-cert_check(creator_cert(Src1, _, syntactically_grassroots), Src, M, ok(M?)) :-
+procedure cert_check(Signature?, String?, Module?, Verdict).
+cert_check(signed(_, _, creator_cert(Src1, _, syntactically_grassroots)), Src, M, ok(M?)) :-
     Src? =?= Src1? | true.
-cert_check(creator_cert(Src1, _, syntactically_grassroots_with_wards(_, _, _, _, _)), Src, M, ok(M?)) :-
+cert_check(signed(_, _, creator_cert(Src1, _, syntactically_grassroots_with_wards(_, _, _, _, _))), Src, M, ok(M?)) :-
     Src? =?= Src1? | true.
-cert_check(creator_cert(Src1, _, grassroots_with_wards(_, _, _, _, _)), Src, M, ok(M?)) :-
+cert_check(signed(_, _, creator_cert(Src1, _, grassroots_with_wards(_, _, _, _, _))), Src, M, ok(M?)) :-
     Src? =?= Src1? | true.
 cert_check(_, _, _, refused) :- otherwise | true.
 
@@ -654,16 +653,15 @@ decline_step(offer(ch(_, [])), Id, From, Src, UserIn, NetIn, Outs, Host) :-
 %% the offer is refused by the path an invitation that does not check takes,
 %% its end closed, and nothing is delivered (Section 6.1).
 procedure invite_signed(Signature?, Key?, Key?, String?, String?, RootChannel(Opaque)?, UserInStream?, NetInStream?, OutputsList?, Host?).
-invite_signed(signed(_, _, Inv), Id, From, Src, InvSig, End, UserIn, NetIn, Outs, Host) :-
-    invite_check(Inv?, Src?, Id?, Ok),
+invite_signed(Sg, Id, From, Src, InvSig, End, UserIn, NetIn, Outs, Host) :-
+    invite_check(Sg?, Src?, Id?, Ok),
     offer_step(Ok?, Id?, From?, Src?, InvSig?, End?, UserIn?, NetIn?, Outs?, Host?).
-invite_signed(unsigned, Id, From, Src, InvSig, End, UserIn, NetIn, Outs, Host) :-
-    offer_step(false, Id?, From?, Src?, InvSig?, End?, UserIn?, NetIn?, Outs?, Host?).
 
-%% The signed invitation is untyped; it must name the offered source identity
-%% and this agent.
-procedure invite_check(Term?, String?, Constant?, Constant).
-invite_check(invitation(Src1, Me), Src, Id, true) :- Src? =?= Src1?, Me? =?= Id? | true.
+%% The invitation is read inside the signed term, its functor matched in the
+%% head (TGLP, Type checking of guards); it must name the offered source
+%% identity and this agent, and what is unsigned does not.
+procedure invite_check(Signature?, String?, Constant?, Constant).
+invite_check(signed(_, _, invitation(Src1, Me)), Src, Id, true) :- Src? =?= Src1?, Me? =?= Id? | true.
 invite_check(_, _, _, false) :- otherwise | true.
 
 procedure offer_step(Constant?, Key?, Key?, String?, String?, RootChannel(Opaque)?, UserInStream?, NetInStream?, OutputsList?, Host?).
@@ -733,9 +731,11 @@ take_joining(_, _, [], [], none).
 %% type identity, the type identity of the entry template's opaque instance at
 %% the mini-app's type, which must be equal at both ends") ---
 
-%% The signed undertaking is untyped; it must name the source identity.
-procedure undertaking_check(Term?, String?, Constant).
-undertaking_check(undertaking(Src1), Src, true) :- Src? =?= Src1? | true.
+%% The undertaking is read inside the signed term, its functor matched in the
+%% head (TGLP, Type checking of guards); it must name the source identity,
+%% and what is unsigned does not.
+procedure undertaking_check(Signature?, String?, Constant).
+undertaking_check(signed(_, _, undertaking(Src1)), Src, true) :- Src? =?= Src1? | true.
 undertaking_check(_, _, false) :- otherwise | true.
 
 %% handshake(Ok0, I, Apps, Apps1, Src, T, Ok, I1): the peer's undertaking
@@ -767,16 +767,12 @@ identity_match(_, _, _, _, _, refused) :- otherwise | true.
 %% --- a forgery --- the join is refused, the end kept closed, and no
 %% conversation opens (Section 6.1).
 procedure join_signed(Signature?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
-join_signed(signed(_, _, Und), Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
-    undertaking_check(Und?, Src?, Ok0),
+join_signed(Sg, Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    undertaking_check(Sg?, Src?, Ok0),
     take_invited(From?, Src?, Pend?, Pend1, I),
     handshake(Ok0?, I?, Apps?, Apps1, Src?, T?, Ok, I1),
     root_step(Ok?, I1?, Id?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
               Apps1?, Atts?, Pend1?, Trusted?).
-join_signed(unsigned, Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
-    take_invited(From?, Src?, Pend?, Pend1, I),
-    root_step(refused, I?, Id?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
-              Apps?, Atts?, Pend1?, Trusted?).
 
 procedure root_step(Verdict?, Kept?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 root_step(ok(M), kept(App, Mine), Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
@@ -799,16 +795,12 @@ root_step(_, I, Id, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
 %% where it is unsigned --- a forgery --- no end is accepted, the end is
 %% closed, and nothing is delivered (Section 6.1).
 procedure root_signed(Signature?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
-root_signed(signed(_, _, Und), Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
-    undertaking_check(Und?, Src?, Ok0),
+root_signed(Sg, Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    undertaking_check(Sg?, Src?, Ok0),
     take_joining(From?, Src?, Pend?, Pend1, I),
     handshake(Ok0?, I?, Apps?, Apps1, Src?, T?, Ok, I1),
     accept_root_step(Ok?, I1?, Id?, From?, UserIn?, NetIn?, Outs?,
                      Apps1?, Atts?, Pend1?, Trusted?).
-root_signed(unsigned, Id, From, Src, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
-    take_joining(From?, Src?, Pend?, Pend1, I),
-    accept_root_step(refused, I?, Id?, From?, UserIn?, NetIn?, Outs?,
-                     Apps?, Atts?, Pend1?, Trusted?).
 
 procedure accept_root_step(Verdict?, Kept?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 accept_root_step(ok(M), kept(App, End), Id, From, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-

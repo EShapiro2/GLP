@@ -207,29 +207,41 @@ exported procedure admit_list(Integer?, Key?, Signature?, Stream(DirAsk), DirLis
 %% and Visibility.
 admit_list(N, A, signed(K, _, listing(A1, Email, name(Name), listed)), Supply?, Reply?, N1?, Ps,
            [pending(N?, A?, Supply, Reply) | Ps?],
-           [listing(N?, A?, Email?, name(Name?), listed) | Reports1?], Reports1) :-
+           Reports?, Reports1) :-
     integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?) |
-    N1 := N? + 1.
+    N1 := N? + 1,
+    listing_named(N?, A?, Email?, Name?, listed, Reports, Reports1?).
 admit_list(N, A, signed(K, _, listing(A1, Email, name(Name), unlisted)), Supply?, Reply?, N1?, Ps,
            [pending(N?, A?, Supply, Reply) | Ps?],
-           [listing(N?, A?, Email?, name(Name?), unlisted) | Reports1?], Reports1) :-
+           Reports?, Reports1) :-
     integer(N?), K? =?= A?, A1? =?= A?, string(Email?), string(Name?) |
-    N1 := N? + 1.
+    N1 := N? + 1,
+    listing_named(N?, A?, Email?, Name?, unlisted, Reports, Reports1?).
 admit_list(N, A, signed(K, _, listing(A1, Email, none, listed)), Supply?, Reply?, N1?, Ps,
            [pending(N?, A?, Supply, Reply) | Ps?],
-           [listing(N?, A?, Email?, none, listed) | Reports1?], Reports1) :-
+           Reports?, Reports1) :-
     integer(N?), K? =?= A?, A1? =?= A?, string(Email?) |
-    N1 := N? + 1.
+    N1 := N? + 1,
+    listing_unnamed(N?, A?, Email?, listed, Reports, Reports1?).
 admit_list(N, A, signed(K, _, listing(A1, Email, none, unlisted)), Supply?, Reply?, N1?, Ps,
            [pending(N?, A?, Supply, Reply) | Ps?],
-           [listing(N?, A?, Email?, none, unlisted) | Reports1?], Reports1) :-
+           Reports?, Reports1) :-
     integer(N?), K? =?= A?, A1? =?= A?, string(Email?) |
-    N1 := N? + 1.
+    N1 := N? + 1,
+    listing_unnamed(N?, A?, Email?, unlisted, Reports, Reports1?).
 
 %% unsigned, another signer, another term, or a listing naming another key:
 %% refused, the Supply closed, and nothing reported.
 admit_list(N, _, _, [], rejected, N?, Ps, Ps?, Reports?, Reports) :-
     otherwise | true.
+
+%% listing_named and listing_unnamed: the report of a listing, its email address
+%% and its name read from inside the signed term and typed by their guards in
+%% admit_list/10, so handed on in the body (TGLP, Type checking of guards).
+procedure listing_named(Integer?, Key?, String?, String?, DirVisibility?, Stream(DirReport), Stream(DirReport)?).
+listing_named(N, A, Email, Name, V, [listing(N?, A?, Email?, name(Name?), V?) | Reports1?], Reports1).
+procedure listing_unnamed(Integer?, Key?, String?, DirVisibility?, Stream(DirReport), Stream(DirReport)?).
+listing_unnamed(N, A, Email, V, [listing(N?, A?, Email?, none, V?) | Reports1?], Reports1).
 
 %% =============================================================================
 %% answer: the host's answer to list request M
@@ -320,10 +332,15 @@ check_links(_, [], []).
 %% by Kept1, where S reports L signed by A over an invitation naming A; Kept
 %% is Kept1 otherwise.
 procedure keep_link(Key?, SignedTerm?, Signature?, DirLinks, DirLinks?).
-keep_link(A, L, signed(K, _, invitation(I, _, _, _, E)), [link(L?, E?) | Kept1?], Kept1) :-
-    K? =?= A?, I? =?= A?, integer(E?) | true.
+keep_link(A, L, signed(K, _, invitation(I, _, _, _, E)), Kept?, Kept1) :-
+    K? =?= A?, I? =?= A?, integer(E?) | kept_link(L?, E?, Kept, Kept1?).
+
 keep_link(_, _, _, Kept1?, Kept1) :-
     otherwise | true.
+
+%% kept_link(L, E, Kept, Kept1): link(L, E) written on Kept, the expiry E read from inside the signed link and typed by its guard in keep_link/5, so handed on in the body (TGLP, Type checking of guards).
+procedure kept_link(SignedTerm?, Integer?, DirLinks, DirLinks?).
+kept_link(L, E, [link(L?, E?) | Kept1?], Kept1).
 
 %% =============================================================================
 %% admit_unlist: dispatch on what signature/2 reports for an unlist request
