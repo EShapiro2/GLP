@@ -1,4 +1,4 @@
-Changes from /tmp/claude-0/-home-user/c7b83ece-7229-53aa-bda1-a1b9689f0d55/scratchpad/old/calculus to /tmp/claude-0/-home-user/c7b83ece-7229-53aa-bda1-a1b9689f0d55/scratchpad/pubF, for an owner who adopted the first.
+Changes from /tmp/claude-0/-home-user/c7b83ece-7229-53aa-bda1-a1b9689f0d55/scratchpad/old/calculus to /tmp/claude-0/-home-user/c7b83ece-7229-53aa-bda1-a1b9689f0d55/scratchpad/pubG, for an owner who adopted the first.
 
 AGORA:
   own act added: Offer own
@@ -25,7 +25,6 @@ CMB:
   inherited acts changed: 1 (Accept by bond from DGC)
   derived acts: 89, before 1, changed
 CSSN:
-  own act added: Child add
   inherited act added: Post own, from GSN
   inherited act added: Child post own, from GSNW
   inherited act added: Child leave, from GSNW
@@ -282,5 +281,5 @@ WC:
   inherited acts changed: 1 (Accept by bond from DGC)
   derived acts: 90, before 2, changed
 
-Summary: 62 contracts; own acts changed 12; inherited acts changed only 19; text only 31; unchanged 0; new 0; no longer published 0.
-With an own act added, gone, renamed or changed: AGORA, CMB, CSSN, DAO, DGC, GBCC, GSN, GSNP, GSNW, LDAO, MCS, SC.
+Summary: 62 contracts; own acts changed 11; inherited acts changed only 20; text only 31; unchanged 0; new 0; no longer published 0.
+With an own act added, gone, renamed or changed: AGORA, CMB, DAO, DGC, GBCC, GSN, GSNP, GSNW, LDAO, MCS, SC.

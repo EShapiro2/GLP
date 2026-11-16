@@ -7,6 +7,7 @@ Run from the top: python3 tools/supplied.py; its last line is the count, 0 when 
 # every required predicate that is none of the four; numbers' states left out (they are constraints).
 import os, sys
 sys.path.insert(0, 'tools'); import gcsas
+import toglp
 PARAMS = set()
 names = sorted(f[:-4] for f in os.listdir('sasx') if f.endswith('.txt'))
 w = gcsas.World(sorted(f[:-4] for f in os.listdir('gr') if f.endswith('.txt') and not f.startswith('NOTES')))
@@ -17,7 +18,7 @@ for n in names:
     phrase = {p: t for t, p, a in lex.basic}
     env, refl = lex.env_preds(), lex.refl_preds()
     PARS = PARAMS | lex.env_preds('par')
-    acts = [e for e in (gcsas.read_schema_line(l) for l in gcsas.get('sasx', n) if gcsas.ENTRY.match(l)) if e['kind'] == 'act']
+    acts = [e for e in toglp.schemas(n) if e['kind'] == 'act']      # an act no binding enables is no act (toglp.unenabled)
     added = {l[1] for e in acts for l in e['head'] if not l[0]}
     req = {}
     for e in acts:

@@ -28,11 +28,16 @@ def acts(path):
     out = []
     if not os.path.exists(path):
         return out
+    tp = os.path.join(os.path.dirname(path), 'term.glp.txt')      # an act the term leaves out, no binding enabling it, is no act (toglp.unenabled)
+    term = open(tp, encoding='utf-8').read() if os.path.exists(tp) else None
     for l in open(path, encoding='utf-8'):
         m = LINE.match(l.rstrip('\n'))
         if not m or m.group(3).startswith('| '):
             continue
         name, _, schema = m.group(3).partition(': ')
+        f = re.sub(r' +', '_', name.lower().strip().replace("'", ''))      # the schema's name, as toglp.ident
+        if term is not None and not re.search(r"sas\('?%s(?:_\d+)?'?, " % re.escape(f), term):
+            continue
         out.append((name, schema, m.group(1).split('+')))
     return out
 
