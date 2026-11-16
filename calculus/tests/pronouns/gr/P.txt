@@ -1,0 +1,10 @@
+P: Pronouns and possessives
+Alice, Bob, Erin and Frank are persons, Carol a person, Orga an organisation, Club a club.
+1. ■ Ward end: Carol may end her friendship with Bob, provided he is not her guardian.
+2. ■ Greet guardian: Bob may greet Alice, provided she is his guardian. Greet known: Erin may greet Bob, provided she knows him. Greet self: Frank may greet Erin, provided he knows himself.
+3. ■ Greet friend: Alice may greet Frank, provided he is her friend. Greet stranger: Alice may greet Bob, provided he is not her friend. Greet of hers: Erin may greet Frank, provided Frank is a friend of hers.
+4. ■ Greet member: Frank may greet Orga, provided it has him as a member. Greet outsider: Orga may greet Bob, provided he is not its member. Greet their member: Orga may greet Frank, provided he is their member. Greet in her club: Alice may greet Frank, provided he is a member of her Club.
+Logic pragmas.
+Vocabulary: x has y as a guardian = has_guardian(x,y); x is a friend of y = friend(x,y); x knows y = knows(x,y); x has greeted y = greeted(x,y); x has y as a member = member(x,y); x has ended x's friendship with y = ended(x,y); x is a member of y's c = club_member(x,c,y).
+After x ends x's friendship with y: x has ended x's friendship with y.
+After x greets y: x has greeted y.
