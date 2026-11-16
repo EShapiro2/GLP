@@ -1708,6 +1708,8 @@ POSITIVE_FILES=(
     "$TC_DIR/positive/term_univ.glp"
     # The root's RName and OneOf: run in Section ZG.
     "$TC_DIR/positive/one_of.glp"
+    # A variable tested by a type guard has that type in the whole clause, its head included (TGLP typed-glp.tex, "Type checking of guards"): a key read from inside the term signature/2 reports, signed(Key, Hash, Term), and handed out in the head.
+    "$TC_DIR/positive/guard/guard_narrows_head.glp"
     "$TC_DIR/positive/merge_basic.glp"
     "$TC_DIR/positive/append_list.glp"
     "$TC_DIR/positive/copy_stream.glp"
@@ -1976,6 +1978,9 @@ NEGATIVE_FILES=(
     "$TC_DIR/negative/term/term_writer_below.glp"
     "$TC_DIR/negative/term/term_union.glp"
     "$TC_DIR/negative/term/term_univ_wildcard.glp"
+    # --- typechecker/negative/guard: the same variable under a guard of another type, and under no guard ---
+    "$TC_DIR/negative/guard/guard_narrows_head_wrong_type.glp"
+    "$TC_DIR/negative/guard/below_term_unguarded.glp"
 
     # --- typechecker/negative/head ---
     "$TC_DIR/negative/head/merge_wrong_constant.glp"
@@ -7561,11 +7566,15 @@ check "ZG5 Term: a list of Terms" "N3 = 4" "$zg5"
 zg_oneof=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/typechecker/positive/one_of.glp
 count(['Alice', 'Bob', one('Carol', ['Alice', 'Bob']), one('Dave', '_'), one('Erin', 'Alice')], N).
+others_of('Alice', L1).
+others_of(['Alice', 'Bob'], L2).
 :quit
 HEREDOC
 2>&1)
 check "ZG5 OneOf: the program loads" "Loaded: .*one_of.glp" "$zg_oneof"
 check "ZG5 OneOf: Others one name, a list of names, or '_'" "N = 4" "$zg_oneof"
+check "ZG5 OneOf: one name, narrowed by constant/1, read as a list" "L1 = \\['Alice'\\]" "$zg_oneof"
+check "ZG5 OneOf: a list of names read as itself" "L2 = \\['Alice', 'Bob'\\]" "$zg_oneof"
 
 # The refusals, each for its reason.
 zg_term() { # zg_term <file>: the REPL's output on loading a negative
