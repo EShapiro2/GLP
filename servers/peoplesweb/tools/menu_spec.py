@@ -38,7 +38,9 @@ def spec(path):
     props = {}
     for alt in m.group(1).split(';'):
         alt = alt.strip()
-        mm = re.match(r'(\w+)(?:\((.*)\))?$', alt, re.S)
+        # A proposal is named by an atom, quoted where it is not a word, as
+        # GNL's 'no-show'.
+        mm = re.match(r"('[^']*'|\w+)(?:\((.*)\))?$", alt, re.S)
         args = []
         if mm.group(2):
             depth, buf = 0, ''
@@ -48,7 +50,7 @@ def spec(path):
                 if ch == ',' and depth == 0: args.append(buf.strip()); buf = ''; continue
                 buf += ch
             args.append(buf.strip())
-        props[mm.group(1)] = args
+        props[mm.group(1).strip("'")] = args
     mm = re.search(r'^Menu =::= social_menu\((.*)\)\s*\.\s*$', src, re.M | re.S)
     items = P(mm.group(1)).term() if mm else []
     labels, fields, acts, meeting, texts = {}, {}, {}, {}, {}
