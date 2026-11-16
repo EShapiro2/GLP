@@ -15,7 +15,7 @@ After the fare and the deposit are released to x and to y as the terms say: no l
 After x cancels x's ride with y: no longer x's fare is locked, no longer y's deposit is locked, no longer x and y have a ride, x has a pickup recorded with no one, y has a pickup recorded with no one, x has a release of the ride with y and y has a release of the ride with x.
 After x withdraws x's call c: no longer x has the call c open.
 GRA:0 - | A *pickup delay* is measured from the award. The *terms* of a call, a parameter of GRA, state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
-GRA:0 - | Alice is a rider, Bob a driver and Carol a person, Trip a call. A person can be either a rider or a driver but not both.
+GRA:0 - | Alice is a rider and Bob a driver, Trip a call. A person can be either a rider or a driver but not both.
 GRA:0 - | Environment: x is a rider; x is a driver; the bidding period of x's call c has ended; x is at the pickup point with y; x is at the destination with y; no pickup of x's ride is recorded within the maximum pickup delay.
 GRA:0 - | Parameters: the terms of x's call c select y; the terms of x's call c select no bidder.
 GRA:1 ■ | Call.

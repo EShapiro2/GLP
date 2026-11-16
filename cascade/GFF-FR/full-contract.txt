@@ -5,7 +5,7 @@ Alice *trusts* Bob when she knows Bob personally and believes him to keep the un
 A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice.
 A *feed* is named by its author.
 d > 1, an integer, is a parameter of GFF-FR.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons. Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person. Alice, Bob and Carol are persons, Bob and Carol possibly one person.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice and Bob are persons. Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person. Alice, Bob and Carol are persons, Bob and Carol possibly one person.
 GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.

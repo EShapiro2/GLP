@@ -1,0 +1,34 @@
+% JOINT: Joint Accounts --- an example contract by Nimrod Talmon with Claude, 2026-10-31, revised 2026-11-01 against docs/speech-act-schemas-guide.md.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.  The paper responsible: GCE (https://github.com/nimrodtalmon/grassroots-contracts/blob/main/paper/main.pdf), which prints this contract with the other example contracts.
+% Extends: GC, Grassroots Coins, Currencies' (programs/currencies/coins), and through it GKK.  It cites their clauses whole and restates none.
+% Defines: joint account, named by its opener as a group by its leader; k.joint(u, <a>.n) at both partners.
+% Schemas: JOINT.glp beside this file, written by tools/contracts.py.
+Joint: Joint Accounts
+Joint extends GC.
+Alice and Bob are persons.
+1. ■ Open account: Alice and Bob, who know each other, may jointly open a joint account, under a new name of Alice's.
+2. ■ Deposit: Either of them may move coins they hold into their joint account.
+3. ■ Withdraw: Alice and Bob may jointly move coins from their joint account to either of them.
+Logic pragmas
+Joint extends GC.
+Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
+1. ■ Open account: Alice and Bob may jointly open the joint account Acct under a new name of Alice's, provided Alice and Bob know each other.
+2. ■ Deposit: Alice may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct. Partner deposit: Bob may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct.
+3. ■ Withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Alice. Partner withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Bob.
+Logic pragmas.
+Vocabulary: x has an account named n = account(x,n); x holds the joint account n with y = joint(x,n,y); x keeps m z-coins in n with y = joint_coin(x,z,n,y,*m).
+x and y hold the joint account n: x holds the joint account n with y and y holds the joint account n with x.
+After x and y open the joint account n under a new name of x's, which requires x does not have an account named n: x has an account named n and x and y hold the joint account n.
+After x moves m z-coins into the joint account n of x and y: no longer x holds m z-coins, x keeps m z-coins in n with y and y knows z.
+After y moves m z-coins into the joint account n of x and y: no longer y holds m z-coins, x keeps m z-coins in n with y and x knows z.
+After x and y move m z-coins from the joint account n to x: no longer x keeps m z-coins in n with y and x holds m z-coins.
+After x and y move m z-coins from the joint account n to y: no longer x keeps m z-coins in n with y and y holds m z-coins.
+Interface pragmas
+Joint: the joint money Alice shares.
+Accounts: the accounts Alice shares.
+Open account: Alice [Open account] <acct>
+  Bob: Alice asks to open a joint account with you.
+Deposit: Alice [Deposit] <sum>
+  Bob [Partner deposit] <sum>
+Withdraw: Alice [Withdraw] <sum> [Partner withdraw] <sum>
+  Bob: Alice asks to withdraw from your joint account.

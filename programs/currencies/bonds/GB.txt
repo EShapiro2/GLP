@@ -3,35 +3,23 @@
 % Paper: GB, Grassroots Bonds: Financing by the People, for the People, https://arxiv.org/abs/2603.13671
 % Adopted from the Calculus, branch Calculus of GLP, 3b5fd5d, by calculus/MIGRATION.md (Udi, 2026-11-15): the contract and its Logic pragmas are the Calculus's text, which Udi approved; GB.glp and cascade/GB/ are printed by calculus/tools/adopt.py, never written by hand; the Interface pragmas are the owner's, a line for each clause with acts of its own, the fields those of calculus/NAME/interface.txt (Currencies #19, 2026-11-15).
 GB: Grassroots Bonds
-GB extends GC.
-A *bond* is a unit of debt, due at its maturity date, that includes its issuer's public key and its maturity date and is signed by their private key. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
-Alice, Bob and Carol are parties.
-1. ■ Issue bond: Alice may issue Alice-bonds of a maturity later than the current date.
-2. ■ Swap: Alice and Bob, who know each other, may jointly swap coins and bonds they hold.
-3. ■ Redeem: Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
-4. ■ Escrow. Deposit: Alice may deposit coins and bonds with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob if the condition is met. Return: Carol and Alice may jointly return them to Alice if it fails. Each act is between two parties who know each other.
+GB restricts and extends GC.
+A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
+Alice and Bob are parties.
+1. ■ Issue bond: GN:1, for bonds, with maturity later than the current date.
+2. ■ Redeem: Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
 Logic pragmas
-GB extends GC.
-A *bond* is a unit of debt, due at its maturity date, that includes its issuer's public key and its maturity date and is signed by their private key. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
-Alice, Bob, Carol and Dave are parties, Day and Term maturity dates, Today a date, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clauses 2 and 3 Carol and Dave are possibly Alice, Bob or one person, and in clause 4 Dave is possibly Alice, Bob or Carol.
-1. ■ Issue bond: Alice may issue Sum Alice-bonds due Day, provided the current date is Today and Day is more than Today.
-2. ■ Swap: GC:2. Swap coin for bond: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-bonds due Day, provided Alice and Bob know each other. Swap bonds: Alice and Bob may jointly swap Sum Carol-bonds due Day for Total Dave-bonds due Term, provided Alice and Bob know each other.
-3. ■ Redeem: GC:4. Redeem coin against bond: Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob. Redeem bond: Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today. Redeem bond against bond: Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.
-4. ■ Escrow. Deposit: Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Deposit bond: Alice may deposit Sum Dave-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other. Release bond: Carol and Bob may jointly release Sum Dave-bonds due Day that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other. Return bond: Carol and Alice may jointly return Sum Dave-bonds due Day deposited for Bob on Cond, provided Carol and Alice know each other.
+GB restricts and extends GC.
+A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
+Alice, Bob and Carol are parties, Day and Term maturity dates, Today a date; Carol is possibly Alice or Bob.
+1. ■ Issue bond: GN:1, for bonds, only if the current date is Today and Day is more than Today.
+2. ■ Redeem: GC:2. Redeem coin against bond: Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob. Redeem bond: Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today. Redeem bond against bond: Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.
 Logic pragmas.
-Vocabulary: x holds a y-bond due e = bond(x,y,e); x holds n y-bonds due e = bond(x,y,e,*n); the current date is e, for x = today(x,e); z holds n w-coins in escrow from x for y on k = escrow_coin(z,w,x,y,k,*n); z holds n w-bonds due e in escrow from x for y on k = escrow_bond(z,w,e,x,y,k,*n).
-After x issues n x-bonds due e: x holds n x-bonds due e.
-After x and y swap n z-coins for m w-bonds due e: no longer x holds n z-coins, y holds n z-coins, no longer y holds m w-bonds due e, x holds m w-bonds due e, y knows z and x knows w.
-After x and y swap n z-bonds due e for m w-bonds due f: no longer x holds n z-bonds due e, y holds n z-bonds due e, no longer y holds m w-bonds due f, x holds m w-bonds due f, y knows z and x knows w.
+Vocabulary: x holds a y-bond due e = bond(x,y,e); x holds n y-bonds due e = bond(x,y,e,*n); the current date is e, for x = today(x,e); z holds n w-bonds due e in escrow from x for y on k = escrow_bond(z,w,e,x,y,k,*n).
 After x redeems a y-coin against a z-bond due e: no longer x holds a y-coin, y holds a y-coin, no longer y holds a z-bond due e, x holds a z-bond due e and x knows z.
 After x redeems a y-bond due e against a z-coin: no longer x holds a y-bond due e, y holds a y-bond due e, no longer y holds a z-coin, x holds a z-coin and x knows z.
 After x redeems a y-bond due e against a z-bond due f: no longer x holds a y-bond due e, y holds a y-bond due e, no longer y holds a z-bond due f, x holds a z-bond due f and x knows z.
-After x deposits n w-coins with z for y on k: no longer x holds n w-coins and z holds n w-coins in escrow from x for y on k.
-After x deposits n w-bonds due e with z for y on k: no longer x holds n w-bonds due e and z holds n w-bonds due e in escrow from x for y on k.
-After z and y release n w-coins that x deposited on k: no longer z holds n w-coins in escrow from x for y on k, y holds n w-coins and y knows w.
-After z and y release n w-bonds due e that x deposited on k: no longer z holds n w-bonds due e in escrow from x for y on k, y holds n w-bonds due e and y knows w.
-After z and x return n w-coins deposited for y on k: no longer z holds n w-coins in escrow from x for y on k, x holds n w-coins and x knows w.
-After z and x return n w-bonds due e deposited for y on k: no longer z holds n w-bonds due e in escrow from x for y on k, x holds n w-bonds due e and x knows w.
+Kind of note: bond, y-bonds due Day for y-notes.
 Interface pragmas
 Bonds: the bonds Alice holds.
 Issue bond: Alice [Issue bond] <maturity> <amount>

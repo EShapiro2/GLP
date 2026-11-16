@@ -1,0 +1,5 @@
+GAI instantiates GnW: holds
+GAI composes it (GnW) with GFP: holds
+GAI restricts it (GnW and GFP): holds
+GAI strengthens it (GnW and GFP): holds
+GAI extends it (GnW and GFP): holds

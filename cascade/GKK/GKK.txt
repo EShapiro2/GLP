@@ -7,21 +7,21 @@
 % Schemas: GKK.glp beside this file, the full schemas, printed by calculus/tools/adopt.py GKK from the Logic pragmas and never written by hand; adopt.py --check GKK holds it and cascade/GKK/ to what the tools print.
 GKK: Grassroots Keys and Knowledge
 An *identity* is a unique key pair.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Logic pragmas
 An *identity* is a unique key pair.
-A *party* to a contract is whoever has an identity.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Alice, Bob and Carol are persons.
 1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Logic pragmas.
-Vocabulary: x has an identity = identity(x); x knows y = knows(x,y).
+Vocabulary: x has an identity = identity(x); x is a person = person(x); x knows y = knows(x,y).
 x and y know each other: x knows y and y knows x.
-After x establishes an identity, which requires x does not have an identity: x has an identity.
+After x establishes an identity, which requires x does not have an identity: x has an identity and x is a person.
 After x and y come to know each other: x and y know each other.
 After x introduces z to y: y knows z.
 Reflexive: x knows y.

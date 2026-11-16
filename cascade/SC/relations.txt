@@ -1,0 +1,3 @@
+SC instantiates GCorp: holds
+SC composes it (GCorp) with GS: holds
+SC extends it (GCorp and GS): holds

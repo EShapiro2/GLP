@@ -2,7 +2,7 @@
 %% complete in itself.  Not to be edited: edit GPE.txt and run adopt.py GPE.
 % contract_named(gpe, C): the contract, GPE.
 procedure contract_named(Constant?, SDeclared).
-contract_named(gpe, environment([nearby], reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
+contract_named(gpe, environment([nearby], reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
  sas(open_place, ['Alice'], [], [atom(open_place, ['Alice'])], [atom(identity, ['Alice']), not(atom(open_place, ['Alice']))], true, ['Alice']),

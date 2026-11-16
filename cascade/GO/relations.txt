@@ -1,0 +1,4 @@
+GO instantiates GnW: holds
+GO restricts it (GnW): holds
+GO strengthens it (GnW): holds
+GO extends it (GnW): holds
