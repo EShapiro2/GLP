@@ -1780,12 +1780,15 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     worded_acts(W?, Was),
     worded_lx(W?, Lx2),
     base_lines(C?, Was?, Lx2?, Lb00),
+    worded_ones(W?, Wos),
+    ones_lines(Wos?, Lon),
+    lapp(Lb00?, Lon?, Lb01),
     worded_stands(W?, Wss),
     standing_lines(C?, Wss?, Lsd),
     worded_acts(W?, Wac),
     consent_lines(Wac?, Lcs),
     lapp(Lsd?, Lcs?, Lsc),
-    lapp(Lb00?, Lsc?, Lb0),
+    lapp(Lb01?, Lsc?, Lb0),
     worded_lx(W?, Lx6),
     local_lines(Lx6?, Ll),
     lapp(Lb0?, Ll?, Lb),
@@ -2811,6 +2814,25 @@ stand_act_of1(no, no, _, Ss, M, R?) :- stand_act_of(Ss?, M?, R).
 procedure same_act(Constant?, Constant?, YesNo).
 same_act(X, Y, yes) :- X? =?= Y? | true.
 same_act(_, _, no) :- otherwise | true.
+%% The pairs of each schema's roles that its clause names possibly one person, schema_ones(Name, Pairs), each may_one(J, I), which the platform's rule of a schema-binding reads (text.glp, rule_ok; vGLP, Section 5.4, "Speech-act schemas as local specifications": "distinct agent roles to distinct persons but for two the clause names as possibly one person").
+MayOne  ::= may_one(Integer, Integer).
+MayOnes ::= [] ; [MayOne | MayOnes].
+procedure worded_ones(Worded?, Ones).
+worded_ones(words(_, _, _, D), Os?) :- ones_of(D?, Os).
+procedure ones_lines(Ones?, Lines).
+ones_lines(Os, ['', 'MayOne    ::= may_one(Integer, Integer).', 'MayOnes   ::= [] ; [MayOne | MayOnes].', 'procedure schema_ones(Constant?, MayOnes).'|L?]) :- ones_lines1(Os?, L).
+procedure ones_lines1(Ones?, Lines).
+ones_lines1([], ['schema_ones(_, []) :- otherwise | true.']).
+ones_lines1([ones(N, Ps)|Os], [T?, '.'|L?]) :- ground(N?) |
+    may_ones(Ps?, Ms),
+    T0 =.. [schema_ones, N?, Ms?],
+    term_to_string(T0?, T),
+    ones_lines1(Os?, L).
+procedure may_ones(Sames?, MayOnes).
+may_ones([], []).
+may_ones([same(J, I)|Ps], [may_one(J?, I?)|Ms?]) :- may_ones(Ps?, Ms).
+may_ones([mark(_)|Ps], Ms?) :- may_ones(Ps?, Ms).
+may_ones([gship(_, _, _)|Ps], Ms?) :- may_ones(Ps?, Ms).
 procedure base_lines(Contract?, TActs?, Lxs?, Lines).
 base_lines(C, As, Lx, ['', 'procedure schema_base(Constant?, Integer).'|L?]) :- ground(C?), ground(As?), ground(Lx?) | base_lines1(C?, As?, Lx?, L).
 %% The base of the conjuncts of a schema local to their base, its listed roles' and those of its conjuncts whose instances the attempt names, which have one (q_lines, local.glp).
