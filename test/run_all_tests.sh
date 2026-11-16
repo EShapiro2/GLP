@@ -5846,10 +5846,10 @@ check "CVA social graph: a contract naming no introduction predicate has none" "
 cva_atom() { # cva_atom <platform.vglp>: the alternatives of Atom, one line
     awk '/^Atom ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$1"
 }
-check "CVA machine states: the social graph's atoms, identity, knows(Peer) and friend(Peer)" "^identity knows(Peer) friend(Peer) $" "$(cva_atom "$CVA/social_graph/platform.vglp")"
+check "CVA machine states: the social graph's atoms, identity, person, knows(Peer) and friend(Peer)" "^identity person knows(Peer) friend(Peer) $" "$(cva_atom "$CVA/social_graph/platform.vglp")"
 check "CVA machine states: ... friend(bob) written as the contract writes it" "^atom_of(g(friend, \[p(V1)\]), shown(friend(V1?)))$" "$cva_sg_text"
-check "CVA machine states: the currency's atoms, GKK's identity and knows(Peer) and its own coin(Peer)" "^identity knows(Peer) coin(Peer) $" "$(cva_atom "$CVA/currency/platform.vglp")"
-check "CVA machine states: GSN's atoms, a speech act at a speech-act variable's place" "^identity knows(Peer) friend(Peer) message(Peer, Speech) leader(Speech) member(Speech, Peer) listed(Peer, Speech) posted(Speech, Peer, Speech) group_delivered(Peer, Speech, Speech, Peer) group_message(Peer, Speech, Speech, Peer) $" "$(cva_atom "$GLP_DIR/programs/apps/gsn/platform.vglp")"
+check "CVA machine states: the currency's atoms, GKK's identity, person and knows(Peer) and its own coin(Peer)" "^identity person knows(Peer) coin(Peer) $" "$(cva_atom "$CVA/currency/platform.vglp")"
+check "CVA machine states: GSN's atoms, a speech act at a speech-act variable's place" "^identity person knows(Peer) friend(Peer) message(Peer, Speech) leader(Speech) member(Speech, Peer) listed(Peer, Speech) posted(Speech, Peer, Speech) group_delivered(Peer, Speech, Speech, Peer) group_message(Peer, Speech, Speech, Peer) $" "$(cva_atom "$GLP_DIR/programs/apps/gsn/platform.vglp")"
 # GSNP holds no atom authored since GSNP d0d98714 (2026-11-07, "item with its holder, author_of, GFP's, in place of authored"), and item comes before attestation, the atoms in the order of their predicates' first occurrence.
 check "CVA machine states: GSNP's, on GKK, GnW and GAI, a signed term a speech act" "^identity person knows(Peer) friend(Peer) item(Speech) leader(Speech) member(Speech, Peer) listed(Peer, Speech) posted(Speech, Peer, Speech) group_delivered(Peer, Speech, Speech, Peer) ai_agent has_guardian(Peer) attestation(Speech) principal(Peer) guardian(Peer) attestation_record(Peer, Speech) retired $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
 
