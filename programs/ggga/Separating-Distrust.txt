@@ -4,7 +4,7 @@
 % Restricts: Distrust, GGGA's (Distrust.txt beside this file), and with it Friendship and Knowledge, by the relations of the Calculus (calculus/README.md, "The relations"): Separating Distrust:1 restricts Friendship:1, forbidding at each of the two a declared distrust of the other; every other act of Distrust is kept; Separating Distrust:2 is undertaken and adds no schema.
 % Defines: nothing.
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 029de9f; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write; clause 1 is undertaken, as Friendship:1 is, and clause 2 ends with Bob's withdrawal (GGGA #4).  Git holds what the file said before.
-% Schemas: Separating-Distrust.glp beside this file, the full schemas, Distrust's nine, befriend with the two forbidden atoms, printed by calculus/tools/adopt.py Separating-Distrust from the Logic pragmas and never written by hand; adopt.py --check Separating-Distrust holds it and cascade/Separating-Distrust/ to what the tools print.  Clause 2 has no schema.
+% Schemas: Separating-Distrust.glp beside this file, the full schemas, Distrust's nine, befriend with the two forbidden atoms, printed by calculus/tools/adopt.py "Separating Distrust" from the Logic pragmas and never written by hand; adopt.py --check "Separating Distrust" holds it and cascade/Separating-Distrust/ to what the tools print.  Clause 2 has no schema.
 % Pragmas: the Interface pragmas are Distrust's and Friendship's, Separating Distrust having their acts and adding none; the heading stands with no line under it, vGLP's reader refusing a contract with no heading.
 Separating Distrust
 Separating Distrust restricts Distrust.
