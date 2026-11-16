@@ -1,10 +1,10 @@
 % GSN: Grassroots Social Network --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: GSC.  The paper, /Users/udi/Grassroots/GSC/main.tex, prints it in its box in Section 2.3 and cites a clause as GSN:1; GSNP, GAI's, and CSSN extend it.
 % Paper: GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231
-% Extends: GSN extends and strengthens GSG, Grassroots Social Graph, GSC's (GSG.txt beside this file), by the relations of the Calculus (GLP calculus/README.md, The relations): its Unfriend is GSG:2 strengthened, ending every membership between the two.
+% Extends: GSN extends and strengthens GSG, Grassroots Social Graph, GSC's (Friendship.txt beside this file), by the relations of the Calculus (GLP calculus/README.md, The relations): its Unfriend is GSG:2 strengthened, ending every membership between the two.
 % Defines: group, leader, member, message.  The clauses say "agent" where GSC's paper says "person", so that CSSN can add children and GAI AI agents (Udi, 2026-10-20); an agent is a person, a child or an AI agent, and the pronoun 'they'.
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus c475902; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GSC's, a line for each act, named by the act.  Git holds what the file said before.
-% Schemas: GSN.glp beside this file, the full schemas, GKK's and GSG's with those of messages and groups, a message a speech act with a name, a post delivered once to each member, printed by calculus/tools/adopt.py GSN from the Logic pragmas and never written by hand; adopt.py --check GSN holds it and cascade/GSN/ to what the tools print.
+% Schemas: Groups.glp beside this file, the full schemas, GKK's and GSG's with those of messages and groups, a message a speech act with a name, a post delivered once to each member, printed by calculus/tools/adopt.py GSN from the Logic pragmas and never written by hand; adopt.py --check GSN holds it and cascade/Groups/ to what the tools print.
 Groups
 Groups extends and strengthens Friendship.
 A *message*, a parameter of Groups, is what a person sends.
