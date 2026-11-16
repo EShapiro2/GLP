@@ -1,0 +1,5 @@
+R: Restricted
+R restricts B.
+Alice, Bob and Carol are persons, Sum a number.
+1. ■ Pay checked: B:1 Pay, only if Bob knows Alice.
+Logic pragmas.

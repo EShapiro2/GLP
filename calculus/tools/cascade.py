@@ -23,7 +23,7 @@ GLP = os.environ.get('GLP_DIR') or next((d for d in (os.path.join(os.path.dirnam
 PARAMETRIC = 'no platform: a parametric contract has none until it is instantiated'
 
 
-def repl(text, timeout=int(os.environ.get('CASCADE_TIMEOUT', 600))):
+def repl(text, timeout=int(os.environ.get('CASCADE_TIMEOUT', 3600))):
     try:
         r = subprocess.run(['bin/glpc'], input=text, capture_output=True, text=True, cwd=os.path.join(GLP, 'glp_runtime'), timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -38,6 +38,59 @@ def answer(lines, var):
     return None
 
 
+def clause_sentences(n, acts):
+    """{index of an act in acts: the sentence of the clause the act is}, from the expanded contract, exp/NAME.txt.
+    The clause is the exp/ line whose first label is the first of the act's label (GSG:2 for GSG:2+GSN:3); its
+    sentence is the one whose head names the act ('Unfriend: ...', 'Organisation end, Unfriend, ...: ...'), or the
+    line's one sentence where it has one; and where the line has as many sentences no head names as acts of that
+    label it names nowhere, the acts take them in order; an act the pragmas split from a clause's act takes that act's.
+    An act no clause states, a derived act ('<Act> for <Role>', 'Vote of ...'), has none here."""
+    import gcsas
+    lines, labelled = {}, []
+    for l in gcsas.get('exp', n)[1:]:
+        m = re.match(r'([^.]*)\. [%s] (.*)$' % gcsas.MARKS, l)
+        if not m:
+            continue
+        heads = []
+        for snt in gcsas.sentences(m.group(2)):
+            mm = re.match(r"([A-Z][A-Za-z' ,-]*?): (.+)$", snt)
+            if mm:
+                heads.append(([x.strip() for x in re.split(r',| or | and ', mm.group(1))], mm.group(2)))
+        lines.setdefault(m.group(1).split(', ')[0], heads)
+        labelled.append((m.group(1).split(', '), heads))
+    derived = re.compile(r'.+ for .+|Vote of .+')
+    got, rest = {}, {}
+    for k, e in enumerate(acts):
+        heads = lines.get(e['label'].split('+')[0])
+        if heads is None or derived.fullmatch(e['name']):
+            continue
+        named = [h for h in heads if e['name'] in h[0]]
+        if named:
+            got[k] = named[0][1]
+        elif len(heads) == 1:
+            got[k] = heads[0][1]
+        else:
+            rest.setdefault(e['label'].split('+')[0], []).append(k)
+    for lab, ks in rest.items():
+        free = [h for h in lines[lab] if not any(a['name'] in h[0] for a in acts if a['label'].split('+')[0] == lab)]
+        if len(free) == len(ks):
+            for k, h in zip(ks, free):
+                got[k] = h[1]
+    # An act the pragmas split from a clause's act ('Deposit bond' from 'Deposit', 'Officer expel' from 'Expel')
+    # takes the sentence of that act: in the exp/ lines that bear one of the act's labels, the act a head names whose
+    # words are all in the act's name, the one of most words.
+    words = lambda x: set(x.lower().split())
+    for k, e in enumerate(acts):
+        if k in got or derived.fullmatch(e['name']):
+            continue
+        labs = set(e['label'].split('+'))
+        cands = [(len(words(x)), snt) for ls, heads in labelled if labs & set(ls) for xs, snt in heads for x in xs
+                 if x != e['name'] and words(x) <= words(e['name'])]
+        if cands:
+            got[k] = max(cands, key=lambda c: c[0])[1]
+    return got
+
+
 def contract_txt(n):
     """The contract as the cascade's reader of pragmas takes it: one clause for each act, titled by the act, with
     the sentence of the act; and its Interface pragmas, printed from the act: the first of those who decide it
@@ -46,14 +99,16 @@ def contract_txt(n):
     import gcsas
     acts = [e for e in toglp.schemas(n) if e['kind'] == 'act']
     flat = {}
-    for l in gcsas.get('gx', n)[1:]:          # the expanded sentences of the pragmas, by the names of their acts
+    for l in gcsas.get('gx', n)[1:]:          # the sentences recovered from the expanded schemas, by the names of their acts
         m = re.match(r'[^.]*\. [%s] (.*)$' % gcsas.MARKS, l)
         for snt in gcsas.sentences(m.group(1)) if m else []:
             mm = re.match(r"([A-Z][A-Za-z' -]*?): (.+)$", snt)
             if mm:
                 flat.setdefault(mm.group(1), []).append(mm.group(2))
-    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES')))
+    own = clause_sentences(n, acts)
+    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
     kinds = gcsas.kinds_from(w, n)
+    one = w.lexicon(n).one
     title = gcsas.get('gr', n)[0]
     out, prag, used = [title], ['Pragmas'], {}
     for k, e in enumerate(acts, 1):
@@ -62,11 +117,16 @@ def contract_txt(n):
         used[nm] = i + 1
         t = e['name'] if not i else '%s %d' % (e['name'], i + 1)
         sent = flat.get(e['name'], [e['name'] + '.'])[min(i, len(flat.get(e['name'], [1])) - 1)]
-        out.append('%d. %s %s.  %s' % (k, e['mark'], t, sent))
+        shown = own.get(k - 1) or sent
+        for p in e['must']:         # the reader takes who must consent from these words (vGLP's pragmas.sh); the schema's, kept
+            if not re.search(r'\b%s must consent\b' % re.escape(p), shown):
+                shown = shown.rstrip('.') + ', and %s must consent.' % p
+        out.append('%d. %s %s.  %s' % (k, e['mark'], t, shown))
         named = [g for g in e['guards'] if '(' not in g]
         roles = sum(1 for g in e['guards'] if '(' in g)
         deciders = ['Decider' + ('' if j == 0 else 'ABCDEFG'[j]) for j in range(roles)]
-        listed = ['Codecider' + ('' if j == 0 else 'ABCDEFG'[j]) for j in range(roles)]
+        rg = [gcsas.parse_atom(g)[1] for g in e['guards'] if '(' in g]
+        listed = ['Codecider' + ('' if j == 0 else 'ABCDEFG'[j]) for j in range(roles) if rg[j] not in one]     # a role any one of whom decides has no other to ask (toglp.ONE)
         who = named + deciders
         if not who:
             continue

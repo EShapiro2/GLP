@@ -138,6 +138,7 @@ const List<String> _notShown = [
   'issue(',
   'swap(',
   'pay(',
+  'pay_issuer(',
   'bond(',
   'date(',
   'dated',
@@ -912,7 +913,7 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     await run.shoot(alice, 'gkk-a-alice-identity.png');
     await run.join(alice);
-    expect(alice.atoms, ['identity']);
+    expect(alice.atoms, ['identity', 'person']);
     // Once her identity is established, Acquaint, GKK's "[Acquaint]", with its field for the peer's key, GKK's "<person>" (Section 5.4, "The contract's words").
     expect(
         find.descendant(
@@ -929,8 +930,8 @@ void appsScreens(Screens screens) {
     await run.meetByKey(alice, bob, shot: 'gkk-b-bob-asked-to-meet.png');
     await run.meetByKey(alice, carol);
     expect(alice.atoms,
-        unorderedEquals(['identity', 'knows(bob)', 'knows(carol)']));
-    expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)']));
+        unorderedEquals(['identity', 'person', 'knows(bob)', 'knows(carol)']));
+    expect(bob.atoms, unorderedEquals(['identity', 'person', 'knows(alice)']));
 
     // Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Introduce, GKK's "[Introduce]", in Bob's row of her Contacts, Bob taking the second role of introduce, with its field beside it, GKK's "<person>", Carol, introduce's agent variable c, which Alice's role requires held, knows(c), so it is picked among the persons she knows: "A button is drawn in the row of a tab's entry, a person who takes a role of the act or an item the act names, with the act's fields beside it" (vGLP, Section 6.2); "a variable is picked among the items the viewer holds where the proposer's role requires it held" (vGLP acd3e74, Section 5.4, "The contract's words").  She picks Carol and taps Introduce.
     await run.list(alice, 'knows');
@@ -963,7 +964,7 @@ void appsScreens(Screens screens) {
     expect(bob.questions('approval'), isEmpty);
     expect(carol.questions('approval'), isEmpty);
     expect(bob.atoms,
-        unorderedEquals(['identity', 'knows(alice)', 'knows(carol)']));
+        unorderedEquals(['identity', 'person', 'knows(alice)', 'knows(carol)']));
 
     // (c) Bob's contacts once he has approved: a row for each atom of knows, in the order of his state, the newest first, Carol and then Alice, each with Introduce, its field a key; Acquaint, which requires no atom of knows at his role, in no row: "A button is drawn in the row of a tab's entry, whose person takes a role of the act, ... in a row of the tab whose predicate the act requires or deletes at the proposer's role naming the entry" (vGLP 516a0a2, Section 6.2).
     await run.top(bob);
@@ -1017,8 +1018,8 @@ void appsScreens(Screens screens) {
     await run.list(bob, 'friend');
     await run.tap(bob, run.control(bob, 'act:unfriend:alice'));
     expect(alice.questions('approval'), isEmpty);
-    expect(alice.atoms, unorderedEquals(['identity', 'knows(bob)']));
-    expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)']));
+    expect(alice.atoms, unorderedEquals(['identity', 'person', 'knows(bob)']));
+    expect(bob.atoms, unorderedEquals(['identity', 'person', 'knows(alice)']));
 
     // (c) Alice's tabs after Bob ends the friendship: Friends lists no one, and Contacts lists Bob.
     expect(run.control(alice, 'atom:bob'), findsNothing);
@@ -1240,7 +1241,7 @@ void appsScreens(Screens screens) {
     await run.type(alice, run.control(alice, 'field:issue::2'), '2');
     await run.tap(alice, run.control(alice, 'send:issue:'));
     expect(alice.atoms,
-        unorderedEquals(['identity', 'knows(bob)', 'coin(alice)', 'coin(alice)']));
+        unorderedEquals(['identity', 'person', 'knows(bob)', 'coin(alice)', 'coin(alice)']));
     await run.list(alice, 'coin');
     await run.top(alice);
     expect(run.control(alice, 'atom:alice'), findsOneWidget);
@@ -1289,20 +1290,20 @@ void appsScreens(Screens screens) {
     expect(alice.atoms.where((x) => x == 'coin(bob)'), hasLength(3));
     expect(bob.atoms.where((x) => x == 'coin(alice)'), hasLength(2));
 
-    // (c) Bob's holdings after the swap: the Alice-coins he holds, with Pay, GC's "[Pay]", beside them.
+    // (c) Bob's holdings after the swap: the Alice-coins he holds, with Pay issuer, GC's "[Pay issuer]", beside them.
     await run.list(bob, 'coin');
     await run.top(bob);
     expect(run.control(bob, 'atom:alice'), findsOneWidget);
     expect(run.control(bob, 'atom:bob'), findsNothing);
-    expect(run.control(bob, 'act:pay:alice'), findsOneWidget);
+    expect(run.control(bob, 'act:pay_issuer:alice'), findsOneWidget);
     run.plain(bob);
     await run.shoot(bob, 'gc-c-bob-holdings.png');
 
-    // Alice pays two Bob-coins to Bob (GC:3): Pay beside her Bob-coins, its field amount, 2; which proposes pay(alice, bob, 2); Bob is not asked.
+    // Alice pays two Bob-coins to Bob (GC:3): Pay issuer beside her Bob-coins, its field amount, 2; which proposes pay_issuer(alice, bob, 2); Bob is not asked.
     await run.list(alice, 'coin');
-    await run.tap(alice, run.control(alice, 'act:pay:bob'));
-    await run.type(alice, run.control(alice, 'field:pay:bob:3'), '2');
-    await run.tap(alice, run.control(alice, 'send:pay:bob'));
+    await run.tap(alice, run.control(alice, 'act:pay_issuer:bob'));
+    await run.type(alice, run.control(alice, 'field:pay_issuer:bob:3'), '2');
+    await run.tap(alice, run.control(alice, 'send:pay_issuer:bob'));
     expect(bob.questions('approval'), isEmpty);
     expect(alice.atoms.where((x) => x == 'coin(bob)'), hasLength(1));
 
@@ -1521,13 +1522,13 @@ void appsScreens(Screens screens) {
           reason: '$p swaps $k $u-coins for $k1 $w-coins with $q');
     }
 
-    // [p] pays [k] coins of [q] to [q] (GC:3): Pay, GC's "[Pay]", beside their [q]-coins on their Coins tab, its field amount; nobody is asked.
+    // [p] pays [k] coins of [q] to [q] (GC:3): Pay issuer, GC's "[Pay issuer]", beside their [q]-coins on their Coins tab, its field amount; nobody is asked.
     Future<void> pay(String p, String q, int k) async {
       final (pq, qq) = (held(p, q), held(q, q));
       await run.list(v[p]!, 'coin');
-      await run.tap(v[p]!, run.control(v[p]!, 'act:pay:$q'));
-      await run.type(v[p]!, run.control(v[p]!, 'field:pay:$q:3'), '$k');
-      await run.tap(v[p]!, run.control(v[p]!, 'send:pay:$q'));
+      await run.tap(v[p]!, run.control(v[p]!, 'act:pay_issuer:$q'));
+      await run.type(v[p]!, run.control(v[p]!, 'field:pay_issuer:$q:3'), '$k');
+      await run.tap(v[p]!, run.control(v[p]!, 'send:pay_issuer:$q'));
       expect(v[q]!.questions('approval'), isEmpty);
       expect((held(p, q), held(q, q)), (pq - k, qq + k),
           reason: '$p pays $k $q-coins to $q');

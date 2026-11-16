@@ -91,7 +91,7 @@
 %%   cheer(p?)        :  at p  -greeted, +cheered
 %%
 %% greeted, greeting and cheered are of arity zero, so a state holds a count
-%% of each; greet(p, p) sends its two roles to one person, neither adding or
+%% of each; greet names its two roles possibly one person, schema(greet, ['Alice', one('Bob', 'Alice')], ...), so greet(p, p) sends them to one person, neither adding or
 %% deleting an atom naming the other, so they act together there, friend(p)
 %% holding at p, friend being reflexive, and greeted and greeting both added;
 %% and each cheer deletes one greeted (vGLP, Section 5.4, the paragraph on act
@@ -158,6 +158,18 @@
 %%   count(a)         :  at a  counting, +tick
 %%
 %% count is guarded at no role and has one role and no variable, so the atoms its role requires need name no other role and no variable, and the contract is effective; its schema-binding at a determines an unguarded part opened by a, in the domain of a's function wherever a holds counting, which no act deletes.  begin, guarded by a, lets the play choose whose agent counts.  counter/self.glp plays it.
+%%
+%% pokes is counter with a second unguarded class, of two participants, opened by the other person, so that a contract compiled here has an agent that always has an own transaction to take while it must also read the starts of another's, and neither may wait for ever while the other holds (vGLP, Section 5.4, "The compilation": "At every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger"; the audit's Finding 1; Udi, 2026-11-16):
+%%
+%%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
+%%                       at q  not friend(p), +friend(p)
+%%   begin(a?)        :  at a  not counting, +counting
+%%   count(a)         :  at a  counting, +tick
+%%   arm(b?)          :  at b  not armed, +armed
+%%   poke(b, a)       :  at b  armed, friend(a), +poked(a)
+%%                       at a  friend(b), +poked_by(b)
+%%
+%% poke is guarded at no role, and the atoms each role requires name the other role, so the contract is effective; its schema-binding at b and a determines an unguarded part opened by b, in its domain wherever b holds armed and the two are friends, which no act deletes, so that b's agent proposes it again after each commit.  The person who begins counts, and the person who arms pokes.  pokes/self.glp plays it.
 %%
 %% merges is befriend with groups, a leader merging two of their groups in one act of the leader and of every member the leader lists in either, so that a contract compiled here has a schema with two listed roles of one base, a[listed(*, n1)] and a[listed(*, n2)] (vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC); a group is named by its leader and a speech act, and its leader does not list themself:
 %%
@@ -315,8 +327,10 @@ Exprs      ::= [] ; [Expr | Exprs].
 %% A schema's second argument is its variables, pvar(X), svar(Y) and num(X), in the order of its head (GSC 0228e79, Definition "Act schema").
 Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs)
             ; nschema(Constant, Args, Constraint, RoleSpecs)
+            ; schema(Constant, Names, Args, RoleSpecs)
             ; qschema(Constant, Args, Args, Constraint, RoleSpecs, Conjuncts, Forms)
             ; SSchema.
+%% A schema whose head names its roles, schema(Name, Names, Vars, Roles), as its owner writes it and as the compiler reads it (compiler/self.glp, WSchema and RName): a role written one(Name, Other) is possibly one person with the role named Other (vGLP, Section 5.4, "Speech-act schemas as local specifications": "distinct agent roles to distinct persons but for two the clause names as possibly one person"); friends' greet is written so.  Names and RName are the root programs/self.glp's.
 %% SSchema is a schema of the clause syntax, sas/7, the root programs/self.glp's, which GSC's reader, as_read/2, takes to the term form (programs/gsc/self.glp): wild is written in it.
 %% A safe formula and a quantified conjunct, as programs/gsc/self.glp writes them.
 Form       ::= fa(Arg, Mult) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form)
@@ -346,6 +360,7 @@ contract_named(parts, C?) :- parts(C).
 contract_named(opens, C?) :- opens(C).
 contract_named(groups, C?) :- groups(C).
 contract_named(counter, C?) :- counter(C).
+contract_named(pokes, C?) :- pokes(C).
 contract_named(merges, C?) :- merges(C).
 contract_named(coins, C?) :- coins(C).
 contract_named(wardclose, C?) :- wardclose(C).
@@ -383,6 +398,7 @@ introduction_named(parts, no_introduction).
 introduction_named(opens, no_introduction).
 introduction_named(groups, no_introduction).
 introduction_named(counter, no_introduction).
+introduction_named(pokes, no_introduction).
 introduction_named(merges, no_introduction).
 introduction_named(coins, no_introduction).
 introduction_named(wardclose, no_introduction).
@@ -466,6 +482,10 @@ pragmas_named(groups, pragmas([list('"Friends"', [friend])],
 pragmas_named(counter, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(begin, '"Begin"', [], none, '"Friends"', by([1]))])).
+pragmas_named(pokes, pragmas([list('"Friends"', [friend])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(begin, '"Begin"', [], none, '"Friends"', by([1])),
+     act(arm, '"Arm"', [], none, '"Friends"', by([1]))])).
 pragmas_named(merges, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(create, '"Create"', [], none, '"Friends"', by([1])),
@@ -661,7 +681,7 @@ procedure friends(Contract).
 friends([schema(befriend, [],
            [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
             rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
-         schema(greet, [],
+         schema(greet, ['Alice', one('Bob', 'Alice')], [],
            [rs(guarded, [atom(greeted, [])], [], [atom(friend, [role(2)])], []),
             rs(unguarded, [atom(greeting, [])], [], [], [])]),
          schema(cheer, [],
@@ -733,6 +753,20 @@ counter([schema(befriend, [],
            [rs(guarded, [atom(counting, [])], [], [], [atom(counting, [])])]),
          schema(count, [],
            [rs(unguarded, [atom(tick, [])], [], [atom(counting, [])], [])])]).
+
+procedure pokes(Contract).
+pokes([schema(befriend, [],
+         [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+          rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+       schema(begin, [],
+         [rs(guarded, [atom(counting, [])], [], [], [atom(counting, [])])]),
+       schema(count, [],
+         [rs(unguarded, [atom(tick, [])], [], [atom(counting, [])], [])]),
+       schema(arm, [],
+         [rs(guarded, [atom(armed, [])], [], [], [atom(armed, [])])]),
+       schema(poke, [],
+         [rs(unguarded, [atom(poked, [role(2)])], [], [atom(armed, []), atom(friend, [role(2)])], []),
+          rs(unguarded, [atom(poked_by, [role(1)])], [], [atom(friend, [role(1)])], [])])]).
 
 procedure merges(Contract).
 merges([schema(befriend, [],

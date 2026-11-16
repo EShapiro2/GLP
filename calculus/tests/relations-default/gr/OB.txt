@@ -1,0 +1,3 @@
+OB: Organisation with a board
+OB instantiates O with board bylaws; x holds the role Director in z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Director for the votes decide m in z, and extends it.
+Orga is an organisation.

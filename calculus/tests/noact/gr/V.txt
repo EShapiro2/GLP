@@ -1,0 +1,4 @@
+V: A Restriction that Leaves No One to Take an Act
+V restricts W.
+Alice is a person, Carol a ward.
+1. ■ Greet: W:3 Greet, only if Carol is a person and Carol is a ward.

@@ -6,7 +6,7 @@ A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, a
 A *service* is a ward operated by a machine at an address every person can reach.
 An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
 A *directory* is a service with a page every person can read.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons. Alice, Bob and Erin are persons, Carol and Dave wards. Alice is a person, Dave a service. Alice, Bob and Carol are persons, Dave a service. Alice, Bob and Carol are persons, Dora a service.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice and Bob are persons. Alice and Bob are persons, Carol and Dave wards. Alice, Bob and Carol are persons, Dave a service. Alice, Bob and Carol are persons, Dora a service.
 GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -23,5 +23,5 @@ GRV:2. ■ Invite by link: Alice may register with Dave an invitation link of he
 GRV:3. ■ Use link: Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
 GRV:4. ■ Reconnection. Present: Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship. Match: Dave then gives each the address of the other.
 GDS:1. ■ Open directory: Carol may make her service Dora a directory.
-GDS:2. ■ Listing. List: Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, shown on Dora's page or not; her app then keeps Dora supplied with invitation links of hers. Delist: Alice may delist herself.
+GDS:2. ■ Listing. List me: Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, shown on Dora's page or not; her app then keeps Dora supplied with invitation links of hers. Delist me: Alice may delist herself.
 GDS:3. ■ Lookup: Bob may look Alice up, on Dora's page if she is shown there, and by her email address and name if not; Dora then gives Bob an invitation link of Alice's.

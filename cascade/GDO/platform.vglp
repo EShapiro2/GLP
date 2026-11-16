@@ -68,6 +68,8 @@ MenuWord ::= say(String) ; at(Integer).
 Atom ::=
 identity
 ;
+person
+;
 knows(Peer)
 ;
 friend(Peer)
@@ -78,6 +80,8 @@ points_to(Peer)
 procedure atom_of(GAtom?, Shown).
 atom_of(g(identity, []), shown(identity))
 .
+atom_of(g(person, []), shown(person))
+.
 atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
 .
 atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
@@ -87,11 +91,11 @@ atom_of(g(points_to, [p(V1)]), shown(points_to(V1?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(point_friend, [], [rs(guarded, [atom(points_to, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(point_transitive, [pvar('Carol')], [rs(guarded, [atom(points_to, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(points_to, [role(2)])], [atom(points_to, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar('Carol')])], [])]), schema(unpoint, [pvar('Bob')], [rs(guarded, [], [atom(points_to, [pvar('Bob')])], [atom(identity, [])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(point_friend, [], [rs(guarded, [atom(points_to, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(point_transitive, [pvar('Carol')], [rs(guarded, [atom(points_to, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(points_to, [role(2)])], [atom(points_to, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar('Carol')])], [])]), schema(unpoint, [pvar('Bob')], [rs(guarded, [], [atom(points_to, [pvar('Bob')])], [atom(identity, [])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
-schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]))
+schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]))
 .
 schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]))
 .
@@ -152,6 +156,27 @@ schema_base(point_transitive, 1)
 schema_base(unpoint, 1)
 .
 schema_base(_, 1) :- otherwise | true.
+
+MayOne    ::= may_one(Integer, Integer).
+MayOnes   ::= [] ; [MayOne | MayOnes].
+procedure schema_ones(Constant?, MayOnes).
+schema_ones(establish, [])
+.
+schema_ones(acquaint, [])
+.
+schema_ones(introduce, [])
+.
+schema_ones(befriend, [])
+.
+schema_ones(unfriend, [])
+.
+schema_ones(point_friend, [])
+.
+schema_ones(point_transitive, [])
+.
+schema_ones(unpoint, [])
+.
+schema_ones(_, []) :- otherwise | true.
 
 procedure schema_consents(Constant?, Ints).
 schema_consents(_, []) :- otherwise | true.
@@ -395,7 +420,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("GDO: Grassroots Directed Overlay\nGDO extends GSG.\nAlice, Bob and Carol are persons.\n1. ■ Point friend: Alice, who does not point to her friend Bob, may point to Bob.\n2. ■ Point transitive: Alice, who knows Carol and points to Bob who points to Carol, may point to Carol.\n3. ■ Unpoint: Alice, who points to Bob, may cease pointing to Bob.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(point_friend, ['Alice', 'Bob'], [], [rs(guarded, [atom(points_to, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(point_transitive, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(points_to, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(points_to, [role(2)])], [atom(points_to, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar('Carol')])], [])]), schema(unpoint, ['Alice'], [pvar('Bob')], [rs(guarded, [], [atom(points_to, [pvar('Bob')])], [atom(identity, [])], [])])]), pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Pointing", [points_to])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(unfriend, "Unfriend", [], none, "Friends", by([1])), act(point_friend, "Point", [], none, "Pointing", by([1])), act(point_transitive, "Point", [], none, "Pointing", by([1])), act(unpoint, "Unpoint", [], none, "Pointing", by([1]))], [], nolook, version(1, 1))))
+contract("GDO: Grassroots Directed Overlay\nGDO extends GSG.\nAlice, Bob and Carol are persons.\n1. ■ Point friend: Alice, who does not point to her friend Bob, may point to Bob.\n2. ■ Point transitive: Alice, who knows Carol and points to Bob who points to Carol, may point to Carol.\n3. ■ Unpoint: Alice, who points to Bob, may cease pointing to Bob.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(point_friend, ['Alice', 'Bob'], [], [rs(guarded, [atom(points_to, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(points_to, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(point_transitive, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(points_to, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [pvar('Carol')]), atom(points_to, [role(2)])], [atom(points_to, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(points_to, [pvar('Carol')])], [])]), schema(unpoint, ['Alice'], [pvar('Bob')], [rs(guarded, [], [atom(points_to, [pvar('Bob')])], [atom(identity, [])], [])])]), pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Pointing", [points_to])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(unfriend, "Unfriend", [], none, "Friends", by([1])), act(point_friend, "Point", [], none, "Pointing", by([1])), act(point_transitive, "Point", [], none, "Pointing", by([1])), act(unpoint, "Unpoint", [], none, "Pointing", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -606,7 +631,7 @@ App       ::= app(GAtoms, Integer, Lock, Recs).
 Pend      ::= deferred(Net).
 Pends     ::= [] ; [Pend | Pends].
 WKey      ::= op(Class) ; vt(Attempt) ; cm(Attempt) ; wd(Attempt, Attempt)
-            ; ip(Peer, Peer) ; rd(Attempt).
+            ; ip(Peer, Peer) ; rd(Attempt) ; reading.
 Wait      ::= w(WKey, Integer).
 Waits     ::= [] ; [Wait | Waits].
 WFound    ::= at(Integer) ; unseen.
@@ -726,10 +751,52 @@ procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, YesNo?, Stream(Trigger)
 agent_goal([T|Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     then_local(U?, Th),
     step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
-agent_goal([], [T|In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
+%% Before it reads a trigger the agent goal takes an own transaction whose condition holds and whose class has waited at least as long as the reading of a trigger has, the one that has waited longest (own_cond, eligible), and only where there is none reads the next trigger (vGLP, Section 5.4, "The compilation": "At every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger"; the audit's Finding 1, Grassroots-Audit 17cde7e, papers/vGLP.pdf.md; Udi, 2026-11-16).  The reading of a trigger waits since the last reading (read_at).
+agent_goal([], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?) |
+    st_app(St?, Ap0),
+    own_cond(St?, Ch, St1),
+    early(Ch?, Ap0?, In?, U?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
+procedure early(Choice?, App?, Stream(Trigger)?, YesNo?, Stream(Trigger),
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?).
+early(take(K, S), Ap0, In, _, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
+    dispatch_own(take(K?, S?), Ap0?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+early(none, _, In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
+    read_next(In?, U?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+procedure read_next(Stream(Trigger)?, YesNo?, Stream(Trigger),
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?).
+read_next([T|In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     then_read(U?, Th),
-    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
-agent_goal([], [], _, [], [], [], [], _, _, _).
+    read_at(St?, St1),
+    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
+read_next([], _, [], [], [], [], _, _, _).
+%% The reading of a trigger, recorded: it waits from now, the count of the own transactions taken (w(reading, D)).
+procedure read_at(St?, St).
+read_at(St, St1?) :- ground(St?) |
+    st_count(St?, D),
+    st_waits(St?, W),
+    drop_reading(W?, W1),
+    set_waits(St?, [w(reading, D?)|W1?], St1).
+procedure drop_reading(Waits?, Waits).
+drop_reading([], []).
+drop_reading([w(reading, _)|Ws], Ws?).
+drop_reading([X|Ws], [X?|Ws1?]) :- otherwise | drop_reading(Ws?, Ws1).
+%% The candidates whose class has waited at least as long as the reading of a trigger: it began to wait no later than the last reading, or no trigger has been read.
+procedure eligible(Cands?, Waits?, Cands).
+eligible(Cs, W, Cs1?) :- ground(W?) |
+    wait_of(reading, W?, F),
+    reading_at(F?, Rd),
+    eligible1(Cs?, W?, Rd?, Cs1).
+procedure reading_at(WFound?, Integer).
+reading_at(at(T), T?).
+reading_at(unseen, 0).
+procedure eligible1(Cands?, Waits?, Integer?, Cands).
+eligible1([], _, _, []).
+eligible1([cand(K, I)|Cs], W, Rd, R?) :- ground(K?), ground(W?), integer(Rd?) |
+    began_at(K?, W?, T),
+    eligible2(T?, Rd?, cand(K?, I?), Cs?, W?, R).
+procedure eligible2(Integer?, Integer?, Cand?, Cands?, Waits?, Cands).
+eligible2(T, Rd, C, Cs, W, [C?|R?]) :- T? =< Rd? | eligible1(Cs?, W?, Rd?, R).
+eligible2(T, Rd, _, Cs, W, R?) :- T? > Rd? | eligible1(Cs?, W?, Rd?, R).
 
 %% After a recheck, read from the agent goal's own list, an own trigger is unread exactly when one was before it (own_unread, no_own); after another trigger, read from the input stream, an own trigger is written unless one is unread (write_own, own_unread).  An own trigger is read from the input stream, and its clause, step(own, ...), takes no Then: dispatch_own writes the next own trigger after an own transaction taken, and none where none holds.
 procedure then_local(YesNo?, Then).
@@ -800,7 +867,7 @@ step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?
     recheck_find(Pd?, V?, Tr?, St?, F),
     recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
-    take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+    agent_goal(Ls?, In?, no, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
 %% After a dispatch: where the machine state has changed, the new view is written on the output (vGLP b7e3517, Section 5.4, "The compilation": "where the machine state changes, it writes the new view on the output"); where the app state has changed, the approval questions whose question the new app state no longer holds pending are closed; where it has, or the dispatch consumed a start (Kick), the starts held waiting are put up again, by a recheck; and the agent goal writes an own trigger on its stream of own triggers after another trigger read from the input stream, unless an own trigger it has written is still unread, and after an own transaction taken (Then write_own), and none after an own trigger on which none holds (no_own) or while one is unread (own_unread), so that at most one own trigger it has written is unread (vGLP 6c8c663, Section 5.4, "The compilation").
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?,
@@ -1846,7 +1913,7 @@ own_cond2(Cs, St, Ch?, St2?) :- ground(St?) |
     st_ix(St?, Ix),
     prune_waits(W?, R?, Ix?, W0),
     st_count(St?, D),
-    choose(Cs?, W0?, D?, Ch0, W1),
+    choose_e(Cs?, W0?, D?, Ch0, W1),
     set_waits(St?, W1?, St1),
     count_own(Ch0?, St1?, Ch, St2).
 %% The own transaction taken, counted.
@@ -2402,6 +2469,7 @@ prune_wait(no, X, Ws, [X?|Ws?]).
 prune_wait(yes, _, Ws, Ws?).
 procedure dead_key(WKey?, Recs?, Ix?, YesNo).
 dead_key(op(_), _, _, no).
+dead_key(reading, _, _, no).
 dead_key(vt(A), R, ix(Tr, _, _, _), D?) :- ground(A?), ground(R?) |
     has_vote(A?, R?, V),
     rec_closed(A?, R?, Tr?, Cl),
@@ -2545,6 +2613,14 @@ add_cls(nocls, Is, Is?).
 add_cls(cls(I), Is, Is1?) :- app(Is?, [I?], Is1).
 
 %% --- Choosing the instance of the class that has waited longest -----------
+procedure choose_e(Cands?, Waits?, Integer?, Choice, Waits).
+choose_e(Cs, W, D, Ch?, W1?) :- ground(Cs?), ground(W?), integer(D?) |
+    ensure_waits(Cs?, W?, D?, Wa),
+    choose_e1(Cs?, Wa?, D?, Ch, W1).
+procedure choose_e1(Cands?, Waits?, Integer?, Choice, Waits).
+choose_e1(Cs, Wa, D, Ch?, W1?) :- ground(Wa?), integer(D?) |
+    eligible(Cs?, Wa?, Cs1),
+    choose1(Cs1?, Wa?, D?, Ch, W1).
 procedure choose(Cands?, Waits?, Integer?, Choice, Waits).
 choose(Cs, W, D, Ch?, W2?) :- ground(Cs?), ground(W?), integer(D?) |
     ensure_waits(Cs?, W?, D?, W1),
@@ -4830,40 +4906,67 @@ delta_in1(no, X, Ps, E?) :- delta_in(X?, Ps?, E).
 
 %% Definition "Binding": two roles sent to one person only if neither adds or
 %% deletes an atom naming the other.
-procedure rule_ok(RoleSpecs?, Binding?, YesNo).
-rule_ok(Rs, B, R?) :- ground(Rs?) |
+procedure rule_ok(RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+rule_ok(Rs, B, Ls, Os, R?) :- ground(Rs?) |
     rs_len(Rs?, K),
-    pairs_ok(1, K?, Rs?, B?, R).
-procedure pairs_ok(Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pairs_ok(I, K, _, _, yes) :- I? > K? | true.
-pairs_ok(I, K, Rs, B, R?) :- I? =< K?, ground(Rs?), ground(B?) |
+    pairs_ok(1, K?, Rs?, B?, Ls?, Os?, R).
+procedure pairs_ok(Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pairs_ok(I, K, _, _, _, _, yes) :- I? > K? | true.
+pairs_ok(I, K, Rs, B, Ls, Os, R?) :- I? =< K?, ground(Rs?), ground(B?), ground(Ls?), ground(Os?) |
     J := I? + 1,
-    pair_row(I?, J?, K?, Rs?, B?, R1),
+    pair_row(I?, J?, K?, Rs?, B?, Ls?, Os?, R1),
     I1 := I? + 1,
-    pairs_ok1(R1?, I1?, K?, Rs?, B?, R).
-procedure pairs_ok1(YesNo?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pairs_ok1(no, _, _, _, _, no).
-pairs_ok1(yes, I, K, Rs, B, R?) :- pairs_ok(I?, K?, Rs?, B?, R).
-procedure pair_row(Integer?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pair_row(_, J, K, _, _, yes) :- J? > K? | true.
-pair_row(I, J, K, Rs, B, R?) :- J? =< K?, ground(Rs?), ground(B?) |
+    pairs_ok1(R1?, I1?, K?, Rs?, B?, Ls?, Os?, R).
+procedure pairs_ok1(YesNo?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pairs_ok1(no, _, _, _, _, _, _, no).
+pairs_ok1(yes, I, K, Rs, B, Ls, Os, R?) :- pairs_ok(I?, K?, Rs?, B?, Ls?, Os?, R).
+procedure pair_row(Integer?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pair_row(_, J, K, _, _, _, _, yes) :- J? > K? | true.
+pair_row(I, J, K, Rs, B, Ls, Os, R?) :- J? =< K?, ground(Rs?), ground(B?), ground(Ls?), ground(Os?) |
     role_person(I?, B?, P),
     role_person(J?, B?, Q),
     nth_spec(Rs?, I?, RI),
     nth_spec(Rs?, J?, RJ),
-    pair_ok(P?, Q?, RI?, RJ?, I?, J?, R1),
+    pair_ok(P?, Q?, RI?, RJ?, I?, J?, Ls?, Os?, R1),
     J1 := J? + 1,
-    pair_row1(R1?, I?, J1?, K?, Rs?, B?, R).
-procedure pair_row1(YesNo?, Integer?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pair_row1(no, _, _, _, _, _, no).
-pair_row1(yes, I, J, K, Rs, B, R?) :- pair_row(I?, J?, K?, Rs?, B?, R).
-procedure pair_ok(Peer?, Peer?, RoleSpec?, RoleSpec?, Integer?, Integer?, YesNo).
-pair_ok(P, Q, RI, RJ, I, J, R?) :- P? =?= Q? |
+    pair_row1(R1?, I?, J1?, K?, Rs?, B?, Ls?, Os?, R).
+procedure pair_row1(YesNo?, Integer?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pair_row1(no, _, _, _, _, _, _, _, no).
+pair_row1(yes, I, J, K, Rs, B, Ls, Os, R?) :- pair_row(I?, J?, K?, Rs?, B?, Ls?, Os?, R).
+%% Two agent roles go to one person only where the clause names the two possibly one person, schema_ones, and neither adds or deletes an atom naming the other; a listed role's place and another role, where neither does (vGLP, Section 5.4, "Speech-act schemas as local specifications": "distinct agent roles to distinct persons but for two the clause names as possibly one person, which it may bind to one person where neither adds or deletes an atom naming the other"; local.glp, rule_ok, the same of the contract; CSSN #17 and Code #33, vGLP_inbox.md, 2026-11-16 18:42 UTC: a class of two children and one parent took children_acquaint with a child in a parent's role for a schema-binding, so each child for a proposer of its parts).
+procedure pair_ok(Peer?, Peer?, RoleSpec?, RoleSpec?, Integer?, Integer?, Ints?, MayOnes?, YesNo).
+pair_ok(P, Q, RI, RJ, I, J, Ls, Os, R?) :- P? =?= Q?, integer(I?), integer(J?), ground(Ls?), ground(Os?) |
     role_names(RI?, J?, A1),
     role_names(RJ?, I?, A2),
     or(A1?, A2?, A),
-    neg(A?, R).
-pair_ok(_, _, _, _, _, _, yes) :- otherwise | true.
+    neg(A?, R0),
+    int_in(I?, Ls?, LI),
+    int_in(J?, Ls?, LJ),
+    or(LI?, LJ?, Li),
+    may_one_pair(I?, J?, Os?, Mk),
+    or(Li?, Mk?, OkM),
+    and(R0?, OkM?, R).
+pair_ok(_, _, _, _, _, _, _, _, yes) :- otherwise | true.
+procedure int_in(Integer?, Ints?, YesNo).
+int_in(_, [], no).
+int_in(I, [K|Ks], B?) :- integer(I?), integer(K?) | int_in1(I?, K?, Ks?, B).
+procedure int_in1(Integer?, Integer?, Ints?, YesNo).
+int_in1(I, K, _, yes) :- I? =:= K? | true.
+int_in1(I, _, Ks, B?) :- otherwise | int_in(I?, Ks?, B).
+procedure may_one_pair(Integer?, Integer?, MayOnes?, YesNo).
+may_one_pair(_, _, [], no).
+may_one_pair(I, J, [may_one(A, B)|Ms], M?) :- integer(I?), integer(J?), integer(A?), integer(B?) | may_one1(I?, J?, A?, B?, Ms?, M).
+procedure may_one1(Integer?, Integer?, Integer?, Integer?, MayOnes?, YesNo).
+may_one1(I, J, A, B, _, yes) :- I? =:= A?, J? =:= B? | true.
+may_one1(I, J, A, B, _, yes) :- I? =:= B?, J? =:= A? | true.
+may_one1(I, J, _, _, Ms, M?) :- otherwise | may_one_pair(I?, J?, Ms?, M).
+procedure listed_places(Schema?, Ints).
+listed_places(schema(_, _, _), []).
+listed_places(lschema(_, _, _, Lsts), Ls?) :- listing_places(Lsts?, Ls).
+procedure listing_places(Listings?, Ints).
+listing_places([], []).
+listing_places([listing(I, _, _, _, _, _, _)|Lsts], [I?|Ls?]) :- listing_places(Lsts?, Ls).
+listing_places([instances(_, _, _, _, _, _, _)|Lsts], Ls?) :- listing_places(Lsts?, Ls).
 procedure role_names(RoleSpec?, Integer?, YesNo).
 role_names(rs(_, A, D, _, _), J, R?) :- integer(J?) |
     names_role(A?, J?, R1),
@@ -6087,7 +6190,7 @@ listings_ok1(no, _, _, _, _, no).
 listings_ok1(yes, Lsts, B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
 %% The roles Definition "Binding" constrains (rule_ok): the schema's own, each listed role's place with no atom, a listed role's people being no roles a binding sends to people.
 procedure rule_spec_ok(Constant?, Binding?, YesNo).
-rule_spec_ok(Nm, B, Ok?) :- schema_entry(Nm?, E), rule_spec(E?, Rs0), rule_ok(Rs0?, B?, Ok).
+rule_spec_ok(Nm, B, Ok?) :- ground(Nm?) | schema_entry(Nm?, E), rule_spec(E?, Rs0), schema_entry(Nm?, E1), listed_places(E1?, Ls), schema_ones(Nm?, Os), rule_ok(Rs0?, B?, Ls?, Os?, Ok).
 procedure rule_spec(Schema?, RoleSpecs).
 rule_spec(schema(_, _, Rs), Rs?).
 rule_spec(lschema(_, _, Rs, Lsts), Rs0?) :- blank_listed(Lsts?, Rs?, Rs0).

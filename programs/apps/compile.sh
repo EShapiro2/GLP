@@ -10,8 +10,8 @@
 #   gsn    gsn       programs/gsc/GSN.glp
 #   gsnp   gsnp      programs/gai/GSNP.glp
 #   gai    gai       programs/gai/GAI.glp
-#   gc     gc        programs/currencies/coins/GC.glp
-#   gb     gb        programs/currencies/bonds/GB.glp
+#   gc     gc        programs/currencies/coins/Coins.glp
+#   gb     gb        programs/currencies/bonds/Bonds.glp
 #   gff    gff       programs/gff/GFF.glp     (GFF, adopted from the Calculus, which has no GFF-I: Udi, 2026-11-15, to GFF #6)
 #
 # The steps are cascade.sh's 1, 2 and 4: the contract, contract_named/2, from the owner's file; the checker's verdict on it, programs/gsc's check/2; and the compiler, programs/vglp/cva/compiler's compile/5, on the contract, its verdict, its introduction predicate, introduction_named/2 where the owner's file names one and no_introduction otherwise, and its pragmas, the words its app shows, read from the NAME.txt beside the owner's file and from those of the contracts it extends by programs/vglp/cva/compiler/pragmas.sh (vGLP, Section 5.4, "The contract's words"), each act the schema its button names (GSC, Section 2).  What the compiler prints between its lines "%% compile begin" and "%% compile end" is the platform.
@@ -31,8 +31,8 @@ contract_of() { # contract_of <app> ; the checker's name of its contract
         gsn) echo gsn ;;
         gsnp) echo gsnp ;;
         gai) echo gai ;;
-        gc) echo gc ;;
-        gb) echo gb ;;
+        gc) echo coins ;;
+        gb) echo bonds ;;
         gff) echo gff ;;
     esac
 }
@@ -43,8 +43,8 @@ file_of() { # file_of <app> ; the owner's file that holds its contract
         gsn) echo "$GLP_DIR/programs/gsc/GSN.glp" ;;
         gsnp) echo "$GLP_DIR/programs/gai/GSNP.glp" ;;
         gai) echo "$GLP_DIR/programs/gai/GAI.glp" ;;
-        gc) echo "$GLP_DIR/programs/currencies/coins/GC.glp" ;;
-        gb) echo "$GLP_DIR/programs/currencies/bonds/GB.glp" ;;
+        gc) echo "$GLP_DIR/programs/currencies/coins/Coins.glp" ;;
+        gb) echo "$GLP_DIR/programs/currencies/bonds/Bonds.glp" ;;
         gff) echo "$GLP_DIR/programs/gff/GFF.glp" ;;
     esac
 }

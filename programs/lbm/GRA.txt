@@ -8,7 +8,7 @@
 GRA: Grassroots Ride Auction
 GRA extends GDO-LB.
 A *pickup delay* is measured from the award. The *terms* of a call, a parameter of GRA, state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
-Alice is a rider, Bob a driver and Carol a person. A person can be either a rider or a driver but not both.
+Alice is a rider and Bob a driver. A person can be either a rider or a driver but not both.
 1. ■ Call. Call: Alice, who has no open call and no ride, may call for bids on a ride from the persons Alice points to, stating the pickup point, the destination, the bidding period and the terms. Forward call: Each of them forwards the call to the persons they point to.
 2. ■ Bid: Bob, who received the call, may bid a fare and a pickup delay before the bidding period ends; Alice may not open a bid before then.
 3. ■ Award. Award: After the bidding period ends, Alice may award the ride to the bidder the terms select among the bidders who have no ride, at the fare the terms set; Alice's fare and the deposit the terms set for Bob are then locked. Close: If the terms select no bidder, Alice may close the call.
@@ -19,7 +19,7 @@ Alice is a rider, Bob a driver and Carol a person. A person can be either a ride
 Logic pragmas
 GRA extends GDO-LB.
 A *pickup delay* is measured from the award. The *terms* of a call, a parameter of GRA, state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
-Alice is a rider, Bob a driver and Carol a person, Trip a call. A person can be either a rider or a driver but not both.
+Alice is a rider and Bob a driver, Trip a call. A person can be either a rider or a driver but not both.
 1. ■ Call. Call: Alice may call for bids on a ride as Trip, provided Alice is a rider and Alice does not have a ride. Alice calls for bids from the persons Alice points to, stating the pickup point, the destination, the bidding period and the terms. Send call: Alice's call Trip goes to Bob, provided Alice has the call Trip open and Alice points to Bob. Forward call: Bob forwards Alice's call Trip to Carol, provided Bob has received Alice's call Trip from Alice and Bob points to Carol.
 2. ■ Bid: Bob may bid a fare and a pickup delay on Alice's call Trip, provided Bob is a driver, Bob has received Alice's call Trip and the bidding period of Alice's call Trip has not ended. Alice may not open a bid before then.
 3. ■ Award. Award: Alice may award the ride of her call Trip to Bob, provided the bidding period of Alice's call Trip has ended, Bob has a bid on Alice's call Trip and the terms of Alice's call Trip select Bob. The ride is awarded at the fare the terms set, and Alice's fare and the deposit the terms set for Bob are then locked. Close: Alice may close her call Trip, provided the terms of Alice's call Trip select no bidder.

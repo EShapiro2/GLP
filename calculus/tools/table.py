@@ -3,7 +3,7 @@
 Run tools/expand.py first, and tools/gcsas.py for the sizes of the schemas (sas/ and sasx/).  Calculus #2, 2026-11-13; the schemas, Calculus #3, 2026-11-14."""
 import os, re, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REL = re.compile(r'\b(extends|restricts|strengthens|instantiates|composes)\b')
+REL = re.compile(r'\b(extends|restricts|strengthens|instantiates|composes|relaxes)\b')
 def lines(path):
     return [l.rstrip('\n') for l in open(path, encoding='utf-8') if l.strip() and not l.startswith('%')]
 def words(ls):
@@ -14,7 +14,7 @@ def esc(s):
         s = s.replace(c, '\\' + c)
     return s
 def names():
-    return sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES'))
+    return sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES-'))
 def first_line(name):
     body = lines(os.path.join(ROOT, 'rev', name + '.txt'))[1:]
     first = next((l for l in body if not re.match(r'\d+\.', l) and l.startswith(name + ' ') and REL.search(l)), '')

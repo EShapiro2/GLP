@@ -14,7 +14,7 @@ def parametric(n):
 
 
 def main():
-    names = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES'))
+    names = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES-'))
     st, vd = [], []
     for n in names:
         d = os.path.join(ROOT, 'cascade', n)

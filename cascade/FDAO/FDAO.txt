@@ -4,13 +4,12 @@
 % Defines: treasury, the DAO's coins, k.dao_coin(u, n) at its steward; grant.
 % Schemas: FDAO.glp beside this file, written by tools/contracts.py.
 FDAO: Funded DAO
-FDAO extends DAO and GC.
-Alice and Bob are persons.
+FDAO extends DAO and Coins.
 1. ■ Fund: A member of a DAO may give it coins they hold; its steward keeps them apart as the DAO's.
 2. ■ Grant: The steward may grant the proposer of a passed proposal, once per proposal, any amount of the DAO's coins of one issuer.
 3. ○ Amount. The steward will grant a passed proposal the amount it asks for, as far as the DAO's coins allow.
 Logic pragmas
-FDAO extends DAO and GC.
+FDAO extends DAO and Coins.
 Alice, Bob, Carol and Dave are persons, Delos a DAO and Prop a proposal, Sum a number, Carol possibly Alice or Bob, Dave possibly Alice, Bob or Carol.
 1. ■ Fund: Carol may give Alice's Delos Sum Dave-coins, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.
 2. ■ Grant: Alice may grant Carol Sum Dave-coins of Delos for Prop, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Carol has proposed Prop to Alice's Delos.

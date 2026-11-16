@@ -1,0 +1,4 @@
+OK: Organisation as it is
+OK restricts O.
+OK:0 - | Alice is a person, Orga an organisation, Motion a motion.
+OK:1 ■ Act: O:1 Act <- role(Alice,Orga,Director).

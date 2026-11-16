@@ -4,7 +4,7 @@ An *identity* is a unique key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an organisation and how. Here: bylaws. An organisation takes an act of a party by those who decide for it.
 An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of GO, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons. Alice, Bob and Erin are persons, Carol and Dave organisations. Alice and Bob are persons, Orga an organisation.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice and Bob are persons. Alice and Bob are persons, Carol and Dave organisations. Alice and Bob are persons, Orga an organisation.
 GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.

@@ -13,6 +13,8 @@ contract the entry gives
     its inherited acts added, gone and renamed, apart, each with the contract it comes from;
     its own acts whose schema changed, the old line and the new;
     derived acts ('<Act> for <Role>', 'Vote of ...') counted in one line, not listed;
+    'relations.txt changed', the lines gone and come, where the verdicts of tools/relations.py on its first line
+        differ ('relations.txt only' in the summary where nothing else changed);
     'text only' where no act changed and only contract.txt or full-contract.txt differ, and 'unchanged' where
     nothing does.
 Standard library only.
@@ -48,6 +50,17 @@ def text(path):
 
 def own_of(n, labels):
     return any(x.split(':')[0] == n for x in labels)
+
+
+def relations_changed(po, pn):
+    """The lines of relations.txt (tools/relations.py) gone and come, where it changed; [] where it did not, or where
+    neither publication has it."""
+    ro, rn = text(os.path.join(po, 'relations.txt')), text(os.path.join(pn, 'relations.txt'))
+    if ro == rn or (ro is None and rn is None):
+        return []
+    lo, ln = (ro or '').splitlines(), (rn or '').splitlines()
+    return (['  relations.txt changed'] + ['    was: %s' % l for l in lo if l not in ln] +
+            ['    now: %s' % l for l in ln if l not in lo])
 
 
 def compare(n, old, new):
@@ -105,8 +118,11 @@ def entry(n, od, nd):
     if (do or dn) and (out or not same):        # counted where the acts changed, or the derived acts themselves did
         out.append('  derived acts: %d, before %d%s' % (len(dn), len(do), '' if same else ', changed'))
     own = bool(o_add or o_gone or o_ren or o_chg)
+    rel = relations_changed(po, pn)
     if out:
-        return ['%s:' % n] + out, 'own' if own else 'inherited'
+        return ['%s:' % n] + out + rel, 'own' if own else 'inherited'
+    if rel:
+        return ['%s:' % n] + rel, 'relations'
     if text(os.path.join(po, 'contract.txt')) != text(os.path.join(pn, 'contract.txt')) or \
        text(os.path.join(po, 'full-contract.txt')) != text(os.path.join(pn, 'full-contract.txt')):
         return ['%s: text only' % n], 'text'
@@ -123,7 +139,7 @@ def changes(od, nd):
         cases.setdefault(c, []).append(n)
         if c == 'own':
             owned.append(n)
-    words = [('own', 'own acts changed'), ('inherited', 'inherited acts changed only'), ('text', 'text only'),
+    words = [('own', 'own acts changed'), ('inherited', 'inherited acts changed only'), ('relations', 'relations.txt only'), ('text', 'text only'),
              ('unchanged', 'unchanged'), ('new', 'new'), ('gone', 'no longer published')]
     lines += ['', 'Summary: %d contracts; ' % len(names) + '; '.join('%s %d' % (w, len(cases.get(c, []))) for c, w in words) + '.',
               'With an own act added, gone, renamed or changed: %s.' % (', '.join(owned) if owned else 'none')]

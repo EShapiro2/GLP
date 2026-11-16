@@ -1,10 +1,10 @@
 # A run of the cascade on GD-S
 
-- Contract: `GD-S` (`gd_s` to the checker), its owner's two files `programs/ggga/GD-S.txt` and `programs/ggga/GD-S.glp`, copied here as they stood at `3de9bd2d`.
+- Contract: `GD-S` (`gd_s` to the checker), its owner's two files `programs/ggga/GD-S.txt` and `programs/ggga/GD-S.glp`, copied here as they stood at `d8cbd78d`.
 - The paper: `/Users/udi/Grassroots/SRC (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/ggga/GD-S.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/ggga/GD-S.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 00:26 UTC by `cascade.sh gd_s`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `3de9bd2d`; each artefact's source and tool:
+- Run on 2026-11-16 19:36 UTC by `cascade.sh gd_s`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `d8cbd78d`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

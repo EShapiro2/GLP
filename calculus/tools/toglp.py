@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import gcsas
 
 ARITH = {'le': 'le', 'ge': 'ge', 'gt': 'gt', 'lt': 'lt'}
-# The current date, today, is an environment predicate wherever an act reads it (GLP programs/currencies/bonds/GB.glp;
+# The current date, today, is an environment predicate wherever an act reads it (GLP programs/currencies/bonds/Bonds.glp;
 # vGLP compiler README, 10); every other is declared in the Logic pragmas, 'Environment: ...'.
 ENV = ['today']
 CMP = {'<': 'lt', '>': 'gt', '<=': 'le', '>=': 'ge', '=': 'eq'}
@@ -47,40 +47,23 @@ _UNENABLED = {}
 
 
 def unenabled(n, acts):
-    """{(label, act): why} of the acts of n that require of one name both that it is a person and that it bears a mark
-    of a ward of the contract (child, ward, organisation, ai_agent: marks_of), which no agent is at once (GnW: a
-    person or a ward).  A name is required a person where the act requires person(X), or where X decides it and the
-    act's own contract declares X a person, as term() writes atom(person, [X]) for such a guard."""
+    """{(label, act): why} of the acts of n that no agent can take (gcsas.untakable, the one test): gcsas.py leaves
+    each out of sasx/, so none is ever found here, and main says so if one is."""
     key = (ROOT, n)
     if key not in _UNENABLED:
-        out = {}
         marks = marks_of(acts) if any(l[1] == 'person' for e in acts for l in e['head']) else {}
-        if marks:
-            w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES')))
-            memo = {}
-            for e in acts:
-                o = re.split(r'[:+]', e['label'])[0]
-                if o not in memo:
-                    memo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if ks & {'person', 'party'} and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
-                persons = memo[o] | frozenset((e.get('taken') or {}).values()) | {gcsas.VOTER}
-                has = lambda p, g: any(not l[0] and l[1] == p and l[2] and l[2][0] == g for l in e['body'])
-                made = {l[2][0] for l in e['head'] if l[1] == 'identity' and not l[0]}
-                names = {l[2][0] for l in e['body'] if l[2]} | {g for g in e['guards'] if '(' not in g}
-                for x in sorted(names):
-                    person = has('person', x) or (x in e['guards'] and x not in made and x in persons
-                                                  and not any(has(m, x) and has(u, x) for m, u in marks.items()))
-                    ward = [m for m in marks if has(m, x)]
-                    if person and ward:
-                        out[(e['label'], e['name'])] = 'it requires person(%s) and %s(%s), and no agent is both' % (x, ward[0], x)
-                        break
-        _UNENABLED[key] = out
+        w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-'))) if marks else None
+        _UNENABLED[key] = gcsas.untakable(w, n, acts) if marks else {}
     return _UNENABLED[key]
+
+
+ONE = set()     # the roles any one of whom decides, 'any one listed by' (gcsas.Lex.one), of the contract values_of read last
 
 
 def values_of(n, refl=None, env=None, par=None):
     """The predicates of values and of no person: those whose vocabulary has the current date, now; and, in refl,
     the predicates the Logic pragmas declare reflexive, 'Reflexive: x knows y.', in n or a contract n is written from."""
-    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES')))
+    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
     lex = w.lexicon(n)
     rl = {p: gcsas.pattern(by, lex) for p, by in lex.rlist.items()}
     if refl is not None:
@@ -89,6 +72,8 @@ def values_of(n, refl=None, env=None, par=None):
         env.update(lex.env_preds())
     if par is not None:
         par.update(lex.env_preds('par'))
+    ONE.clear()
+    ONE.update(lex.one)
     return {p for _, p, a in lex.basic if 'now' in a}, rl, gcsas.kinds_from(w, n)
 
 
@@ -103,23 +88,7 @@ def agents_of(acts, values=()):
     return out
 
 
-def marks_of(acts):
-    """The marks of a contract with wards and the list of the guardians of each: {ward: has_guardian}.  A mark is
-    given with an identity by the act that creates its bearer, which also gives the bearer a guardian who holds
-    the guardianship."""
-    out = {}
-    for e in acts:
-        pos = [l for l in e['head'] if not l[0]]
-        for l in pos:
-            if l[1] == 'identity':
-                x = l[2][0]
-                for m in pos:
-                    if len(m[2]) == 1 and m[2][0] == x and m[1] not in ('identity', 'person'):
-                        us = [u for u in pos if len(u[2]) == 2 and u[2][0] == x and u[2][1] != x
-                              and any(len(v[2]) == 2 and v[2] == (u[2][1], x) and v[1] in u[1] for v in pos)]
-                        if us:
-                            out.setdefault(m[1], us[0][1])
-    return out
+marks_of = gcsas.marks_of      # the marks of a contract with wards (gcsas.marks_of)
 
 
 def schema_nums(lits, values, places=frozenset()):
@@ -142,7 +111,7 @@ def schema_nums(lits, values, places=frozenset()):
 
 def num_places(acts, values):
     """The places of predicates that hold a number in some schema of the contract, so that a place has one type in
-    the whole term: LIB's borrowed(y,t,x,e) holds the day e as a number in Lend, which compares it, and so in Return."""
+    the whole term: Lib's borrowed(y,t,x,e) holds the day e as a number in Lend, which compares it, and so in Return."""
     places, n = set(), -1
     while n != len(places):
         n = len(places)
@@ -264,7 +233,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         if r and r != roles[0]:
             roles.remove(r)
             roles.insert(0, r)
-    others, bound, listed, lists, deciders = [], [], [], [], []
+    others, bound, listed, lists, deciders, onecons = [], [], [], [], [], []
     for g in e['guards']:           # those who decide: one of them, named, and every other the first agent of the role lists for it
         if '(' in g:
             _, p, a = gcsas.parse_atom(g)
@@ -272,9 +241,10 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             a = [x for x in a if not x.startswith('-')]
             if a[0] not in roles:
                 roles.append(a[0])
-            k = len(listed) + 1
+            k = len(deciders) + 1
             d, x = 'Decider' + ('' if k == 1 else 'ABCDEFG'[k - 1]), 'Codecider' + ('' if k == 1 else 'ABCDEFG'[k - 1])
-            listed.append(x)
+            if p not in ONE:
+                listed.append(x)
             deciders.append(d)
             anchor = lambda v: 'atom(%s, [%s])' % (p, ', '.join([q(a[0]), q(v)] + [q(y) for y in a[1:]]))
             holds = lambda v: []
@@ -286,12 +256,15 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                 # GAI's record of an attestation, which GSC's def:relay, clause 2, asks of the acts that add a guardian
                 # (Make guardian names the attestation), and not of End guardian or Retire
                 ls = [l for l in ls if l[1][0] == a[0] or all(x in named or not re.fullmatch(gcsas.NAME, x) for x in l[1])]
-                at_z = [l for l in ls if l[1][0] == a[0]]
+                at_z = [l for l in ls if l[1][0] == a[0]] or [l for l in ls if a[0] in l[1]]      # a state of z that lists them; else one of each that names z (SC's shareholders: y holds a share of z)
                 anchor = lambda v, l=at_z[0]: fm(l, v)
                 holds = lambda v, ls=ls, l0=at_z[0]: [fm(l, v) for l in ls if l is not l0]
             person = lambda v: ['atom(person, [%s])' % q(v)] if marks else []      # those who decide for a ward are persons
             lists.append(anchor(d))
             lists.extend(person(d) + holds(d))
+            if p in ONE:            # a role any one of whom decides ('any one listed by'): the one, and no other (GnW's default, Udi, 2026-11-16: 'any guardian')
+                onecons.extend('ne(%s, %s)' % (q(d), q(y)) for y in ex)
+                continue
             conj = ['atom(identity, [%s])' % q(x)] + person(x) + holds(x)
             f = conj[-1]
             for c in reversed(conj[:-1]):
@@ -356,7 +329,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             at = 'times(%s, %s)' % (arg(mult), at)
         return at, cons
 
-    head, body, cons = [], [], []
+    head, body, cons = [], [], list(onecons)
     cleared = [l for l in e['head'] if l[0] and l[2] and l[2][0] in roles and '_' in l[2][1:]]
     for where, ls in ((head, e['head']), (body, e['body'])):
         for l in ls:
@@ -391,7 +364,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                 cons.append('%s(%s, %s)' % (NOT[ARITH[l[1]]] if l[0] else ARITH[l[1]], arg(l[2][0]), arg(l[2][1])))
             elif l[1] in ('sum', 'product'):
                 cons.append('%s(%s, %s(%s, %s))' % ('ne' if l[0] else 'eq', arg(l[2][0]), 'plus' if l[1] == 'sum' else 'mul', arg(l[2][1]), arg(l[2][2])))
-            elif holderless(l):
+            elif holderless(l) and not re.fullmatch(r'(<=|>=|<|>|=)\w+', l[2][0] if l[2] else ''):      # a counted holder is a count, cardinality(...) (SC's 'fewer than 1 persons holds a share of z')
                 c = 'rel(%s, [%s])' % (l[1], ', '.join(arg(a) for a in l[2]))
                 cons.append('not(%s)' % c if l[0] else c)
             else:
@@ -406,7 +379,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         for g in [g for g in e['guards'] if '(' not in g]:
             if g in made or has('person', g) or any(has(m, g) and has(u, g) for m, u in marks.items()):
                 continue
-            if g in persons:        # a guard the act's own contract declares a person or a party is a person, not a ward (GB:4's escrow agent, Calculus #6, 2026-11-15 17:23 UTC; a party, Udi, 2026-11-15)
+            if g in persons:        # a guard the act's own contract declares a person or a party is a person, not a ward (Bonds:4's escrow agent, Calculus #6, 2026-11-15 17:23 UTC; a party, Udi, 2026-11-15)
                 lists.append('atom(person, [%s])' % q(g))
                 continue
             f = 'atom(person, [%s])' % q(g)
@@ -465,7 +438,7 @@ def contract_term(n):
     if refl:
         drop = lambda ls: [l for l in ls if not (l[1] in refl and len(l[2]) == 2 and l[2][0] == l[2][1])]
         acts = [dict(e, head=drop(e['head']), body=drop(e['body'])) for e in acts]
-    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES')))
+    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
     pmemo = {}
     def persons_of(e):      # the names the contract that wrote the act declares persons or parties, and only those
         o = re.split(r'[:+]', e['label'])[0]

@@ -1,0 +1,2 @@
+GnW extends GSG: holds
+GnW restricts GSG: holds

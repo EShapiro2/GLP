@@ -1,9 +1,9 @@
 GDS: Grassroots Directory Service (flat text)
 GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 GKK:0 - | Alice, Bob and Carol are persons.
 GKK:0 - | Reflexive: x knows y.
-GKK:1+GnW:3 ■ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
+GKK:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2+GnW:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
 GKK:3+GnW:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
@@ -15,7 +15,8 @@ GSG:2+GnW:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a frien
 GSG:3 ○ | Loss of Trust.
 GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
-GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+GnW:0 - | Alice and Bob are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+GnW:0 - | Default: any guardian of z for those who decide for z.
 GnW:1 ■ Enter: Alice and Carol may jointly Carol has an identity, Carol is a ward, Carol has Alice as a guardian, Alice is the creator of Carol, Alice is a guardian of Carol, Alice knows Carol, Carol knows Alice, Alice counts Carol as a friend and Carol counts Alice as a friend, provided Alice is a person and not Carol has an identity. Must consent: Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.
 GnW:2 ■ | Guardian decisions.
@@ -37,7 +38,6 @@ GnW:4 ■ Wards of one guardian befriend: Carol, Dave and Alice may jointly Caro
 GnW:5 ■ Retire: The guardians of Carol may Carol is retired, no longer anyone is a guardian of Carol, no longer Carol has anyone as a guardian, no longer Carol counts anyone as a friend and no longer anyone counts Carol as a friend, provided not Carol is retired.
 GnW:5 ■ | Carol can then take no act.
 GSV:0 - | A *service* is a ward operated by a machine at an address every person can reach.
-GSV:0 - | Alice is a person, Dave a service.
 GRV:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
 GRV:0 - | Alice, Bob and Carol are persons, Dave a service, Link an invitation link.
 GRV:1 ■ Open server: Carol may Dave is a rendezvous server, provided Carol is a guardian of Dave and not Dave is a rendezvous server.
@@ -54,12 +54,12 @@ GDS:0 - | A *directory* is a service with a page every person can read.
 GDS:0 - | Alice, Bob and Carol are persons, Dora a service, Mail an email address, Name a name.
 GDS:1 ■ Open directory: Carol may Dora is a directory, provided Carol is a guardian of Dora and not Dora is a directory.
 GDS:2 ■ | Listing.
-GDS:2 ■ List: Alice and Dora may jointly Dora lists Alice by Mail under Name on its page, provided Dora is a directory, Alice knows Dora and not Dora lists Alice by Mail under Name on its page.
-GDS:2 ■ List unshown: Alice and Dora may jointly Dora lists Alice by Mail under Name off its page, provided Dora is a directory, Alice knows Dora and not Dora lists Alice by Mail under Name off its page.
+GDS:2 ■ List me: Alice and Dora may jointly Dora lists Alice by Mail under Name on its page, provided Dora is a directory, Alice knows Dora and not Dora lists Alice by Mail under Name on its page.
+GDS:2 ■ List me unshown: Alice and Dora may jointly Dora lists Alice by Mail under Name off its page, provided Dora is a directory, Alice knows Dora and not Dora lists Alice by Mail under Name off its page.
 GDS:2 ■ | Dora consents having verified Mail as an email address of Alice.
 GDS:2 ■ | Alice lists with a name if she chooses, shown on Dora's page or not, and her app then keeps Dora supplied with invitation links of hers.
-GDS:2 ■ Delist: Alice may no longer Dora lists Alice by Mail under Name on its page.
-GDS:2 ■ Delist unshown: Alice may no longer Dora lists Alice by Mail under Name off its page.
+GDS:2 ■ Delist me: Alice may no longer Dora lists Alice by Mail under Name on its page.
+GDS:2 ■ Delist me unshown: Alice may no longer Dora lists Alice by Mail under Name off its page.
 GDS:3 ■ Lookup: Bob may Bob holds an invitation link of Alice from Dora, provided Bob knows Dora and Dora lists Alice by Mail under Name on its page.
 GDS:3 ■ Lookup by address: Bob may Bob holds an invitation link of Alice from Dora, provided Bob knows Dora and Dora lists Alice by Mail under Name off its page.
 GDS:3 ■ | Bob looks Alice up on Dora's page if she is shown there, and by her email address and name if not.

@@ -1,285 +1,333 @@
-Changes from the publication at GLP Calculus a687ab8 to this one, for an owner who adopted the first.
+DRAFT, 2026-11-16: printed before the cascade run of the 66 is assembled; it is printed again then.
+Changes from the publication at Calculus code 2307a5b (the 62 adopted on main) to code 32d16c50, for an owner who adopted the first.
 
-AGORA:
-  own act added: Offer own
-  own act added: Want own
-  own act added: Withdraw own
+Renamed, the contract's name and nothing else (Udi, 2026-11-16): AGORA is Agora.  JOINT is Joint.  STAY is Stay.  LIB is Lib.  REC is Rec.  GC is Coins.  GB is Bonds.  The title line of Coins and of Bonds is its one word.  Below, each is compared with itself under its old name.
+New: CDC (owner GO), Notes (owner GSC), Shares (owner GO), GA (owner GSA).  The title line of Notes and of Shares is its one word.
+
+Agora:
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
   derived acts: 3, before 3
+Bonds:
+  own act gone: Swap
+  own act gone: Swap bonds
+  own act gone: Deposit
+  own act gone: Deposit bond
+  own act gone: Release
+  own act gone: Release bond
+  own act gone: Return
+  own act gone: Return bond
+  inherited act added: Swap, from Notes
+  inherited act added: Swap bonds, from Notes
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited act added: Deposit, from Notes
+  inherited act added: Deposit bond, from Notes
+  inherited act added: Release, from Notes
+  inherited act added: Release bond, from Notes
+  inherited act added: Return, from Notes
+  inherited act added: Return bond, from Notes
+  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
+  derived acts: 1, before 1
 CB:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
+CDC: new in this publication
 CMB:
-  own act added: Bank deposit own coins
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  own act changed: Loan by the directors
+    was: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Day,*Total), bond(Orga,Bob,Day,*Total), ~vote_lend(Orga,_,Bob,Sum,Day) <- role(Alice,Orga,Director), vote_lend(Orga,>=Votes,Bob,Sum,Day), sum(More,Votes,1), has_role(Orga,<More,Director), participant(Bob,Orga), ~role(Bob,Orga,_), coin(Orga,Orga,*Sum), bond(Bob,Bob,Day,*Total) guarded by Alice, Bob.
+    now: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Day,*Total), bond(Orga,Bob,Day,*Total), ~vote_lend(Orga,_,Bob,Sum,Day) <- role(Alice,Orga,Director), vote_lend(Orga,>=Votes,Bob,Sum,Day), product(Double,Votes,2), has_role(Orga,<Double,Director), participant(Bob,Orga), ~role(Bob,Orga,_), coin(Orga,Orga,*Sum), bond(Bob,Bob,Day,*Total) guarded by Alice, Bob.
+  own act changed: Set lending limit
+    was: ~lending_limit(Orga,Carol,_), lending_limit(Orga,Carol,Limit), ~vote_limit(Orga,_,Carol,Limit) <- role(Alice,Orga,Director), vote_limit(Orga,>=Votes,Carol,Limit), sum(More,Votes,1), has_role(Orga,<More,Director), has_role(Orga,Carol,Lender) guarded by Alice.
+    now: ~lending_limit(Orga,Carol,_), lending_limit(Orga,Carol,Limit), ~vote_limit(Orga,_,Carol,Limit) <- role(Alice,Orga,Director), vote_limit(Orga,>=Votes,Carol,Limit), product(Double,Votes,2), has_role(Orga,<Double,Director), has_role(Orga,Carol,Lender) guarded by Alice.
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
 CSSN:
-  inherited act added: Post own, from GSN
-  inherited act added: Child post own, from GSNW
-  inherited act added: Child leave, from GSNW
-  inherited act added: Child remove, from GSNW
+  own act changed: Of age
+    was: of_age(Carol), ~child(Carol), ~parent(_,Carol), ~has_parent(Carol,_), person(Carol) <- creator(Alice,Carol), parent(Alice,Carol), has_parent(Carol,Alice), ~of_age(Carol), child(Carol) guarded by Alice.
+    now: of_age(Carol), ~child(Carol), ~parent(_,Carol), ~has_parent(Carol,_), person(Carol) <- creator(Alice,Carol), has_parent(Carol,Bob), ~of_age(Carol), child(Carol) guarded by Alice.
+  inherited acts changed: 1 (Child end from GnW)
 CnC:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  own act changed: Join
+    was: participant(Bob,Orga), has_participant(Orga,Bob) <- ~participant(Bob,Orga), paid_fee(Orga,Bob) guarded by Bob, deciders(Orga).
+    now: participant(Bob,Orga), has_participant(Orga,Bob), ~vote_join_orga(Orga,_,Bob) <- ~participant(Bob,Orga), vote_join_orga(Orga,>=VotesOrga,Bob), product(DoubleOrga,VotesOrga,2), has_participant(Orga,<DoubleOrga), paid_fee(Orga,Bob) guarded by Bob, deciders(Orga).
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 5 (Organisation end from GnW, Expel from GO, Officer expel from GO, Amend from GO, Pay from Notes)
+  derived acts: 102, before 89, changed
+Coins:
+  own act gone: Issue
+  own act gone: Swap
+  own act renamed: Pay, now Pay issuer
+  inherited act added: Issue, from Notes
+  inherited act added: Swap, from Notes
+  inherited act added: Pay, from Notes
+  inherited act added: Deposit, from Notes
+  inherited act added: Release, from Notes
+  inherited act added: Return, from Notes
+  inherited acts changed: 1 (Establish from GKK)
 DAO:
-  own act added: Propose own
-  own act added: Vote own for
-  own act added: Vote own against
+  inherited acts changed: 1 (Establish from GKK)
 DGC:
-  own act added: Deposit own coins
-  own act added: Deposit with the issuer
-  own act added: Deposit own bonds
-  own act added: Deposit bond with the issuer
-  own act added: Pay own accepted coins
-  own act added: Pay accepted coins to the issuer
-  own act changed: Accept by bond
-    was: accepts(Alice,Carol,Dollar,*Limit) <- bond(Alice,Carol,Day), issued_bond_in(Carol,Dollar,Due) guarded by Alice.
-    now: accepts(Alice,Carol,Dollar,*Limit) <- bond(Alice,Carol,Day), issued_bond_in(Carol,Dollar,Due), le(Day,Due), le(Due,Day) guarded by Alice.
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
   derived acts: 1, before 1
 FDAO:
-  inherited act added: Propose own, from DAO
-  inherited act added: Vote own for, from DAO
-  inherited act added: Vote own against, from DAO
-GAI: text only
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Deposit, from Notes
+  inherited act added: Release, from Notes
+  inherited act added: Return, from Notes
+  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
+GA: new in this publication
+GAI:
+  own act changed: AI agent end
+    was: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~guardian(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol), attestation(Carol,Proof) guarded by Carol.
+    now: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~has_guardian(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol), attestation(Carol,Proof) guarded by Carol.
 GAN:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
-GAS: text only
-GB: text only
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
+GAS:
+  inherited acts changed: 1 (Ward end from GnW)
 GBCC:
-  own act added: Deposit own coins
-  own act added: Deposit with the issuer
-  own act added: Deposit own bonds
-  own act added: Deposit bond with the issuer
-  own act added: Pay own accepted coins
-  own act added: Pay accepted coins to the issuer
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  own act added: Pay issuer
+  own act added: Pay bond
+  own act changed: Pay
+    was: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum), all_stay_backed(Alice,Orga) guarded by Alice.
+    now: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,*Sum), all_stay_backed(Alice,Orga) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+  inherited acts changed: 3 (Organisation end from GnW, Act from GO, Amend from GO)
+  derived acts: 99, before 89, changed
 GBank:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
-GC: text only
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 6 (Organisation end from GnW, Propose from GO, Vote from GO, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
 GCC:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
 GCoop:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 9 (Organisation end from GnW, Propose from GO, Vote from GO, Act from GO, Join from GO, Expel from GO, Officer expel from GO, Amend from GO, Pay from Notes)
+  derived acts: 102, before 89, changed
 GCorp:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
-GD: text only
-GD-S: text only
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 6 (Organisation end from GnW, Propose from GO, Vote from GO, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
+GD:
+  inherited acts changed: 1 (Establish from GKK)
+GD-S:
+  inherited acts changed: 1 (Establish from GKK)
 GDAO:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
-GDC: text only
-GDO: text only
-GDO-L: text only
-GDO-LB: text only
-GDS: text only
-GFF: text only
-GFF-FR: text only
-GFF-FR-BC: text only
-GFF-PS: text only
-GFP: text only
-GKK: text only
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 6 (Organisation end from GnW, Join from GO, Expel from GO, Officer expel from GO, Amend from GO, Pay from Notes)
+  derived acts: 102, before 89, changed
+GDC:
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Deposit, from Notes
+  inherited act added: Release, from Notes
+  inherited act added: Return, from Notes
+  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
+GDO:
+  inherited acts changed: 1 (Establish from GKK)
+GDO-L:
+  inherited acts changed: 1 (Establish from GKK)
+GDO-LB:
+  inherited acts changed: 1 (Establish from GKK)
+GDS:
+  own act renamed: List, now List me
+  own act renamed: List unshown, now List me unshown
+  own act renamed: Delist, now Delist me
+  own act renamed: Delist unshown, now Delist me unshown
+  inherited acts changed: 1 (Ward end from GnW)
+GFF:
+  inherited acts changed: 1 (Establish from GKK)
+GFF-FR:
+  inherited acts changed: 1 (Establish from GKK)
+GFF-FR-BC:
+  inherited acts changed: 1 (Establish from GKK)
+GFF-PS:
+  inherited acts changed: 1 (Establish from GKK)
+GFP:
+  inherited acts changed: 1 (Establish from GKK)
+GKK:
+  own act changed: Establish
+    was: identity(Alice) <- ~identity(Alice) guarded by Alice.
+    now: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 GLDAO:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 6 (Organisation end from GnW, Join from GO, Expel from GO, Officer expel from GO, Amend from GO, Pay from Notes)
+  derived acts: 102, before 89, changed
 GNG:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
 GNL:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
 GNM:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
 GNO:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
-GO: text only
-GPD: text only
-GPE: text only
-GRA: text only
-GRA-SS: text only
-GRV: text only
-GSG: text only
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
+GO:
+  own act changed: Propose
+    was: proposed(Orga,Motion) <- proposer(Bob,Orga,Motion), ~proposed(Orga,Motion) guarded by Bob.
+    now: proposed(Orga,Motion) <- officer(Bob,Orga), ~proposed(Orga,Motion) guarded by Bob.
+  own act changed: Vote
+    was: vote(Orga,Bob,Motion) <- voter(Bob,Orga,Motion), organisation(Orga), proposed(Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.
+    now: vote(Orga,Bob,Motion) <- officer(Bob,Orga), organisation(Orga), proposed(Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.
+  own act changed: Act
+    was: taken(Orga,Motion) <- taker(Alice,Orga,Motion), decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
+    now: taken(Orga,Motion) <- officer(Alice,Orga), vote(Orga,>=Votes,Motion), product(Double,Votes,2), has_officer(Orga,<Double), ~taken(Orga,Motion) guarded by Alice.
+  own act changed: Amend
+    was: amended(Orga), taken(Orga,Motion) <- taker(Alice,Orga,Motion), organisation(Orga), proposed(Orga,Motion), decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
+    now: amended(Orga), taken(Orga,Motion) <- officer(Alice,Orga), organisation(Orga), proposed(Orga,Motion), vote(Orga,>=Votes,Motion), product(Double,Votes,2), has_officer(Orga,<Double), ~taken(Orga,Motion) guarded by Alice.
+  inherited acts changed: 1 (Organisation end from GnW)
+GPD:
+  inherited acts changed: 1 (Establish from GKK)
+GPE:
+  own act changed: Encounter
+    was: knows(Alice,Bob), knows(Bob,Alice) <- ~knows(Alice,Bob), ~knows(Bob,Alice), nearby(Alice,Bob), nearby(Bob,Alice), open_place(Alice), open_place(Bob) guarded by Alice, Bob.
+    now: knows(Alice,Bob), knows(Bob,Alice) <- ~knows(Alice,Bob), ~knows(Bob,Alice), nearby(Alice,Bob), nearby(Bob,Alice), open_place(Alice), open_place(Bob) guarded by Alice, Bob must Alice, Bob.
+  inherited acts changed: 1 (Establish from GKK)
+GRA:
+  inherited acts changed: 1 (Establish from GKK)
+GRA-SS:
+  inherited acts changed: 1 (Establish from GKK)
+GRV:
+  inherited acts changed: 1 (Ward end from GnW)
+GSG:
+  inherited acts changed: 1 (Establish from GKK)
 GSN:
-  own act added: Post own
+  inherited acts changed: 1 (Establish from GKK)
 GSNP:
-  own act added: Post own
+  inherited acts changed: 1 (AI agent end from GnW)
 GSNW:
-  own act added: Post own
-  own act added: Ward post own
-  own act added: Ward add
-  own act added: Ward leave
-  own act added: Ward remove
-GSV: text only
-GnW: text only
-JOINT: text only
+  own act changed: Ward end
+    was: ~friend(Carol,Bob), ~friend(Bob,Carol), ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <- ~guardian(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+    now: ~friend(Carol,Bob), ~friend(Bob,Carol), ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <- ~has_guardian(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+  own act changed: Retire
+    was: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~friend(Carol,_), ~friend(_,Carol), ~member(Carol,_,_), ~listed(_,Carol,_) <- ~retired(Carol) guarded by deciders(Carol).
+    now: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~friend(Carol,_), ~friend(_,Carol), ~member(Carol,_,_), ~listed(_,Carol,_) <- ~retired(Carol) guarded by any_guardian(Carol).
+  inherited acts changed: 2 (Make guardian from GnW, End guardian from GnW)
+GSV:
+  inherited acts changed: 1 (Ward end from GnW)
+GnW:
+  own act gone: Establish
+  own act changed: Make guardian
+    was: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), has_guardian(Carol,Alice), friend(Bob,Alice), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by deciders(Carol), Bob.
+    now: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), has_guardian(Carol,Alice), friend(Bob,Alice), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by any_guardian(Carol), Bob.
+  own act changed: End guardian
+    was: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by deciders(Carol,-Bob).
+    now: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by any_guardian(Carol,-Bob).
+  own act changed: Ward end
+    was: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~guardian(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+    now: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~has_guardian(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+  own act changed: Retire
+    was: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~friend(Carol,_), ~friend(_,Carol) <- ~retired(Carol) guarded by deciders(Carol).
+    now: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~friend(Carol,_), ~friend(_,Carol) <- ~retired(Carol) guarded by any_guardian(Carol).
+  inherited act added: Establish, from GKK
+Joint:
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Deposit coin, from Notes
+  inherited act added: Release, from Notes
+  inherited act added: Return, from Notes
+  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
 LDAO:
-  own act added: Delegate own
-  own act added: Delegate to the steward
-  own act added: Revoke own
-  own act added: Count own for
-  own act added: Count own against
-  inherited act added: Propose own, from DAO
-  inherited act added: Vote own for, from DAO
-  inherited act added: Vote own against, from DAO
-LIB: text only
+  inherited acts changed: 1 (Establish from GKK)
+Lib:
+  inherited acts changed: 1 (Establish from GKK)
 MCS:
-  own act added: Deposit own coins
-  own act added: Deposit with the issuer
-  own act added: Deposit own bonds
-  own act added: Deposit bond with the issuer
-  own act added: Pay own accepted coins
-  own act added: Pay accepted coins to the issuer
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  own act added: Pay issuer
+  own act added: Pay bond
+  own act changed: Pay
+    was: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum), credit_limit(Alice,Orga) guarded by Alice.
+    now: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,*Sum), credit_limit(Alice,Orga) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+  inherited acts changed: 3 (Organisation end from GnW, Act from GO, Amend from GO)
+  derived acts: 99, before 89, changed
+Notes: new in this publication
 ORH:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
-REC: text only
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
+Rec:
+  inherited acts changed: 1 (Establish from GKK)
 SC:
-  own act added: Claim own coins
-  own act added: Claim coins of the corporation
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  own act gone: Redeem
+  own act gone: Redeem coin against bond
+  own act gone: Issue shares
+  own act gone: Vote on issue
+  own act gone: Vote on first issue
+  own act changed: Set dividend
+    was: dividend(Orga,Div), ~vote_dividend(Orga,_,Div) <- role(Alice,Orga,Director), vote_dividend(Orga,>=Votes,Div), sum(More,Votes,1), has_role(Orga,<More,Director), ~dividend(Orga,Div) guarded by Alice.
+    now: dividend(Orga,Div), ~vote_dividend(Orga,_,Div) <- role(Alice,Orga,Director), vote_dividend(Orga,>=Votes,Div), product(Double,Votes,2), has_role(Orga,<Double,Director), ~dividend(Orga,Div) guarded by Alice.
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited act added: Redeem, from Coins
+  inherited act added: Redeem coin against bond, from Bonds
+  inherited act added: Issue shares, from Notes
+  inherited act added: Issue shares by shareholders, from Notes
+  inherited act added: Swap shares, from Notes
+  inherited act added: Pay share, from Notes
+  inherited act added: Deposit share, from Notes
+  inherited act added: Release share, from Notes
+  inherited act added: Return share, from Notes
+  inherited acts changed: 7 (Person unfriend from GSG, Appoint from GnW, End officer from GnW, Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 128, before 89, changed
 SCB:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
-SGSG: text only
+  own act changed: Lend
+    was: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Term,*Total), bond(Orga,Bob,Term,*Total), ~vote_lend(Orga,_,Bob,Sum,Term) <- role(Alice,Orga,Governor), vote_lend(Orga,>=Votes,Bob,Sum,Term), sum(More,Votes,1), has_role(Orga,<More,Governor), participant(Bob,Orga), ~role(Bob,Orga,_), policy_rate(Orga,Term,Rate), product(Interest,Sum,Rate), sum(Total,Sum,Interest), coin(Orga,Orga,*Sum), bond(Bob,Bob,Term,*Total) guarded by Alice, Bob.
+    now: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Term,*Total), bond(Orga,Bob,Term,*Total), ~vote_lend(Orga,_,Bob,Sum,Term) <- role(Alice,Orga,Governor), vote_lend(Orga,>=Votes,Bob,Sum,Term), product(Double,Votes,2), has_role(Orga,<Double,Governor), participant(Bob,Orga), ~role(Bob,Orga,_), policy_rate(Orga,Term,Rate), product(Interest,Sum,Rate), sum(Total,Sum,Interest), coin(Orga,Orga,*Sum), bond(Bob,Bob,Term,*Total) guarded by Alice, Bob.
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
+SGSG:
+  inherited acts changed: 1 (Establish from GKK)
 SPLLC:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
-STAY: text only
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
+Shares: new in this publication
+Stay:
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Deposit, from Notes
+  inherited act added: Release, from Notes
+  inherited act added: Return, from Notes
+  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
 TC:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 89, before 1, changed
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 6 (Organisation end from GnW, Propose from GO, Vote from GO, Act from GO, Amend from GO, Pay from Notes)
+  derived acts: 99, before 89, changed
 WC:
-  inherited act added: Deposit own coins, from DGC
-  inherited act added: Deposit with the issuer, from DGC
-  inherited act added: Deposit own bonds, from DGC
-  inherited act added: Deposit bond with the issuer, from DGC
-  inherited act added: Pay own accepted coins, from DGC
-  inherited act added: Pay accepted coins to the issuer, from DGC
-  inherited acts changed: 1 (Accept by bond from DGC)
-  derived acts: 90, before 2, changed
+  inherited act added: Pay issuer, from Notes
+  inherited act added: Pay bond, from Notes
+  inherited acts changed: 6 (Organisation end from GnW, Join from GO, Expel from GO, Officer expel from GO, Amend from GO, Pay from Notes)
+  derived acts: 103, before 90, changed
 
-Summary: 62 contracts; own acts changed 11; inherited acts changed only 20; text only 31; unchanged 0; new 0; no longer published 0.
-With an own act added, gone, renamed or changed: AGORA, CMB, DAO, DGC, GBCC, GSN, GSNP, GSNW, LDAO, MCS, SC.
+Summary: 66 contracts; own acts changed 16; inherited acts changed only 46; relations.txt only 0; text only 0; unchanged 0; new 4; no longer published 0.
+With an own act added, gone, renamed or changed: Bonds, CMB, CSSN, CnC, Coins, GAI, GBCC, GDS, GKK, GO, GPE, GSNW, GnW, MCS, SC, SCB.

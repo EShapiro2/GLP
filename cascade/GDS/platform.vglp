@@ -64,13 +64,13 @@ match(Peer, Peer, Peer)
 ;
 open_directory(Peer, Peer)
 ;
-list(Peer, Peer, Speech, Speech)
+list_me(Peer, Peer, Speech, Speech)
 ;
-list_unshown(Peer, Peer, Speech, Speech)
+list_me_unshown(Peer, Peer, Speech, Speech)
 ;
-delist(Peer, Peer)
+delist_me(Peer, Peer)
 ;
-delist_unshown(Peer, Peer)
+delist_me_unshown(Peer, Peer)
 ;
 lookup(Peer, Peer)
 ;
@@ -128,13 +128,13 @@ present(Peer, Peer, Peer)
 ;
 open_directory(Peer, Peer)
 ;
-list(Peer, Peer, Speech, Speech)
+list_me(Peer, Peer, Speech, Speech)
 ;
-list_unshown(Peer, Peer, Speech, Speech)
+list_me_unshown(Peer, Peer, Speech, Speech)
 ;
-delist(Peer, Peer)
+delist_me(Peer, Peer)
 ;
-delist_unshown(Peer, Peer)
+delist_me_unshown(Peer, Peer)
 ;
 lookup(Peer, Peer)
 ;
@@ -145,7 +145,7 @@ Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, []), req(person, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2, 3], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)]), req(person, [])], [1, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(person, []), forb(friend, [at(2)])], [2], [], [], [])]), button("Enter", [act(enter, 2, [1, 2], [req(identity, []), req(person, []), unless(knows, [at(1)]), unless(friend, [at(1)]), unless(has_guardian, [at(1)]), unless(creator, [at(1)]), unless(guardian, [at(1)]), unless(registered, [any, at(1)]), unless(spent, [any, at(1)]), unless(address, [at(1)]), unless(presented, [at(1), any]), unless(presented, [any, at(1)]), unless(lists_shown, [at(1), any, any]), unless(lists_unshown, [at(1), any, any]), unless(holds_link, [any, at(1)])], [], [field(1, "name", key)], [], [])]), button("Make guardian", [act(make_guardian, 3, [1, 2, 3], [req(identity, []), req(person, []), req(guardian, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(person, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(person, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(person, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(person, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(person, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [2], [field(1, "person", person)], [], [])]), button("End guardian", [act(end_guardian, 3, [1, 2, 3], [req(identity, []), req(person, []), req(guardian, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [2], [field(1, "person", person)], [], [])]), button("Resign", [act(resign, 1, [1, 2], [req(identity, []), req(person, []), req(guardian, [at(2)])], [2], [], [], [])]), button("Guardian unfriend", [act(guardian_unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)]), req(guardian, [at(2)])], [2], [], [], [])]), button("Ward acquaint", [act(ward_acquaint, 2, [1, 2], [req(identity, []), req(person, [])], [], [field(1, "person", key)], [], [])]), button("Ward befriend", [act(ward_befriend, 3, [1, 2, 3], [req(identity, []), req(friend, [at(2)]), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(ward, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(ward, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [2], [field(1, "ward", person)], [], [])]), button("Ward unfriend", [act(ward_unfriend, 3, [1, 2, 3], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)]), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], has_guardian, [at(2)]), proved(identity, [], creator, [at(2)]), proved(identity, [], guardian, [at(2)]), proved(identity, [], registered, [any, at(2)]), proved(identity, [], spent, [any, at(2)]), proved(identity, [], address, [at(2)]), proved(identity, [], presented, [at(2), any]), proved(identity, [], presented, [any, at(2)]), proved(identity, [], lists_shown, [at(2), any, any]), proved(identity, [], lists_unshown, [at(2), any, any]), proved(identity, [], holds_link, [any, at(2)])], [], [field(1, "ward", person), field(2, "person", person)], [], [])]), button("Ward end", [act(ward_end, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(has_guardian, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)]), forb(guardian, [at(2)])], [2], [], [], [])]), button("Person unfriend", [act(person_unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)])], [2], [], [], [])]), button("Wards acquaint", [act(wards_acquaint, 1, [1, 2], [req(identity, []), req(ward, []), req(has_guardian, [any])], [], [field(2, "person", key)], [], [])]), button("Wards befriend", [act(wards_befriend, 3, [1, 2, 3, 4], [req(identity, []), req(knows, [at(2)]), req(friend, [at(4)]), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(ward, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(ward, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [2, 4], [field(1, "ward", person)], [same(4, 3)], [])]), button("Wards of one guardian befriend", [act(wards_of_one_guardian_befriend, 3, [1, 2, 3], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(ward, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(ward, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)]), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], has_guardian, [at(2)]), proved(identity, [], creator, [at(2)]), proved(ward, [], creator, [at(2)]), proved(identity, [], guardian, [at(2)]), proved(ward, [], guardian, [at(2)]), proved(identity, [], registered, [any, at(2)]), proved(identity, [], spent, [any, at(2)]), proved(identity, [], address, [at(2)]), proved(identity, [], presented, [at(2), any]), proved(identity, [], presented, [any, at(2)]), proved(identity, [], lists_shown, [at(2), any, any]), proved(identity, [], lists_unshown, [at(2), any, any]), proved(identity, [], holds_link, [any, at(2)])], [], [field(1, "ward", person), field(2, "other ward", person)], [], [])]), button("Retire", [act(retire, 2, [1, 2], [req(identity, []), req(person, []), req(guardian, [at(1)])], [1], [], [], [])]), button("Open server", [act(open_server, 2, [1, 2], [req(identity, []), req(guardian, [at(1)]), req(person, [])], [1], [], [], [])]), button("Sign link", [act(sign_link, 1, [1], [req(identity, []), req(knows, [at(3)]), req(person, []), forb(link, [at(2), at(3)])], [3], [field(2, "link", text)], [], [])]), button("Invite by link", [act(invite_by_link, 2, [1, 2], [req(identity, []), req(link, [at(3), at(1)]), req(knows, [at(1)]), req(person, [])], [3, 1], [], [], [])]), button("Use link", [act(use_link, 3, [1, 2, 3], [req(identity, []), req(knows, [at(1)]), req(person, []), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], has_guardian, [at(2)]), proved(identity, [], creator, [at(2)]), proved(identity, [], guardian, [at(2)]), proved(identity, [], registered, [any, at(2)]), proved(identity, [], spent, [any, at(2)]), proved(identity, [], address, [at(2)]), proved(identity, [], presented, [at(2), any]), proved(identity, [], presented, [any, at(2)]), proved(identity, [], lists_shown, [at(2), any, any]), proved(identity, [], lists_unshown, [at(2), any, any]), proved(identity, [], holds_link, [any, at(2)])], [1], [field(2, "alice", person), field(4, "link", text)], [], [])]), button("Present", [act(present, 2, [1, 2, 3], [req(identity, []), req(friend, [at(3)]), req(knows, [at(1)]), req(person, [])], [3, 1], [], [], [])]), button("Open directory", [act(open_directory, 2, [1, 2], [req(identity, []), req(guardian, [at(1)]), req(person, [])], [1], [], [], [])]), button("List", [act(list, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(person, [])], [1], [field(3, "mail", text), field(4, "name", text)], [], [])]), button("List unshown", [act(list_unshown, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(person, [])], [1], [field(3, "mail", text), field(4, "name", text)], [], [])]), button("Delist", [act(delist, 2, [1, 2], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [], [field(1, "dora", person)], [], [])]), button("Delist unshown", [act(delist_unshown, 2, [1, 2], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [], [field(1, "dora", person)], [], [])]), button("Lookup", [act(lookup, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(person, [])], [2], [], [], [])]), button("Lookup by address", [act(lookup_by_address, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(person, [])], [2], [], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, []), req(person, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2, 3], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)]), req(person, [])], [1, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(person, []), forb(friend, [at(2)])], [2], [], [], [])]), button("Enter", [act(enter, 2, [1, 2], [req(identity, []), req(person, []), unless(knows, [at(1)]), unless(friend, [at(1)]), unless(has_guardian, [at(1)]), unless(creator, [at(1)]), unless(guardian, [at(1)]), unless(registered, [any, at(1)]), unless(spent, [any, at(1)]), unless(address, [at(1)]), unless(presented, [at(1), any]), unless(presented, [any, at(1)]), unless(lists_shown, [at(1), any, any]), unless(lists_unshown, [at(1), any, any]), unless(holds_link, [any, at(1)])], [], [field(1, "name", key)], [], [])]), button("Ward acquaint", [act(ward_acquaint, 2, [1, 2], [req(identity, []), req(person, [])], [], [field(1, "person", key)], [], [])]), button("Ward befriend", [act(ward_befriend, 3, [1, 2, 3], [req(identity, []), req(friend, [at(2)]), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(ward, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(ward, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [2], [field(1, "ward", person)], [], [])]), button("Ward unfriend", [act(ward_unfriend, 3, [1, 2, 3], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)]), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], has_guardian, [at(2)]), proved(identity, [], creator, [at(2)]), proved(identity, [], guardian, [at(2)]), proved(identity, [], registered, [any, at(2)]), proved(identity, [], spent, [any, at(2)]), proved(identity, [], address, [at(2)]), proved(identity, [], presented, [at(2), any]), proved(identity, [], presented, [any, at(2)]), proved(identity, [], lists_shown, [at(2), any, any]), proved(identity, [], lists_unshown, [at(2), any, any]), proved(identity, [], holds_link, [any, at(2)])], [], [field(1, "ward", person), field(2, "person", person)], [], [])]), button("Ward end", [act(ward_end, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(has_guardian, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)]), forb(guardian, [at(2)])], [2], [], [], [])]), button("Person unfriend", [act(person_unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)])], [2], [], [], [])]), button("Wards acquaint", [act(wards_acquaint, 1, [1, 2], [req(identity, []), req(ward, []), req(has_guardian, [any])], [], [field(2, "person", key)], [], [])]), button("Wards befriend", [act(wards_befriend, 3, [1, 2, 3, 4], [req(identity, []), req(knows, [at(2)]), req(friend, [at(4)]), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(ward, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(ward, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [2, 4], [field(1, "ward", person)], [same(4, 3)], [])]), button("Wards of one guardian befriend", [act(wards_of_one_guardian_befriend, 3, [1, 2, 3], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(ward, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(ward, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)]), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], has_guardian, [at(2)]), proved(identity, [], creator, [at(2)]), proved(ward, [], creator, [at(2)]), proved(identity, [], guardian, [at(2)]), proved(ward, [], guardian, [at(2)]), proved(identity, [], registered, [any, at(2)]), proved(identity, [], spent, [any, at(2)]), proved(identity, [], address, [at(2)]), proved(identity, [], presented, [at(2), any]), proved(identity, [], presented, [any, at(2)]), proved(identity, [], lists_shown, [at(2), any, any]), proved(identity, [], lists_unshown, [at(2), any, any]), proved(identity, [], holds_link, [any, at(2)])], [], [field(1, "ward", person), field(2, "other ward", person)], [], [])]), button("Make guardian", [act(make_guardian, 3, [1, 2, 3], [req(identity, []), req(person, []), req(guardian, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(person, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(person, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(person, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(person, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(person, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [2], [field(1, "person", person)], [], [])]), button("End guardian", [act(end_guardian, 3, [1, 2, 3], [req(identity, []), req(person, []), req(guardian, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [2], [field(1, "person", person)], [], [])]), button("Resign", [act(resign, 1, [1, 2], [req(identity, []), req(person, []), req(guardian, [at(2)])], [2], [], [], [])]), button("Guardian unfriend", [act(guardian_unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)]), req(guardian, [at(2)])], [2], [], [], [])]), button("Retire", [act(retire, 2, [1, 2], [req(identity, []), req(person, []), req(guardian, [at(1)])], [1], [], [], [])]), button("Open server", [act(open_server, 2, [1, 2], [req(identity, []), req(guardian, [at(1)]), req(person, [])], [1], [], [], [])]), button("Sign link", [act(sign_link, 1, [1], [req(identity, []), req(knows, [at(3)]), req(person, []), forb(link, [at(2), at(3)])], [3], [field(2, "link", text)], [], [])]), button("Invite by link", [act(invite_by_link, 2, [1, 2], [req(identity, []), req(link, [at(3), at(1)]), req(knows, [at(1)]), req(person, [])], [3, 1], [], [], [])]), button("Use link", [act(use_link, 3, [1, 2, 3], [req(identity, []), req(knows, [at(1)]), req(person, []), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], has_guardian, [at(2)]), proved(identity, [], creator, [at(2)]), proved(identity, [], guardian, [at(2)]), proved(identity, [], registered, [any, at(2)]), proved(identity, [], spent, [any, at(2)]), proved(identity, [], address, [at(2)]), proved(identity, [], presented, [at(2), any]), proved(identity, [], presented, [any, at(2)]), proved(identity, [], lists_shown, [at(2), any, any]), proved(identity, [], lists_unshown, [at(2), any, any]), proved(identity, [], holds_link, [any, at(2)])], [1], [field(2, "alice", person), field(4, "link", text)], [], [])]), button("Present", [act(present, 2, [1, 2, 3], [req(identity, []), req(friend, [at(3)]), req(knows, [at(1)]), req(person, [])], [3, 1], [], [], [])]), button("Open directory", [act(open_directory, 2, [1, 2], [req(identity, []), req(guardian, [at(1)]), req(person, [])], [1], [], [], [])]), button("List me", [act(list_me, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(person, [])], [1], [field(3, "mail", text), field(4, "name", text)], [], [])]), button("List me unshown", [act(list_me_unshown, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(person, [])], [1], [field(3, "mail", text), field(4, "name", text)], [], [])]), button("Delist me", [act(delist_me, 2, [1, 2], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [], [field(1, "dora", person)], [], [])]), button("Delist me unshown", [act(delist_me_unshown, 2, [1, 2], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_guardian, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], guardian, [at(1)]), proved(identity, [], registered, [any, at(1)]), proved(identity, [], spent, [any, at(1)]), proved(identity, [], address, [at(1)]), proved(identity, [], presented, [at(1), any]), proved(identity, [], presented, [any, at(1)]), proved(identity, [], lists_shown, [at(1), any, any]), proved(identity, [], lists_unshown, [at(1), any, any]), proved(identity, [], holds_link, [any, at(1)])], [], [field(1, "dora", person)], [], [])]), button("Lookup", [act(lookup, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(person, [])], [2], [], [], [])]), button("Lookup by address", [act(lookup_by_address, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(person, [])], [2], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -245,7 +245,7 @@ atom_of(g(holds_link, [p(V1), p(V2)]), shown(holds_link(V1?, V2?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, []), atom(person, [])], [])]), schema(enter, [], [rs(guarded, [atom(identity, []), atom(ward, []), atom(has_guardian, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(guardian, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), lschema(make_guardian, [], [rs(guarded, [atom(guardian, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)])], [atom(guardian, [role(2)])]), rs(unguarded, [atom(has_guardian, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)])], [atom(retired, []), atom(has_guardian, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], [])], [listing(4, 2, has_guardian, [role(4)], fcons(true), [], [])]), schema(resign, [], [rs(guarded, [], [atom(guardian, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_guardian, [role(1)])], [atom(identity, [])], [])]), lschema(end_guardian, [], [rs(unguarded, [], [atom(guardian, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_guardian, [role(1)])], [atom(identity, []), atom(has_guardian, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], [])], [listing(4, 2, has_guardian, [role(4)], fcons(ne(role(4), role(1))), [], [])]), schema(guardian_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(guardian, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_guardian, [role(1)])], [atom(identity, [])], [])]), schema(ward_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(ward_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), schema(ward_end, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(has_guardian, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], [atom(guardian, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(ward_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(has_guardian, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(guardian, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(wards_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Bob')])], [])]), schema(wards_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(wards_of_one_guardian_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), lschema(retire, [], [rs(unguarded, [atom(retired, [])], [atom(has_guardian, [any]), atom(friend, [any])], [atom(identity, []), atom(has_guardian, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(1)])], []), rs(unguarded, [], [atom(guardian, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])], [listing(3, 1, has_guardian, [role(3)], fcons(true), [], []), listing(4, 1, has_guardian, [role(4)], fcons(true), [], []), listing(5, 1, friend, [role(5)], fcons(true), [], [])]), schema(open_server, [], [rs(unguarded, [atom(rendezvous_server, [])], [], [atom(identity, [])], [atom(rendezvous_server, [])]), rs(guarded, [], [], [atom(identity, []), atom(guardian, [role(1)]), atom(person, [])], [])]), schema(sign_link, [svar('Link'), pvar('Dave')], [rs(guarded, [atom(link, [svar('Link'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Dave')]), atom(person, [])], [atom(link, [svar('Link'), pvar('Dave')])])]), schema(invite_by_link, [svar('Link')], [rs(unguarded, [atom(registered, [svar('Link'), role(2)])], [], [atom(identity, []), atom(rendezvous_server, [])], [atom(spent, [svar('Link'), role(2)]), atom(registered, [svar('Link'), role(2)])]), rs(guarded, [], [], [atom(identity, []), atom(link, [svar('Link'), role(1)]), atom(knows, [role(1)]), atom(person, [])], [])]), schema(use_link, [svar('Link')], [rs(unguarded, [atom(spent, [svar('Link'), role(2)])], [atom(registered, [svar('Link'), role(2)])], [atom(identity, [])], [atom(expired, [svar('Link')])]), rs(unguarded, [atom(address, [role(3)])], [], [atom(identity, [])], []), rs(guarded, [atom(address, [role(2)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]), schema(present, [], [rs(unguarded, [atom(presented, [role(2), role(3)])], [], [atom(identity, []), atom(rendezvous_server, [])], [atom(presented, [role(2), role(3)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(knows, [role(1)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)])], [])]), schema(match, [], [rs(unguarded, [], [atom(presented, [role(2), role(3)]), atom(presented, [role(3), role(2)])], [atom(identity, [])], []), rs(unguarded, [atom(address, [role(3)])], [], [atom(identity, [])], []), rs(unguarded, [atom(address, [role(2)])], [], [atom(identity, [])], [])]), schema(open_directory, [], [rs(unguarded, [atom(directory, [])], [], [atom(identity, [])], [atom(directory, [])]), rs(guarded, [], [], [atom(identity, []), atom(guardian, [role(1)]), atom(person, [])], [])]), schema(list, [svar('Mail'), svar('Name')], [rs(guarded, [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]), schema(list_unshown, [svar('Mail'), svar('Name')], [rs(guarded, [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]), schema(delist, [], [rs(unguarded, [], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(delist_unshown, [], [rs(unguarded, [], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(lookup, [], [rs(guarded, [atom(holds_link, [pvar('Alice'), role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(lists_shown, [pvar('Alice'), svar('Mail'), svar('Name')])], [])]), schema(lookup_by_address, [], [rs(guarded, [atom(holds_link, [pvar('Alice'), role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(lists_unshown, [pvar('Alice'), svar('Mail'), svar('Name')])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, []), atom(person, [])], [])]), schema(enter, [], [rs(guarded, [atom(identity, []), atom(ward, []), atom(has_guardian, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(guardian, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), lschema(make_guardian, [], [rs(guarded, [atom(guardian, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)])], [atom(guardian, [role(2)])]), rs(unguarded, [atom(has_guardian, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)])], [atom(retired, []), atom(has_guardian, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], [])], [listing(4, 2, has_guardian, [role(4)], fcons(true), [], [])]), schema(resign, [], [rs(guarded, [], [atom(guardian, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_guardian, [role(1)])], [atom(identity, [])], [])]), lschema(end_guardian, [], [rs(unguarded, [], [atom(guardian, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_guardian, [role(1)])], [atom(identity, []), atom(has_guardian, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], [])], [listing(4, 2, has_guardian, [role(4)], fcons(ne(role(4), role(1))), [], [])]), schema(guardian_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(guardian, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_guardian, [role(1)])], [atom(identity, [])], [])]), schema(ward_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(ward_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), schema(ward_end, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(has_guardian, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], [atom(guardian, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(ward_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(has_guardian, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(guardian, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(wards_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Bob')])], [])]), schema(wards_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(wards_of_one_guardian_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), lschema(retire, [], [rs(unguarded, [atom(retired, [])], [atom(has_guardian, [any]), atom(friend, [any])], [atom(identity, []), atom(has_guardian, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(1)])], []), rs(unguarded, [], [atom(guardian, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])], [listing(3, 1, has_guardian, [role(3)], fcons(true), [], []), listing(4, 1, has_guardian, [role(4)], fcons(true), [], []), listing(5, 1, friend, [role(5)], fcons(true), [], [])]), schema(open_server, [], [rs(unguarded, [atom(rendezvous_server, [])], [], [atom(identity, [])], [atom(rendezvous_server, [])]), rs(guarded, [], [], [atom(identity, []), atom(guardian, [role(1)]), atom(person, [])], [])]), schema(sign_link, [svar('Link'), pvar('Dave')], [rs(guarded, [atom(link, [svar('Link'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Dave')]), atom(person, [])], [atom(link, [svar('Link'), pvar('Dave')])])]), schema(invite_by_link, [svar('Link')], [rs(unguarded, [atom(registered, [svar('Link'), role(2)])], [], [atom(identity, []), atom(rendezvous_server, [])], [atom(spent, [svar('Link'), role(2)]), atom(registered, [svar('Link'), role(2)])]), rs(guarded, [], [], [atom(identity, []), atom(link, [svar('Link'), role(1)]), atom(knows, [role(1)]), atom(person, [])], [])]), schema(use_link, [svar('Link')], [rs(unguarded, [atom(spent, [svar('Link'), role(2)])], [atom(registered, [svar('Link'), role(2)])], [atom(identity, [])], [atom(expired, [svar('Link')])]), rs(unguarded, [atom(address, [role(3)])], [], [atom(identity, [])], []), rs(guarded, [atom(address, [role(2)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]), schema(present, [], [rs(unguarded, [atom(presented, [role(2), role(3)])], [], [atom(identity, []), atom(rendezvous_server, [])], [atom(presented, [role(2), role(3)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(knows, [role(1)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)])], [])]), schema(match, [], [rs(unguarded, [], [atom(presented, [role(2), role(3)]), atom(presented, [role(3), role(2)])], [atom(identity, [])], []), rs(unguarded, [atom(address, [role(3)])], [], [atom(identity, [])], []), rs(unguarded, [atom(address, [role(2)])], [], [atom(identity, [])], [])]), schema(open_directory, [], [rs(unguarded, [atom(directory, [])], [], [atom(identity, [])], [atom(directory, [])]), rs(guarded, [], [], [atom(identity, []), atom(guardian, [role(1)]), atom(person, [])], [])]), schema(list_me, [svar('Mail'), svar('Name')], [rs(guarded, [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]), schema(list_me_unshown, [svar('Mail'), svar('Name')], [rs(guarded, [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]), schema(delist_me, [], [rs(unguarded, [], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(delist_me_unshown, [], [rs(unguarded, [], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(lookup, [], [rs(guarded, [atom(holds_link, [pvar('Alice'), role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(lists_shown, [pvar('Alice'), svar('Mail'), svar('Name')])], [])]), schema(lookup_by_address, [], [rs(guarded, [atom(holds_link, [pvar('Alice'), role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(lists_unshown, [pvar('Alice'), svar('Mail'), svar('Name')])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -301,13 +301,13 @@ schema_entry(match, schema(match, [], [rs(unguarded, [], [atom(presented, [role(
 .
 schema_entry(open_directory, schema(open_directory, [], [rs(unguarded, [atom(directory, [])], [], [atom(identity, [])], [atom(directory, [])]), rs(guarded, [], [], [atom(identity, []), atom(guardian, [role(1)]), atom(person, [])], [])]))
 .
-schema_entry(list, schema(list, [svar('Mail'), svar('Name')], [rs(guarded, [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]))
+schema_entry(list_me, schema(list_me, [svar('Mail'), svar('Name')], [rs(guarded, [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]))
 .
-schema_entry(list_unshown, schema(list_unshown, [svar('Mail'), svar('Name')], [rs(guarded, [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]))
+schema_entry(list_me_unshown, schema(list_me_unshown, [svar('Mail'), svar('Name')], [rs(guarded, [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]))
 .
-schema_entry(delist, schema(delist, [], [rs(unguarded, [], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]))
+schema_entry(delist_me, schema(delist_me, [], [rs(unguarded, [], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]))
 .
-schema_entry(delist_unshown, schema(delist_unshown, [], [rs(unguarded, [], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]))
+schema_entry(delist_me_unshown, schema(delist_me_unshown, [], [rs(unguarded, [], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]))
 .
 schema_entry(lookup, schema(lookup, [], [rs(guarded, [atom(holds_link, [pvar('Alice'), role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(lists_shown, [pvar('Alice'), svar('Mail'), svar('Name')])], [])]))
 .
@@ -368,13 +368,13 @@ schema_numeric(match, numeric([cj(every, true)], [], []))
 .
 schema_numeric(open_directory, numeric([cj(every, true)], [], []))
 .
-schema_numeric(list, numeric([cj(every, true)], [], []))
+schema_numeric(list_me, numeric([cj(every, true)], [], []))
 .
-schema_numeric(list_unshown, numeric([cj(every, true)], [], []))
+schema_numeric(list_me_unshown, numeric([cj(every, true)], [], []))
 .
-schema_numeric(delist, numeric([cj(every, true)], [svar('Mail'), svar('Name')], []))
+schema_numeric(delist_me, numeric([cj(every, true)], [svar('Mail'), svar('Name')], []))
 .
-schema_numeric(delist_unshown, numeric([cj(every, true)], [svar('Mail'), svar('Name')], []))
+schema_numeric(delist_me_unshown, numeric([cj(every, true)], [svar('Mail'), svar('Name')], []))
 .
 schema_numeric(lookup, numeric([cj(every, true)], [pvar('Alice'), svar('Mail'), svar('Name')], [read(2, [pvar('Alice')], [])]))
 .
@@ -387,9 +387,9 @@ schema_forms(end_guardian, [sform(cond, fforall([role(4)], role(2), atom(has_gua
 .
 schema_forms(ward_end, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(ward, [])), fexists([pvar('G1')], role(1), atom(has_guardian, [pvar('G1')]), fcons(true)))))])
 .
-schema_forms(list, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(ward, [])), fexists([pvar('G1')], role(1), atom(has_guardian, [pvar('G1')]), fcons(true)))))])
+schema_forms(list_me, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(ward, [])), fexists([pvar('G1')], role(1), atom(has_guardian, [pvar('G1')]), fcons(true)))))])
 .
-schema_forms(list_unshown, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(ward, [])), fexists([pvar('G1')], role(1), atom(has_guardian, [pvar('G1')]), fcons(true)))))])
+schema_forms(list_me_unshown, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(ward, [])), fexists([pvar('G1')], role(1), atom(has_guardian, [pvar('G1')]), fcons(true)))))])
 .
 schema_forms(_, []) :- otherwise | true.
 
@@ -451,19 +451,88 @@ schema_base(match, 1)
 .
 schema_base(open_directory, 2)
 .
-schema_base(list, 2)
+schema_base(list_me, 2)
 .
-schema_base(list_unshown, 2)
+schema_base(list_me_unshown, 2)
 .
-schema_base(delist, 2)
+schema_base(delist_me, 2)
 .
-schema_base(delist_unshown, 2)
+schema_base(delist_me_unshown, 2)
 .
 schema_base(lookup, 1)
 .
 schema_base(lookup_by_address, 1)
 .
 schema_base(_, 1) :- otherwise | true.
+
+MayOne    ::= may_one(Integer, Integer).
+MayOnes   ::= [] ; [MayOne | MayOnes].
+procedure schema_ones(Constant?, MayOnes).
+schema_ones(establish, [])
+.
+schema_ones(acquaint, [])
+.
+schema_ones(introduce, [])
+.
+schema_ones(befriend, [])
+.
+schema_ones(person_unfriend, [])
+.
+schema_ones(enter, [])
+.
+schema_ones(make_guardian, [])
+.
+schema_ones(resign, [])
+.
+schema_ones(end_guardian, [])
+.
+schema_ones(guardian_unfriend, [])
+.
+schema_ones(ward_acquaint, [])
+.
+schema_ones(ward_befriend, [])
+.
+schema_ones(ward_end, [])
+.
+schema_ones(unfriend, [])
+.
+schema_ones(ward_unfriend, [])
+.
+schema_ones(wards_acquaint, [])
+.
+schema_ones(wards_befriend, [may_one(3, 4)])
+.
+schema_ones(wards_of_one_guardian_befriend, [])
+.
+schema_ones(retire, [])
+.
+schema_ones(open_server, [])
+.
+schema_ones(sign_link, [])
+.
+schema_ones(invite_by_link, [])
+.
+schema_ones(use_link, [])
+.
+schema_ones(present, [])
+.
+schema_ones(match, [])
+.
+schema_ones(open_directory, [])
+.
+schema_ones(list_me, [])
+.
+schema_ones(list_me_unshown, [])
+.
+schema_ones(delist_me, [])
+.
+schema_ones(delist_me_unshown, [])
+.
+schema_ones(lookup, [])
+.
+schema_ones(lookup_by_address, [])
+.
+schema_ones(_, []) :- otherwise | true.
 
 procedure schema_consents(Constant?, Ints).
 schema_consents(_, []) :- otherwise | true.
@@ -538,13 +607,13 @@ binding_of(match(V1, V2, V3), match, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(
 .
 binding_of(open_directory(V1, V2), open_directory, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
-binding_of(list(V1, V2, V3, V4), list, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Mail'), s(V3?)), b(svar('Name'), s(V4?))])
+binding_of(list_me(V1, V2, V3, V4), list_me, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Mail'), s(V3?)), b(svar('Name'), s(V4?))])
 .
-binding_of(list_unshown(V1, V2, V3, V4), list_unshown, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Mail'), s(V3?)), b(svar('Name'), s(V4?))])
+binding_of(list_me_unshown(V1, V2, V3, V4), list_me_unshown, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Mail'), s(V3?)), b(svar('Name'), s(V4?))])
 .
-binding_of(delist(V1, V2), delist, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Mail'), lv(delist, 'Mail')), b(svar('Name'), lv(delist, 'Name'))])
+binding_of(delist_me(V1, V2), delist_me, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Mail'), lv(delist_me, 'Mail')), b(svar('Name'), lv(delist_me, 'Name'))])
 .
-binding_of(delist_unshown(V1, V2), delist_unshown, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Mail'), lv(delist_unshown, 'Mail')), b(svar('Name'), lv(delist_unshown, 'Name'))])
+binding_of(delist_me_unshown(V1, V2), delist_me_unshown, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Mail'), lv(delist_me_unshown, 'Mail')), b(svar('Name'), lv(delist_me_unshown, 'Name'))])
 .
 binding_of(lookup(V1, V2), lookup, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Alice'), lv(lookup, 'Alice')), b(svar('Mail'), lv(lookup, 'Mail')), b(svar('Name'), lv(lookup, 'Name'))])
 .
@@ -848,7 +917,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 .
-class_of(list, B, D, list(V1?, V2?, V3?, V4?))
+class_of(list_me, B, D, list_me(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
 ,
@@ -862,7 +931,7 @@ val_speech(svar('Mail'), B?, D?, V3)
 ,
 val_speech(svar('Name'), B?, D?, V4)
 .
-class_of(list_unshown, B, D, list_unshown(V1?, V2?, V3?, V4?))
+class_of(list_me_unshown, B, D, list_me_unshown(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
 ,
@@ -876,7 +945,7 @@ val_speech(svar('Mail'), B?, D?, V3)
 ,
 val_speech(svar('Name'), B?, D?, V4)
 .
-class_of(delist, B, D, delist(V1?, V2?))
+class_of(delist_me, B, D, delist_me(V1?, V2?))
 :-
 ground(B?)
 ,
@@ -886,7 +955,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 .
-class_of(delist_unshown, B, D, delist_unshown(V1?, V2?))
+class_of(delist_me_unshown, B, D, delist_me_unshown(V1?, V2?))
 :-
 ground(B?)
 ,
@@ -974,13 +1043,13 @@ name_class(present(V1, V2, V3), _, present(V1?, V2?, V3?))
 .
 name_class(open_directory(V1, V2), _, open_directory(V1?, V2?))
 .
-name_class(list(V1, V2, V3, V4), _, list(V1?, V2?, V3?, V4?))
+name_class(list_me(V1, V2, V3, V4), _, list_me(V1?, V2?, V3?, V4?))
 .
-name_class(list_unshown(V1, V2, V3, V4), _, list_unshown(V1?, V2?, V3?, V4?))
+name_class(list_me_unshown(V1, V2, V3, V4), _, list_me_unshown(V1?, V2?, V3?, V4?))
 .
-name_class(delist(V1, V2), _, delist(V1?, V2?))
+name_class(delist_me(V1, V2), _, delist_me(V1?, V2?))
 .
-name_class(delist_unshown(V1, V2), _, delist_unshown(V1?, V2?))
+name_class(delist_me_unshown(V1, V2), _, delist_me_unshown(V1?, V2?))
 .
 name_class(lookup(V1, V2), _, lookup(V1?, V2?))
 .
@@ -1038,13 +1107,13 @@ request_name(present(V1, V2, V3), pname(present(V1?, V2?, V3?)))
 .
 request_name(open_directory(V1, V2), pname(open_directory(V1?, V2?)))
 .
-request_name(list(V1, V2, V3, V4), pname(list(V1?, V2?, V3?, V4?)))
+request_name(list_me(V1, V2, V3, V4), pname(list_me(V1?, V2?, V3?, V4?)))
 .
-request_name(list_unshown(V1, V2, V3, V4), pname(list_unshown(V1?, V2?, V3?, V4?)))
+request_name(list_me_unshown(V1, V2, V3, V4), pname(list_me_unshown(V1?, V2?, V3?, V4?)))
 .
-request_name(delist(V1, V2), pname(delist(V1?, V2?)))
+request_name(delist_me(V1, V2), pname(delist_me(V1?, V2?)))
 .
-request_name(delist_unshown(V1, V2), pname(delist_unshown(V1?, V2?)))
+request_name(delist_me_unshown(V1, V2), pname(delist_me_unshown(V1?, V2?)))
 .
 request_name(lookup(V1, V2), pname(lookup(V1?, V2?)))
 .
@@ -1100,34 +1169,6 @@ ground(V2?)
 ground(Me?)
 |
 ask_of([q(V1?, 2, [person(V2?), text(" asks to be your guardian.")])], Me?, Ws)
-.
-sentence_of(make_guardian(V1, V2, V3, V4), Me, Ws?)
-:-
-ground(V1?)
-,
-ground(V3?)
-,
-ground(V2?)
-,
-ground(V4?)
-,
-ground(Me?)
-|
-ask_of([q(V1?, 3, [person(V3?), text(" asks you to be a guardian of the ward "), person(V2?), text(".")]), ql(V4?, 3, [person(V3?), text(" asks that "), person(V1?), text(" be a guardian of your ward "), person(V2?), text(".")])], Me?, Ws)
-.
-sentence_of(end_guardian(V1, V2, V3, V4), Me, Ws?)
-:-
-ground(V4?)
-,
-ground(V3?)
-,
-ground(V1?)
-,
-ground(V2?)
-,
-ground(Me?)
-|
-ask_of([ql(V4?, 3, [person(V3?), text(" asks to end "), person(V1?), text("'s guardianship of your ward "), person(V2?), text(".")])], Me?, Ws)
 .
 sentence_of(ward_acquaint(V1, V2), Me, Ws?)
 :-
@@ -1187,6 +1228,34 @@ ground(Me?)
 |
 ask_of([q(V1?, 3, [person(V3?), text(" asks that you and "), person(V2?), text(" befriend.")]), q(V2?, 3, [person(V3?), text(" asks that you and "), person(V1?), text(" befriend.")])], Me?, Ws)
 .
+sentence_of(make_guardian(V1, V2, V3, V4), Me, Ws?)
+:-
+ground(V1?)
+,
+ground(V3?)
+,
+ground(V2?)
+,
+ground(V4?)
+,
+ground(Me?)
+|
+ask_of([q(V1?, 3, [person(V3?), text(" asks you to be a guardian of the service "), person(V2?), text(".")]), ql(V4?, 3, [person(V3?), text(" asks that "), person(V1?), text(" be a guardian of your service "), person(V2?), text(".")])], Me?, Ws)
+.
+sentence_of(end_guardian(V1, V2, V3, V4), Me, Ws?)
+:-
+ground(V4?)
+,
+ground(V3?)
+,
+ground(V1?)
+,
+ground(V2?)
+,
+ground(Me?)
+|
+ask_of([ql(V4?, 3, [person(V3?), text(" asks to end "), person(V1?), text("'s guardianship of your service "), person(V2?), text(".")])], Me?, Ws)
+.
 sentence_of(retire(V1, V2, V3, _, _), Me, Ws?)
 :-
 ground(V3?)
@@ -1197,9 +1266,9 @@ ground(V1?)
 ,
 ground(Me?)
 |
-ask_of([ql(V3?, 2, [person(V2?), text(" asks to retire your ward "), person(V1?), text(".")])], Me?, Ws)
+ask_of([ql(V3?, 2, [person(V2?), text(" asks to retire your service "), person(V1?), text(".")])], Me?, Ws)
 .
-sentence_of(list(V1, V2, _, _), Me, Ws?)
+sentence_of(list_me(V1, V2, _, _), Me, Ws?)
 :-
 ground(V1?)
 ,
@@ -1209,7 +1278,7 @@ ground(Me?)
 |
 ask_of([q(V1?, 2, [person(V2?), text(" asks to be listed.")])], Me?, Ws)
 .
-sentence_of(list_unshown(V1, V2, _, _), Me, Ws?)
+sentence_of(list_me_unshown(V1, V2, _, _), Me, Ws?)
 :-
 ground(V1?)
 ,
@@ -1269,7 +1338,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("GDS: Grassroots Directory Service\nGDS extends GRV.\nA *directory* is a service with a page every person can read.\nAlice, Bob and Carol are persons, Dora a service.\n1. ■ Open directory: Carol may make her service Dora a directory.\n2. ■ Listing. List: Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, shown on Dora's page or not; her app then keeps Dora supplied with invitation links of hers. Delist: Alice may delist herself.\n3. ■ Lookup: Bob may look Alice up, on Dora's page if she is shown there, and by her email address and name if not; Dora then gives Bob an invitation link of Alice's.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, ['Bob', 'Alice', 'Carol'], [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, []), atom(person, [])], [])]), schema(enter, ['Carol', 'Alice'], [], [rs(guarded, [atom(identity, []), atom(ward, []), atom(has_guardian, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(guardian, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), cschema(make_guardian, ['Bob', 'Carol', 'Decider', 'Codecider'], [], [], [rs(guarded, [atom(guardian, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)])], [atom(guardian, [role(2)])]), rs(unguarded, [atom(has_guardian, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)])], [atom(retired, []), atom(has_guardian, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], []), crs(listed(2, has_guardian, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], [])]), schema(resign, ['Bob', 'Carol'], [], [rs(guarded, [], [atom(guardian, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_guardian, [role(1)])], [atom(identity, [])], [])]), qschema(end_guardian, ['Bob', 'Carol', 'Decider', 'Codecider'], [], [pvar('Codecider'), svar('Codecider'), num('Codecider')], true, [rs(unguarded, [], [atom(guardian, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_guardian, [role(1)])], [atom(identity, []), atom(has_guardian, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], []), crs(qlisted(2, has_guardian, [role(4)], [role(4)]), guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], [])], [], [fforall([role(4)], role(2), atom(has_guardian, [role(4)]), fcons(ne(role(4), role(1))), [fa(role(4), atom(identity, [])), fa(role(4), atom(person, [])), fa(role(4), atom(guardian, [role(2)]))])]), schema(guardian_unfriend, ['Bob', 'Carol'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(guardian, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_guardian, [role(1)])], [atom(identity, [])], [])]), schema(ward_acquaint, ['Carol', 'Bob'], [pvar('Alice')], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(ward_befriend, ['Carol', 'Bob', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), qschema(ward_end, ['Carol', 'Bob'], [], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(has_guardian, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(ward, [])), fexists([svar('G1')], role(1), atom(has_guardian, [svar('G1')]), fcons(true))))]), schema(unfriend, ['Bob', 'Carol'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], [atom(guardian, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(ward_unfriend, ['Carol', 'Bob', 'Alice'], [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(has_guardian, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(guardian, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(wards_acquaint, ['Carol', 'Dave'], [pvar('Alice'), pvar('Bob')], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Bob')])], [])]), schema(wards_befriend, ['Carol', 'Dave', 'Alice', one('Bob', 'Alice')], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(wards_of_one_guardian_befriend, ['Carol', 'Dave', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), cschema(retire, ['Carol', 'Decider', 'Codecider', 'E1', 'E2'], [], [], [rs(unguarded, [atom(retired, [])], [atom(has_guardian, [any]), atom(friend, [any])], [atom(identity, []), atom(has_guardian, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(1)])], []), crs(listed(1, has_guardian, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(1)])], []), crs(listed(1, has_guardian, []), unguarded, [], [atom(guardian, [role(1)])], [atom(identity, [])], []), crs(listed(1, friend, []), unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(open_server, ['Dave', 'Carol'], [], [rs(unguarded, [atom(rendezvous_server, [])], [], [atom(identity, [])], [atom(rendezvous_server, [])]), rs(guarded, [], [], [atom(identity, []), atom(guardian, [role(1)]), atom(person, [])], [])]), schema(sign_link, ['Alice'], [svar('Link'), pvar('Dave')], [rs(guarded, [atom(link, [svar('Link'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Dave')]), atom(person, [])], [atom(link, [svar('Link'), pvar('Dave')])])]), schema(invite_by_link, ['Dave', 'Alice'], [svar('Link')], [rs(unguarded, [atom(registered, [svar('Link'), role(2)])], [], [atom(identity, []), atom(rendezvous_server, [])], [atom(spent, [svar('Link'), role(2)]), atom(registered, [svar('Link'), role(2)])]), rs(guarded, [], [], [atom(identity, []), atom(link, [svar('Link'), role(1)]), atom(knows, [role(1)]), atom(person, [])], [])]), schema(use_link, ['Dave', 'Alice', 'Bob'], [svar('Link')], [rs(unguarded, [atom(spent, [svar('Link'), role(2)])], [atom(registered, [svar('Link'), role(2)])], [atom(identity, [])], [atom(expired, [svar('Link')])]), rs(unguarded, [atom(address, [role(3)])], [], [atom(identity, [])], []), rs(guarded, [atom(address, [role(2)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]), schema(present, ['Dave', 'Alice', 'Bob'], [], [rs(unguarded, [atom(presented, [role(2), role(3)])], [], [atom(identity, []), atom(rendezvous_server, [])], [atom(presented, [role(2), role(3)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(knows, [role(1)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)])], [])]), schema(match, ['Dave', 'Alice', 'Bob'], [], [rs(unguarded, [], [atom(presented, [role(2), role(3)]), atom(presented, [role(3), role(2)])], [atom(identity, [])], []), rs(unguarded, [atom(address, [role(3)])], [], [atom(identity, [])], []), rs(unguarded, [atom(address, [role(2)])], [], [atom(identity, [])], [])]), schema(open_directory, ['Dora', 'Carol'], [], [rs(unguarded, [atom(directory, [])], [], [atom(identity, [])], [atom(directory, [])]), rs(guarded, [], [], [atom(identity, []), atom(guardian, [role(1)]), atom(person, [])], [])]), qschema(list, ['Dora', 'Alice'], [svar('Mail'), svar('Name')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(ward, [])), fexists([svar('G1')], role(1), atom(has_guardian, [svar('G1')]), fcons(true))))]), qschema(list_unshown, ['Dora', 'Alice'], [svar('Mail'), svar('Name')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(ward, [])), fexists([svar('G1')], role(1), atom(has_guardian, [svar('G1')]), fcons(true))))]), schema(delist, ['Dora', 'Alice'], [svar('Mail'), svar('Name')], [rs(unguarded, [], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(delist_unshown, ['Dora', 'Alice'], [svar('Mail'), svar('Name')], [rs(unguarded, [], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(lookup, ['Bob', 'Dora'], [pvar('Alice'), svar('Mail'), svar('Name')], [rs(guarded, [atom(holds_link, [pvar('Alice'), role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(lists_shown, [pvar('Alice'), svar('Mail'), svar('Name')])], [])]), schema(lookup_by_address, ['Bob', 'Dora'], [pvar('Alice'), svar('Mail'), svar('Name')], [rs(guarded, [atom(holds_link, [pvar('Alice'), role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(lists_unshown, [pvar('Alice'), svar('Mail'), svar('Name')])], [])])]), pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Guardianships", [guardian])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(enter, "Enter", ["name"], said([[person(2), text(" asks to be your guardian.")], []]), "Guardianships", by([2])), act(make_guardian, "Make guardian", ["person"], said([[person(3), text(" asks you to be a guardian of the ward "), person(2), text(".")], [], [person(3), text(" asks that "), person(1), text(" be a guardian of your ward "), person(2), text(".")]]), "Guardianships", by([3])), act(end_guardian, "End guardian", ["person"], said([[], [person(3), text(" asks to end "), person(1), text("'s guardianship of your ward "), person(2), text(".")]]), "Guardianships", by([3])), act(resign, "Resign", [], none, "Guardianships", by([1])), act(guardian_unfriend, "Guardian unfriend", [], none, "Guardianships", by([1])), act(ward_acquaint, "Ward acquaint", ["person"], said([[person(2), text(" wishes that you know each other.")], []]), "Guardianships", by([2])), act(ward_befriend, "Ward befriend", ["ward"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and her ward "), person(1), text(" befriend.")], []]), "Guardianships", by([3])), act(ward_unfriend, "Ward unfriend", ["ward", "person"], none, "Guardianships", by([3])), act(ward_end, "Ward end", [], none, "Guardianships", by([1])), act(unfriend, "Unfriend", [], none, "Guardianships", by([1])), act(person_unfriend, "Person unfriend", [], none, "Guardianships", by([1])), act(wards_acquaint, "Wards acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Guardianships", by([1])), act(wards_befriend, "Wards befriend", ["ward"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], [], [person(3), text(" asks that "), person(1), text(" and your ward "), person(2), text(" befriend.")]]), "Guardianships", by([3], [same(4, 3)])), act(wards_of_one_guardian_befriend, "Wards of one guardian befriend", ["ward", "other ward"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], []]), "Guardianships", by([3])), act(retire, "Retire", [], said([[], [person(2), text(" asks to retire your ward "), person(1), text(".")]]), "Guardianships", by([2])), act(open_server, "Open server", [], none, "", by([2])), act(sign_link, "Sign link", ["", "link"], none, "", by([1])), act(invite_by_link, "Invite by link", [], none, "", by([2])), act(use_link, "Use link", ["", "alice", "", "link"], none, "", by([3])), act(present, "Present", [], none, "", by([2])), act(open_directory, "Open directory", [], none, "", by([2])), act(list, "List", ["", "", "mail", "name"], said([[person(2), text(" asks to be listed.")], []]), "", by([2])), act(list_unshown, "List unshown", ["", "", "mail", "name"], said([[person(2), text(" asks to be listed.")], []]), "", by([2])), act(delist, "Delist", ["dora"], none, "", by([2])), act(delist_unshown, "Delist unshown", ["dora"], none, "", by([2])), act(lookup, "Lookup", [], none, "", by([1])), act(lookup_by_address, "Lookup by address", [], none, "", by([1]))], [], look("📇", "network"), version(1, 1))))
+contract("GDS: Grassroots Directory Service\nGDS extends GRV.\nA *directory* is a service with a page every person can read.\nAlice, Bob and Carol are persons, Dora a service.\n1. ■ Open directory: Carol may make her service Dora a directory.\n2. ■ Listing. List me: Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, shown on Dora's page or not; her app then keeps Dora supplied with invitation links of hers. Delist me: Alice may delist herself.\n3. ■ Lookup: Bob may look Alice up, on Dora's page if she is shown there, and by her email address and name if not; Dora then gives Bob an invitation link of Alice's.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, ['Bob', 'Alice', 'Carol'], [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, []), atom(person, [])], [])]), schema(enter, ['Carol', 'Alice'], [], [rs(guarded, [atom(identity, []), atom(ward, []), atom(has_guardian, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(guardian, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), cschema(make_guardian, ['Bob', 'Carol', 'Decider', 'Codecider'], [], [], [rs(guarded, [atom(guardian, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)])], [atom(guardian, [role(2)])]), rs(unguarded, [atom(has_guardian, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)])], [atom(retired, []), atom(has_guardian, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], []), crs(listed(2, has_guardian, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], [])]), schema(resign, ['Bob', 'Carol'], [], [rs(guarded, [], [atom(guardian, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_guardian, [role(1)])], [atom(identity, [])], [])]), qschema(end_guardian, ['Bob', 'Carol', 'Decider', 'Codecider'], [], [pvar('Codecider'), svar('Codecider'), num('Codecider')], true, [rs(unguarded, [], [atom(guardian, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_guardian, [role(1)])], [atom(identity, []), atom(has_guardian, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], []), crs(qlisted(2, has_guardian, [role(4)], [role(4)]), guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(2)])], [])], [], [fforall([role(4)], role(2), atom(has_guardian, [role(4)]), fcons(ne(role(4), role(1))), [fa(role(4), atom(identity, [])), fa(role(4), atom(person, [])), fa(role(4), atom(guardian, [role(2)]))])]), schema(guardian_unfriend, ['Bob', 'Carol'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(guardian, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_guardian, [role(1)])], [atom(identity, [])], [])]), schema(ward_acquaint, ['Carol', 'Bob'], [pvar('Alice')], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(ward_befriend, ['Carol', 'Bob', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), qschema(ward_end, ['Carol', 'Bob'], [], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(has_guardian, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(ward, [])), fexists([svar('G1')], role(1), atom(has_guardian, [svar('G1')]), fcons(true))))]), schema(unfriend, ['Bob', 'Carol'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], [atom(guardian, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(ward_unfriend, ['Carol', 'Bob', 'Alice'], [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(has_guardian, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(guardian, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(wards_acquaint, ['Carol', 'Dave'], [pvar('Alice'), pvar('Bob')], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [pvar('Bob')])], [])]), schema(wards_befriend, ['Carol', 'Dave', 'Alice', one('Bob', 'Alice')], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(wards_of_one_guardian_befriend, ['Carol', 'Dave', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(ward, []), atom(has_guardian, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), cschema(retire, ['Carol', 'Decider', 'Codecider', 'E1', 'E2'], [], [], [rs(unguarded, [atom(retired, [])], [atom(has_guardian, [any]), atom(friend, [any])], [atom(identity, []), atom(has_guardian, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(1)])], []), crs(listed(1, has_guardian, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(guardian, [role(1)])], []), crs(listed(1, has_guardian, []), unguarded, [], [atom(guardian, [role(1)])], [atom(identity, [])], []), crs(listed(1, friend, []), unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(open_server, ['Dave', 'Carol'], [], [rs(unguarded, [atom(rendezvous_server, [])], [], [atom(identity, [])], [atom(rendezvous_server, [])]), rs(guarded, [], [], [atom(identity, []), atom(guardian, [role(1)]), atom(person, [])], [])]), schema(sign_link, ['Alice'], [svar('Link'), pvar('Dave')], [rs(guarded, [atom(link, [svar('Link'), pvar('Dave')])], [], [atom(identity, []), atom(knows, [pvar('Dave')]), atom(person, [])], [atom(link, [svar('Link'), pvar('Dave')])])]), schema(invite_by_link, ['Dave', 'Alice'], [svar('Link')], [rs(unguarded, [atom(registered, [svar('Link'), role(2)])], [], [atom(identity, []), atom(rendezvous_server, [])], [atom(spent, [svar('Link'), role(2)]), atom(registered, [svar('Link'), role(2)])]), rs(guarded, [], [], [atom(identity, []), atom(link, [svar('Link'), role(1)]), atom(knows, [role(1)]), atom(person, [])], [])]), schema(use_link, ['Dave', 'Alice', 'Bob'], [svar('Link')], [rs(unguarded, [atom(spent, [svar('Link'), role(2)])], [atom(registered, [svar('Link'), role(2)])], [atom(identity, [])], [atom(expired, [svar('Link')])]), rs(unguarded, [atom(address, [role(3)])], [], [atom(identity, [])], []), rs(guarded, [atom(address, [role(2)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])]), schema(present, ['Dave', 'Alice', 'Bob'], [], [rs(unguarded, [atom(presented, [role(2), role(3)])], [], [atom(identity, []), atom(rendezvous_server, [])], [atom(presented, [role(2), role(3)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(knows, [role(1)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)])], [])]), schema(match, ['Dave', 'Alice', 'Bob'], [], [rs(unguarded, [], [atom(presented, [role(2), role(3)]), atom(presented, [role(3), role(2)])], [atom(identity, [])], []), rs(unguarded, [atom(address, [role(3)])], [], [atom(identity, [])], []), rs(unguarded, [atom(address, [role(2)])], [], [atom(identity, [])], [])]), schema(open_directory, ['Dora', 'Carol'], [], [rs(unguarded, [atom(directory, [])], [], [atom(identity, [])], [atom(directory, [])]), rs(guarded, [], [], [atom(identity, []), atom(guardian, [role(1)]), atom(person, [])], [])]), qschema(list_me, ['Dora', 'Alice'], [svar('Mail'), svar('Name')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(ward, [])), fexists([svar('G1')], role(1), atom(has_guardian, [svar('G1')]), fcons(true))))]), qschema(list_me_unshown, ['Dora', 'Alice'], [svar('Mail'), svar('Name')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [], [atom(identity, []), atom(directory, [])], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(ward, [])), fexists([svar('G1')], role(1), atom(has_guardian, [svar('G1')]), fcons(true))))]), schema(delist_me, ['Dora', 'Alice'], [svar('Mail'), svar('Name')], [rs(unguarded, [], [atom(lists_shown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(delist_me_unshown, ['Dora', 'Alice'], [svar('Mail'), svar('Name')], [rs(unguarded, [], [atom(lists_unshown, [role(2), svar('Mail'), svar('Name')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(lookup, ['Bob', 'Dora'], [pvar('Alice'), svar('Mail'), svar('Name')], [rs(guarded, [atom(holds_link, [pvar('Alice'), role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(lists_shown, [pvar('Alice'), svar('Mail'), svar('Name')])], [])]), schema(lookup_by_address, ['Bob', 'Dora'], [pvar('Alice'), svar('Mail'), svar('Name')], [rs(guarded, [atom(holds_link, [pvar('Alice'), role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(lists_unshown, [pvar('Alice'), svar('Mail'), svar('Name')])], [])])]), pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Guardianships", [guardian])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(enter, "Enter", ["name"], said([[person(2), text(" asks to be your guardian.")], []]), "Guardianships", by([2])), act(ward_acquaint, "Ward acquaint", ["person"], said([[person(2), text(" wishes that you know each other.")], []]), "Guardianships", by([2])), act(ward_befriend, "Ward befriend", ["ward"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and her ward "), person(1), text(" befriend.")], []]), "Guardianships", by([3])), act(ward_unfriend, "Ward unfriend", ["ward", "person"], none, "Guardianships", by([3])), act(ward_end, "Ward end", [], none, "Guardianships", by([1])), act(unfriend, "Unfriend", [], none, "Guardianships", by([1])), act(person_unfriend, "Person unfriend", [], none, "Guardianships", by([1])), act(wards_acquaint, "Wards acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Guardianships", by([1])), act(wards_befriend, "Wards befriend", ["ward"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], [], [person(3), text(" asks that "), person(1), text(" and your ward "), person(2), text(" befriend.")]]), "Guardianships", by([3], [same(4, 3)])), act(wards_of_one_guardian_befriend, "Wards of one guardian befriend", ["ward", "other ward"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], []]), "Guardianships", by([3])), act(make_guardian, "Make guardian", ["person"], said([[person(3), text(" asks you to be a guardian of the service "), person(2), text(".")], [], [person(3), text(" asks that "), person(1), text(" be a guardian of your service "), person(2), text(".")]]), "", by([3])), act(end_guardian, "End guardian", ["person"], said([[], [person(3), text(" asks to end "), person(1), text("'s guardianship of your service "), person(2), text(".")]]), "", by([3])), act(resign, "Resign", [], none, "", by([1])), act(guardian_unfriend, "Guardian unfriend", [], none, "", by([1])), act(retire, "Retire", [], said([[], [person(2), text(" asks to retire your service "), person(1), text(".")]]), "", by([2])), act(open_server, "Open server", [], none, "", by([2])), act(sign_link, "Sign link", ["", "link"], none, "", by([1])), act(invite_by_link, "Invite by link", [], none, "", by([2])), act(use_link, "Use link", ["", "alice", "", "link"], none, "", by([3])), act(present, "Present", [], none, "", by([2])), act(open_directory, "Open directory", [], none, "", by([2])), act(list_me, "List me", ["", "", "mail", "name"], said([[person(2), text(" asks to be listed.")], []]), "", by([2])), act(list_me_unshown, "List me unshown", ["", "", "mail", "name"], said([[person(2), text(" asks to be listed.")], []]), "", by([2])), act(delist_me, "Delist me", ["dora"], none, "", by([2])), act(delist_me_unshown, "Delist me unshown", ["dora"], none, "", by([2])), act(lookup, "Lookup", [], none, "", by([1])), act(lookup_by_address, "Lookup by address", [], none, "", by([1]))], [], look("📇", "network"), version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -1510,7 +1579,7 @@ App       ::= app(GAtoms, Integer, Lock, Recs).
 Pend      ::= deferred(Net).
 Pends     ::= [] ; [Pend | Pends].
 WKey      ::= op(Class) ; vt(Attempt) ; cm(Attempt) ; wd(Attempt, Attempt)
-            ; ip(Peer, Peer) ; rd(Attempt).
+            ; ip(Peer, Peer) ; rd(Attempt) ; reading.
 Wait      ::= w(WKey, Integer).
 Waits     ::= [] ; [Wait | Waits].
 WFound    ::= at(Integer) ; unseen.
@@ -1630,10 +1699,52 @@ procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, YesNo?, Stream(Trigger)
 agent_goal([T|Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     then_local(U?, Th),
     step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
-agent_goal([], [T|In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
+%% Before it reads a trigger the agent goal takes an own transaction whose condition holds and whose class has waited at least as long as the reading of a trigger has, the one that has waited longest (own_cond, eligible), and only where there is none reads the next trigger (vGLP, Section 5.4, "The compilation": "At every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger"; the audit's Finding 1, Grassroots-Audit 17cde7e, papers/vGLP.pdf.md; Udi, 2026-11-16).  The reading of a trigger waits since the last reading (read_at).
+agent_goal([], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?) |
+    st_app(St?, Ap0),
+    own_cond(St?, Ch, St1),
+    early(Ch?, Ap0?, In?, U?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
+procedure early(Choice?, App?, Stream(Trigger)?, YesNo?, Stream(Trigger),
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?).
+early(take(K, S), Ap0, In, _, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
+    dispatch_own(take(K?, S?), Ap0?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+early(none, _, In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
+    read_next(In?, U?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+procedure read_next(Stream(Trigger)?, YesNo?, Stream(Trigger),
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?).
+read_next([T|In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     then_read(U?, Th),
-    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
-agent_goal([], [], _, [], [], [], [], _, _, _).
+    read_at(St?, St1),
+    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
+read_next([], _, [], [], [], [], _, _, _).
+%% The reading of a trigger, recorded: it waits from now, the count of the own transactions taken (w(reading, D)).
+procedure read_at(St?, St).
+read_at(St, St1?) :- ground(St?) |
+    st_count(St?, D),
+    st_waits(St?, W),
+    drop_reading(W?, W1),
+    set_waits(St?, [w(reading, D?)|W1?], St1).
+procedure drop_reading(Waits?, Waits).
+drop_reading([], []).
+drop_reading([w(reading, _)|Ws], Ws?).
+drop_reading([X|Ws], [X?|Ws1?]) :- otherwise | drop_reading(Ws?, Ws1).
+%% The candidates whose class has waited at least as long as the reading of a trigger: it began to wait no later than the last reading, or no trigger has been read.
+procedure eligible(Cands?, Waits?, Cands).
+eligible(Cs, W, Cs1?) :- ground(W?) |
+    wait_of(reading, W?, F),
+    reading_at(F?, Rd),
+    eligible1(Cs?, W?, Rd?, Cs1).
+procedure reading_at(WFound?, Integer).
+reading_at(at(T), T?).
+reading_at(unseen, 0).
+procedure eligible1(Cands?, Waits?, Integer?, Cands).
+eligible1([], _, _, []).
+eligible1([cand(K, I)|Cs], W, Rd, R?) :- ground(K?), ground(W?), integer(Rd?) |
+    began_at(K?, W?, T),
+    eligible2(T?, Rd?, cand(K?, I?), Cs?, W?, R).
+procedure eligible2(Integer?, Integer?, Cand?, Cands?, Waits?, Cands).
+eligible2(T, Rd, C, Cs, W, [C?|R?]) :- T? =< Rd? | eligible1(Cs?, W?, Rd?, R).
+eligible2(T, Rd, _, Cs, W, R?) :- T? > Rd? | eligible1(Cs?, W?, Rd?, R).
 
 %% After a recheck, read from the agent goal's own list, an own trigger is unread exactly when one was before it (own_unread, no_own); after another trigger, read from the input stream, an own trigger is written unless one is unread (write_own, own_unread).  An own trigger is read from the input stream, and its clause, step(own, ...), takes no Then: dispatch_own writes the next own trigger after an own transaction taken, and none where none holds.
 procedure then_local(YesNo?, Then).
@@ -1704,7 +1815,7 @@ step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?
     recheck_find(Pd?, V?, Tr?, St?, F),
     recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
-    take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+    agent_goal(Ls?, In?, no, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
 %% After a dispatch: where the machine state has changed, the new view is written on the output (vGLP b7e3517, Section 5.4, "The compilation": "where the machine state changes, it writes the new view on the output"); where the app state has changed, the approval questions whose question the new app state no longer holds pending are closed; where it has, or the dispatch consumed a start (Kick), the starts held waiting are put up again, by a recheck; and the agent goal writes an own trigger on its stream of own triggers after another trigger read from the input stream, unless an own trigger it has written is still unread, and after an own transaction taken (Then write_own), and none after an own trigger on which none holds (no_own) or while one is unread (own_unread), so that at most one own trigger it has written is unread (vGLP 6c8c663, Section 5.4, "The compilation").
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?,
@@ -2750,7 +2861,7 @@ own_cond2(Cs, St, Ch?, St2?) :- ground(St?) |
     st_ix(St?, Ix),
     prune_waits(W?, R?, Ix?, W0),
     st_count(St?, D),
-    choose(Cs?, W0?, D?, Ch0, W1),
+    choose_e(Cs?, W0?, D?, Ch0, W1),
     set_waits(St?, W1?, St1),
     count_own(Ch0?, St1?, Ch, St2).
 %% The own transaction taken, counted.
@@ -3306,6 +3417,7 @@ prune_wait(no, X, Ws, [X?|Ws?]).
 prune_wait(yes, _, Ws, Ws?).
 procedure dead_key(WKey?, Recs?, Ix?, YesNo).
 dead_key(op(_), _, _, no).
+dead_key(reading, _, _, no).
 dead_key(vt(A), R, ix(Tr, _, _, _), D?) :- ground(A?), ground(R?) |
     has_vote(A?, R?, V),
     rec_closed(A?, R?, Tr?, Cl),
@@ -3449,6 +3561,14 @@ add_cls(nocls, Is, Is?).
 add_cls(cls(I), Is, Is1?) :- app(Is?, [I?], Is1).
 
 %% --- Choosing the instance of the class that has waited longest -----------
+procedure choose_e(Cands?, Waits?, Integer?, Choice, Waits).
+choose_e(Cs, W, D, Ch?, W1?) :- ground(Cs?), ground(W?), integer(D?) |
+    ensure_waits(Cs?, W?, D?, Wa),
+    choose_e1(Cs?, Wa?, D?, Ch, W1).
+procedure choose_e1(Cands?, Waits?, Integer?, Choice, Waits).
+choose_e1(Cs, Wa, D, Ch?, W1?) :- ground(Wa?), integer(D?) |
+    eligible(Cs?, Wa?, Cs1),
+    choose1(Cs1?, Wa?, D?, Ch, W1).
 procedure choose(Cands?, Waits?, Integer?, Choice, Waits).
 choose(Cs, W, D, Ch?, W2?) :- ground(Cs?), ground(W?), integer(D?) |
     ensure_waits(Cs?, W?, D?, W1),
@@ -5734,40 +5854,67 @@ delta_in1(no, X, Ps, E?) :- delta_in(X?, Ps?, E).
 
 %% Definition "Binding": two roles sent to one person only if neither adds or
 %% deletes an atom naming the other.
-procedure rule_ok(RoleSpecs?, Binding?, YesNo).
-rule_ok(Rs, B, R?) :- ground(Rs?) |
+procedure rule_ok(RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+rule_ok(Rs, B, Ls, Os, R?) :- ground(Rs?) |
     rs_len(Rs?, K),
-    pairs_ok(1, K?, Rs?, B?, R).
-procedure pairs_ok(Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pairs_ok(I, K, _, _, yes) :- I? > K? | true.
-pairs_ok(I, K, Rs, B, R?) :- I? =< K?, ground(Rs?), ground(B?) |
+    pairs_ok(1, K?, Rs?, B?, Ls?, Os?, R).
+procedure pairs_ok(Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pairs_ok(I, K, _, _, _, _, yes) :- I? > K? | true.
+pairs_ok(I, K, Rs, B, Ls, Os, R?) :- I? =< K?, ground(Rs?), ground(B?), ground(Ls?), ground(Os?) |
     J := I? + 1,
-    pair_row(I?, J?, K?, Rs?, B?, R1),
+    pair_row(I?, J?, K?, Rs?, B?, Ls?, Os?, R1),
     I1 := I? + 1,
-    pairs_ok1(R1?, I1?, K?, Rs?, B?, R).
-procedure pairs_ok1(YesNo?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pairs_ok1(no, _, _, _, _, no).
-pairs_ok1(yes, I, K, Rs, B, R?) :- pairs_ok(I?, K?, Rs?, B?, R).
-procedure pair_row(Integer?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pair_row(_, J, K, _, _, yes) :- J? > K? | true.
-pair_row(I, J, K, Rs, B, R?) :- J? =< K?, ground(Rs?), ground(B?) |
+    pairs_ok1(R1?, I1?, K?, Rs?, B?, Ls?, Os?, R).
+procedure pairs_ok1(YesNo?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pairs_ok1(no, _, _, _, _, _, _, no).
+pairs_ok1(yes, I, K, Rs, B, Ls, Os, R?) :- pairs_ok(I?, K?, Rs?, B?, Ls?, Os?, R).
+procedure pair_row(Integer?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pair_row(_, J, K, _, _, _, _, yes) :- J? > K? | true.
+pair_row(I, J, K, Rs, B, Ls, Os, R?) :- J? =< K?, ground(Rs?), ground(B?), ground(Ls?), ground(Os?) |
     role_person(I?, B?, P),
     role_person(J?, B?, Q),
     nth_spec(Rs?, I?, RI),
     nth_spec(Rs?, J?, RJ),
-    pair_ok(P?, Q?, RI?, RJ?, I?, J?, R1),
+    pair_ok(P?, Q?, RI?, RJ?, I?, J?, Ls?, Os?, R1),
     J1 := J? + 1,
-    pair_row1(R1?, I?, J1?, K?, Rs?, B?, R).
-procedure pair_row1(YesNo?, Integer?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pair_row1(no, _, _, _, _, _, no).
-pair_row1(yes, I, J, K, Rs, B, R?) :- pair_row(I?, J?, K?, Rs?, B?, R).
-procedure pair_ok(Peer?, Peer?, RoleSpec?, RoleSpec?, Integer?, Integer?, YesNo).
-pair_ok(P, Q, RI, RJ, I, J, R?) :- P? =?= Q? |
+    pair_row1(R1?, I?, J1?, K?, Rs?, B?, Ls?, Os?, R).
+procedure pair_row1(YesNo?, Integer?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pair_row1(no, _, _, _, _, _, _, _, no).
+pair_row1(yes, I, J, K, Rs, B, Ls, Os, R?) :- pair_row(I?, J?, K?, Rs?, B?, Ls?, Os?, R).
+%% Two agent roles go to one person only where the clause names the two possibly one person, schema_ones, and neither adds or deletes an atom naming the other; a listed role's place and another role, where neither does (vGLP, Section 5.4, "Speech-act schemas as local specifications": "distinct agent roles to distinct persons but for two the clause names as possibly one person, which it may bind to one person where neither adds or deletes an atom naming the other"; local.glp, rule_ok, the same of the contract; CSSN #17 and Code #33, vGLP_inbox.md, 2026-11-16 18:42 UTC: a class of two children and one parent took children_acquaint with a child in a parent's role for a schema-binding, so each child for a proposer of its parts).
+procedure pair_ok(Peer?, Peer?, RoleSpec?, RoleSpec?, Integer?, Integer?, Ints?, MayOnes?, YesNo).
+pair_ok(P, Q, RI, RJ, I, J, Ls, Os, R?) :- P? =?= Q?, integer(I?), integer(J?), ground(Ls?), ground(Os?) |
     role_names(RI?, J?, A1),
     role_names(RJ?, I?, A2),
     or(A1?, A2?, A),
-    neg(A?, R).
-pair_ok(_, _, _, _, _, _, yes) :- otherwise | true.
+    neg(A?, R0),
+    int_in(I?, Ls?, LI),
+    int_in(J?, Ls?, LJ),
+    or(LI?, LJ?, Li),
+    may_one_pair(I?, J?, Os?, Mk),
+    or(Li?, Mk?, OkM),
+    and(R0?, OkM?, R).
+pair_ok(_, _, _, _, _, _, _, _, yes) :- otherwise | true.
+procedure int_in(Integer?, Ints?, YesNo).
+int_in(_, [], no).
+int_in(I, [K|Ks], B?) :- integer(I?), integer(K?) | int_in1(I?, K?, Ks?, B).
+procedure int_in1(Integer?, Integer?, Ints?, YesNo).
+int_in1(I, K, _, yes) :- I? =:= K? | true.
+int_in1(I, _, Ks, B?) :- otherwise | int_in(I?, Ks?, B).
+procedure may_one_pair(Integer?, Integer?, MayOnes?, YesNo).
+may_one_pair(_, _, [], no).
+may_one_pair(I, J, [may_one(A, B)|Ms], M?) :- integer(I?), integer(J?), integer(A?), integer(B?) | may_one1(I?, J?, A?, B?, Ms?, M).
+procedure may_one1(Integer?, Integer?, Integer?, Integer?, MayOnes?, YesNo).
+may_one1(I, J, A, B, _, yes) :- I? =:= A?, J? =:= B? | true.
+may_one1(I, J, A, B, _, yes) :- I? =:= B?, J? =:= A? | true.
+may_one1(I, J, _, _, Ms, M?) :- otherwise | may_one_pair(I?, J?, Ms?, M).
+procedure listed_places(Schema?, Ints).
+listed_places(schema(_, _, _), []).
+listed_places(lschema(_, _, _, Lsts), Ls?) :- listing_places(Lsts?, Ls).
+procedure listing_places(Listings?, Ints).
+listing_places([], []).
+listing_places([listing(I, _, _, _, _, _, _)|Lsts], [I?|Ls?]) :- listing_places(Lsts?, Ls).
+listing_places([instances(_, _, _, _, _, _, _)|Lsts], Ls?) :- listing_places(Lsts?, Ls).
 procedure role_names(RoleSpec?, Integer?, YesNo).
 role_names(rs(_, A, D, _, _), J, R?) :- integer(J?) |
     names_role(A?, J?, R1),
@@ -6991,7 +7138,7 @@ listings_ok1(no, _, _, _, _, no).
 listings_ok1(yes, Lsts, B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
 %% The roles Definition "Binding" constrains (rule_ok): the schema's own, each listed role's place with no atom, a listed role's people being no roles a binding sends to people.
 procedure rule_spec_ok(Constant?, Binding?, YesNo).
-rule_spec_ok(Nm, B, Ok?) :- schema_entry(Nm?, E), rule_spec(E?, Rs0), rule_ok(Rs0?, B?, Ok).
+rule_spec_ok(Nm, B, Ok?) :- ground(Nm?) | schema_entry(Nm?, E), rule_spec(E?, Rs0), schema_entry(Nm?, E1), listed_places(E1?, Ls), schema_ones(Nm?, Os), rule_ok(Rs0?, B?, Ls?, Os?, Ok).
 procedure rule_spec(Schema?, RoleSpecs).
 rule_spec(schema(_, _, Rs), Rs?).
 rule_spec(lschema(_, _, Rs, Lsts), Rs0?) :- blank_listed(Lsts?, Rs?, Rs0).

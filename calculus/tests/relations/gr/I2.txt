@@ -1,0 +1,2 @@
+I2: I2
+I2 instantiates B with a seal for a badge.

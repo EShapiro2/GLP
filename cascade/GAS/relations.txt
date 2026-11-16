@@ -1,0 +1,2 @@
+GAS composes GPD with GSV: holds
+GAS extends it (GPD and GSV): holds

@@ -1,0 +1,3 @@
+OT: Organisation by plain bylaws
+OT instantiates O with plain bylaws, and extends it.
+OT:0 - | Orga is an organisation.

@@ -1,0 +1,5 @@
+C: Relaxed with a condition
+Of B: Alice, Bob and Carol are persons, Sum a number.
+Of C: Alice, Bob and Carol are persons, Sum a number.
+B:1. ■ Pay: Alice may pay Bob Sum Carol-coins, with the consent of Bob, provided Alice knows Bob.
+B:1, C:1. ■ Pay known: Alice may pay Bob Sum Carol-coins, provided Alice knows Bob and Bob knows Alice.

@@ -5,25 +5,25 @@
 % Last changed: 2026-11-12, by GO #5.
 % Schemas: GNG.glp beside this file.
 GNG: Network Gig Work
-GNG extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation) and restricts REC.
+GNG extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation) and restricts Rec.
 A *worker* is a provider and a *client* a customer. A *job* names the work, its price in Orga-coins and its deadline; its terms say what is released to whom on cancellation.
-Alice and Bob are persons, Orga a network organisation.
+Alice and Bob are persons, Orga a networked organisation.
 1. ■ Job. Post: Alice, a client, may post a job to the workers she points to. Pass: A worker may pass it to the workers they point to. Withdraw job: Alice may withdraw it.
 2. ■ Engage: Alice may engage Bob, a worker, for the job with the consent of Bob, provided Alice and Bob know each other; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 3. ◆ Deliver: Bob may attest that he delivered the work to Alice.
 4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (GNO:2).
 5. ■ Cancelling. Cancel: Alice or Bob may cancel the engagement before delivery, and the payment and the deposit are then released to Alice and to Bob as the terms say. Lapse: If no delivery is attested by the deadline, Alice may cancel and both are then released to her.
-6. ◆ Recommend: REC:1, where Alice recommends Bob for the work after acceptance.
+6. ◆ Recommend: Rec:1, where Alice recommends Bob for the work after acceptance.
 Logic pragmas
-GNG extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation) and restricts REC.
+GNG extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation) and restricts Rec.
 A *worker* is a provider and a *client* a customer. A *job* names the work, its price in Orga-coins and its deadline; its terms say what is released to whom on cancellation.
-Alice, Bob and Carol are persons, Orga a network organisation, Kept a number, Job a job, Skill a skill or a service; in clause 1 Carol is a worker, in clause 4 an arbiter, and in clause 6 Skill is the job.
+Alice, Bob and Carol are persons, Orga a networked organisation, Kept a number, Job a job, Skill a skill or a service; in clause 1 Carol is a worker, in clause 4 an arbiter, and in clause 6 Skill is the job.
 1. ■ Job. Post: Alice may post Job in Orga, provided Alice is a client of Orga. Alice posts the job to the workers she points to. Send job: Job of Alice goes to Bob in Orga, provided Alice has Job posted in Orga, Alice points to Bob and Bob is a worker of Orga. Pass: Bob may pass Job of Alice to Carol in Orga, provided Bob is a worker of Orga, Bob has received Job of Alice in Orga, Bob points to Carol, Orga has the stake at the number S, Carol holds Kept Orga-coins and Kept is at least S. Withdraw job: Alice may withdraw Job from Orga.
 2. ■ Engage: Alice may engage Bob for Job in Orga, with the consent of Bob, provided Bob is a worker of Orga, Alice has Job posted in Orga and Alice and Bob know each other. Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 3. ◆ Deliver: Bob may attest the delivery of Job to Alice, provided Alice and Bob have an engagement for Job.
 4. ■ Acceptance. Accept work: Alice may accept Job of Bob in Orga, provided Bob has attested the delivery of Job to Alice. The payment and the deposit are then released to Bob. Reject: Alice may reject Job of Bob raising to Carol the dispute over Orga-coins, provided Bob has attested the delivery of Job to Alice, Orga-coins are locked between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Alice raises the dispute by GNO:2.
 5. ■ Cancelling. Cancel: Alice may cancel her engagement of Bob for Job in Orga, provided Bob has not attested the delivery of Job to Alice. Worker cancel: Bob may cancel his engagement by Alice for Job in Orga, provided Bob has not attested the delivery of Job to Alice. The payment and the deposit are then released to Alice and to Bob as the terms say. Lapse: Alice may cancel her engagement of Bob for Job in Orga, provided no delivery of Job is attested by the deadline. The payment and the deposit are then both released to Alice.
-6. ◆ Recommend: REC:1, only if Alice has accepted Skill of Bob.
+6. ◆ Recommend: Rec:1, only if Alice has accepted Skill of Bob.
 Logic pragmas.
 Vocabulary: x has j posted in z = posted(x,j,z); y has received j of x in z = received(y,j,x,z); x has engaged y for j = engaged(x,y,j); y is engaged by x for j = engaged_by(y,x,j); y has attested the delivery of j to x = delivered(y,j,x); x has accepted j of y = accepted(x,j,y); x has rejected j of y = rejected(x,j,y); no delivery of j is attested by the deadline, for x = lapsed(x,j).
 y is a worker of z: y is a provider of z.

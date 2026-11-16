@@ -13,7 +13,9 @@ MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.
 MenuField ::= field(Integer, String, MenuFieldType).
 MenuFieldType ::= person ; key ; agent ; text ; number.
 MenuWord ::= say(String) ; at(Integer).
-Atom ::= identity ; knows(Peer) ; friend(Peer) ; distrusts(Peer).
+Atom ::= identity ; person ; knows(Peer) ; friend(Peer) ; distrusts(Peer).
+MayOne ::= may_one(Integer, Integer).
+MayOnes ::= [] ; [MayOne | MayOnes].
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
 RArg ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
 RArgs ::= [] ; [RArg | RArgs].
@@ -162,7 +164,7 @@ Recs ::= [] ; [Rec | Recs].
 App ::= app(GAtoms, Integer, Lock, Recs).
 Pend ::= deferred(Net).
 Pends ::= [] ; [Pend | Pends].
-WKey ::= op(Class) ; vt(Attempt) ; cm(Attempt) ; wd(Attempt, Attempt) ; ip(Peer, Peer) ; rd(Attempt).
+WKey ::= op(Class) ; vt(Attempt) ; cm(Attempt) ; wd(Attempt, Attempt) ; ip(Peer, Peer) ; rd(Attempt) ; reading.
 Wait ::= w(WKey, Integer).
 Waits ::= [] ; [Wait | Waits].
 WFound ::= at(Integer) ; unseen.
@@ -221,16 +223,17 @@ Question ::= request_r(Request?) ; approval_w(Approval).
 
 procedure atom_of(GAtom?, Shown).
 atom_of(g(identity, []), shown(identity)).
+atom_of(g(person, []), shown(person)).
 atom_of(g(knows, [p(V1)]), shown(knows(V1?))).
 atom_of(g(friend, [p(V1)]), shown(friend(V1?))).
 atom_of(g(distrusts, [p(V1)]), shown(distrusts(V1?))).
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(distrust, [], [rs(guarded, [atom(distrusts, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)]), atom(distrusts, [role(2)])]), rs(unguarded, [], [], [atom(identity, [])], [atom(friend, [role(1)])])]), schema(distrust_friend, [], [rs(guarded, [atom(distrusts, [role(2)])], [atom(friend, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], [atom(distrusts, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(propagate, [pvar('Carol')], [rs(guarded, [atom(distrusts, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(knows, [pvar('Carol')]), atom(distrusts, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(distrusts, [pvar('Carol')])], [])]), schema(cease, [pvar('Carol')], [rs(guarded, [], [atom(distrusts, [pvar('Carol')])], [atom(identity, [])], [])])]).
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(distrust, [], [rs(guarded, [atom(distrusts, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)]), atom(distrusts, [role(2)])]), rs(unguarded, [], [], [atom(identity, [])], [atom(friend, [role(1)])])]), schema(distrust_friend, [], [rs(guarded, [atom(distrusts, [role(2)])], [atom(friend, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], [atom(distrusts, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(propagate, [pvar('Carol')], [rs(guarded, [atom(distrusts, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(knows, [pvar('Carol')]), atom(distrusts, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(distrusts, [pvar('Carol')])], [])]), schema(cease, [pvar('Carol')], [rs(guarded, [], [atom(distrusts, [pvar('Carol')])], [atom(identity, [])], [])])]).
 
 procedure schema_entry(Constant?, Schema).
-schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])])).
+schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])])).
 schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])])).
 schema_entry(introduce, schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])])).
 schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])])).
@@ -270,6 +273,18 @@ schema_base(distrust_friend, 1).
 schema_base(propagate, 1).
 schema_base(cease, 1).
 schema_base(_, 1) :- otherwise | true.
+
+procedure schema_ones(Constant?, MayOnes).
+schema_ones(establish, []).
+schema_ones(acquaint, []).
+schema_ones(introduce, []).
+schema_ones(befriend, []).
+schema_ones(unfriend, []).
+schema_ones(distrust, []).
+schema_ones(distrust_friend, []).
+schema_ones(propagate, []).
+schema_ones(cease, []).
+schema_ones(_, []) :- otherwise | true.
 
 procedure schema_consents(Constant?, Ints).
 schema_consents(_, []) :- otherwise | true.
@@ -338,7 +353,7 @@ sentence_of(befriend(V1, V2), Me, Ws?) :- ground(V2?), ground(V1?), ground(Me?) 
 sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 exported procedure contract(String, Exported).
-contract('GD: Grassroots Distrust\nGD extends GSG.\nAlice, Bob and Carol are persons.\n1. ■ Distrust: Alice, who knows Carol, may declare distrust of Carol; if they are friends, this ends their friendship.\n2. ■ Propagate: Alice, who does not know Carol, may declare distrust of Carol provided her friend Bob has declared it.\n3. ■ Cease: Alice, who has declared distrust of Carol, may withdraw the declaration.', with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(distrust, ['Alice', 'Carol'], [], [rs(guarded, [atom(distrusts, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)]), atom(distrusts, [role(2)])]), rs(unguarded, [], [], [atom(identity, [])], [atom(friend, [role(1)])])]), schema(distrust_friend, ['Alice', 'Carol'], [], [rs(guarded, [atom(distrusts, [role(2)])], [atom(friend, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], [atom(distrusts, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(propagate, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(distrusts, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(knows, [pvar('Carol')]), atom(distrusts, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(distrusts, [pvar('Carol')])], [])]), schema(cease, ['Alice'], [pvar('Carol')], [rs(guarded, [], [atom(distrusts, [pvar('Carol')])], [atom(identity, [])], [])])]), pragmas([list('Contacts', [knows]), list('Friends', [friend]), list('Distrusted', [distrusts])], [act(establish, 'Establish', [], none, 'Contacts', by([1])), act(acquaint, 'Acquaint', ['', person], said([[], [person(1), text(' wishes that you know each other.')]]), 'Contacts', by([1])), act(introduce, 'Introduce', [], said([[person(2), text(' asks to introduce '), person(3), text(' to you.')], []]), 'Contacts', by([2])), act(befriend, 'Befriend', [], said([[], [person(1), text(' asks to be your friend.')]]), 'Friends', by([1])), act(unfriend, 'Unfriend', [], none, 'Friends', by([1])), act(distrust, 'Distrust', [], none, 'Distrusted', by([1])), act(distrust_friend, 'Distrust friend', [], none, 'Distrusted', by([1])), act(propagate, 'Propagate', ['', '', person], none, 'Distrusted', by([1])), act(cease, 'Cease', [], none, 'Distrusted', by([1]))], [], nolook, version(1, 1)))).
+contract('GD: Grassroots Distrust\nGD extends GSG.\nAlice, Bob and Carol are persons.\n1. ■ Distrust: Alice, who knows Carol, may declare distrust of Carol; if they are friends, this ends their friendship.\n2. ■ Propagate: Alice, who does not know Carol, may declare distrust of Carol provided her friend Bob has declared it.\n3. ■ Cease: Alice, who has declared distrust of Carol, may withdraw the declaration.', with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(distrust, ['Alice', 'Carol'], [], [rs(guarded, [atom(distrusts, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)]), atom(distrusts, [role(2)])]), rs(unguarded, [], [], [atom(identity, [])], [atom(friend, [role(1)])])]), schema(distrust_friend, ['Alice', 'Carol'], [], [rs(guarded, [atom(distrusts, [role(2)])], [atom(friend, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], [atom(distrusts, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(propagate, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(distrusts, [pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(knows, [pvar('Carol')]), atom(distrusts, [pvar('Carol')])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(distrusts, [pvar('Carol')])], [])]), schema(cease, ['Alice'], [pvar('Carol')], [rs(guarded, [], [atom(distrusts, [pvar('Carol')])], [atom(identity, [])], [])])]), pragmas([list('Contacts', [knows]), list('Friends', [friend]), list('Distrusted', [distrusts])], [act(establish, 'Establish', [], none, 'Contacts', by([1])), act(acquaint, 'Acquaint', ['', person], said([[], [person(1), text(' wishes that you know each other.')]]), 'Contacts', by([1])), act(introduce, 'Introduce', [], said([[person(2), text(' asks to introduce '), person(3), text(' to you.')], []]), 'Contacts', by([2])), act(befriend, 'Befriend', [], said([[], [person(1), text(' asks to be your friend.')]]), 'Friends', by([1])), act(unfriend, 'Unfriend', [], none, 'Friends', by([1])), act(distrust, 'Distrust', [], none, 'Distrusted', by([1])), act(distrust_friend, 'Distrust friend', [], none, 'Distrusted', by([1])), act(propagate, 'Propagate', ['', '', person], none, 'Distrusted', by([1])), act(cease, 'Cease', [], none, 'Distrusted', by([1]))], [], nolook, version(1, 1)))).
 
 exported procedure version(Integer, Integer).
 version(1, 1).
@@ -395,8 +410,38 @@ await_greet(_, no, []).
 
 procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, YesNo?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
 agent_goal([T | Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- then_local(U?, Th), step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
-agent_goal([], [T | In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- then_read(U?, Th), step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
-agent_goal([], [], _, [], [], [], [], _, _, _, []).
+agent_goal([], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(St?) | st_app(St?, Ap0), own_cond(St?, Ch, St1), early(Ch?, Ap0?, In?, U?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
+
+procedure early(Choice?, App?, Stream(Trigger)?, YesNo?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
+early(take(K, S), Ap0, In, _, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- dispatch_own(take(K?, S?), Ap0?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
+early(none, _, In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- read_next(In?, U?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
+
+procedure read_next(Stream(Trigger)?, YesNo?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
+read_next([T | In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- then_read(U?, Th), read_at(St?, St1), step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
+read_next([], _, [], [], [], [], _, _, _, []).
+
+procedure read_at(St?, St).
+read_at(St, St1?) :- ground(St?) | st_count(St?, D), st_waits(St?, W), drop_reading(W?, W1), set_waits(St?, [w(reading, D?) | W1?], St1).
+
+procedure drop_reading(Waits?, Waits).
+drop_reading([], []).
+drop_reading([w(reading, _) | Ws], Ws?).
+drop_reading([X | Ws], [X? | Ws1?]) :- otherwise | drop_reading(Ws?, Ws1).
+
+procedure eligible(Cands?, Waits?, Cands).
+eligible(Cs, W, Cs1?) :- ground(W?) | wait_of(reading, W?, F), reading_at(F?, Rd), eligible1(Cs?, W?, Rd?, Cs1).
+
+procedure reading_at(WFound?, Integer).
+reading_at(at(T), T?).
+reading_at(unseen, 0).
+
+procedure eligible1(Cands?, Waits?, Integer?, Cands).
+eligible1([], _, _, []).
+eligible1([cand(K, I) | Cs], W, Rd, R?) :- ground(K?), ground(W?), integer(Rd?) | began_at(K?, W?, T), eligible2(T?, Rd?, cand(K?, I?), Cs?, W?, R).
+
+procedure eligible2(Integer?, Integer?, Cand?, Cands?, Waits?, Cands).
+eligible2(T, Rd, C, Cs, W, [C? | R?]) :- (T? =< Rd?) | eligible1(Cs?, W?, Rd?, R).
+eligible2(T, Rd, _, Cs, W, R?) :- (T? > Rd?) | eligible1(Cs?, W?, Rd?, R).
 
 procedure then_local(YesNo?, Then).
 then_local(yes, own_unread).
@@ -416,7 +461,7 @@ step(net(msg(_, intro(_, Q))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, 
 step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(To?), ground(F?), ground(X?), ground(St?) | st_app(St?, Ap0), message_cond(X?, St?, Cd, St1), dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
 step(answered(At, YN), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(At?), ground(YN?), ground(St?) | st_app(St?, Ap0), close_approval(At?, Approvals?, Approvals1), answer_cond(At?, St?, Cd, St1), dispatch_answer(Cd?, YN?, At?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals1?, H?, St1?, D).
 step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(St?) | st_pends(St?, Pd), st_view(St?, V), st_trie(St?, Tr), recheck_find(Pd?, V?, Tr?, St?, F), recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
-step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
+step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- agent_goal(Ls?, In?, no, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
 
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
 next(Th, Kick, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- next_n(Th?, Kick?, Ap0?, [], Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
@@ -1004,7 +1049,7 @@ procedure own_cond1a(St?, Cands?, Cands?, Cands?, Choice, St).
 own_cond1a(St, Cs1, Csg, Csh, Ch?, St5?) :- ground(St?) | st_app(St?, Ap), app_recs(Ap?, R), st_view(St?, V), vote_cands0(R?, V?, St?, Cs2, St2), commit_cands_st(St2?, Cs3, St3), wound_cands0(St3?, Cs4, St4), intro_cands(St4?, Cs5, St6), ready_cands(St6?, Cs6, St7), app(Cs1?, Csg?, Ca), app(Ca?, Csh?, Cb), app(Cb?, Cs2?, C12), app(C12?, Cs3?, C123), app(C123?, Cs4?, C1234), app(C1234?, Cs5?, C12345), app(C12345?, Cs6?, Cs), own_cond2(Cs?, St7?, Ch, St5).
 
 procedure own_cond2(Cands?, St?, Choice, St).
-own_cond2(Cs, St, Ch?, St2?) :- ground(St?) | st_waits(St?, W), st_app(St?, Ap), app_recs(Ap?, R), st_ix(St?, Ix), prune_waits(W?, R?, Ix?, W0), st_count(St?, D), choose(Cs?, W0?, D?, Ch0, W1), set_waits(St?, W1?, St1), count_own(Ch0?, St1?, Ch, St2).
+own_cond2(Cs, St, Ch?, St2?) :- ground(St?) | st_waits(St?, W), st_app(St?, Ap), app_recs(Ap?, R), st_ix(St?, Ix), prune_waits(W?, R?, Ix?, W0), st_count(St?, D), choose_e(Cs?, W0?, D?, Ch0, W1), set_waits(St?, W1?, St1), count_own(Ch0?, St1?, Ch, St2).
 
 procedure count_own(Choice?, St?, Choice, St).
 count_own(none, St, none, St?).
@@ -1317,6 +1362,7 @@ prune_wait(yes, _, Ws, Ws?).
 
 procedure dead_key(WKey?, Recs?, Ix?, YesNo).
 dead_key(op(_), _, _, no).
+dead_key(reading, _, _, no).
 dead_key(vt(A), R, ix(Tr, _, _, _), D?) :- ground(A?), ground(R?) | has_vote(A?, R?, V), rec_closed(A?, R?, Tr?, Cl), or(V?, Cl?, D).
 dead_key(cm(A), R, ix(Tr, _, _, _), D?) :- rec_closed(A?, R?, Tr?, D).
 dead_key(wd(_, B), R, ix(Tr, _, _, _), D?) :- ground(B?), ground(R?) | rec_closed(B?, R?, Tr?, Cl), mem(yielded(B?), R?, Yd), or(Cl?, Yd?, D).
@@ -1375,6 +1421,12 @@ meet_all([C | Cs], St, Is, Is2?, St2?) :- ground(C?) | st_class(C?, St?, R, St1)
 procedure add_cls(ClassRes?, Infos?, Infos).
 add_cls(nocls, Is, Is?).
 add_cls(cls(I), Is, Is1?) :- app(Is?, [I?], Is1).
+
+procedure choose_e(Cands?, Waits?, Integer?, Choice, Waits).
+choose_e(Cs, W, D, Ch?, W1?) :- ground(Cs?), ground(W?), integer(D?) | ensure_waits(Cs?, W?, D?, Wa), choose_e1(Cs?, Wa?, D?, Ch, W1).
+
+procedure choose_e1(Cands?, Waits?, Integer?, Choice, Waits).
+choose_e1(Cs, Wa, D, Ch?, W1?) :- ground(Wa?), integer(D?) | eligible(Cs?, Wa?, Cs1), choose1(Cs1?, Wa?, D?, Ch, W1).
 
 procedure choose(Cands?, Waits?, Integer?, Choice, Waits).
 choose(Cs, W, D, Ch?, W2?) :- ground(Cs?), ground(W?), integer(D?) | ensure_waits(Cs?, W?, D?, W1), choose1(Cs?, W1?, D?, Ch, W2).
@@ -2827,28 +2879,54 @@ procedure delta_in1(YesNo?, Delta?, Deltas?, YesNo).
 delta_in1(yes, _, _, yes).
 delta_in1(no, X, Ps, E?) :- delta_in(X?, Ps?, E).
 
-procedure rule_ok(RoleSpecs?, Binding?, YesNo).
-rule_ok(Rs, B, R?) :- ground(Rs?) | rs_len(Rs?, K), pairs_ok(1, K?, Rs?, B?, R).
+procedure rule_ok(RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+rule_ok(Rs, B, Ls, Os, R?) :- ground(Rs?) | rs_len(Rs?, K), pairs_ok(1, K?, Rs?, B?, Ls?, Os?, R).
 
-procedure pairs_ok(Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pairs_ok(I, K, _, _, yes) :- (I? > K?) | true.
-pairs_ok(I, K, Rs, B, R?) :- (I? =< K?), ground(Rs?), ground(B?) | J := (I? + 1), pair_row(I?, J?, K?, Rs?, B?, R1), I1 := (I? + 1), pairs_ok1(R1?, I1?, K?, Rs?, B?, R).
+procedure pairs_ok(Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pairs_ok(I, K, _, _, _, _, yes) :- (I? > K?) | true.
+pairs_ok(I, K, Rs, B, Ls, Os, R?) :- (I? =< K?), ground(Rs?), ground(B?), ground(Ls?), ground(Os?) | J := (I? + 1), pair_row(I?, J?, K?, Rs?, B?, Ls?, Os?, R1), I1 := (I? + 1), pairs_ok1(R1?, I1?, K?, Rs?, B?, Ls?, Os?, R).
 
-procedure pairs_ok1(YesNo?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pairs_ok1(no, _, _, _, _, no).
-pairs_ok1(yes, I, K, Rs, B, R?) :- pairs_ok(I?, K?, Rs?, B?, R).
+procedure pairs_ok1(YesNo?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pairs_ok1(no, _, _, _, _, _, _, no).
+pairs_ok1(yes, I, K, Rs, B, Ls, Os, R?) :- pairs_ok(I?, K?, Rs?, B?, Ls?, Os?, R).
 
-procedure pair_row(Integer?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pair_row(_, J, K, _, _, yes) :- (J? > K?) | true.
-pair_row(I, J, K, Rs, B, R?) :- (J? =< K?), ground(Rs?), ground(B?) | role_person(I?, B?, P), role_person(J?, B?, Q), nth_spec(Rs?, I?, RI), nth_spec(Rs?, J?, RJ), pair_ok(P?, Q?, RI?, RJ?, I?, J?, R1), J1 := (J? + 1), pair_row1(R1?, I?, J1?, K?, Rs?, B?, R).
+procedure pair_row(Integer?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pair_row(_, J, K, _, _, _, _, yes) :- (J? > K?) | true.
+pair_row(I, J, K, Rs, B, Ls, Os, R?) :- (J? =< K?), ground(Rs?), ground(B?), ground(Ls?), ground(Os?) | role_person(I?, B?, P), role_person(J?, B?, Q), nth_spec(Rs?, I?, RI), nth_spec(Rs?, J?, RJ), pair_ok(P?, Q?, RI?, RJ?, I?, J?, Ls?, Os?, R1), J1 := (J? + 1), pair_row1(R1?, I?, J1?, K?, Rs?, B?, Ls?, Os?, R).
 
-procedure pair_row1(YesNo?, Integer?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pair_row1(no, _, _, _, _, _, no).
-pair_row1(yes, I, J, K, Rs, B, R?) :- pair_row(I?, J?, K?, Rs?, B?, R).
+procedure pair_row1(YesNo?, Integer?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pair_row1(no, _, _, _, _, _, _, _, no).
+pair_row1(yes, I, J, K, Rs, B, Ls, Os, R?) :- pair_row(I?, J?, K?, Rs?, B?, Ls?, Os?, R).
 
-procedure pair_ok(Peer?, Peer?, RoleSpec?, RoleSpec?, Integer?, Integer?, YesNo).
-pair_ok(P, Q, RI, RJ, I, J, R?) :- (P? =?= Q?) | role_names(RI?, J?, A1), role_names(RJ?, I?, A2), or(A1?, A2?, A), neg(A?, R).
-pair_ok(_, _, _, _, _, _, yes) :- otherwise | true.
+procedure pair_ok(Peer?, Peer?, RoleSpec?, RoleSpec?, Integer?, Integer?, Ints?, MayOnes?, YesNo).
+pair_ok(P, Q, RI, RJ, I, J, Ls, Os, R?) :- (P? =?= Q?), integer(I?), integer(J?), ground(Ls?), ground(Os?) | role_names(RI?, J?, A1), role_names(RJ?, I?, A2), or(A1?, A2?, A), neg(A?, R0), int_in(I?, Ls?, LI), int_in(J?, Ls?, LJ), or(LI?, LJ?, Li), may_one_pair(I?, J?, Os?, Mk), or(Li?, Mk?, OkM), and(R0?, OkM?, R).
+pair_ok(_, _, _, _, _, _, _, _, yes) :- otherwise | true.
+
+procedure int_in(Integer?, Ints?, YesNo).
+int_in(_, [], no).
+int_in(I, [K | Ks], B?) :- integer(I?), integer(K?) | int_in1(I?, K?, Ks?, B).
+
+procedure int_in1(Integer?, Integer?, Ints?, YesNo).
+int_in1(I, K, _, yes) :- (I? =:= K?) | true.
+int_in1(I, _, Ks, B?) :- otherwise | int_in(I?, Ks?, B).
+
+procedure may_one_pair(Integer?, Integer?, MayOnes?, YesNo).
+may_one_pair(_, _, [], no).
+may_one_pair(I, J, [may_one(A, B) | Ms], M?) :- integer(I?), integer(J?), integer(A?), integer(B?) | may_one1(I?, J?, A?, B?, Ms?, M).
+
+procedure may_one1(Integer?, Integer?, Integer?, Integer?, MayOnes?, YesNo).
+may_one1(I, J, A, B, _, yes) :- (I? =:= A?), (J? =:= B?) | true.
+may_one1(I, J, A, B, _, yes) :- (I? =:= B?), (J? =:= A?) | true.
+may_one1(I, J, _, _, Ms, M?) :- otherwise | may_one_pair(I?, J?, Ms?, M).
+
+procedure listed_places(Schema?, Ints).
+listed_places(schema(_, _, _), []).
+listed_places(lschema(_, _, _, Lsts), Ls?) :- listing_places(Lsts?, Ls).
+
+procedure listing_places(Listings?, Ints).
+listing_places([], []).
+listing_places([listing(I, _, _, _, _, _, _) | Lsts], [I? | Ls?]) :- listing_places(Lsts?, Ls).
+listing_places([instances(_, _, _, _, _, _, _) | Lsts], Ls?) :- listing_places(Lsts?, Ls).
 
 procedure role_names(RoleSpec?, Integer?, YesNo).
 role_names(rs(_, A, D, _, _), J, R?) :- integer(J?) | names_role(A?, J?, R1), names_role(D?, J?, R2), or(R1?, R2?, R).
@@ -3696,7 +3774,7 @@ listings_ok1(no, _, _, _, _, no).
 listings_ok1(yes, Lsts, B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
 
 procedure rule_spec_ok(Constant?, Binding?, YesNo).
-rule_spec_ok(Nm, B, Ok?) :- schema_entry(Nm?, E), rule_spec(E?, Rs0), rule_ok(Rs0?, B?, Ok).
+rule_spec_ok(Nm, B, Ok?) :- ground(Nm?) | schema_entry(Nm?, E), rule_spec(E?, Rs0), schema_entry(Nm?, E1), listed_places(E1?, Ls), schema_ones(Nm?, Os), rule_ok(Rs0?, B?, Ls?, Os?, Ok).
 
 procedure rule_spec(Schema?, RoleSpecs).
 rule_spec(schema(_, _, Rs), Rs?).
@@ -4735,7 +4813,7 @@ form_string(_, refused) :- otherwise | true.
 Drawn ::= request_r(View_request_r) ; approval_w(View_approval) ; output(List(Output)) ; Request ; YesNo ; last_state ; social_menu(List(MenuEntry)) ; approval_sentence.
 
 exported procedure dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
-dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(named(last_state, thread(menu([form(view, [field('Key', shown), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(distrusts, [field('Peer', shown)])]))), field('List(Key)', thread), field('List(Approved)', thread(menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])]))), field('List(Tab)', thread(menu([form(tab, [field('String', shown), field('Constant', shown)]), form(tab, [field('String', shown), field('Constant', shown), field('Constant', shown)])])))]), form(refused, [field('Approved', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])])), field('Key', shown), field('Reason', menu([shown, shown, form(unable, [field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(distrusts, [field('Peer', shown)])]))), field('List(Atom)', thread(menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(distrusts, [field('Peer', shown)])])))])]))])]))), MOut?, G0s?, ODs), constructs(Ss?).
+dispatch(Asks, PCh, ch(MIn?, MOut)) :- dispatch(Asks?, PCh?, MIn, ODs?, G0s, Ss), output(named(last_state, thread(menu([form(view, [field('Key', shown), field('List(Atom)', thread(menu([shown, shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(distrusts, [field('Peer', shown)])]))), field('List(Key)', thread), field('List(Approved)', thread(menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])]))), field('List(Tab)', thread(menu([form(tab, [field('String', shown), field('Constant', shown)]), form(tab, [field('String', shown), field('Constant', shown), field('Constant', shown)])])))]), form(refused, [field('Approved', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])])), field('Key', shown), field('Reason', menu([shown, shown, form(unable, [field('List(Atom)', thread(menu([shown, shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(distrusts, [field('Peer', shown)])]))), field('List(Atom)', thread(menu([shown, shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(distrusts, [field('Peer', shown)])])))])]))])]))), MOut?, G0s?, ODs), constructs(Ss?).
 
 procedure constructs(Stream(Spawn(Question, Drawn))?).
 constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constructs(Ss?).
@@ -4743,7 +4821,7 @@ constructs([]).
 
 procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 construct(Id, request_r(X?), Gs, Ds?) :- answer_request([], X, Gs1?, _, Done), run_request_r(Id?, named(social_menu([button('Establish', [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button('Acquaint', [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, person, key)], [], [])]), button('Introduce', [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button('Befriend', [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)])], [2], [], [], [])]), button('Unfriend', [act(unfriend, 1, [1, 2], [req(identity, []), req(friend, [at(2)])], [2], [], [], [])]), button('Distrust', [act(distrust, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), forb(friend, [at(2)]), forb(distrusts, [at(2)])], [2], [], [], [])]), button('Distrust friend', [act(distrust_friend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(friend, [at(2)]), forb(distrusts, [at(2)])], [2], [], [], [])]), button('Propagate', [act(propagate, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(knows, [at(3)]), forb(distrusts, [at(3)])], [2], [field(3, person, agent)], [], [])]), button('Cease', [act(cease, 1, [1], [req(identity, []), req(distrusts, [at(2)])], [2], [], [], [])])]), form(propose, [field('Proposal', menu([label('Establish', form(establish, [field('Peer', peer)])), label('Acquaint', form(acquaint, [field('Peer', peer), field(person, peer)])), label('Introduce', form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Befriend', form(befriend, [field('Peer', peer), field('Peer', peer)])), label('Unfriend', form(unfriend, [field('Peer', peer), field('Peer', peer)])), label('Distrust', form(distrust, [field('Peer', peer), field('Peer', peer)])), label('Distrust friend', form(distrust_friend, [field('Peer', peer), field('Peer', peer)])), label('Propagate', form(propagate, [field('Peer', peer), field('Peer', peer), field(person, peer)])), label('Cease', form(cease, [field('Peer', peer), field('Peer', peer)]))]))])), [input([])], Done?, Gs?, Gs1, Ds).
-construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs1?, _, Vs, Done), run_approval_w(Id?, named(approval_sentence, form(approval, [field('Asking', menu([form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])])), field('Names', menu([shown, form(request, [field('Rho', menu([form(one, [field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])]))]), form(rho, [field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])]))])])), field('Integer', shown)])]))]), form(hello, [field('Peer', shown), field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])]))])])), field('List(Word)', thread(menu([form(text, [field('String', shown)]), form(person, [field('Peer', shown)]), form(named, [field('String', shown), field('Peer', shown)]), form(valued, [field('String', shown), field('Number', shown)]), form(held, [field('Atom', menu([shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(distrusts, [field('Peer', shown)])])), field('Integer', shown)])]))), field('YesNo', buttons([yes, no]))])), Vs?, Done?, Gs?, Gs1, Ds).
+construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs1?, _, Vs, Done), run_approval_w(Id?, named(approval_sentence, form(approval, [field('Asking', menu([form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])])), field('Names', menu([shown, form(request, [field('Rho', menu([form(one, [field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])]))]), form(rho, [field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])]))])])), field('Integer', shown)])]))]), form(hello, [field('Peer', shown), field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(befriend, [field('Peer', shown), field('Peer', shown)]), form(unfriend, [field('Peer', shown), field('Peer', shown)]), form(distrust, [field('Peer', shown), field('Peer', shown)]), form(distrust_friend, [field('Peer', shown), field('Peer', shown)]), form(propagate, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(cease, [field('Peer', shown), field('Peer', shown)])]))])])), field('List(Word)', thread(menu([form(text, [field('String', shown)]), form(person, [field('Peer', shown)]), form(named, [field('String', shown), field('Peer', shown)]), form(valued, [field('String', shown), field('Number', shown)]), form(held, [field('Atom', menu([shown, shown, form(knows, [field('Peer', shown)]), form(friend, [field('Peer', shown)]), form(distrusts, [field('Peer', shown)])])), field('Integer', shown)])]))), field('YesNo', buttons([yes, no]))])), Vs?, Done?, Gs?, Gs1, Ds).
 
 procedure output(Widget(Drawn)?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
 output(W, Ms, Gs, [draw(0, W?, output([])) | Ds?]) :- ground(W?) | output_more(W?, Ms?, [], Gs?, Ds).

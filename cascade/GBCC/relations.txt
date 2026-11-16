@@ -1,0 +1,2 @@
+GBCC extends GCC: holds
+GBCC restricts it (GCC): holds

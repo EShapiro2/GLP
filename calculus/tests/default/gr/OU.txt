@@ -1,0 +1,3 @@
+OU: Organisation deciding as one
+OU instantiates O with unanimous bylaws; z holds the votes of at least Votes persons on m, More is Votes plus 1 and z has fewer than More persons as a member for the votes decide m in z, and extends it.
+Orga is an organisation, Votes and More numbers.

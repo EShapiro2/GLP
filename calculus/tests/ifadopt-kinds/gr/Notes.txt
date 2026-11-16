@@ -1,0 +1,16 @@
+Notes
+Notes extends GKK.
+A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+1. ■ Issue: Alice may issue Sum Alice-notes.
+2. ■ Swap: Alice and Bob may jointly swap Sum Carol-notes for Total Dave-notes, provided Alice and Bob know each other.
+3. ■ Pay: Alice may pay Bob Sum Carol-notes, with the consent of Bob, provided Alice knows Bob.
+4. ■ Escrow. Deposit: Alice may deposit Sum Dave-notes with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-notes that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-notes deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
+Logic pragmas.
+Vocabulary: x holds n y-notes = note(x,y,*n); z holds n w-notes in escrow from x for y on k = escrow_note(z,w,x,y,k,*n).
+After x issues n x-notes: x holds n x-notes.
+After x and y swap n z-notes for m w-notes: no longer x holds n z-notes, y holds n z-notes, no longer y holds m w-notes, x holds m w-notes, y knows z and x knows w.
+After x pays y n z-notes: no longer x holds n z-notes, y holds n z-notes and y knows z.
+After x deposits n w-notes with z for y on k: no longer x holds n w-notes and z holds n w-notes in escrow from x for y on k.
+After z and y release n w-notes that x deposited on k: no longer z holds n w-notes in escrow from x for y on k, y holds n w-notes and y knows w.
+After z and x return n w-notes deposited for y on k: no longer z holds n w-notes in escrow from x for y on k, x holds n w-notes and x knows w.

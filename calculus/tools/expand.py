@@ -33,6 +33,11 @@ The rules.
    one of C's expanded definitions.
 6. The names lines are united sentence by sentence, the definitions likewise,
    inherited first; a sentence appears once.
+7. A relaxing citation, `X:n, without ...[, if ...]`, adds an act and keeps
+   the act of X:n as it is (tools/SAS-WRITING.txt, RELAXATION): it is no
+   operation, and its clause is kept as an own clause, as written, after the
+   clause X:n it cites (Coins:1, Pay issuer: Notes:3, without the consent of Bob,
+   if the coins are Bob-coins).
 
 It checks and prints: every contract a first line names is in rev/ (after
 revtex's RENAMED and DROPPED); every citation X:n is a clause of the expanded
@@ -60,7 +65,7 @@ LEAD_IN = ('Each contract with the operations of its first line and of its citin
 
 NAME = r'[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*'
 REF = NAME + r':\d+'
-VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes')
+VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes')
 VERB = r'(?:%s)' % '|'.join(VERBS)
 PRONOUNS = ('it', 'them', 'the composition')
 
@@ -310,8 +315,8 @@ def link(contracts):
     unparsed = []
     for name in sorted(contracts):
         c = contracts[name]
-        if not c.title_line.startswith(name + ':'):
-            fail("%s: the title line does not open with '%s:'" % (name, name))
+        if not (c.title_line.startswith(name + ':') or c.title_line == name):      # 'NAME: Title', or the name alone (Notes, Coins, Bonds, Shares, Udi, 2026-11-16)
+            fail("%s: the title line does not open with '%s:' and is not the name alone" % (name, name))
         if c.first_line is None:
             c.first = First()
             continue
@@ -595,6 +600,7 @@ def expand(name, contracts, cache):
         cl = parse_clause(name, n, mark, text)
         own = '%s:%d' % (name, n)
         cites = [CITE.match(s.text) for s in cl.sents]
+        cites = [None if m and m.group(2) == ', ' and m.group(3).startswith('without ') else m for m in cites]     # rule 7: a relaxation
         if not any(m and m.group(2) == ', ' for m in cites):
             if any(cites):                    # `X:n and Y:m apply ...`: a citation, but no restriction to append
                 note(name, own, "cites %s with no restriction after a comma; it is kept as an own clause, unchanged: '%s'"

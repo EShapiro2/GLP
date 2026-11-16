@@ -1,0 +1,3 @@
+OU: Organisation deciding as one
+OU instantiates O with unanimous bylaws; vote(z,>=Votes,m), sum(More,Votes,1), has_member(z,<More) for decided(z,m), and extends it.
+OU:0 - | Orga is an organisation, Votes and More numbers.

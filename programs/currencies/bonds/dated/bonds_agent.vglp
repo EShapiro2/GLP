@@ -4,20 +4,20 @@
 %% Section 3.3 of "Grassroots Bonds: Financing by the People, for the People",
 %% Definition "The Transactions of Grassroots Bonds" --- Issue, Swap, Pay,
 %% Redeem, Deposit, Release and Return --- one clause each, guarded where the
-%% transaction is guarded: Issue, Pay and Redeem by the one party whose
-%% election they are, Issue in its two forms; Swap, Deposit, Release and Return
-%% by both, the giver by its request clause and the receiver by a responder,
+%% transaction is guarded: Issue, Pay issuer and Redeem by the one party whose
+%% election they are, Issue in its two forms; Swap, Pay of any notes (Notes:3),
+%% Deposit, Release and Return by both, the giver by its request clause and the receiver by a responder,
 %% respond_swap or respond_transfer.  It extends the coins program
 %% (programs/currencies/coins) by what bonds and escrow add: a coin and a bond
 %% are two instruments, a coin carrying no date and a bond its maturity; the
 %% agent reads the current date from its machine's clock (today/1, ../self.glp)
 %% where a transaction's precondition names it, at the issue of a bond, whose
-%% maturity is later than the current date (GB:1), and at the issuer of a bond
+%% maturity is later than the current date (Bonds:1), and at the issuer of a bond
 %% presented, which is mature when its maturity is at most the current date;
 %% pay carries coins and reads no date; redeem presents a coin or a mature
 %% bond of the issuer, against any coin or bond the issuer holds, of the
-%% bearer's choice (GB:3), a bond not mature going back; and the three escrow
-%% transfers are new (GB:4): a deposit names its beneficiary and its
+%% bearer's choice (Bonds:2), a bond not mature going back; and the three escrow
+%% transfers are those of Notes (Notes:4): a deposit names its beneficiary and its
 %% condition, the escrow agent holds each coin and bond deposited as a record
 %% of the instrument, the depositor, the beneficiary and the condition, and
 %% releases it to that beneficiary or returns it to that depositor.  Its
@@ -83,7 +83,7 @@ decide_swap(no, From, _, Offered, Resp?, Ans?) :-
 
 %% =============================================================================
 %% The transfer responder: the receiver's guard of a deposit, a release or a
-%% return, each guarded by both participants (GB:4).  At
+%% return, each guarded by both participants (Notes:4).  At
 %% the escrow agent the escrow program answers in place of the person.
 %% =============================================================================
 
@@ -263,6 +263,13 @@ serve(Reqs, Id, [transfer_declined_by(deposit, Q, _, Given)|UserIn], PeerIn, Con
     show(transfer_declined(deposit, Q?), Outs?, Outs1),
     after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial?).
 
+%% My payment was declined: my notes come back.
+serve(Reqs, Id, [transfer_declined_by(pay, Q, none, Given)|UserIn], PeerIn, Convs, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Q?), ground(Given?) |
+    append_instruments(Holdings?, Given?, Holdings1),
+    show(transfer_declined(pay, Q?), Outs?, Outs1),
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial?).
+
 %% My release or return was declined: the instruments are held in escrow
 %% again, on their terms.
 serve(Reqs, Id, [transfer_declined_by(Kind, Q, terms(P, B, C), Given)|UserIn], PeerIn, Convs, Outs, Holdings, Serial) :-
@@ -319,16 +326,17 @@ serve([swap(Q, U, D, K, V, D1, K1)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdi
     show(swap_same(Q?, U?, D?, K?), Outs?, Outs1),
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?).
 
-%% Pay_{p,q}(k), guarded by p: k q-coins to q, which q takes (GC:3).  Only coins are paid, and no date is read.  The precondition
+%% Pay issuer, Pay_{p,q}(k), guarded by p: k q-coins to q, which q takes with
+%% no consent asked (Coins:1, which relaxes Notes:3 for the payee's own coins).  Only coins are paid, and no date is read.  The precondition
 %% cent^k_q in c_p is the selection.
-serve([pay(Q, K)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
+serve([pay_issuer(Q, K)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
     ground(Id?), ground(Q?), integer(K?), K? >= 1 |
     select_instruments(Q?, now, K?, Holdings?, Status, Give, Rest),
     do_pay(Status?, Id?, Q?, K?, Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
 
 %% Redeem_{p,q}(x, r, *), guarded by p: x, a q-coin or a q-bond, due D,
 %% presented to q for a coin or a bond of r that q holds, of p's choice
-%% (GB:3), due D1, the instrument taken not x: each a lot of one, the two
+%% (Bonds:2), due D1, the instrument taken not x: each a lot of one, the two
 %% lots different.  The precondition x in c_p is the selection; that a bond x
 %% is mature, d <= d*, and cent_{r,*} in c_q are tested at q,
 %% which discloses what it holds where the second fails.
@@ -346,6 +354,14 @@ serve([redeem(Q, D, R, D1)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Ser
     lot(Q?, D?, 1) =?= lot(R?, D1?, 1) |
     show(redeem_same(Q?, D?), Outs?, Outs1),
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?).
+
+%% Pay (Notes:3), guarded by both: p proposes to pay q a lot of notes, coins or
+%% bonds of any issuer, and q answers by respond_transfer, their consent.  The
+%% precondition cent^k_{u,*} in c_p is the selection.
+serve([pay(Q, U, D, K)|Reqs], Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Q?), ground(U?), ground(D?), integer(K?), K? >= 1 |
+    select_instruments(U?, D?, K?, Holdings?, Status, Give, Rest),
+    propose_transfer(Status?, pay, none, Id?, Q?, lot(U?, D?, K?), Give?, Rest?, Reqs?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
 
 %% Deposit_{p,e}(cent^k_{u,*}, q, kappa), guarded by both: p proposes the
 %% transfer to the escrow agent e, for the beneficiary q on the condition
@@ -430,7 +446,7 @@ on_act(swap(Want, Offered, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Outs, 
 %% person --- at the escrow agent, to the escrow program.  A deposit names the
 %% giver as its depositor, a release its receiver as the beneficiary, and a
 %% return its receiver as the depositor; one that does not is no transfer of
-%% GB:4, and goes back unasked.
+%% Notes:4, and goes back unasked.
 on_act(transfer(Kind, Terms, Given, Resp?), From, Id, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
     ground(Kind?), ground(Terms?), ground(Given?), ground(From?), ground(Id?) |
     names_me(Kind?, Terms?, From?, Id?, Mine),
@@ -440,6 +456,7 @@ procedure names_me(Kind?, Terms?, Key?, Key?, Decision).
 names_me(deposit, terms(P, _, _), From, _, yes) :- P? =?= From? | true.
 names_me(release, terms(_, Q, _), _, Id, yes) :- Q? =?= Id? | true.
 names_me(return, terms(P, _, _), _, Id, yes) :- P? =?= Id? | true.
+names_me(pay, none, _, _, yes).
 names_me(_, _, _, _, no) :- otherwise | true.
 
 procedure pose_transfer(Decision?, Kind?, Terms?, Stream(Instrument)?, TransferResponse, Key?, Key?, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?).
@@ -452,7 +469,7 @@ pose_transfer(no, Kind, _, Given, transfer_decline(Given?), From, Id, Reqs, User
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings?, Serial?).
 
 %% A payment of my own coins is taken; instruments that are not my coins are
-%% no payment of GC:3, and go back.
+%% no payment of Coins:1, and go back.
 procedure take_payment(Decision?, Key?, Key?, Stream(Instrument)?, PayResponse, Stream(Request)?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?).
 take_payment(yes, Id, From, Coins, pay_taken, Reqs, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
     ground(Coins?) |
@@ -568,8 +585,9 @@ propose_transfer(fail, Kind, Terms, Id, _, lot(U, D, K), Give, Rest, Reqs, UserI
 %% in the holdings, a release's or a return's in escrow on their terms.
 procedure put_back(Kind?, Terms?, Stream(Instrument)?, Stream(Instrument)?, Stream(Instrument)).
 put_back(deposit, _, Give, Rest, Orig?) :- append_instruments(Give?, Rest?, Orig).
+put_back(pay, _, Give, Rest, Orig?) :- append_instruments(Give?, Rest?, Orig).
 put_back(Kind, terms(P, Q, C), Give, Rest, Orig?) :-
-    Kind? =?\= deposit |
+    Kind? =?\= deposit, Kind? =?\= pay |
     to_escrow(Give?, P?, Q?, C?, Records),
     append_instruments(Records?, Rest?, Orig).
 
@@ -656,11 +674,14 @@ after_escrow(Reqs, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
     show(escrowed(Held?), Outs1?, Outs2),
     serve(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs2?, Holdings?, Serial?).
 
-%% After a transfer is sent: a deposit changes the holdings, a release or a
-%% return what is held in escrow.
+%% After a transfer is sent: a deposit or a payment changes the holdings, a
+%% release or a return what is held in escrow.
 procedure after_sent(Kind?, Stream(Request)?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?).
 after_sent(deposit, Reqs, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
     after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?).
-after_sent(Kind, Reqs, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
-    Kind? =?\= deposit |
+after_sent(pay, Reqs, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
+    after_change(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?).
+after_sent(release, Reqs, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
+    after_escrow(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?).
+after_sent(return, Reqs, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
     after_escrow(Reqs?, Id?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?).

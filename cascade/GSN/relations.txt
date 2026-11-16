@@ -1,0 +1,2 @@
+GSN extends GSG: holds
+GSN strengthens GSG: holds

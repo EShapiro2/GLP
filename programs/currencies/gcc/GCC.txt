@@ -9,9 +9,9 @@ Alice and Bob are persons, Orga a community currency.
 1. ■ Draw: Alice, a treasurer, may swap Alice-coins for Orga-coins.
 2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.
 Logic pragmas
-GCC instantiates GBank with community currency bylaws; x is a treasurer of z for x is entitled to propose m in z; x is a treasurer of z for x is entitled to take m for z; x is a treasurer of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, More is Votes plus 1 and z has fewer than More persons in the role Treasurer for the votes decide m according to the bylaws of z, and extends it.
+GCC instantiates GBank with community currency bylaws; x is a treasurer of z for x is entitled to propose m in z; x is a treasurer of z for x is entitled to take m for z; x is a treasurer of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Treasurer for the votes decide m according to the bylaws of z, and extends it.
 A *community currency* is a bank whose coins are Dollar-denominated and whose bylaws name one role, *treasurer*; the treasurers jointly decide its acts.
-Alice and Bob are persons, Orga a community currency, Sum, Votes and More numbers.
+Alice and Bob are persons, Orga a community currency, Sum a number.
 1. ■ Draw: Alice may swap Sum Alice-coins for Sum Orga-coins, provided Alice is a treasurer of Orga.
 2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.
 Logic pragmas.

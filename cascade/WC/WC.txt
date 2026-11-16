@@ -11,7 +11,7 @@ Bob is a person, Orga a workers' cooperative.
 1. ■ Pay for work: Orga may pay Bob, a member, Dollar-denominated coins for his work.
 2. ■ Distribute: Orga may distribute Dollar-denominated coins it holds to the members equally.
 Logic pragmas
-WC instantiates GCoop with bylaws that delegate no act; x is a member of z for x is entitled to propose m in z; x is a member of z for x is entitled to take m for z; x is a member of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z, and extends it.
+WC instantiates GCoop with bylaws that delegate no act, and extends it.
 A *workers' cooperative* is a cooperative whose members work for it.
 Alice, Bob and Carol are persons, Orga a workers' cooperative, Iris an issuer, Dollar a fiat currency, Sum, Votes and Double numbers.
 1. ■ Pay for work: Alice may pay Bob Sum Iris-coins of Orga for Bob's work, provided Alice is a member of Orga, Orga holds the votes of at least Votes persons to pay Bob Sum Iris-coins, Double is Votes times 2, Orga has fewer than Double persons as a participant, Bob is a member of Orga and Bob accepts Sum Dollar-denominated Iris-coins in payment. Vote to pay: Carol may vote to pay Bob Sum Iris-coins of Orga for Bob's work, provided Carol is a member of Orga and Orga has Bob as a participant.

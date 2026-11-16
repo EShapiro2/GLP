@@ -2,7 +2,7 @@
 %% complete in itself.  Not to be edited: edit DAO.txt and run adopt.py DAO.
 % contract_named(dao, C): the contract, DAO.
 procedure contract_named(Constant?, SDeclared).
-contract_named(dao, reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
+contract_named(dao, reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
  sas(found, ['Alice'], ['Delos'], [atom(steward, ['Alice', 'Delos']), atom(member, ['Alice', 'Delos', 'Alice']), atom(listed, ['Alice', 'Alice', 'Delos'])], [atom(identity, ['Alice']), not(atom(steward, ['Alice', 'Delos']))], true, ['Alice']),

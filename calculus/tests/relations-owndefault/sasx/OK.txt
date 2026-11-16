@@ -1,0 +1,8 @@
+OK: Organisation as it is (expanded schemas)
+O:0 - | Alice is a person, Orga an organisation, Motion a motion.
+O:0 - | Parameters: x is entitled to vote on m in z; the votes decide m in z.
+O:0 - | Default: x is a member of z for x is entitled to vote on m in z.
+O:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a member for the votes decide m in z.
+O:1 ■ Vote: vote(Orga,Alice,Motion) <- member(Alice,Orga), ~vote(Orga,Alice,Motion) guarded by Alice.
+O:1+OK:1 ■ Act: taken(Orga,Motion) <- member(Alice,Orga), vote(Orga,>=Votes,Motion), product(Double,Votes,2), has_member(Orga,<Double), ~taken(Orga,Motion), role(Alice,Orga,Director) guarded by Alice.
+OK:0 - | Alice is a person, Orga an organisation, Motion a motion.

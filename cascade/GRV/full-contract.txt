@@ -5,7 +5,7 @@ Alice *trusts* Bob when she knows Bob personally and believes him to keep the un
 A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. Here: the guardians deciding jointly. A ward takes an act of a party by those who decide for it.
 A *service* is a ward operated by a machine at an address every person can reach.
 An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons. Alice, Bob and Erin are persons, Carol and Dave wards. Alice is a person, Dave a service. Alice, Bob and Carol are persons, Dave a service.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice and Bob are persons. Alice and Bob are persons, Carol and Dave wards. Alice, Bob and Carol are persons, Dave a service.
 GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.

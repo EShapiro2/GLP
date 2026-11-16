@@ -29,7 +29,7 @@ Instrument ::= coin(Issuer, Serial) ; bond(Issuer, Maturity, Serial)
 Lot        ::= lot(Issuer, Due, Amount).
 Serial     ::= Integer.
 
-%% The three escrow transfers of GB:4: a deposit by the depositor with the
+%% The three escrow transfers of Notes:4: a deposit by the depositor with the
 %% escrow agent, for a beneficiary, on a condition the three agree; a release
 %% by the escrow agent to the beneficiary; a return by the escrow agent to the
 %% depositor.  Each is a transfer of one lot guarded by both participants, and
@@ -42,8 +42,11 @@ Serial     ::= Integer.
 %% a return to the depositor it names, and no other act reaches.  A condition
 %% is a day, met once the current date has reached it, or an agreement the
 %% three know by its name, which the escrow agent judges.
-Kind ::= deposit ; release ; return.
-Terms ::= terms(Depositor, Beneficiary, Condition).
+%% A payment of notes, coins or bonds of any issuer, to a payee who consents
+%% (Notes:3) is a transfer of the same kind with no terms: pay, guarded by both.
+%% A payment of the payee's own coins takes no consent (Coins:1, Pay issuer).
+Kind ::= deposit ; release ; return ; pay.
+Terms ::= terms(Depositor, Beneficiary, Condition) ; none.
 Condition ::= day(Date) ; agreed(Constant).
 
 %% The counterparty's answer to a swap: the instruments it gives, or the
@@ -237,7 +240,8 @@ Due         ::= Constant.
 Request ::= issue(Amount)
           ; issue(Amount, Maturity)
           ; swap(Friend, GiveIssuer, GiveDue, GiveAmount, WantIssuer, WantDue, WantAmount)
-          ; pay(Friend, Amount)
+          ; pay_issuer(Friend, Amount)
+          ; pay(Friend, Issuer, Due, Amount)
           ; redeem(Friend, GiveDue, WantIssuer, WantDue)
           ; deposit(EscrowAgent, Issuer, Due, Amount, Beneficiary, Condition)
           ; release(Beneficiary, Issuer, Due, Amount, Depositor, Condition)
@@ -279,21 +283,23 @@ Events ::= [Event | Events].
 %% agent's request form --- issue(K) for coins and issue(K, D) for bonds; a
 %% setting of the machine's clock to a day, clock(T), or forward to it,
 %% advance(T), which in a headless run the play drives; an
-%% acceptance of a swap or of a transfer the named party proposes, granted on
-%% its card; or a wait for a screen message.  A due is `now` for coins and the
+%% acceptance of a swap or of a transfer the named party proposes, or a
+%% refusal of a transfer, granted on its card; or a wait for a screen message.  A due is `now` for coins and the
 %% maturity date for bonds.
 Step ::= issue(Integer)
        ; issue(Integer, Integer)
        ; clock(Integer)
        ; advance(Integer)
        ; swap(Key, Key, Constant, Integer, Key, Constant, Integer)
-       ; pay(Key, Integer)
+       ; pay_issuer(Key, Integer)
+       ; pay(Key, Key, Constant, Integer)
        ; redeem(Key, Constant, Key, Constant)
        ; deposit(Key, Key, Constant, Integer, Key, Condition)
        ; release(Key, Key, Constant, Integer, Key, Condition)
        ; return(Key, Key, Constant, Integer, Key, Condition)
        ; accept(Key)
        ; accept_transfer(Key)
+       ; decline_transfer(Key)
        ; await(ScreenContent).
 Script ::= [] ; [Step | Script].
 
@@ -612,6 +618,10 @@ village :- village # market.
 imported procedure village#two_escrows.
 exported procedure two_escrows.
 two_escrows :- village # two_escrows.
+
+imported procedure village#pay_notes.
+exported procedure pay_notes.
+pay_notes :- village # pay_notes.
 
 imported procedure village#escrow_terms.
 exported procedure escrow_terms.

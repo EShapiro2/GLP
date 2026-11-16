@@ -1,9 +1,9 @@
 GAS: Grassroots App Store (expanded schemas)
 GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 GKK:0 - | Alice, Bob and Carol are persons.
 GKK:0 - | Reflexive: x knows y.
-GKK:1+GnW:3 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2+GnW:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
 GKK:3+GnW:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
@@ -33,7 +33,8 @@ GPD:5 ■ Invite: program(Bob,Prog@Alice,Carol), installed(Bob,Prog@Alice,Carol)
 GPD:5 ■ | Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
 GPD:6 ■ Leave: ~installed(Alice,Prog,Carol), ~participant(Alice,Prog,Carol,_), ~participant(_,Prog,Carol,Alice) <- installed(Alice,Prog,Carol) guarded by Alice possibly Alice=Carol.
 GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
-GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+GnW:0 - | Alice and Bob are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+GnW:0 - | Default: any guardian of z for those who decide for z.
 GnW:1 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.
 GnW:2 ■ | Guardian decisions.
@@ -55,7 +56,6 @@ GnW:4 ■ Wards of one guardian befriend: friend(Carol,Dave), friend(Dave,Carol)
 GnW:5 ■ Retire: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~friend(Carol,_), ~friend(_,Carol) <- ~retired(Carol) guarded by guardians(Carol).
 GnW:5 ■ | Carol can then take no act.
 GSV:0 - | A *service* is a ward operated by a machine at an address every person can reach.
-GSV:0 - | Alice is a person, Dave a service.
 GAS:0 - | A *store* is a service holding a list of programs. Alice *trusts* a store when she has declared it and has not withdrawn the declaration.
 GAS:0 - | Alice, Bob and Carol are persons, Dave a service, Prog a program.
 GAS:1 ■ Open store: store(Dave) <- guardian(Carol,Dave), ~store(Dave) guarded by Carol.

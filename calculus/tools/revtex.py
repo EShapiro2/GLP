@@ -735,8 +735,8 @@ def main():
             orig = Contract(original_box(os.path.join(args.glp, originals[oname])), False, originals[oname])
         else:
             warn('%s has no original; its whole text is marked as inserted' % name)
-        if not rev.title_line.startswith(name + ':'):
-            warn("%s: the title line does not open with '%s:'" % (name, name))
+        if not (rev.title_line.startswith(name + ':') or rev.title_line == name):      # or the name alone
+            warn("%s: the title line does not open with '%s:' and is not the name alone" % (name, name))
         lines, hs, cs = box_tex(name, rev, orig)
         out += [''] + lines
         if asked.get(name):

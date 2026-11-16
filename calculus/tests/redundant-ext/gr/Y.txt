@@ -1,0 +1,5 @@
+Y: Citing the act removed
+Y restricts X.
+Alice, Bob and Carol are persons, Sum a number.
+1. ■ Pay thrice: X:1 Pay twice, only if Carol knows Alice.
+Logic pragmas.

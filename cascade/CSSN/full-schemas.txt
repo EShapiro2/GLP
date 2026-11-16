@@ -1,9 +1,9 @@
 CSSN: Child-Safe Social Network (expanded schemas)
 GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 GKK:0 - | Alice, Bob and Carol are persons.
 GKK:0 - | Reflexive: x knows y.
-GKK:1+GnW:3 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2+GnW:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
 GKK:3+GnW:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
@@ -31,7 +31,8 @@ GSN:4+GSNW:1 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,
 GSN:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
 GSN:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.
 GnW:0 - | Bob *trusts* Carol, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a child and how. A child takes an act of a party by those who decide for it.
-GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave children; in clause 4 Alice and Bob are possibly one person.
+GnW:0 - | Alice and Bob are persons, Carol and Dave children; in clause 4 Alice and Bob are possibly one person.
+GnW:0 - | Default: any parent of z for those who decide for z.
 GnW:1+CSSN:1 ◆ Enter: identity(Carol), child(Carol), has_parent(Carol,Alice), creator(Alice,Carol), parent(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.
 GnW:2 ■ | Guardian decisions.
@@ -65,7 +66,6 @@ GSNW:3 ■ Child join: member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) <- leade
 GSNW:3 ■ Children join: member(Dave,Grupo,Carol), listed(Carol,Dave,Grupo) <- leader(Carol,Grupo), child(Carol), has_parent(Carol,Alice), parent(Alice,Carol), friend(Carol,Dave), friend(Dave,Carol), child(Dave), has_parent(Dave,Bob), parent(Bob,Dave), knows(Alice,Dave), friend(Alice,Bob), friend(Bob,Alice), ~member(Dave,Grupo,_) guarded by Carol, Dave, Alice, Bob.
 GSNW:3 ■ Children of one parent join: member(Dave,Grupo,Carol), listed(Carol,Dave,Grupo) <- leader(Carol,Grupo), child(Carol), has_parent(Carol,Alice), parent(Alice,Carol), friend(Carol,Dave), friend(Dave,Carol), child(Dave), has_parent(Dave,Alice), parent(Alice,Dave), ~member(Dave,Grupo,_) guarded by Carol, Dave, Alice.
 GSNW:3 ■ Child withdraw: ~member(Carol,Grupo,Bob), ~listed(Bob,Carol,Grupo) <- has_parent(Carol,Alice), parent(Alice,Carol), member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) guarded by Alice.
-GSNW:3+CSSN:3 ■ Child add: member(Bob,Grupo,Carol), listed(Carol,Bob,Grupo) <- leader(Carol,Grupo), child(Carol), ~retired(Carol), has_parent(Carol,Alice), parent(Alice,Carol), friend(Carol,Bob), friend(Bob,Carol), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_), child(Bob) guarded by Carol, Bob, Alice.
 GSNW:3 ■ Child leave: ~member(Carol,Grupo,Alice), ~listed(Alice,Carol,Grupo) <- child(Carol), ~retired(Carol), member(Carol,Grupo,Alice), listed(Alice,Carol,Grupo) guarded by Carol.
 GSNW:3 ■ Child remove: ~member(Bob,Grupo,Carol), ~listed(Carol,Bob,Grupo) <- leader(Carol,Grupo), child(Carol), ~retired(Carol), member(Bob,Grupo,Carol), listed(Carol,Bob,Grupo) guarded by Carol.
 CSSN:0 - | Alice and Bob are persons, Carol and Dave children; in clause 2 Alice and Bob are possibly one person.
