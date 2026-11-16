@@ -1,0 +1,6 @@
+Savings Bank
+Savings Bank restricts Community Bank.
+Savings Bank:0 - | A *savings bank* is a community bank that keeps savings.
+Savings Bank:0 - | Alice and Bob are persons, Acct an account.
+Savings Bank:1 ■ Open: Community Bank:1 <- knows(Bob,Alice).
+Savings Bank:1 ■ | Savings Bank accounts pay interest.

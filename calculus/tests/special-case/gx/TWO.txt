@@ -1,12 +1,12 @@
 TWO: A restriction for two kinds
-Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Of Bonds: A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date. Alice, Bob and Carol are parties, Day and Term maturity dates, Today a date; Carol is possibly Alice or Bob. Kind of note: bond, y-bonds due Day for y-notes.
 Of TWO: Alice and Bob are parties, Today a date.
-GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Notes:1. ■ Issue: Alice may issue Sum Alice-coins.
 Notes:1, Bonds:1. ■ Issue bond: Alice may issue Sum Alice-bonds due Day, provided the current date is Today and Day is more than Today.
 Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other. Swap coin for bond: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-bonds due Day, provided Alice and Bob know each other. Swap bonds: Alice and Bob may jointly swap Sum Carol-bonds due Day for Total Dave-bonds due Term, provided Alice and Bob know each other.

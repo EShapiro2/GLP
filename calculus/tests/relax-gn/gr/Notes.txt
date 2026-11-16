@@ -1,5 +1,5 @@
 Notes
-Notes extends GKK.
+Notes extends Knowledge.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 1. ■ Issue: Alice may issue Sum Alice-notes.

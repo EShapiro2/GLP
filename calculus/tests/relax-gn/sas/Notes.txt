@@ -1,5 +1,5 @@
 Notes
-Notes extends GKK.
+Notes extends Knowledge.
 Vocabulary: x holds n y-notes = note(x,y,*n); z holds n w-notes in escrow from x for y on k = escrow_note(z,w,x,y,k,*n).
 After x issues n x-notes: x holds n x-notes.
 After x and y swap n z-notes for m w-notes: no longer x holds n z-notes, y holds n z-notes, no longer y holds m w-notes, x holds m w-notes, y knows z and x knows w.

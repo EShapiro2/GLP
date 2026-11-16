@@ -17,6 +17,8 @@ and checks, for each contract:
 Standard library only.
 """
 import itertools, os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NAMES_      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NAME = r"[A-Z][A-Za-z]*"
@@ -24,8 +26,8 @@ PH = re.compile(r"^([b-z])('s|-[A-Za-z]+)?$")
 MARKS = "■◆○"
 PRAGMAS = "Logic pragmas."
 CLAUSE = re.compile(r"^(\d+)\. ([%s]) (.*)$" % MARKS)
-ENTRY = re.compile(r"^((?:[A-Za-z-]+:\d+)(?:\+[A-Za-z-]+:\d+)*) ([%s-]) (.*)$" % MARKS)
-REF = r"[A-Za-z-]+:\d+"
+ENTRY = re.compile(r"^((?:%s)(?:\+%s)*) ([%s-]) (.*)$" % (NAMES_.REF, NAMES_.REF, MARKS))      # a label: names and numbers, "Notes:3+Coins:1", a name of one or two words
+REF = NAMES_.REF
 PRON = {"Alice": "her", "Alicia": "her", "Carol": "her", "Erin": "her", "Bob": "his", "Dave": "his", "Frank": "his"}
 POSS = {"her": "hers", "his": "his", "its": "its", "their": "theirs"}
 WILD = "_"        # in a place: someone; in a state that must not hold, or that ends: anyone
@@ -513,7 +515,7 @@ def strip_refs(s):
 def read_gr(name, d="gr"):
     c = Contract()
     c.name = name
-    lines = [poss_in(l.rstrip("\n")) for l in open(os.path.join(ROOT, d, name + ".txt"), encoding="utf-8") if l.strip()]
+    lines = [poss_in(l.rstrip("\n")) for l in open(os.path.join(ROOT, d, NAMES_.file_of(name) + ".txt"), encoding="utf-8") if l.strip()]
     c.title = lines[0]
     c.params = params_of(lines, name)
     c.first = None
@@ -622,17 +624,17 @@ def first_line(c, known):
         return [], {}, []
     s = strip_refs(c.first)[:-1]
     subs, prose = {}, []
-    m = re.search(r"instantiates ((?:[A-Za-z-]+)(?: and [A-Za-z-]+)*) with (.*?)(?=, (?:and )?(?:restricts|strengthens|extends|composes|relaxes)\b|$)", s)
+    m = re.search(r"instantiates ((?:%s)(?: and (?:%s))*) with (.*?)(?=, (?:and )?(?:restricts|strengthens|extends|composes|relaxes)\b|$)" % (NAMES_.NAME_RX, NAMES_.NAME_RX), s)
     if m:
         items = m.group(2).split("; ") if ";" in m.group(2) else re.split(r", | and ", m.group(2))
         for p in m.group(1).split(" and "):
             subs[p] = [it for it in items if " for " in it]
         prose = [it for it in items if " for " not in it]
     parents, operands = [], s[len(c.name):m.start(2)] + s[m.end(2):] if m else s[len(c.name):]
-    for mm in re.finditer(r"[A-Za-z][A-Za-z-]*", operands):
-        if mm.group(0) in known and mm.group(0) not in parents and mm.group(0) != c.name:
-            parents.append(mm.group(0))
-    cm = re.search(r"composes it with ((?:[A-Za-z-]+)(?: and [A-Za-z-]+)*)", operands) if m else None
+    for _, _, nm in NAMES_.find(operands, known):          # the known names, longest first (tools/names.py)
+        if nm not in parents and nm != c.name:
+            parents.append(nm)
+    cm = re.search(r"composes it with ((?:%s)(?: and (?:%s))*)" % (NAMES_.NAME_RX, NAMES_.NAME_RX), operands) if m else None
     if cm:          # the instance composed with a contract: its states put for states bind the contract composed too (SC's bylaws, Shares's issue of shares)
         states = [it for it in subs[m.group(1).split(" and ")[0]] if re.search(r"(?<![A-Za-z'_-])[b-z](?='s|-[A-Za-z]|[ ,.)]|$)", it)]
         for p in cm.group(1).split(" and "):
@@ -1526,12 +1528,12 @@ def write_sas(w, n, sas):
 
 def put(d, n, lines):
     os.makedirs(os.path.join(ROOT, d), exist_ok=True)
-    with open(os.path.join(ROOT, d, n + ".txt"), "w", encoding="utf-8") as f:
+    with open(os.path.join(ROOT, d, NAMES_.file_of(n) + ".txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(poss_out(l) for l in lines) + "\n")
 
 
 def get(d, n):
-    return [poss_in(l.rstrip("\n")) for l in open(os.path.join(ROOT, d, n + ".txt"), encoding="utf-8") if l.strip()]
+    return [poss_in(l.rstrip("\n")) for l in open(os.path.join(ROOT, d, NAMES_.file_of(n) + ".txt"), encoding="utf-8") if l.strip()]
 
 
 # ---- the kinds of names; a citation in the names of its own contract -----------------
@@ -3296,7 +3298,7 @@ UNTAKABLE = {}      # {(n, label, act): why}, the acts main left out of n's sasx
 
 
 def main():
-    allnames = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, "gr")) if f.endswith(".txt") and not f.startswith("NOTES-"))
+    allnames = NAMES_.names_in(os.path.join(ROOT, "gr"))
     w = World(allnames)
     names = order([a for a in sys.argv[1:] if not a.startswith("-")] or allnames, w)
     global REMOVE
@@ -3312,7 +3314,7 @@ def main():
             sx0 = expand_schemas(w, n)
             sx = [e for e in schemas_at_defaults(w, n, sx0) if not e.get("generic")]
             gone = untakable(w, n, [read_schema_line(schema_line(e)) for e in sx if e["kind"] == "act"])      # an act no agent can take is no act of the contract
-            keep = os.path.join(ROOT, "sasx-all", n + ".txt")      # sasx/ with the untakable acts kept, for relations.py alone: a restriction may make a base's act untakable
+            keep = os.path.join(ROOT, "sasx-all", NAMES_.file_of(n) + ".txt")      # sasx/ with the untakable acts kept, for relations.py alone: a restriction may make a base's act untakable
             if gone:
                 put("sasx-all", n, [w.contract(n).title + " (expanded schemas, the acts no agent can take kept)"] + [schema_line(e) for e in sx])
             elif os.path.exists(keep):
@@ -3342,7 +3344,7 @@ def main():
                 w2.lex.pop(n, None)
                 s2, _ = compile_contract(w2, n)
                 res.append("recover " + ("equivalent" if norm(s2) == norm(sas) and sas_first(w2, n) == sas_first(w, n) else "NO"))
-                os.remove(os.path.join(ROOT, "back-tmp", n + ".txt"))
+                os.remove(os.path.join(ROOT, "back-tmp", NAMES_.file_of(n) + ".txt"))
                 os.rmdir(os.path.join(ROOT, "back-tmp"))
                 put("back", n, back)
         except Err as ex:

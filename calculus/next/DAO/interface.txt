@@ -1,0 +1,36 @@
+DAO
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ■ Found.  Alice may found a DAO under a new name of hers; Alice is then its steward and first member.
+5. ■ Join.  Alice, the steward of a DAO, may admit Bob, whom she knows and who is not yet a member, with the consent of Bob.
+6. ■ Propose.  A member of a DAO may make a proposal to it, each proposal once; its steward records it.
+7. ■ Propose own.  A member of a DAO may make a proposal to it, each proposal once; its steward records it.
+8. ■ Deliver proposal.  The steward delivers it to every member but the steward, the proposer included.
+9. ■ Vote for.  A member who holds a proposal of their DAO may vote for or against it, once and before the steward decides it; the steward records the vote.
+10. ■ Vote own for.  A member who holds a proposal of their DAO may vote for or against it, once and before the steward decides it; the steward records the vote.
+11. ■ Vote against.  A member who holds a proposal of their DAO may vote for or against it, once and before the steward decides it; the steward records the vote.
+12. ■ Vote own against.  A member who holds a proposal of their DAO may vote for or against it, once and before the steward decides it; the steward records the vote.
+13. ■ Deliver vote for.  A member who holds a proposal of their DAO may vote for or against it, once and before the steward decides it; the steward records the vote.
+14. ■ Deliver vote against.  A member who holds a proposal of their DAO may vote for or against it, once and before the steward decides it; the steward records the vote.
+15. ■ Pass.  The steward may decide a proposal, passed or rejected, once.
+16. ■ Reject.  The steward may decide a proposal, passed or rejected, once.
+17. ■ Deliver pass.  The steward may decide a proposal, passed or rejected, once.
+18. ■ Deliver reject.  The steward may decide a proposal, passed or rejected, once.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Found: Alice [Found] <delos>
+Join: Alice [Join]
+  Bob: Alice asks for your consent to join.
+Propose: Carol [Propose] <prop>
+Propose own: Alice [Propose own] <prop>
+Vote for: Carol [Vote for]
+Vote own for: Alice [Vote own for]
+Vote against: Carol [Vote against]
+Vote own against: Alice [Vote own against]
+Pass: Alice [Pass] <votes>
+Reject: Alice [Reject] <votes>

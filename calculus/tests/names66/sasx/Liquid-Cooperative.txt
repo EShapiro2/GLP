@@ -1,0 +1,18 @@
+Liquid Cooperative (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Cooperative:0 - | A *cooperative* is owned by its members.
+Cooperative:0 - | Alice and Bob are persons, Coop a cooperative.
+Cooperative:1 ■ Join: member(Alice,Coop) <- member(Bob,Coop) guarded by Alice, Bob.
+Cooperative:1 ■ | Cooperative members vote.
+DAO:0 - | Alice and Bob are persons, Org a networked organisation.
+DAO:1+Liquid Cooperative:1 ■ Delegate: delegates(Alice,Bob,Org) <- knows(Alice,Bob), member(Bob,Coop) guarded by Alice.
+DAO:1 ■ | DAO bylaws name a steward.
+Cooperative DAO:0 - | A *cooperative DAO* is a cooperative that delegates as a DAO does.
+Liquid Cooperative:0 - | Alice and Bob are persons, Coop a cooperative, Org a networked organisation.

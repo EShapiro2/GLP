@@ -20,6 +20,8 @@ A line: NAME, act, the pair, "holds", "covered by ACT", "exempt: REASON", "does 
 X".  The last line counts each; the exit code is 1 where a pair does not hold and nothing covers or exempts it.
 """
 import os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import toglp
@@ -62,13 +64,13 @@ def covering(e, x, y, acts):
 # A pair whose one agent's case the contract's own text does not allow, with the sentence that says so, or whose case an
 # act already covers that is not the act with the two names one: (the clause the act comes from, the act, the pair).
 EXEMPT = {
-    ('GSN:1', 'Message', 'Alice=Bob'): 'GSG:1: "Alice and Bob may jointly befriend each other": a friend is another person, and GSN:1 is "Alice may send a message to her friend Bob."',
-    ('GSN:3', 'Join', 'Alice=Bob'): 'GSN:2 Create: "Alice may create a group, of which she is the leader and first member."',
-    ('GSN:3', 'Remove', 'Alice=Bob'): 'GSN:2 Close: "Alice may close the group by leaving it."',
-    ('GSN:3', 'Leave', 'Alice=Bob'): 'GSN:2 Close: "Alice may close the group by leaving it."',
-    ('GSN:4', 'Deliver', 'Alice=Carol'): 'GSN:4 Deliver leader, the leader\'s own receipt of each post (GSN:4: "Its leader delivers it to every current member").',
-    ('LDAO:1', 'Delegate own', 'Alice=Dave'): 'LDAO\'s names line, "Carol or Dave possibly Alice": in Delegate own Alice is also Carol, and Carol and Dave are not possibly one person.',
-    ('LDAO:1', 'Delegate to the steward', 'Alice=Carol'): 'LDAO\'s names line, "Carol or Dave possibly Alice": in Delegate to the steward Alice is also Dave, and Carol and Dave are not possibly one person.',
+    ('Groups:1', 'Message', 'Alice=Bob'): 'Friendship:1: "Alice and Bob may jointly befriend each other": a friend is another person, and Groups:1 is "Alice may send a message to her friend Bob."',
+    ('Groups:3', 'Join', 'Alice=Bob'): 'Groups:2 Create: "Alice may create a group, of which she is the leader and first member."',
+    ('Groups:3', 'Remove', 'Alice=Bob'): 'Groups:2 Close: "Alice may close the group by leaving it."',
+    ('Groups:3', 'Leave', 'Alice=Bob'): 'Groups:2 Close: "Alice may close the group by leaving it."',
+    ('Groups:4', 'Deliver', 'Alice=Carol'): 'Groups:4 Deliver leader, the leader\'s own receipt of each post (Groups:4: "Its leader delivers it to every current member").',
+    ('Liquid DAO:1', 'Delegate own', 'Alice=Dave'): 'Liquid DAO\'s names line, "Carol or Dave possibly Alice": in Delegate own Alice is also Carol, and Carol and Dave are not possibly one person.',
+    ('Liquid DAO:1', 'Delegate to the steward', 'Alice=Carol'): 'Liquid DAO\'s names line, "Carol or Dave possibly Alice": in Delegate to the steward Alice is also Dave, and Carol and Dave are not possibly one person.',
     ('Agora:4', 'Deliver to poster', 'Alice=Carol'): 'Agora:4: "The keeper delivers it to every member but the keeper, the poster included."',
 }
 
@@ -109,7 +111,7 @@ def survey(n):
 
 
 def main():
-    names = sys.argv[1:] or sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'sasx')) if f.endswith('.txt'))
+    names = sys.argv[1:] or NM.names_in(os.path.join(ROOT, 'sasx'))
     rows = [r for n in names for r in survey(n)]
     for r in rows:
         print('%-10s %-36s %-12s %s' % r)

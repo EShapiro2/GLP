@@ -1,5 +1,5 @@
 MRC: Club
-MRC extends GKK.
+MRC extends Knowledge.
 Vocabulary: y is a member of z = member(y,z); z has y as a member = has_member(z,y).
 Roles: those who decide for z = deciders(z), listed by z has y as a member and y is a member of z.
 After y joins z, which requires y is not a member of z: y is a member of z and z has y as a member.

@@ -1,0 +1,8 @@
+Cooperative
+Cooperative extends Knowledge.
+Vocabulary: x is a member of c = member(x,c).
+After x joins the cooperative c: x is a member of c.
+Cooperative:0 - | A *cooperative* is owned by its members.
+Cooperative:0 - | Alice and Bob are persons, Coop a cooperative.
+Cooperative:1 ■ Join: member(Alice,Coop) <- member(Bob,Coop) guarded by Alice, Bob.
+Cooperative:1 ■ | Cooperative members vote.

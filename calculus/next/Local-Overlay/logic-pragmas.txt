@@ -1,0 +1,10 @@
+Local Overlay
+Local Overlay restricts Overlay.
+A person has a *location*. d > 0, an integer, and e > 0 are parameters of Local Overlay.
+Alice, Bob and Carol are persons.
+1. ■ Point friend: Overlay:1, only if either Alice points to fewer than d persons and Bob is closest to Alice among all of Alice's unpointed friends, or Bob is closer to Alice by more than e than some person pointed to by Alice.
+2. ■ Point transitive: Overlay:2, only if Carol is closer to Alice by more than e than some person pointed to by Alice.
+3. ■ Unpoint: Overlay:3, only if the bound is d, Alice points to more than d persons and Bob is furthest from Alice among the persons Alice points to.
+Logic pragmas.
+Vocabulary: the bound is n, for x = bound(x,n); either x points to fewer than d persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than e than some person pointed to by x = may_point_friend(x,y); y is closer to x by more than e than some person pointed to by x = closer(x,y); y is furthest from x among the persons x points to = furthest(x,y).
+Environment: the bound is n, for x; either x points to fewer than d persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than e than some person pointed to by x; y is closer to x by more than e than some person pointed to by x; y is furthest from x among the persons x points to.

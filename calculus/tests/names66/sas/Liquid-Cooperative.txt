@@ -1,0 +1,4 @@
+Liquid Cooperative
+Liquid Cooperative restricts Cooperative DAO.
+Liquid Cooperative:0 - | Alice and Bob are persons, Coop a cooperative, Org a networked organisation.
+Liquid Cooperative:1 ■ Delegate: DAO:1 <- member(Bob,Coop).

@@ -1,0 +1,6 @@
+Distrust
+Distrust extends Friendship.
+Alice, Bob and Carol are persons.
+1. ■ Distrust: Alice, who knows Carol, may declare distrust of Carol; if they are friends, this ends their friendship.
+2. ■ Propagate: Alice, who does not know Carol, may declare distrust of Carol provided her friend Bob has declared it.
+3. ■ Cease: Alice, who has declared distrust of Carol, may withdraw the declaration.

@@ -1,4 +1,4 @@
 Pair: Joint Accounts of Friends
-Pair restricts Joint.
+Pair restricts Joint Accounts.
 Alice and Bob are persons, Acct a joint account.
-1. ■ Open: Joint:1, only if Alice knows Bob. Joint accounts stay open until both close them.
+1. ■ Open: Joint Accounts:1, only if Alice knows Bob. Joint accounts stay open until both close them.

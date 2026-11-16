@@ -1,0 +1,17 @@
+Library
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ◆ Shelve.  Alice may put a thing of her own on her shelf, under a new name of hers.
+5. ■ Lend.  Alice may lend Bob a thing from her shelf until a day later than the current date, with the consent of Bob, provided Alice and Bob know each other; it then leaves the shelf, and Bob holds it.
+6. ■ Return.  Bob may return a borrowed thing; it then goes back on Alice's shelf.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Shelve: Alice [Shelve] <tome>
+Lend: Alice [Lend] <day>
+  Bob: Alice asks for your consent to lend.
+Return: Bob [Return]

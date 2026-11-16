@@ -1,0 +1,8 @@
+Bank
+Bank extends Knowledge.
+Vocabulary: x holds the account n with y = account(x,n,y).
+After x and y open the account n: x holds the account n with y and y holds the account n with x.
+Bank:0 - | A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank.
+Bank:0 - | Alice and Bob are persons, Acct an account.
+Bank:1 ■ Open: account(Alice,Acct,Bob), account(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice) guarded by Alice, Bob.
+Bank:1 ■ | Bank accounts stay open until both close them.

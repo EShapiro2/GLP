@@ -12,6 +12,8 @@ writes those who decide as a listed role with its anchor, which the vocabulary o
 contract is listed as not translated.
 """
 import os, re, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import gcsas
@@ -52,7 +54,7 @@ def unenabled(n, acts):
     key = (ROOT, n)
     if key not in _UNENABLED:
         marks = marks_of(acts) if any(l[1] == 'person' for e in acts for l in e['head']) else {}
-        w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-'))) if marks else None
+        w = gcsas.World(NM.names_in(os.path.join(ROOT, 'gr'))) if marks else None
         _UNENABLED[key] = gcsas.untakable(w, n, acts) if marks else {}
     return _UNENABLED[key]
 
@@ -63,7 +65,7 @@ ONE = set()     # the roles any one of whom decides, 'any one listed by' (gcsas.
 def values_of(n, refl=None, env=None, par=None):
     """The predicates of values and of no person: those whose vocabulary has the current date, now; and, in refl,
     the predicates the Logic pragmas declare reflexive, 'Reflexive: x knows y.', in n or a contract n is written from."""
-    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
+    w = gcsas.World(NM.names_in(os.path.join(ROOT, 'gr')))
     lex = w.lexicon(n)
     rl = {p: gcsas.pattern(by, lex) for p, by in lex.rlist.items()}
     if refl is not None:
@@ -438,7 +440,7 @@ def contract_term(n):
     if refl:
         drop = lambda ls: [l for l in ls if not (l[1] in refl and len(l[2]) == 2 and l[2][0] == l[2][1])]
         acts = [dict(e, head=drop(e['head']), body=drop(e['body'])) for e in acts]
-    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
+    w = gcsas.World(NM.names_in(os.path.join(ROOT, 'gr')))
     pmemo = {}
     def persons_of(e):      # the names the contract that wrote the act declares persons or parties, and only those
         o = re.split(r'[:+]', e['label'])[0]
@@ -480,15 +482,15 @@ def check(t, glp):
 
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('-')]
-    allnames = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'sasx')) if f.endswith('.txt'))
+    allnames = NM.names_in(os.path.join(ROOT, 'sasx'))
     glp = os.environ.get('GLP_DIR') or next((d for d in (os.path.join(os.path.dirname(ROOT), 'GLP'), '/home/user/GLP') if os.path.isdir(d)), None)
     os.makedirs(os.path.join(ROOT, 'glp'), exist_ok=True)
     lines, bad = [], 0
-    for n in args or allnames:
+    for n in [NM.name_of(a) for a in args] or allnames:
         t, acts, roles = contract_term(n)
         for (lb, a), why in sorted(unenabled(n, []).items()):      # filled by schemas(n), which contract_term read
-            print('%-10s left out of the term: %s (%s), %s' % (n, a, lb, why), flush=True)
-        p = os.path.join(ROOT, 'glp', n + '.glp.txt')
+            print('%-10s left out of the term: %s (%s), %s' % (NM.file_of(n), a, lb, why), flush=True)
+        p = os.path.join(ROOT, 'glp', NM.file_of(n) + '.glp.txt')
         if roles:                   # no term is written, and none of an earlier run is left in its place
             if os.path.exists(p):
                 os.remove(p)
@@ -501,7 +503,7 @@ def main():
         else:
             open(p, 'w', encoding='utf-8').write(t + '\n')
             v = 'translated: %d schemas' % acts
-        lines.append('%-10s %s' % (n, v))
+        lines.append('%-10s %s' % (NM.file_of(n), v))      # a line by the file name, one word
         print(lines[-1], flush=True)
     if '--check' in sys.argv and not args:
         open(os.path.join(ROOT, 'glp', 'VERDICTS.txt'), 'w', encoding='utf-8').write('\n'.join(lines) + '\n')

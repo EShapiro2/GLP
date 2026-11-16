@@ -54,6 +54,8 @@ their rev/ and gr/ in a temporary directory from NAME and every contract it is w
 that it compiles as it does in the Calculus.  Python's standard library and nothing else.
 """
 import os, re, shutil, subprocess, sys, tempfile
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(TOOLS)
@@ -105,13 +107,13 @@ def owners():
     return _OWNERS
 
 
-GLP_NAME = {'Agora': 'AGORA', 'Joint': 'JOINT', 'Stay': 'STAY', 'Lib': 'LIB', 'Rec': 'REC', 'Coins': 'GC', 'Bonds': 'GB'}      # renamed (Udi, 2026-11-16): the owner's file in GLP keeps the old name until Code renames it
+GLP_NAME = NM.glp_name      # renamed (Udi, 2026-11-16, NAMES.txt): the owner's file in GLP keeps its name on main, the first column, until Code renames it
 
 
 def owner_file(name):
     """The owner's NAME.txt in GLP: programs/**/NAME.txt with a '% Owner' line, or None; for a contract renamed, its
     file under the old name until Code renames it (GLP_NAME)."""
-    return owners().get(name) or owners().get(GLP_NAME.get(name, name))
+    return owners().get(NM.file_of(name)) or owners().get(GLP_NAME(name))
 
 
 def adopted_file(name):
@@ -136,7 +138,7 @@ def calc_ref():
 def calc_names(ref):
     """The contracts of the branch Calculus: those with calculus/NAME/contract.txt."""
     r = git('ls-tree', '-r', '--name-only', ref, 'calculus/')
-    return {l.split('/')[1] for l in r.stdout.decode('utf-8').split('\n') if l.endswith('/contract.txt') and l.count('/') == 2}
+    return {NM.of_glp(l.split('/')[1]) for l in r.stdout.decode('utf-8').split('\n') if l.endswith('/contract.txt') and l.count('/') == 2}
 
 
 def adopted(text):
@@ -177,16 +179,18 @@ def compose(pct, rev, gr, iface):
 def calculus_text(name):
     """The Calculus's contract.txt and logic-pragmas.txt of NAME: from rev/ and gr/ beside the tools, on the branch
     code; from calculus/NAME/ in the checkout of GLP; or else from calculus/NAME/ of GLP's branch Calculus, by git."""
-    for c, g in ((os.path.join(ROOT, 'rev', name + '.txt'), os.path.join(ROOT, 'gr', name + '.txt')),
-                 (os.path.join(ROOT, name, 'contract.txt'), os.path.join(ROOT, name, 'logic-pragmas.txt')),
-                 (os.path.join(GLP, 'calculus', name, 'contract.txt'), os.path.join(GLP, 'calculus', name, 'logic-pragmas.txt'))):
+    for c, g in ((os.path.join(ROOT, 'rev', NM.file_of(name) + '.txt'), os.path.join(ROOT, 'gr', NM.file_of(name) + '.txt')),
+                 (os.path.join(ROOT, NM.file_of(name), 'contract.txt'), os.path.join(ROOT, NM.file_of(name), 'logic-pragmas.txt')),
+                 (os.path.join(GLP, 'calculus', NM.file_of(name), 'contract.txt'), os.path.join(GLP, 'calculus', NM.file_of(name), 'logic-pragmas.txt')),
+                 (os.path.join(GLP, 'calculus', GLP_NAME(name), 'contract.txt'), os.path.join(GLP, 'calculus', GLP_NAME(name), 'logic-pragmas.txt'))):
         if os.path.exists(c) and os.path.exists(g):
             return read(c), read(g)
     ref = calc_ref()
-    if ref:
-        c, g = git('show', '%s:calculus/%s/contract.txt' % (ref, name)), git('show', '%s:calculus/%s/logic-pragmas.txt' % (ref, name))
+    for d in ((NM.file_of(name), GLP_NAME(name)) if ref else ()):
+        c, g = git('show', '%s:calculus/%s/contract.txt' % (ref, d)), git('show', '%s:calculus/%s/logic-pragmas.txt' % (ref, d))
         if c.returncode == 0 and g.returncode == 0:
             return c.stdout.decode('utf-8'), g.stdout.decode('utf-8')
+    if ref:
         die('no text of %s: not adopted in %s, and not in calculus/%s/ of the checkout or of %s' % (name, GLP, name, ref))
     die('no text of %s: not adopted in %s, and no calculus/%s/ in the checkout; fetch the branch Calculus: git -C %s fetch origin Calculus' % (name, GLP, name, GLP))
 
@@ -200,14 +204,14 @@ def write_adopted(name, out):
     if s[1] != rev or s[2] != gr:
         die('%s: the adopted file does not split back into its contract and its Logic pragmas' % name)
     os.makedirs(out, exist_ok=True)
-    with open(os.path.join(out, name + '.txt'), 'w', encoding='utf-8', newline='') as f:
+    with open(os.path.join(out, NM.file_of(name) + '.txt'), 'w', encoding='utf-8', newline='') as f:
         f.write(text)
 
 
 def all_names():
     """Every contract: the adopted ones in GLP, those of rev/ beside the tools, of calculus/*/ in the checkout, and of
     the branch Calculus."""
-    names = {n for n in owners() if adopted_file(n)}
+    names = {NM.of_glp(n) for n in owners() if adopted_file(NM.of_glp(n))}
     ref = calc_ref()
     if ref:
         names |= calc_names(ref)
@@ -216,9 +220,9 @@ def all_names():
             for f in os.listdir(base):
                 if base.endswith('rev'):
                     if f.endswith('.txt') and not f.startswith('NOTES-'):
-                        names.add(f[:-4])
+                        names.add(NM.name_of(f[:-4]))
                 elif os.path.exists(os.path.join(base, f, 'contract.txt')):
-                    names.add(f)
+                    names.add(NM.of_glp(f))
     return sorted(names)
 
 
@@ -227,20 +231,20 @@ def computed_paths():
     out = {}
     for n in all_names():
         a = adopted_file(n)
-        out[n] = os.path.relpath(a, GLP) if a else 'calculus/%s/' % n
+        out[n] = os.path.relpath(a, GLP) if a else 'calculus/%s/' % NM.file_of(n)
     return out
 
 
 def write_paths():
     with open(PATHS, 'w', encoding='utf-8') as f:
-        f.write(''.join('%s %s\n' % kv for kv in sorted(computed_paths().items())))
+        f.write(''.join('%s %s\n' % (NM.file_of(n), p) for n, p in sorted(computed_paths().items())))      # a line by the file name, a name having a space
 
 
 def paths():
     """PATHS.txt, where --paths wrote one; else the paths as --paths would write them, worked out now."""
     if not os.path.exists(PATHS):
         return computed_paths()
-    return dict(l.split(None, 1) for l in read(PATHS).split('\n') if l.strip())
+    return {NM.name_of(l.split(None, 1)[0]): l.split(None, 1)[1] for l in read(PATHS).split('\n') if l.strip()}
 
 
 def texts(name, path):
@@ -267,7 +271,7 @@ def written_from(name, ps):
         ls = lines(out[n][0])
         if len(ls) > 1 and re.match(re.escape(n) + r' (extends|restricts|strengthens|instantiates|composes|relaxes)\b', ls[1]):
             first = re.sub(r' \([^()]*\)', '', ls[1])
-            todo += [w for w in re.findall(r'[A-Za-z][A-Za-z-]*', first[len(n):]) if w in ps]
+            todo += [w for _, _, w in NM.find(first[len(n):], ps)]      # the known names, longest first (tools/names.py)
     return out
 
 
@@ -289,10 +293,11 @@ def compile_tree(name, texts):
             os.makedirs(os.path.join(tmp, d))
         for n, (rev, gr) in texts.items():
             for d, t in (('rev', rev), ('gr', gr)):
-                with open(os.path.join(tmp, d, n + '.txt'), 'w', encoding='utf-8', newline='') as f:
+                with open(os.path.join(tmp, d, NM.file_of(n) + '.txt'), 'w', encoding='utf-8', newline='') as f:
                     f.write(t)
-        for t in ('gcsas.py', 'toglp.py', 'expand.py', 'revtex.py'):
+        for t in ('gcsas.py', 'toglp.py', 'expand.py', 'revtex.py', 'names.py'):
             shutil.copy(os.path.join(TOOLS, t), os.path.join(tmp, 'tools', t))
+        shutil.copy(os.path.join(TOOLS, '..', 'NAMES.txt'), os.path.join(tmp, 'NAMES.txt'))      # the names (tools/names.py)
         run = lambda *a: subprocess.run([sys.executable] + list(a), cwd=tmp, capture_output=True, text=True)
         out = {}
         for step in (('tools/gcsas.py', name), ('tools/expand.py', '--out', os.path.join(tmp, 'expanded.tex')), ('tools/toglp.py', name)):
@@ -303,7 +308,7 @@ def compile_tree(name, texts):
                 die('%s: %s failed, exit %d; nothing written: %s' % (name, os.path.basename(step[0]), r.returncode, ' | '.join(why)[-400:]))
         steps = []
         for d, pat, f in OUTS:
-            p = os.path.join(tmp, d, pat % name)
+            p = os.path.join(tmp, d, pat % NM.file_of(name))
             if not os.path.exists(p):
                 die('%s: no %s printed; %s' % (name, f, ' | '.join((r.stdout + r.stderr).strip()[-300:] for r in steps)))
             out[f] = read(p)
@@ -324,12 +329,12 @@ def targets(name, root=None):
     out, path = compiled(name)
     intro = introduction(name, read(os.path.join(GLP, path))) if path.endswith('.txt') else None
     glp = module(name, out.pop('term.glp.txt'), intro)      # the term goes into NAME.glp, and term.glp.txt is not written
-    rec = os.path.join(root, 'cascade', name)
+    rec = os.path.join(root, 'cascade', NM.file_of(name))
     files = {os.path.join(rec, f): t for f, t in out.items()}
-    files[os.path.join(rec, name + '.glp')] = glp
+    files[os.path.join(rec, NM.file_of(name) + '.glp')] = glp
     if path.endswith('.txt'):
-        files[os.path.join(root, os.path.dirname(path), name + '.glp')] = glp
-        files[os.path.join(rec, name + '.txt')] = read(os.path.join(GLP, path))
+        files[os.path.join(root, os.path.dirname(path), NM.file_of(name) + '.glp')] = glp
+        files[os.path.join(rec, NM.file_of(name) + '.txt')] = read(os.path.join(GLP, path))
     return files
 
 
@@ -358,9 +363,9 @@ def module(name, term, intro=None):
     """NAME.glp: the full schemas, the Calculus's term.glp.txt, in the form of programs/gsc/README.md, "Writing a
     contract": a file of its own, procedure contract_named(Constant?, SDeclared), one clause returning the contract
     under its name, the name in lower case with every other character an underscore, as cascade.py names it."""
-    ident = re.sub(r'[^a-z0-9]', '_', name.lower())
+    ident = NM.atom_of(name)      # the fourth column of NAMES.txt
     head = ('%%%% %s.glp --- printed by adopt.py from %s.txt: the contract\'s full schemas, the Calculus\'s term.glp.txt,\n'
-            '%%%% complete in itself.  Not to be edited: edit %s.txt and run adopt.py %s.\n' % (name, name, name, name))
+            '%%%% complete in itself.  Not to be edited: edit %s.txt and run adopt.py %s.\n' % (NM.file_of(name), NM.file_of(name), NM.file_of(name), "'%s'" % name if ' ' in name else name))
     body = head + ('%% contract_named(%s, C): the contract, %s.\n'
                    'procedure contract_named(Constant?, SDeclared).\n'
                    'contract_named(%s, %s).\n' % (ident, name, ident, term.rstrip('\n')))
@@ -384,10 +389,12 @@ def main():
         a = a[:i] + a[i + 2:]
     if a[:1] == ['--tree'] and len(a) == 3:       # the compile of NAME on DIR/rev and DIR/gr, a case of tests/
         d = a[1]
-        names = sorted(f[:-4] for f in os.listdir(os.path.join(d, 'gr')) if f.endswith('.txt'))
-        texts = {n: (read(os.path.join(d, 'rev', n + '.txt')), read(os.path.join(d, 'gr', n + '.txt'))) for n in names}
+        names = NM.names_in(os.path.join(d, 'gr'))
+        texts = {n: (read(os.path.join(d, 'rev', NM.file_of(n) + '.txt')), read(os.path.join(d, 'gr', NM.file_of(n) + '.txt'))) for n in names}
         out = compile_tree(a[2], texts)
         print('%s: compiled; printed %s' % (a[2], ', '.join(sorted(out))))
+        glp = module(a[2], out['term.glp.txt'])      # NAME.glp: its file and the atom of contract_named, NAMES.txt's fourth column
+        print('%s.glp: %s' % (NM.file_of(a[2]), ' '.join(l.split(', ')[0] + ', ...' for l in glp.split('\n') if l.startswith('contract_named('))))
         return
     if not GLP:
         die('no clone of GLP: set GLP_DIR')

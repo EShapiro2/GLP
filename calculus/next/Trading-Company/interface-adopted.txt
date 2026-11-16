@@ -1,0 +1,6 @@
+Interface pragmas
+Buy: Alice [Buy] <frank> <sum> <ware>
+  Dave: Alice asks for your consent to buy.
+Receive: Bob [Receive] <ware>
+Sell: Carol [Sell] <frank> <sum> <ware>
+  Erin: Carol asks for your consent to sell.

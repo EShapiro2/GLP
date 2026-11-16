@@ -1,0 +1,5 @@
+Interface pragmas
+Pay for work: Alice [Pay for work] <bob> <iris> <sum> <votes>
+  Carol [Vote to pay] <bob> <iris> <sum>
+Distribute: Alice [Distribute] <bob> <iris> <votes>
+  Carol [Vote to distribute] <bob> <iris>

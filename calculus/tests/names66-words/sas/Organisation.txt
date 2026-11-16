@@ -1,0 +1,4 @@
+Organisation
+Organisation instantiates Guardians with bylaws, an officer for a guardian, and restricts it.
+Organisation:0 - | Alice and Bob are persons.
+Organisation:1 ■ Appoint: Guardians:1 <- knows(Bob,Alice).
