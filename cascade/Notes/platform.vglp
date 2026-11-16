@@ -5,7 +5,7 @@
 %% into vGLP by its compilation (Section 5.4, "The compilation").  Edit the
 %% contract or the compiler and run
 %% programs/vglp/cva/compile.sh, not this file.
-%% the canonical CVA platform of the contract(gn)
+%% the canonical CVA platform of the contract(notes)
 
 %% ===========================================================================
 %% The contract
@@ -513,7 +513,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("GN: Grassroots Notes\nGN extends GKK.\nA *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.\nAlice, Bob and Carol are parties.\n1. ■ Issue: Alice may issue Alice-notes.\n2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.\n3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.\n4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, ['Alice'], [num('Sum')], [rs(guarded, [times(num('Sum'), atom(note, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, ['Alice', 'Bob'], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(note, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(note, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(note, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob'], [pvar('Carol'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]), schema(deposit, ['Alice', 'Carol'], [pvar('Dave'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_note, [pvar('Dave'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release, ['Carol', 'Bob'], [pvar('Dave'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_note, [pvar('Dave'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, ['Carol', 'Alice'], [pvar('Dave'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_note, [pvar('Dave'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])])]), pragmas([list("Contacts", [knows]), list("Notes", [note])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(issue, "Issue", ["", "amount"], none, "Notes", by([1])), act(swap, "Swap", ["", "", "", "amount given", "issuer wanted", "amount wanted"], said([[], [person(1), text(" asks to swap notes with you.")]]), "Notes", by([1])), act(pay, "Pay", ["", "", "", "amount"], said([[], [person(1), text(" asks to pay you notes.")]]), "Notes", by([1])), act(deposit, "Deposit", ["", "", "", "amount", "", "condition"], said([[], [person(1), text(" asks to deposit notes with you.")]]), "Notes", by([1])), act(release, "Release", ["", "", "", "", "", "amount"], said([[], [person(1), text(" asks to release notes to you.")]]), "Notes", by([1])), act(return, "Return", ["", "", "", "", "", "amount"], said([[], [person(1), text(" asks to return notes to you.")]]), "Notes", by([1]))], [], nolook, version(1, 1))))
+contract("Notes\nNotes extends GKK.\nA *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.\nAlice, Bob and Carol are parties.\n1. ■ Issue: Alice may issue Alice-notes.\n2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.\n3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.\n4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, ['Alice'], [num('Sum')], [rs(guarded, [times(num('Sum'), atom(note, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, ['Alice', 'Bob'], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(note, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(note, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(note, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob'], [pvar('Carol'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]), schema(deposit, ['Alice', 'Carol'], [pvar('Dave'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_note, [pvar('Dave'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release, ['Carol', 'Bob'], [pvar('Dave'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_note, [pvar('Dave'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, ['Carol', 'Alice'], [pvar('Dave'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_note, [pvar('Dave'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])])]), pragmas([list("Contacts", [knows]), list("Notes", [note])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(issue, "Issue", ["", "amount"], none, "Notes", by([1])), act(swap, "Swap", ["", "", "", "amount given", "issuer wanted", "amount wanted"], said([[], [person(1), text(" asks to swap notes with you.")]]), "Notes", by([1])), act(pay, "Pay", ["", "", "", "amount"], said([[], [person(1), text(" asks to pay you notes.")]]), "Notes", by([1])), act(deposit, "Deposit", ["", "", "", "amount", "", "condition"], said([[], [person(1), text(" asks to deposit notes with you.")]]), "Notes", by([1])), act(release, "Release", ["", "", "", "", "", "amount"], said([[], [person(1), text(" asks to release notes to you.")]]), "Notes", by([1])), act(return, "Return", ["", "", "", "", "", "amount"], said([[], [person(1), text(" asks to return notes to you.")]]), "Notes", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -724,7 +724,7 @@ App       ::= app(GAtoms, Integer, Lock, Recs).
 Pend      ::= deferred(Net).
 Pends     ::= [] ; [Pend | Pends].
 WKey      ::= op(Class) ; vt(Attempt) ; cm(Attempt) ; wd(Attempt, Attempt)
-            ; ip(Peer, Peer) ; rd(Attempt).
+            ; ip(Peer, Peer) ; rd(Attempt) ; reading.
 Wait      ::= w(WKey, Integer).
 Waits     ::= [] ; [Wait | Waits].
 WFound    ::= at(Integer) ; unseen.
@@ -844,10 +844,52 @@ procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, YesNo?, Stream(Trigger)
 agent_goal([T|Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     then_local(U?, Th),
     step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
-agent_goal([], [T|In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
+%% Before it reads a trigger the agent goal takes an own transaction whose condition holds and whose class has waited at least as long as the reading of a trigger has, the one that has waited longest (own_cond, eligible), and only where there is none reads the next trigger (vGLP, Section 5.4, "The compilation": "At every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger"; the audit's Finding 1, Grassroots-Audit 17cde7e, papers/vGLP.pdf.md; Udi, 2026-11-16).  The reading of a trigger waits since the last reading (read_at).
+agent_goal([], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?) |
+    st_app(St?, Ap0),
+    own_cond(St?, Ch, St1),
+    early(Ch?, Ap0?, In?, U?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
+procedure early(Choice?, App?, Stream(Trigger)?, YesNo?, Stream(Trigger),
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?).
+early(take(K, S), Ap0, In, _, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
+    dispatch_own(take(K?, S?), Ap0?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+early(none, _, In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
+    read_next(In?, U?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+procedure read_next(Stream(Trigger)?, YesNo?, Stream(Trigger),
+    Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?).
+read_next([T|In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     then_read(U?, Th),
-    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
-agent_goal([], [], _, [], [], [], [], _, _, _).
+    read_at(St?, St1),
+    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
+read_next([], _, [], [], [], [], _, _, _).
+%% The reading of a trigger, recorded: it waits from now, the count of the own transactions taken (w(reading, D)).
+procedure read_at(St?, St).
+read_at(St, St1?) :- ground(St?) |
+    st_count(St?, D),
+    st_waits(St?, W),
+    drop_reading(W?, W1),
+    set_waits(St?, [w(reading, D?)|W1?], St1).
+procedure drop_reading(Waits?, Waits).
+drop_reading([], []).
+drop_reading([w(reading, _)|Ws], Ws?).
+drop_reading([X|Ws], [X?|Ws1?]) :- otherwise | drop_reading(Ws?, Ws1).
+%% The candidates whose class has waited at least as long as the reading of a trigger: it began to wait no later than the last reading, or no trigger has been read.
+procedure eligible(Cands?, Waits?, Cands).
+eligible(Cs, W, Cs1?) :- ground(W?) |
+    wait_of(reading, W?, F),
+    reading_at(F?, Rd),
+    eligible1(Cs?, W?, Rd?, Cs1).
+procedure reading_at(WFound?, Integer).
+reading_at(at(T), T?).
+reading_at(unseen, 0).
+procedure eligible1(Cands?, Waits?, Integer?, Cands).
+eligible1([], _, _, []).
+eligible1([cand(K, I)|Cs], W, Rd, R?) :- ground(K?), ground(W?), integer(Rd?) |
+    began_at(K?, W?, T),
+    eligible2(T?, Rd?, cand(K?, I?), Cs?, W?, R).
+procedure eligible2(Integer?, Integer?, Cand?, Cands?, Waits?, Cands).
+eligible2(T, Rd, C, Cs, W, [C?|R?]) :- T? =< Rd? | eligible1(Cs?, W?, Rd?, R).
+eligible2(T, Rd, _, Cs, W, R?) :- T? > Rd? | eligible1(Cs?, W?, Rd?, R).
 
 %% After a recheck, read from the agent goal's own list, an own trigger is unread exactly when one was before it (own_unread, no_own); after another trigger, read from the input stream, an own trigger is written unless one is unread (write_own, own_unread).  An own trigger is read from the input stream, and its clause, step(own, ...), takes no Then: dispatch_own writes the next own trigger after an own transaction taken, and none where none holds.
 procedure then_local(YesNo?, Then).
@@ -918,7 +960,7 @@ step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?
     recheck_find(Pd?, V?, Tr?, St?, F),
     recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
-    take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+    agent_goal(Ls?, In?, no, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
 %% After a dispatch: where the machine state has changed, the new view is written on the output (vGLP b7e3517, Section 5.4, "The compilation": "where the machine state changes, it writes the new view on the output"); where the app state has changed, the approval questions whose question the new app state no longer holds pending are closed; where it has, or the dispatch consumed a start (Kick), the starts held waiting are put up again, by a recheck; and the agent goal writes an own trigger on its stream of own triggers after another trigger read from the input stream, unless an own trigger it has written is still unread, and after an own transaction taken (Then write_own), and none after an own trigger on which none holds (no_own) or while one is unread (own_unread), so that at most one own trigger it has written is unread (vGLP 6c8c663, Section 5.4, "The compilation").
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?,
@@ -1964,7 +2006,7 @@ own_cond2(Cs, St, Ch?, St2?) :- ground(St?) |
     st_ix(St?, Ix),
     prune_waits(W?, R?, Ix?, W0),
     st_count(St?, D),
-    choose(Cs?, W0?, D?, Ch0, W1),
+    choose_e(Cs?, W0?, D?, Ch0, W1),
     set_waits(St?, W1?, St1),
     count_own(Ch0?, St1?, Ch, St2).
 %% The own transaction taken, counted.
@@ -2520,6 +2562,7 @@ prune_wait(no, X, Ws, [X?|Ws?]).
 prune_wait(yes, _, Ws, Ws?).
 procedure dead_key(WKey?, Recs?, Ix?, YesNo).
 dead_key(op(_), _, _, no).
+dead_key(reading, _, _, no).
 dead_key(vt(A), R, ix(Tr, _, _, _), D?) :- ground(A?), ground(R?) |
     has_vote(A?, R?, V),
     rec_closed(A?, R?, Tr?, Cl),
@@ -2663,6 +2706,14 @@ add_cls(nocls, Is, Is?).
 add_cls(cls(I), Is, Is1?) :- app(Is?, [I?], Is1).
 
 %% --- Choosing the instance of the class that has waited longest -----------
+procedure choose_e(Cands?, Waits?, Integer?, Choice, Waits).
+choose_e(Cs, W, D, Ch?, W1?) :- ground(Cs?), ground(W?), integer(D?) |
+    ensure_waits(Cs?, W?, D?, Wa),
+    choose_e1(Cs?, Wa?, D?, Ch, W1).
+procedure choose_e1(Cands?, Waits?, Integer?, Choice, Waits).
+choose_e1(Cs, Wa, D, Ch?, W1?) :- ground(Wa?), integer(D?) |
+    eligible(Cs?, Wa?, Cs1),
+    choose1(Cs1?, Wa?, D?, Ch, W1).
 procedure choose(Cands?, Waits?, Integer?, Choice, Waits).
 choose(Cs, W, D, Ch?, W2?) :- ground(Cs?), ground(W?), integer(D?) |
     ensure_waits(Cs?, W?, D?, W1),
