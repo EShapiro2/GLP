@@ -1966,8 +1966,8 @@ void appsScreens(Screens screens) {
   // GFF's app (programs/apps/gff), compiled down the cascade from GFF.glp and its pragmas, GFF.txt, with those of GDO-L, GDO, GSG and GKK, which it is written from (programs/apps/gff/README.md): five tabs, Contacts, Friends, Pointing, Posts and Feeds, and the buttons Point, Unpoint, Labeled point, Labeled unpoint and Post, GFF's "[Post] <item>".  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp and README.md, "Running it", steps 1 to 8), each act a tap or a picked or typed field.
   testWidgets(
       'GFF\'s app on four phones, the play of GFF\'s feeds: the friendships, '
-      'each friend with a pointer to the other; and (1) Alice\'s Posts after '
-      'her two posts', (tester) async {
+      'each friend with a pointer to the other; (1) Alice\'s Posts after '
+      'her two posts; and the play\'s steps 3 to 8 with its screens 2 to 7', (tester) async {
     final run = await _Run.start(tester, screens, 'gff',
         chain: const ['alice', 'bob', 'carol', 'dave'],
         pairs: const [
@@ -2032,9 +2032,122 @@ void appsScreens(Screens screens) {
     expect(bob.atoms,
         containsAll(['item($first, alice)', 'item($second, alice)']));
     expect(bob.atoms, contains('received($first, alice, alice)'));
-    // Steps 3 to 8 of the play (programs/apps/gff/README.md, "Running it"), Carol's and Dave's Labeled point, the introductions, the third and fourth items and Carol's Labeled unpoint, and their screens, are brought once a post comes to rest: at migration 944fb18e Alice's first post does not, within 300 million reductions.
+    final items12 = ['item($first, alice)', 'item($second, alice)'];
     expect(carol.atoms, isNot(contains('item($first, alice)')));
     expect(dave.atoms, isNot(contains('item($first, alice)')));
+
+    // Step 3: Carol follows Alice's feed through Bob, her friend, who has an alice-pointer: Labeled point beside Bob in her Friends, the label alice (GDO-L:1, labeled_point_friend), which adds pointer(bob, alice) at her; both items reach her from Bob (GFF:2).
+    await run.list(carol, 'friend');
+    await run.tap(carol, run.control(carol, 'act:labeled_point:bob'));
+    await run.type(carol, run.control(carol, 'field:labeled_point:bob:1'), 'alice');
+    // Labeled point's form in Bob's row has the ways of two acts, labeled_point_friend, which binds no value beside Bob, and labeled_point_transitive_friend, which binds a friend of hers; the form draws no picker of them, its first way binding none, so none is chosen and the button stays disabled (named_widgets.dart, _offerForm: `chosen` is null where the ways are several, and the picker is drawn only `if (rest.isNotEmpty)`).  Red here until the form lets her choose.
+    expect(
+        tester
+            .widget<ElevatedButton>(run.control(carol, 'send:labeled_point:bob'))
+            .onPressed,
+        isNotNull,
+        reason: 'carol: Labeled point beside Bob cannot be sent');
+    await run.tap(carol, run.control(carol, 'send:labeled_point:bob'));
+    expect(carol.atoms, contains('pointer(bob, alice)'));
+    expect(carol.atoms, containsAll(items12));
+    expect(carol.atoms, contains('received($first, alice, bob)'));
+    // (2) Carol's Pointing: Bob with the labels bob and alice.
+    await run.list(carol, 'pointer');
+    await run.top(carol);
+    expect(run.texts(carol), containsAllInOrder(['Pointing', 'Bob', 'Alice', 'Labeled unpoint', 'Dave', 'Dave', 'Bob', 'Bob']));
+    run.plain(carol);
+    await run.shoot(carol, 'gff-app-2.png');
+    // (3) Carol's Feeds, "Feeds: the items Alice holds, by feed, each once.": Alice's two items.
+    await tab(carol, 'Feeds');
+    await run.top(carol);
+    expect(run.texts(carol), containsAll(['First item', 'Second item']));
+    run.plain(carol);
+    await run.shoot(carol, 'gff-app-3.png');
+
+    // Step 4: Dave follows Alice's feed through Carol likewise, and both items reach him from Carol.
+    await run.list(dave, 'friend');
+    await run.tap(dave, run.control(dave, 'act:labeled_point:carol'));
+    await run.type(dave, run.control(dave, 'field:labeled_point:carol:1'), 'alice');
+    await run.tap(dave, run.control(dave, 'send:labeled_point:carol'));
+    expect(dave.atoms, contains('pointer(carol, alice)'));
+    expect(dave.atoms, containsAll(items12));
+    expect(dave.atoms, contains('received($first, alice, carol)'));
+
+    // Step 5: Carol introduces Dave to Bob (GKK:3, introduce(bob, carol, dave)): Introduce beside Bob in her Contacts, Dave picked; Bob, whose consent it takes, is asked, and comes to know Dave.  Then Bob to Dave, introduce(dave, carol, bob): Dave is asked, and comes to know Bob.
+    await run.list(carol, 'knows');
+    await run.tap(carol, run.control(carol, 'act:introduce:bob'));
+    await run.tap(carol, run.control(carol, 'pick:introduce:bob:dave'));
+    await run.tap(carol, run.control(carol, 'send:introduce:bob'));
+    final i1 = bob.approval;
+    expect(formatTerm(i1.view), contains(', introduce(bob, carol, dave), none), '));
+    await run.list(bob, 'knows');
+    await run.top(bob);
+    await run.answer(bob, 'yes');
+    expect(bob.atoms, contains('knows(dave)'));
+    await run.list(carol, 'knows');
+    await run.tap(carol, run.control(carol, 'act:introduce:dave'));
+    await run.tap(carol, run.control(carol, 'pick:introduce:dave:bob'));
+    await run.tap(carol, run.control(carol, 'send:introduce:dave'));
+    final i2 = dave.approval;
+    expect(formatTerm(i2.view), contains(', introduce(dave, carol, bob), none), '));
+    await run.list(dave, 'knows');
+    await run.top(dave);
+    await run.answer(dave, 'yes');
+    expect(dave.atoms, contains('knows(bob)'));
+    // (4) Dave's Contacts after Carol introduced Bob to him.
+    await run.list(dave, 'knows');
+    await run.top(dave);
+    expect(run.texts(dave), containsAllInOrder(['Contacts', 'Bob', 'Introduce', 'Befriend', 'Labeled point', 'Carol', 'Introduce']));
+    run.plain(dave);
+    await run.shoot(dave, 'gff-app-4.png');
+    // Dave adds an alice-pointer to Bob, Bob having an alice-pointer to Alice and Dave knowing him (GFF:3, labeled_point_transitive): Labeled point beside Bob in his Contacts, his pointer to Carol labeled alice picked.
+    await run.tap(dave, run.control(dave, 'act:labeled_point:bob'));
+    await run.tap(dave, run.control(dave, 'pick:labeled_point:bob:carol,alice'));
+    await run.tap(dave, run.control(dave, 'send:labeled_point:bob'));
+    expect(dave.atoms, contains('pointer(bob, alice)'));
+    // (5) Dave's Pointing: Carol with the labels carol and alice, Bob with alice.
+    await run.list(dave, 'pointer');
+    await run.top(dave);
+    expect(run.texts(dave), containsAllInOrder(['Pointing', 'Bob', 'Alice', 'Labeled unpoint', 'Carol', 'Alice', 'Labeled unpoint', 'Carol', 'Carol']));
+    run.plain(dave);
+    await run.shoot(dave, 'gff-app-5.png');
+
+    // Step 6: Alice posts a third item, which reaches Bob, Carol and Dave, each once.
+    await post(alice, 'Third item');
+    final third = said('Third item', 'alice');
+    for (final p in [bob, carol, dave]) {
+      expect(p.atoms.where((x) => x == 'item($third, alice)'), hasLength(1),
+          reason: p.name);
+    }
+
+    // Step 7: Carol removes her alice-pointer to Bob, Labeled unpoint (GDO-L:3, labeled_unpoint), beside it in her Pointing.
+    await run.list(carol, 'pointer');
+    await run.tap(carol, run.control(carol, 'act:labeled_unpoint:pointer(bob, alice)'));
+    expect(carol.atoms, isNot(contains('pointer(bob, alice)')));
+    // (6) Carol's Pointing: Bob with the label bob.
+    await run.top(carol);
+    expect(run.texts(carol), containsAllInOrder(['Pointing', 'Dave', 'Dave', 'Bob', 'Bob']));
+    expect(run.control(carol, 'atom:pointer(bob, alice)'), findsNothing);
+    run.plain(carol);
+    await run.shoot(carol, 'gff-app-6.png');
+
+    // Step 8: Alice posts a fourth item, which reaches Bob, and from Bob Dave, and not Carol.
+    await post(alice, 'Fourth item');
+    final fourth = said('Fourth item', 'alice');
+    expect(bob.atoms, contains('item($fourth, alice)'));
+    expect(dave.atoms, contains('received($fourth, alice, bob)'));
+    expect(carol.atoms, isNot(contains('item($fourth, alice)')));
+    // (7) Dave's Feeds with the four items; Carol's has three.
+    await tab(dave, 'Feeds');
+    await run.top(dave);
+    expect(run.texts(dave),
+        containsAll(['First item', 'Second item', 'Third item', 'Fourth item']));
+    run.plain(dave);
+    await run.shoot(dave, 'gff-app-7.png');
+    await tab(carol, 'Feeds');
+    expect(run.texts(carol),
+        containsAll(['First item', 'Second item', 'Third item']));
+    expect(run.texts(carol), isNot(contains('Fourth item')));
     run.finish();
   }, timeout: Timeout.none);
 
@@ -2103,11 +2216,16 @@ void appsScreens(Screens screens) {
     ]) {
       expect(run.control(alice, 'act:$f:carol'), findsOneWidget, reason: f);
     }
-    // Of age requires that she is Carol's creator (CSSN:4), an atom no tab lists: it is drawn on her Contacts, with a picker of the children she created, and not in Carol's row here.
+    // Of age requires that she is Carol's creator (CSSN:4): it is drawn in Carol's row of her Created tab, CSSN's "Created: those Alice is the creator of.", and not in Carol's row here.
     expect(run.control(alice, 'act:of_age:carol'), findsNothing);
-    await run.list(alice, 'knows');
-    expect(run.control(alice, 'pick:of_age::carol'), findsOneWidget);
-    expect(run.control(alice, 'send:of_age:'), findsOneWidget);
+    expect(run.listNamed(alice, 'creator', 'Created'), findsOneWidget);
+    await run.list(alice, 'creator');
+    expect(run.control(alice, 'atom:carol'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'act:of_age:carol'),
+            matching: find.text('Of age')),
+        findsOneWidget);
     await run.list(alice, 'parent');
     await run.top(alice);
     for (final f in [
@@ -2147,7 +2265,7 @@ void appsScreens(Screens screens) {
     await run.list(alice, 'knows');
     await run.top(alice);
     expect(run.textsOf(alice, ca), [
-      'Bob wishes that you and her child Dave know each other.',
+      'Bob wishes that you and Dave, Bob\'s child, know each other.',
       'Contacts: Alice',
       'Children: Dave',
       'yes',
@@ -2201,7 +2319,7 @@ void appsScreens(Screens screens) {
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Bob at his phone: '
       'asked to come to know Alice and to approve the acquaintance of Carol and Dave; (3) '
       'asked to approve Alice\'s attempt that they befriend, with yes and no; '
-      '(6) his Contacts with Of age, Dave picked, which declares Dave of age',
+      '(6) his Created tab with Dave and Of age, which declares Dave of age',
       (tester) async {
     final run = await _cssn(tester, screens, 'bob');
     final bob = run.person('bob');
@@ -2297,8 +2415,7 @@ void appsScreens(Screens screens) {
     expect(
         tester.getTopLeft(run.on(bob, find.byKey(constructKey(a.id)))).dy,
         lessThan(tester.getTopLeft(run.control(bob, 'atom:dave')).dy));
-    // Of age's picker, on this tab, is labelled by the name of its type, as a field given no label is.
-    run.plain(bob, allow: {'Peer'});
+    run.plain(bob);
     await run.shoot(bob, 'cssn-app-3.png');
     await run.answer(bob, 'yes');
     expect(bob.questions('approval'), isEmpty);
@@ -2307,18 +2424,18 @@ void appsScreens(Screens screens) {
         contains(startsWith('view(dave, [friend(carol), ')));
     expect(run.scriptedAtoms('dave'), isNot(contains('friend(carol)')));
     expect(run.scriptedAtoms('carol'), isNot(contains('friend(dave)')));
-    // (6) Bob's Of age, CSSN's "[Of age]" (CSSN:4; of_age(r, p?)): it requires that he is Dave's creator, an atom no tab lists, so it is drawn on his Contacts, with a picker of the children he created, Dave, and not in Dave's row of his Children; it proposes of_age(dave, bob) when tapped, nobody being asked: its one guarding role is Bob's, and Coming of age's pragma carries no question.
+    // (6) Bob's Created tab, CSSN's "Created: those Alice is the creator of.": Dave's row with Of age, CSSN's "[Of age]" (CSSN:4), which requires that he is Dave's creator; it is not in Dave's row of his Children; it proposes of_age(dave, bob) when tapped, nobody being asked: its one guarding role is Bob's, and Coming of age's pragma carries no question.
     await run.list(bob, 'parent');
     await run.top(bob);
     expect(run.control(bob, 'atom:dave'), findsOneWidget);
     expect(run.control(bob, 'act:of_age:dave'), findsNothing);
-    await run.list(bob, 'knows');
-    await run.tap(bob, run.control(bob, 'pick:of_age::dave'));
-    final ofAge = run.control(bob, 'send:of_age:');
+    await run.list(bob, 'creator');
+    await run.top(bob);
+    expect(run.control(bob, 'atom:dave'), findsOneWidget);
+    final ofAge = run.control(bob, 'act:of_age:dave');
     expect(find.descendant(of: ofAge, matching: find.text('Of age')),
         findsOneWidget);
-    await run.foot(bob, ofAge);
-    run.plain(bob, allow: {'Peer'});
+    run.plain(bob);
     await run.shoot(bob, 'cssn-app-6.png');
     await run.tap(bob, ofAge);
     expect(bob.questions('approval'), isEmpty);
@@ -2425,13 +2542,14 @@ void appsScreens(Screens screens) {
     expect(run.control(carol, 'atom:dave'), findsOneWidget);
     expect(run.control(carol, 'atom:bob'), findsNothing);
     expect(run.control(carol, 'act:child_end:dave'), findsOneWidget);
-    // The rows in the order of her state, the newest first: Dave, then Alice; Child end and Child message beside each, both requiring friend of the other at the child's role and forbidding nothing there (CSSN.txt, the menu of programs/cssn/platform.vglp), so beside Alice, her parent, too.
+    // The rows in the order of her state, the newest first: Dave, then Alice; Child message beside each, and Child end beside Dave alone: a ward is not offered the button to end a friendship with her guardian (GnW.txt, Ward end; CSSN.txt, the menu of programs/cssn/platform.vglp), so none beside Alice, her parent.
     expect(run.texts(carol), containsAllInOrder(['Friends', 'Dave', 'Alice']));
     for (final q in ['dave', 'alice']) {
-      expect(run.control(carol, 'act:child_end:$q'), findsOneWidget, reason: q);
       expect(run.control(carol, 'act:child_message:$q'), findsOneWidget,
           reason: q);
     }
+    expect(run.control(carol, 'act:child_end:dave'), findsOneWidget);
+    expect(run.control(carol, 'act:child_end:alice'), findsNothing);
     run.plain(carol);
     await run.shoot(carol, 'cssn-app-5.png');
     // Carol ends the friendship with Dave, her own act, Child end beside Dave, child_end(carol, dave) (CSSN.txt, "Carol [Child end]"): nobody is asked.

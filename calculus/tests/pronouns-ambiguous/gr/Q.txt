@@ -1,0 +1,6 @@
+Q: An ambiguous pronoun
+Alice, Bob and Erin are persons.
+1. ■ Greet: Alice may greet Erin, provided she knows Bob.
+Logic pragmas.
+Vocabulary: x knows y = knows(x,y); x has greeted y = greeted(x,y).
+After x greets y: x has greeted y.

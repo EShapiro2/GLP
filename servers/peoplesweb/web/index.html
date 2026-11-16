@@ -132,6 +132,8 @@ ol.cl{padding:0;margin:0;list-style:none}
 ol.cl li{display:grid;grid-template-columns:24px 22px 1fr;gap:2px;padding:10px 0;border-bottom:1px solid var(--line)}
 ol.cl li:last-child{border-bottom:none}
 ol.cl .n{color:var(--faint);font-weight:600}
+ol.cl.full li{grid-template-columns:minmax(64px,max-content) 22px 1fr;gap:2px 8px}ol.cl.full .n{font-size:12.5px;white-space:nowrap;padding-top:2px}
+.seg{display:inline-flex;background:rgba(118,118,128,.12);border-radius:999px;padding:2px}.seg button{border:none;background:none;border-radius:999px;padding:5px 14px;font-weight:600;font-size:13px;color:var(--mute);cursor:pointer}.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 ol.cl b{font-weight:600}
 .note{color:var(--mute);font-size:14px;margin:0 0 8px}
 .small{font-size:13px;color:var(--faint)}
@@ -146,6 +148,7 @@ ol.cl b{font-weight:600}
 .layer details{margin-top:10px}
 .layer summary{cursor:pointer;font-size:14px;color:var(--blue);font-weight:500;list-style:none}
 .layer summary::-webkit-details-marker{display:none}
+.rules.txt{white-space:pre-wrap;font-size:14px;line-height:1.55}.fullc{margin-top:10px}.fullc summary{list-style:none}.fullc summary::-webkit-details-marker{display:none}.fullc .txt{white-space:pre-wrap;font-size:14px;line-height:1.55;margin-top:10px;max-height:70vh;overflow:auto}
 .code{font:12px/1.55 var(--mono);background:#1d1d1f;color:#e5e5ea;border-radius:12px;padding:14px 16px;max-height:460px;overflow:auto;white-space:pre;margin-top:10px}
 .code a{color:#64b5ff}
 .verdict{font:13px var(--mono);background:#e8f8ee;color:#1c7c3f;border-radius:8px;padding:5px 10px;display:inline-block;word-break:break-word;margin-top:8px}
@@ -223,6 +226,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
     </div>
     <div class="sh"><h2>Grassroots Contracts</h2><span id="hint">drag to turn, scroll to zoom</span></div>
     <div class="card" id="mapcard"><svg id="graph"></svg><div id="tip"></div></div>
+    <p class="small" style="text-align:center;margin-top:28px">The content of this site is derived from the GLP repository, <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener">https://github.com/EShapiro2/GLP</a>.</p>
   </section>
   <section id="tab-contracts" class="tab">
     <div class="pt"><h1>Contracts</h1><p id="ccount"></p></div>
@@ -326,8 +330,8 @@ function citeHtml(P){
 // surface, its name horizontal; each arrow painted on the surface too, along
 // the great circle from a contract to one built on it, turning with the globe
 // (Udi, 2026-11-10); extends widens from a point to its tip, restricts
-// narrows to one, amends keeps one width and is barred, implements is dashed
-// and instantiates dotted; drag turns the globe, the wheel zooms, the far side
+// narrows to one, strengthens keeps one wide width, amends keeps one width and
+// is barred, implements is dashed, instantiates dotted and composes dash-dotted; drag turns the globe, the wheel zooms, the far side
 // is hidden.
 const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {}, RING = [], WAY = {};
 function depthOf(id){
@@ -560,8 +564,24 @@ function drawGlobe(){
     if (run.length) s += `<polyline points="${run.join(' ')}" fill="none" stroke="#ccd8e2"/>`;
   }
   const k = S/265;
+  // The solid arrows' outlines, in units of the globe's scale: the shaft's
+  // half-width at its tail and at its head's base, and the head's half-width.
+  // A pair of contracts with two relations ('GDO-L extends and strengthens
+  // GDO') has one arrow split along its length, its left side the first
+  // relation's outline and its right side the second's; a third relation is a
+  // slim arrow of its own outline along the middle, drawn darker (Udi,
+  // 2026-11-15, to Website #2).
+  const RELCOL = {extends: '#3b7dd8', restricts: '#d64550', strengthens: '#2a9d6f', instantiates: '#8b5fd3', composes: '#e39a2d', implements: '#6b7785', amends: '#8d6e63'};
+  const SOLID = {extends: [0.4, 4.2, 7.5], restricts: [4.2, 0.4, 2.8], strengthens: [3.4, 3.4, 7.5], amends: [2.2, 2.2, 6.5]};
+  const solids = rs => rs.length > 1 && rs.every(r => SOLID[r]);
   // The key's arrows, drawn flat in its corner, each a straight shaft and head:
   // extends and restricts a tapered shaft, amends one of one width.
+  const split = (p, q, A, B, hl, fill, op = '.85') => {
+    const [px, py] = p, [qx, qy] = q, dx = qx-px, dy = qy-py, Ln = Math.hypot(dx, dy) || 1, ux = dx/Ln, uy = dy/Ln, nx = -uy, ny = ux;
+    const bx = qx - ux*hl, by = qy - uy*hl;
+    const pts = [[px+nx*A[0],py+ny*A[0]],[bx+nx*A[1],by+ny*A[1]],[bx+nx*A[2],by+ny*A[2]],[qx,qy],[bx-nx*B[2],by-ny*B[2]],[bx-nx*B[1],by-ny*B[1]],[px-nx*B[0],py-ny*B[0]]];
+    return `<polygon points="${pts.map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity="${op}"/>`; };
+  const combo = (p, q, rs, fill) => split(p, q, SOLID[rs[0]], SOLID[rs[1]], 10, fill) + (rs[2] ? split(p, q, SOLID[rs[2]].map(x => x*0.4), SOLID[rs[2]].map(x => x*0.4), 10, fill, '1') : '');
   const taper = (p, q, w0, w1, hl, hw, fill, pad0, pad1) => {
     let [px, py] = p, [qx, qy] = q;
     const dx = qx-px, dy = qy-py, Ln = Math.hypot(dx, dy) || 1, ux = dx/Ln, uy = dy/Ln, nx = -uy, ny = ux;
@@ -628,8 +648,12 @@ function drawGlobe(){
         pts.push(vec(t0 + (t1 - t0) * u, f)); }
     }
     return pts; };
-  const paint = (p, q, rel, fill) => {
-    const U = curve(p, q), sl = [0];
+  const paint = (p, q, rel) => ribbon(curve(p, q), p, q, (Array.isArray(rel) ? rel : [rel]).map(r => RELCOL[r] || RELCOL.extends), true);
+  // A ribbon along the points U of the sphere, from the edge of contract p's
+  // ellipse, or from U's start where p is null, to q's or U's end, in the
+  // colours cols, a part of its length each, with a head or none.
+  const ribbon = (U, p, q, cols, head) => {
+    const sl = [0];
     for (let i = 1; i < U.length; i++) sl.push(sl[i-1] + Math.acos(Math.max(-1, Math.min(1, dot3(U[i-1], U[i])))));
     const total = sl[sl.length-1];
     if (total < 1e-4) return '';
@@ -638,47 +662,64 @@ function drawGlobe(){
       return nrm(add3(U[i-1].map(x => x*(1-f)), U[i], f)); };
     const tan = a => nrm(add3(at(Math.min(total, a + 1e-3)), at(Math.max(0, a - 1e-3)), -1));
     const side = (a, e) => { const P = at(a); return add3(P.map(x => x*Math.cos(e)), nrm(crs(P, tan(a))), Math.sin(e)); };
-    const a0 = edgeAngle(p, tan(0)), a1 = total - edgeAngle(q, tan(total));
-    const u = 1/265, hl = (rel === 'restricts' ? 7 : rel === 'amends' ? 9 : 10) * u;
-    const hw = (rel === 'restricts' ? 2.8 : rel === 'amends' || rel === 'implements' || rel === 'instantiates' ? 6.5 : 7.5) * u;
-    const [w0, w1] = rel === 'restricts' ? [4.2*u, 0.4*u] : rel === 'amends' ? [2.2*u, 2.2*u] : [0.4*u, 4.2*u];
-    const aB = a1 - hl;
+    const a0 = p ? edgeAngle(p, tan(0)) : 0, a1 = total - (q ? edgeAngle(q, tan(total)) : 0);
+    // Every arrow has one outline, and its colour says the relation (RELCOL);
+    // an arrow of two relations is coloured half and half along its length,
+    // one of three a third each, the head in the last (Udi, 2026-11-15, to
+    // Website #2).
+    const u = 1/265, rs = cols, hl = 10*u, hw = 6.5*u, w = 2.4*u;
+    const aB = head ? a1 - hl : a1;
     if (aB <= a0) return '';
     const front = a => projv(at(a))[2] > 0.02;
-    // The shaft's arc lengths, with the points where it passes the limb.
-    const n = Math.max(2, Math.ceil((aB - a0) / (0.8 * Math.PI/180))), as = [];
-    for (let i = 0; i <= n; i++) as.push(a0 + (aB - a0) * i / n);
-    const runs = []; let run = [];
-    for (let i = 0; i < as.length; i++){
-      if (i && front(as[i]) !== front(as[i-1])){
-        let lo = as[i-1], hi = as[i];
-        for (let k2 = 0; k2 < 24; k2++){ const m = (lo + hi)/2; if (front(m) === front(as[i-1])) lo = m; else hi = m; }
-        if (front(as[i])) run = [hi]; else { run.push(lo); runs.push(run); run = []; }
-      }
-      if (front(as[i])) run.push(as[i]);
-    }
-    if (run.length) runs.push(run);
     const xy = v => { const [X0, Y0] = projv(v); return X0.toFixed(1) + ',' + Y0.toFixed(1); };
-    const dash = rel === 'implements' ? `${7*k} ${4*k}` : rel === 'instantiates' ? `0.1 ${4.5*k}` : null;
     let out = '';
-    for (const r of runs){
-      if (r.length < 2) continue;
-      if (dash){ out += `<polyline points="${r.map(a => xy(at(a))).join(' ')}" fill="none" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`; continue; }
-      const e = a => w0 + (w1 - w0) * (a - a0) / (aB - a0);
-      out += `<polygon points="${[...r.map(a => xy(side(a, e(a)))), ...r.slice().reverse().map(a => xy(side(a, -e(a))))].join(' ')}" fill="${fill}" fill-opacity=".85"/>`;
-    }
-    if (front(aB) && front(a1))
-      out += `<polygon points="${[xy(side(aB, hw)), xy(at(a1)), xy(side(aB, -hw))].join(' ')}" fill="${fill}" fill-opacity=".85"/>`;
-    const am = (a0 + a1) / 2 - 4*u;
-    if (rel === 'amends' && front(am))
-      out += `<line x1="${xy(side(am, 6*u)).replace(',', '" y1="')}" x2="${xy(side(am, -6*u)).replace(',', '" y2="')}" stroke="${fill}" stroke-width="${(2.2*k).toFixed(1)}" stroke-opacity=".85"/>`;
+    rs.forEach((r, j) => {
+      const lo = a0 + (aB - a0) * j / rs.length, hi = a0 + (aB - a0) * (j + 1) / rs.length, col = r;
+      const n = Math.max(2, Math.ceil((hi - lo) / (0.8 * Math.PI/180))), as = [];
+      for (let i = 0; i <= n; i++) as.push(lo + (hi - lo) * i / n);
+      const runs = []; let run = [];
+      for (let i = 0; i < as.length; i++){
+        if (i && front(as[i]) !== front(as[i-1])){
+          let l2 = as[i-1], h2 = as[i];
+          for (let k2 = 0; k2 < 24; k2++){ const m = (l2 + h2)/2; if (front(m) === front(as[i-1])) l2 = m; else h2 = m; }
+          if (front(as[i])) run = [h2]; else { run.push(l2); runs.push(run); run = []; }
+        }
+        if (front(as[i])) run.push(as[i]);
+      }
+      if (run.length) runs.push(run);
+      for (const q2 of runs) if (q2.length > 1)
+        out += `<polygon points="${[...q2.map(a => xy(side(a, w))), ...q2.slice().reverse().map(a => xy(side(a, -w)))].join(' ')}" fill="${col}" fill-opacity=".85"/>`;
+    });
+    if (head && front(aB) && front(a1))
+      out += `<polygon points="${[xy(side(aB, hw)), xy(at(a1)), xy(side(aB, -hw))].join(' ')}" fill="${rs[rs.length-1]}" fill-opacity=".85"/>`;
     return out; };
   // Each arrow in the colour of the family of the contract it comes from: its
   // head touches the other contract's ellipse, which shows that one's colour,
   // so the arrow shows where it comes from (Udi, 2026-11-10).
-  D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
-    s += paint(p, c.id, (c.rels && c.rels[p]) || c.relation, FAM[famOf(C[p])][1]);
-  }));
+  // A composition has two origins: 'GAS composes GPD with GSV' is a line from
+  // each of the two that merge along the way into one trunk, which arrives at
+  // GAS; each line has its own relation's colour ('GAI instantiates GnW,
+  // composes it with GFP': GnW's is instantiates'), and the trunk the colours
+  // of what the contract does to the composition, a part each, or composes'
+  // where it says nothing (Udi, 2026-11-15, to Website #2).
+  const composed = c => {
+    const ps = c.extends.filter(p => C[p] && c.rels && c.rels[p] === 'composes'), of = (c.rels_of || []).filter(x => x.of === 'composition');
+    if (ps.length === 1 && of.length && C[of[0].base] && !ps.includes(of[0].base)) ps.unshift(of[0].base);
+    return ps.length === 2 ? {ps, trunk: of.map(x => x.rel)} : null; };
+  const unit = id => vec(th(id), PHI[id]);
+  D.contracts.forEach(c => {
+    const cm = composed(c);
+    c.extends.filter(p => C[p] && !(cm && cm.ps.includes(p))).forEach(p => {
+      const all = c.rels_all && c.rels_all[p];
+      s += paint(p, c.id, all && all.length ? all : (c.rels && c.rels[p]) || c.relation);
+    });
+    if (!cm) return;
+    const [A, B] = cm.ps.map(unit), Cv = unit(c.id), M = nrm(add3(add3(A.map(x => x*0.25), B, 0.25), Cv, 0.5)), K = nrm(add3(M.map(x => x*1.5), Cv, -0.5));
+    const leg = P => { const o = []; for (let i = 0; i <= 40; i++){ const t = i/40; o.push(nrm(add3(add3(P.map(x => x*(1-t)*(1-t)), K, 2*t*(1-t)), M, t*t))); } return o; };
+    const trunk = []; for (let i = 0; i <= 30; i++) trunk.push(nrm(add3(M.map(x => x*(1 - i/30)), Cv, i/30)));
+    cm.ps.forEach((p, i) => { s += ribbon(leg(i ? B : A), p, null, [RELCOL[(c.rels && c.rels[p]) || 'composes']], false); });
+    s += ribbon(trunk, null, c.id, (cm.trunk.length ? cm.trunk : ['composes']).map(r => RELCOL[r] || RELCOL.composes), true);
+  });
   D.contracts.forEach(c => {
     const [X, Y, Z] = pos[c.id];
     if (Z < 0.02 || X < -60 || X > GW+60 || Y < -40 || Y > GH+40) return;
@@ -699,15 +740,19 @@ function drawGlobe(){
       <text x="${X.toFixed(1)}" y="${(Y + 0.36*fs).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}">${c.id}</text></g>`;
   });
   // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
-  const KEY = ['extends', 'restricts', 'amends', 'implements', 'instantiates'].map(r => [r, r]);
-  const nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
-  s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="150" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
+  // The key has each relation the globe draws: of the five of the Calculus
+  // (calculus/README.md, The relations), of implements, GSC's, and of amends,
+  // while a text in force still states it.
+  const ALL = D.contracts.flatMap(c => Object.values(c.rels_all || {}));
+  const USED = new Set([...D.contracts.flatMap(c => [c.relation, ...Object.values(c.rels || {})]), ...ALL.flat()]);
+  const KEY = ['extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r])
+    .concat([...new Set(ALL.filter(rs => rs.length > 1).sort((a, b) => a.length - b.length).map(rs => rs.join('|')))].map(x => [x.split('|'), x.split('|').join(', ').replace(/, ([^,]*)$/, ' and $1')]));
+  const KW = Math.max(150, 84 + 6.6*Math.max(...KEY.map(([, t]) => t.length))), nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
+  s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="${KW}" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   KEY.forEach(([r, t], i) => { const y = ky + 24*i, p = [kx, y], q = [kx + 54, y];
-    s += r === 'restricts' ? taper(p, q, 4.2*kk, 0.4*kk, 7*kk, 2.8*kk, kc, 0, 0)
-      : r === 'amends' ? taper(p, q, 2.2*kk, 2.2*kk, 9*kk, 6.5*kk, kc, 0, 0) + cross(p, q, 6*kk, kc, 0, 0, kk)
-      : r === 'implements' ? stroked(p, q, `${7*kk} ${4*kk}`, kc, 0, 0, kk)
-      : r === 'instantiates' ? stroked(p, q, `0.1 ${4.5*kk}`, kc, 0, 0, kk)
-      : taper(p, q, 0.4*kk, 4.2*kk, 10*kk, 7.5*kk, kc, 0, 0);
+    const rs = Array.isArray(r) ? r : [r], x1 = kx + 44;
+    rs.forEach((z, j) => { s += `<rect x="${(kx + (x1 - kx)*j/rs.length).toFixed(1)}" y="${y - 2.4}" width="${((x1 - kx)/rs.length).toFixed(1)}" height="4.8" fill="${RELCOL[z]}" fill-opacity=".85"/>`; });
+    s += `<polygon points="${x1},${y - 6.5} ${kx + 54},${y} ${x1},${y + 6.5}" fill="${RELCOL[rs[rs.length-1]]}" fill-opacity=".85"/>`;
     s += `<text x="${kx + 66}" y="${y + 4}" font-size="12.5" fill="#33404d">${t}</text>`; });
   s += `</g>`;
   // Level with the key, how far the contracts got: the number of contracts in
@@ -719,14 +764,14 @@ function drawGlobe(){
   // contract, as it would beside the key.
   const CNT = [['contracts', D.contracts.length],
                ...STAGES.map(([n], i) => [n, D.contracts.filter(c => STAGES.slice(0, i + 1).every(([, reached]) => reached(c))).length])];
-  const cx2 = nar ? kx + 170 : GW - 150, cb = ky - 20 + 24*KEY.length + 16, cy2 = cb - (24*CNT.length + 16) + 20;
+  const cx2 = nar ? kx + KW + 20 : GW - 150, cb = ky - 20 + 24*KEY.length + 16, cy2 = cb - (24*CNT.length + 16) + 20;
   s += `<g class="key"><rect x="${cx2-12}" y="${cy2-20}" width="150" height="${24*CNT.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   CNT.forEach(([n, k], i) => { const y = cy2 + 24*i;
     if (i === 1) s += `<line x1="${cx2-4}" y1="${y-12}" x2="${cx2+130}" y2="${y-12}" stroke="#d5dee7"/>`;
     s += `<text x="${cx2}" y="${y + 4}" font-size="12.5" fill="#33404d">${n}</text>`
        + `<text x="${cx2 + 130}" y="${y + 4}" font-size="12.5" font-weight="600" text-anchor="end" fill="#33404d">${k}</text>`; });
   s += `</g>`;
-  const g = $('#graph'); g.setAttribute('viewBox', nar ? `${CX - 300} ${CY - 302} 600 772` : `0 0 ${GW} ${GH}`); g.innerHTML = s;
+  const g = $('#graph'); g.setAttribute('viewBox', nar ? `${CX - 300} ${CY - 302} 600 ${Math.max(772, 632 + 24*KEY.length + 16)}` : `0 0 ${GW} ${GH}`); g.innerHTML = s;
   const tip = $('#tip'), wrap = $('#mapcard');
   let hideT = null;
   const show = (c, e) => {
@@ -914,12 +959,9 @@ function page(c, hood){
       <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(c.id)}</div></div>
     </div>
     ${stripHtml(c)}
-    <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2></div>
-      <div class="card rules">
-      ${c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
-      <div class="pre">${esc(c.preamble)}</div>
-      <ol class="cl">${c.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}${cl.sep || '.'}</b> ${esc(cl.text)}</span></li>`).join('')}</ol>
-      </div>
+    <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2>${c.calculus && c.calculus.fullc ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
+      ${c.clauses.length || c.preamble ? `<div class="card rules" id="cbox">${boxHtml(c, false)}</div>` : `<p class="small">No text in force.</p>`}
+      ${calcHtml(c)}
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
       ${c.dir ? `<p class="small">In the repository: <a href="https://github.com/EShapiro2/GLP/tree/main/${esc(c.dir)}" target="_blank" rel="noopener"><code>${esc(c.dir)}</code></a>.</p>` : ''}
     </div>
@@ -931,7 +973,45 @@ function page(c, hood){
     <div id="hood" class="sec"></div>`;
   $('#view').querySelectorAll('[data-go]').forEach(a => a.onclick = () => go(a.dataset.go || null));
   $('#hoodbtn').onclick = () => go(c.id, !hood);
+  const tf = $('#tf');
+  if (tf) tf.querySelectorAll('button').forEach(bt => bt.onclick = () => {
+    tf.querySelectorAll('button').forEach(z => z.classList.toggle('on', z === bt));
+    $('#cbox').innerHTML = boxHtml(c, !!bt.dataset.f); });
+  const fd = $('#view').querySelector('details[data-full]');
+  if (fd) fd.addEventListener('toggle', async () => {
+    fd.querySelector('summary').textContent = fd.open ? 'Hide the full contract' : 'Full contract';
+    if (!fd.open || fd.dataset.done) return; fd.dataset.done = 1;
+    try { const r = await fetch(fd.dataset.full); if (!r.ok) throw 0; fd.querySelector('.txt').textContent = (await r.text()).split('\n').filter(l => !l.startsWith('%')).join('\n').trim(); }
+    catch (e){ fd.querySelector('.txt').textContent = 'Not available.'; }
+  });
   if (hood){ $('#hood').style.display = 'block'; hoodHtml(c); setTimeout(() => $('#hood').scrollIntoView({behavior:'smooth', block:'start'}), 60); }
+}
+
+// The Calculus (calculus/MIGRATION.md, the section Website): until its owner
+// adopts a contract, the text the Calculus proposes, from the branch Calculus
+// of GLP, with its state; the button Full contract, the contract with every
+// clause it has from the contracts it is written from (Udi, 2026-11-15, to
+// Calculus #6).
+// The contract's box: the contract as its owner wrote it, terse, or the full
+// contract, with every clause it has from the contracts it is written from,
+// each numbered by the contract it is from; the same form and the same box,
+// the two-state button above it choosing (Udi, 2026-11-16, to Website #2).
+function boxHtml(c, full){
+  const x = full ? c.calculus.fullc : c;
+  return `${!full && c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
+      <div class="pre">${esc(x.preamble)}</div>
+      <ol class="cl${full ? ' full' : ''}">${x.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}${cl.sep || '.'}</b> ${esc(cl.text)}</span></li>`).join('')}</ol>`;
+}
+function calcHtml(c){
+  const k = c.calculus; if (!k) return '';
+  const yn = b => b ? 'yes' : 'no';
+  const br = `https://github.com/EShapiro2/GLP/tree/Calculus/calculus/${encodeURIComponent(c.id)}`;
+  const full = k.full ? `<details class="fullc" data-full="${esc(k.full)}"><summary class="btn grey">Full contract</summary><div class="card rules txt">Loading…</div></details>` : '';
+  if (k.adopted) return k.fullc ? '' : full;
+  return `<div class="sh" style="margin-top:22px"><h2>Proposed by the Calculus</h2></div>
+      <p class="small">The text of ${esc(c.id)} in the Calculus, published on the <a href="${br}" target="_blank" rel="noopener">branch Calculus</a> of GLP; ${k.owner && k.owner !== 'none' ? `its owner, ${esc(k.owner)}, has not adopted it yet` : 'it has no owner yet'} (<a href="https://github.com/EShapiro2/GLP/blob/Calculus/calculus/MIGRATION.md" target="_blank" rel="noopener">the migration plan</a>).  Certified by GLP's checker: ${yn(k.certified)}.  Compiled to GLP: ${yn(k.compiled)}.</p>
+      ${k.proposed ? `<div class="card rules txt">${esc(k.proposed)}</div>` : ''}
+      ${full}`;
 }
 
 function hoodHtml(c){
@@ -993,6 +1073,7 @@ function relsHtml(c){
   const mk = {agrees: '✓', given: '✓', disagrees: '✗', open: '–'};
   const say = {agrees: 'agrees with its schemas', given: 'agrees, given an invariant', disagrees: 'disagrees with its schemas', open: 'not checked'};
   return `<div class="sec"><div class="sh"><h2>Relations</h2></div><div class="card refs rels">${c.checks.map(r =>
+    r.line ? `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(r.line)}</b>: ${r.result === 'agrees' ? 'holds' : 'does not hold'}<div class="why">${esc(r.why)}</div></div></div>` :
     `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(c.id)} ${esc(r.rel)} ${r.of ? `its ${esc(r.of)} of ` : ''}<a data-go="${esc(r.base)}">${esc(r.base)}</a></b>: ${say[r.result]}<div class="why">${esc(r.why)}</div></div></div>`).join('')}</div></div>`;
 }
 // The app as a certified artefact, the .glpw the Grassroots App installs.
