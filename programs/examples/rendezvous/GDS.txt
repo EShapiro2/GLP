@@ -31,9 +31,9 @@ After y looks x up with d by address: y holds an invitation link of x from d.
 Interface pragmas
 Look: 📇, network
 Open directory: Carol [Open directory]
-Listing: Alice [List] <mail> <name> [List unshown] <mail> <name>
+Listing: Alice [List me] <mail> <name> [List me unshown] <mail> <name>
   Dora: Alice asks to be listed.
-  Alice [Delist] <dora> [Delist unshown] <dora>
+  Alice [Delist me] <dora> [Delist me unshown] <dora>
 Lookup: Bob [Lookup] [Lookup by address]
 Implementation pragmas
 Listing: the directory verifies an email address by sending it a message with a link, which Alice opens.
