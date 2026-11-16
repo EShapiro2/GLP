@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7.2 and cites a clause as CnC:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GCoop and TC.
-% Last changed: 2026-11-12, by GO #5.
+% Last changed: 2026-11-16, by GO #8.
 % Schemas: CnC.glp beside this file.
 CnC: Consumers' Cooperative
 CnC instantiates GCoop and TC with bylaws that delegate no act and restricts and extends them.
@@ -23,7 +23,7 @@ After g sets the fee of z at n: the earlier fee of z has ended and z has the fee
 After y pays z the fee in n w-coins, which requires y has not paid z the fee: no longer y holds n w-coins, z holds n w-coins and y has paid z the fee.
 Interface pragmas
 Look: 🧺, sharing
-Join: Bob [Join] <organisation> <officer>
+Fee: Bob [Join] <organisation> <officer> <votes>
   Decider: Bob asks to become a member of Orga.
   Codecider: Bob asks to become a member of Orga.
   Decider [Set fee] <fee>
