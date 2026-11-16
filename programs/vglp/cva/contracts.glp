@@ -91,7 +91,7 @@
 %%   cheer(p?)        :  at p  -greeted, +cheered
 %%
 %% greeted, greeting and cheered are of arity zero, so a state holds a count
-%% of each; greet(p, p) sends its two roles to one person, neither adding or
+%% of each; greet names its two roles possibly one person, schema(greet, ['Alice', one('Bob', 'Alice')], ...), so greet(p, p) sends them to one person, neither adding or
 %% deleting an atom naming the other, so they act together there, friend(p)
 %% holding at p, friend being reflexive, and greeted and greeting both added;
 %% and each cheer deletes one greeted (vGLP, Section 5.4, the paragraph on act
@@ -327,8 +327,10 @@ Exprs      ::= [] ; [Expr | Exprs].
 %% A schema's second argument is its variables, pvar(X), svar(Y) and num(X), in the order of its head (GSC 0228e79, Definition "Act schema").
 Schema    ::= schema(Constant, Args, RoleSpecs) ; cschema(Constant, Args, Reaches, RoleSpecs)
             ; nschema(Constant, Args, Constraint, RoleSpecs)
+            ; schema(Constant, Names, Args, RoleSpecs)
             ; qschema(Constant, Args, Args, Constraint, RoleSpecs, Conjuncts, Forms)
             ; SSchema.
+%% A schema whose head names its roles, schema(Name, Names, Vars, Roles), as its owner writes it and as the compiler reads it (compiler/self.glp, WSchema and RName): a role written one(Name, Other) is possibly one person with the role named Other (vGLP, Section 5.4, "Speech-act schemas as local specifications": "distinct agent roles to distinct persons but for two the clause names as possibly one person"); friends' greet is written so.  Names and RName are the root programs/self.glp's.
 %% SSchema is a schema of the clause syntax, sas/7, the root programs/self.glp's, which GSC's reader, as_read/2, takes to the term form (programs/gsc/self.glp): wild is written in it.
 %% A safe formula and a quantified conjunct, as programs/gsc/self.glp writes them.
 Form       ::= fa(Arg, Mult) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form)
@@ -679,7 +681,7 @@ procedure friends(Contract).
 friends([schema(befriend, [],
            [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
             rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
-         schema(greet, [],
+         schema(greet, ['Alice', one('Bob', 'Alice')], [],
            [rs(guarded, [atom(greeted, [])], [], [atom(friend, [role(2)])], []),
             rs(unguarded, [atom(greeting, [])], [], [], [])]),
          schema(cheer, [],
