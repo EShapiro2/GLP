@@ -1,3 +1,9 @@
+% Shares --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-16, to Calculus #7, reported by Calculus #7; named Shares by Udi, 2026-11-16, to Calculus #8, reported by Calculus #8).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 6.3, Shareholding corporation, and cites a clause as Shares:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: GO and Notes, restricting them.
+% Last changed: 2026-11-16, by GO #8.
+% Schemas: Shares.glp beside this file.
 Shares
 Shares restricts GO and Notes.
 A *share* of Orga is an Orga-note that gives its holder a vote in Orga and a part of its dividends.
@@ -7,9 +13,16 @@ Logic pragmas
 Shares restricts GO and Notes.
 A *share* of Orga is an Orga-note that gives its holder a vote in Orga and a part of its dividends.
 Alice is a party, Orga an organisation.
-1. ■ Issue shares: Notes:1, for shares, with the consent of those who decide the issue of shares of Alice.
+1. ■ Issue shares: Notes:1, for shares, only if Alice is an organisation, with the consent of those who decide the issue of shares of Alice.
 Logic pragmas.
 Vocabulary: x holds a share of z = share(x,z); x holds n shares of z = share(x,z,*n); x holds exactly n shares of z = share(x,z,#n); z holds n shares of w in escrow from x for y on k = escrow_share(z,w,x,y,k,*n).
 Roles: those who decide the issue of shares of z = share_deciders(z).
 Default: those who decide for z for those who decide the issue of shares of z.
 Kind of note: share, shares of y for y-notes.
+Interface pragmas
+Look: 📈, money
+Issue shares: Alice [Issue shares] <amount>
+  Decider: Alice asks to issue shares of your organisation.
+  Codecider: Alice asks to issue shares of your organisation.
+  Decider [Issue shares for Alice] <amount>
+  Codecider: Decider asks to issue shares of your organisation Alice.
