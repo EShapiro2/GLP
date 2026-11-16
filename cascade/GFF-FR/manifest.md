@@ -1,10 +1,18 @@
 # A run of the cascade on GFF-FR
 
+<<<<<<< HEAD
 - Contract: `GFF-FR` (`gff_fr` to the checker), its owner's two files `programs/gff/GFF-FR.txt` and `programs/gff/GFF-FR.glp`, copied here as they stood at `6aca278c`.
 - The paper: `/Users/udi/Grassroots/GFF (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gff/GFF-FR.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gff/GFF-FR.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
 - Run on 2026-11-16 16:40 UTC by `cascade.sh gff_fr`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 - Every source and every tool at this repository's `6aca278c`; each artefact's source and tool:
+=======
+- Contract: `GFF-FR` (`gff_fr` to the checker), its owner's two files `programs/gff/GFF-FR.txt` and `programs/gff/GFF-FR.glp`, copied here as they stood at `50c591c0`.
+- The paper: `/Users/udi/Grassroots/GFF (not on this machine)` at `unknown`, for the paper's own record.
+- Adopted from the Calculus: `programs/gff/GFF-FR.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gff/GFF-FR.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
+- Run on 2026-11-16 16:49 UTC by `cascade.sh gff_fr`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `50c591c0`; each artefact's source and tool:
+>>>>>>> origin/GFF-pub2
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
