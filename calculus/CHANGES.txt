@@ -1,4 +1,4 @@
-Changes from /tmp/claude-0/-home-user/c7b83ece-7229-53aa-bda1-a1b9689f0d55/scratchpad/old/calculus to /tmp/claude-0/-home-user/c7b83ece-7229-53aa-bda1-a1b9689f0d55/scratchpad/pubH, for an owner who adopted the first.
+Changes from the publication at GLP Calculus a687ab8 to this one, for an owner who adopted the first.
 
 AGORA:
   own act added: Offer own
