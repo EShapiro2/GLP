@@ -182,6 +182,10 @@ MODE=write
 case "${!#}" in --check|--record) MODE="${!#}"; set -- "${@:1:$#-1}" ;; esac
 [ $# -ge 1 ] || usage
 NAMES=("$@")
+# The four renamed (Udi, 2026-11-16): a row's old key is read as its new one, the contract's name, which its NAME.glp gives by contract_named.
+for i in "${!NAMES[@]}"; do
+    case "${NAMES[$i]}" in gc) NAMES[$i]=coins ;; gb) NAMES[$i]=bonds ;; gn) NAMES[$i]=notes ;; gs) NAMES[$i]=shares ;; esac
+done
 
 # lookup <contract>: its NAME.txt and NAME.glp's name, FILE, its owner's
 # directory, OWNER, its paper, PAPER, and its plays, PLAYDIR, PLAYAT and

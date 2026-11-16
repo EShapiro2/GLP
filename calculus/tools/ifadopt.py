@@ -55,6 +55,20 @@ def titles(n):
 
 
 
+def kind_preds(n):
+    """The predicates of the states of the kinds of note n itself declares ('Kind of note: bond, ...' of its Logic
+    pragmas): bond and escrow_bond for Bonds; empty for a contract that declares none."""
+    import gcsas
+    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
+    if n not in w.known:
+        return set()
+    ks = [k for k in gcsas.kinds_of(w, n) if k['decl'] == n]
+    if not ks:
+        return set()
+    lex = w.lexicon(n)
+    return {v[2] for k in ks for v in gcsas.kind_atoms(w, n, lex, k).values()}
+
+
 def adopted(n, txt):
     """The text of interface-adopted.txt from the cascade's NAME.txt, txt; None where the contract has no line of its own."""
     ls = txt.split('\n')
@@ -75,13 +89,24 @@ def adopted(n, txt):
         else:
             t, rest = l.split(': ', 1)
             lines.append((t, rest, []))
-    tl = titles(n)
-    own = {}           # clause number: [(button line, questions)]
+    tl = {j: v for j, v in titles(n).items()}
+    kp = kind_preds(n)          # the predicates of the kinds of note n declares: a form of an act of notes with one is n's act
+    own = {}           # clause number, or (contract, clause number) of the clause of Notes a form comes from: [(button line, questions)]
     for t, rest, qs in lines:
         e = acts[clauses[t] - 1]
         if t != e['name'] and not re.fullmatch(re.escape(e['name']) + r' \d+', t):
             raise ValueError('%s: the act %s of cascade/%s/%s.txt is not %s of the full schemas' % (n, t, n, n, e['name']))
         mine = [l.rpartition(':')[2] for l in e['label'].split('+') if l.rpartition(':')[0] == n]
+        if not mine and kp and any(l[1] in kp for l in e['head']):
+            # a form of an act of notes for a kind n declares (Bonds' Swap coin for bond, Pay bond, Deposit bond): n's act,
+            # proposed in n's file under the title of the clause of Notes it comes from, which GLP's reader takes there
+            # (programs/vglp/cva/compiler/pragmas.sh: a pragma line may name a clause of a contract its contract extends)
+            o, _, oj = e['label'].split('+')[0].rpartition(':')
+            ot = titles(o) if os.path.exists(os.path.join(ROOT, 'rev', o + '.txt')) else {}
+            if int(oj) in ot:
+                tl[(o, int(oj))] = ot[int(oj)]
+                own.setdefault((o, int(oj)), []).append((rest, [q for q in qs if q.strip().split(':', 1)[0] not in set(e.get('must', ()))]))
+            continue
         if not mine:
             continue          # an act of a contract this one is written from: its line is in that contract's file
         j = mine[-1]          # an act of an inherited clause that a clause of this one changes, as GSG:2+GnW:3, is that clause's
@@ -96,7 +121,7 @@ def adopted(n, txt):
     if not own:
         return None
     out = ['Interface pragmas']
-    for j in sorted(own):
+    for j in sorted(own, key=lambda j: (1, j[0], j[1]) if isinstance(j, tuple) else (0, '', j)):      # n's own clauses, then those of Notes its forms come from
         first = True
         prev = None          # the proposer of the last button line, where it has no question
         for rest, qs in own[j]:
