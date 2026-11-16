@@ -1,0 +1,2 @@
+GRA-SS instantiates GRA: holds
+GRA-SS restricts it (GRA): holds
