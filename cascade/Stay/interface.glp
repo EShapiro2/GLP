@@ -1,4 +1,4 @@
-%% The interface of the canonical CVA platform of STAY in sGLP's term form
+%% The interface of the canonical CVA platform of Stay in sGLP's term form
 %% (programs/sglp/README.md, "The term form"), printed by programs/sglp/cva/interface.sh
 %% from platform.vglp and platform.glp beside it: the types the platform defines
 %% and those of the root it names, its volitional procedure declarations, and
@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem('Peer', 'Peer', 'Peer'), list_place('Peer', 'Speech'), book('Peer', 'Peer', 'Speech', 'Integer', 'Integer'), cancel('Peer', 'Peer', 'Speech', 'Integer', 'Integer'), review('Peer', 'Peer', 'Speech', 'Integer')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem('Peer', 'Peer', 'Peer'), list_place('Peer', 'Speech'), book('Peer', 'Peer', 'Speech', 'Integer', 'Integer'), cancel('Peer', 'Peer', 'Speech', 'Integer', 'Integer'), review('Peer', 'Peer', 'Speech', 'Integer')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), pay('Peer', 'Peer', 'Peer', 'Integer'), pay_issuer('Peer', 'Peer', 'Integer'), deposit('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech'), release('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), return('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), redeem('Peer', 'Peer', 'Peer'), list_place('Peer', 'Speech'), book('Peer', 'Peer', 'Speech', 'Integer', 'Integer'), cancel('Peer', 'Peer', 'Speech', 'Integer', 'Integer'), review('Peer', 'Peer', 'Speech', 'Integer')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), pay('Peer', 'Peer', 'Peer', 'Integer'), pay_issuer('Peer', 'Peer', 'Integer'), deposit('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech'), release('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), return('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), redeem('Peer', 'Peer', 'Peer'), list_place('Peer', 'Speech'), book('Peer', 'Peer', 'Speech', 'Integer', 'Integer'), cancel('Peer', 'Peer', 'Speech', 'Integer', 'Integer'), review('Peer', 'Peer', 'Speech', 'Integer')]),
   type('Request', [propose('Proposal')]),
   type('RequestMenu', [social_menu('List'('MenuEntry'))]),
   type('MenuEntry', [button('String', 'List'('MenuAct')), label('Constant', 'String'), label('Constant', 'Integer', 'String')]),
@@ -18,7 +18,7 @@ interface([
   type('MenuField', [field('Integer', 'String', 'MenuFieldType')]),
   type('MenuFieldType', [person, key, agent, text, number]),
   type('MenuWord', [say('String'), at('Integer')]),
-  type('Atom', [identity, knows('Peer'), coin('Peer'), listed('Speech'), hosts, stay('Peer', 'Speech', 'Integer', 'Integer'), booked('Speech', 'Integer'), review('Peer', 'Speech', 'Integer')]),
+  type('Atom', [identity, person, knows('Peer'), coin('Peer'), escrow_coin('Peer', 'Peer', 'Peer', 'Speech'), listed('Speech'), hosts, stay('Peer', 'Speech', 'Integer', 'Integer'), booked('Speech', 'Integer'), review('Peer', 'Speech', 'Integer')]),
   type('RNameTerm', [own('Integer'), own_var('Constant'), nvar('Constant'), ext('RNameTerm', 'Constant'), ext_any('RNameTerm')]),
   type('RArg', [role('Integer'), pvar('Constant'), svar('Constant'), nterm('RNameTerm'), sgn('Constant', 'Integer'), num('Constant'), real('Constant'), any, ilist('Integer', 'String'), item_of('RArg'), val('Constant')]),
   type('RArgs', [[], ['RArg' | 'RArgs']]),
@@ -1296,14 +1296,18 @@ interface([
   compiled(join_proposal_introduce_3, 4),
   compiled(join_proposal_issue_2, 3),
   compiled(join_proposal_swap_6, 7),
-  compiled(join_proposal_pay_3, 4),
-  compiled(join_proposal_redeem_3, 4),
+  compiled(join_proposal_pay_4, 5),
+  compiled(join_proposal_pay_issuer_3, 4),
   compiled(join_utterance_utterance_1, 2),
   compiled(join_utterance_program_1, 2),
   compiled(join_utterance_speech_2, 3),
   compiled(form_utterance, 2),
   compiled(join_speech_speech_2, 3),
   compiled(form_speech, 2),
+  compiled(join_proposal_deposit_6, 7),
+  compiled(join_proposal_release_6, 7),
+  compiled(join_proposal_return_6, 7),
+  compiled(join_proposal_redeem_3, 4),
   compiled(join_proposal_list_place_2, 3),
   compiled(join_proposal_book_5, 6),
   compiled(join_proposal_cancel_5, 6),

@@ -1,4 +1,4 @@
-%% The interface of the canonical CVA platform of AGORA in sGLP's term form
+%% The interface of the canonical CVA platform of Agora in sGLP's term form
 %% (programs/sglp/README.md, "The term form"), printed by programs/sglp/cva/interface.sh
 %% from platform.vglp and platform.glp beside it: the types the platform defines
 %% and those of the root it names, its volitional procedure declarations, and
@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem('Peer', 'Peer', 'Peer'), issue_bond('Peer', 'Integer', 'Integer'), swap_coin_for_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer', 'Integer'), swap_bonds('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer', 'Integer'), redeem_coin_against_bond('Peer', 'Peer', 'Peer', 'Integer'), redeem_bond('Peer', 'Peer', 'Integer', 'Peer'), redeem_bond_against_bond('Peer', 'Peer', 'Integer', 'Peer', 'Integer'), deposit('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech'), deposit_bond('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Speech'), release('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), release_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech', 'Integer'), return('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), return_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech', 'Integer'), make('Peer', 'Speech'), open('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), offer('Peer', 'Peer', 'Speech', 'Speech'), offer_own('Peer', 'Speech', 'Speech'), want('Peer', 'Peer', 'Speech', 'Speech'), want_own('Peer', 'Speech', 'Speech'), deliver('Peer', 'Peer', 'Peer', 'Speech', 'Speech'), deliver_to_poster('Peer', 'Peer', 'Speech', 'Speech'), withdraw('Peer', 'Peer', 'List'('Peer'), 'Speech', 'Speech'), withdraw_own('Peer', 'List'('Peer'), 'Speech', 'Speech'), swap_item_for_coin('Peer', 'Peer', 'Speech', 'Peer', 'Integer'), swap_item_for_bond('Peer', 'Peer', 'Speech', 'Peer', 'Integer', 'Integer'), swap_items('Peer', 'Peer', 'Speech', 'Speech'), deposit_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech'), release_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech'), return_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), pay('Peer', 'Peer', 'Integer'), redeem('Peer', 'Peer', 'Peer'), issue_bond('Peer', 'Integer', 'Integer'), swap_coin_for_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer', 'Integer'), swap_bonds('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer', 'Integer'), redeem_coin_against_bond('Peer', 'Peer', 'Peer', 'Integer'), redeem_bond('Peer', 'Peer', 'Integer', 'Peer'), redeem_bond_against_bond('Peer', 'Peer', 'Integer', 'Peer', 'Integer'), deposit('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech'), deposit_bond('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Speech'), release('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), release_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech', 'Integer'), return('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), return_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech', 'Integer'), make('Peer', 'Speech'), open('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), offer('Peer', 'Peer', 'Speech', 'Speech'), offer_own('Peer', 'Speech', 'Speech'), want('Peer', 'Peer', 'Speech', 'Speech'), want_own('Peer', 'Speech', 'Speech'), withdraw('Peer', 'Peer', 'Speech', 'Speech'), withdraw_own('Peer', 'Speech', 'Speech'), swap_item_for_coin('Peer', 'Peer', 'Speech', 'Peer', 'Integer'), swap_item_for_bond('Peer', 'Peer', 'Speech', 'Peer', 'Integer', 'Integer'), swap_items('Peer', 'Peer', 'Speech', 'Speech'), deposit_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech'), release_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech'), return_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), issue_bond('Peer', 'Integer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), swap_coin_for_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer', 'Integer'), swap_bonds('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer', 'Integer'), pay('Peer', 'Peer', 'Peer', 'Integer'), pay_issuer('Peer', 'Peer', 'Integer'), pay_bond('Peer', 'Peer', 'Peer', 'Integer', 'Integer'), deposit('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech'), deposit_bond('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Speech'), release('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), release_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech', 'Integer'), return('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), return_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech', 'Integer'), redeem('Peer', 'Peer', 'Peer'), redeem_coin_against_bond('Peer', 'Peer', 'Peer', 'Integer'), redeem_bond('Peer', 'Peer', 'Integer', 'Peer'), redeem_bond_against_bond('Peer', 'Peer', 'Integer', 'Peer', 'Integer'), make('Peer', 'Speech'), open('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), offer('Peer', 'Peer', 'Speech', 'Speech'), offer_own('Peer', 'Speech', 'Speech'), want('Peer', 'Peer', 'Speech', 'Speech'), want_own('Peer', 'Speech', 'Speech'), deliver('Peer', 'Peer', 'Peer', 'Speech', 'Speech'), deliver_to_poster('Peer', 'Peer', 'Speech', 'Speech'), withdraw('Peer', 'Peer', 'List'('Peer'), 'Speech', 'Speech'), withdraw_own('Peer', 'List'('Peer'), 'Speech', 'Speech'), swap_item_for_coin('Peer', 'Peer', 'Speech', 'Peer', 'Integer'), swap_item_for_bond('Peer', 'Peer', 'Speech', 'Peer', 'Integer', 'Integer'), swap_items('Peer', 'Peer', 'Speech', 'Speech'), deposit_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech'), release_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech'), return_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Integer'), issue_bond('Peer', 'Integer', 'Integer'), swap('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer'), swap_coin_for_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Integer', 'Integer'), swap_bonds('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Integer', 'Integer'), pay('Peer', 'Peer', 'Peer', 'Integer'), pay_issuer('Peer', 'Peer', 'Integer'), pay_bond('Peer', 'Peer', 'Peer', 'Integer', 'Integer'), deposit('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech'), deposit_bond('Peer', 'Peer', 'Peer', 'Integer', 'Integer', 'Peer', 'Speech'), release('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), release_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech', 'Integer'), return('Peer', 'Peer', 'Peer', 'Peer', 'Speech', 'Integer'), return_bond('Peer', 'Peer', 'Peer', 'Integer', 'Peer', 'Speech', 'Integer'), redeem('Peer', 'Peer', 'Peer'), redeem_coin_against_bond('Peer', 'Peer', 'Peer', 'Integer'), redeem_bond('Peer', 'Peer', 'Integer', 'Peer'), redeem_bond_against_bond('Peer', 'Peer', 'Integer', 'Peer', 'Integer'), make('Peer', 'Speech'), open('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), offer('Peer', 'Peer', 'Speech', 'Speech'), offer_own('Peer', 'Speech', 'Speech'), want('Peer', 'Peer', 'Speech', 'Speech'), want_own('Peer', 'Speech', 'Speech'), withdraw('Peer', 'Peer', 'Speech', 'Speech'), withdraw_own('Peer', 'Speech', 'Speech'), swap_item_for_coin('Peer', 'Peer', 'Speech', 'Peer', 'Integer'), swap_item_for_bond('Peer', 'Peer', 'Speech', 'Peer', 'Integer', 'Integer'), swap_items('Peer', 'Peer', 'Speech', 'Speech'), deposit_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech'), release_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech'), return_item('Peer', 'Peer', 'Speech', 'Peer', 'Speech')]),
   type('Request', [propose('Proposal')]),
   type('RequestMenu', [social_menu('List'('MenuEntry'))]),
   type('MenuEntry', [button('String', 'List'('MenuAct')), label('Constant', 'String'), label('Constant', 'Integer', 'String')]),
@@ -18,7 +18,7 @@ interface([
   type('MenuField', [field('Integer', 'String', 'MenuFieldType')]),
   type('MenuFieldType', [person, key, agent, text, number]),
   type('MenuWord', [say('String'), at('Integer')]),
-  type('Atom', [identity, knows('Peer'), coin('Peer'), bond('Peer', 'Integer'), escrow_coin('Peer', 'Peer', 'Peer', 'Speech'), escrow_bond('Peer', 'Integer', 'Peer', 'Peer', 'Speech'), made('Speech'), item('Speech'), keeper('Speech'), member('Speech', 'Peer'), has_member('Peer', 'Speech'), posted('Speech', 'Speech'), post('Peer', 'Speech', 'Speech'), delivered_post('Peer', 'Speech', 'Speech', 'Peer'), escrow_item('Speech', 'Peer', 'Peer', 'Speech')]),
+  type('Atom', [identity, person, knows('Peer'), coin('Peer'), bond('Peer', 'Integer'), escrow_coin('Peer', 'Peer', 'Peer', 'Speech'), escrow_bond('Peer', 'Integer', 'Peer', 'Peer', 'Speech'), made('Speech'), item('Speech'), keeper('Speech'), member('Speech', 'Peer'), has_member('Peer', 'Speech'), posted('Speech', 'Speech'), post('Peer', 'Speech', 'Speech'), delivered_post('Peer', 'Speech', 'Speech', 'Peer'), escrow_item('Speech', 'Peer', 'Peer', 'Speech')]),
   type('RNameTerm', [own('Integer'), own_var('Constant'), nvar('Constant'), ext('RNameTerm', 'Constant'), ext_any('RNameTerm')]),
   type('RArg', [role('Integer'), pvar('Constant'), svar('Constant'), nterm('RNameTerm'), sgn('Constant', 'Integer'), num('Constant'), real('Constant'), any, ilist('Integer', 'String'), item_of('RArg'), val('Constant')]),
   type('RArgs', [[], ['RArg' | 'RArgs']]),
@@ -1293,15 +1293,13 @@ interface([
   compiled(join_proposal_acquaint_2, 3),
   compiled(join_proposal_introduce_3, 4),
   compiled(join_proposal_issue_2, 3),
-  compiled(join_proposal_swap_6, 7),
-  compiled(join_proposal_pay_3, 4),
-  compiled(join_proposal_redeem_3, 4),
   compiled(join_proposal_issue_bond_3, 4),
+  compiled(join_proposal_swap_6, 7),
   compiled(join_proposal_swap_coin_for_bond_7, 8),
   compiled(join_proposal_swap_bonds_8, 9),
-  compiled(join_proposal_redeem_coin_against_bond_4, 5),
-  compiled(join_proposal_redeem_bond_4, 5),
-  compiled(join_proposal_redeem_bond_against_bond_5, 6),
+  compiled(join_proposal_pay_4, 5),
+  compiled(join_proposal_pay_issuer_3, 4),
+  compiled(join_proposal_pay_bond_5, 6),
   compiled(join_utterance_utterance_1, 2),
   compiled(join_utterance_program_1, 2),
   compiled(join_utterance_speech_2, 3),
@@ -1314,6 +1312,10 @@ interface([
   compiled(join_proposal_release_bond_7, 8),
   compiled(join_proposal_return_6, 7),
   compiled(join_proposal_return_bond_7, 8),
+  compiled(join_proposal_redeem_3, 4),
+  compiled(join_proposal_redeem_coin_against_bond_4, 5),
+  compiled(join_proposal_redeem_bond_4, 5),
+  compiled(join_proposal_redeem_bond_against_bond_5, 6),
   compiled(join_proposal_make_2, 3),
   compiled(join_proposal_open_2, 3),
   compiled(join_proposal_join_3, 4),
