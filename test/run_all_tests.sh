@@ -6487,6 +6487,18 @@ cva_pokes_seq=$(printf '%s\n' "$cva_pokes" | grep "A = \[" | head -1 | awk '{ n 
 check "CVA pokes: neither class starves the other: alice holds three pokes of bob's or more within the limit, and her agent counts between every two of them" "^ok repeated$" "$cva_pokes_seq"
 check_not "CVA pokes: no person asked for count or poke" "gave(attempt([a-z]*, [0-9]*, [0-9]*, count\|gave(count\|gave(attempt([a-z]*, [0-9]*, [0-9]*, poke\|gave(poke" "$cva_pokes"
 check "CVA pokes: the run does not suspend, both agents having an own transaction without end, stopped at the REPL's :limit" "capped" "$cva_pokes"
+# The audit's schedule (the audit's Finding 1, Grassroots-Audit 17cde7e, papers/vGLP.pdf.md; pokes/self.glp, play_pokes_paired): the network delivers each outcome to alice together with bob's start of his next poke, so the start is on alice's input before she has dispatched the outcome, and her count holds only between the two.  On it an agent that took its own transactions only on an own trigger read in its turn starves alice's count (29 pokes and 3 counts at the compiler of GLP 59a5c571, vGLP #29, 2026-11-16); "at every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger" (vGLP, Section 5.4, "The compilation"), so it does not.
+cva_pokes_paired=$("$REPL_RUN" <<HEREDOC
+$CVA/pokes/
+:limit 600000
+play_pokes_paired(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA pokes paired: the audit's schedule, bob's outcome of a poke delivered to alice with his start of the next" "sent(bob, alice, outcome(attempt(bob, \([0-9]*\), \1, poke(bob, alice), none), commit(\[\]))), sent(bob, alice, start(attempt(bob, [0-9]*, [0-9]*, poke(bob, alice), none)))" "$cva_pokes_paired"
+cva_pokes_paired_seq=$(printf '%s\n' "$cva_pokes_paired" | grep "A = \[" | head -1 | awk '{ n = split($0, v, /\), view\(alice, /); for (i = 2; i <= n; i++) { s = v[i]; sub(/\], \[.*/, "", s); p = gsub(/poked_by/, "", s); t = gsub(/tick/, "", s); if (p > lp) { if (lp > 0 && t <= tp) bad = 1; lp = p; tp = t } } } END { print (bad ? "bad" : "ok"), (lp >= 3 ? "repeated" : "few") }')
+check "CVA pokes paired: alice's count is not starved: she holds three pokes of bob's or more within the limit, and her agent counts between every two of them" "^ok repeated$" "$cva_pokes_paired_seq"
+check "CVA pokes paired: stopped at the REPL's :limit" "capped" "$cva_pokes_paired"
 
 # No clock and no tick (vGLP efe7bbc, Section 5.4, "Triggers": the agent takes its own transactions "one at a time, each on an own trigger that the agent writes on a stream merged fairly with its other triggers, when it starts, after another trigger and after each own transaction it takes, until none holds", vGLP 6c8c663; Udi's approval of 2026-10-18, reported by Code #10): each play's run but the counter's suspends once every agent has taken its own transactions until none holds and no trigger is left to read, where until vGLP efe7bbc it ran to the REPL's :limit, each agent's clock ticking without end.
 for v in cva_sg_menu cva_sg_befriend cva_sg_unfriend cva_sg_refused cva_cur_payswap cva_cur_redeem cva_cur_busy cva_cur_declined cva_nudge cva_intro cva_gnudge cva_cs cva_link cva_friends cva_waves cva_parts cva_opens cva_groups cva_merges cva_network cva_coins cva_wardclose cva_numbers cva_intros cva_reading cva_signing cva_days cva_linear; do
