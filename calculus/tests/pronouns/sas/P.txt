@@ -1,0 +1,16 @@
+P: Pronouns and possessives
+Vocabulary: x has y as a guardian = has_guardian(x,y); x is a friend of y = friend(x,y); x knows y = knows(x,y); x has greeted y = greeted(x,y); x has y as a member = member(x,y); x has ended x's friendship with y = ended(x,y); x is a member of y's c = club_member(x,c,y).
+After x ends x's friendship with y: x has ended x's friendship with y.
+After x greets y: x has greeted y.
+P:0 - | Alice, Bob, Erin and Frank are persons, Carol a person, Orga an organisation, Club a club.
+P:1 ■ Ward end: ended(Carol,Bob) <- ~has_guardian(Carol,Bob) guarded by Carol.
+P:2 ■ Greet guardian: greeted(Bob,Alice) <- has_guardian(Bob,Alice) guarded by Bob.
+P:2 ■ Greet known: greeted(Erin,Bob) <- knows(Erin,Bob) guarded by Erin.
+P:2 ■ Greet self: greeted(Frank,Erin) <- knows(Frank,Frank) guarded by Frank.
+P:3 ■ Greet friend: greeted(Alice,Frank) <- friend(Frank,Alice) guarded by Alice.
+P:3 ■ Greet stranger: greeted(Alice,Bob) <- ~friend(Bob,Alice) guarded by Alice.
+P:3 ■ Greet of hers: greeted(Erin,Frank) <- friend(Frank,Erin) guarded by Erin.
+P:4 ■ Greet member: greeted(Frank,Orga) <- member(Orga,Frank) guarded by Frank.
+P:4 ■ Greet outsider: greeted(Orga,Bob) <- ~member(Orga,Bob) guarded by Orga.
+P:4 ■ Greet their member: greeted(Orga,Frank) <- member(Orga,Frank) guarded by Orga.
+P:4 ■ Greet in her club: greeted(Alice,Frank) <- club_member(Frank,Club,Alice) guarded by Alice.
