@@ -2054,6 +2054,7 @@ void appsScreens(Screens screens) {
     // (2) Carol's Pointing: Bob with the labels bob and alice.
     await run.list(carol, 'pointer');
     await run.top(carol);
+    expect(run.texts(carol), containsAllInOrder(['Pointing', 'Bob', 'Alice', 'Labeled unpoint', 'Dave', 'Dave', 'Bob', 'Bob']));
     run.plain(carol);
     await run.shoot(carol, 'gff-app-2.png');
     // (3) Carol's Feeds, "Feeds: the items Alice holds, by feed, each once.": Alice's two items.
@@ -2072,30 +2073,31 @@ void appsScreens(Screens screens) {
     expect(dave.atoms, containsAll(items12));
     expect(dave.atoms, contains('received($first, alice, carol)'));
 
-    // Step 5: Carol introduces Dave to Bob (GKK:3), Introduce beside Dave in her Contacts, Bob picked, and Dave is asked; then Bob to Dave, and Bob is asked.
-    await run.list(carol, 'knows');
-    await run.tap(carol, run.control(carol, 'act:introduce:dave'));
-    await run.tap(carol, run.control(carol, 'pick:introduce:dave:bob'));
-    await run.tap(carol, run.control(carol, 'send:introduce:dave'));
-    final i1 = dave.approval;
-    expect(formatTerm(i1.view), contains(', introduce(dave, carol, bob), none), '));
-    await run.list(dave, 'knows');
-    await run.top(dave);
-    await run.answer(dave, 'yes');
-    expect(bob.atoms, contains('knows(dave)'));
+    // Step 5: Carol introduces Dave to Bob (GKK:3, introduce(bob, carol, dave)): Introduce beside Bob in her Contacts, Dave picked; Bob, whose consent it takes, is asked, and comes to know Dave.  Then Bob to Dave, introduce(dave, carol, bob): Dave is asked, and comes to know Bob.
     await run.list(carol, 'knows');
     await run.tap(carol, run.control(carol, 'act:introduce:bob'));
     await run.tap(carol, run.control(carol, 'pick:introduce:bob:dave'));
     await run.tap(carol, run.control(carol, 'send:introduce:bob'));
-    final i2 = bob.approval;
-    expect(formatTerm(i2.view), contains(', introduce(bob, carol, dave), none), '));
+    final i1 = bob.approval;
+    expect(formatTerm(i1.view), contains(', introduce(bob, carol, dave), none), '));
     await run.list(bob, 'knows');
     await run.top(bob);
     await run.answer(bob, 'yes');
+    expect(bob.atoms, contains('knows(dave)'));
+    await run.list(carol, 'knows');
+    await run.tap(carol, run.control(carol, 'act:introduce:dave'));
+    await run.tap(carol, run.control(carol, 'pick:introduce:dave:bob'));
+    await run.tap(carol, run.control(carol, 'send:introduce:dave'));
+    final i2 = dave.approval;
+    expect(formatTerm(i2.view), contains(', introduce(dave, carol, bob), none), '));
+    await run.list(dave, 'knows');
+    await run.top(dave);
+    await run.answer(dave, 'yes');
     expect(dave.atoms, contains('knows(bob)'));
     // (4) Dave's Contacts after Carol introduced Bob to him.
     await run.list(dave, 'knows');
     await run.top(dave);
+    expect(run.texts(dave), containsAllInOrder(['Contacts', 'Bob', 'Introduce', 'Befriend', 'Labeled point', 'Carol', 'Introduce']));
     run.plain(dave);
     await run.shoot(dave, 'gff-app-4.png');
     // Dave adds an alice-pointer to Bob, Bob having an alice-pointer to Alice and Dave knowing him (GFF:3, labeled_point_transitive): Labeled point beside Bob in his Contacts, his pointer to Carol labeled alice picked.
@@ -2106,6 +2108,7 @@ void appsScreens(Screens screens) {
     // (5) Dave's Pointing: Carol with the labels carol and alice, Bob with alice.
     await run.list(dave, 'pointer');
     await run.top(dave);
+    expect(run.texts(dave), containsAllInOrder(['Pointing', 'Bob', 'Alice', 'Labeled unpoint', 'Carol', 'Alice', 'Labeled unpoint', 'Carol', 'Carol']));
     run.plain(dave);
     await run.shoot(dave, 'gff-app-5.png');
 
@@ -2123,6 +2126,8 @@ void appsScreens(Screens screens) {
     expect(carol.atoms, isNot(contains('pointer(bob, alice)')));
     // (6) Carol's Pointing: Bob with the label bob.
     await run.top(carol);
+    expect(run.texts(carol), containsAllInOrder(['Pointing', 'Dave', 'Dave', 'Bob', 'Bob']));
+    expect(run.control(carol, 'atom:pointer(bob, alice)'), findsNothing);
     run.plain(carol);
     await run.shoot(carol, 'gff-app-6.png');
 
