@@ -36,6 +36,9 @@ leave: not member(Bob, Grupo, Alice), not listed(Alice, Bob, Grupo) <-
 post: posted(Alice, Text, Bob, Grupo) <-
     identity(Alice), not posted(Alice, Text, Bob, Grupo), identity(Bob), member(Bob, Grupo, Alice) guarded by Bob
 
+post_own: posted(Alice, Text, Alice, Grupo) <-
+    identity(Alice), member(Alice, Grupo, Alice), not posted(Alice, Text, Alice, Grupo) guarded by Alice
+
 deliver: group_delivered(Alice, Bob, Text, Grupo, Carol), group_message(Carol, Bob, Text, Grupo, Alice) <-
     identity(Alice), leader(Alice, Grupo), posted(Alice, Text, Bob, Grupo), listed(Alice, Carol, Grupo), not group_delivered(Alice, Bob, Text, Grupo, Carol), identity(Carol)
 
