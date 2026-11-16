@@ -12,30 +12,24 @@
 %% holds nothing else --- no network entry, and no call to a predicate that
 %% reaches the network or the person --- so the program is certified.
 %%
-%% bonds/4 is the same with the agent's calendar, a stream of dates, which
-%% the headless plays write themselves
+%% The agent reads the current date from the machine's clock (today/1,
+%% ../self.glp): on a smartphone the phone's, and in a headless play the one
+%% clock of every agent, which the play's scripted persons set
 %% (../village.glp, ../credit_line.glp, the instruments' plays, plays.glp).
-%% bonds/3 gives the agent an empty calendar: its date stands at 0, so a bond
-%% it mints matures on a date later than 0, and no bond of its own is mature
-%% by its date.  The super-app activates miniapp/3 below, with no calendar.
 
-imported procedure bonds_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Integer?, Stream(Ask(Question))).
+imported procedure bonds_agent#agent(Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation(PeerMsg))?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Ask(Question))).
 imported procedure bonds_agent#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
-
-%% With no clock, no date ever advances.
-exported procedure bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?).
-bonds(Id, Ui, Convs) :- bonds(Id?, Ui?, Convs?, []).
 
 %% The agent with its dispatcher, the calls of the canonical compilation
 %% (vGLP, Definition "Canonical Compilation"): the agent starts with no
-%% holdings, date 0, serial 1, no conversation and its screen, and its asks
+%% holdings, serial 1, no conversation and its screen, and its asks
 %% go to the dispatcher, which reads the person channel; the screen goes to
 %% the person on the dispatcher's channel to the program, which merges it with
 %% the constructs' draws.
-exported procedure bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
-bonds(Id, Ui, Convs, Cal) :-
+exported procedure bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?).
+bonds(Id, Ui, Convs) :-
     ground(Id?) |
-    bonds_agent # agent(Id?, [], [], Convs?, Cal?, [user_output(Screen)], [], 0, 1, Asks),
+    bonds_agent # agent(Id?, [], [], Convs?, [user_output(Screen)], [], 1, Asks),
     bonds_agent # dispatch(Asks?, Ui?, MCh),
     show_screen(MCh?, Screen?).
 
@@ -59,8 +53,7 @@ relay([], []).
 %% 2026-10-13 20:09 UTC, item 1).  Its grants: the person's key, the person
 %% channel and the channel to the social graph (GLP paper, appendix-guards,
 %% "Predefined types": the entry template miniapp/3).  The mini-app is
-%% bonds/3's, its agent's date at 0 and no calendar, until GB says how the
-%% agent reads the day from the phone (vGLP 609b630, Section 5.4).  The
+%% bonds/3's.  The
 %% social graph's stream
 %% gives each conversation to the agent; a held link is passed over, the
 %% mini-app making no warm call, and its stream up to the social graph closes

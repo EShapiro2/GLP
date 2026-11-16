@@ -3155,7 +3155,7 @@ agent(ch([bonds(alice)], O), ch(N?, X)).
 HEREDOC
 2>&1)
 check "Bonds mini-app agent/2: the first act bonds(alice) starts the mini-app, its screen drawn on the person channel" "O = \[draw(0, thread(menu(" "$n3_agent"
-check "Bonds mini-app agent/2: ... and its request form drawn, minting first" "draw(1, input_box(menu(\[form(mint, " "$n3_agent"
+check "Bonds mini-app agent/2: ... and its request form drawn, minting first" "draw(1, input_box(menu(\[form(issue, " "$n3_agent"
 check_not "Bonds mini-app agent/2: no failed goal" "→ failed\|Error" "$n3_agent"
 
 n3_load=$("$REPL_RUN" <<HEREDOC
@@ -3196,11 +3196,9 @@ check "Bonds village: Charlie's holdings" "tagged(charlie, holdings(\[lot(alice,
 check "Bonds village: Diana's holdings" "tagged(diana, holdings(\[lot(bob, 25, 24), lot(frank, 28, 12), lot(diana, now, 8), lot(frank, now, 1)\]))" "$n3_run"
 check "Bonds village: Eve's holdings" "tagged(eve, holdings(\[lot(charlie, now, 4), lot(frank, now, 1), lot(alice, now, 2), lot(bob, now, 10)\]))" "$n3_run"
 check "Bonds village: Frank's holdings" "tagged(frank, holdings(\[lot(diana, now, 7), lot(eve, now, 10), lot(frank, 28, 6), lot(frank, now, 4)\]))" "$n3_run"
-check "Bonds village: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_run"
+check "Bonds village: the escrow agent holds nothing at the end" "tagged(escrow, escrowed(\[\]))" "$n3_run"
 check "Bonds village: a bond presented before its issuer's date reaches its maturity is returned by the issuer" "tagged(frank, not_mature_for(diana, 28))" "$n3_run"
 check "Bonds village: and the bearer holds it back" "tagged(diana, not_mature(frank, 28))" "$n3_run"
-check "Bonds village: Bob's bonds mature by his own calendar" "tagged(bob, date_advanced(25))" "$n3_run"
-check "Bonds village: Advance is the next day, so the day before is logged too" "tagged(bob, date_advanced(24))" "$n3_run"
 check "Bonds village: the redemption takes back an immature bond, the bearer's screen naming the coin presented and the bond taken" "tagged(frank, redeemed(diana, now, frank, 28))" "$n3_run"
 check "Bonds village: ... and the issuer's screen naming them too" "tagged(diana, presented(frank, now, frank, 28))" "$n3_run"
 check "Bonds village: once mature by its issuer's date, the bond is redeemed as a coin is, against a coin its issuer holds (GB:4), the bearer's screen naming the bond presented, of day 28, and the coin taken" "tagged(diana, redeemed(frank, 28, frank, now))" "$n3_run"
@@ -3208,8 +3206,34 @@ check "Bonds village: ... the issuer taking the matured bond back and giving the
 check_not "Bonds village: no redemption message without the due of the instrument presented" "redeemed([a-z]*, [a-z]*, [a-z0-9]*))\|presented([a-z]*, [a-z]*, [a-z0-9]*))" "$n3_run"
 check_not "Bonds village: no Mature act, a matured bond being redeemed (GB:4), so no matured( line is logged" "matured(\|matured_for(" "$n3_run"
 check_not "Bonds village: Redeem records no date warranty, so no warranty( line is logged" "warranty(" "$n3_run"
-check "Bonds village: the escrow agent's date reaches the release date" "tagged(escrow, date_advanced(30))" "$n3_run"
+check "Bonds village: the escrow agent holds the deposit in escrow, from the depositor, for the beneficiary, on the condition (GB:4), and it is no holding of its own" "tagged(escrow, escrowed(\[in_escrow(frank, now, 5, charlie, frank, day(30))\]))" "$n3_run"
+check "Bonds village: the current date reaches the day of the condition" "tagged(escrow, date(30))" "$n3_run"
 check "Bonds village: the escrow releases to the beneficiary" "tagged(frank, received_transfer(release, escrow, \[lot(frank, now, 5)\]))" "$n3_run"
+
+echo "--- Bonds escrow terms and maturity (escrow_terms) ---"
+
+# GB:1, a bond's maturity is later than the current date; GB:4, a deposit is
+# for a beneficiary the depositor knows, on a condition, and the escrow agent
+# releases it to that beneficiary and returns it to that depositor (the port
+# of the program to GB as adopted, Currencies #20, 2026-11-16).
+n3_terms=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+escrow_terms.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds escrow terms: no runtime error" "→ suspended" "$n3_terms"
+check_not "Bonds escrow terms: no failed goal" "ERROR" "$n3_terms"
+check "Bonds escrow terms: a bond maturing on the current date is not issued (GB:1)" "tagged(alice, not_later(1, 1))" "$n3_terms"
+check_not "Bonds escrow terms: ... and alice holds no bond" "lot(alice, 1, " "$n3_terms"
+check "Bonds escrow terms: a deposit for a party the depositor does not know is not sent" "tagged(alice, no_conversation(carol))" "$n3_terms"
+check "Bonds escrow terms: the deposit is held in escrow from alice for bob on day 30" "tagged(escrow, escrowed(\[in_escrow(alice, now, 2, alice, bob, day(30))\]))" "$n3_terms"
+check "Bonds escrow terms: a release to a party who is not the beneficiary, and one on another condition, find no such record" "tagged(escrow, lacking(alice, now, 2)).*tagged(escrow, lacking(alice, now, 2))" "$(printf '%s' "$n3_terms" | tr '\n' ' ')"
+check_not "Bonds escrow terms: ... so nothing is released" "received_transfer(release" "$n3_terms"
+check "Bonds escrow terms: the return reaches the depositor" "tagged(alice, received_transfer(return, escrow, \[lot(alice, now, 2)\]))" "$n3_terms"
+check "Bonds escrow terms: the escrow agent holds nothing in escrow at the end" "tagged(escrow, escrowed(\[\]))" "$n3_terms"
 
 echo "--- Bonds two escrows open at once (two_escrows) ---"
 
@@ -3228,11 +3252,11 @@ HEREDOC
 
 check "Bonds two escrows: no runtime error" "→ suspended" "$n3_esc2"
 check_not "Bonds two escrows: no failed goal" "ERROR" "$n3_esc2"
-check "Bonds two escrows: the escrow agent holds both deposits at once" "tagged(escrow, holdings(\[lot(frank, now, 4)\]))" "$n3_esc2"
-check "Bonds two escrows: the escrow agent's date reaches the release date" "tagged(escrow, date_advanced(30))" "$n3_esc2"
+check "Bonds two escrows: the escrow agent holds both deposits at once, in escrow from charlie for frank on day 30" "tagged(escrow, escrowed(\[in_escrow(frank, now, 4, charlie, frank, day(30))\]))" "$n3_esc2"
+check "Bonds two escrows: the escrow agent's date reaches the release date" "tagged(escrow, date(30))" "$n3_esc2"
 check "Bonds two escrows: the first release reaches the beneficiary" "tagged(frank, holdings(\[lot(charlie, now, 4), lot(frank, now, 2)\]))" "$n3_esc2"
 check "Bonds two escrows: the second release reaches the beneficiary" "tagged(frank, holdings(\[lot(charlie, now, 4), lot(frank, now, 4)\]))" "$n3_esc2"
-check "Bonds two escrows: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_esc2"
+check "Bonds two escrows: the escrow agent holds nothing at the end" "tagged(escrow, escrowed(\[\]))" "$n3_esc2"
 
 echo "--- Bonds credit line (credit_line), Proposition prop:credit-line ---"
 
@@ -3246,15 +3270,15 @@ HEREDOC
 
 check "Bonds credit line: no runtime error" "→ suspended" "$n3_cl"
 check_not "Bonds credit line: no failed goal" "ERROR" "$n3_cl"
-check "Bonds credit line: establishment, the escrow holds the limit" "tagged(escrow, holdings(\[lot(alice, now, 20)\]))" "$n3_cl"
-check "Bonds credit line: draw, the escrow holds the undrawn coins" "tagged(escrow, holdings(\[lot(alice, now, 12)\]))" "$n3_cl"
+check "Bonds credit line: establishment, the escrow holds the limit, in escrow from the lender for the borrower" "tagged(escrow, escrowed(\[in_escrow(alice, now, 20, alice, bob, agreed(credit_line))\]))" "$n3_cl"
+check "Bonds credit line: draw, the escrow holds the undrawn coins" "tagged(escrow, escrowed(\[in_escrow(alice, now, 12, alice, bob, agreed(credit_line))\]))" "$n3_cl"
 check "Bonds credit line: draw, the lender holds the principal for the amount drawn" "tagged(alice, holdings(\[lot(bob, 25, 8), lot(bob, 20, 2)\]))" "$n3_cl"
-check "Bonds credit line: partial repayment restores capacity" "tagged(escrow, holdings(\[lot(alice, now, 15)\]))" "$n3_cl"
-check "Bonds credit line: expiry judged by the escrow agent's own date" "tagged(escrow, date_advanced(25))" "$n3_cl"
+check "Bonds credit line: partial repayment restores capacity" "tagged(escrow, escrowed(\[in_escrow(alice, now, 15, alice, bob, agreed(credit_line))\]))" "$n3_cl"
+check "Bonds credit line: expiry judged by the escrow agent's own date" "tagged(escrow, date(25))" "$n3_cl"
 check "Bonds credit line: at expiry the undrawn coins return to the lender" "tagged(alice, received_transfer(return, escrow, \[lot(alice, now, 20)\]))" "$n3_cl"
 check "Bonds credit line: at expiry with nothing drawn the lender holds its coins and no principal bond" "tagged(alice, holdings(\[lot(bob, 20, 2), lot(alice, now, 20)\]))" "$n3_cl"
 check "Bonds credit line: the borrower holds its principal bonds back" "tagged(bob, holdings(\[lot(bob, 25, 8)\]))" "$n3_cl"
-check "Bonds credit line: the escrow holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_cl"
+check "Bonds credit line: the escrow holds nothing at the end" "tagged(escrow, escrowed(\[\]))" "$n3_cl"
 
 echo "--- Bonds collateral (collateral) ---"
 
@@ -3273,7 +3297,7 @@ check "Bonds collateral: on fulfilment the collateral is returned to the borrowe
 check "Bonds collateral: on default it is released to the lender" "tagged(alice, received_transfer(release, escrow, \[lot(carol, now, 3)\]))" "$n3_col"
 check "Bonds collateral: the repaid lender holds its coins back and the coupon bond" "tagged(alice, holdings(\[lot(bob, 20, 1), lot(alice, now, 5), lot(bob, 30, 6), lot(carol, now, 3)\]))" "$n3_col"
 check "Bonds collateral: the borrower holds the bonds it redeemed back and the returned collateral" "tagged(bob, holdings(\[lot(bob, 20, 5), lot(carol, now, 3), lot(alice, now, 5)\]))" "$n3_col"
-check "Bonds collateral: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_col"
+check "Bonds collateral: the escrow agent holds nothing at the end" "tagged(escrow, escrowed(\[\]))" "$n3_col"
 
 echo "--- Bonds forward contract (forward) ---"
 
@@ -3305,7 +3329,7 @@ check "Bonds guarantee: on fulfilment they are returned to the guarantor" "tagge
 check "Bonds guarantee: on default they are released to the lender" "tagged(alice, received_transfer(release, escrow, \[lot(gary, now, 3)\]))" "$n3_gtee"
 check "Bonds guarantee: the lender holds the guarantor's bonds and the defaulted loan's" "tagged(alice, holdings(\[lot(bob, 20, 1), lot(alice, now, 5), lot(bob, 30, 6), lot(gary, now, 3)\]))" "$n3_gtee"
 check "Bonds guarantee: the guarantor is left with what it did not forfeit" "tagged(gary, holdings(\[lot(gary, now, 3)\]))" "$n3_gtee"
-check "Bonds guarantee: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_gtee"
+check "Bonds guarantee: the escrow agent holds nothing at the end" "tagged(escrow, escrowed(\[\]))" "$n3_gtee"
 
 echo "--- Bonds packaged exchange: balloon and fixed-payment loans ---"
 
@@ -3320,7 +3344,7 @@ HEREDOC
 check_not "Bonds balloon loan: no failed goal" "ERROR" "$n3_bal"
 check "Bonds balloon loan: the lender holds the interest bonds and the principal" "tagged(alice, holdings(\[lot(bob, 10, 1), lot(bob, 20, 1), lot(bob, 30, 10)\]))" "$n3_bal"
 check "Bonds balloon loan: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, now, 10)\]))" "$n3_bal"
-check "Bonds balloon loan: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_bal"
+check "Bonds balloon loan: the escrow agent holds nothing at the end" "tagged(escrow, escrowed(\[\]))" "$n3_bal"
 
 n3_fix=$("$REPL_RUN" <<HEREDOC
 $BONDS
@@ -3333,7 +3357,7 @@ HEREDOC
 check_not "Bonds fixed-payment loan: no failed goal" "ERROR" "$n3_fix"
 check "Bonds fixed-payment loan: the lender holds the three equal payments" "tagged(alice, holdings(\[lot(bob, 10, 4), lot(bob, 20, 4), lot(bob, 30, 4)\]))" "$n3_fix"
 check "Bonds fixed-payment loan: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, now, 9)\]))" "$n3_fix"
-check "Bonds fixed-payment loan: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_fix"
+check "Bonds fixed-payment loan: the escrow agent holds nothing at the end" "tagged(escrow, escrowed(\[\]))" "$n3_fix"
 
 n3_irs=$("$REPL_RUN" <<HEREDOC
 $BONDS
@@ -3346,7 +3370,7 @@ HEREDOC
 check_not "Bonds interest rate swap: no failed goal" "ERROR" "$n3_irs"
 check "Bonds interest rate swap: the fixed payer holds the floating leg" "tagged(alice, holdings(\[lot(bob, 10, 2), lot(bob, 20, 4), lot(bob, 30, 5)\]))" "$n3_irs"
 check "Bonds interest rate swap: the floating payer holds the fixed leg" "tagged(bob, holdings(\[lot(alice, 10, 3), lot(alice, 20, 3), lot(alice, 30, 3)\]))" "$n3_irs"
-check "Bonds interest rate swap: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_irs"
+check "Bonds interest rate swap: the escrow agent holds nothing at the end" "tagged(escrow, escrowed(\[\]))" "$n3_irs"
 
 echo "--- Bonds option, exercised and expired (option_exercised, option_expired) ---"
 
@@ -3361,7 +3385,7 @@ HEREDOC
 check_not "Bonds option exercised: no failed goal" "ERROR" "$n3_optx"
 check "Bonds option exercised: the holder takes the underlying" "tagged(alice, holdings(\[lot(bob, 40, 10)\]))" "$n3_optx"
 check "Bonds option exercised: the writer takes the premium and the strike" "tagged(bob, holdings(\[lot(alice, now, 10)\]))" "$n3_optx"
-check "Bonds option exercised: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_optx"
+check "Bonds option exercised: the escrow agent holds nothing at the end" "tagged(escrow, escrowed(\[\]))" "$n3_optx"
 
 n3_opte=$("$REPL_RUN" <<HEREDOC
 $BONDS
@@ -3372,10 +3396,10 @@ HEREDOC
 2>&1)
 
 check_not "Bonds option expired: no failed goal" "ERROR" "$n3_opte"
-check "Bonds option expired: the escrow agent's own date passes the window" "tagged(escrow, date_advanced(41))" "$n3_opte"
+check "Bonds option expired: the escrow agent's own date passes the window" "tagged(escrow, date(41))" "$n3_opte"
 check "Bonds option expired: the strike goes back to the holder" "tagged(alice, holdings(\[lot(alice, now, 8)\]))" "$n3_opte"
 check "Bonds option expired: the writer keeps the underlying and takes the premium" "tagged(bob, holdings(\[lot(bob, 40, 10), lot(alice, now, 2)\]))" "$n3_opte"
-check "Bonds option expired: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_opte"
+check "Bonds option expired: the escrow agent holds nothing at the end" "tagged(escrow, escrowed(\[\]))" "$n3_opte"
 
 echo "--- Bonds insurance, claimed and expired (insurance_claimed, insurance_expired) ---"
 
@@ -3442,7 +3466,7 @@ HEREDOC
 check_not "Bonds letter of credit: no failed goal" "ERROR" "$n3_loc"
 check "Bonds letter of credit: the seller is paid in the bank's coins" "tagged(alice, holdings(\[lot(bank, now, 10)\]))" "$n3_loc"
 check "Bonds letter of credit: the bank holds the buyer's reimbursement bonds" "tagged(bank, holdings(\[lot(bob, 30, 10)\]))" "$n3_loc"
-check "Bonds letter of credit: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_loc"
+check "Bonds letter of credit: the escrow agent holds nothing at the end" "tagged(escrow, escrowed(\[\]))" "$n3_loc"
 
 echo "--- The bonds mini-app's own plays (play_mint, play_swap, play_same) ---"
 
@@ -3455,7 +3479,7 @@ HEREDOC
 2>&1)
 
 check_not "Bonds mini-app play_mint: no failed goal" "ERROR" "$n3_pm"
-check "Bonds mini-app play_mint: alice mints 3 of her own" "S = \[minted(3, now), holdings(\[lot(alice, now, 3)\])" "$n3_pm"
+check "Bonds mini-app play_mint: alice mints 3 of her own" "S = \[issued(3, now), holdings(\[lot(alice, now, 3)\])" "$n3_pm"
 
 n3_ps=$("$REPL_RUN" <<HEREDOC
 $BONDSD
@@ -3466,8 +3490,8 @@ HEREDOC
 2>&1)
 
 check_not "Bonds mini-app play_swap: no failed goal" "ERROR" "$n3_ps"
-check "Bonds mini-app play_swap: the proposer's screen, her conversation opened and her coins swapped for bonds" "A = \[opened(bob), minted(2, now), holdings(\[lot(alice, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 30, 2)\])" "$n3_ps"
-check "Bonds mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\])" "$n3_ps"
+check "Bonds mini-app play_swap: the proposer's screen, her conversation opened and her coins swapped for bonds" "A = \[opened(bob), issued(2, now), holdings(\[lot(alice, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 30, 2)\])" "$n3_ps"
+check "Bonds mini-app play_swap: the counterparty's screen" "B = \[opened(alice), date(1), issued(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\])" "$n3_ps"
 
 # A request that changes no state determines no transaction (GB, Definition
 # def:gb-transactions and Appendix A): a redemption of a bond against a bond
@@ -3483,8 +3507,8 @@ HEREDOC
 2>&1)
 
 check_not "Bonds mini-app play_same: no failed goal" "ERROR" "$n3_same"
-check "Bonds mini-app play_same: the bearer's screen refuses the redemption of a bond against a bond of its own issuer and due, redeem_same, and the swap of a lot for the same lot, swap_same, and her holdings stay" "A = \[opened(bob), minted(2, now), holdings(\[lot(alice, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 30, 2)\]), redeem_same(bob, 30), swap_same(bob, bob, 30, 2) | X[0-9]*\]$" "$n3_same"
-check "Bonds mini-app play_same: nothing is sent, the counterparty's screen showing nothing of either" "B = \[opened(alice), minted(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\]) | X[0-9]*\]$" "$n3_same"
+check "Bonds mini-app play_same: the bearer's screen refuses the redemption of a bond against a bond of its own issuer and due, redeem_same, and the swap of a lot for the same lot, swap_same, and her holdings stay" "A = \[opened(bob), issued(2, now), holdings(\[lot(alice, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 30, 2)\]), redeem_same(bob, 30), swap_same(bob, bob, 30, 2) | X[0-9]*\]$" "$n3_same"
+check "Bonds mini-app play_same: nothing is sent, the counterparty's screen showing nothing of either" "B = \[opened(alice), date(1), issued(2, 30), holdings(\[lot(bob, 30, 2)\]), swap_done(alice), holdings(\[lot(alice, now, 2)\]) | X[0-9]*\]$" "$n3_same"
 echo ""
 
 
@@ -3499,8 +3523,8 @@ rm -f "$GLP_DIR/programs/social/graph/core/dated.glpw"
 check "N3 dated swap on smartphones: the mini-app's artefact is certified" "dated.glpw --- certified under" "$n3_dated_swap"
 check "N3 dated swap on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n3_dated_swap"
 check_not "N3 dated swap on smartphones: no event stopped at the cap" "did not quiesce" "$n3_dated_swap"
-boot_same "N3 dated swap on smartphones: alice's lines" "[opened(bob), minted(2, now), holdings([lot(alice, now, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)])]" "$(boot_person alice "$n3_dated_swap")"
-boot_same "N3 dated swap on smartphones: bob's lines" "[opened(alice), minted(2, 30), holdings([lot(bob, 30, 2)]), swap_done(alice), holdings([lot(alice, now, 2)])]" "$(boot_person bob "$n3_dated_swap")"
+boot_same "N3 dated swap on smartphones: alice's lines" "[opened(bob), issued(2, now), holdings([lot(alice, now, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)])]" "$(boot_person alice "$n3_dated_swap")"
+boot_same "N3 dated swap on smartphones: bob's lines" "[opened(alice), date(1), issued(2, 30), holdings([lot(bob, 30, 2)]), swap_done(alice), holdings([lot(alice, now, 2)])]" "$(boot_person bob "$n3_dated_swap")"
 
 # the bonds program's play_same on two smartphones (dated_same_boot.glp): play_swap, after which alice asks for the two acts that change no state, each refused at her, her screen saying so.
 n3_dated_same=$("$REPL_RUN" <<HEREDOC
@@ -3513,8 +3537,8 @@ rm -f "$GLP_DIR/programs/social/graph/core/dated.glpw"
 check "N3 dated same on smartphones: the mini-app's artefact is certified" "dated.glpw --- certified under" "$n3_dated_same"
 check "N3 dated same on smartphones: the boot settles" "Boot settled: 2 agents (alice, bob)" "$n3_dated_same"
 check_not "N3 dated same on smartphones: no event stopped at the cap" "did not quiesce" "$n3_dated_same"
-boot_same "N3 dated same on smartphones: alice's lines" "[opened(bob), minted(2, now), holdings([lot(alice, now, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)]), redeem_same(bob, 30), swap_same(bob, bob, 30, 2)]" "$(boot_person alice "$n3_dated_same")"
-boot_same "N3 dated same on smartphones: bob's lines" "[opened(alice), minted(2, 30), holdings([lot(bob, 30, 2)]), swap_done(alice), holdings([lot(alice, now, 2)])]" "$(boot_person bob "$n3_dated_same")"
+boot_same "N3 dated same on smartphones: alice's lines" "[opened(bob), issued(2, now), holdings([lot(alice, now, 2)]), holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)]), redeem_same(bob, 30), swap_same(bob, bob, 30, 2)]" "$(boot_person alice "$n3_dated_same")"
+boot_same "N3 dated same on smartphones: bob's lines" "[opened(alice), date(1), issued(2, 30), holdings([lot(bob, 30, 2)]), swap_done(alice), holdings([lot(alice, now, 2)])]" "$(boot_person bob "$n3_dated_same")"
 
 fi  # Section N3
 

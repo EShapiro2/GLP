@@ -9,7 +9,7 @@
 %% and the person channel never closes --- so a play's result is read off a
 %% partial stream.
 
-imported procedure person#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure person#person(Key?, PersonOut(Drawn)?, PersonIn(Drawn), Script?, Agreement?, Stream(ScreenContent)).
 
 %% play_mint(Screen): alice, alone, mints 3 coins of her own.
 %% Expected: Screen = [minted(3, now), holdings([lot(alice, now, 3)]) | _].
@@ -18,7 +18,7 @@ play_mint(Screen?) :-
     self_module(M),
     find_type(bonds/3, T),
     run(bonds(alice, ch(Grants?, Draws), []), T?, M?),
-    person # person(alice, Draws?, Grants, _, [mint(3)], none, Screen).
+    person # person(alice, Draws?, Grants, [issue(3)], none, Screen).
 
 %% play_swap(ScreenA, ScreenB): alice and bob with one conversation between
 %% their two executions; alice mints 2 coins and bob 2 bonds maturing day 30,
@@ -32,9 +32,9 @@ play_swap(ScreenA?, ScreenB?) :-
     self_module(M),
     find_type(bonds/3, T),
     run(bonds(alice, ch(GrantsA?, DrawsA), [conversation(bob, ch(AB?, BA))]), T?, M?),
-    person # person(alice, DrawsA?, GrantsA, _, [mint(2), swap(bob, alice, now, 2, bob, 30, 2)], none, ScreenA),
+    person # person(alice, DrawsA?, GrantsA, [issue(2), swap(bob, alice, now, 2, bob, 30, 2)], none, ScreenA),
     run(bonds(bob, ch(GrantsB?, DrawsB), [conversation(alice, ch(BA?, AB))]), T?, M?),
-    person # person(bob, DrawsB?, GrantsB, _, [mint(2, 30), accept(alice)], none, ScreenB).
+    person # person(bob, DrawsB?, GrantsB, [clock(1), issue(2, 30), accept(alice)], none, ScreenB).
 
 %% play_same(ScreenA, ScreenB): play_swap, after which alice holds bob's 2
 %% bonds maturing day 30 and asks for two acts that change no state, each a
@@ -52,9 +52,9 @@ play_same(ScreenA?, ScreenB?) :-
     self_module(M),
     find_type(bonds/3, T),
     run(bonds(alice, ch(GrantsA?, DrawsA), [conversation(bob, ch(AB?, BA))]), T?, M?),
-    person # person(alice, DrawsA?, GrantsA, _, [mint(2), swap(bob, alice, now, 2, bob, 30, 2), redeem(bob, 30, bob, 30), swap(bob, bob, 30, 2, bob, 30, 2)], none, ScreenA),
+    person # person(alice, DrawsA?, GrantsA, [issue(2), swap(bob, alice, now, 2, bob, 30, 2), redeem(bob, 30, bob, 30), swap(bob, bob, 30, 2, bob, 30, 2)], none, ScreenA),
     run(bonds(bob, ch(GrantsB?, DrawsB), [conversation(alice, ch(BA?, AB))]), T?, M?),
-    person # person(bob, DrawsB?, GrantsB, _, [mint(2, 30), accept(alice)], none, ScreenB).
+    person # person(bob, DrawsB?, GrantsB, [clock(1), issue(2, 30), accept(alice)], none, ScreenB).
 
 %% The scripted person the super-app's plays activate: the root's second
 %% template miniapp_person/5 (programs/self.glp) at the mini-app's own Drawn,
@@ -64,15 +64,15 @@ play_same(ScreenA?, ScreenB?) :-
 %% chooses the script, the person's acts on its end of the person channel,
 %% each peer named by its key in the list of the keys the person knows, the
 %% person's own key the first argument (alice knows bob, bob alice):
-%%   alice  [mint(2), swap(bob, alice, now, 2, bob, 30, 2)]
-%%   bob    [mint(2, 30), accept(alice)]
+%%   alice  [issue(2), swap(bob, alice, now, 2, bob, 30, 2)]
+%%   bob    [clock(1), issue(2, 30), accept(alice)]
 %% Any other role, or a person who knows other than the one key, has no
 %% script: the person reports the screen and acts on nothing.
 exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(ScreenContent)).
-miniapp_person(Me, alice, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) | person # person(Me?, Ds?, Gs, _, [await(opened(Bob?)), mint(2), swap(Bob?, Me?, now, 2, Bob?, 30, 2)], none, S).
-miniapp_person(Me, bob, [Alice], ch(Ds, Gs?), S?) :- person # person(Me?, Ds?, Gs, _, [await(opened(Alice?)), mint(2, 30), accept(Alice?)], none, S).
+miniapp_person(Me, alice, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) | person # person(Me?, Ds?, Gs, [await(opened(Bob?)), issue(2), swap(Bob?, Me?, now, 2, Bob?, 30, 2)], none, S).
+miniapp_person(Me, bob, [Alice], ch(Ds, Gs?), S?) :- person # person(Me?, Ds?, Gs, [clock(1), await(opened(Alice?)), issue(2, 30), accept(Alice?)], none, S).
 %% The roles of the other plays, for their boots on smartphones (programs/currencies/dated_*_boot.glp; Currencies #15, Code_inbox 2026-11-05 07:26 UTC): same, alice's script of play_same, bob's being bob's above.
-miniapp_person(Me, same, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) | person # person(Me?, Ds?, Gs, _, [await(opened(Bob?)), mint(2), swap(Bob?, Me?, now, 2, Bob?, 30, 2), redeem(Bob?, 30, Bob?, 30), swap(Bob?, Bob?, 30, 2, Bob?, 30, 2)], none, S).
+miniapp_person(Me, same, [Bob], ch(Ds, Gs?), S?) :- ground(Me?), ground(Bob?) | person # person(Me?, Ds?, Gs, [await(opened(Bob?)), issue(2), swap(Bob?, Me?, now, 2, Bob?, 30, 2), redeem(Bob?, 30, Bob?, 30), swap(Bob?, Bob?, 30, 2, Bob?, 30, 2)], none, S).
 %% The role of play_mint, for its boot on a smartphone (programs/currencies/dated_mint_boot.glp): mint, the person alone, who activates the mini-app with no invitation and no peer (GSA paper, Section 3, "A grassroots program instance") and mints 3, play_mint's script.
-miniapp_person(Me, mint, _, ch(Ds, Gs?), S?) :- ground(Me?) | person # person(Me?, Ds?, Gs, _, [mint(3)], none, S).
-miniapp_person(Me, _, _, ch(Ds, Gs?), S?) :- otherwise | person # person(Me?, Ds?, Gs, _, [], none, S).
+miniapp_person(Me, mint, _, ch(Ds, Gs?), S?) :- ground(Me?) | person # person(Me?, Ds?, Gs, [issue(3)], none, S).
+miniapp_person(Me, _, _, ch(Ds, Gs?), S?) :- otherwise | person # person(Me?, Ds?, Gs, [], none, S).
