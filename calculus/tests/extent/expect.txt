@@ -1,0 +1,12 @@
+K          commute yes; return yes; recover same
+1 contracts, 0 with a fault
+--- sasx/K.txt
+K: Wildcard extent (expanded schemas)
+K:0 - | Alice, Bob and Carol are persons, Grupo a group.
+K:1 ■ Guard: guardian(Alice,Carol), has_guardian(Carol,Alice) <- guarded by Alice, Carol.
+K:2 ■ Join: member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) <- guarded by Bob, Carol.
+K:3 ■ Retire: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~member(Carol,_,_), ~listed(_,Carol,_) <- guardian(Alice,Carol) guarded by Alice.
+--- term K
+[sas(guard, ['Alice', 'Carol'], [], [atom(guardian, ['Alice', 'Carol']), atom(has_guardian, ['Carol', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Carol'])], true, ['Alice', 'Carol']),
+ sas(join, ['Carol', 'Bob'], ['Grupo'], [atom(member, ['Carol', 'Grupo', 'Bob']), atom(listed, ['Bob', 'Carol', 'Grupo'])], [atom(identity, ['Carol']), atom(identity, ['Bob'])], true, ['Bob', 'Carol']),
+ sas(retire, ['Carol', 'Alice'], [], [atom(retired, ['Carol']), forall(['E1'], atom(has_guardian, ['Carol', 'E1']), true, [not(atom(guardian, ['E1', 'Carol']))]), not(atom(has_guardian, ['Carol', '_'])), not(atom(member, ['Carol', '_', '_'])), forall(['E2'], atom(member, ['Carol', '_', 'E2']), true, [not(atom(listed, ['E2', 'Carol', '_']))])], [atom(identity, ['Carol']), atom(identity, ['Alice']), atom(guardian, ['Alice', 'Carol']), forall(['E1'], atom(has_guardian, ['Carol', 'E1']), true, [atom(identity, ['E1']), atom(guardian, ['E1', 'Carol'])]), forall(['E2'], atom(member, ['Carol', '_', 'E2']), true, [atom(identity, ['E2'])])], true, ['Alice'])]

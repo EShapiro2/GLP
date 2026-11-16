@@ -1,0 +1,4 @@
+GDAO: Grassroots DAO
+GDAO instantiates GCoop with DAO bylaws; participant(x,z) for proposer(x,z,m); participant(x,z) for taker(x,z,m); participant(x,z) for voter(x,z,m); vote(z,>=Votes,m), product(Double,Votes,2), has_participant(z,<Double) for decided(z,m).
+GDAO:0 - | A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer, and delegate to the steward the admission of a member.
+GDAO:0 - | Orga is a DAO, Votes and Double numbers.

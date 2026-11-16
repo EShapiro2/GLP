@@ -239,8 +239,8 @@ agent(Id, [declined(Other)|UserIn], NetIn, Outs, Host) :-
 %% verdict, as the checker prints it, certifying the contract.  signature/2 assigns unsigned on a
 %% forged certification, and the super-app refuses to install it (Section 6.1).
 %% Every mini-app is installed alike: its grants are its end of its person
-%% channel, at Opaque, and a calendar the super-app writes (Section 3, "What
-%% the super-app grants a mini-app"), held until its activation.
+%% channel, at Opaque (Section 3, "What the super-app grants a mini-app"),
+%% held until its activation.
 agent(Id, [msg(person, Id1, install(App, M, CSig, Ui))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(Trusted?) |
@@ -251,8 +251,7 @@ agent(Id, [msg(person, Id1, install(App, M, CSig, Ui))|UserIn], NetIn, Outs,
 %% Activate a mini-app installed here (GSA paper, Section 3, "A grassroots
 %% program instance": "An instance begins with one person, who installs the
 %% certified program and activates it; others join it on invitation"): from
-%% the registry, with its two grants and its calendar, with no invitation and
-%% no peer.  A later invitation to it is looked up in the registry and its
+%% the registry, with its two grants, with no invitation and no peer.  A later invitation to it is looked up in the registry and its
 %% root channel goes to the running execution ("Activation and joining";
 %% deliver/9).  A mini-app running already, or not installed, is left as it
 %% is.
@@ -261,16 +260,6 @@ agent(Id, [msg(person, Id1, activate(App))|UserIn], NetIn, Outs,
     Id? =?= Id1?, ground(App?) |
     activate_app(App?, Id?, Apps?, Apps1, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
-
-%% Today's date, from the device's clock (superapp/4) or a play's script:
-%% written on the calendar of every mini-app installed, one date a day (GSG
-%% paper, Section 3: "a calendar, a stream of dates the super-app writes from
-%% the smartphone's clock, one a day").
-agent(Id, [msg(person, Id1, date(D))|UserIn], NetIn, Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, integer(D?) |
-    date_apps(D?, Apps?, Apps1),
-    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
 %% Invite a friend to the instance of a mini-app (Section 3, "Distribution
 %% with an invitation"): over the friend channel, two things and nothing else,
@@ -522,33 +511,20 @@ cert_check(creator_cert(Src1, _, grassroots_with_wards(_, _, _, _, _)), Src, M, 
 cert_check(_, _, _, refused) :- otherwise | true.
 
 %% install_step(V, App, CSig, Ui, Apps, Apps1): a mini-app installed is held
-%% idle with its grants, its end of its person channel and a fresh calendar,
-%% whose writer the super-app keeps; one refused has its person channel read
-%% for good, the channel never ending (idle_channel/1).
+%% idle with its end of its person channel; one refused has its person
+%% channel read for good, the channel never ending (idle_channel/1).
 procedure install_step(Verdict?, Constant?, String?, PersonChannel(Opaque)?, AppList?, AppList).
-install_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle(Ui?, Cal?, Cal)) | Apps?]).
+install_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle(Ui?)) | Apps?]).
 install_step(refused, _, _, Ui, Apps, Apps?) :- idle_channel(Ui?).
-
-%% date_apps(D, Apps, Apps1): the date D on the calendar of each mini-app.
-procedure date_apps(Integer?, AppList?, AppList).
-date_apps(D, [app(A, M, C, St) | Rest], [app(A?, M?, C?, St1?) | Rest1?]) :-
-    date_status(D?, St?, St1),
-    date_apps(D?, Rest?, Rest1).
-date_apps(_, [], []).
-
-procedure date_status(Integer?, AppStatus?, AppStatus).
-date_status(D, idle(Ui, Cal, [D? | Ds?]), idle(Ui?, Cal?, Ds)).
-date_status(D, running(Sg?, Cal, [D? | Ds?]), running(Sg, Cal?, Ds)).
 
 %% app_idle(App, Apps, Apps1): the mini-app's entry returns from running to
 %% idle.  The end of the person channel the entry held at installation went
 %% to the execution that has now ended, so the entry takes a fresh one, as it
-%% did at installation, and the calendar kept for its next activation; the
-%% next activation posts the two with the entry goal.  An entry that is not
+%% did at installation; the next activation posts it with the entry goal.  An entry that is not
 %% running is left as it is, so a report that arrives twice, or for a mini-app
 %% never activated, changes nothing.
 procedure app_idle(Constant?, AppList?, AppList).
-app_idle(App, [app(A, M, C, running([], Cal, Ds?)) | Rest], [app(A?, M?, C?, idle(Ui?, Cal?, Ds)) | Rest?]) :-
+app_idle(App, [app(A, M, C, running([])) | Rest], [app(A?, M?, C?, idle(Ui?)) | Rest?]) :-
     App? =?= A? |
     new_channel(Ui, Person),
     hold_person(Person?).
@@ -569,16 +545,16 @@ app_module(_, [], [], missing).
 %% identities(M, Src, T): the mini-app's source identity, from its
 %% certificate, and the root channel's type identity: that of the entry
 %% template's opaque instance at the type at which the mini-app's exports
-%% record its entry miniapp/4 as the template's instance (GSG paper, Sections
+%% record its entry miniapp/3 as the template's instance (GSG paper, Sections
 %% 4 and 6; TGLP modules.tex, Definition "Type Identity of a Type, Opaque
 %% Instance").  The super-app holds no declaration of the mini-app's types:
-%% the template miniapp/4 is the root's, and opaque_type/3 reads the type's
+%% the template miniapp/3 is the root's, and opaque_type/3 reads the type's
 %% identity off the module value.
 procedure identities(Module?, String, Constant).
 identities(M, Src?, T?) :-
     decompose_module(M?, _, Src, _),
-    opaque_type(miniapp/4, M?, H),
-    find_type(miniapp/4, H?, T).
+    opaque_type(miniapp/3, M?, H),
+    find_type(miniapp/3, H?, T).
 
 %% --- The inviter ---
 
@@ -850,21 +826,18 @@ accept_root_step(_, I, Id, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
 %% deliver(App, Friend, End, Id, M, Apps, Apps1, UserIn, UserIn1): hand the
 %% mini-app one end of the root channel of its conversation with Friend, on its
 %% social-graph channel.  An idle mini-app is activated first, with exactly its
-%% three grants: the end of its person channel and the calendar held since
-%% installation, and the social-graph channel; the calendar is copied, the
-%% copy kept for its next activation should this execution end.  Where it
-%% runs already the new conversation goes to that execution (Section 3,
-%% "Activation and joining").
+%% two grants: the end of its person channel held since installation, and the
+%% social-graph channel.  Where it runs already the new conversation goes to
+%% that execution (Section 3, "Activation and joining").
 procedure deliver(Constant?, Key?, RootChannel(Opaque)?, Key?, Module?, AppList?, AppList, UserInStream?, UserInStream).
-deliver(App, Friend, End, Id, M, [app(A, M1, C, idle(Ui, Cal, Ds?)) | Rest],
-        [app(A?, M1?, C?, running(Sg1, Kept?, Ds)) | Rest?], UserIn, UserIn1?) :-
+deliver(App, Friend, End, Id, M, [app(A, M1, C, idle(Ui)) | Rest],
+        [app(A?, M1?, C?, running(Sg1)) | Rest?], UserIn, UserIn1?) :-
     App? =?= A? |
-    copy_calendar(Cal?, Given, Kept),
-    activate(M?, Id?, Ui?, Sg?, Up, Given?),
+    activate(M?, Id?, Ui?, Sg?, Up),
     open_conv(Friend?, End?, Sg, Sg1?),
     inject_requests(App?, Up?, UserIn?, UserIn1).
-deliver(App, Friend, End, _, _, [app(A, M1, C, running(Sg?, Cal, Ds?)) | Rest],
-        [app(A?, M1?, C?, running(Sg1, Cal?, Ds)) | Rest?], UserIn, UserIn?) :-
+deliver(App, Friend, End, _, _, [app(A, M1, C, running(Sg?)) | Rest],
+        [app(A?, M1?, C?, running(Sg1)) | Rest?], UserIn, UserIn?) :-
     App? =?= A? |
     open_conv(Friend?, End?, Sg, Sg1?).
 deliver(App, Friend, End, Id, M, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
@@ -873,25 +846,23 @@ deliver(_, _, _, _, _, [], [], UserIn, UserIn?).
 
 %% activate_app(App, Id, Apps, Apps1, UserIn, UserIn1): the person's
 %% activation of the mini-app installed as App, with no invitation and no
-%% peer.  An idle entry is activated with exactly its three grants, as
-%% deliver/9 activates one: the end of its person channel and the calendar
-%% held since installation, the calendar copied and the copy kept for its next
-%% activation, and its social-graph channel, on which no conversation is yet
+%% peer.  An idle entry is activated with exactly its two grants, as
+%% deliver/9 activates one: the end of its person channel held since
+%% installation, and its social-graph channel, on which no conversation is yet
 %% open; the entry is then running, its writer of that channel kept, so that a
 %% later invitation's root channel goes to this execution.  An entry running
 %% already is passed over, and so is every entry of another name.
 procedure activate_app(Constant?, Key?, AppList?, AppList, UserInStream?, UserInStream).
-activate_app(App, Id, [app(A, M, C, idle(Ui, Cal, Ds?)) | Rest],
-             [app(A?, M?, C?, running(Sg, Kept?, Ds)) | Rest?], UserIn, UserIn1?) :-
+activate_app(App, Id, [app(A, M, C, idle(Ui)) | Rest],
+             [app(A?, M?, C?, running(Sg)) | Rest?], UserIn, UserIn1?) :-
     App? =?= A? |
-    copy_calendar(Cal?, Given, Kept),
-    activate(M?, Id?, Ui?, Sg?, Up, Given?),
+    activate(M?, Id?, Ui?, Sg?, Up),
     inject_requests(App?, Up?, UserIn?, UserIn1).
 activate_app(App, Id, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
     otherwise | activate_app(App?, Id?, Rest?, Rest1, UserIn?, UserIn1).
 activate_app(_, _, [], [], UserIn, UserIn?).
 
-%% activate(M, Id, Ui, Sg, Up, Cal): the mini-app activated by run/3 at the
+%% activate(M, Id, Ui, Sg, Up): the mini-app activated by run/3 at the
 %% type identity of the entry template's opaque instance at the type its
 %% exports record (GSG paper, Section 4, "Compiled programs as values"; TGLP
 %% modules.tex, Dynamic Activation, "Opaque types"): opaque_type/3 reads that
@@ -899,18 +870,11 @@ activate_app(_, _, [], [], UserIn, UserIn?).
 %% instance's, and run/3 posts the one goal shape every mini-app is activated
 %% by, its grants held at Opaque standing at the positions of the template's
 %% parameter (the one step back).
-procedure activate(Module?, Key?, PersonChannel(Opaque)?, Stream(SgToApp(Opaque))?, Stream(AppToSg), Stream(Integer)?).
-activate(M, Id, Ui, Sg, Up?, Cal) :-
-    opaque_type(miniapp/4, M?, H),
-    find_type(miniapp/4, H?, T),
-    run(miniapp(Id?, Ui?, ch(Sg?, Up), Cal?), T?, M?).
-
-%% copy_calendar(Cal, Given, Kept): each date, as it comes, to the execution
-%% activated and to the copy the entry keeps.
-procedure copy_calendar(Stream(Integer)?, Stream(Integer), Stream(Integer)).
-copy_calendar([D | Ds], [D? | Gs?], [D? | Ks?]) :-
-    integer(D?) | copy_calendar(Ds?, Gs, Ks).
-copy_calendar([], [], []).
+procedure activate(Module?, Key?, PersonChannel(Opaque)?, Stream(SgToApp(Opaque))?, Stream(AppToSg)).
+activate(M, Id, Ui, Sg, Up?) :-
+    opaque_type(miniapp/3, M?, H),
+    find_type(miniapp/3, H?, T),
+    run(miniapp(Id?, Ui?, ch(Sg?, Up)), T?, M?).
 
 %% inject_requests(App, Up, UserIn, UserIn1): the mini-app's requests up its
 %% social-graph channel, tagged with its name, injected into the agent's person
@@ -956,8 +920,8 @@ close_pending([_ | Rest]) :- otherwise | close_pending(Rest?).
 close_pending([]).
 
 procedure close_apps(AppList?).
-close_apps([app(_, _, _, idle(Ui, _, [])) | Rest]) :- idle_channel(Ui?), close_apps(Rest?).
-close_apps([app(_, _, _, running([], _, [])) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, idle(Ui)) | Rest]) :- idle_channel(Ui?), close_apps(Rest?).
+close_apps([app(_, _, _, running([])) | Rest]) :- close_apps(Rest?).
 close_apps([]).
 
 %% idle_channel(Ui?): the person channel of a mini-app never activated, which
@@ -1075,7 +1039,7 @@ pending_step(false, Name, S, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted)
 %% mini-app, the name handed on as Name1 to be remembered: a reader of a type
 %% that is not constant is read once.
 procedure forward_pending(GlobalName?, Key?, AppList?, AppList, GlobalName).
-forward_pending(Name, S, [app(A, M, C, running(Sg?, Cal, Ds?)) | Rest], [app(A?, M?, C?, running(Sg1, Cal?, Ds)) | Rest1?], Name1?) :-
+forward_pending(Name, S, [app(A, M, C, running(Sg?)) | Rest], [app(A?, M?, C?, running(Sg1)) | Rest1?], Name1?) :-
     ground(Name?) |
     push_down(held(Name?, S?), Sg, Sg1?),
     forward_pending(Name?, S?, Rest?, Rest1, Name1).

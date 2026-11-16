@@ -1,0 +1,3 @@
+M: Possibly one, marked
+Of M: Alice and Bob are persons, Club a club, Bob possibly Alice.
+M:1. ■ Found: Alice and Bob may jointly found Club. Greet: Alice may greet Bob.

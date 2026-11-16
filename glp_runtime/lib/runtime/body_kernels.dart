@@ -116,6 +116,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // Time operations
   registry.register('_now', 1, nowKernel);
+  registry.register('_set_clock', 1, setClockKernel);
   registry.register('_random', 4, randomKernel);
   registry.register('_split_random_seed', 3, splitRandomSeedKernel);
 
@@ -583,8 +584,25 @@ BodyKernelResult nowKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
     return kernelAbort('[ABORT] now/1: expected 1 argument, got ${args.length}');
   }
-  final currentTime = DateTime.now().millisecondsSinceEpoch;
-  return bindResult(rt, args[0], currentTime);
+  return bindResult(rt, args[0], rt.machineNow);
+}
+
+/// `'_set_clock'(T?)`: "set_clock(T) sets the machine's clock to T, Unix
+/// milliseconds, and the clock runs on from it" (GLP-Spec appendix-guards.tex,
+/// "Clock access (now/1, set_clock/1)").
+BodyKernelResult setClockKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    return kernelAbort('[ABORT] set_clock/1: expected 1 argument, got ${args.length}');
+  }
+  final t = _deref(rt, args[0]);
+  if (t is! ConstTerm || t.value is! int) {
+    return kernelAbort('[ABORT] set_clock/1: T must be an integer');
+  }
+  if (!rt.clockSettable) {
+    return kernelAbort("[ABORT] set_clock/1: this machine's clock may not be set");
+  }
+  rt.setClock(t.value as int);
+  return BodyKernelResult.success;
 }
 
 /// `_self_module`/1 — module-as-value, producer half; the kernel behind the

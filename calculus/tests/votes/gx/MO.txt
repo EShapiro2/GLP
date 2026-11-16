@@ -1,0 +1,3 @@
+MO: A Minimal Organisation
+Of MO: Bob is a person, Orga an organisation, Motion an act of Orga. Parameters: x is entitled to vote on m in z; the votes decide m according to the bylaws of z.
+MO:1. ■ Vote: Bob may vote on Motion in Orga, provided Bob is entitled to vote on Motion in Orga.

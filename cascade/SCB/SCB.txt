@@ -1,0 +1,58 @@
+% SCB: Sovereign Central Bank --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.5 and cites a clause as SCB:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: GBank, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-12, by GO #5.
+% Schemas: SCB.glp beside this file.
+SCB: Sovereign Central Bank
+SCB instantiates GBank with central bank bylaws and restricts and extends it.
+A *central bank* is a bank created by an organisation, Gov (GO:1), as the *sovereign* of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar. Its bylaws name two roles, *governor*, held by its first officer, and *committee member*; the governors jointly decide the acts of the bank, but the officers of Gov decide the appointment and the removal of its officers, and the committee members, the monetary policy committee, set by a majority the *policy rate* for each term, the return over that term at which the bank lends its coins against bonds. A participant who holds no role is a *counterparty*.
+Gov is an organisation, Bob a person, Orga a central bank.
+1. ■ Leave, Expel: GO:3, only with the consent of both Bob and the governors.
+2. ■ Set policy rate: The committee members may set the policy rate for a term.
+3. ■ Lend: Bob, a counterparty, and Orga may jointly swap Orga-coins for Bob-bonds of a term, as many bonds as the coins and the interest on them at the policy rate for that term.
+4. ■ Open market: Bob, a counterparty, and Orga may jointly swap coins and bonds they hold (DGC:2).
+5. ○ Authority. Gov will create Orga and appoint and remove its officers as the law of the Dollar provides.
+Logic pragmas
+SCB instantiates GBank with central bank bylaws; x is a governor of z for x is entitled to propose m in z; x is a governor of z for x is entitled to take m for z; x is a governor of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, More is Votes plus 1 and z has fewer than More persons in the role Governor for the votes decide m according to the bylaws of z, and restricts and extends it.
+A *central bank* is a bank created by an organisation, Gov (GO:1), as the *sovereign* of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar. Its bylaws name two roles, *governor*, held by its first officer, and *committee member*; the governors jointly decide the acts of the bank, but the officers of Gov decide the appointment and the removal of its officers, and the committee members, the monetary policy committee, set by a majority the *policy rate* for each term, the return over that term at which the bank lends its coins against bonds. A participant who holds no role is a *counterparty*.
+Gov is an organisation, Alice, Bob and Carol persons, Orga a central bank, Term a term, Rate, Sum, Interest, Total, Votes, Double and More numbers.
+1. ■ Leave: GO:3 Leave, only if Orga is an organisation, with the consent of the governors of Orga. Officer leave: GO:3 Officer leave, only if Orga is an organisation, with the consent of the governors of Orga. Expel: GO:3 Expel, only if Orga is an organisation, with the consent of Bob and the governors of Orga. Officer expel: GO:3 Officer expel, only if Orga is an organisation, with the consent of Bob and the governors of Orga.
+2. ■ Set policy rate: Alice may set the policy rate of Orga for Term at Rate, provided Alice is a committee member of Orga, Orga holds the votes of at least Votes persons to set the policy rate for Term at Rate, Double is Votes times 2 and Orga has fewer than Double persons in the role Committee. Vote on policy rate: Carol may vote to set the policy rate of Orga for Term at Rate, provided Carol is a committee member of Orga.
+3. ■ Lend: Alice may swap Sum Orga-coins of Orga with Bob for Total Bob-bonds due Term, with the consent of Bob, provided Alice is a governor of Orga, Orga holds the votes of at least Votes persons to lend Bob Sum Orga-coins due Term, More is Votes plus 1, Orga has fewer than More persons in the role Governor, Bob is a counterparty of Orga, Orga has the policy rate for Term at the number Rate, Interest is Sum times Rate and Total is Sum plus Interest. Bob and Orga swap as many bonds as the coins and the interest on them at the policy rate for that term. Vote to lend: Carol may vote to lend Bob Sum Orga-coins of Orga due Term, provided Carol is a governor of Orga and Orga has Bob as a participant.
+4. ■ Open market. Bob, a counterparty, and Orga may jointly swap coins and bonds they hold (DGC:2).
+5. ○ Authority. Gov will create Orga and appoint and remove its officers as the law of the Dollar provides.
+Logic pragmas.
+Vocabulary: z has the policy rate for e at the number n = policy_rate(z,e,n); z holds v's vote to set the policy rate for e at n = vote_rate(z,v,e,n); z holds v's vote to lend y n z-coins due e = vote_lend(z,v,y,n,e).
+Roles: the governors of z = governors(z), listed by z has y in the role Governor and y holds the role Governor in z; the committee members of z = committee_members(z).
+x is a governor of z: x holds the role Governor in z.
+x is a committee member of z: x holds the role Committee in z.
+y is a counterparty of z: y is a participant of z and y holds no role in z.
+the earlier policy rate of z for e has ended: z has the policy rate for e at no number.
+After v votes to set the policy rate of z for e at n, which requires z does not hold v's vote to set the policy rate for e at n: z holds v's vote to set the policy rate for e at n.
+After x sets the policy rate of z for e at n: the earlier policy rate of z for e has ended, z has the policy rate for e at the number n and z holds no one's vote to set the policy rate for e at n.
+After v votes to lend y n z-coins of z due e, which requires z does not hold v's vote to lend y n z-coins due e: z holds v's vote to lend y n z-coins due e.
+After x swaps n z-coins of z with y for m y-bonds due e: no longer z holds n z-coins, y holds n z-coins, no longer y holds m y-bonds due e, z holds m y-bonds due e and z holds no one's vote to lend y n z-coins due e.
+Interface pragmas
+Look: 🏛️, money
+Leave, Expel: Bob [Leave] <governor>
+  Decider: Bob asks to end his participation in Orga.
+  Codecider: Bob asks to end his participation in Orga.
+  Bob [Officer leave] <governor>
+  Decider: Bob asks to end his participation and his office in Orga.
+  Codecider: Bob asks to end his participation and his office in Orga.
+  Bob [Expel] <officer> <governor>
+  Decider: Bob consents to end his participation in Orga.
+  DeciderB: Bob consents to end his participation in Orga.
+  Codecider: Bob consents to end his participation in Orga.
+  CodeciderB: Bob consents to end his participation in Orga.
+  Bob [Officer expel] <officer> <governor>
+  Decider: Bob consents to end his participation and his office in Orga.
+  DeciderB: Bob consents to end his participation and his office in Orga.
+  Codecider: Bob consents to end his participation and his office in Orga.
+  CodeciderB: Bob consents to end his participation and his office in Orga.
+Set policy rate: Alice [Set policy rate] <term> <rate> <votes>
+  Carol [Vote on policy rate] <term> <rate>
+Lend: Alice [Lend] <counterparty> <amount> <term> <total> <votes>
+  Bob: Alice asks to swap your bonds for coins of Orga at the policy rate.
+  Carol [Vote to lend] <counterparty> <amount> <term>

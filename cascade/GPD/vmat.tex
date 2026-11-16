@@ -116,6 +116,15 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
 , \qquad 
 c'_
 {
@@ -126,15 +135,6 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-knows
-}
-(
-Carol
-)
-\}
 ,\\
 &
 \text{provided } 
@@ -147,13 +147,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-knows
-}
-(
-Carol
 )
  \in c_
 {
@@ -169,6 +162,13 @@ knows
 }
 (
 \Alice
+)
+,
+\mathit{
+knows
+}
+(
+Carol
 )
  \in c_
 {
@@ -388,7 +388,7 @@ c_
 item
 }
 (
-x
+Item
 )
 \}
 ,\\
@@ -408,7 +408,7 @@ identity
 item
 }
 (
-x
+Item
 )
  \notin c_
 {
@@ -434,6 +434,19 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+\mathrm{sgn}(
+Item
+,
+\Bob
+)
+)
+\}
 , \qquad 
 c'_
 {
@@ -444,32 +457,12 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-item
-}
-(
-\mathrm{sgn}(
-x
-,
-\Alice
-)
-)
-\}
 ,\\
 &
 \text{provided } 
 \mathit{
 identity
 }
-,
-\mathit{
-item
-}
-(
-x
-)
 ,
 \mathit{
 friend
@@ -485,6 +478,20 @@ friend
 \mathit{
 identity
 }
+,
+\mathit{
+item
+}
+(
+Item
+)
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
  \in c_
 {
 \Bob
@@ -492,7 +499,7 @@ identity
 ,\\
 &
 \text{guarded by } \{
-\Alice
+\Bob
 \}
 \end{align*}
 \iffalse
@@ -512,17 +519,12 @@ c_
  \uplus 
 \{
 \mathit{
-item
+program
 }
 (
-x
-)
+Prog
 ,
-\mathit{
-published
-}
-(
-x
+\Alice
 )
 \}
 ,\\
@@ -539,23 +541,17 @@ identity
 &
 \text{provided } 
 \mathit{
-item
+program
 }
 (
-x
+Prog
+,
+\Alice
 )
  \notin c_
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-\mathrm{program}(
-\mathrm{item}(
-x
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -579,7 +575,7 @@ c_
  \uplus 
 \{
 \mathit{
-trusts
+trusts_developer
 }
 (
 Carol
@@ -606,7 +602,7 @@ Carol
 &
 \text{provided } 
 \mathit{
-trusts
+trusts_developer
 }
 (
 Carol
@@ -622,7 +618,7 @@ Carol
 \}
 \end{align*}
 \iffalse
-distrust
+untrust
 \fi
 \begin{align*}
 &
@@ -638,7 +634,7 @@ c_
  \setminus 
 \{
 \mathit{
-trusts
+trusts_developer
 }
 (
 Carol
@@ -652,7 +648,7 @@ identity
 }
 ,
 \mathit{
-trusts
+trusts_developer
 }
 (
 Carol
@@ -681,6 +677,21 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{
+program
+}
+(
+\mathrm{sgn}(
+Prog
+,
+\Bob
+)
+,
+Dave
+)
+\}
 , \qquad 
 c'_
 {
@@ -691,32 +702,12 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-item
-}
-(
-\mathrm{sgn}(
-y
-,
-\Alice
-)
-)
-\}
 ,\\
 &
 \text{provided } 
 \mathit{
 identity
 }
-,
-\mathit{
-item
-}
-(
-y
-)
 ,
 \mathit{
 friend
@@ -732,22 +723,30 @@ friend
 \mathit{
 identity
 }
+,
+\mathit{
+program
+}
+(
+Prog
+,
+Dave
+)
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
  \in c_
 {
 \Bob
 }
 ,\\
 &
-\text{provided } 
-\mathrm{program}(
-\mathrm{item}(
-y
-)
-)
-,\\
-&
 \text{guarded by } \{
-\Alice
+\Bob
 \}
 \end{align*}
 \iffalse
@@ -770,7 +769,9 @@ c_
 installed
 }
 (
-x
+Prog
+,
+\Alice
 )
 \}
 ,\\
@@ -781,10 +782,12 @@ identity
 }
 ,
 \mathit{
-published
+program
 }
 (
-x
+Prog
+,
+\Alice
 )
  \in c_
 {
@@ -797,7 +800,9 @@ x
 installed
 }
 (
-x
+Prog
+,
+\Alice
 )
  \notin c_
 {
@@ -829,9 +834,9 @@ c_
 installed
 }
 (
-\mathrm{item}(
-y
-)
+Prog
+,
+Carol
 )
 \}
 ,\\
@@ -842,17 +847,19 @@ identity
 }
 ,
 \mathit{
-item
+program
 }
 (
-y
+Prog
+,
+Carol
 )
 ,
 \mathit{
-trusts
+trusts_developer
 }
 (
-Bob
+Carol
 )
  \in c_
 {
@@ -865,9 +872,9 @@ Bob
 installed
 }
 (
-\mathrm{item}(
-y
-)
+Prog
+,
+Carol
 )
  \notin c_
 {
@@ -875,26 +882,12 @@ y
 }
 ,\\
 &
-\text{provided } 
-\mathrm{program}(
-\mathrm{item}(
-y
-)
-)
-\land
-\mathrm{author}(
-y
-)
-=
-Bob
-,\\
-&
 \text{guarded by } \{
 \Alice
 \}
 \end{align*}
 \iffalse
-invite_new
+invite
 \fi
 \begin{align*}
 &
@@ -910,183 +903,38 @@ c_
  \uplus 
 \{
 \mathit{
-participant
-}
-(
-\mathrm{item}(
-y
-)
-,
-\Bob
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-participant
-}
-(
-\mathrm{item}(
-y
-)
-,
-\Alice
-)
-,
-\mathit{
-item
+program
 }
 (
 \mathrm{sgn}(
-y
+Prog
 ,
-\Alice
-)
-)
-,
-\mathit{
-installed
-}
-(
-\mathrm{item}(
-y
-)
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
 \Bob
 )
 ,
-\mathit{
-item
-}
-(
-y
-)
-,
-\mathit{
-installed
-}
-(
-\mathrm{item}(
-y
-)
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
-,
-\mathit{
-trusts
-}
-(
 Carol
 )
- \in c_
-{
-\Bob
+,
+\mathit{
+installed
 }
-,\\
-&
-\text{provided } 
+(
+\mathrm{sgn}(
+Prog
+,
+\Bob
+)
+,
+Carol
+)
+,
 \mathit{
 participant
 }
 (
-\mathrm{item}(
-y
-)
+Prog
 ,
-\Bob
-)
- \notin c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-installed
-}
-(
-\mathrm{item}(
-y
-)
-)
- \notin c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathrm{author}(
-y
-)
-=
 Carol
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-invite_installed
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-participant
-}
-(
-\mathrm{item}(
-y
-)
 ,
 \Bob
 )
@@ -1107,9 +955,9 @@ c_
 participant
 }
 (
-\mathrm{item}(
-y
-)
+Prog
+,
+Carol
 ,
 \Alice
 )
@@ -1129,19 +977,10 @@ friend
 )
 ,
 \mathit{
-item
+trusts_developer
 }
 (
-y
-)
-,
-\mathit{
-installed
-}
-(
-\mathrm{item}(
-y
-)
+Carol
 )
  \in c_
 {
@@ -1160,64 +999,17 @@ friend
 )
 ,
 \mathit{
-trusts
-}
-(
-Carol
-)
-,
-\mathit{
 installed
 }
 (
-\mathrm{item}(
-y
-)
+Prog
+,
+Carol
 )
  \in c_
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-\mathit{
-participant
-}
-(
-\mathrm{item}(
-y
-)
-,
-\Bob
-)
- \notin c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-participant
-}
-(
-\mathrm{item}(
-y
-)
-,
-\Alice
-)
- \notin c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathrm{author}(
-y
-)
-=
-Carol
 ,\\
 &
 \text{guarded by } \{
@@ -1246,7 +1038,9 @@ c'_
 installed
 }
 (
-p
+Prog
+,
+Carol
 )
 \}
 ) \setminus K_
@@ -1263,7 +1057,9 @@ p
 participant
 }
 (
-p
+Prog
+,
+Carol
 ,
 \ast
 )
@@ -1285,7 +1081,9 @@ p
 participant
 }
 (
-p
+Prog
+,
+Carol
 ,
 \ast
 )
@@ -1299,7 +1097,9 @@ p
 participant
 }
 (
-p
+Prog
+,
+Carol
 ,
 \ast
 )
@@ -1323,14 +1123,18 @@ c'_
 installed
 }
 (
-p
+Prog
+,
+Carol
 )
 ,
 \mathit{
 participant
 }
 (
-p
+Prog
+,
+Carol
 ,
 \Alice
 )
@@ -1349,7 +1153,9 @@ p
 participant
 }
 (
-p
+Prog
+,
+Carol
 ,
 \ast
 )
@@ -1371,7 +1177,9 @@ p
 participant
 }
 (
-p
+Prog
+,
+Carol
 ,
 \ast
 )
@@ -1385,7 +1193,9 @@ p
 participant
 }
 (
-p
+Prog
+,
+Carol
 ,
 \ast
 )
@@ -1405,7 +1215,9 @@ q
 participant
 }
 (
-p
+Prog
+,
+Carol
 ,
 \Alice
 )
@@ -1420,7 +1232,9 @@ q
 participant
 }
 (
-p
+Prog
+,
+Carol
 ,
 \ast
 )
@@ -1441,7 +1255,9 @@ identity
 installed
 }
 (
-p
+Prog
+,
+Carol
 )
  \in c_
 {
@@ -1456,7 +1272,9 @@ identity
 participant
 }
 (
-p
+Prog
+,
+Carol
 ,
 \Alice
 )
@@ -1471,7 +1289,9 @@ q \in
 participant
 }
 (
-p
+Prog
+,
+Carol
 ,
 \ast
 )
@@ -1490,7 +1310,9 @@ participant
 (
 \Alice
 ,
-p
+Prog
+,
+Carol
 ,
 \Bob
 )
@@ -1508,7 +1330,9 @@ participant
 (
 \Bob
 ,
-p
+Prog
+,
+Carol
 ,
 \Alice
 )
@@ -1525,7 +1349,9 @@ participant
 (
 \Alice
 ,
-p
+Prog
+,
+Carol
 ,
 \Bob
 )
@@ -1537,7 +1363,9 @@ participant
 (
 \Bob
 ,
-p
+Prog
+,
+Carol
 ,
 \Alice
 )

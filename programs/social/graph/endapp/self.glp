@@ -6,7 +6,7 @@
 %%
 %% It exists because ../pingapp cannot fence the registry's return from
 %% running to idle: see miniapp.glp.  Its entry is the super-app's entry
-%% template miniapp/4, declared once in the root programs/self.glp, at its own
+%% template miniapp/3, declared once in the root programs/self.glp, at its own
 %% two types, EndShown what it draws for its person and EndMsg its root
 %% channels' messages (vGLP, 2026-10-14 13:21 UTC, S2), and its scripted person
 %% the second template miniapp_person/5 at EndShown and its screen's type
@@ -31,9 +31,9 @@ EndEvs    ::= [] ; [EndEv | EndEvs].
 EndConv   ::= conv(Key, Stream(EndMsg)?).
 EndConvs  ::= [] ; [EndConv | EndConvs].
 
-imported procedure miniapp#miniapp(Key?, PersonChannel(EndShown)?, SgChannel(EndMsg)?, Stream(Integer)?).
-exported procedure miniapp(Key?, PersonChannel(EndShown)?, SgChannel(EndMsg)?, Stream(Integer)?).
-miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+imported procedure miniapp#miniapp(Key?, PersonChannel(EndShown)?, SgChannel(EndMsg)?).
+exported procedure miniapp(Key?, PersonChannel(EndShown)?, SgChannel(EndMsg)?).
+miniapp(Id, Ui, Sg) :- miniapp # miniapp(Id?, Ui?, Sg?).
 
 imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(EndShown), PersonIn(EndShown))?, Stream(EndUi)).
 exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(EndShown), PersonIn(EndShown))?, Stream(EndUi)).

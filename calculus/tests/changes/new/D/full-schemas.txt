@@ -1,0 +1,2 @@
+D: Delta (expanded schemas)
+D:1 ■ Act: d(Alice) <- guarded by Alice.

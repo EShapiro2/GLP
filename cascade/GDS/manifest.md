@@ -1,19 +1,26 @@
 # A run of the cascade on GDS
 
-- Contract: `GDS` (`gds` to the checker), its owner's two files `programs/examples/rendezvous/GDS.txt` and `programs/examples/rendezvous/GDS.glp`, copied here as they stood at `805d00f4`.
-- The paper: `git@github.com:EShapiro2/GLP-Networking-API.git` at `3a3a4a7f`, for the paper's own record.
-- An instance of gnw, programs/gsc/GnW.glp, under [=(ward, service)]: its term formed by programs/gsc's instantiate/4 from the base's, its file holding only what it adds or replaces (GSC, Definition Parametric contract).
-- The tools: this repository at `805d00f4` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-11 23:40 UTC by `cascade.sh gds`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GDS` (`gds` to the checker), its owner's two files `programs/examples/rendezvous/GDS.txt` and `programs/examples/rendezvous/GDS.glp`, copied here as they stood at `8aa74bd8`.
+- The paper: `/Users/udi/Grassroots/GNA (not on this machine)` at `unknown`, for the paper's own record.
+- Adopted from the Calculus: `programs/examples/rendezvous/GDS.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/examples/rendezvous/GDS.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
+- Run on 2026-11-16 00:27 UTC by `cascade.sh gds`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8aa74bd8`; each artefact's source and tool:
 
-| Artefact | What it holds |
-|---|---|
-| `GDS.txt` | the contract |
-| `GDS.glp` | the act schemas, as terms |
-| `schemas.txt` | the act schemas in GSC's notation, printed from the terms |
-| `verdict.txt` | the checker's verdict: `syntactically_grassroots_with_wards(acquaint, [service], [guardianship(service, guardian_of, guarded_by)], [relay(ward_acquaint, ward(1, service, no_guardian), free(2)), relay(wards_acquaint, ward(1, service, no_guardian), ward(2, service, no_guardian))], [identity, person])` |
-| `vmat.tex` | the VMAT form, 23 displays, one per schema |
-| `platform.vglp` | the CVA compiler's refusal, and no platform.glp and no run |
+| Artefact | Source | Tool | What it holds |
+|---|---|---|---|
+| `GDS.txt` | `programs/examples/rendezvous/GDS.txt` | copied | the contract, its Logic pragmas and its Interface pragmas |
+| `GDS.glp` | `programs/examples/rendezvous/GDS.txt` | calculus/tools/adopt.py, copied from `programs/examples/rendezvous/GDS.glp` | the full schemas, the term the checker reads |
+| `schemas.txt` | `GDS.txt`'s Logic pragmas | calculus/tools/adopt.py | the speech-act schemas compiled from the Logic pragmas |
+| `full-contract.txt` | `GDS.txt` and the contracts it is written from | calculus/tools/adopt.py | the full contract, each clause labelled by its origin |
+| `full-pragmas.txt` | the same | calculus/tools/adopt.py | the Logic pragmas' sentences, the relations applied |
+| `flat.txt` | the same | calculus/tools/adopt.py | the flat text, the relations applied |
+| `full-schemas.txt` | the same | calculus/tools/adopt.py | the schemas, the relations applied |
+| `verdict.txt` | `GDS.glp` | programs/gsc, check/2 | the checker's verdict: `syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])` |
+| `vmat.tex` | `GDS.glp` | programs/gsc, compile_contract/2 | the VMAT form, 32 displays, one per schema |
+| `platform.vglp` | `GDS.glp` read by programs/gsc's as_read/2, and `GDS.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
+| `platform.glp` | `platform.vglp` | glp_runtime's :emit | the platform compiled to GLP, as emitted |
+| `interface.glp` | `platform.vglp` and `platform.glp` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |
+| (no run) | | | vGLP keeps no plays for gds |
 
 What the tools refused or lacked:
-- platform: %% not compiled(gds)
+- run: vGLP keeps no plays for gds

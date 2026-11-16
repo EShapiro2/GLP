@@ -1,0 +1,5 @@
+CUR: A Currency (flat text)
+CUR:0 - | A *party* to a contract is whoever has an identity.
+CUR:0 - | Alice and Bob are parties, Sum and Total numbers.
+CUR:1 ■ Pay: Alice may no longer Alice holds Sum Alice-coins and Bob holds Sum Alice-coins, provided Alice knows Bob.
+CUR:2 ■ Swap: Alice and Bob may jointly no longer Alice holds Sum Alice-coins, Bob holds Sum Alice-coins, no longer Bob holds Total Bob-coins and Alice holds Total Bob-coins.

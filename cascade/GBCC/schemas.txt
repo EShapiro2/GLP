@@ -1,0 +1,31 @@
+GBCC: Grassroots Backed Community Currency
+GBCC extends GCC and restricts it.
+Vocabulary: every treasurer of z stays backed, for x = all_stay_backed(x,z); x stays backed in z = stays_backed(z,x); z has a Dollar recorded as paid in by x = paid_in(z,x).
+Roles: the treasurers of z = treasurers(z), listed by z has y in the role Treasurer and y holds the role Treasurer in z.
+After g records a Dollar as paid into the account of z by x: z has a Dollar recorded as paid in by x.
+GBCC:0 - | *f*, a fraction 0 ≤ f < 1, is a parameter of GBCC. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
+GBCC:0 - | Alice is a person, Orga a community currency.
+GBCC:0 - | Environment: every treasurer of z stays backed, for x; x stays backed in z.
+GBCC:1 ■ | Treasurers.
+GBCC:1 ■ Appoint: GO:4 Appoint <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Resign: GO:4 Resign <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ End officer: GO:4 End officer <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Officer unfriend: GO:4 Officer unfriend <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Leave: GO:3 Leave <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Officer leave: GO:3 Officer leave <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Expel: GO:3 Expel <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Officer expel: GO:3 Officer expel <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Swap: GB:2 <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Pay: GC:3 <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Redeem: GB:3 <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Escrow: GB:4 <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Deposit own coins: DGC:2 Deposit own coins <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Deposit with the issuer: DGC:2 Deposit with the issuer <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Deposit own bonds: DGC:2 Deposit own bonds <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Deposit bond with the issuer: DGC:2 Deposit bond with the issuer <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Pay: DGC:4 <- all_stay_backed(Actor,Orga).
+GBCC:2 ■ Draw: GCC:1 <- stays_backed(Orga,Alice).
+GBCC:3 ◆ Record: paid_in(Orga,Alice) <- organisation(Orga), role(Alice,Orga,Treasurer) guarded by treasurers(Orga), Alice.
+GBCC:3 ◆ | Alice, a treasurer, may pay Dollars into the account, and the treasurers may then jointly record them as paid in by Alice.
+GBCC:4 ○ | Fiat redemption.
+GBCC:4 ○ | GCC:2, from the account while it holds Dollars, and from a treasurer if it holds none.

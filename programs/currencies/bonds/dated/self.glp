@@ -22,9 +22,9 @@ imported procedure miniapp#bonds(Key?, PersonChannel(Drawn)?, Stream(Conversatio
 exported procedure bonds(Key?, PersonChannel(Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
 bonds(Id, Ui, Convs, Cal) :- miniapp # bonds(Id?, Ui?, Convs?, Cal?).
 
-imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?, Stream(Integer)?).
-exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?, Stream(Integer)?).
-miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?).
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(PeerMsg)?).
+miniapp(Id, Ui, Sg) :- miniapp # miniapp(Id?, Ui?, Sg?).
 
 imported procedure person#person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 exported procedure person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
@@ -64,7 +64,7 @@ play_same(A?, B?) :- plays # play_same(A, B).
 %% acts after the first are the grants of the mini-app's person channel, and
 %% what its dispatcher draws goes out on the agent's person channel.  The
 %% mini-app's conversations are the root channels the super-app hands it
-%% (miniapp/4 above); the agent alone has none, and its network input is not
+%% (miniapp/3 above); the agent alone has none, and its network input is not
 %% read.
 DatedNet    ::= Stream(NetMsg(PeerMsg)).
 DatedAct    ::= bonds(Key).

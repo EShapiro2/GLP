@@ -1,69 +1,21 @@
-Environment predicates: link
-
-Reflexive predicates: friend, knows
-
-establish: identity(Alice), person(Alice) <-
-    not identity(Alice) guarded by Alice
-
-acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), person(Alice), identity(Bob), person(Bob) guarded by Alice, Bob
-
-introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), person(Alice), identity(Bob), knows(Bob, Alice), person(Bob), identity(Carol), person(Carol) guarded by Alice, Bob
-
-befriend: friend(Alice, Bob), friend(Bob, Alice) <-
-    identity(Alice), knows(Alice, Bob), person(Alice), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), person(Bob), not friend(Bob, Alice) guarded by Alice, Bob
-
-unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
-    identity(Alice), person(Alice), friend(Alice, Bob), not guardian_of(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
-
-enter: created(Alice, Carol), guardian_of(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), identity(Carol), service(Carol), creator(Carol, Alice), guarded_by(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice) <-
-    identity(Alice), person(Alice), not identity(Carol) guarded by Alice, Carol
-
-make_guardian: guardian_of(Bob, Carol), friend(Bob, Carol), knows(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob), knows(Carol, Bob) <-
-    identity(Bob), person(Bob), not guardian_of(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), friend(Alice, Bob), identity(Carol), service(Carol), guarded_by(Carol, Alice), not guarded_by(Carol, Bob), not friend(Carol, Bob), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Bob, Alice, Erin
-
-end_guardian: not guardian_of(Bob, Carol), not guarded_by(Carol, Bob) <-
-    identity(Alice), person(Alice), guardian_of(Alice, Carol), identity(Bob), person(Bob), guardian_of(Bob, Carol), identity(Carol), guarded_by(Carol, Alice), guarded_by(Carol, Bob), forall Erin (guarded_by(Carol, Erin), Erin != Bob -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Alice, Erin
-
-resign: not guardian_of(Bob, Carol), not guarded_by(Carol, Bob) <-
-    identity(Bob), person(Bob), guardian_of(Bob, Carol), identity(Carol), guarded_by(Carol, Bob) guarded by Bob
-
-guardian_unfriend: not friend(Bob, Carol), not guardian_of(Bob, Carol), not friend(Carol, Bob), not guarded_by(Carol, Bob) <-
-    identity(Bob), person(Bob), friend(Bob, Carol), guardian_of(Bob, Carol), identity(Carol), friend(Carol, Bob), guarded_by(Carol, Bob) guarded by Bob
-
-ward_acquaint: knows(Carol, Bob), knows(Bob, Carol) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Bob), person(Bob) guarded by Carol, Bob
-
-ward_befriend: friend(Carol, Bob), friend(Bob, Carol) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), knows(Carol, Bob), not friend(Carol, Bob), identity(Bob), knows(Bob, Carol), person(Bob), not friend(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), friend(Alice, Bob) guarded by Carol, Bob, Alice
-
-ward_unfriend: not friend(Carol, Bob), not friend(Bob, Carol) <-
-    identity(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol) guarded by Alice
-
-ward_end: not friend(Carol, Bob), not friend(Bob, Carol) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol) guarded by Carol
-
-wards_acquaint: knows(Carol, Dave), knows(Dave, Carol) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Dave), service(Dave), guarded_by(Dave, Bob) guarded by Carol, Dave
-
-wards_befriend: friend(Carol, Dave), friend(Dave, Carol) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), knows(Carol, Dave), not friend(Carol, Dave), identity(Dave), service(Dave), guarded_by(Dave, one(Bob, Alice)), knows(Dave, Carol), not friend(Dave, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), identity(one(Bob, Alice)), person(one(Bob, Alice)), guardian_of(one(Bob, Alice), Dave) guarded by Carol, Dave, Alice, one(Bob, Alice)
-
-retire: retired(Carol), not friend(Carol, _), not guarded_by(Carol, _), forall Bob (friend(Carol, Bob) -> not friend(Bob, Carol)), forall Erin (guarded_by(Carol, Erin) -> not guardian_of(Erin, Carol)) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Alice), person(Alice), guardian_of(Alice, Carol), forall Bob (friend(Carol, Bob) -> identity(Bob), friend(Bob, Carol)), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Alice, Erin
-
-open_server: rendezvous(Dave) <-
-    identity(Carol), person(Carol), guardian_of(Carol, Dave), identity(Dave), service(Dave), guarded_by(Dave, Carol), not rendezvous(Dave) guarded by Carol, Dave
-
-invite_by_link: registered_with(Alice, Dave, s), registered(Dave, Alice, s, e) <-
-    identity(Alice), person(Alice), knows(Alice, Dave), link(Alice, s, e), not registered_with(Alice, Dave, s), identity(Dave), rendezvous(Dave), not registered(Dave, Alice, s, _), not used(Dave, Alice, s) guarded by Alice
-
-redeem: redeemed(Bob, a, s), used(Dave, a, s), not registered(Dave, a, s, e) <-
-    identity(Bob), person(Bob), knows(Bob, Dave), identity(Dave), rendezvous(Dave), registered(Dave, a, s, e) guarded by Bob
-
-present: waiting(Dave, Alice, Bob) <-
-    identity(Alice), person(Alice), knows(Alice, Dave), friend(Alice, Bob), identity(Dave), rendezvous(Dave), not waiting(Dave, Alice, Bob) guarded by Alice
-
-match: matched(Dave, a, b), not waiting(Dave, a, b), not waiting(Dave, b, a) <-
-    identity(Dave), rendezvous(Dave), waiting(Dave, a, b), waiting(Dave, b, a)
+GRV: Grassroots Rendezvous
+GRV extends GSV.
+Vocabulary: d is a rendezvous server = rendezvous_server(d); x has signed n as an invitation link that names d = link(x,n,d); d has n registered for x = registered(d,n,x); d holds n expired = expired(d,n); d holds n spent for x = spent(d,n,x); x has the address of y = address(x,y); d has the signature of y over the friendship of x and y presented = presented(d,x,y).
+After x makes d a rendezvous server, which requires d is not a rendezvous server: d is a rendezvous server.
+After x signs n as an invitation link that names d, which requires x has not signed n as an invitation link that names d: x has signed n as an invitation link that names d.
+After x registers n with d, which requires d does not have n registered for x: d has n registered for x.
+After y presents n of x to d: no longer d has n registered for x, d holds n spent for x, x has the address of y and y has the address of x.
+After x presents to d the signature of y over the friendship of x and y, which requires d does not have the signature of y over the friendship of x and y presented: d has the signature of y over the friendship of x and y presented.
+After d matches x and y: no longer d has the signature of y over the friendship of x and y presented, no longer d has the signature of x over the friendship of y and x presented, x has the address of y and y has the address of x.
+GRV:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
+GRV:0 - | Alice, Bob and Carol are persons, Dave a service, Link an invitation link.
+GRV:1 ■ Open server: rendezvous_server(Dave) <- guardian(Carol,Dave), ~rendezvous_server(Dave) guarded by Carol.
+GRV:2 ■ | Invite by link.
+GRV:2 ■ Sign link: link(Alice,Link,Dave) <- knows(Alice,Dave), ~link(Alice,Link,Dave) guarded by Alice.
+GRV:2 ■ Invite by link: registered(Dave,Link,Alice) <- link(Alice,Link,Dave), knows(Alice,Dave), rendezvous_server(Dave), ~spent(Dave,Link,Alice), ~registered(Dave,Link,Alice) guarded by Alice.
+GRV:2 ■ | Link has a new serial.
+GRV:3 ■ Use link: ~registered(Dave,Link,Alice), spent(Dave,Link,Alice), address(Alice,Bob), address(Bob,Alice) <- knows(Bob,Dave), ~expired(Dave,Link), registered(Dave,Link,Alice) guarded by Bob.
+GRV:3 ■ | The link is then spent.
+GRV:4 ■ | Reconnection.
+GRV:4 ■ Present: presented(Dave,Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), knows(Alice,Dave), rendezvous_server(Dave), ~presented(Dave,Alice,Bob) guarded by Alice.
+GRV:4 ■ Match: ~presented(Dave,Alice,Bob), ~presented(Dave,Bob,Alice), address(Alice,Bob), address(Bob,Alice) <- presented(Dave,Alice,Bob), presented(Dave,Bob,Alice).

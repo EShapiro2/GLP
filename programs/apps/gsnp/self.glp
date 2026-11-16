@@ -1,12 +1,12 @@
 %% ---------------------------------------------------------------------------
-%% programs/apps/gsnp --- the app of GSNP, the grassroots social network with provenance (GAI's contract, programs/gai/GSNP.txt and GSNP.glp; Coordination Appendix C), which extends GSN and GAI, and through them GnW, GSG and GKK, as a mini-app of the Grassroots Super-App (GSG paper, Section 2), compiled down the abstraction cascade from its act schemas: the canonical CVA platform vGLP's compiler prints from them, platform.vglp (vGLP, Section 3.2, Definition "Canonical CVA Platform"; Section 5.4, "The compilation"), compiled to GLP by the canonical compilation when the directory loads (vGLP, Section 6.3, "The canonical compilation").  It is the host of GSN's app, ../gsn, on GSNP's platform: the same entry miniapp/4 (miniapp.glp, the same file as ../gsg's and ../gsn's), its scripted person (person.glp) and the play that activates it by run/3, five executions over four conversations, with no super-app (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it, and its artefact gsnp.glpw is what the super-app installs; the plays of the super-app hosting it on five smartphones are ../gsnp_boot.glp.
+%% programs/apps/gsnp --- the app of GSNP, the grassroots social network with provenance (GAI's contract, programs/gai/GSNP.txt and GSNP.glp; Coordination Appendix C), which extends GSN and GAI, and through them GnW, GSG and GKK, as a mini-app of the Grassroots Super-App (GSG paper, Section 2), compiled down the abstraction cascade from its act schemas: the canonical CVA platform vGLP's compiler prints from them, platform.vglp (vGLP, Section 3.2, Definition "Canonical CVA Platform"; Section 5.4, "The compilation"), compiled to GLP by the canonical compilation when the directory loads (vGLP, Section 6.3, "The canonical compilation").  It is the host of GSN's app, ../gsn, on GSNP's platform: the same entry miniapp/3 (miniapp.glp, the same file as ../gsg's and ../gsn's), its scripted person (person.glp) and the play that activates it by run/3, five executions over four conversations, with no super-app (plays.glp).  It calls nothing that reaches the network or the person, so the REPL's :artefact certifies it, and its artefact gsnp.glpw is what the super-app installs; the plays of the super-app hosting it on five smartphones are ../gsnp_boot.glp.
 %%
 %% The types of platform.vglp, written again for the declarations of this directory's modules, but for those the compilation forms --- Question, Drawn and Ask(Q) --- which the linker writes into every module that imports a compiled procedure, the dispatcher, or a procedure whose declaration names them (vGLP, Section 6.3, "The canonical compilation").  The compiled module's own definitions shadow these within it, and the two must agree.
 %% ---------------------------------------------------------------------------
 
 Peer      ::= Key.
 Speech    ::= speech(Utterance, Peer).
-Utterance ::= utterance(String) ; Speech.
+Utterance ::= utterance(String) ; program(Module) ; Speech.
 Class ::=
 establish(Peer)
 ;
@@ -16,55 +16,69 @@ introduce(Peer, Peer, Peer)
 ;
 befriend(Peer, Peer)
 ;
-unfriend(Peer, Peer)
-;
-enter(Peer, Peer, Speech)
-;
-make_guardian(Peer, Peer, Peer, Speech)
-;
-end_guardian(Peer, Peer, Peer)
-;
-resign(Peer, Peer)
-;
-guardian_unfriend(Peer, Peer)
-;
-agent_acquaint(Peer, Peer, Peer, Speech)
-;
-agent_befriend(Peer, Peer, Peer)
-;
-agent_unfriend(Peer, Peer, Peer)
-;
-agents_acquaint(Peer, Peer, Peer, Peer, Speech, Speech)
-;
-agents_befriend(Peer, Peer, Peer, Peer)
-;
-retire(Peer, Peer, List(Peer), List(Peer))
-;
-sign(Peer, Speech)
+person_unfriend(Peer, Peer)
 ;
 message(Peer, Peer, Speech)
 ;
-forward(Peer, Peer, Speech)
-;
 create(Peer, Speech)
-;
-join(Peer, Peer, Speech)
-;
-leave(Peer, Peer, Speech)
-;
-remove(Peer, Peer, Speech)
 ;
 close(Peer, List(Peer), Speech)
 ;
-post_own(Peer, Speech, Speech)
+join(Peer, Peer, Speech)
+;
+remove(Peer, Peer, Speech)
+;
+leave(Peer, Peer, Speech)
 ;
 post(Peer, Peer, Speech, Speech)
 ;
-post_forward(Peer, Peer, Speech, Speech)
+post_own(Peer, Speech, Speech)
 ;
-deliver(Peer, Peer, Speech, Speech)
+deliver(Peer, Peer, Peer, Speech, Speech)
+;
+deliver_leader(Peer, Peer, Speech, Speech)
+;
+enter(Peer, Peer, Speech)
+;
+make_guardian(Peer, Peer, Peer, List(Peer), Speech)
+;
+resign(Peer, Peer)
+;
+end_guardian(Peer, Peer, Peer, List(Peer))
+;
+guardian_unfriend(Peer, Peer)
+;
+ai_agent_acquaint(Peer, Peer)
+;
+ai_agent_befriend(Peer, Peer, Peer)
+;
+ai_agent_end(Peer, Peer)
+;
+unfriend(Peer, Peer)
+;
+ai_agent_unfriend(Peer, Peer, Peer)
+;
+ai_agents_acquaint(Peer, Peer, Speech)
+;
+ai_agents_befriend(Peer, Peer, Peer, Peer)
+;
+ai_agents_of_one_guardian_befriend(Peer, Peer, Peer)
+;
+retire(Peer, Peer, List(Peer), List(Peer), List(Peer))
+;
+sign(Peer, Speech)
+;
+forward(Peer, Peer, Speech)
+;
+agent_sign(Peer, Speech)
+;
+agent_forward(Peer, Peer, Speech)
+;
+agent_message(Peer, Peer, Speech)
 ;
 deliver_own(Peer, Peer, Speech, Speech)
+;
+post_forward(Peer, Peer, Speech, Speech)
 .
 Proposal ::=
 establish(Peer)
@@ -75,111 +89,119 @@ introduce(Peer, Peer, Peer)
 ;
 befriend(Peer, Peer)
 ;
-unfriend(Peer, Peer)
+person_unfriend(Peer, Peer)
+;
+message(Peer, Peer, Speech)
+;
+create(Peer, Speech)
+;
+close(Peer, Speech)
+;
+join(Peer, Peer, Speech)
+;
+remove(Peer, Peer, Speech)
+;
+leave(Peer, Peer, Speech)
+;
+post(Peer, Peer, Speech, Speech)
+;
+post_own(Peer, Speech, Speech)
 ;
 enter(Peer, Peer, Speech)
 ;
 make_guardian(Peer, Peer, Peer, Speech)
 ;
-end_guardian(Peer, Peer, Peer)
-;
 resign(Peer, Peer)
+;
+end_guardian(Peer, Peer, Peer)
 ;
 guardian_unfriend(Peer, Peer)
 ;
-agent_acquaint(Peer, Peer, Peer, Speech)
+ai_agent_acquaint(Peer, Peer)
 ;
-agent_befriend(Peer, Peer, Peer)
+ai_agent_befriend(Peer, Peer, Peer)
 ;
-agent_unfriend(Peer, Peer, Peer)
+ai_agent_end(Peer, Peer)
 ;
-agents_acquaint(Peer, Peer, Peer, Peer, Speech, Speech)
+unfriend(Peer, Peer)
 ;
-agents_befriend(Peer, Peer, Peer, Peer)
+ai_agent_unfriend(Peer, Peer, Peer)
+;
+ai_agents_acquaint(Peer, Peer, Speech)
+;
+ai_agents_befriend(Peer, Peer, Peer, Peer)
+;
+ai_agents_of_one_guardian_befriend(Peer, Peer, Peer)
 ;
 retire(Peer, Peer)
 ;
 sign(Peer, Speech)
 ;
-message(Peer, Peer, Speech)
-;
 forward(Peer, Peer, Speech)
 ;
-create(Peer, Speech)
+agent_sign(Peer, Speech)
 ;
-join(Peer, Peer, Speech)
+agent_forward(Peer, Peer, Speech)
 ;
-leave(Peer, Peer, Speech)
-;
-remove(Peer, Peer, Speech)
-;
-close(Peer, Speech)
-;
-post_own(Peer, Speech, Speech)
-;
-post(Peer, Peer, Speech, Speech)
+agent_message(Peer, Peer, Speech)
 ;
 post_forward(Peer, Peer, Speech, Speech)
 .
 Request ::= propose(Proposal).
 YesNo     ::= yes ; no.
 Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
-Vote      ::= yes ; no(Reason).
-Decision  ::= commit ; abort(Peer, Reason) ; yield.
+Vote      ::= yes(Bindings) ; yes(Bindings, GAtoms) ; no(Reason).
+Decision  ::= commit(Binding) ; abort(Peer, Reason) ; yield.
 Rho       ::= one(Class) ; rho(Proposal).
 Names     ::= none ; request(Rho, Integer).
 Attempt   ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
-            ; yield(Attempt) ; request(Rho, Integer).
+            ; yield(Attempt) ; ready(Attempt) ; request(Rho, Integer).
 Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
 Atom ::=
 identity
 ;
-retired
+person
 ;
 knows(Peer)
 ;
-agent
-;
 friend(Peer)
-;
-principal(Peer)
-;
-guarded_by(Peer)
-;
-principal_of(Peer)
-;
-guardian_of(Peer)
-;
-agent_of(Peer, Speech)
-;
-authored(Speech)
-;
-attestation(Speech)
-;
-retired_of(Peer)
 ;
 item(Speech)
 ;
-member(CName)
+leader(Speech)
+;
+member(Speech, Peer)
 ;
 listed(Peer, Speech)
 ;
-closed(Speech)
+posted(Speech, Peer, Speech)
 ;
-posted(Speech, Speech)
+group_delivered(Peer, Speech, Speech, Peer)
 ;
-delivered(Speech, Peer, Speech)
+ai_agent
+;
+has_guardian(Peer)
+;
+attestation(Speech)
+;
+principal(Peer)
+;
+guardian(Peer)
+;
+attestation_record(Peer, Speech)
+;
+retired
 .
 %% A community name, the value of a name term <u>.y_1...y_n: community(P) of the person P, and dot(N, S), N followed by the speech act S, as dot(community(a), n) names the group n led by a (vGLP c649c0d, Section 5.4, "Act schemas as local specifications").
 CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
-Output    ::= view(List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
+Output    ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Asking    ::= Attempt ; hello(Peer, Proposal).
 Approved  ::= Proposal.
 Approval  ::= approval(Asking, List(Word), YesNo?).
-Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Number).
+Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Number) ; held(Atom, Integer).
 Menu      ::= menu(Key, List(Key), Request?).
 
 %% What the mini-app's scripted person reports, its screen (person.glp): each view the program writes, once, the machine state and the persons the agent knows (vGLP b7e3517, Section 5.4, "The compilation"), and each notice, refused(P, Q, D) (vGLP f0acbc1, Section 5.4, "The compilation"); the agent's own key and the persons a request question shows, where the script looks; and each answer it gives an approval question, of the attempt or of an attempt of the class its script names.
@@ -192,10 +214,10 @@ Route     ::= route(Key, Stream(Net)?).
 Routes    ::= [] ; [Route | Routes].
 Sending   ::= went ; held(Net).
 
-%% The mini-app's entry, the instance of the root's entry template miniapp/4 (programs/self.glp) at the mini-app's two types, Drawn and Net.
-imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
-exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?, Stream(Integer)?).
-miniapp(Id, Ui, Sg, Cal) :- miniapp # miniapp(Id?, Ui?, Sg?, Cal?).
+%% The mini-app's entry, the instance of the root's entry template miniapp/3 (programs/self.glp) at the mini-app's two types, Drawn and Net.
+imported procedure miniapp#miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?).
+exported procedure miniapp(Key?, PersonChannel(Drawn)?, SgChannel(Net)?).
+miniapp(Id, Ui, Sg) :- miniapp # miniapp(Id?, Ui?, Sg?).
 
 %% The scripted person, the instance of the root's second template miniapp_person/5 at Drawn and at Seen.
 imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).

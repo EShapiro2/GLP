@@ -39,7 +39,7 @@ Peer       ::= Key.
 Carried(X, R) ::= hello(Peer, R) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, X).
 Msg(X, R)  ::= msg(Peer, Carried(X, R)).
 Sent(X)    ::= sent(Peer, Peer, X) ; intro(Peer, Peer, Peer).
-Step(T, Q, S, P, D) ::= req(T) ; own(Holes, T) ; look ; wait(Cond(Q, S, P, D)) ; approval(Q, T) ; refresh.
+Step(T, Q, S, P, D) ::= req(T) ; own(Holes, T) ; look ; wait(Cond(Q, S, P, D)) ; approval(Q, T) ; refresh ; clock(Integer).
 Cond(Q, S, P, D) ::= known(Peer) ; holds(S) ; lacks(S) ; has(S, Integer) ; refused(P, Peer, D) ; asked(Q) ; asking.
 Holes      ::= [] ; [Peer? | Holes].
 Steps(T, Q, S, P, D) ::= [] ; [Step(T, Q, S, P, D) | Steps(T, Q, S, P, D)].
@@ -198,6 +198,10 @@ advance(ps(Se, T, Cs, [wait(X)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
 advance(ps(Se, T, Cs, [approval(K, A)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- ground(Cs?), ground(K?) |
     find_approval(K?, Cs?, F),
     approved(F?, ps(Se?, T?, Cs?, [approval(K?, A?)|Ss?]), Gs, Gs1?, St1, Log, Log1?).
+%% clock(T) sets the machine's clock to T, Unix milliseconds, by GLP's set_clock/1, so that a play has the day it wants: the compiled agent of a contract that requires the day reads the date by now/1 (vGLP, Section 5.4: "the compiled agent reads it from its phone whenever it computes a condition"; GLP #16, vGLP_inbox, 2026-11-15 20:30 UTC, Udi approving set_clock).  The clock is the machine's, so one step sets it for every agent of the play.
+advance(ps(Se, T, Cs, [clock(Ms)|Ss]), Gs?, Gs1, St1?, Log?, Log1) :- integer(Ms?) |
+    set_clock(Ms?),
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
 advance(ps(Se, T, Cs, []), Gs1?, Gs1, ps(Se?, T?, Cs?, []), Log1?, Log1).
 
 %% fill(Me, Ks): the agent's own key Me written into each hole of Ks.

@@ -1,0 +1,4 @@
+PLAIN: A Currency Without Wards
+PLAIN extends CUR.
+Alice and Bob are parties, Sum a number.
+1. ■ Pay known: CUR:1 Pay, only if Bob knows Alice.

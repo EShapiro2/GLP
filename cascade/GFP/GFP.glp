@@ -1,37 +1,11 @@
-%% ---------------------------------------------------------------------------
-%% GFP.glp --- Grassroots Forwarding with Provenance, GSC's, extending GSG, in the clause syntax
-%% of GSC's paper, Section 3.2 (the form is described in GKK.glp).  The clauses are in GFP.txt
-%% beside this file: sign is GFP:1, Signing, and forward GFP:2, Forwarding; GKK's and GSG's
-%% schemas come first, every role but establish's requiring identity.  sgn(x, 'Alice') is the
-%% speech act x signed over by the agent in the role Alice (GSC, Section 3.2, signed terms).
-%% ---------------------------------------------------------------------------
-
-% contract_named(gfp, C): the contract, GFP (Coordination Appendix C).
-procedure contract_named(Constant?, SContract).
-contract_named(gfp,
-   [sas(establish, ['Alice'], [],
-       [atom(identity, ['Alice'])],
-       [not(atom(identity, ['Alice']))], true, ['Alice']),
-    sas(acquaint, ['Alice', 'Bob'], [],
-       [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])],
-       [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
-    sas(introduce, ['Alice', 'Bob', 'Carol'], ['Carol'],
-       [atom(knows, ['Bob', 'Carol'])],
-       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Alice', 'Carol']),
-        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob']),
-    sas(befriend, ['Alice', 'Bob'], [],
-       [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])],
-       [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), not(atom(friend, ['Alice', 'Bob'])),
-        atom(identity, ['Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Bob', 'Alice']))],
-       true, ['Alice', 'Bob']),
-    sas(unfriend, ['Alice', 'Bob'], [],
-       [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
-       [atom(identity, ['Alice']), atom(friend, ['Alice', 'Bob']),
-        atom(identity, ['Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
-    sas(sign, ['Alice'], [x],
-       [atom(item, ['Alice', x])],
-       [atom(identity, ['Alice']), not(atom(item, ['Alice', x]))], true, ['Alice']),
-    sas(forward, ['Alice', 'Bob'], [x],
-       [atom(item, ['Bob', sgn(x, 'Alice')])],
-       [atom(identity, ['Alice']), atom(item, ['Alice', x]), atom(friend, ['Alice', 'Bob']),
-        atom(identity, ['Bob'])], true, ['Alice'])]).
+%% GFP.glp --- printed by adopt.py from GFP.txt: the contract's full schemas, the Calculus's term.glp.txt,
+%% complete in itself.  Not to be edited: edit GFP.txt and run adopt.py GFP.
+% contract_named(gfp, C): the contract, GFP.
+procedure contract_named(Constant?, SDeclared).
+contract_named(gfp, reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
+ sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
+ sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
+ sas(befriend, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice', 'Bob']),
+ sas(unfriend, ['Alice', 'Bob'], [], [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
+ sas(sign, ['Alice'], ['Item'], [atom(item, ['Alice', 'Item'])], [atom(identity, ['Alice']), not(atom(item, ['Alice', 'Item']))], true, ['Alice']),
+ sas(forward, ['Bob', 'Alice'], ['Item'], [atom(item, ['Bob', sgn('Item', 'Alice')])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(item, ['Alice', 'Item']), atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice'])])).

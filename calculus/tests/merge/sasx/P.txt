@@ -1,0 +1,4 @@
+P: Willing (expanded schemas)
+C:0 - | Alice is a person.
+C:1+P:1 ■ Signal: s(Alice) <- w(Alice) guarded by Alice.
+P:0 - | Alice is a person.

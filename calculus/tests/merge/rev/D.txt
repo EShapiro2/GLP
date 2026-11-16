@@ -1,0 +1,3 @@
+D: Both
+D composes P with Q.
+Alice is a person.

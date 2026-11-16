@@ -1,0 +1,6 @@
+MO: A Minimal Organisation
+Vocabulary: x is a member of z = member(x,z); z has x as a participant = has_participant(z,x); z holds x's vote on m = vote(z,x,m); x is entitled to vote on m in z = voter(x,z,m); the votes decide m according to the bylaws of z = decided(z,m).
+After x votes on m in z, which requires z does not hold x's vote on m: z holds x's vote on m.
+MO:0 - | Bob is a person, Orga an organisation, Motion an act of Orga.
+MO:0 - | Parameters: x is entitled to vote on m in z; the votes decide m according to the bylaws of z.
+MO:1 ■ Vote: vote(Orga,Bob,Motion) <- voter(Bob,Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.

@@ -1,0 +1,26 @@
+CMB: Commercial Bank
+CMB instantiates GBank with commercial bank bylaws; role(x,z,Director) for proposer(x,z,m); role(x,z,Director) for taker(x,z,m); role(x,z,Director) for voter(x,z,m); vote(z,>=Votes,m), sum(More,Votes,1), has_role(z,<More,Director) for decided(z,m), and restricts and extends it.
+Vocabulary: z has the lending limit of x at the number n = lending_limit(z,x,n); z holds v's vote to set the lending limit of x at n = vote_limit(z,v,x,n); z holds v's vote to lend y n z-coins due e = vote_lend(z,v,y,n,e).
+y is a customer of z: y is a participant of z and y holds no role in z.
+x is a loan officer of z: x holds the role Lender in z and z has x in the role Lender.
+Roles: the directors of z = directors(z), listed by z has y in the role Director and y holds the role Director in z; those who decide the loan for z = loan_deciders(z).
+x is a director of z: x holds the role Director in z.
+After y swaps n w-coins for n z-coins: no longer y holds n w-coins, z holds n w-coins, no longer z holds n z-coins and y holds n z-coins.
+After v votes to lend y n z-coins of z due e, which requires z does not hold v's vote to lend y n z-coins due e: z holds v's vote to lend y n z-coins due e.
+After x swaps n z-coins of z with y for m y-bonds due e: no longer z holds n z-coins, y holds n z-coins, no longer y holds m y-bonds due e, z holds m y-bonds due e and z holds no one's vote to lend y n z-coins due e.
+the earlier lending limit of x in z has ended: z has the lending limit of x at no number.
+After v votes to set the lending limit of x in z at n, which requires z does not hold v's vote to set the lending limit of x at n: z holds v's vote to set the lending limit of x at n.
+After w sets the lending limit of x in z at n: the earlier lending limit of x in z has ended, z has the lending limit of x at the number n and z holds no one's vote to set the lending limit of x at n.
+CMB:0 - | A *commercial bank* is a bank that may issue Dollar-denominated coins and bonds, whose bylaws name two roles, *director*, held by its first officer, and *loan officer*; the directors jointly decide the acts of the bank, but a loan officer decides a loan within their *lending limit*, a number of Dollars. A participant who holds no role is a *customer*.
+CMB:0 - | Alice, Bob, Carol, Dave and Erin are persons, Dave possibly Bob, Orga a commercial bank, Dollar a fiat currency, Day a maturity date, Sum, Total, Limit, Votes and More numbers.
+CMB:1 ■ Leave: GO:3 Leave <- organisation(Orga) guarded by directors(Orga).
+CMB:1 ■ Officer leave: GO:3 Officer leave <- organisation(Orga) guarded by directors(Orga).
+CMB:1 ■ Expel: GO:3 Expel <- organisation(Orga) guarded by Bob, directors(Orga).
+CMB:1 ■ Officer expel: GO:3 Officer expel <- organisation(Orga) guarded by Bob, directors(Orga).
+CMB:2 ■ Bank deposit: ~coin(Bob,Dave,*Sum), coin(Orga,Dave,*Sum), ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum) <- participant(Bob,Orga), ~role(Bob,Orga,_), issued_in(Dave,Dollar), coin(Bob,Dave,*Sum), coin(Orga,Orga,*Sum) guarded by Bob possibly Bob=Dave.
+CMB:2 ■ Bank deposit own coins: ~coin(Bob,Bob,*Sum), coin(Orga,Bob,*Sum), ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum) <- participant(Bob,Orga), ~role(Bob,Orga,_), issued_in(Bob,Dollar), coin(Bob,Bob,*Sum), coin(Orga,Orga,*Sum) guarded by Bob.
+CMB:3 ■ Loan: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Day,*Total), bond(Orga,Bob,Day,*Total), ~vote_lend(Orga,_,Bob,Sum,Day) <- role(Alice,Orga,Lender), has_role(Orga,Alice,Lender), lending_limit(Orga,Alice,Limit), le(Sum,Limit), participant(Bob,Orga), ~role(Bob,Orga,_), coin(Orga,Orga,*Sum), bond(Bob,Bob,Day,*Total) guarded by Alice, Bob.
+CMB:3 ■ Loan by the directors: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Day,*Total), bond(Orga,Bob,Day,*Total), ~vote_lend(Orga,_,Bob,Sum,Day) <- role(Alice,Orga,Director), vote_lend(Orga,>=Votes,Bob,Sum,Day), sum(More,Votes,1), has_role(Orga,<More,Director), participant(Bob,Orga), ~role(Bob,Orga,_), coin(Orga,Orga,*Sum), bond(Bob,Bob,Day,*Total) guarded by Alice, Bob.
+CMB:3 ■ Vote to lend: vote_lend(Orga,Erin,Bob,Sum,Day) <- role(Erin,Orga,Director), has_participant(Orga,Bob), ~vote_lend(Orga,Erin,Bob,Sum,Day) guarded by Erin.
+CMB:4 ■ Set lending limit: ~lending_limit(Orga,Carol,_), lending_limit(Orga,Carol,Limit), ~vote_limit(Orga,_,Carol,Limit) <- role(Alice,Orga,Director), vote_limit(Orga,>=Votes,Carol,Limit), sum(More,Votes,1), has_role(Orga,<More,Director), has_role(Orga,Carol,Lender) guarded by Alice.
+CMB:4 ■ Vote on lending limit: vote_limit(Orga,Erin,Carol,Limit) <- role(Erin,Orga,Director), has_role(Orga,Carol,Lender), ~vote_limit(Orga,Erin,Carol,Limit) guarded by Erin.

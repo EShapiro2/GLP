@@ -2,63 +2,145 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 6, Grassroots Corporations and cites a clause as GCorp:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GO and DGC, Denominated Grassroots Currencies, SGC's (programs/currencies/sovereign).
-% Last changed: 2026-11-11, by GO #5.
+% Last changed: 2026-11-12, by GO #5.
 % Schemas: GCorp.glp beside this file.
 GCorp: Grassroots Corporation
 GCorp extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-A corporation is an organisation that holds, pays and issues Dollar-denominated coins and bonds.
-Pragmas
+A *corporation* is an organisation that holds, pays and issues Dollar-denominated coins and bonds.
+Logic pragmas
+GCorp extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A *corporation* is an organisation that holds, pays and issues Dollar-denominated coins and bonds.
+Interface pragmas
 Look: 🏢, money
-Organisations: the organisations Alice participates in, and her roles in each.
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
-Identity: Alice [Establish]
-Acquaintance: Alice [Acquaint] <person Bob>
-  Bob: Alice asks you to approve this: acquaint.
-Introduction: Alice [Introduce]
-  Bob: Alice asks you to approve this: introduce.
-Friendship: Alice [Befriend]
-  Bob: Alice asks you to approve this: befriend.
-Ending a friendship: Alice [Unfriend]
-Acts of the organisation: Alice [Sign] <act>
-  Bob [Propose]
-  Bob [Vote] <act>
-  Bob [Named propose]
-  Bob [Named vote] <act>
-  Otto [Move retire] <motion>
-Creation: Alice [Found] <organisation> <role>
-  Orga: Alice asks you to approve this: found.
-  Greta [Gov found] <person Alice> <organisation> <role>
-  Alice: Greta asks you to approve this: gov found.
-  Orga: Greta asks you to approve this: gov found.
-Ward and person: Otto [Org acquaint] <person Bob>
-  Bob: Otto asks you to approve this: org acquaint.
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
-  Bruno: Otto asks you to approve this: orgs acquaint.
-Retiring: Otto [Retire]
-Participation: Bob [Join] <person Otto> <role>
-  Otto: Bob asks you to approve this: join.
-  Bob [Leave]
-  Otto [Expel] <person Bob>
-Joint guardianship: Otto [Appoint] <person Bob> <role>
-  Bob: Otto asks you to approve this: appoint.
-  Otto [Dismiss] <person Bob> <role>
-  Bob [Resign role]
-  Nora [First officer] <person Bob> <role>
-  Bob: Nora asks you to approve this: first officer.
-Amendment: Otto [Amend] <new bylaws>
-Minting: Alice [Mint coin] <denomination> <amount>
-  Alice [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
-  Bob: Alice asks you to approve this: swap.
-Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount>
-  Alice [Payout] <amount>
-  Alice [Spend] <person Bob> <amount>
-Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Escrow: Alice [Deposit] <amount>
-  Carol: Alice asks you to approve this: deposit.
-  Carol [Release] <amount>
-  Bob: Carol asks you to approve this: release.
-  Carol [Return] <amount>
-  Alice: Carol asks you to approve this: return.
+Issue: AliceOfficer [Issue for Alice] <sum> <votesalice>
+  Voter [Vote of Alice for Issue] <sum>
+  AliceOfficer [First issue for Alice] <sum> <dollar> <votesalice>
+  Voter [Vote of Alice for First issue] <sum> <dollar>
+Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <sum> <total> <votesalice>
+  Bob: AliceOfficer asks for your consent to swap for alice.
+  Voter [Vote of Alice for Swap] <bob> <sum> <carol> <total> <dave>
+  Alice [Swap for Bob] <bobofficer> <sum> <total> <votesbob>
+  BobOfficer: Alice asks for your consent to swap for bob.
+  Voter [Vote of Bob for Swap] <alice> <sum> <carol> <total> <dave>
+  AliceOfficer [Swap for Alice and Bob] <bobofficer> <sum> <total> <votesalice> <votesbob>
+  BobOfficer: AliceOfficer asks for your consent to swap for alice and bob.
+  AliceOfficer [Redeem for Alice] <votesalice>
+  Voter [Vote of Alice for Redeem] <bob> <carol>
+  AliceOfficer [Swap coin for bond for Alice] <sum> <day> <total> <votesalice>
+  Bob: AliceOfficer asks for your consent to swap coin for bond for alice.
+  Voter [Vote of Alice for Swap coin for bond] <bob> <sum> <carol> <total> <dave> <day>
+  Alice [Swap coin for bond for Bob] <bobofficer> <sum> <day> <total> <votesbob>
+  BobOfficer: Alice asks for your consent to swap coin for bond for bob.
+  Voter [Vote of Bob for Swap coin for bond] <alice> <sum> <carol> <total> <dave> <day>
+  AliceOfficer [Swap coin for bond for Alice and Bob] <bobofficer> <sum> <day> <total> <votesalice> <votesbob>
+  BobOfficer: AliceOfficer asks for your consent to swap coin for bond for alice and bob.
+  AliceOfficer [Swap bonds for Alice] <day> <sum> <term> <total> <votesalice>
+  Bob: AliceOfficer asks for your consent to swap bonds for alice.
+  Voter [Vote of Alice for Swap bonds] <bob> <sum> <carol> <day> <total> <dave> <term>
+  Alice [Swap bonds for Bob] <bobofficer> <sum> <term> <total> <votesbob>
+  BobOfficer: Alice asks for your consent to swap bonds for bob.
+  Voter [Vote of Bob for Swap bonds] <alice> <sum> <carol> <day> <total> <dave> <term>
+  AliceOfficer [Swap bonds for Alice and Bob] <bobofficer> <day> <sum> <term> <total> <votesalice> <votesbob>
+  BobOfficer: AliceOfficer asks for your consent to swap bonds for alice and bob.
+  AliceOfficer [Redeem coin against bond for Alice] <day> <votesalice>
+  Voter [Vote of Alice for Redeem coin against bond] <bob> <carol> <day>
+  AliceOfficer [Redeem bond for Alice] <day> <votesalice>
+  Voter [Vote of Alice for Redeem bond] <bob> <day> <carol>
+  AliceOfficer [Redeem bond against bond for Alice] <day> <term> <votesalice>
+  Voter [Vote of Alice for Redeem bond against bond] <bob> <day> <carol> <term>
+  AliceOfficer [Deposit for Alice] <sum> <cond> <dollar> <votesalice>
+  Carol: AliceOfficer asks for your consent to deposit for alice.
+  Voter [Vote of Alice for Deposit] <sum> <dollar> <dave> <carol> <bob> <cond>
+  Alice [Deposit for Carol] <carolofficer> <sum> <cond> <dollar> <votescarol>
+  CarolOfficer: Alice asks for your consent to deposit for carol.
+  Voter [Vote of Carol for Deposit] <alice> <sum> <dollar> <dave> <bob> <cond>
+  AliceOfficer [Deposit for Alice and Carol] <carolofficer> <sum> <cond> <dollar> <votesalice> <votescarol>
+  CarolOfficer: AliceOfficer asks for your consent to deposit for alice and carol.
+  AliceOfficer [Deposit bond for Alice] <day> <sum> <cond> <dollar> <votesalice>
+  Carol: AliceOfficer asks for your consent to deposit bond for alice.
+  Voter [Vote of Alice for Deposit bond] <sum> <dollar> <dave> <day> <carol> <bob> <cond>
+  Alice [Deposit bond for Carol] <carolofficer> <sum> <cond> <dollar> <votescarol>
+  CarolOfficer: Alice asks for your consent to deposit bond for carol.
+  Voter [Vote of Carol for Deposit bond] <alice> <sum> <dollar> <dave> <day> <bob> <cond>
+  AliceOfficer [Deposit bond for Alice and Carol] <carolofficer> <day> <sum> <cond> <dollar> <votesalice> <votescarol>
+  CarolOfficer: AliceOfficer asks for your consent to deposit bond for alice and carol.
+  AliceOfficer [Deposit own coins for Alice] <sum> <cond> <dollar> <votesalice>
+  Carol: AliceOfficer asks for your consent to deposit own coins for alice.
+  Alice [Deposit own coins for Carol] <carolofficer> <sum> <cond> <votescarol>
+  CarolOfficer: Alice asks for your consent to deposit own coins for carol.
+  AliceOfficer [Deposit own coins for Alice and Carol] <carolofficer> <sum> <cond> <dollar> <votesalice> <votescarol>
+  CarolOfficer: AliceOfficer asks for your consent to deposit own coins for alice and carol.
+  AliceOfficer [Deposit with the issuer for Alice] <sum> <cond> <dollar> <votesalice>
+  Carol: AliceOfficer asks for your consent to deposit with the issuer for alice.
+  Alice [Deposit with the issuer for Carol] <carolofficer> <sum> <cond> <dollar> <votescarol>
+  CarolOfficer: Alice asks for your consent to deposit with the issuer for carol.
+  AliceOfficer [Deposit with the issuer for Alice and Carol] <carolofficer> <sum> <cond> <dollar> <votesalice> <votescarol>
+  CarolOfficer: AliceOfficer asks for your consent to deposit with the issuer for alice and carol.
+  AliceOfficer [Deposit more for Alice] <sum> <cond> <dollar> <votesalice>
+  Carol: AliceOfficer asks for your consent to deposit more for alice.
+  Alice [Deposit more for Carol] <carolofficer> <sum> <cond> <dollar> <votescarol>
+  CarolOfficer: Alice asks for your consent to deposit more for carol.
+  AliceOfficer [Deposit more for Alice and Carol] <carolofficer> <sum> <cond> <dollar> <votesalice> <votescarol>
+  CarolOfficer: AliceOfficer asks for your consent to deposit more for alice and carol.
+  AliceOfficer [Deposit own bonds for Alice] <day> <sum> <cond> <dollar> <votesalice>
+  Carol: AliceOfficer asks for your consent to deposit own bonds for alice.
+  Alice [Deposit own bonds for Carol] <carolofficer> <sum> <cond> <votescarol>
+  CarolOfficer: Alice asks for your consent to deposit own bonds for carol.
+  AliceOfficer [Deposit own bonds for Alice and Carol] <carolofficer> <day> <sum> <cond> <dollar> <votesalice> <votescarol>
+  CarolOfficer: AliceOfficer asks for your consent to deposit own bonds for alice and carol.
+  AliceOfficer [Deposit bond with the issuer for Alice] <day> <sum> <cond> <dollar> <votesalice>
+  Carol: AliceOfficer asks for your consent to deposit bond with the issuer for alice.
+  Alice [Deposit bond with the issuer for Carol] <carolofficer> <sum> <cond> <dollar> <votescarol>
+  CarolOfficer: Alice asks for your consent to deposit bond with the issuer for carol.
+  AliceOfficer [Deposit bond with the issuer for Alice and Carol] <carolofficer> <day> <sum> <cond> <dollar> <votesalice> <votescarol>
+  CarolOfficer: AliceOfficer asks for your consent to deposit bond with the issuer for alice and carol.
+  AliceOfficer [Deposit bond more for Alice] <day> <sum> <cond> <dollar> <votesalice>
+  Carol: AliceOfficer asks for your consent to deposit bond more for alice.
+  Alice [Deposit bond more for Carol] <carolofficer> <sum> <cond> <dollar> <votescarol>
+  CarolOfficer: Alice asks for your consent to deposit bond more for carol.
+  AliceOfficer [Deposit bond more for Alice and Carol] <carolofficer> <day> <sum> <cond> <dollar> <votesalice> <votescarol>
+  CarolOfficer: AliceOfficer asks for your consent to deposit bond more for alice and carol.
+Pay: AliceOfficer [Pay for Alice] <sum> <votesalice>
+  Voter [Vote of Alice for Pay] <bob> <sum>
+Issue bond: AliceOfficer [Issue bond for Alice] <day> <sum> <votesalice>
+  Voter [Vote of Alice for Issue bond] <sum> <day>
+Escrow: CarolOfficer [Release for Carol] <sum> <votescarol>
+  Bob: CarolOfficer asks for your consent to release for carol.
+  Voter [Vote of Carol for Release] <bob> <sum> <dave> <alice> <cond>
+  Carol [Release for Bob] <bobofficer> <sum> <votesbob>
+  BobOfficer: Carol asks for your consent to release for bob.
+  Voter [Vote of Bob for Release] <carol> <sum> <dave> <alice> <cond>
+  CarolOfficer [Release for Carol and Bob] <bobofficer> <cond> <sum> <votescarol> <votesbob>
+  BobOfficer: CarolOfficer asks for your consent to release for carol and bob.
+  CarolOfficer [Release bond for Carol] <day> <sum> <votescarol>
+  Bob: CarolOfficer asks for your consent to release bond for carol.
+  Voter [Vote of Carol for Release bond] <bob> <sum> <dave> <day> <alice> <cond>
+  Carol [Release bond for Bob] <bobofficer> <sum> <votesbob>
+  BobOfficer: Carol asks for your consent to release bond for bob.
+  Voter [Vote of Bob for Release bond] <carol> <sum> <dave> <day> <alice> <cond>
+  CarolOfficer [Release bond for Carol and Bob] <bobofficer> <day> <cond> <sum> <votescarol> <votesbob>
+  BobOfficer: CarolOfficer asks for your consent to release bond for carol and bob.
+  CarolOfficer [Return for Carol] <sum> <votescarol>
+  Alice: CarolOfficer asks for your consent to return for carol.
+  Voter [Vote of Carol for Return] <alice> <sum> <dave> <bob> <cond>
+  Carol [Return for Alice] <aliceofficer> <sum> <votesalice>
+  AliceOfficer: Carol asks for your consent to return for alice.
+  Voter [Vote of Alice for Return] <carol> <sum> <dave> <bob> <cond>
+  CarolOfficer [Return for Carol and Alice] <aliceofficer> <cond> <sum> <votescarol> <votesalice>
+  AliceOfficer: CarolOfficer asks for your consent to return for carol and alice.
+  CarolOfficer [Return bond for Carol] <day> <sum> <votescarol>
+  Alice: CarolOfficer asks for your consent to return bond for carol.
+  Voter [Vote of Carol for Return bond] <alice> <sum> <dave> <day> <bob> <cond>
+  Carol [Return bond for Alice] <aliceofficer> <sum> <votesalice>
+  AliceOfficer: Carol asks for your consent to return bond for alice.
+  Voter [Vote of Alice for Return bond] <carol> <sum> <dave> <day> <bob> <cond>
+  CarolOfficer [Return bond for Carol and Alice] <aliceofficer> <day> <cond> <sum> <votescarol> <votesalice>
+  AliceOfficer: CarolOfficer asks for your consent to return bond for carol and alice.
+Issue denominated bond: AliceOfficer [Issue denominated bond for Alice] <day> <sum> <dollar> <votesalice>
+  Voter [Vote of Alice for Issue denominated bond] <sum> <dollar> <day>
+Accept: AliceOfficer [Accept for Alice] <dollar> <limit> <votesalice>
+  Voter [Vote of Alice for Accept] <limit> <dollar> <carol>
+  AliceOfficer [Accept by bond for Alice] <dollar> <limit> <votesalice>
+Pay accepted coins: AliceOfficer [Pay accepted coins for Alice] <dollar> <votesalice>
+  Voter [Vote of Alice for Pay accepted coins] <bob> <carol> <dollar>
+  AliceOfficer [Pay own accepted coins for Alice] <dollar> <votesalice> [Pay accepted coins to the issuer for Alice] <dollar> <votesalice>

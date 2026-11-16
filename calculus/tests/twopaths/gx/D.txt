@@ -1,0 +1,6 @@
+D: Both
+Of C: Alice is a person.
+Of P: Alice is a person.
+Of Q: Alice is a person.
+Of D: Alice is a person.
+C:1, P:1, Q:1. ■ Mark: Alice may mark herself, and then no longer Alice has a pass.

@@ -1,0 +1,29 @@
+% MCS: Mutual Credit Society --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.1 and cites a clause as MCS:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: GBank, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-12, by GO #5.
+% Schemas: MCS.glp beside this file.
+MCS: Mutual Credit Society
+MCS instantiates GBank with mutual credit society bylaws and restricts and extends it.
+A *mutual credit society* is a bank whose bylaws name one role, *member*, held by every participant; the members jointly decide its acts. A member is *in the red* by their coins in circulation less the other persons' coins they hold.
+Alice and Bob are persons, Orga a mutual credit society.
+1. ■ Leave: GO:3, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other.
+2. ■ Redeem member's coin: Bob, a member, may redeem an Alice-coin he holds against an Orga-coin, provided Alice is a member.
+3. ■ Credit limit. DGC:2, GC:3 and DGC:4, only if every member is then in the red by at most 1000 coins.
+Logic pragmas
+MCS instantiates GBank with mutual credit society bylaws; x is a member of z for x is entitled to propose m in z; x is a member of z for x is entitled to take m for z; x is a member of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, More is Votes plus 1 and z has fewer than More persons as a participant for the votes decide m according to the bylaws of z, and restricts and extends it.
+A *mutual credit society* is a bank whose bylaws name one role, *member*, held by every participant; the members jointly decide its acts. A member is *in the red* by their coins in circulation less the other persons' coins they hold.
+Alice and Bob are persons, Orga a mutual credit society, Votes and More numbers.
+1. ■ Leave: GO:3 Leave, only if Bob holds exactly 0 Orga-coins. Leave owed nothing: GO:3 Leave, only if Orga holds exactly 0 Bob-coins. Officer leave: GO:3 Officer leave, only if Bob holds exactly 0 Orga-coins. Officer leave owed nothing: GO:3 Officer leave, only if Orga holds exactly 0 Bob-coins.
+2. ■ Redeem member's coin: Bob may redeem with Orga an Alice-coin against an Orga-coin, provided Bob is a member of Orga and Alice is a member of Orga.
+3. ■ Credit limit. Swap: DGC:2, only if every member of Orga is then in the red by at most 1000 coins. Pay: GC:3, only if every member of Orga is then in the red by at most 1000 coins. Pay: DGC:4, only if every member of Orga is then in the red by at most 1000 coins.
+Logic pragmas.
+Vocabulary: every member of z is then in the red by at most 1000 coins, for x = credit_limit(x,z).
+y is a member of z: y is a participant of z.
+After y redeems with z an x-coin against a z-coin: no longer y holds an x-coin, z holds an x-coin, no longer z holds a z-coin and y holds a z-coin.
+Environment: every member of z is then in the red by at most 1000 coins, for x.
+Interface pragmas
+Look: 🤝, money
+Leave: Bob [Leave owed nothing] [Officer leave owed nothing]
+Redeem member's coin: Bob [Redeem member's coin]

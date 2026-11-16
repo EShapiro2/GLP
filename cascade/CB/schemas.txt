@@ -1,0 +1,18 @@
+CB: Community Bank
+CB instantiates GBank with community bank bylaws; role(x,z,Director) for proposer(x,z,m); role(x,z,Director) for taker(x,z,m); role(x,z,Director) for voter(x,z,m); vote(z,>=Votes,m), sum(More,Votes,1), has_role(z,<More,Director) for decided(z,m), and restricts and extends it.
+Vocabulary: z has y's credit line at the number n = credit_line(z,y,n).
+Roles: the directors of z = directors(z), listed by z has y in the role Director and y holds the role Director in z.
+x is a director of z: x holds the role Director in z.
+y's earlier credit line in z has ended: z has y's credit line at no number.
+After g sets y's credit line in z at n: y's earlier credit line in z has ended and z has y's credit line at the number n.
+After y swaps n y-coins for n z-coins: no longer y holds n y-coins, z holds n y-coins, no longer z holds n z-coins and y holds n z-coins.
+CB:0 - | A *community bank* is a bank whose bylaws name two roles, *member*, held by every participant, and *director*, held by its first officer and by members; the directors jointly decide the acts of the bank, but the members jointly appoint and remove directors. A member's *credit line* is a number of coins.
+CB:0 - | Bob is a person, Orga a community bank, Sum, Line, Held, Total, Votes and More numbers.
+CB:1 ■ Leave: GO:3 Leave <- coin(Bob,Orga,#0).
+CB:1 ■ Leave owed nothing: GO:3 Leave <- coin(Orga,Bob,#0).
+CB:1 ■ Officer leave: GO:3 Officer leave <- coin(Bob,Orga,#0).
+CB:1 ■ Officer leave owed nothing: GO:3 Officer leave <- coin(Orga,Bob,#0).
+CB:2 ■ Set credit line: ~credit_line(Orga,Bob,_), credit_line(Orga,Bob,Line) <- organisation(Orga), has_participant(Orga,Bob) guarded by directors(Orga).
+CB:3 ■ Credit: ~coin(Bob,Bob,*Sum), coin(Orga,Bob,*Sum), ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum) <- coin(Orga,Bob,#Held), credit_line(Orga,Bob,Line), sum(Total,Held,Sum), le(Total,Line), coin(Bob,Bob,*Sum), coin(Orga,Orga,*Sum) guarded by Bob.
+CB:4 ○ | Community currency.
+CB:4 ○ | A member will accept Orga-coins in payment for their offerings at the prices they post.

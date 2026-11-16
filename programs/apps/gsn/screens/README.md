@@ -2,7 +2,7 @@
 
 The screens of GAI's figure of GSN's app (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, item 5, its sentence for a join at 11:35 UTC, and its screen (c) at 13:31 UTC), in the figure's order: Bob's phone, and Alice's for the leader's acts, as the construct family draws the app, one screen with the tabs Contacts, Friends, Groups, Messages and Posts, the lists of GKK's, GSG's and GSN's pragmas, drawn from the last view the agent wrote (`../README.md`, "The screens").  Each file is one phone's screen taken on the iOS Simulator, an iPhone 16e, 390 by 844 points at 3 pixels a point, its status bar at 9:41 with full signal, Wi-Fi and battery, in the light theme, set in Roboto; the simulator's screenshot is the display alone, so it is framed as the phone, in a black bezel with rounded corners, 1080 by 2220 pixels on white, as vGLP's figure of the app is (`vGLP/figures/gsg-app-friends.png`).
 
-They are taken by `glp_multiagent/tool/sim_screens.sh`, which plays on the simulator the scenario of `glp_multiagent/test/apps_screens_test.dart`: it loads this app, runs its entry `miniapp/4` for Alice and for Bob over one conversation, and takes each person's acts by tapping and typing on the tabs' controls.  From `glp_multiagent/`:
+They are taken by `glp_multiagent/tool/sim_screens.sh`, which plays on the simulator the scenario of `glp_multiagent/test/apps_screens_test.dart`: it loads this app, runs its entry `miniapp/3` for Alice and for Bob over one conversation, and takes each person's acts by tapping and typing on the tabs' controls.  From `glp_multiagent/`:
 
 ```bash
 bash tool/sim_screens.sh

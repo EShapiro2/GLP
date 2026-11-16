@@ -21,17 +21,24 @@ its owner writes that line; web/about.json holds the site's own line for each
 contract; and programs/apps/look.json each family's name and colours, which
 the app's asset sync reads too.  build/ and
 programs/vglp/cva/web_worlds/ are generated, gitignored, and this script rebuilds them whole.
+
+The test site, peoplesweb.org/test (deploy/test.sh), is this script of another
+branch run over the repository as main has it: GLP_ROOT names the repository,
+BUILD_DIR where the site is written, and SITE_TEST=1 says that the build
+writes no world, the test pages using the live server's worlds, and that the
+pages are served one level below the site's root, where the API is.
 """
 import json, os, re, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # servers/peoplesweb
-GLP = os.path.dirname(os.path.dirname(HERE))                          # the repository
-BUILD = os.path.join(HERE, 'build')
+GLP = os.environ.get('GLP_ROOT') or os.path.dirname(os.path.dirname(HERE))   # the repository
+BUILD = os.environ.get('BUILD_DIR') or os.path.join(HERE, 'build')
+TEST = os.environ.get('SITE_TEST') == '1'                             # the test site (deploy/test.sh)
 WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.path.join(BUILD, 'www')
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
 from menu_spec import spec   # noqa: E402
-from papers import cite_of, foundational, load_state, paper_of  # noqa: E402
+from papers import cite_of, foundational, key_of, load_state, paper_of  # noqa: E402
 import directories  # noqa: E402
 import certify  # noqa: E402
 
@@ -107,9 +114,51 @@ def parse_rules(text):
     return header, out
 
 
+CALC_LINE = re.compile(r'^([A-Za-z]+(?:-[A-Za-z]+)*):(\d+) (\S) (.*)$')
+
+
+def parse_calculus(text):
+    """The schemas as the Calculus's tools print them (schemas.txt and
+    full-schemas.txt of a contract adopted from the Calculus): a line for each
+    speech act, 'GSG:1 ○ Befriend: heads <- body guarded by Alice, Bob.',
+    labelled by the contract and clause it is from, a head or a body atom
+    '~A' its negation; a line 'GSG:1 ○ | ...' is the clause's prose, and the
+    lines with no label, the title and the Logic pragmas, are the header."""
+    header, out = [], []
+    for line in text.split('\n'):
+        if not line.strip():
+            continue
+        m = CALC_LINE.match(line)
+        if not m:
+            header.append(line.strip())
+            continue
+        rest = m.group(4)
+        r = re.match(r'^([^|:][^:]*): (.*?)\s*<-\s*(.*?)\.?$', rest)
+        if rest.startswith('|') or not r:
+            continue
+        body, sep, g = r.group(3).rpartition('guarded by ')
+        if not sep:
+            body, g = r.group(3), ''
+        heads, needs = split_top(r.group(2)), split_top(body)
+        out.append({'name': r.group(1), 'head': f"{r.group(1)}: {r.group(2)}", 'form': 'rule',
+                    'origin': m.group(1), 'clause': int(m.group(2)),
+                    'adds': [h for h in heads if not h.startswith('~')],
+                    'removes': [h[1:] for h in heads if h.startswith('~')],
+                    'body': body.strip(), 'needs': ['not ' + n[1:] if n.startswith('~') else n for n in needs],
+                    'guarded': [x.strip() for x in g.split(',') if x.strip()]})
+    return header, out
+
+
 def parse_schemas(path):
     """schemas.txt, as cascade.sh prints it, into heads and roles: the form
-    by roles of the records before 2026-11, or the form by rules since."""
+    by roles of the records before 2026-11, or the form by rules since; and,
+    of a contract adopted from the Calculus, the Calculus's form, read from
+    full-schemas.txt beside it where it is, which has the acts of the
+    contracts it is written from, each labelled by its origin."""
+    full = os.path.join(os.path.dirname(path), 'full-schemas.txt')
+    for q in (full, path):
+        if os.path.exists(q) and any(CALC_LINE.match(l) for l in read(q).split('\n')):
+            return parse_calculus(read(q))
     if not os.path.exists(path): return [], []
     if re.search(r'^[a-z_0-9]+: .*<-\s*$', read(path), re.M):
         return parse_rules(read(path))
@@ -143,16 +192,23 @@ def contract_text(path):
     meta = [l for l in lines if l.startswith('%')]
     body = [l for l in lines if l.strip() and not l.startswith('%')]
     name, title = body[0].split(': ', 1)
-    # The pragmas follow the clauses under 'Pragmas', or under 'Interface
-    # pragmas' and 'Implementation pragmas', their two kinds (GSC's Section 2;
+    # The pragmas follow the clauses.  A contract adopted from the Calculus
+    # (calculus/MIGRATION.md) has its Logic pragmas after its clauses, under
+    # 'Logic pragmas', and its Interface pragmas after them; an earlier text
+    # has them under 'Pragmas', or under 'Interface pragmas' and
+    # 'Implementation pragmas', their two kinds (GSC's Section 2;
     # Coordination, to_all 2026-11-07 22:13 UTC), the headings kept among them.
     heads = ('Pragmas', 'Interface pragmas', 'Implementation pragmas')
+    box = next((i for i, l in enumerate(body) if l.strip() in heads + ('Logic pragmas',)), len(body))
     end = next((i for i, l in enumerate(body) if l.strip() in heads), len(body))
     clauses, preamble = [], []
-    for l in body[1:end]:
-        m = re.match(r'(\d+)\. (\S) (.+?)\.\s+(.*)$', l)
+    for l in body[1:box]:
+        # A clause's title ends with a full stop, or, in the Calculus's text,
+        # where the title is the clause's act, with a colon; 'sep' keeps
+        # which, so the page prints the clause as it is written.
+        m = re.match(r'(\d+)\. (\S) (.+?)([.:])\s+(.*)$', l)
         if m:
-            clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'text': m.group(4)})
+            clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'sep': m.group(4), 'text': m.group(5)})
         elif not clauses:
             # Every line of the box before its clauses, in its order: the
             # extension line, the definitions that are part of the contract
@@ -247,17 +303,25 @@ def has_platform(n):
 
 
 compiled = sorted(n for n in os.listdir(os.path.join(GLP, 'cascade')) if has_platform(n) and n in cat)
+# The test site writes no world: its apps are the live server's, so a contract
+# is live there where the live build made its world.
+if TEST:
+    compiled = [n for n in compiled if os.path.exists(os.path.join(WORLDS, f'live_{n.lower()}', 'platform.vglp'))]
 
-shutil.rmtree(BUILD, ignore_errors=True); shutil.rmtree(WORLDS, ignore_errors=True)
-os.makedirs(WORLDS); os.makedirs(os.path.join(WWW, 'specs'))
-with open(os.path.join(WORLDS, '.gitignore'), 'w') as f:
-    f.write('# Generated by servers/peoplesweb/tools/build.py, and rebuilt whole by it.\n*\n')
+shutil.rmtree(BUILD, ignore_errors=True)
+os.makedirs(os.path.join(WWW, 'specs'))
+if not TEST:
+    shutil.rmtree(WORLDS, ignore_errors=True)
+    os.makedirs(WORLDS)
+    with open(os.path.join(WORLDS, '.gitignore'), 'w') as f:
+        f.write('# Generated by servers/peoplesweb/tools/build.py, and rebuilt whole by it.\n*\n')
 
 for n in compiled:
     c = n.lower()
-    subprocess.run([sys.executable, '-I', os.path.join(HERE, 'tools', 'gen_harness.py'),
-                    os.path.join(GLP, 'cascade', n, 'platform.vglp'), os.path.join(WORLDS, f'live_{c}'), n],
-                   check=True, stdout=subprocess.DEVNULL)
+    if not TEST:
+        subprocess.run([sys.executable, '-I', os.path.join(HERE, 'tools', 'gen_harness.py'),
+                        os.path.join(GLP, 'cascade', n, 'platform.vglp'), os.path.join(WORLDS, f'live_{c}'), n],
+                       check=True, stdout=subprocess.DEVNULL)
     s = spec(os.path.join(WORLDS, f'live_{c}', 'platform.vglp'))
     s['id'], s['title'] = n, cat[n]['title']
     s['calendar'] = 'cal(alice, N)' in read(os.path.join(WORLDS, f'live_{c}', 'self.glp'))
@@ -329,6 +393,7 @@ for n in sorted(set(compiled) | set(cat)):
     c['cascade'] = n in compiled
     c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''
     c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
+    c['paperKey'] = key_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''))
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
     c['live'], c['noteBefore'], c['layers'] = n in compiled, '', {}
@@ -351,6 +416,10 @@ for n in sorted(set(compiled) | set(cat)):
 
 for c in contracts:
     for s in c['schemas']:
+        # The Calculus's form names each act's origin itself.
+        if s.get('origin'):
+            s['from'] = s.pop('origin')
+            continue
         s['from'] = c['id']
         for a in ancestors(c['id']):
             if a in shown and any(x['name'] == s['name'] for x in next(k for k in contracts if k['id'] == a)['schemas']):
@@ -374,7 +443,7 @@ with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
 
 commit = subprocess.run(['git', '-C', GLP, 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
 for f in os.listdir(os.path.join(HERE, 'web')):
-    if f.endswith(('.html', '.png', '.ico', '.jpg')):
+    if f.endswith(('.html', '.js', '.png', '.ico', '.jpg')):
         shutil.copy(os.path.join(HERE, 'web', f), os.path.join(WWW, f))
 # The page an invitation link opens, peoplesweb.org/i (GNA, Section 6,
 # Invitation links), and the file that names the Grassroots App to iOS as the
@@ -385,15 +454,32 @@ if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
     for f, path in pdfs.items():
         shutil.copy(path, os.path.join(WWW, 'papers', f))
-# Who answers for each directory of GLP (tools/directories.py), each with the
-# citations of its project's papers; and what no entry covers, which the
-# build prints and the page shows, so that every directory is accounted for.
-dirs = directories.table(GLP)
-for e in dirs:
-    e['cites'] = [x for x in (cite_of(k, served, paper_state) for k in e.pop('papers')) if x]
+# The projects (tools/directories.py): each with its papers, each paper with
+# its citation, its contracts and its directories, and under Code the
+# directories with no paper, a tree in which each is once (Udi, 2026-11-12, to
+# GSA #5); the Papers page lists the same projects' papers, and after them the
+# papers no project holds.  What no entry covers, and what does not fit the
+# tree, the build prints and the page shows, so that every directory is
+# accounted for.
+projects, code, faults = directories.tree(GLP, [(c['id'], os.path.relpath(texts[c['id']], GLP), c.pop('paperKey')) for c in contracts if c['id'] in texts])
+for p in projects:
+    for q in p['papers']:
+        q['cite'] = cite_of(q['key'], served, paper_state) or {}
+        if not q['cite']:
+            faults.append(f"the paper {q['key']} of {p['id']} is not in tools/papers.py")
 lost = directories.unaccounted(GLP)
 if lost:
     print('directories: no entry answers for ' + ', '.join(lost))
+for f in faults:
+    print('projects: ' + f)
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
-    f.write('window.DATA = ' + json.dumps({'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'foundational': foundational(served, paper_state), 'directories': dirs, 'unaccounted': lost}, ensure_ascii=False) + ';\n')
+    data = {'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'projects': projects, 'code': code,
+            'noPaper': [{'id': i, 'name': n, 'repo': r} for i, n, r in directories.NO_PAPER],
+            'otherPapers': foundational(served, paper_state, but={k for _, _, ks in directories.PROJECTS for k in ks}),
+            'unaccounted': lost, 'faults': faults}
+    if TEST:
+        # The test site's pages are one level below the site's root, and the
+        # API they call is the live server's, at the root.
+        data['test'], data['api'] = True, ''
+    f.write('window.DATA = ' + json.dumps(data, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))

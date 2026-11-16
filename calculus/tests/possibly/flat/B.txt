@@ -1,0 +1,3 @@
+B: Possibly one (flat text)
+B:0 - | Alice and Bob are persons, Alice and Bob possibly one person.
+B:1 ■ Greet: Alice may Bob is greeted by Alice. Possibly one: Alice=Bob.
