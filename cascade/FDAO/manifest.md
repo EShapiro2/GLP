@@ -1,10 +1,10 @@
 # A run of the cascade on FDAO
 
-- Contract: `FDAO` (`fdao` to the checker), its owner's two files `programs/gce/fdao/FDAO.txt` and `programs/gce/fdao/FDAO.glp`, copied here as they stood at `52a1c23c`.
+- Contract: `FDAO` (`fdao` to the checker), its owner's two files `programs/gce/fdao/FDAO.txt` and `programs/gce/fdao/FDAO.glp`, copied here as they stood at `05722967`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gce/fdao/FDAO.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gce/fdao/FDAO.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 19:07 UTC by `cascade.sh fdao`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `52a1c23c`; each artefact's source and tool:
+- Run on 2026-11-16 19:35 UTC by `cascade.sh fdao`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `05722967`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
