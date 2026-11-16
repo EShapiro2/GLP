@@ -60,12 +60,15 @@ main_name() {
     esac
 }
 # The table, calculus/NAMES.txt, or the file CONTRACT_NAMES names, a table of
-# the same form, as pragmas.sh reads it.
+# the same form, as pragmas.sh reads it: lines of four columns, or of five, the
+# fifth "the row and atom on main today, before the renaming: the name on main
+# in lower case, every character that is not a letter or a digit an underscore"
+# (calculus/NAMES.txt, Calculus-3 d15a5308).
 NAMES="${CONTRACT_NAMES:-$GLP_DIR/calculus/NAMES.txt}"
-table_row() { # table_row <name> ; its row of the table, its four columns joined by "|"
+table_row() { # table_row <name> ; its row of the table, its five columns joined by "|", the fifth empty in a table of four
     awk -F'|' -v n="$1" '
-        f && NF == 4 { for (i = 1; i <= 4; i++) gsub(/^[ \t]+|[ \t]+$/, "", $i); if ($1 == n || $2 == n) { print $1 "|" $2 "|" $3 "|" $4; exit } }
-        { x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x); if (NF == 4 && x == "name on main") f = 1 }
+        f && (NF == 4 || NF == 5) { for (i = 1; i <= NF; i++) gsub(/^[ \t]+|[ \t]+$/, "", $i); if ($1 == n || $2 == n) { print $1 "|" $2 "|" $3 "|" $4 "|" (NF == 5 ? $5 : ""); exit } }
+        { x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x); if ((NF == 4 || NF == 5) && x == "name on main") f = 1 }
     ' "$NAMES"
 }
 # The owner's file of the contract of a row, by the table: the NAME.glp of its
@@ -74,14 +77,16 @@ table_row() { # table_row <name> ; its row of the table, its four columns joined
 # NAMES.txt), under programs/; and the name its file gives it, contract_named/2,
 # "the atom of contract_named", the file name in lower case, a hyphen as an
 # underscore (ibid.), its fourth column, or, of the file of its name on main,
+# the row and atom on main, its fifth column where the table has it, and else
 # that name so written, as gsg of GSG.glp.
 row_file() { # row_file <contract> ; "<file>|<atom>"
-    local r m f g
+    local r m f a g
     r=$(table_row "$(main_name "$1")")
     [ -n "$r" ] || return 1
-    m=${r%%|*}; f=$(printf '%s' "$r" | cut -d'|' -f3)
+    m=${r%%|*}; f=$(printf '%s' "$r" | cut -d'|' -f3); a=$(printf '%s' "$r" | cut -d'|' -f5)
+    [ -n "$a" ] || a=$(printf '%s' "$m" | tr 'A-Z-' 'a-z_')
     for g in "$GLP_DIR"/programs/*/"$m.glp" "$GLP_DIR"/programs/*/*/"$m.glp"; do
-        [ -f "$g" ] && { printf '%s|%s\n' "$g" "$(printf '%s' "$m" | tr 'A-Z-' 'a-z_')"; return 0; }
+        [ -f "$g" ] && { printf '%s|%s\n' "$g" "$a"; return 0; }
     done
     for g in "$GLP_DIR"/programs/*/"$f.glp" "$GLP_DIR"/programs/*/*/"$f.glp"; do
         [ -f "$g" ] && { printf '%s|%s\n' "$g" "$(printf '%s' "$r" | cut -d'|' -f4)"; return 0; }

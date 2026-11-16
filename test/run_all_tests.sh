@@ -4020,10 +4020,14 @@ echo ""
 # -----------------------------------------------------------------------------
 echo "--- The canonical CVA platform of an act-schema contract ---"
 CVA="$GLP_DIR/programs/vglp/cva"
-# The names of the contracts are those of the table of calculus/NAMES.txt and nothing else ("How a reader knows a name: a name is one of the names of this table and nothing else"), which pragmas.sh and compile.sh read; the fixtures of this section are named in a table of the same form, the table of calculus/NAMES.txt and a row for each fixture, which CONTRACT_NAMES names for this section.
+# The names of the contracts are those of the table of calculus/NAMES.txt and nothing else ("How a reader knows a name: a name is one of the names of this table and nothing else"), which pragmas.sh and compile.sh read; the fixtures of this section are named in a table of the same form, the table of calculus/NAMES.txt and a row for each fixture, which CONTRACT_NAMES names for this section ("A test may add made-up contracts: rows of the same form after the table's, in a table of its own that it builds from this one", calculus/NAMES.txt).  A row has the table's columns, four, or five where the table has "row and atom on main" (Calculus-3 d15a5308), a fixture's atom on main its atom, since it is not renamed.
 CVA_NAMES=$(mktemp)
 cat "$GLP_DIR/calculus/NAMES.txt" > "$CVA_NAMES"
-for cva_x in XA XB XB-L XB2 XC XC2 XD XE XG XG-L XH XI XJ XK XL XLF XLI XLX XM XN XNONE XO XP XQ XR XS XT XU XV XVB XVE XVF XVO XVT XW; do printf '%s | %s | %s | %s\n' "$cva_x" "$cva_x" "$cva_x" "$(printf '%s' "$cva_x" | tr 'A-Z-' 'a-z_')" >> "$CVA_NAMES"; done
+cva_cols=$(awk -F'|' '{ x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x) } x == "name on main" { print NF; exit }' "$CVA_NAMES")
+for cva_x in XA XB XB-L XB2 XC XC2 XD XE XG XG-L XH XI XJ XK XL XLF XLI XLX XM XN XNONE XO XP XQ XR XS XT XU XV XVB XVE XVF XVO XVT XW; do
+    cva_a=$(printf '%s' "$cva_x" | tr 'A-Z-' 'a-z_')
+    if [ "$cva_cols" = 5 ]; then printf '%s | %s | %s | %s | %s\n' "$cva_x" "$cva_x" "$cva_x" "$cva_a" "$cva_a"; else printf '%s | %s | %s | %s\n' "$cva_x" "$cva_x" "$cva_x" "$cva_a"; fi >> "$CVA_NAMES"
+done
 export CONTRACT_NAMES="$CVA_NAMES"
 
 # Guarded: set -e would end the run without totals on a red compile.sh.
@@ -4432,7 +4436,18 @@ cva_nm_main=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/CB.txt" 2>&1 | sed
 cva_nm_none=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/None.txt" 2>&1; echo "exit $?")
 cva_nm_lead=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Lead.txt" 2>&1; echo "exit $?")
 cva_nm_cite=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_nm/Community-Bank.txt" "[schema(leave, ['Alice', 'Bob'], [], [rs(guarded, [atom(left, [role(2)])], [], [atom(member, [role(2)])], [atom(left, [role(2)])]), rs(guarded, [], [], [], [])])]" 2>&1; echo "exit $?")
+# The same first lines read by a table of the other form: the table of this section with its lines of four columns given a fifth, the row and atom on main, or its lines of five given four, so that pragmas.sh reads a table of four columns and of five alike (calculus/NAMES.txt, Calculus-3 d15a5308: "The fifth column is the row and atom on main today, before the renaming") (names3).
+cva_nm_t=$(mktemp)
+awk -F'|' -v OFS='|' '{ x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x) } x == "name on main" { f = 1; if (NF == 4) { print $0 " | row and atom on main"; next } } f && NF == 4 { a = tolower(x); gsub(/[^a-z0-9]/, "_", a); print $0 " | " a; next } f && NF == 5 { print $1 OFS $2 OFS $3 OFS $4; next } { print }' "$CVA_NAMES" > "$cva_nm_t"
+cva_nm_t_cols=$(awk -F'|' '{ x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x) } x == "name on main" { print NF; exit }' "$cva_nm_t")
+cva_nm3_two=$(CONTRACT_NAMES="$cva_nm_t" bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Community-Bank.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm3_main=$(CONTRACT_NAMES="$cva_nm_t" bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/CB.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+rm -f "$cva_nm_t"
 rm -rf "$cva_nm"
+check "CVA pragmas: the table of the other form, of four columns where this section's has five and of five where it has four (names3)" "^[45]$" "$cva_nm_t_cols"
+check_not "CVA pragmas: ... and not of the columns of this section's table (names3)" "^$cva_cols$" "$cva_nm_t_cols"
+check "CVA pragmas: ... Community Bank, Bank and Coins found by it (names3)" "^Bank.txt Coins.txt Community-Bank.txt $" "$cva_nm3_two"
+check "CVA pragmas: ... CB, GBank and Coins, names of the first column, found by it (names3)" "^GBank.txt Coins.txt CB.txt $" "$cva_nm3_main"
 check "CVA pragmas: a first line naming Community Bank, a name of two words, read longest first, and Bank and Coins in it, each found by its file name (names2)" "^Bank.txt Coins.txt Community-Bank.txt $" "$cva_nm_two"
 check "CVA pragmas: ... Trading Company and Bank, two contracts, after Workers' Cooperative, its file found without the apostrophe (names2_and)" "^Trading-Company.txt Bank.txt Workers-Cooperative.txt $" "$cva_nm_and"
 check "CVA pragmas: ... a first line in the names of the first column, CB restricts GBank and extends Coins, as on main (names2_main)" "^GBank.txt Coins.txt CB.txt $" "$cva_nm_main"
