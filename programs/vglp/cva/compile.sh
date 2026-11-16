@@ -141,7 +141,7 @@ for c in $CONTRACTS; do
         grep -hE '^(Error|✗)' "$WORK/$c".*.out | head -3 >> "$WORK/status"
         continue
     fi
-    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$c" "$rd" "$vt" "$it" "$pr" > "$WORK/p.in"
+    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$(name_in "$c")" "$rd" "$vt" "$it" "$pr" > "$WORK/p.in"
     repl "$WORK/p.in" "$WORK/$c.p.out"
     f="$OUT/$d/platform.vglp"
     if ! awk '
