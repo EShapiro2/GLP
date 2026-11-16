@@ -1,10 +1,10 @@
 # A run of the cascade on GRA-SS
 
-- Contract: `GRA-SS` (`gra_ss` to the checker), its owner's two files `programs/lbm/GRA-SS.txt` and `programs/lbm/GRA-SS.glp`, copied here as they stood at `a1323891`.
+- Contract: `GRA-SS` (`gra_ss` to the checker), its owner's two files `programs/lbm/GRA-SS.txt` and `programs/lbm/GRA-SS.glp`, copied here as they stood at `ae022944`.
 - The paper: `/Users/udi/Grassroots/GRH (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/lbm/GRA-SS.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/lbm/GRA-SS.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 16:35 UTC by `cascade.sh gra_ss`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `a1323891`; each artefact's source and tool:
+- Run on 2026-11-16 16:37 UTC by `cascade.sh gra_ss`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `ae022944`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
