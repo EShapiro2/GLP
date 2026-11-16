@@ -77,7 +77,6 @@ programs/book/social_networks/broadcast.glp	open-type	FollowerEntry
 programs/book/social_networks/replicate.glp	open-decl	replicate2/3
 programs/book/social_networks/replicate.glp	open-decl	replicate3/4
 programs/book/streams/objects_monitors/many_counters.glp	open-decl	wait_write/1
-programs/book/streams/objects_monitors/network_switch_3way.glp	open-decl	network/3
 programs/book/streams/objects_monitors/queue_manager.glp	open-type	QueueReq
 programs/book/streams/producers_consumers/biased_merge.glp	open-type	Msg
 programs/book/streams/producers_consumers/distribute_binary.glp	open-type	Req
@@ -405,10 +404,6 @@ programs/tests/typed/real_guard.glp	open-decl	real_or_other/2
 programs/tests/typed/real_guard.glp	open-decl	twice/2
 programs/tests/typed/run1.glp	open-decl	clause/2
 programs/tests/typed/run1.glp	open-decl	run/1
-programs/tests/typed/struct_demo.glp	open-decl	build_person/1
-programs/tests/typed/struct_demo.glp	open-decl	get_age/2
-programs/tests/typed/struct_demo.glp	open-decl	get_city/2
-programs/tests/typed/struct_demo.glp	open-decl	make_person/4
 programs/tests/typed/test_defined_guards.glp	open-decl	channel/1
 programs/tests/typed/test_defined_guards.glp	open-decl	test/2
 programs/tests/typed/test_defined_guards_all.glp	open-decl	bind_response/3
