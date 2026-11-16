@@ -1,0 +1,4 @@
+WARD: Wards
+Of WARD: A ward takes an act of a party by those who decide for it. Alice is a person, Carol a ward.
+WARD:1. ■ Enter: Alice may create Carol, provided Alice is a person.
+WARD:2. ■ Retire: Those who decide for Carol may retire Carol.

@@ -1,0 +1,18 @@
+Changes from old to new, for an owner who adopted the first.
+
+A:
+  own act added: Added
+  own act gone: Gone
+  own act renamed: Rename, now Renamed
+  own act changed: Change
+    was: r(Alice) <- s(Alice) guarded by Alice.
+    now: r(Alice) <- s(Alice), x(Alice) guarded by Alice.
+  inherited act added: Arrived, from P
+  inherited act gone: Dropped, from P
+  derived acts: 2, before 1, changed
+B: text only
+C: unchanged
+D: new in this publication
+
+Summary: 4 contracts; own acts changed 1; inherited acts changed only 0; text only 1; unchanged 1; new 1; no longer published 0.
+With an own act added, gone, renamed or changed: A.

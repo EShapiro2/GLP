@@ -7,16 +7,20 @@ of the abstraction cascade in the GLP repository, as its cascade.sh runs them on
 For each it writes cascade/NAME/: verdict.txt, the verdict of GLP's checker (programs/gsc, check/2); vmat.tex, the
 VMAT form (programs/gsc, compile_contract/2); platform.vglp, the canonical platform (programs/vglp/cva/compiler,
 compile/5, with no introduction named and no Interface pragmas); platform.glp, the platform compiled to GLP (the
-REPL's :emit); and prints a line.  cascade/STATUS.txt has the lines of the last run of all.  Needs the Dart SDK on
+REPL's :emit), counted compiled only if it then loads in GLP, the load's lines in run.log; interface-adopted.txt, the Interface pragmas of NAME.txt keyed by the titles of the contract's own clauses, as an owner's adopted file has them (tools/ifadopt.py), where they are read; and prints a line.  A
+parametric contract, a term parametric(...), gets its verdict and its VMAT form and no platform.  cascade/STATUS.txt has the lines of the last run of all.  Needs the Dart SDK on
 the PATH and a clone of GLP beside this directory, or $GLP_DIR; it writes a scratch directory under the clone's
 programs/tests/cascade_emit/ and removes it.
 """
-import os, re, shutil, subprocess, sys
+import os, re, shutil, subprocess, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import toglp
 
 GLP = os.environ.get('GLP_DIR') or next((d for d in (os.path.join(os.path.dirname(ROOT), 'GLP'), '/home/user/GLP') if os.path.isdir(d)), None)
+
+
+PARAMETRIC = 'no platform: a parametric contract has none until it is instantiated'
 
 
 def repl(text, timeout=int(os.environ.get('CASCADE_TIMEOUT', 600))):
@@ -75,15 +79,30 @@ def contract_txt(n):
                     names.append(a)
         fields = ['<%s>' % sorted(kinds.get(a, {a.lower()}))[0] for a in names if a != who[0] and a not in mine]
         prag.append('%s: %s [%s]' % (t, who[0], t))        # the fields are added as the reader of the pragmas asks for them
+        must = set(re.findall(r'\b([A-Z][a-z]+) must consent\b', sent))       # a person who must consent is a guard who is not asked (vGLP, 5.4)
         for g in who[1:] + listed:
+            if g in must:
+                continue
             prag.append('  %s: %s asks for your consent to %s.' % (g, who[0], t.lower()))     # a question names persons of the act only
     return '\n'.join(out + prag) + '\n'
+
+
+# The files run() writes into cascade/NAME/ (and adopt.py the others there, which it keeps).
+RUN_FILES = ('verdict.txt', 'vmat.tex', 'platform.vglp', 'platform.glp', 'run.log', 'interface-adopted.txt')
+
+
+def ok(line):
+    """A run that ended: certified, with a platform.glp that loads, or a parametric contract, which has none."""
+    return ' certified;' in line and (line.endswith('platform.glp loads') or 'a parametric contract has none' in line)
 
 
 def run(n):
     name = re.sub(r'[^a-z0-9]', '_', n.lower())
     out = os.path.join(ROOT, 'cascade', n)
     os.makedirs(out, exist_ok=True)
+    for f in RUN_FILES:             # what an earlier run wrote: none of it is left beside the outputs of this one
+        if os.path.exists(os.path.join(out, f)):
+            os.remove(os.path.join(out, f))
     put = lambda f, s: open(os.path.join(out, f), 'w', encoding='utf-8').write(s if s.endswith('\n') else s + '\n')
     ct = toglp.contract_term(n)[0].replace('\n', '')
     gsc = GLP + '/programs/gsc/'
@@ -111,10 +130,18 @@ def run(n):
     res = 'certified; VMAT %d displays' % sum(1 for l in vm if l == '\\begin{align*}')
     if any(l.startswith('% not compiled') for l in vm):
         res = 'certified; VMAT not compiled: ' + next(l for l in vm if l.startswith('% not compiled'))[:80]
+    if ct.startswith('parametric('):      # a parametric contract is certified and has no platform until it is instantiated (vGLP, 5.4; vGLP #28, 2026-11-15)
+        for f in ('platform.vglp', 'platform.glp', 'run.log', n + '.txt', 'interface-adopted.txt'):
+            if os.path.exists(os.path.join(out, f)):
+                os.remove(os.path.join(out, f))
+        return res + '; ' + PARAMETRIC
     txt = contract_txt(n)
-    for _ in range(60):          # the reader of the pragmas says which names a line leaves unnamed: a field is added for each
+    rdf = tempfile.NamedTemporaryFile('w', suffix='.read.txt', delete=False, encoding='utf-8')   # the read term goes to pragmas.sh as @<file>, never on a command line (vGLP-arg 9e795627; an argument over 128 KB is refused)
+    rdf.write(rd)
+    rdf.close()
+    for _ in range(4 * txt.count('\n') + 60):     # the reader of the pragmas says which names a line leaves unnamed: a field is added for each, as many rounds as lines need (a contract with the ward's forms of its parties' acts needs more than 60)
         put(n + '.txt', txt)
-        pr = subprocess.run(['bash', GLP + '/programs/vglp/cva/compiler/pragmas.sh', os.path.join(out, n + '.txt'), rd], capture_output=True, text=True)
+        pr = subprocess.run(['bash', GLP + '/programs/vglp/cva/compiler/pragmas.sh', os.path.join(out, n + '.txt'), '@' + rdf.name], capture_output=True, text=True)
         m = re.search(r'the pragma "([^"]+)" leaves unnamed the variable (.*?) of ', pr.stderr)
         if pr.returncode == 0 or not m:
             break
@@ -122,8 +149,13 @@ def run(n):
         txt, k = re.subn(r'(?m)^(%s: \w+ \[[^\]]*\](?: <[^>]*>)*)$' % re.escape(m.group(1)), lambda mm: mm.group(1) + add, txt)
         if not k:
             break
+    os.remove(rdf.name)
     if pr.returncode != 0:
+        if os.path.exists(os.path.join(out, 'interface-adopted.txt')):
+            os.remove(os.path.join(out, 'interface-adopted.txt'))
         return res + '; its Interface pragmas were not read: ' + pr.stderr.strip().split('\n')[0][:200]
+    import ifadopt
+    ifadopt.write(n)          # the same lines keyed by the titles of the contract's own clauses, for its owner's adopted file
     lines = repl('%s\n:limit 1000000000\ncompile(%s, %s, %s, no_introduction, %s).\n:quit\n' % (GLP + '/programs/vglp/cva/compiler/', name, rd, vt, pr.stdout.strip()))
     if '%% compile begin' not in lines or '%% compile end' not in lines:
         return res + '; no platform printed: ' + ' '.join(l for l in lines if 'rror' in l or '✗' in l)[:120]
@@ -142,7 +174,13 @@ def run(n):
         if not os.path.exists(g):
             return res + '; not compiled to GLP: ' + ' '.join(l for l in lines if 'rror' in l or '✗' in l)[:160]
         shutil.copy(g, out)
-        return res + '; platform.glp %d lines' % sum(1 for _ in open(g, encoding='utf-8'))
+        res += '; platform.glp %d lines' % sum(1 for _ in open(g, encoding='utf-8'))
+        lines = repl('%s\n:quit\n' % g)          # compiled only if platform.glp loads in GLP
+        bad = [l for l in lines if 'rror' in l or '✗' in l or 'Duplicate' in l]
+        put('run.log', '\n'.join(['load %s' % os.path.relpath(g, GLP)] + (bad or [l for l in lines if l.startswith('✓')])))
+        if bad or not any(l.startswith('✓') for l in lines):
+            return res + '; platform.glp does not load: ' + ' '.join(bad)[:160]
+        return res + '; platform.glp loads'
     finally:
         shutil.rmtree(emit, ignore_errors=True)
 
@@ -166,7 +204,11 @@ def main():
         lines = list(ex.map(one, names))
     if not args:
         open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
+    bad = [l.split()[0] for l in lines if not ok(l)]
+    if bad:
+        print('%d of %d contracts failed: %s' % (len(bad), len(lines), ' '.join(bad)), file=sys.stderr)
+    return 1 if bad else 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

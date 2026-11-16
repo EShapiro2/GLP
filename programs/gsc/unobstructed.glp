@@ -327,13 +327,31 @@ sch_vvars(NSc, R?) :- ground(NSc?) |
     nsch_vars(NSc?, Vs),
     filter_vvars(Vs?, R).
 
-% The value variables among a schema's variables, num(X) whole and real(X)
-% real (GSC 8b1460f; self.glp, Arg).
+% The value variables among a schema's variables, num(X) whole, real(X)
+% real (GSC 8b1460f; self.glp, Arg) and const(X) over constants, which is
+% bound as any value variable is (sym_binds) and, being no number, is given
+% no variable of linear.glp's (inst_env, intro_env, whole_vvars): a match
+% of it rests on the equations of the values it meets (Eqs, self.glp).
 procedure filter_vvars(Args?, Args).
 filter_vvars([], []).
 filter_vvars([num(X)|As], [num(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
 filter_vvars([real(X)|As], [real(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
+filter_vvars([const(X)|As], [const(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
 filter_vvars([_|As], R?) :- otherwise, ground(As?) | filter_vvars(As?, R).
+
+% The value variables over constants of a schema, each marked in the
+% substitution a match of its atoms begins with: an atom writes a value
+% variable of any type num(X), and the mark tells the match that X meets a
+% constant value (self.glp, match_nvar).
+procedure const_marks(NSchema?, Subst).
+const_marks(NSc, R?) :- ground(NSc?) |
+    nsch_vars(NSc?, Vs),
+    const_marks1(Vs?, R).
+
+procedure const_marks1(Args?, Subst).
+const_marks1([], []).
+const_marks1([const(X)|Vs], [bind(const(X?), undef)|R?]) :- const_marks1(Vs?, R).
+const_marks1([_|Vs], R?) :- otherwise | const_marks1(Vs?, R).
 
 % The value variables taken as whole: those of type num, and those written as
 % a multiplicity, Pw, "a positive whole number" (def:binding-numbers); a value
@@ -386,7 +404,8 @@ procedure mult_supply(Atom?, Atoms?, RoleSpecs?, NSchema?, GAtom?, Val?, DNF?, T
 mult_supply(Psi, N, Rs, NSc, G, V, O, Tg, PwI, R?) :-
     ground(Psi?), ground(N?), ground(Rs?), ground(NSc?), ground(G?), ground(V?), ground(O?),
     ground(Tg?), ground(PwI?) |
-    match_atom(Psi?, G?, Rs?, [bind(role(1), V?)], [], MR0),
+    const_marks(NSc?, M),
+    match_atom(Psi?, G?, Rs?, [bind(role(1), V?)|M?], [], MR0),
     forb_match(N?, G?, Rs?, MR0?, MR),
     supply_dnf(MR?, NSc?, Tg?, PwI?, D0),
     once_and(N?, O?, D0?, R).
@@ -611,7 +630,8 @@ procedure plus_block(Atom?, Mults?, Integer?, Schema?, RoleSpecs?, Constant?, NS
 plus_block(Psi, Plus, J, Sc, Rs, Nm, NSc, Cx, G, P, PwI, R?) :-
     ground(Psi?), ground(Plus?), integer(J?), ground(Sc?), ground(Rs?), ground(Nm?),
     ground(NSc?), ground(Cx?), ground(G?), ground(P?), ground(PwI?) |
-    match_atom(Psi?, G?, Rs?, [bind(role(J?), P?)], [], MR),
+    const_marks(NSc?, M),
+    match_atom(Psi?, G?, Rs?, [bind(role(J?), P?)|M?], [], MR),
     block_mr(MR?, Psi?, Plus?, J?, Sc?, Nm?, NSc?, Cx?, PwI?, R).
 
 procedure n_is_party_role(NRoleSpec?, Ans).
@@ -926,6 +946,9 @@ sym_binds([num(X)|Vs], B, [bind(num(X?), nfree(X?))|R?]) :-
     ground(X?), ground(Vs?), ground(B?) |
     sym_binds(Vs?, B?, R).
 sym_binds([real(X)|Vs], B, [bind(num(X?), nfree(X?))|R?]) :-
+    ground(X?), ground(Vs?), ground(B?) |
+    sym_binds(Vs?, B?, R).
+sym_binds([const(X)|Vs], B, [bind(num(X?), nfree(X?))|R?]) :-
     ground(X?), ground(Vs?), ground(B?) |
     sym_binds(Vs?, B?, R).
 sym_binds([A|Vs], B, R?) :- otherwise, ground(A?), ground(Vs?), ground(B?) |

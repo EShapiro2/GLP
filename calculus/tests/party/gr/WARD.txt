@@ -1,0 +1,10 @@
+WARD: Wards
+A ward takes an act of a party by those who decide for it.
+Alice is a person, Carol a ward.
+1. ■ Enter: Alice may create Carol, provided Alice is a person.
+2. ■ Retire: Those who decide for Carol may retire Carol.
+Logic pragmas.
+Vocabulary: x is a person = person(x); z is a ward = ward(z); x has y as a guardian = has_guardian(x,y); y is a guardian of x = guardian(y,x); x is retired = retired(x).
+Roles: those who decide for z = deciders(z), listed by z has y as a guardian and y is a guardian of z.
+After x creates z: z is a ward, z has x as a guardian and x is a guardian of z.
+After g retires z, which requires z is not retired: z is retired.

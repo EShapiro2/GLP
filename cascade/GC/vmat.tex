@@ -116,6 +116,15 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
 , \qquad 
 c'_
 {
@@ -126,15 +135,6 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-knows
-}
-(
-c
-)
-\}
 ,\\
 &
 \text{provided } 
@@ -147,13 +147,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-knows
-}
-(
-c
 )
  \in c_
 {
@@ -170,6 +163,13 @@ knows
 (
 \Alice
 )
+,
+\mathit{
+knows
+}
+(
+Carol
+)
  \in c_
 {
 \Bob
@@ -183,7 +183,7 @@ knows
 \}
 \end{align*}
 \iffalse
-mint
+issue
 \fi
 \begin{align*}
 &
@@ -198,7 +198,7 @@ c_
 }
  \uplus 
 \{
-k
+Sum
 \cdot
 \text{\textcent}
 (
@@ -237,27 +237,27 @@ c'_
 }
  \setminus 
 \{
-k
+Sum
 \cdot
 \text{\textcent}
 (
-u
+Carol
 )
 \}
 ) \uplus 
 \{
-k1
+Total
 \cdot
 \text{\textcent}
 (
-v
+Dave
 )
 ,
 \mathit{
 knows
 }
 (
-v
+Dave
 )
 \}
 , \qquad 
@@ -272,27 +272,27 @@ c'_
 }
  \setminus 
 \{
-k1
+Total
 \cdot
 \text{\textcent}
 (
-v
+Dave
 )
 \}
 ) \uplus 
 \{
-k
+Sum
 \cdot
 \text{\textcent}
 (
-u
+Carol
 )
 ,
 \mathit{
 knows
 }
 (
-u
+Carol
 )
 \}
 ,\\
@@ -310,11 +310,11 @@ knows
 \Bob
 )
 ,
-k
+Sum
 \cdot
 \text{\textcent}
 (
-u
+Carol
 )
 \}
  \subseteq c_
@@ -334,11 +334,11 @@ knows
 \Alice
 )
 ,
-k1
+Total
 \cdot
 \text{\textcent}
 (
-v
+Dave
 )
 \}
  \subseteq c_
@@ -369,7 +369,7 @@ c_
 }
  \setminus 
 \{
-k
+Sum
 \cdot
 \text{\textcent}
 (
@@ -388,7 +388,7 @@ c_
 }
  \uplus 
 \{
-k
+Sum
 \cdot
 \text{\textcent}
 (
@@ -410,7 +410,7 @@ knows
 \Bob
 )
 ,
-k
+Sum
 \cdot
 \text{\textcent}
 (
@@ -460,14 +460,14 @@ c'_
 \{
 \text{\textcent}
 (
-r
+Carol
 )
 ,
 \mathit{
 knows
 }
 (
-r
+Carol
 )
 \}
 , \qquad 
@@ -484,7 +484,7 @@ c'_
 \{
 \text{\textcent}
 (
-r
+Carol
 )
 \}
 ) \uplus 
@@ -523,7 +523,7 @@ identity
 ,
 \text{\textcent}
 (
-r
+Carol
 )
  \in c_
 {

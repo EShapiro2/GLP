@@ -1,0 +1,13 @@
+W          commute yes; return yes; recover same
+1 contracts, 0 with a fault
+--- sasx/W.txt
+W: No act no binding enables (expanded schemas)
+W:0 - | Alice is a person, Carol a ward.
+W:1 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+W:2 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol) <- ~identity(Carol) guarded by Alice.
+W:3 ■ Wave: waved(Carol) <- person(Carol), ward(Carol) guarded by Carol.
+W:3 ■ Greet: greeted(Carol) <- guarded by Carol.
+--- term W
+[sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
+ sas(enter, ['Carol', 'Alice'], [], [atom(identity, ['Carol']), atom(ward, ['Carol']), atom(has_guardian, ['Carol', 'Alice']), atom(guardian, ['Alice', 'Carol'])], [atom(identity, ['Alice']), not(atom(identity, ['Carol'])), atom(person, ['Alice'])], true, ['Alice']),
+ sas(greet, ['Carol'], [], [atom(greeted, ['Carol'])], [atom(identity, ['Carol']), or(atom(person, ['Carol']), and(atom(ward, ['Carol']), exists(['G1'], atom(has_guardian, ['Carol', 'G1']), true)))], true, ['Carol'])]

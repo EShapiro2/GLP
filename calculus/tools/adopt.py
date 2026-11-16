@@ -4,13 +4,16 @@
     python3 adopt.py --write NAME DIR   writes DIR/NAME.txt, the adopted file, from the Calculus's text of NAME and the
                                         owner's NAME.txt in GLP ($GLP_DIR), keeping its % lines and its Interface pragmas
     python3 adopt.py --paths            writes PATHS.txt beside this directory: a line "NAME path" for each contract, the
-                                        path in GLP of its adopted file, or calculus/NAME/ where GLP has none
+                                        path in GLP of its adopted file, programs/<dir>/NAME.txt with a % Owner line and
+                                        a line "Logic pragmas", or calculus/NAME/ where GLP has none
     python3 adopt.py NAME               writes NAME.glp beside NAME's adopted file, and into cascade/NAME/ of GLP NAME.txt,
                                         a copy of the adopted file, NAME.glp, schemas.txt, full-contract.txt,
                                         full-pragmas.txt, flat.txt and full-schemas.txt, compiled from the contracts of
-                                        PATHS.txt
+                                        PATHS.txt, or, where there is none, of the paths --paths would write
     python3 adopt.py --check NAME       prints nothing and exits 0 where those files are what it would write; else
                                         names each that differs, and exits 1
+    --out DIR, after NAME or --check NAME: the files are written, or checked, under DIR in place of the checkout
+                                        (DIR/cascade/NAME/, DIR/<dir>/NAME.glp)
     python3 adopt.py --split-check      writes every contract's adopted file into a temporary directory and checks
                                         that it splits back into its contract and its Logic pragmas, byte for byte;
                                         prints the count and the contracts that do not, and exits 1 if there is one
@@ -24,7 +27,9 @@ THE ADOPTED FILE, programs/<dir>/NAME.txt, line by line:
    contract's; its own line "Logic pragmas.", where it has one, stays where it is, between the contract written in
    the grammar and the vocabulary, so that the file splits back into the two, byte for byte;
 5. where the owner has Interface pragmas, the line "Interface pragmas" and the owner's lines after its heading of
-   pragmas ("Pragmas" or "Interface pragmas"), Implementation pragmas included, as they are.
+   pragmas ("Pragmas" or "Interface pragmas"), Implementation pragmas included, as they are.  Under the heading
+   "Implementation pragmas" a line "Introduction: PRED." names the contract's introduction predicate, PRED a basic
+   state's predicate, as knows; at most one such line.
 It splits back: the contract is the lines from the first that does not begin with % up to "Logic pragmas"; the Logic
 pragmas are the title and the lines after "Logic pragmas" up to "Interface pragmas" or the end.  No line of a
 contract or of its Logic pragmas is either heading.
@@ -32,20 +37,30 @@ contract or of its Logic pragmas is either heading.
 NAME.glp is the full schemas, the term of term.glp.txt, complete in itself, in the form of programs/gsc/README.md,
 "Writing a contract": procedure contract_named(Constant?, SDeclared) and one clause, contract_named(name, Term), the
 name in lower case, every other character an underscore.  A bare term would not load: programs/gsc, the checker,
-is one project, and a NAME.glp there is one of its modules.
+is one project, and a NAME.glp there is one of its modules.  Where the adopted file has the line "Introduction: PRED."
+under "Implementation pragmas", NAME.glp also has, after it, the type Intro, procedure introduction_named(Constant?,
+Intro) and introduction_named(name, introduction(PRED)), as a NAME.glp written by hand had them, which cascade.sh and
+the compile.sh of programs/cssn and programs/apps read; with no such line, none, and those read no_introduction.
 
-It reads GLP at $GLP_DIR, or a clone named GLP beside the directory above this one.  It runs from tools/ on the branch
+A contract not adopted is read from calculus/NAME/ in the checkout, or, where the checkout has no calculus/NAME/, as
+on the branches migration and main, from calculus/NAME/ of the branch Calculus (origin/Calculus or Calculus) of the
+clone, by git show; with that branch not fetched, it names the contract as missing and the command that fetches it.
+
+It reads GLP at $GLP_DIR, the checkout this calculus/ is in, or a clone named GLP beside the directory above this one.  It runs from tools/ on the branch
 code and from calculus/tools/ in GLP: it uses the gcsas.py, toglp.py, expand.py and revtex.py beside it, and builds
-their rev/ and gr/ in a temporary directory from every contract of PATHS.txt, so that each compiles as it does in the
-Calculus.  Python's standard library and nothing else.
+their rev/ and gr/ in a temporary directory from NAME and every contract it is written from, by the first lines, so
+that it compiles as it does in the Calculus.  Python's standard library and nothing else.
 """
 import os, re, shutil, subprocess, sys, tempfile
 
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(TOOLS)
-GLP = os.environ.get('GLP_DIR') or next((d for d in (os.path.join(os.path.dirname(ROOT), 'GLP'), os.path.join(os.path.dirname(os.path.dirname(ROOT)), 'GLP'), '/home/user/GLP') if os.path.isdir(os.path.join(d, 'programs'))), None)
+GLP = os.environ.get('GLP_DIR') or next((d for d in (os.path.dirname(ROOT), os.path.join(os.path.dirname(ROOT), 'GLP'), os.path.join(os.path.dirname(os.path.dirname(ROOT)), 'GLP'), '/home/user/GLP') if os.path.isdir(os.path.join(d, 'programs'))), None)
 PATHS = os.path.join(ROOT, 'PATHS.txt')
+CALC_REFS = ('origin/Calculus', 'Calculus')      # the branch of GLP where calculus/NAME/ of every contract is
 LP, IP = 'Logic pragmas', 'Interface pragmas'
+IMPL = 'Implementation pragmas'
+INTRO = re.compile(r'^Introduction\s*:\s*([a-z][a-z0-9_]*)\.?\s*$')
 IFACE = ('Pragmas', 'Interface pragmas')
 OUTS = [('sas', '%s.txt', 'schemas.txt'), ('exp', '%s.txt', 'full-contract.txt'), ('gx', '%s.txt', 'full-pragmas.txt'),
         ('flat', '%s.txt', 'flat.txt'), ('sasx', '%s.txt', 'full-schemas.txt'), ('glp', '%s.glp.txt', 'term.glp.txt')]
@@ -65,14 +80,57 @@ def lines(text):
     return text.split('\n')[:-1] if text.endswith('\n') else text.split('\n')
 
 
+_OWNERS = None
+
+
+def owners():
+    """{NAME: path} of every programs/**/NAME.txt in GLP with a '% Owner' line, the first found."""
+    global _OWNERS
+    if _OWNERS is None:
+        _OWNERS = {}
+        for d, ds, fs in os.walk(os.path.join(GLP, 'programs')):
+            ds.sort()
+            for f in sorted(fs):
+                if f.endswith('.txt'):
+                    p = os.path.join(d, f)
+                    try:
+                        with open(p, encoding='utf-8') as fh:
+                            head = fh.read(8192)
+                    except (OSError, UnicodeDecodeError):
+                        continue
+                    if re.search(r'^% Owner', head, re.M):
+                        _OWNERS.setdefault(f[:-4], p)
+    return _OWNERS
+
+
 def owner_file(name):
     """The owner's NAME.txt in GLP: programs/**/NAME.txt with a '% Owner' line, or None."""
-    for d, _, fs in os.walk(os.path.join(GLP, 'programs')):
-        if name + '.txt' in fs:
-            p = os.path.join(d, name + '.txt')
-            if re.search(r'^% Owner', read(p), re.M):
-                return p
-    return None
+    return owners().get(name)
+
+
+def adopted_file(name):
+    """The owner's NAME.txt where it is in the adopted form, a line 'Logic pragmas' in it; else None."""
+    o = owner_file(name)
+    return o if o and adopted(read(o)) else None
+
+
+def git(*a):
+    """git in the clone of GLP; where GLP is a scratch directory with calculus/ linked into it, as cascade.sh makes it,
+    in the clone that calculus/ is in."""
+    c = os.path.join(GLP, 'calculus')
+    where = os.path.dirname(os.path.realpath(c)) if os.path.exists(c) else GLP
+    return subprocess.run(['git', '-C', where] + list(a), capture_output=True)
+
+
+def calc_ref():
+    """The branch Calculus in GLP's clone, origin/Calculus or Calculus; None where the clone has neither."""
+    return next((r for r in CALC_REFS if git('rev-parse', '--verify', '-q', r + ':calculus').returncode == 0), None)
+
+
+def calc_names(ref):
+    """The contracts of the branch Calculus: those with calculus/NAME/contract.txt."""
+    r = git('ls-tree', '-r', '--name-only', ref, 'calculus/')
+    return {l.split('/')[1] for l in r.stdout.decode('utf-8').split('\n') if l.endswith('/contract.txt') and l.count('/') == 2}
 
 
 def adopted(text):
@@ -112,13 +170,19 @@ def compose(pct, rev, gr, iface):
 
 def calculus_text(name):
     """The Calculus's contract.txt and logic-pragmas.txt of NAME: from rev/ and gr/ beside the tools, on the branch
-    code, or from calculus/NAME/ in GLP."""
+    code; from calculus/NAME/ in the checkout of GLP; or else from calculus/NAME/ of GLP's branch Calculus, by git."""
     for c, g in ((os.path.join(ROOT, 'rev', name + '.txt'), os.path.join(ROOT, 'gr', name + '.txt')),
                  (os.path.join(ROOT, name, 'contract.txt'), os.path.join(ROOT, name, 'logic-pragmas.txt')),
                  (os.path.join(GLP, 'calculus', name, 'contract.txt'), os.path.join(GLP, 'calculus', name, 'logic-pragmas.txt'))):
         if os.path.exists(c) and os.path.exists(g):
             return read(c), read(g)
-    die('no text of %s in rev/ and gr/, in calculus/%s/, or in %s/calculus/%s/' % (name, name, GLP, name))
+    ref = calc_ref()
+    if ref:
+        c, g = git('show', '%s:calculus/%s/contract.txt' % (ref, name)), git('show', '%s:calculus/%s/logic-pragmas.txt' % (ref, name))
+        if c.returncode == 0 and g.returncode == 0:
+            return c.stdout.decode('utf-8'), g.stdout.decode('utf-8')
+        die('no text of %s: not adopted in %s, and not in calculus/%s/ of the checkout or of %s' % (name, GLP, name, ref))
+    die('no text of %s: not adopted in %s, and no calculus/%s/ in the checkout; fetch the branch Calculus: git -C %s fetch origin Calculus' % (name, GLP, name, GLP))
 
 
 def write_adopted(name, out):
@@ -135,7 +199,12 @@ def write_adopted(name, out):
 
 
 def all_names():
-    names = set()
+    """Every contract: the adopted ones in GLP, those of rev/ beside the tools, of calculus/*/ in the checkout, and of
+    the branch Calculus."""
+    names = {n for n in owners() if adopted_file(n)}
+    ref = calc_ref()
+    if ref:
+        names |= calc_names(ref)
     for base in (os.path.join(ROOT, 'rev'), ROOT, os.path.join(GLP, 'calculus')):
         if os.path.isdir(base):
             for f in os.listdir(base):
@@ -147,18 +216,24 @@ def all_names():
     return sorted(names)
 
 
-def write_paths():
-    out = []
+def computed_paths():
+    """{NAME: path}: the adopted file, programs/<dir>/NAME.txt, where GLP has it; else calculus/NAME/."""
+    out = {}
     for n in all_names():
-        o = owner_file(n)
-        out.append('%s %s' % (n, os.path.relpath(o, GLP) if o and adopted(read(o)) else 'calculus/%s/' % n))
+        a = adopted_file(n)
+        out[n] = os.path.relpath(a, GLP) if a else 'calculus/%s/' % n
+    return out
+
+
+def write_paths():
     with open(PATHS, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(out) + '\n')
+        f.write(''.join('%s %s\n' % kv for kv in sorted(computed_paths().items())))
 
 
 def paths():
+    """PATHS.txt, where --paths wrote one; else the paths as --paths would write them, worked out now."""
     if not os.path.exists(PATHS):
-        die('no %s: run adopt.py --paths first' % PATHS)
+        return computed_paths()
     return dict(l.split(None, 1) for l in read(PATHS).split('\n') if l.strip())
 
 
@@ -172,65 +247,139 @@ def texts(name, path):
     return calculus_text(name)
 
 
+def written_from(name, ps):
+    """{NAME: (contract, Logic pragmas)} of NAME and every contract it is written from, by the first lines, each from
+    its line of the paths."""
+    out, todo = {}, [name]
+    while todo:
+        n = todo.pop()
+        if n in out:
+            continue
+        if n not in ps:
+            die('%s, which a contract compiled is written from, is not among the contracts found' % n)
+        out[n] = texts(n, ps[n])
+        ls = lines(out[n][0])
+        if len(ls) > 1 and re.match(re.escape(n) + r' (extends|restricts|strengthens|instantiates|composes)\b', ls[1]):
+            first = re.sub(r' \([^()]*\)', '', ls[1])
+            todo += [w for w in re.findall(r'[A-Za-z][A-Za-z-]*', first[len(n):]) if w in ps]
+    return out
+
+
 def compiled(name):
-    """{file: text} of what NAME compiles to, from a temporary rev/ and gr/ of every contract of PATHS.txt."""
+    """{file: text} of what NAME compiles to, from a temporary rev/ and gr/ of NAME and the contracts it is written from."""
     ps = paths()
     if name not in ps:
-        die('%s is not in %s' % (name, PATHS))
+        die('%s is not in %s: not adopted in %s%s' % (name, PATHS if os.path.exists(PATHS) else 'the contracts found', GLP,
+            '' if calc_ref() else '; its text is on the branch Calculus, not in this clone: git -C %s fetch origin Calculus, then adopt.py --paths' % GLP))
+    return compile_tree(name, written_from(name, ps)), ps[name].strip()
+
+
+def compile_tree(name, texts):
+    """{file: text} of what NAME compiles to, the Calculus's compilers run in a temporary directory on TEXTS,
+    {contract: (rev, gr)}, NAME and the contracts it is written from."""
     tmp = tempfile.mkdtemp(prefix='adopt-')
     try:
         for d in ('rev', 'gr', 'tools'):
             os.makedirs(os.path.join(tmp, d))
-        for n, p in ps.items():
-            rev, gr = texts(n, p)
+        for n, (rev, gr) in texts.items():
             for d, t in (('rev', rev), ('gr', gr)):
                 with open(os.path.join(tmp, d, n + '.txt'), 'w', encoding='utf-8', newline='') as f:
                     f.write(t)
         for t in ('gcsas.py', 'toglp.py', 'expand.py', 'revtex.py'):
             shutil.copy(os.path.join(TOOLS, t), os.path.join(tmp, 'tools', t))
         run = lambda *a: subprocess.run([sys.executable] + list(a), cwd=tmp, capture_output=True, text=True)
-        steps = [run('tools/gcsas.py', name), run('tools/expand.py', '--out', os.path.join(tmp, 'expanded.tex')), run('tools/toglp.py', name)]
         out = {}
+        for step in (('tools/gcsas.py', name), ('tools/expand.py', '--out', os.path.join(tmp, 'expanded.tex')), ('tools/toglp.py', name)):
+            r = run(*step)          # a step that fails stops it: nothing it printed is taken
+            if r.returncode != 0:
+                ls = [l.replace(tmp, '.') for l in (r.stdout + r.stderr).split('\n') if l.strip()]
+                why = [l for l in ls if l.startswith('FAIL') or 'ERROR' in l or ' NO' in l or 'not translated' in l or 'Traceback' in l] or ls[-1:]
+                die('%s: %s failed, exit %d; nothing written: %s' % (name, os.path.basename(step[0]), r.returncode, ' | '.join(why)[-400:]))
+        steps = []
         for d, pat, f in OUTS:
             p = os.path.join(tmp, d, pat % name)
             if not os.path.exists(p):
                 die('%s: no %s printed; %s' % (name, f, ' | '.join((r.stdout + r.stderr).strip()[-300:] for r in steps)))
             out[f] = read(p)
-        return out, ps[name].strip()
+        return out
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def targets(name):
+def targets(name, root=None):
     """What adopt.py NAME writes: NAME.glp beside the adopted file; and into cascade/NAME/, under the owner's names,
     NAME.txt, a copy of the adopted file as it stands, NAME.glp, and the five files of the Calculus's compilers.  The
     rest of the record of a run (verdict.txt, vmat.tex, platform.vglp, platform.glp, run.log, interface.glp,
     manifest.md) is cascade.sh's.  A contract not yet adopted has no NAME.txt and no NAME.glp beside it."""
+    root = root or GLP
     out, path = compiled(name)
-    glp = module(name, out.pop('term.glp.txt'))
-    rec = os.path.join(GLP, 'cascade', name)
+    intro = introduction(name, read(os.path.join(GLP, path))) if path.endswith('.txt') else None
+    glp = module(name, out.pop('term.glp.txt'), intro)      # the term goes into NAME.glp, and term.glp.txt is not written
+    rec = os.path.join(root, 'cascade', name)
     files = {os.path.join(rec, f): t for f, t in out.items()}
     files[os.path.join(rec, name + '.glp')] = glp
     if path.endswith('.txt'):
-        files[os.path.join(GLP, os.path.dirname(path), name + '.glp')] = glp
+        files[os.path.join(root, os.path.dirname(path), name + '.glp')] = glp
         files[os.path.join(rec, name + '.txt')] = read(os.path.join(GLP, path))
     return files
 
 
-def module(name, term):
+def introduction(name, text):
+    """The introduction predicate of an adopted file: PRED of its line "Introduction: PRED." under the heading
+    "Implementation pragmas", among the lines after "Interface pragmas"; None where it has none."""
+    iface = split(text)[3] or []
+    found, impl = [], False
+    for l in iface:
+        s = l.strip()
+        if s == IMPL:
+            impl = True
+        elif s in IFACE:
+            impl = False
+        elif impl and s.startswith('Introduction'):
+            m = INTRO.match(s)
+            if not m:
+                die('%s: the line "%s" of its Implementation pragmas is not "Introduction: PRED.", PRED a predicate' % (name, s))
+            found.append(m.group(1))
+    if len(found) > 1:
+        die('%s: %d lines "Introduction: ..." in its Implementation pragmas; a contract has one introduction predicate' % (name, len(found)))
+    return found[0] if found else None
+
+
+def module(name, term, intro=None):
     """NAME.glp: the full schemas, the Calculus's term.glp.txt, in the form of programs/gsc/README.md, "Writing a
     contract": a file of its own, procedure contract_named(Constant?, SDeclared), one clause returning the contract
     under its name, the name in lower case with every other character an underscore, as cascade.py names it."""
     ident = re.sub(r'[^a-z0-9]', '_', name.lower())
     head = ('%%%% %s.glp --- printed by adopt.py from %s.txt: the contract\'s full schemas, the Calculus\'s term.glp.txt,\n'
             '%%%% complete in itself.  Not to be edited: edit %s.txt and run adopt.py %s.\n' % (name, name, name, name))
-    return head + ('%% contract_named(%s, C): the contract, %s.\n'
+    body = head + ('%% contract_named(%s, C): the contract, %s.\n'
                    'procedure contract_named(Constant?, SDeclared).\n'
                    'contract_named(%s, %s).\n' % (ident, name, ident, term.rstrip('\n')))
+    if intro:
+        body += ('\n%% introduction_named(%s, I): the contract\'s introduction predicate, %s, from the line "Introduction: %s."\n'
+                 '%% of its Implementation pragmas, in the form of programs/vglp/cva/contracts.glp.\n'
+                 'Intro ::= no_introduction ; introduction(Constant).\n'
+                 'procedure introduction_named(Constant?, Intro).\n'
+                 'introduction_named(%s, introduction(%s)).\n' % (ident, intro, intro, ident, intro))
+    return body
 
 
 def main():
     a = sys.argv[1:]
+    root = None
+    if '--out' in a:                    # --out DIR: write, or check, the files under DIR in place of the checkout
+        i = a.index('--out')
+        if i + 1 >= len(a):
+            die('--out needs a directory')
+        root = os.path.abspath(a[i + 1])
+        a = a[:i] + a[i + 2:]
+    if a[:1] == ['--tree'] and len(a) == 3:       # the compile of NAME on DIR/rev and DIR/gr, a case of tests/
+        d = a[1]
+        names = sorted(f[:-4] for f in os.listdir(os.path.join(d, 'gr')) if f.endswith('.txt'))
+        texts = {n: (read(os.path.join(d, 'rev', n + '.txt')), read(os.path.join(d, 'gr', n + '.txt'))) for n in names}
+        out = compile_tree(a[2], texts)
+        print('%s: compiled; printed %s' % (a[2], ', '.join(sorted(out))))
+        return
     if not GLP:
         die('no clone of GLP: set GLP_DIR')
     if a[:1] == ['--write'] and len(a) == 3:
@@ -249,17 +398,17 @@ def main():
         print('%d contracts, %d that do not split back%s' % (len(names), len(bad), (': ' + ' '.join(bad)) if bad else ''))
         sys.exit(1 if bad else 0)
     elif a[:1] == ['--check'] and len(a) == 2:
-        bad = [p for p, t in targets(a[1]).items() if not os.path.exists(p) or read(p) != t]
+        bad = [p for p, t in targets(a[1], root).items() if not os.path.exists(p) or read(p) != t]
         for p in bad:
-            print(os.path.relpath(p, GLP))
+            print(os.path.relpath(p, root or GLP))
         sys.exit(1 if bad else 0)
     elif len(a) == 1 and not a[0].startswith('-'):
-        for p, t in targets(a[0]).items():
+        for p, t in targets(a[0], root).items():
             os.makedirs(os.path.dirname(p), exist_ok=True)
             with open(p, 'w', encoding='utf-8', newline='') as f:
                 f.write(t)
     else:
-        die('usage: adopt.py --write NAME DIR | --paths | NAME | --check NAME | --split-check')
+        die('usage: adopt.py --write NAME DIR | --paths | NAME [--out DIR] | --check NAME [--out DIR] | --split-check')
 
 
 if __name__ == '__main__':

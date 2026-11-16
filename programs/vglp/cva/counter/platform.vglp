@@ -97,6 +97,9 @@ schema_base(count, 1)
 .
 schema_base(_, 1) :- otherwise | true.
 
+procedure schema_consents(Constant?, Ints).
+schema_consents(_, []) :- otherwise | true.
+
 procedure schema_locals(Constant?, Locals).
 schema_locals(_, []) :- otherwise | true.
 
@@ -286,7 +289,7 @@ Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String,
 RoleAsk   ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).
 Asked     ::= asked(Integer, List(Word)).
 Close     ::= close.
-Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
+Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.
 %% The peer an acquaintance part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract's acquaintance schemas).
 MeetPeer  ::= peer(Peer) ; nopeer.
 
@@ -487,7 +490,7 @@ Then      ::= write_own ; own_unread ; no_own.
 ApprovalRes ::= approval_for(Attempt) ; noapproval.
 
 %% When it starts, its view is written on the output: its own key, the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
-%% Where the contract requires the day, the agent reads also the calendar, a stream of dates the device writes, one a day, merged with its triggers (vGLP, Section 5.4, "The compilation": "the fair merge ... of the answers to its request questions, the messages arriving on the network, the answers to its approval questions, its own triggers and, where the contract requires the day, the calendar").
+%% Where the contract requires the day, the agent reads the date from its phone whenever it reads a trigger, before it computes a condition, and holds today(d), d that date, beside its app state until the next (dated; vGLP, Section 5.4, "Speech-act schemas as local specifications": "we assume that every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition").  It takes no calendar.
 %% Where the contract declares environment predicates other than the day, the agent takes, when the platform is deployed, their atoms, written as the contract writes them, List(Atom), and holds them in its machine state from startup, its first view showing them ("An environment predicate is the day, by the calendar, or a value the contract declares and does not fix, as BCC's f and GFF-FR's d: given when the platform is deployed, held from startup", vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "its value is given when the platform is deployed, and the compiled agent holds the atom from startup").
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
 agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?]) :- ground(Id?) |
@@ -628,14 +631,6 @@ step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?
     st_trie(St?, Tr),
     recheck_find(Pd?, V?, Tr?, St?, F),
     recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
-%% A date of the calendar: today(d) replaced in the state beside the app state, which the conditions read and the view does not show; the app state changing, the starts and the requests the agent holds are put up again (vGLP, Section 5.4, "The compilation": "on each date of which it replaces today(d) and puts up again the starts and requests it holds").  The agent holds today(d) as an atom of the machine state of its app state, which no schema adds or deletes, which atom_of does not show and show_state does not compare.
-step(day(D), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
-    integer(D?), ground(St?) |
-    st_app(St?, Ap0),
-    st_app(St?, Ap),
-    set_today(D?, Ap?, Ap1),
-    set_app(St?, Ap1?, St1),
-    next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
@@ -1252,9 +1247,18 @@ greet_unless(no, P, N, St, Ans?, Ans1, St?) :- ground(P?), ground(N?), ground(St
     st_id(St?, Me),
     st_ms(St?, S),
     name_class(N?, S?, C),
-    question_words(C?, Me?, Ws),
-    greet_whole(P?, N?, Ws?, R),
+    greet_at(C?, Me?, P?, N?, R),
     merge(R?, Ans1?, Ans).
+procedure greet_at(Class?, Peer?, Peer?, Proposal?, Stream(Trigger)).
+greet_at(C, Me, P, N, R?) :- ground(C?), ground(Me?) |
+    question_words(C?, Me?, Ws),
+    binding_of(C?, Nm, Bn),
+    consents_me(Nm?, Bn?, Me?, Cs),
+    greet_or_consent(Cs?, P?, N?, Ws?, R).
+%% A called person who must consent to the acquaintance is not asked: their consent stands, and the agent takes it as their yes.
+procedure greet_or_consent(YesNo?, Peer?, Proposal?, List(Word)?, Stream(Trigger)).
+greet_or_consent(no, P, N, Ws, R?) :- greet_whole(P?, N?, Ws?, R).
+greet_or_consent(yes, _, N, _, [greeted(N?)]).
 
 %% --- Introduce: the ihellos --------------------------------------------------
 %% On reading an introduction intro(Q) the agent sends Q ihello, unless Q is itself or known or it has sent one; an arriving ihello is recorded; and where a peer becomes known by the two the agent writes the new view on the output (Section 5.4).
@@ -1682,7 +1686,7 @@ procedure count_own(Choice?, St?, Choice, St).
 count_own(none, St, none, St?).
 count_own(take(K, S), St, take(K?, S?), St1?) :- advance(St?, St1).
 
-%% Propose of an unguarded part, by its opener: each unguarded part of the class I that the agent opens (opening_parts), where Propose's condition holds on the agent (may_propose) and its machine state is in the part's domain; each part the proposing class op(P), P the part's term, and the attempt naming none.
+%% Propose of an unguarded part, by its opener: each unguarded part of the class I that the agent opens (opening_parts), where Propose's condition holds on the agent (may_propose) and its machine state is in the part's domain; each part the proposing class op(P), P the part's term, and the attempt naming none.  Where another participant refused the agent's last attempt of the part as unable, the part is proposed again only once that participant's ready has come (unready; vGLP 76db5e0, Definition "Proposing", Propose: "if [t]_j is unguarded, p is ready for [t]_j, and, where another participant q refused p's last attempt beta of [t]_j as unable, p has recorded ready(beta, q)"; Udi, 2026-11-15; GFF #6, vGLP_inbox, 2026-11-15 21:54 UTC: GFF's Deliver was proposed again without end).
 procedure op_cands(Infos?, V?, Cands).
 op_cands([], _, []).
 op_cands([I|Is], V, Cs?) :- ground(I?), ground(V?) |
@@ -1699,9 +1703,15 @@ part_cands([P|Ps], I, V, Cs?) :- ground(P?), ground(I?), ground(V?) |
     v_id(V?, Id),
     v_ms(V?, S),
     part_dom(P?, Id?, S?, B2),
-    and(B1?, B2?, B),
+    and(B1?, B2?, B12),
+    v_recs(V?, R),
+    recs_unready(R?, I?, P?, Id?, U),
+    neg(U?, Nu),
+    and(B12?, Nu?, B),
     part_cands(Ps?, I?, V?, Cs1),
     keep_pcand(B?, I?, P?, none, Cs1?, Cs).
+procedure recs_unready(Recs?, Info?, Class?, Peer?, YesNo).
+recs_unready(R, I, P, Id, U?) :- ground(R?) | unready(R?, I?, P?, Id?, R?, U).
 procedure keep_pcand(YesNo?, Info?, Class?, Names?, Cands?, Cands).
 keep_pcand(yes, I, P, Nm, Cs, [cand(op(P?), prop(I?, P?, Nm?))|Cs?]) :- ground(P?) | true.
 keep_pcand(no, _, _, _, Cs, Cs?).
@@ -2717,11 +2727,23 @@ asked_by(At, Id, B?) :- ground(At?), ground(Id?) |
     attempt_id(At?, P),
     attempt_class(At?, C),
     binding_of(C?, Nm, Bn),
+    asked_at(Nm?, Bn?, Id?, P?, B).
+procedure asked_at(Constant?, Binding?, Peer?, Peer?, YesNo).
+asked_at(Nm, Bn, Id, P, B?) :- ground(Nm?), ground(Bn?), ground(Id?) |
     marked_people(Nm?, Bn?, G),
     mem(Id?, G?, In),
     same(Id?, P?, Me),
     neg(Me?, NotMe),
-    and(In?, NotMe?, B).
+    consents_me(Nm?, Bn?, Id?, Cs),
+    neg(Cs?, Asks),
+    and(In?, NotMe?, B0),
+    and(B0?, Asks?, B).
+%% A person who must consent to an act is a guard of it who is not asked (vGLP, Section 5.4, "The contract's words"): whether the agent Me is the person in a role of the schema Nm, at the binding Bn, that the pragmas mark so (schema_consents).
+procedure consents_me(Constant?, Binding?, Peer?, YesNo).
+consents_me(Nm, Bn, Me, B?) :- ground(Nm?), ground(Bn?), ground(Me?) |
+    schema_consents(Nm?, Is),
+    persons_of(Is?, Bn?, Ps),
+    mem(Me?, Ps?, B).
 
 %% Answer: the person's answer recorded, answered(At, yes) by its then-branch
 %% and answered(At, no) by its else-branch; it sends nothing and votes nothing.
@@ -4798,12 +4820,18 @@ mates_of([lschema(Nm, _, Rs, Lsts)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), gro
     on_base(As0?, Lsts?, As),
     deltas_peers(Ps?, Q1),
     sort_peers(Q1?, Q2),
-    subsets(Q2?, Ls),
-    list_choices(Lsts?, Ls?, Ps?, Cs),
-    tuples_of(Cs?, Ts),
-    listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M1),
+    listed_choices(As?, Q2?, Nm?, Rs?, Lsts?, Ps?, M1),
     mates_of(Ss?, Ps?, M2),
     app(M1?, M2?, M).
+%% The schema-bindings of a schema with listed roles at the assignments As of its roles: at each choice of a list for each listed role (list_choices), the copies of the listed roles the roles after the schema's own.
+procedure listed_choices(Bindings?, Peers?, Constant?, RoleSpecs?, Listings?, Deltas?, Mates).
+listed_choices(As, Q, Nm, Rs, Lsts, Ps, M?) :- ground(As?), ground(Rs?), ground(Lsts?), ground(Ps?) |
+    rs_len(Rs?, K),
+    K1 := K? + 1,
+    list_choices(Lsts?, Lsts?, Q?, As?, Rs?, K1?, Ps?, Cs),
+    tuples_of(Cs?, Ts0),
+    same_lists(Ts0?, Lsts?, Ts),
+    listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M).
 procedure on_base(Bindings?, Listings?, Bindings).
 on_base([], _, []).
 on_base([B|Bs], Lsts, R?) :- ground(B?), ground(Lsts?) |
@@ -4833,19 +4861,103 @@ subsets([P|Ps], R?) :- ground(P?), ground(Ps?) |
 procedure with_first(PeerLists?, Peer?, PeerLists).
 with_first([], _, []).
 with_first([L|Ls], P, [[P?|L?]|R?]) :- ground(P?) | with_first(Ls?, P?, R).
-%% For each listing of Lsts, in their order, the lists it may take: a listed role any set of the participants, Ls; the instances of a conjunct any set of the assignments its conditional literals, matched together, give among the atoms the class's changes Ps add, or delete, the instances of a schema-binding of the class being among them (inst_cands).  A variable the quantifier binds that no conditional literal names is given no value by the changes, and an assignment that leaves it free is none of them: such a list is found only as the attempt's own schema-binding carries it (class_mates).
-procedure list_choices(Listings?, PeerLists?, Deltas?, ListTuples).
-list_choices([], _, _, []).
-list_choices([listing(_, _, _, _, _, _, _)|Lsts], Ls, Ps, [Ws?|Cs?]) :- ground(Ls?) |
+%% For each listing of Lsts, in their order, the lists it may take: a listed role any set of the participants at whom it fits (fit_people); the instances of a conjunct any set of the assignments its conditional literals, matched together, give among the atoms the class's changes Ps add, or delete, the instances of a schema-binding of the class being among them (inst_cands).  A variable the quantifier binds that no conditional literal names is given no value by the changes, and an assignment that leaves it free is none of them: such a list is found only as the attempt's own schema-binding carries it (class_mates).
+%% The people a listed role may take are those of the participants Q at whom its deleted and added atoms, as its copy for that person has them (spec_copies), match into the atoms the class's changes Ps delete and add there under one of the assignments As of the schema's roles (fit_people): a list with another person determines no schema-binding of the class, its match_deltas finding none, and is not tried, as an assignment of the roles is not (fit_assigns), so the schema-bindings found, and their order, are those of every list; a listed role that deletes and adds nothing takes any set of the participants.  Two listed roles of one base whose quantifiers have the same anchor and no condition have the same instances in every state, "the instances of a conjunct with a listed role give the people of the role, one for each instance" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), so a schema-binding that gives them different lists determines no transaction and is of no class: the people such a role may take are those that fit at each of them (twins_fit), and of the choices only those that give them one list are kept (same_lists).  All is the schema's listings.
+procedure list_choices(Listings?, Listings?, Peers?, Bindings?, RoleSpecs?, Integer?, Deltas?, ListTuples).
+list_choices([], _, _, _, _, _, _, []).
+list_choices([listing(I, Bi, Rho, Vs, Phi, _, _)|Lsts], All, Q, As, Rs, J, Ps, [Ws?|Cs?]) :-
+    ground(All?), ground(Q?), ground(As?), ground(Rs?), integer(J?), ground(Ps?) |
+    twins_fit(All?, I?, Bi?, Rho?, Vs?, Phi?, Q?, As?, Rs?, J?, Ps?, Qi),
+    subsets(Qi?, Ls),
     wrap_ppl(Ls?, Ws),
-    list_choices(Lsts?, Ls?, Ps?, Cs).
-list_choices([instances(_, _, Xs, _, _, CA, CD)|Lsts], Ls, Ps, [Ws?|Cs?]) :- ground(Ps?), ground(Xs?), ground(CA?), ground(CD?) |
+    list_choices(Lsts?, All?, Q?, As?, Rs?, J?, Ps?, Cs).
+list_choices([instances(_, _, Xs, _, _, CA, CD)|Lsts], All, Q, As, Rs, J, Ps, [Ws?|Cs?]) :- ground(Ps?), ground(Xs?), ground(CA?), ground(CD?) |
     inst_cands(CA?, CD?, Xs?, Ps?, Q0),
     sort_insts(Q0?, Q1),
     dedup(Q1?, Q2),
     isubsets(Q2?, Is),
     wrap_ins(Is?, Ws),
-    list_choices(Lsts?, Ls?, Ps?, Cs).
+    list_choices(Lsts?, All?, Q?, As?, Rs?, J?, Ps?, Cs).
+%% twins_fit(All, I, Bi, Rho, Vs, Phi, Q, As, Rs, J, Ps, Qi): the people of Q that fit at every listed role of All of the anchor of the listed role I, itself among them.
+procedure twins_fit(Listings?, Integer?, Integer?, Constant?, Vars?, Form?, Peers?, Bindings?, RoleSpecs?, Integer?, Deltas?, Peers).
+twins_fit([], _, _, _, _, _, Q, _, _, _, _, Q?).
+twins_fit([listing(I2, Bi2, Rho2, Vs2, Phi2, _, _)|Ls], I, Bi, Rho, Vs, Phi, Q, As, Rs, J, Ps, Qi?) :-
+    integer(I2?), integer(I?), integer(Bi?), ground(Rho?), ground(Vs?), ground(Phi?), ground(As?), ground(Rs?), integer(J?), ground(Ps?) |
+    same_anchor(I2?, Bi2?, Rho2?, Vs2?, Phi2?, I?, Bi?, Rho?, Vs?, Phi?, S),
+    twin_fit(S?, I2?, Q?, As?, Rs?, J?, Ps?, Q1),
+    twins_fit(Ls?, I?, Bi?, Rho?, Vs?, Phi?, Q1?, As?, Rs?, J?, Ps?, Qi).
+twins_fit([instances(_, _, _, _, _, _, _)|Ls], I, Bi, Rho, Vs, Phi, Q, As, Rs, J, Ps, Qi?) :-
+    twins_fit(Ls?, I?, Bi?, Rho?, Vs?, Phi?, Q?, As?, Rs?, J?, Ps?, Qi).
+procedure twin_fit(YesNo?, Integer?, Peers?, Bindings?, RoleSpecs?, Integer?, Deltas?, Peers).
+twin_fit(no, _, Q, _, _, _, _, Q?).
+twin_fit(yes, I, Q, As, Rs, J, Ps, Qi?) :- integer(I?), integer(J?) |
+    nth_spec(Rs?, I?, R),
+    renum_spec(R?, I?, J?, R1),
+    fit_people(Q?, R1?, J?, As?, Ps?, Qi).
+%% Whether the listed roles I2 and I have one base, the same anchor, each at its own place in it, and no condition.
+procedure same_anchor(Integer?, Integer?, Constant?, Vars?, Form?, Integer?, Integer?, Constant?, Vars?, Form?, YesNo).
+same_anchor(I2, Bi2, Rho2, Vs2, Phi2, I, Bi, Rho, Vs, Phi, S?) :- integer(I2?), integer(I?) |
+    same_int(Bi2?, Bi?, E1),
+    same(Rho2?, Rho?, E2),
+    renum_vars(Vs2?, I2?, 0, Ws2),
+    renum_vars(Vs?, I?, 0, Ws),
+    same(Ws2?, Ws?, E3),
+    same(Phi2?, fcons(true), E4),
+    same(Phi?, fcons(true), E5),
+    and(E1?, E2?, E12),
+    and(E12?, E3?, E123),
+    and(E4?, E5?, E45),
+    and(E123?, E45?, S).
+%% Of the choices Ts, each a list for each listing of Lsts, those that give the listed roles of one anchor one list.
+procedure same_lists(ListTuples?, Listings?, ListTuples).
+same_lists([], _, []).
+same_lists([T|Ts], Lsts, R?) :- ground(T?), ground(Lsts?) |
+    tuple_same(Lsts?, T?, Lsts?, T?, Ok),
+    same_lists(Ts?, Lsts?, R1),
+    keep_tuple(Ok?, T?, R1?, R).
+procedure keep_tuple(YesNo?, LLists?, ListTuples?, ListTuples).
+keep_tuple(yes, T, R, [T?|R?]).
+keep_tuple(no, _, R, R?).
+procedure tuple_same(Listings?, LLists?, Listings?, LLists?, YesNo).
+tuple_same([], _, _, _, yes).
+tuple_same([_|_], [], _, _, yes).
+tuple_same([listing(I, Bi, Rho, Vs, Phi, _, _)|Ls], [L|T], All, AT, Ok?) :- ground(All?), ground(AT?) |
+    twins_same(All?, AT?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok1),
+    tuple_same1(Ok1?, Ls?, T?, All?, AT?, Ok).
+tuple_same([instances(_, _, _, _, _, _, _)|Ls], [_|T], All, AT, Ok?) :- tuple_same(Ls?, T?, All?, AT?, Ok).
+procedure tuple_same1(YesNo?, Listings?, LLists?, Listings?, LLists?, YesNo).
+tuple_same1(no, _, _, _, _, no).
+tuple_same1(yes, Ls, T, All, AT, Ok?) :- tuple_same(Ls?, T?, All?, AT?, Ok).
+procedure twins_same(Listings?, LLists?, Integer?, Integer?, Constant?, Vars?, Form?, LList?, YesNo).
+twins_same([], _, _, _, _, _, _, _, yes).
+twins_same([_|_], [], _, _, _, _, _, _, yes).
+twins_same([listing(I2, Bi2, Rho2, Vs2, Phi2, _, _)|Ls], [L2|T], I, Bi, Rho, Vs, Phi, L, Ok?) :-
+    integer(I?), integer(Bi?), ground(Rho?), ground(Vs?), ground(Phi?), ground(L?) |
+    same_anchor(I2?, Bi2?, Rho2?, Vs2?, Phi2?, I?, Bi?, Rho?, Vs?, Phi?, S),
+    same(L2?, L?, E),
+    neg(S?, NS),
+    or(NS?, E?, Ok1),
+    twins_same1(Ok1?, Ls?, T?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok).
+twins_same([instances(_, _, _, _, _, _, _)|Ls], [_|T], I, Bi, Rho, Vs, Phi, L, Ok?) :-
+    twins_same(Ls?, T?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok).
+procedure twins_same1(YesNo?, Listings?, LLists?, Integer?, Integer?, Constant?, Vars?, Form?, LList?, YesNo).
+twins_same1(no, _, _, _, _, _, _, _, _, no).
+twins_same1(yes, Ls, T, I, Bi, Rho, Vs, Phi, L, Ok?) :- twins_same(Ls?, T?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok).
+%% fit_people(Q, R, J, As, Ps, Qi): the people of Q, in their order, at whom the role R, the copy of index J of a listed role, fits (fits) under one of the assignments As.
+procedure fit_people(Peers?, RoleSpec?, Integer?, Bindings?, Deltas?, Peers).
+fit_people([], _, _, _, _, []).
+fit_people([P|Qs], R, J, As, Ps, Qi?) :- ground(P?), ground(R?), integer(J?), ground(As?), ground(Ps?) |
+    fits_any(As?, R?, J?, P?, Ps?, Ok),
+    fit_people(Qs?, R?, J?, As?, Ps?, Q1),
+    keep_peer(Ok?, P?, Q1?, Qi).
+procedure fits_any(Bindings?, RoleSpec?, Integer?, Peer?, Deltas?, YesNo).
+fits_any([], _, _, _, _, no).
+fits_any([B|Bs], R, J, P, Ps, Ok?) :- ground(B?), ground(R?), integer(J?), ground(P?), ground(Ps?) |
+    fits(R?, [b(role(J?), p(P?))|B?], P?, Ps?, Ok1),
+    fits_any1(Ok1?, Bs?, R?, J?, P?, Ps?, Ok).
+procedure fits_any1(YesNo?, Bindings?, RoleSpec?, Integer?, Peer?, Deltas?, YesNo).
+fits_any1(yes, _, _, _, _, _, yes).
+fits_any1(no, Bs, R, J, P, Ps, Ok?) :- fits_any(Bs?, R?, J?, P?, Ps?, Ok).
 procedure wrap_ppl(PeerLists?, LLists).
 wrap_ppl([], []).
 wrap_ppl([L|Ls], [ppl(L?)|Ws?]) :- wrap_ppl(Ls?, Ws).
@@ -5092,7 +5204,7 @@ drop_mate(mate(N, B, G, F), [mate(N1, B1, G1, F1)|Ms], R?) :-
 procedure drop_mate1(YesNo?, Mate?, Mate?, Mates?, Mates).
 drop_mate1(yes, M, _, Ms, R?) :- drop_mate(M?, Ms?, R).
 drop_mate1(no, M, M1, Ms, [M1?|R?]) :- drop_mate(M?, Ms?, R).
-%% The parts the schema-bindings Ms of a class determine, each pt(T, G, Op), in the order of Ms: named by the term T of the first of its schema-bindings, a schema-binding of the part of one before it naming no other part; its guard set G, the people in the marked roles of its schema-bindings; and, for an unguarded part, its opener, opener(P), P "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it"; for a guarded part determined by a schema with a listed role whose base is not a guarding role, opener(P), P the least of the people in the first role of those schema-bindings that is not a guard of the part, "and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part" (vGLP a890465, Section 5.4, "Act schemas as local specifications"); and for every other guarded part guarded_part.  An opener per part is one the agent finds: an unguarded part has its opener in the first role of one of its schema-bindings, so the agent, which finds among its own transactions the classes of the unguarded schemas with it in their first role, finds every part it opens (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3).
+%% The parts the schema-bindings Ms of a class determine, each pt(T, G, Op), in the order of Ms: named by the term T of the first of its schema-bindings, a schema-binding of the part of one before it naming no other part; its guard set G, the people in the marked roles of its schema-bindings; and, for an unguarded part, its opener, opener(P), P "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it"; for a guarded part determined by a schema whose base is not a guarding role, opener(P), P the person in the base of those schema-bindings, the least of them, who is not a guard of the part, "the opener of a guarded part determined by a schema whose base is not a guarding role is the person in the base, who is not a guard of the part, as the ward whose state lists her guardians opens the acts they take jointly" (vGLP, Section 5.4, "Speech-act schemas as local specifications"; until this text the person in the first role, which is the base of child_close and is not of make_guardian: CSSN #16, Code_inbox.md, 2026-11-15 17:05 UTC); and for every other guarded part its proposers, proposed(Ob).  An opener per part is one the agent finds: an unguarded part has its opener in the first role of one of its schema-bindings, so the agent, which finds among its own transactions the classes of the unguarded schemas with it in their first role, finds every part it opens (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3).
 procedure info_parts_of(Mates?, Peers?, Peer?, Parts).
 info_parts_of(Ms, Q, Id, Pts?) :- ground(Ms?) | parts_of(Ms?, Ms?, Q?, Id?, [], Pts).
 %% parts_of(Ms, All, Q, Id, Seen, Pts): the parts of the schema-bindings Ms that are not the part of one of Seen, the openers taken over All.
@@ -5126,19 +5238,21 @@ part_firsts([mate(N, B, G, F)|Ms], M, Q, Fs?) :- ground(F?), ground(M?), ground(
     same_mpart(Q?, mate(N?, B?, G?, F?), M?, S),
     part_firsts(Ms?, M?, Q?, Fs1),
     keep_peer(S?, F?, Fs1?, Fs).
-%% The people in the first role of the schema-bindings of All that determine the part of M, of a schema with a listed role whose base is not a guarding role, and that are not guards of the part, G (vGLP a890465, Section 5.4, "Act schemas as local specifications").
+%% The people in the base (schema_base) of the schema-bindings of All that determine the part of M, of a schema whose base is not a guarding role, and that are not guards of the part, G (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the opener of a guarded part determined by a schema whose base is not a guarding role is the person in the base, who is not a guard of the part").
 procedure part_gfirsts(Mates?, Mate?, Peers?, Peers?, Peers).
 part_gfirsts([], _, _, _, []).
-part_gfirsts([mate(N, B, G1, F)|Ms], M, Q, G, Fs?) :- ground(N?), ground(F?), ground(M?), ground(Q?), ground(G?) |
+part_gfirsts([mate(N, B, G1, F)|Ms], M, Q, G, Fs?) :- ground(N?), ground(B?), ground(F?), ground(M?), ground(Q?), ground(G?) |
     same_mpart(Q?, mate(N?, B?, G1?, F?), M?, S),
     opens_guarded(N?, O),
-    mem(F?, G?, InG),
+    schema_base(N?, Bi),
+    role_person(Bi?, B?, P),
+    mem(P?, G?, InG),
     neg(InG?, NotG),
     and(S?, O?, S1),
     and(S1?, NotG?, K),
     part_gfirsts(Ms?, M?, Q?, G?, Fs1),
-    keep_peer(K?, F?, Fs1?, Fs).
-%% Whether a schema is one with a listed role whose base is not a guarding role: its listed roles have one base (local.glp), its first role.
+    keep_peer(K?, P?, Fs1?, Fs).
+%% Whether a schema is one with a listed role whose base is not a guarding role: its listed roles have one base (local.glp), the base of the schema.
 procedure opens_guarded(Constant?, YesNo).
 opens_guarded(Nm, B?) :- schema_entry(Nm?, E), opens_guarded1(E?, B).
 procedure opens_guarded1(Schema?, YesNo).
@@ -5153,7 +5267,7 @@ opens_guarded1(lschema(_, _, Rs, [instances(_, Bi, _, _, _, _, _)|_]), B?) :- gr
 procedure spec_unguarded(RoleSpec?, YesNo).
 spec_unguarded(rs(unguarded, _, _, _, _), yes).
 spec_unguarded(rs(guarded, _, _, _, _), no).
-%% The opener of an unguarded part, from the people Fs in the first role of its schema-bindings, and of a guarded part, from those of Fo.
+%% The opener of an unguarded part, from the people Fs in the first role of its schema-bindings, and of a guarded part, from those of Fo, in the base of its schema-bindings.
 procedure part_opener(Peers?, Peers?, Peers?, Peers?, Opener).
 part_opener([], Fs, _, Ob, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Ob?, Op).
 part_opener([_|_], _, Fo, Ob, Op?) :- sort_peers(Fo?, Ss), least_opener(Ss?, Ob?, Op).

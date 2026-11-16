@@ -1,0 +1,4 @@
+M: Possibly one, marked (flat text)
+M:0 - | Alice and Bob are persons, Club a club, Bob possibly Alice.
+M:1 ■ Found: Alice and Bob may jointly Alice is a founder of Club and Bob is a founder of Club. Possibly one: Alice=Bob.
+M:1 ■ Greet: Alice may Bob is greeted by Alice. Possibly one: Alice=Bob.

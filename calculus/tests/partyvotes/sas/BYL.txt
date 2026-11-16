@@ -1,0 +1,3 @@
+BYL: Bylaws
+BYL instantiates OCUR with bylaws; member(x,z) for taker(x,z,m); member(x,z) for voter(x,z,m); vote(z,>=Votes,m), product(Double,Votes,2), has_participant(z,<Double) for decided(z,m).
+BYL:0 - | Votes and Double are numbers.

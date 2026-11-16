@@ -1,0 +1,3 @@
+K: Base
+Of K: Alice and Bob are persons. Reflexive: x knows y.
+K:1. ■ Meet: Alice and Bob may jointly meet.

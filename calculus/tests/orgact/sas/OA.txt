@@ -1,0 +1,7 @@
+OA: An Organisation's Act
+Vocabulary: x is a participant of z = participant(x,z); z has x as a participant = has_participant(z,x); x holds n y-coins = coin(x,y,*n); z holds v's vote to pay y n w-coins = vote_pay(z,v,y,w,n).
+After v votes to pay y n w-coins of z, which requires z does not hold v's vote to pay y n w-coins: z holds v's vote to pay y n w-coins.
+After x pays y n w-coins of z: no longer z holds n w-coins, y holds n w-coins and z holds no one's vote to pay y n w-coins.
+OA:0 - | Alice, Bob and Carol are persons, Orga an organisation, Iris an issuer, Sum, Votes and Double numbers.
+OA:1 ■ Pay: ~coin(Orga,Iris,*Sum), coin(Bob,Iris,*Sum), ~vote_pay(Orga,_,Bob,Iris,Sum) <- participant(Alice,Orga), vote_pay(Orga,>=Votes,Bob,Iris,Sum), product(Double,Votes,2), has_participant(Orga,<Double), coin(Orga,Iris,*Sum) guarded by Alice.
+OA:1 ■ Vote to pay: vote_pay(Orga,Carol,Bob,Iris,Sum) <- participant(Carol,Orga), has_participant(Orga,Bob), ~vote_pay(Orga,Carol,Bob,Iris,Sum) guarded by Carol.

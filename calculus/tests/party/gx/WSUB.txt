@@ -1,0 +1,8 @@
+WSUB: A Restriction of Wards in a Currency
+Of WARD: A ward takes an act of a party by those who decide for it. Alice is a person, Carol a ward.
+Of CUR: A *party* to a contract is whoever has an identity. Alice and Bob are parties, Sum and Total numbers.
+Of WSUB: Alice and Bob are parties, Sum a number.
+WARD:1. ■ Enter: Alice may create Carol, provided Alice is a person.
+WARD:2. ■ Retire: Those who decide for Carol may retire Carol.
+CUR:1, WSUB:1. ■ Pay known: Alice may pay Bob Sum Alice-coins, provided Alice knows Bob and Bob knows Alice. Pay known for Alice: Alice may pay Bob Sum Alice-coins, taken for Alice by those who decide for Alice, provided Alice knows Bob and Bob knows Alice.
+CUR:2. ■ Swap: Alice and Bob may jointly swap Sum Alice-coins for Total Bob-coins. Swap for Alice: Alice and Bob may jointly swap Sum Alice-coins for Total Bob-coins, taken for Alice by those who decide for Alice. Swap for Bob: Alice and Bob may jointly swap Sum Alice-coins for Total Bob-coins, taken for Bob by those who decide for Bob. Swap for Alice and Bob: Alice and Bob may jointly swap Sum Alice-coins for Total Bob-coins, taken for Alice by those who decide for Alice and for Bob by those who decide for Bob.

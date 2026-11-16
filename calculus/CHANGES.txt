@@ -1,0 +1,285 @@
+Changes from the publication at GLP Calculus a687ab8 to this one, for an owner who adopted the first.
+
+AGORA:
+  own act added: Offer own
+  own act added: Want own
+  own act added: Withdraw own
+  derived acts: 3, before 3
+CB:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+CMB:
+  own act added: Bank deposit own coins
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+CSSN:
+  inherited act added: Post own, from GSN
+  inherited act added: Child post own, from GSNW
+  inherited act added: Child leave, from GSNW
+  inherited act added: Child remove, from GSNW
+CnC:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+DAO:
+  own act added: Propose own
+  own act added: Vote own for
+  own act added: Vote own against
+DGC:
+  own act added: Deposit own coins
+  own act added: Deposit with the issuer
+  own act added: Deposit own bonds
+  own act added: Deposit bond with the issuer
+  own act added: Pay own accepted coins
+  own act added: Pay accepted coins to the issuer
+  own act changed: Accept by bond
+    was: accepts(Alice,Carol,Dollar,*Limit) <- bond(Alice,Carol,Day), issued_bond_in(Carol,Dollar,Due) guarded by Alice.
+    now: accepts(Alice,Carol,Dollar,*Limit) <- bond(Alice,Carol,Day), issued_bond_in(Carol,Dollar,Due), le(Day,Due), le(Due,Day) guarded by Alice.
+  derived acts: 1, before 1
+FDAO:
+  inherited act added: Propose own, from DAO
+  inherited act added: Vote own for, from DAO
+  inherited act added: Vote own against, from DAO
+GAI: text only
+GAN:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GAS: text only
+GB: text only
+GBCC:
+  own act added: Deposit own coins
+  own act added: Deposit with the issuer
+  own act added: Deposit own bonds
+  own act added: Deposit bond with the issuer
+  own act added: Pay own accepted coins
+  own act added: Pay accepted coins to the issuer
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GBank:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GC: text only
+GCC:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GCoop:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GCorp:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GD: text only
+GD-S: text only
+GDAO:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GDC: text only
+GDO: text only
+GDO-L: text only
+GDO-LB: text only
+GDS: text only
+GFF: text only
+GFF-FR: text only
+GFF-FR-BC: text only
+GFF-PS: text only
+GFP: text only
+GKK: text only
+GLDAO:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GNG:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GNL:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GNM:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GNO:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+GO: text only
+GPD: text only
+GPE: text only
+GRA: text only
+GRA-SS: text only
+GRV: text only
+GSG: text only
+GSN:
+  own act added: Post own
+GSNP:
+  own act added: Post own
+GSNW:
+  own act added: Post own
+  own act added: Ward post own
+  own act added: Ward add
+  own act added: Ward leave
+  own act added: Ward remove
+GSV: text only
+GnW: text only
+JOINT: text only
+LDAO:
+  own act added: Delegate own
+  own act added: Delegate to the steward
+  own act added: Revoke own
+  own act added: Count own for
+  own act added: Count own against
+  inherited act added: Propose own, from DAO
+  inherited act added: Vote own for, from DAO
+  inherited act added: Vote own against, from DAO
+LIB: text only
+MCS:
+  own act added: Deposit own coins
+  own act added: Deposit with the issuer
+  own act added: Deposit own bonds
+  own act added: Deposit bond with the issuer
+  own act added: Pay own accepted coins
+  own act added: Pay accepted coins to the issuer
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+ORH:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+REC: text only
+SC:
+  own act added: Claim own coins
+  own act added: Claim coins of the corporation
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+SCB:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+SGSG: text only
+SPLLC:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+STAY: text only
+TC:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 89, before 1, changed
+WC:
+  inherited act added: Deposit own coins, from DGC
+  inherited act added: Deposit with the issuer, from DGC
+  inherited act added: Deposit own bonds, from DGC
+  inherited act added: Deposit bond with the issuer, from DGC
+  inherited act added: Pay own accepted coins, from DGC
+  inherited act added: Pay accepted coins to the issuer, from DGC
+  inherited acts changed: 1 (Accept by bond from DGC)
+  derived acts: 90, before 2, changed
+
+Summary: 62 contracts; own acts changed 11; inherited acts changed only 20; text only 31; unchanged 0; new 0; no longer published 0.
+With an own act added, gone, renamed or changed: AGORA, CMB, DAO, DGC, GBCC, GSN, GSNP, GSNW, LDAO, MCS, SC.

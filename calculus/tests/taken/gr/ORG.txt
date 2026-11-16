@@ -1,0 +1,7 @@
+ORG: Organisations in a Currency
+ORG extends CUR.
+Erin and Frank are persons, Alice and Bob organisations or persons, Sum and Total numbers.
+1. ■ Pay for an organisation: CUR:1 Pay, taken for Alice by Erin, only if Erin is a member of Alice.
+2. ■ Swap of two organisations: CUR:2 Swap, taken for Alice by Erin and for Bob by Frank, only if Erin is a member of Alice and Frank is a member of Bob.
+Logic pragmas.
+Vocabulary: x is a member of z = member(x,z).

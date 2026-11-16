@@ -1,0 +1,13 @@
+GDO: Grassroots Directed Overlay
+Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
+Of GDO: Alice, Bob and Carol are persons.
+GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+GSG:2. ■ Unfriend: Alice may end her friendship with Bob.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+GDO:1. ■ Point friend: Alice may point to Bob, provided Alice and Bob are friends.
+GDO:2. ■ Point transitive: Alice may point to Carol, provided Alice knows Carol, Alice points to Bob and Bob points to Carol.
+GDO:3. ■ Unpoint: Alice may cease pointing to Bob.

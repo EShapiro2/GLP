@@ -1,0 +1,6 @@
+PLAIN: A Currency Without Wards (expanded schemas)
+CUR:0 - | A *party* to a contract is whoever has an identity.
+CUR:0 - | Alice and Bob are parties, Sum and Total numbers.
+CUR:1+PLAIN:1 ■ Pay known: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum), knows(Bob,Alice) guarded by Alice.
+CUR:2 ■ Swap: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total) guarded by Alice, Bob.
+PLAIN:0 - | Alice and Bob are parties, Sum a number.

@@ -1,0 +1,7 @@
+M: Possibly one, marked
+Alice and Bob are persons, Club a club, Bob possibly Alice.
+1. ■ Found: Alice and Bob may jointly found Club. Greet: Alice may greet Bob.
+Logic pragmas.
+Vocabulary: x is a founder of c = founder(x,c); y is greeted by x = greeted(y,x).
+After x and y found c: x is a founder of c and y is a founder of c.
+After x greets y: y is greeted by x.

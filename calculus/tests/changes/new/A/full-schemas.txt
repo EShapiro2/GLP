@@ -1,0 +1,10 @@
+A: Alpha (expanded schemas)
+P:1 ■ Inherit: p(Alice) <- guarded by Alice.
+P:4 ■ Arrived: q2(Alice) <- guarded by Alice.
+A:1 ■ | A clause.
+A:1 ■ Change: r(Alice) <- s(Alice), x(Alice) guarded by Alice.
+A:1 ■ Renamed: t(Alice) <- guarded by Alice.
+A:2 ■ Added: y(Alice) <- guarded by Alice.
+P:3+A:2 ■ Strengthened: v(Alice) <- guarded by Alice.
+A:3 ■ Accept for Dollar: w(Alice) <- guarded by Alice.
+A:3 ■ Accept for Euro: w2(Alice) <- guarded by Alice.

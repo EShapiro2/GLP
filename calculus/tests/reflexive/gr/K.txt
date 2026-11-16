@@ -1,0 +1,7 @@
+K: Base
+Alice and Bob are persons.
+1. ■ Meet: Alice and Bob may jointly meet.
+Logic pragmas.
+Vocabulary: x knows y = knows(x,y); x has noted z = noted(x,z).
+After x and y meet: x knows y and y knows x.
+Reflexive: x knows y.

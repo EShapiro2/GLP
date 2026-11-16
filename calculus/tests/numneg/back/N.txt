@@ -1,0 +1,15 @@
+N: Numbers
+Alice is a person, Bob a person, Sum, Cap and Line numbers.
+1. ■ Small: Alice may give Bob Sum Alice-coins, provided Sum is at most Cap.
+2. ■ Large: Alice may give Bob Sum Alice-coins, provided Sum is not at most Cap.
+3. ■ True: Alice may give Bob 2 Alice-coins, provided 2 is at least 1.
+4. ■ False: Alice may give Bob 2 Alice-coins, provided 2 is not at least 1.
+5. ■ Two: Alice may give Bob 2 Alice-coins, provided Bob holds exactly 2 Alice-coins.
+6. ■ Not two: Alice may give Bob 2 Alice-coins, provided Bob does not hold exactly 2 Alice-coins.
+7. ■ Set: Alice may set Bob's line at Line.
+8. ■ Use: Alice may give Bob Sum Alice-coins, provided Alice has Bob's line at the number Line and Sum is at most Line.
+Logic pragmas.
+Vocabulary: x holds a y-coin = coin(x,y); x holds n y-coins = coin(x,y,*n); x holds exactly n y-coins = coin(x,y,#n); z has y's line at the number n = line(z,y,n).
+y's earlier line in z has ended: z has y's line at no number.
+After z sets y's line at n: y's earlier line in z has ended and z has y's line at the number n.
+After x gives y n x-coins: no longer x holds n x-coins and y holds n x-coins.

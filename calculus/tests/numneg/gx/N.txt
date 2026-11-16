@@ -1,0 +1,10 @@
+N: Numbers
+Of N: Alice is a person, Bob a person, Sum, Cap and Line numbers.
+N:1. ■ Small: Alice may give Bob Sum Alice-coins, provided Sum is at most Cap.
+N:2. ■ Large: Alice may give Bob Sum Alice-coins, provided Sum is not at most Cap.
+N:3. ■ True: Alice may give Bob 2 Alice-coins, provided 2 is at least 1.
+N:4. ■ False: Alice may give Bob 2 Alice-coins, provided 2 is not at least 1.
+N:5. ■ Two: Alice may give Bob 2 Alice-coins, provided Bob holds exactly 2 Alice-coins.
+N:6. ■ Not two: Alice may give Bob 2 Alice-coins, provided Bob does not hold exactly 2 Alice-coins.
+N:7. ■ Set: Alice may set Bob's line at Line.
+N:8. ■ Use: Alice may give Bob Sum Alice-coins, provided Alice has Bob's line at the number Line and Sum is at most Line.

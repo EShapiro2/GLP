@@ -14,7 +14,7 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-mint(Peer, Integer)
+issue(Peer, Integer)
 ;
 swap(Peer, Peer, Peer, Integer, Peer, Integer)
 ;
@@ -29,7 +29,7 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-mint(Peer, Integer)
+issue(Peer, Integer)
 ;
 swap(Peer, Peer, Peer, Integer, Peer, Integer)
 ;

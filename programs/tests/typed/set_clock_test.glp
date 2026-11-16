@@ -1,0 +1,34 @@
+% set_clock/1 (GLP-ICLP appendix-guards, "Clock access (now/1, set_clock/1)"): the machine's clock reads T once set_clock(T) has run and runs on from it; now/1 and the time guards read it.
+
+Reading ::= read(Integer).
+Passed ::= passed.
+
+% The day of 2000-01-01 is 10957; its first millisecond is 946684800000.
+procedure day_after_set(Integer).
+day_after_set(D?) :-
+  set_clock(946684800000), read_when(R), day_of(R?, D).
+
+procedure read_when(Reading).
+read_when(read(T?)) :- when_idle | now(T).
+
+procedure day_of(Reading?, Integer).
+day_of(read(T), D?) :- integer(T?) | D := T? // 86400000.
+
+% A goal waits until the next day; setting the clock to that day ends its wait.
+procedure wait_passes(Passed).
+wait_passes(P?) :-
+  set_clock(946684800000), waiter(947000000000, P), setter(947000000000).
+
+procedure waiter(Integer?, Passed).
+waiter(T, passed) :- wait_until(T?) | true.
+
+procedure setter(Integer?).
+setter(T) :- when_idle | set_clock(T?).
+
+% wait/1 ends when the clock is set past the end of its duration.
+procedure duration_passes(Passed).
+duration_passes(P?) :-
+  set_clock(946684800000), sleeper(3600000, P), setter(946688400000).
+
+procedure sleeper(Integer?, Passed).
+sleeper(D, passed) :- wait(D?) | true.
