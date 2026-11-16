@@ -4,13 +4,13 @@ The app of GB, grassroots bonds, as a mini-app of the Grassroots Super-App (GSG 
 
 ## The contract
 
-GB is Currencies' contract (Coordination Appendix C); its clauses and pragmas are `programs/currencies/bonds/GB.txt`, as GB's paper, Section 3.1, has them in its box, and its act schemas `programs/currencies/bonds/GB.glp`, as its Appendix A has them.  GB extends GC, Currencies' coins contract (`programs/currencies/coins/GC.txt`; the app `../gc`), and through it GKK, the base contract (`programs/gsc/GKK.txt`; the app `../gkk`), whose clauses it cites, and not GSG: no act of it requires a friend.
+GB is Currencies' contract (Coordination Appendix C); its clauses and pragmas are `programs/currencies/bonds/Bonds.txt`, as GB's paper, Section 3.1, has them in its box, and its act schemas `programs/currencies/bonds/Bonds.glp`, as its Appendix A has them.  GB extends GC, Currencies' coins contract (`programs/currencies/coins/Coins.txt`; the app `../gc`), and through it GKK, the base contract (`programs/gsc/Knowledge.txt`; the app `../gkk`), whose clauses it cites, and not GSG: no act of it requires a friend.
 
 GKK:1 is `establish`, which adds `identity`, `knows` being reflexive, GKK:2 `acquaint`, GKK:3 `introduce`.  GC:1 is `issue(p? ; k)`, which adds k copies of `coin(p)` at `p`, and GB:1 `issue_bond(p? ; d, k)`, which adds k copies of `bond(p, d)` at `p` where `d` is later than the current date, `today(t)`, which the agent reads from the machine's clock by `now/1`; GC:2 is `swap`, coins for coins, and GB:2 `swap_coin_for_bond` and `swap_bonds`, each guarded by both, who know each other; GC:3 is `pay`; GC:4 is `redeem`, a coin against a coin, and GB:3 `redeem_coin_against_bond`, `redeem_bond` and `redeem_bond_against_bond`, each guarded by the bearer, a bond presented only where its maturity date is at most the current date at its issuer; GB:4 is the escrow, `deposit` and `deposit_bond`, guarded by the depositor and the escrow agent, for a beneficiary and on a condition, `release` and `release_bond`, guarded by the escrow agent and the beneficiary, and `return` and `return_bond`, guarded by the escrow agent and the depositor.  GC:5 describes no act.  The checker's verdict is `syntactically_grassroots`.
 
 ## The cascade
 
-1. The act schemas, `programs/currencies/bonds/GB.glp`, and the pragmas, `GB.txt`; the checker's verdict `syntactically_grassroots`.
+1. The act schemas, `programs/currencies/bonds/Bonds.glp`, and the pragmas, `Bonds.txt`; the checker's verdict `syntactically_grassroots`.
 2. The canonical CVA platform of the schemas (vGLP, Section 3.2, Definition "Canonical CVA Platform"), compiled into vGLP with the words of the pragmas (Section 5.4, "The compilation" and "The contract's words"): `platform.vglp`, as `programs/vglp/cva/compiler` prints it.  `bash programs/apps/compile.sh --check` re-prints it and compares; `bash programs/apps/compile.sh` writes it.
 3. GLP: the canonical compilation (vGLP, Section 6.3) compiles `platform.vglp` when the directory loads.
 4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/3`, which the super-app activates by `run/3`.
