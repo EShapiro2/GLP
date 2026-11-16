@@ -43,7 +43,7 @@ GnW:2 ■ | Carol may not end a friendship with her guardian.
 GnW:3 ■ | Ward and person.
 GnW:3+GAI:2 ■ AI agent acquaint: Carol and Bob may jointly Carol knows Bob, Bob knows Carol and Bob holds a record of Carol's attestation Proof, provided Carol is an AI agent, Carol has Alice as a guardian, Bob is a person and Carol holds the attestation Proof.
 GnW:3+GAI:2 ■ AI agent befriend: Carol, Bob and Alice may jointly Carol counts Bob as a friend and Bob counts Carol as a friend, provided Carol is an AI agent, not Carol is retired, Carol has Alice as a guardian, Bob is a person, Carol knows Bob, Bob knows Carol, Alice counts Bob as a friend, Bob counts Alice as a friend, not Carol counts Bob as a friend, not Bob counts Carol as a friend and Carol holds the attestation Proof.
-GnW:3+GAI:2 ■ AI agent end: Carol may no longer Carol counts Bob as a friend and no longer Bob counts Carol as a friend, provided not Bob is a guardian of Carol and Carol holds the attestation Proof.
+GnW:3+GAI:2 ■ AI agent end: Carol may no longer Carol counts Bob as a friend and no longer Bob counts Carol as a friend, provided not Carol has Bob as a guardian and Carol holds the attestation Proof.
 GnW:3 ■ Unfriend: Bob may no longer Bob counts Carol as a friend and no longer Carol counts Bob as a friend, provided not Bob is a guardian of Carol.
 GnW:3 ■ AI agent unfriend: Alice may no longer Carol counts Bob as a friend and no longer Bob counts Carol as a friend, provided Carol has Alice as a guardian and not Bob is a guardian of Carol.
 GnW:4 ■ | Wards.
