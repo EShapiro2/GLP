@@ -23,5 +23,15 @@ After x redeems a y-coin against a z-coin: no longer x holds a y-coin, y holds a
 Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Interface pragmas
 Coins: the coins Alice holds.
+Swap: Alice [Swap] <amount given> <issuer wanted> <amount wanted>
+  Bob: Alice asks to swap coins with you.
+Pay: Alice [Pay] <amount>
+  Bob: Alice asks to pay you coins.
+Escrow: Alice [Deposit] <amount> <condition>
+  Carol: Alice asks to deposit coins with you.
+  Carol [Release] <amount>
+  Bob: Carol asks to release coins to you.
+  Carol [Return] <amount>
+  Alice: Carol asks to return coins to you.
 Pay issuer: Alice [Pay issuer] <amount>
 Redeem: Alice [Redeem] <issuer wanted>
