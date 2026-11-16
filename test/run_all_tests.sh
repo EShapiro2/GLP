@@ -4394,10 +4394,12 @@ printf '%s\n' '% Owner: vGLP.' 'XJ: Test' 'Alice is a person.' '1. ■ Mint: Ali
 printf '%s\n' 'XK: Test' 'XK instantiates XJ with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Contract to App).' 'Alice is a person.' '1. ■ Burn: Alice may burn coins.' > "$cva_pa/XK.txt"
 printf '%s\n' 'XL: Test' 'XL instantiates XJ and XK with bylaws that delegate no act and restricts them.' 'Alice is a person.' > "$cva_pa/XL.txt"
 printf '%s\n' 'XM: Test' 'XM extends, restricts and strengthens XJ and XK.' 'Alice is a person.' > "$cva_pa/XM.txt"
+printf '%s\n' 'XR: Test' 'XR relaxes and extends XJ.' 'Alice is a person.' > "$cva_pa/XR.txt"
 cva_pa_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_pa/XJ.txt" "[schema(mint, ['Alice'], [num(k)], [rs(guarded, [times(num(k), atom(coin, [role(1)]))], [], [], [])])]" 2>&1; echo "exit $?")
 cva_pa_k=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_pa/XK.txt" 2>&1 | sed 's|.*/||' | tr '\n' ' '; echo)
 cva_pa_l=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_pa/XL.txt" 2>&1 | sed 's|.*/||' | tr '\n' ' '; echo)
 cva_pa_m=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_pa/XM.txt" 2>&1 | sed 's|.*/||' | tr '\n' ' '; echo)
+cva_pa_r=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_pa/XR.txt" 2>&1 | sed 's|.*/||' | tr '\n' ' '; echo)
 rm -rf "$cva_pa"
 check "CVA pragmas: a clause titled by its act, its title ending in a colon, is named by a pragma line (adopted)" "act('mint', '\"Mint\"', \['\"\"', '\"amount\"'\], none, '\"Coins\"', by(\[1\]))" "$cva_pa_out"
 check "CVA pragmas: ... the contract's text ends at the line Logic pragmas (adopted)" "Mint: Alice may mint coins.\"')" "$cva_pa_out"
@@ -4406,6 +4408,7 @@ check "CVA pragmas: ... and pragmas.sh exits 0 (adopted)" "^exit 0$" "$cva_pa_ou
 check "CVA pragmas: a first line with an instantiation's words after with, and relations joined by commas and and (firstline)" "^XJ.txt XK.txt $" "$cva_pa_k"
 check "CVA pragmas: ... two contracts instantiated, and them (firstline)" "^XJ.txt XK.txt XL.txt $" "$cva_pa_l"
 check "CVA pragmas: ... extends, restricts and strengthens two contracts (firstline)" "^XJ.txt XK.txt XM.txt $" "$cva_pa_m"
+check "CVA pragmas: ... relaxes, the Calculus's sixth relation, as GC's 'GC relaxes and extends GN.' (firstline; Code #33, 2026-11-16 16:50 UTC)" "^XJ.txt XR.txt $" "$cva_pa_r"
 # A person who must consent (vGLP, Section 5.4, "The contract's words": "A clause may say that a person, or a ward, must consent to its act: they are a guard of the act, so it is never taken against them, and they are not asked"; the Calculus's GnW, Enter; Udi, 2026-11-15): the reader takes the line with no question to Carol and gives the act consents(1), her role; a line that asks her is refused; and the platform the compiler prints holds schema_consents(enter, [1]), by which her agent takes a hello and a start of the act with no question (consent).
 cva_pc=$(mktemp -d)
 printf '%s\n' '% Owner: vGLP.' 'XN: Test' 'Alice is a person, Carol a ward.' '1. ■ Enter: Alice may create Carol, and Carol must consent.' 'Interface pragmas' 'Wards: the wards of Alice.' 'Enter: Alice [Enter] <carol>' > "$cva_pc/XN.txt"

@@ -329,7 +329,8 @@ sub relation_names {
     return () unless @body >= 2;
     my $nm = qr/[A-Z][A-Za-z0-9]*(?:-[A-Z][A-Za-z0-9]*)*/;
     # composes, the composition of contracts (GSC, Section Relations among Contracts), names the contracts composed, "composes A with B", A or B "it", "the instance" or "the composition" where it is what the line has named before, as "GAI instantiates GnW, composes it with GFP and restricts the composition" (GAI.txt) and "GSNP composes GAI with GSN and amends the composition" (GSNP.txt; GAI #13, Code_inbox.md, 2026-11-10 20:39 UTC).
-    my $rel = qr/(?:amends|extends|instantiates|implements|restricts|strengthens|composes)\b/;
+    # relaxes, the sixth relation of the Calculus (calculus/PARTS.txt, 2: "a relaxing citation ... adds the relaxed act and keeps the act cited"), as "GC relaxes and extends GN." (Code #33, vGLP_inbox.md, 2026-11-16 16:50 UTC).
+    my $rel = qr/(?:amends|extends|instantiates|implements|restricts|strengthens|relaxes|composes)\b/;
     my $back = qr/(?:it|them|the instance|the composition)/;
     return () unless $body[1] =~ /^$nm\s+($rel.*?)\.\s*$/;
     my $line = $body[1];
