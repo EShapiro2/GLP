@@ -17,6 +17,10 @@ c_
 \mathit{
 identity
 }
+,
+\mathit{
+person
+}
 \}
 ,\\
 &
@@ -222,6 +226,62 @@ identity
 \}
 \end{align*}
 \iffalse
+issue_bond
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+Sum
+\cdot
+\mathit{
+bond
+}
+(
+\Alice
+,
+Day
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+today
+}
+(
+Today
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+Day
+>
+Today
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
 swap
 \fi
 \begin{align*}
@@ -351,244 +411,6 @@ Dave
 \Alice
 ,
 \Bob
-\}
-\end{align*}
-\iffalse
-pay
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-\Bob
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-\Bob
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-Sum
-\cdot
-\text{\textcent}
-(
-\Bob
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-redeem
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-\text{\textcent}
-(
-\Bob
-)
-\}
-) \uplus 
-\{
-\text{\textcent}
-(
-Carol
-)
-,
-\mathit{
-knows
-}
-(
-Carol
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-\text{\textcent}
-(
-Carol
-)
-\}
-) \uplus 
-\{
-\text{\textcent}
-(
-\Bob
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-\text{\textcent}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\text{\textcent}
-(
-Carol
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-issue_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-Sum
-\cdot
-\mathit{
-bond
-}
-(
-\Alice
-,
-Day
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-today
-}
-(
-Today
-)
- \in c_
-{
-\Alice
-}
-,\\
-&
-\text{provided } 
-Day
->
-Today
-,\\
-&
-\text{guarded by } \{
-\Alice
 \}
 \end{align*}
 \iffalse
@@ -892,7 +714,7 @@ Term
 \}
 \end{align*}
 \iffalse
-redeem_coin_against_bond
+pay
 \fi
 \begin{align*}
 &
@@ -901,31 +723,15 @@ c'_
 \Alice
 }
  := 
-(c_
+c_
 {
 \Alice
 }
  \setminus 
 \{
+Sum
+\cdot
 \text{\textcent}
-(
-\Bob
-)
-\}
-) \uplus 
-\{
-\mathit{
-bond
-}
-(
-Carol
-,
-Day
-)
-,
-\mathit{
-knows
-}
 (
 Carol
 )
@@ -936,31 +742,30 @@ c'_
 \Bob
 }
  := 
-(c_
+c_
 {
 \Bob
 }
- \setminus 
+ \uplus 
 \{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+,
 \mathit{
-bond
+knows
 }
 (
 Carol
-,
-Day
-)
-\}
-) \uplus 
-\{
-\text{\textcent}
-(
-\Bob
 )
 \}
 ,\\
 &
 \text{provided } 
+\{
 \mathit{
 identity
 }
@@ -972,11 +777,14 @@ knows
 \Bob
 )
 ,
+Sum
+\cdot
 \text{\textcent}
 (
-\Bob
+Carol
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Alice
 }
@@ -984,15 +792,90 @@ knows
 \mathit{
 identity
 }
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+pay_issuer
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
 ,
 \mathit{
-bond
+knows
 }
 (
-Carol
-,
-Day
+\Bob
 )
+,
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
  \in c_
 {
 \Bob
@@ -1004,7 +887,7 @@ Day
 \}
 \end{align*}
 \iffalse
-redeem_bond
+pay_bond
 \fi
 \begin{align*}
 &
@@ -1013,33 +896,21 @@ c'_
 \Alice
 }
  := 
-(c_
+c_
 {
 \Alice
 }
  \setminus 
 \{
+Sum
+\cdot
 \mathit{
 bond
 }
 (
-\Bob
+Carol
 ,
 Day
-)
-\}
-) \uplus 
-\{
-\text{\textcent}
-(
-Carol
-)
-,
-\mathit{
-knows
-}
-(
-Carol
 )
 \}
 , \qquad 
@@ -1048,31 +919,34 @@ c'_
 \Bob
 }
  := 
-(c_
+c_
 {
 \Bob
 }
- \setminus 
+ \uplus 
 \{
-\text{\textcent}
-(
-Carol
-)
-\}
-) \uplus 
-\{
+Sum
+\cdot
 \mathit{
 bond
 }
 (
-\Bob
+Carol
 ,
 Day
+)
+,
+\mathit{
+knows
+}
+(
+Carol
 )
 \}
 ,\\
 &
 \text{provided } 
+\{
 \mathit{
 identity
 }
@@ -1084,15 +958,18 @@ knows
 \Bob
 )
 ,
+Sum
+\cdot
 \mathit{
 bond
 }
 (
-\Bob
+Carol
 ,
 Day
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Alice
 }
@@ -1100,169 +977,16 @@ Day
 \mathit{
 identity
 }
-,
-\mathit{
-today
-}
-(
-Today
-)
-,
-\text{\textcent}
-(
-Carol
-)
  \in c_
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-Day
-\le
-Today
 ,\\
 &
 \text{guarded by } \{
 \Alice
-\}
-\end{align*}
-\iffalse
-redeem_bond_against_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-bond
-}
-(
+,
 \Bob
-,
-Day
-)
-\}
-) \uplus 
-\{
-\mathit{
-bond
-}
-(
-Carol
-,
-Term
-)
-,
-\mathit{
-knows
-}
-(
-Carol
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-bond
-}
-(
-Carol
-,
-Term
-)
-\}
-) \uplus 
-\{
-\mathit{
-bond
-}
-(
-\Bob
-,
-Day
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-\mathit{
-bond
-}
-(
-\Bob
-,
-Day
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-today
-}
-(
-Today
-)
-,
-\mathit{
-bond
-}
-(
-Carol
-,
-Term
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-Day
-\le
-Today
-,\\
-&
-\text{guarded by } \{
-\Alice
 \}
 \end{align*}
 \iffalse
@@ -1957,6 +1681,480 @@ knows
 \Alice
 ,
 \Bob
+\}
+\end{align*}
+\iffalse
+redeem
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+Carol
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+Carol
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\text{\textcent}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\text{\textcent}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+redeem_coin_against_bond
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+) \uplus 
+\{
+\mathit{
+bond
+}
+(
+Carol
+,
+Day
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+bond
+}
+(
+Carol
+,
+Day
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\text{\textcent}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+bond
+}
+(
+Carol
+,
+Day
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+redeem_bond
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+Carol
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+Carol
+)
+\}
+) \uplus 
+\{
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+today
+}
+(
+Today
+)
+,
+\text{\textcent}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+Day
+\le
+Today
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+redeem_bond_against_bond
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+\}
+) \uplus 
+\{
+\mathit{
+bond
+}
+(
+Carol
+,
+Term
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+bond
+}
+(
+Carol
+,
+Term
+)
+\}
+) \uplus 
+\{
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+bond
+}
+(
+\Bob
+,
+Day
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+today
+}
+(
+Today
+)
+,
+\mathit{
+bond
+}
+(
+Carol
+,
+Term
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+Day
+\le
+Today
+,\\
+&
+\text{guarded by } \{
+\Alice
 \}
 \end{align*}
 \iffalse
