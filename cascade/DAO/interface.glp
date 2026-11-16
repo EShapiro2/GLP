@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), found('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), propose('Peer', 'Peer', 'Speech', 'Speech'), deliver_proposal('Peer', 'Peer', 'Speech', 'Speech'), vote_for('Peer', 'Peer', 'Speech', 'Speech'), vote_against('Peer', 'Peer', 'Speech', 'Speech'), deliver_vote_for('Peer', 'Peer', 'Peer', 'Speech', 'Speech'), deliver_vote_against('Peer', 'Peer', 'Peer', 'Speech', 'Speech'), pass('Peer', 'Speech', 'Speech', 'Integer', 'Integer'), reject('Peer', 'Speech', 'Speech', 'Integer', 'Integer'), deliver_pass('Peer', 'Peer', 'Speech', 'Speech'), deliver_reject('Peer', 'Peer', 'Speech', 'Speech')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), found('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), propose('Peer', 'Peer', 'Speech', 'Speech'), vote_for('Peer', 'Peer', 'Speech', 'Speech'), vote_against('Peer', 'Peer', 'Speech', 'Speech'), pass('Peer', 'Speech', 'Speech', 'Integer', 'Integer'), reject('Peer', 'Speech', 'Speech', 'Integer', 'Integer')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), found('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), propose('Peer', 'Peer', 'Speech', 'Speech'), propose_own('Peer', 'Speech', 'Speech'), deliver_proposal('Peer', 'Peer', 'Speech', 'Speech'), vote_for('Peer', 'Peer', 'Speech', 'Speech'), vote_own_for('Peer', 'Speech', 'Speech'), vote_against('Peer', 'Peer', 'Speech', 'Speech'), vote_own_against('Peer', 'Speech', 'Speech'), deliver_vote_for('Peer', 'Peer', 'Peer', 'Speech', 'Speech'), deliver_vote_against('Peer', 'Peer', 'Peer', 'Speech', 'Speech'), pass('Peer', 'Speech', 'Speech', 'Integer', 'Integer'), reject('Peer', 'Speech', 'Speech', 'Integer', 'Integer'), deliver_pass('Peer', 'Peer', 'Speech', 'Speech'), deliver_reject('Peer', 'Peer', 'Speech', 'Speech')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), found('Peer', 'Speech'), join('Peer', 'Peer', 'Speech'), propose('Peer', 'Peer', 'Speech', 'Speech'), propose_own('Peer', 'Speech', 'Speech'), vote_for('Peer', 'Peer', 'Speech', 'Speech'), vote_own_for('Peer', 'Speech', 'Speech'), vote_against('Peer', 'Peer', 'Speech', 'Speech'), vote_own_against('Peer', 'Speech', 'Speech'), pass('Peer', 'Speech', 'Speech', 'Integer', 'Integer'), reject('Peer', 'Speech', 'Speech', 'Integer', 'Integer')]),
   type('Request', [propose('Proposal')]),
   type('RequestMenu', [social_menu('List'('MenuEntry'))]),
   type('MenuEntry', [button('String', 'List'('MenuAct')), label('Constant', 'String'), label('Constant', 'Integer', 'String')]),
@@ -416,6 +416,7 @@ interface([
   compiled(count_own, 4),
   compiled(op_cands, 3),
   compiled(part_cands, 4),
+  compiled(recs_unready, 5),
   compiled(keep_pcand, 6),
   compiled(may_propose, 3),
   compiled(guard_cands, 3),
@@ -1299,8 +1300,11 @@ interface([
   compiled(join_proposal_found_2, 3),
   compiled(join_proposal_join_3, 4),
   compiled(join_proposal_propose_4, 5),
+  compiled(join_proposal_propose_own_3, 4),
   compiled(join_proposal_vote_for_4, 5),
+  compiled(join_proposal_vote_own_for_3, 4),
   compiled(join_proposal_vote_against_4, 5),
+  compiled(join_proposal_vote_own_against_3, 4),
   compiled(join_proposal_pass_5, 6),
   compiled(join_proposal_reject_5, 6),
   compiled(form_proposal, 2),
