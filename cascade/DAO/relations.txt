@@ -1,1 +1,0 @@
-DAO extends GKK: holds

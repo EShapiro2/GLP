@@ -18,7 +18,7 @@ interface([
   type('MenuField', [field('Integer', 'String', 'MenuFieldType')]),
   type('MenuFieldType', [person, key, agent, text, number]),
   type('MenuWord', [say('String'), at('Integer')]),
-  type('Atom', [identity, knows('Peer'), steward('Speech'), member('Speech', 'Peer'), listed('Peer', 'Speech'), proposed('Speech', 'Speech', 'Peer'), proposal('Speech', 'Speech'), delivered('Speech', 'Speech', 'Peer'), voted('Speech', 'Speech'), vote_for('Peer', 'Speech', 'Speech'), decided('Speech', 'Speech'), vote_against('Peer', 'Speech', 'Speech'), delivered_vote('Peer', 'Speech', 'Speech', 'Peer'), passed('Speech', 'Speech'), rejected('Speech', 'Speech'), delivered_decision('Speech', 'Speech', 'Peer')]),
+  type('Atom', [identity, person, knows('Peer'), steward('Speech'), member('Speech', 'Peer'), listed('Peer', 'Speech'), proposed('Speech', 'Speech', 'Peer'), proposal('Speech', 'Speech'), delivered('Speech', 'Speech', 'Peer'), voted('Speech', 'Speech'), vote_for('Peer', 'Speech', 'Speech'), decided('Speech', 'Speech'), vote_against('Peer', 'Speech', 'Speech'), delivered_vote('Peer', 'Speech', 'Speech', 'Peer'), passed('Speech', 'Speech'), rejected('Speech', 'Speech'), delivered_decision('Speech', 'Speech', 'Peer')]),
   type('RNameTerm', [own('Integer'), own_var('Constant'), nvar('Constant'), ext('RNameTerm', 'Constant'), ext_any('RNameTerm')]),
   type('RArg', [role('Integer'), pvar('Constant'), svar('Constant'), nterm('RNameTerm'), sgn('Constant', 'Integer'), num('Constant'), real('Constant'), any, ilist('Integer', 'String'), item_of('RArg'), val('Constant')]),
   type('RArgs', [[], ['RArg' | 'RArgs']]),
