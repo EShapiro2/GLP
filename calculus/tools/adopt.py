@@ -387,6 +387,7 @@ def main():
             die('--out needs a directory')
         root = os.path.abspath(a[i + 1])
         a = a[:i] + a[i + 2:]
+    a = [x if x.startswith('-') else NM.name_of(x) for x in a]      # a contract is named by its name or by its file name: "Secure Friendship" or Secure-Friendship
     if a[:1] == ['--tree'] and len(a) == 3:       # the compile of NAME on DIR/rev and DIR/gr, a case of tests/
         d = a[1]
         names = NM.names_in(os.path.join(d, 'gr'))
