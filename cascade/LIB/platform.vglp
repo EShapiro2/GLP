@@ -43,7 +43,7 @@ Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Shelve", [act(shelve, 1, [1], [req(identity, []), forb(shelved, [at(2)])], [], [field(2, "tome", text)], [], [])]), button("Lend", [act(lend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(today, [any]), req(shelf, [at(3)])], [2, 3], [field(4, "day", number)], [], [])]), button("Return", [act(return, 1, [1, 2], [req(identity, []), req(borrowed, [at(3), at(2), at(4)])], [3, 2, 4], [], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Shelve", [act(shelve, 1, [1], [req(identity, []), forb(shelved, [at(2)])], [], [field(2, "tome", text)], [], [])]), button("Lend", [act(lend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(shelf, [at(3)])], [2, 3], [field(4, "day", number)], [], [])]), button("Return", [act(return, 1, [1, 2], [req(identity, []), req(borrowed, [at(3), at(2), at(4)])], [3, 2, 4], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -1824,7 +1824,7 @@ procedure count_own(Choice?, St?, Choice, St).
 count_own(none, St, none, St?).
 count_own(take(K, S), St, take(K?, S?), St1?) :- advance(St?, St1).
 
-%% Propose of an unguarded part, by its opener: each unguarded part of the class I that the agent opens (opening_parts), where Propose's condition holds on the agent (may_propose) and its machine state is in the part's domain; each part the proposing class op(P), P the part's term, and the attempt naming none.
+%% Propose of an unguarded part, by its opener: each unguarded part of the class I that the agent opens (opening_parts), where Propose's condition holds on the agent (may_propose) and its machine state is in the part's domain; each part the proposing class op(P), P the part's term, and the attempt naming none.  Where another participant refused the agent's last attempt of the part as unable, the part is proposed again only once that participant's ready has come (unready; vGLP 76db5e0, Definition "Proposing", Propose: "if [t]_j is unguarded, p is ready for [t]_j, and, where another participant q refused p's last attempt beta of [t]_j as unable, p has recorded ready(beta, q)"; Udi, 2026-11-15; GFF #6, vGLP_inbox, 2026-11-15 21:54 UTC: GFF's Deliver was proposed again without end).
 procedure op_cands(Infos?, V?, Cands).
 op_cands([], _, []).
 op_cands([I|Is], V, Cs?) :- ground(I?), ground(V?) |
@@ -1841,9 +1841,15 @@ part_cands([P|Ps], I, V, Cs?) :- ground(P?), ground(I?), ground(V?) |
     v_id(V?, Id),
     v_ms(V?, S),
     part_dom(P?, Id?, S?, B2),
-    and(B1?, B2?, B),
+    and(B1?, B2?, B12),
+    v_recs(V?, R),
+    recs_unready(R?, I?, P?, Id?, U),
+    neg(U?, Nu),
+    and(B12?, Nu?, B),
     part_cands(Ps?, I?, V?, Cs1),
     keep_pcand(B?, I?, P?, none, Cs1?, Cs).
+procedure recs_unready(Recs?, Info?, Class?, Peer?, YesNo).
+recs_unready(R, I, P, Id, U?) :- ground(R?) | unready(R?, I?, P?, Id?, R?, U).
 procedure keep_pcand(YesNo?, Info?, Class?, Names?, Cands?, Cands).
 keep_pcand(yes, I, P, Nm, Cs, [cand(op(P?), prop(I?, P?, Nm?))|Cs?]) :- ground(P?) | true.
 keep_pcand(no, _, _, _, Cs, Cs?).
