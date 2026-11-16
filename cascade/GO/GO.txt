@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 3, Grassroots Organisations and cites a clause as GO:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: GnW, Guardians 'n' Wards, GSC's (programs/gsc), and through it GSG and GKK.
-% Last changed: 2026-11-12, by GO #5.
+% Last changed: 2026-11-16, by GO #8.
 % Schemas: GO.glp beside this file.
 GO: Grassroots Organisation
 GO instantiates GnW with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
@@ -82,3 +82,5 @@ Wards: Carol [Organisations acquaint] <person>
   Alice [Organisations of one officer befriend] <organisation> <other organisation>
   Carol: Alice asks that you and Dave befriend.
   Dave: Alice asks that you and Carol befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks to retire your organisation Carol.
