@@ -142,6 +142,13 @@ Acquaint: Alice [Acquaint]
   Bob: Alice asks for your consent to acquaint.
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
+--- interface-adopted GKK
+Interface pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
 --- interface GSG
 GSG: Grassroots Social Graph
 1. ○ Establish.  Alice may establish an identity once.
@@ -155,6 +162,11 @@ Acquaint: Alice [Acquaint]
   Bob: Alice asks for your consent to acquaint.
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+--- interface-adopted GSG
+Interface pragmas
 Befriend: Alice [Befriend]
   Bob: Alice asks for your consent to befriend.
 Unfriend: Alice [Unfriend]
@@ -193,3 +205,14 @@ Remove: Alice [Remove]
 Leave: Bob [Leave]
 Post: Bob [Post]
 Post own: Alice [Post own]
+--- interface-adopted GSN
+Interface pragmas
+Message: Alice [Message]
+Group: Alice [Create] [Close]
+Joining and Leaving: Alice [Unfriend]
+  Alice [Join]
+  Bob: Alice asks for your consent to join.
+  Alice [Remove]
+  Bob [Leave]
+Group messaging: Bob [Post]
+  Alice [Post own]

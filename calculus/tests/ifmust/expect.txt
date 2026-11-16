@@ -150,6 +150,13 @@ Acquaint: Alice [Acquaint]
   Bob: Alice asks for your consent to acquaint.
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
+--- interface-adopted GKK
+Interface pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
 --- interface GSG
 GSG: Grassroots Social Graph
 1. ○ Establish.  Alice may establish an identity once.
@@ -163,6 +170,11 @@ Acquaint: Alice [Acquaint]
   Bob: Alice asks for your consent to acquaint.
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+--- interface-adopted GSG
+Interface pragmas
 Befriend: Alice [Befriend]
   Bob: Alice asks for your consent to befriend.
 Unfriend: Alice [Unfriend]
@@ -219,6 +231,43 @@ Wards befriend: Carol [Wards befriend]
   Alice: Carol asks for your consent to wards befriend.
   Bob: Carol asks for your consent to wards befriend.
 Wards of one guardian befriend: Carol [Wards of one guardian befriend]
+  Dave: Carol asks for your consent to wards of one guardian befriend.
+  Alice: Carol asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+--- interface-adopted GnW
+Interface pragmas
+Enter: Alice [Enter]
+Guardian decisions: Bob [Make guardian]
+  Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
+  Bob [Resign]
+  Decider [End guardian]
+  Codecider: Decider asks for your consent to end guardian.
+  Bob [Guardian unfriend]
+Ward and person: Alice [Establish]
+  Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+  Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+  Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+  Alice [Person unfriend]
+  Carol [Ward acquaint]
+  Bob: Carol asks for your consent to ward acquaint.
+  Carol [Ward befriend]
+  Bob: Carol asks for your consent to ward befriend.
+  Alice: Carol asks for your consent to ward befriend.
+  Carol [Ward end]
+  Bob [Unfriend]
+  Alice [Ward unfriend]
+Wards: Carol [Wards acquaint]
+  Dave: Carol asks for your consent to wards acquaint.
+  Carol [Wards befriend]
+  Dave: Carol asks for your consent to wards befriend.
+  Alice: Carol asks for your consent to wards befriend.
+  Bob: Carol asks for your consent to wards befriend.
+  Carol [Wards of one guardian befriend]
   Dave: Carol asks for your consent to wards of one guardian befriend.
   Alice: Carol asks for your consent to wards of one guardian befriend.
 Retire: Decider [Retire]
