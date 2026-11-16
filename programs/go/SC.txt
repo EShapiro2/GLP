@@ -30,10 +30,7 @@ Officers: Decider [Appoint] <person> <role>
   Bob: Decider asks you to be an officer of the organisation Carol.
   Decider [End officer] <person>
   Bob [Resign] [Officer unfriend]
-Issue shares: AliceOfficer [Issue shares for Alice] <decider> <amount>
-  Decider: AliceOfficer asks to issue shares of your organisation Alice.
-  Codecider: AliceOfficer asks to issue shares of your organisation Alice.
-  AliceOfficer [Issue shares by any officer for Alice] <decider> <amount>
+Issue: AliceOfficer [Issue shares by any officer for Alice] <decider> <amount>
   Decider: AliceOfficer asks to issue the first shares of your organisation Alice.
 Dividend: Alice [Set dividend] <dividend> <votes>
   Erin [Vote on dividend] <dividend>
