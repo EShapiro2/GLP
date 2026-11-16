@@ -2542,13 +2542,14 @@ void appsScreens(Screens screens) {
     expect(run.control(carol, 'atom:dave'), findsOneWidget);
     expect(run.control(carol, 'atom:bob'), findsNothing);
     expect(run.control(carol, 'act:child_end:dave'), findsOneWidget);
-    // The rows in the order of her state, the newest first: Dave, then Alice; Child end and Child message beside each, both requiring friend of the other at the child's role and forbidding nothing there (CSSN.txt, the menu of programs/cssn/platform.vglp), so beside Alice, her parent, too.
+    // The rows in the order of her state, the newest first: Dave, then Alice; Child message beside each, and Child end beside Dave alone: a ward is not offered the button to end a friendship with her guardian (GnW.txt, Ward end; CSSN.txt, the menu of programs/cssn/platform.vglp), so none beside Alice, her parent.
     expect(run.texts(carol), containsAllInOrder(['Friends', 'Dave', 'Alice']));
     for (final q in ['dave', 'alice']) {
-      expect(run.control(carol, 'act:child_end:$q'), findsOneWidget, reason: q);
       expect(run.control(carol, 'act:child_message:$q'), findsOneWidget,
           reason: q);
     }
+    expect(run.control(carol, 'act:child_end:dave'), findsOneWidget);
+    expect(run.control(carol, 'act:child_end:alice'), findsNothing);
     run.plain(carol);
     await run.shoot(carol, 'cssn-app-5.png');
     // Carol ends the friendship with Dave, her own act, Child end beside Dave, child_end(carol, dave) (CSSN.txt, "Carol [Child end]"): nobody is asked.

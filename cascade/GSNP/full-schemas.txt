@@ -43,7 +43,7 @@ GnW:2 ■ | Carol may not end a friendship with her guardian.
 GnW:3 ■ | Ward and person.
 GnW:3+GAI:2 ■ AI agent acquaint: knows(Carol,Bob), knows(Bob,Carol), attestation_record(Bob,Carol,Proof) <- ai_agent(Carol), has_guardian(Carol,Alice), person(Bob), attestation(Carol,Proof) guarded by Carol, Bob.
 GnW:3+GAI:2 ■ AI agent befriend: friend(Carol,Bob), friend(Bob,Carol) <- ai_agent(Carol), ~retired(Carol), has_guardian(Carol,Alice), person(Bob), knows(Carol,Bob), knows(Bob,Carol), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Bob), ~friend(Bob,Carol), attestation(Carol,Proof) guarded by Carol, Bob, Alice.
-GnW:3+GAI:2 ■ AI agent end: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~guardian(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol), attestation(Carol,Proof) guarded by Carol.
+GnW:3+GAI:2 ■ AI agent end: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~has_guardian(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol), attestation(Carol,Proof) guarded by Carol.
 GnW:3 ■ Unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob) <- ~guardian(Bob,Carol), friend(Bob,Carol), friend(Carol,Bob) guarded by Bob.
 GnW:3 ■ AI agent unfriend: ~friend(Carol,Bob), ~friend(Bob,Carol) <- has_guardian(Carol,Alice), ~guardian(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Alice.
 GnW:4 ■ | Wards.
