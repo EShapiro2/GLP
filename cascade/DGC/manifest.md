@@ -1,10 +1,10 @@
 # A run of the cascade on DGC
 
-- Contract: `DGC` (`dgc` to the checker), its owner's two files `programs/currencies/sovereign/DGC.txt` and `programs/currencies/sovereign/DGC.glp`, copied here as they stood at `90cc6698`.
+- Contract: `DGC` (`dgc` to the checker), its owner's two files `programs/currencies/sovereign/DGC.txt` and `programs/currencies/sovereign/DGC.glp`, copied here as they stood at `8a67f938`.
 - The paper: `/Users/udi/Grassroots/SGC (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/currencies/sovereign/DGC.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/currencies/sovereign/DGC.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 18:10 UTC by `cascade.sh dgc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `90cc6698`; each artefact's source and tool:
+- Run on 2026-11-16 19:09 UTC by `cascade.sh dgc`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8a67f938`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
