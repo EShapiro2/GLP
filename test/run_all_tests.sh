@@ -4020,6 +4020,11 @@ echo ""
 # -----------------------------------------------------------------------------
 echo "--- The canonical CVA platform of an act-schema contract ---"
 CVA="$GLP_DIR/programs/vglp/cva"
+# The names of the contracts are those of the table of calculus/NAMES.txt and nothing else ("How a reader knows a name: a name is one of the names of this table and nothing else"), which pragmas.sh and compile.sh read; the fixtures of this section are named in a table of the same form, the table of calculus/NAMES.txt and a row for each fixture, which CONTRACT_NAMES names for this section.
+CVA_NAMES=$(mktemp)
+cat "$GLP_DIR/calculus/NAMES.txt" > "$CVA_NAMES"
+for cva_x in XA XB XB-L XB2 XC XC2 XD XE XG XG-L XH XI XJ XK XL XLF XLI XLX XM XN XNONE XO XP XQ XR XS XT XU XV XVB XVE XVF XVO XVT XW; do printf '%s | %s | %s | %s\n' "$cva_x" "$cva_x" "$cva_x" "$(printf '%s' "$cva_x" | tr 'A-Z-' 'a-z_')" >> "$CVA_NAMES"; done
+export CONTRACT_NAMES="$CVA_NAMES"
 
 # Guarded: set -e would end the run without totals on a red compile.sh.
 cva_print=$(bash "$CVA/compile.sh" --check 2>&1 || true)
@@ -4410,6 +4415,34 @@ check "CVA pragmas: a first line with an instantiation's words after with, and r
 check "CVA pragmas: ... two contracts instantiated, and them (firstline)" "^XJ.txt XK.txt XL.txt $" "$cva_pa_l"
 check "CVA pragmas: ... extends, restricts and strengthens two contracts (firstline)" "^XJ.txt XK.txt XM.txt $" "$cva_pa_m"
 check "CVA pragmas: ... relaxes, the Calculus's sixth relation, as GC's 'GC relaxes and extends GN.' (firstline; Code #33, 2026-11-16 16:50 UTC)" "^XJ.txt XR.txt $" "$cva_pa_r"
+# The names of the contracts (calculus/NAMES.txt: "How a reader knows a name: a name is one of the names of this table and nothing else.  Match the known names longest first, so that \"Community Bank restricts Bank and extends Coins.\" names Community Bank, Bank and Coins, and \"Trading Company and Bank\" two contracts"; "The file name is the name with a hyphen for each space and no apostrophe"): a first line naming a contract of two words and the two of one word in it, each found by its file name (names2); a contract of two words and one of one word joined by and, the name with an apostrophe read and its file found without it (names2_and); a first line in the names of the first column, as on main (names2_main); a word in neither column, after a relation and first in the line, refused (names2_none, names2_lead); and a citation of a clause of a contract of two words, Community Bank:1, naming no person in a contract with no declaration of names, so that a question naming the Bank is text (names2_cite).
+cva_nm=$(mktemp -d)
+printf '%s\n' 'Bank' 'Alice is a person.' '1. ■ Open: Alice may open an account.' > "$cva_nm/Bank.txt"
+printf '%s\n' 'Coins' 'Alice is a person.' '1. ■ Mint: Alice may mint coins.' > "$cva_nm/Coins.txt"
+printf '%s\n' 'Trading Company' 'Alice is a person.' '1. ■ Trade: Alice may trade.' > "$cva_nm/Trading-Company.txt"
+printf '%s\n' 'Community Bank' 'Community Bank restricts Bank and extends Coins.' '1. ■ Leave: Community Bank:1, only if Alice and Bob agree.' 'Pragmas' 'Left: the banks Alice left.' 'Leave: Alice [Leave]' '  Bob: Alice leaves the Bank.' > "$cva_nm/Community-Bank.txt"
+printf '%s\n' "Workers' Cooperative" "Workers' Cooperative extends Trading Company and Bank." 'Alice is a person.' > "$cva_nm/Workers-Cooperative.txt"
+printf '%s\n' 'GBank' 'Alice is a person.' '1. ■ Open: Alice may open an account.' > "$cva_nm/GBank.txt"
+printf '%s\n' 'CB: Community Bank' 'CB restricts GBank and extends Coins.' 'Alice is a person.' > "$cva_nm/CB.txt"
+printf '%s\n' 'Community Bank' 'Community Bank restricts Bank and extends Coinz.' 'Alice is a person.' > "$cva_nm/None.txt"
+printf '%s\n' 'Comunity Bank' 'Comunity Bank restricts Bank.' 'Alice is a person.' > "$cva_nm/Lead.txt"
+cva_nm_two=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Community-Bank.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_and=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Workers-Cooperative.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_main=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/CB.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_none=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/None.txt" 2>&1; echo "exit $?")
+cva_nm_lead=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Lead.txt" 2>&1; echo "exit $?")
+cva_nm_cite=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_nm/Community-Bank.txt" "[schema(leave, ['Alice', 'Bob'], [], [rs(guarded, [atom(left, [role(2)])], [], [atom(member, [role(2)])], [atom(left, [role(2)])]), rs(guarded, [], [], [], [])])]" 2>&1; echo "exit $?")
+rm -rf "$cva_nm"
+check "CVA pragmas: a first line naming Community Bank, a name of two words, read longest first, and Bank and Coins in it, each found by its file name (names2)" "^Bank.txt Coins.txt Community-Bank.txt $" "$cva_nm_two"
+check "CVA pragmas: ... Trading Company and Bank, two contracts, after Workers' Cooperative, its file found without the apostrophe (names2_and)" "^Trading-Company.txt Bank.txt Workers-Cooperative.txt $" "$cva_nm_and"
+check "CVA pragmas: ... a first line in the names of the first column, CB restricts GBank and extends Coins, as on main (names2_main)" "^GBank.txt Coins.txt CB.txt $" "$cva_nm_main"
+check "CVA pragmas: ... a word in neither column after a relation refused, named (names2_none)" "names no contract at \"Coinz\"" "$cva_nm_none"
+check_not "CVA pragmas: ... and pragmas.sh does not exit 0 (names2_none)" "^exit 0$" "$cva_nm_none"
+check "CVA pragmas: ... a first line whose first words are in neither column refused, named (names2_lead)" "names no contract at \"Comunity Bank\", no name of calculus/NAMES.txt" "$cva_nm_lead"
+check_not "CVA pragmas: ... and pragmas.sh does not exit 0 (names2_lead)" "^exit 0$" "$cva_nm_lead"
+check "CVA pragmas: a citation of a clause of a contract of two words, Community Bank:1, names no person, so the question naming the Bank is text (names2_cite)" "act('leave', '\"Leave\"', \[\], said(\[\[\], \[person(1), text('\" leaves the Bank.\"')\]\]), '\"Left\"', by(\[1\]))" "$cva_nm_cite"
+check "CVA pragmas: ... the contract shown by its name, Community Bank, and not by its file name (names2_cite)" "^Community Bank: Leave: Alice \[Leave\]: fields none$" "$cva_nm_cite"
+check "CVA pragmas: ... and pragmas.sh exits 0 (names2_cite)" "^exit 0$" "$cva_nm_cite"
 # A person who must consent (vGLP, Section 5.4, "The contract's words": "A clause may say that a person, or a ward, must consent to its act: they are a guard of the act, so it is never taken against them, and they are not asked"; the Calculus's GnW, Enter; Udi, 2026-11-15): the reader takes the line with no question to Carol and gives the act consents(1), her role; a line that asks her is refused; and the platform the compiler prints holds schema_consents(enter, [1]), by which her agent takes a hello and a start of the act with no question (consent).
 cva_pc=$(mktemp -d)
 printf '%s\n' '% Owner: vGLP.' 'XN: Test' 'Alice is a person, Carol a ward.' '1. ■ Enter: Alice may create Carol, and Carol must consent.' 'Interface pragmas' 'Wards: the wards of Alice.' 'Enter: Alice [Enter] <carol>' > "$cva_pc/XN.txt"
@@ -6647,6 +6680,8 @@ check "CVA written from: composes, 'composes it with XC', the instance composed 
 check "CVA written from: a relation followed by no contract's name refused, named (none)" "names no contract at \"the bylaws of XB and restricts it\"" "$cva_wf_n"
 check "CVA written from: ... and pragmas.sh exits other than 0 (none)" "^exit [1-9]" "$cva_wf_n"
 check "CVA written from: 'it' with no contract named before it refused (bare)" "names no contract at \"it\"" "$cva_wf_t"
+rm -f "$CVA_NAMES"
+unset CONTRACT_NAMES
 echo ""
 
 
