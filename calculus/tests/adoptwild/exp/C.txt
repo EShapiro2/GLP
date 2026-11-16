@@ -1,0 +1,4 @@
+% Written by tools/expand.py from rev/; do not edit.
+C: Wildcard deletion
+Alice is a person.
+C:1. ■ Forget: Alice may forget, provided Alice knows someone.

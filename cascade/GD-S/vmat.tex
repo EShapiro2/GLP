@@ -116,6 +116,15 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
 , \qquad 
 c'_
 {
@@ -126,15 +135,6 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-knows
-}
-(
-c
-)
-\}
 ,\\
 &
 \text{provided } 
@@ -147,13 +147,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-knows
-}
-(
-c
 )
  \in c_
 {
@@ -169,6 +162,13 @@ knows
 }
 (
 \Alice
+)
+,
+\mathit{
+knows
+}
+(
+Carol
 )
  \in c_
 {
@@ -408,9 +408,19 @@ c_
 distrusts
 }
 (
-c
+\Bob
 )
 \}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
 ,\\
 &
 \text{provided } 
@@ -422,28 +432,36 @@ identity
 knows
 }
 (
-c
+\Bob
 )
  \in c_
 {
 \Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
 }
 ,\\
 &
 \text{provided } 
 \{
 \mathit{
-distrusts
-}
-(
-c
-)
-,
-\mathit{
 friend
 }
 (
-c
+\Bob
+)
+,
+\mathit{
+distrusts
+}
+(
+\Bob
 )
 \}
  \cap c_
@@ -451,6 +469,17 @@ c
 \Alice
 }
  = \emptyset
+ \text{ and } 
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
 ,\\
 &
 \text{guarded by } \{
@@ -586,7 +615,7 @@ c_
 distrusts
 }
 (
-c
+Carol
 )
 \}
 , \qquad 
@@ -622,10 +651,17 @@ identity
 }
 ,
 \mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
 distrusts
 }
 (
-c
+Carol
 )
  \in c_
 {
@@ -636,17 +672,17 @@ c
 \text{provided } 
 \{
 \mathit{
-distrusts
+knows
 }
 (
-c
+Carol
 )
 ,
 \mathit{
-friend
+distrusts
 }
 (
-c
+Carol
 )
 \}
  \cap c_
@@ -680,7 +716,7 @@ c_
 distrusts
 }
 (
-c
+Carol
 )
 \}
 ,\\
@@ -694,7 +730,7 @@ identity
 distrusts
 }
 (
-c
+Carol
 )
  \in c_
 {

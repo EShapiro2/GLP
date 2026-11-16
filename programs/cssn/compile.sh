@@ -59,7 +59,7 @@ fi
 echo "introduction: $INTRO"
 
 # Its pragmas, from CSSN.txt and those of the contracts it extends.
-if ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$HERE/CSSN.txt" "$RD" 2> "$WORK/pr.err"); then
+if ! PR=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$HERE/CSSN.txt" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
     echo "pragmas: not read: $(head -1 "$WORK/pr.err")"
     exit 1
 fi

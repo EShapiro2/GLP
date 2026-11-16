@@ -1,0 +1,5 @@
+ORG: An Organisation (expanded schemas)
+ORG:0 - | Bob is a person, Orga an organisation, Motion an act of Orga.
+ORG:0 - | Parameters: x is entitled to vote on m in z; the votes decide m according to the bylaws of z; x is entitled to take m for z.
+ORG:1 ■ Vote: vote(Orga,Bob,Motion) <- voter(Bob,Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.
+ORG:2 ■ Retire: retired(Orga) <- ~retired(Orga) guarded by deciders(Orga).

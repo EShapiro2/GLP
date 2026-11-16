@@ -1,0 +1,46 @@
+% SGSG: Secure Grassroots Social Graph --- the contract, the one copy, its owner's (organisation/claude.md, "Sessions").
+% Owner: SPM (calculus/MIGRATION.md, "Every owner of a contract", the plan Udi confirmed on 2026-11-15, reported by Coordination #16).  The paper's appendix "The GSG and SGSG Contracts" prints it in its box and cites a clause as SGSG:1.
+% Paper: SPM, Securing People and their Machines Against Major Faults, https://arxiv.org/abs/2607.02304
+% Extends: GSG, Grassroots Social Graph, GSC's (programs/gsc).  It cites GSG:1, GSG:2 and GKK:1 and restates none.
+% Defines: identity record, identity custodian, threshold, records, state loss, identity loss.  Alicia is a new identity of Alice, an identity being the person who acts.
+% Last changed: 2026-11-15, adopted again from the Calculus as republished (GLP branch Calculus 79ec48f; calculus/MIGRATION.md): SGSG:3, the checkpoint sent with nobody deciding and holding her friends and her identity record (Udi, 2026-11-15, to SPM #1), and the Logic pragmas mended on SPM's four findings; the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas SPM's, a line for each clause with a guarded act, named by the clause's title, with a button for each guarded act.  SGSG had no text in GLP before its first adoption that day.
+% Schemas: SGSG.glp beside this file, the full schemas, GKK's and GSG's with SGSG's, printed by calculus/tools/adopt.py SGSG from the Logic pragmas and never written by hand; adopt.py --check SGSG holds it and cascade/SGSG/ to what the tools print.
+SGSG: Secure Grassroots Social Graph
+SGSG extends GSG.
+The *identity record* of Alice is her *identity custodians*, persons she names, and her *threshold*, a share of them greater than half. The *records* of Alice are her friends and, for each friend, the friends of that friend. Alice suffers a *state loss* when her machine loses some or all of its state and she keeps her private key, and an *identity loss* when she loses her private key.
+Alice, Bob and Carol are persons, Alicia a new identity of Alice.
+1. ■ Identity record: Alice may fix her identity record, once. It then changes only by the replacement of a custodian's lost identity (SGSG:5).
+2. ■ Friendship updates. Tell: Alice tells each of her friends when she becomes a friend of Bob (GSG:1) and when she ends a friendship (GSG:2), and the friend records it. Send record: Alice sends Bob, when they become friends, her friends and her identity record, and Bob keeps them.
+3. ■ Checkpoint: Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.
+4. ■ State recovery. Restore: After a state loss of Alice, each friend of Alice sends her the friendship updates and the checkpoints he keeps, and Alice records them again.
+5. ◆ Identity replacement. Replace: After an identity loss, Alice may establish a new identity, Alicia (GKK:1), and ask her identity custodians to vouch for it. Vouch: Carol, an identity custodian of Alice, may vouch, once, that Alicia is Alice. Accept: Bob, a friend of Alice, accepts Alicia in place of Alice once at least the threshold of the identity custodians he records for Alice have vouched; Alicia is then his friend in place of Alice, and his identity custodian if Alice was. Bob tells Alicia the friends of Alice he records, and tells his friends of the change.
+Logic pragmas
+SGSG extends GSG.
+The *identity record* of Alice is her *identity custodians*, persons she names, and her *threshold*, a share of them greater than half. The *records* of Alice are her friends and, for each friend, the friends of that friend. Alice suffers a *state loss* when her machine loses some or all of its state and she keeps her private key, and an *identity loss* when she loses her private key.
+Alice, Bob and Carol are persons, Alicia a new identity of Alice, Share and Double numbers.
+1. ■ Name custodian: Alice may name Carol her identity custodian, provided Alice knows Carol and Alice does not have a fixed identity record. Identity record: Alice may fix her identity record with the threshold Share, provided Alice has at least Share persons as an identity custodian, Double is Share times 2 and Alice has fewer than Double persons as an identity custodian. It then changes only by the replacement of a custodian's lost identity (SGSG:5).
+2. ■ Friendship updates. Tell: Alice tells Carol of the friendship of Alice and Bob, provided Alice and Carol are friends and Alice and Bob are friends. Tell end: Alice tells Carol of the end of the friendship of Alice and Bob, provided Alice and Carol are friends and Alice and Bob are not friends. Send record: Alice sends Bob the identity custodian Carol, provided Alice and Bob are friends, Alice has a fixed identity record and Alice has Carol as an identity custodian.
+3. ■ Checkpoint: Alice sends Bob a checkpoint of Alice's friends and Alice's identity record, provided Alice and Bob are friends. Bob keeps it.
+4. ■ State recovery. Restore: Bob restores the records of Alice, provided Alice has suffered a state loss, Bob counts Alice as a friend and Bob keeps a checkpoint of Alice.
+5. ◆ Identity replacement. Replace: Alicia may ask Carol to vouch that Alicia is Alice, provided Alicia knows Carol and Carol is an identity custodian of Alice. Alicia asks only after an identity loss of Alice. Vouch: Carol may vouch that Alicia is Alice, provided Carol has been asked to vouch that Alicia is Alice and Carol is an identity custodian of Alice. Accept: Bob accepts Alicia in place of Alice on the vouch of Carol, provided Bob records Carol as an identity custodian of Alice, Carol has vouched that Alicia is Alice and at least the threshold of the identity custodians Bob records for Alice have vouched that Alicia is Alice. Accept custodian: Bob accepts Alicia as an identity custodian in place of Alice, provided Bob has accepted Alicia in place of Alice on the vouch of Carol. Bob tells Alicia the friends of Alice he records, and tells his friends of the change.
+Logic pragmas.
+Vocabulary: x has z as an identity custodian = custodian(x,z); z is an identity custodian of x = custodian_of(z,x); x has a fixed identity record = fixed(x); x has the threshold n = threshold(x,n); z records the friendship of x and y = records_friend(z,x,y); y records z as an identity custodian of x = records_custodian(y,x,z); y keeps a checkpoint of x = checkpoint(y,x); x has suffered a state loss = state_loss(x); x has recovered records from y = recovered(x,y); z has been asked to vouch that w is x = asked(z,w,x); z has vouched that w is x = vouched(z,w,x); at least the threshold of the identity custodians y records for x have vouched that w is x = threshold_vouched(y,x,w); y has accepted w in place of x on the vouch of c = accepted(y,w,x,c).
+After x names z x's identity custodian, which requires x does not have z as an identity custodian: x has z as an identity custodian and z is an identity custodian of x.
+After x fixes x's identity record with the threshold n, which requires x does not have a fixed identity record: x has a fixed identity record and x has the threshold n.
+After x tells z of the friendship of x and y, which requires z does not record the friendship of x and y: z records the friendship of x and y.
+After x tells z of the end of the friendship of x and y: no longer z records the friendship of x and y.
+After x sends y the identity custodian z, which requires y does not record z as an identity custodian of x: y records z as an identity custodian of x.
+After x sends y a checkpoint of x's friends and x's identity record: y keeps a checkpoint of x.
+After y restores the records of x, which requires x does not count y as a friend: x counts y as a friend and x has recovered records from y.
+After w asks z to vouch that w is x, which requires z has not been asked to vouch that w is x: z has been asked to vouch that w is x.
+After z vouches that w is x, which requires z has not vouched that w is x: z has vouched that w is x.
+After y accepts w in place of x on the vouch of c, which requires y has not accepted w in place of x on the vouch of anyone: no longer y counts x as a friend, y counts w as a friend, w counts y as a friend and y has accepted w in place of x on the vouch of c.
+After y accepts w as an identity custodian in place of x: no longer y has x as an identity custodian, no longer x is an identity custodian of y, y has w as an identity custodian and w is an identity custodian of y.
+Environment: x has suffered a state loss; at least the threshold of the identity custodians y records for x have vouched that w is x.
+Interface pragmas
+Identity custodians: the custodians Alice named.
+Custodian of: those Alice is a custodian of.
+Vouch requests: those who asked Alice to vouch.
+Identity record: Alice [Name custodian] [Identity record] <threshold>
+Identity replacement: Alicia [Replace] <lost identity>
+  Carol [Vouch]

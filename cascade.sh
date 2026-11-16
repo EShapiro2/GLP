@@ -56,11 +56,8 @@
 #   dgc         DGC   Currencies  programs/currencies/sovereign ---
 #   gcc         GCC   Currencies  programs/currencies/gcc   ---
 #   gdc         GDC   Currencies  programs/currencies/gdc   ---
-#   bcc         BCC   Currencies  programs/currencies/bcc   ---
 #   gra         GRA   GRH         programs/lbm              ---
-#   gff_i       GFF-I GFF         programs/gff              ---
 #   cb          CB    GO          programs/go               ---
-#   cc          CC    GO          programs/go               ---
 #   cmb         CMB   GO          programs/go               ---
 #   cnc         CnC   GO          programs/go               ---
 #   gan         GAN   GO          programs/go               ---
@@ -84,6 +81,7 @@
 #   wc          WC    GO          programs/go               ---
 #   gdo_lb      GDO-LB GRH        programs/lbm              ---
 #   gra_ss      GRA-SS GRH        programs/lbm              ---
+#   sgsg        SGSG  SPM         programs/social/spm       ---
 #   gff_ps      GFF-PS GFF        programs/gff              ---
 #   gff_fr      GFF-FR GFF        programs/gff              ---
 #   gff_fr_bc   GFF-FR-BC GFF     programs/gff              ---
@@ -136,6 +134,25 @@
 # and manifest.md, the index of the directory, naming the contract, its owner,
 # the paper's repository and commit, the GLP commit the tools were at, and
 # what each step gave.
+#
+# A contract its owner has adopted from the Calculus (claude.md "Code", "The
+# record of a contract adopted from the Calculus", Coordination #16,
+# 2026-11-15; calculus/README.md, "Adopting a contract") is known by its
+# NAME.txt having a line "Logic pragmas": the owner's % lines, the contract, the
+# line "Logic pragmas" and its Logic pragmas, and where it has them the line
+# "Interface pragmas" and its Interface pragmas.  Its NAME.glp is printed by
+# calculus/tools/adopt.py NAME, contract_named(<contract>, Term), Term the full
+# schemas, complete in itself.  Its record differs from the one above in step 2
+# and adds four artefacts:
+#   1. NAME.txt and NAME.glp, copied as they stand at the run; NAME.glp must be
+#      what adopt.py prints from the NAME.txt beside it, its term the term.glp.txt
+#      adopt.py prints, so that term.glp.txt is not kept beside it.
+#   2. schemas.txt, full-contract.txt, full-pragmas.txt, flat.txt and
+#      full-schemas.txt: as calculus/tools/adopt.py NAME prints them, run here on
+#      a scratch copy of the adopted files (adopt.py --paths) so that it writes
+#      nothing in the repository; notation_contract/1 is not run.
+#   3 to 7 as above, on NAME.glp's term, the full schemas, with no other
+#      contract's schemas added.
 #
 # A step that gives nothing --- a contract the checker refuses is not compiled,
 # an uncompiled platform has no .glp and no run, a platform with no plays has no
@@ -201,9 +218,7 @@ case "$1" in
     dgc)  FILE=DGC;  OWNER="programs/currencies/sovereign"; PAPER="/Users/udi/Grassroots/SGC"; PLAYDIR="" ;;
     gcc)  FILE=GCC;  OWNER="programs/currencies/gcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     gdc)  FILE=GDC;  OWNER="programs/currencies/gdc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
-    bcc)  FILE=BCC;  OWNER="programs/currencies/bcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     gra)  FILE=GRA;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/GRH";  PLAYDIR="" ;;
-    gff_i) FILE=GFF-I; OWNER="programs/gff";               PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
     gff_ps) FILE=GFF-PS; OWNER="programs/gff";             PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
     gff_fr) FILE=GFF-FR; OWNER="programs/gff";             PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
     gff_fr_bc) FILE=GFF-FR-BC; OWNER="programs/gff";       PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GFF-FR (Udi, 2026-11-07; GFF #3)
@@ -218,7 +233,6 @@ case "$1" in
     lib) FILE=LIB;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     joint) FILE=JOINT; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     cb) FILE=CB; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's twenty-three, each its % Owner line's (Udi, 2026-11-09, to GO #3); rows added 2026-11-12, the contracts having been checked and never recorded (Udi, 2026-11-12, to Code #28)
-    cc) FILE=CC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     cmb) FILE=CMB; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     cnc) FILE=CnC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     gan) FILE=GAN; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
@@ -242,7 +256,8 @@ case "$1" in
     wc) FILE=WC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     gdo_lb) FILE=GDO-LB; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
     gra_ss) FILE=GRA-SS; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
-    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gdo_lb gra_ss gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint cb cc cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc" >&2; exit 2 ;;
+    sgsg) FILE=SGSG; OWNER="programs/social/spm"; PAPER="/Users/udi/Grassroots/SPM"; PLAYDIR="" ;;   # SPM's, adopted from the Calculus (SPM #1, 2026-11-15)
+    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gff agora gdo dgc gcc gdc gra gd gd_s gdo_l gdo_lb gra_ss gff_ps gff_fr gff_fr_bc sgsg dao ldao fdao rec stay lib joint cb cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not
@@ -369,9 +384,41 @@ if grep -q "^introduction_named($n," "$src/$f.glp"; then
     [ -n "$IT" ] && INTRO="$IT"
 fi
 }
+# adopted_print: an adopted contract's artefacts as calculus/tools/adopt.py
+# prints them (calculus/README.md, "Adopting a contract"), into $OUT.  adopt.py
+# finds the adopted contracts under programs/ and reads one not adopted from
+# the branch Calculus of this clone; with --out it writes under a scratch
+# directory, cascade/NAME/ and the owner's NAME.glp, so that the repository is
+# not written (adopt.py at f4650ab of the Calculus's repository, Helper #7,
+# 2026-11-15).
+ADOPT_PRINTS="schemas.txt full-contract.txt full-pragmas.txt flat.txt full-schemas.txt"
+adopted_print() {
+    local A="$WORK/adopt"
+    mkdir -p "$A" || exit 2
+    if ! GLP_DIR="$GLP_DIR" python3 "$GLP_DIR/calculus/tools/adopt.py" "$FILE" --out "$A" > "$WORK/adopt.out" 2>&1; then
+        say "calculus/tools/adopt.py $FILE failed: $(head -3 "$WORK/adopt.out")"
+        exit 1
+    fi
+    if ! cmp -s "$A/$OWNER/$FILE.glp" "$SRC/$FILE.glp"; then
+        say "$OWNER/$FILE.glp is not what calculus/tools/adopt.py $FILE prints from $OWNER/$FILE.txt; its owner runs it"
+        diff "$SRC/$FILE.glp" "$A/$OWNER/$FILE.glp" | head -10
+        exit 1
+    fi
+    for f in $ADOPT_PRINTS; do
+        if [ ! -f "$A/cascade/$FILE/$f" ]; then
+            say "calculus/tools/adopt.py $FILE printed no $f"
+            exit 1
+        fi
+        cp "$A/cascade/$FILE/$f" "$OUT/$f"
+    done
+    say "adopted: $FILE.glp and $(echo $ADOPT_PRINTS | sed -e 's/ /, /g') as calculus/tools/adopt.py prints them"
+}
+ADOPTED=0
 if [ ${#NAMES[@]} -eq 1 ]; then
     cp "$SRC/$CTXT" "$OUT/$CTXT"
     cp "$SRC/$FILE.glp" "$OUT/$FILE.glp"
+    grep -qx 'Logic pragmas' "$SRC/$CTXT" && ADOPTED=1
+    [ "$ADOPTED" = 1 ] && adopted_print
     read_contract "$NAME" "$SRC" "$FILE"
 else
     # The composition: each contract read, with its pragmas, as when it is
@@ -408,7 +455,7 @@ else
         Tn=$(printf '%s' "$TF" | tr 'A-Z-' 'a-z_')
         [ -f "$TD/$TF.glp" ] || { say "the third contract the contracts amend, $TF, has no $TF.glp beside its $TF.txt"; exit 1; }
         read_contract "$Tn" "$TD" "$TF"
-        if ! P=$(bash "$PRAG" "${THIRD[0]}" "$RD" 2> "$WORK/pr.err"); then
+        if ! P=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$PRAG" "${THIRD[0]}" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
             say "the pragmas of $TF, the third contract the contracts amend, were not read: $(head -1 "$WORK/pr.err")"
             exit 1
         fi
@@ -421,7 +468,7 @@ else
         cp "${SRCS[i]}/${FILES[i]}.glp" "$OUT/${FILES[i]}.glp"
         read_contract "${NAMES[i]}" "${SRCS[i]}" "${FILES[i]}"
         P=no_pragmas
-        if [ "${CTXTS[i]}" = "${FILES[i]}.txt" ] && ! P=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${SRCS[i]}/${CTXTS[i]}" "$RD" 2> "$WORK/pr.err"); then
+        if [ "${CTXTS[i]}" = "${FILES[i]}.txt" ] && ! P=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${SRCS[i]}/${CTXTS[i]}" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
             say "the pragmas of ${FILES[i]} were not read: $(head -1 "$WORK/pr.err")"
             exit 1
         fi
@@ -438,7 +485,9 @@ fi
 
 # 2. The schemas in GSC's notation, printed from the term by programs/gsc: a
 # token to a line between its lines "%% notation begin" and "%% notation end",
-# an empty line ending a line of the text (programs/gsc/notation.glp).
+# an empty line ending a line of the text (programs/gsc/notation.glp).  An
+# adopted contract's schemas.txt is the Calculus's, printed by adopt.py above.
+if [ "$ADOPTED" = 0 ]; then
 printf '%s\n:limit 10000000\nnotation_contract(%s).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/n.in"
 repl "$WORK/n.in" "$WORK/n.out"
 perl -ne '
@@ -458,6 +507,7 @@ fi
 # "tau: H <-", H empty in a schema that adds and deletes nothing, and its body
 # on the next line, indented (GSC, Section 3.2; programs/gsc/notation.glp).
 say "schemas.txt: $(grep -cE '^[a-z_0-9]*: .* <-$' "$OUT/schemas.txt") schemas"
+fi
 
 # 3. The verdict, and 4. the VMAT form, from programs/gsc.
 printf '%s\n:limit 1000000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
@@ -503,7 +553,7 @@ if [ "$PARAMETRIC" = 1 ]; then
 fi
 if [ "$PARAMETRIC" = 0 ] && [ ${#NAMES[@]} -eq 1 ]; then
     PR=no_pragmas
-    if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "$RD" 2> "$WORK/pr.err"); then
+    if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
         say "its pragmas were not read: $(head -1 "$WORK/pr.err")"
         exit 1
     fi
@@ -614,6 +664,41 @@ paper_line() {   # paper_line <paper directory>: its remote and its commit
             echo "  - \`${FILES[i]}\`: \`${OWNERS[i]}/${CTXTS[i]}\` and \`${OWNERS[i]}/${FILES[i]}.glp\`; the paper $(paper_line "${PAPERS[i]}")."
         done
     fi
+    if [ "$ADOPTED" = 1 ]; then
+    echo "- Adopted from the Calculus: \`$OWNER/$CTXT\` is the contract, its Logic pragmas and its Interface pragmas, and \`$OWNER/$FILE.glp\` the full schemas as calculus/tools/adopt.py prints them from it (claude.md \"Code\", \"The record of a contract adopted from the Calculus\"; calculus/README.md, \"Adopting a contract\")."
+    echo "- Run on $(date -u '+%Y-%m-%d %H:%M UTC') by \`cascade.sh ${NAMES[*]}\`; the suite's Section CAS re-runs it and holds these files to what the tools print."
+    echo "- Every source and every tool at this repository's \`$GLP_COMMIT\`; each artefact's source and tool:"
+    echo ""
+    echo "| Artefact | Source | Tool | What it holds |"
+    echo "|---|---|---|---|"
+    echo "| \`$CTXT\` | \`$OWNER/$CTXT\` | copied | the contract, its Logic pragmas and its Interface pragmas |"
+    echo "| \`$FILE.glp\` | \`$OWNER/$CTXT\` | calculus/tools/adopt.py, copied from \`$OWNER/$FILE.glp\` | the full schemas, the term the checker reads |"
+    echo "| \`schemas.txt\` | \`$CTXT\`'s Logic pragmas | calculus/tools/adopt.py | the speech-act schemas compiled from the Logic pragmas |"
+    echo "| \`full-contract.txt\` | \`$CTXT\` and the contracts it is written from | calculus/tools/adopt.py | the full contract, each clause labelled by its origin |"
+    echo "| \`full-pragmas.txt\` | the same | calculus/tools/adopt.py | the Logic pragmas' sentences, the relations applied |"
+    echo "| \`flat.txt\` | the same | calculus/tools/adopt.py | the flat text, the relations applied |"
+    echo "| \`full-schemas.txt\` | the same | calculus/tools/adopt.py | the schemas, the relations applied |"
+    echo "| \`verdict.txt\` | \`$FILE.glp\` | programs/gsc, check/2 | the checker's verdict: \`$VT\` |"
+    if grep -q '^% not compiled' "$OUT/vmat.tex"; then
+        echo "| \`vmat.tex\` | \`$FILE.glp\` | programs/gsc, compile_contract/2 | the compiler to VMAT's refusal |"
+    else
+        echo "| \`vmat.tex\` | \`$FILE.glp\` | programs/gsc, compile_contract/2 | the VMAT form, $(grep -c '^\\begin{align\*}$' "$OUT/vmat.tex") displays, one per schema |"
+    fi
+    if [ "$COMPILED" = 1 ]; then
+        echo "| \`platform.vglp\` | \`$FILE.glp\` read by programs/gsc's as_read/2, and \`$CTXT\`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |"
+        echo "| \`platform.glp\` | \`platform.vglp\` | glp_runtime's :emit | the platform compiled to GLP, as emitted |"
+        echo "| \`interface.glp\` | \`platform.vglp\` and \`platform.glp\` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |"
+        if [ "$RUN" = 1 ]; then
+            echo "| \`run.log\` | \`platform.vglp\` | ${PLAYS#$GLP_DIR/}, the plays with scripted persons, in the REPL | the plays' logs: $(printf '%s\n' "$GOALS" | sed -e 's/(.*//' | tr '\n' ' ')|"
+        else
+            echo "| (no run) | | | ${NOTE[${#NOTE[@]}-1]#run: } |"
+        fi
+    elif [ "$PARAMETRIC" = 1 ]; then
+        echo "| (no platform) | | | a parametric contract, with no realisation |"
+    else
+        echo "| \`platform.vglp\` | \`$FILE.glp\` | programs/vglp/cva/compiler, compile/5 | the CVA compiler's refusal, and no platform.glp and no run |"
+    fi
+    else
     echo "- The tools: this repository at \`$GLP_COMMIT\` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP)${PLAYS:+, ${PLAYS#$GLP_DIR/} (the plays with scripted persons)}."
     echo "- Run on $(date -u '+%Y-%m-%d %H:%M UTC') by \`cascade.sh ${NAMES[*]}\`; the suite's Section CAS re-runs it and holds these files to what the tools print."
     echo ""
@@ -643,6 +728,7 @@ paper_line() {   # paper_line <paper directory>: its remote and its commit
         echo "| (no platform) | a parametric contract, with no realisation |"
     else
         echo "| \`platform.vglp\` | the CVA compiler's refusal, and no platform.glp and no run |"
+    fi
     fi
     if [ ${#NOTE[@]} -gt 0 ]; then
         echo ""

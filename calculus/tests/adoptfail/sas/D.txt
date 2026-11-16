@@ -1,0 +1,5 @@
+D: Willing
+D restricts C.
+Vocabulary: x is willing = w(x).
+D:0 - | Alice is a person.
+D:1 ■ Signal: C:1 <- w(Alice).

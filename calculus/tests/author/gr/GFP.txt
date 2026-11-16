@@ -1,0 +1,10 @@
+GFP: Grassroots Forwarding with Provenance
+GFP extends GSG.
+The *author* of an item is its first signer.
+Alice and Bob are persons, Item an item.
+1. ■ Sign: Alice may create Item by signing it.
+2. ■ Forward: Alice may forward Item to Bob, adding her signature to the signatures Item carries, provided Alice holds the item Item and Alice and Bob are friends.
+Logic pragmas.
+Vocabulary: x holds the item t = item(x,t).
+After x creates t by signing it, which requires x does not hold the item t: x holds the item t.
+After x forwards t to y, adding x's signature to the signatures t carries: y holds the item t signed by x.

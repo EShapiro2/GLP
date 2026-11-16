@@ -1,0 +1,60 @@
+C          commute yes; return yes; recover same
+P          commute yes; return yes; recover same
+Q          commute yes; return yes; recover same
+D          commute yes; return yes; recover same
+E          commute yes; return yes; recover same
+5 contracts, 0 with a fault
+--- sasx/C.txt
+C: Base (expanded schemas)
+C:0 - | Alice is a person.
+C:1 ■ Signal: s(Alice) <- guarded by Alice.
+--- sasx/D.txt
+D: Both (expanded schemas)
+C:0 - | Alice is a person.
+C:1+P:1+Q:1 ■ Signal: s(Alice) <- w(Alice), q(Alice) guarded by Alice.
+P:0 - | Alice is a person.
+Q:0 - | Alice is a person.
+D:0 - | Alice is a person.
+--- sasx/E.txt
+E: Both, the other order (expanded schemas)
+C:0 - | Alice is a person.
+C:1+Q:1+P:1 ■ Signal: s(Alice) <- q(Alice), w(Alice) guarded by Alice.
+Q:0 - | Alice is a person.
+P:0 - | Alice is a person.
+E:0 - | Alice is a person.
+--- sasx/P.txt
+P: Willing (expanded schemas)
+C:0 - | Alice is a person.
+C:1+P:1 ■ Signal: s(Alice) <- w(Alice) guarded by Alice.
+P:0 - | Alice is a person.
+--- sasx/Q.txt
+Q: Qualified (expanded schemas)
+C:0 - | Alice is a person.
+C:1+Q:1 ■ Signal: s(Alice) <- q(Alice) guarded by Alice.
+Q:0 - | Alice is a person.
+--- expand.py: exit 0; --check: exit 0
+--- exp/C.txt
+% Written by tools/expand.py from rev/; do not edit.
+C: Base
+Alice is a person.
+C:1. ■ Signal: Alice may signal.
+--- exp/D.txt
+% Written by tools/expand.py from rev/; do not edit.
+D: Both
+Alice is a person.
+C:1, P:1, Q:1. ■ Signal: Alice may signal, only if Alice is willing, and only if Alice is qualified.
+--- exp/E.txt
+% Written by tools/expand.py from rev/; do not edit.
+E: Both, the other order
+Alice is a person.
+C:1, Q:1, P:1. ■ Signal: Alice may signal, only if Alice is qualified, and only if Alice is willing.
+--- exp/P.txt
+% Written by tools/expand.py from rev/; do not edit.
+P: Willing
+Alice is a person.
+C:1, P:1. ■ Signal: Alice may signal, only if Alice is willing.
+--- exp/Q.txt
+% Written by tools/expand.py from rev/; do not edit.
+Q: Qualified
+Alice is a person.
+C:1, Q:1. ■ Signal: Alice may signal, only if Alice is qualified.

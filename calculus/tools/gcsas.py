@@ -16,7 +16,7 @@ and checks, for each contract:
     return    the flat text recovered from sasx/NAME.txt is flat/NAME.txt
 Standard library only.
 """
-import os, re, sys
+import itertools, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NAME = r"[A-Z][A-Za-z]*"
@@ -30,9 +30,20 @@ PRON = {"Alice": "her", "Alicia": "her", "Carol": "her", "Erin": "her", "Bob": "
 POSS = {"her": "hers", "his": "his", "its": "its", "their": "theirs"}
 WILD = "_"        # in a place: someone; in a state that must not hold, or that ends: anyone
 WILDW = ("someone", "anyone", "no one")
+SIGNED = r"%s(?: signed by %s)+" % (NAME, NAME)   # a place holding a thing with its signatures: 'Item signed by Alice', in a schema Item@Alice
 COUNTS = {"fewer than": "<", "more than": ">", "at most": "<=", "at least": ">="}   # 'fewer than D persons' in a place: <D
 COUNTW = r"(?:%s) (?:[A-Z][A-Za-z]*|\d+) persons" % "|".join(COUNTS)
 SIGNS = {v: k for k, v in COUNTS.items()}
+POSS_IN = re.compile(r"the (\w+?)s of ((?:%s) (?:[A-Z][A-Za-z]*|\d+) persons)" % "|".join(COUNTS))   # 'the votes of at least V persons' is read as 'at least V persons's vote'
+POSS_OUT = re.compile(r"((?:%s) (?:[A-Z][A-Za-z]*|\d+) persons)'s (\w+)" % "|".join(COUNTS))      # and printed so (GO #6, Calculus #6, 2026-11-15 16:37 UTC)
+
+
+def poss_in(l):
+    return POSS_IN.sub(lambda m: "%s's %s" % (m.group(2), m.group(1)), l)
+
+
+def poss_out(l):
+    return POSS_OUT.sub(lambda m: "the %ss of %s" % (m.group(2), m.group(1)), l)
 
 
 def count_code(v):
@@ -40,9 +51,21 @@ def count_code(v):
     return COUNTS[m.group(1)] + m.group(2) if m else v
 NOUNS = set()     # 'the role r' in a basic state: 'no role' and 'some role' are written for 'the role no one', 'the role someone'
 MARK = "*#"   # the last argument of an atom: *n, n copies; #n, exactly n copies and no more
-ARITH = "Vocabulary: n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k)."   # of every contract
+PARL = "Parameters: "   # 'Parameters: x is entitled to propose m in z.': a state a later contract, the bylaws or the terms fill; a parameter of the term
+ENVL = "Environment: "   # 'Environment: x is nearby y.': a state the platform gives, an environment predicate of the term; no act adds or ends it
+REFL = "Reflexive: "   # 'Reflexive: x knows y.': every agent holding the state's atoms holds x knows x; no act adds or ends it
+ARITH = "Vocabulary: n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k); x is the author of t = author(x,t)."   # of every contract; the author of an item is its first signer (GFP), read by toglp.py as eq(author_of(t), x)
 ACTOR = "Actor"   # in a citation: the first of those who take the act cited
 IRREG = {"is": "be", "has": "have", "does": "do", "goes": "go"}
+TAKEN = r", taken for %s by %s(?: and for %s by %s)*" % (NAME, NAME, NAME, NAME)   # a citation taking the act cited for a party: its guard NAME1 is NAME2
+VOTES = r", on the votes of %s(?: and of %s)* for it" % (NAME, NAME)   # an act or a citation decided by the votes of organisations, GO's
+GO_VOTES = {"vote": "z holds x's vote on m", "voter": "x is entitled to vote on m in z", "decided": "the votes decide m according to the bylaws of z"}   # GO's states of a motion m
+VOTER = "Voter"   # the name of the one who votes, in the vote act generated
+GO_TAKE = "x is entitled to take m for z"   # GO's state of the one who takes a motion m for z, derived for an act taken for a party on votes
+GO_STATES = dict(GO_VOTES, taker=GO_TAKE)
+WARD_ROLE = "those who decide for z"   # GnW's role: a contract whose lexicon has it has wards, and a ward takes an act of a party by those who decide for it
+KNOWS = "x knows y"   # GKK's: the edge a ward's form adds from its officer to a role that reads, and from the organisation to each agent of a motion
+OFFICER = "Officer"   # AliceOfficer: the one who takes an act for the party Alice, in the ward's form derived of the act
 
 
 class Err(Exception):
@@ -100,7 +123,7 @@ def tok_rx(tok, seen, fixed=None, subj=None, poss=False, article=False):
     if v in seen:
         return "(?P=%s)%s%s" % (v, re.escape(suf), comma)
     seen.add(v)
-    return "(?P<%s>%s|%s|%s|\\d+)%s%s" % (v, COUNTW, NAME, "|".join(WILDW), re.escape(suf), comma)
+    return "(?P<%s>%s|%s|%s|%s|\\d+)%s%s" % (v, COUNTW, SIGNED, NAME, "|".join(WILDW), re.escape(suf), comma)
 
 
 def wild(s, neg):
@@ -133,7 +156,7 @@ def fill(t, b, subj=None, pron=False):
                 p = PRON.get(b[v], "its" if re.fullmatch(NAME, b[v]) else "their")
                 out.append((POSS[p] if of_hers(tk, i) else p) + comma)
             else:
-                out.append(b[v] + suf + comma)
+                out.append(b[v].replace("@", " signed by ") + suf + comma)
         else:
             out.append(tok)
     for i in filled:      # 'a y-coin' of Alice is 'an Alice-coin'
@@ -247,12 +270,43 @@ class Lex:
         self.req = {}     # act phrase -> the conditions it requires: 'After x ..., which requires c: effects.'
         self.rlist = {}   # role predicate -> the states that list its agents: 'those who decide for z = deciders(z), listed by z has y as a guardian and y is a guardian of z'
         self.short = {}   # basic state -> (the state as a sentence writes it, its holder's place): 'e is late, for x = late(x,e)'
+        self.refl = []    # basic states of two places declared reflexive: 'Reflexive: x knows y.', every agent holding x knows x
+        self.env = []     # basic states declared environment predicates: 'Environment: x is nearby y.', given by the platform
+        self.par = []     # basic states declared parameters: 'Parameters: x is entitled to propose m in z.'
+        self.votes = []   # the acts decided 'on the votes of NAME for it': GO's states of a motion, derived for each (vote_family)
+        self.voted = {}   # the name of a sentence decided on votes -> the ids of its vote families
 
     def copy(self):
         l = Lex()
         l.basic, l.roles, l.defs, l.req, l.short = list(self.basic), list(self.roles), list(self.defs), dict(self.req), dict(self.short)
         l.rlist = dict(self.rlist)
+        l.refl = list(self.refl)
+        l.env = list(self.env)
+        l.par = list(self.par)
+        l.votes = [dict(f) for f in self.votes]
+        l.voted = dict(self.voted)
         return l
+
+    def refl_preds(self):
+        """The predicates of the states declared reflexive."""
+        out = set()
+        for t in self.refl:
+            b = [(p, a) for tt, p, a in self.basic if tt == t]
+            if not b or len(b[0][1]) != 2:
+                raise Err("'Reflexive: %s.' names no basic state of two places" % t)
+            out.add(b[0][0])
+        return out
+
+    def env_preds(self, attr="env"):
+        """The predicates of the states declared environment predicates, or with attr 'par' parameters."""
+        out = set()
+        norm = lambda t: t.replace(",", "")
+        for t in getattr(self, attr):
+            b = [p for tt, p, a in self.basic if norm(tt) == norm(t)]
+            if not b:
+                raise Err("'%s%s.' names no basic state" % (ENVL if attr == "env" else PARL, t))
+            out.add(b[0])
+        return out
 
     def add(self, other):
         for attr in ("basic", "roles", "defs"):
@@ -265,9 +319,21 @@ class Lex:
             self.short.setdefault(k, v)
         for k, v in other.rlist.items():
             self.rlist.setdefault(k, v)
+        self.refl.extend(t for t in other.refl if t not in self.refl)
+        self.env.extend(t for t in other.env if t not in self.env)
+        self.par.extend(t for t in other.par if t not in self.par)
+        self.votes.extend(f for f in other.votes if f["id"] not in {g["id"] for g in self.votes})
+        for k, v in other.voted.items():
+            self.voted.setdefault(k, v)
 
     def states(self):
-        """Templates of states, longest first, each with its payload."""
+        """Templates of states, longest first, each with its payload; kept while the lexicon is the same."""
+        k = (tuple(self.basic), tuple(self.defs), tuple(sorted(self.short.items())))
+        if getattr(self, "_states", (None,))[0] != k:
+            self._states = (k, self._states_of())
+        return self._states[1]
+
+    def _states_of(self):
         ts = [(t, ("basic", t, p, a)) for t, p, a in self.basic] + [(t, ("def", t, r)) for t, r, act in self.defs if not act]
         ts += [(self.short[t][0], ("short", t, p, a, self.short[t][1])) for t, p, a in self.basic if t in self.short]
         ts += [(negative(t), ("neg",) + pay) for t, pay in ts if negative(t)]
@@ -325,7 +391,7 @@ def parse_list(text, tpls, what="states"):
             none = "no one" in gd.values()
             if none and (neg or pay[0] == "neg"):
                 continue
-            gd = {k: WILD if v in WILDW else count_code(v) for k, v in gd.items()}
+            gd = {k: WILD if v in WILDW else count_code(v).replace(" signed by ", "@") for k, v in gd.items()}
             if (neg or none or pay[0] == "neg") and any(v[:1] in "<>" for v in gd.values()):
                 continue
             item = (neg or none, pay, gd, text[p:m.end()])
@@ -379,7 +445,15 @@ def unfold(text, lex, neg=False, actor=None):
 
 
 def persons_of(text, lex):
-    """A list of persons: [(text, guard term)]."""
+    """A list of persons: [(text, guard term)].  A role may be followed by ', other than NAME', a person who is not of
+    those who take the act for it, written as the argument -NAME of its guard term: deciders(Carol,-Bob)."""
+    m = re.fullmatch(r"(.*), other than (%s),?" % NAME, text.strip())
+    if m:
+        out = persons_of(m.group(1), lex)
+        if not out or "(" not in out[-1][1]:
+            raise Err("'other than' after no role: " + text)
+        out[-1] = (out[-1][0] + ", other than " + m.group(2) + ",", out[-1][1][:-1] + ",-" + m.group(2) + ")")
+        return out
     out = []
     for _, pay, b, s in parse_list(text, lex.persons(), "persons"):
         if pay[0] == "name":
@@ -391,6 +465,11 @@ def persons_of(text, lex):
 
 def lits_of(text, lex, actor=None):
     return [(n, p, a) for n, _, _, p, a in unfold(text, lex, actor=actor)]
+
+
+def self_atom(pred, args, rp):
+    """An atom of a reflexive predicate naming one agent twice, x knows x."""
+    return pred in rp and len(args) == 2 and args[0] == args[1]
 
 
 def phrases_of(text, lex, actor=None):
@@ -410,8 +489,9 @@ def strip_refs(s):
 def read_gr(name, d="gr"):
     c = Contract()
     c.name = name
-    lines = [l.rstrip("\n") for l in open(os.path.join(ROOT, d, name + ".txt"), encoding="utf-8") if l.strip()]
+    lines = [poss_in(l.rstrip("\n")) for l in open(os.path.join(ROOT, d, name + ".txt"), encoding="utf-8") if l.strip()]
     c.title = lines[0]
+    c.params = params_of(lines, name)
     c.first = None
     c.own = Lex()
     c.header = []      # (kind, line): vocabulary, roles, definitions, prose and names, in order
@@ -419,11 +499,20 @@ def read_gr(name, d="gr"):
     for i, l in enumerate(lines[1:]):
         m = CLAUSE.match(l)
         if m:
-            c.clauses.append((int(m.group(1)), m.group(2), m.group(3)))
+            c.clauses.append((int(m.group(1)), m.group(2), params_in(m.group(3), c.params)))
         elif l == PRAGMAS:
             continue
         elif i == 0 and re.match(re.escape(name) + r" (extends|restricts|strengthens|instantiates|composes)\b", l):
             c.first = l
+        elif l.startswith(REFL):
+            c.own.refl.extend(t for t in l[len(REFL):].rstrip(".").split("; ") if t not in c.own.refl)
+            c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
+        elif l.startswith(ENVL):
+            c.own.env.extend(t for t in params_in(l[len(ENVL):], c.params).rstrip(".").split("; ") if t not in c.own.env)
+            c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
+        elif l.startswith(PARL):
+            c.own.par.extend(t for t in params_in(l[len(PARL):], c.params).rstrip(".").split("; ") if t not in c.own.par)
+            c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
         elif l.startswith("Vocabulary: ") or l.startswith("Roles: "):
             kind, rest = l.split(": ", 1)
             for e in rest.rstrip(".").split("; "):
@@ -432,6 +521,9 @@ def read_gr(name, d="gr"):
                 if ", listed by " in a:
                     a, by = a.split(", listed by ", 1)
                 _, p, args = parse_atom(a)
+                if any(x in args for x in c.params):
+                    raise Err("the parameter %s is a place of %s" % ([x for x in c.params if x in args][0], a))
+                t = params_in(t, c.params)
                 if by:
                     c.own.rlist[p] = by
                 NOUNS.update(re.findall(r"\bthe ([a-z]+) [b-z](?= |$)", t))
@@ -442,7 +534,7 @@ def read_gr(name, d="gr"):
                 (c.own.basic if kind == "Vocabulary" else c.own.roles).append((t, p, args))
             c.header.append(("lex", l))
         elif ": " in l and "*" not in l and tvars(l.split(": ", 1)[0]) and l.endswith("."):
-            t, r = l[:-1].split(": ", 1)
+            t, r = params_in(l[:-1], c.params).split(": ", 1)
             act = t.startswith("After ")
             t = t[6:] if act else t
             if act and ", which requires " in t:
@@ -452,6 +544,30 @@ def read_gr(name, d="gr"):
         else:
             c.header.append(("prose", l))
     return c
+
+
+def params_of(lines, name):
+    """The parameters a contract declares in lower case in a prose line, as GFF-FR's 'd > 1, an integer, is a
+    parameter of GFF-FR.' and GDO-LB's 'd > 0, an integer, and e > 0 are parameters of GDO-LB.': {letter: its name}.
+    A lower-case letter is a place of the grammar, so in the clauses the parameter is read as a name, its capital;
+    the recovered clauses write the letter again (decompile)."""
+    out = {}
+    for l in lines:
+        if re.search(r" (?:is a parameter|are parameters) of %s\.$" % re.escape(name), l):
+            for x in re.findall(r"(?<![A-Za-z])([b-z]) (?:[<>]=?|=) ", l):
+                out[x] = x.upper()
+    names = set(re.findall(NAME, " ".join(l for l in lines if re.match(NAME + r"(?:, " + NAME + r")*(?: and " + NAME + r")? (?:is|are) ", l))))
+    for x, y in out.items():
+        if y in names:
+            raise Err("the parameter %s would be read as %s, which the names line names" % (x, y))
+    return out
+
+
+def params_in(text, params):
+    """A clause with each lower-case parameter read as its name."""
+    for x, y in params.items():
+        text = re.sub(r"(?<![A-Za-z'*-])%s(?![A-Za-z'-])" % x, y, text)
+    return text
 
 
 def first_line(c, known):
@@ -488,6 +604,23 @@ def plural(w):
     return w + ("es" if re.search(r"(s|sh|ch|x|z)$", w) else "s")
 
 
+def rename_act(e, new, old):
+    """An act of a contract instantiated by a word takes the new word in its name, as the full contract has it: GnW's
+    Make guardian is CSSN's Make parent, Wards befriend its Children befriend.  The name its own contract gives it
+    stays its original name, oname, by which it is joined and cited."""
+    if e.get("kind") not in ("act", "cite") or "name" not in e:
+        return
+    (_, nw), (_, ow) = article(new), article(old)
+    def one(m):
+        w = m.group(0)
+        to = plural(nw) if w.lower() == plural(ow).lower() else nw
+        return cap(to) if w[:1].isupper() else to
+    name = re.sub(r"(?i)\b(?:%s|%s)\b" % (re.escape(plural(ow)), re.escape(ow)), one, e["name"])
+    if name != e["name"]:
+        e.setdefault("oname", e["name"])
+        e["name"] = name
+
+
 def word_sub(new, old):
     """An instantiation by a word: (text function, predicate function)."""
     (an, nw), (ao, ow) = article(new), article(old)
@@ -516,7 +649,7 @@ def same_phrase(t, b):
         mx, my = PH.match(x.rstrip(",")), PH.match(y.rstrip(","))
         if mx and my and (mx.group(2) or "") == (my.group(2) or "") and mp.setdefault(my.group(1), mx.group(1)) == mx.group(1):
             continue
-        if x != y:
+        if x != y or mx and my:      # a place of b put for two places of t is not t
             return None
     return mp
 
@@ -549,6 +682,19 @@ def say(neg, phrase, effect):
     return (("no longer " if effect else "not ") if neg else "") + phrase
 
 
+PUT_RX = {}
+
+
+def put_rx(t):
+    """The pattern of a state put for a state, a name it adds read also as someone, anyone or no one."""
+    if t not in PUT_RX:
+        r = tpl_rx(t)
+        for x in extras(t):
+            r = re.sub(r"(?<![A-Za-z])%s(?![A-Za-z])" % x, "(?:%s|%s)" % (x, "|".join(WILDW)), r)
+        PUT_RX[t] = re.compile(r + r"(?=$|[ ,.])")
+    return PUT_RX[t]
+
+
 def subst_states(text, lex, tb, new, effect, put=()):
     """A definition of the contract instantiated, with the state put for the basic state tb.  A name the state put
     adds is anyone where the state must not hold, and where it ends for someone unnamed."""
@@ -558,11 +704,6 @@ def subst_states(text, lex, tb, new, effect, put=()):
     up = {v: "Zz" + v.upper() + "zz" for v in vs}
     filled = " ".join(fill(tok, up) for tok in toks(text))
     out = []
-    def put_rx(t):
-        r = tpl_rx(t)
-        for x in extras(t):
-            r = re.sub(r"(?<![A-Za-z])%s(?![A-Za-z])" % x, "(?:%s|%s)" % (x, "|".join(WILDW)), r)
-        return re.compile(r + r"(?=$|[ ,.])")
     tpls = [(put_rx(t), ("put", t)) for t in put] + lex.states()
     for n, pay, b, was in parse_list(filled, tpls):
         if pay[0] in ("short", "neg"):
@@ -599,6 +740,7 @@ class World:
     def __init__(self, names):
         self.known = set(names)
         self.c, self.lex, self.flat, self.sas, self.sasx = {}, {}, {}, {}, {}
+        self.party = {}    # n -> the ward's forms n derives of the acts of parties it has (party_specs)
 
     def contract(self, n):
         if n not in self.c:
@@ -614,7 +756,7 @@ class World:
         lex = c.own.copy()
         for p in parents:
             pl = self.lexicon(p).copy()
-            for item in subs.get(p, []):
+            for item in derive_items(subs.get(p, []), self.lexicon(p)):
                 sf = split_for(item, self.lexicon(p))
                 if sf and sf[0] == "state":
                     _, new, tb, _, _ = sf
@@ -623,6 +765,7 @@ class World:
                     pl.defs = [(t, subst_states(r, pl, tb, new, act, put), act) for t, r, act in pl.defs]
                     pl.req = {t: subst_states(v, pl, tb, new, False, put) for t, v in pl.req.items()}
                     pl.basic = [e for e in pl.basic if e[0] != tb]
+                    pl.par = [t for t in pl.par if t.replace(",", "") != tb.replace(",", "")]   # a parameter the first line binds is no longer one
                 if sf is None:
                     new, old = item.split(" for ", 1)
                     ft, fp = word_sub(new, old)
@@ -632,8 +775,15 @@ class World:
                     pl.req = {ft(t): ft(v) for t, v in pl.req.items()}
                     pl.short = {ft(t): (ft(v[0]), v[1]) for t, v in pl.short.items()}
                     pl.rlist = {fp(k): ft(v) for k, v in pl.rlist.items()}
+                    pl.refl = [ft(t) for t in pl.refl]
+                    pl.env = [ft(t) for t in pl.env]
+                    pl.par = [ft(t) for t in pl.par]
+                    pl.votes = [dict(f, t=ft(f["t"]), P=ft(f["P"]), st={k: dict(v, go=fp(v["go"]), pred=fp(v["pred"]), tpl=ft(v["tpl"])) for k, v in f["st"].items()})
+                                for f in pl.votes]
             lex.add(pl)
         lex.add(arith())
+        for name, fams in self.vote_families(n, lex, parents, subs):
+            lex.voted[name] = [add_family(lex, f) for f in fams]
         self.lex[n] = lex
         self.binds(n)          # refuses two different states put for one state
         del self.lex[n]
@@ -652,6 +802,7 @@ class World:
             lex.defs = [(t, subst_states(r, lex, tb, new, act, put), act) for t, r, act in lex.defs]
             lex.req = {t: subst_states(v, lex, tb, new, False, put) for t, v in lex.req.items()}
             lex.basic = [e for e in lex.basic if e[0] != tb]
+            lex.par = [t for t in lex.par if t.replace(",", "") != tb.replace(",", "")]   # a parameter the first line binds is no longer one
 
     def binds(self, n):
         """The states that n and the contracts it is written from put for states: [(item, the contract instantiated)]."""
@@ -659,7 +810,7 @@ class World:
         parents, subs, _ = first_line(c, self.known)
         out = []
         for p in parents:
-            for item in subs.get(p, []):
+            for item in derive_items(subs.get(p, []), self.lexicon(p)):
                 sf = split_for(item, self.lexicon(p))
                 if sf and sf[0] == "state":
                     out.append((item, p))
@@ -670,6 +821,243 @@ class World:
             if seen.setdefault((q, sf[2]), sf[1]) != sf[1]:
                 raise Err("%s: two contracts it is written from put different states for '%s' of %s" % (n, sf[2], q))
         return out
+
+    def vote_families(self, n, lex, parents, subs):
+        """The sentences of n decided 'on the votes of NAME for it': [(name, the vote family of each NAME)].  The family is
+        the act's, as its contract names it, and the organisation's: two citations of one act on one's votes share it."""
+        c, out = self.contract(n), []
+        for num, mark, text in c.clauses:
+            for s in sentences(text):
+                m = re.match(r"([A-Z][A-Za-z' -]*?): (.+)$", s)
+                vm = m and re.search(VOTES + r"\.$", s)
+                if not vm:
+                    continue
+                orgs, body, where = votes_of(vm.group(0)), m.group(2)[:len(m.group(2)) - len(vm.group(0)) + 1], "%s:%d %s" % (n, num, m.group(1))
+                cm = re.match(r"(%s)(?: ([A-Z][A-Za-z' -]*?))?(?=,|\.$)" % REF, body)
+                try:
+                    if cm:
+                        entries = []
+                        for p in parents:
+                            words = [it for it in subs.get(p, []) if split_for(it, self.lexicon(p)) is None]
+                            entries += instantiate_schemas(expand_schemas(self, p), words)
+                        hit = own_acts(entries, cited(entries, cm.group(1), cm.group(2), where))
+                        if len(hit) != 1:
+                            raise Err("a citation on votes names one act")
+                        e = entries[hit[0]]
+                        actname = e["name"]
+                        _, ir = inv_basic(lex)
+                        best = best_phrase(e, lex, act_phrases(lex), [guard_text(g, ir) for g in e["guards"]])
+                        if not best:
+                            raise Err("no act phrase has the effects of the act cited")
+                        t, b = best[1], best[2]
+                    else:
+                        _, t, b, _, _, _, _ = read_act(body, lex)
+                        actname = m.group(1)
+                    fams = []
+                    for org in orgs:
+                        zp = [v for v in tvars(t) if b.get(v) == org]
+                        if not zp:
+                            raise Err("%s is no place of the act decided on its votes" % org)
+                        fams.append(pick_family(lex, actname, t, zp, org, out))
+                    out.append((m.group(1), fams))
+                except Err as ex:
+                    raise Err("%s: %s" % (where, ex))
+        self.party[n] = self.party_specs(n, lex, parents, subs)
+        _, ir = inv_basic(lex)
+        for sp in self.party[n]:
+            if not sp["votes"]:
+                continue
+            best = best_phrase(sp["act"], lex, act_phrases(lex), [guard_text(g, ir) for g in sp["act"]["guards"]])
+            if not best:
+                raise Err("%s %s: no act phrase has the effects of the act" % (n, sp["name"]))
+            t, b = best[1], best[2]
+            fams = []
+            for org in sp["votes"]:
+                zp = [v for v in tvars(t) if b.get(v) == org]
+                if not zp:
+                    raise Err("%s %s: %s is no place of the act" % (n, sp["name"], org))
+                fams.append(pick_family(lex, sp["act"]["name"], t, zp, org, out))
+            out.append((sp["name"], fams))
+        return out
+
+    def party_specs(self, n, lex, parents, subs):
+        """The ward's forms of the acts of parties, which a contract with wards (its lexicon has GnW's role 'those who
+        decide for z') derives of the acts it has whose guards include names that the act's own contract declares
+        parties, and that no contract it is written from has derived.  For each nonempty set S of those guards, one
+        act '<Act> for <Role>[ and <Role>]', the act taken for each ward R of S by one who decides for it: written from
+        GO, by its officer ROfficer, only if ROfficer is entitled to take it for R, on the votes of R for it (GO:2's Act);
+        else by those who decide for R (GnW).  An act that names a ward as such, not as a party, has no such form."""
+        if not any(r[0] == WARD_ROLE for r in lex.roles):
+            return []
+        entries = []
+        for p in parents:
+            words = [it for it in subs.get(p, []) if split_for(it, self.lexicon(p)) is None]
+            entries += instantiate_schemas(expand_schemas(self, p), words)
+        done = {e["party"] for e in entries if e.get("party")}
+        go = any(e[0] == GO_TAKE for e in lex.basic)
+        role = [r for r in lex.roles if r[0] == WARD_ROLE][0]
+        out, seen = [], set()
+        for e in entries:
+            if e["kind"] != "act" or e.get("party") or e.get("voteact") or e.get("taken"):
+                continue
+            pid = e.get("pid") or key(e)
+            if pid in done or pid in seen:
+                continue
+            seen.add(pid)
+            origin = e["label"].split("+")[0].split(":")[0]
+            kinds = kinds_line(self.contract(origin)) if origin in self.known else {}
+            rs = [g for g in e["guards"] if "(" not in g and "party" in kinds.get(g, ())]
+            if not rs:
+                continue
+            agents = {x for x, ks in kinds.items() if ks & {"person", "party", "organisation", "ward"}}
+            kn = [p for t, p, a in lex.basic if t == KNOWS]
+            kn = kn[0] if kn else None
+            if not go and any(split_for(it, self.lexicon(q))[2] in GO_STATES.values() for it, q in self.binds(n)):
+                raise Err("%s: the acts of parties have no ward's form in a contract that binds GO's states of a motion" % n)
+            for k in range(1, len(rs) + 1):
+                for S in itertools.combinations(rs, k):
+                    sfx = " for " + join(S)
+                    if go:
+                        taken = {r: r + OFFICER for r in S}
+                        ttext, votes = dict(taken), list(S)
+                    else:
+                        taken = {r: "%s(%s)" % (role[1], r) for r in S}
+                        ttext, votes = {r: fill(WARD_ROLE, {"z": r}) for r in S}, None
+                    out.append(dict(pid=pid, act=e, name=e["name"] + sfx, sfx=sfx, taken=taken, ttext=ttext, votes=votes,
+                                    takers=dict(taken) if go else None, agents=agents if go else None,
+                                    knows=reader_edges(e, taken, kn, agents) if go and kn else []))
+        return out
+
+
+def ident(name):
+    return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+
+
+def votes_of(s):
+    """The organisations of ', on the votes of Alice and of Bob for it', or of a schema's 'Alice and of Bob'."""
+    return re.findall(r"(?:^|of )(%s)(?= and of | for it|$)" % NAME, s.strip())
+
+
+def votes_text(orgs):
+    return " and of ".join(orgs)
+
+
+def vote_family(lex, name, t, zp, org):
+    """GO's states of a motion m derived for the act phrase t decided on the votes of the agent at its place zp: m is
+    'whether' and the act phrase, that agent at GO's place z: 'z holds x's vote on whether z pays y n y-coins'."""
+    tv = tvars(t)
+    pool = [v for v in "bcdefghijklnopqrstuvwy" if v not in tv]
+    ren = {v: "z" if v == zp else pool.pop(0) if v in "xzm" else v for v in tv}
+    P = rename(t, ren)
+    places = [ren[v] for v in tv if v != zp]
+    st, fid = {}, ident(name + " " + org)
+    for k, T in list(GO_VOTES.items()) + ([("taker", GO_TAKE)] if any(e[0] == GO_TAKE for e in lex.basic) else []):
+        go = [e for e in lex.basic if e[0] == T]
+        if not go:
+            raise Err("on the votes of: no state '%s' of GO, unbound, in this contract" % T)
+        _, gp, ga = go[0]
+        st[k] = dict(go=gp, goargs=ga, pred=gp + "_" + fid, tpl=" ".join("whether " + P if tok == "m" else tok for tok in toks(T)),
+                     args=tuple(a2 for a in ga for a2 in (places if a == "m" else [a])))
+    return dict(name=name, vname="Vote of %s for %s" % (org, name), id=fid, org=org, t=t, zp=zp, ren=ren, P=P, places=places, st=st)
+
+
+def pick_family(lex, name, t, zps, org, out):
+    """The vote family of an act decided on the votes of org, which holds the places zps of its act phrase: of the
+    place that gives a motion the contract has already, if one does (an act of one agent in two roles, as Helper #7's
+    Deposit with the issuer, is decided as the act it specialises), else of the first."""
+    have = {f["st"]["vote"]["tpl"] for f in lex.votes} | {f["st"]["vote"]["tpl"] for _, fs in out for f in fs}
+    cands = [vote_family(lex, name, t, z, org) for z in zps]
+    return next((f for f in cands if f["st"]["vote"]["tpl"] in have), cands[0])
+
+
+def add_family(lex, f):
+    """The derived states in the vocabulary, the entitlement and the decision parameters as GO's are, and the vote act;
+    its id.  Two acts of one phrase on one organisation's votes (DGC's Deposit and Deposit more) are one motion, one family."""
+    same = [g for g in lex.votes if g["st"]["vote"]["tpl"] == f["st"]["vote"]["tpl"]]
+    if same:
+        return same[0]["id"]
+    if any(g["id"] == f["id"] for g in lex.votes):
+        raise Err("two acts named %s, of different phrases, decided on votes" % f["name"])
+    for k, v in f["st"].items():
+        lex.basic.append((v["tpl"], v["pred"], v["args"]))
+        if k != "vote":
+            lex.par.append(v["tpl"])
+    vt = f["st"]["vote"]["tpl"]
+    act = "x votes on whether %s in z" % f["P"]
+    lex.defs.append((act, vt, True))
+    lex.req[act] = negative(vt)
+    lex.votes.append(f)
+    return f["id"]
+
+
+def derive_items(items, plex):
+    """The items of an instantiation, and for each that puts states for GO's state of a motion, the same for that
+    state derived for each act decided on votes: m is 'whether' and the act phrase."""
+    out = list(items)
+    for item in items:
+        sf = split_for(item, plex)
+        if not sf or sf[0] != "state" or sf[2] not in GO_STATES.values():
+            continue
+        k = [k for k, T in GO_STATES.items() if T == sf[2]][0]
+        for f in plex.votes:
+            if k not in f["st"]:
+                continue
+            mine = set(tvars(sf[1])) - {"z", "x", "m"}
+            pool = [v for v in "bcdefghijklnopqrstuvwy" if v not in mine and v not in f["places"]]
+            mp = {v: pool.pop(0) if v in mine else v for v in f["places"]}
+            P = rename(f["P"], mp)
+            new = " ".join(("whether " + P + tok[1:]) if tok.rstrip(",") == "m" else tok for tok in toks(sf[1]))
+            try:
+                nums = count_names(pattern(sf[1], plex))
+            except Err:
+                nums = set()
+            out.append(org_numbers(new, nums, f["org"]) + " for " + rename(f["st"][k]["tpl"], mp))
+    return out
+
+
+def count_names(lits):
+    """The names a list of literals counts or computes with, numbers the bylaws set: Votes and More of 'z holds the
+    votes of at least Votes persons on m, More is Votes plus 1 and z has fewer than More persons in the role Treasurer'."""
+    out = set()
+    for _, p, a in lits:
+        for v in a:
+            m = re.fullmatch(r"(<=|>=|<|>|=)?(%s)" % NAME, v.lstrip(MARK))
+            if m and (m.group(1) or p in ("sum", "product", "le", "ge", "gt", "lt")):
+                out.add(m.group(2))
+    return out
+
+
+def org_numbers(s, nums, org):
+    """The numbers of a decision on the votes of org named for it, VotesAlice, so that an act on the votes of two
+    organisations counts the votes of each against its own number."""
+    return re.sub(r"(?<![A-Za-z])(%s)(?![A-Za-z])" % "|".join(sorted(nums)), lambda m: m.group(1) + org, s) if nums else s
+
+
+def derive_atoms(items, fams):
+    """derive_items on the schemas: 'vote(z,>=V,m), ... for decided(z,m)', for each act decided on votes."""
+    out = list(items)
+    for item in items:
+        new, old = item.rsplit(" for ", 1)
+        if "(" not in old:
+            continue
+        _, pred, args = parse_atom(old)
+        for f in fams:
+            k = [k for k, v in f["st"].items() if v["go"] == pred and len(v["goargs"]) == len(args)]
+            if not k:
+                continue
+            ms = tuple("m%d" % (i + 1) for i in range(len(f["places"])))
+            nums = count_names([parse_atom(l) for l in split_top(new)])
+            ex = lambda a: [x for y in a for x in (ms if y == "m" else (y,))]
+            nl = []
+            for x, q, a in (parse_atom(l) for l in split_top(org_numbers(new, nums, f["org"]))):
+                if "m" in a:
+                    d = [v["pred"] for v in f["st"].values() if v["go"] == q]
+                    if not d:
+                        raise Err("the motion m in a state not derived for votes: %s" % item)
+                    q = d[0]
+                nl.append((x, q, tuple(ex(a))))
+            out.append(", ".join(lit_s(l) for l in nl) + " for " + atom_s((f["st"][k[0]]["pred"], tuple(ex(args)))))
+    return out
 
 
 def sentences(text):
@@ -754,15 +1142,17 @@ def compile_contract(w, n):
         label = "%s:%d" % (n, num)
         for s in sentences(text):
             m = re.match(r"([A-Z][A-Za-z' -]*?): (.+)$", s)
-            cm = m and re.match(r"(%s)(?: ([A-Z][A-Za-z' -]*?))?((?:, only if .*?)?)((?:, with the consent of .*?)?)((?:, and then .*)?)\.$" % REF, m.group(2))
+            cm = m and re.match(r"(%s)(?: ([A-Z][A-Za-z' -]*?))?((?:%s)?)((?:, only if .*?)?)((?:, with the consent of .*?)?)((?:, and then .*?)?)((?:%s)?)\.$"
+                                % (REF, TAKEN, VOTES), m.group(2))
+            vm = m and not cm and re.search(VOTES + r"\.$", m.group(2))
             try:
                 if cm:
-                    conds = cm.group(3)[len(", only if "):] if cm.group(3) else ""
-                    cons = cm.group(4)[len(", with the consent of "):] if cm.group(4) else ""
-                    then = cm.group(5)[len(", and then "):] if cm.group(5) else ""
+                    conds = cm.group(4)[len(", only if "):] if cm.group(4) else ""
+                    cons = cm.group(5)[len(", with the consent of "):] if cm.group(5) else ""
+                    then = cm.group(6)[len(", and then "):] if cm.group(6) else ""
                     e = dict(kind="cite", label=label, mark=mark, name=m.group(1), target=cm.group(1), tname=cm.group(2),
                              body=lits_of(conds, lex, ACTOR), guards=[g for _, g in persons_of(cons, lex)] if cons else [],
-                             then=lits_of(then, lex, ACTOR))
+                             then=lits_of(then, lex, ACTOR), taken=taken_of(cm.group(3)), votes=votes_of(cm.group(7)) if cm.group(7) else None)
                     theirs = {q for _, q, _ in w.lexicon(cm.group(1).split(":")[0]).basic}
                     if any(q in theirs for _, q, _ in e["then"]):
                         raise Err("a strengthening adds a state of the contract it strengthens")
@@ -770,13 +1160,19 @@ def compile_contract(w, n):
                     own.append(dict(e, conds=phrases_of(conds, lex, ACTOR), persons=[p for p, _ in persons_of(cons, lex)] if cons else [],
                                     effects=phrases_of(then, lex, ACTOR)))
                 elif m:
-                    persons, t, b, r, consent, conds, must = read_act(m.group(2), lex)
+                    persons, t, b, r, consent, conds, must = read_act(m.group(2)[:vm.start()] + "." if vm else m.group(2), lex)
                     musts = persons_of(must, lex) if must else []      # who must consent, and is not asked
                     cons = (persons_of(consent, lex) if consent else []) + musts
                     who = actor_of([p for p, _ in persons], t, b)
                     eff, cnd = unfold(fill(r, b), lex, actor=who), unfold(conds, lex, actor=who)
                     if t in lex.req:
                         cnd = cnd + unfold(fill(lex.req[t], b), lex, actor=who)
+                    rp = lex.refl_preds()
+                    if any(self_atom(x[3], x[4], rp) for x in eff):
+                        raise Err("an act adds or ends a state its holder holds of itself, which the pragmas declare reflexive")
+                    if any(x[0] and self_atom(x[3], x[4], rp) for x in cnd):
+                        raise Err("a condition that a reflexive state not hold of its holder itself")
+                    cnd = [x for x in cnd if not self_atom(x[3], x[4], rp)]      # it holds: taken as holding
                     head = [(x[0], x[3], x[4]) for x in eff]
                     if any(WILD in x[4] for x in eff if not x[0]) or any(a[:1] in "<>" for x in eff for a in x[4]):
                         raise Err("an act cannot make a state hold of someone unnamed, or of a number of persons")
@@ -786,7 +1182,10 @@ def compile_contract(w, n):
                     same = same_of(c, num, names_of(sas[-1]))
                     sas[-1]["same"] = same
                     sas[-1]["must"] = [g for _, g in musts]
-                    own.append(dict(kind="act", label=label, mark=mark, name=m.group(1), same=same, must=[p for p, _ in musts], persons=list(dict.fromkeys(p for p, _ in persons + cons)),
+                    sas[-1]["votes"] = votes_of(vm.group(0)) if vm else None
+                    if not set(sas[-1]["must"]) <= set(sas[-1]["guards"]):      # one who must consent is one of those who take the act
+                        raise Err("%s: one who must consent is not among its guards: %s" % (m.group(1), ", ".join(sorted(set(sas[-1]["must"]) - set(sas[-1]["guards"])))))
+                    own.append(dict(kind="act", label=label, mark=mark, name=m.group(1), same=same, must=[p for p, _ in musts], persons=list(dict.fromkeys(p for p, _ in persons + cons)), votes=sas[-1]["votes"],
                                     effects=[(x[0], wild(fill(x[1], x[2]), x[0])) for x in eff], conds=[(x[0], wild(fill(x[1], x[2]), x[0])) for x in cnd]))
                 else:
                     sas.append(dict(kind="kept", label=label, mark=mark, text=s))
@@ -798,17 +1197,27 @@ def compile_contract(w, n):
 
 # ---- printing and reading schemas ----------------------------------------------------
 
+def taken_of(s):
+    """{NAME1: NAME2} of ', taken for NAME1 by NAME2 and for NAME3 by NAME4'."""
+    return dict(re.findall(r"for (%s) by (%s(?:\([^)]*\))?)" % (NAME, NAME), s)) if s else {}
+
+
 def schema_line(e):
     pre = "%s %s " % (e["label"], e["mark"])
     if e["kind"] == "kept":
         return pre + "| " + e["text"]
     head = ", ".join(lit_s(l) for l in e["head"]) if e["kind"] == "act" else e["target"] + (" " + e["tname"] if e.get("tname") else "") + \
+        taken_text(e.get("taken")) + (", on the votes of " + votes_text(e["votes"]) if e.get("votes") else "") + \
         (" + " + ", ".join(lit_s(l) for l in e["then"]) if e.get("then") else "")
     s = "%s%s: %s <-" % (pre, e["name"], head)
     if e["body"]:
         s += " " + ", ".join(lit_s(l) for l in e["body"])
     if e["guards"]:
         s += " guarded by " + ", ".join(e["guards"])
+    if e["kind"] == "act" and e.get("taken"):
+        s += " " + taken_text(e["taken"])[2:]
+    if e["kind"] == "act" and e.get("votes"):
+        s += " on the votes of " + votes_text(e["votes"])
     if e.get("must"):
         s += " must " + ", ".join(e["must"])
     if e.get("same"):
@@ -831,16 +1240,24 @@ def read_schema_line(l):
     if " must " in " " + rest:
         rest, mu = (" " + rest).rsplit(" must ", 1)
         must = mu.split(", ")
+    votes = None
+    if " on the votes of " in " " + rest:
+        rest, votes = (" " + rest).rsplit(" on the votes of ", 1)
+        votes = votes_of(votes)
+    taken = {}
+    if " taken for " in " " + rest:
+        rest, tk = (" " + rest).rsplit(" taken ", 1)
+        taken = taken_of(tk)
     guards = []
     if " guarded by " in " " + rest:
         rest, g = (" " + rest).rsplit(" guarded by ", 1)
         guards = split_top(g)
     body = [parse_atom(a) for a in split_top(rest)]
-    cm = re.fullmatch(r"(%s)(?: ([^+]+?))?(?: \+ (.+))?" % REF, head.strip())
+    cm = re.fullmatch(r"(%s)(?: ([^+,]+?))?((?:%s)?)(?:, on the votes of (%s(?: and of %s)*))?(?: \+ (.+))?" % (REF, TAKEN, NAME, NAME), head.strip())
     if cm:
         return dict(kind="cite", label=label, mark=mark, name=name, target=cm.group(1), tname=cm.group(2), body=body, guards=guards,
-                    then=[parse_atom(a) for a in split_top(cm.group(3))] if cm.group(3) else [])
-    return dict(kind="act", label=label, mark=mark, name=name, head=[parse_atom(a) for a in split_top(head)], body=body, guards=guards, same=same, must=must)
+                    then=[parse_atom(a) for a in split_top(cm.group(5))] if cm.group(5) else [], taken=taken_of(cm.group(3)), votes=votes_of(cm.group(4)) if cm.group(4) else None)
+    return dict(kind="act", label=label, mark=mark, name=name, head=[parse_atom(a) for a in split_top(head)], body=body, guards=guards, same=same, must=must, votes=votes, taken=taken)
 
 
 def sas_first(w, n):
@@ -870,11 +1287,11 @@ def write_sas(w, n, sas):
 def put(d, n, lines):
     os.makedirs(os.path.join(ROOT, d), exist_ok=True)
     with open(os.path.join(ROOT, d, n + ".txt"), "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
+        f.write("\n".join(poss_out(l) for l in lines) + "\n")
 
 
 def get(d, n):
-    return [l.rstrip("\n") for l in open(os.path.join(ROOT, d, n + ".txt"), encoding="utf-8") if l.strip()]
+    return [poss_in(l.rstrip("\n")) for l in open(os.path.join(ROOT, d, n + ".txt"), encoding="utf-8") if l.strip()]
 
 
 # ---- the kinds of names; a citation in the names of its own contract -----------------
@@ -958,7 +1375,7 @@ def names_of(e, text=False):
     for l in e.get("head", []) + e["body"] + e.get("then", []):
         out.update(l[2])
     for g in e["guards"]:
-        out.update(parse_atom(g)[2] if "(" in g else [g])
+        out.update(x.lstrip("-") for x in parse_atom(g)[2]) if "(" in g else out.add(g)
     return {x.lstrip(MARK) for x in out if x != WILD and x[:1] not in "<>" and not x.isdigit()}
 
 
@@ -976,7 +1393,8 @@ def cite_map(w, n, cite, hit, text=False):
         cands = [x for x in sorted(hn - cn) if theirs.get(x, set()) & kf and "person" not in theirs.get(x, set())]
         if len(cands) == 1:
             mp[f] = cands[0]
-    first = (hit["persons"] if text else hit["guards"])[:1]
+    back = {v: k for k, v in (hit.get("taken") or {}).items()}       # an act taken for a party: the party takes it
+    first = [back.get(x, x) for x in (hit["persons"] if text else hit["guards"])[:1]]
     if first and not re.fullmatch(NAME, first[0]) and re.search(r"(?<![A-Za-z])%s" % NAME, first[0][1:]):
         first = [re.search(r"(?<![A-Za-z])%s" % NAME, first[0][1:]).group(0)]      # those who decide for Orga: Orga holds it
     if first and re.fullmatch(NAME, first[0]):
@@ -994,7 +1412,7 @@ def map_guard(g, mp):
     if "(" not in g:
         return mp.get(g, g)
     _, p, a = parse_atom(g)
-    return "%s(%s)" % (p, ",".join(mp.get(x, x) for x in a))
+    return "%s(%s)" % (p, ",".join("-" + mp.get(x[1:], x[1:]) if x.startswith("-") else mp.get(x, x) for x in a))
 
 
 # ---- the operations, on the schemas --------------------------------------------------
@@ -1020,7 +1438,8 @@ def sub_atoms(lits, rules, head=False):
                 for nl in new:
                     if l[0] and nl[0]:
                         raise Err("a negated atom instantiated by a negated atom")
-                    out.append((l[0] or nl[0], nl[1], tuple(b[a] if a in b else WILD if more_any else a for a in nl[2]) + copies))
+                    sub = lambda a: "@".join(b[x] if x in b else x for x in a.split("@")) if "@" in a else b[a] if a in b else WILD if more_any else a
+                    out.append((l[0] or nl[0], nl[1], tuple(sub(a) for a in nl[2]) + copies))
                 break
         else:
             out.append(l)
@@ -1039,16 +1458,26 @@ def instantiate_schemas(entries, items):
                 e = dict(e)
                 if e["kind"] == "act":
                     e["head"], e["body"] = sub_atoms(e["head"], [((pred, args), newl)], True), sub_atoms(e["body"], [((pred, args), newl)])
-                    for x in {a for nl in newl for a in nl[2] if a not in args}:   # a name the act only requires: someone
+                    for x in {a for nl in newl for a in nl[2] if a not in args and re.fullmatch(r"[a-z]", a)}:   # a name the act only requires: someone; a constant (Treasurer) stays
                         if not any(x in l[2] for l in e["head"]):
                             e["body"] = [(n, q, tuple(WILD if a == x else a for a in aa)) for n, q, aa in e["body"]]
                     gs = []
                     for g in e["guards"]:
                         if "(" in g and parse_atom(g)[1] == pred:
-                            b = dict(zip(args, parse_atom(g)[2]))
-                            g = "%s(%s)" % (newl[0][1], ",".join(b.get(a, a) for a in newl[0][2]))
+                            ga = parse_atom(g)[2]
+                            b = dict(zip(args, [x for x in ga if not x.startswith("-")]))
+                            g = "%s(%s)" % (newl[0][1], ",".join([b.get(a, a) for a in newl[0][2]] + [x for x in ga if x.startswith("-")]))
                         gs.append(g)
                     e["guards"] = gs
+                    if e.get("must"):
+                        ms = []
+                        for g in e["must"]:
+                            if "(" in g and parse_atom(g)[1] == pred:
+                                ga = parse_atom(g)[2]
+                                b = dict(zip(args, [x for x in ga if not x.startswith("-")]))
+                                g = "%s(%s)" % (newl[0][1], ",".join([b.get(a, a) for a in newl[0][2]] + [x for x in ga if x.startswith("-")]))
+                            ms.append(g)
+                        e["must"] = ms
                 out.append(e)
             entries = out
         else:
@@ -1059,9 +1488,11 @@ def instantiate_schemas(entries, items):
                 if e["kind"] == "kept":
                     e["text"] = ft(e["text"])
                 else:
+                    rename_act(e, new, old)
                     e["head"] = [(x, fp(p), a) for x, p, a in e["head"]]
                     e["body"] = [(x, fp(p), a) for x, p, a in e["body"]]
                     e["guards"] = [fp(g) if "(" in g else g for g in e["guards"]]
+                    e["must"] = [fp(g) if "(" in g else g for g in e.get("must", [])]
                 out.append(e)
             entries = out
     return entries
@@ -1096,6 +1527,25 @@ def both(a, b, fields):
     return o
 
 
+def unclash(entries):
+    """Two acts of one name, one of them joined from two contracts that name it differently: the joined act takes
+    the first of its other names, from the clauses it comes from, that no act of the contract has, so that every act
+    has a name of its own; GSNW's GSG:2+GSN:3+GnW:3, Unfriend in GSN and Person unfriend in GnW, beside GnW:3's
+    Unfriend, keeps GnW's Person unfriend."""
+    acts = [e for e in entries if e["kind"] == "act"]
+    for e in acts:
+        if e.get("party") or "+" not in e["label"] or sum(1 for f in acts if f["name"] == e["name"]) < 2:
+            continue
+        used = {f["name"] for f in acts}
+        alt = next((m for m in e.get("names", {}).values() if m not in used), None)
+        if alt:
+            e["name"] = alt
+    base = {e["pid"]: e["name"] for e in acts if e.get("pid") and not e.get("party")}
+    for e in acts:          # a ward's form is named for its act, as the act is named here: "Pay accepted coins for Alice"
+        if e.get("party") in base:
+            e["name"] = base[e["party"]] + e["sfx"]
+
+
 def inherit(entries, have, new, fields):
     for e in new:
         k = key(e)
@@ -1110,10 +1560,62 @@ def cited(entries, target, tname, where):
     def named(e):       # the name the act has at the clause cited
         at = e.get("names", {}).get(target)
         return at == tname if at is not None else e["name"] == tname or e.get("oname") == tname
-    hit = [i for i, e in enumerate(entries) if e["kind"] == "act" and target in e["label"].split("+") and (tname is None or named(e))]
+    hit = [i for i, e in enumerate(entries) if e["kind"] == "act" and not e.get("voteact") and target in e["label"].split("+") and (tname is None or named(e))]
     if not hit:
         raise Err("%s: no act of %s%s" % (where, target, " named " + tname if tname else ""))
-    return hit
+    pids = {entries[i].get("pid") for i in hit} - {None}     # an act cited by its name: its ward's forms with it
+    return sorted(set(hit) | {i for i, e in enumerate(entries) if e.get("party") in pids})
+
+
+def reader_edges(e, taken, kn, agents):
+    """The edges a ward's form of the act e needs: the party, taken for by its officer, guards no longer, and a role
+    that reads (holds a state the act requires, changes none, does not guard) had its edge to a guard from a state the
+    party required; each officer then knows each agent the act names, so that it has an edge to each role that reads,
+    and an act of one agent in two roles stays the act it specialises with the two names one (GSC's def:volition;
+    Calculus #6, the client's decision, 2026-11-15)."""
+    names = [a.lstrip(MARK) for l in e["head"] + e["body"] for a in l[2]] + [g for g in e["guards"] if "(" not in g]
+    names = [x for x in dict.fromkeys(names) if x in agents]
+    return [(False, kn, (o, r)) for o in taken.values() for r in names if r != o]
+
+
+def own_acts(entries, hit):
+    """The acts of hit that are no ward's form derived of another (party_specs)."""
+    return [i for i in hit if not entries[i].get("party")]
+
+
+def renamed(o, name):
+    """An act a citation of one act renames; its ward's forms are renamed with it (unclash)."""
+    if not o.get("party"):
+        o["oname"], o["name"] = o["name"], name
+
+
+def derive_party(w, n, lex, entries, text=False):
+    """The ward's forms of the acts of parties that n derives (World.party_specs), each after its act, with its vote acts."""
+    for sp in w.party.get(n, []):
+        i = next(i for i, x in enumerate(entries) if x["kind"] == "act" and not x.get("party") and (x.get("pid") or key(x)) == sp["pid"])
+        entries[i] = dict(entries[i], pid=sp["pid"])
+        o = dict(entries[i])
+        if text:
+            gen = gen_votes_text(lex, o, sp["votes"], sp["name"], o["label"], o["mark"], sp["takers"], sp["agents"]) if sp["votes"] else None
+            ib, _ = inv_basic(lex)
+            o["conds"] = o["conds"] + [(False, phrase_of(l, ib)) for l in sp["knows"]]
+            o["taken"] = dict(sp["ttext"])
+            o["persons"] = [o["taken"].get(g, g) for g in o["persons"]]
+            if gen:
+                o["conds"], o["effects"] = o["conds"] + gen[0], o["effects"] + gen[1]
+        else:
+            gen = gen_votes(lex, o, sp["votes"], sp["name"], o["label"], o["mark"], sp["takers"], sp["agents"]) if sp["votes"] else None
+            o["body"] = o["body"] + sp["knows"]
+            o["taken"] = dict(sp["taken"])
+            o["guards"] = [o["taken"].get(g, g) for g in o["guards"]]
+            if gen:
+                o["body"], o["head"] = o["body"] + gen[0], o["head"] + gen[1]
+        o.update(name=sp["name"], oname=sp["name"], names={}, party=sp["pid"], sfx=sp["sfx"])
+        o.pop("pid", None)
+        j = after(entries, i)
+        entries.insert(j, dict(o, of=key(entries[i])))
+        if gen:
+            entries[j + 1:j + 1] = [dict(v, of=key(entries[i])) for v in new_votes(entries, gen[2])]
 
 
 def binds_sas(w, n, memo={}):
@@ -1132,14 +1634,20 @@ def expand_schemas(w, n):
     if n in w.sasx:
         return w.sasx[n]
     _, first, parents, subs, own = read_sas(w, n)
+    lex = w.lexicon(n)
     entries, have = [], {}
     for p in parents:
-        inherit(entries, have, instantiate_schemas(expand_schemas(w, p), subs.get(p, [])), ("head", "body", "guards"))
+        inherit(entries, have, instantiate_schemas(expand_schemas(w, p), derive_atoms(subs.get(p, []), lex.votes)), ("head", "body", "guards"))
     for p in parents:
-        entries = instantiate_schemas(entries, binds_sas(w, p))
+        entries = instantiate_schemas(entries, derive_atoms(binds_sas(w, p), lex.votes))
     for e in own:
         if e["kind"] == "cite":
             hit = cited(entries, e["target"], e["tname"], e["label"])
+            if e.get("taken") or e.get("votes"):
+                hit = own_acts(entries, hit)
+                if len(hit) != 1:
+                    raise Err("%s: a citation taken for a party or on votes names one act, and %s has %d" % (e["label"], e["target"], len(hit)))
+            one = len(own_acts(entries, hit)) == 1
             for i in hit:
                 o = dict(entries[i])
                 mp = cite_map(w, n, e, o)
@@ -1147,16 +1655,119 @@ def expand_schemas(w, n):
                 o["head"] = o["head"] + then
                 o["body"] = o["body"] + [(x, p, tuple(mp.get(a, a) for a in args)) for x, p, args in e["body"]] + \
                     [(False, p, args) for x, p, args in then if x and WILD not in args]
+                gen = gen_votes(lex, o, [mp.get(x, x) for x in e["votes"]], e["name"], e["label"], e["mark"]) if e.get("votes") else None
+                if e.get("taken"):
+                    o["taken"] = taken_map(e, mp, o["guards"])
+                    o["guards"] = [o["taken"].get(g, g) for g in o["guards"]]
                 o["guards"] = o["guards"] + [g for g in (map_guard(g, mp) for g in e["guards"]) if g not in o["guards"]]
+                o["must"] = o.get("must", []) + [g for g in (map_guard(g, mp) for g in e.get("must", [])) if g not in o.get("must", [])]
                 o["label"], o["mark"] = o["label"] + "+" + e["label"], e["mark"]
-                if len(hit) == 1:
-                    o["oname"], o["name"] = o["name"], e["name"]
+                if one:
+                    renamed(o, e["name"])
                 o["names"] = dict(o.get("names", {}), **{e["label"]: o["name"]})
-                entries[i] = o
+                if gen:
+                    o["body"], o["head"] = o["body"] + gen[0], o["head"] + gen[1]
+                if e.get("taken"):          # the act taken for a party is one more act, cited by its own name; the act cited stays as it was
+                    o["oname"], o["names"] = o["name"], {e["label"]: o["name"]}
+                    j = after(entries, i)
+                    entries.insert(j, dict(o, of=key(entries[i])))
+                else:
+                    j = i
+                    entries[i] = o
+                if gen:
+                    entries[j + 1:j + 1] = [dict(v, of=key(entries[i])) for v in new_votes(entries, gen[2])]
         else:
-            entries.append(dict(e, names={e["label"]: e["name"]}) if e["kind"] == "act" else e)
+            if e["kind"] == "act":
+                e = dict(e, names={e["label"]: e["name"]})
+                org = e.pop("votes", None)
+                gen = gen_votes(lex, e, org, e["name"], e["label"], e["mark"]) if org else None
+                if gen:
+                    e["body"], e["head"] = e["body"] + gen[0], e["head"] + gen[1]
+                entries += [e] + (new_votes(entries, gen[2]) if gen else [])
+            else:
+                entries.append(e)
+    derive_party(w, n, lex, entries)
+    unclash(entries)
     w.sasx[n] = entries
     return entries
+
+
+def after(entries, i):
+    """The place for one more act taken from entries[i]: after it and the acts taken from it before, in the order cited."""
+    j = i + 1
+    while j < len(entries) and entries[j].get("of") == key(entries[i]):
+        j += 1
+    return j
+
+
+def new_votes(entries, votes):
+    """The vote acts generated that the contract does not have yet: one act may be cited on one's votes twice."""
+    have = {x["name"] for x in entries if x["kind"] == "act"}
+    return [v for v in votes if v["name"] not in have]
+
+
+def taken_map(e, mp, guards):
+    """The guards a citation 'taken for NAME1 by NAME2' replaces, in the names of the act cited: {NAME1: NAME2}."""
+    out = {}
+    for a, b in e["taken"].items():
+        a = mp.get(a, a)
+        if a not in guards:
+            raise Err("%s: taken for %s, who does not take %s" % (e["label"], a, e["target"]))
+        out[a] = b
+    return out
+
+
+def gen_votes(lex, o, orgs, name, label, mark, takers=None, agents=None):
+    """The act o decided on the votes of the organisations orgs: ([the conditions that the votes of each decide it],
+    [the effect that clears them], [the vote act of each]).  With takers, {org: the one who takes it for org}, also
+    the condition that each is entitled to take it for its organisation (GO:2's Act)."""
+    out = ([], [], [])
+    for k, org in enumerate(orgs):
+        c, clear, vote = gen_vote(lex, o, org, k, name, label, mark, (takers or {}).get(org), agents)
+        out[0].extend(c)
+        out[1].append(clear)
+        out[2].append(vote)
+    return out
+
+
+def gen_vote(lex, o, org, k, name, label, mark, taker=None, agents=None):
+    """The act o decided on the votes of org: (the conditions that taker, if named, is entitled to take it for org and
+    that the votes decide it, the effect that clears them, the vote act).
+    The states are GO's of a motion, derived for the act (vote_family); the one who votes is Voter."""
+    f = [f for f in lex.votes if f["id"] in lex.voted.get(name, [])[k:k + 1]]
+    if not f:
+        raise Err("%s %s: decided on votes, and no states of its votes" % (label, name))
+    f = f[0]
+    r = [r for t, r, act in lex.defs if act and t == f["t"]][0]
+    _, ir = inv_basic(lex)
+    sv, _ = subject(f["t"])
+    full = None
+    for b, _ in match_some(pattern(r, lex), o["head"]):
+        for fb in subject_bindings(sv, b, [guard_text(g, ir) for g in o["guards"]]):
+            if all(v in fb for v in tvars(f["t"])) and fb[f["zp"]] == org:
+                full = fb
+                break
+        if full:
+            break
+    if not full:
+        raise Err("%s %s: %s takes no place of its act phrase '%s'" % (label, name, org, f["t"]))
+    if VOTER in names_of(o):
+        raise Err("%s %s: the act names %s, the name of the one who votes" % (label, name, VOTER))
+    vals = {f["ren"][v]: full[v] for v in tvars(f["t"])}
+    at = lambda k, x: tuple(org if a == "z" else x if a == "x" else vals[a] for a in f["st"][k]["args"])
+    pr = lambda k: f["st"][k]["pred"]
+    # with agents (a ward's form), the organisation knows each agent its motion names, as the vote names them (GKK's
+    # 'z knows y'; Calculus #6, the client's decision, 2026-11-15)
+    kn = [p for t, p, a in lex.basic if t == KNOWS]
+    knows = [(False, kn[0], (org, a)) for a in dict.fromkeys(at("vote", VOTER)) if agents and kn and a in agents and a != org]
+    vote = dict(kind="act", label=label, mark=mark, name=f["vname"], head=[(False, pr("vote"), at("vote", VOTER))],
+                body=[(False, pr("voter"), at("voter", VOTER))] + knows + [(True, pr("vote"), at("vote", VOTER))], guards=[VOTER], must=[],
+                same=[p for p in o.get("same", []) if set(p.split("=")) <= set(at("vote", VOTER))],      # the names of the act possibly one are so in its motion
+                names={label: f["vname"]}, voteact=True)
+    if taker and "taker" not in f["st"]:
+        raise Err("%s %s: taken for %s on its votes, and no state '%s' of GO in this contract" % (label, name, org, GO_TAKE))
+    take = [(False, pr("taker"), at("taker", taker))] if taker else []
+    return take + [(False, pr("decided"), at("decided", None))], (True, pr("vote"), at("vote", WILD)), vote
 
 
 # ---- the operations, on the text ----------------------------------------------------
@@ -1208,11 +1819,18 @@ def instantiate_text(w, entries, items, p, n):
                     if kind == "state":
                         e["effects"], e["conds"] = sub_phrases(e["effects"], [(rx, new)], lex, True), sub_phrases(e["conds"], [(rx, new)], lex)
                         for x in extras(new):
+                            if re.fullmatch(NAME, x):    # a name the first line writes, a count or a constant, stays, as in instantiate_schemas
+                                continue
                             xr = r"(?<![A-Za-z])%s(?![A-Za-z])" % x
                             if not any(re.search(xr, ph) for _, ph in e["effects"]):
                                 e["conds"] = [(c, re.sub(xr, "anyone" if c else "someone", ph)) for c, ph in e["conds"]]
                     else:
-                        e["persons"] = [low(fill(new, rx.fullmatch(x).groupdict())) if rx.fullmatch(x) else x for x in e["persons"]]
+                        def role_sub(x):
+                            m = re.fullmatch(r"(.*?)((?:, other than %s,)*)" % NAME, x)      # a role and those other than whom
+                            r = rx.fullmatch(m.group(1))
+                            return low(fill(new, r.groupdict())) + m.group(2) if r else x
+                        e["persons"] = [role_sub(x) for x in e["persons"]]
+                        e["must"] = [role_sub(x) for x in e.get("must", [])]
                 out.append(e)
         else:
             new, old = item.split(" for ", 1)
@@ -1222,9 +1840,11 @@ def instantiate_text(w, entries, items, p, n):
                 if e["kind"] == "kept":
                     e["text"] = ft(e["text"])
                 else:
+                    rename_act(e, new, old)
                     e["effects"] = [(x, ft(s)) for x, s in e["effects"]]
                     e["conds"] = [(x, ft(s)) for x, s in e["conds"]]
                     e["persons"] = [ft(s) for s in e["persons"]]
+                    e["must"] = [ft(s) for s in e.get("must", [])]
                 out.append(e)
         entries = out
     return entries
@@ -1232,31 +1852,74 @@ def instantiate_text(w, entries, items, p, n):
 
 def expand_text(w, n, own):
     c = w.contract(n)
+    lex = w.lexicon(n)
     parents, subs, _ = first_line(c, w.known)
     entries, have = [], {}
     for p in parents:
-        inherit(entries, have, instantiate_text(w, w.flat[p], subs.get(p, []), p, n), ("effects", "conds", "persons"))
+        inherit(entries, have, instantiate_text(w, w.flat[p], derive_items(subs.get(p, []), w.lexicon(p)), p, n), ("effects", "conds", "persons"))
     for p in parents:
         for item, q in w.binds(p):
             entries = instantiate_text(w, entries, [item], q, n)
     for e in own:
         if e["kind"] == "cite":
             hit = cited(entries, e["target"], e["tname"], e["label"])
+            if e.get("taken") or e.get("votes"):
+                hit = own_acts(entries, hit)
+                if len(hit) != 1:
+                    raise Err("%s: a citation taken for a party or on votes names one act, and %s has %d" % (e["label"], e["target"], len(hit)))
+            one = len(own_acts(entries, hit)) == 1
             for i in hit:
                 o = dict(entries[i])
                 mp = cite_map(w, n, e, o, True)
                 o["effects"] = o["effects"] + [(x, map_text(s, mp)) for x, s in e.get("effects", [])]
                 o["conds"] = o["conds"] + [(x, map_text(s, mp)) for x, s in e["conds"]]
+                gen = gen_votes_text(lex, o, [map_text(x, mp) for x in e["votes"]], e["name"], e["label"], e["mark"]) if e.get("votes") else None
+                if e.get("taken"):
+                    o["taken"] = taken_map(e, {k: map_text(k, mp) for k in e["taken"]}, o["persons"])
+                    o["persons"] = [o["taken"].get(g, g) for g in o["persons"]]
                 o["persons"] = o["persons"] + [g for g in (map_text(g, mp) for g in e["persons"]) if g not in o["persons"]]
                 o["label"], o["mark"] = o["label"] + "+" + e["label"], e["mark"]
-                if len(hit) == 1:
-                    o["oname"], o["name"] = o["name"], e["name"]
+                if one:
+                    renamed(o, e["name"])
                 o["names"] = dict(o.get("names", {}), **{e["label"]: o["name"]})
-                entries[i] = o
+                if gen:
+                    o["conds"], o["effects"] = o["conds"] + gen[0], o["effects"] + gen[1]
+                if e.get("taken"):
+                    o["oname"], o["names"] = o["name"], {e["label"]: o["name"]}
+                    j = after(entries, i)
+                    entries.insert(j, dict(o, of=key(entries[i])))
+                else:
+                    j = i
+                    entries[i] = o
+                if gen:
+                    entries[j + 1:j + 1] = [dict(v, of=key(entries[i])) for v in new_votes(entries, gen[2])]
         else:
-            entries.append(dict(e, names={e["label"]: e["name"]}) if e["kind"] == "act" else e)
+            if e["kind"] == "act":
+                e = dict(e, names={e["label"]: e["name"]})
+                org = e.pop("votes", None)
+                gen = gen_votes_text(lex, e, org, e["name"], e["label"], e["mark"]) if org else None
+                if gen:
+                    e["conds"], e["effects"] = e["conds"] + gen[0], e["effects"] + gen[1]
+                entries += [e] + (new_votes(entries, gen[2]) if gen else [])
+            else:
+                entries.append(e)
+    derive_party(w, n, lex, entries, True)
+    unclash(entries)
     w.flat[n] = entries
     return entries
+
+
+def gen_votes_text(lex, o, org, name, label, mark, takers=None, agents=None):
+    """gen_votes on the flat text: the act's effects read as atoms, and what it generates written as psi writes it."""
+    head = []
+    for x, ph in o["effects"]:
+        head += [(x ^ l[0], l[1], l[2]) for l in lits_of(ph, lex)]
+    guards = [g for _, g in persons_of(join(o["persons"]), lex)] if o["persons"] else []
+    conds, clears, votes = gen_votes(lex, dict(o, head=head, body=[], guards=guards), org, name, label, mark, takers, agents)
+    ib, ir = inv_basic(lex)
+    return [(False, phrase_of(c, ib)) for c in conds], [(True, phrase_of(c, ib)) for c in clears], \
+        [dict(v, persons=[guard_text(g, ir) for g in v["guards"]], effects=[(l[0], phrase_of(l, ib)) for l in v["head"]],
+              conds=[(l[0], phrase_of(l, ib)) for l in conditions(v)]) for v in votes]
 
 
 # ---- the two maps between a flat text and schemas ---------------------------------------
@@ -1279,7 +1942,7 @@ def phi(lines, lex):
         must = []
         if " Must consent: " in rest:
             rest, mu = rest.rsplit(" Must consent: ", 1)
-            must = mu[:-1].split(", ")
+            must = [g for _, g in persons_of(mu[:-1], lex)]      # parsed as the guards are, a role by the role lexicon
         name, body = rest[:-1].split(": ", 1)
         conds = ""
         if ", provided " in body:
@@ -1287,6 +1950,8 @@ def phi(lines, lex):
         mm = re.match(r"(.*?) may (?:jointly )?(.*)$", body)
         persons = persons_of(mm.group(1), lex) if mm else []
         eff, cnd = lits_of(mm.group(2) if mm else low(body), lex), lits_of(conds, lex)
+        rp = lex.refl_preds()
+        cnd = [x for x in cnd if x[0] or not self_atom(x[1], x[2], rp)]
         out.append(dict(kind="act", label=label, mark=mark, name=name, head=eff, same=same, must=must,
                         body=cnd + [(False, p, a) for x, p, a in eff if x and WILD not in a], guards=[g for _, g in persons]))
     return out
@@ -1312,14 +1977,17 @@ def guard_text(g, ir):
     if "(" not in g:
         return g
     _, p, a = parse_atom(g)
-    return fill(ir[p][0], dict(zip(ir[p][1], a)))
+    ex = [x[1:] for x in a if x.startswith("-")]
+    a = [x for x in a if not x.startswith("-")]
+    return fill(ir[p][0], dict(zip(ir[p][1], a))) + "".join(", other than %s," % x for x in ex)
 
 
 def conditions(e):
-    """The body of a schema without the atoms it deletes."""
+    """The body of a schema without the atoms it deletes, each required by its deletion; a deletion with the wildcard,
+    which ends every atom it matches, requires none, so an atom of the body that matches it is a condition stated."""
     body = list(e["body"])
     for l in e["head"]:
-        if l[0]:
+        if l[0] and WILD not in l[2]:
             for i in range(len(body) - 1, -1, -1):
                 if body[i] == (False, l[1], l[2]):
                     del body[i]
@@ -1335,7 +2003,7 @@ def psi(entries, lex):
         if e["kind"] == "kept":
             out.append(flat_line(e))
         else:
-            out.append(flat_line(dict(e, persons=[guard_text(g, ir) for g in e["guards"]],
+            out.append(flat_line(dict(e, persons=[guard_text(g, ir) for g in e["guards"]], must=[guard_text(g, ir) for g in e.get("must", [])],
                                       effects=[(l[0], phrase_of(l, ib)) for l in e["head"]],
                                       conds=[(l[0], phrase_of(l, ib)) for l in conditions(e)])))
     return out
@@ -1356,7 +2024,19 @@ def match_lits(pats, lits, b=None):
         for a, v in zip(p[2], l[2]):
             if a[:1] in MARK and v[:1] == a[:1]:
                 a, v = a[1:], v[1:]
-            if PH.fullmatch(a):
+            if "@" in a:                # t@x: a thing with its signatures, the last signer x, the rest t
+                pa, va = a.split("@"), v.split("@")
+                if len(va) < len(pa):
+                    ok = False
+                    continue
+                va = ["@".join(va[:len(va) - len(pa) + 1])] + va[len(va) - len(pa) + 1:]
+                for a1, v1 in zip(pa, va):
+                    if PH.fullmatch(a1):
+                        if nb.setdefault(a1, v1) != v1:
+                            ok = False
+                    elif a1 != v1:
+                        ok = False
+            elif PH.fullmatch(a):
                 if nb.setdefault(a, v) != v:
                     ok = False
             elif a != v:
@@ -1372,7 +2052,8 @@ def pattern(text, lex):
     up = {v: "Zz" + v.upper() + "zz" for v in vs}
     filled = " ".join(fill(tok, up) for tok in toks(text))
     back = {v: k for k, v in up.items()}
-    return [(n, p, tuple(a[0] + back.get(a[1:], a[1:]) if a[:1] in MARK else back.get(a, a) for a in args)) for n, p, args in lits_of(filled, lex)]
+    bk = lambda a: "@".join(back.get(x, x) for x in a.split("@"))
+    return [(n, p, tuple(a[0] + bk(a[1:]) if a[:1] in MARK else bk(a) for a in args)) for n, p, args in lits_of(filled, lex)]
 
 
 def fold_states(lits, lex, actor=None):
@@ -1475,10 +2156,9 @@ def act_phrases(lex):
     return [(t, pattern(r, lex)) for t, r, isact in lex.defs if isact]
 
 
-def act_sentence(e, lex, acts, ir):
-    """The sentence of an act schema: the act phrase whose effects are its head, its conditions folded."""
+def best_phrase(e, lex, acts, gts):
+    """The act phrase whose effects are the head of the act schema e, its binding, persons, conditions and the effects left."""
     best = None
-    gts = [guard_text(g, ir) for g in e["guards"]]
     for k, (t, pat) in enumerate(acts):
         sv, rest = subject(t)
         for b, rest_h in match_some(pat, e["head"]):
@@ -1498,12 +2178,29 @@ def act_sentence(e, lex, acts, ir):
                 score = (len(rest_h), len([v for v in sv if v not in b]), k)
                 if best is None or score < best[0]:
                     best = (score, t, full, [full[v] for v in sv] if gts else [], conds, rest_h)
+    return best
+
+
+def taken_text(taken):
+    """', taken for Alice by Erin and for Bob by Frank' of {Alice: Erin, Bob: Frank}."""
+    return ", taken " + " and ".join("for %s by %s" % kv for kv in taken.items()) if taken else ""
+
+
+def act_sentence(e, lex, acts, ir):
+    """The sentence of an act schema: the act phrase whose effects are its head, its conditions folded.  An act a
+    citation takes for a party is written with its own persons, 'taken for' the party 'by' the one who takes it."""
+    tk = {k: guard_text(v, ir) for k, v in (e.get("taken") or {}).items()}
+    back = {v: k for k, v in tk.items()}
+    gts = [back.get(g, g) for g in (guard_text(g, ir) for g in e["guards"])]
+    best = best_phrase(e, lex, acts, gts)
     if not best:
         return None
     _, t, full, persons, conds, rest_h = best
     mu = [guard_text(g, ir) for g in e.get("must", [])]
-    s = "%s: %s" % (e["name"], act_text(persons, t, full, join(g for g in gts if g not in persons and g not in mu),
-                                        fold_states(conds, lex, actor_of(persons, t, full)), join(mu)))
+    whole = act_text(persons, t, full, join(g for g in gts if g not in persons and g not in mu),
+                     fold_states(conds, lex, actor_of(persons, t, full)), join(mu))
+    bare = act_text(persons, t, full, "", "")[:-1]
+    s = "%s: %s" % (e["name"], bare + taken_text(tk) + whole[len(bare):])
     return s[:-1] + ", and then " + effects_text(rest_h, lex) + "." if rest_h else s
 
 
@@ -1562,23 +2259,30 @@ def decompile(w, n):
     body, by = [], {}
     for e in entries:
         if e["label"].endswith(":0"):
-            head_lines.append(("prose", e["text"]))
+            if e["label"] == n + ":0" and (e["text"].startswith(REFL) or e["text"].startswith(ENVL) or e["text"].startswith(PARL)):
+                head_lines.append(e["text"])      # a declaration of the Logic pragmas, after the lexicon lines
+            else:
+                head_lines.append(("prose", e["text"]))
             continue
         if e["kind"] == "kept":
             s = e["text"]
         elif e["kind"] == "cite":
-            s = "%s: %s%s" % (e["name"], e["target"], " " + e["tname"] if e["tname"] else "")
+            s = "%s: %s%s%s" % (e["name"], e["target"], " " + e["tname"] if e["tname"] else "", taken_text(e.get("taken")))
             if e["body"]:
                 s += ", only if " + fold_states(e["body"], lex, ACTOR)
             if e["guards"]:
                 s += ", with the consent of " + join(guard_text(g, ir) for g in e["guards"])
             if e.get("then"):
                 s += ", and then " + effects_text(e["then"], lex)
+            if e.get("votes"):
+                s += ", on the votes of %s for it" % votes_text(e["votes"])
             s += "."
         else:
             s = act_sentence(e, lex, acts, ir)
             if s is None:
                 raise Err("%s %s: no act phrase has these effects" % (e["label"], e["name"]))
+            if e.get("votes"):
+                s = s[:-1] + ", on the votes of %s for it." % votes_text(e["votes"])
         num = int(e["label"].split(":")[1])
         if num not in by:
             by[num] = [e["mark"], []]
@@ -1587,7 +2291,10 @@ def decompile(w, n):
     # the contract: its prose and names lines, its clauses; then its Logic pragmas, the lexicon lines
     out += [l[1] for l in head_lines if not isinstance(l, str)]
     for num in body:
-        out.append("%d. %s %s" % (num, by[num][0], " ".join(by[num][1])))
+        line = " ".join(by[num][1])
+        for x, y in w.contract(n).params.items():       # a lower-case parameter written as the contract writes it
+            line = re.sub(r"(?<![A-Za-z'*-])%s(?![A-Za-z'-])" % y, x, line)
+        out.append("%d. %s %s" % (num, by[num][0], line))
     lexl = [l for l in head_lines if isinstance(l, str) and l != PRAGMAS]
     if lexl:
         out += [PRAGMAS] + lexl
@@ -1602,9 +2309,11 @@ def norm(entries):
         if e["kind"] == "kept":
             out.append((e["label"], e["mark"], e["text"]))
         elif e["kind"] == "cite":
-            out.append((e["label"], e["mark"], e["name"], e["target"], e["tname"], tuple(sorted(e["body"])), tuple(sorted(e["guards"])), tuple(sorted(e.get("then", [])))))
+            out.append((e["label"], e["mark"], e["name"], e["target"], e["tname"], tuple(sorted(e["body"])), tuple(sorted(e["guards"])), tuple(sorted(e.get("then", [])))) +
+                       ((tuple(sorted((e.get("taken") or {}).items())), tuple(e.get("votes") or ())) if e.get("taken") or e.get("votes") else ()))
         else:
-            out.append((e["label"], e["mark"], e["name"], tuple(sorted(e["head"])), tuple(sorted(e["body"])), tuple(sorted(e["guards"])), tuple(e.get("same") or ()), tuple(sorted(e.get("must") or ()))))
+            out.append((e["label"], e["mark"], e["name"], tuple(sorted(e["head"])), tuple(sorted(e["body"])), tuple(sorted(e["guards"])), tuple(e.get("same") or ()), tuple(sorted(e.get("must") or ()))) +
+                       ((tuple(e["votes"]),) if e.get("votes") else ()))
     return sorted(out, key=repr)
 
 
@@ -1647,7 +2356,8 @@ def main():
                 res.append("recover same")
             else:
                 w2 = World(allnames)
-                w2.c, w2.lex = dict(w.c), dict(w.lex)
+                w2.c, w2.lex, w2.party = dict(w.c), dict(w.lex), dict(w.party)
+                w2.sasx = {k: v for k, v in w.sasx.items() if k != n}
                 put("back-tmp", n, back)
                 c2 = read_gr(n, "back-tmp")
                 w2.c[n] = c2

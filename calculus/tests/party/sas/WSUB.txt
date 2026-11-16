@@ -1,0 +1,4 @@
+WSUB: A Restriction of Wards in a Currency
+WSUB extends WCUR.
+WSUB:0 - | Alice and Bob are parties, Sum a number.
+WSUB:1 ■ Pay known: CUR:1 Pay <- knows(Bob,Alice).

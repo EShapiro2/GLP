@@ -1,0 +1,6 @@
+Q: Qualified
+Q restricts C.
+Alice is a person.
+1. ■ Signal: C:1, only if Alice is qualified.
+Logic pragmas.
+Vocabulary: x is qualified = q(x).

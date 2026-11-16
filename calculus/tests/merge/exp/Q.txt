@@ -1,0 +1,4 @@
+% Written by tools/expand.py from rev/; do not edit.
+Q: Qualified
+Alice is a person.
+C:1, Q:1. ■ Signal: Alice may signal, only if Alice is qualified.

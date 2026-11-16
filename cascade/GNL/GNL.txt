@@ -5,111 +5,51 @@
 % Last changed: 2026-11-12, by GO #5.
 % Schemas: GNL.glp beside this file.
 GNL: Network Lodging
-GNL extends GNO, GDO (GRH, Grassroots Ride-Hailing, in preparation) and REC.
-A host is a provider and a traveller a customer.  A listing names a place, the nights offered and the price a night in Orga-coins; its terms say what is released to whom on cancellation.
-Alice and Bob are persons, Orga a lodging organisation.
-1. ■ Listing.  Bob, a host, may post a listing to the travellers he points to, and a traveller may pass it to the travellers they point to; Bob may withdraw it.
-2. ■ Booking.  Alice, a traveller, and Bob, who know each other, may jointly book nights of his listing; Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
-3. ■ Check-in and checkout.  Alice may record her check-in when she is at the place on the first night, and her checkout when she leaves it after the last; the payment and the deposit are then released to Bob.
-4. ■ Cancelling.  Alice or Bob may cancel a booking before the first night, and the payment and the deposit are released to Alice and to Bob as the terms say; if no check-in is recorded on the first night while Alice is at the place, she may cancel and both are released to her.
-5. ■ Dispute.  Alice, checked in, or Bob may raise a dispute over the payment and the deposit before checkout (GNO:4).
-6. ◆ Review.  REC:1, where Alice recommends Bob for the stay after checkout.
-Pragmas
+GNL extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation), and restricts GNO and REC.
+A *host* is a provider and a *traveller* a customer. A *listing* names a place, the nights offered and the price a night in Orga-coins; its terms say what is released to whom on cancellation.
+Alice and Bob are persons, Orga a network organisation.
+1. ■ Listing. Post: Bob, a host, may post a listing to the travellers he points to. Pass: A traveller may pass it to the travellers they point to. Withdraw listing: Bob may withdraw it.
+2. ■ Book: Alice, a traveller, may book nights of Bob's listing with the consent of Bob, provided Alice and Bob know each other; Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
+3. ■ Check-in and checkout. Check in: Alice may record her check-in when she is at the place on the first night. Check out: Alice may record her checkout when she leaves it after the last night; the payment and the deposit are then released to Bob.
+4. ■ Cancelling. Cancel: Alice or Bob may cancel a booking before the first night, and the payment and the deposit are then released to Alice and to Bob as the terms say. No-show: If no check-in is recorded on the first night while Alice is at the place, she may cancel and both are then released to her.
+5. ■ Raise: GNO:2, only before checkout, and by Alice only if she is checked in.
+6. ◆ Recommend: REC:1, where Alice recommends Bob for the stay after checkout.
+Logic pragmas
+GNL extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation), and restricts GNO and REC.
+A *host* is a provider and a *traveller* a customer. A *listing* names a place, the nights offered and the price a night in Orga-coins; its terms say what is released to whom on cancellation.
+Alice, Bob and Carol are persons, Orga a network organisation, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a traveller, in clause 5 an arbiter, and in clause 6 Skill is the listing.
+1. ■ Listing. Post: Bob may post Listing in Orga, provided Bob is a host of Orga. Bob posts the listing to the travellers he points to. Send listing: Listing of Bob goes to Alice in Orga, provided Bob has Listing posted in Orga, Bob points to Alice and Alice is a traveller of Orga. Pass: Alice may pass Listing of Bob to Carol in Orga, provided Alice is a traveller of Orga, Alice has received Listing of Bob in Orga, Alice points to Carol and Carol accepts a Mark-denominated Orga-coin in payment. Withdraw listing: Bob may withdraw Listing from Orga.
+2. ■ Book: Alice may book nights of Listing of Bob in Orga, with the consent of Bob, provided Alice is a traveller of Orga, Bob has Listing posted in Orga and Alice and Bob know each other. Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
+3. ■ Check-in and checkout. Check in: Alice may record her check-in at Listing of Bob, provided Alice and Bob have a booking of Listing and Alice is at the place of Listing on the first night. Check out: Alice may record her checkout from Listing of Bob in Orga, provided Alice leaves the place of Listing after the last night. The payment and the deposit are then released to Bob.
+4. ■ Cancelling. Cancel: Alice may cancel her booking of Listing of Bob in Orga, provided it is before the first night of Listing. Host cancel: Bob may cancel his booking of Listing by Alice in Orga, provided it is before the first night of Listing. The payment and the deposit are then released to Alice and to Bob as the terms say. No-show: Alice may cancel her booking of Listing of Bob in Orga, provided no check-in at Listing is recorded on the first night while Alice is at the place. The payment and the deposit are then both released to Alice.
+5. ■ Raise: GNO:2 Raise, only if Alice is checked in at Listing of Bob. Provider raise: GNO:2 Provider raise, only if Bob has nights of Listing booked by Alice.
+6. ◆ Recommend: REC:1, only if Alice has checked out of Skill of Bob.
+Logic pragmas.
+Vocabulary: y has l posted in z = posted(y,l,z); x has received l of y in z = received(x,l,y,z); x has nights of l booked with y = booked(x,l,y); y has nights of l booked by x = booked_by(y,l,x); x is at the place of l on the first night = at_place(x,l); x is checked in at l of y = checked_in(x,l,y); x leaves the place of l after the last night = leaves(x,l); x has checked out of l of y = checked_out(x,l,y); it is before the first night of l, for x = before_first_night(x,l); no check-in at l is recorded on the first night while x is at the place = no_show(x,l).
+y is a host of z: y is a provider of z.
+x is a traveller of z: x is a customer of z.
+x and y have a booking of l: x has nights of l booked with y and y has nights of l booked by x.
+After y posts l in z, which requires y does not have l posted in z: y has l posted in z.
+After l of y goes to x in z, which requires x has not received l of y in z: x has received l of y in z.
+After x passes l of y to w in z, which requires w has not received l of y in z: w has received l of y in z.
+After y withdraws l from z: no longer y has l posted in z.
+After x books nights of l of y in z, which requires x and y do not have a booking of l: x and y have a booking of l and z-coins are locked between the provider y and the customer x.
+After x records x's check-in at l of y, which requires x is not checked in at l of y: x is checked in at l of y.
+After x records x's checkout from l of y in z: no longer x is checked in at l of y, x has checked out of l of y, no longer x and y have a booking of l and no longer z-coins are locked between the provider y and the customer x.
+After x cancels x's booking of l of y in z: no longer x and y have a booking of l and no longer z-coins are locked between the provider y and the customer x.
+After y cancels y's booking of l by x in z: no longer x and y have a booking of l and no longer z-coins are locked between the provider y and the customer x.
+Environment: x is at the place of l on the first night; x leaves the place of l after the last night; it is before the first night of l, for x; no check-in at l is recorded on the first night while x is at the place.
+Interface pragmas
 Look: 🏠, network
-Organisations: the organisations Alice participates in, and her roles in each.
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
-Listings: the listings Alice received, and her bookings.
-Identity: Alice [Establish]
-Acquaintance: Alice [Acquaint] <person Bob>
-  Bob: Alice asks you to approve this: acquaint.
-Introduction: Alice [Introduce]
-  Bob: Alice asks you to approve this: introduce.
-Friendship: Alice [Befriend]
-  Bob: Alice asks you to approve this: befriend.
-Ending a friendship: Alice [Unfriend]
-Acts of the organisation: Alice [Sign] <act>
-  Bob [Propose]
-  Bob [Vote] <act>
-  Otto [Move org acquaint] <motion>
-  Otto [Move orgs acquaint] <motion>
-  Bruno [Moveb orgs acquaint] <motion of the other organisation>
-  Otto [Move org befriend] <role> <motion>
-  Otto [Move org unfriend] <motion>
-  Otto [Move orgs befriend] <role> <role> <motion>
-  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
-  Otto [Move retire] <motion>
-  Otto [Move join] <motion>
-  Otto [Move appoint] <role> <motion>
-  Otto [Move dismiss] <role> <motion>
-  Otto [Move amend] <bylaws> <new bylaws> <motion>
-  Otto [Move cc join] <denomination> <stake> <motion>
-  Otto [Move cc remove] <denomination> <motion>
-  Otto [Move gbcc record first] <maturity> <motion>
-  Otto [Move gbcc record] <maturity> <profile> <motion>
-  Otto [Move gno stake] <stake> <motion>
-Creation: Alice [Found] <organisation> <denomination>
-  Orga: Alice asks you to approve this: found.
-Ward and person: Otto [Org acquaint] <person Bob>
-  Bob: Otto asks you to approve this: org acquaint.
-  Otto [Org befriend] <person Bob> <person Alice> <role>
-  Bob: Otto asks you to approve this: org befriend.
-  Alice: Otto asks you to approve this: org befriend.
-  Otto [Org unfriend] <person Bob>
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
-  Bruno: Otto asks you to approve this: orgs acquaint.
-  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
-  Bruno: Otto asks you to approve this: orgs befriend.
-  Alice: Otto asks you to approve this: orgs befriend.
-  Bob: Otto asks you to approve this: orgs befriend.
-Joint guardianship: Bob [Officer unfriend]
-  Otto [Appoint] <person Bob> <role>
-  Bob: Otto asks you to approve this: appoint.
-  Otto [Dismiss] <person Bob> <role>
-  Bob [Resign role]
-Retiring: Otto [Retire]
-Participation: Bob [Join] <person Otto>
-  Otto: Bob asks you to approve this: join.
-Amendment: Otto [Amend] <new bylaws>
-Minting: Alice [Mint coin] <denomination> <amount>
-  Alice [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
-  Bob: Alice asks you to approve this: swap.
-Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount>
-  Alice [Payout] <amount>
-  Alice [Spend] <person Bob> <amount>
-Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Escrow: Alice [Deposit] <amount>
-  Carol: Alice asks you to approve this: deposit.
-  Carol [Release] <amount>
-  Bob: Carol asks you to approve this: release.
-  Carol [Return] <amount>
-  Alice: Carol asks you to approve this: return.
-Treasurers: Otto [Cc join] <person Bob>
-  Bob: Otto asks you to approve this: cc join.
-  Bob [Cc resign]
-  Otto [Cc remove] <person Bob>
-Drawing: Alice [Cc draw] <amount>
-Account: Otto [Gbcc record first] <person Alice> <Dollars>
-  Otto [Gbcc record] <person Alice>
-Stake: Otto [Gno stake] <stake>
-Arbitration: Alice [Gno raise c] <deal> <person Carol>
-  Bob [Gno raise p] <deal> <person Carol>
-  Carol [Gno arbitrate] <deal> <person Alice> <person Bob> <fee> <to customer> <to provider>
-Pointing to friend: Alice [Point friend]
-Transitive pointing: Alice [Point transitive]
-Ceasing to point: Alice [Unpoint]
-Listing: Bob [Gnl list] <limit> <place> <first night> <last night> <price> <terms> <deposit> <fee>
-  Alice [Gnl pass]
-  Bob [Gnl withdraw]
-Booking: Alice [Gnl book] <deal>
-  Bob: Alice asks you to approve this: gnl book.
-Check-in and checkout: Alice [Gnl checkin] <organisation> <person Bob>
-  Alice [Gnl checkout] <organisation> <person Bob>
-Cancelling: Alice [Gnl cancel c] <organisation> <person Bob> <to customer> <to provider> <payment to provider> <deposit to provider>
-  Bob [Gnl cancel p] <organisation> <person Alice> <to customer> <to provider> <payment to provider> <deposit to provider>
-  Alice [Gnl noshow] <organisation>
-Review: Alice [Recommend] <stake>
-Showing: Bob [Show]
-Withdrawing: Alice [Withdraw recommendation]
+Listing: Bob [Post] <listing>
+  Alice [Pass]
+  Bob [Withdraw listing]
+Book: Alice [Book] <listing>
+  Bob: Alice asks to book nights of your listing.
+Check-in and checkout: Alice [Check in] [Check out]
+Cancelling: Alice [Cancel]
+  Bob [Host cancel]
+  Alice [No-show]
+Raise: Alice [Raise] <arbiter>
+  Bob [Provider raise] <arbiter>
+Recommend: Alice [Recommend]

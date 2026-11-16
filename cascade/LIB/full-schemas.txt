@@ -1,0 +1,16 @@
+LIB: Grassroots Library (expanded schemas)
+GKK:0 - | An *identity* is a unique key pair.
+GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | Alice, Bob and Carol are persons.
+GKK:0 - | Reflexive: x knows y.
+GKK:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+LIB:0 - | Alice and Bob are persons, Tome a thing, Day a day and Today a date.
+LIB:1 ◆ Shelve: shelved(Alice,Tome), shelf(Alice,Tome) <- ~shelved(Alice,Tome) guarded by Alice.
+LIB:1 ◆ | Tome is a thing of Alice's own.
+LIB:2 ■ Lend: ~shelf(Alice,Tome), borrowed(Bob,Tome,Alice,Day) <- knows(Alice,Bob), knows(Bob,Alice), today(Alice,Today), gt(Day,Today), shelf(Alice,Tome) guarded by Alice, Bob.
+LIB:3 ■ Return: ~borrowed(Bob,Tome,Alice,Day), shelf(Alice,Tome) <- borrowed(Bob,Tome,Alice,Day) guarded by Bob.
+LIB:4 ○ | On time.
+LIB:4 ○ | Bob will return a borrowed thing by the agreed day.

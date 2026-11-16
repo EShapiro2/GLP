@@ -116,6 +116,15 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
 , \qquad 
 c'_
 {
@@ -126,15 +135,6 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-knows
-}
-(
-Carol
-)
-\}
 ,\\
 &
 \text{provided } 
@@ -147,13 +147,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-knows
-}
-(
-Carol
 )
  \in c_
 {
@@ -169,6 +162,13 @@ knows
 }
 (
 \Alice
+)
+,
+\mathit{
+knows
+}
+(
+Carol
 )
  \in c_
 {
@@ -199,7 +199,7 @@ c_
  \uplus 
 \{
 \mathit{
-open
+open_place
 }
 \}
 ,\\
@@ -216,7 +216,7 @@ identity
 &
 \text{provided } 
 \mathit{
-open
+open_place
 }
  \notin c_
 {
@@ -245,7 +245,7 @@ c_
  \setminus 
 \{
 \mathit{
-open
+open_place
 }
 \}
 ,\\
@@ -256,7 +256,7 @@ identity
 }
 ,
 \mathit{
-open
+open_place
 }
  \in c_
 {
@@ -318,15 +318,15 @@ identity
 }
 ,
 \mathit{
-open
-}
-,
-\mathit{
 nearby
 }
 (
 \Bob
 )
+,
+\mathit{
+open_place
+}
  \in c_
 {
 \Alice
@@ -337,15 +337,15 @@ identity
 }
 ,
 \mathit{
-open
-}
-,
-\mathit{
 nearby
 }
 (
 \Alice
 )
+,
+\mathit{
+open_place
+}
  \in c_
 {
 \Bob

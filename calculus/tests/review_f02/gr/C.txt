@@ -1,0 +1,6 @@
+C: Wildcard deletion
+Alice is a person.
+1. ■ Forget: Alice may forget, provided Alice knows someone.
+Logic pragmas.
+Vocabulary: x knows y = knows(x,y).
+After x forgets: no longer x knows anyone.

@@ -49,11 +49,16 @@ num_info_of(Nm, Hd, C, Fs, Rs, B, num_info(Nm?, C?, Ls?, Cj?, Fi?, Rd?)) :- grou
     variables_of(Hd?, Vs4),
     variables_of(Hd?, Vs5),
     variables_of(Hd?, Vs6),
-    locals_of(Vs1?, Rs?, B?, Ls00),
-    locals_of(Vs2?, Rs?, B?, Ls10),
-    locals_of(Vs3?, Rs?, B?, Ls20),
-    locals_of(Vs5?, Rs?, B?, Ls30),
-    locals_of(Vs6?, Rs?, B?, Ls40),
+    con_args(C?, Ca1),
+    locals_of(Vs1?, Rs?, Ca1?, B?, Ls00),
+    con_args(C?, Ca2),
+    locals_of(Vs2?, Rs?, Ca2?, B?, Ls10),
+    con_args(C?, Ca3),
+    locals_of(Vs3?, Rs?, Ca3?, B?, Ls20),
+    con_args(C?, Ca5),
+    locals_of(Vs5?, Rs?, Ca5?, B?, Ls30),
+    con_args(C?, Ca6),
+    locals_of(Vs6?, Rs?, Ca6?, B?, Ls40),
     det_locals(C?, Hd?, Rs?, Ls00?, Ls),
     det_locals(C?, Hd?, Rs?, Ls10?, Ls1),
     det_locals(C?, Hd?, Rs?, Ls20?, Ls2),
@@ -470,6 +475,8 @@ var_name(svar(X), vn(X?)).
 var_name(num(X), vn(X?)).
 %% A real variable is num(X) to the checks (cvac.glp, reals_off); the clause covers the type.
 var_name(real(X), vn(X?)).
+%% A variable over the constants is num(X) to the checks (cvac.glp, consts_off); the clause covers the type.
+var_name(const(X), vn(X?)).
 var_name(role(_), novar).
 var_name(nterm(_), novar).
 var_name(sgn(_, _), novar).
@@ -500,13 +507,37 @@ procedure keep_arg_if(YesNo?, Arg?, Args?, Args).
 keep_arg_if(yes, A, R, [A?|R?]).
 keep_arg_if(no, _, R, R?).
 %% "A variable that occurs only in atoms required or deleted at one role, and in the constraint and the safe formulas, is local to it; and a variable is also local to a role, and read there, where atoms the schema requires at that role hold it, no atom it deletes, forbids or adds at that role and no atom it requires, deletes or forbids at another role holds it, and atoms it adds at other roles do; a variable of an atom deleted at one role and added at another is not local, and the request names it" (vGLP 6abbed9, Section 5.4, "Speech-act schemas as local specifications", on Cloud #14's reading, Code_inbox.md, 2026-11-10 11:09 and 11:12 UTC): a variable kept or deleted at one role I and nowhere else, forbidden nowhere and listed by no listed role, is local to I where no atom adds it, or where no atom deletes it and no atom adds it at I.
-procedure locals_of(Args?, RoleSpecs?, Integer?, Locs).
-locals_of([], _, _, []).
-locals_of([V|Vs], Rs, B, Ls?) :- ground(V?), ground(Rs?), integer(B?) |
+procedure locals_of(Args?, RoleSpecs?, Args?, Integer?, Locs).
+locals_of([], _, _, _, []).
+locals_of([V|Vs], Rs, Ca, B, Ls?) :- ground(V?), ground(Rs?), ground(Ca?), integer(B?) |
     occ_roles(Rs?, 1, V?, Kr0, Ot, Dl, Ad),
     dedup(Kr0?, Kr),
-    locals_of(Vs?, Rs?, B?, Ls1),
-    local_one(Kr?, Ot?, Dl?, Ad?, B?, V?, Ls1?, Ls).
+    base_deletes(Rs?, 1, B?, V?, Bd0),
+    mem(V?, Ca?, InC),
+    neg(InC?, NotC),
+    and(Bd0?, NotC?, Bd),
+    locals_of(Vs?, Rs?, Ca?, B?, Ls1),
+    local_unless(Bd?, Kr?, Ot?, Dl?, Ad?, B?, V?, Ls1?, Ls).
+%% "... is local to that role, ..., but for a variable of an atom the schema deletes at the base of the schema: the person who proposes chooses which of their own records the act removes, so the schema-binding binds that variable and the request names it, as the person a pointer points to and its label when Alice removes one of her pointers" (vGLP, Section 5.4, "Speech-act schemas as local specifications"): a variable among the arguments of an atom the role B, the base, deletes, a name term's and a signed term's included, is not local.  A cleared atom is cleared, not deleted, and gives none; and the paper does not say it of a variable that is only the multiplicity of a deleted atom, which is as it was.  The rule is of a variable the constraint does not name, Ca the constraint's arguments (vGLP, Section 5.4: "but for a variable of an atom the schema deletes at the base of the schema (below) that the constraint does not name"): one it names is local as before, as i of i_1 = i + k.
+procedure local_unless(YesNo?, Ints?, YesNo?, YesNo?, Ints?, Integer?, Arg?, Locs?, Locs).
+local_unless(yes, _, _, _, _, _, _, Ls, Ls?).
+local_unless(no, Kr, Ot, Dl, Ad, B, V, Ls, R?) :- local_one(Kr?, Ot?, Dl?, Ad?, B?, V?, Ls?, R).
+%% Whether the role of index B, from I, deletes an atom, not a cleared one, with V among its arguments.
+procedure base_deletes(RoleSpecs?, Integer?, Integer?, Arg?, YesNo).
+base_deletes([], _, _, _, no).
+base_deletes([R|_], I, B, V, D?) :- I? =:= B? |
+    rs_lists(R?, _, M, _, _),
+    uncleared(M?, M1),
+    own_args(M1?, A0),
+    flat_args(A0?, A),
+    mem(V?, A?, D).
+base_deletes([_|Rs], I, B, V, D?) :- otherwise, integer(I?) | I1 := I? + 1, base_deletes(Rs?, I1?, B?, V?, D).
+%% The arguments of the atoms, their multiplicities apart.
+procedure own_args(Atoms?, Args).
+own_args([], []).
+own_args([atom(_, As)|Xs], R?) :- own_args(Xs?, R1), app(As?, R1?, R).
+own_args([times(_, A)|Xs], R?) :- own_args([A?|Xs?], R).
+own_args([rest(_, _, A)|Xs], R?) :- own_args([A?|Xs?], R).
 %% occ_roles(Rs, I, V, Kr, Ot, Dl, Ad): the indices of the roles that keep or delete an atom naming V; whether a role forbids one, or lists V among a listed role's arguments; whether a role deletes one; and the indices of the roles that add one.
 procedure occ_roles(RoleSpecs?, Integer?, Arg?, Ints, YesNo, YesNo, Ints).
 occ_roles([], _, _, [], no, no, []).
@@ -865,6 +896,8 @@ lin_coef(mul(A, B), V, K?) :- ground(A?), ground(B?), ground(V?) |
 lin_coef(num(X), V, K?) :- ground(X?), ground(V?) | same_arg_coef(num(X?), V?, K).
 %% A real variable is num(X) to the checks (cvac.glp, reals_off); the clause covers the type.
 lin_coef(real(X), V, K?) :- ground(X?), ground(V?) | same_arg_coef(num(X?), V?, K).
+%% A variable over the constants is num(X) to the checks (cvac.glp, consts_off); the clause covers the type.
+lin_coef(const(X), V, K?) :- ground(X?), ground(V?) | same_arg_coef(num(X?), V?, K).
 lin_coef(role(_), _, 0).
 lin_coef(pvar(_), _, 0).
 lin_coef(svar(_), _, 0).
@@ -1005,6 +1038,8 @@ variables_of([], []).
 variables_of([num(X)|As], R?) :- ground(X?) | is_nvar(num(X?), B), variables_of(As?, R1), keep_arg_if(B?, num(X?), R1?, R).
 %% A real variable is num(X) to the checks (cvac.glp, reals_off); the clause covers the type.
 variables_of([real(X)|As], [num(X?)|R?]) :- variables_of(As?, R).
+%% A variable over the constants is num(X) to the checks (cvac.glp, consts_off); the clause covers the type.
+variables_of([const(X)|As], [num(X?)|R?]) :- variables_of(As?, R).
 variables_of([pvar(X)|As], [pvar(X?)|R?]) :- variables_of(As?, R).
 variables_of([svar(X)|As], [svar(X?)|R?]) :- variables_of(As?, R).
 variables_of([role(_)|As], R?) :- variables_of(As?, R).
@@ -1307,6 +1342,7 @@ person_vars([item_of(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([val(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([num(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([real(_)|Vs], R?) :- person_vars(Vs?, R).
+person_vars([const(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([any|Vs], R?) :- person_vars(Vs?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 person_vars([ilist(_, _)|Vs], R?) :- person_vars(Vs?, R).
@@ -1321,6 +1357,7 @@ speech_vars([item_of(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([val(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([num(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([real(_)|Vs], R?) :- speech_vars(Vs?, R).
+speech_vars([const(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([any|Vs], R?) :- speech_vars(Vs?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 speech_vars([ilist(_, _)|Vs], R?) :- speech_vars(Vs?, R).
@@ -1710,6 +1747,8 @@ adm_var(val(_), _, _, _, yes).
 %% A number names no agent, so admissibility does not concern it (GSC, Section 3.2).
 adm_var(num(_), _, _, _, yes).
 adm_var(real(_), _, _, _, yes).
+%% A constant names no agent either.
+adm_var(const(_), _, _, _, yes).
 %% The wildcard is in no added atom (GSC 327e035, Definition "Speech-act schema"); the clause covers the type.
 adm_var(any, _, _, _, yes).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
@@ -2036,21 +2075,85 @@ linked_l1(no, Ps, Rs1, B1, Rs2, B2, Rf, L?) :- linked_l(Ps?, Rs1?, B1?, Rs2?, B2
 procedure mates_onto(Contract?, Deltas?, Preds?, Ones?, LMates).
 mates_onto([], _, _, _, []).
 mates_onto([schema(Nm, _, Rs)|Ss], Pt, Rf, Os, M?) :- ground(Nm?), ground(Rs?), ground(Pt?), ground(Rf?), ground(Os?) |
-    deltas_people(Pt?, Q),
-    rs_count(Rs?, K),
-    role_assigns(1, K?, Q?, [[]], As),
-    ones_pairs(Os?, Nm?, Ps),
-    lmates_assigns(As?, Nm?, Rs?, Pt?, Rf?, Ps?, M1),
+    same_preds(Rs?, Pt?, Sp),
+    mates_onto_s(Sp?, Nm?, Rs?, Pt?, Rf?, Os?, M1),
     mates_onto(Ss?, Pt?, Rf?, Os?, M2),
     app(M1?, M2?, M).
 mates_onto([cschema(_, _, _, _)|Ss], Pt, Rf, Os, M?) :- mates_onto(Ss?, Pt?, Rf?, Os?, M).
 mates_onto([nschema(_, _, _, _)|Ss], Pt, Rf, Os, M?) :- mates_onto(Ss?, Pt?, Rf?, Os?, M).
-procedure role_assigns(Integer?, Integer?, Ints?, Bindings?, Bindings).
-role_assigns(I, K, _, Acc, Acc?) :- I? > K? | true.
-role_assigns(I, K, Q, Acc, R?) :- I? =< K?, ground(Q?) |
-    assign_role(Acc?, I?, Q?, Acc1),
+%% A schema whose deleted and added atoms have other predicates than Pt's has no schema-binding onto Pt, every atom a schema-binding deletes or adds being one of Pt's and every one of Pt's being one it deletes or adds (deltas_same): it is passed over before its roles are sent onto the participants.
+procedure mates_onto_s(YesNo?, Constant?, RoleSpecs?, Deltas?, Preds?, Ones?, LMates).
+mates_onto_s(no, _, _, _, _, _, []).
+mates_onto_s(yes, Nm, Rs, Pt, Rf, Os, M?) :- ground(Nm?), ground(Rs?), ground(Pt?), ground(Os?) |
+    role_cands(Rs?, Pt?, Cs),
+    cand_assigns(1, Cs?, [[]], As),
+    ones_pairs(Os?, Nm?, Ps),
+    lmates_assigns(As?, Nm?, Rs?, Pt?, Rf?, Ps?, M).
+procedure same_preds(RoleSpecs?, Deltas?, YesNo).
+same_preds(Rs, Pt, S?) :- ground(Rs?), ground(Pt?) |
+    rs_dels(Rs?, Ds),
+    rs_adds(Rs?, As),
+    atoms_preds(Ds?, P1),
+    atoms_preds(As?, P2),
+    deltas_preds(Pt?, Q1, Q2),
+    set_same(P1?, Q1?, E1),
+    set_same(P2?, Q2?, E2),
+    and(E1?, E2?, S).
+%% The roles of a schema sent onto the participants of Pt: a role only to a participant at whom Pt deletes and adds atoms of the predicates the role deletes and adds, each atom of a role being matched with one of the atoms Pt deletes or adds at the role's person (match_deltas_l).  The participants are taken in Pt's order, so the schema-bindings come in the order of all the assignments of the roles to the participants, those passed over left out.
+IntsList ::= [] ; [Ints | IntsList].
+procedure role_cands(RoleSpecs?, Deltas?, IntsList).
+role_cands([], _, []).
+role_cands([R|Rs], Pt, [C?|Cs?]) :- ground(R?), ground(Pt?) |
+    rs_lists(R?, A, D, _, _),
+    atoms_preds(D?, Pd),
+    atoms_preds(A?, Pa),
+    cands_at(Pt?, Pd?, Pa?, C),
+    role_cands(Rs?, Pt?, Cs).
+procedure cands_at(Deltas?, Preds?, Preds?, Ints).
+cands_at([], _, _, []).
+cands_at([delta(P, D, A)|Ds], Pd, Pa, C?) :- ground(Pd?), ground(Pa?), integer(P?) |
+    gas_preds(D?, Qd),
+    gas_preds(A?, Qa),
+    set_sub(Pd?, Qd?, E1),
+    set_sub(Pa?, Qa?, E2),
+    and(E1?, E2?, E),
+    cands_at(Ds?, Pd?, Pa?, C1),
+    keep_int(E?, P?, C1?, C).
+procedure cand_assigns(Integer?, IntsList?, Bindings?, Bindings).
+cand_assigns(_, [], Acc, Acc?).
+cand_assigns(I, [C|Cs], Acc, R?) :- integer(I?), ground(C?) |
+    assign_role(Acc?, I?, C?, Acc1),
     I1 := I? + 1,
-    role_assigns(I1?, K?, Q?, Acc1?, R).
+    cand_assigns(I1?, Cs?, Acc1?, R).
+procedure atom_pred(Atom?, Constant).
+atom_pred(atom(P, _), P?).
+atom_pred(times(_, A), P?) :- atom_pred(A?, P).
+atom_pred(rest(_, _, A), P?) :- atom_pred(A?, P).
+procedure atoms_preds(Atoms?, Preds).
+atoms_preds([], []).
+atoms_preds([A|As], [P?|Ps?]) :- atom_pred(A?, P), atoms_preds(As?, Ps).
+procedure gas_preds(GAs?, Preds).
+gas_preds([], []).
+gas_preds([ga(P, _)|Gs], [P?|Ps?]) :- gas_preds(Gs?, Ps).
+procedure deltas_preds(Deltas?, Preds, Preds).
+deltas_preds([], [], []).
+deltas_preds([delta(_, D, A)|Ds], P1?, P2?) :-
+    gas_preds(D?, X1),
+    gas_preds(A?, X2),
+    deltas_preds(Ds?, Y1, Y2),
+    app(X1?, Y1?, P1),
+    app(X2?, Y2?, P2).
+procedure set_same(Preds?, Preds?, YesNo).
+set_same(X, Y, E?) :- ground(X?), ground(Y?) |
+    set_sub(X?, Y?, E1),
+    set_sub(Y?, X?, E2),
+    and(E1?, E2?, E).
+procedure set_sub(Preds?, Preds?, YesNo).
+set_sub([], _, yes).
+set_sub([X|Xs], Ys, B?) :- ground(Ys?) | mem(X?, Ys?, B1), set_sub1(B1?, Xs?, Ys?, B).
+procedure set_sub1(YesNo?, Preds?, Preds?, YesNo).
+set_sub1(no, _, _, no).
+set_sub1(yes, Xs, Ys, B?) :- set_sub(Xs?, Ys?, B).
 procedure assign_role(Bindings?, Integer?, Ints?, Bindings).
 assign_role([], _, _, []).
 assign_role([B|Bs], I, Q, R?) :- ground(B?), integer(I?), ground(Q?) |

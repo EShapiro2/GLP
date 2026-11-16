@@ -1,0 +1,5 @@
+K: Wildcard extent
+Of K: Alice, Bob and Carol are persons, Grupo a group.
+K:1. ■ Guard: Alice may become a guardian of Carol, with the consent of Carol.
+K:2. ■ Join: Bob may add Carol to Grupo, with the consent of Carol.
+K:3. ■ Retire: Alice may retire Carol, provided Alice is a guardian of Carol.

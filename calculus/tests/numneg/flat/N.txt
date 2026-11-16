@@ -1,0 +1,10 @@
+N: Numbers (flat text)
+N:0 - | Alice is a person, Bob a person, Sum, Cap and Line numbers.
+N:1 ■ Small: Alice may no longer Alice holds Sum Alice-coins and Bob holds Sum Alice-coins, provided Sum is at most Cap.
+N:2 ■ Large: Alice may no longer Alice holds Sum Alice-coins and Bob holds Sum Alice-coins, provided not Sum is at most Cap.
+N:3 ■ True: Alice may no longer Alice holds 2 Alice-coins and Bob holds 2 Alice-coins, provided 2 is at least 1.
+N:4 ■ False: Alice may no longer Alice holds 2 Alice-coins and Bob holds 2 Alice-coins, provided not 2 is at least 1.
+N:5 ■ Two: Alice may no longer Alice holds 2 Alice-coins and Bob holds 2 Alice-coins, provided Bob holds exactly 2 Alice-coins.
+N:6 ■ Not two: Alice may no longer Alice holds 2 Alice-coins and Bob holds 2 Alice-coins, provided not Bob holds exactly 2 Alice-coins.
+N:7 ■ Set: Alice may no longer Alice has Bob's line at the number anyone and Alice has Bob's line at the number Line.
+N:8 ■ Use: Alice may no longer Alice holds Sum Alice-coins and Bob holds Sum Alice-coins, provided Alice has Bob's line at the number Line and Sum is at most Line.

@@ -16,13 +16,15 @@ DIRECTORIES = [
     ('programs/social/graph/ui', 'vGLP', ['vGLP'], "the user interface's modules inside the social graph, the mediator among them"),
     ('programs/sglp', 'sGLP', ['sGLP'], "an owner's own programs/sglp/<owner>/<NAME>_sglp.glp is that owner's"),
     ('programs/gsc', 'GSC', ['GSC'], 'GnW and programs/gsc/wards included'),
-    ('programs/social', 'GSA', ['GSA'], 'the operating system: the social graph, the secure social graph and the boot files'),
+    ('programs/social', 'GSA', ['GSA'], 'the operating system: the social graph, programs/social/graph, and the boot files'),
+    ('programs/social/spm', 'SPM', ['SPM'], "whole: cva, gsg, secure_gsg and the contract SGSG; SPM's paper specifies it, and GSA's Section 4.3 cites SPM's paper for it (Coordination #16, 2026-11-15, GSA #6 and SPM #1 agreeing)"),
     ('programs/social/graph/core/gsg_phone.glp', 'GSC', ['GSC'], "GSG's app on the phone"),
     ('programs/social/graph/core/gsn_phone.glp', 'GSC', ['GSC'], "GSN's app on the phone"),
     ('programs/social/graph/core/gkk_phone.glp', 'GSC', ['GSC'], "GKK's app on the phone"),
     ('programs/social/graph/core/gsnp_phone.glp', 'GAI', ['GAI'], "GSNP's app on the phone"),
     ('programs/social/graph/core/gai_phone.glp', 'GAI', ['GAI'], "GAI's app on the phone"),
     ('programs/social/graph/core/gc_phone.glp', 'Currencies', ['GC'], "GC's app on the phone"),
+    ('programs/social/graph/core/gb_phone.glp', 'Currencies', ['GB'], "GB's app on the phone"),
     ('servers/peoplesweb', 'Website', [], "the site peoplesweb.org: its pages, its build, the papers' PDFs, the test site and the sweep's scripts"),
     ('networking', 'GNA', ['GNA'], 'the networking layer, imported from Dan Bachar\'s grassroots-networking'),
     ('programs/examples/rendezvous', 'GNA', ['GNA'], 'the rendezvous server and the directory, GSV, GRV and GDS'),
@@ -41,6 +43,7 @@ DIRECTORIES = [
     ('programs/federation', 'GFWC', [], ''),
     ('programs/p99', 'P99', [], ''),
     ('phones', 'Phones', [], 'phone testing; GSA its specification, Code its code'),
+    ('calculus', 'Calculus', [], "the Calculus: each contract in its text and what its tools print of it, until its owner adopts it; the tools and the tests (Coordination #16, 2026-11-15, by calculus/MIGRATION.md)"),
     ('organisation', 'Coordination', [], "the organisation's rules: claude.md, the style guide and claudese.md"),
     ('programs/apps', 'Code', [], "the apps' boot files and compile.sh"),
     ('programs/apps/gkk', 'GSC', ['GSC'], "GKK's app"),
@@ -98,6 +101,10 @@ PROJECTS = [
     ('DSA', 'Digital Speech Acts', ['DSA']),
     ('CCDG', 'Constitutional Consensus', ['CCDG']),
     ('CGMS', 'Constitutional Governance in Metric Spaces', ['CGMS']),
+    # Calculus, its paper private until Udi says (calculus/MIGRATION.md), by
+    # name and with no paper (Coordination #16, 2026-11-15: the project is
+    # Calculus on the site, never GCC).
+    ('Calculus', 'Grassroots Contracts Calculus', []),
     # The projects whose papers are not on arXiv, each with its one paper by
     # title and authors (Udi, 2026-11-14, to Website #2, approving Coordination
     # #15's question of 2026-11-12 13:11 UTC; the repositories and main files
