@@ -1,0 +1,6 @@
+Joint: Joint Accounts
+Joint extends Coins.
+Alice and Bob are persons.
+1. ■ Open account: Alice and Bob, who know each other, may jointly open a joint account, under a new name of Alice's.
+2. ■ Deposit: Either of them may move coins they hold into their joint account.
+3. ■ Withdraw: Alice and Bob may jointly move coins from their joint account to either of them.

@@ -1,9 +1,8 @@
 DRAFT, 2026-11-16: printed before the cascade run of the 66 is assembled; it is printed again then.
-Changes from the publication at Calculus code 2307a5b (the 62 adopted on main) to code dc582f3c, for an owner who adopted the first.
+Changes from the publication at Calculus code 2307a5b (the 62 adopted on main) to code 32d16c50, for an owner who adopted the first.
 
 Renamed, the contract's name and nothing else (Udi, 2026-11-16): AGORA is Agora.  JOINT is Joint.  STAY is Stay.  LIB is Lib.  REC is Rec.  GC is Coins.  GB is Bonds.  The title line of Coins and of Bonds is its one word.  Below, each is compared with itself under its old name.
 New: CDC (owner GO), Notes (owner GSC), Shares (owner GO), GA (owner GSA).  The title line of Notes and of Shares is its one word.
-Not certified by GLP's checker as it stands: SC.  Do not adopt SC from this draft.
 
 Agora:
   inherited act added: Pay issuer, from Notes
