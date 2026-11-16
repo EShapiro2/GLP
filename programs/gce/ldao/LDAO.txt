@@ -25,4 +25,7 @@ Interface pragmas
 Delegating: whether Alice is delegating in each DAO.
 Delegations: the delegations Alice records.
 Delegate: Carol [Delegate]
+  Alice [Delegate own]
+  Carol [Delegate to the steward]
 Revoke: Carol [Revoke] <alice>
+  Alice [Revoke own]

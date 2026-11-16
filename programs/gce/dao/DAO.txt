@@ -45,5 +45,7 @@ Found: Alice [Found] <delos>
 Join: Alice [Join]
   Bob: Alice invites you to their DAO.
 Proposing: Carol [Propose] <prop>
+  Alice [Propose own] <prop>
 Voting: Carol [Vote for] [Vote against]
+  Alice [Vote own for] [Vote own against]
 Deciding: Alice [Pass] <votes> [Reject] <votes>
