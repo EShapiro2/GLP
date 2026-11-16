@@ -15,10 +15,11 @@ GBCC:1 ■ Leave: GO:3 Leave <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Officer leave: GO:3 Officer leave <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Expel: GO:3 Expel <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Officer expel: GO:3 Officer expel <- all_stay_backed(Actor,Orga).
-GBCC:1 ■ Swap: GB:2 <- all_stay_backed(Actor,Orga).
-GBCC:1 ■ Pay: GC:3 <- all_stay_backed(Actor,Orga).
-GBCC:1 ■ Redeem: GB:3 <- all_stay_backed(Actor,Orga).
-GBCC:1 ■ Escrow: GB:4 <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Swap: GN:2 <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Pay: GN:3 <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Escrow: GN:4 <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Pay issuer: GC:1 <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Redeem: GB:2 <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Deposit own coins: DGC:2 Deposit own coins <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Deposit with the issuer: DGC:2 Deposit with the issuer <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Deposit own bonds: DGC:2 Deposit own bonds <- all_stay_backed(Actor,Orga).

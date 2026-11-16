@@ -1,20 +1,29 @@
 GDC: Grassroots Denominated Coins (expanded schemas)
 GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 GKK:0 - | Alice, Bob and Carol are persons.
 GKK:0 - | Reflexive: x knows y.
-GKK:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
-GC:0 - | A *coin* is a unit of debt that includes its issuer's public key and is signed by their private key. An *Alice-coin* is a coin issued by Alice.
-GC:0 - | Alice, Bob, Carol and Dave are parties, Sum and Total numbers, Carol and Dave possibly Alice, Bob or one person.
-GC:1+GDC:1 ■ Issue: coin(Alice,Alice,*Sum) <- issued_in(Alice,Dollar) guarded by Alice.
-GC:2 ■ Swap: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~coin(Bob,Dave,*Total), coin(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), coin(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
-GC:3 ■ Pay: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum) guarded by Alice.
-GC:4 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
-GC:5 ○ | Pricing.
-GC:5 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+GN:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+GN:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+GN:1+GDC:1 ■ Issue: coin(Alice,Alice,*Sum) <- issued_in(Alice,Dollar) guarded by Alice.
+GN:2 ■ Swap: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~coin(Bob,Dave,*Total), coin(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), coin(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+GN:3 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+GN:3+GC:1 ■ Pay issuer: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum) guarded by Alice.
+GN:4 ■ | Escrow.
+GN:4 ■ Deposit: ~coin(Alice,Dave,*Sum), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), coin(Alice,Dave,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GN:4 ■ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GN:4 ■ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GN:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
+GC:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
+GC:0 - | Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob.
+GC:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
+GC:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
+GC:3 ○ | Pricing.
+GC:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 GDC:0 - | *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
 GDC:0 - | Alice and Bob are parties, Dollar a fiat currency, Sum a number.
 GDC:1 ■ First issue: coin(Alice,Alice,*Sum), issued_in(Alice,Dollar) <- ~issued_in(Alice,_) guarded by Alice.

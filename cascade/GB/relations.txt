@@ -1,0 +1,2 @@
+GB restricts GC: holds
+GB extends GC: holds

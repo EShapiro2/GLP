@@ -1,4 +1,4 @@
-%% The interface of the canonical CVA platform of LIB in sGLP's term form
+%% The interface of the canonical CVA platform of Lib in sGLP's term form
 %% (programs/sglp/README.md, "The term form"), printed by programs/sglp/cva/interface.sh
 %% from platform.vglp and platform.glp beside it: the types the platform defines
 %% and those of the root it names, its volitional procedure declarations, and
@@ -18,7 +18,7 @@ interface([
   type('MenuField', [field('Integer', 'String', 'MenuFieldType')]),
   type('MenuFieldType', [person, key, agent, text, number]),
   type('MenuWord', [say('String'), at('Integer')]),
-  type('Atom', [identity, knows('Peer'), shelved('Speech'), shelf('Speech'), borrowed('Speech', 'Peer', 'Integer')]),
+  type('Atom', [identity, person, knows('Peer'), shelved('Speech'), shelf('Speech'), borrowed('Speech', 'Peer', 'Integer')]),
   type('RNameTerm', [own('Integer'), own_var('Constant'), nvar('Constant'), ext('RNameTerm', 'Constant'), ext_any('RNameTerm')]),
   type('RArg', [role('Integer'), pvar('Constant'), svar('Constant'), nterm('RNameTerm'), sgn('Constant', 'Integer'), num('Constant'), real('Constant'), any, ilist('Integer', 'String'), item_of('RArg'), val('Constant')]),
   type('RArgs', [[], ['RArg' | 'RArgs']]),

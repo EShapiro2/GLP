@@ -265,7 +265,7 @@ def written_from(name, ps):
             die('%s, which a contract compiled is written from, is not among the contracts found' % n)
         out[n] = texts(n, ps[n])
         ls = lines(out[n][0])
-        if len(ls) > 1 and re.match(re.escape(n) + r' (extends|restricts|strengthens|instantiates|composes)\b', ls[1]):
+        if len(ls) > 1 and re.match(re.escape(n) + r' (extends|restricts|strengthens|instantiates|composes|relaxes)\b', ls[1]):
             first = re.sub(r' \([^()]*\)', '', ls[1])
             todo += [w for w in re.findall(r'[A-Za-z][A-Za-z-]*', first[len(n):]) if w in ps]
     return out

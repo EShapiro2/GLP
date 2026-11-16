@@ -25,7 +25,7 @@ After x closes x's place: no longer x has declared the place open.
 Environment: x is nearby y.
 Interface pragmas
 Look: 📶, network
-Nearby: the persons nearby.
+Nearby: those nearby.
 Open place: Alice [Open place] [Close place]
 Implementation pragmas
 Open place: while the place is open Alice's app sets the trust of Bluetooth and of the local network open, and closed otherwise (GNA).

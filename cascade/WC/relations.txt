@@ -1,0 +1,2 @@
+WC instantiates GCoop: holds
+WC extends it (GCoop): holds

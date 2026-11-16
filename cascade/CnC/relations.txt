@@ -1,0 +1,3 @@
+CnC instantiates GCoop and TC: holds
+CnC restricts it (GCoop and TC): holds
+CnC extends it (GCoop and TC): holds

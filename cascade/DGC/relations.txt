@@ -1,0 +1,3 @@
+DGC extends GB and GDC: holds
+DGC restricts GB: holds
+DGC strengthens GB: holds

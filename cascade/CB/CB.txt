@@ -13,9 +13,9 @@ Bob is a person, Orga a community bank.
 3. ■ Credit: Bob may swap Bob-coins he holds for Orga-coins, provided the Bob-coins Orga holds do not exceed his credit line.
 4. ○ Community currency. A member will accept Orga-coins in payment for their offerings at the prices they post.
 Logic pragmas
-CB instantiates GBank with community bank bylaws; x is a director of z for x is entitled to propose m in z; x is a director of z for x is entitled to take m for z; x is a director of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, More is Votes plus 1 and z has fewer than More persons in the role Director for the votes decide m according to the bylaws of z, and restricts and extends it.
+CB instantiates GBank with community bank bylaws; x is a director of z for x is entitled to propose m in z; x is a director of z for x is entitled to take m for z; x is a director of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Director for the votes decide m according to the bylaws of z, and restricts and extends it.
 A *community bank* is a bank whose bylaws name two roles, *member*, held by every participant, and *director*, held by its first officer and by members; the directors jointly decide the acts of the bank, but the members jointly appoint and remove directors. A member's *credit line* is a number of coins.
-Bob is a person, Orga a community bank, Sum, Line, Held, Total, Votes and More numbers.
+Bob is a person, Orga a community bank, Sum, Line, Held and Total numbers.
 1. ■ Leave: GO:3 Leave, only if Bob holds exactly 0 Orga-coins. Leave owed nothing: GO:3 Leave, only if Orga holds exactly 0 Bob-coins. Officer leave: GO:3 Officer leave, only if Bob holds exactly 0 Orga-coins. Officer leave owed nothing: GO:3 Officer leave, only if Orga holds exactly 0 Bob-coins.
 2. ■ Set credit line: The directors of Orga may set Bob's credit line in Orga at Line, provided Orga is an organisation and Orga has Bob as a participant.
 3. ■ Credit: Bob may swap Sum Bob-coins for Sum Orga-coins, provided Orga holds exactly Held Bob-coins, Orga has Bob's credit line at the number Line, Total is Held plus Sum and Total is at most Line.
