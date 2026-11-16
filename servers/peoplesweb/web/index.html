@@ -398,8 +398,9 @@ function layout(){
     for (let i = 0; i < EDG.length; i++) for (let j = i + 1; j < EDG.length; j++) n += xs(P, EDG[i], EDG[j]);
     return n; };
   // The crossings of the arrows at the contracts a and b with all the others.
-  const near = (a, b) => { const P = place(), mine = EDG.filter(e => e.includes(a) || e.includes(b)); let n = 0;
-    for (const e of mine) for (const f of EDG) if (e !== f) n += xs(P, e, f);
+  const INC = {}; EDG.forEach(e => e.forEach(v => (INC[v] = INC[v] || []).push(e)));
+  const near = (P, a, b) => { let n = 0;
+    for (const e of [...(INC[a] || []), ...(INC[b] || []).filter(e => !e.includes(a))]) for (const f of EDG) if (e !== f) n += xs(P, e, f);
     return n; };
   // Then each pair of neighbours on a ring is swapped where that crosses fewer
   // arrows to the rings above and below, until no swap helps.  The whole is
@@ -422,16 +423,17 @@ function layout(){
     best.forEach((r, d) => Lr[d] = r);
     for (let pass = 0, swapped = true; swapped && pass < 30; pass++){
       swapped = false;
+      const P = place();
       for (let d = 1; d <= maxd; d++) for (let i = 0; i + 1 < Lr[d].length; i++){
-        const a = Lr[d][i], b = Lr[d][i+1], before = near(a, b);
-        Lr[d][i] = b; Lr[d][i+1] = a;
-        if (near(a, b) < before) swapped = true; else { Lr[d][i] = a; Lr[d][i+1] = b; }
+        const a = Lr[d][i], b = Lr[d][i+1], before = near(P, a, b), pa = P[a], pb = P[b];
+        P[a] = pb; P[b] = pa;
+        if (near(P, a, b) < before){ Lr[d][i] = b; Lr[d][i+1] = a; swapped = true; } else { P[a] = pa; P[b] = pb; }
       }
     }
     return crossings(); };
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   let best = null, bestN = Infinity;
-  for (let t = 0; t < 16; t++){
+  for (let t = 0; t < 10; t++){
     if (t){ const ord = {}; D.contracts.forEach(c => ord[c.id] = rnd());
       const pos = {}; (function walk(id, lo, hi){ pos[id] = (lo + hi) / 2;
         const ks = (KIDS[id] || []).slice().sort((a, b) => ord[a] - ord[b]), tot = ks.reduce((n, k) => n + leaves(k), 0);

@@ -476,7 +476,10 @@ for n in sorted(set(compiled) | set(cat)):
     # contract with no record has not been through the cascade.
     c['record'] = os.path.isdir(d)
     pv = os.path.join(d, 'platform.vglp')
-    c['notCompiled'] = [] if c['live'] or not os.path.exists(pv) else not_compiled(read(pv))
+    # Asked only of a record that has no platform: on a test site with no
+    # world nothing is live, and a whole platform read as its reasons made
+    # /next's data.js 8 MB (2026-11-16).
+    c['notCompiled'] = [] if c['live'] or has_platform(n) or not os.path.exists(pv) else not_compiled(read(pv))
     for k, f in LAYERS:
         if os.path.exists(os.path.join(d, f)):
             os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
