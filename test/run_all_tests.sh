@@ -1706,6 +1706,8 @@ POSITIVE_FILES=(
     # Type checking of =.. and ..= (TGLP typed-constant-readers.tex): run in
     # Section ZG.
     "$TC_DIR/positive/term_univ.glp"
+    # A variable tested by a type guard has that type in the whole clause, its head included (TGLP typed-glp.tex, "Type checking of guards"): a key read from inside the term signature/2 reports, signed(Key, Hash, Term), and handed out in the head.
+    "$TC_DIR/positive/guard/guard_narrows_head.glp"
     "$TC_DIR/positive/merge_basic.glp"
     "$TC_DIR/positive/append_list.glp"
     "$TC_DIR/positive/copy_stream.glp"
@@ -1974,6 +1976,9 @@ NEGATIVE_FILES=(
     "$TC_DIR/negative/term/term_writer_below.glp"
     "$TC_DIR/negative/term/term_union.glp"
     "$TC_DIR/negative/term/term_univ_wildcard.glp"
+    # --- typechecker/negative/guard: the same variable under a guard of another type, and under no guard ---
+    "$TC_DIR/negative/guard/guard_narrows_head_wrong_type.glp"
+    "$TC_DIR/negative/guard/below_term_unguarded.glp"
 
     # --- typechecker/negative/head ---
     "$TC_DIR/negative/head/merge_wrong_constant.glp"
