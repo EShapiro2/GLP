@@ -1,9 +1,9 @@
-% CMB: Commercial Bank --- the contract, the one copy, its owner's (claude.md, "Sessions").
-% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.4 and cites a clause as CMB:1.
+% Commercial Bank --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 4.4 and cites a clause as Commercial Bank:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GBank, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-12, by GO #5.
-% Schemas: CMB.glp beside this file.
+% Extends: Bank, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-16, by GO #8.
+% Schemas: Commercial-Bank.glp beside this file.
 Commercial Bank
 Commercial Bank instantiates Bank with commercial bank bylaws and restricts and extends it.
 A *commercial bank* is a bank that may issue Dollar-denominated coins and bonds, whose bylaws name two roles, *director*, held by its first officer, and *loan officer*; the directors jointly decide the acts of the bank, but a loan officer decides a loan within their *lending limit*, a number of Dollars. A participant who holds no role is a *customer*.

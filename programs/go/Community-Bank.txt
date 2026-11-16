@@ -1,9 +1,9 @@
-% CB: Community Bank --- the contract, the one copy, its owner's (claude.md, "Sessions").
-% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 4.2 and cites a clause as CB:1.
+% Community Bank --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 4.2 and cites a clause as Community Bank:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GBank, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-12, by GO #5.
-% Schemas: CB.glp beside this file.
+% Extends: Bank, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-16, by GO #8.
+% Schemas: Community-Bank.glp beside this file.
 Community Bank
 Community Bank instantiates Bank with community bank bylaws and restricts and extends it.
 A *community bank* is a bank whose bylaws name two roles, *member*, held by every participant, and *director*, held by its first officer and by members; the directors jointly decide the acts of the bank, but the members jointly appoint and remove directors. A member's *credit line* is a number of coins.
