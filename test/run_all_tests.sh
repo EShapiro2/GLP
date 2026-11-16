@@ -6456,6 +6456,13 @@ cva_cm_act="act('establish', '\"Establish\"', ['\"\"'], none, '\"Contacts\"', by
 cva_cm_pa="pragmas([$cva_cm_tab, list('\"Coins\"', ['coin'])], [$cva_cm_act, act('mint', '\"Mint\"', ['\"\"', '\"amount\"'], none, '\"Coins\"', by([1]))])"
 cva_cm_pb="pragmas([$cva_cm_tab, list('\"Burnt\"', ['coin'])], [$cva_cm_act, act('burn', '\"Burn\"', [], none, '\"Burnt\"', by([1]))])"
 cva_cm_ok=$(bash "$CVA/compiler/compose.sh" XA "reflexive([knows], [$cva_cm_est, $cva_cm_mint])" "$cva_cm_pa" "introduction(knows)" XB "environment([today], [$cva_cm_est2, $cva_cm_burn])" "$cva_cm_pb" no_introduction 2>&1; echo "exit $?")
+# A reading or the pragmas from a file, @<file> (Code #33, 2026-11-15 22:57 UTC): the same composition.
+cva_cm_f1=$(mktemp); cva_cm_f2=$(mktemp)
+printf '%s\n' "reflexive([knows], [$cva_cm_est, $cva_cm_mint])" > "$cva_cm_f1"
+printf '%s\n' "$cva_cm_pa" > "$cva_cm_f2"
+cva_cm_okf=$(bash "$CVA/compiler/compose.sh" XA "@$cva_cm_f1" "@$cva_cm_f2" "introduction(knows)" XB "environment([today], [$cva_cm_est2, $cva_cm_burn])" "$cva_cm_pb" no_introduction 2>&1; echo "exit $?")
+rm -f "$cva_cm_f1" "$cva_cm_f2"
+if [ "$cva_cm_ok" = "$cva_cm_okf" ]; then _check_pass "CVA composition: a reading and the pragmas read from files, @<file>, give the same composition"; else _check_fail "CVA composition: a reading and the pragmas read from files, @<file>, give the same composition" "the two outputs differ"; fi
 cva_cm_schema=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est, $cva_cm_mint]" "$cva_cm_pa" no_introduction XC "[$cva_cm_est3]" no_pragmas no_introduction 2>&1; echo "exit $?")
 cva_cm_tabx=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est, $cva_cm_mint]" "$cva_cm_pa" no_introduction XD "[$cva_cm_est]" "pragmas([list('\"Contacts\"', ['knows'])], [])" no_introduction 2>&1; echo "exit $?")
 cva_cm_button=$(bash "$CVA/compiler/compose.sh" XA "[$cva_cm_est, $cva_cm_mint]" "$cva_cm_pa" no_introduction XE "[$cva_cm_est]" "pragmas([], [act('establish', '\"Establish\"', [], none, '\"Contacts\"', by([1]))])" no_introduction 2>&1; echo "exit $?")
