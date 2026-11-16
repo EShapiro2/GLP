@@ -1,0 +1,6 @@
+GLDAO: Grassroots Liquid DAO
+GLDAO extends GDAO.
+A member's *delegate* is another member whose vote counts for theirs.
+Bob and Carol are persons.
+1. ■ Delegating. Delegate: Bob, a member, may make Carol, a member he knows, his delegate, one at a time. Revoke: Bob may revoke it.
+2. ■ Count: A member who has not voted on a proposal counts as voting as their delegate did, down a chain of delegates, and can no longer vote on it.

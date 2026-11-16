@@ -1,0 +1,5 @@
+ORH: Ride-Hailing Organisation
+ORH extends GNO and restricts and strengthens GRA-SS (GRH, Grassroots Ride-Hailing, in preparation).
+A *driver* is a provider and a *rider* a customer.
+Alice and Bob are persons, Orga a networked organisation.
+1. ■ Award: GRA-SS:2, only if the fare and the deposit are in Orga-coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (GNO:2).

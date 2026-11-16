@@ -1,0 +1,24 @@
+GAI: Accountable AI Agents
+GAI instantiates GnW with guardians(z) for deciders(z), an AI agent for a ward and a principal for a creator, composes it with GFP, and restricts, strengthens and extends the composition (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Vocabulary: z holds the attestation t = attestation(z,t); y holds a record of z's attestation t = attestation_record(y,z,t).
+Roles: the guardians of z = guardians(z), listed by z has y as a guardian, y is a guardian of z and y holds a record of z's attestation Proof.
+GAI:0 - | The *developer* of an AI agent is the signer of its code.
+GAI:0 - | Alice and Bob are persons, Alf an AI agent, Proof and Seal attestations, Item an item; in clause 2 Carol and Dave are AI agents.
+GAI:1 ○ | AI developer and guardian accountability.
+GAI:1 ○ | The developer of Alf will be accountable for Alf's defects.
+GAI:1 ○ | Every guardian of Alf will be accountable for operating it recklessly.
+GAI:2 ■ | AI acts.
+GAI:2 ■ Enter: GnW:1 + attestation(Alf,Proof), attestation_record(Alice,Alf,Proof) <- item(Alice,Proof), author(Alice,Proof).
+GAI:2 ■ | The principal of Alf attests at its creation, signed over Alf's public key, that Alf runs code signed by its developer.
+GAI:2 ■ Make guardian: GnW:2 Make guardian + attestation_record(Bob,Alf,Proof) <- attestation(Alf,Proof).
+GAI:2 ■ AI agent acquaint: GnW:3 Ward acquaint + attestation_record(Bob,Alf,Proof) <- attestation(Alf,Proof).
+GAI:2 ■ AI agent befriend: GnW:3 Ward befriend <- attestation(Alf,Proof).
+GAI:2 ■ AI agent end: GnW:3 Ward end <- attestation(Alf,Proof).
+GAI:2 ■ AI agents acquaint: GnW:4 Wards acquaint + attestation_record(Carol,Dave,Seal), attestation_record(Dave,Carol,Proof) <- attestation(Carol,Proof), attestation(Dave,Seal).
+GAI:2 ■ AI agents befriend: GnW:4 Wards befriend <- attestation(Carol,Proof), attestation(Dave,Seal).
+GAI:2 ■ AI agents of one guardian befriend: GnW:4 Wards of one guardian befriend <- attestation(Carol,Proof), attestation(Dave,Seal).
+GAI:2 ■ Sign: GFP:1 <- person(Alice).
+GAI:2 ■ Forward: GFP:2 <- person(Alice).
+GAI:2 ■ Agent sign: item(Alf,Item) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), ~item(Alf,Item) guarded by Alf.
+GAI:2 ■ Agent forward: item(Bob,Item@Alf) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), item(Alf,Item), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
+GAI:2 ■ | Every act of Alf requires this attestation and names its developer and its principal.

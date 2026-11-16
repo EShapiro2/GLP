@@ -1,0 +1,58 @@
+% Written by tools/expand.py from rev/; do not edit.
+GAN: Grassroots Ad Network
+An *identity* is a unique key pair.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an organisation and how. Here: bylaws. An organisation takes an act of a party by those who decide for it.
+An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of GO, name the roles of an organisation and say who decides each of its acts and how, their own amendment included. Here: community currency bylaws.
+A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
+A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
+*Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
+A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
+A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
+A *community currency* is a bank whose coins are Dollar-denominated and whose bylaws name one role, *treasurer*; the treasurers jointly decide its acts.
+*f*, a fraction 0 ≤ f < 1, is a parameter of GBCC. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
+A *networked organisation* is a backed community currency whose bylaws also name the role *arbiter*. A *provider* is a person whose *stake*, the Orga-coins they hold, is at least *S*, a number of Orga-coins, and a *customer* is a person who accepts Orga-coins. A treasurer is a provider. A *dispute* is over Orga-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the Orga-coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice and Bob are persons. Alice and Bob are persons, Carol and Dave organisations. Alice and Bob are persons, Orga an organisation. Alice, Bob and Carol are parties. Alice and Bob are parties. Alice is a party. Alice and Bob are persons, Orga a community currency. Alice is a person, Orga a community currency. Alice, Bob and Carol are persons, Orga a networked organisation. Alice and Bob are persons, Orga a networked organisation.
+GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+GSG:2. ■ Unfriend: Alice may end her friendship with Bob.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+GnW:1. ■ Enter: Alice may create an organisation, Carol, and establish Carol's identity by choosing Carol's key pair. Alice is then the creator, an officer and a friend of Carol.
+GnW:2, GO:4, GBCC:1. ■ Officer decisions. Make officer: Those who decide for Carol may make Bob, a friend of an officer of Carol, an officer and a friend of Carol, with the consent of Bob, only if Bob is a participant; the decision names his role, and only if every treasurer stays backed. Resign: Bob may end his guardianship of Carol, only if every treasurer stays backed. End officer: Those who decide for Carol, other than Bob, may end Bob's guardianship, only if every treasurer stays backed. Officer unfriend: Bob may end his friendship with Carol, which ends his guardianship, only if every treasurer stays backed. Carol may not end a friendship with her officer.
+GnW:3. ■ Organisation and person. Organisation acquaint: Carol, an organisation of Alice, and Bob may jointly come to know each other. Organisation befriend: Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends. Organisation end, Unfriend, Organisation unfriend: Carol, Bob or Alice may end the relation of Bob and Carol.
+GnW:4. ■ Organisations. Organisations acquaint: Carol, an organisation of Alice, and Dave, an organisation of Bob, may jointly come to know each other. Organisations befriend: Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+GnW:5. ■ Retire: Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
+GO:1. ■ Found: An organisation may create Orga (GnW:1) with the consent of Alice; Alice is then its first officer.
+GO:2. ■ Acts of the organisation. Propose: An officer, or a person the bylaws name, may propose an act of Orga. Vote: Those who decide the act may vote on it. Act: An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.
+GO:3, GBCC:1. ■ Participation. Join: Bob may become a participant of Orga with the consent of those who decide for Orga. Leave, Expel: Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds, only if every treasurer stays backed.
+GO:5. ■ Amend: Those who decide it may amend the bylaws.
+GO:6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
+GN:1, GB:1. ■ Issue: Alice may issue Alice-notes, for bonds, with maturity later than the current date.
+GN:2, DGC:2, GBCC:1. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold, only if the coins and bonds are of one denomination, and only if every treasurer stays backed.
+GN:3, GBCC:1. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent, only if every treasurer stays backed.
+GN:4, DGC:2, GBCC:1. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination, and only if every treasurer stays backed. Release: Carol and Bob may jointly release them to Bob, only if the coins and bonds are of one denomination, and only if every treasurer stays backed. Return: Carol and Alice may jointly return them to Alice, only if the coins and bonds are of one denomination, and only if every treasurer stays backed. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
+GC:1, GBCC:1. ■ Pay issuer: GN:3, without the consent of Bob, if the coins are Bob-coins, only if every treasurer stays backed.
+GC:2, DGC:2, GBCC:1. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows, only if the coins and bonds are of one denomination, and only if every treasurer stays backed.
+GC:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+GB:2, DGC:2, GBCC:1. ■ Redeem: Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows, only if the coins and bonds are of one denomination, and only if every treasurer stays backed.
+GDC:1. ■ Issue: Alice may issue Alice-coins denominated by a fiat currency.
+GDC:2. ○ Denomination. A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
+GDC:3. ○ Pricing. Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.
+DGC:1. ■ Issue denominated bond: Alice may issue Alice-bonds denominated by a fiat currency, of a maturity later than the current date.
+DGC:3. ■ Accept: Alice may accept Dollar-denominated Carol-coins in payment up to a limit of her choosing, if she holds a Dollar-denominated Carol-coin or Carol-bond; each such coin paid to Alice counts against the limit, and Alice may accept again.
+DGC:4, GBCC:1. ■ Pay accepted coins: Alice may pay Bob, whom she knows, coins she holds that Bob accepts, only if every treasurer stays backed.
+GCC:1, GBCC:2. ■ Draw: Alice, a treasurer, may swap Alice-coins for Orga-coins, only if Alice stays backed.
+GCC:2, GBCC:4. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar, from the account while it holds Dollars, and from a treasurer if it holds none.
+GBCC:3. ◆ Record: Alice, a treasurer, may pay Dollars into the account, and the treasurers may then jointly record them as paid in by Alice.
+GNO:1. ■ Set stake: The treasurers may set S.
+GNO:2. ■ Arbitration. Raise: Either Alice or Bob, the parties to a dispute, may raise it to an arbiter, Carol. Arbitrate: Carol may then decide the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.
+GDO:1. ■ Point friend: Alice, who does not point to her friend Bob, may point to Bob.
+GDO:2. ■ Point transitive: Alice, who knows Carol and points to Bob who points to Carol, may point to Carol.
+GDO:3. ■ Unpoint: Alice, who points to Bob, may cease pointing to Bob.
+GAN:1. ■ Posting. Post: Bob, an advertiser, may post an ad to the members he points to; its budget is then locked on top of his stake. Pass: A member may pass it to the members they point to.
+GAN:2. ■ Show: Alice, a member, is shown an ad she received if it is for her profile.
+GAN:3. ◆ Viewing and clicking. View, Click: Alice may attest that she viewed, or clicked, an ad shown to her, and the ad's budget then pays her its coins for the view or the click, up to the most one member may earn from it.

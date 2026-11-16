@@ -1,0 +1,113 @@
+Agora extends GB: holds
+CB instantiates GBank: holds
+CB restricts it (GBank): holds
+CB extends it (GBank): holds
+CDC restricts GO: holds
+CDC strengthens GO: holds
+CMB instantiates GBank: holds
+CMB restricts it (GBank): holds
+CMB extends it (GBank): holds
+CSSN instantiates GSNW: holds
+CSSN restricts it (GSNW): holds
+CSSN extends it (GSNW): holds
+CnC instantiates GCoop and TC: holds
+CnC restricts it (GCoop and TC): holds
+CnC extends it (GCoop and TC): holds
+DAO extends GKK: holds
+DGC extends GB and GDC: holds
+DGC restricts GB: holds
+DGC strengthens GB: holds
+FDAO extends DAO and GC: holds
+GA composes GPE with GAS and GDS: holds
+GAI instantiates GnW: holds
+GAI composes it (GnW) with GFP: holds
+GAI restricts it (GnW and GFP): holds
+GAI strengthens it (GnW and GFP): holds
+GAI extends it (GnW and GFP): holds
+GAN extends GNO and GDO: holds
+GAS composes GPD with GSV: holds
+GAS extends it (GPD and GSV): holds
+GB restricts GC: holds
+GB extends GC: holds
+GBCC extends GCC: holds
+GBCC restricts it (GCC): holds
+GBank extends GO and DGC: holds
+GC relaxes GN: holds
+GC extends GN: holds
+GCC instantiates GBank: holds
+GCC extends it (GBank): holds
+GCoop extends CDC and DGC: holds
+GCorp extends GO and DGC: holds
+GD extends GSG: holds
+GD-S restricts GD: holds
+GDAO instantiates GCoop: holds
+GDC extends GC: holds
+GDC restricts GC: holds
+GDO extends GSG: holds
+GDO-L extends GDO: holds
+GDO-L strengthens GDO: holds
+GDO-LB restricts GDO: holds
+GDS extends GRV: holds
+GFF extends GDO-L: holds
+GFF restricts GDO-L: holds
+GFF-FR extends GFF: holds
+GFF-FR-BC extends GFF-FR: holds
+GFF-PS extends GFF: holds
+GFP extends GSG: holds
+GLDAO extends GDAO: holds
+GN extends GKK: holds
+GNG extends GNO and GDO: holds
+GNG restricts Rec: holds
+GNL extends GNO and GDO: holds
+GNL restricts GNO and Rec: holds
+GNM extends GNO and GDO: holds
+GNM restricts Rec: holds
+GNO extends GBCC: holds
+GNO restricts it (GBCC): holds
+GO instantiates GnW: holds
+GO restricts it (GnW): holds
+GO strengthens it (GnW): holds
+GO extends it (GnW): holds
+GPD extends GFP: holds
+GPE extends GKK: holds
+GRA extends GDO-LB: holds
+GRA-SS instantiates GRA: holds
+GRA-SS restricts it (GRA): holds
+GRV extends GSV: holds
+GS restricts GO and GN: holds
+GSG extends GKK: holds
+GSN extends GSG: holds
+GSN strengthens GSG: holds
+GSNP instantiates GSN: holds
+GSNP composes it (GSN) with GAI: holds
+GSNP restricts it (GSN and GAI): holds
+GSNP extends it (GSN and GAI): holds
+GSNW extends GSN and GnW: holds
+GSNW restricts GSN and GnW: holds
+GSNW strengthens GSN and GnW: holds
+GSV instantiates GnW: holds
+GnW extends GSG: holds
+GnW restricts GSG: holds
+Joint extends GC: holds
+LDAO extends DAO: holds
+Lib extends GKK: holds
+MCS instantiates GBank: holds
+MCS restricts it (GBank): holds
+MCS extends it (GBank): holds
+ORH extends GNO: holds
+ORH restricts GRA-SS: holds
+ORH strengthens GRA-SS: holds
+Rec extends GKK: holds
+SC instantiates GCorp: holds
+SC composes it (GCorp) with GS: holds
+SC extends it (GCorp and GS): holds
+SCB instantiates GBank: holds
+SCB restricts it (GBank): holds
+SCB extends it (GBank): holds
+SGSG extends GSG: holds
+SPLLC instantiates GCorp: holds
+Stay extends GC: holds
+TC extends GCorp: holds
+WC instantiates GCoop: holds
+WC extends it (GCoop): holds
+112 relations, 112 hold, 0 fail

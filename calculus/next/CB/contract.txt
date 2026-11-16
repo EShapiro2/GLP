@@ -1,0 +1,8 @@
+CB: Community Bank
+CB instantiates GBank with community bank bylaws and restricts and extends it.
+A *community bank* is a bank whose bylaws name two roles, *member*, held by every participant, and *director*, held by its first officer and by members; the directors jointly decide the acts of the bank, but the members jointly appoint and remove directors. A member's *credit line* is a number of coins.
+Bob is a person, Orga a community bank.
+1. ■ Leave: GO:3, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other.
+2. ■ Set credit line: The directors may set Bob's credit line.
+3. ■ Credit: Bob may swap Bob-coins he holds for Orga-coins, provided the Bob-coins Orga holds do not exceed his credit line.
+4. ○ Community currency. A member will accept Orga-coins in payment for their offerings at the prices they post.

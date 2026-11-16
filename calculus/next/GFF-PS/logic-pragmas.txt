@@ -1,0 +1,6 @@
+GFF-PS: Path-Shortening GFF
+GFF-PS extends GFF.
+Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.
+1. ■ Shorten: Alice replaces a Dave-pointer to Bob by a Dave-pointer to Carol, provided Alice and Carol know each other and Bob has a Dave-pointer to Carol.
+Logic pragmas.
+After x replaces a w-pointer to y by a w-pointer to z, which requires x does not have a w-pointer to z: no longer x has a w-pointer to y and x has a w-pointer to z.

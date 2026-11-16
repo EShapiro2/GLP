@@ -1,0 +1,7 @@
+GDO-L: Grassroots Directed Overlay with Labels
+GDO-L extends and strengthens GDO.
+A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice.
+Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.
+1. ■ Labeled point friend: Alice, who has no Dave-pointer to her friend Bob, may add one, if Bob has a Dave-pointer.
+2. ■ Labeled point transitive: Alice, who knows Carol and either has a Dave-pointer to Bob or is Bob's friend, may add a Dave-pointer to Carol, if Bob has a Dave-pointer to Carol.
+3. ■ Labeled unpoint: Alice, who has a Dave-pointer to Carol, may remove it, unless Carol is Dave and her friend.

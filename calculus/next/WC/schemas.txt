@@ -1,0 +1,14 @@
+WC: Workers' Cooperative
+WC instantiates GCoop with bylaws that delegate no act, and extends it.
+Vocabulary: z holds v's vote to pay y n w-coins = vote_pay(z,v,y,w,n); z holds v's vote to distribute a w-coin to y = vote_distribute(z,v,y,w); z has distributed a coin to y = distributed(z,y); z has distributed no more coins to y than to any other member = least_share(z,y).
+After v votes to pay y n w-coins of z for y's work, which requires z does not hold v's vote to pay y n w-coins: z holds v's vote to pay y n w-coins.
+After x pays y n w-coins of z for y's work: no longer z holds n w-coins, y holds n w-coins and z holds no one's vote to pay y n w-coins.
+After v votes to distribute a w-coin of z to y, which requires z does not hold v's vote to distribute a w-coin to y: z holds v's vote to distribute a w-coin to y.
+After x distributes a w-coin of z to y: no longer z holds a w-coin, y holds a w-coin, z has distributed a coin to y and z holds no one's vote to distribute a w-coin to y.
+WC:0 - | A *workers' cooperative* is a cooperative whose members work for it.
+WC:0 - | Alice, Bob and Carol are persons, Orga a workers' cooperative, Iris an issuer, Dollar a fiat currency, Sum, Votes and Double numbers.
+WC:0 - | Environment: z has distributed no more coins to y than to any other member.
+WC:1 ■ Pay for work: ~coin(Orga,Iris,*Sum), coin(Bob,Iris,*Sum), ~vote_pay(Orga,_,Bob,Iris,Sum) <- participant(Alice,Orga), vote_pay(Orga,>=Votes,Bob,Iris,Sum), product(Double,Votes,2), has_participant(Orga,<Double), participant(Bob,Orga), accepts(Bob,Iris,Dollar,*Sum), coin(Orga,Iris,*Sum) guarded by Alice.
+WC:1 ■ Vote to pay: vote_pay(Orga,Carol,Bob,Iris,Sum) <- participant(Carol,Orga), has_participant(Orga,Bob), ~vote_pay(Orga,Carol,Bob,Iris,Sum) guarded by Carol.
+WC:2 ■ Distribute: ~coin(Orga,Iris), coin(Bob,Iris), distributed(Orga,Bob), ~vote_distribute(Orga,_,Bob,Iris) <- participant(Alice,Orga), vote_distribute(Orga,>=Votes,Bob,Iris), product(Double,Votes,2), has_participant(Orga,<Double), participant(Bob,Orga), accepts(Bob,Iris,Dollar), least_share(Orga,Bob), coin(Orga,Iris) guarded by Alice.
+WC:2 ■ Vote to distribute: vote_distribute(Orga,Carol,Bob,Iris) <- participant(Carol,Orga), has_participant(Orga,Bob), ~vote_distribute(Orga,Carol,Bob,Iris) guarded by Carol.

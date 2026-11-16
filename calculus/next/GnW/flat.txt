@@ -1,0 +1,39 @@
+GnW: Guardians 'n' Wards (flat text)
+GKK:0 - | An *identity* is a unique key pair.
+GKK:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+GKK:0 - | Alice, Bob and Carol are persons.
+GKK:0 - | Reflexive: x knows y.
+GKK:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
+GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2+GnW:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
+GKK:3+GnW:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+GSG:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+GSG:0 - | Alice and Bob are persons.
+GSG:1+GnW:3 ■ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend, not Bob counts Alice as a friend, Alice is a person and Bob is a person.
+GSG:1 ○ | Alice and Bob will become friends only if they trust each other.
+GSG:2+GnW:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
+GSG:3 ○ | Loss of Trust.
+GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
+GnW:0 - | Alice and Bob are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+GnW:0 - | Default: any guardian of z for those who decide for z.
+GnW:1 ■ Enter: Alice and Carol may jointly Carol has an identity, Carol is a ward, Carol has Alice as a guardian, Alice is the creator of Carol, Alice is a guardian of Carol, Alice knows Carol, Carol knows Alice, Alice counts Carol as a friend and Carol counts Alice as a friend, provided Alice is a person and not Carol has an identity. Must consent: Carol.
+GnW:1 ■ | Alice chooses Carol's key pair.
+GnW:2 ■ | Guardian decisions.
+GnW:2 ■ Make guardian: Any guardian of Carol and Bob may jointly Bob is a guardian of Carol, Carol has Bob as a guardian, Bob knows Carol, Carol knows Bob, Bob counts Carol as a friend and Carol counts Bob as a friend, provided Carol is a ward, not Carol is retired, Bob is a person, Carol has Alice as a guardian, Bob counts Alice as a friend, not Bob is a guardian of Carol and not Carol has Bob as a guardian.
+GnW:2 ■ Resign: Bob may no longer Bob is a guardian of Carol and no longer Carol has Bob as a guardian.
+GnW:2 ■ End guardian: Any guardian of Carol, other than Bob, may no longer Bob is a guardian of Carol and no longer Carol has Bob as a guardian.
+GnW:2 ■ Guardian unfriend: Bob may no longer Bob counts Carol as a friend, no longer Carol counts Bob as a friend, no longer Bob is a guardian of Carol and no longer Carol has Bob as a guardian.
+GnW:2 ■ | Carol may not end a friendship with her guardian.
+GnW:3 ■ | Ward and person.
+GnW:3 ■ Ward acquaint: Carol and Bob may jointly Carol knows Bob and Bob knows Carol, provided Carol is a ward, Carol has Alice as a guardian and Bob is a person.
+GnW:3 ■ Ward befriend: Carol, Bob and Alice may jointly Carol counts Bob as a friend and Bob counts Carol as a friend, provided Carol is a ward, not Carol is retired, Carol has Alice as a guardian, Bob is a person, Carol knows Bob, Bob knows Carol, Alice counts Bob as a friend, Bob counts Alice as a friend, not Carol counts Bob as a friend and not Bob counts Carol as a friend.
+GnW:3 ■ Ward end: Carol may no longer Carol counts Bob as a friend and no longer Bob counts Carol as a friend, provided not Carol has Bob as a guardian.
+GnW:3 ■ Unfriend: Bob may no longer Bob counts Carol as a friend and no longer Carol counts Bob as a friend, provided not Bob is a guardian of Carol.
+GnW:3 ■ Ward unfriend: Alice may no longer Carol counts Bob as a friend and no longer Bob counts Carol as a friend, provided Carol has Alice as a guardian and not Bob is a guardian of Carol.
+GnW:4 ■ | Wards.
+GnW:4 ■ Wards acquaint: Carol and Dave may jointly Carol knows Dave and Dave knows Carol, provided Carol is a ward, Carol has Alice as a guardian, Dave is a ward and Dave has Bob as a guardian. Possibly one: Alice=Bob.
+GnW:4 ■ Wards befriend: Carol, Dave, Alice and Bob may jointly Carol counts Dave as a friend and Dave counts Carol as a friend, provided Carol is a ward, not Carol is retired, Carol has Alice as a guardian, Dave is a ward, not Dave is retired, Dave has Bob as a guardian, Carol knows Dave, Dave knows Carol, Alice knows Dave, Alice counts Bob as a friend, Bob counts Alice as a friend, not Carol counts Dave as a friend and not Dave counts Carol as a friend. Possibly one: Alice=Bob.
+GnW:4 ■ Wards of one guardian befriend: Carol, Dave and Alice may jointly Carol counts Dave as a friend and Dave counts Carol as a friend, provided Carol is a ward, not Carol is retired, Carol has Alice as a guardian, Dave is a ward, not Dave is retired, Dave has Alice as a guardian, Carol knows Dave, Dave knows Carol, not Carol counts Dave as a friend and not Dave counts Carol as a friend.
+GnW:5 ■ Retire: Any guardian of Carol may Carol is retired, no longer anyone is a guardian of Carol, no longer Carol has anyone as a guardian, no longer Carol counts anyone as a friend and no longer anyone counts Carol as a friend, provided not Carol is retired.
+GnW:5 ■ | Carol can then take no act.

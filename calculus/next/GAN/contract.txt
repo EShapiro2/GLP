@@ -1,0 +1,7 @@
+GAN: Grassroots Ad Network
+GAN extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation).
+An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the Orga-coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
+Alice and Bob are persons, Orga a networked organisation.
+1. ■ Posting. Post: Bob, an advertiser, may post an ad to the members he points to; its budget is then locked on top of his stake. Pass: A member may pass it to the members they point to.
+2. ■ Show: Alice, a member, is shown an ad she received if it is for her profile.
+3. ◆ Viewing and clicking. View, Click: Alice may attest that she viewed, or clicked, an ad shown to her, and the ad's budget then pays her its coins for the view or the click, up to the most one member may earn from it.

@@ -1,0 +1,36 @@
+GRA: Grassroots Ride Auction
+GRA extends GDO-LB.
+Vocabulary: x is a rider = rider(x); x is a driver = driver(x); x has the call c open = open_call(x,c); x has a ride = ride(x); x rides with y = rides_with(x,y); x has a release of the ride with y = released(x,y); y has received x's call c = call(y,x,c); y has received x's call c from x = direct_call(y,x,c); x has sent x's call c to y = sent_call(x,y,c); y has forwarded x's call c to z = forwarded(y,x,z,c); y has a bid on x's call c = bid(y,x,c); the bidding period of x's call c has ended = period_ended(x,c); the terms of x's call c select y = selects(x,y,c); the terms of x's call c select no bidder = selects_none(x,c); x's fare is locked = fare_locked(x); x's deposit is locked = deposit_locked(x); x is at the pickup point with y = at_pickup(x,y); x is at the destination with y = at_destination(x,y); x has a pickup recorded with y = pickup(x,y); no pickup of x's ride is recorded within the maximum pickup delay = no_pickup(x).
+x and y have a ride: x has a ride, y has a ride, x rides with y and y rides with x.
+x and y are both at the pickup point: x is at the pickup point with y and y is at the pickup point with x.
+x and y are both at the destination: x is at the destination with y and y is at the destination with x.
+After x calls for bids on a ride as c, which requires x has no call open: x has the call c open.
+After x's call c goes to y, which requires y has not received x's call c: x has sent x's call c to y, y has received x's call c and y has received x's call c from x.
+After y forwards x's call c to z, which requires y has not forwarded x's call c to z: y has forwarded x's call c to z and z has received x's call c.
+After y bids a fare and a pickup delay on x's call c: y has a bid on x's call c.
+After x awards the ride of x's call c to y, which requires y does not have a ride: no longer x has the call c open, x and y have a ride, x's fare is locked and y's deposit is locked.
+After x closes x's call c: no longer x has the call c open.
+After the pickup of x and y is recorded, which requires x does not have a pickup recorded with y and y does not have a pickup recorded with x: x has a pickup recorded with y and y has a pickup recorded with x.
+After the fare and the deposit are released to x and to y as the terms say: no longer x's fare is locked, no longer y's deposit is locked, no longer x and y have a ride, x has a pickup recorded with no one, y has a pickup recorded with no one, x has a release of the ride with y and y has a release of the ride with x.
+After x cancels x's ride with y: no longer x's fare is locked, no longer y's deposit is locked, no longer x and y have a ride, x has a pickup recorded with no one, y has a pickup recorded with no one, x has a release of the ride with y and y has a release of the ride with x.
+After x withdraws x's call c: no longer x has the call c open.
+GRA:0 - | A *pickup delay* is measured from the award. The *terms* of a call, a parameter of GRA, state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
+GRA:0 - | Alice is a rider and Bob a driver, Trip a call. A person can be either a rider or a driver but not both.
+GRA:0 - | Environment: x is a rider; x is a driver; the bidding period of x's call c has ended; x is at the pickup point with y; x is at the destination with y; no pickup of x's ride is recorded within the maximum pickup delay.
+GRA:0 - | Parameters: the terms of x's call c select y; the terms of x's call c select no bidder.
+GRA:1 ■ | Call.
+GRA:1 ■ Call: open_call(Alice,Trip) <- rider(Alice), ~ride(Alice), ~open_call(Alice,_) guarded by Alice.
+GRA:1 ■ | Alice calls for bids from the persons Alice points to, stating the pickup point, the destination, the bidding period and the terms.
+GRA:1 ■ Send call: sent_call(Alice,Bob,Trip), call(Bob,Alice,Trip), direct_call(Bob,Alice,Trip) <- open_call(Alice,Trip), points_to(Alice,Bob), ~call(Bob,Alice,Trip).
+GRA:1 ■ Forward call: forwarded(Bob,Alice,Carol,Trip), call(Carol,Alice,Trip) <- direct_call(Bob,Alice,Trip), points_to(Bob,Carol), ~forwarded(Bob,Alice,Carol,Trip).
+GRA:2 ■ Bid: bid(Bob,Alice,Trip) <- driver(Bob), call(Bob,Alice,Trip), ~period_ended(Alice,Trip) guarded by Bob.
+GRA:2 ■ | Alice may not open a bid before then.
+GRA:3 ■ | Award.
+GRA:3 ■ Award: ~open_call(Alice,Trip), ride(Alice), ride(Bob), rides_with(Alice,Bob), rides_with(Bob,Alice), fare_locked(Alice), deposit_locked(Bob) <- period_ended(Alice,Trip), bid(Bob,Alice,Trip), selects(Alice,Bob,Trip), ~ride(Bob), open_call(Alice,Trip) guarded by Alice.
+GRA:3 ■ | The ride is awarded at the fare the terms set, and Alice's fare and the deposit the terms set for Bob are then locked.
+GRA:3 ■ Close: ~open_call(Alice,Trip) <- selects_none(Alice,Trip), open_call(Alice,Trip) guarded by Alice.
+GRA:4 ■ Pickup: pickup(Alice,Bob), pickup(Bob,Alice) <- ride(Alice), ride(Bob), rides_with(Alice,Bob), rides_with(Bob,Alice), at_pickup(Alice,Bob), at_pickup(Bob,Alice), ~pickup(Alice,Bob), ~pickup(Bob,Alice).
+GRA:5 ■ Arrive: ~fare_locked(Alice), ~deposit_locked(Bob), ~ride(Alice), ~ride(Bob), ~rides_with(Alice,Bob), ~rides_with(Bob,Alice), ~pickup(Alice,_), ~pickup(Bob,_), released(Alice,Bob), released(Bob,Alice) <- at_destination(Alice,Bob), at_destination(Bob,Alice), fare_locked(Alice), deposit_locked(Bob), ride(Alice), ride(Bob), rides_with(Alice,Bob), rides_with(Bob,Alice).
+GRA:6 ■ Cancel: ~fare_locked(Alice), ~deposit_locked(Bob), ~ride(Alice), ~ride(Bob), ~rides_with(Alice,Bob), ~rides_with(Bob,Alice), ~pickup(Alice,_), ~pickup(Bob,_), released(Alice,Bob), released(Bob,Alice) <- no_pickup(Alice), fare_locked(Alice), deposit_locked(Bob), ride(Alice), ride(Bob), rides_with(Alice,Bob), rides_with(Bob,Alice) guarded by Alice.
+GRA:6 ■ | The fare and the deposit are then released to Alice and to Bob as the terms say.
+GRA:7 ■ Withdraw: ~open_call(Alice,Trip) <- ~period_ended(Alice,Trip), open_call(Alice,Trip) guarded by Alice.

@@ -1,0 +1,12 @@
+GDC: Grassroots Denominated Coins
+GDC extends and restricts GC.
+Vocabulary: x has issued coins of the denomination f = issued_in(x,f).
+After x issues n f-denominated x-coins: x holds n x-coins and x has issued coins of the denomination f.
+GDC:0 - | *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
+GDC:0 - | Alice and Bob are parties, Dollar a fiat currency, Sum a number.
+GDC:1 ■ First issue: coin(Alice,Alice,*Sum), issued_in(Alice,Dollar) <- ~issued_in(Alice,_) guarded by Alice.
+GDC:1 ■ Issue: GN:1 Issue <- issued_in(Alice,Dollar).
+GDC:2 ○ | Denomination.
+GDC:2 ○ | A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
+GDC:3 ○ | Pricing.
+GDC:3 ○ | Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.

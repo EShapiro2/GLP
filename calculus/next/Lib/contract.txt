@@ -1,0 +1,7 @@
+Lib: Grassroots Library
+Lib extends GKK.
+Alice and Bob are persons.
+1. ◆ Shelve: Alice may put a thing of her own on her shelf, under a new name of hers.
+2. ■ Lend: Alice may lend Bob a thing from her shelf until a day later than the current date, with the consent of Bob, provided Alice and Bob know each other; it then leaves the shelf, and Bob holds it.
+3. ■ Return: Bob may return a borrowed thing; it then goes back on Alice's shelf.
+4. ○ On time. Bob will return a borrowed thing by the agreed day.

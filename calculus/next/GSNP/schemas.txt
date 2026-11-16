@@ -1,0 +1,19 @@
+GSNP: Grassroots Social Network with Provenance
+GSNP instantiates GSN with item(y,t) for message(y,x,t); item(z,t@y) for group_message(z,x,t,g,y), composes it with GAI (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231), and restricts and extends the composition.
+After x sends t to y: y holds the item t.
+After y delivers t as its author in g to z, which requires y has not delivered the message t of y in g to z: y has delivered the message t of y in g to z and z holds the item t.
+After x forwards t to the group g of y, adding x's signature to the signatures t carries: y has the post t signed by x of x in g.
+GSNP:0 - | Alf is an AI agent, Alice and Bob are persons, Grupo a group, Text a message, Item an item, Proof an attestation.
+GSNP:1 ■ Message: GSN:1 <- person(Alice), item(Alice,Text), author(Alice,Text).
+GSNP:1 ■ Post: GSN:4 Post <- person(Bob), item(Bob,Text), author(Bob,Text).
+GSNP:1 ■ Post own: GSN:4 Post own <- person(Alice), item(Alice,Text), author(Alice,Text).
+GSNP:1 ■ Agent message: item(Bob,Text) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), item(Alf,Text), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
+GSNP:1 ■ Create: GSN:2 Create <- person(Alice).
+GSNP:1 ■ Close: GSN:2 Close <- person(Alice).
+GSNP:1 ■ Join: GSN:3 Join <- person(Alice), person(Bob).
+GSNP:1 ■ Remove: GSN:3 Remove <- person(Alice).
+GSNP:1 ■ Leave: GSN:3 Leave <- person(Bob).
+GSNP:1 ■ Deliver: GSN:4 Deliver <- ~author(Alice,Text).
+GSNP:1 ■ Deliver leader: GSN:4 Deliver leader <- ~author(Alice,Text).
+GSNP:1 ■ Deliver own: group_delivered(Alice,Alice,Text,Grupo,Carol), item(Carol,Text) <- leader(Alice,Grupo), posted(Alice,Text,Alice,Grupo), listed(Alice,Carol,Grupo), author(Alice,Text), ~group_delivered(Alice,Alice,Text,Grupo,Carol).
+GSNP:2 ■ Post forward: posted(Alice,Item@Bob,Bob,Grupo) <- person(Bob), member(Bob,Grupo,Alice), ~leader(Bob,Grupo), item(Bob,Item) guarded by Bob.

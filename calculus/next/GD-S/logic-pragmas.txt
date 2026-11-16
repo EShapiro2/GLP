@@ -1,0 +1,5 @@
+GD-S: Separating GD
+GD-S restricts GD.
+Alice, Bob and Carol are persons.
+1. ○ Befriend: GSG:1, only if Alice has not declared distrust of Bob and Bob has not declared distrust of Alice.
+2. ○ Taking sides. Alice, whose friend Bob has declared distrust of Carol, will eventually declare distrust of Carol or end her friendship with Bob, unless Bob withdraws the declaration.

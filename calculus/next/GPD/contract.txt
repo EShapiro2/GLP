@@ -1,0 +1,10 @@
+GPD: Grassroots Programs Dissemination
+GPD extends GFP (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration.
+Alice, Bob and Carol are persons.
+1. ◆ Publish: Carol may publish a program by signing it, attesting that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
+2. ■ Developer Trust. Trust: Alice may declare trust in Carol, whom she knows, as a developer. Untrust: Alice may withdraw the declaration.
+3. ■ Offer: Carol may offer a program she holds to her friend Alice by forwarding it to her.
+4. ■ Install: Alice may install a program she published, as well as a program offered to her whose developer she trusts.
+5. ■ Invite: Alice may invite her friend Bob to join her in a program she installed, with the consent of Bob, who trusts its developer; Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
+6. ■ Leave: Alice may leave a program she installed; it is then no longer installed, and her participation in it with every participant ends.

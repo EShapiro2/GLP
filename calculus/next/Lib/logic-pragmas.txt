@@ -1,0 +1,12 @@
+Lib: Grassroots Library
+Lib extends GKK.
+Alice and Bob are persons, Tome a thing, Day a day and Today a date.
+1. ◆ Shelve: Alice may put Tome on her shelf under a new name of hers. Tome is a thing of Alice's own.
+2. ■ Lend: Alice may lend Bob Tome from her shelf until Day, with the consent of Bob, provided Alice and Bob know each other, the current date is Today and Day is more than Today.
+3. ■ Return: Bob may return Tome borrowed from Alice until Day.
+4. ○ On time. Bob will return a borrowed thing by the agreed day.
+Logic pragmas.
+Vocabulary: x has shelved t = shelved(x,t); x has t on the shelf = shelf(x,t); y holds t of x until e = borrowed(y,t,x,e); the current date is e, for x = today(x,e).
+After x puts t on x's shelf under a new name of x's, which requires x has not shelved t: x has shelved t and x has t on the shelf.
+After x lends y t from x's shelf until e: no longer x has t on the shelf and y holds t of x until e.
+After y returns t borrowed from x until e: no longer y holds t of x until e and x has t on the shelf.

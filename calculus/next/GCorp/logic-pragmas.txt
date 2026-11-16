@@ -1,0 +1,3 @@
+GCorp: Grassroots Corporation
+GCorp extends GO and DGC (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A *corporation* is an organisation that holds, pays and issues Dollar-denominated coins and bonds.

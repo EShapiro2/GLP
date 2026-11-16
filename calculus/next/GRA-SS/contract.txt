@@ -1,0 +1,8 @@
+GRA-SS: Grassroots Ride Auction, Second-Score Restriction
+GRA-SS instantiates GRA with second-score terms and restricts it.
+*Second-score terms* state a maximum pickup delay T ≥ 0, a willingness to pay W(τ) = A − λτ with A, λ ≥ 0, and a deposit D ≥ 0. The award is at time t₀. A bid (p, τ) is the fare p ≥ 0 the bidder asks and the pickup delay τ ≥ 0 the bidder promises. Its *score* is W(τ) − p, and it is *admissible* iff τ ≤ T and its score is at least 0.
+Alice is a rider, Bob a driver and Carol a person.
+1. ■ Point transitive: GDO-LB:2, only if Carol is a driver.
+2. ■ Award. Award, Close: GRA:3, where the terms select the bidder whose admissible bid has the highest score, ties broken as the terms say, or no bidder if no bid is admissible. They set the fare P = W(τ) − s₂, where τ is that bid's pickup delay and s₂ is the highest score among the other admissible bids, or 0 if there is none, and they set the deposit D.
+3. ■ Arrive: GRA:5, where the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}.
+4. ■ Cancel: GRA:6, where the fare and the deposit are released to Alice if Alice was at the pickup point from t₀ to t₀ + T, and otherwise the fare to Alice and the deposit to Bob.
