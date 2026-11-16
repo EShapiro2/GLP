@@ -191,7 +191,6 @@ programs/social/graph/budget/bounded.glp	open-decl	bounded/3
 programs/social/graph/budget/bounded.glp	open-decl	execute/4
 programs/social/graph/budget/bounded.glp	open-decl	reduce/2
 programs/social/graph/core/agent.glp	open-decl	anchor_is/4
-programs/social/graph/core/agent.glp	open-decl	cert_check/4
 programs/social/graph/core/agent.glp	open-decl	invite_check/4
 programs/social/graph/core/agent.glp	open-decl	may_release/5
 programs/social/graph/core/agent.glp	open-decl	mr_anchor/6
