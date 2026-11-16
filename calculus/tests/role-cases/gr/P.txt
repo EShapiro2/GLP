@@ -1,5 +1,5 @@
 P: Greetings
-P extends GKK.
+P extends Knowledge.
 Alice and Bob are persons.
 1. ■ Greet: Alice may greet Bob, with the consent of those who decide for Bob, provided Alice knows Bob.
 Logic pragmas.

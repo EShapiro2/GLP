@@ -1,0 +1,4 @@
+Interface pragmas
+Point friend: Alice [Point friend]
+Point transitive: Alice [Point transitive]
+Unpoint: Alice [Unpoint]

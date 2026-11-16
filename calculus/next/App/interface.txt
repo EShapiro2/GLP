@@ -1,0 +1,122 @@
+App
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ■ Open place.  Alice may declare the place she is in open.
+5. ■ Close place.  Alice may close it.
+6. ■ Encounter.  Alice and Bob, nearby each other, who have both declared the place open, come to know each other, and Alice must consent, and Bob must consent.
+7. ■ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+8. ■ Person unfriend.  Alice may end her friendship with Bob.
+9. ■ Sign.  Alice may create an item by signing it.
+10. ■ Forward.  Alice may forward an item she holds to her friend Bob, adding her signature to the signatures the item carries.
+11. ◆ Publish.  Carol may publish a program by signing it, attesting that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
+12. ■ Trust.  Alice may declare trust in Carol, whom she knows, as a developer.
+13. ■ Untrust.  Alice may withdraw the declaration.
+14. ■ Offer.  Carol may offer a program she holds to her friend Alice by forwarding it to her.
+15. ■ Install own.  Alice may install a program she published, as well as a program offered to her whose developer she trusts.
+16. ■ Install.  Alice may install a program she published, as well as a program offered to her whose developer she trusts.
+17. ■ Invite.  Alice may invite her friend Bob to join her in a program she installed, with the consent of Bob, who trusts its developer; Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
+18. ■ Leave.  Alice may leave a program she installed; it is then no longer installed, and her participation in it with every participant ends.
+19. ■ Enter.  Alice may create a ward, Carol, and establish Carol's identity by choosing Carol's key pair, and Carol must consent.
+20. ■ Make guardian.  Those who decide for Carol may make Bob, a friend of a guardian of Carol, a guardian and a friend of Carol, with the consent of Bob.
+21. ■ Resign.  Bob may end his guardianship of Carol.
+22. ■ End guardian.  Those who decide for Carol, other than Bob, may end Bob's guardianship.
+23. ■ Guardian unfriend.  Bob may end his friendship with Carol, which ends his guardianship.
+24. ■ Ward acquaint.  Carol, a ward of Alice, and Bob may jointly come to know each other.
+25. ■ Ward befriend.  Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends.
+26. ■ Ward end.  Carol, Bob or Alice may end the relation of Bob and Carol.
+27. ■ Unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
+28. ■ Ward unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
+29. ■ Wards acquaint.  Carol, a ward of Alice, and Dave, a ward of Bob, may jointly come to know each other.
+30. ■ Wards befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+31. ■ Wards of one guardian befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+32. ■ Retire.  Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
+33. ■ Open store.  Carol may make her service Dave a store.
+34. ○ List.  Carol may list in Dave a program developed by Bob, after adding her signature to its signatures, provided she trusts Bob as a developer.
+35. ○ Delist.  Carol may delist it.
+36. ■ Trust store.  Alice may declare trust in Dave, Carol being known to her.
+37. ■ Untrust store.  Alice may withdraw the declaration.
+38. ■ Install from store.  Alice may install a program listed in a store she trusts.
+39. ■ Open server.  Carol may make her service Dave a rendezvous server.
+40. ■ Sign link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+41. ■ Invite by link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+42. ■ Use link.  Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
+43. ■ Present.  Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship.
+44. ■ Match.  Dave then gives each the address of the other.
+45. ■ Open directory.  Carol may make her service Dora a directory.
+46. ■ List me.  Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, shown on Dora's page or not; her app then keeps Dora supplied with invitation links of hers.
+47. ■ List me unshown.  Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, shown on Dora's page or not; her app then keeps Dora supplied with invitation links of hers.
+48. ■ Delist me.  Alice may delist herself.
+49. ■ Delist me unshown.  Alice may delist herself.
+50. ■ Lookup.  Bob may look Alice up, on Dora's page if she is shown there, and by her email address and name if not; Dora then gives Bob an invitation link of Alice's.
+51. ■ Lookup by address.  Bob may look Alice up, on Dora's page if she is shown there, and by her email address and name if not; Dora then gives Bob an invitation link of Alice's.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Open place: Alice [Open place]
+Close place: Alice [Close place]
+Encounter: Alice [Encounter]
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Person unfriend: Alice [Person unfriend]
+Sign: Alice [Sign] <item>
+Forward: Alice [Forward]
+Publish: Carol [Publish] <prog>
+Trust: Alice [Trust]
+Untrust: Alice [Untrust]
+Offer: Carol [Offer]
+Install own: Alice [Install own]
+Install: Alice [Install]
+Invite: Alice [Invite]
+  Bob: Alice asks for your consent to invite.
+Leave: Alice [Leave]
+Enter: Alice [Enter] <carol>
+Make guardian: Bob [Make guardian] <carol>
+  Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
+Resign: Bob [Resign]
+End guardian: Decider [End guardian] <bob>
+  Codecider: Decider asks for your consent to end guardian.
+Guardian unfriend: Bob [Guardian unfriend]
+Ward acquaint: Carol [Ward acquaint] <bob>
+  Bob: Carol asks for your consent to ward acquaint.
+Ward befriend: Carol [Ward befriend]
+  Bob: Carol asks for your consent to ward befriend.
+  Alice: Carol asks for your consent to ward befriend.
+Ward end: Carol [Ward end]
+Unfriend: Bob [Unfriend]
+Ward unfriend: Alice [Ward unfriend] <carol> <bob>
+Wards acquaint: Carol [Wards acquaint] <dave>
+  Dave: Carol asks for your consent to wards acquaint.
+Wards befriend: Carol [Wards befriend] <bob>
+  Dave: Carol asks for your consent to wards befriend.
+  Alice: Carol asks for your consent to wards befriend.
+  Bob: Carol asks for your consent to wards befriend.
+Wards of one guardian befriend: Carol [Wards of one guardian befriend]
+  Dave: Carol asks for your consent to wards of one guardian befriend.
+  Alice: Carol asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+Open store: Carol [Open store]
+List: Carol [List]
+Delist: Carol [Delist]
+Trust store: Alice [Trust store]
+Untrust store: Alice [Untrust store]
+Install from store: Alice [Install from store] <prog> <bob>
+Open server: Carol [Open server]
+Sign link: Alice [Sign link] <link>
+Invite by link: Alice [Invite by link]
+Use link: Bob [Use link] <alice> <link>
+Present: Alice [Present]
+Open directory: Carol [Open directory]
+List me: Alice [List me] <mail> <name>
+  Dora: Alice asks for your consent to list me.
+List me unshown: Alice [List me unshown] <mail> <name>
+  Dora: Alice asks for your consent to list me unshown.
+Delist me: Alice [Delist me] <dora>
+Delist me unshown: Alice [Delist me unshown] <dora>
+Lookup: Bob [Lookup]
+Lookup by address: Bob [Lookup by address]

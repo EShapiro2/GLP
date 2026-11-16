@@ -1,0 +1,5 @@
+Savings Bank
+Savings Bank restricts Community Bank.
+A *savings bank* is a community bank that keeps savings.
+Alice and Bob are persons, Acct an account.
+1. ■ Open: Community Bank:1, only if Bob knows Alice. Savings Bank accounts pay interest.

@@ -10,12 +10,37 @@ publication directory tests/CASE/pub, or, with neither, on the schemas gcsas.py 
     python3 tools/tests.py --write    write expect.txt of every case from this run (read it before you commit it)
 """
 import io, os, shutil, subprocess, sys, tempfile, contextlib
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import gcsas
 
 
+def reload_tools():
+    """The tools again, after $CALCULUS_NAMES is set or unset: a module reads the names when it is loaded."""
+    import importlib
+    for m in ('names', 'gcsas', 'toglp', 'relations', 'cascade', 'ifadopt', 'changes'):
+        if m in sys.modules:
+            importlib.reload(sys.modules[m])
+
+
 def run(case):
+    """The output of a case; with the case's own NAMES.txt, its made-up contracts after the table's (NAMES.txt: 'A test
+    may add made-up contracts ... in a table of its own'), for this process and the tools it runs."""
+    extra = os.path.join(ROOT, 'tests', case, 'NAMES.txt')
+    if not os.path.exists(extra):
+        return run_case(case)
+    os.environ['CALCULUS_NAMES'] = extra
+    reload_tools()
+    try:
+        return run_case(case)
+    finally:
+        del os.environ['CALCULUS_NAMES']
+        reload_tools()
+
+
+def run_case(case):
     d = os.path.join(ROOT, 'tests', case)
     rel_tree = os.path.exists(os.path.join(d, 'relations')) and not os.path.isdir(os.path.join(d, 'schemas')) and not os.path.isdir(os.path.join(d, 'pub'))
     if os.path.exists(os.path.join(d, 'relations')) and not rel_tree:      # a case of tools/relations.py: schemas written by hand in schemas/, no gcsas.py
@@ -56,7 +81,7 @@ def run(case):
         try:
             for f in sorted(os.listdir(sx)) if os.path.isdir(sx) else []:
                 try:
-                    out += ['--- term ' + f[:-4]] + toglp.contract_term(f[:-4])[0].split('\n')
+                    out += ['--- term ' + f[:-4]] + toglp.contract_term(NM.name_of(f[:-4]))[0].split('\n')
                 except Exception as ex:
                     out += ['--- term ' + f[:-4], 'EXCEPTION %s: %s' % (type(ex).__name__, ex)]
         finally:
@@ -86,13 +111,13 @@ def run(case):
         try:
             for f in sorted(os.listdir(sx)) if os.path.isdir(sx) else []:
                 try:
-                    txt = cascade.contract_txt(f[:-4])
+                    txt = cascade.contract_txt(NM.name_of(f[:-4]))
                     out += ['--- interface ' + f[:-4]] + txt.rstrip('\n').split('\n')
                     if os.path.isdir(os.path.join(d, 'rev')):      # and, where the case has its texts, ifadopt.py's proposal to the owner
                         import ifadopt
                         sv, ifadopt.ROOT = ifadopt.ROOT, d
                         try:
-                            out += ['--- interface-adopted ' + f[:-4]] + (ifadopt.adopted(f[:-4], txt) or 'none\n').rstrip('\n').split('\n')
+                            out += ['--- interface-adopted ' + f[:-4]] + (ifadopt.adopted(NM.name_of(f[:-4]), txt) or 'none\n').rstrip('\n').split('\n')
                         finally:
                             ifadopt.ROOT = sv
                 except Exception as ex:
@@ -104,7 +129,7 @@ def run(case):
         out += ['--- relations.py'] + ['%s: %s' % (line, 'holds' if not f else 'FAILS: ' + '; '.join(f)) for _, line, _, _, f in relations.run(root=d)]
     ad = os.path.join(d, 'adopt.txt')
     if os.path.exists(ad):              # a case of adopt.py: the compile of the contract it names, on the case's texts
-        for n in open(ad, encoding='utf-8').read().split():
+        for n in [l.strip() for l in open(ad, encoding='utf-8') if l.strip()]:      # a contract a line, its name of one or two words
             r = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'adopt.py'), '--tree', d, n], capture_output=True, text=True)
             out += ['--- adopt.py --tree %s: exit %d' % (n, r.returncode)] + [l for l in (r.stdout + r.stderr).split('\n') if l.strip()]
     return out

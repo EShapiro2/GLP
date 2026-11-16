@@ -1,0 +1,5 @@
+Second-Score Auction
+Second-Score Auction restricts Auction.
+Second-Score Auction:0 - | A *second-score auction* awards the second score.
+Second-Score Auction:0 - | Alice and Bob are persons.
+Second-Score Auction:1 ■ Bid: Auction:1 Bid <- knows(Bob,Alice).

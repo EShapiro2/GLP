@@ -1,0 +1,8 @@
+Interface pragmas
+Publish: Carol [Publish] <prog>
+Developer Trust: Alice [Trust] [Untrust]
+Offer: Carol [Offer]
+Install: Alice [Install own] [Install]
+Invite: Alice [Invite]
+  Bob: Alice asks for your consent to invite.
+Leave: Alice [Leave]

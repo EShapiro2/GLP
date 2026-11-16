@@ -1,0 +1,4 @@
+Interface pragmas
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]

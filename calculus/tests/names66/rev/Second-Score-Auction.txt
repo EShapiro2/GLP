@@ -1,0 +1,5 @@
+Second-Score Auction
+Second-Score Auction restricts Auction.
+A *second-score auction* awards the second score.
+Alice and Bob are persons.
+1. ■ Bid: Auction:1 Bid, only if Bob knows Alice.

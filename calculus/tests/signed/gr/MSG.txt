@@ -1,5 +1,5 @@
 MSG: Messages
-MSG extends GSG.
+MSG extends Friendship.
 Alice and Bob are persons, Text a message.
 1. ■ Message: Alice may send Text to Bob, provided Alice and Bob are friends.
 Logic pragmas.

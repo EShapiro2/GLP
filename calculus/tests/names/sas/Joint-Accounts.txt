@@ -1,0 +1,7 @@
+Joint Accounts
+Joint Accounts extends Knowledge.
+Vocabulary: x holds the joint account n with y = joint(x,n,y).
+x and y hold the joint account n: x holds the joint account n with y and y holds the joint account n with x.
+After x and y open the joint account n: x and y hold the joint account n.
+Joint Accounts:0 - | Alice and Bob are persons, Acct a joint account.
+Joint Accounts:1 ■ Open: joint(Alice,Acct,Bob), joint(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice) guarded by Alice, Bob.

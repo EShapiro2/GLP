@@ -1,0 +1,79 @@
+Children (flat text)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2+Guardians:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
+Knowledge:3+Guardians:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:0 - | Alice and Bob are persons.
+Friendship:1+Guardians:3 ■ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend, not Bob counts Alice as a friend, Alice is a person and Bob is a person.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2+Groups:3+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend, no longer Bob counts Alice as a friend, no longer Alice is a member of the group anyone of Bob, no longer Bob is a member of the group anyone of Alice, no longer Alice has Bob as a member of the group anyone and no longer Bob has Alice as a member of the group anyone, provided Alice is a person and Bob is a person.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Groups:0 - | A *message*, a parameter of Groups, is what a person sends.
+Groups:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+Groups:1+Warded Groups:1 ■ Message: Alice may Bob has the message Text from Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend and Alice is a person. Possibly one: Alice=Bob.
+Groups:2 ■ | Group.
+Groups:2+Warded Groups:2 ■ Create: Alice may Alice is the leader of Grupo, Alice is a member of the group Grupo of Alice and Alice has Alice as a member of the group Grupo, provided not Alice is the leader of Grupo and Alice is a person.
+Groups:2 ■ | Alice is then its leader and first member.
+Groups:2+Warded Groups:2 ■ Close: Alice may no longer Alice is the leader of Grupo, no longer Alice has anyone as a member of the group Grupo and no longer anyone is a member of the group Grupo of Alice, provided Alice is a person.
+Groups:3 ■ | Joining and Leaving.
+Groups:3+Warded Groups:3+Children:3 ■ Join: Alice and Bob may jointly Bob is a member of the group Grupo of Alice and Alice has Bob as a member of the group Grupo, provided Alice is the leader of Grupo, Alice counts Bob as a friend, Bob counts Alice as a friend, not Bob is a member of the group Grupo of anyone, Bob is a person and Alice is a person. Possibly one: Alice=Bob.
+Groups:3 ■ Remove: Alice may no longer Bob is a member of the group Grupo of Alice and no longer Alice has Bob as a member of the group Grupo, provided Alice is the leader of Grupo. Possibly one: Alice=Bob.
+Groups:3 ■ Leave: Bob may no longer Bob is a member of the group Grupo of Alice and no longer Alice has Bob as a member of the group Grupo. Possibly one: Alice=Bob.
+Groups:4 ■ | Group messaging.
+Groups:4+Warded Groups:1 ■ Post: Bob may Alice has the post Text of Bob in Grupo, provided Bob is a member of the group Grupo of Alice, not Alice has the post Text of Bob in Grupo and Bob is a person. Possibly one: Alice=Bob.
+Groups:4+Warded Groups:1 ■ Post own: Alice may Alice has the post Text of Alice in Grupo, provided Alice is a member of the group Grupo of Alice, not Alice has the post Text of Alice in Grupo and Alice is a person.
+Groups:4 ■ Deliver: Alice has delivered the message Text of Bob in Grupo to Carol and Carol has the message Text of Bob in Grupo delivered by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, Alice has Carol as a member of the group Grupo and not Alice has delivered the message Text of Bob in Grupo to Carol. Possibly one: Alice=Bob, Alice=Carol, Bob=Carol.
+Groups:4 ■ Deliver leader: Alice has delivered the message Text of Bob in Grupo to Alice and Alice has the message Text of Bob in Grupo delivered by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo and not Alice has delivered the message Text of Bob in Grupo to Alice. Possibly one: Alice=Bob.
+Guardians:0 - | Bob *trusts* Carol, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a child and how. A child takes an act of a party by those who decide for it.
+Guardians:0 - | Alice and Bob are persons, Carol and Dave children; in clause 4 Alice and Bob are possibly one person.
+Guardians:0 - | Default: any parent of z for those who decide for z.
+Guardians:1+Children:1 ◆ Enter: Alice and Carol may jointly Carol has an identity, Carol is a child, Carol has Alice as a parent, Alice is the creator of Carol, Alice is a parent of Carol, Alice knows Carol, Carol knows Alice, Alice counts Carol as a friend and Carol counts Alice as a friend, provided Alice is a person and not Carol has an identity. Must consent: Carol.
+Guardians:1 ■ | Alice chooses Carol's key pair.
+Guardians:2 ■ | Guardian decisions.
+Guardians:2 ■ Make parent: The parents of Carol and Bob may jointly Bob is a parent of Carol, Carol has Bob as a parent, Bob knows Carol, Carol knows Bob, Bob counts Carol as a friend and Carol counts Bob as a friend, provided Carol is a child, not Carol is retired, Bob is a person, Carol has Alice as a parent, Bob counts Alice as a friend, not Bob is a parent of Carol and not Carol has Bob as a parent.
+Guardians:2 ■ Resign: Bob may no longer Bob is a parent of Carol and no longer Carol has Bob as a parent.
+Guardians:2 ■ End parent: The parents of Carol, other than Bob, may no longer Bob is a parent of Carol and no longer Carol has Bob as a parent.
+Guardians:2+Warded Groups:3 ■ Parent unfriend: Bob may no longer Bob counts Carol as a friend, no longer Carol counts Bob as a friend, no longer Bob is a parent of Carol, no longer Carol has Bob as a parent, no longer Bob is a member of the group anyone of Carol, no longer Carol is a member of the group anyone of Bob, no longer Bob has Carol as a member of the group anyone and no longer Carol has Bob as a member of the group anyone.
+Guardians:2 ■ | Carol may not end a friendship with her parent.
+Guardians:3 ■ | Ward and person.
+Guardians:3+Children:2 ■ Child acquaint: Carol, Bob and Alice may jointly Carol knows Bob and Bob knows Carol, provided Carol is a child, Carol has Alice as a parent, Bob is a person, Alice knows Bob and Alice is a parent of Carol.
+Guardians:3 ■ Child befriend: Carol, Bob and Alice may jointly Carol counts Bob as a friend and Bob counts Carol as a friend, provided Carol is a child, not Carol is retired, Carol has Alice as a parent, Bob is a person, Carol knows Bob, Bob knows Carol, Alice counts Bob as a friend, Bob counts Alice as a friend, not Carol counts Bob as a friend and not Bob counts Carol as a friend.
+Guardians:3+Warded Groups:3 ■ Child end: Carol may no longer Carol counts Bob as a friend, no longer Bob counts Carol as a friend, no longer Carol is a member of the group anyone of Bob, no longer Bob is a member of the group anyone of Carol, no longer Carol has Bob as a member of the group anyone and no longer Bob has Carol as a member of the group anyone, provided not Carol has Bob as a parent.
+Guardians:3+Warded Groups:3 ■ Unfriend: Bob may no longer Bob counts Carol as a friend, no longer Carol counts Bob as a friend, no longer Bob is a member of the group anyone of Carol, no longer Carol is a member of the group anyone of Bob, no longer Bob has Carol as a member of the group anyone and no longer Carol has Bob as a member of the group anyone, provided not Bob is a parent of Carol.
+Guardians:3+Warded Groups:3 ■ Child unfriend: Alice may no longer Carol counts Bob as a friend, no longer Bob counts Carol as a friend, no longer Carol is a member of the group anyone of Bob, no longer Bob is a member of the group anyone of Carol, no longer Carol has Bob as a member of the group anyone and no longer Bob has Carol as a member of the group anyone, provided Carol has Alice as a parent and not Bob is a parent of Carol.
+Guardians:4 ■ | Wards.
+Guardians:4+Children:2 ■ Children acquaint: Carol, Dave, Alice and Bob may jointly Carol knows Dave and Dave knows Carol, provided Carol is a child, Carol has Alice as a parent, Dave is a child, Dave has Bob as a parent, Alice knows Dave, Bob knows Carol, Alice knows Bob, Bob knows Alice, Alice is a parent of Carol and Bob is a parent of Dave. Possibly one: Alice=Bob.
+Guardians:4 ■ Children befriend: Carol, Dave, Alice and Bob may jointly Carol counts Dave as a friend and Dave counts Carol as a friend, provided Carol is a child, not Carol is retired, Carol has Alice as a parent, Dave is a child, not Dave is retired, Dave has Bob as a parent, Carol knows Dave, Dave knows Carol, Alice knows Dave, Alice counts Bob as a friend, Bob counts Alice as a friend, not Carol counts Dave as a friend and not Dave counts Carol as a friend. Possibly one: Alice=Bob.
+Guardians:4 ■ Children of one parent befriend: Carol, Dave and Alice may jointly Carol counts Dave as a friend and Dave counts Carol as a friend, provided Carol is a child, not Carol is retired, Carol has Alice as a parent, Dave is a child, not Dave is retired, Dave has Alice as a parent, Carol knows Dave, Dave knows Carol, not Carol counts Dave as a friend and not Dave counts Carol as a friend.
+Guardians:5+Warded Groups:3 ■ Retire: The parents of Carol may Carol is retired, no longer anyone is a parent of Carol, no longer Carol has anyone as a parent, no longer Carol counts anyone as a friend, no longer anyone counts Carol as a friend, no longer Carol is a member of the group anyone of anyone and no longer anyone has Carol as a member of the group anyone, provided not Carol is retired.
+Guardians:5 ■ | Carol can then take no act.
+Warded Groups:0 - | Alice and Bob are persons, Carol and Dave children, Grupo a group, Text a message; in clause 1 Carol is possibly Alice.
+Warded Groups:1 ■ | A child's messages.
+Warded Groups:1 ■ Child message: Carol may Bob has the message Text from Carol, provided Carol is a child, not Carol is retired, Carol counts Bob as a friend and Bob counts Carol as a friend.
+Warded Groups:1 ■ Child post: Carol may Alice has the post Text of Carol in Grupo, provided Carol is a child, not Carol is retired, Carol is a member of the group Grupo of Alice and not Alice has the post Text of Carol in Grupo. Possibly one: Alice=Carol.
+Warded Groups:1 ■ Child post own: Carol may Carol has the post Text of Carol in Grupo, provided Carol is a child, not Carol is retired, Carol is a member of the group Grupo of Carol and not Carol has the post Text of Carol in Grupo.
+Warded Groups:2 ■ | A child's group.
+Warded Groups:2+Children:3 ■ Child create: Carol and Alice may jointly Carol is the leader of Grupo, Carol is a member of the group Grupo of Carol and Carol has Carol as a member of the group Grupo, provided Carol is a child, not Carol is retired, not Carol is the leader of Grupo and Carol has Alice as a parent.
+Warded Groups:2 ■ Child close: Carol may no longer Carol is the leader of Grupo, no longer Carol has anyone as a member of the group Grupo and no longer anyone is a member of the group Grupo of Carol, provided Carol is a child and not Carol is retired.
+Warded Groups:2 ■ Parent close: Alice may no longer Carol is the leader of Grupo, no longer Carol has anyone as a member of the group Grupo and no longer anyone is a member of the group Grupo of Carol, provided Alice is a parent of Carol.
+Warded Groups:3 ■ Child join: Bob, Carol and Alice may jointly Carol is a member of the group Grupo of Bob and Bob has Carol as a member of the group Grupo, provided Bob is the leader of Grupo, Bob is a person, Bob counts Carol as a friend, Carol counts Bob as a friend, Carol has Alice as a parent, Alice is a parent of Carol, Alice counts Bob as a friend, Bob counts Alice as a friend and not Carol is a member of the group Grupo of anyone.
+Warded Groups:3 ■ Children join: Carol, Dave, Alice and Bob may jointly Dave is a member of the group Grupo of Carol and Carol has Dave as a member of the group Grupo, provided Carol is the leader of Grupo, Carol is a child, Carol has Alice as a parent, Alice is a parent of Carol, Carol counts Dave as a friend, Dave counts Carol as a friend, Dave is a child, Dave has Bob as a parent, Bob is a parent of Dave, Alice knows Dave, Alice counts Bob as a friend, Bob counts Alice as a friend and not Dave is a member of the group Grupo of anyone.
+Warded Groups:3 ■ Children of one parent join: Carol, Dave and Alice may jointly Dave is a member of the group Grupo of Carol and Carol has Dave as a member of the group Grupo, provided Carol is the leader of Grupo, Carol is a child, Carol has Alice as a parent, Alice is a parent of Carol, Carol counts Dave as a friend, Dave counts Carol as a friend, Dave is a child, Dave has Alice as a parent, Alice is a parent of Dave and not Dave is a member of the group Grupo of anyone.
+Warded Groups:3 ■ Child withdraw: Alice may no longer Carol is a member of the group Grupo of Bob and no longer Bob has Carol as a member of the group Grupo, provided Carol has Alice as a parent and Alice is a parent of Carol.
+Warded Groups:3 ■ Child leave: Carol may no longer Carol is a member of the group Grupo of Alice and no longer Alice has Carol as a member of the group Grupo, provided Carol is a child and not Carol is retired.
+Warded Groups:3 ■ Child remove: Carol may no longer Bob is a member of the group Grupo of Carol and no longer Carol has Bob as a member of the group Grupo, provided Carol is the leader of Grupo, Carol is a child and not Carol is retired.
+Children:0 - | Alice and Bob are persons, Carol and Dave children; in clause 2 Alice and Bob are possibly one person.
+Children:1 ◆ | Alice is a legal parent of the minor who operates Carol.
+Children:2 ■ | A child's acquaintances.
+Children:3 ■ | Only a child, Dave, may join the group.
+Children:4 ○ Of age: Alice may Carol is of age, no longer Carol is a child, no longer anyone is a parent of Carol, no longer Carol has anyone as a parent and Carol is a person, provided Alice is the creator of Carol, Carol has Bob as a parent and not Carol is of age.
+Children:4 ○ | Carol is then a person.
+Children:4 ○ | The creator will do so if the minor who operates Carol comes of age, and not before.
+Children:5 ○ | A minor who is not a ward.
+Children:5 ○ | Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.

@@ -1,5 +1,5 @@
 P: Greetings
-P extends GKK.
+P extends Knowledge.
 Vocabulary: x has greeted y = greeted(x,y).
 Roles: those who decide for z = deciders(z); the friends of z = friends(z).
 After x greets y: x has greeted y.

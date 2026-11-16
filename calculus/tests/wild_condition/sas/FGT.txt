@@ -1,5 +1,5 @@
 FGT: Forgetting
-FGT extends GKK.
+FGT extends Knowledge.
 x knows no one: no longer x knows anyone.
 After x forgets everyone: x knows no one.
 FGT:0 - | Alice is a person.

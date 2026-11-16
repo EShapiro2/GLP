@@ -1,0 +1,31 @@
+Interface pragmas
+A ward's messages: Alice [Message] <text>
+  Bob [Post] <text>
+  Alice [Post own] <text>
+  Carol [Ward message] <text> [Ward post] <text> [Ward post own] <text>
+A ward's group: Alice [Create] <grupo> [Close]
+  Carol [Ward create] <grupo> [Ward close]
+  Alice [Guardian close] <grupo>
+Ward join: Alice [Join]
+  Bob: Alice asks for your consent to join.
+  Bob [Guardian unfriend]
+  Carol [Ward end]
+  Bob [Unfriend]
+  Alice [Ward unfriend] <carol> <bob>
+  Decider [Retire]
+  Bob [Ward join]
+  Carol: Bob asks for your consent to ward join.
+  Alice: Bob asks for your consent to ward join.
+  Carol [Wards join] <bob>
+  Dave: Carol asks for your consent to wards join.
+  Alice: Carol asks for your consent to wards join.
+  Bob: Carol asks for your consent to wards join.
+  Carol [Wards of one guardian join]
+  Dave: Carol asks for your consent to wards of one guardian join.
+  Alice: Carol asks for your consent to wards of one guardian join.
+  Alice [Ward withdraw] <bob> <grupo>
+  Carol [Ward add]
+  Bob: Carol asks for your consent to ward add.
+  Alice: Carol asks for your consent to ward add.
+  Carol [Ward leave] [Ward remove]
+Unfriend: Alice [Person unfriend]

@@ -1,1 +1,1 @@
-A case of tools/relations.py on schemas gcsas.py prints: O has defaults; OR restricts it and gives its parameter a default of its own (as CDC of GO), OK restricts it and keeps O's defaults (Calculus #7, 2026-11-16).
+A case of tools/relations.py on schemas gcsas.py prints: O has defaults; OR restricts it and gives its parameter a default of its own (as Constitution of Organisation), OK restricts it and keeps O's defaults (Calculus #7, 2026-11-16).

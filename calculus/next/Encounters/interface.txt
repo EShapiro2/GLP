@@ -1,0 +1,16 @@
+Encounters
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ■ Open place.  Alice may declare the place she is in open.
+5. ■ Close place.  Alice may close it.
+6. ■ Encounter.  Alice and Bob, nearby each other, who have both declared the place open, come to know each other, and Alice must consent, and Bob must consent.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Open place: Alice [Open place]
+Close place: Alice [Close place]
+Encounter: Alice [Encounter]

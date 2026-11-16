@@ -1,0 +1,5 @@
+Funded DAO
+Funded DAO extends DAO and Coins.
+1. ■ Fund: A member of a DAO may give it coins they hold; its steward keeps them apart as the DAO's.
+2. ■ Grant: The steward may grant the proposer of a passed proposal, once per proposal, any amount of the DAO's coins of one issuer.
+3. ○ Amount. The steward will grant a passed proposal the amount it asks for, as far as the DAO's coins allow.

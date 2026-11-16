@@ -1,0 +1,32 @@
+Interface pragmas
+Enter: Alice [Enter] <carol>
+Guardian decisions: Bob [Make guardian] <carol>
+  Decider: Bob asks for your consent to make guardian.
+  Bob [Resign]
+  Decider [End guardian] <bob>
+  Bob [Guardian unfriend]
+Ward and person: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+  Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+  Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+  Alice [Person unfriend]
+  Carol [Ward acquaint] <bob>
+  Bob: Carol asks for your consent to ward acquaint.
+  Carol [Ward befriend]
+  Bob: Carol asks for your consent to ward befriend.
+  Alice: Carol asks for your consent to ward befriend.
+  Carol [Ward end]
+  Bob [Unfriend]
+  Alice [Ward unfriend] <carol> <bob>
+Wards: Carol [Wards acquaint] <dave>
+  Dave: Carol asks for your consent to wards acquaint.
+  Carol [Wards befriend] <bob>
+  Dave: Carol asks for your consent to wards befriend.
+  Alice: Carol asks for your consent to wards befriend.
+  Bob: Carol asks for your consent to wards befriend.
+  Carol [Wards of one guardian befriend]
+  Dave: Carol asks for your consent to wards of one guardian befriend.
+  Alice: Carol asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]

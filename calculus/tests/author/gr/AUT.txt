@@ -1,5 +1,5 @@
 AUT: Authored Messages
-AUT instantiates MSG with y holds the item t signed by x for y has the message t from x, and composes it with GFP.
+AUT instantiates MSG with y holds the item t signed by x for y has the message t from x, and composes it with Forwarding.
 Alice and Bob are persons, Text a message, Item an item.
-1. ■ Message: MSG:1, only if Alice holds the item Text and Alice is the author of Text. Forward other: GFP:2, only if not Alice is the author of Item.
+1. ■ Message: MSG:1, only if Alice holds the item Text and Alice is the author of Text. Forward other: Forwarding:2, only if not Alice is the author of Item.
 Logic pragmas.

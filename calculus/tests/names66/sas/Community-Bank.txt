@@ -1,0 +1,5 @@
+Community Bank
+Community Bank instantiates Bank with community bank bylaws and restricts it.
+Community Bank:0 - | A *community bank* is a bank whose members know each other; the bank serves the organisation of its members.
+Community Bank:0 - | Alice and Bob are persons, Acct an account.
+Community Bank:1 ■ Open: Bank:1 <- knows(Alice,Bob).
