@@ -1,10 +1,10 @@
 % GSNW: Grassroots Social Network with Wards --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: CSSN (Udi, 2026-11-10, to GSC #14, reported by GSC, and to CSSN #14, the name): CSSN is its one user today, and GSC takes it over if a second contract comes to need it.  The paper, /Users/udi/Grassroots/CSSN/main_CSSN.tex, prints it in its box and cites a clause as GSNW:1.
 % Paper: CSSN, Child-Safe Social Networking: From Social Contract to App, in preparation
-% Extends: GSNW extends, restricts and strengthens GSN, Grassroots Social Network, and GnW, Guardians 'n' Wards, both GSC's (programs/gsc), by the relations of the Calculus (GLP calculus/README.md, The relations): it restricts GSN's Message, Post, Create, Close and Join to persons; it strengthens GnW's Guardian unfriend, Ward end, Unfriend, Ward unfriend and Retire, each ending also every membership between the two; and it extends them with ten acts for wards, Ward message, Ward post, Ward create, Ward close, Guardian close, Ward join, Wards join, Wards of one guardian join and Ward withdraw.  Through them it has GSG and GKK, GSC's.
+% Extends: GSNW extends, restricts and strengthens GSN, Grassroots Social Network, and GnW, Guardians 'n' Wards, both GSC's (programs/gsc), by the relations of the Calculus (GLP calculus/README.md, The relations): it restricts GSN's Message, Post, Create, Close and Join to persons; it strengthens GnW's Guardian unfriend, Ward end, Unfriend, Ward unfriend and Retire, each ending also every membership between the two; and it extends them with fourteen acts for wards, Ward message, Ward post, Ward post own, Ward create, Ward close, Guardian close, Ward join, Wards join, Wards of one guardian join, Ward withdraw, Ward leave, Ward remove and Ward add.  Through them it has GSG and GKK, GSC's.
 % Parameters: GnW's decision rule and GSN's message; no app runs GSNW, and CSSN instantiates it.
 % Defines: nothing of its own; ward, guardian and relation are GnW's, group, leader, member and message GSN's.
-% Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 2503050; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas CSSN's, a line for each clause, named by its title, with a button for each act the clause adds.  Git holds what the file said before.
+% Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 3b5fd5d; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas CSSN's, a line for each clause, named by its title, with a button for each act the clause adds.  Git holds what the file said before.
 % Schemas: GSNW.glp beside this file, the full schemas, GKK's, GSG's, GSN's and GnW's with GSNW's, printed by calculus/tools/adopt.py GSNW from the Logic pragmas and never written by hand; adopt.py --check GSNW holds it and cascade/GSNW/ to what the tools print.
 GSNW: Grassroots Social Network with Wards
 GSNW extends, restricts and strengthens GSN and GnW.
@@ -24,6 +24,7 @@ After y closes the group g of z: no longer z is the leader of g, z has no one as
 Interface pragmas
 A ward's messages: Carol [Ward message] <text>
   Carol [Ward post] <text>
+  Carol [Ward post own] <text>
 A ward's group: Carol [Ward create] <name>
   Carol [Ward close]
   Alice [Guardian close] <group>
@@ -38,3 +39,8 @@ Ward join: Bob [Ward join]
   Dave: Carol asks you to join her group.
   Alice: Carol asks that Dave join her group.
   Alice [Ward withdraw] <leader> <group>
+  Carol [Ward leave]
+  Carol [Ward remove]
+  Carol [Ward add]
+  Bob: Carol asks you to join her group.
+  Alice: Carol asks that Bob join her group.
