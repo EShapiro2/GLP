@@ -9069,7 +9069,7 @@ check "SG child-safe platform on two smartphones: alice's message reaches bob" "
 rm -f "$SG_CORE"/*.glpw
 
 # Physical encounters (GSA paper, Section 4, the box GPE; Appendix "The
-# Operating System", "Nearby"; programs/social/graph/GPE.txt): the social
+# Operating System", "Nearby"; programs/social/graph/Encounters.txt): the social
 # graph with the operating system's Nearby around it (graph/core/place.glp,
 # os_phone/6), which declares to the layer a watch on the agents nearby over
 # the PAN and the LAN, declare(nearby(U, S)).  Two smartphones that do not
