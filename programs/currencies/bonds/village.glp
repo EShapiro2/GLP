@@ -62,7 +62,7 @@ script(alice, [issue(15), swap(bob, alice, now, 15, bob, now, 15),
                issue(15), swap(charlie, alice, now, 15, charlie, now, 15),
                swap(eve, bob, now, 10, frank, now, 4)]).
 script(bob, [issue(15), accept(alice), issue(24, 25), accept(diana),
-             pay(alice, 5)]).
+             pay_issuer(alice, 5)]).
 script(charlie, [issue(15), accept(alice), issue(10),
                  swap(eve, charlie, now, 10, eve, now, 10), accept(eve),
                  deposit(escrow, frank, now, 5, frank, day(30))]).
@@ -75,10 +75,10 @@ script(diana, [issue(20), swap(bob, diana, now, 20, bob, 25, 24),
                redeem(frank, 28, frank, now)]).
 script(eve, [issue(10), accept(charlie), issue(10),
              swap(frank, eve, now, 10, frank, now, 10),
-             pay(charlie, 6), swap(charlie, frank, now, 5, alice, now, 5),
-             pay(alice, 3), accept(alice)]).
+             pay_issuer(charlie, 6), swap(charlie, frank, now, 5, alice, now, 5),
+             pay_issuer(alice, 3), accept(alice)]).
 script(frank, [issue(18, 28), accept(diana), issue(10), accept(eve),
-               pay(diana, 3),
+               pay_issuer(diana, 3),
                await(not_mature_for(diana, 28)), advance(28),
                redeem(diana, now, frank, 28), redeem(diana, now, frank, 28),
                redeem(diana, now, frank, 28), redeem(diana, now, frank, 28),
@@ -176,6 +176,21 @@ escrow_terms :-
               release(bob, alice, now, 2, alice, day(31)),
               return(alice, alice, now, 2, bob, day(30))],
              [conversation(alice, ch(GA?, AG)), conversation(bob, ch(GB?, BG))]).
+
+%% Pay (GN:3) and Pay issuer (GC:1): alice issues coins and bonds; she pays
+%% bob two of her coins and a bond, which are not his own, with his consent;
+%% she asks to pay carol a coin, and carol declines, so it comes back; and bob
+%% pays alice one of her coins back, her own, which she takes unasked.
+exported procedure pay_notes.
+pay_notes :-
+    day_one,
+    villager(alice,
+             [issue(4), issue(1, 30), pay(bob, alice, now, 2), pay(bob, alice, 30, 1),
+              pay(carol, alice, now, 1), await(received(bob, 1))],
+             [conversation(bob, ch(AB?, BA)), conversation(carol, ch(AC?, CA))]),
+    villager(bob, [accept_transfer(alice), accept_transfer(alice), pay_issuer(alice, 1)],
+             [conversation(alice, ch(BA?, AB))]),
+    villager(carol, [decline_transfer(alice)], [conversation(alice, ch(CA?, AC))]).
 
 exported procedure day_one.
 day_one :- set_clock(86400000).

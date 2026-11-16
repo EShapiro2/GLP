@@ -157,6 +157,7 @@ procedure kind_of(_?, Kind).
 kind_of(deposit, deposit).
 kind_of(release, release).
 kind_of(return, return).
+kind_of(pay, pay).
 
 procedure key_of(_?, Key).
 key_of(R, K?) :- string(R?) | K = R?.
@@ -245,8 +246,10 @@ done(issue(_, D), not_later(D1, _), yes) :- D? =:= D1? | true.
 done(swap(Q, _, _, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(swap(Q, _, _, _, _, _, _), swap_declined(Q1), yes) :- Q? =?= Q1? | true.
 done(swap(Q, _, _, _, _, _, _), swap_same(Q1, _, _, _), yes) :- Q? =?= Q1? | true.
-done(pay(Q, K), paid(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
-done(pay(Q, K), not_accepted(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
+done(pay_issuer(Q, K), paid(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
+done(pay_issuer(Q, K), not_accepted(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
+done(pay(Q, _, _, _), transferred(pay, Q1), yes) :- Q? =?= Q1? | true.
+done(pay(Q, _, _, _), transfer_declined(pay, Q1), yes) :- Q? =?= Q1? | true.
 done(redeem(Q, D, R, D1), redeemed(Q1, D2, R1, D3), yes) :- Q? =?= Q1?, D? =?= D2?, R? =?= R1?, D1? =?= D3? | true.
 done(redeem(Q, D, _, _), redeem_same(Q1, D1), yes) :- Q? =?= Q1?, D? =?= D1? | true.
 done(redeem(Q, D, _, _), not_mature(Q1, D1), yes) :- Q? =?= Q1?, D? =?= D1? | true.
@@ -260,6 +263,7 @@ done(return(P, _, _, _, _, _), transferred(return, P1), yes) :- P? =?= P1? | tru
 done(return(P, _, _, _, _, _), transfer_declined(return, P1), yes) :- P? =?= P1? | true.
 done(accept(Q), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(accept_transfer(Q), received_transfer(_, Q1, _), yes) :- Q? =?= Q1? | true.
+done(decline_transfer(Q), declined_transfer(_, Q1), yes) :- Q? =?= Q1? | true.
 done(_, lacking(_, _, _), yes).
 done(_, no_conversation(_), yes).
 done(_, _, no) :- otherwise | true.
@@ -287,7 +291,8 @@ procedure pick(Step?, Form?, OpenOffers?, OpenTransfers?, Choice, OpenOffers, Op
 pick(issue(K), form(C, P), Swaps, Ts, grant(C?, P?, issue(K?)), Swaps?, Ts?).
 pick(issue(K, D), form(C, P), Swaps, Ts, grant(C?, P?, issue(K?, D?)), Swaps?, Ts?).
 pick(swap(Q, U, D, K, V, D1, K1), form(C, P), Swaps, Ts, grant(C?, P?, swap(Q?, U?, D?, K?, V?, D1?, K1?)), Swaps?, Ts?).
-pick(pay(Q, K), form(C, P), Swaps, Ts, grant(C?, P?, pay(Q?, K?)), Swaps?, Ts?).
+pick(pay_issuer(Q, K), form(C, P), Swaps, Ts, grant(C?, P?, pay_issuer(Q?, K?)), Swaps?, Ts?).
+pick(pay(Q, U, D, K), form(C, P), Swaps, Ts, grant(C?, P?, pay(Q?, U?, D?, K?)), Swaps?, Ts?).
 pick(redeem(Q, D, R, D1), form(C, P), Swaps, Ts, grant(C?, P?, redeem(Q?, D?, R?, D1?)), Swaps?, Ts?).
 pick(deposit(E, U, D, K, Q, Cn), form(C, P), Swaps, Ts, grant(C?, P?, deposit(E?, U?, D?, K?, Q?, Cn?)), Swaps?, Ts?).
 pick(release(Q, U, D, K, R, Cn), form(C, P), Swaps, Ts, grant(C?, P?, release(Q?, U?, D?, K?, R?, Cn?)), Swaps?, Ts?).
@@ -300,7 +305,18 @@ pick(accept(From), _, Swaps, Ts, Choice?, Swaps1?, Ts?) :-
 pick(accept_transfer(From), _, Swaps, Ts, Choice?, Swaps?, Ts1?) :-
     ground(From?) |
     find_transfer(From?, Ts?, Choice, Ts1).
+pick(decline_transfer(From), _, Swaps, Ts, Choice?, Swaps?, Ts1?) :-
+    ground(From?) |
+    find_transfer(From?, Ts?, Found, Ts1),
+    refuse(Found?, Choice).
 pick(_, _, Swaps, Ts, wait, Swaps?, Ts?) :- otherwise | true.
+
+%% The grant that refuses the card found: no in place of yes.
+procedure refuse(Choice?, Choice).
+refuse(grant(C, P, _), grant(C?, P?, no)).
+refuse(wait, wait).
+refuse(clock(_), wait).
+refuse(advance(_), wait).
 
 procedure find_offer(Key?, OpenOffers?, Choice, OpenOffers).
 find_offer(From, [open_offer(F, C, P)|Rest], grant(C?, P?, yes), Rest?) :-
