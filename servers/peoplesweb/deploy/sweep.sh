@@ -62,9 +62,13 @@ fi
 sudo -u glp env PAPERS_DIR=/var/lib/glp/papers CALCULUS_DIR="$CW/site/calculus" python3 -I servers/peoplesweb/tools/build.py
 # The test site is under /test of Caddy's root and is not the live build's to
 # delete (deploy/test.sh).
-rsync -a --delete --exclude /test/ servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
+rsync -a --delete --exclude /test/ --exclude /next/ servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
 [ "$old" = "$new" ] || systemctl restart peoplesweb
 # The test site, peoplesweb.org/test: the site as the branch Website-site has it,
 # over the repository as main has it.  Last, so that a failure there leaves
 # the live site published.
 sh servers/peoplesweb/deploy/test.sh || echo "sweep: the test site, peoplesweb.org/test, was not built" >&2
+# The site of the Calculus's next publication, peoplesweb.org/next
+# (deploy/next.sh); after the test site, a failure there leaving both as they
+# are.
+sh servers/peoplesweb/deploy/next.sh || echo "sweep: the site of the next publication, peoplesweb.org/next, was not built" >&2

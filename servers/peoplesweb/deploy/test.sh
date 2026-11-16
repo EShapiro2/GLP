@@ -25,7 +25,7 @@ WORK=${TEST_WORK:-/var/lib/glp/test}
 WWW=${TEST_WWW:-/var/www/peoplesweb.org/test}
 AS=${TEST_AS-sudo -u glp}
 cd "$GLP"
-URL=$(git remote get-url origin)
+URL=${TEST_URL:-$(git remote get-url origin)}
 if $AS git ls-remote --exit-code --heads "$URL" "$BRANCH" >/dev/null 2>&1; then :; else
 	[ $? -eq 2 ] && rm -rf "$WWW"
 	exit 0
@@ -39,7 +39,7 @@ $AS sh -c "git -C '$WORK/repo' archive FETCH_HEAD servers/peoplesweb | tar -x -C
 if [ -d servers/peoplesweb/cache ]; then
 	$AS cp -R servers/peoplesweb/cache/. "$WORK/cache/"
 fi
-$AS env GLP_ROOT="$GLP" BUILD_DIR="$WORK/build" SITE_TEST=1 CERTIFY_CACHE="$WORK/cache" \
+$AS env GLP_ROOT="$GLP" BUILD_DIR="$WORK/build" SITE_TEST=1 CERTIFY_CACHE="$WORK/cache" CERTIFY="${CERTIFY:-1}" \
 	PAPERS_DIR="${PAPERS_DIR:-/var/lib/glp/papers}" \
 	CALCULUS_DIR="${CALCULUS_DIR:-/var/lib/glp/calculus/site/calculus}" \
 	python3 -I "$WORK/site/servers/peoplesweb/tools/build.py"
