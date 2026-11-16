@@ -205,7 +205,9 @@ def terms(contracts):
             o = repl([f'load {os.path.relpath(p, os.path.join(GLP, "glp_runtime"))}', f'contract_named({name}, C).'])
             t = answer(o, 'C')
             r = answer(repl(['../programs/gsc', ':limit 10000000', f'as_read({t}, R).']), 'R') if t else None
-            err = None if t else next((l.split(': ', 1)[-1].strip() for l in o.splitlines() if 'Error' in l), 'no term')
+            # A run not made, the build's time for checks being spent, is not a
+            # contract that does not load (Helper #2, 2026-11-16).
+            err = None if t else 'NOT ASKED' if o.startswith('[certify] not asked') else next((l.split(': ', 1)[-1].strip() for l in o.splitlines() if 'Error' in l), 'no term')
             # Kept only where the REPL loaded the file: a REPL that did not
             # run (a timeout, a rebuild of glpc) is asked again next time.
             cache[c['id']] = {'hash': h if 'Loaded' in o else None, 'term': t, 'read': r, 'error': err}
@@ -323,6 +325,8 @@ def relations(contracts):
     P = {c['id']: c['path'] for c in contracts}
 
     def missing(i):
+        if i in E and E[i] == 'NOT ASKED':
+            return f'{i} is not read yet; it is at a next build of the site'
         if i in E:
             return f'{os.path.basename(P[i])[:-4]}.glp does not load: {E[i][:200]}'
         return f'{i} has no speech-act schemas ({i}.glp)'
