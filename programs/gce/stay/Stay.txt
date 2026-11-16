@@ -4,14 +4,14 @@
 % Defines: place; stay, stay(x, a, d) at the guest; guest, guest(b, x, d, k) at the host, k the price; review; a night is a day of GB's calendar.
 % Schemas: STAY.glp beside this file, written by tools/contracts.py.
 Stay: Grassroots Stays
-Stay extends GC.
+Stay extends Coins.
 Alice and Bob are persons.
 1. ◆ List place: Alice, who can host guests at a place, may list it under a new name of hers.
 2. ■ Book: Bob, who knows Alice, may book a stay at a place of Alice's on a night later than the current date, for a price Bob pays in Alice-coins, with the consent of Alice; a place may be booked once a night.
 3. ■ Cancel: Before the night, Alice may cancel a stay, paying Bob back its price in Alice-coins.
 4. ■ Review: After the night has come, Bob may review his stay, once; Alice keeps the review.
 Logic pragmas
-Stay extends GC.
+Stay extends Coins.
 Alice and Bob are persons, Place a place and Night a night, Today a date, Sum a number.
 1. ◆ List place: Alice may list Place under a new name of hers, provided Alice can host guests.
 2. ■ Book: Bob may book a stay at Alice's Place on Night for Sum Alice-coins, with the consent of Alice, provided Bob knows Alice, Alice lists Place, the current date is Today and Night is more than Today.

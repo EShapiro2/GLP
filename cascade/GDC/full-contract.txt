@@ -8,13 +8,13 @@ Alice, Bob and Carol are persons. A *party* to a contract is whoever has an iden
 GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-GN:1. ■ Issue: Alice may issue Alice-notes.
-GN:2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
-GN:3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
-GN:4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
-GC:1. ■ Pay issuer: GN:3, without the consent of Bob, if the coins are Bob-coins.
-GC:2. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
-GC:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+Notes:1. ■ Issue: Alice may issue Alice-notes.
+Notes:2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
+Notes:3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
+Notes:4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
+Coins:1. ■ Pay issuer: Notes:3, without the consent of Bob, if the coins are Bob-coins.
+Coins:2. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
+Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 GDC:1. ■ Issue: Alice may issue Alice-coins denominated by a fiat currency.
 GDC:2. ○ Denomination. A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
 GDC:3. ○ Pricing. Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.

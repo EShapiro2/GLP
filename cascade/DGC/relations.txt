@@ -1,3 +1,3 @@
-DGC extends GB and GDC: holds
-DGC restricts GB: holds
-DGC strengthens GB: holds
+DGC extends Bonds and GDC: holds
+DGC restricts Bonds: holds
+DGC strengthens Bonds: holds

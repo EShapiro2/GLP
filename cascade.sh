@@ -44,8 +44,8 @@
 #   gsn         GSN   GSC         programs/gsc              social_network
 #   gnw         GnW   GSC         programs/gsc              ---
 #   gsnp        GSNP  GAI         programs/gai              ---
-#   gc          GC    Currencies  programs/currencies/coins currency
-#   gb          GB    Currencies  programs/currencies/bonds ---
+#   gc, coins   Coins Currencies  programs/currencies/coins currency
+#   gb, bonds   Bonds Currencies  programs/currencies/bonds ---
 #   cssn        CSSN  CSSN        programs/cssn             programs/cssn (CSSN's, the village)
 #   gsnw        GSNW  CSSN        programs/cssn             ---
 #   gfwc        GFWC  GFWC        programs/federation       ---
@@ -204,8 +204,8 @@ case "$1" in
           PLAYLIMIT=6000000 ;;   # the standing approvals' Requests take GSN's play past 600000 (vGLP f0acbc1; Code #12, 2026-10-20)
     gnw)  FILE=GnW;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;   # GSC's, amends GSG (Udi, 2026-11-10, to GSC #14; GAI's programs/gai until 6415bff0)
     gsnp) FILE=GSNP; OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
-    gc)   FILE=GC;   OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC";   PLAYDIR="currency" ;;
-    gb)   FILE=GB;   OWNER="programs/currencies/bonds"; PAPER="/Users/udi/Grassroots/GB";   PLAYDIR="" ;;
+    gc|coins) FILE=Coins; OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC";   PLAYDIR="currency" ;;
+    gb|bonds) FILE=Bonds; OWNER="programs/currencies/bonds"; PAPER="/Users/udi/Grassroots/GB";   PLAYDIR="" ;;
     gsnw) FILE=GSNW; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR="" ;;   # CSSN's, parametric, the base CSSN instantiates (Udi, 2026-11-10, to GSC #14 and CSSN #14, its % Owner line)
     cssn) FILE=CSSN; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR=""
           PLAYAT="programs/cssn"; PLAYLIMIT=100000000 ;;
@@ -249,10 +249,10 @@ case "$1" in
     go) FILE=GO; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     mcs) FILE=MCS; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     orh) FILE=ORH; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
-    gn) FILE=GN; OWNER="programs/gsc"; PAPER="/Users/udi/Grassroots/GSC"; PLAYDIR="" ;;   # the notes, GSC's (the Calculus's publication of 2026-11-16)
+    gn|notes) FILE=Notes; OWNER="programs/gsc"; PAPER="/Users/udi/Grassroots/GSC"; PLAYDIR="" ;;   # the notes, GSC's (the Calculus's publication of 2026-11-16)
     ga) FILE=GA; OWNER="programs/social/graph"; PAPER=""; PLAYDIR="" ;;   # GSA's (the Calculus's publication of 2026-11-16)
     cdc) FILE=CDC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's (the Calculus's publication of 2026-11-16)
-    gs) FILE=GS; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # the shares, GO's (the Calculus's publication of 2026-11-16)
+    gs|shares) FILE=Shares; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # the shares, GO's (the Calculus's publication of 2026-11-16)
     sc) FILE=SC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     scb) FILE=SCB; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     spllc) FILE=SPLLC; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;

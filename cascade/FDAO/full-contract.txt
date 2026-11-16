@@ -13,13 +13,13 @@ DAO:3. ■ Proposing. Propose: A member of a DAO may make a proposal to it, each
 DAO:4. ■ Voting. Vote for, Vote against: A member who holds a proposal of their DAO may vote for or against it, once and before the steward decides it; the steward records the vote. Deliver vote: The steward delivers the vote to every member but the steward.
 DAO:5. ■ Deciding. Pass, Reject: The steward may decide a proposal, passed or rejected, once. Deliver decision: The steward delivers the decision to every member but the steward.
 DAO:6. ■ Majority. The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.
-GN:1. ■ Issue: Alice may issue Alice-notes.
-GN:2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
-GN:3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
-GN:4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
-GC:1. ■ Pay issuer: GN:3, without the consent of Bob, if the coins are Bob-coins.
-GC:2. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
-GC:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+Notes:1. ■ Issue: Alice may issue Alice-notes.
+Notes:2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
+Notes:3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
+Notes:4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
+Coins:1. ■ Pay issuer: Notes:3, without the consent of Bob, if the coins are Bob-coins.
+Coins:2. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
+Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 FDAO:1. ■ Fund: A member of a DAO may give it coins they hold; its steward keeps them apart as the DAO's.
 FDAO:2. ■ Grant: The steward may grant the proposer of a passed proposal, once per proposal, any amount of the DAO's coins of one issuer.
 FDAO:3. ○ Amount. The steward will grant a passed proposal the amount it asks for, as far as the DAO's coins allow.

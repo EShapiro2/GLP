@@ -1,5 +1,5 @@
 Joint: Joint Accounts
-Joint extends GC.
+Joint extends Coins.
 Vocabulary: x has an account named n = account(x,n); x holds the joint account n with y = joint(x,n,y); x keeps m z-coins in n with y = joint_coin(x,z,n,y,*m).
 x and y hold the joint account n: x holds the joint account n with y and y holds the joint account n with x.
 After x and y open the joint account n under a new name of x's, which requires x does not have an account named n: x has an account named n and x and y hold the joint account n.

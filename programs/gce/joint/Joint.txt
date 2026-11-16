@@ -4,13 +4,13 @@
 % Defines: joint account, named by its opener as a group by its leader; k.joint(u, <a>.n) at both partners.
 % Schemas: JOINT.glp beside this file, written by tools/contracts.py.
 Joint: Joint Accounts
-Joint extends GC.
+Joint extends Coins.
 Alice and Bob are persons.
 1. ■ Open account: Alice and Bob, who know each other, may jointly open a joint account, under a new name of Alice's.
 2. ■ Deposit: Either of them may move coins they hold into their joint account.
 3. ■ Withdraw: Alice and Bob may jointly move coins from their joint account to either of them.
 Logic pragmas
-Joint extends GC.
+Joint extends Coins.
 Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
 1. ■ Open account: Alice and Bob may jointly open the joint account Acct under a new name of Alice's, provided Alice and Bob know each other.
 2. ■ Deposit: Alice may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct. Partner deposit: Bob may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct.

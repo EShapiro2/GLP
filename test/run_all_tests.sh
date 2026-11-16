@@ -9328,10 +9328,10 @@ check_not "APPS gai agents: ... and is not stopped at the limit" "capped" "$apps
 
 # GC's app, programs/apps/gc: the same host on GC's platform, its wrapper the same file as GSG's; GC is Currencies' contract on GKK and not GSG (programs/currencies/coins/GC.glp), the app built for GSC's paper (Currencies #11 Cowork, Code_inbox.md, 2026-10-20 18:10 UTC, task 2); two executions over one conversation (play_coins): each establishes their identity and comes to know themselves (GKK:1) and bob issues three Bob-coins (GC:1, issue); alice asks to come to know bob and he answers yes (GKK:2); alice issues two Alice-coins and asks bob to swap them for three Bob-coins, swap(alice, bob, alice, 2, bob, 3), and he answers yes, each coming to know the issuer of the coins they take (GC:2, swap); and alice pays two Bob-coins to bob, pay(alice, bob, 2), which asks nobody (GC:3, pay).
 check "APPS gc: platform.vglp is what vGLP's compiler prints from GC.glp" "^gc/platform.vglp: as printed$" "$apps_print"
-if cmp -s "$GLP_DIR/programs/apps/gc/platform.vglp" "$GLP_DIR/cascade/GC/platform.vglp"; then
+if cmp -s "$GLP_DIR/programs/apps/gc/platform.vglp" "$GLP_DIR/cascade/Coins/platform.vglp"; then
     _check_pass "APPS gc: platform.vglp is the platform of the recorded run of the cascade on GC"
 else
-    _check_fail "APPS gc: platform.vglp is the platform of the recorded run of the cascade on GC" "programs/apps/gc/platform.vglp differs from cascade/GC/platform.vglp"
+    _check_fail "APPS gc: platform.vglp is the platform of the recorded run of the cascade on GC" "programs/apps/gc/platform.vglp differs from cascade/Coins/platform.vglp"
 fi
 apps_gc_proposal=$(awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$GLP_DIR/programs/apps/gc/platform.vglp")
 check "APPS gc: the request type proposes GKK's three classes and GC's four, issue, swap and pay naming their amounts (vGLP, Section 7.3)" "^establish(Peer) acquaint(Peer, Peer) introduce(Peer, Peer, Peer) issue(Peer, Integer) swap(Peer, Peer, Peer, Integer, Peer, Integer) pay(Peer, Peer, Integer) redeem(Peer, Peer, Peer) $" "$apps_gc_proposal"

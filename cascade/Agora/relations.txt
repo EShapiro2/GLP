@@ -1,1 +1,1 @@
-Agora extends GB: holds
+Agora extends Bonds: holds
