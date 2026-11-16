@@ -3242,6 +3242,59 @@ def order(names, w):
     return out
 
 
+# ---- the acts no agent can take ----------------------------------------------------
+
+def marks_of(acts):
+    """The marks of a contract with wards and the list of the guardians of each: {ward: has_guardian}.  A mark is
+    given with an identity by the act that creates its bearer, which also gives the bearer a guardian who holds
+    the guardianship."""
+    out = {}
+    for e in acts:
+        pos = [l for l in e['head'] if not l[0]]
+        for l in pos:
+            if l[1] == 'identity':
+                x = l[2][0]
+                for m in pos:
+                    if len(m[2]) == 1 and m[2][0] == x and m[1] not in ('identity', 'person'):
+                        us = [u for u in pos if len(u[2]) == 2 and u[2][0] == x and u[2][1] != x
+                              and any(len(v[2]) == 2 and v[2] == (u[2][1], x) and v[1] in u[1] for v in pos)]
+                        if us:
+                            out.setdefault(m[1], us[0][1])
+    return out
+
+
+def untakable(w, n, acts):
+    """{(label, act): why} of the acts of n, entries as read_schema_line reads them, that require of one name both
+    that it is a person and that it bears a mark of a ward of the contract (child, ward, organisation, ai_agent:
+    marks_of), which no agent is at once (GnW: a person or a ward).  A name is required a person where the act
+    requires person(X), or where X decides it and the act's own contract declares X a person.  Such an act no agent
+    can take: it is in none of sasx/, flat/, gx/ (main), and toglp.py has none to leave out of the term."""
+    out = {}
+    marks = marks_of(acts) if any(l[1] == 'person' for e in acts for l in e['head']) else {}
+    if not marks:
+        return out
+    memo = {}
+    for e in acts:
+        o = re.split(r'[:+]', e['label'])[0]
+        if o not in memo:
+            memo[o] = frozenset(x for x, ks in kinds_from(w, n, o).items() if ks & {'person', 'party'} and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
+        persons = memo[o] | frozenset((e.get('taken') or {}).values()) | {VOTER}
+        has = lambda p, g: any(not l[0] and l[1] == p and l[2] and l[2][0] == g for l in e['body'])
+        made = {l[2][0] for l in e['head'] if l[1] == 'identity' and not l[0]}
+        names = {l[2][0] for l in e['body'] if l[2]} | {g for g in e['guards'] if '(' not in g}
+        for x in sorted(names):
+            person = has('person', x) or (x in e['guards'] and x not in made and x in persons
+                                          and not any(has(m, x) and has(u, x) for m, u in marks.items()))
+            ward = [m for m in marks if has(m, x)]
+            if person and ward:
+                out[(e['label'], e['name'])] = 'it requires person(%s) and %s(%s), and no agent is both' % (x, ward[0], x)
+                break
+    return out
+
+
+UNTAKABLE = {}      # {(n, label, act): why}, the acts main left out of n's sasx/, flat/ and gx/
+
+
 def main():
     allnames = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, "gr")) if f.endswith(".txt") and not f.startswith("NOTES-"))
     w = World(allnames)
@@ -3258,6 +3311,16 @@ def main():
             put("flat", n, [w.contract(n).title + " (flat text)"] + [flat_line(e) for e in flat])
             sx0 = expand_schemas(w, n)
             sx = [e for e in schemas_at_defaults(w, n, sx0) if not e.get("generic")]
+            gone = untakable(w, n, [read_schema_line(schema_line(e)) for e in sx if e["kind"] == "act"])      # an act no agent can take is no act of the contract
+            keep = os.path.join(ROOT, "sasx-all", n + ".txt")      # sasx/ with the untakable acts kept, for relations.py alone: a restriction may make a base's act untakable
+            if gone:
+                put("sasx-all", n, [w.contract(n).title + " (expanded schemas, the acts no agent can take kept)"] + [schema_line(e) for e in sx])
+            elif os.path.exists(keep):
+                os.remove(keep)
+            sx = [e for e in sx if (e["label"], e.get("name")) not in gone]
+            flat = [e for e in flat if (e["label"], e.get("name")) not in gone]
+            put("flat", n, [w.contract(n).title + " (flat text)"] + [flat_line(e) for e in flat])
+            UNTAKABLE.update({(n,) + k: v for k, v in gone.items()})
             put("sasx", n, [w.contract(n).title + " (expanded schemas)"] + [schema_line(e) for e in sx])
             w.sasx[n] = sx
             put("gx", n, expanded(w, n))
@@ -3291,6 +3354,9 @@ def main():
         for (c, l, nm), (kl, kn) in sorted(REMOVED.items()):
             if c == n:
                 print("%-10s removed %s %s, made redundant by %s %s" % (n, l, nm, kl, kn))
+        for (c, l, nm), why in sorted(UNTAKABLE.items()):
+            if c == n:
+                print("%-10s untakable %s %s: %s" % (n, l, nm, why))
         print("%-10s %s" % (n, "; ".join(res)))
     print("%d contracts, %d with a fault" % (len(names), bad))
     return 1 if bad else 0

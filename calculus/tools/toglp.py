@@ -47,33 +47,13 @@ _UNENABLED = {}
 
 
 def unenabled(n, acts):
-    """{(label, act): why} of the acts of n that require of one name both that it is a person and that it bears a mark
-    of a ward of the contract (child, ward, organisation, ai_agent: marks_of), which no agent is at once (GnW: a
-    person or a ward).  A name is required a person where the act requires person(X), or where X decides it and the
-    act's own contract declares X a person, as term() writes atom(person, [X]) for such a guard."""
+    """{(label, act): why} of the acts of n that no agent can take (gcsas.untakable, the one test): gcsas.py leaves
+    each out of sasx/, so none is ever found here, and main says so if one is."""
     key = (ROOT, n)
     if key not in _UNENABLED:
-        out = {}
         marks = marks_of(acts) if any(l[1] == 'person' for e in acts for l in e['head']) else {}
-        if marks:
-            w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
-            memo = {}
-            for e in acts:
-                o = re.split(r'[:+]', e['label'])[0]
-                if o not in memo:
-                    memo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if ks & {'person', 'party'} and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
-                persons = memo[o] | frozenset((e.get('taken') or {}).values()) | {gcsas.VOTER}
-                has = lambda p, g: any(not l[0] and l[1] == p and l[2] and l[2][0] == g for l in e['body'])
-                made = {l[2][0] for l in e['head'] if l[1] == 'identity' and not l[0]}
-                names = {l[2][0] for l in e['body'] if l[2]} | {g for g in e['guards'] if '(' not in g}
-                for x in sorted(names):
-                    person = has('person', x) or (x in e['guards'] and x not in made and x in persons
-                                                  and not any(has(m, x) and has(u, x) for m, u in marks.items()))
-                    ward = [m for m in marks if has(m, x)]
-                    if person and ward:
-                        out[(e['label'], e['name'])] = 'it requires person(%s) and %s(%s), and no agent is both' % (x, ward[0], x)
-                        break
-        _UNENABLED[key] = out
+        w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-'))) if marks else None
+        _UNENABLED[key] = gcsas.untakable(w, n, acts) if marks else {}
     return _UNENABLED[key]
 
 
@@ -108,23 +88,7 @@ def agents_of(acts, values=()):
     return out
 
 
-def marks_of(acts):
-    """The marks of a contract with wards and the list of the guardians of each: {ward: has_guardian}.  A mark is
-    given with an identity by the act that creates its bearer, which also gives the bearer a guardian who holds
-    the guardianship."""
-    out = {}
-    for e in acts:
-        pos = [l for l in e['head'] if not l[0]]
-        for l in pos:
-            if l[1] == 'identity':
-                x = l[2][0]
-                for m in pos:
-                    if len(m[2]) == 1 and m[2][0] == x and m[1] not in ('identity', 'person'):
-                        us = [u for u in pos if len(u[2]) == 2 and u[2][0] == x and u[2][1] != x
-                              and any(len(v[2]) == 2 and v[2] == (u[2][1], x) and v[1] in u[1] for v in pos)]
-                        if us:
-                            out.setdefault(m[1], us[0][1])
-    return out
+marks_of = gcsas.marks_of      # the marks of a contract with wards (gcsas.marks_of)
 
 
 def schema_nums(lits, values, places=frozenset()):
