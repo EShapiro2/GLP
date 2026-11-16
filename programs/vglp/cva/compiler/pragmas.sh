@@ -20,7 +20,7 @@ PROGRAMS="$(cd "$(dirname "$0")/../../.." && pwd)"
 exec perl -CSD -Mutf8 -e '
 use strict; use warnings; use Cwd ();
 my ($top, $programs, $term, $from) = @ARGV;
-# The names of the contracts, read from the table of calculus/NAMES.txt, "name on main | name | file name | row and atom", the one source of the names: "How a reader knows a name: a name is one of the names of this table and nothing else.  Match the known names longest first, so that \"Community Bank restricts Bank and extends Coins.\" names Community Bank, Bank and Coins, and \"Trading Company and Bank\" two contracts" (calculus/NAMES.txt).  A name of the first column, the name a contract has on main, is the name of its file, as GSG.txt; a name of the second column is the name of the file of its third, "the name with a hyphen for each space and no apostrophe", as Community-Bank.txt (ibid.).  $file_of{N} is the file name of the contract named N, $name_of_file{F} the name of the contract whose file name is F, and $known every name, the longest first.  The table is calculus/NAMES.txt beside programs/, or the file CONTRACT_NAMES names, a table of the same form, as the suite gives its fixtures theirs.
+# The names of the contracts, read from the table of calculus/NAMES.txt, "name on main | name | file name | row and atom", or "name on main | name | file name | row and atom | row and atom on main", its fifth column "the row and atom on main today, before the renaming" (calculus/NAMES.txt, Calculus-3 d15a5308), a line of four columns or five read alike, the one source of the names: "How a reader knows a name: a name is one of the names of this table and nothing else.  Match the known names longest first, so that \"Community Bank restricts Bank and extends Coins.\" names Community Bank, Bank and Coins, and \"Trading Company and Bank\" two contracts" (calculus/NAMES.txt).  A name of the first column, the name a contract has on main, is the name of its file, as GSG.txt; a name of the second column is the name of the file of its third, "the name with a hyphen for each space and no apostrophe", as Community-Bank.txt (ibid.).  $file_of{N} is the file name of the contract named N, $name_of_file{F} the name of the contract whose file name is F, and $known every name, the longest first.  The table is calculus/NAMES.txt beside programs/, or the file CONTRACT_NAMES names, a table of the same form, as the suite gives its fixtures theirs.
 my (%file_of, %name_of_file);
 {
     my $tf = $ENV{CONTRACT_NAMES} // "$programs/../calculus/NAMES.txt";
@@ -29,7 +29,7 @@ my (%file_of, %name_of_file);
     while (my $l = <$nh>) {
         chomp $l;
         my @c = map { s/^\s+|\s+$//gr } split /\|/, $l, -1;
-        next unless @c == 4;
+        next unless @c == 4 || @c == 5;
         if (!$in) { $in = 1 if $c[0] eq "name on main"; next }
         next if grep { $_ eq "" } @c;
         $file_of{$c[0]} //= $c[0]; $name_of_file{$c[0]} //= $c[0];
