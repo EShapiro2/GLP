@@ -1,2 +1,0 @@
-GDO-L extends GDO: holds
-GDO-L strengthens GDO: holds
