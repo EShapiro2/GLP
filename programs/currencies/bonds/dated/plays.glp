@@ -11,8 +11,8 @@
 
 imported procedure person#person(Key?, PersonOut(Drawn)?, PersonIn(Drawn), Script?, Agreement?, Stream(ScreenContent)).
 
-%% play_mint(Screen): alice, alone, mints 3 coins of her own.
-%% Expected: Screen = [minted(3, now), holdings([lot(alice, now, 3)]) | _].
+%% play_mint(Screen): alice, alone, issues 3 coins of her own.
+%% Expected: Screen = [issued(3, now), holdings([lot(alice, now, 3)]) | _].
 exported procedure play_mint(Stream(ScreenContent)).
 play_mint(Screen?) :-
     self_module(M),
@@ -21,11 +21,11 @@ play_mint(Screen?) :-
     person # person(alice, Draws?, Grants, [issue(3)], none, Screen).
 
 %% play_swap(ScreenA, ScreenB): alice and bob with one conversation between
-%% their two executions; alice mints 2 coins and bob 2 bonds maturing day 30,
+%% their two executions; alice issues 2 coins and bob 2 bonds maturing day 30,
 %% alice offers her 2 coins for bob's 2 bonds, and bob accepts.
-%% Expected: ScreenA = [opened(bob), minted(2, now), holdings([lot(alice, now, 2)]),
+%% Expected: ScreenA = [opened(bob), issued(2, now), holdings([lot(alice, now, 2)]),
 %%   holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)]) | _],
-%%   ScreenB = [opened(alice), minted(2, 30), holdings([lot(bob, 30, 2)]),
+%%   ScreenB = [opened(alice), date(1), issued(2, 30), holdings([lot(bob, 30, 2)]),
 %%   swap_done(alice), holdings([lot(alice, now, 2)]) | _].
 exported procedure play_swap(Stream(ScreenContent), Stream(ScreenContent)).
 play_swap(ScreenA?, ScreenB?) :-
@@ -42,10 +42,10 @@ play_swap(ScreenA?, ScreenB?) :-
 %% of bob due 30 against a bond of bob due 30, and to swap her 2 of them for 2
 %% of them.  Her agent refuses each before anything is sent, the screen saying
 %% so, and her holdings stay; bob's screen shows nothing of either.
-%% Expected: ScreenA = [opened(bob), minted(2, now), holdings([lot(alice, now, 2)]),
+%% Expected: ScreenA = [opened(bob), issued(2, now), holdings([lot(alice, now, 2)]),
 %%   holdings([]), swap_done(bob), holdings([lot(bob, 30, 2)]),
 %%   redeem_same(bob, 30), swap_same(bob, bob, 30, 2) | _],
-%%   ScreenB = [opened(alice), minted(2, 30), holdings([lot(bob, 30, 2)]),
+%%   ScreenB = [opened(alice), date(1), issued(2, 30), holdings([lot(bob, 30, 2)]),
 %%   swap_done(alice), holdings([lot(alice, now, 2)]) | _].
 exported procedure play_same(Stream(ScreenContent), Stream(ScreenContent)).
 play_same(ScreenA?, ScreenB?) :-

@@ -8926,7 +8926,7 @@ check_not "SG activation alone: no failed play" "→ failed" "$sg_activate"
 # invitation and no peer, and her scripted person, under the role mint, mints
 # 3; her lines are play_mint's screen, in order.
 for sg_mint in "coins coins/currency [minted(3), holdings([lot(alice, 3)])]" \
-               "dated bonds/dated [minted(3, now), holdings([lot(alice, now, 3)])]" \
+               "dated bonds/dated [issued(3, now), holdings([lot(alice, now, 3)])]" \
                "sovereign sovereign/denominated [minted(3, now), holdings([lot(alice, usd, now, 3)])]"; do
     sg_mint_name=${sg_mint%% *}; sg_mint_rest=${sg_mint#* }; sg_mint_dir=${sg_mint_rest%% *}; sg_mint_lines=${sg_mint_rest#* }
     sg_mint_out=$("$REPL_RUN" <<HEREDOC
