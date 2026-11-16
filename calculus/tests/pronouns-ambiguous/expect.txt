@@ -1,0 +1,3 @@
+Q          ERROR Q:1, Greet: Alice may greet Erin, provided sh: the pronoun 'she' names both Alice and Erin
+R          ERROR R:1, Greet: Bob may greet Frank, provided she: the pronoun 'she' names no person the sentence has named
+2 contracts, 2 with a fault
