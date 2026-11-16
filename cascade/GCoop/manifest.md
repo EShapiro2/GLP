@@ -1,10 +1,10 @@
 # A run of the cascade on GCoop
 
-- Contract: `GCoop` (`gcoop` to the checker), its owner's two files `programs/go/GCoop.txt` and `programs/go/GCoop.glp`, copied here as they stood at `5bad5d62`.
+- Contract: `GCoop` (`gcoop` to the checker), its owner's two files `programs/go/GCoop.txt` and `programs/go/GCoop.glp`, copied here as they stood at `42eaa76a`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/GCoop.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/GCoop.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 18:47 UTC by `cascade.sh gcoop`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `5bad5d62`; each artefact's source and tool:
+- Run on 2026-11-16 20:16 UTC by `cascade.sh gcoop`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `42eaa76a`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
