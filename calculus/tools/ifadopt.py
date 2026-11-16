@@ -69,6 +69,31 @@ def kind_preds(n):
     return {v[2] for k in ks for v in gcsas.kind_atoms(w, n, lex, k).values()}
 
 
+_PARENT_ACTS = {}
+
+
+def renamed_here(n, e):
+    """Whether the act e, of a contract n is written from, is printed in n under another name than in every contract of
+    n's first line that has it (Joint's "Deposit coin", Notes:4's Deposit of coins named so beside Joint:2's Deposit):
+    the line of that contract's file names its act by the other name, which in n is n's own act, so e's line is n's
+    (Calculus #8, 2026-11-16, on Code #33's "the schema deposit_coin ... is fitted by no line")."""
+    import gcsas
+    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
+    if n not in w.known:
+        return False
+    parents, _, _ = gcsas.first_line(w.contract(n), w.known)
+    head = sorted(e['head'])
+    names = set()
+    for p in parents:
+        if p not in _PARENT_ACTS:
+            try:
+                _PARENT_ACTS[p] = [x for x in toglp.schemas(p) if x['kind'] == 'act']
+            except (OSError, gcsas.Err):
+                _PARENT_ACTS[p] = []
+        names |= {x['name'] for x in _PARENT_ACTS[p] if x['label'].split('+')[0] == e['label'].split('+')[0] and sorted(x['head']) == head}
+    return bool(names) and e['name'] not in names
+
+
 def adopted(n, txt):
     """The text of interface-adopted.txt from the cascade's NAME.txt, txt; None where the contract has no line of its own."""
     ls = txt.split('\n')
@@ -97,7 +122,7 @@ def adopted(n, txt):
         if t != e['name'] and not re.fullmatch(re.escape(e['name']) + r' \d+', t):
             raise ValueError('%s: the act %s of cascade/%s/%s.txt is not %s of the full schemas' % (n, t, n, n, e['name']))
         mine = [l.rpartition(':')[2] for l in e['label'].split('+') if l.rpartition(':')[0] == n]
-        if not mine and kp and any(l[1] in kp for l in e['head']):
+        if not mine and (kp and any(l[1] in kp for l in e['head']) or renamed_here(n, e)):
             # a form of an act of notes for a kind n declares (Bonds' Swap coin for bond, Pay bond, Deposit bond): n's act,
             # proposed in n's file under the title of the clause of Notes it comes from, which GLP's reader takes there
             # (programs/vglp/cva/compiler/pragmas.sh: a pragma line may name a clause of a contract its contract extends)
