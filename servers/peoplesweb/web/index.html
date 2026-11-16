@@ -958,7 +958,7 @@ function page(c, hood){
     </div>
     ${stripHtml(c)}
     <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2></div>
-      ${c.clauses.length ? `<div class="card rules">
+      ${c.clauses.length || c.preamble ? `<div class="card rules">
       ${c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
       <div class="pre">${esc(c.preamble)}</div>
       <ol class="cl">${c.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}${cl.sep || '.'}</b> ${esc(cl.text)}</span></li>`).join('')}</ol>
