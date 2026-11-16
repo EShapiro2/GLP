@@ -30,11 +30,30 @@ After x deposits n more f-denominated w-bonds due e with z for y on k: no longer
 Environment: the coins and bonds of z and w are of one denomination, for x.
 Interface pragmas
 Issue denominated bond: Alice [Issue denominated bond] <maturity> <amount> <denomination>
-Swap, Redeem, Escrow: Alice [Swap] <amount given> <amount wanted> [Swap coin for bond] <amount given> <maturity wanted> <amount wanted> [Swap bonds] <amount given> <maturity wanted> <amount wanted>
-  Bob: Alice asks to swap coins or bonds with you.
-  Alice [Redeem] [Redeem coin against bond] <maturity wanted> [Redeem bond] [Redeem bond against bond] <maturity wanted>
-  Alice [Deposit] <amount> <condition> [Deposit bond] <amount> <condition> [Deposit more] <amount> <condition> <denomination> [Deposit bond more] <amount> <condition> <denomination> [Deposit own coins] <amount> <condition> [Deposit with the issuer] <amount> <condition> <denomination> [Deposit own bonds] <amount> <condition> [Deposit bond with the issuer] <amount> <condition> <denomination>
-  Carol: Alice asks to deposit coins or bonds with you.
+Swap, Redeem, Escrow: Alice [Swap] <amount given> <amount wanted>
+  Bob: Alice asks to swap coins with you.
+  Alice [Redeem]
+  Alice [Swap coin for bond] <amount given> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap coins for bonds with you.
+  Alice [Swap bonds] <amount given> <maturity wanted> <amount wanted>
+  Bob: Alice asks to swap bonds with you.
+  Alice [Redeem coin against bond] <maturity wanted> [Redeem bond] [Redeem bond against bond] <maturity wanted>
+  Alice [Deposit] <amount> <condition>
+  Carol: Alice asks to deposit coins with you.
+  Alice [Deposit bond] <amount> <condition>
+  Carol: Alice asks to deposit bonds with you.
+  Alice [Deposit own coins] <amount> <condition>
+  Carol: Alice asks to deposit her own coins with you.
+  Alice [Deposit with the issuer] <amount> <condition> <denomination>
+  Carol: Alice asks to deposit your coins with you.
+  Alice [Deposit more] <amount> <condition> <denomination>
+  Carol: Alice asks to deposit more coins with you.
+  Alice [Deposit own bonds] <amount> <condition>
+  Carol: Alice asks to deposit her own bonds with you.
+  Alice [Deposit bond with the issuer] <amount> <condition> <denomination>
+  Carol: Alice asks to deposit your bonds with you.
+  Alice [Deposit bond more] <amount> <condition> <denomination>
+  Carol: Alice asks to deposit more bonds with you.
   Carol [Release] <amount> [Release bond] <amount>
   Bob: Carol asks to release coins or bonds to you.
   Carol [Return] <amount> [Return bond] <amount>
