@@ -31,7 +31,7 @@ Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
             ; yield(Attempt) ; request(Rho, Integer).
 Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net       ::= msg(Peer, Content).
-Atom      ::= identity ; knows(Peer) ; friend(Peer) ; pointer(Peer, Peer) ; points_to(Peer)
+Atom      ::= identity ; person ; knows(Peer) ; friend(Peer) ; pointer(Peer, Peer) ; points_to(Peer)
             ; item(Speech, Peer) ; received(Speech, Peer, Peer).
 Output    ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
