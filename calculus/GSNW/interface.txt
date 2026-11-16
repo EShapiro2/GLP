@@ -38,6 +38,9 @@ GSNW: Grassroots Social Network with Wards
 37. ■ Wards join.  Carol may add Dave to Grupo, with the consent of Dave, Alice and Bob, provided Carol is the leader of Grupo, Carol is a ward, Carol has Alice as a guardian, Alice is a guardian of Carol, Carol and Dave are friends, Dave is a ward, Dave has Bob as a guardian, Bob is a guardian of Dave, Alice knows Dave and Alice and Bob are friends.
 38. ■ Wards of one guardian join.  Carol may add Dave to Grupo, with the consent of Dave and Alice, provided Carol is the leader of Grupo, Carol is a ward, Carol has Alice as a guardian, Alice is a guardian of Carol, Carol and Dave are friends, Dave is a ward, Dave has Alice as a guardian and Alice is a guardian of Dave.
 39. ■ Ward withdraw.  Alice may withdraw Carol from Bob's Grupo, provided Carol has Alice as a guardian and Alice is a guardian of Carol.
+40. ■ Ward add.  Carol may add Bob to Grupo, with the consent of Bob and Alice, provided Carol is the leader of Grupo, Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Alice is a guardian of Carol, Carol and Bob are friends and Alice and Bob are friends.
+41. ■ Ward leave.  Carol may end her membership in Alice's Grupo, provided Carol is a ward and Carol is not retired.
+42. ■ Ward remove.  Carol may end Bob's membership in Grupo, provided Carol is the leader of Grupo, Carol is a ward and Carol is not retired.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -100,3 +103,8 @@ Wards of one guardian join: Carol [Wards of one guardian join]
   Dave: Carol asks for your consent to wards of one guardian join.
   Alice: Carol asks for your consent to wards of one guardian join.
 Ward withdraw: Alice [Ward withdraw] <bob> <grupo>
+Ward add: Carol [Ward add]
+  Bob: Carol asks for your consent to ward add.
+  Alice: Carol asks for your consent to ward add.
+Ward leave: Carol [Ward leave]
+Ward remove: Carol [Ward remove]

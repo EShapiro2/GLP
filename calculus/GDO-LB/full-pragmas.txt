@@ -1,5 +1,5 @@
 GDO-LB: Location-Based GDO
-Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity. Reflexive: x knows y.
+Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
 Of GDO: Alice, Bob and Carol are persons.
 Of GDO-LB: A person has a *location*. d > 0, an integer, and e > 0 are parameters of GDO-LB. Alice, Bob and Carol are persons. Environment: the bound is n, for x; either x points to fewer than d persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than e than some person pointed to by x; y is closer to x by more than e than some person pointed to by x; y is furthest from x among the persons x points to.

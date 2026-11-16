@@ -12,6 +12,7 @@ CSSN:2 ■ Child acquaint: GnW:3 Ward acquaint <- knows(Alice,Bob), parent(Alice
 CSSN:2 ■ Children acquaint: GnW:4 Wards acquaint <- knows(Alice,Dave), knows(Bob,Carol), knows(Alice,Bob), knows(Bob,Alice), parent(Alice,Carol), parent(Bob,Dave) guarded by Alice, Bob.
 CSSN:3 ■ Child create: GSNW:2 Ward create <- has_parent(Carol,Alice) guarded by Alice.
 CSSN:3 ■ Join: GSN:3 Join <- person(Alice).
+CSSN:3 ■ Child add: GSNW:3 Ward add <- child(Bob).
 CSSN:3 ■ | Only a child, Dave, may join the group.
 CSSN:4 ○ Of age: of_age(Carol), ~child(Carol), ~parent(_,Carol), ~has_parent(Carol,_), person(Carol) <- creator(Alice,Carol), parent(Alice,Carol), has_parent(Carol,Alice), ~of_age(Carol), child(Carol) guarded by Alice.
 CSSN:4 ○ | Carol is then a person.

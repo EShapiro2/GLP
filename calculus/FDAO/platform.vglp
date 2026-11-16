@@ -24,11 +24,17 @@ join(Peer, Peer, Speech)
 ;
 propose(Peer, Peer, Speech, Speech)
 ;
+propose_own(Peer, Speech, Speech)
+;
 deliver_proposal(Peer, Peer, Speech, Speech)
 ;
 vote_for(Peer, Peer, Speech, Speech)
 ;
+vote_own_for(Peer, Speech, Speech)
+;
 vote_against(Peer, Peer, Speech, Speech)
+;
+vote_own_against(Peer, Speech, Speech)
 ;
 deliver_vote_for(Peer, Peer, Peer, Speech, Speech)
 ;
@@ -68,9 +74,15 @@ join(Peer, Peer, Speech)
 ;
 propose(Peer, Peer, Speech, Speech)
 ;
+propose_own(Peer, Speech, Speech)
+;
 vote_for(Peer, Peer, Speech, Speech)
 ;
+vote_own_for(Peer, Speech, Speech)
+;
 vote_against(Peer, Peer, Speech, Speech)
+;
+vote_own_against(Peer, Speech, Speech)
 ;
 pass(Peer, Speech, Speech, Integer, Integer)
 ;
@@ -93,7 +105,7 @@ Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "bob", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Found", [act(found, 1, [1], [req(identity, []), forb(steward, [at(2)])], [], [field(2, "delos", text)], [], [])]), button("Join", [act(join, 2, [1, 2], [req(identity, []), req(steward, [at(3)]), req(knows, [at(1)])], [3, 1], [], [], [])]), button("Propose", [act(propose, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)])], [4, 2], [field(3, "prop", text)], [], [])]), button("Vote for", [act(vote_for, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), req(proposal, [at(3), at(4)]), forb(voted, [at(3), at(4)])], [4, 2, 3], [], [], [])]), button("Vote against", [act(vote_against, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), req(proposal, [at(3), at(4)]), forb(voted, [at(3), at(4)])], [4, 2, 3], [], [], [])]), button("Pass", [act(pass, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [], [])]), button("Reject", [act(reject, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [], [])]), button("Issue", [act(issue, 1, [1], [req(identity, [])], [], [field(2, "sum", number)], [], [])]), button("Swap", [act(swap, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, "sum", number), field(5, "dave", agent), field(6, "total", number)], [], [])]), button("Pay", [act(pay, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "sum", number)], [], [])]), button("Redeem", [act(redeem, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "carol", agent)], [], [])]), button("Fund", [act(fund, 1, [1, 2], [req(identity, []), req(member, [at(5), at(2)]), req(coin, [at(3)])], [5, 2, 3], [field(4, "sum", number)], [], [])]), button("Grant", [act(grant, 1, [1, 2], [req(identity, []), req(steward, [at(4)]), req(passed, [at(6), at(4)]), req(dao_coin, [at(3), at(4)]), forb(granted, [at(6), at(4)]), proved(identity, [], knows, [at(2)]), proved(identity, [], member, [any, at(2)]), proved(identity, [], listed, [at(2), any]), proved(identity, [], proposed, [any, any, at(2)]), proved(identity, [], delivered, [any, any, at(2)]), proved(identity, [], vote_for, [at(2), any, any]), proved(identity, [], vote_against, [at(2), any, any]), proved(identity, [], delivered_vote, [any, any, any, at(2)]), proved(identity, [], delivered_decision, [any, any, at(2)])], [4, 6, 3], [field(2, "carol", person), field(5, "sum", number)], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "bob", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Found", [act(found, 1, [1], [req(identity, []), forb(steward, [at(2)])], [], [field(2, "delos", text)], [], [])]), button("Join", [act(join, 2, [1, 2], [req(identity, []), req(steward, [at(3)]), req(knows, [at(1)])], [3, 1], [], [], [])]), button("Propose", [act(propose, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)])], [4, 2], [field(3, "prop", text)], [], [])]), button("Propose own", [act(propose_own, 1, [1], [req(identity, []), req(member, [at(3), at(1)]), req(steward, [at(3)]), forb(proposal, [at(2), at(3)])], [3], [field(2, "prop", text)], [], [])]), button("Vote for", [act(vote_for, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), req(proposal, [at(3), at(4)]), forb(voted, [at(3), at(4)])], [4, 2, 3], [], [], [])]), button("Vote own for", [act(vote_own_for, 1, [1], [req(identity, []), req(member, [at(3), at(1)]), req(proposal, [at(2), at(3)]), req(steward, [at(3)]), forb(decided, [at(2), at(3)]), forb(voted, [at(2), at(3)])], [3, 2], [], [], [])]), button("Vote against", [act(vote_against, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), req(proposal, [at(3), at(4)]), forb(voted, [at(3), at(4)])], [4, 2, 3], [], [], [])]), button("Vote own against", [act(vote_own_against, 1, [1], [req(identity, []), req(member, [at(3), at(1)]), req(proposal, [at(2), at(3)]), req(steward, [at(3)]), forb(decided, [at(2), at(3)]), forb(voted, [at(2), at(3)])], [3, 2], [], [], [])]), button("Pass", [act(pass, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [], [])]), button("Reject", [act(reject, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [], [])]), button("Issue", [act(issue, 1, [1], [req(identity, [])], [], [field(2, "sum", number)], [], [])]), button("Swap", [act(swap, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, "sum", number), field(5, "dave", agent), field(6, "total", number)], [], [])]), button("Pay", [act(pay, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "sum", number)], [], [])]), button("Redeem", [act(redeem, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "carol", agent)], [], [])]), button("Fund", [act(fund, 1, [1, 2], [req(identity, []), req(member, [at(5), at(2)]), req(coin, [at(3)])], [5, 2, 3], [field(4, "sum", number)], [same(2, 1)], [])]), button("Grant", [act(grant, 1, [1, 2], [req(identity, []), req(steward, [at(4)]), req(passed, [at(6), at(4)]), req(dao_coin, [at(3), at(4)]), forb(granted, [at(6), at(4)]), proved(identity, [], knows, [at(2)]), proved(identity, [], member, [any, at(2)]), proved(identity, [], listed, [at(2), any]), proved(identity, [], proposed, [any, any, at(2)]), proved(identity, [], delivered, [any, any, at(2)]), proved(identity, [], vote_for, [at(2), any, any]), proved(identity, [], vote_against, [at(2), any, any]), proved(identity, [], delivered_vote, [any, any, any, at(2)]), proved(identity, [], delivered_decision, [any, any, at(2)])], [4, 6, 3], [field(2, "carol", person), field(5, "sum", number)], [same(2, 1)], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -189,7 +201,7 @@ atom_of(g(granted, [s(V1), s(V2)]), shown(granted(V1?, V2?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(found, [svar('Delos')], [rs(guarded, [atom(steward, [svar('Delos')]), atom(member, [svar('Delos'), role(1)]), atom(listed, [role(1), svar('Delos')])], [], [atom(identity, [])], [atom(steward, [svar('Delos')])])]), schema(join, [svar('Delos')], [rs(guarded, [atom(member, [svar('Delos'), role(2)])], [], [atom(identity, [])], [atom(member, [svar('Delos'), role(2)])]), rs(guarded, [atom(listed, [role(1), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(knows, [role(1)])], [])]), schema(propose, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]), schema(deliver_proposal, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(vote_for, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(vote_against, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(deliver_vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(pass, [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(reject, [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(deliver_pass, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_reject, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(issue, [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(fund, [pvar('Dave'), num('Sum'), svar('Delos')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [], [atom(identity, []), atom(steward, [svar('Delos')])], [])]), schema(grant, [pvar('Dave'), svar('Delos'), num('Sum'), svar('Prop')], [rs(guarded, [atom(granted, [svar('Prop'), svar('Delos')])], [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [atom(granted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [], [atom(identity, []), atom(proposed, [svar('Prop'), svar('Delos'), role(1)])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(found, [svar('Delos')], [rs(guarded, [atom(steward, [svar('Delos')]), atom(member, [svar('Delos'), role(1)]), atom(listed, [role(1), svar('Delos')])], [], [atom(identity, [])], [atom(steward, [svar('Delos')])])]), schema(join, [svar('Delos')], [rs(guarded, [atom(member, [svar('Delos'), role(2)])], [], [atom(identity, [])], [atom(member, [svar('Delos'), role(2)])]), rs(guarded, [atom(listed, [role(1), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(knows, [role(1)])], [])]), schema(propose, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]), schema(propose_own, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]), schema(deliver_proposal, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(vote_for, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(vote_own_for, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]), schema(vote_against, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(vote_own_against, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]), schema(deliver_vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(pass, [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(reject, [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(deliver_pass, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_reject, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(issue, [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(fund, [pvar('Dave'), num('Sum'), svar('Delos')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [], [atom(identity, []), atom(steward, [svar('Delos')])], [])]), schema(grant, [pvar('Dave'), svar('Delos'), num('Sum'), svar('Prop')], [rs(guarded, [atom(granted, [svar('Prop'), svar('Delos')])], [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [atom(granted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [], [atom(identity, []), atom(proposed, [svar('Prop'), svar('Delos'), role(1)])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -205,11 +217,17 @@ schema_entry(join, schema(join, [svar('Delos')], [rs(guarded, [atom(member, [sva
 .
 schema_entry(propose, schema(propose, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]))
 .
+schema_entry(propose_own, schema(propose_own, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]))
+.
 schema_entry(deliver_proposal, schema(deliver_proposal, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]))
 .
 schema_entry(vote_for, schema(vote_for, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]))
 .
+schema_entry(vote_own_for, schema(vote_own_for, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]))
+.
 schema_entry(vote_against, schema(vote_against, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]))
+.
+schema_entry(vote_own_against, schema(vote_own_against, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]))
 .
 schema_entry(deliver_vote_for, schema(deliver_vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]))
 .
@@ -250,19 +268,25 @@ schema_numeric(join, numeric([cj(every, true)], [], []))
 .
 schema_numeric(propose, numeric([cj(every, true)], [], []))
 .
+schema_numeric(propose_own, numeric([cj(every, true)], [], []))
+.
 schema_numeric(deliver_proposal, numeric([cj(every, true)], [], []))
 .
 schema_numeric(vote_for, numeric([cj(every, true)], [], []))
 .
+schema_numeric(vote_own_for, numeric([cj(every, true)], [], []))
+.
 schema_numeric(vote_against, numeric([cj(every, true)], [], []))
+.
+schema_numeric(vote_own_against, numeric([cj(every, true)], [], []))
 .
 schema_numeric(deliver_vote_for, numeric([cj(every, true)], [], []))
 .
 schema_numeric(deliver_vote_against, numeric([cj(every, true)], [], []))
 .
-schema_numeric(pass, numeric([cj(at(1), ge(cardinality([svar('X1')], role(1), atom(vote_for, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], []))
+schema_numeric(pass, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote_for, [pvar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(listed, [pvar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], []))
 .
-schema_numeric(reject, numeric([cj(at(1), ge(cardinality([svar('X1')], role(1), atom(vote_against, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], []))
+schema_numeric(reject, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote_against, [pvar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(listed, [pvar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], []))
 .
 schema_numeric(deliver_pass, numeric([cj(every, true)], [], []))
 .
@@ -301,11 +325,17 @@ schema_base(join, 2)
 .
 schema_base(propose, 1)
 .
+schema_base(propose_own, 1)
+.
 schema_base(deliver_proposal, 1)
 .
 schema_base(vote_for, 1)
 .
+schema_base(vote_own_for, 1)
+.
 schema_base(vote_against, 1)
+.
+schema_base(vote_own_against, 1)
 .
 schema_base(deliver_vote_for, 1)
 .
@@ -360,11 +390,17 @@ binding_of(join(V1, V2, V3), join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(sv
 .
 binding_of(propose(V1, V2, V3, V4), propose, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(svar('Delos'), s(V4?))])
 .
+binding_of(propose_own(V1, V2, V3), propose_own, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(svar('Delos'), s(V3?))])
+.
 binding_of(deliver_proposal(V1, V2, V3, V4), deliver_proposal, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(svar('Delos'), s(V4?))])
 .
 binding_of(vote_for(V1, V2, V3, V4), vote_for, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(svar('Delos'), s(V4?))])
 .
+binding_of(vote_own_for(V1, V2, V3), vote_own_for, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(svar('Delos'), s(V3?))])
+.
 binding_of(vote_against(V1, V2, V3, V4), vote_against, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(svar('Delos'), s(V4?))])
+.
+binding_of(vote_own_against(V1, V2, V3), vote_own_against, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(svar('Delos'), s(V3?))])
 .
 binding_of(deliver_vote_for(V1, V2, V3, V4, V5), deliver_vote_for, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(svar('Prop'), s(V4?)), b(svar('Delos'), s(V5?))])
 .
@@ -458,6 +494,18 @@ val_speech(svar('Prop'), B?, D?, V3)
 ,
 val_speech(svar('Delos'), B?, D?, V4)
 .
+class_of(propose_own, B, D, propose_own(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar('Prop'), B?, D?, V2)
+,
+val_speech(svar('Delos'), B?, D?, V3)
+.
 class_of(deliver_proposal, B, D, deliver_proposal(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
@@ -486,6 +534,18 @@ val_speech(svar('Prop'), B?, D?, V3)
 ,
 val_speech(svar('Delos'), B?, D?, V4)
 .
+class_of(vote_own_for, B, D, vote_own_for(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar('Prop'), B?, D?, V2)
+,
+val_speech(svar('Delos'), B?, D?, V3)
+.
 class_of(vote_against, B, D, vote_against(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
@@ -499,6 +559,18 @@ val_peer(role(2), B?, D?, V2)
 val_speech(svar('Prop'), B?, D?, V3)
 ,
 val_speech(svar('Delos'), B?, D?, V4)
+.
+class_of(vote_own_against, B, D, vote_own_against(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar('Prop'), B?, D?, V2)
+,
+val_speech(svar('Delos'), B?, D?, V3)
 .
 class_of(deliver_vote_for, B, D, deliver_vote_for(V1?, V2?, V3?, V4?, V5?))
 :-
@@ -692,9 +764,15 @@ name_class(join(V1, V2, V3), _, join(V1?, V2?, V3?))
 .
 name_class(propose(V1, V2, V3, V4), _, propose(V1?, V2?, V3?, V4?))
 .
+name_class(propose_own(V1, V2, V3), _, propose_own(V1?, V2?, V3?))
+.
 name_class(vote_for(V1, V2, V3, V4), _, vote_for(V1?, V2?, V3?, V4?))
 .
+name_class(vote_own_for(V1, V2, V3), _, vote_own_for(V1?, V2?, V3?))
+.
 name_class(vote_against(V1, V2, V3, V4), _, vote_against(V1?, V2?, V3?, V4?))
+.
+name_class(vote_own_against(V1, V2, V3), _, vote_own_against(V1?, V2?, V3?))
 .
 name_class(pass(V1, V2, V3, V4, V5), _, pass(V1?, V2?, V3?, V4?, V5?))
 .
@@ -726,9 +804,15 @@ request_name(join(V1, V2, V3), pname(join(V1?, V2?, V3?)))
 .
 request_name(propose(V1, V2, V3, V4), pname(propose(V1?, V2?, V3?, V4?)))
 .
+request_name(propose_own(V1, V2, V3), pname(propose_own(V1?, V2?, V3?)))
+.
 request_name(vote_for(V1, V2, V3, V4), pname(vote_for(V1?, V2?, V3?, V4?)))
 .
+request_name(vote_own_for(V1, V2, V3), pname(vote_own_for(V1?, V2?, V3?)))
+.
 request_name(vote_against(V1, V2, V3, V4), pname(vote_against(V1?, V2?, V3?, V4?)))
+.
+request_name(vote_own_against(V1, V2, V3), pname(vote_own_against(V1?, V2?, V3?)))
 .
 request_name(pass(V1, V2, V3, V4, V5), pname(pass(V1?, V2?, V3?, V4?, V5?)))
 .
@@ -851,7 +935,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("FDAO: Funded DAO\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ■ Found.  Alice may found Delos under a new name of hers.\n5. ■ Join.  Alice may admit Bob to Delos, with the consent of Bob, provided Alice is the steward of Delos and Alice knows Bob.\n6. ■ Propose.  Carol may make the proposal Prop to Alice's Delos, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.\n7. ■ Deliver proposal.  Alice delivers Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Prop of Delos and Alice has Bob as a member of Delos.\n8. ■ Vote for.  Carol may vote for Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.\n9. ■ Vote against.  Carol may vote against Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.\n10. ■ Deliver vote for.  Alice delivers Carol's vote for Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos and Alice has Bob as a member of Delos.\n11. ■ Deliver vote against.  Alice delivers Carol's vote against Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos and Alice has Bob as a member of Delos.\n12. ■ Pass.  Alice may pass Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote for Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.\n13. ■ Reject.  Alice may reject Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote against Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.\n14. ■ Deliver pass.  Alice delivers to Bob the decision that Prop of Delos is passed, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Alice has Bob as a member of Delos.\n15. ■ Deliver reject.  Alice delivers to Bob the decision that Prop of Delos is rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected and Alice has Bob as a member of Delos.\n16. ■ Issue.  Alice may issue Sum Alice-coins.\n17. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.\n18. ■ Pay.  Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.\n19. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.\n20. ■ Fund.  Carol may give Alice's Delos Sum Dave-coins, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.\n21. ■ Grant.  Alice may grant Carol Sum Dave-coins of Delos for Prop, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Carol has proposed Prop to Alice's Delos.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(found, ['Alice'], [svar('Delos')], [rs(guarded, [atom(steward, [svar('Delos')]), atom(member, [svar('Delos'), role(1)]), atom(listed, [role(1), svar('Delos')])], [], [atom(identity, [])], [atom(steward, [svar('Delos')])])]), schema(join, ['Bob', 'Alice'], [svar('Delos')], [rs(guarded, [atom(member, [svar('Delos'), role(2)])], [], [atom(identity, [])], [atom(member, [svar('Delos'), role(2)])]), rs(guarded, [atom(listed, [role(1), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(knows, [role(1)])], [])]), schema(propose, ['Carol', 'Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]), schema(deliver_proposal, ['Alice', 'Bob'], [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(vote_for, ['Carol', 'Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(vote_against, ['Carol', 'Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(deliver_vote_for, ['Alice', 'Bob'], [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_vote_against, ['Alice', 'Bob'], [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), qschema(pass, ['Alice'], [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(vote_for, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes')), and(eq(num('Double'), mul(num('Votes'), val(2))), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))), [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])], [], []), qschema(reject, ['Alice'], [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(vote_against, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes')), and(eq(num('Double'), mul(num('Votes'), val(2))), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))), [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])], [], []), schema(deliver_pass, ['Alice', 'Bob'], [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_reject, ['Alice', 'Bob'], [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(issue, ['Alice'], [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, ['Alice', 'Bob'], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob'], [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(fund, ['Carol', 'Alice'], [pvar('Dave'), num('Sum'), svar('Delos')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [], [atom(identity, []), atom(steward, [svar('Delos')])], [])]), schema(grant, ['Alice', 'Carol'], [pvar('Dave'), svar('Delos'), num('Sum'), svar('Prop')], [rs(guarded, [atom(granted, [svar('Prop'), svar('Delos')])], [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [atom(granted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [], [atom(identity, []), atom(proposed, [svar('Prop'), svar('Delos'), role(1)])], [])])]), pragmas([], [act(establish, "Establish", [], none, "", by([1])), act(acquaint, "Acquaint", ["", "bob"], said([[], [person(1), text(" asks for your consent to acquaint.")]]), "", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks for your consent to introduce.")], []]), "", by([2])), act(found, "Found", ["", "delos"], none, "", by([1])), act(join, "Join", [], said([[person(2), text(" asks for your consent to join.")], []]), "", by([2])), act(propose, "Propose", ["", "", "prop"], none, "", by([1])), act(vote_for, "Vote for", [], none, "", by([1])), act(vote_against, "Vote against", [], none, "", by([1])), act(pass, "Pass", ["", "", "", "votes"], none, "", by([1])), act(reject, "Reject", ["", "", "", "votes"], none, "", by([1])), act(issue, "Issue", ["", "sum"], none, "", by([1])), act(swap, "Swap", ["", "", "", "sum", "dave", "total"], said([[], [person(1), text(" asks for your consent to swap.")]]), "", by([1])), act(pay, "Pay", ["", "", "sum"], none, "", by([1])), act(redeem, "Redeem", ["", "", "carol"], none, "", by([1])), act(fund, "Fund", ["", "", "", "sum"], none, "", by([1])), act(grant, "Grant", ["", "carol", "", "", "sum"], none, "", by([1]))], [], nolook, version(1, 1))))
+contract("FDAO: Funded DAO\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ■ Found.  Alice may found Delos under a new name of hers.\n5. ■ Join.  Alice may admit Bob to Delos, with the consent of Bob, provided Alice is the steward of Delos and Alice knows Bob.\n6. ■ Propose.  Carol may make the proposal Prop to Alice's Delos, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.\n7. ■ Propose own.  Alice may make the proposal Prop to Alice's Delos, provided Alice is a member of Alice's Delos and Alice is the steward of Delos.\n8. ■ Deliver proposal.  Alice delivers Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Prop of Delos and Alice has Bob as a member of Delos.\n9. ■ Vote for.  Carol may vote for Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.\n10. ■ Vote own for.  Alice may vote for Prop of Alice's Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.\n11. ■ Vote against.  Carol may vote against Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.\n12. ■ Vote own against.  Alice may vote against Prop of Alice's Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.\n13. ■ Deliver vote for.  Alice delivers Carol's vote for Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos and Alice has Bob as a member of Delos.\n14. ■ Deliver vote against.  Alice delivers Carol's vote against Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos and Alice has Bob as a member of Delos.\n15. ■ Pass.  Alice may pass Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote for Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.\n16. ■ Reject.  Alice may reject Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote against Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.\n17. ■ Deliver pass.  Alice delivers to Bob the decision that Prop of Delos is passed, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Alice has Bob as a member of Delos.\n18. ■ Deliver reject.  Alice delivers to Bob the decision that Prop of Delos is rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected and Alice has Bob as a member of Delos.\n19. ■ Issue.  Alice may issue Sum Alice-coins.\n20. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.\n21. ■ Pay.  Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.\n22. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.\n23. ■ Fund.  Carol may give Alice's Delos Sum Dave-coins, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.\n24. ■ Grant.  Alice may grant Carol Sum Dave-coins of Delos for Prop, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Carol has proposed Prop to Alice's Delos.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(found, ['Alice'], [svar('Delos')], [rs(guarded, [atom(steward, [svar('Delos')]), atom(member, [svar('Delos'), role(1)]), atom(listed, [role(1), svar('Delos')])], [], [atom(identity, [])], [atom(steward, [svar('Delos')])])]), schema(join, ['Bob', 'Alice'], [svar('Delos')], [rs(guarded, [atom(member, [svar('Delos'), role(2)])], [], [atom(identity, [])], [atom(member, [svar('Delos'), role(2)])]), rs(guarded, [atom(listed, [role(1), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(knows, [role(1)])], [])]), schema(propose, ['Carol', 'Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]), schema(propose_own, ['Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]), schema(deliver_proposal, ['Alice', 'Bob'], [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(vote_for, ['Carol', 'Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(vote_own_for, ['Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]), schema(vote_against, ['Carol', 'Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(vote_own_against, ['Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]), schema(deliver_vote_for, ['Alice', 'Bob'], [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_vote_against, ['Alice', 'Bob'], [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), qschema(pass, ['Alice'], [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(vote_for, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes')), and(eq(num('Double'), mul(num('Votes'), val(2))), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))), [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])], [], []), qschema(reject, ['Alice'], [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(vote_against, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes')), and(eq(num('Double'), mul(num('Votes'), val(2))), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))), [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])], [], []), schema(deliver_pass, ['Alice', 'Bob'], [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_reject, ['Alice', 'Bob'], [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(issue, ['Alice'], [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, ['Alice', 'Bob'], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob'], [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(fund, ['Carol', one('Alice', 'Carol')], [pvar('Dave'), num('Sum'), svar('Delos')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [], [atom(identity, []), atom(steward, [svar('Delos')])], [])]), schema(grant, ['Alice', one('Carol', 'Alice')], [pvar('Dave'), svar('Delos'), num('Sum'), svar('Prop')], [rs(guarded, [atom(granted, [svar('Prop'), svar('Delos')])], [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [atom(granted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [], [atom(identity, []), atom(proposed, [svar('Prop'), svar('Delos'), role(1)])], [])])]), pragmas([], [act(establish, "Establish", [], none, "", by([1])), act(acquaint, "Acquaint", ["", "bob"], said([[], [person(1), text(" asks for your consent to acquaint.")]]), "", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks for your consent to introduce.")], []]), "", by([2])), act(found, "Found", ["", "delos"], none, "", by([1])), act(join, "Join", [], said([[person(2), text(" asks for your consent to join.")], []]), "", by([2])), act(propose, "Propose", ["", "", "prop"], none, "", by([1])), act(propose_own, "Propose own", ["", "prop"], none, "", by([1])), act(vote_for, "Vote for", [], none, "", by([1])), act(vote_own_for, "Vote own for", [], none, "", by([1])), act(vote_against, "Vote against", [], none, "", by([1])), act(vote_own_against, "Vote own against", [], none, "", by([1])), act(pass, "Pass", ["", "", "", "votes"], none, "", by([1])), act(reject, "Reject", ["", "", "", "votes"], none, "", by([1])), act(issue, "Issue", ["", "sum"], none, "", by([1])), act(swap, "Swap", ["", "", "", "sum", "dave", "total"], said([[], [person(1), text(" asks for your consent to swap.")]]), "", by([1])), act(pay, "Pay", ["", "", "sum"], none, "", by([1])), act(redeem, "Redeem", ["", "", "carol"], none, "", by([1])), act(fund, "Fund", ["", "", "", "sum"], none, "", by([1], [same(2, 1)])), act(grant, "Grant", ["", "carol", "", "", "sum"], none, "", by([1], [same(2, 1)]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -913,7 +997,7 @@ Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String,
 RoleAsk   ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).
 Asked     ::= asked(Integer, List(Word)).
 Close     ::= close.
-Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
+Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.
 %% The peer an acquaintance part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract's acquaintance schemas).
 MeetPeer  ::= peer(Peer) ; nopeer.
 
@@ -1114,7 +1198,7 @@ Then      ::= write_own ; own_unread ; no_own.
 ApprovalRes ::= approval_for(Attempt) ; noapproval.
 
 %% When it starts, its view is written on the output: its own key, the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
-%% Where the contract requires the day, the agent reads also the calendar, a stream of dates the device writes, one a day, merged with its triggers (vGLP, Section 5.4, "The compilation": "the fair merge ... of the answers to its request questions, the messages arriving on the network, the answers to its approval questions, its own triggers and, where the contract requires the day, the calendar").
+%% Where the contract requires the day, the agent reads the date from its phone whenever it reads a trigger, before it computes a condition, and holds today(d), d that date, beside its app state until the next (dated; vGLP, Section 5.4, "Speech-act schemas as local specifications": "we assume that every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition").  It takes no calendar.
 %% Where the contract declares environment predicates other than the day, the agent takes, when the platform is deployed, their atoms, written as the contract writes them, List(Atom), and holds them in its machine state from startup, its first view showing them ("An environment predicate is the day, by the calendar, or a value the contract declares and does not fix, as BCC's f and GFF-FR's d: given when the platform is deployed, held from startup", vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "its value is given when the platform is deployed, and the compiled agent holds the atom from startup").
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
 agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?]) :- ground(Id?) |
@@ -1255,14 +1339,6 @@ step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?
     st_trie(St?, Tr),
     recheck_find(Pd?, V?, Tr?, St?, F),
     recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
-%% A date of the calendar: today(d) replaced in the state beside the app state, which the conditions read and the view does not show; the app state changing, the starts and the requests the agent holds are put up again (vGLP, Section 5.4, "The compilation": "on each date of which it replaces today(d) and puts up again the starts and requests it holds").  The agent holds today(d) as an atom of the machine state of its app state, which no schema adds or deletes, which atom_of does not show and show_state does not compare.
-step(day(D), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
-    integer(D?), ground(St?) |
-    st_app(St?, Ap0),
-    st_app(St?, Ap),
-    set_today(D?, Ap?, Ap1),
-    set_app(St?, Ap1?, St1),
-    next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
@@ -5446,12 +5522,18 @@ mates_of([lschema(Nm, _, Rs, Lsts)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), gro
     on_base(As0?, Lsts?, As),
     deltas_peers(Ps?, Q1),
     sort_peers(Q1?, Q2),
-    subsets(Q2?, Ls),
-    list_choices(Lsts?, Ls?, Ps?, Cs),
-    tuples_of(Cs?, Ts),
-    listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M1),
+    listed_choices(As?, Q2?, Nm?, Rs?, Lsts?, Ps?, M1),
     mates_of(Ss?, Ps?, M2),
     app(M1?, M2?, M).
+%% The schema-bindings of a schema with listed roles at the assignments As of its roles: at each choice of a list for each listed role (list_choices), the copies of the listed roles the roles after the schema's own.
+procedure listed_choices(Bindings?, Peers?, Constant?, RoleSpecs?, Listings?, Deltas?, Mates).
+listed_choices(As, Q, Nm, Rs, Lsts, Ps, M?) :- ground(As?), ground(Rs?), ground(Lsts?), ground(Ps?) |
+    rs_len(Rs?, K),
+    K1 := K? + 1,
+    list_choices(Lsts?, Lsts?, Q?, As?, Rs?, K1?, Ps?, Cs),
+    tuples_of(Cs?, Ts0),
+    same_lists(Ts0?, Lsts?, Ts),
+    listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M).
 procedure on_base(Bindings?, Listings?, Bindings).
 on_base([], _, []).
 on_base([B|Bs], Lsts, R?) :- ground(B?), ground(Lsts?) |
@@ -5481,19 +5563,103 @@ subsets([P|Ps], R?) :- ground(P?), ground(Ps?) |
 procedure with_first(PeerLists?, Peer?, PeerLists).
 with_first([], _, []).
 with_first([L|Ls], P, [[P?|L?]|R?]) :- ground(P?) | with_first(Ls?, P?, R).
-%% For each listing of Lsts, in their order, the lists it may take: a listed role any set of the participants, Ls; the instances of a conjunct any set of the assignments its conditional literals, matched together, give among the atoms the class's changes Ps add, or delete, the instances of a schema-binding of the class being among them (inst_cands).  A variable the quantifier binds that no conditional literal names is given no value by the changes, and an assignment that leaves it free is none of them: such a list is found only as the attempt's own schema-binding carries it (class_mates).
-procedure list_choices(Listings?, PeerLists?, Deltas?, ListTuples).
-list_choices([], _, _, []).
-list_choices([listing(_, _, _, _, _, _, _)|Lsts], Ls, Ps, [Ws?|Cs?]) :- ground(Ls?) |
+%% For each listing of Lsts, in their order, the lists it may take: a listed role any set of the participants at whom it fits (fit_people); the instances of a conjunct any set of the assignments its conditional literals, matched together, give among the atoms the class's changes Ps add, or delete, the instances of a schema-binding of the class being among them (inst_cands).  A variable the quantifier binds that no conditional literal names is given no value by the changes, and an assignment that leaves it free is none of them: such a list is found only as the attempt's own schema-binding carries it (class_mates).
+%% The people a listed role may take are those of the participants Q at whom its deleted and added atoms, as its copy for that person has them (spec_copies), match into the atoms the class's changes Ps delete and add there under one of the assignments As of the schema's roles (fit_people): a list with another person determines no schema-binding of the class, its match_deltas finding none, and is not tried, as an assignment of the roles is not (fit_assigns), so the schema-bindings found, and their order, are those of every list; a listed role that deletes and adds nothing takes any set of the participants.  Two listed roles of one base whose quantifiers have the same anchor and no condition have the same instances in every state, "the instances of a conjunct with a listed role give the people of the role, one for each instance" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), so a schema-binding that gives them different lists determines no transaction and is of no class: the people such a role may take are those that fit at each of them (twins_fit), and of the choices only those that give them one list are kept (same_lists).  All is the schema's listings.
+procedure list_choices(Listings?, Listings?, Peers?, Bindings?, RoleSpecs?, Integer?, Deltas?, ListTuples).
+list_choices([], _, _, _, _, _, _, []).
+list_choices([listing(I, Bi, Rho, Vs, Phi, _, _)|Lsts], All, Q, As, Rs, J, Ps, [Ws?|Cs?]) :-
+    ground(All?), ground(Q?), ground(As?), ground(Rs?), integer(J?), ground(Ps?) |
+    twins_fit(All?, I?, Bi?, Rho?, Vs?, Phi?, Q?, As?, Rs?, J?, Ps?, Qi),
+    subsets(Qi?, Ls),
     wrap_ppl(Ls?, Ws),
-    list_choices(Lsts?, Ls?, Ps?, Cs).
-list_choices([instances(_, _, Xs, _, _, CA, CD)|Lsts], Ls, Ps, [Ws?|Cs?]) :- ground(Ps?), ground(Xs?), ground(CA?), ground(CD?) |
+    list_choices(Lsts?, All?, Q?, As?, Rs?, J?, Ps?, Cs).
+list_choices([instances(_, _, Xs, _, _, CA, CD)|Lsts], All, Q, As, Rs, J, Ps, [Ws?|Cs?]) :- ground(Ps?), ground(Xs?), ground(CA?), ground(CD?) |
     inst_cands(CA?, CD?, Xs?, Ps?, Q0),
     sort_insts(Q0?, Q1),
     dedup(Q1?, Q2),
     isubsets(Q2?, Is),
     wrap_ins(Is?, Ws),
-    list_choices(Lsts?, Ls?, Ps?, Cs).
+    list_choices(Lsts?, All?, Q?, As?, Rs?, J?, Ps?, Cs).
+%% twins_fit(All, I, Bi, Rho, Vs, Phi, Q, As, Rs, J, Ps, Qi): the people of Q that fit at every listed role of All of the anchor of the listed role I, itself among them.
+procedure twins_fit(Listings?, Integer?, Integer?, Constant?, Vars?, Form?, Peers?, Bindings?, RoleSpecs?, Integer?, Deltas?, Peers).
+twins_fit([], _, _, _, _, _, Q, _, _, _, _, Q?).
+twins_fit([listing(I2, Bi2, Rho2, Vs2, Phi2, _, _)|Ls], I, Bi, Rho, Vs, Phi, Q, As, Rs, J, Ps, Qi?) :-
+    integer(I2?), integer(I?), integer(Bi?), ground(Rho?), ground(Vs?), ground(Phi?), ground(As?), ground(Rs?), integer(J?), ground(Ps?) |
+    same_anchor(I2?, Bi2?, Rho2?, Vs2?, Phi2?, I?, Bi?, Rho?, Vs?, Phi?, S),
+    twin_fit(S?, I2?, Q?, As?, Rs?, J?, Ps?, Q1),
+    twins_fit(Ls?, I?, Bi?, Rho?, Vs?, Phi?, Q1?, As?, Rs?, J?, Ps?, Qi).
+twins_fit([instances(_, _, _, _, _, _, _)|Ls], I, Bi, Rho, Vs, Phi, Q, As, Rs, J, Ps, Qi?) :-
+    twins_fit(Ls?, I?, Bi?, Rho?, Vs?, Phi?, Q?, As?, Rs?, J?, Ps?, Qi).
+procedure twin_fit(YesNo?, Integer?, Peers?, Bindings?, RoleSpecs?, Integer?, Deltas?, Peers).
+twin_fit(no, _, Q, _, _, _, _, Q?).
+twin_fit(yes, I, Q, As, Rs, J, Ps, Qi?) :- integer(I?), integer(J?) |
+    nth_spec(Rs?, I?, R),
+    renum_spec(R?, I?, J?, R1),
+    fit_people(Q?, R1?, J?, As?, Ps?, Qi).
+%% Whether the listed roles I2 and I have one base, the same anchor, each at its own place in it, and no condition.
+procedure same_anchor(Integer?, Integer?, Constant?, Vars?, Form?, Integer?, Integer?, Constant?, Vars?, Form?, YesNo).
+same_anchor(I2, Bi2, Rho2, Vs2, Phi2, I, Bi, Rho, Vs, Phi, S?) :- integer(I2?), integer(I?) |
+    same_int(Bi2?, Bi?, E1),
+    same(Rho2?, Rho?, E2),
+    renum_vars(Vs2?, I2?, 0, Ws2),
+    renum_vars(Vs?, I?, 0, Ws),
+    same(Ws2?, Ws?, E3),
+    same(Phi2?, fcons(true), E4),
+    same(Phi?, fcons(true), E5),
+    and(E1?, E2?, E12),
+    and(E12?, E3?, E123),
+    and(E4?, E5?, E45),
+    and(E123?, E45?, S).
+%% Of the choices Ts, each a list for each listing of Lsts, those that give the listed roles of one anchor one list.
+procedure same_lists(ListTuples?, Listings?, ListTuples).
+same_lists([], _, []).
+same_lists([T|Ts], Lsts, R?) :- ground(T?), ground(Lsts?) |
+    tuple_same(Lsts?, T?, Lsts?, T?, Ok),
+    same_lists(Ts?, Lsts?, R1),
+    keep_tuple(Ok?, T?, R1?, R).
+procedure keep_tuple(YesNo?, LLists?, ListTuples?, ListTuples).
+keep_tuple(yes, T, R, [T?|R?]).
+keep_tuple(no, _, R, R?).
+procedure tuple_same(Listings?, LLists?, Listings?, LLists?, YesNo).
+tuple_same([], _, _, _, yes).
+tuple_same([_|_], [], _, _, yes).
+tuple_same([listing(I, Bi, Rho, Vs, Phi, _, _)|Ls], [L|T], All, AT, Ok?) :- ground(All?), ground(AT?) |
+    twins_same(All?, AT?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok1),
+    tuple_same1(Ok1?, Ls?, T?, All?, AT?, Ok).
+tuple_same([instances(_, _, _, _, _, _, _)|Ls], [_|T], All, AT, Ok?) :- tuple_same(Ls?, T?, All?, AT?, Ok).
+procedure tuple_same1(YesNo?, Listings?, LLists?, Listings?, LLists?, YesNo).
+tuple_same1(no, _, _, _, _, no).
+tuple_same1(yes, Ls, T, All, AT, Ok?) :- tuple_same(Ls?, T?, All?, AT?, Ok).
+procedure twins_same(Listings?, LLists?, Integer?, Integer?, Constant?, Vars?, Form?, LList?, YesNo).
+twins_same([], _, _, _, _, _, _, _, yes).
+twins_same([_|_], [], _, _, _, _, _, _, yes).
+twins_same([listing(I2, Bi2, Rho2, Vs2, Phi2, _, _)|Ls], [L2|T], I, Bi, Rho, Vs, Phi, L, Ok?) :-
+    integer(I?), integer(Bi?), ground(Rho?), ground(Vs?), ground(Phi?), ground(L?) |
+    same_anchor(I2?, Bi2?, Rho2?, Vs2?, Phi2?, I?, Bi?, Rho?, Vs?, Phi?, S),
+    same(L2?, L?, E),
+    neg(S?, NS),
+    or(NS?, E?, Ok1),
+    twins_same1(Ok1?, Ls?, T?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok).
+twins_same([instances(_, _, _, _, _, _, _)|Ls], [_|T], I, Bi, Rho, Vs, Phi, L, Ok?) :-
+    twins_same(Ls?, T?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok).
+procedure twins_same1(YesNo?, Listings?, LLists?, Integer?, Integer?, Constant?, Vars?, Form?, LList?, YesNo).
+twins_same1(no, _, _, _, _, _, _, _, _, no).
+twins_same1(yes, Ls, T, I, Bi, Rho, Vs, Phi, L, Ok?) :- twins_same(Ls?, T?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok).
+%% fit_people(Q, R, J, As, Ps, Qi): the people of Q, in their order, at whom the role R, the copy of index J of a listed role, fits (fits) under one of the assignments As.
+procedure fit_people(Peers?, RoleSpec?, Integer?, Bindings?, Deltas?, Peers).
+fit_people([], _, _, _, _, []).
+fit_people([P|Qs], R, J, As, Ps, Qi?) :- ground(P?), ground(R?), integer(J?), ground(As?), ground(Ps?) |
+    fits_any(As?, R?, J?, P?, Ps?, Ok),
+    fit_people(Qs?, R?, J?, As?, Ps?, Q1),
+    keep_peer(Ok?, P?, Q1?, Qi).
+procedure fits_any(Bindings?, RoleSpec?, Integer?, Peer?, Deltas?, YesNo).
+fits_any([], _, _, _, _, no).
+fits_any([B|Bs], R, J, P, Ps, Ok?) :- ground(B?), ground(R?), integer(J?), ground(P?), ground(Ps?) |
+    fits(R?, [b(role(J?), p(P?))|B?], P?, Ps?, Ok1),
+    fits_any1(Ok1?, Bs?, R?, J?, P?, Ps?, Ok).
+procedure fits_any1(YesNo?, Bindings?, RoleSpec?, Integer?, Peer?, Deltas?, YesNo).
+fits_any1(yes, _, _, _, _, _, yes).
+fits_any1(no, Bs, R, J, P, Ps, Ok?) :- fits_any(Bs?, R?, J?, P?, Ps?, Ok).
 procedure wrap_ppl(PeerLists?, LLists).
 wrap_ppl([], []).
 wrap_ppl([L|Ls], [ppl(L?)|Ws?]) :- wrap_ppl(Ls?, Ws).
@@ -5740,7 +5906,7 @@ drop_mate(mate(N, B, G, F), [mate(N1, B1, G1, F1)|Ms], R?) :-
 procedure drop_mate1(YesNo?, Mate?, Mate?, Mates?, Mates).
 drop_mate1(yes, M, _, Ms, R?) :- drop_mate(M?, Ms?, R).
 drop_mate1(no, M, M1, Ms, [M1?|R?]) :- drop_mate(M?, Ms?, R).
-%% The parts the schema-bindings Ms of a class determine, each pt(T, G, Op), in the order of Ms: named by the term T of the first of its schema-bindings, a schema-binding of the part of one before it naming no other part; its guard set G, the people in the marked roles of its schema-bindings; and, for an unguarded part, its opener, opener(P), P "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it"; for a guarded part determined by a schema with a listed role whose base is not a guarding role, opener(P), P the least of the people in the first role of those schema-bindings that is not a guard of the part, "and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part" (vGLP a890465, Section 5.4, "Act schemas as local specifications"); and for every other guarded part guarded_part.  An opener per part is one the agent finds: an unguarded part has its opener in the first role of one of its schema-bindings, so the agent, which finds among its own transactions the classes of the unguarded schemas with it in their first role, finds every part it opens (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3).
+%% The parts the schema-bindings Ms of a class determine, each pt(T, G, Op), in the order of Ms: named by the term T of the first of its schema-bindings, a schema-binding of the part of one before it naming no other part; its guard set G, the people in the marked roles of its schema-bindings; and, for an unguarded part, its opener, opener(P), P "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it"; for a guarded part determined by a schema whose base is not a guarding role, opener(P), P the person in the base of those schema-bindings, the least of them, who is not a guard of the part, "the opener of a guarded part determined by a schema whose base is not a guarding role is the person in the base, who is not a guard of the part, as the ward whose state lists her guardians opens the acts they take jointly" (vGLP, Section 5.4, "Speech-act schemas as local specifications"; until this text the person in the first role, which is the base of child_close and is not of make_guardian: CSSN #16, Code_inbox.md, 2026-11-15 17:05 UTC); and for every other guarded part its proposers, proposed(Ob).  An opener per part is one the agent finds: an unguarded part has its opener in the first role of one of its schema-bindings, so the agent, which finds among its own transactions the classes of the unguarded schemas with it in their first role, finds every part it opens (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3).
 procedure info_parts_of(Mates?, Peers?, Peer?, Parts).
 info_parts_of(Ms, Q, Id, Pts?) :- ground(Ms?) | parts_of(Ms?, Ms?, Q?, Id?, [], Pts).
 %% parts_of(Ms, All, Q, Id, Seen, Pts): the parts of the schema-bindings Ms that are not the part of one of Seen, the openers taken over All.
@@ -5774,19 +5940,21 @@ part_firsts([mate(N, B, G, F)|Ms], M, Q, Fs?) :- ground(F?), ground(M?), ground(
     same_mpart(Q?, mate(N?, B?, G?, F?), M?, S),
     part_firsts(Ms?, M?, Q?, Fs1),
     keep_peer(S?, F?, Fs1?, Fs).
-%% The people in the first role of the schema-bindings of All that determine the part of M, of a schema with a listed role whose base is not a guarding role, and that are not guards of the part, G (vGLP a890465, Section 5.4, "Act schemas as local specifications").
+%% The people in the base (schema_base) of the schema-bindings of All that determine the part of M, of a schema whose base is not a guarding role, and that are not guards of the part, G (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the opener of a guarded part determined by a schema whose base is not a guarding role is the person in the base, who is not a guard of the part").
 procedure part_gfirsts(Mates?, Mate?, Peers?, Peers?, Peers).
 part_gfirsts([], _, _, _, []).
-part_gfirsts([mate(N, B, G1, F)|Ms], M, Q, G, Fs?) :- ground(N?), ground(F?), ground(M?), ground(Q?), ground(G?) |
+part_gfirsts([mate(N, B, G1, F)|Ms], M, Q, G, Fs?) :- ground(N?), ground(B?), ground(F?), ground(M?), ground(Q?), ground(G?) |
     same_mpart(Q?, mate(N?, B?, G1?, F?), M?, S),
     opens_guarded(N?, O),
-    mem(F?, G?, InG),
+    schema_base(N?, Bi),
+    role_person(Bi?, B?, P),
+    mem(P?, G?, InG),
     neg(InG?, NotG),
     and(S?, O?, S1),
     and(S1?, NotG?, K),
     part_gfirsts(Ms?, M?, Q?, G?, Fs1),
-    keep_peer(K?, F?, Fs1?, Fs).
-%% Whether a schema is one with a listed role whose base is not a guarding role: its listed roles have one base (local.glp), its first role.
+    keep_peer(K?, P?, Fs1?, Fs).
+%% Whether a schema is one with a listed role whose base is not a guarding role: its listed roles have one base (local.glp), the base of the schema.
 procedure opens_guarded(Constant?, YesNo).
 opens_guarded(Nm, B?) :- schema_entry(Nm?, E), opens_guarded1(E?, B).
 procedure opens_guarded1(Schema?, YesNo).
@@ -5801,7 +5969,7 @@ opens_guarded1(lschema(_, _, Rs, [instances(_, Bi, _, _, _, _, _)|_]), B?) :- gr
 procedure spec_unguarded(RoleSpec?, YesNo).
 spec_unguarded(rs(unguarded, _, _, _, _), yes).
 spec_unguarded(rs(guarded, _, _, _, _), no).
-%% The opener of an unguarded part, from the people Fs in the first role of its schema-bindings, and of a guarded part, from those of Fo.
+%% The opener of an unguarded part, from the people Fs in the first role of its schema-bindings, and of a guarded part, from those of Fo, in the base of its schema-bindings.
 procedure part_opener(Peers?, Peers?, Peers?, Peers?, Opener).
 part_opener([], Fs, _, Ob, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Ob?, Op).
 part_opener([_|_], _, Fo, Ob, Op?) :- sort_peers(Fo?, Ss), least_opener(Ss?, Ob?, Op).

@@ -5,21 +5,24 @@ FDAO: Funded DAO
 4. ■ Found.  Alice may found Delos under a new name of hers.
 5. ■ Join.  Alice may admit Bob to Delos, with the consent of Bob, provided Alice is the steward of Delos and Alice knows Bob.
 6. ■ Propose.  Carol may make the proposal Prop to Alice's Delos, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.
-7. ■ Deliver proposal.  Alice delivers Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Prop of Delos and Alice has Bob as a member of Delos.
-8. ■ Vote for.  Carol may vote for Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
-9. ■ Vote against.  Carol may vote against Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
-10. ■ Deliver vote for.  Alice delivers Carol's vote for Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos and Alice has Bob as a member of Delos.
-11. ■ Deliver vote against.  Alice delivers Carol's vote against Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos and Alice has Bob as a member of Delos.
-12. ■ Pass.  Alice may pass Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote for Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.
-13. ■ Reject.  Alice may reject Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote against Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.
-14. ■ Deliver pass.  Alice delivers to Bob the decision that Prop of Delos is passed, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Alice has Bob as a member of Delos.
-15. ■ Deliver reject.  Alice delivers to Bob the decision that Prop of Delos is rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected and Alice has Bob as a member of Delos.
-16. ■ Issue.  Alice may issue Sum Alice-coins.
-17. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
-18. ■ Pay.  Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.
-19. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
-20. ■ Fund.  Carol may give Alice's Delos Sum Dave-coins, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.
-21. ■ Grant.  Alice may grant Carol Sum Dave-coins of Delos for Prop, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Carol has proposed Prop to Alice's Delos.
+7. ■ Propose own.  Alice may make the proposal Prop to Alice's Delos, provided Alice is a member of Alice's Delos and Alice is the steward of Delos.
+8. ■ Deliver proposal.  Alice delivers Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Prop of Delos and Alice has Bob as a member of Delos.
+9. ■ Vote for.  Carol may vote for Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
+10. ■ Vote own for.  Alice may vote for Prop of Alice's Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
+11. ■ Vote against.  Carol may vote against Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
+12. ■ Vote own against.  Alice may vote against Prop of Alice's Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos.
+13. ■ Deliver vote for.  Alice delivers Carol's vote for Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos and Alice has Bob as a member of Delos.
+14. ■ Deliver vote against.  Alice delivers Carol's vote against Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos and Alice has Bob as a member of Delos.
+15. ■ Pass.  Alice may pass Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote for Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.
+16. ■ Reject.  Alice may reject Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds at least Votes persons's vote against Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos.
+17. ■ Deliver pass.  Alice delivers to Bob the decision that Prop of Delos is passed, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Alice has Bob as a member of Delos.
+18. ■ Deliver reject.  Alice delivers to Bob the decision that Prop of Delos is rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected and Alice has Bob as a member of Delos.
+19. ■ Issue.  Alice may issue Sum Alice-coins.
+20. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
+21. ■ Pay.  Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.
+22. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
+23. ■ Fund.  Carol may give Alice's Delos Sum Dave-coins, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.
+24. ■ Grant.  Alice may grant Carol Sum Dave-coins of Delos for Prop, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Carol has proposed Prop to Alice's Delos.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -30,8 +33,11 @@ Found: Alice [Found] <delos>
 Join: Alice [Join]
   Bob: Alice asks for your consent to join.
 Propose: Carol [Propose] <prop>
+Propose own: Alice [Propose own] <prop>
 Vote for: Carol [Vote for]
+Vote own for: Alice [Vote own for]
 Vote against: Carol [Vote against]
+Vote own against: Alice [Vote own against]
 Pass: Alice [Pass] <votes>
 Reject: Alice [Reject] <votes>
 Issue: Alice [Issue] <sum>

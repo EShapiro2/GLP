@@ -118,6 +118,14 @@ class Sent(object):
     def __init__(self, heads, text):
         self.heads, self.text = heads, text
         self.restricted = 0       # the restrictions appended to it
+        self.rests = []           # their texts, in the order appended
+
+    def base(self):
+        """The sentence before its restrictions were appended, or None where its text is not that and them."""
+        if not self.rests:
+            return self.text
+        tail = ', ' + ', and '.join(self.rests) + '.'
+        return self.text[:-len(tail)] + '.' if self.text.endswith(tail) else None
 
     def render(self):
         return (', '.join(self.heads) + ': ' if self.heads else '') + self.text
@@ -455,6 +463,26 @@ def bind(name, target, defs, binding, sub):
         d.here.append(here)
 
 
+def merge(a, b):
+    """A clause that comes by two paths (rule 1): where the two are one clause, sentence by sentence, with restrictions
+    appended, A takes every restriction of B it lacks, after its own, and B's labels; the expanded text then carries
+    every inherited restriction, as the merged schema has every condition (tools/gcsas.py).  False where they are not."""
+    if len(a.sents) != len(b.sents) or a.mark != b.mark or a.title != b.title:
+        return False
+    for x, y in zip(a.sents, b.sents):
+        if x.heads != y.heads or x.base() is None or x.base() != y.base():
+            return False
+    for x, y in zip(a.sents, b.sents):
+        rests = x.rests + [t for t in y.rests if t not in x.rests]
+        base = x.base()
+        x.text = base[:-1] + (', ' + ', and '.join(rests) if rests else '') + '.'
+        x.rests, x.restricted = rests, len(rests)
+    for l in b.labels:
+        if l not in a.labels:
+            a.labels.append(l)
+    return True
+
+
 def restrict(name, k, mark, heads, title, refs, rest, exp, sub):
     """Apply one citing sentence of clause name:k to the clauses it cites; return them."""
     own = '%s:%d' % (name, k)
@@ -501,6 +529,7 @@ def restrict(name, k, mark, heads, title, refs, rest, exp, sub):
                 s.text += '.'
             s.text = s.text[:-1] + (', and ' if s.restricted else ', ') + rest + '.'
             s.restricted += 1
+            s.rests.append(rest)
         if c.mark != mark:
             note(name, own, 'its mark %s differs from the mark %s of %s; the replaced clause takes the mark %s of the citing clause'
                  % (mark, c.mark, c.label(), mark))
@@ -528,6 +557,7 @@ def expand(name, contracts, cache):
                 for s in cl.sents:
                     s.heads = [sub(h) for h in s.heads] if s.heads else s.heads
                     s.text = sub(s.text)
+                    s.rests = [sub(x) for x in s.rests]
             bind(name, dep, e.defs, c.first.binding, sub)
         for d in e.defs:                      # definitions: a sentence once
             same = [x for x in exp.defs if x.text == d.text]
@@ -546,9 +576,9 @@ def expand(name, contracts, cache):
             same = [x for x in exp.clauses if x.origin == cl.origin]
             if not same:
                 exp.clauses.append(cl)
-            elif same[0].render() != cl.render():
-                note(name, cl.origin, 'comes by two paths in two texts; the first is kept: [%s] and not [%s]'
-                     % (same[0].render(), cl.render()))
+            elif same[0].render() != cl.render() and not merge(same[0], cl):
+                fail('%s, %s: comes by two paths in two texts that are not one clause with restrictions: [%s] and [%s]'
+                     % (name, cl.origin, same[0].render(), cl.render()))
     exp.inherited = len(exp.clauses)
 
     for k, line in enumerate(c.def_lines):

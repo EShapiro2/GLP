@@ -1,0 +1,22 @@
+N          commute yes; return yes; recover equivalent
+1 contracts, 0 with a fault
+--- sasx/N.txt
+N: Numbers (expanded schemas)
+N:0 - | Alice is a person, Bob a person, Sum, Cap and Line numbers.
+N:1 ■ Small: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- le(Sum,Cap), coin(Alice,Alice,*Sum) guarded by Alice.
+N:2 ■ Large: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- ~le(Sum,Cap), coin(Alice,Alice,*Sum) guarded by Alice.
+N:3 ■ True: ~coin(Alice,Alice,*2), coin(Bob,Alice,*2) <- ge(2,1), coin(Alice,Alice,*2) guarded by Alice.
+N:4 ■ False: ~coin(Alice,Alice,*2), coin(Bob,Alice,*2) <- ~ge(2,1), coin(Alice,Alice,*2) guarded by Alice.
+N:5 ■ Two: ~coin(Alice,Alice,*2), coin(Bob,Alice,*2) <- coin(Bob,Alice,#2), coin(Alice,Alice,*2) guarded by Alice.
+N:6 ■ Not two: ~coin(Alice,Alice,*2), coin(Bob,Alice,*2) <- ~coin(Bob,Alice,#2), coin(Alice,Alice,*2) guarded by Alice.
+N:7 ■ Set: ~line(Alice,Bob,_), line(Alice,Bob,Line) <- guarded by Alice.
+N:8 ■ Use: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- line(Alice,Bob,Line), le(Sum,Line), coin(Alice,Alice,*Sum) guarded by Alice.
+--- term N
+[sas(small, ['Alice', 'Bob'], ['Sum', 'Cap'], [not(times(num('Sum'), atom(coin, ['Alice', 'Alice']))), times(num('Sum'), atom(coin, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), times(num('Sum'), atom(coin, ['Alice', 'Alice']))], le(num('Sum'), num('Cap')), ['Alice']),
+ sas(large, ['Alice', 'Bob'], ['Sum', 'Cap'], [not(times(num('Sum'), atom(coin, ['Alice', 'Alice']))), times(num('Sum'), atom(coin, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), times(num('Sum'), atom(coin, ['Alice', 'Alice']))], gt(num('Sum'), num('Cap')), ['Alice']),
+ sas(true, ['Alice', 'Bob'], [], [not(times(val(2), atom(coin, ['Alice', 'Alice']))), times(val(2), atom(coin, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), times(val(2), atom(coin, ['Alice', 'Alice']))], ge(val(2), val(1)), ['Alice']),
+ sas(false, ['Alice', 'Bob'], [], [not(times(val(2), atom(coin, ['Alice', 'Alice']))), times(val(2), atom(coin, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), times(val(2), atom(coin, ['Alice', 'Alice']))], lt(val(2), val(1)), ['Alice']),
+ sas(two, ['Alice', 'Bob'], [], [not(times(val(2), atom(coin, ['Alice', 'Alice']))), times(val(2), atom(coin, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), times(val(2), atom(coin, ['Alice', 'Alice']))], eq(cardinality([], atom(coin, ['Bob', 'Alice']), true), val(2)), ['Alice']),
+ sas(not_two, ['Alice', 'Bob'], [], [not(times(val(2), atom(coin, ['Alice', 'Alice']))), times(val(2), atom(coin, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), times(val(2), atom(coin, ['Alice', 'Alice']))], ne(cardinality([], atom(coin, ['Bob', 'Alice']), true), val(2)), ['Alice']),
+ sas(set, ['Alice', 'Bob'], ['Bob', 'Line'], [not(atom(line, ['Alice', 'Bob', '_'])), atom(line, ['Alice', 'Bob', num('Line')])], [atom(identity, ['Alice'])], true, ['Alice']),
+ sas(use, ['Alice', 'Bob'], ['Sum', 'Line'], [not(times(num('Sum'), atom(coin, ['Alice', 'Alice']))), times(num('Sum'), atom(coin, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(line, ['Alice', 'Bob', num('Line')]), times(num('Sum'), atom(coin, ['Alice', 'Alice']))], le(num('Sum'), num('Line')), ['Alice'])]

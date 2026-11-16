@@ -11,10 +11,9 @@ words before the first full stop or colon of the clause, as "Proposing" of "3. â
 contract this writes cascade/NAME/interface-adopted.txt: the line "Interface pragmas" and the same lines, keyed so.
 Each clause of the contract's own with an act that has a line has one line: its title, a colon and the line of its
 first such act; the line of each other act of the clause follows, indented two spaces, as "  Alice [Close]", each
-with its questions after it, so that a question belongs to its own act's button line.  The reader reads who must
-consent to an act from the clause of the adopted file, not from its Logic pragmas: a person the act's sentence says
-must consent and the clause does not is asked, "Carol: Alice asks for your consent to enter.", and a person the clause
-says must consent is not.  Two acts of one clause with the
+with its questions after it, so that a question belongs to its own act's button line.  Who must consent to an act
+is the act's schema's, the "must" of the Logic pragmas, as in the cascade's file: a person who must consent is not
+asked, though the clause's words do not say it, as GnW's Enter, whose Carol does not yet exist.  Two acts of one clause with the
 same proposer and no question share a button line, as GSN's "Group: Alice [Create] <name> [Close]".  An act of a clause of
 a contract it is written from that a clause of its own changes, labelled so in the expanded schemas, as GSG:2+GnW:3,
 is written under that clause of its own; one changed by a definition, as Befriend by GDO-L's, has no clause of its
@@ -43,7 +42,6 @@ def titles(n):
     return out
 
 
-MUST = re.compile(r'\b([A-Z][a-z]+) must consent\b')      # the reader's form (pragmas.sh)
 
 
 def adopted(n, txt):
@@ -78,17 +76,11 @@ def adopted(n, txt):
         j = mine[-1]          # an act of an inherited clause that a clause of this one changes, as GSG:2+GnW:3, is that clause's
         if int(j) not in tl:
             continue          # changed by a definition of the contract, not a clause, as GDO-L's Befriend: the inherited line names it
-        # Who must consent: the cascade's file takes it from the act's sentence of the Logic pragmas and asks them not;
-        # the reader of an adopted file takes it from the contract's clause (pragmas.sh, "must consent"), so a person the
-        # sentence says must consent and the clause does not is asked, and one the clause says must consent is not.
-        who = rest.split(' ', 1)[0]
-        mrev = set(MUST.findall(tl[int(j)][1]))
-        qs = [q for q in qs if q.strip().split(':', 1)[0] not in mrev]
-        asked = {q.strip().split(':', 1)[0] for q in qs}
-        for g in MUST.findall(sent.get(t, '')):
-            if g not in mrev and g != who and g not in asked:
-                qs.append('  %s: %s asks for your consent to %s.' % (g, who, t.lower()))
-                asked.add(g)
+        # Who must consent is the act's schema's, the 'must' of the Logic pragmas (sasx/NAME.txt), as in the cascade's
+        # file: a party who must consent is a guard who is not asked (vGLP, 5.4), whatever the clause's words say, as
+        # GnW's Enter, whose Carol does not yet exist (Calculus #6, 2026-11-15 21:30 UTC, on the review's F11).
+        must = set(e.get('must', ()))
+        qs = [q for q in qs if q.strip().split(':', 1)[0] not in must]
         own.setdefault(int(j), []).append((rest, qs))
     if not own:
         return None

@@ -1,46 +1,33 @@
-The republication is in parts.
+All 62 contracts, published at one commit (this one), from Calculus code 2307a5b.
 
-Part 1, commit 79ec48f, from Calculus code 2754268, run on GLP migration 1119642: the 37 contracts outside GO's family,
-each certified by GLP's checker and compiled to a platform.glp that loads.
+Run: every contract certified by GLP's checker (GSC) and compiled by vGLP on GLP branch migration: the 39 outside GO's
+family at eaaea850, GO's 22, ORH and the four currencies again at 0a008eb1 (which adds vGLP-arg, the term passed to the
+reader by a file; no tool that changes a platform differs between the two).  62 certified; 54 with a platform.glp that
+loads; 8 parametric, with no platform until instantiated: GO GBank GCoop GCorp GNO GAN TC GRA.
 
-Part 1 again for nine of them, and GRA's two, this commit, from Calculus code cddaa8b, run on GLP migration 04f9bdc and
-checked on GLP branch GSC-supplied 020fe5ea (GSC, Section 3.2): CSSN GAI GAS GDS GRV GSNP GSNW GSV GnW, and GRA GRA-SS.
-The cause: in a contract with wards the term wrote every guard as a person or a ward with a guardian, so a ward could
-take a person's act by itself; a guard its contract declares a person is now a person.  GRA and GRA-SS are certified and
-parametric in the terms of a call, with no platform until instantiated.
-An owner who adopted one of the eleven takes it again: python3 calculus/tools/adopt.py --write NAME <dir>.
-The other 28 of part 1 are as at 79ec48f (GSNP as at 029de9f before this); each of the 37 now has interface-adopted.txt
-where it has an act of its own with a line: the Interface lines in the form an adopted file takes, a proposal to the owner.
+CHANGES.txt says, contract by contract, what an owner who adopted the earlier publication (a687ab8) finds changed:
+acts added, gone, renamed, changed; 'text only' where only words changed.  Adopt: python3 calculus/tools/adopt.py
+--write NAME <dir>; the check: adopt.py --check.
 
-GB, DGC and AGORA again, from Calculus code dee832e, run on GLP migration 60e40c3 and checked on GSC-supplied 020fe5e:
-Redeem bond and Redeem bond against bond read the current date at the issuer, today(Bob, Today), where they read it
-at the redeemer (Currencies' finding).  An owner who adopted one of the three takes it again.
+What changed since a687ab8:
+1. Parties (Udi, 2026-11-15).  GKK: 'A *party* to a contract is whoever has an identity.'  GC, GDC, GB, DGC: Alice, Bob
+   and Carol are parties.  GnW: 'A ward takes an act of a party by those who decide for it.'  So an organisation, a
+   ward, holds, pays and issues coins and bonds.  In GO's family each act of a party has, beside the person's form, the
+   organisation's: '<Act> for <Role>', taken for it by an officer on its votes (GO:2), with a vote act; they are derived
+   by the tools, about 90 schemas a contract.
+2. Roles a contract calls possibly one person are marked one(Name, Other) where GSC's Definition Binding lets one agent
+   bear both; where it does not, the contract has an act of one role beside the act: Post own, Ward post own, Propose
+   own, Vote own for and against, Delegate own, Delegate to the steward, Revoke own, Count own for and against, Deposit
+   own coins and bonds, Deposit with the issuer, Pay own accepted coins, Pay accepted coins to the issuer, Claim own
+   coins, Claim coins of the corporation, Bank deposit own coins, Offer own, Want own, Withdraw own.
+3. A ward's acts in a group: Ward leave, Ward remove, Ward add (GSNW); in CSSN Child add is restricted so that no
+   adult joins a child's group (CSSN:3).
+4. DGC's Accept by bond: the bond held and the bond issued in the denomination are of one maturity.
+5. A ward's Retire clears her listings at the leaders of her groups (GSNW, CSSN).
+6. The tools, after a review: recovery keeps a stated condition beside a wildcard deletion; a role that must consent;
+   a negated comparison or count; the readable text keeps every inherited restriction; adopt.py, toglp.py, cascade.py
+   and publish.py stop on a failed step; one who must consent is not shown as asked; cascade.py passes the term to the
+   reader by a file; tests/ has 30 cases.
 
-GRA-SS again, from Calculus code 1337fb6, run on GLP migration 9fc1d3a and checked on GSC-supplied 020fe5e: it fills
-GRA's two parameters and declares none, so it is certified with a platform that loads (GRH's finding).  GRA stays parametric.
-
-Part 2, this commit, from Calculus code f2c610d, run on GLP migration f130e16 (with vGLP's wildcard and const) and
-checked on GSC-supplied 020fe5e: GO's family, 22 contracts, each certified: CB CMB CnC GAN GBCC GBank GCC GCoop GCorp
-GDAO GLDAO GNG GNL GNM GNO GO MCS SC SCB SPLLC TC WC.  Fifteen have a platform.glp that loads; seven are parametric
-in the bylaws and have none until instantiated: GAN GBank GCoop GCorp GNO GO TC.  They may now be adopted.
-What changed since the first publication: every act of an organisation is voted, each one entitled casting a vote and
-an officer the bylaws name taking the act on the count; Amend is a motion of GO:2; the treasurers, directors and
-governors are listed by their roles; SC's issue of shares is voted by the shareholders, the weighing of shares the
-platform's; Retire clears every role of the one retired.
-
-ORH, this commit, from Calculus code 858e306, run on GLP branch GSC-kinds a866c7a (migration 4470b07 and GSC's rule that
-a type no act adds is no type of ward): certified, with a platform.glp that loads.  All 62 are now published.
-
-GSN, GSNW, GSNP, CSSN, DAO and LDAO again, this commit, from Calculus code a42db49, run on GLP migration 3e1a4c6: each
-certified, with a platform.glp that loads.  The cause (CSSN's finding): where a contract says two of an act's roles are
-possibly one person, the term now marks them one(Name, Other) where GSC's Definition Binding lets one agent bear both,
-and where it does not (a role adds or deletes an atom naming the other) the contract has an act of one role beside the
-act: Post own (GSN), Ward post own (GSNW; CSSN's Child post own), Propose own, Vote own for and against (DAO), Delegate
-own, Delegate to the steward, Revoke own, Count own for and against (LDAO).  An owner who adopted one of the six takes
-it again.  The same change in the currencies and GO's family (Deposit own coins, Pay own accepted coins and the like)
-comes with the next entry.
-
-To come: a party, whoever has an identity, in GKK and the currencies, and a ward taking a party's act by those who
-decide for it (Udi, 2026-11-15), so that an organisation holds, pays and issues coins and bonds; the acts of one role in
-the currencies; DGC's Accept by bond on one maturity; and mends of the tools after a review.  These change texts, terms
-and platforms; all 62 are then published again, at one commit, and this file will say so.
+Not in this publication: the review's findings on the contracts themselves and on Theorem 8, which wait for its
+revised report.

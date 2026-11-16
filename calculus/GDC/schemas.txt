@@ -3,7 +3,7 @@ GDC extends and restricts GC.
 Vocabulary: x has issued coins of the denomination f = issued_in(x,f).
 After x issues n f-denominated x-coins: x holds n x-coins and x has issued coins of the denomination f.
 GDC:0 - | *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
-GDC:0 - | Alice and Bob are persons, Dollar a fiat currency, Sum a number.
+GDC:0 - | Alice and Bob are parties, Dollar a fiat currency, Sum a number.
 GDC:1 ■ First issue: coin(Alice,Alice,*Sum), issued_in(Alice,Dollar) <- ~issued_in(Alice,_) guarded by Alice.
 GDC:1 ■ Issue: GC:1 <- issued_in(Alice,Dollar).
 GDC:2 ○ | Denomination.

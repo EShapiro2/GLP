@@ -25,3 +25,7 @@ Ward join: Alice [Join]
   Dave: Carol asks for your consent to wards of one guardian join.
   Alice: Carol asks for your consent to wards of one guardian join.
   Alice [Ward withdraw] <bob> <grupo>
+  Carol [Ward add]
+  Bob: Carol asks for your consent to ward add.
+  Alice: Carol asks for your consent to ward add.
+  Carol [Ward leave] [Ward remove]

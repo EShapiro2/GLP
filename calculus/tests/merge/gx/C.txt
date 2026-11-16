@@ -1,0 +1,3 @@
+C: Base
+Of C: Alice is a person.
+C:1. ■ Signal: Alice may signal.

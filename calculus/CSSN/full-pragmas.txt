@@ -1,8 +1,8 @@
 CSSN: Child-Safe Social Network
-Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity. Reflexive: x knows y.
+Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
 Of GSN: A *message*, a parameter of GSN, is what a person sends. Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
-Of GnW: Bob *trusts* Carol, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a child and how. Alice, Bob and Erin are persons, Carol and Dave children; in clause 4 Alice and Bob are possibly one person.
+Of GnW: Bob *trusts* Carol, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a child and how. A child takes an act of a party by those who decide for it. Alice, Bob and Erin are persons, Carol and Dave children; in clause 4 Alice and Bob are possibly one person.
 Of GSNW: Alice and Bob are persons, Carol and Dave children, Grupo a group, Text a message; in clause 1 Carol is possibly Alice.
 Of CSSN: Alice and Bob are persons, Carol and Dave children; in clause 2 Alice and Bob are possibly one person.
 GKK:1, GnW:3. ■ Establish: Alice may establish an identity, and then Alice is a person. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -36,6 +36,8 @@ GSNW:2. ■ A child's group.
 GSNW:2, CSSN:3. ■ Child create: Carol may create Grupo, with the consent of Alice, provided Carol is a child, Carol is not retired and Carol has Alice as a parent.
 GSNW:2. ■ Child close: Carol may close Grupo by leaving it, provided Carol is a child and Carol is not retired. Parent close: Alice may close the group Grupo of Carol, provided Alice is a parent of Carol.
 GSNW:3. ■ Child join: Bob may add Carol to Grupo, with the consent of Carol and Alice, provided Bob is the leader of Grupo, Bob is a person, Bob and Carol are friends, Carol has Alice as a parent, Alice is a parent of Carol and Alice and Bob are friends. Children join: Carol may add Dave to Grupo, with the consent of Dave, Alice and Bob, provided Carol is the leader of Grupo, Carol is a child, Carol has Alice as a parent, Alice is a parent of Carol, Carol and Dave are friends, Dave is a child, Dave has Bob as a parent, Bob is a parent of Dave, Alice knows Dave and Alice and Bob are friends. Children of one parent join: Carol may add Dave to Grupo, with the consent of Dave and Alice, provided Carol is the leader of Grupo, Carol is a child, Carol has Alice as a parent, Alice is a parent of Carol, Carol and Dave are friends, Dave is a child, Dave has Alice as a parent and Alice is a parent of Dave. Child withdraw: Alice may withdraw Carol from Bob's Grupo, provided Carol has Alice as a parent and Alice is a parent of Carol.
+GSNW:3, CSSN:3. ■ Child add: Carol may add Bob to Grupo, with the consent of Bob and Alice, provided Carol is the leader of Grupo, Carol is a child, Carol is not retired, Carol has Alice as a parent, Alice is a parent of Carol, Carol and Bob are friends, Alice and Bob are friends and Bob is a child.
+GSNW:3. ■ Child leave: Carol may end her membership in Alice's Grupo, provided Carol is a child and Carol is not retired. Child remove: Carol may end Bob's membership in Grupo, provided Carol is the leader of Grupo, Carol is a child and Carol is not retired.
 CSSN:1. ◆ Alice is a legal parent of the minor who operates Carol.
 CSSN:2. ■ A child's acquaintances.
 CSSN:3. ■ Only a child, Dave, may join the group.

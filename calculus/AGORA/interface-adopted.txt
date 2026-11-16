@@ -3,8 +3,12 @@ Make: Alice [Make] <item>
 Open: Alice [Open] <mart>
 Join: Alice [Join]
   Bob: Alice asks for your consent to join.
-Posting: Carol [Offer] [Want] <wish>
+Posting: Carol [Offer]
+  Alice [Offer own]
+  Carol [Want] <wish>
+  Alice [Want own] <wish>
 Withdraw: Carol [Withdraw] <alice> <item> <mart>
+  Alice [Withdraw own]
 Swap, Escrow: Alice [Swap item for coin] <dave> <sum>
   Bob: Alice asks for your consent to swap item for coin.
   Alice [Swap item for bond] <dave> <day> <sum>

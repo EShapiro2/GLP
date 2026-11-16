@@ -1,0 +1,6 @@
+T: Three possibly one
+Alice, Bob and Carol are persons, Club a club, Bob and Carol possibly Alice or one person.
+1. ■ Found: Alice, Bob and Carol may jointly found Club.
+Logic pragmas.
+Vocabulary: x is a founder of c = founder(x,c).
+After x, y and z found c: x is a founder of c, y is a founder of c and z is a founder of c.

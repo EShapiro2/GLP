@@ -1,6 +1,5 @@
 Interface pragmas
 Enter: Alice [Enter] <carol>
-  Carol: Alice asks for your consent to enter.
 A child's acquaintances: Carol [Child acquaint] <bob>
   Bob: Carol asks for your consent to child acquaint.
   Alice: Carol asks for your consent to child acquaint.
@@ -12,4 +11,7 @@ Child create: Alice [Join]
   Bob: Alice asks for your consent to join.
   Carol [Child create] <grupo>
   Alice: Carol asks for your consent to child create.
+  Carol [Child add]
+  Bob: Carol asks for your consent to child add.
+  Alice: Carol asks for your consent to child add.
 Of age: Alice [Of age]

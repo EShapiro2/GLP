@@ -19,6 +19,10 @@ GBCC:1 ■ Swap: GB:2 <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Pay: GC:3 <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Redeem: GB:3 <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Escrow: GB:4 <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Deposit own coins: DGC:2 Deposit own coins <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Deposit with the issuer: DGC:2 Deposit with the issuer <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Deposit own bonds: DGC:2 Deposit own bonds <- all_stay_backed(Actor,Orga).
+GBCC:1 ■ Deposit bond with the issuer: DGC:2 Deposit bond with the issuer <- all_stay_backed(Actor,Orga).
 GBCC:1 ■ Pay: DGC:4 <- all_stay_backed(Actor,Orga).
 GBCC:2 ■ Draw: GCC:1 <- stays_backed(Orga,Alice).
 GBCC:3 ◆ Record: paid_in(Orga,Alice) <- organisation(Orga), role(Alice,Orga,Treasurer) guarded by treasurers(Orga), Alice.

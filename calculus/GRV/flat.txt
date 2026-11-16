@@ -1,6 +1,7 @@
 GRV: Grassroots Rendezvous (flat text)
 GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
+GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | Alice, Bob and Carol are persons.
 GKK:0 - | Reflexive: x knows y.
 GKK:1+GnW:3 ■ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -13,7 +14,7 @@ GSG:1 ○ | Alice and Bob will become friends only if they trust each other.
 GSG:2+GnW:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
 GSG:3 ○ | Loss of Trust.
 GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
+GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
 GnW:1 ■ Enter: Alice and Carol may jointly Carol has an identity, Carol is a ward, Carol has Alice as a guardian, Alice is the creator of Carol, Alice is a guardian of Carol, Alice knows Carol, Carol knows Alice, Alice counts Carol as a friend and Carol counts Alice as a friend, provided Alice is a person and not Carol has an identity. Must consent: Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.

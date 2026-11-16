@@ -22,16 +22,19 @@ AGORA: Grassroots Barter
 21. ■ Open.  Alice may open Mart under a new name of hers.
 22. ■ Join.  Alice may admit Bob to Mart, with the consent of Bob, provided Alice is the keeper of Mart and Alice knows Bob.
 23. ■ Offer.  Carol may post Item to the wall of Alice's Mart, provided Carol is a member of the market Mart of Alice, Alice is the keeper of Mart and Carol holds the item Item.
-24. ■ Want.  Carol may post Wish to the wall of Alice's Mart, provided Carol is a member of the market Mart of Alice and Alice is the keeper of Mart.
-25. ■ Deliver.  Alice delivers Carol's post of Item in Mart to Bob, provided Alice is the keeper of Mart, Alice sees Carol's post of Item on the wall of Mart and Alice has Bob as a member of Mart.
-26. ■ Deliver to poster.  Alice delivers Carol's post of Item in Mart back to Carol, provided Alice is the keeper of Mart, Alice sees Carol's post of Item on the wall of Mart and Carol is not the keeper of Mart.
-27. ■ Withdraw.  Carol may withdraw her post of Item in Alice's Mart.
-28. ■ Swap item for coin.  Alice and Bob may jointly swap the item Item for Sum Dave-coins, provided Alice and Bob know each other.
-29. ■ Swap item for bond.  Alice and Bob may jointly swap the item Item for Sum Dave-bonds due Day, provided Alice and Bob know each other.
-30. ■ Swap items.  Alice and Bob may jointly swap the item Item for the item Thing, provided Alice and Bob know each other.
-31. ■ Deposit item.  Alice may deposit the item Item with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.
-32. ■ Release item.  Carol and Bob may jointly release the item Item that Alice deposited on Cond, provided Carol and Bob know each other.
-33. ■ Return item.  Carol and Alice may jointly return the item Item deposited for Bob on Cond, provided Carol and Alice know each other.
+24. ■ Offer own.  Alice may post Item to the wall of Alice's Mart, provided Alice is a member of the market Mart of Alice, Alice is the keeper of Mart and Alice holds the item Item.
+25. ■ Want.  Carol may post Wish to the wall of Alice's Mart, provided Carol is a member of the market Mart of Alice and Alice is the keeper of Mart.
+26. ■ Want own.  Alice may post Wish to the wall of Alice's Mart, provided Alice is a member of the market Mart of Alice and Alice is the keeper of Mart.
+27. ■ Deliver.  Alice delivers Carol's post of Item in Mart to Bob, provided Alice is the keeper of Mart, Alice sees Carol's post of Item on the wall of Mart and Alice has Bob as a member of Mart.
+28. ■ Deliver to poster.  Alice delivers Carol's post of Item in Mart back to Carol, provided Alice is the keeper of Mart, Alice sees Carol's post of Item on the wall of Mart and Carol is not the keeper of Mart.
+29. ■ Withdraw.  Carol may withdraw her post of Item in Alice's Mart.
+30. ■ Withdraw own.  Alice may withdraw her post of Item in Alice's Mart.
+31. ■ Swap item for coin.  Alice and Bob may jointly swap the item Item for Sum Dave-coins, provided Alice and Bob know each other.
+32. ■ Swap item for bond.  Alice and Bob may jointly swap the item Item for Sum Dave-bonds due Day, provided Alice and Bob know each other.
+33. ■ Swap items.  Alice and Bob may jointly swap the item Item for the item Thing, provided Alice and Bob know each other.
+34. ■ Deposit item.  Alice may deposit the item Item with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.
+35. ■ Release item.  Carol and Bob may jointly release the item Item that Alice deposited on Cond, provided Carol and Bob know each other.
+36. ■ Return item.  Carol and Alice may jointly return the item Item deposited for Bob on Cond, provided Carol and Alice know each other.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -68,8 +71,11 @@ Open: Alice [Open] <mart>
 Join: Alice [Join]
   Bob: Alice asks for your consent to join.
 Offer: Carol [Offer]
+Offer own: Alice [Offer own]
 Want: Carol [Want] <wish>
+Want own: Alice [Want own] <wish>
 Withdraw: Carol [Withdraw] <alice> <item> <mart>
+Withdraw own: Alice [Withdraw own]
 Swap item for coin: Alice [Swap item for coin] <dave> <sum>
   Bob: Alice asks for your consent to swap item for coin.
 Swap item for bond: Alice [Swap item for bond] <dave> <day> <sum>

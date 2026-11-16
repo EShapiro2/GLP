@@ -1,6 +1,6 @@
 GnW: Guardians 'n' Wards
 GnW extends and restricts GSG.
-Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
+Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
 Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
 1. ■ Enter: Alice may create Carol, and Carol must consent, provided Alice is a person. Alice chooses Carol's key pair.
 2. ■ Guardian decisions. Make guardian: Those who decide for Carol may make Bob a guardian of Carol, with the consent of Bob, provided Carol is a ward, Carol is not retired, Bob is a person, Carol has Alice as a guardian and Bob counts Alice as a friend. Resign: Bob may end his guardianship of Carol. End guardian: Those who decide for Carol, other than Bob, may end Bob's guardianship of Carol. Guardian unfriend: Bob may end his friendship with his ward Carol. Carol may not end a friendship with her guardian.

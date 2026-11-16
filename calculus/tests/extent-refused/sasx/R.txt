@@ -1,0 +1,5 @@
+R: Wildcard extent refused (expanded schemas)
+R:0 - | Alice, Bob and Carol are persons, Grupo a group.
+R:1 ■ Guard: guardian(Alice,Carol), has_guardian(Carol,Alice) <- guarded by Alice, Carol.
+R:2 ■ Join: listed(Bob,Carol,Grupo) <- guarded by Bob, Carol.
+R:3 ■ Retire: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~member(Carol,_,_), ~listed(_,Carol,_) <- guardian(Alice,Carol) guarded by Alice.

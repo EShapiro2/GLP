@@ -1,7 +1,7 @@
 GRV: Grassroots Rendezvous
-Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity. Reflexive: x knows y.
+Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
-Of GnW: Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+Of GnW: Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. A ward takes an act of a party by those who decide for it. Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
 Of GSV: A *service* is a ward operated by a machine at an address every person can reach. Alice is a person, Dave a service.
 Of GRV: An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry. Alice, Bob and Carol are persons, Dave a service, Link an invitation link.
 GKK:1, GnW:3. ■ Establish: Alice may establish an identity, and then Alice is a person. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.

@@ -42,13 +42,13 @@ deposit(Peer, Peer, Peer, Integer, Peer, Speech)
 ;
 deposit_bond(Peer, Peer, Peer, Integer, Integer, Peer, Speech)
 ;
-release(Peer, Peer, Peer, Integer)
+release(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
-release_bond(Peer, Peer, Peer, Integer, Integer)
+release_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
 ;
-return(Peer, Peer, Peer, Integer)
+return(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
-return_bond(Peer, Peer, Peer, Integer, Integer)
+return_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
 ;
 make(Peer, Speech)
 ;
@@ -58,13 +58,19 @@ join(Peer, Peer, Speech)
 ;
 offer(Peer, Peer, Speech, Speech)
 ;
+offer_own(Peer, Speech, Speech)
+;
 want(Peer, Peer, Speech, Speech)
+;
+want_own(Peer, Speech, Speech)
 ;
 deliver(Peer, Peer, Peer, Speech, Speech)
 ;
 deliver_to_poster(Peer, Peer, Speech, Speech)
 ;
 withdraw(Peer, Peer, List(Peer), Speech, Speech)
+;
+withdraw_own(Peer, List(Peer), Speech, Speech)
 ;
 swap_item_for_coin(Peer, Peer, Speech, Peer, Integer)
 ;
@@ -74,9 +80,9 @@ swap_items(Peer, Peer, Speech, Speech)
 ;
 deposit_item(Peer, Peer, Speech, Peer, Speech)
 ;
-release_item(Peer, Peer, Speech)
+release_item(Peer, Peer, Speech, Peer, Speech)
 ;
-return_item(Peer, Peer, Speech)
+return_item(Peer, Peer, Speech, Peer, Speech)
 .
 
 Proposal ::=
@@ -110,13 +116,13 @@ deposit(Peer, Peer, Peer, Integer, Peer, Speech)
 ;
 deposit_bond(Peer, Peer, Peer, Integer, Integer, Peer, Speech)
 ;
-release(Peer, Peer, Peer, Integer)
+release(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
-release_bond(Peer, Peer, Peer, Integer, Integer)
+release_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
 ;
-return(Peer, Peer, Peer, Integer)
+return(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
-return_bond(Peer, Peer, Peer, Integer, Integer)
+return_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
 ;
 make(Peer, Speech)
 ;
@@ -126,9 +132,15 @@ join(Peer, Peer, Speech)
 ;
 offer(Peer, Peer, Speech, Speech)
 ;
+offer_own(Peer, Speech, Speech)
+;
 want(Peer, Peer, Speech, Speech)
 ;
+want_own(Peer, Speech, Speech)
+;
 withdraw(Peer, Peer, Speech, Speech)
+;
+withdraw_own(Peer, Speech, Speech)
 ;
 swap_item_for_coin(Peer, Peer, Speech, Peer, Integer)
 ;
@@ -138,16 +150,16 @@ swap_items(Peer, Peer, Speech, Speech)
 ;
 deposit_item(Peer, Peer, Speech, Peer, Speech)
 ;
-release_item(Peer, Peer, Speech)
+release_item(Peer, Peer, Speech, Peer, Speech)
 ;
-return_item(Peer, Peer, Speech)
+return_item(Peer, Peer, Speech, Peer, Speech)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "bob", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Issue", [act(issue, 1, [1], [req(identity, [])], [], [field(2, "sum", number)], [], [])]), button("Swap", [act(swap, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, "sum", number), field(5, "dave", agent), field(6, "total", number)], [], [])]), button("Pay", [act(pay, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "sum", number)], [], [])]), button("Redeem", [act(redeem, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "carol", agent)], [], [])]), button("Issue bond", [act(issue_bond, 1, [1], [req(identity, []), req(today, [any])], [], [field(2, "day", number), field(3, "sum", number)], [], [])]), button("Swap coin for bond", [act(swap_coin_for_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, "sum", number), field(5, "dave", agent), field(6, "day", number), field(7, "total", number)], [], [])]), button("Swap bonds", [act(swap_bonds, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, "sum", number), field(6, "dave", agent), field(7, "term", number), field(8, "total", number)], [], [])]), button("Redeem coin against bond", [act(redeem_coin_against_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "carol", agent), field(4, "day", number)], [], [])]), button("Redeem bond", [act(redeem_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(2), at(3)])], [2, 3], [field(4, "carol", agent)], [], [])]), button("Redeem bond against bond", [act(redeem_bond_against_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(2), at(3)])], [2, 3], [field(4, "carol", agent), field(5, "term", number)], [], [])]), button("Deposit", [act(deposit, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(5)]), req(coin, [at(3)])], [2, 5, 3], [field(4, "sum", number), field(6, "cond", text)], [], [])]), button("Deposit bond", [act(deposit_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(6)]), req(bond, [at(3), at(4)])], [2, 6, 3, 4], [field(5, "sum", number), field(7, "cond", text)], [], [])]), button("Release", [act(release, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_coin, [at(3), any, at(2), any])], [2, 3], [field(4, "sum", number)], [], [])]), button("Release bond", [act(release_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_bond, [at(3), at(4), any, at(2), any])], [2, 3, 4], [field(5, "sum", number)], [], [])]), button("Return", [act(return, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_coin, [at(3), at(2), any, any])], [2, 3], [field(4, "sum", number)], [], [])]), button("Return bond", [act(return_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_bond, [at(3), at(4), at(2), any, any])], [2, 3, 4], [field(5, "sum", number)], [], [])]), button("Make", [act(make, 1, [1], [req(identity, []), forb(made, [at(2)])], [], [field(2, "item", text)], [], [])]), button("Open", [act(open, 1, [1], [req(identity, []), forb(keeper, [at(2)])], [], [field(2, "mart", text)], [], [])]), button("Join", [act(join, 2, [1, 2], [req(identity, []), req(keeper, [at(3)]), req(knows, [at(1)])], [3, 1], [], [], [])]), button("Offer", [act(offer, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), req(item, [at(3)]), forb(posted, [at(3), at(4)])], [4, 2, 3], [], [], [])]), button("Want", [act(want, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), forb(posted, [at(3), at(4)])], [4, 2], [field(3, "wish", text)], [], [])]), button("Withdraw", [act(withdraw, 2, [1, 2], [req(identity, []), proved(identity, [], knows, [at(1)]), proved(identity, [], escrow_coin, [any, at(1), any, any]), proved(identity, [], escrow_bond, [any, any, at(1), any, any]), proved(identity, [], member, [any, at(1)]), proved(identity, [], has_member, [at(1), any]), proved(identity, [], post, [at(1), any, any]), proved(identity, [], delivered_post, [any, any, any, at(1)]), proved(identity, [], delivered_post, [at(1), any, any, any]), proved(identity, [], escrow_item, [any, at(1), any, any])], [], [field(1, "alice", person), field(3, "item", text), field(4, "mart", text)], [], [])]), button("Swap item for coin", [act(swap_item_for_coin, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(item, [at(3)])], [2, 3], [field(4, "dave", agent), field(5, "sum", number)], [], [])]), button("Swap item for bond", [act(swap_item_for_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(item, [at(3)])], [2, 3], [field(4, "dave", agent), field(5, "day", number), field(6, "sum", number)], [], [])]), button("Swap items", [act(swap_items, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(item, [at(3)])], [2, 3], [field(4, "thing", text)], [], [])]), button("Deposit item", [act(deposit_item, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(4)]), req(item, [at(3)])], [2, 4, 3], [field(5, "cond", text)], [], [])]), button("Release item", [act(release_item, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_item, [at(3), any, at(2), any])], [2, 3], [], [], [])]), button("Return item", [act(return_item, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_item, [at(3), at(2), any, any])], [2, 3], [], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "bob", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Issue", [act(issue, 1, [1], [req(identity, [])], [], [field(2, "sum", number)], [], [])]), button("Swap", [act(swap, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, "sum", number), field(5, "dave", agent), field(6, "total", number)], [], [])]), button("Pay", [act(pay, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "sum", number)], [], [])]), button("Redeem", [act(redeem, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "carol", agent)], [], [])]), button("Issue bond", [act(issue_bond, 1, [1], [req(identity, [])], [], [field(2, "day", number), field(3, "sum", number)], [], [])]), button("Swap coin for bond", [act(swap_coin_for_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, "sum", number), field(5, "dave", agent), field(6, "day", number), field(7, "total", number)], [], [])]), button("Swap bonds", [act(swap_bonds, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(3), at(4)])], [2, 3, 4], [field(5, "sum", number), field(6, "dave", agent), field(7, "term", number), field(8, "total", number)], [], [])]), button("Redeem coin against bond", [act(redeem_coin_against_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "carol", agent), field(4, "day", number)], [], [])]), button("Redeem bond", [act(redeem_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(2), at(3)])], [2, 3], [field(4, "carol", agent)], [], [])]), button("Redeem bond against bond", [act(redeem_bond_against_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(bond, [at(2), at(3)])], [2, 3], [field(4, "carol", agent), field(5, "term", number)], [], [])]), button("Deposit", [act(deposit, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(5)]), req(coin, [at(3)])], [2, 5, 3], [field(4, "sum", number), field(6, "cond", text)], [], [])]), button("Deposit bond", [act(deposit_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(6)]), req(bond, [at(3), at(4)])], [2, 6, 3, 4], [field(5, "sum", number), field(7, "cond", text)], [], [])]), button("Release", [act(release, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_coin, [at(3), at(4), at(2), at(5)])], [2, 3, 4, 5], [field(6, "sum", number)], [], [])]), button("Release bond", [act(release_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_bond, [at(3), at(4), at(5), at(2), at(6)])], [2, 3, 4, 5, 6], [field(7, "sum", number)], [], [])]), button("Return", [act(return, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_coin, [at(3), at(2), at(4), at(5)])], [2, 3, 4, 5], [field(6, "sum", number)], [], [])]), button("Return bond", [act(return_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_bond, [at(3), at(4), at(2), at(5), at(6)])], [2, 3, 4, 5, 6], [field(7, "sum", number)], [], [])]), button("Make", [act(make, 1, [1], [req(identity, []), forb(made, [at(2)])], [], [field(2, "item", text)], [], [])]), button("Open", [act(open, 1, [1], [req(identity, []), forb(keeper, [at(2)])], [], [field(2, "mart", text)], [], [])]), button("Join", [act(join, 2, [1, 2], [req(identity, []), req(keeper, [at(3)]), req(knows, [at(1)])], [3, 1], [], [], [])]), button("Offer", [act(offer, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), req(item, [at(3)]), forb(posted, [at(3), at(4)])], [4, 2, 3], [], [], [])]), button("Offer own", [act(offer_own, 1, [1], [req(identity, []), req(member, [at(3), at(1)]), req(keeper, [at(3)]), req(item, [at(2)]), forb(posted, [at(2), at(3)])], [3, 2], [], [], [])]), button("Want", [act(want, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), forb(posted, [at(3), at(4)])], [4, 2], [field(3, "wish", text)], [], [])]), button("Want own", [act(want_own, 1, [1], [req(identity, []), req(member, [at(3), at(1)]), req(keeper, [at(3)]), forb(posted, [at(2), at(3)])], [3], [field(2, "wish", text)], [], [])]), button("Withdraw", [act(withdraw, 2, [1, 2], [req(identity, []), proved(identity, [], knows, [at(1)]), proved(identity, [], escrow_coin, [any, at(1), any, any]), proved(identity, [], escrow_bond, [any, any, at(1), any, any]), proved(identity, [], member, [any, at(1)]), proved(identity, [], has_member, [at(1), any]), proved(identity, [], post, [at(1), any, any]), proved(identity, [], delivered_post, [any, any, any, at(1)]), proved(identity, [], delivered_post, [at(1), any, any, any]), proved(identity, [], escrow_item, [any, at(1), any, any])], [], [field(1, "alice", person), field(3, "item", text), field(4, "mart", text)], [], [])]), button("Withdraw own", [act(withdraw_own, 1, [1], [req(identity, []), req(post, [at(1), at(2), at(3)])], [2, 3], [], [], [])]), button("Swap item for coin", [act(swap_item_for_coin, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(item, [at(3)])], [2, 3], [field(4, "dave", agent), field(5, "sum", number)], [], [])]), button("Swap item for bond", [act(swap_item_for_bond, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(item, [at(3)])], [2, 3], [field(4, "dave", agent), field(5, "day", number), field(6, "sum", number)], [], [])]), button("Swap items", [act(swap_items, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(item, [at(3)])], [2, 3], [field(4, "thing", text)], [], [])]), button("Deposit item", [act(deposit_item, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(knows, [at(4)]), req(item, [at(3)])], [2, 4, 3], [field(5, "cond", text)], [], [])]), button("Release item", [act(release_item, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_item, [at(3), at(4), at(2), at(5)])], [2, 3, 4, 5], [], [], [])]), button("Return item", [act(return_item, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(escrow_item, [at(3), at(2), at(4), at(5)])], [2, 3, 4, 5], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -184,8 +196,6 @@ member(Speech, Peer)
 ;
 has_member(Peer, Speech)
 ;
-member(Speech)
-;
 posted(Speech, Speech)
 ;
 post(Peer, Speech, Speech)
@@ -218,8 +228,6 @@ atom_of(g(member, [s(V1), p(V2)]), shown(member(V1?, V2?)))
 .
 atom_of(g(has_member, [p(V1), s(V2)]), shown(has_member(V1?, V2?)))
 .
-atom_of(g(member, [s(V1)]), shown(member(V1?)))
-.
 atom_of(g(posted, [s(V1), s(V2)]), shown(posted(V1?, V2?)))
 .
 atom_of(g(post, [p(V1), s(V2), s(V3)]), shown(post(V1?, V2?, V3?)))
@@ -231,7 +239,7 @@ atom_of(g(escrow_item, [s(V1), p(V2), p(V3), s(V4)]), shown(escrow_item(V1?, V2?
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(issue_bond, [num('Day'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(bond, [role(1), num('Day')]))], [], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(swap_coin_for_bond, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Day'), num('Total')], [rs(guarded, [times(num('Total'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_bonds, [pvar('Carol'), num('Day'), num('Sum'), pvar('Dave'), num('Term'), num('Total')], [rs(guarded, [times(num('Total'), atom(bond, [pvar('Dave'), num('Term')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(bond, [pvar('Carol'), num('Day')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Carol'), num('Day')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(bond, [pvar('Dave'), num('Term')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(redeem_coin_against_bond, [pvar('Carol'), num('Day')], [rs(guarded, [atom(bond, [pvar('Carol'), num('Day')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(bond, [pvar('Carol'), num('Day')])], [atom(identity, [])], [])]), schema(redeem_bond, [num('Day'), pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(bond, [role(2), num('Day')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num('Day')])], [atom(coin, [pvar('Carol')])], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(redeem_bond_against_bond, [num('Day'), pvar('Carol'), num('Term')], [rs(guarded, [atom(bond, [pvar('Carol'), num('Term')]), atom(knows, [pvar('Carol')])], [atom(bond, [role(2), num('Day')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num('Day')])], [atom(bond, [pvar('Carol'), num('Term')])], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(deposit, [pvar('Dave'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(deposit_bond, [pvar('Dave'), num('Day'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release, [pvar('Dave'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release_bond, [pvar('Dave'), num('Day'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, [pvar('Dave'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return_bond, [pvar('Dave'), num('Day'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(make, [svar('Item')], [rs(guarded, [atom(made, [svar('Item')]), atom(item, [svar('Item')])], [], [atom(identity, [])], [atom(made, [svar('Item')])])]), schema(open, [svar('Mart')], [rs(guarded, [atom(keeper, [svar('Mart')]), atom(member, [svar('Mart'), role(1)]), atom(has_member, [role(1), svar('Mart')])], [], [atom(identity, [])], [atom(keeper, [svar('Mart')])])]), schema(join, [svar('Mart')], [rs(guarded, [atom(member, [svar('Mart'), role(2)])], [], [atom(identity, [])], [atom(member, [svar('Mart'), any])]), rs(guarded, [atom(has_member, [role(1), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(knows, [role(1)])], [])]), schema(offer, [svar('Item'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(2)]), atom(item, [svar('Item')])], [atom(posted, [svar('Item'), svar('Mart')])]), rs(unguarded, [atom(post, [role(1), svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')])], [])]), schema(want, [svar('Wish'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(2)])], [atom(posted, [svar('Wish'), svar('Mart')])]), rs(unguarded, [atom(post, [role(1), svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')])], [])]), schema(deliver, [pvar('Carol'), svar('Item'), svar('Mart')], [rs(unguarded, [atom(delivered_post, [pvar('Carol'), svar('Item'), svar('Mart'), role(2)])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(post, [pvar('Carol'), svar('Item'), svar('Mart')]), atom(has_member, [role(2), svar('Mart')])], [atom(delivered_post, [pvar('Carol'), svar('Item'), svar('Mart'), role(2)])]), rs(unguarded, [atom(post, [pvar('Carol'), svar('Item'), svar('Mart')]), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]), schema(deliver_to_poster, [svar('Item'), svar('Mart')], [rs(unguarded, [atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(2)])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(post, [role(2), svar('Item'), svar('Mart')])], [atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(2)])]), rs(unguarded, [atom(post, [role(2), svar('Item'), svar('Mart')])], [], [atom(identity, [])], [atom(keeper, [svar('Mart')])])]), lschema(withdraw, [svar('Item'), svar('Mart')], [rs(unguarded, [], [atom(post, [role(2), svar('Item'), svar('Mart')]), atom(delivered_post, [role(2), svar('Item'), svar('Mart'), any])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, [])], []), rs(unguarded, [], [atom(post, [role(2), svar('Item'), svar('Mart')])], [atom(identity, [])], [])], [listing(3, 1, delivered_post, [role(2), svar('Item'), svar('Mart'), role(3)], fcons(true), [], [])]), schema(swap_item_for_coin, [svar('Item'), pvar('Dave'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_item_for_bond, [svar('Item'), pvar('Dave'), num('Day'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_items, [svar('Item'), svar('Thing')], [rs(guarded, [atom(item, [svar('Thing')])], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [atom(item, [svar('Thing')])], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(deposit_item, [svar('Item'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [atom(escrow_item, [svar('Item'), role(1), pvar('Bob'), svar('Cond')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release_item, [svar('Item')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), pvar('Alice'), role(2), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return_item, [svar('Item')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), role(2), pvar('Bob'), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(issue_bond, [num('Day'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(bond, [role(1), num('Day')]))], [], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(swap_coin_for_bond, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Day'), num('Total')], [rs(guarded, [times(num('Total'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_bonds, [pvar('Carol'), num('Day'), num('Sum'), pvar('Dave'), num('Term'), num('Total')], [rs(guarded, [times(num('Total'), atom(bond, [pvar('Dave'), num('Term')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(bond, [pvar('Carol'), num('Day')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Carol'), num('Day')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(bond, [pvar('Dave'), num('Term')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(redeem_coin_against_bond, [pvar('Carol'), num('Day')], [rs(guarded, [atom(bond, [pvar('Carol'), num('Day')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(bond, [pvar('Carol'), num('Day')])], [atom(identity, [])], [])]), schema(redeem_bond, [num('Day'), pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(bond, [role(2), num('Day')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num('Day')])], [atom(coin, [pvar('Carol')])], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(redeem_bond_against_bond, [num('Day'), pvar('Carol'), num('Term')], [rs(guarded, [atom(bond, [pvar('Carol'), num('Term')]), atom(knows, [pvar('Carol')])], [atom(bond, [role(2), num('Day')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num('Day')])], [atom(bond, [pvar('Carol'), num('Term')])], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(deposit, [pvar('Dave'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(deposit_bond, [pvar('Dave'), num('Day'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release, [pvar('Dave'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release_bond, [pvar('Dave'), num('Day'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, [pvar('Dave'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return_bond, [pvar('Dave'), num('Day'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(make, [svar('Item')], [rs(guarded, [atom(made, [svar('Item')]), atom(item, [svar('Item')])], [], [atom(identity, [])], [atom(made, [svar('Item')])])]), schema(open, [svar('Mart')], [rs(guarded, [atom(keeper, [svar('Mart')]), atom(member, [svar('Mart'), role(1)]), atom(has_member, [role(1), svar('Mart')])], [], [atom(identity, [])], [atom(keeper, [svar('Mart')])])]), schema(join, [svar('Mart')], [rs(guarded, [atom(member, [svar('Mart'), role(2)])], [], [atom(identity, [])], [atom(member, [svar('Mart'), any])]), rs(guarded, [atom(has_member, [role(1), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(knows, [role(1)])], [])]), schema(offer, [svar('Item'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(2)]), atom(item, [svar('Item')])], [atom(posted, [svar('Item'), svar('Mart')])]), rs(unguarded, [atom(post, [role(1), svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')])], [])]), schema(offer_own, [svar('Item'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Item'), svar('Mart')]), atom(post, [role(1), svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(1)]), atom(keeper, [svar('Mart')]), atom(item, [svar('Item')])], [atom(posted, [svar('Item'), svar('Mart')])])]), schema(want, [svar('Wish'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(2)])], [atom(posted, [svar('Wish'), svar('Mart')])]), rs(unguarded, [atom(post, [role(1), svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')])], [])]), schema(want_own, [svar('Wish'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Wish'), svar('Mart')]), atom(post, [role(1), svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(1)]), atom(keeper, [svar('Mart')])], [atom(posted, [svar('Wish'), svar('Mart')])])]), schema(deliver, [pvar('Carol'), svar('Item'), svar('Mart')], [rs(unguarded, [atom(delivered_post, [pvar('Carol'), svar('Item'), svar('Mart'), role(2)])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(post, [pvar('Carol'), svar('Item'), svar('Mart')]), atom(has_member, [role(2), svar('Mart')])], [atom(delivered_post, [pvar('Carol'), svar('Item'), svar('Mart'), role(2)])]), rs(unguarded, [atom(post, [pvar('Carol'), svar('Item'), svar('Mart')]), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]), schema(deliver_to_poster, [svar('Item'), svar('Mart')], [rs(unguarded, [atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(2)])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(post, [role(2), svar('Item'), svar('Mart')])], [atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(2)])]), rs(unguarded, [atom(post, [role(2), svar('Item'), svar('Mart')])], [], [atom(identity, [])], [atom(keeper, [svar('Mart')])])]), lschema(withdraw, [svar('Item'), svar('Mart')], [rs(unguarded, [], [atom(post, [role(2), svar('Item'), svar('Mart')]), atom(delivered_post, [role(2), svar('Item'), svar('Mart'), any])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, [])], []), rs(unguarded, [], [atom(post, [role(2), svar('Item'), svar('Mart')])], [atom(identity, [])], [])], [listing(3, 1, delivered_post, [role(2), svar('Item'), svar('Mart'), role(3)], fcons(true), [], [])]), lschema(withdraw_own, [svar('Item'), svar('Mart')], [rs(guarded, [], [atom(post, [role(1), svar('Item'), svar('Mart')]), atom(delivered_post, [role(1), svar('Item'), svar('Mart'), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(post, [role(1), svar('Item'), svar('Mart')])], [atom(identity, [])], [])], [listing(2, 1, delivered_post, [role(1), svar('Item'), svar('Mart'), role(2)], fcons(true), [], [])]), schema(swap_item_for_coin, [svar('Item'), pvar('Dave'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_item_for_bond, [svar('Item'), pvar('Dave'), num('Day'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_items, [svar('Item'), svar('Thing')], [rs(guarded, [atom(item, [svar('Thing')])], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [atom(item, [svar('Thing')])], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(deposit_item, [svar('Item'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [atom(escrow_item, [svar('Item'), role(1), pvar('Bob'), svar('Cond')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release_item, [svar('Item'), pvar('Alice'), svar('Cond')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), pvar('Alice'), role(2), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return_item, [svar('Item'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), role(2), pvar('Bob'), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -265,13 +273,13 @@ schema_entry(deposit, schema(deposit, [pvar('Dave'), num('Sum'), pvar('Bob'), sv
 .
 schema_entry(deposit_bond, schema(deposit_bond, [pvar('Dave'), num('Day'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(release, schema(release, [pvar('Dave'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(release, schema(release, [pvar('Dave'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(release_bond, schema(release_bond, [pvar('Dave'), num('Day'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(release_bond, schema(release_bond, [pvar('Dave'), num('Day'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(return, schema(return, [pvar('Dave'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(return, schema(return, [pvar('Dave'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(return_bond, schema(return_bond, [pvar('Dave'), num('Day'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(return_bond, schema(return_bond, [pvar('Dave'), num('Day'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
 schema_entry(make, schema(make, [svar('Item')], [rs(guarded, [atom(made, [svar('Item')]), atom(item, [svar('Item')])], [], [atom(identity, [])], [atom(made, [svar('Item')])])]))
 .
@@ -281,13 +289,19 @@ schema_entry(join, schema(join, [svar('Mart')], [rs(guarded, [atom(member, [svar
 .
 schema_entry(offer, schema(offer, [svar('Item'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(2)]), atom(item, [svar('Item')])], [atom(posted, [svar('Item'), svar('Mart')])]), rs(unguarded, [atom(post, [role(1), svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')])], [])]))
 .
+schema_entry(offer_own, schema(offer_own, [svar('Item'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Item'), svar('Mart')]), atom(post, [role(1), svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(1)]), atom(keeper, [svar('Mart')]), atom(item, [svar('Item')])], [atom(posted, [svar('Item'), svar('Mart')])])]))
+.
 schema_entry(want, schema(want, [svar('Wish'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(2)])], [atom(posted, [svar('Wish'), svar('Mart')])]), rs(unguarded, [atom(post, [role(1), svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')])], [])]))
+.
+schema_entry(want_own, schema(want_own, [svar('Wish'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Wish'), svar('Mart')]), atom(post, [role(1), svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(1)]), atom(keeper, [svar('Mart')])], [atom(posted, [svar('Wish'), svar('Mart')])])]))
 .
 schema_entry(deliver, schema(deliver, [pvar('Carol'), svar('Item'), svar('Mart')], [rs(unguarded, [atom(delivered_post, [pvar('Carol'), svar('Item'), svar('Mart'), role(2)])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(post, [pvar('Carol'), svar('Item'), svar('Mart')]), atom(has_member, [role(2), svar('Mart')])], [atom(delivered_post, [pvar('Carol'), svar('Item'), svar('Mart'), role(2)])]), rs(unguarded, [atom(post, [pvar('Carol'), svar('Item'), svar('Mart')]), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]))
 .
 schema_entry(deliver_to_poster, schema(deliver_to_poster, [svar('Item'), svar('Mart')], [rs(unguarded, [atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(2)])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(post, [role(2), svar('Item'), svar('Mart')])], [atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(2)])]), rs(unguarded, [atom(post, [role(2), svar('Item'), svar('Mart')])], [], [atom(identity, [])], [atom(keeper, [svar('Mart')])])]))
 .
 schema_entry(withdraw, lschema(withdraw, [svar('Item'), svar('Mart')], [rs(unguarded, [], [atom(post, [role(2), svar('Item'), svar('Mart')]), atom(delivered_post, [role(2), svar('Item'), svar('Mart'), any])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, [])], []), rs(unguarded, [], [atom(post, [role(2), svar('Item'), svar('Mart')])], [atom(identity, [])], [])], [listing(3, 1, delivered_post, [role(2), svar('Item'), svar('Mart'), role(3)], fcons(true), [], [])]))
+.
+schema_entry(withdraw_own, lschema(withdraw_own, [svar('Item'), svar('Mart')], [rs(guarded, [], [atom(post, [role(1), svar('Item'), svar('Mart')]), atom(delivered_post, [role(1), svar('Item'), svar('Mart'), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(post, [role(1), svar('Item'), svar('Mart')])], [atom(identity, [])], [])], [listing(2, 1, delivered_post, [role(1), svar('Item'), svar('Mart'), role(2)], fcons(true), [], [])]))
 .
 schema_entry(swap_item_for_coin, schema(swap_item_for_coin, [svar('Item'), pvar('Dave'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
@@ -297,9 +311,9 @@ schema_entry(swap_items, schema(swap_items, [svar('Item'), svar('Thing')], [rs(g
 .
 schema_entry(deposit_item, schema(deposit_item, [svar('Item'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [atom(escrow_item, [svar('Item'), role(1), pvar('Bob'), svar('Cond')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(release_item, schema(release_item, [svar('Item')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), pvar('Alice'), role(2), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(release_item, schema(release_item, [svar('Item'), pvar('Alice'), svar('Cond')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), pvar('Alice'), role(2), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(return_item, schema(return_item, [svar('Item')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), role(2), pvar('Bob'), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(return_item, schema(return_item, [svar('Item'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), role(2), pvar('Bob'), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -334,13 +348,13 @@ schema_numeric(deposit, numeric([cj(every, true)], [], []))
 .
 schema_numeric(deposit_bond, numeric([cj(every, true)], [], []))
 .
-schema_numeric(release, numeric([cj(every, true)], [pvar('Alice'), svar('Cond')], []))
+schema_numeric(release, numeric([cj(every, true)], [], []))
 .
-schema_numeric(release_bond, numeric([cj(every, true)], [pvar('Alice'), svar('Cond')], []))
+schema_numeric(release_bond, numeric([cj(every, true)], [], []))
 .
-schema_numeric(return, numeric([cj(every, true)], [pvar('Bob'), svar('Cond')], []))
+schema_numeric(return, numeric([cj(every, true)], [], []))
 .
-schema_numeric(return_bond, numeric([cj(every, true)], [pvar('Bob'), svar('Cond')], []))
+schema_numeric(return_bond, numeric([cj(every, true)], [], []))
 .
 schema_numeric(make, numeric([cj(every, true)], [], []))
 .
@@ -350,13 +364,19 @@ schema_numeric(join, numeric([cj(every, true)], [], []))
 .
 schema_numeric(offer, numeric([cj(every, true)], [], []))
 .
+schema_numeric(offer_own, numeric([cj(every, true)], [], []))
+.
 schema_numeric(want, numeric([cj(every, true)], [], []))
+.
+schema_numeric(want_own, numeric([cj(every, true)], [], []))
 .
 schema_numeric(deliver, numeric([cj(every, true)], [], []))
 .
 schema_numeric(deliver_to_poster, numeric([cj(every, true)], [], []))
 .
 schema_numeric(withdraw, numeric([cj(every, true)], [], []))
+.
+schema_numeric(withdraw_own, numeric([cj(every, true)], [], []))
 .
 schema_numeric(swap_item_for_coin, numeric([cj(every, true)], [], []))
 .
@@ -366,19 +386,23 @@ schema_numeric(swap_items, numeric([cj(every, true)], [], []))
 .
 schema_numeric(deposit_item, numeric([cj(every, true)], [], []))
 .
-schema_numeric(release_item, numeric([cj(every, true)], [pvar('Alice'), svar('Cond')], []))
+schema_numeric(release_item, numeric([cj(every, true)], [], []))
 .
-schema_numeric(return_item, numeric([cj(every, true)], [pvar('Bob'), svar('Cond')], []))
+schema_numeric(return_item, numeric([cj(every, true)], [], []))
 .
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
 procedure schema_forms(Constant?, SForms).
 schema_forms(withdraw, [sform(cond, fforall([role(3)], role(1), atom(delivered_post, [role(1), role(2), svar('Item'), svar('Mart'), role(3)]), fcons(true), [fa(role(3), atom(identity, [role(3)])), fa(role(3), atom(post, [role(3), role(2), svar('Item'), svar('Mart')]))]))])
 .
+schema_forms(withdraw_own, [sform(cond, fforall([role(2)], role(1), atom(delivered_post, [role(1), role(1), svar('Item'), svar('Mart'), role(2)]), fcons(true), [fa(role(2), atom(identity, [role(2)])), fa(role(2), atom(post, [role(2), role(1), svar('Item'), svar('Mart')]))]))])
+.
 schema_forms(_, []) :- otherwise | true.
 
 procedure schema_held(Constant?, HPats).
 schema_held(withdraw, [hp(1, [atom(delivered_post, [role(2), svar('Item'), svar('Mart'), pvar('~4')])]), hp(3, [atom(identity, []), atom(post, [role(2), svar('Item'), svar('Mart')])])])
+.
+schema_held(withdraw_own, [hp(1, [atom(delivered_post, [role(1), svar('Item'), svar('Mart'), pvar('~4')])]), hp(2, [atom(identity, []), atom(post, [role(1), svar('Item'), svar('Mart')])])])
 .
 schema_held(_, []) :- otherwise | true.
 
@@ -429,13 +453,19 @@ schema_base(join, 2)
 .
 schema_base(offer, 1)
 .
+schema_base(offer_own, 1)
+.
 schema_base(want, 1)
+.
+schema_base(want_own, 1)
 .
 schema_base(deliver, 1)
 .
 schema_base(deliver_to_poster, 1)
 .
 schema_base(withdraw, 1)
+.
+schema_base(withdraw_own, 1)
 .
 schema_base(swap_item_for_coin, 1)
 .
@@ -496,13 +526,13 @@ binding_of(deposit(V1, V2, V3, V4, V5, V6), deposit, [b(role(1), p(V1?)), b(role
 .
 binding_of(deposit_bond(V1, V2, V3, V4, V5, V6, V7), deposit_bond, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Day'), n(V4?)), b(num('Sum'), n(V5?)), b(pvar('Bob'), p(V6?)), b(svar('Cond'), s(V7?))])
 .
-binding_of(release(V1, V2, V3, V4), release, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Sum'), n(V4?)), b(pvar('Alice'), lv(release, 'Alice')), b(svar('Cond'), lv(release, 'Cond'))])
+binding_of(release(V1, V2, V3, V4, V5, V6), release, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(pvar('Alice'), p(V4?)), b(svar('Cond'), s(V5?)), b(num('Sum'), n(V6?))])
 .
-binding_of(release_bond(V1, V2, V3, V4, V5), release_bond, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Day'), n(V4?)), b(num('Sum'), n(V5?)), b(pvar('Alice'), lv(release_bond, 'Alice')), b(svar('Cond'), lv(release_bond, 'Cond'))])
+binding_of(release_bond(V1, V2, V3, V4, V5, V6, V7), release_bond, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Day'), n(V4?)), b(pvar('Alice'), p(V5?)), b(svar('Cond'), s(V6?)), b(num('Sum'), n(V7?))])
 .
-binding_of(return(V1, V2, V3, V4), return, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Sum'), n(V4?)), b(pvar('Bob'), lv(return, 'Bob')), b(svar('Cond'), lv(return, 'Cond'))])
+binding_of(return(V1, V2, V3, V4, V5, V6), return, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(pvar('Bob'), p(V4?)), b(svar('Cond'), s(V5?)), b(num('Sum'), n(V6?))])
 .
-binding_of(return_bond(V1, V2, V3, V4, V5), return_bond, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Day'), n(V4?)), b(num('Sum'), n(V5?)), b(pvar('Bob'), lv(return_bond, 'Bob')), b(svar('Cond'), lv(return_bond, 'Cond'))])
+binding_of(return_bond(V1, V2, V3, V4, V5, V6, V7), return_bond, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Day'), n(V4?)), b(pvar('Bob'), p(V5?)), b(svar('Cond'), s(V6?)), b(num('Sum'), n(V7?))])
 .
 binding_of(make(V1, V2), make, [b(role(1), p(V1?)), b(svar('Item'), s(V2?))])
 .
@@ -512,7 +542,11 @@ binding_of(join(V1, V2, V3), join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(sv
 .
 binding_of(offer(V1, V2, V3, V4), offer, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V3?)), b(svar('Mart'), s(V4?))])
 .
+binding_of(offer_own(V1, V2, V3), offer_own, [b(role(1), p(V1?)), b(svar('Item'), s(V2?)), b(svar('Mart'), s(V3?))])
+.
 binding_of(want(V1, V2, V3, V4), want, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Wish'), s(V3?)), b(svar('Mart'), s(V4?))])
+.
+binding_of(want_own(V1, V2, V3), want_own, [b(role(1), p(V1?)), b(svar('Wish'), s(V2?)), b(svar('Mart'), s(V3?))])
 .
 binding_of(deliver(V1, V2, V3, V4, V5), deliver, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(svar('Item'), s(V4?)), b(svar('Mart'), s(V5?))])
 .
@@ -522,6 +556,10 @@ binding_of(withdraw(V1, V2, V3, V4, V5), withdraw, B?)
 :-
 listed_binding(withdraw, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V4?)), b(svar('Mart'), s(V5?))], [ppl(V3?)], B)
 .
+binding_of(withdraw_own(V1, V2, V3, V4), withdraw_own, B?)
+:-
+listed_binding(withdraw_own, [b(role(1), p(V1?)), b(svar('Item'), s(V3?)), b(svar('Mart'), s(V4?))], [ppl(V2?)], B)
+.
 binding_of(swap_item_for_coin(V1, V2, V3, V4, V5), swap_item_for_coin, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V3?)), b(pvar('Dave'), p(V4?)), b(num('Sum'), n(V5?))])
 .
 binding_of(swap_item_for_bond(V1, V2, V3, V4, V5, V6), swap_item_for_bond, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V3?)), b(pvar('Dave'), p(V4?)), b(num('Day'), n(V5?)), b(num('Sum'), n(V6?))])
@@ -530,9 +568,9 @@ binding_of(swap_items(V1, V2, V3, V4), swap_items, [b(role(1), p(V1?)), b(role(2
 .
 binding_of(deposit_item(V1, V2, V3, V4, V5), deposit_item, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V3?)), b(pvar('Bob'), p(V4?)), b(svar('Cond'), s(V5?))])
 .
-binding_of(release_item(V1, V2, V3), release_item, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V3?)), b(pvar('Alice'), lv(release_item, 'Alice')), b(svar('Cond'), lv(release_item, 'Cond'))])
+binding_of(release_item(V1, V2, V3, V4, V5), release_item, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V3?)), b(pvar('Alice'), p(V4?)), b(svar('Cond'), s(V5?))])
 .
-binding_of(return_item(V1, V2, V3), return_item, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V3?)), b(pvar('Bob'), lv(return_item, 'Bob')), b(svar('Cond'), lv(return_item, 'Cond'))])
+binding_of(return_item(V1, V2, V3, V4, V5), return_item, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V3?)), b(pvar('Bob'), p(V4?)), b(svar('Cond'), s(V5?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -754,7 +792,7 @@ val_peer(pvar('Bob'), B?, D?, V6)
 ,
 val_speech(svar('Cond'), B?, D?, V7)
 .
-class_of(release, B, D, release(V1?, V2?, V3?, V4?))
+class_of(release, B, D, release(V1?, V2?, V3?, V4?, V5?, V6?))
 :-
 ground(B?)
 ,
@@ -766,9 +804,13 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(pvar('Dave'), B?, D?, V3)
 ,
-val_num(num('Sum'), B?, V4)
+val_peer(pvar('Alice'), B?, D?, V4)
+,
+val_speech(svar('Cond'), B?, D?, V5)
+,
+val_num(num('Sum'), B?, V6)
 .
-class_of(release_bond, B, D, release_bond(V1?, V2?, V3?, V4?, V5?))
+class_of(release_bond, B, D, release_bond(V1?, V2?, V3?, V4?, V5?, V6?, V7?))
 :-
 ground(B?)
 ,
@@ -782,9 +824,13 @@ val_peer(pvar('Dave'), B?, D?, V3)
 ,
 val_num(num('Day'), B?, V4)
 ,
-val_num(num('Sum'), B?, V5)
+val_peer(pvar('Alice'), B?, D?, V5)
+,
+val_speech(svar('Cond'), B?, D?, V6)
+,
+val_num(num('Sum'), B?, V7)
 .
-class_of(return, B, D, return(V1?, V2?, V3?, V4?))
+class_of(return, B, D, return(V1?, V2?, V3?, V4?, V5?, V6?))
 :-
 ground(B?)
 ,
@@ -796,9 +842,13 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(pvar('Dave'), B?, D?, V3)
 ,
-val_num(num('Sum'), B?, V4)
+val_peer(pvar('Bob'), B?, D?, V4)
+,
+val_speech(svar('Cond'), B?, D?, V5)
+,
+val_num(num('Sum'), B?, V6)
 .
-class_of(return_bond, B, D, return_bond(V1?, V2?, V3?, V4?, V5?))
+class_of(return_bond, B, D, return_bond(V1?, V2?, V3?, V4?, V5?, V6?, V7?))
 :-
 ground(B?)
 ,
@@ -812,7 +862,11 @@ val_peer(pvar('Dave'), B?, D?, V3)
 ,
 val_num(num('Day'), B?, V4)
 ,
-val_num(num('Sum'), B?, V5)
+val_peer(pvar('Bob'), B?, D?, V5)
+,
+val_speech(svar('Cond'), B?, D?, V6)
+,
+val_num(num('Sum'), B?, V7)
 .
 class_of(make, B, D, make(V1?, V2?))
 :-
@@ -860,6 +914,18 @@ val_speech(svar('Item'), B?, D?, V3)
 ,
 val_speech(svar('Mart'), B?, D?, V4)
 .
+class_of(offer_own, B, D, offer_own(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar('Item'), B?, D?, V2)
+,
+val_speech(svar('Mart'), B?, D?, V3)
+.
 class_of(want, B, D, want(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
@@ -873,6 +939,18 @@ val_peer(role(2), B?, D?, V2)
 val_speech(svar('Wish'), B?, D?, V3)
 ,
 val_speech(svar('Mart'), B?, D?, V4)
+.
+class_of(want_own, B, D, want_own(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_speech(svar('Wish'), B?, D?, V2)
+,
+val_speech(svar('Mart'), B?, D?, V3)
 .
 class_of(deliver, B, D, deliver(V1?, V2?, V3?, V4?, V5?))
 :-
@@ -919,6 +997,20 @@ copies_of(B?, 3, V3)
 val_speech(svar('Item'), B?, D?, V4)
 ,
 val_speech(svar('Mart'), B?, D?, V5)
+.
+class_of(withdraw_own, B, D, withdraw_own(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+copies_of(B?, 2, V2)
+,
+val_speech(svar('Item'), B?, D?, V3)
+,
+val_speech(svar('Mart'), B?, D?, V4)
 .
 class_of(swap_item_for_coin, B, D, swap_item_for_coin(V1?, V2?, V3?, V4?, V5?))
 :-
@@ -984,7 +1076,7 @@ val_peer(pvar('Bob'), B?, D?, V4)
 ,
 val_speech(svar('Cond'), B?, D?, V5)
 .
-class_of(release_item, B, D, release_item(V1?, V2?, V3?))
+class_of(release_item, B, D, release_item(V1?, V2?, V3?, V4?, V5?))
 :-
 ground(B?)
 ,
@@ -995,8 +1087,12 @@ val_peer(role(1), B?, D?, V1)
 val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Item'), B?, D?, V3)
+,
+val_peer(pvar('Alice'), B?, D?, V4)
+,
+val_speech(svar('Cond'), B?, D?, V5)
 .
-class_of(return_item, B, D, return_item(V1?, V2?, V3?))
+class_of(return_item, B, D, return_item(V1?, V2?, V3?, V4?, V5?))
 :-
 ground(B?)
 ,
@@ -1007,6 +1103,10 @@ val_peer(role(1), B?, D?, V1)
 val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Item'), B?, D?, V3)
+,
+val_peer(pvar('Bob'), B?, D?, V4)
+,
+val_speech(svar('Cond'), B?, D?, V5)
 .
 
 procedure name_class(Proposal?, GAtoms?, Class).
@@ -1040,13 +1140,13 @@ name_class(deposit(V1, V2, V3, V4, V5, V6), _, deposit(V1?, V2?, V3?, V4?, V5?, 
 .
 name_class(deposit_bond(V1, V2, V3, V4, V5, V6, V7), _, deposit_bond(V1?, V2?, V3?, V4?, V5?, V6?, V7?))
 .
-name_class(release(V1, V2, V3, V4), _, release(V1?, V2?, V3?, V4?))
+name_class(release(V1, V2, V3, V4, V5, V6), _, release(V1?, V2?, V3?, V4?, V5?, V6?))
 .
-name_class(release_bond(V1, V2, V3, V4, V5), _, release_bond(V1?, V2?, V3?, V4?, V5?))
+name_class(release_bond(V1, V2, V3, V4, V5, V6, V7), _, release_bond(V1?, V2?, V3?, V4?, V5?, V6?, V7?))
 .
-name_class(return(V1, V2, V3, V4), _, return(V1?, V2?, V3?, V4?))
+name_class(return(V1, V2, V3, V4, V5, V6), _, return(V1?, V2?, V3?, V4?, V5?, V6?))
 .
-name_class(return_bond(V1, V2, V3, V4, V5), _, return_bond(V1?, V2?, V3?, V4?, V5?))
+name_class(return_bond(V1, V2, V3, V4, V5, V6, V7), _, return_bond(V1?, V2?, V3?, V4?, V5?, V6?, V7?))
 .
 name_class(make(V1, V2), _, make(V1?, V2?))
 .
@@ -1056,11 +1156,19 @@ name_class(join(V1, V2, V3), _, join(V1?, V2?, V3?))
 .
 name_class(offer(V1, V2, V3, V4), _, offer(V1?, V2?, V3?, V4?))
 .
+name_class(offer_own(V1, V2, V3), _, offer_own(V1?, V2?, V3?))
+.
 name_class(want(V1, V2, V3, V4), _, want(V1?, V2?, V3?, V4?))
+.
+name_class(want_own(V1, V2, V3), _, want_own(V1?, V2?, V3?))
 .
 name_class(withdraw(V1, V2, V4, V5), St, C?)
 :-
 listed_class(withdraw, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Item'), s(V4?)), b(svar('Mart'), s(V5?))], St?, C)
+.
+name_class(withdraw_own(V1, V3, V4), St, C?)
+:-
+listed_class(withdraw_own, [b(role(1), p(V1?)), b(svar('Item'), s(V3?)), b(svar('Mart'), s(V4?))], St?, C)
 .
 name_class(swap_item_for_coin(V1, V2, V3, V4, V5), _, swap_item_for_coin(V1?, V2?, V3?, V4?, V5?))
 .
@@ -1070,9 +1178,9 @@ name_class(swap_items(V1, V2, V3, V4), _, swap_items(V1?, V2?, V3?, V4?))
 .
 name_class(deposit_item(V1, V2, V3, V4, V5), _, deposit_item(V1?, V2?, V3?, V4?, V5?))
 .
-name_class(release_item(V1, V2, V3), _, release_item(V1?, V2?, V3?))
+name_class(release_item(V1, V2, V3, V4, V5), _, release_item(V1?, V2?, V3?, V4?, V5?))
 .
-name_class(return_item(V1, V2, V3), _, return_item(V1?, V2?, V3?))
+name_class(return_item(V1, V2, V3, V4, V5), _, return_item(V1?, V2?, V3?, V4?, V5?))
 .
 
 procedure request_name(Class?, PName).
@@ -1106,13 +1214,13 @@ request_name(deposit(V1, V2, V3, V4, V5, V6), pname(deposit(V1?, V2?, V3?, V4?, 
 .
 request_name(deposit_bond(V1, V2, V3, V4, V5, V6, V7), pname(deposit_bond(V1?, V2?, V3?, V4?, V5?, V6?, V7?)))
 .
-request_name(release(V1, V2, V3, V4), pname(release(V1?, V2?, V3?, V4?)))
+request_name(release(V1, V2, V3, V4, V5, V6), pname(release(V1?, V2?, V3?, V4?, V5?, V6?)))
 .
-request_name(release_bond(V1, V2, V3, V4, V5), pname(release_bond(V1?, V2?, V3?, V4?, V5?)))
+request_name(release_bond(V1, V2, V3, V4, V5, V6, V7), pname(release_bond(V1?, V2?, V3?, V4?, V5?, V6?, V7?)))
 .
-request_name(return(V1, V2, V3, V4), pname(return(V1?, V2?, V3?, V4?)))
+request_name(return(V1, V2, V3, V4, V5, V6), pname(return(V1?, V2?, V3?, V4?, V5?, V6?)))
 .
-request_name(return_bond(V1, V2, V3, V4, V5), pname(return_bond(V1?, V2?, V3?, V4?, V5?)))
+request_name(return_bond(V1, V2, V3, V4, V5, V6, V7), pname(return_bond(V1?, V2?, V3?, V4?, V5?, V6?, V7?)))
 .
 request_name(make(V1, V2), pname(make(V1?, V2?)))
 .
@@ -1122,9 +1230,15 @@ request_name(join(V1, V2, V3), pname(join(V1?, V2?, V3?)))
 .
 request_name(offer(V1, V2, V3, V4), pname(offer(V1?, V2?, V3?, V4?)))
 .
+request_name(offer_own(V1, V2, V3), pname(offer_own(V1?, V2?, V3?)))
+.
 request_name(want(V1, V2, V3, V4), pname(want(V1?, V2?, V3?, V4?)))
 .
+request_name(want_own(V1, V2, V3), pname(want_own(V1?, V2?, V3?)))
+.
 request_name(withdraw(V1, V2, _, V4, V5), pname(withdraw(V1?, V2?, V4?, V5?)))
+.
+request_name(withdraw_own(V1, _, V3, V4), pname(withdraw_own(V1?, V3?, V4?)))
 .
 request_name(swap_item_for_coin(V1, V2, V3, V4, V5), pname(swap_item_for_coin(V1?, V2?, V3?, V4?, V5?)))
 .
@@ -1134,9 +1248,9 @@ request_name(swap_items(V1, V2, V3, V4), pname(swap_items(V1?, V2?, V3?, V4?)))
 .
 request_name(deposit_item(V1, V2, V3, V4, V5), pname(deposit_item(V1?, V2?, V3?, V4?, V5?)))
 .
-request_name(release_item(V1, V2, V3), pname(release_item(V1?, V2?, V3?)))
+request_name(release_item(V1, V2, V3, V4, V5), pname(release_item(V1?, V2?, V3?, V4?, V5?)))
 .
-request_name(return_item(V1, V2, V3), pname(return_item(V1?, V2?, V3?)))
+request_name(return_item(V1, V2, V3, V4, V5), pname(return_item(V1?, V2?, V3?, V4?, V5?)))
 .
 request_name(_, nopname) :- otherwise | true.
 
@@ -1243,53 +1357,53 @@ ground(Me?)
 |
 ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to deposit bond."), valued("sum", V5?)])], Me?, Ws)
 .
-sentence_of(release(V1, V2, _, V4), Me, Ws?)
+sentence_of(release(V1, V2, _, _, _, V6), Me, Ws?)
 :-
 ground(V2?)
 ,
 ground(V1?)
 ,
-ground(V4?)
+ground(V6?)
 ,
 ground(Me?)
 |
-ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to release."), valued("sum", V4?)])], Me?, Ws)
+ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to release."), valued("sum", V6?)])], Me?, Ws)
 .
-sentence_of(release_bond(V1, V2, _, _, V5), Me, Ws?)
+sentence_of(release_bond(V1, V2, _, _, _, _, V7), Me, Ws?)
 :-
 ground(V2?)
 ,
 ground(V1?)
 ,
-ground(V5?)
+ground(V7?)
 ,
 ground(Me?)
 |
-ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to release bond."), valued("sum", V5?)])], Me?, Ws)
+ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to release bond."), valued("sum", V7?)])], Me?, Ws)
 .
-sentence_of(return(V1, V2, _, V4), Me, Ws?)
+sentence_of(return(V1, V2, _, _, _, V6), Me, Ws?)
 :-
 ground(V2?)
 ,
 ground(V1?)
 ,
-ground(V4?)
+ground(V6?)
 ,
 ground(Me?)
 |
-ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to return."), valued("sum", V4?)])], Me?, Ws)
+ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to return."), valued("sum", V6?)])], Me?, Ws)
 .
-sentence_of(return_bond(V1, V2, _, _, V5), Me, Ws?)
+sentence_of(return_bond(V1, V2, _, _, _, _, V7), Me, Ws?)
 :-
 ground(V2?)
 ,
 ground(V1?)
 ,
-ground(V5?)
+ground(V7?)
 ,
 ground(Me?)
 |
-ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to return bond."), valued("sum", V5?)])], Me?, Ws)
+ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to return bond."), valued("sum", V7?)])], Me?, Ws)
 .
 sentence_of(join(V1, V2, _), Me, Ws?)
 :-
@@ -1351,7 +1465,7 @@ ground(Me?)
 |
 ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to deposit item.")])], Me?, Ws)
 .
-sentence_of(release_item(V1, V2, _), Me, Ws?)
+sentence_of(release_item(V1, V2, _, _, _), Me, Ws?)
 :-
 ground(V2?)
 ,
@@ -1361,7 +1475,7 @@ ground(Me?)
 |
 ask_of([q(V2?, 1, [person(V1?), text(" asks for your consent to release item.")])], Me?, Ws)
 .
-sentence_of(return_item(V1, V2, _), Me, Ws?)
+sentence_of(return_item(V1, V2, _, _, _), Me, Ws?)
 :-
 ground(V2?)
 ,
@@ -1421,7 +1535,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("AGORA: Grassroots Barter\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ■ Issue.  Alice may issue Sum Alice-coins.\n5. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.\n6. ■ Pay.  Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.\n7. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.\n8. ■ Issue bond.  Alice may issue Sum Alice-bonds due Day, provided the current date is Today and Day is more than Today.\n9. ■ Swap coin for bond.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-bonds due Day, provided Alice and Bob know each other.\n10. ■ Swap bonds.  Alice and Bob may jointly swap Sum Carol-bonds due Day for Total Dave-bonds due Term, provided Alice and Bob know each other.\n11. ■ Redeem coin against bond.  Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob.\n12. ■ Redeem bond.  Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.\n13. ■ Redeem bond against bond.  Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.\n14. ■ Deposit.  Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.\n15. ■ Deposit bond.  Alice may deposit Sum Dave-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.\n16. ■ Release.  Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other.\n17. ■ Release bond.  Carol and Bob may jointly release Sum Dave-bonds due Day that Alice deposited on Cond, provided Carol and Bob know each other.\n18. ■ Return.  Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other.\n19. ■ Return bond.  Carol and Alice may jointly return Sum Dave-bonds due Day deposited for Bob on Cond, provided Carol and Alice know each other.\n20. ■ Make.  Alice may make the item Item.\n21. ■ Open.  Alice may open Mart under a new name of hers.\n22. ■ Join.  Alice may admit Bob to Mart, with the consent of Bob, provided Alice is the keeper of Mart and Alice knows Bob.\n23. ■ Offer.  Carol may post Item to the wall of Alice's Mart, provided Carol is a member of the market Mart of Alice, Alice is the keeper of Mart and Carol holds the item Item.\n24. ■ Want.  Carol may post Wish to the wall of Alice's Mart, provided Carol is a member of the market Mart of Alice and Alice is the keeper of Mart.\n25. ■ Deliver.  Alice delivers Carol's post of Item in Mart to Bob, provided Alice is the keeper of Mart, Alice sees Carol's post of Item on the wall of Mart and Alice has Bob as a member of Mart.\n26. ■ Deliver to poster.  Alice delivers Carol's post of Item in Mart back to Carol, provided Alice is the keeper of Mart, Alice sees Carol's post of Item on the wall of Mart and Carol is not the keeper of Mart.\n27. ■ Withdraw.  Carol may withdraw her post of Item in Alice's Mart.\n28. ■ Swap item for coin.  Alice and Bob may jointly swap the item Item for Sum Dave-coins, provided Alice and Bob know each other.\n29. ■ Swap item for bond.  Alice and Bob may jointly swap the item Item for Sum Dave-bonds due Day, provided Alice and Bob know each other.\n30. ■ Swap items.  Alice and Bob may jointly swap the item Item for the item Thing, provided Alice and Bob know each other.\n31. ■ Deposit item.  Alice may deposit the item Item with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.\n32. ■ Release item.  Carol and Bob may jointly release the item Item that Alice deposited on Cond, provided Carol and Bob know each other.\n33. ■ Return item.  Carol and Alice may jointly return the item Item deposited for Bob on Cond, provided Carol and Alice know each other.", with(environment([today], reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, ['Alice'], [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, ['Alice', 'Bob'], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob'], [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), nschema(issue_bond, ['Alice'], [num('Day'), num('Sum'), num('Today')], gt(num('Day'), num('Today')), [rs(guarded, [times(num('Sum'), atom(bond, [role(1), num('Day')]))], [], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(swap_coin_for_bond, ['Alice', 'Bob'], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Day'), num('Total')], [rs(guarded, [times(num('Total'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_bonds, ['Alice', 'Bob'], [pvar('Carol'), num('Day'), num('Sum'), pvar('Dave'), num('Term'), num('Total')], [rs(guarded, [times(num('Total'), atom(bond, [pvar('Dave'), num('Term')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(bond, [pvar('Carol'), num('Day')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Carol'), num('Day')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(bond, [pvar('Dave'), num('Term')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(redeem_coin_against_bond, ['Alice', 'Bob'], [pvar('Carol'), num('Day')], [rs(guarded, [atom(bond, [pvar('Carol'), num('Day')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(bond, [pvar('Carol'), num('Day')])], [atom(identity, [])], [])]), nschema(redeem_bond, ['Alice', 'Bob'], [num('Day'), pvar('Carol'), num('Today')], le(num('Day'), num('Today')), [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(bond, [role(2), num('Day')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num('Day')])], [atom(coin, [pvar('Carol')])], [atom(identity, []), atom(today, [num('Today')])], [])]), nschema(redeem_bond_against_bond, ['Alice', 'Bob'], [num('Day'), pvar('Carol'), num('Term'), num('Today')], le(num('Day'), num('Today')), [rs(guarded, [atom(bond, [pvar('Carol'), num('Term')]), atom(knows, [pvar('Carol')])], [atom(bond, [role(2), num('Day')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num('Day')])], [atom(bond, [pvar('Carol'), num('Term')])], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(deposit, ['Alice', 'Carol'], [pvar('Dave'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(deposit_bond, ['Alice', 'Carol'], [pvar('Dave'), num('Day'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release, ['Carol', 'Bob'], [pvar('Dave'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release_bond, ['Carol', 'Bob'], [pvar('Dave'), num('Day'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, ['Carol', 'Alice'], [pvar('Dave'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return_bond, ['Carol', 'Alice'], [pvar('Dave'), num('Day'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(make, ['Alice'], [svar('Item')], [rs(guarded, [atom(made, [svar('Item')]), atom(item, [svar('Item')])], [], [atom(identity, [])], [atom(made, [svar('Item')])])]), schema(open, ['Alice'], [svar('Mart')], [rs(guarded, [atom(keeper, [svar('Mart')]), atom(member, [svar('Mart'), role(1)]), atom(has_member, [role(1), svar('Mart')])], [], [atom(identity, [])], [atom(keeper, [svar('Mart')])])]), schema(join, ['Bob', 'Alice'], [svar('Mart')], [rs(guarded, [atom(member, [svar('Mart'), role(2)])], [], [atom(identity, [])], [atom(member, [svar('Mart'), any])]), rs(guarded, [atom(has_member, [role(1), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(knows, [role(1)])], [])]), schema(offer, ['Carol', 'Alice'], [svar('Item'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(2)]), atom(item, [svar('Item')])], [atom(posted, [svar('Item'), svar('Mart')])]), rs(unguarded, [atom(post, [role(1), svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')])], [])]), schema(want, ['Carol', 'Alice'], [svar('Wish'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(2)])], [atom(posted, [svar('Wish'), svar('Mart')])]), rs(unguarded, [atom(post, [role(1), svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')])], [])]), schema(deliver, ['Alice', 'Bob'], [pvar('Carol'), svar('Item'), svar('Mart')], [rs(unguarded, [atom(delivered_post, [pvar('Carol'), svar('Item'), svar('Mart'), role(2)])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(post, [pvar('Carol'), svar('Item'), svar('Mart')]), atom(has_member, [role(2), svar('Mart')])], [atom(delivered_post, [pvar('Carol'), svar('Item'), svar('Mart'), role(2)])]), rs(unguarded, [atom(post, [pvar('Carol'), svar('Item'), svar('Mart')]), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]), schema(deliver_to_poster, ['Alice', 'Carol'], [svar('Item'), svar('Mart')], [rs(unguarded, [atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(2)])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(post, [role(2), svar('Item'), svar('Mart')])], [atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(2)])]), rs(unguarded, [atom(post, [role(2), svar('Item'), svar('Mart')])], [], [atom(identity, [])], [atom(keeper, [svar('Mart')])])]), qschema(withdraw, ['Alice', 'Carol', 'E1'], [svar('Item'), svar('Mart')], [pvar('E1'), svar('E1'), num('E1'), pvar('E1'), svar('E1'), num('E1')], true, [rs(unguarded, [], [atom(post, [role(2), svar('Item'), svar('Mart')]), atom(delivered_post, [role(2), svar('Item'), svar('Mart'), any])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, [])], []), crs(qlisted(1, delivered_post, [role(2), svar('Item'), svar('Mart'), role(3)], [role(3)]), unguarded, [], [atom(post, [role(2), svar('Item'), svar('Mart')])], [atom(identity, [])], [])], [conjunct([role(3)], 1, atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(3)]), fcons(true), [], [], [fnot(fa(role(3), atom(post, [role(2), svar('Item'), svar('Mart')])))])], [fforall([role(3)], role(1), atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(3)]), fcons(true), [fa(role(3), atom(identity, [])), fa(role(3), atom(post, [role(2), svar('Item'), svar('Mart')]))])]), schema(swap_item_for_coin, ['Alice', 'Bob'], [svar('Item'), pvar('Dave'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_item_for_bond, ['Alice', 'Bob'], [svar('Item'), pvar('Dave'), num('Day'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_items, ['Alice', 'Bob'], [svar('Item'), svar('Thing')], [rs(guarded, [atom(item, [svar('Thing')])], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [atom(item, [svar('Thing')])], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(deposit_item, ['Alice', 'Carol'], [svar('Item'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [atom(escrow_item, [svar('Item'), role(1), pvar('Bob'), svar('Cond')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release_item, ['Carol', 'Bob'], [svar('Item'), pvar('Alice'), svar('Cond')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), pvar('Alice'), role(2), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return_item, ['Carol', 'Alice'], [svar('Item'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), role(2), pvar('Bob'), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])])])), pragmas([], [act(establish, "Establish", [], none, "", by([1])), act(acquaint, "Acquaint", ["", "bob"], said([[], [person(1), text(" asks for your consent to acquaint.")]]), "", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks for your consent to introduce.")], []]), "", by([2])), act(issue, "Issue", ["", "sum"], none, "", by([1])), act(swap, "Swap", ["", "", "", "sum", "dave", "total"], said([[], [person(1), text(" asks for your consent to swap.")]]), "", by([1])), act(pay, "Pay", ["", "", "sum"], none, "", by([1])), act(redeem, "Redeem", ["", "", "carol"], none, "", by([1])), act(issue_bond, "Issue bond", ["", "day", "sum"], none, "", by([1])), act(swap_coin_for_bond, "Swap coin for bond", ["", "", "", "sum", "dave", "day", "total"], said([[], [person(1), text(" asks for your consent to swap coin for bond.")]]), "", by([1])), act(swap_bonds, "Swap bonds", ["", "", "", "", "sum", "dave", "term", "total"], said([[], [person(1), text(" asks for your consent to swap bonds.")]]), "", by([1])), act(redeem_coin_against_bond, "Redeem coin against bond", ["", "", "carol", "day"], none, "", by([1])), act(redeem_bond, "Redeem bond", ["", "", "", "carol"], none, "", by([1])), act(redeem_bond_against_bond, "Redeem bond against bond", ["", "", "", "carol", "term"], none, "", by([1])), act(deposit, "Deposit", ["", "", "", "sum", "", "cond"], said([[], [person(1), text(" asks for your consent to deposit.")]]), "", by([1])), act(deposit_bond, "Deposit bond", ["", "", "", "", "sum", "", "cond"], said([[], [person(1), text(" asks for your consent to deposit bond.")]]), "", by([1])), act(release, "Release", ["", "", "", "sum"], said([[], [person(1), text(" asks for your consent to release.")]]), "", by([1])), act(release_bond, "Release bond", ["", "", "", "", "sum"], said([[], [person(1), text(" asks for your consent to release bond.")]]), "", by([1])), act(return, "Return", ["", "", "", "sum"], said([[], [person(1), text(" asks for your consent to return.")]]), "", by([1])), act(return_bond, "Return bond", ["", "", "", "", "sum"], said([[], [person(1), text(" asks for your consent to return bond.")]]), "", by([1])), act(make, "Make", ["", "item"], none, "", by([1])), act(open, "Open", ["", "mart"], none, "", by([1])), act(join, "Join", [], said([[person(2), text(" asks for your consent to join.")], []]), "", by([2])), act(offer, "Offer", [], none, "", by([1])), act(want, "Want", ["", "", "wish"], none, "", by([1])), act(withdraw, "Withdraw", ["alice", "", "item", "mart"], none, "", by([2])), act(swap_item_for_coin, "Swap item for coin", ["", "", "", "dave", "sum"], said([[], [person(1), text(" asks for your consent to swap item for coin.")]]), "", by([1])), act(swap_item_for_bond, "Swap item for bond", ["", "", "", "dave", "day", "sum"], said([[], [person(1), text(" asks for your consent to swap item for bond.")]]), "", by([1])), act(swap_items, "Swap items", ["", "", "", "thing"], said([[], [person(1), text(" asks for your consent to swap items.")]]), "", by([1])), act(deposit_item, "Deposit item", ["", "", "", "", "cond"], said([[], [person(1), text(" asks for your consent to deposit item.")]]), "", by([1])), act(release_item, "Release item", [], said([[], [person(1), text(" asks for your consent to release item.")]]), "", by([1])), act(return_item, "Return item", [], said([[], [person(1), text(" asks for your consent to return item.")]]), "", by([1]))], [], nolook, version(1, 1))))
+contract("AGORA: Grassroots Barter\n1. ○ Establish.  Alice may establish an identity.\n2. ■ Acquaint.  Alice and Bob may jointly come to know each other.\n3. ■ Introduce.  Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.\n4. ■ Issue.  Alice may issue Sum Alice-coins.\n5. ■ Swap.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.\n6. ■ Pay.  Alice may pay Bob Sum Bob-coins, provided Alice knows Bob.\n7. ■ Redeem.  Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.\n8. ■ Issue bond.  Alice may issue Sum Alice-bonds due Day, provided the current date is Today and Day is more than Today.\n9. ■ Swap coin for bond.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-bonds due Day, provided Alice and Bob know each other.\n10. ■ Swap bonds.  Alice and Bob may jointly swap Sum Carol-bonds due Day for Total Dave-bonds due Term, provided Alice and Bob know each other.\n11. ■ Redeem coin against bond.  Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob.\n12. ■ Redeem bond.  Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.\n13. ■ Redeem bond against bond.  Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.\n14. ■ Deposit.  Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.\n15. ■ Deposit bond.  Alice may deposit Sum Dave-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.\n16. ■ Release.  Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other.\n17. ■ Release bond.  Carol and Bob may jointly release Sum Dave-bonds due Day that Alice deposited on Cond, provided Carol and Bob know each other.\n18. ■ Return.  Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other.\n19. ■ Return bond.  Carol and Alice may jointly return Sum Dave-bonds due Day deposited for Bob on Cond, provided Carol and Alice know each other.\n20. ■ Make.  Alice may make the item Item.\n21. ■ Open.  Alice may open Mart under a new name of hers.\n22. ■ Join.  Alice may admit Bob to Mart, with the consent of Bob, provided Alice is the keeper of Mart and Alice knows Bob.\n23. ■ Offer.  Carol may post Item to the wall of Alice's Mart, provided Carol is a member of the market Mart of Alice, Alice is the keeper of Mart and Carol holds the item Item.\n24. ■ Offer own.  Alice may post Item to the wall of Alice's Mart, provided Alice is a member of the market Mart of Alice, Alice is the keeper of Mart and Alice holds the item Item.\n25. ■ Want.  Carol may post Wish to the wall of Alice's Mart, provided Carol is a member of the market Mart of Alice and Alice is the keeper of Mart.\n26. ■ Want own.  Alice may post Wish to the wall of Alice's Mart, provided Alice is a member of the market Mart of Alice and Alice is the keeper of Mart.\n27. ■ Deliver.  Alice delivers Carol's post of Item in Mart to Bob, provided Alice is the keeper of Mart, Alice sees Carol's post of Item on the wall of Mart and Alice has Bob as a member of Mart.\n28. ■ Deliver to poster.  Alice delivers Carol's post of Item in Mart back to Carol, provided Alice is the keeper of Mart, Alice sees Carol's post of Item on the wall of Mart and Carol is not the keeper of Mart.\n29. ■ Withdraw.  Carol may withdraw her post of Item in Alice's Mart.\n30. ■ Withdraw own.  Alice may withdraw her post of Item in Alice's Mart.\n31. ■ Swap item for coin.  Alice and Bob may jointly swap the item Item for Sum Dave-coins, provided Alice and Bob know each other.\n32. ■ Swap item for bond.  Alice and Bob may jointly swap the item Item for Sum Dave-bonds due Day, provided Alice and Bob know each other.\n33. ■ Swap items.  Alice and Bob may jointly swap the item Item for the item Thing, provided Alice and Bob know each other.\n34. ■ Deposit item.  Alice may deposit the item Item with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob.\n35. ■ Release item.  Carol and Bob may jointly release the item Item that Alice deposited on Cond, provided Carol and Bob know each other.\n36. ■ Return item.  Carol and Alice may jointly return the item Item deposited for Bob on Cond, provided Carol and Alice know each other.", with(environment([today], reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, ['Alice'], [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, ['Alice', 'Bob'], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob'], [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(redeem, ['Alice', 'Bob'], [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), nschema(issue_bond, ['Alice'], [num('Day'), num('Sum'), num('Today')], gt(num('Day'), num('Today')), [rs(guarded, [times(num('Sum'), atom(bond, [role(1), num('Day')]))], [], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(swap_coin_for_bond, ['Alice', 'Bob'], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Day'), num('Total')], [rs(guarded, [times(num('Total'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_bonds, ['Alice', 'Bob'], [pvar('Carol'), num('Day'), num('Sum'), pvar('Dave'), num('Term'), num('Total')], [rs(guarded, [times(num('Total'), atom(bond, [pvar('Dave'), num('Term')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(bond, [pvar('Carol'), num('Day')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Carol'), num('Day')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(bond, [pvar('Dave'), num('Term')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(redeem_coin_against_bond, ['Alice', 'Bob'], [pvar('Carol'), num('Day')], [rs(guarded, [atom(bond, [pvar('Carol'), num('Day')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(bond, [pvar('Carol'), num('Day')])], [atom(identity, [])], [])]), nschema(redeem_bond, ['Alice', 'Bob'], [num('Day'), pvar('Carol'), num('Today')], le(num('Day'), num('Today')), [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(bond, [role(2), num('Day')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num('Day')])], [atom(coin, [pvar('Carol')])], [atom(identity, []), atom(today, [num('Today')])], [])]), nschema(redeem_bond_against_bond, ['Alice', 'Bob'], [num('Day'), pvar('Carol'), num('Term'), num('Today')], le(num('Day'), num('Today')), [rs(guarded, [atom(bond, [pvar('Carol'), num('Term')]), atom(knows, [pvar('Carol')])], [atom(bond, [role(2), num('Day')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(bond, [role(2), num('Day')])], [atom(bond, [pvar('Carol'), num('Term')])], [atom(identity, []), atom(today, [num('Today')])], [])]), schema(deposit, ['Alice', 'Carol'], [pvar('Dave'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(deposit_bond, ['Alice', 'Carol'], [pvar('Dave'), num('Day'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release, ['Carol', 'Bob'], [pvar('Dave'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release_bond, ['Carol', 'Bob'], [pvar('Dave'), num('Day'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, ['Carol', 'Alice'], [pvar('Dave'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return_bond, ['Carol', 'Alice'], [pvar('Dave'), num('Day'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_bond, [pvar('Dave'), num('Day'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(make, ['Alice'], [svar('Item')], [rs(guarded, [atom(made, [svar('Item')]), atom(item, [svar('Item')])], [], [atom(identity, [])], [atom(made, [svar('Item')])])]), schema(open, ['Alice'], [svar('Mart')], [rs(guarded, [atom(keeper, [svar('Mart')]), atom(member, [svar('Mart'), role(1)]), atom(has_member, [role(1), svar('Mart')])], [], [atom(identity, [])], [atom(keeper, [svar('Mart')])])]), schema(join, ['Bob', 'Alice'], [svar('Mart')], [rs(guarded, [atom(member, [svar('Mart'), role(2)])], [], [atom(identity, [])], [atom(member, [svar('Mart'), any])]), rs(guarded, [atom(has_member, [role(1), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(knows, [role(1)])], [])]), schema(offer, ['Carol', 'Alice'], [svar('Item'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(2)]), atom(item, [svar('Item')])], [atom(posted, [svar('Item'), svar('Mart')])]), rs(unguarded, [atom(post, [role(1), svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')])], [])]), schema(offer_own, ['Alice'], [svar('Item'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Item'), svar('Mart')]), atom(post, [role(1), svar('Item'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(1)]), atom(keeper, [svar('Mart')]), atom(item, [svar('Item')])], [atom(posted, [svar('Item'), svar('Mart')])])]), schema(want, ['Carol', 'Alice'], [svar('Wish'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(2)])], [atom(posted, [svar('Wish'), svar('Mart')])]), rs(unguarded, [atom(post, [role(1), svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(keeper, [svar('Mart')])], [])]), schema(want_own, ['Alice'], [svar('Wish'), svar('Mart')], [rs(guarded, [atom(posted, [svar('Wish'), svar('Mart')]), atom(post, [role(1), svar('Wish'), svar('Mart')])], [], [atom(identity, []), atom(member, [svar('Mart'), role(1)]), atom(keeper, [svar('Mart')])], [atom(posted, [svar('Wish'), svar('Mart')])])]), schema(deliver, ['Alice', 'Bob'], [pvar('Carol'), svar('Item'), svar('Mart')], [rs(unguarded, [atom(delivered_post, [pvar('Carol'), svar('Item'), svar('Mart'), role(2)])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(post, [pvar('Carol'), svar('Item'), svar('Mart')]), atom(has_member, [role(2), svar('Mart')])], [atom(delivered_post, [pvar('Carol'), svar('Item'), svar('Mart'), role(2)])]), rs(unguarded, [atom(post, [pvar('Carol'), svar('Item'), svar('Mart')]), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]), schema(deliver_to_poster, ['Alice', 'Carol'], [svar('Item'), svar('Mart')], [rs(unguarded, [atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(2)])], [], [atom(identity, []), atom(keeper, [svar('Mart')]), atom(post, [role(2), svar('Item'), svar('Mart')])], [atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(2)])]), rs(unguarded, [atom(post, [role(2), svar('Item'), svar('Mart')])], [], [atom(identity, [])], [atom(keeper, [svar('Mart')])])]), qschema(withdraw, ['Alice', 'Carol', 'E1'], [svar('Item'), svar('Mart')], [pvar('E1'), svar('E1'), num('E1'), pvar('E1'), svar('E1'), num('E1')], true, [rs(unguarded, [], [atom(post, [role(2), svar('Item'), svar('Mart')]), atom(delivered_post, [role(2), svar('Item'), svar('Mart'), any])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, [])], []), crs(qlisted(1, delivered_post, [role(2), svar('Item'), svar('Mart'), role(3)], [role(3)]), unguarded, [], [atom(post, [role(2), svar('Item'), svar('Mart')])], [atom(identity, [])], [])], [conjunct([role(3)], 1, atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(3)]), fcons(true), [], [], [fnot(fa(role(3), atom(post, [role(2), svar('Item'), svar('Mart')])))])], [fforall([role(3)], role(1), atom(delivered_post, [role(2), svar('Item'), svar('Mart'), role(3)]), fcons(true), [fa(role(3), atom(identity, [])), fa(role(3), atom(post, [role(2), svar('Item'), svar('Mart')]))])]), qschema(withdraw_own, ['Alice', 'E1'], [svar('Item'), svar('Mart')], [pvar('E1'), svar('E1'), num('E1'), pvar('E1'), svar('E1'), num('E1')], true, [rs(guarded, [], [atom(post, [role(1), svar('Item'), svar('Mart')]), atom(delivered_post, [role(1), svar('Item'), svar('Mart'), any])], [atom(identity, [])], []), crs(qlisted(1, delivered_post, [role(1), svar('Item'), svar('Mart'), role(2)], [role(2)]), unguarded, [], [atom(post, [role(1), svar('Item'), svar('Mart')])], [atom(identity, [])], [])], [conjunct([role(2)], 1, atom(delivered_post, [role(1), svar('Item'), svar('Mart'), role(2)]), fcons(true), [], [], [fnot(fa(role(2), atom(post, [role(1), svar('Item'), svar('Mart')])))])], [fforall([role(2)], role(1), atom(delivered_post, [role(1), svar('Item'), svar('Mart'), role(2)]), fcons(true), [fa(role(2), atom(identity, [])), fa(role(2), atom(post, [role(1), svar('Item'), svar('Mart')]))])]), schema(swap_item_for_coin, ['Alice', 'Bob'], [svar('Item'), pvar('Dave'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_item_for_bond, ['Alice', 'Bob'], [svar('Item'), pvar('Dave'), num('Day'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [times(num('Sum'), atom(bond, [pvar('Dave'), num('Day')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(swap_items, ['Alice', 'Bob'], [svar('Item'), svar('Thing')], [rs(guarded, [atom(item, [svar('Thing')])], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [atom(item, [svar('Thing')])], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(deposit_item, ['Alice', 'Carol'], [svar('Item'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [atom(item, [svar('Item')])], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [atom(escrow_item, [svar('Item'), role(1), pvar('Bob'), svar('Cond')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release_item, ['Carol', 'Bob'], [svar('Item'), pvar('Alice'), svar('Cond')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), pvar('Alice'), role(2), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return_item, ['Carol', 'Alice'], [svar('Item'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [atom(escrow_item, [svar('Item'), role(2), pvar('Bob'), svar('Cond')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(item, [svar('Item')])], [], [atom(identity, []), atom(knows, [role(1)])], [])])])), pragmas([], [act(establish, "Establish", [], none, "", by([1])), act(acquaint, "Acquaint", ["", "bob"], said([[], [person(1), text(" asks for your consent to acquaint.")]]), "", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks for your consent to introduce.")], []]), "", by([2])), act(issue, "Issue", ["", "sum"], none, "", by([1])), act(swap, "Swap", ["", "", "", "sum", "dave", "total"], said([[], [person(1), text(" asks for your consent to swap.")]]), "", by([1])), act(pay, "Pay", ["", "", "sum"], none, "", by([1])), act(redeem, "Redeem", ["", "", "carol"], none, "", by([1])), act(issue_bond, "Issue bond", ["", "day", "sum"], none, "", by([1])), act(swap_coin_for_bond, "Swap coin for bond", ["", "", "", "sum", "dave", "day", "total"], said([[], [person(1), text(" asks for your consent to swap coin for bond.")]]), "", by([1])), act(swap_bonds, "Swap bonds", ["", "", "", "", "sum", "dave", "term", "total"], said([[], [person(1), text(" asks for your consent to swap bonds.")]]), "", by([1])), act(redeem_coin_against_bond, "Redeem coin against bond", ["", "", "carol", "day"], none, "", by([1])), act(redeem_bond, "Redeem bond", ["", "", "", "carol"], none, "", by([1])), act(redeem_bond_against_bond, "Redeem bond against bond", ["", "", "", "carol", "term"], none, "", by([1])), act(deposit, "Deposit", ["", "", "", "sum", "", "cond"], said([[], [person(1), text(" asks for your consent to deposit.")]]), "", by([1])), act(deposit_bond, "Deposit bond", ["", "", "", "", "sum", "", "cond"], said([[], [person(1), text(" asks for your consent to deposit bond.")]]), "", by([1])), act(release, "Release", ["", "", "", "", "", "sum"], said([[], [person(1), text(" asks for your consent to release.")]]), "", by([1])), act(release_bond, "Release bond", ["", "", "", "", "", "", "sum"], said([[], [person(1), text(" asks for your consent to release bond.")]]), "", by([1])), act(return, "Return", ["", "", "", "", "", "sum"], said([[], [person(1), text(" asks for your consent to return.")]]), "", by([1])), act(return_bond, "Return bond", ["", "", "", "", "", "", "sum"], said([[], [person(1), text(" asks for your consent to return bond.")]]), "", by([1])), act(make, "Make", ["", "item"], none, "", by([1])), act(open, "Open", ["", "mart"], none, "", by([1])), act(join, "Join", [], said([[person(2), text(" asks for your consent to join.")], []]), "", by([2])), act(offer, "Offer", [], none, "", by([1])), act(offer_own, "Offer own", [], none, "", by([1])), act(want, "Want", ["", "", "wish"], none, "", by([1])), act(want_own, "Want own", ["", "wish"], none, "", by([1])), act(withdraw, "Withdraw", ["alice", "", "item", "mart"], none, "", by([2])), act(withdraw_own, "Withdraw own", [], none, "", by([1])), act(swap_item_for_coin, "Swap item for coin", ["", "", "", "dave", "sum"], said([[], [person(1), text(" asks for your consent to swap item for coin.")]]), "", by([1])), act(swap_item_for_bond, "Swap item for bond", ["", "", "", "dave", "day", "sum"], said([[], [person(1), text(" asks for your consent to swap item for bond.")]]), "", by([1])), act(swap_items, "Swap items", ["", "", "", "thing"], said([[], [person(1), text(" asks for your consent to swap items.")]]), "", by([1])), act(deposit_item, "Deposit item", ["", "", "", "", "cond"], said([[], [person(1), text(" asks for your consent to deposit item.")]]), "", by([1])), act(release_item, "Release item", [], said([[], [person(1), text(" asks for your consent to release item.")]]), "", by([1])), act(return_item, "Return item", [], said([[], [person(1), text(" asks for your consent to return item.")]]), "", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -1483,7 +1597,7 @@ Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String,
 RoleAsk   ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).
 Asked     ::= asked(Integer, List(Word)).
 Close     ::= close.
-Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; day(Integer).
+Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.
 %% The peer an acquaintance part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract's acquaintance schemas).
 MeetPeer  ::= peer(Peer) ; nopeer.
 
@@ -1684,15 +1798,13 @@ Then      ::= write_own ; own_unread ; no_own.
 ApprovalRes ::= approval_for(Attempt) ; noapproval.
 
 %% When it starts, its view is written on the output: its own key, the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
-%% Where the contract requires the day, the agent reads also the calendar, a stream of dates the device writes, one a day, merged with its triggers (vGLP, Section 5.4, "The compilation": "the fair merge ... of the answers to its request questions, the messages arriving on the network, the answers to its approval questions, its own triggers and, where the contract requires the day, the calendar").
+%% Where the contract requires the day, the agent reads the date from its phone whenever it reads a trigger, before it computes a condition, and holds today(d), d that date, beside its app state until the next (dated; vGLP, Section 5.4, "Speech-act schemas as local specifications": "we assume that every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition").  It takes no calendar.
 %% Where the contract declares environment predicates other than the day, the agent takes, when the platform is deployed, their atoms, written as the contract writes them, List(Atom), and holds them in its machine state from startup, its first view showing them ("An environment predicate is the day, by the calendar, or a value the contract declares and does not fix, as BCC's f and GFF-FR's d: given when the platform is deployed, held from startup", vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "its value is given when the platform is deployed, and the compiled agent holds the atom from startup").
-exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Integer)?).
-agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?], Cal) :- ground(Id?) |
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
+agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?]) :- ground(Id?) |
     tabs(Ts),
     request(Rq),
-    tag_net(NetIn?, Nt0),
-    tag_cal(Cal?, Ct),
-    merge(Nt0?, Ct?, Nt),
+    tag_net(NetIn?, Nt),
     merge(Rq?, Nt?, M1),
     merge(M1?, Ans?, M2),
     merge(M2?, [own|Ow?], In),
@@ -1717,9 +1829,6 @@ ask_next(Ans?, Ans1) :-
 procedure tag_net(Stream(Net)?, Stream(Trigger)).
 tag_net([M|Ms], [net(M?)|Ts?]) :- tag_net(Ms?, Ts).
 tag_net([], []).
-procedure tag_cal(Stream(Integer)?, Stream(Trigger)).
-tag_cal([D|Ds], [day(D?)|Ts?]) :- tag_cal(Ds?, Ts).
-tag_cal([], []).
 
 %% A responder: the approval question Start raises shows the attempt and takes yes or no.
 %% The agent goal holds the writer of its close signal and closes it once the
@@ -1756,11 +1865,21 @@ procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, YesNo?, Stream(Trigger)
     Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?).
 agent_goal([T|Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     then_local(U?, Th),
-    step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+    dated(St?, St1),
+    step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
 agent_goal([], [T|In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     then_read(U?, Th),
-    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+    dated(St?, St1),
+    step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
 agent_goal([], [], _, [], [], [], [], _, _, _).
+%% The state with the date of the phone: today(d), d the date in UTC, the time now/1 gives, in milliseconds, in whole days, replaced in the state beside the app state, which the conditions read and the view does not show.  The agent holds today(d) as an atom of the machine state of its app state, which no schema adds or deletes, which atom_of does not show and show_state does not compare.
+procedure dated(St?, St).
+dated(St, St1?) :- ground(St?) |
+    now(T),
+    D := floor(T? / 86400000),
+    st_app(St?, Ap),
+    set_today(D?, Ap?, Ap1),
+    set_app(St?, Ap1?, St1).
 
 %% After a recheck, read from the agent goal's own list, an own trigger is unread exactly when one was before it (own_unread, no_own); after another trigger, read from the input stream, an own trigger is written unless one is unread (write_own, own_unread).  An own trigger is read from the input stream, and its clause, step(own, ...), takes no Then: dispatch_own writes the next own trigger after an own transaction taken, and none where none holds.
 procedure then_local(YesNo?, Then).
@@ -1830,14 +1949,6 @@ step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?
     st_trie(St?, Tr),
     recheck_find(Pd?, V?, Tr?, St?, F),
     recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
-%% A date of the calendar: today(d) replaced in the state beside the app state, which the conditions read and the view does not show; the app state changing, the starts and the requests the agent holds are put up again (vGLP, Section 5.4, "The compilation": "on each date of which it replaces today(d) and puts up again the starts and requests it holds").  The agent holds today(d) as an atom of the machine state of its app state, which no schema adds or deletes, which atom_of does not show and show_state does not compare.
-step(day(D), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
-    integer(D?), ground(St?) |
-    st_app(St?, Ap0),
-    st_app(St?, Ap),
-    set_today(D?, Ap?, Ap1),
-    set_app(St?, Ap1?, St1),
-    next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
@@ -6021,12 +6132,18 @@ mates_of([lschema(Nm, _, Rs, Lsts)|Ss], Ps, M?) :- ground(Nm?), ground(Rs?), gro
     on_base(As0?, Lsts?, As),
     deltas_peers(Ps?, Q1),
     sort_peers(Q1?, Q2),
-    subsets(Q2?, Ls),
-    list_choices(Lsts?, Ls?, Ps?, Cs),
-    tuples_of(Cs?, Ts),
-    listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M1),
+    listed_choices(As?, Q2?, Nm?, Rs?, Lsts?, Ps?, M1),
     mates_of(Ss?, Ps?, M2),
     app(M1?, M2?, M).
+%% The schema-bindings of a schema with listed roles at the assignments As of its roles: at each choice of a list for each listed role (list_choices), the copies of the listed roles the roles after the schema's own.
+procedure listed_choices(Bindings?, Peers?, Constant?, RoleSpecs?, Listings?, Deltas?, Mates).
+listed_choices(As, Q, Nm, Rs, Lsts, Ps, M?) :- ground(As?), ground(Rs?), ground(Lsts?), ground(Ps?) |
+    rs_len(Rs?, K),
+    K1 := K? + 1,
+    list_choices(Lsts?, Lsts?, Q?, As?, Rs?, K1?, Ps?, Cs),
+    tuples_of(Cs?, Ts0),
+    same_lists(Ts0?, Lsts?, Ts),
+    listed_mates(Ts?, As?, Nm?, Rs?, Lsts?, Ps?, M).
 procedure on_base(Bindings?, Listings?, Bindings).
 on_base([], _, []).
 on_base([B|Bs], Lsts, R?) :- ground(B?), ground(Lsts?) |
@@ -6056,19 +6173,103 @@ subsets([P|Ps], R?) :- ground(P?), ground(Ps?) |
 procedure with_first(PeerLists?, Peer?, PeerLists).
 with_first([], _, []).
 with_first([L|Ls], P, [[P?|L?]|R?]) :- ground(P?) | with_first(Ls?, P?, R).
-%% For each listing of Lsts, in their order, the lists it may take: a listed role any set of the participants, Ls; the instances of a conjunct any set of the assignments its conditional literals, matched together, give among the atoms the class's changes Ps add, or delete, the instances of a schema-binding of the class being among them (inst_cands).  A variable the quantifier binds that no conditional literal names is given no value by the changes, and an assignment that leaves it free is none of them: such a list is found only as the attempt's own schema-binding carries it (class_mates).
-procedure list_choices(Listings?, PeerLists?, Deltas?, ListTuples).
-list_choices([], _, _, []).
-list_choices([listing(_, _, _, _, _, _, _)|Lsts], Ls, Ps, [Ws?|Cs?]) :- ground(Ls?) |
+%% For each listing of Lsts, in their order, the lists it may take: a listed role any set of the participants at whom it fits (fit_people); the instances of a conjunct any set of the assignments its conditional literals, matched together, give among the atoms the class's changes Ps add, or delete, the instances of a schema-binding of the class being among them (inst_cands).  A variable the quantifier binds that no conditional literal names is given no value by the changes, and an assignment that leaves it free is none of them: such a list is found only as the attempt's own schema-binding carries it (class_mates).
+%% The people a listed role may take are those of the participants Q at whom its deleted and added atoms, as its copy for that person has them (spec_copies), match into the atoms the class's changes Ps delete and add there under one of the assignments As of the schema's roles (fit_people): a list with another person determines no schema-binding of the class, its match_deltas finding none, and is not tried, as an assignment of the roles is not (fit_assigns), so the schema-bindings found, and their order, are those of every list; a listed role that deletes and adds nothing takes any set of the participants.  Two listed roles of one base whose quantifiers have the same anchor and no condition have the same instances in every state, "the instances of a conjunct with a listed role give the people of the role, one for each instance" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), so a schema-binding that gives them different lists determines no transaction and is of no class: the people such a role may take are those that fit at each of them (twins_fit), and of the choices only those that give them one list are kept (same_lists).  All is the schema's listings.
+procedure list_choices(Listings?, Listings?, Peers?, Bindings?, RoleSpecs?, Integer?, Deltas?, ListTuples).
+list_choices([], _, _, _, _, _, _, []).
+list_choices([listing(I, Bi, Rho, Vs, Phi, _, _)|Lsts], All, Q, As, Rs, J, Ps, [Ws?|Cs?]) :-
+    ground(All?), ground(Q?), ground(As?), ground(Rs?), integer(J?), ground(Ps?) |
+    twins_fit(All?, I?, Bi?, Rho?, Vs?, Phi?, Q?, As?, Rs?, J?, Ps?, Qi),
+    subsets(Qi?, Ls),
     wrap_ppl(Ls?, Ws),
-    list_choices(Lsts?, Ls?, Ps?, Cs).
-list_choices([instances(_, _, Xs, _, _, CA, CD)|Lsts], Ls, Ps, [Ws?|Cs?]) :- ground(Ps?), ground(Xs?), ground(CA?), ground(CD?) |
+    list_choices(Lsts?, All?, Q?, As?, Rs?, J?, Ps?, Cs).
+list_choices([instances(_, _, Xs, _, _, CA, CD)|Lsts], All, Q, As, Rs, J, Ps, [Ws?|Cs?]) :- ground(Ps?), ground(Xs?), ground(CA?), ground(CD?) |
     inst_cands(CA?, CD?, Xs?, Ps?, Q0),
     sort_insts(Q0?, Q1),
     dedup(Q1?, Q2),
     isubsets(Q2?, Is),
     wrap_ins(Is?, Ws),
-    list_choices(Lsts?, Ls?, Ps?, Cs).
+    list_choices(Lsts?, All?, Q?, As?, Rs?, J?, Ps?, Cs).
+%% twins_fit(All, I, Bi, Rho, Vs, Phi, Q, As, Rs, J, Ps, Qi): the people of Q that fit at every listed role of All of the anchor of the listed role I, itself among them.
+procedure twins_fit(Listings?, Integer?, Integer?, Constant?, Vars?, Form?, Peers?, Bindings?, RoleSpecs?, Integer?, Deltas?, Peers).
+twins_fit([], _, _, _, _, _, Q, _, _, _, _, Q?).
+twins_fit([listing(I2, Bi2, Rho2, Vs2, Phi2, _, _)|Ls], I, Bi, Rho, Vs, Phi, Q, As, Rs, J, Ps, Qi?) :-
+    integer(I2?), integer(I?), integer(Bi?), ground(Rho?), ground(Vs?), ground(Phi?), ground(As?), ground(Rs?), integer(J?), ground(Ps?) |
+    same_anchor(I2?, Bi2?, Rho2?, Vs2?, Phi2?, I?, Bi?, Rho?, Vs?, Phi?, S),
+    twin_fit(S?, I2?, Q?, As?, Rs?, J?, Ps?, Q1),
+    twins_fit(Ls?, I?, Bi?, Rho?, Vs?, Phi?, Q1?, As?, Rs?, J?, Ps?, Qi).
+twins_fit([instances(_, _, _, _, _, _, _)|Ls], I, Bi, Rho, Vs, Phi, Q, As, Rs, J, Ps, Qi?) :-
+    twins_fit(Ls?, I?, Bi?, Rho?, Vs?, Phi?, Q?, As?, Rs?, J?, Ps?, Qi).
+procedure twin_fit(YesNo?, Integer?, Peers?, Bindings?, RoleSpecs?, Integer?, Deltas?, Peers).
+twin_fit(no, _, Q, _, _, _, _, Q?).
+twin_fit(yes, I, Q, As, Rs, J, Ps, Qi?) :- integer(I?), integer(J?) |
+    nth_spec(Rs?, I?, R),
+    renum_spec(R?, I?, J?, R1),
+    fit_people(Q?, R1?, J?, As?, Ps?, Qi).
+%% Whether the listed roles I2 and I have one base, the same anchor, each at its own place in it, and no condition.
+procedure same_anchor(Integer?, Integer?, Constant?, Vars?, Form?, Integer?, Integer?, Constant?, Vars?, Form?, YesNo).
+same_anchor(I2, Bi2, Rho2, Vs2, Phi2, I, Bi, Rho, Vs, Phi, S?) :- integer(I2?), integer(I?) |
+    same_int(Bi2?, Bi?, E1),
+    same(Rho2?, Rho?, E2),
+    renum_vars(Vs2?, I2?, 0, Ws2),
+    renum_vars(Vs?, I?, 0, Ws),
+    same(Ws2?, Ws?, E3),
+    same(Phi2?, fcons(true), E4),
+    same(Phi?, fcons(true), E5),
+    and(E1?, E2?, E12),
+    and(E12?, E3?, E123),
+    and(E4?, E5?, E45),
+    and(E123?, E45?, S).
+%% Of the choices Ts, each a list for each listing of Lsts, those that give the listed roles of one anchor one list.
+procedure same_lists(ListTuples?, Listings?, ListTuples).
+same_lists([], _, []).
+same_lists([T|Ts], Lsts, R?) :- ground(T?), ground(Lsts?) |
+    tuple_same(Lsts?, T?, Lsts?, T?, Ok),
+    same_lists(Ts?, Lsts?, R1),
+    keep_tuple(Ok?, T?, R1?, R).
+procedure keep_tuple(YesNo?, LLists?, ListTuples?, ListTuples).
+keep_tuple(yes, T, R, [T?|R?]).
+keep_tuple(no, _, R, R?).
+procedure tuple_same(Listings?, LLists?, Listings?, LLists?, YesNo).
+tuple_same([], _, _, _, yes).
+tuple_same([_|_], [], _, _, yes).
+tuple_same([listing(I, Bi, Rho, Vs, Phi, _, _)|Ls], [L|T], All, AT, Ok?) :- ground(All?), ground(AT?) |
+    twins_same(All?, AT?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok1),
+    tuple_same1(Ok1?, Ls?, T?, All?, AT?, Ok).
+tuple_same([instances(_, _, _, _, _, _, _)|Ls], [_|T], All, AT, Ok?) :- tuple_same(Ls?, T?, All?, AT?, Ok).
+procedure tuple_same1(YesNo?, Listings?, LLists?, Listings?, LLists?, YesNo).
+tuple_same1(no, _, _, _, _, no).
+tuple_same1(yes, Ls, T, All, AT, Ok?) :- tuple_same(Ls?, T?, All?, AT?, Ok).
+procedure twins_same(Listings?, LLists?, Integer?, Integer?, Constant?, Vars?, Form?, LList?, YesNo).
+twins_same([], _, _, _, _, _, _, _, yes).
+twins_same([_|_], [], _, _, _, _, _, _, yes).
+twins_same([listing(I2, Bi2, Rho2, Vs2, Phi2, _, _)|Ls], [L2|T], I, Bi, Rho, Vs, Phi, L, Ok?) :-
+    integer(I?), integer(Bi?), ground(Rho?), ground(Vs?), ground(Phi?), ground(L?) |
+    same_anchor(I2?, Bi2?, Rho2?, Vs2?, Phi2?, I?, Bi?, Rho?, Vs?, Phi?, S),
+    same(L2?, L?, E),
+    neg(S?, NS),
+    or(NS?, E?, Ok1),
+    twins_same1(Ok1?, Ls?, T?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok).
+twins_same([instances(_, _, _, _, _, _, _)|Ls], [_|T], I, Bi, Rho, Vs, Phi, L, Ok?) :-
+    twins_same(Ls?, T?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok).
+procedure twins_same1(YesNo?, Listings?, LLists?, Integer?, Integer?, Constant?, Vars?, Form?, LList?, YesNo).
+twins_same1(no, _, _, _, _, _, _, _, _, no).
+twins_same1(yes, Ls, T, I, Bi, Rho, Vs, Phi, L, Ok?) :- twins_same(Ls?, T?, I?, Bi?, Rho?, Vs?, Phi?, L?, Ok).
+%% fit_people(Q, R, J, As, Ps, Qi): the people of Q, in their order, at whom the role R, the copy of index J of a listed role, fits (fits) under one of the assignments As.
+procedure fit_people(Peers?, RoleSpec?, Integer?, Bindings?, Deltas?, Peers).
+fit_people([], _, _, _, _, []).
+fit_people([P|Qs], R, J, As, Ps, Qi?) :- ground(P?), ground(R?), integer(J?), ground(As?), ground(Ps?) |
+    fits_any(As?, R?, J?, P?, Ps?, Ok),
+    fit_people(Qs?, R?, J?, As?, Ps?, Q1),
+    keep_peer(Ok?, P?, Q1?, Qi).
+procedure fits_any(Bindings?, RoleSpec?, Integer?, Peer?, Deltas?, YesNo).
+fits_any([], _, _, _, _, no).
+fits_any([B|Bs], R, J, P, Ps, Ok?) :- ground(B?), ground(R?), integer(J?), ground(P?), ground(Ps?) |
+    fits(R?, [b(role(J?), p(P?))|B?], P?, Ps?, Ok1),
+    fits_any1(Ok1?, Bs?, R?, J?, P?, Ps?, Ok).
+procedure fits_any1(YesNo?, Bindings?, RoleSpec?, Integer?, Peer?, Deltas?, YesNo).
+fits_any1(yes, _, _, _, _, _, yes).
+fits_any1(no, Bs, R, J, P, Ps, Ok?) :- fits_any(Bs?, R?, J?, P?, Ps?, Ok).
 procedure wrap_ppl(PeerLists?, LLists).
 wrap_ppl([], []).
 wrap_ppl([L|Ls], [ppl(L?)|Ws?]) :- wrap_ppl(Ls?, Ws).
@@ -6315,7 +6516,7 @@ drop_mate(mate(N, B, G, F), [mate(N1, B1, G1, F1)|Ms], R?) :-
 procedure drop_mate1(YesNo?, Mate?, Mate?, Mates?, Mates).
 drop_mate1(yes, M, _, Ms, R?) :- drop_mate(M?, Ms?, R).
 drop_mate1(no, M, M1, Ms, [M1?|R?]) :- drop_mate(M?, Ms?, R).
-%% The parts the schema-bindings Ms of a class determine, each pt(T, G, Op), in the order of Ms: named by the term T of the first of its schema-bindings, a schema-binding of the part of one before it naming no other part; its guard set G, the people in the marked roles of its schema-bindings; and, for an unguarded part, its opener, opener(P), P "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it"; for a guarded part determined by a schema with a listed role whose base is not a guarding role, opener(P), P the least of the people in the first role of those schema-bindings that is not a guard of the part, "and so is the opener of a guarded part determined by a schema with a listed role whose base is not a guarding role, where that person is not a guard of the part" (vGLP a890465, Section 5.4, "Act schemas as local specifications"); and for every other guarded part guarded_part.  An opener per part is one the agent finds: an unguarded part has its opener in the first role of one of its schema-bindings, so the agent, which finds among its own transactions the classes of the unguarded schemas with it in their first role, finds every part it opens (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3).
+%% The parts the schema-bindings Ms of a class determine, each pt(T, G, Op), in the order of Ms: named by the term T of the first of its schema-bindings, a schema-binding of the part of one before it naming no other part; its guard set G, the people in the marked roles of its schema-bindings; and, for an unguarded part, its opener, opener(P), P "the least, in the order of identifiers, of the people in the first role of the schema-bindings that determine it"; for a guarded part determined by a schema whose base is not a guarding role, opener(P), P the person in the base of those schema-bindings, the least of them, who is not a guard of the part, "the opener of a guarded part determined by a schema whose base is not a guarding role is the person in the base, who is not a guard of the part, as the ward whose state lists her guardians opens the acts they take jointly" (vGLP, Section 5.4, "Speech-act schemas as local specifications"; until this text the person in the first role, which is the base of child_close and is not of make_guardian: CSSN #16, Code_inbox.md, 2026-11-15 17:05 UTC); and for every other guarded part its proposers, proposed(Ob).  An opener per part is one the agent finds: an unguarded part has its opener in the first role of one of its schema-bindings, so the agent, which finds among its own transactions the classes of the unguarded schemas with it in their first role, finds every part it opens (vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 3).
 procedure info_parts_of(Mates?, Peers?, Peer?, Parts).
 info_parts_of(Ms, Q, Id, Pts?) :- ground(Ms?) | parts_of(Ms?, Ms?, Q?, Id?, [], Pts).
 %% parts_of(Ms, All, Q, Id, Seen, Pts): the parts of the schema-bindings Ms that are not the part of one of Seen, the openers taken over All.
@@ -6349,19 +6550,21 @@ part_firsts([mate(N, B, G, F)|Ms], M, Q, Fs?) :- ground(F?), ground(M?), ground(
     same_mpart(Q?, mate(N?, B?, G?, F?), M?, S),
     part_firsts(Ms?, M?, Q?, Fs1),
     keep_peer(S?, F?, Fs1?, Fs).
-%% The people in the first role of the schema-bindings of All that determine the part of M, of a schema with a listed role whose base is not a guarding role, and that are not guards of the part, G (vGLP a890465, Section 5.4, "Act schemas as local specifications").
+%% The people in the base (schema_base) of the schema-bindings of All that determine the part of M, of a schema whose base is not a guarding role, and that are not guards of the part, G (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the opener of a guarded part determined by a schema whose base is not a guarding role is the person in the base, who is not a guard of the part").
 procedure part_gfirsts(Mates?, Mate?, Peers?, Peers?, Peers).
 part_gfirsts([], _, _, _, []).
-part_gfirsts([mate(N, B, G1, F)|Ms], M, Q, G, Fs?) :- ground(N?), ground(F?), ground(M?), ground(Q?), ground(G?) |
+part_gfirsts([mate(N, B, G1, F)|Ms], M, Q, G, Fs?) :- ground(N?), ground(B?), ground(F?), ground(M?), ground(Q?), ground(G?) |
     same_mpart(Q?, mate(N?, B?, G1?, F?), M?, S),
     opens_guarded(N?, O),
-    mem(F?, G?, InG),
+    schema_base(N?, Bi),
+    role_person(Bi?, B?, P),
+    mem(P?, G?, InG),
     neg(InG?, NotG),
     and(S?, O?, S1),
     and(S1?, NotG?, K),
     part_gfirsts(Ms?, M?, Q?, G?, Fs1),
-    keep_peer(K?, F?, Fs1?, Fs).
-%% Whether a schema is one with a listed role whose base is not a guarding role: its listed roles have one base (local.glp), its first role.
+    keep_peer(K?, P?, Fs1?, Fs).
+%% Whether a schema is one with a listed role whose base is not a guarding role: its listed roles have one base (local.glp), the base of the schema.
 procedure opens_guarded(Constant?, YesNo).
 opens_guarded(Nm, B?) :- schema_entry(Nm?, E), opens_guarded1(E?, B).
 procedure opens_guarded1(Schema?, YesNo).
@@ -6376,7 +6579,7 @@ opens_guarded1(lschema(_, _, Rs, [instances(_, Bi, _, _, _, _, _)|_]), B?) :- gr
 procedure spec_unguarded(RoleSpec?, YesNo).
 spec_unguarded(rs(unguarded, _, _, _, _), yes).
 spec_unguarded(rs(guarded, _, _, _, _), no).
-%% The opener of an unguarded part, from the people Fs in the first role of its schema-bindings, and of a guarded part, from those of Fo.
+%% The opener of an unguarded part, from the people Fs in the first role of its schema-bindings, and of a guarded part, from those of Fo, in the base of its schema-bindings.
 procedure part_opener(Peers?, Peers?, Peers?, Peers?, Opener).
 part_opener([], Fs, _, Ob, Op?) :- sort_peers(Fs?, Ss), least_opener(Ss?, Ob?, Op).
 part_opener([_|_], _, Fo, Ob, Op?) :- sort_peers(Fo?, Ss), least_opener(Ss?, Ob?, Op).

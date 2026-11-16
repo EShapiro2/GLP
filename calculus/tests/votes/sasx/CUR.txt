@@ -1,0 +1,4 @@
+CUR: A Currency (expanded schemas)
+CUR:0 - | Alice and Bob are persons, Sum and Total numbers.
+CUR:1 ■ Pay: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum) guarded by Alice.
+CUR:2 ■ Swap: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total) guarded by Alice, Bob.

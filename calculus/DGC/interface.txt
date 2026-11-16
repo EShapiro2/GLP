@@ -20,11 +20,17 @@ DGC: Denominated Grassroots Currencies
 19. ■ Return bond.  Carol and Alice may jointly return Sum Dave-bonds due Day deposited for Bob on Cond, provided Carol and Alice know each other.
 20. ■ First issue.  Alice may issue Sum Dollar-denominated Alice-coins, provided Alice has issued coins of no denomination.
 21. ■ Issue denominated bond.  Alice may issue Sum Dollar-denominated Alice-bonds due Day, provided the current date is Today and Day is more than Today.
-22. ■ Deposit more.  Alice may deposit Sum more Dollar-denominated Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob, Dave has issued coins of the denomination Dollar and Carol holds the escrow from Alice for Bob on Cond in the denomination Dollar.
-23. ■ Deposit bond more.  Alice may deposit Sum more Dollar-denominated Dave-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob, Dave has issued a Dollar-denominated bond due Day and Carol holds the escrow from Alice for Bob on Cond in the denomination Dollar.
-24. ■ Accept.  Alice may accept Limit more Dollar-denominated Carol-coins in payment, provided Alice holds a Dollar-denominated Carol-coin.
-25. ■ Accept by bond.  Alice may accept Limit more Dollar-denominated Carol-coins in payment, provided Alice holds a Carol-bond due Day and Carol has issued a Dollar-denominated bond due Due.
-26. ■ Pay accepted coins.  Alice may pay Bob a Carol-coin that Bob accepts as denominated by Dollar, provided Alice knows Bob and Carol has issued coins of the denomination Dollar.
+22. ■ Deposit own coins.  Alice may deposit Sum more Dollar-denominated Alice-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob, Alice has issued coins of the denomination Dollar and Carol holds the escrow from Alice for Bob on Cond in no denomination.
+23. ■ Deposit with the issuer.  Alice may deposit Sum more Dollar-denominated Carol-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob, Carol has issued coins of the denomination Dollar and Carol holds the escrow from Alice for Bob on Cond in no denomination.
+24. ■ Deposit more.  Alice may deposit Sum more Dollar-denominated Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob, Dave has issued coins of the denomination Dollar and Carol holds the escrow from Alice for Bob on Cond in the denomination Dollar.
+25. ■ Deposit own bonds.  Alice may deposit Sum more Dollar-denominated Alice-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob, Alice has issued a Dollar-denominated bond due Day and Carol holds the escrow from Alice for Bob on Cond in no denomination.
+26. ■ Deposit bond with the issuer.  Alice may deposit Sum more Dollar-denominated Carol-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob, Carol has issued a Dollar-denominated bond due Day and Carol holds the escrow from Alice for Bob on Cond in no denomination.
+27. ■ Deposit bond more.  Alice may deposit Sum more Dollar-denominated Dave-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other, Alice knows Bob, Dave has issued a Dollar-denominated bond due Day and Carol holds the escrow from Alice for Bob on Cond in the denomination Dollar.
+28. ■ Accept.  Alice may accept Limit more Dollar-denominated Carol-coins in payment, provided Alice holds a Dollar-denominated Carol-coin.
+29. ■ Accept by bond.  Alice may accept Limit more Dollar-denominated Carol-coins in payment, provided Alice holds a Carol-bond due Day, Carol has issued a Dollar-denominated bond due Due, Day is at most Due and Due is at most Day.
+30. ■ Pay accepted coins.  Alice may pay Bob a Carol-coin that Bob accepts as denominated by Dollar, provided Alice knows Bob and Carol has issued coins of the denomination Dollar.
+31. ■ Pay own accepted coins.  Alice may pay Bob an Alice-coin that Bob accepts as denominated by Dollar, provided Alice knows Bob and Alice has issued coins of the denomination Dollar.
+32. ■ Pay accepted coins to the issuer.  Alice may pay Bob a Bob-coin that Bob accepts as denominated by Dollar, provided Alice knows Bob and Bob has issued coins of the denomination Dollar.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -58,10 +64,20 @@ Return bond: Carol [Return bond] <sum>
   Alice: Carol asks for your consent to return bond.
 First issue: Alice [First issue] <sum> <dollar>
 Issue denominated bond: Alice [Issue denominated bond] <day> <sum> <dollar>
+Deposit own coins: Alice [Deposit own coins] <sum> <cond>
+  Carol: Alice asks for your consent to deposit own coins.
+Deposit with the issuer: Alice [Deposit with the issuer] <sum> <cond> <dollar>
+  Carol: Alice asks for your consent to deposit with the issuer.
 Deposit more: Alice [Deposit more] <sum> <cond> <dollar>
   Carol: Alice asks for your consent to deposit more.
+Deposit own bonds: Alice [Deposit own bonds] <sum> <cond>
+  Carol: Alice asks for your consent to deposit own bonds.
+Deposit bond with the issuer: Alice [Deposit bond with the issuer] <sum> <cond> <dollar>
+  Carol: Alice asks for your consent to deposit bond with the issuer.
 Deposit bond more: Alice [Deposit bond more] <sum> <cond> <dollar>
   Carol: Alice asks for your consent to deposit bond more.
 Accept: Alice [Accept] <limit>
 Accept by bond: Alice [Accept by bond] <limit>
 Pay accepted coins: Alice [Pay accepted coins] <dollar>
+Pay own accepted coins: Alice [Pay own accepted coins]
+Pay accepted coins to the issuer: Alice [Pay accepted coins to the issuer]

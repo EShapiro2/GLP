@@ -12,9 +12,17 @@ Swap, Redeem, Escrow: Alice [Swap] <sum> <total>
   Carol: Alice asks for your consent to deposit.
   Alice [Deposit bond] <sum> <cond>
   Carol: Alice asks for your consent to deposit bond.
+  Alice [Deposit own coins] <sum> <cond>
+  Carol: Alice asks for your consent to deposit own coins.
+  Alice [Deposit with the issuer] <sum> <cond> <dollar>
+  Carol: Alice asks for your consent to deposit with the issuer.
   Alice [Deposit more] <sum> <cond> <dollar>
   Carol: Alice asks for your consent to deposit more.
+  Alice [Deposit own bonds] <sum> <cond>
+  Carol: Alice asks for your consent to deposit own bonds.
+  Alice [Deposit bond with the issuer] <sum> <cond> <dollar>
+  Carol: Alice asks for your consent to deposit bond with the issuer.
   Alice [Deposit bond more] <sum> <cond> <dollar>
   Carol: Alice asks for your consent to deposit bond more.
 Accept: Alice [Accept] <limit> [Accept by bond] <limit>
-Pay accepted coins: Alice [Pay accepted coins] <dollar>
+Pay accepted coins: Alice [Pay accepted coins] <dollar> [Pay own accepted coins] [Pay accepted coins to the issuer]

@@ -1,6 +1,5 @@
 Interface pragmas
 AI acts: Alice [Enter] <carol>
-  Carol: Alice asks for your consent to enter.
   Bob [Make guardian] <carol> <proof>
   Decider: Bob asks for your consent to make guardian.
   Codecider: Bob asks for your consent to make guardian.

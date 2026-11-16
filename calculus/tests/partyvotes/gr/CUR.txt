@@ -1,0 +1,9 @@
+CUR: A Currency
+A *party* to a contract is whoever has an identity.
+Alice and Bob are parties, Sum and Total numbers.
+1. ■ Pay: Alice may pay Bob Sum Alice-coins, provided Alice knows Bob.
+2. ■ Swap: Alice and Bob may jointly swap Sum Alice-coins for Total Bob-coins.
+Logic pragmas.
+Vocabulary: x knows y = knows(x,y); x holds n y-coins = coin(x,y,*n).
+After x pays y n x-coins: no longer x holds n x-coins and y holds n x-coins.
+After x and y swap n x-coins for m y-coins: no longer x holds n x-coins, y holds n x-coins, no longer y holds m y-coins and x holds m y-coins.

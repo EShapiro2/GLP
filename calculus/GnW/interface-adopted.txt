@@ -1,6 +1,5 @@
 Interface pragmas
 Enter: Alice [Enter] <carol>
-  Carol: Alice asks for your consent to enter.
 Guardian decisions: Bob [Make guardian] <carol>
   Decider: Bob asks for your consent to make guardian.
   Codecider: Bob asks for your consent to make guardian.

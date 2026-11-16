@@ -1,0 +1,8 @@
+T          commute yes; return yes; recover same
+1 contracts, 0 with a fault
+--- sasx/T.txt
+T: Three possibly one (expanded schemas)
+T:0 - | Alice, Bob and Carol are persons, Club a club, Bob and Carol possibly Alice or one person.
+T:1 ■ Found: founder(Alice,Club), founder(Bob,Club), founder(Carol,Club) <- guarded by Alice, Bob, Carol possibly Alice=Bob, Alice=Carol, Bob=Carol.
+--- term T
+EXCEPTION ValueError: Found: Carol is possibly one agent with Alice and Bob, and the term writes one Other for a name, one(Carol, Other)

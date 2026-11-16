@@ -1,0 +1,6 @@
+C: Required role consent
+Vocabulary: x is ready = ready(x).
+Roles: those who decide for x = deciders(x).
+After x acts: x is ready.
+C:0 - | Alice is a person.
+C:1 ■ Act: ready(Alice) <- guarded by Alice, deciders(Alice) must deciders(Alice).

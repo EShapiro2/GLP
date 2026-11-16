@@ -1,6 +1,7 @@
 GSNW: Grassroots Social Network with Wards (expanded schemas)
 GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | Alice, Bob and Carol are persons. A party to a contract must have an identity.
+GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | Alice, Bob and Carol are persons.
 GKK:0 - | Reflexive: x knows y.
 GKK:1+GnW:3 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
@@ -29,7 +30,7 @@ GSN:4+GSNW:1 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), 
 GSN:4+GSNW:1 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo), person(Alice) guarded by Alice.
 GSN:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
 GSN:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.
-GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how.
+GnW:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
 GnW:0 - | Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
 GnW:1 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
 GnW:1 ■ | Alice chooses Carol's key pair.
@@ -64,3 +65,6 @@ GSNW:3 ■ Ward join: member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) <- leader
 GSNW:3 ■ Wards join: member(Dave,Grupo,Carol), listed(Carol,Dave,Grupo) <- leader(Carol,Grupo), ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol), friend(Carol,Dave), friend(Dave,Carol), ward(Dave), has_guardian(Dave,Bob), guardian(Bob,Dave), knows(Alice,Dave), friend(Alice,Bob), friend(Bob,Alice), ~member(Dave,Grupo,_) guarded by Carol, Dave, Alice, Bob.
 GSNW:3 ■ Wards of one guardian join: member(Dave,Grupo,Carol), listed(Carol,Dave,Grupo) <- leader(Carol,Grupo), ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol), friend(Carol,Dave), friend(Dave,Carol), ward(Dave), has_guardian(Dave,Alice), guardian(Alice,Dave), ~member(Dave,Grupo,_) guarded by Carol, Dave, Alice.
 GSNW:3 ■ Ward withdraw: ~member(Carol,Grupo,Bob), ~listed(Bob,Carol,Grupo) <- has_guardian(Carol,Alice), guardian(Alice,Carol), member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) guarded by Alice.
+GSNW:3 ■ Ward add: member(Bob,Grupo,Carol), listed(Carol,Bob,Grupo) <- leader(Carol,Grupo), ward(Carol), ~retired(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol), friend(Carol,Bob), friend(Bob,Carol), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_) guarded by Carol, Bob, Alice.
+GSNW:3 ■ Ward leave: ~member(Carol,Grupo,Alice), ~listed(Alice,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Alice), listed(Alice,Carol,Grupo) guarded by Carol.
+GSNW:3 ■ Ward remove: ~member(Bob,Grupo,Carol), ~listed(Carol,Bob,Grupo) <- leader(Carol,Grupo), ward(Carol), ~retired(Carol), member(Bob,Grupo,Carol), listed(Carol,Bob,Grupo) guarded by Carol.
