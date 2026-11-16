@@ -4480,15 +4480,70 @@ as_read(parametric(Ps, D), parametric(Ps?, R?)) :- ground(Ps?), ground(D?) | as_
 % name for it, in that schema's place, and the others after B's, in their
 % order, the reflexive and environment predicates of the two together.  Base not
 % parametric is taken as B.  The faults of the bindings are
-% instance_faults/3's.
+% instance_faults/3's.  "An instantiation of some of the parameters of a
+% parametric contract is a parametric contract in the others ... and a
+% contract that amends another may declare further parameters, among the
+% predicates and constants of the schemas it adds" (GSC, Definition
+% Parametric contract): the parameters of Base no binding writes, then those
+% Additions declares, parametric(Ps, A), are the parameters of D, which is
+% parametric(Params, D0) where there are any.
 exported procedure instantiate(SDeclared?, SBindings?, SDeclared?, WDeclared).
-instantiate(parametric(_, B), Bs, A, D?) :- ground(B?), ground(Bs?), ground(A?) |
+instantiate(parametric(Ps, B), Bs, A, D?) :- ground(Ps?), ground(B?), ground(Bs?), ground(A?) |
     rn_sdecl(B?, Bs?, B1),
     xpreds(Bs?, Xs),
     xa_sdecl(B1?, Xs?, B2),
-    add_sdecl(B2?, A?, D).
+    sdecl_unparam(A?, A0),
+    add_sdecl(B2?, A0?, D0),
+    params_unbound(Ps?, Bs?, L0),
+    sdecl_params(A?, LA),
+    sparams_app(L0?, LA?, L),
+    wrap_params(L?, D0?, D).
 instantiate(B, Bs, A, D?) :- otherwise, ground(B?), ground(Bs?), ground(A?) |
-    add_sdecl(B?, A?, D).
+    sdecl_unparam(A?, A0),
+    add_sdecl(B?, A0?, D0),
+    sdecl_params(A?, LA),
+    wrap_params(LA?, D0?, D).
+
+% The parameters no binding writes, in their order, a constant val(C) by its
+% name C as a binding writes it.
+procedure params_unbound(SParams?, SBindings?, SParams).
+params_unbound([], _, []).
+params_unbound([P|Ps], Bs, R?) :- ground(P?), ground(Ps?), ground(Bs?) |
+    binding_names(Bs?, Ns),
+    param_written(Ns?, P?, A),
+    params_unbound(Ps?, Bs?, R1),
+    keep_param(A?, P?, R1?, R).
+
+% Whether a binding names the parameter P, as param_member/3 reads a name.
+procedure param_written(Preds?, SParam?, Ans).
+param_written([], _, no).
+param_written([N|Ns], P, R?) :- ground(N?), ground(Ns?), ground(P?) |
+    param_member([P?], N?, A1),
+    param_written(Ns?, P?, A2),
+    or_yes(A1?, A2?, R).
+
+procedure binding_names(SBindings?, Preds).
+binding_names([], []).
+binding_names([(P = _)|Bs], [P?|R?]) :- binding_names(Bs?, R).
+binding_names([extended(P, _, _)|Bs], [P?|R?]) :- binding_names(Bs?, R).
+
+procedure keep_param(Ans?, SParam?, SParams?, SParams).
+keep_param(yes, _, R, R?).
+keep_param(no, P, R, [P?|R?]).
+
+% A contract term without its declaration of parameters.
+procedure sdecl_unparam(SDeclared?, SDeclared).
+sdecl_unparam(parametric(_, D), R?) :- ground(D?) | sdecl_unparam(D?, R).
+sdecl_unparam(D, D?) :- otherwise, ground(D?) | true.
+
+% The parameters a contract term declares, parametric(Ps, D), or none.
+procedure sdecl_params(SDeclared?, SParams).
+sdecl_params(parametric(Ps, _), Ps?).
+sdecl_params(D, []) :- otherwise, ground(D?) | true.
+
+procedure wrap_params(SParams?, WDeclared?, WDeclared).
+wrap_params([], D, D?).
+wrap_params([P|Ps], D, parametric([P?|Ps?], D?)).
 
 % The faults of an instance's bindings: not_parametric, the base names no
 % parameters; not_a_parameter(P), P no parameter of the base and no name of
