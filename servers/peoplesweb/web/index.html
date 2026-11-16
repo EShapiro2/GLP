@@ -132,6 +132,8 @@ ol.cl{padding:0;margin:0;list-style:none}
 ol.cl li{display:grid;grid-template-columns:24px 22px 1fr;gap:2px;padding:10px 0;border-bottom:1px solid var(--line)}
 ol.cl li:last-child{border-bottom:none}
 ol.cl .n{color:var(--faint);font-weight:600}
+ol.cl.full li{grid-template-columns:minmax(64px,max-content) 22px 1fr;gap:2px 8px}ol.cl.full .n{font-size:12.5px;white-space:nowrap;padding-top:2px}
+.seg{display:inline-flex;background:rgba(118,118,128,.12);border-radius:999px;padding:2px}.seg button{border:none;background:none;border-radius:999px;padding:5px 14px;font-weight:600;font-size:13px;color:var(--mute);cursor:pointer}.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 ol.cl b{font-weight:600}
 .note{color:var(--mute);font-size:14px;margin:0 0 8px}
 .small{font-size:13px;color:var(--faint)}
@@ -957,12 +959,8 @@ function page(c, hood){
       <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(c.id)}</div></div>
     </div>
     ${stripHtml(c)}
-    <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2></div>
-      ${c.clauses.length || c.preamble ? `<div class="card rules">
-      ${c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
-      <div class="pre">${esc(c.preamble)}</div>
-      <ol class="cl">${c.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}${cl.sep || '.'}</b> ${esc(cl.text)}</span></li>`).join('')}</ol>
-      </div>` : `<p class="small">No text in force.</p>`}
+    <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2>${c.calculus && c.calculus.fullc ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
+      ${c.clauses.length || c.preamble ? `<div class="card rules" id="cbox">${boxHtml(c, false)}</div>` : `<p class="small">No text in force.</p>`}
       ${calcHtml(c)}
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
       ${c.dir ? `<p class="small">In the repository: <a href="https://github.com/EShapiro2/GLP/tree/main/${esc(c.dir)}" target="_blank" rel="noopener"><code>${esc(c.dir)}</code></a>.</p>` : ''}
@@ -975,6 +973,10 @@ function page(c, hood){
     <div id="hood" class="sec"></div>`;
   $('#view').querySelectorAll('[data-go]').forEach(a => a.onclick = () => go(a.dataset.go || null));
   $('#hoodbtn').onclick = () => go(c.id, !hood);
+  const tf = $('#tf');
+  if (tf) tf.querySelectorAll('button').forEach(bt => bt.onclick = () => {
+    tf.querySelectorAll('button').forEach(z => z.classList.toggle('on', z === bt));
+    $('#cbox').innerHTML = boxHtml(c, !!bt.dataset.f); });
   const fd = $('#view').querySelector('details[data-full]');
   if (fd) fd.addEventListener('toggle', async () => {
     fd.querySelector('summary').textContent = fd.open ? 'Hide the full contract' : 'Full contract';
@@ -990,12 +992,22 @@ function page(c, hood){
 // of GLP, with its state; the button Full contract, the contract with every
 // clause it has from the contracts it is written from (Udi, 2026-11-15, to
 // Calculus #6).
+// The contract's box: the contract as its owner wrote it, terse, or the full
+// contract, with every clause it has from the contracts it is written from,
+// each numbered by the contract it is from; the same form and the same box,
+// the two-state button above it choosing (Udi, 2026-11-16, to Website #2).
+function boxHtml(c, full){
+  const x = full ? c.calculus.fullc : c;
+  return `${!full && c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
+      <div class="pre">${esc(x.preamble)}</div>
+      <ol class="cl${full ? ' full' : ''}">${x.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}${cl.sep || '.'}</b> ${esc(cl.text)}</span></li>`).join('')}</ol>`;
+}
 function calcHtml(c){
   const k = c.calculus; if (!k) return '';
   const yn = b => b ? 'yes' : 'no';
   const br = `https://github.com/EShapiro2/GLP/tree/Calculus/calculus/${encodeURIComponent(c.id)}`;
   const full = k.full ? `<details class="fullc" data-full="${esc(k.full)}"><summary class="btn grey">Full contract</summary><div class="card rules txt">Loading…</div></details>` : '';
-  if (k.adopted) return full;
+  if (k.adopted) return k.fullc ? '' : full;
   return `<div class="sh" style="margin-top:22px"><h2>Proposed by the Calculus</h2></div>
       <p class="small">The text of ${esc(c.id)} in the Calculus, published on the <a href="${br}" target="_blank" rel="noopener">branch Calculus</a> of GLP; ${k.owner && k.owner !== 'none' ? `its owner, ${esc(k.owner)}, has not adopted it yet` : 'it has no owner yet'} (<a href="https://github.com/EShapiro2/GLP/blob/Calculus/calculus/MIGRATION.md" target="_blank" rel="noopener">the migration plan</a>).  Certified by GLP's checker: ${yn(k.certified)}.  Compiled to GLP: ${yn(k.compiled)}.</p>
       ${k.proposed ? `<div class="card rules txt">${esc(k.proposed)}</div>` : ''}

@@ -382,6 +382,18 @@ def calculus_of(n):
         os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
         shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))
         v['full'] = f'stack/{n}/full-contract.txt'
+        # The full contract in the form of the contract itself, for the page
+        # to show the two in one box (Udi, 2026-11-16, to Website #2): its
+        # lines before the clauses, and each clause with the contract and
+        # number it is from, 'GKK:1'; a line that opens with % is the tools'.
+        pre, cls = [], []
+        for l in [l for l in read(fc).split('\n') if l.strip() and not l.startswith('%')][1:]:
+            m = re.match(r'([A-Za-z]+(?:-[A-Za-z]+)*:\d+)\. (\S) (.+?)([.:])\s+(.*)$', l)
+            if m:
+                cls.append({'n': m.group(1), 'mod': m.group(2), 'name': m.group(3), 'sep': m.group(4), 'text': m.group(5)})
+            elif not cls:
+                pre.append(l.strip())
+        v['fullc'] = {'preamble': '\n'.join(pre), 'clauses': cls}
     return v
 
 
