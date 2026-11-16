@@ -51,14 +51,18 @@
 %% b = 0, alice's tally finds no readings meeting a < b, and refuses the
 %% attempt on its condition, itself the refuser; no second attempt is made
 %% until a participant's state changes.  Alice nudges bob, a commit at both:
-%% her machine proposes trail(alice, bob) again, bob's reads b = 0 still, and
-%% it is refused again; bob, nudged, bumps to level 1, a commit since at a
-%% participant that voted yes, so his machine tells alice it is ready, hers
-%% proposes trail(alice, bob) once more, and it commits under the readings
-%% a = 0 and b = 1: alice holds trails(bob) and bob trailed(alice).  Where
-%% bob's bump comes before an attempt reaches him, that attempt commits, and
-%% the play ends the same; in every order each attempt of trail after the
-%% first follows a commit or a ready on the network.  Alice unwatches and
+%% her machine proposes trail(alice, bob) again; bob, nudged, bumps to level 1,
+%% his bump taken before his machine reads her start (vGLP, Section 5.4, "The
+%% compilation": "At every step the agent goal takes whichever has waited
+%% longest, one of its own transactions whose condition holds or the reading
+%% of its next trigger"), so his machine reads b = 1 and the attempt commits
+%% under the readings a = 0 and b = 1: alice holds trails(bob) and bob
+%% trailed(alice).  The bump is a commit since at a participant that voted yes
+%% on the first attempt, which alice refused on its condition, so his machine
+%% also tells alice it is ready for that attempt.  Where an attempt reaches bob
+%% before his bump, it is refused again at b = 0, and his ready for it brings
+%% trail(alice, bob) once more, which commits; in every order each attempt of
+%% trail after the first follows a commit or a ready on the network.  Alice unwatches and
 %% asks to outrank bob, at 0 against 1: bob's machine votes yes, reading
 %% b = 1, alice's tally refuses the attempt on its condition, and alice sees
 %% refused(outrank(alice, bob), alice, unable), her approval ended.  She
