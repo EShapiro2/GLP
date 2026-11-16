@@ -2812,7 +2812,7 @@ k_never "CSSN village act 7: ... alice's person is never asked on the close, her
 k_shows "CSSN village act 8: bob, eve's creator, declares eve of age" B "did(propose(of_age(eve, bob)))"
 k_never "CSSN village act 8: ... and nobody is asked, grace not" G "gave(of_age"
 k_lacks "CSSN village act 8: which ends bob's parenting of eve" B "parent(eve)"
-k_lacks "CSSN village act 8: ... and his creating" B "creator(eve)"
+k_holds "CSSN village act 8: ... bob remaining the creator of eve, the record of who declared her of age" B "creator(eve)"
 k_lacks "CSSN village act 8: ... and grace's parenting of eve, the parent bob made" G "parent(eve)"
 k_holds "CSSN village act 8: ... grace's parenting of dave remaining" G "parent(dave)"
 k_lacks "CSSN village act 8: eve is an adult" E "child"

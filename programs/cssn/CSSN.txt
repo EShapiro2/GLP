@@ -18,7 +18,7 @@ CSSN instantiates GSNW with the parents of z for those who decide for z, a child
 Alice and Bob are persons, Carol and Dave children; in clause 2 Alice and Bob are possibly one person.
 1. ◆ Enter: GnW:1. Alice is a legal parent of the minor who operates Carol.
 2. ■ A child's acquaintances. Child acquaint: GnW:3 Ward acquaint, only if Alice knows Bob and Alice is a parent of Carol, with the consent of Alice. Children acquaint: GnW:4 Wards acquaint, only if Alice knows Dave, Bob knows Carol, Alice and Bob know each other, Alice is a parent of Carol and Bob is a parent of Dave, with the consent of Alice and Bob.
-3. ■ Child create: GSNW:2 Ward create, only if Carol has Alice as a parent, with the consent of Alice. Join: GSN:3 Join, only if Alice is a person. Only a child, Dave, may join the group.
+3. ■ Child create: GSNW:2 Ward create, only if Carol has Alice as a parent, with the consent of Alice. Join: GSN:3 Join, only if Alice is a person. Child add: GSNW:3 Ward add, only if Bob is a child. Only a child, Dave, may join the group.
 4. ○ Of age: Alice may declare Carol of age, provided Alice is the creator of Carol, Alice is a parent of Carol and Carol has Alice as a parent. Carol is then a person. The creator will do so if the minor who operates Carol comes of age, and not before.
 5. ○ A minor who is not a ward. Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.
 Logic pragmas.
@@ -59,6 +59,7 @@ Retire: Decider [Retire]
   Codecider: Decider asks to retire your child Carol.
 A ward's messages: Carol [Child message] <text>
   Carol [Child post] <text>
+  Carol [Child post own] <text>
 Child create: Carol [Child create] <name>
   Alice: Carol asks to create a group.
 A ward's group: Carol [Child close]
@@ -74,6 +75,11 @@ Ward join: Bob [Child join]
   Dave: Carol asks you to join her group.
   Alice: Carol asks that Dave join her group.
   Alice [Child withdraw] <leader> <group>
+  Carol [Child leave]
+  Carol [Child remove]
+  Carol [Child add]
+  Bob: Carol asks you to join her group.
+  Alice: Carol asks that Bob join her group.
 Of age: Alice [Of age]
 Implementation pragmas
 Introduction: knows.
