@@ -235,11 +235,12 @@ for m in re.finditer(r'^#\s+[a-z]+\s+([A-Z][A-Za-z]*)\s+(\S+)\s+programs/', read
     owners[m.group(1)] = m.group(2)
 
 
-# The five relations of the Calculus (calculus/README.md, The relations):
-# extends, restricts, strengthens, instantiates and composes, the last read
+# The six relations of the Calculus (calculus/README.md, The relations):
+# extends, restricts, strengthens, relaxes (the sixth, Calculus #8,
+# 2026-11-16), instantiates and composes, the last read
 # apart below; implements is GSC's, and amends stands while a text in force
 # states it.
-RELATIONS = ('extends', 'restricts', 'strengthens', 'amends', 'implements', 'instantiates')
+RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implements', 'instantiates')
 
 
 def extends_of(c, lines):
@@ -247,7 +248,7 @@ def extends_of(c, lines):
     # The sentence is read to its full stop, each reference in parentheses
     # skipped, wherever it stands: 'GNL extends GNO, GDO (GRH, ...) and REC.'
     # extends REC too (style guide, 36; GO #4, 2026-11-10).
-    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS + ('composes',)) + r') ([^.]+)')
+    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS + ('composes',)) + r')\b([^.]+)')
     for l in [l for l in lines if not l.startswith('%')] + [l for l in lines if l.startswith('%')]:
         m = rel.search(re.sub(r'\([^()]*\)', '', l))
         if m:

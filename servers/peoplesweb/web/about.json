@@ -158,5 +158,30 @@
   "🖥️",
   "network",
   "Services: a ward run by a machine at an address everyone can reach, as a rendezvous server, a directory and a store are."
+ ],
+ "Agora": [
+  "🧺",
+  "money",
+  "Barter: make things, post them on a market wall, trade them."
+ ],
+ "GN": [
+  "🧾",
+  "money",
+  ""
+ ],
+ "GS": [
+  "📈",
+  "money",
+  ""
+ ],
+ "CDC": [
+  "🏛️",
+  "governance",
+  ""
+ ],
+ "GA": [
+  "📱",
+  "os",
+  ""
  ]
 }

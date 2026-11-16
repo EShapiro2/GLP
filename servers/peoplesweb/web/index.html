@@ -574,7 +574,7 @@ function drawGlobe(){
   // relation's outline and its right side the second's; a third relation is a
   // slim arrow of its own outline along the middle, drawn darker (Udi,
   // 2026-11-15, to Website #2).
-  const RELCOL = {extends: '#3b7dd8', restricts: '#d64550', strengthens: '#2a9d6f', instantiates: '#8b5fd3', composes: '#e39a2d', implements: '#6b7785', amends: '#8d6e63'};
+  const RELCOL = {extends: '#3b7dd8', restricts: '#d64550', strengthens: '#2a9d6f', relaxes: '#17a5b8', instantiates: '#8b5fd3', composes: '#e39a2d', implements: '#6b7785', amends: '#8d6e63'};
   const SOLID = {extends: [0.4, 4.2, 7.5], restricts: [4.2, 0.4, 2.8], strengthens: [3.4, 3.4, 7.5], amends: [2.2, 2.2, 6.5]};
   const solids = rs => rs.length > 1 && rs.every(r => SOLID[r]);
   // The key's arrows, drawn flat in its corner, each a straight shaft and head:
@@ -708,7 +708,7 @@ function drawGlobe(){
   const composed = c => {
     const ps = c.extends.filter(p => C[p] && c.rels && c.rels[p] === 'composes'), of = (c.rels_of || []).filter(x => x.of === 'composition');
     if (ps.length === 1 && of.length && C[of[0].base] && !ps.includes(of[0].base)) ps.unshift(of[0].base);
-    return ps.length === 2 ? {ps, trunk: of.map(x => x.rel)} : null; };
+    return ps.length >= 2 ? {ps, trunk: of.map(x => x.rel)} : null; };
   const unit = id => vec(th(id), PHI[id]);
   D.contracts.forEach(c => {
     const cm = composed(c);
@@ -717,10 +717,13 @@ function drawGlobe(){
       s += paint(p, c.id, all && all.length ? all : (c.rels && c.rels[p]) || c.relation);
     });
     if (!cm) return;
-    const [A, B] = cm.ps.map(unit), Cv = unit(c.id), M = nrm(add3(add3(A.map(x => x*0.25), B, 0.25), Cv, 0.5)), K = nrm(add3(M.map(x => x*1.5), Cv, -0.5));
+    // The lines meet at one point, between the composed contracts and the
+    // composing one, however many are composed ('GA composes GPE with GAS
+    // and GDS' three).
+    const Ps = cm.ps.map(unit), Cv = unit(c.id), M = nrm(Ps.reduce((a, P) => add3(a, P, 0.5/Ps.length), Cv.map(x => x*0.5))), K = nrm(add3(M.map(x => x*1.5), Cv, -0.5));
     const leg = P => { const o = []; for (let i = 0; i <= 40; i++){ const t = i/40; o.push(nrm(add3(add3(P.map(x => x*(1-t)*(1-t)), K, 2*t*(1-t)), M, t*t))); } return o; };
     const trunk = []; for (let i = 0; i <= 30; i++) trunk.push(nrm(add3(M.map(x => x*(1 - i/30)), Cv, i/30)));
-    cm.ps.forEach((p, i) => { s += ribbon(leg(i ? B : A), p, null, [RELCOL[(c.rels && c.rels[p]) || 'composes']], false); });
+    cm.ps.forEach((p, i) => { s += ribbon(leg(Ps[i]), p, null, [RELCOL[(c.rels && c.rels[p]) || 'composes']], false); });
     s += ribbon(trunk, null, c.id, (cm.trunk.length ? cm.trunk : ['composes']).map(r => RELCOL[r] || RELCOL.composes), true);
   });
   D.contracts.forEach(c => {
@@ -748,7 +751,7 @@ function drawGlobe(){
   // while a text in force still states it.
   const ALL = D.contracts.flatMap(c => Object.values(c.rels_all || {}));
   const USED = new Set([...D.contracts.flatMap(c => [c.relation, ...Object.values(c.rels || {})]), ...ALL.flat()]);
-  const KEY = ['extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r])
+  const KEY = ['extends', 'restricts', 'strengthens', 'relaxes', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r])
     .concat([...new Set(ALL.filter(rs => rs.length > 1).sort((a, b) => a.length - b.length).map(rs => rs.join('|')))].map(x => [x.split('|'), x.split('|').join(', ').replace(/, ([^,]*)$/, ' and $1')]));
   const KW = Math.max(150, 84 + 6.6*Math.max(...KEY.map(([, t]) => t.length))), nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
   s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="${KW}" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
