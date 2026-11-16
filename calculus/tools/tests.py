@@ -32,7 +32,7 @@ def run(case):
         finally:
             os.chdir(cwd)
     gcsas.ROOT = d
-    for x in ('sas', 'sasx', 'flat', 'gx', 'back'):     # what an earlier run wrote
+    for x in ('sas', 'sasx', 'sasx-all', 'flat', 'gx', 'back'):     # what an earlier run wrote
         shutil.rmtree(os.path.join(d, x), ignore_errors=True)
     gcsas.NOUNS.clear()
     gcsas.REMOVE = os.path.exists(os.path.join(d, 'remove'))      # the removal of redundant acts, for the cases that ask it

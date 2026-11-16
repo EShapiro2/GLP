@@ -1,10 +1,10 @@
 # A run of the cascade on Stay
 
-- Contract: `Stay` (`stay` to the checker), its owner's two files `programs/gce/stay/Stay.txt` and `programs/gce/stay/Stay.glp`, copied here as they stood at `4640ba4f`.
+- Contract: `Stay` (`stay` to the checker), its owner's two files `programs/gce/stay/Stay.txt` and `programs/gce/stay/Stay.glp`, copied here as they stood at `ff4d1a61`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gce/stay/Stay.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gce/stay/Stay.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 17:07 UTC by `cascade.sh stay`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `4640ba4f`; each artefact's source and tool:
+- Run on 2026-11-16 18:11 UTC by `cascade.sh stay`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `ff4d1a61`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

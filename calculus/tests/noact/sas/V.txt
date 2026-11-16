@@ -1,0 +1,4 @@
+V: A Restriction that Leaves No One to Take an Act
+V restricts W.
+V:0 - | Alice is a person, Carol a ward.
+V:1 ■ Greet: W:3 Greet <- person(Carol), ward(Carol).

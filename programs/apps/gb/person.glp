@@ -91,7 +91,7 @@ script(market_bob, Me, [Alice, Diana], [clock(86400000), own([B1], propose(estab
         approval(swap(Alice?, Me?, Alice?, 15, Me?, 15), yes),
         approval(swap_coin_for_bond(Diana?, Me?, Diana?, 20, Me?, 25, 24), yes), wait(holds(coin(Diana?))), clock(2160000000),
         wait(has(coin(Alice?), 15)),
-        own([B4], propose(pay(B4?, Alice?, 5))), wait(lacks(coin(Alice?), 11)), look]) :-
+        own([B4], propose(pay_issuer(B4?, Alice?, 5))), wait(lacks(coin(Alice?), 11)), look]) :-
     ground(Me?), ground(Alice?), ground(Diana?) | true.
 script(market_charlie, Me, [Alice, Eve, Escrow], [clock(86400000), own([C1], propose(establish(C1?))), wait(holds(identity)),
         own([C2], propose(issue(C2?, 25))), wait(has(coin(Me?), 25)),
@@ -121,9 +121,9 @@ script(market_eve, Me, [Alice, Charlie, Frank], [clock(86400000), own([E1], prop
         own([M1], propose(acquaint(M1?, Frank?))), wait(holds(knows(Frank?))),
         approval(swap(Charlie?, Me?, Charlie?, 10, Me?, 10), yes),
         own([E3, E4], propose(swap(E3?, Frank?, E4?, 10, Frank?, 10))), wait(has(coin(Frank?), 10)),
-        own([E5], propose(pay(E5?, Charlie?, 6))), wait(lacks(coin(Charlie?), 5)),
+        own([E5], propose(pay_issuer(E5?, Charlie?, 6))), wait(lacks(coin(Charlie?), 5)),
         own([E6], propose(swap(E6?, Charlie?, Frank?, 5, Alice?, 5))), wait(has(coin(Alice?), 5)),
-        own([E7], propose(pay(E7?, Alice?, 3))), wait(lacks(coin(Alice?), 3)),
+        own([E7], propose(pay_issuer(E7?, Alice?, 3))), wait(lacks(coin(Alice?), 3)),
         approval([[B1]], swap(Alice?, Me?, B1?, 10, Frank?, 4), yes), look]) :-
     ground(Me?), ground(Alice?), ground(Charlie?), ground(Frank?) | true.
 script(market_frank, Me, [Diana, Eve, Escrow, Alice], [clock(86400000), own([F1], propose(establish(F1?))), wait(holds(identity)),
@@ -133,7 +133,7 @@ script(market_frank, Me, [Diana, Eve, Escrow, Alice], [clock(86400000), own([F1]
         approval(swap_coin_for_bond(Diana?, Me?, Diana?, 15, Me?, 28, 18), yes),
         approval(swap(Eve?, Me?, Eve?, 10, Me?, 10), yes),
         wait(has(coin(Diana?), 15)),
-        own([F4], propose(pay(F4?, Diana?, 3))), wait(lacks(coin(Diana?), 13)),
+        own([F4], propose(pay_issuer(F4?, Diana?, 3))), wait(lacks(coin(Diana?), 13)),
         own([F5], propose(redeem_coin_against_bond(F5?, Diana?, Me?, 28))), wait(lacks(coin(Diana?), 12)),
         own([F6], propose(redeem_coin_against_bond(F6?, Diana?, Me?, 28))), wait(lacks(coin(Diana?), 11)),
         own([F7], propose(redeem_coin_against_bond(F7?, Diana?, Me?, 28))), wait(lacks(coin(Diana?), 10)),
@@ -289,7 +289,12 @@ match_class(swap(K1, K2, K3, K4, K5, K6), swap(XK1, XK2, XK3, XK4, XK5, XK6), Vs
     match_int(K4?, XK4?, R3?, R4, BK4),
     match_key(K5?, XK5?, R4?, R5, BK5),
     match_int(K6?, XK6?, R5?, F, BK6).
-match_class(pay(K1, K2, K3), pay(XK1, XK2, XK3), Vs, F?, pay(BK1?, BK2?, BK3?)) :-
+match_class(pay(K1, K2, K3, K4), pay(XK1, XK2, XK3, XK4), Vs, F?, pay(BK1?, BK2?, BK3?, BK4?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, F, BK4).
+match_class(pay_issuer(K1, K2, K3), pay_issuer(XK1, XK2, XK3), Vs, F?, pay_issuer(BK1?, BK2?, BK3?)) :-
     match_key(K1?, XK1?, found(Vs?), R1, BK1),
     match_key(K2?, XK2?, R1?, R2, BK2),
     match_int(K3?, XK3?, R2?, F, BK3).
