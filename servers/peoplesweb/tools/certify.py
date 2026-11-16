@@ -47,13 +47,32 @@ def _hash(*paths):
     return h.hexdigest()[:20]
 
 
+# The time one build may spend in the REPL (CERTIFY_BUDGET, seconds; default
+# ten minutes).  A check through glpc can take minutes, and a merge that
+# changes every contract, or programs/gsc, leaves every one to be asked again:
+# on 2026-11-16, after the Calculus migration, the server's sweep ran more than
+# forty minutes in these checks and the site was not rebuilt meanwhile (Mac #1,
+# 2026-11-16 06:52 UTC).  So a run is started only while the budget lasts; what
+# is not asked is shown as not checked, is not kept in the cache, and is asked
+# at the next build, each build keeping what it asked.
+BUDGET = float(os.environ.get('CERTIFY_BUDGET', '600'))
+_spent = 0.0
+
+
 def repl(lines, timeout=900):
+    global _spent
+    if _spent >= BUDGET:
+        return '[certify] not asked: the time of this build for checks is spent'
+    import time
+    t0 = time.time()
     try:
         p = subprocess.run([os.path.join(GLP, 'glp_runtime', 'bin', 'glpc')], input='\n'.join(lines + [':quit']) + '\n',
                            capture_output=True, text=True, errors='replace', cwd=os.path.join(GLP, 'glp_runtime'), timeout=timeout)
         return p.stdout
     except Exception as e:  # no Dart, a timeout: nothing is checked, the site still builds
         return f'[certify] {e}'
+    finally:
+        _spent += time.time() - t0
 
 
 def answer(out, var):
@@ -349,6 +368,8 @@ def relations(contracts):
                         cache[key] = v
                         changed = True
                     v = cache[key] or ''
+                    if cache[key] is None:  # no answer (a timeout, the build's time spent): asked again next time
+                        cache.pop(key, None)
                     if v == '<unbound>':  # stopped by the limit: open, and asked again next time
                         cache.pop(key, None)
                         v = ''
@@ -420,6 +441,8 @@ def relations(contracts):
                     cache[key] = v
                     changed = True
                 v = cache[key] or ''
+                if cache[key] is None:  # no answer (a timeout, the build's time spent): asked again next time
+                    cache.pop(key, None)
                 if v == '<unbound>':  # stopped by the limit: open, and asked again next time
                     cache.pop(key, None)
                     v = ''
@@ -462,6 +485,8 @@ def artefacts(dest):
             m = re.search(r'Wrote .*?' + re.escape(a) + r'\.glpw --- certified under ([0-9a-f]+)', o)
             e = {'hash': h, 'file': f'{a}.glpw', 'key': m.group(1)} if m else \
                 {'hash': h, 'why': '\n'.join(l for l in o.splitlines() if l.strip() and not l.startswith(('GLP> Goodbye', '╔', '║', '╚', 'Build', 'Working', 'Input', 'Commands', 'Loaded root')))[-800:]}
+            if o.startswith('[certify]'):  # not run: asked again next time
+                e = {'why': 'not checked yet'}
             cache[a] = e
             changed = True
         if 'file' in e:
