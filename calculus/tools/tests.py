@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """tests.py --- the regression cases of the reviews: each tests/CASE/gr is a small set of contracts, and
 tests/CASE/expect.txt what tools/gcsas.py prints for it and the schemas it writes; a case with two publication
-directories, tests/CASE/old and tests/CASE/new, is one of tools/changes.py, and expect.txt is what it prints.
+directories, tests/CASE/old and tests/CASE/new, is one of tools/changes.py, and expect.txt is what it prints; a case
+with a file tests/CASE/interface prints tools/cascade.py's contract text of each contract, as well; a case with a file
+tests/CASE/relations is one of tools/relations.py, on schemas written by hand in tests/CASE/schemas, or on a
+publication directory tests/CASE/pub, or, with neither, on the schemas gcsas.py prints from tests/CASE/gr.
 
     python3 tools/tests.py            run every case and compare
     python3 tools/tests.py --write    write expect.txt of every case from this run (read it before you commit it)
@@ -14,6 +17,12 @@ import gcsas
 
 def run(case):
     d = os.path.join(ROOT, 'tests', case)
+    rel_tree = os.path.exists(os.path.join(d, 'relations')) and not os.path.isdir(os.path.join(d, 'schemas')) and not os.path.isdir(os.path.join(d, 'pub'))
+    if os.path.exists(os.path.join(d, 'relations')) and not rel_tree:      # a case of tools/relations.py: schemas written by hand in schemas/, no gcsas.py
+        import relations
+        pub = os.path.join(d, 'pub')        # a publication directory, NAME/ for each contract
+        return ['%s: %s' % (line, 'holds' if not f else 'FAILS: ' + '; '.join(f))
+                for _, line, _, _, f in (relations.run(root=pub) if os.path.isdir(pub) else relations.run(root=d, schemas_dir='schemas'))]
     if os.path.isdir(os.path.join(d, 'old')) and os.path.isdir(os.path.join(d, 'new')):      # a case of tools/changes.py: two publications
         import changes
         cwd = os.getcwd()
@@ -26,6 +35,9 @@ def run(case):
     for x in ('sas', 'sasx', 'flat', 'gx', 'back'):     # what an earlier run wrote
         shutil.rmtree(os.path.join(d, x), ignore_errors=True)
     gcsas.NOUNS.clear()
+    gcsas.REMOVE = os.path.exists(os.path.join(d, 'remove'))      # the removal of redundant acts, for the cases that ask it
+    gcsas.REMOVED.clear()
+    gcsas.NO_WARD.clear()
     gcsas.binds_sas.__defaults__[0].clear()
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
@@ -64,6 +76,24 @@ def run(case):
         out += ['FAIL: ' + l[len('FAIL: '):] for l in (r.stderr + c.stderr).split('\n') if l.startswith('FAIL: ')]
         for f in sorted(os.listdir(ex)) if os.path.isdir(ex) else []:
             out += ['--- exp/' + f] + [l.rstrip('\n') for l in open(os.path.join(ex, f), encoding='utf-8')]
+    if os.path.exists(os.path.join(d, 'interface')):      # a case of cascade.py's contract text: the sentence of each act is its clause's
+        import cascade, toglp
+        saved = cascade.ROOT, toglp.ROOT
+        cascade.ROOT = toglp.ROOT = d
+        gxd = os.path.join(d, 'gx')
+        for f in sorted(os.listdir(gxd)) if os.path.isdir(gxd) else []:      # and gcsas.py's expanded sentences, full-pragmas.txt
+            out += ['--- gx/' + f] + [l.rstrip('\n') for l in open(os.path.join(gxd, f), encoding='utf-8')]
+        try:
+            for f in sorted(os.listdir(sx)) if os.path.isdir(sx) else []:
+                try:
+                    out += ['--- interface ' + f[:-4]] + cascade.contract_txt(f[:-4]).rstrip('\n').split('\n')
+                except Exception as ex:
+                    out += ['--- interface ' + f[:-4], 'EXCEPTION %s: %s' % (type(ex).__name__, ex)]
+        finally:
+            cascade.ROOT, toglp.ROOT = saved
+    if rel_tree:                        # a case of tools/relations.py on the schemas gcsas.py printed above
+        import relations
+        out += ['--- relations.py'] + ['%s: %s' % (line, 'holds' if not f else 'FAILS: ' + '; '.join(f)) for _, line, _, _, f in relations.run(root=d)]
     ad = os.path.join(d, 'adopt.txt')
     if os.path.exists(ad):              # a case of adopt.py: the compile of the contract it names, on the case's texts
         for n in open(ad, encoding='utf-8').read().split():

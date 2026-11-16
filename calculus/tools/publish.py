@@ -10,6 +10,7 @@ Figure 1 of the paper, and the programs that print them.
     DIR/NAME/flat.txt               its flat text (flat/)
     DIR/NAME/full-schemas.txt       its expanded schemas (sasx/)
     DIR/NAME/term.glp.txt           the expanded schemas as the term GLP's checker reads (glp/)
+    DIR/NAME/relations.txt          a verdict for each relation of its first line, on the schemas (tools/relations.py)
     DIR/NAME/verdict.txt, vmat.tex, interface.txt, platform.vglp, platform.glp    the abstraction cascade (cascade/NAME/)
     DIR/NAME/interface-adopted.txt  the Interface pragmas of interface.txt keyed by the titles of the contract's own
                                     clauses, for its owner's adopted file, proposed to the owner (tools/ifadopt.py)
@@ -19,6 +20,8 @@ Figure 1 of the paper, and the programs that print them.
 """
 import os, shutil, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, 'tools'))
+import relations
 MAP = [('rev', '%s.txt', 'contract.txt'), ('gr', '%s.txt', 'logic-pragmas.txt'), ('sas', '%s.txt', 'schemas.txt'),
        ('exp', '%s.txt', 'full-contract.txt'), ('gx', '%s.txt', 'full-pragmas.txt'), ('flat', '%s.txt', 'flat.txt'),
        ('sasx', '%s.txt', 'full-schemas.txt'), ('glp', '%s.glp.txt', 'term.glp.txt')]
@@ -37,7 +40,10 @@ def state(out, names):
     for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8'):
         if l.strip(): comp[l.split()[0]] = 'parametric' if 'a parametric contract' in l else 'platform.glp' in l
     own['SGSG'] = 'SPM'      # it has no text in GLP yet; SPM's paper has it
-    own['AGORA'] = 'Currencies'      # Udi, 2026-11-15; its owner line in GLP names Talmon, for Currencies to correct
+    own['CDC'] = 'GO'      # it has no text in GLP yet; GO's, in programs/go (Udi, 2026-11-16, to GO #7)
+    own['GN'] = 'GSC'      # new, Udi's text of 2026-11-16; no text in GLP yet (Calculus #7)
+    own['GS'] = 'GO'      # likewise
+    own['Agora'] = 'Currencies'      # Udi, 2026-11-15; its owner line in GLP names Talmon, for Currencies to correct
     yn = lambda b: b if isinstance(b, str) else 'yes' if b else 'no'      # compiled: yes, no, or parametric, certified with no platform until instantiated
     with open(os.path.join(out, 'STATE.txt'), 'w', encoding='utf-8') as f:
         for n in names:
@@ -78,6 +84,7 @@ def build(out, hold=()):
             p = os.path.join(ROOT, src, pat % n)
             if os.path.exists(p): shutil.copyfile(p, os.path.join(d, dst))
             else: missing.append('%s: %s' % (n, dst))
+        open(os.path.join(d, 'relations.txt'), 'w', encoding='utf-8').write(relations.text(n, ROOT))      # tools/relations.py
         c = os.path.join(ROOT, 'cascade', n)
         for f in sorted(os.listdir(c)) if os.path.isdir(c) else []:
             shutil.copyfile(os.path.join(c, f), os.path.join(d, 'interface.txt' if f == n + '.txt' else f))

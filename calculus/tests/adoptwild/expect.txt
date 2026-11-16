@@ -11,4 +11,4 @@ C: Wildcard deletion
 Alice is a person.
 C:1. ■ Forget: Alice may forget, provided Alice knows someone.
 --- adopt.py --tree C: exit 0
-C: compiled; printed flat.txt, full-contract.txt, full-pragmas.txt, full-schemas.txt, schemas.txt, term.glp.txt
+C: compiled; printed flat.txt, full-contract.txt, full-pragmas.txt, full-schemas.txt, relations.txt, schemas.txt, term.glp.txt

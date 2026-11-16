@@ -1,0 +1,4 @@
+TWO: A restriction for two kinds
+TWO restricts GB.
+TWO:0 - | Alice and Bob are parties, Today a date.
+TWO:1 ■ Pay: GN:3, for coins and bonds <- today(Actor,Today).

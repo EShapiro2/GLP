@@ -1,0 +1,4 @@
+R: Restricted
+R restricts B.
+R:0 - | Alice, Bob and Carol are persons, Sum a number.
+R:1 ■ Pay checked: B:1 Pay <- knows(Bob,Alice).

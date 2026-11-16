@@ -77,6 +77,9 @@ def unenabled(n, acts):
     return _UNENABLED[key]
 
 
+ONE = set()     # the roles any one of whom decides, 'any one listed by' (gcsas.Lex.one), of the contract values_of read last
+
+
 def values_of(n, refl=None, env=None, par=None):
     """The predicates of values and of no person: those whose vocabulary has the current date, now; and, in refl,
     the predicates the Logic pragmas declare reflexive, 'Reflexive: x knows y.', in n or a contract n is written from."""
@@ -89,6 +92,8 @@ def values_of(n, refl=None, env=None, par=None):
         env.update(lex.env_preds())
     if par is not None:
         par.update(lex.env_preds('par'))
+    ONE.clear()
+    ONE.update(lex.one)
     return {p for _, p, a in lex.basic if 'now' in a}, rl, gcsas.kinds_from(w, n)
 
 
@@ -142,7 +147,7 @@ def schema_nums(lits, values, places=frozenset()):
 
 def num_places(acts, values):
     """The places of predicates that hold a number in some schema of the contract, so that a place has one type in
-    the whole term: LIB's borrowed(y,t,x,e) holds the day e as a number in Lend, which compares it, and so in Return."""
+    the whole term: Lib's borrowed(y,t,x,e) holds the day e as a number in Lend, which compares it, and so in Return."""
     places, n = set(), -1
     while n != len(places):
         n = len(places)
@@ -264,7 +269,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         if r and r != roles[0]:
             roles.remove(r)
             roles.insert(0, r)
-    others, bound, listed, lists, deciders = [], [], [], [], []
+    others, bound, listed, lists, deciders, onecons = [], [], [], [], [], []
     for g in e['guards']:           # those who decide: one of them, named, and every other the first agent of the role lists for it
         if '(' in g:
             _, p, a = gcsas.parse_atom(g)
@@ -272,9 +277,10 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             a = [x for x in a if not x.startswith('-')]
             if a[0] not in roles:
                 roles.append(a[0])
-            k = len(listed) + 1
+            k = len(deciders) + 1
             d, x = 'Decider' + ('' if k == 1 else 'ABCDEFG'[k - 1]), 'Codecider' + ('' if k == 1 else 'ABCDEFG'[k - 1])
-            listed.append(x)
+            if p not in ONE:
+                listed.append(x)
             deciders.append(d)
             anchor = lambda v: 'atom(%s, [%s])' % (p, ', '.join([q(a[0]), q(v)] + [q(y) for y in a[1:]]))
             holds = lambda v: []
@@ -292,6 +298,9 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             person = lambda v: ['atom(person, [%s])' % q(v)] if marks else []      # those who decide for a ward are persons
             lists.append(anchor(d))
             lists.extend(person(d) + holds(d))
+            if p in ONE:            # a role any one of whom decides ('any one listed by'): the one, and no other (GnW's default, Udi, 2026-11-16: 'any guardian')
+                onecons.extend('ne(%s, %s)' % (q(d), q(y)) for y in ex)
+                continue
             conj = ['atom(identity, [%s])' % q(x)] + person(x) + holds(x)
             f = conj[-1]
             for c in reversed(conj[:-1]):
@@ -356,7 +365,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             at = 'times(%s, %s)' % (arg(mult), at)
         return at, cons
 
-    head, body, cons = [], [], []
+    head, body, cons = [], [], list(onecons)
     cleared = [l for l in e['head'] if l[0] and l[2] and l[2][0] in roles and '_' in l[2][1:]]
     for where, ls in ((head, e['head']), (body, e['body'])):
         for l in ls:

@@ -1,0 +1,4 @@
+RG: Ruled by all its guardians
+Of R: Alice is a person, Carol a ward. Default: any guardian of z for those who decide for z.
+Of RG: Carol is a ward.
+R:1. ■ Retire: The guardians of Carol may retire Carol.
