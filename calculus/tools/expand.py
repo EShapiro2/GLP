@@ -36,7 +36,7 @@ The rules.
 7. A relaxing citation, `X:n, without ...[, if ...]`, adds an act and keeps
    the act of X:n as it is (tools/SAS-WRITING.txt, RELAXATION): it is no
    operation, and its clause is kept as an own clause, as written, after the
-   clause X:n it cites (GC:1, Pay issuer: GN:3, without the consent of Bob,
+   clause X:n it cites (Coins:1, Pay issuer: Notes:3, without the consent of Bob,
    if the coins are Bob-coins).
 
 It checks and prints: every contract a first line names is in rev/ (after
@@ -315,8 +315,8 @@ def link(contracts):
     unparsed = []
     for name in sorted(contracts):
         c = contracts[name]
-        if not c.title_line.startswith(name + ':'):
-            fail("%s: the title line does not open with '%s:'" % (name, name))
+        if not (c.title_line.startswith(name + ':') or c.title_line == name):      # 'NAME: Title', or the name alone (Notes, Coins, Bonds, Shares, Udi, 2026-11-16)
+            fail("%s: the title line does not open with '%s:' and is not the name alone" % (name, name))
         if c.first_line is None:
             c.first = First()
             continue

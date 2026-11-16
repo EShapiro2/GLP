@@ -63,7 +63,7 @@ MARK = "*#"   # the last argument of an atom: *n, n copies; #n, exactly n copies
 DFLL = "Default: "   # 'Default: x is an officer of z for x is entitled to vote on m in z.': the state a parameter takes where no first line binds it (Udi, 2026-11-16, to Calculus #6)
 PARL = "Parameters: "   # 'Parameters: x is entitled to propose m in z.': a state a later contract, the bylaws or the terms fill; a parameter of the term
 ENVL = "Environment: "   # 'Environment: x is nearby y.': a state the platform gives, an environment predicate of the term; no act adds or ends it
-KNDL = "Kind of note: "   # 'Kind of note: bond, y-bonds due Day for y-notes.': a kind of GN's notes (Udi, 2026-11-16: special cases, not instances); see kind_forms
+KNDL = "Kind of note: "   # 'Kind of note: bond, y-bonds due Day for y-notes.': a kind of Notes's notes (Udi, 2026-11-16: special cases, not instances); see kind_forms
 KINDL = re.compile(r"^Kind of note: ([a-z]+), (.+?) for ([b-z])-notes(; its acts keep their names)?\.$")
 REFL = "Reflexive: "   # 'Reflexive: x knows y.': every agent holding the state's atoms holds x knows x; no act adds or ends it
 ARITH = "Vocabulary: n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k); x is the author of t = author(x,t)."   # of every contract; the author of an item is its first signer (GFP), read by toglp.py as eq(author_of(t), x)
@@ -633,7 +633,7 @@ def first_line(c, known):
         if mm.group(0) in known and mm.group(0) not in parents and mm.group(0) != c.name:
             parents.append(mm.group(0))
     cm = re.search(r"composes it with ((?:[A-Za-z-]+)(?: and [A-Za-z-]+)*)", operands) if m else None
-    if cm:          # the instance composed with a contract: its states put for states bind the contract composed too (SC's bylaws, GS's issue of shares)
+    if cm:          # the instance composed with a contract: its states put for states bind the contract composed too (SC's bylaws, Shares's issue of shares)
         states = [it for it in subs[m.group(1).split(" and ")[0]] if re.search(r"(?<![A-Za-z'_-])[b-z](?='s|-[A-Za-z]|[ ,.)]|$)", it)]
         for p in cm.group(1).split(" and "):
             if p in known and p not in subs:
@@ -1872,7 +1872,7 @@ def renamed(o, name):
 
 
 def own_roles(e, rs, lex, text):
-    """{R: the role that decides the act e for R} where each ward R has one among e's guards (persons), as GS:1's those
+    """{R: the role that decides the act e for R} where each ward R has one among e's guards (persons), as Shares:1's those
     who decide the issue of shares of Alice; None where one has none."""
     out = {}
     for r in rs:
@@ -2134,7 +2134,7 @@ def expand_schemas(w, n):
 def kinds_of(w, n):
     """The kinds of note of n, in the order of its chain: [dict(word, noun, slot, plain, decl)].  A kind is declared in
     the Logic pragmas, 'Kind of note: bond, y-bonds due Day for y-notes.': its word, and its noun put for 'y-notes',
-    the place y the issuer; '; its acts keep their names' for the one kind whose forms keep the act's name (GC's coin)."""
+    the place y the issuer; '; its acts keep their names' for the one kind whose forms keep the act's name (Coins's coin)."""
     memo = w.__dict__.setdefault("_kinds", {})
     if n not in memo:
         c = w.contract(n)
@@ -2183,7 +2183,7 @@ def kind_noun(w, k, issuer, j, fresh=None):
 def kind_name(name, ks, words, taken):
     """The name of the form of an act of notes for the kinds ks of its notes, in order: the act's name where every note
     is of the kind that keeps it; else the name and the kind, 'Deposit bond', 'Swap bonds' where its two notes are of
-    one kind, 'Swap coin for bond' where not; where a sentence of another clause has that name, the plural, 'Issue bonds' beside GB:1's Issue bond, and
+    one kind, 'Swap coin for bond' where not; where a sentence of another clause has that name, the plural, 'Issue bonds' beside Bonds:1's Issue bond, and
     the kind's word even for the kind that keeps the names, 'Deposit coin' beside Joint:2's Deposit."""
     if all(words[k]["plain"] for k in ks) and name not in taken:
         return name
@@ -2272,7 +2272,7 @@ def kind_atoms(w, n, lex, k):
 
 def kind_forms(w, n, entries, text=False, lex=None):
     """The acts of notes, each in one form for each kind of each note it moves (Udi, 2026-11-16, to Calculus #7: a coin,
-    a bond and a share are notes, special cases and not instances; Issue, Swap, Pay and Escrow of GN are each one act for
+    a bond and a share are notes, special cases and not instances; Issue, Swap, Pay and Escrow of Notes are each one act for
     any note).  An act whose atoms are of notes is generic: in a contract with kinds it is kept, marked, for the forms
     of a kind added later and for the citations of its clause, and is printed in its forms only.  Each form is the act
     with each note of its issuer's kind, the j-th note of a kind taking the j-th name of the kind's names (Day, Term),
@@ -2358,7 +2358,7 @@ def kind_forms(w, n, entries, text=False, lex=None):
 
 
 def slot_symmetry(w, g, gmap):
-    """The permutations of the notes of an act of notes that a renaming of its names onto itself makes (GN:2 Swap: Alice
+    """The permutations of the notes of an act of notes that a renaming of its names onto itself makes (Notes:2 Swap: Alice
     for Bob, Carol for Dave, Sum for Total), as the act's own contract has it in its schemas (sas/): [(the slot each
     slot goes to)].  Two forms one such permutation maps onto each other are one act, made once (kind_forms)."""
     memo = w.__dict__.setdefault("_symm", {})
@@ -2423,7 +2423,7 @@ def for_kinds(w, n, entries, hit, e):
 
 
 def chain_names(w, n):
-    """The names of the sentences of the clauses of n and of every contract it is written from ('Issue bond' of GB:1),
+    """The names of the sentences of the clauses of n and of every contract it is written from ('Issue bond' of Bonds:1),
     which the form of an act of notes does not take (kind_name)."""
     memo = w.__dict__.setdefault("_cnames", {})
     if n not in memo:
@@ -3241,7 +3241,7 @@ def order(names, w):
 
 
 def main():
-    allnames = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, "gr")) if f.endswith(".txt") and not f.startswith("NOTES"))
+    allnames = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, "gr")) if f.endswith(".txt") and not f.startswith("NOTES-"))
     w = World(allnames)
     names = order([a for a in sys.argv[1:] if not a.startswith("-")] or allnames, w)
     global REMOVE

@@ -41,8 +41,8 @@ def state(out, names):
         if l.strip(): comp[l.split()[0]] = 'parametric' if 'a parametric contract' in l else 'platform.glp' in l
     own['SGSG'] = 'SPM'      # it has no text in GLP yet; SPM's paper has it
     own['CDC'] = 'GO'      # it has no text in GLP yet; GO's, in programs/go (Udi, 2026-11-16, to GO #7)
-    own['GN'] = 'GSC'      # new, Udi's text of 2026-11-16; no text in GLP yet (Calculus #7)
-    own['GS'] = 'GO'      # likewise
+    own['Notes'] = 'GSC'      # new, Udi's text of 2026-11-16; no text in GLP yet (Calculus #7)
+    own['Shares'] = 'GO'      # likewise
     own['Agora'] = 'Currencies'      # Udi, 2026-11-15; its owner line in GLP names Talmon, for Currencies to correct
     yn = lambda b: b if isinstance(b, str) else 'yes' if b else 'no'      # compiled: yes, no, or parametric, certified with no platform until instantiated
     with open(os.path.join(out, 'STATE.txt'), 'w', encoding='utf-8') as f:
@@ -75,7 +75,7 @@ def main(out, hold=()):
 
 
 def build(out, hold=()):
-    names = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES'))
+    names = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES-'))
     names = [n for n in names if n not in hold]      # a contract with no certificate is held out
     missing = []
     for n in names:

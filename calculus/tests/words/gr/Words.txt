@@ -1,0 +1,4 @@
+Words: Bonds and Coins in Words
+Words restricts Bonds.
+Alice and Bob are parties, Today a date.
+1. ■ Pay bonds: Notes:3, for bonds, only if the current date is Today. Bonds are due at maturity. Coins are paid at par.

@@ -136,7 +136,7 @@ def world():
     """The contracts of gr/, compiled and expanded by gcsas.py, once."""
     if not _world:
         import gcsas
-        names = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES'))
+        names = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-'))
         w = gcsas.World(names)
         for m in gcsas.order(names, w):
             sas, own = gcsas.compile_contract(w, m)

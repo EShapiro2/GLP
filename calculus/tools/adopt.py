@@ -105,7 +105,7 @@ def owners():
     return _OWNERS
 
 
-GLP_NAME = {'Agora': 'AGORA', 'Joint': 'JOINT', 'Stay': 'STAY', 'Lib': 'LIB', 'Rec': 'REC'}      # renamed (Udi, 2026-11-16): the owner's file in GLP keeps the old name until Code renames it
+GLP_NAME = {'Agora': 'AGORA', 'Joint': 'JOINT', 'Stay': 'STAY', 'Lib': 'LIB', 'Rec': 'REC', 'Coins': 'GC', 'Bonds': 'GB'}      # renamed (Udi, 2026-11-16): the owner's file in GLP keeps the old name until Code renames it
 
 
 def owner_file(name):
@@ -215,7 +215,7 @@ def all_names():
         if os.path.isdir(base):
             for f in os.listdir(base):
                 if base.endswith('rev'):
-                    if f.endswith('.txt') and not f.startswith('NOTES'):
+                    if f.endswith('.txt') and not f.startswith('NOTES-'):
                         names.add(f[:-4])
                 elif os.path.exists(os.path.join(base, f, 'contract.txt')):
                     names.add(f)

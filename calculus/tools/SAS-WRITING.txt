@@ -1,6 +1,6 @@
 Writing a contract in the grammar, for tools/gcsas.py
 
-rev/NAME.txt is the contract as revised with Udi.  gr/NAME.txt says the same in the grammar of Section 1.1 of the paper, so that tools/gcsas.py compiles it to schemas (sas/), recovers it from them (back/), expands it on the text (flat/) and on the schemas (sasx/), and checks the three.  Models: gr/GKK.txt, GSG.txt, GC.txt, GD.txt, GD-S.txt, GnW.txt, GSV.txt, GO.txt.  Read them, their rev/ originals, and Sections 1 and 2 of sections/01-contracts-schemas.tex first.
+rev/NAME.txt is the contract as revised with Udi.  gr/NAME.txt says the same in the grammar of Section 1.1 of the paper, so that tools/gcsas.py compiles it to schemas (sas/), recovers it from them (back/), expands it on the text (flat/) and on the schemas (sasx/), and checks the three.  Models: gr/GKK.txt, GSG.txt, Coins.txt, GD.txt, GD-S.txt, GnW.txt, GSV.txt, GO.txt.  Read them, their rev/ originals, and Sections 1 and 2 of sections/01-contracts-schemas.tex first.
 
 THE FILE, line by line, in this order
 1. The title, as in rev/.
@@ -38,7 +38,7 @@ HOW TO SAY IT (decisions taken for Udi's later approval; follow them)
 2. One sentence an act.  "Either Alice or Bob may", "Vote for, Vote against:", "Remove, Leave:" are two sentences with two names.  An act with an effect "if ..." is two acts (GD:1).
 3. "Alice, who knows Bob, may ..." becomes "..., provided Alice knows Bob".
 4. A condition never repeats a state the act ends: the schema already requires it.  Where the text says "new", "once", "not yet", add the "not ..." condition.
-5. An act moves an amount of units, a number that is a name of the names line ("Sum and Total numbers"): "Alice may pay Bob Sum Bob-coins".  The vocabulary has the state of one unit and of a number of them: "x holds a y-coin = coin(x,y); x holds n y-coins = coin(x,y,*n)", the last argument *n saying n copies; the definition of the act is of the amount ("After x pays y n y-coins: no longer x holds n y-coins and y holds n y-coins").  An act a clause writes of one unit stays of one unit (GC:4, DGC:3, DGC:4).  The state of an agent is a multiset.
+5. An act moves an amount of units, a number that is a name of the names line ("Sum and Total numbers"): "Alice may pay Bob Sum Bob-coins".  The vocabulary has the state of one unit and of a number of them: "x holds a y-coin = coin(x,y); x holds n y-coins = coin(x,y,*n)", the last argument *n saying n copies; the definition of the act is of the amount ("After x pays y n y-coins: no longer x holds n y-coins and y holds n y-coins").  An act a clause writes of one unit stays of one unit (Coins:4, DGC:3, DGC:4).  The state of an agent is a multiset.
 6. What the grammar cannot break down --- "every member", "more than half", "at most d", "before the night", a computed amount --- is a basic state named by its phrase, with the names it speaks of as places and its holder first ("more than half of the members of d have voted for p = majority_for(d,p)").  Keep such phrases few and close to the text.
 7. A state of mind (trust, belief) is no condition: it goes in an undertaking sentence (GSG:1).  A declaration on record is a state (GD).
 8. An act the machine takes with nobody deciding ("the steward delivers it to every member") is an act with no persons.
@@ -70,7 +70,7 @@ The rules: a citation taken for a party, or on votes, names one act; NAME is a n
 
 PARTIES AND WARDS (derived, not written)
 For the paper's Section 1.1:
-(c) A name a contract declares a party is a person or a ward: in a contract with wards, every act whose guards include names its own contract declares parties keeps its person's form and has, derived and not written, for each nonempty set S of those guards, a ward's form "<Act> for Alice" or "<Act> for Alice and Bob", in which each ward of S takes the act by one who decides for it.  Written from GO, that one is the officer AliceOfficer, as the citation "Swap for Alice: GC:2 Swap, taken for Alice by AliceOfficer, only if AliceOfficer is entitled to take it for Alice, on the votes of Alice for it." would have it (GO:2's Act, the entitlement and the decision bound as the bylaws bind GO's); written from GnW alone, it is those who decide for Alice.
+(c) A name a contract declares a party is a person or a ward: in a contract with wards, every act whose guards include names its own contract declares parties keeps its person's form and has, derived and not written, for each nonempty set S of those guards, a ward's form "<Act> for Alice" or "<Act> for Alice and Bob", in which each ward of S takes the act by one who decides for it.  Written from GO, that one is the officer AliceOfficer, as the citation "Swap for Alice: Coins:2 Swap, taken for Alice by AliceOfficer, only if AliceOfficer is entitled to take it for Alice, on the votes of Alice for it." would have it (GO:2's Act, the entitlement and the decision bound as the bylaws bind GO's); written from GnW alone, it is those who decide for Alice.
 The rules: a contract has wards when its lexicon has GnW's role "those who decide for z"; the forms are derived once, in the first contract with wards that has the act (GBank, GCorp, GCoop), and inherited from it; an act that names a ward as such (GnW's, GO's own) and an act of persons are not derived.  A citation of an act by its name also restricts its ward's forms, and renames them with it ("Pay for Alice" for "Pay accepted coins for Alice"); a vote act is cited by no citation of the clause it comes from.  In sasx/ a ward's form is written "... guarded by AliceOfficer, Bob taken for Alice by AliceOfficer."; toglp.py writes a party, AliceOfficer and Voter as persons.  The numbers a decision on the votes of Alice counts with are named for Alice, VotesAlice and MoreAlice, so that an act on the votes of two organisations counts the votes of each against its own number.
 
 PRONOUNS AND POSSESSIVES
@@ -87,7 +87,7 @@ At least one of the two "without" parts; each part may be left out, in this orde
 one named; the clause must have one act, or the citation names it) without the consents of PERSONS, without the
 conditions named, and with the conditions after "if".  A condition dropped must be a condition of the act, not an atom
 its head ends; a person dropped must be one who decides it or must consent.  "if X is Y", of two names of the act, says
-that one agent is both: the act is written with Y for X ("Pay issuer: GN:3, without the consent of Bob, if Carol is
+that one agent is both: the act is written with Y for X ("Pay issuer: Notes:3, without the consent of Bob, if Carol is
 Bob": the issuer of the notes paid is the payee).  The names are those of the citing contract, as in every citation
 (rule 10).  The first line says "relaxes".  In the schemas the citation is the line "C:n Act relaxed; one X=Y; without
 the consent of P; without LITERALS <- IF-LITERALS", and the act added follows the act cited, labelled C:n+N:k.
@@ -103,20 +103,20 @@ relaxation with no "if" has the relaxed act in place of the act cited, and one w
 behind a switch (gcsas.py --remove; a case of tests/ with a file 'remove'), off for the 62 until the Calculus says.
 
 KINDS OF NOTE (Udi, 2026-11-16: a coin, a bond and a share are special cases of a note, not instances)
-GN writes its acts of notes, "x holds n y-notes = note(x,y,*n)".  A contract with a special case declares it in its
+Notes writes its acts of notes, "x holds n y-notes = note(x,y,*n)".  A contract with a special case declares it in its
 Logic pragmas, after its definitions:
   "Kind of note: WORD, NOUN for y-notes[; its acts keep their names]."
-as GC "Kind of note: coin, y-coins for y-notes; its acts keep their names.", GB "Kind of note: bond, y-bonds due Day
-for y-notes.", GS "Kind of note: share, shares of y for y-notes.".  Its vocabulary has the state of each note state of
-GN with the noun put for "y-notes" (GB: "x holds n y-bonds due e" and "z holds n w-bonds due e in escrow from x for y
+as Coins "Kind of note: coin, y-coins for y-notes; its acts keep their names.", Bonds "Kind of note: bond, y-bonds due Day
+for y-notes.", Shares "Kind of note: share, shares of y for y-notes.".  Its vocabulary has the state of each note state of
+Notes with the noun put for "y-notes" (Bonds: "x holds n y-bonds due e" and "z holds n w-bonds due e in escrow from x for y
 on k"), and a name the noun adds (Day) is of a kind of its names line with as many names as an act has notes (Day and
 Term maturity dates).  gcsas.py then writes each act of notes as one act for each kind of each of its notes
-(NOTES-GRAMMAR.md, "Kinds of note"): never instantiate GN with a word for "note", and never write the acts of a kind
-by hand.  Cite GN's clause for every kind ("Swap: GN:2, only if ..."), or a form by its name ("Issue: GN:1 Issue",
-the coins; "Deposit bond: GN:4 Deposit bond").
+(NOTES-GRAMMAR.md, "Kinds of note"): never instantiate Notes with a word for "note", and never write the acts of a kind
+by hand.  Cite Notes's clause for every kind ("Swap: Notes:2, only if ..."), or a form by its name ("Issue: Notes:1 Issue",
+the coins; "Deposit bond: Notes:4 Deposit bond").
 A restriction for a special case (Udi, 2026-11-16, to Calculus #8: "Restriction: an implication in C has additional
-conditions or guards in C', possibly for a special case of C that C' defines"): "Issue bond: GN:1, for bonds, only if
-the current date is Today and Day is more than Today." restricts GN:1's form for bonds, and renames it when it is the
+conditions or guards in C', possibly for a special case of C that C' defines"): "Issue bond: Notes:1, for bonds, only if
+the current date is Today and Day is more than Today." restricts Notes:1's form for bonds, and renames it when it is the
 one act cited; its forms for the other kinds stay as they are, and so does the act of notes, for a kind added later.
 The kinds are named in the plural, "for bonds", "for coins and bonds", each a kind of note of the contract.  A
 contract that writes an act for a special case cites it so; it does not write the act again beside it.
@@ -132,7 +132,7 @@ others are named by it and the case's role, "Issue shares by shareholders" (a wa
 role a contract may want put by cases is declared a parameter of its own, with a default ("Default: those who decide
 for z for those who decide the issue of shares of z."), so that acts of another role (GO:3's Join) keep theirs.
 In sas/ the item is "first_officers(z) while ~share(_,z) or shareholders(z) while share_majority(z) for share_deciders(z)".
-A ward's form of an act that a role of the ward itself decides (GS:1, with the consent of those who decide the issue of
+A ward's form of an act that a role of the ward itself decides (Shares:1, with the consent of those who decide the issue of
 shares of Alice) is taken for the ward by that role, with no vote: "Issue shares for Alice: ... guarded by
 share_deciders(Alice) taken for Alice by share_deciders(Alice)"; so SC's binding of GO's states of a motion, the
 directors' votes, is for the other acts of Orga (Calculus #8, 2026-11-16).

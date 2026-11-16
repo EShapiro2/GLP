@@ -14,7 +14,7 @@ def esc(s):
         s = s.replace(c, '\\' + c)
     return s
 def names():
-    return sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES'))
+    return sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES-'))
 def first_line(name):
     body = lines(os.path.join(ROOT, 'rev', name + '.txt'))[1:]
     first = next((l for l in body if not re.match(r'\d+\.', l) and l.startswith(name + ' ') and REL.search(l)), '')

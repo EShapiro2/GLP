@@ -10,7 +10,7 @@ sys.path.insert(0, 'tools'); import gcsas
 import toglp
 PARAMS = set()
 names = sorted(f[:-4] for f in os.listdir('sasx') if f.endswith('.txt'))
-w = gcsas.World(sorted(f[:-4] for f in os.listdir('gr') if f.endswith('.txt') and not f.startswith('NOTES')))
+w = gcsas.World(sorted(f[:-4] for f in os.listdir('gr') if f.endswith('.txt') and not f.startswith('NOTES-')))
 NUM = {'le', 'ge', 'gt', 'lt', 'sum', 'product', 'today', 'author'}      # author(x,t): eq(author_of(t), x), a constraint too (toglp.py)
 bad = 0
 for n in names:
