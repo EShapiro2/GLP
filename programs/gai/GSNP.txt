@@ -3,7 +3,7 @@
 % Paper: GAI, Corralling AI Risks with Grassroots Contracts, arXiv (uploaded 2026-11-04, number pending)
 % Extends: GSNP instantiates GSN, Grassroots Social Network, GSC's (programs/gsc/GSN.txt), with items authored by their senders, composes it with GAI, Accountable AI Agents, GAI's (GAI.txt beside this file), and extends the composition, by the relations of the Calculus (GLP calculus/README.md, The relations).  Through GAI it has GFP, GnW, GSG and GKK, GSC's.
 % Defines: nothing; item and author are GFP's, message is GSN's parameter, and AI agent GAI's.
-% Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 2503050; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GAI's: a line for each of its two clauses, with the buttons of Message and Post, which take no field since the item sent is one the sender holds, of Agent message and of Post forward.  The tab Items is GFP's and the other buttons are GSN's, GAI's, GnW's, GSG's and GKK's.  Git holds what the file said before.
+% Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 3b5fd5d; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GAI's: a line for each of its two clauses, with the buttons of Message, Post and Post own, which take no field since the item sent is one the sender holds, of Agent message and of Post forward.  The tab Items is GFP's and the other buttons are GSN's, GAI's, GnW's, GSG's and GKK's.  Git holds what the file said before.
 % Schemas: GSNP.glp beside this file, the full schemas, GKK's, GSG's, GSN's, GnW's, GFP's and GAI's with GSNP's, printed by calculus/tools/adopt.py GSNP from the Logic pragmas and never written by hand; adopt.py --check GSNP holds it and cascade/GSNP/ to what the tools print.
 GSNP: Grassroots Social Network with Provenance
 GSNP instantiates GSN with items authored by their senders, composes it with GAI (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231), and extends the composition.
@@ -21,5 +21,6 @@ After x forwards t to the group g of y, adding x's signature to the signatures t
 Interface pragmas
 Agent message: Alice [Message]
   Bob [Post]
+  Alice [Post own]
   Alf [Agent message]
 Post forward: Bob [Post forward]
