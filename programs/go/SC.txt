@@ -32,9 +32,9 @@ Officers: Decider [Appoint] <person> <role>
   Bob [Resign] [Officer unfriend]
 Issue: AliceOfficer [Issue shares by any officer for Alice] <decider> <amount>
   Decider: AliceOfficer asks to issue the first shares of your organisation Alice.
-Swap: Alice [Swap coin for share] <amount given> <issuer wanted> <amount wanted>
+Swap: Alice [Swap coin for share] <amount given> <amount wanted>
   Bob: Alice asks to swap coins for shares with you.
-  Alice [Swap bond for share] <maturity given> <amount given> <issuer wanted> <amount wanted>
+  Alice [Swap bond for share] <amount given> <amount wanted>
   Bob: Alice asks to swap bonds for shares with you.
 Dividend: Alice [Set dividend] <dividend> <votes>
   Erin [Vote on dividend] <dividend>
