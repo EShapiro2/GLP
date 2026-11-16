@@ -32,6 +32,8 @@ leave(Peer, Peer, Speech)
 ;
 post(Peer, Peer, Speech, Speech)
 ;
+post_own(Peer, Speech, Speech)
+;
 deliver(Peer, Peer, Peer, Speech, Speech)
 ;
 deliver_leader(Peer, Peer, Speech, Speech)
@@ -102,6 +104,8 @@ remove(Peer, Peer, Speech)
 leave(Peer, Peer, Speech)
 ;
 post(Peer, Peer, Speech, Speech)
+;
+post_own(Peer, Speech, Speech)
 ;
 enter(Peer, Peer, Speech)
 ;

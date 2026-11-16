@@ -418,6 +418,7 @@ interface([
   compiled(count_own, 4),
   compiled(op_cands, 3),
   compiled(part_cands, 4),
+  compiled(recs_unready, 5),
   compiled(keep_pcand, 6),
   compiled(may_propose, 3),
   compiled(guard_cands, 3),

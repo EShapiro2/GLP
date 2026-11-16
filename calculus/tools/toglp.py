@@ -35,7 +35,46 @@ def ident(s):
 
 
 def schemas(n):
-    return [gcsas.read_schema_line(l) for l in gcsas.get('sasx', n) if gcsas.ENTRY.match(l)]
+    """The entries of the contract's expanded schemas (sasx/), but for the acts no binding enables (unenabled): an act
+    whose requirements no binding can meet is no act of the contract, and every tool that reads the contract's acts
+    through this leaves it out alike (the term, cascade.py's Interface pragmas, ifadopt.py, possibly.py, supplied.py)."""
+    es = [gcsas.read_schema_line(l) for l in gcsas.get('sasx', n) if gcsas.ENTRY.match(l)]
+    out = unenabled(n, [e for e in es if e['kind'] == 'act'])
+    return [e for e in es if not (e['kind'] == 'act' and (e['label'], e['name']) in out)]
+
+
+_UNENABLED = {}
+
+
+def unenabled(n, acts):
+    """{(label, act): why} of the acts of n that require of one name both that it is a person and that it bears a mark
+    of a ward of the contract (child, ward, organisation, ai_agent: marks_of), which no agent is at once (GnW: a
+    person or a ward).  A name is required a person where the act requires person(X), or where X decides it and the
+    act's own contract declares X a person, as term() writes atom(person, [X]) for such a guard."""
+    key = (ROOT, n)
+    if key not in _UNENABLED:
+        out = {}
+        marks = marks_of(acts) if any(l[1] == 'person' for e in acts for l in e['head']) else {}
+        if marks:
+            w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES')))
+            memo = {}
+            for e in acts:
+                o = re.split(r'[:+]', e['label'])[0]
+                if o not in memo:
+                    memo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if ks & {'person', 'party'} and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
+                persons = memo[o] | frozenset((e.get('taken') or {}).values()) | {gcsas.VOTER}
+                has = lambda p, g: any(not l[0] and l[1] == p and l[2] and l[2][0] == g for l in e['body'])
+                made = {l[2][0] for l in e['head'] if l[1] == 'identity' and not l[0]}
+                names = {l[2][0] for l in e['body'] if l[2]} | {g for g in e['guards'] if '(' not in g}
+                for x in sorted(names):
+                    person = has('person', x) or (x in e['guards'] and x not in made and x in persons
+                                                  and not any(has(m, x) and has(u, x) for m, u in marks.items()))
+                    ward = [m for m in marks if has(m, x)]
+                    if person and ward:
+                        out[(e['label'], e['name'])] = 'it requires person(%s) and %s(%s), and no agent is both' % (x, ward[0], x)
+                        break
+        _UNENABLED[key] = out
+    return _UNENABLED[key]
 
 
 def values_of(n, refl=None, env=None, par=None):
@@ -474,6 +513,8 @@ def main():
     lines, bad = [], 0
     for n in args or allnames:
         t, acts, roles = contract_term(n)
+        for (lb, a), why in sorted(unenabled(n, []).items()):      # filled by schemas(n), which contract_term read
+            print('%-10s left out of the term: %s (%s), %s' % (n, a, lb, why), flush=True)
         p = os.path.join(ROOT, 'glp', n + '.glp.txt')
         if roles:                   # no term is written, and none of an earlier run is left in its place
             if os.path.exists(p):
