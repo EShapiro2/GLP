@@ -27,6 +27,7 @@ import 'package:glp_multiagent/isolate_protocol.dart'
     show runtimeTermOf, screenTermOf;
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/look.dart';
+import 'package:glp_multiagent/ui_runtime/typed_before.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/manifest.dart';
@@ -884,6 +885,8 @@ void main() => appsScreens(Screens.flat(programsDir()));
 
 /// The scenario, the four apps' screens in their figures' order, on [screens]: here, and on the simulator (`integration_test/apps_screens_test.dart`).
 void appsScreens(Screens screens) {
+  // Each scenario starts with nothing typed before: the store of what a person typed is the app's, kept for its session (lib/ui_runtime/typed_before.dart).
+  setUp(TypedBefore.clear);
   // GKK's, GSG's, GSN's and GC's apps are compiled from their contracts with their pragmas, and every word on their screens is the contract's or one of the platform's four, yes, no, declined and unable (vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; Section 8): each tab a list the contract's pragmas name, Contacts, Friends, Groups and Coins, each button the label in brackets and each field the name in angle brackets, each question the sentence after them; a field no pragma names drawn by its type's name, as Meet's field for the peer's key, Peer (Section 6.2: "A construct family draws the label it is given, and the name of the type where it is given none").  Where a button is drawn is the request's widget term's (Section 6.2): beside each person or group the view lists, of an act that names one, and on the tab of its contract, of an act that names none, and Meet with a field for the key.
   testWidgets(
       'GKK\'s app on three phones: Alice establishes her identity; Bob asked '

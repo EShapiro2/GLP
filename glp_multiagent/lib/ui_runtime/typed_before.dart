@@ -58,10 +58,16 @@ TextInputType keyboardFor(String type) => switch (type) {
     };
 
 /// The values typed in [field] before, each a chip that puts it into
-/// [controller]; nothing where there are none.  [keyOf] keys each chip.
+/// [controller]; nothing where there are none.  [keyOf] keys each chip; the
+/// value [omit] is not offered.
 Widget typedBeforeChips(String field, TextEditingController controller,
-    {required Key Function(String value) keyOf, VoidCallback? onPicked}) {
-  final vs = TypedBefore.of(field);
+    {required Key Function(String value) keyOf,
+    VoidCallback? onPicked,
+    String? omit}) {
+  final vs = [
+    for (final v in TypedBefore.of(field))
+      if (v != omit) v
+  ];
   if (vs.isEmpty) return const SizedBox.shrink();
   return Wrap(spacing: 6, runSpacing: 4, children: [
     for (final v in vs)
