@@ -125,11 +125,11 @@ procedure place_act(UserContent?, Key?, List(Key)?, Stream(Request)?, AgentToUse
 place_act(A, Id, Cd, Reqs, Outs, [msg(person, Id?, A?) | Cmds?], D?) :- ground(Id?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
 
 procedure install_act(Content?, Constant?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg), Stream(Ask(Question))).
-install_act(M, App, Id, Cd, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui?)) | Cmds?], D?) :- module(M?) | creator_certification(M?, CSig), new_channel(Ui, Person), hold_person(Person?), serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
+install_act(M, App, Id, Cd, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui?)) | Cmds?], D?) :- module(M?) | publication(M?, CSig), new_channel(Ui, Person), hold_person(Person?), serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
 install_act(S, _, Id, Cd, Reqs, Outs, Cmds?, D?) :- string(S?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds, D).
 
-procedure creator_certification(Module?, String).
-creator_certification(M, CSig?) :- decompose_module(M?, _, Src, _), self_key(K), sign(creator_cert(Src?, [friendship, ending_a_friendship], syntactically_grassroots), K?, CSig).
+procedure publication(Module?, String).
+publication(M, W?) :- decompose_module(M?, _, Src, Cmp), self_key(K), sign(publish(Src?, Cmp?), K?, W).
 
 %% --- the dispatcher (programs/vglp/dispatcher.glp) ---
 
