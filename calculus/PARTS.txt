@@ -1,4 +1,4 @@
-DRAFT, 2026-11-16: 66 contracts, from Calculus code 674e4f2b, before their cascade run.  This file is written again when the run is in, with the commit of GLP it ran on, the count certified and the count with a platform.glp that loads.
+DRAFT, 2026-11-16: 66 contracts, from Calculus code dc582f3c, before their cascade run.  This file is written again when the run is in, with the commit of GLP it ran on, the count certified and the count with a platform.glp that loads.
 
 The 66: the 62 adopted on main, seven of them renamed (Agora, Joint, Stay, Lib, Rec, Coins for GC, Bonds for GB), and CDC, Notes, Shares and GA.
 
