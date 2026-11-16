@@ -31,8 +31,8 @@ contract_of() { # contract_of <app> ; the checker's name of its contract
         gsn) echo gsn ;;
         gsnp) echo gsnp ;;
         gai) echo gai ;;
-        gc) echo gc ;;
-        gb) echo gb ;;
+        gc) echo coins ;;
+        gb) echo bonds ;;
         gff) echo gff ;;
     esac
 }

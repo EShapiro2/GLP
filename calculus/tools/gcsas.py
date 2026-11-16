@@ -1902,14 +1902,16 @@ def derive_party(w, n, lex, entries, text=False):
         entries[i] = dict(entries[i], pid=sp["pid"])
         o = dict(entries[i])
         own = own_roles(o, list(sp["taken"]), lex, text)
-        if own:         # a role of the ward that decides the act takes it for the ward, with no vote (Calculus #8, 2026-11-16: Orga's issue of shares takes no vote of the directors), the ward being one
-            mk = [(t, q) for t, q, a in lex.basic if re.fullmatch(r"[b-z] is an? (?:organisation|ward)", t)]
-            mk = sorted(mk, key=lambda x: "ward" in x[0])[:1]
-            if text:
-                o["conds"] = o["conds"] + [(False, fill(mk[0][0], {mk[0][0][0]: r})) for r in own] if mk else o["conds"]
-            else:
-                o["body"] = o["body"] + [(False, mk[0][1], (r,)) for r in own] if mk else o["body"]
-            sp = dict(sp, taken=own, ttext=own, votes=None, knows=[])
+        if own and sp["votes"]:         # an act a role of the ward decides: taken for the ward by its officer, the role's consent beside it, with no vote (Calculus #8, 2026-11-16: Orga's issue of shares takes no vote of the directors, and is determined as the act is)
+            off = [(t, q, a) for t, q, a in lex.basic if q == "officer" and len(a) == 2]      # GO's "y is an officer of x"
+            for r, tk in sp["taken"].items():
+                if off:
+                    t, q, a = off[0]
+                    if text:
+                        o["conds"] = o["conds"] + [(False, fill(t, {a[0]: sp["ttext"][r], a[1]: r}))]
+                    else:
+                        o["body"] = o["body"] + [(False, q, (tk, r))]
+            sp = dict(sp, votes=None)
         if text:
             gen = gen_votes_text(lex, o, sp["votes"], sp["name"], o["label"], o["mark"], sp["takers"], sp["agents"]) if sp["votes"] else None
             ib, _ = inv_basic(lex)

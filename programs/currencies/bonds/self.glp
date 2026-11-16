@@ -29,7 +29,7 @@ Instrument ::= coin(Issuer, Serial) ; bond(Issuer, Maturity, Serial)
 Lot        ::= lot(Issuer, Due, Amount).
 Serial     ::= Integer.
 
-%% The three escrow transfers of GB:4: a deposit by the depositor with the
+%% The three escrow transfers of Notes:4: a deposit by the depositor with the
 %% escrow agent, for a beneficiary, on a condition the three agree; a release
 %% by the escrow agent to the beneficiary; a return by the escrow agent to the
 %% depositor.  Each is a transfer of one lot guarded by both participants, and
@@ -43,8 +43,8 @@ Serial     ::= Integer.
 %% is a day, met once the current date has reached it, or an agreement the
 %% three know by its name, which the escrow agent judges.
 %% A payment of notes, coins or bonds of any issuer, to a payee who consents
-%% (GN:3) is a transfer of the same kind with no terms: pay, guarded by both.
-%% A payment of the payee's own coins takes no consent (GC:1, Pay issuer).
+%% (Notes:3) is a transfer of the same kind with no terms: pay, guarded by both.
+%% A payment of the payee's own coins takes no consent (Coins:1, Pay issuer).
 Kind ::= deposit ; release ; return ; pay.
 Terms ::= terms(Depositor, Beneficiary, Condition) ; none.
 Condition ::= day(Date) ; agreed(Constant).
