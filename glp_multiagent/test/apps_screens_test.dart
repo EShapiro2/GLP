@@ -912,7 +912,7 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     await run.shoot(alice, 'gkk-a-alice-identity.png');
     await run.join(alice);
-    expect(alice.atoms, ['identity']);
+    expect(alice.atoms, ['identity', 'person']);
     // Once her identity is established, Acquaint, GKK's "[Acquaint]", with its field for the peer's key, GKK's "<person>" (Section 5.4, "The contract's words").
     expect(
         find.descendant(
@@ -929,8 +929,8 @@ void appsScreens(Screens screens) {
     await run.meetByKey(alice, bob, shot: 'gkk-b-bob-asked-to-meet.png');
     await run.meetByKey(alice, carol);
     expect(alice.atoms,
-        unorderedEquals(['identity', 'knows(bob)', 'knows(carol)']));
-    expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)']));
+        unorderedEquals(['identity', 'person', 'knows(bob)', 'knows(carol)']));
+    expect(bob.atoms, unorderedEquals(['identity', 'person', 'knows(alice)']));
 
     // Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Introduce, GKK's "[Introduce]", in Bob's row of her Contacts, Bob taking the second role of introduce, with its field beside it, GKK's "<person>", Carol, introduce's agent variable c, which Alice's role requires held, knows(c), so it is picked among the persons she knows: "A button is drawn in the row of a tab's entry, a person who takes a role of the act or an item the act names, with the act's fields beside it" (vGLP, Section 6.2); "a variable is picked among the items the viewer holds where the proposer's role requires it held" (vGLP acd3e74, Section 5.4, "The contract's words").  She picks Carol and taps Introduce.
     await run.list(alice, 'knows');
@@ -963,7 +963,7 @@ void appsScreens(Screens screens) {
     expect(bob.questions('approval'), isEmpty);
     expect(carol.questions('approval'), isEmpty);
     expect(bob.atoms,
-        unorderedEquals(['identity', 'knows(alice)', 'knows(carol)']));
+        unorderedEquals(['identity', 'person', 'knows(alice)', 'knows(carol)']));
 
     // (c) Bob's contacts once he has approved: a row for each atom of knows, in the order of his state, the newest first, Carol and then Alice, each with Introduce, its field a key; Acquaint, which requires no atom of knows at his role, in no row: "A button is drawn in the row of a tab's entry, whose person takes a role of the act, ... in a row of the tab whose predicate the act requires or deletes at the proposer's role naming the entry" (vGLP 516a0a2, Section 6.2).
     await run.top(bob);
@@ -1017,8 +1017,8 @@ void appsScreens(Screens screens) {
     await run.list(bob, 'friend');
     await run.tap(bob, run.control(bob, 'act:unfriend:alice'));
     expect(alice.questions('approval'), isEmpty);
-    expect(alice.atoms, unorderedEquals(['identity', 'knows(bob)']));
-    expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)']));
+    expect(alice.atoms, unorderedEquals(['identity', 'person', 'knows(bob)']));
+    expect(bob.atoms, unorderedEquals(['identity', 'person', 'knows(alice)']));
 
     // (c) Alice's tabs after Bob ends the friendship: Friends lists no one, and Contacts lists Bob.
     expect(run.control(alice, 'atom:bob'), findsNothing);
@@ -1240,7 +1240,7 @@ void appsScreens(Screens screens) {
     await run.type(alice, run.control(alice, 'field:issue::2'), '2');
     await run.tap(alice, run.control(alice, 'send:issue:'));
     expect(alice.atoms,
-        unorderedEquals(['identity', 'knows(bob)', 'coin(alice)', 'coin(alice)']));
+        unorderedEquals(['identity', 'person', 'knows(bob)', 'coin(alice)', 'coin(alice)']));
     await run.list(alice, 'coin');
     await run.top(alice);
     expect(run.control(alice, 'atom:alice'), findsOneWidget);

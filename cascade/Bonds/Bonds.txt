@@ -23,14 +23,14 @@ Kind of note: bond, y-bonds due Day for y-notes.
 Interface pragmas
 Bonds: the bonds Alice holds.
 Issue bond: Alice [Issue bond] <maturity> <amount>
-Swap: Alice [Swap coin for bond] <amount given> <issuer wanted> <maturity wanted> <amount wanted> [Swap bonds] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
+Swap: Alice [Swap] <amount given> <issuer wanted> <amount wanted> [Swap coin for bond] <amount given> <issuer wanted> <maturity wanted> <amount wanted> [Swap bonds] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.
-Pay: Alice [Pay bond] <amount>
-  Bob: Alice asks to pay bonds to you.
+Pay: Alice [Pay] <amount> [Pay bond] <amount>
+  Bob: Alice asks to pay you coins or bonds.
 Redeem: Alice [Redeem coin against bond] <issuer wanted> <maturity wanted> [Redeem bond] <issuer wanted> [Redeem bond against bond] <issuer wanted> <maturity wanted>
-Escrow: Alice [Deposit bond] <amount> <condition>
-  Carol: Alice asks to deposit bonds with you.
-  Carol [Release bond] <amount>
-  Bob: Carol asks to release bonds to you.
-  Carol [Return bond] <amount>
-  Alice: Carol asks to return bonds to you.
+Escrow: Alice [Deposit] <amount> <condition> [Deposit bond] <amount> <condition>
+  Carol: Alice asks to deposit coins or bonds with you.
+  Carol [Release] <amount> [Release bond] <amount>
+  Bob: Carol asks to release coins or bonds to you.
+  Carol [Return] <amount> [Return bond] <amount>
+  Alice: Carol asks to return coins or bonds to you.
