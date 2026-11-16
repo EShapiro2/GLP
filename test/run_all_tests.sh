@@ -6624,7 +6624,7 @@ cva_c3_real=$(bash "$CVA/compiler/compose.sh" --base GSG "$cva_c3_gsg" "$cva_c3_
 cva_c3_realu=$(bash "$CVA/compiler/compose.sh" GSG "$cva_c3_gsg" "$cva_c3_pgsg" no_introduction GnW "$cva_c3_gnw" no_pragmas no_introduction 2>&1; echo "exit $?")
 check "CVA composition over a third: GSG and GnW over GSG, GnW's establish and not GSG's, the composition GnW's reading (gsg)" "^same$" "$([ -n "$cva_c3_gnw" ] && [ "$(printf '%s\n' "$cva_c3_real" | sed -n 1p)" = "$cva_c3_gnw" ] && echo same || echo differs)"
 check "CVA composition over a third: ... and compose.sh exits 0 (gsg)" "^exit 0$" "$cva_c3_real"
-check "CVA composition over a third: GSG and GnW with no third refused, establish written differently by both (gsg)" "the schema establish is written differently by GSG and GnW" "$cva_c3_realu"
+check "CVA composition over a third: GSG and GnW with no third refused, a schema written differently by both, acquaint since the Calculus's publication of 2026-11-16 and establish before it (gsg)" "the schema [a-z_]* is written differently by GSG and GnW" "$cva_c3_realu"
 # The third, cascade.sh's (README.md beside compose.sh, "Composition"), from the contracts each is written from, pragmas.sh --from: GSG, GnW and GSN each written from GSG, and GnW and GSN, which GSNW amends, from GKK and GSG.
 cva_c3_from=$(bash "$CVA/compiler/pragmas.sh" --from "$GLP_DIR/programs/cssn/GSNW.txt" 2>&1 | sed -e 's|.*/programs/||' | tr '\n' ' ')
 check "CVA composition over a third: pragmas.sh --from gives the contracts GSNW is written from, each before the contracts written from it, GSNW last (from)" "^gsc/GKK.txt gsc/GSG.txt gsc/GSN.txt gsc/GnW.txt cssn/GSNW.txt $" "$cva_c3_from"

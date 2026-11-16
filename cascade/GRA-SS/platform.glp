@@ -162,7 +162,7 @@ Recs ::= [] ; [Rec | Recs].
 App ::= app(GAtoms, Integer, Lock, Recs).
 Pend ::= deferred(Net).
 Pends ::= [] ; [Pend | Pends].
-WKey ::= op(Class) ; vt(Attempt) ; cm(Attempt) ; wd(Attempt, Attempt) ; ip(Peer, Peer) ; rd(Attempt).
+WKey ::= op(Class) ; vt(Attempt) ; cm(Attempt) ; wd(Attempt, Attempt) ; ip(Peer, Peer) ; rd(Attempt) ; reading.
 Wait ::= w(WKey, Integer).
 Waits ::= [] ; [Wait | Waits].
 WFound ::= at(Integer) ; unseen.
@@ -502,8 +502,38 @@ await_greet(_, no, []).
 
 procedure agent_goal(Stream(Trigger)?, Stream(Trigger)?, YesNo?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
 agent_goal([T | Ls], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- then_local(U?, Th), step(T?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
-agent_goal([], [T | In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- then_read(U?, Th), step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
-agent_goal([], [], _, [], [], [], [], _, _, _, []).
+agent_goal([], In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(St?) | st_app(St?, Ap0), own_cond(St?, Ch, St1), early(Ch?, Ap0?, In?, U?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
+
+procedure early(Choice?, App?, Stream(Trigger)?, YesNo?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
+early(take(K, S), Ap0, In, _, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- dispatch_own(take(K?, S?), Ap0?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
+early(none, _, In, U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- read_next(In?, U?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
+
+procedure read_next(Stream(Trigger)?, YesNo?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
+read_next([T | In], U, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- then_read(U?, Th), read_at(St?, St1), step(T?, Th?, [], In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
+read_next([], _, [], [], [], [], _, _, _, []).
+
+procedure read_at(St?, St).
+read_at(St, St1?) :- ground(St?) | st_count(St?, D), st_waits(St?, W), drop_reading(W?, W1), set_waits(St?, [w(reading, D?) | W1?], St1).
+
+procedure drop_reading(Waits?, Waits).
+drop_reading([], []).
+drop_reading([w(reading, _) | Ws], Ws?).
+drop_reading([X | Ws], [X? | Ws1?]) :- otherwise | drop_reading(Ws?, Ws1).
+
+procedure eligible(Cands?, Waits?, Cands).
+eligible(Cs, W, Cs1?) :- ground(W?) | wait_of(reading, W?, F), reading_at(F?, Rd), eligible1(Cs?, W?, Rd?, Cs1).
+
+procedure reading_at(WFound?, Integer).
+reading_at(at(T), T?).
+reading_at(unseen, 0).
+
+procedure eligible1(Cands?, Waits?, Integer?, Cands).
+eligible1([], _, _, []).
+eligible1([cand(K, I) | Cs], W, Rd, R?) :- ground(K?), ground(W?), integer(Rd?) | began_at(K?, W?, T), eligible2(T?, Rd?, cand(K?, I?), Cs?, W?, R).
+
+procedure eligible2(Integer?, Integer?, Cand?, Cands?, Waits?, Cands).
+eligible2(T, Rd, C, Cs, W, [C? | R?]) :- (T? =< Rd?) | eligible1(Cs?, W?, Rd?, R).
+eligible2(T, Rd, _, Cs, W, R?) :- (T? > Rd?) | eligible1(Cs?, W?, Rd?, R).
 
 procedure then_local(YesNo?, Then).
 then_local(yes, own_unread).
@@ -523,7 +553,7 @@ step(net(msg(_, intro(_, Q))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, 
 step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(To?), ground(F?), ground(X?), ground(St?) | st_app(St?, Ap0), message_cond(X?, St?, Cd, St1), dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
 step(answered(At, YN), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(At?), ground(YN?), ground(St?) | st_app(St?, Ap0), close_approval(At?, Approvals?, Approvals1), answer_cond(At?, St?, Cd, St1), dispatch_answer(Cd?, YN?, At?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals1?, H?, St1?, D).
 step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(St?) | st_pends(St?, Pd), st_view(St?, V), st_trie(St?, Tr), recheck_find(Pd?, V?, Tr?, St?, F), recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
-step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- take_own(Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
+step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- agent_goal(Ls?, In?, no, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
 
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
 next(Th, Kick, Ap0, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- next_n(Th?, Kick?, Ap0?, [], Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
@@ -1111,7 +1141,7 @@ procedure own_cond1a(St?, Cands?, Cands?, Cands?, Choice, St).
 own_cond1a(St, Cs1, Csg, Csh, Ch?, St5?) :- ground(St?) | st_app(St?, Ap), app_recs(Ap?, R), st_view(St?, V), vote_cands0(R?, V?, St?, Cs2, St2), commit_cands_st(St2?, Cs3, St3), wound_cands0(St3?, Cs4, St4), intro_cands(St4?, Cs5, St6), ready_cands(St6?, Cs6, St7), app(Cs1?, Csg?, Ca), app(Ca?, Csh?, Cb), app(Cb?, Cs2?, C12), app(C12?, Cs3?, C123), app(C123?, Cs4?, C1234), app(C1234?, Cs5?, C12345), app(C12345?, Cs6?, Cs), own_cond2(Cs?, St7?, Ch, St5).
 
 procedure own_cond2(Cands?, St?, Choice, St).
-own_cond2(Cs, St, Ch?, St2?) :- ground(St?) | st_waits(St?, W), st_app(St?, Ap), app_recs(Ap?, R), st_ix(St?, Ix), prune_waits(W?, R?, Ix?, W0), st_count(St?, D), choose(Cs?, W0?, D?, Ch0, W1), set_waits(St?, W1?, St1), count_own(Ch0?, St1?, Ch, St2).
+own_cond2(Cs, St, Ch?, St2?) :- ground(St?) | st_waits(St?, W), st_app(St?, Ap), app_recs(Ap?, R), st_ix(St?, Ix), prune_waits(W?, R?, Ix?, W0), st_count(St?, D), choose_e(Cs?, W0?, D?, Ch0, W1), set_waits(St?, W1?, St1), count_own(Ch0?, St1?, Ch, St2).
 
 procedure count_own(Choice?, St?, Choice, St).
 count_own(none, St, none, St?).
@@ -1424,6 +1454,7 @@ prune_wait(yes, _, Ws, Ws?).
 
 procedure dead_key(WKey?, Recs?, Ix?, YesNo).
 dead_key(op(_), _, _, no).
+dead_key(reading, _, _, no).
 dead_key(vt(A), R, ix(Tr, _, _, _), D?) :- ground(A?), ground(R?) | has_vote(A?, R?, V), rec_closed(A?, R?, Tr?, Cl), or(V?, Cl?, D).
 dead_key(cm(A), R, ix(Tr, _, _, _), D?) :- rec_closed(A?, R?, Tr?, D).
 dead_key(wd(_, B), R, ix(Tr, _, _, _), D?) :- ground(B?), ground(R?) | rec_closed(B?, R?, Tr?, Cl), mem(yielded(B?), R?, Yd), or(Cl?, Yd?, D).
@@ -1482,6 +1513,12 @@ meet_all([C | Cs], St, Is, Is2?, St2?) :- ground(C?) | st_class(C?, St?, R, St1)
 procedure add_cls(ClassRes?, Infos?, Infos).
 add_cls(nocls, Is, Is?).
 add_cls(cls(I), Is, Is1?) :- app(Is?, [I?], Is1).
+
+procedure choose_e(Cands?, Waits?, Integer?, Choice, Waits).
+choose_e(Cs, W, D, Ch?, W1?) :- ground(Cs?), ground(W?), integer(D?) | ensure_waits(Cs?, W?, D?, Wa), choose_e1(Cs?, Wa?, D?, Ch, W1).
+
+procedure choose_e1(Cands?, Waits?, Integer?, Choice, Waits).
+choose_e1(Cs, Wa, D, Ch?, W1?) :- ground(Wa?), integer(D?) | eligible(Cs?, Wa?, Cs1), choose1(Cs1?, Wa?, D?, Ch, W1).
 
 procedure choose(Cands?, Waits?, Integer?, Choice, Waits).
 choose(Cs, W, D, Ch?, W2?) :- ground(Cs?), ground(W?), integer(D?) | ensure_waits(Cs?, W?, D?, W1), choose1(Cs?, W1?, D?, Ch, W2).
