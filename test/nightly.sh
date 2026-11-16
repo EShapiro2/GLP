@@ -16,7 +16,8 @@ cd /Users/udi/Grassroots/GLP || exit 1
 D=$(date -u +%Y-%m-%d)
 OUT=/Users/udi/Grassroots/tmp/nightly-$D.txt
 # The clone is Code's and stays on main; a pull that is not a fast-forward is said and nothing runs.
-if ! git pull --ff-only > "$OUT" 2>&1; then echo "nightly: git pull --ff-only failed; nothing run" >> "$OUT"; exit 1; fi
+# main alone is fetched: a pull of every branch met a fetch in a worktree of the same clone, the worktrees sharing its refs, and stopped (Mac #1, 2026-11-16).
+if ! git pull --ff-only origin main > "$OUT" 2>&1; then echo "nightly: git pull --ff-only origin main failed; nothing run" >> "$OUT"; exit 1; fi
 echo "main $(git log --format=%h -1)" >> "$OUT"
 # The Mac sleeps at night, so it missed 2026-10-29 and 2026-10-30: pmset wakes it at 01:58 UTC
 # (Udi, 2026-10-30, "wakepoweron at 3:58AM every day", Israel time), and caffeinate -i holds it awake until the run ends (Code #17).
