@@ -36,7 +36,8 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .sh{display:flex;align-items:baseline;justify-content:space-between;margin:34px 0 12px}
 .sh h2{font-size:22px;letter-spacing:-.015em;margin:0;font-weight:700}
 .sh span{color:var(--mute);font-size:14px}
-.sh .hq{display:flex;flex-direction:column;align-items:flex-end;gap:6px}.sh .hq img{display:block;border-radius:8px;border:1px solid var(--line)}
+.sh .hq{display:flex;flex-direction:column;align-items:stretch;gap:6px;width:max-content;margin-left:auto}.sh .hq img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid var(--line)}
+@media (max-width:640px){.sh .hq{align-items:flex-end}.sh .hq img{width:84px}}
 .card{background:var(--card);border-radius:20px;box-shadow:var(--shadow)}
 #mapcard{position:relative;overflow:hidden;padding:6px}
 #graph{display:block;width:100%;height:auto;touch-action:none;-webkit-user-select:none;user-select:none}
