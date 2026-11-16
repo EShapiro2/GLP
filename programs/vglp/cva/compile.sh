@@ -13,7 +13,9 @@
 # programs/gsc/GSN.glp, the checker's gsn, the social network) and GC
 # (Currencies', programs/currencies/coins/GC.glp, the checker's gc; Section
 # 3.4), each the one copy in its owner's file (claude.md "Sessions", the
-# cascade rule; Coordination Appendix C), and nudge, introduce, gnudge,
+# cascade rule; Coordination Appendix C), its file and the name its file gives
+# it found by the table of the contracts' names, calculus/NAMES.txt, under the
+# name it has on main or the name of the table's second column, and nudge, introduce, gnudge,
 # childsafe, link, friends, waves, parts, opens, groups, counter, pokes, merges, coins, wardclose, numbers, bonds, intros, days, linear, forms, counts and shares, vGLP's, which contracts.glp beside the compiler
 # holds, with the introduction predicate each names, introduction_named/2, or
 # none (GSC's three name none).  A contract is checked before it is compiled
@@ -45,17 +47,56 @@ THEIRS="gsg gsn gc"
 OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter pokes merges coins wardclose numbers bonds intros days linear forms counts shares published leaves readings backed consts roles wild wards feeds"
 CONTRACTS="$THEIRS $OURS"
 
+# The name each of GSC's and Currencies' rows has on main, the first column of
+# the table of the contracts' names, calculus/NAMES.txt ("name on main | name |
+# file name | row and atom"), the one source of the names: GC is Coins since
+# 2026-11-16 (Udi's four renames; Code #33, vGLP_inbox.md, 17:12 UTC), and its
+# row here stays gc, coins being vGLP's own contract of contracts.glp.
+main_name() {
+    case "$1" in
+        gsg) echo GSG ;;
+        gsn) echo GSN ;;
+        gc)  echo Coins ;;
+    esac
+}
+# The table, calculus/NAMES.txt, or the file CONTRACT_NAMES names, a table of
+# the same form, as pragmas.sh reads it.
+NAMES="${CONTRACT_NAMES:-$GLP_DIR/calculus/NAMES.txt}"
+table_row() { # table_row <name> ; its row of the table, its four columns joined by "|"
+    awk -F'|' -v n="$1" '
+        f && NF == 4 { for (i = 1; i <= 4; i++) gsub(/^[ \t]+|[ \t]+$/, "", $i); if ($1 == n || $2 == n) { print $1 "|" $2 "|" $3 "|" $4; exit } }
+        { x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x); if (NF == 4 && x == "name on main") f = 1 }
+    ' "$NAMES"
+}
+# The owner's file of the contract of a row, by the table: the NAME.glp of its
+# name on main, as on main, or else that of its file name, "the name with a
+# hyphen for each space and no apostrophe: NAME.txt, NAME.glp" (calculus/
+# NAMES.txt), under programs/; and the name its file gives it, contract_named/2,
+# "the atom of contract_named", the file name in lower case, a hyphen as an
+# underscore (ibid.), its fourth column, or, of the file of its name on main,
+# that name so written, as gsg of GSG.glp.
+row_file() { # row_file <contract> ; "<file>|<atom>"
+    local r m f g
+    r=$(table_row "$(main_name "$1")")
+    [ -n "$r" ] || return 1
+    m=${r%%|*}; f=$(printf '%s' "$r" | cut -d'|' -f3)
+    for g in "$GLP_DIR"/programs/*/"$m.glp" "$GLP_DIR"/programs/*/*/"$m.glp"; do
+        [ -f "$g" ] && { printf '%s|%s\n' "$g" "$(printf '%s' "$m" | tr 'A-Z-' 'a-z_')"; return 0; }
+    done
+    for g in "$GLP_DIR"/programs/*/"$f.glp" "$GLP_DIR"/programs/*/*/"$f.glp"; do
+        [ -f "$g" ] && { printf '%s|%s\n' "$g" "$(printf '%s' "$r" | cut -d'|' -f4)"; return 0; }
+    done
+    return 1
+}
 contract_file() { # contract_file <contract> ; the file that holds it, its owner's
     case "$1" in
-        gsg) echo "$GLP_DIR/programs/gsc/GSG.glp" ;;
-        gsn) echo "$GLP_DIR/programs/gsc/GSN.glp" ;;
-        gc)  echo "$GLP_DIR/programs/currencies/coins/Coins.glp" ;;
+        gsg|gsn|gc) row_file "$1" | cut -d'|' -f1 ;;
         *)   echo "$HERE/contracts.glp" ;;
     esac
 }
-name_in() { # name_in <contract> ; the name its file gives it, contract_named/2: GC is Coins since 2026-11-16 (Udi's four renames; Code #33, vGLP_inbox.md, 17:12 UTC), and its row here stays gc, coins being vGLP's own contract of contracts.glp
+name_in() { # name_in <contract> ; the name its file gives it, contract_named/2
     case "$1" in
-        gc) echo coins ;;
+        gsg|gsn|gc) row_file "$1" | cut -d'|' -f2 ;;
         *)  echo "$1" ;;
     esac
 }
