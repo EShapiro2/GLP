@@ -155,7 +155,7 @@ two_escrows :-
 %% A play begins on day 1: the machine's clock, the one clock of every agent
 %% of the play, is set to it, and a scripted person sets it forward
 %% (dated/person.glp, the step advance).
-%% The terms of an escrow (GB:4), and the maturity of a bond (GB:1): alice asks
+%% The terms of an escrow (Notes:4), and the maturity of a bond (Bonds:1): alice asks
 %% for bonds maturing on day 1, the current date, and none is issued; she asks
 %% to deposit two of her coins for carol, whom she does not know, and nothing
 %% is sent; she deposits them with the escrow agent for bob on day 30; the
@@ -177,7 +177,7 @@ escrow_terms :-
               return(alice, alice, now, 2, bob, day(30))],
              [conversation(alice, ch(GA?, AG)), conversation(bob, ch(GB?, BG))]).
 
-%% Pay (GN:3) and Pay issuer (GC:1): alice issues coins and bonds; she pays
+%% Pay (Notes:3) and Pay issuer (Coins:1): alice issues coins and bonds; she pays
 %% bob two of her coins and a bond, which are not his own, with his consent;
 %% she asks to pay carol a coin, and carol declines, so it comes back; and bob
 %% pays alice one of her coins back, her own, which she takes unasked.
