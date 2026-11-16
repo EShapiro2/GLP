@@ -138,6 +138,7 @@ const List<String> _notShown = [
   'issue(',
   'swap(',
   'pay(',
+  'pay_issuer(',
   'bond(',
   'date(',
   'dated',
@@ -1289,20 +1290,20 @@ void appsScreens(Screens screens) {
     expect(alice.atoms.where((x) => x == 'coin(bob)'), hasLength(3));
     expect(bob.atoms.where((x) => x == 'coin(alice)'), hasLength(2));
 
-    // (c) Bob's holdings after the swap: the Alice-coins he holds, with Pay, GC's "[Pay]", beside them.
+    // (c) Bob's holdings after the swap: the Alice-coins he holds, with Pay issuer, GC's "[Pay issuer]", beside them.
     await run.list(bob, 'coin');
     await run.top(bob);
     expect(run.control(bob, 'atom:alice'), findsOneWidget);
     expect(run.control(bob, 'atom:bob'), findsNothing);
-    expect(run.control(bob, 'act:pay:alice'), findsOneWidget);
+    expect(run.control(bob, 'act:pay_issuer:alice'), findsOneWidget);
     run.plain(bob);
     await run.shoot(bob, 'gc-c-bob-holdings.png');
 
-    // Alice pays two Bob-coins to Bob (GC:3): Pay beside her Bob-coins, its field amount, 2; which proposes pay(alice, bob, 2); Bob is not asked.
+    // Alice pays two Bob-coins to Bob (GC:3): Pay issuer beside her Bob-coins, its field amount, 2; which proposes pay_issuer(alice, bob, 2); Bob is not asked.
     await run.list(alice, 'coin');
-    await run.tap(alice, run.control(alice, 'act:pay:bob'));
-    await run.type(alice, run.control(alice, 'field:pay:bob:3'), '2');
-    await run.tap(alice, run.control(alice, 'send:pay:bob'));
+    await run.tap(alice, run.control(alice, 'act:pay_issuer:bob'));
+    await run.type(alice, run.control(alice, 'field:pay_issuer:bob:3'), '2');
+    await run.tap(alice, run.control(alice, 'send:pay_issuer:bob'));
     expect(bob.questions('approval'), isEmpty);
     expect(alice.atoms.where((x) => x == 'coin(bob)'), hasLength(1));
 
@@ -1521,13 +1522,13 @@ void appsScreens(Screens screens) {
           reason: '$p swaps $k $u-coins for $k1 $w-coins with $q');
     }
 
-    // [p] pays [k] coins of [q] to [q] (GC:3): Pay, GC's "[Pay]", beside their [q]-coins on their Coins tab, its field amount; nobody is asked.
+    // [p] pays [k] coins of [q] to [q] (GC:3): Pay issuer, GC's "[Pay issuer]", beside their [q]-coins on their Coins tab, its field amount; nobody is asked.
     Future<void> pay(String p, String q, int k) async {
       final (pq, qq) = (held(p, q), held(q, q));
       await run.list(v[p]!, 'coin');
-      await run.tap(v[p]!, run.control(v[p]!, 'act:pay:$q'));
-      await run.type(v[p]!, run.control(v[p]!, 'field:pay:$q:3'), '$k');
-      await run.tap(v[p]!, run.control(v[p]!, 'send:pay:$q'));
+      await run.tap(v[p]!, run.control(v[p]!, 'act:pay_issuer:$q'));
+      await run.type(v[p]!, run.control(v[p]!, 'field:pay_issuer:$q:3'), '$k');
+      await run.tap(v[p]!, run.control(v[p]!, 'send:pay_issuer:$q'));
       expect(v[q]!.questions('approval'), isEmpty);
       expect((held(p, q), held(q, q)), (pq - k, qq + k),
           reason: '$p pays $k $q-coins to $q');
