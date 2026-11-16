@@ -1,5 +1,5 @@
 SCB: Sovereign Central Bank
-SCB instantiates GBank with central bank bylaws; role(x,z,Governor) for proposer(x,z,m); role(x,z,Governor) for taker(x,z,m); role(x,z,Governor) for voter(x,z,m); vote(z,>=Votes,m), sum(More,Votes,1), has_role(z,<More,Governor) for decided(z,m), and restricts and extends it.
+SCB instantiates GBank with central bank bylaws; role(x,z,Governor) for proposer(x,z,m); role(x,z,Governor) for taker(x,z,m); role(x,z,Governor) for voter(x,z,m); vote(z,>=Votes,m), product(Double,Votes,2), has_role(z,<Double,Governor) for decided(z,m), and restricts and extends it.
 Vocabulary: z has the policy rate for e at the number n = policy_rate(z,e,n); z holds v's vote to set the policy rate for e at n = vote_rate(z,v,e,n); z holds v's vote to lend y n z-coins due e = vote_lend(z,v,y,n,e).
 Roles: the governors of z = governors(z), listed by z has y in the role Governor and y holds the role Governor in z; the committee members of z = committee_members(z).
 x is a governor of z: x holds the role Governor in z.
@@ -11,14 +11,14 @@ After x sets the policy rate of z for e at n: the earlier policy rate of z for e
 After v votes to lend y n z-coins of z due e, which requires z does not hold v's vote to lend y n z-coins due e: z holds v's vote to lend y n z-coins due e.
 After x swaps n z-coins of z with y for m y-bonds due e: no longer z holds n z-coins, y holds n z-coins, no longer y holds m y-bonds due e, z holds m y-bonds due e and z holds no one's vote to lend y n z-coins due e.
 SCB:0 - | A *central bank* is a bank created by an organisation, Gov (GO:1), as the *sovereign* of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar. Its bylaws name two roles, *governor*, held by its first officer, and *committee member*; the governors jointly decide the acts of the bank, but the officers of Gov decide the appointment and the removal of its officers, and the committee members, the monetary policy committee, set by a majority the *policy rate* for each term, the return over that term at which the bank lends its coins against bonds. A participant who holds no role is a *counterparty*.
-SCB:0 - | Gov is an organisation, Alice, Bob and Carol persons, Orga a central bank, Term a term, Rate, Sum, Interest, Total, Votes, Double and More numbers.
+SCB:0 - | Gov is an organisation, Alice, Bob and Carol persons, Orga a central bank, Term a term, Rate, Sum, Interest, Total, Votes and Double numbers.
 SCB:1 ■ Leave: GO:3 Leave <- organisation(Orga) guarded by governors(Orga).
 SCB:1 ■ Officer leave: GO:3 Officer leave <- organisation(Orga) guarded by governors(Orga).
 SCB:1 ■ Expel: GO:3 Expel <- organisation(Orga) guarded by Bob, governors(Orga).
 SCB:1 ■ Officer expel: GO:3 Officer expel <- organisation(Orga) guarded by Bob, governors(Orga).
 SCB:2 ■ Set policy rate: ~policy_rate(Orga,Term,_), policy_rate(Orga,Term,Rate), ~vote_rate(Orga,_,Term,Rate) <- role(Alice,Orga,Committee), vote_rate(Orga,>=Votes,Term,Rate), product(Double,Votes,2), has_role(Orga,<Double,Committee) guarded by Alice.
 SCB:2 ■ Vote on policy rate: vote_rate(Orga,Carol,Term,Rate) <- role(Carol,Orga,Committee), ~vote_rate(Orga,Carol,Term,Rate) guarded by Carol.
-SCB:3 ■ Lend: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Term,*Total), bond(Orga,Bob,Term,*Total), ~vote_lend(Orga,_,Bob,Sum,Term) <- role(Alice,Orga,Governor), vote_lend(Orga,>=Votes,Bob,Sum,Term), sum(More,Votes,1), has_role(Orga,<More,Governor), participant(Bob,Orga), ~role(Bob,Orga,_), policy_rate(Orga,Term,Rate), product(Interest,Sum,Rate), sum(Total,Sum,Interest), coin(Orga,Orga,*Sum), bond(Bob,Bob,Term,*Total) guarded by Alice, Bob.
+SCB:3 ■ Lend: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Term,*Total), bond(Orga,Bob,Term,*Total), ~vote_lend(Orga,_,Bob,Sum,Term) <- role(Alice,Orga,Governor), vote_lend(Orga,>=Votes,Bob,Sum,Term), product(Double,Votes,2), has_role(Orga,<Double,Governor), participant(Bob,Orga), ~role(Bob,Orga,_), policy_rate(Orga,Term,Rate), product(Interest,Sum,Rate), sum(Total,Sum,Interest), coin(Orga,Orga,*Sum), bond(Bob,Bob,Term,*Total) guarded by Alice, Bob.
 SCB:3 ■ | Bob and Orga swap as many bonds as the coins and the interest on them at the policy rate for that term.
 SCB:3 ■ Vote to lend: vote_lend(Orga,Carol,Bob,Sum,Term) <- role(Carol,Orga,Governor), has_participant(Orga,Bob), ~vote_lend(Orga,Carol,Bob,Sum,Term) guarded by Carol.
 SCB:4 ■ | Open market.

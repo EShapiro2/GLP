@@ -1,9 +1,9 @@
 GCC: Grassroots Community Currency
-GCC instantiates GBank with community currency bylaws; role(x,z,Treasurer) for proposer(x,z,m); role(x,z,Treasurer) for taker(x,z,m); role(x,z,Treasurer) for voter(x,z,m); vote(z,>=Votes,m), sum(More,Votes,1), has_role(z,<More,Treasurer) for decided(z,m), and extends it.
+GCC instantiates GBank with community currency bylaws; role(x,z,Treasurer) for proposer(x,z,m); role(x,z,Treasurer) for taker(x,z,m); role(x,z,Treasurer) for voter(x,z,m); vote(z,>=Votes,m), product(Double,Votes,2), has_role(z,<Double,Treasurer) for decided(z,m), and extends it.
 x is a treasurer of z: x holds the role Treasurer in z.
 After x swaps n x-coins for n z-coins: no longer x holds n x-coins, z holds n x-coins, no longer z holds n z-coins and x holds n z-coins.
 GCC:0 - | A *community currency* is a bank whose coins are Dollar-denominated and whose bylaws name one role, *treasurer*; the treasurers jointly decide its acts.
-GCC:0 - | Alice and Bob are persons, Orga a community currency, Sum, Votes and More numbers.
+GCC:0 - | Alice and Bob are persons, Orga a community currency, Sum a number.
 GCC:1 ■ Draw: ~coin(Alice,Alice,*Sum), coin(Orga,Alice,*Sum), ~coin(Orga,Orga,*Sum), coin(Alice,Orga,*Sum) <- role(Alice,Orga,Treasurer), coin(Alice,Alice,*Sum), coin(Orga,Orga,*Sum) guarded by Alice.
 GCC:2 ○ | Fiat redemption.
 GCC:2 ○ | Any treasurer will redeem an Orga-coin Bob holds against one Dollar.

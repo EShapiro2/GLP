@@ -746,7 +746,8 @@ if [ "$MODE" = "--check" ]; then
     [ -d "$REC" ] || { say "no record in cascade/$FILE"; exit 1; }
     # Every artefact the run made and every one in the record, the manifest
     # aside, which names the run.
-    for f in $( (ls "$OUT"; ls "$REC") | grep -vx manifest.md | sort -u); do
+    # relations.txt aside too: calculus/tools/adopt.py writes it into the record and adopt.py --check holds it.
+    for f in $( (ls "$OUT"; ls "$REC") | grep -vx manifest.md | grep -vx relations.txt | sort -u); do
         if [ -f "$OUT/$f" ] || [ -f "$REC/$f" ]; then
             if [ -f "$OUT/$f" ] && [ -f "$REC/$f" ] && cmp -s "$OUT/$f" "$REC/$f"; then
                 echo "$f: as printed"
@@ -761,6 +762,8 @@ if [ "$MODE" = "--check" ]; then
 fi
 
 [ "$STATUS" = 0 ] || exit 1
+# relations.txt in the record is adopt.py's and stays (Helper #12, 2026-11-16: a run deleted it).
+[ -f "$REC/relations.txt" ] && cp "$REC/relations.txt" "$OUT/relations.txt"
 rm -rf "$REC" && mkdir -p "$REC" && cp "$OUT"/* "$REC"/ || { say "the record could not be written"; exit 1; }
 say "written to cascade/$FILE"
 

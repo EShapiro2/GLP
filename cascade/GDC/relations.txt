@@ -1,0 +1,2 @@
+GDC extends GC: holds
+GDC restricts GC: holds

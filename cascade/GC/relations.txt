@@ -1,0 +1,2 @@
+GC relaxes GN: holds
+GC extends GN: holds

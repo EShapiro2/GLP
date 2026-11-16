@@ -1,32 +1,14 @@
 GB: Grassroots Bonds
-GB extends GC.
-Vocabulary: x holds a y-bond due e = bond(x,y,e); x holds n y-bonds due e = bond(x,y,e,*n); the current date is e, for x = today(x,e); z holds n w-coins in escrow from x for y on k = escrow_coin(z,w,x,y,k,*n); z holds n w-bonds due e in escrow from x for y on k = escrow_bond(z,w,e,x,y,k,*n).
-After x issues n x-bonds due e: x holds n x-bonds due e.
-After x and y swap n z-coins for m w-bonds due e: no longer x holds n z-coins, y holds n z-coins, no longer y holds m w-bonds due e, x holds m w-bonds due e, y knows z and x knows w.
-After x and y swap n z-bonds due e for m w-bonds due f: no longer x holds n z-bonds due e, y holds n z-bonds due e, no longer y holds m w-bonds due f, x holds m w-bonds due f, y knows z and x knows w.
+GB restricts and extends GC.
+Vocabulary: x holds a y-bond due e = bond(x,y,e); x holds n y-bonds due e = bond(x,y,e,*n); the current date is e, for x = today(x,e); z holds n w-bonds due e in escrow from x for y on k = escrow_bond(z,w,e,x,y,k,*n).
 After x redeems a y-coin against a z-bond due e: no longer x holds a y-coin, y holds a y-coin, no longer y holds a z-bond due e, x holds a z-bond due e and x knows z.
 After x redeems a y-bond due e against a z-coin: no longer x holds a y-bond due e, y holds a y-bond due e, no longer y holds a z-coin, x holds a z-coin and x knows z.
 After x redeems a y-bond due e against a z-bond due f: no longer x holds a y-bond due e, y holds a y-bond due e, no longer y holds a z-bond due f, x holds a z-bond due f and x knows z.
-After x deposits n w-coins with z for y on k: no longer x holds n w-coins and z holds n w-coins in escrow from x for y on k.
-After x deposits n w-bonds due e with z for y on k: no longer x holds n w-bonds due e and z holds n w-bonds due e in escrow from x for y on k.
-After z and y release n w-coins that x deposited on k: no longer z holds n w-coins in escrow from x for y on k, y holds n w-coins and y knows w.
-After z and y release n w-bonds due e that x deposited on k: no longer z holds n w-bonds due e in escrow from x for y on k, y holds n w-bonds due e and y knows w.
-After z and x return n w-coins deposited for y on k: no longer z holds n w-coins in escrow from x for y on k, x holds n w-coins and x knows w.
-After z and x return n w-bonds due e deposited for y on k: no longer z holds n w-bonds due e in escrow from x for y on k, x holds n w-bonds due e and x knows w.
-GB:0 - | A *bond* is a unit of debt, due at its maturity date, that includes its issuer's public key and its maturity date and is signed by their private key. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
-GB:0 - | Alice, Bob, Carol and Dave are parties, Day and Term maturity dates, Today a date, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clauses 2 and 3 Carol and Dave are possibly Alice, Bob or one person, and in clause 4 Dave is possibly Alice, Bob or Carol.
-GB:1 ■ Issue bond: bond(Alice,Alice,Day,*Sum) <- today(Alice,Today), gt(Day,Today) guarded by Alice.
-GB:2 ■ Swap: GC:2 <-.
-GB:2 ■ Swap coin for bond: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~bond(Bob,Dave,Day,*Total), bond(Alice,Dave,Day,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), bond(Bob,Dave,Day,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
-GB:2 ■ Swap bonds: ~bond(Alice,Carol,Day,*Sum), bond(Bob,Carol,Day,*Sum), ~bond(Bob,Dave,Term,*Total), bond(Alice,Dave,Term,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), bond(Alice,Carol,Day,*Sum), bond(Bob,Dave,Term,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
-GB:3 ■ Redeem: GC:4 <-.
-GB:3 ■ Redeem coin against bond: ~coin(Alice,Bob), coin(Bob,Bob), ~bond(Bob,Carol,Day), bond(Alice,Carol,Day), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), bond(Bob,Carol,Day) guarded by Alice possibly Alice=Carol, Bob=Carol.
-GB:3 ■ Redeem bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), today(Bob,Today), le(Day,Today), bond(Alice,Bob,Day), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
-GB:3 ■ Redeem bond against bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~bond(Bob,Carol,Term), bond(Alice,Carol,Term), knows(Alice,Carol) <- knows(Alice,Bob), today(Bob,Today), le(Day,Today), bond(Alice,Bob,Day), bond(Bob,Carol,Term) guarded by Alice possibly Alice=Carol, Bob=Carol.
-GB:4 ■ | Escrow.
-GB:4 ■ Deposit: ~coin(Alice,Dave,*Sum), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), coin(Alice,Dave,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
-GB:4 ■ Deposit bond: ~bond(Alice,Dave,Day,*Sum), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), bond(Alice,Dave,Day,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
-GB:4 ■ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
-GB:4 ■ Release bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Bob,Dave,Day,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
-GB:4 ■ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
-GB:4 ■ Return bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Alice,Dave,Day,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+GB:0 - | A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
+GB:0 - | Alice, Bob and Carol are parties, Day and Term maturity dates, Today a date; Carol is possibly Alice or Bob.
+GB:0 - | Kind of note: bond, y-bonds due Day for y-notes.
+GB:1 ■ Issue bond: GN:1, for bonds <- today(Actor,Today), gt(Day,Today).
+GB:2 ■ Redeem: GC:2 <-.
+GB:2 ■ Redeem coin against bond: ~coin(Alice,Bob), coin(Bob,Bob), ~bond(Bob,Carol,Day), bond(Alice,Carol,Day), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), bond(Bob,Carol,Day) guarded by Alice possibly Alice=Carol, Bob=Carol.
+GB:2 ■ Redeem bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), today(Bob,Today), le(Day,Today), bond(Alice,Bob,Day), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
+GB:2 ■ Redeem bond against bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~bond(Bob,Carol,Term), bond(Alice,Carol,Term), knows(Alice,Carol) <- knows(Alice,Bob), today(Bob,Today), le(Day,Today), bond(Alice,Bob,Day), bond(Bob,Carol,Term) guarded by Alice possibly Alice=Carol, Bob=Carol.

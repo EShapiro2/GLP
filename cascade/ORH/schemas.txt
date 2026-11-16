@@ -4,7 +4,7 @@ Vocabulary: the fare and the deposit of x's call c are in z-coins = in_coins(x,z
 x holds the fare of x's call c in z-coins: x holds the fare of x's call c and x holds a z-coin.
 y holds the deposit of x's call c on top of y's stake in z: y holds the deposit of x's call c and y is a provider of z.
 ORH:0 - | A *driver* is a provider and a *rider* a customer.
-ORH:0 - | Alice and Bob are persons, Orga a network organisation.
+ORH:0 - | Alice and Bob are persons, Orga a networked organisation.
 ORH:0 - | Environment: the fare and the deposit of x's call c are in z-coins; x holds the fare of x's call c; y holds the deposit of x's call c.
 ORH:1 ■ Award: GRA-SS:2 Award + provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- in_coins(Alice,Orga,Trip), holds_fare(Alice,Trip), coin(Alice,Orga), holds_deposit(Bob,Alice,Trip), stake(Orga,S), coin(Bob,Orga,*Held), ge(Held,S).
 ORH:1 ■ Arrive: GRA:5 + ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <-.

@@ -1,5 +1,5 @@
 GNG: Network Gig Work
-GNG extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation) and restricts REC.
+GNG extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation) and restricts Rec.
 Vocabulary: x has j posted in z = posted(x,j,z); y has received j of x in z = received(y,j,x,z); x has engaged y for j = engaged(x,y,j); y is engaged by x for j = engaged_by(y,x,j); y has attested the delivery of j to x = delivered(y,j,x); x has accepted j of y = accepted(x,j,y); x has rejected j of y = rejected(x,j,y); no delivery of j is attested by the deadline, for x = lapsed(x,j).
 y is a worker of z: y is a provider of z.
 x is a client of z: x is a customer of z.
@@ -15,7 +15,7 @@ After x rejects j of y raising to w the dispute over z-coins, which requires x h
 After x cancels x's engagement of y for j in z: no longer x and y have an engagement for j and no longer z-coins are locked between the provider y and the customer x.
 After y cancels y's engagement by x for j in z: no longer x and y have an engagement for j and no longer z-coins are locked between the provider y and the customer x.
 GNG:0 - | A *worker* is a provider and a *client* a customer. A *job* names the work, its price in Orga-coins and its deadline; its terms say what is released to whom on cancellation.
-GNG:0 - | Alice, Bob and Carol are persons, Orga a network organisation, Kept a number, Job a job, Skill a skill or a service; in clause 1 Carol is a worker, in clause 4 an arbiter, and in clause 6 Skill is the job.
+GNG:0 - | Alice, Bob and Carol are persons, Orga a networked organisation, Kept a number, Job a job, Skill a skill or a service; in clause 1 Carol is a worker, in clause 4 an arbiter, and in clause 6 Skill is the job.
 GNG:0 - | Environment: no delivery of j is attested by the deadline, for x.
 GNG:1 ■ | Job.
 GNG:1 ■ Post: posted(Alice,Job,Orga) <- accepts(Alice,Orga,Dollar), ~posted(Alice,Job,Orga) guarded by Alice.
@@ -37,4 +37,4 @@ GNG:5 ■ Worker cancel: ~engaged(Alice,Bob,Job), ~engaged_by(Bob,Alice,Job), ~p
 GNG:5 ■ | The payment and the deposit are then released to Alice and to Bob as the terms say.
 GNG:5 ■ Lapse: ~engaged(Alice,Bob,Job), ~engaged_by(Bob,Alice,Job), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- lapsed(Alice,Job), engaged(Alice,Bob,Job), engaged_by(Bob,Alice,Job), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Alice.
 GNG:5 ■ | The payment and the deposit are then both released to Alice.
-GNG:6 ◆ Recommend: REC:1 <- accepted(Alice,Skill,Bob).
+GNG:6 ◆ Recommend: Rec:1 <- accepted(Alice,Skill,Bob).

@@ -1,0 +1,2 @@
+GNL extends GNO and GDO: holds
+GNL restricts GNO and Rec: holds

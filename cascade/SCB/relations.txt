@@ -1,0 +1,3 @@
+SCB instantiates GBank: holds
+SCB restricts it (GBank): holds
+SCB extends it (GBank): holds
