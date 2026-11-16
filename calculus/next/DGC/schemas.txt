@@ -1,5 +1,5 @@
 DGC: Denominated Grassroots Currencies
-DGC extends GB and GDC, and restricts and strengthens GB.
+DGC extends Bonds and GDC, and restricts and strengthens Bonds.
 Vocabulary: x has issued an f-denominated bond due e = issued_bond_in(x,f,e); the coins and bonds of z and w are of one denomination, for x = one_denomination(x,z,w); z holds the escrow from x for y on k in the denomination f = escrow_denomination(z,x,y,k,f); x accepts an f-denominated z-coin in payment = accepts(x,z,f); x accepts n f-denominated z-coins in payment = accepts(x,z,f,*n).
 x holds an f-denominated z-coin: x holds a z-coin and z has issued coins of the denomination f.
 x holds an f-denominated z-bond due e: x holds a z-bond due e and z has issued an f-denominated bond due e.
@@ -12,13 +12,13 @@ DGC:0 - | A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's d
 DGC:0 - | Alice, Bob, Carol and Dave are parties, Dollar a fiat currency, Day and Due maturity dates, Today a date, Cond a condition Alice, Bob and Carol agree, Sum and Limit numbers; in clause 4 Carol is possibly Alice or Bob.
 DGC:0 - | Environment: the coins and bonds of z and w are of one denomination, for x.
 DGC:1 ■ Issue denominated bond: bond(Alice,Alice,Day,*Sum), issued_bond_in(Alice,Dollar,Day) <- today(Alice,Today), gt(Day,Today) guarded by Alice.
-DGC:2 ■ Swap: GN:2 <- one_denomination(Actor,Carol,Dave).
-DGC:2 ■ Redeem: GB:2 <- one_denomination(Actor,Bob,Carol).
-DGC:2 ■ Deposit: GN:4 Deposit + escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- issued_in(Dave,Dollar), ~escrow_denomination(Carol,Alice,Bob,Cond,_).
+DGC:2 ■ Swap: Notes:2 <- one_denomination(Actor,Carol,Dave).
+DGC:2 ■ Redeem: Bonds:2 <- one_denomination(Actor,Bob,Carol).
+DGC:2 ■ Deposit: Notes:4 Deposit + escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- issued_in(Dave,Dollar), ~escrow_denomination(Carol,Alice,Bob,Cond,_).
 DGC:2 ■ Deposit own coins: ~coin(Alice,Alice,*Sum), escrow_coin(Carol,Alice,Alice,Bob,Cond,*Sum), escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), issued_in(Alice,Dollar), ~escrow_denomination(Carol,Alice,Bob,Cond,_), coin(Alice,Alice,*Sum) guarded by Alice, Carol.
 DGC:2 ■ Deposit with the issuer: ~coin(Alice,Carol,*Sum), escrow_coin(Carol,Carol,Alice,Bob,Cond,*Sum), escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), issued_in(Carol,Dollar), ~escrow_denomination(Carol,Alice,Bob,Cond,_), coin(Alice,Carol,*Sum) guarded by Alice, Carol.
 DGC:2 ■ Deposit more: ~coin(Alice,Dave,*Sum), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), issued_in(Dave,Dollar), escrow_denomination(Carol,Alice,Bob,Cond,Dollar), coin(Alice,Dave,*Sum) guarded by Alice, Carol.
-DGC:2 ■ Deposit bond: GN:4 Deposit bond + escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- issued_bond_in(Dave,Dollar,Day), ~escrow_denomination(Carol,Alice,Bob,Cond,_).
+DGC:2 ■ Deposit bond: Notes:4 Deposit bond + escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- issued_bond_in(Dave,Dollar,Day), ~escrow_denomination(Carol,Alice,Bob,Cond,_).
 DGC:2 ■ Deposit own bonds: ~bond(Alice,Alice,Day,*Sum), escrow_bond(Carol,Alice,Day,Alice,Bob,Cond,*Sum), escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), issued_bond_in(Alice,Dollar,Day), ~escrow_denomination(Carol,Alice,Bob,Cond,_), bond(Alice,Alice,Day,*Sum) guarded by Alice, Carol.
 DGC:2 ■ Deposit bond with the issuer: ~bond(Alice,Carol,Day,*Sum), escrow_bond(Carol,Carol,Day,Alice,Bob,Cond,*Sum), escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), issued_bond_in(Carol,Dollar,Day), ~escrow_denomination(Carol,Alice,Bob,Cond,_), bond(Alice,Carol,Day,*Sum) guarded by Alice, Carol.
 DGC:2 ■ Deposit bond more: ~bond(Alice,Dave,Day,*Sum), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), issued_bond_in(Dave,Dollar,Day), escrow_denomination(Carol,Alice,Bob,Cond,Dollar), bond(Alice,Dave,Day,*Sum) guarded by Alice, Carol.

@@ -2,7 +2,7 @@
 
 Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfac`), for the contracts of `cascade/STATUS.txt`, in its order.  The owner text is GLP's `programs/<dir>/NAME.txt` with a `% Owner` line; the project is the first word of that line.  Compared: the title, the first line, the definitions, the names line and the clauses, that is the lines before the first heading of pragmas and after the `%` lines; two lines are the same where they are equal once every run of white space is one space.  A count is of the lines in the owner text and in ours that are in no common run of lines.  The last column counts the same way with the marks of a defined term, `*term*`, taken out, which rev/ writes and the owner texts mostly do not; the lines below are in full, marks included.
 
-66 contracts: 0 the same, 61 differ, 5 with no owner text in GLP (SGSG; CDC, new, GO's, programs/go; GN, new, GSC's; GS, new, GO's; GA, new, GSA's, programs/social/graph); of those that differ, 2 differ only in the marks `*term*`.
+66 contracts: 0 the same, 61 differ, 5 with no owner text in GLP (SGSG; CDC, new, GO's, programs/go; Notes, new, GSC's; Shares, new, GO's; GA, new, GSA's, programs/social/graph); of those that differ, 2 differ only in the marks `*term*`.
 
 | Contract | Owner | Owner text in GLP at `33ecfac` | Calculus text against it | The same, the marks `*` taken out |
 |---|---|---|---|---|
@@ -18,10 +18,10 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 | GAI | GAI | `programs/gai/GAI.txt` | 9 lines differ (owner 4, ours 5) | 9 |
 | GAN | GO | `programs/go/GAN.txt` | 10 lines differ (owner 5, ours 5) | 10 |
 | GAS | GSA | `programs/social/graph/GAS.txt` | 13 lines differ (owner 6, ours 7) | 13 |
-| GB | Currencies | `programs/currencies/bonds/GB.txt` | 12 lines differ (owner 7, ours 5) | 12 |
+| Bonds | Currencies | `programs/currencies/bonds/GB.txt` | 14 lines differ (owner 8, ours 6) | 14 |
 | GBCC | GO | `programs/go/GBCC.txt` | 14 lines differ (owner 7, ours 7) | 14 |
 | GBank | GO | `programs/go/GBank.txt` | 2 lines differ (owner 1, ours 1) | same |
-| GC | Currencies | `programs/currencies/coins/GC.txt` | 13 lines differ (owner 7, ours 6) | 13 |
+| Coins | Currencies | `programs/currencies/coins/GC.txt` | 15 lines differ (owner 8, ours 7) | 15 |
 | GCC | Currencies | `programs/currencies/gcc/GCC.txt` | 14 lines differ (owner 8, ours 6) | 14 |
 | GCoop | GO | `programs/go/GCoop.txt` | 8 lines differ (owner 6, ours 2) | 8 |
 | GCorp | GO | `programs/go/GCorp.txt` | 2 lines differ (owner 1, ours 1) | same |
@@ -70,8 +70,8 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 | TC | GO | `programs/go/TC.txt` | 16 lines differ (owner 9, ours 7) | 16 |
 | WC | GO | `programs/go/WC.txt` | 10 lines differ (owner 5, ours 5) | 10 |
 | CDC | GO (new, Udi, 2026-11-16); none in GLP | | | |
-| GN | GSC (new, Udi, 2026-11-16); none in GLP | | | |
-| GS | GO (new, Udi, 2026-11-16); none in GLP | | | |
+| Notes | GSC (new, Udi, 2026-11-16); none in GLP | | | |
+| Shares | GO (new, Udi, 2026-11-16); none in GLP | | | |
 
 ## The lines that differ, the owner first and ours second
 
@@ -86,7 +86,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - owner: 5. ■ Withdrawal. Bob may withdraw a post of theirs; Alice, the keeper, removes it from their own wall and from the wall of every member it was delivered to, and Bob may not post it to that market again.
 - owner: 6. ■ Trading. GB's swap and escrow apply to items as to coins and bonds; a post is not withdrawn when its item is traded.
 - ours: Agora: Grassroots Barter
-- ours: Agora extends GB.
+- ours: Agora extends Bonds.
 - ours: An *item* is a one-of-a-kind thing named by its maker.
 - ours: Alice and Bob are persons.
 - ours: 1. ■ Make: Alice may make an item, which she then holds.
@@ -94,7 +94,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - ours: 3. ■ Join: Alice, the keeper of a market, may admit Bob, whom she knows, with the consent of Bob.
 - ours: 4. ■ Posting. Offer, Want: A member of a market may post to its wall an item they hold, or something they want, each once; its keeper sees the post on their own wall. Deliver: The keeper delivers it to every member but the keeper, the poster included; each member then knows its poster.
 - ours: 5. ■ Withdraw: A member may withdraw a post of theirs; the keeper removes it from their own wall and from the wall of every member it was delivered to, and the member may not post it to that market again.
-- ours: 6. ■ Swap, Escrow: GN:2 and GN:4 apply to items as to notes.
+- ours: 6. ■ Swap, Escrow: Notes:2 and Notes:4 apply to items as to notes.
 
 ### CB
 
@@ -196,11 +196,11 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - owner: 7. ○ Pricing. Alice prices their offerings in Alice-coins and accepts them in payment at those prices.
 - owner: 8. ○ Denomination. An Alice-coin and an Alice-bond are each Alice's debt of one Dollar, the coin due now and the bond at its date; Alice redeems an Alice-coin on presentation at face value, by a Dollar-denominated coin or bond the bearer accepts or by one Dollar.
 - owner: 9. ■ Escrow. Alice may deposit Dollar-denominated coins and bonds with Carol for Bob; Carol and Bob may jointly decide to release them to Bob, and Carol and Alice to return them to Alice, as the agreed condition is met or fails.
-- ours: DGC extends GB and GDC, and restricts and strengthens GB.
+- ours: DGC extends Bonds and GDC, and restricts and strengthens Bonds.
 - ours: A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
 - ours: Alice, Bob and Carol are parties.
 - ours: 1. ■ Issue denominated bond: Alice may issue Alice-bonds denominated by a fiat currency, of a maturity later than the current date.
-- ours: 2. ■ Swap, Redeem, Escrow: GN:2, GC:2, GB:2 and GN:4, only if the coins and bonds are of one denomination.
+- ours: 2. ■ Swap, Redeem, Escrow: Notes:2, Coins:2, Bonds:2 and Notes:4, only if the coins and bonds are of one denomination.
 - ours: 3. ■ Accept: Alice may accept Dollar-denominated Carol-coins in payment up to a limit of her choosing, if she holds a Dollar-denominated Carol-coin or Carol-bond; each such coin paid to Alice counts against the limit, and Alice may accept again.
 - ours: 4. ■ Pay accepted coins: Alice may pay Bob, whom she knows, coins she holds that Bob accepts.
 
@@ -210,7 +210,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - owner: 1. ■ Funding. A member of a DAO may give it coins they hold; its steward, who is not asked, keeps them apart as the DAO's, and they leave the DAO only as grants.
 - owner: 2. ■ Granting. The steward may pay the proposer of a passed proposal, once per proposal, any amount of the DAO's coins of one issuer; the proposer is not asked.
 - owner: 3. ○ Amount. The steward grants a passed proposal the amount it asks for, as far as the DAO's coins allow.
-- ours: FDAO extends DAO and GC.
+- ours: FDAO extends DAO and Coins.
 - ours: 1. ■ Fund: A member of a DAO may give it coins they hold; its steward keeps them apart as the DAO's.
 - ours: 2. ■ Grant: The steward may grant the proposer of a passed proposal, once per proposal, any amount of the DAO's coins of one issuer.
 - ours: 3. ○ Amount. The steward will grant a passed proposal the amount it asks for, as far as the DAO's coins allow.
@@ -256,8 +256,9 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - ours: 3. ■ Store trust. Trust store: Alice may declare trust in Dave, Carol being known to her. Untrust store: Alice may withdraw the declaration.
 - ours: 4. ■ Install from store: Alice may install a program listed in a store she trusts.
 
-### GB
+### Bonds
 
+- owner: GB: Grassroots Bonds
 - owner: GB extends GC.
 - owner: Alice, Bob and Carol are persons.
 - owner: 1. ■ Minting. Alice may decide to issue Alice-bonds of a maturity later than her own date.
@@ -265,10 +266,11 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - owner: 3. ■ Swap. Alice and Bob, who know each other, may jointly decide to swap coins and bonds they hold.
 - owner: 4. ■ Redemption. Alice may decide to redeem a Bob-coin, or a matured Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
 - owner: 5. ■ Escrow. Alice may deposit coins and bonds with Carol for Bob, on a condition the three agree; Carol and Bob may jointly decide to release them to Bob when the condition is met, and Carol and Alice may jointly decide to return them to Alice when it fails; each act is between two parties who know each other.
-- ours: GB restricts and extends GC.
+- ours: Bonds
+- ours: Bonds restricts and extends Coins.
 - ours: A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
 - ours: Alice and Bob are parties.
-- ours: 1. ■ Issue bond: GN:1, for bonds, with maturity later than the current date.
+- ours: 1. ■ Issue bond: Notes:1, for bonds, with maturity later than the current date.
 - ours: 2. ■ Redeem: Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
 
 ### GBCC
@@ -283,7 +285,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - ours: GBCC extends GCC and restricts it.
 - ours: *f*, a fraction 0 ≤ f < 1, is a parameter of GBCC. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
 - ours: Alice is a person, Orga a community currency.
-- ours: 1. ■ Treasurers. GO:4 and GnW:2, only if every treasurer stays backed. Leave, Expel: GO:3, only if every treasurer stays backed. Swap, Pay, Redeem, Escrow: GN:2, GN:3, GN:4, GC:1, GC:2, GB:2 and DGC:4, only if every treasurer stays backed.
+- ours: 1. ■ Treasurers. GO:4 and GnW:2, only if every treasurer stays backed. Leave, Expel: GO:3, only if every treasurer stays backed. Swap, Pay, Redeem, Escrow: Notes:2, Notes:3, Notes:4, Coins:1, Coins:2, Bonds:2 and DGC:4, only if every treasurer stays backed.
 - ours: 2. ■ Draw: GCC:1, only if Alice stays backed.
 - ours: 3. ◆ Record: Alice, a treasurer, may pay Dollars into the account, and the treasurers may then jointly record them as paid in by Alice.
 - ours: 4. ○ Fiat redemption. GCC:2, from the account while it holds Dollars, and from a treasurer if it holds none.
@@ -293,8 +295,9 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - owner: A bank is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
 - ours: A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
 
-### GC
+### Coins
 
+- owner: GC: Grassroots Coins
 - owner: GC extends GKK.
 - owner: Alice and Bob are persons.
 - owner: 1. ■ Minting. Alice may decide to issue Alice-coins.
@@ -302,10 +305,11 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - owner: 3. ■ Payment. Alice may decide to pay Bob-coins she holds to Bob, whom she knows.
 - owner: 4. ■ Redemption. Alice may decide to redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
 - owner: 5. ○ Pricing. Alice prices her offerings in Alice-coins and accepts them in payment at those prices.
-- ours: GC relaxes and extends GN.
+- ours: Coins
+- ours: Coins relaxes and extends Notes.
 - ours: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 - ours: Alice and Bob are parties.
-- ours: 1. ■ Pay issuer: GN:3, without the consent of Bob, if the coins are Bob-coins.
+- ours: 1. ■ Pay issuer: Notes:3, without the consent of Bob, if the coins are Bob-coins.
 - ours: 2. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
 - ours: 3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 
@@ -381,7 +385,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - owner: 1. ■ Minting. Alice may decide to issue Alice-coins denominated by a fiat currency.
 - owner: 2. ○ Denomination. A Dollar-denominated Alice-coin is Alice's debt of one Dollar, due now; Alice redeems it on presentation at face value, by a Dollar-denominated coin the bearer accepts or by one Dollar.
 - owner: 3. ○ Pricing. Alice accepts Dollar-denominated Alice-coins in payment for their offerings at one Dollar each.
-- ours: GDC extends and restricts GC.
+- ours: GDC extends and restricts Coins.
 - ours: *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
 - ours: Alice is a party.
 - ours: 1. ■ Issue: Alice may issue Alice-coins denominated by a fiat currency.
@@ -435,7 +439,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - ours: A *directory* is a service with a page every person can read.
 - ours: Alice, Bob and Carol are persons, Dora a service.
 - ours: 1. ■ Open directory: Carol may make her service Dora a directory.
-- ours: 2. ■ Listing. List: Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, shown on Dora's page or not; her app then keeps Dora supplied with invitation links of hers. Delist: Alice may delist herself.
+- ours: 2. ■ Listing. List me: Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, shown on Dora's page or not; her app then keeps Dora supplied with invitation links of hers. Delist me: Alice may delist herself.
 - ours: 3. ■ Lookup: Bob may look Alice up, on Dora's page if she is shown there, and by her email address and name if not; Dora then gives Bob an invitation link of Alice's.
 
 ### GFF
@@ -764,7 +768,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - owner: 2. ■ Depositing. Either of them may move coins they hold into their joint account; the other is not asked.
 - owner: 3. ■ Withdrawing. Coins leave a joint account only by an act of both, to either of them.
 - ours: Joint: Joint Accounts
-- ours: Joint extends GC.
+- ours: Joint extends Coins.
 - ours: Alice and Bob are persons.
 - ours: 1. ■ Open account: Alice and Bob, who know each other, may jointly open a joint account, under a new name of Alice's.
 - ours: 2. ■ Deposit: Either of them may move coins they hold into their joint account.
@@ -811,7 +815,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - owner: 5. ■ Leaving. Upon ending membership, the Orga-coins Bob holds and the Bob-coins Orga holds are redeemed against each other.
 - ours: 1. ■ Leave: GO:3, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other.
 - ours: 2. ■ Redeem member's coin: Bob, a member, may redeem an Alice-coin he holds against an Orga-coin, provided Alice is a member.
-- ours: 3. ■ Credit limit. DGC:2, GN:3, GC:1 and DGC:4, only if every member is then in the red by at most 1000 coins.
+- ours: 3. ■ Credit limit. DGC:2, Notes:3, Coins:1 and DGC:4, only if every member is then in the red by at most 1000 coins.
 
 ### ORH
 
@@ -849,7 +853,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - owner: 3. ■ Directors. The shareholders may elect a participant a director, and remove a director.
 - owner: 4. ■ Dividend. The directors may decide a dividend, a number of Dollars a share, a shareholder may then claim it from Orga, once, in Dollar-denominated coins for the shares they hold.
 - owner: 5. ■ Redemption. DGC:6, for a coin of a denomination other than Share.
-- ours: SC instantiates GCorp with shareholding corporation bylaws, composes it with GS, and extends the composition.
+- ours: SC instantiates GCorp with shareholding corporation bylaws, composes it with Shares, and extends the composition.
 - ours: A *shareholding corporation* is a corporation whose bylaws name two roles, *shareholder*, held by every person who holds a share of Orga, and *director*, held by its first officer, who decides the first issue of shares; the shareholders decide later issues and the appointment and the removal of directors, by a majority of the shares they hold, and the directors jointly decide the other acts of Orga.
 - ours: Orga is a shareholding corporation.
 - ours: 1. ■ Dividend. Set dividend: The directors may set a dividend, a number of Dollars a share. Claim: A shareholder may then claim it from Orga, once, in Dollar-denominated coins for the shares they hold.
@@ -894,7 +898,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`33ecfa
 - owner: 3. ■ Cancelling. Before the night, by Alice's date, Alice may cancel a stay, paying Bob back its whole price in Alice-coins; Bob is not asked.
 - owner: 4. ■ Reviewing. Once the night has come, by Bob's date, Bob may review their stay, once; Alice keeps the review and is not asked.
 - ours: Stay: Grassroots Stays
-- ours: Stay extends GC.
+- ours: Stay extends Coins.
 - ours: Alice and Bob are persons.
 - ours: 1. ◆ List place: Alice, who can host guests at a place, may list it under a new name of hers.
 - ours: 2. ■ Book: Bob, who knows Alice, may book a stay at a place of Alice's on a night later than the current date, for a price Bob pays in Alice-coins, with the consent of Alice; a place may be booked once a night.

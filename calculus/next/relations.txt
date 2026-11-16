@@ -1,4 +1,6 @@
-Agora extends GB: holds
+Agora extends Bonds: holds
+Bonds restricts Coins: holds
+Bonds extends Coins: holds
 CB instantiates GBank: holds
 CB restricts it (GBank): holds
 CB extends it (GBank): holds
@@ -13,11 +15,13 @@ CSSN extends it (GSNW): holds
 CnC instantiates GCoop and TC: holds
 CnC restricts it (GCoop and TC): holds
 CnC extends it (GCoop and TC): holds
+Coins relaxes Notes: holds
+Coins extends Notes: holds
 DAO extends GKK: holds
-DGC extends GB and GDC: holds
-DGC restricts GB: holds
-DGC strengthens GB: holds
-FDAO extends DAO and GC: holds
+DGC extends Bonds and GDC: holds
+DGC restricts Bonds: holds
+DGC strengthens Bonds: holds
+FDAO extends DAO and Coins: holds
 GA composes GPE with GAS and GDS: holds
 GAI instantiates GnW: holds
 GAI composes it (GnW) with GFP: holds
@@ -27,13 +31,9 @@ GAI extends it (GnW and GFP): holds
 GAN extends GNO and GDO: holds
 GAS composes GPD with GSV: holds
 GAS extends it (GPD and GSV): holds
-GB restricts GC: holds
-GB extends GC: holds
 GBCC extends GCC: holds
 GBCC restricts it (GCC): holds
 GBank extends GO and DGC: holds
-GC relaxes GN: holds
-GC extends GN: holds
 GCC instantiates GBank: holds
 GCC extends it (GBank): holds
 GCoop extends CDC and DGC: holds
@@ -41,8 +41,8 @@ GCorp extends GO and DGC: holds
 GD extends GSG: holds
 GD-S restricts GD: holds
 GDAO instantiates GCoop: holds
-GDC extends GC: holds
-GDC restricts GC: holds
+GDC extends Coins: holds
+GDC restricts Coins: holds
 GDO extends GSG: holds
 GDO-L extends GDO: holds
 GDO-L strengthens GDO: holds
@@ -55,7 +55,6 @@ GFF-FR-BC extends GFF-FR: holds
 GFF-PS extends GFF: holds
 GFP extends GSG: holds
 GLDAO extends GDAO: holds
-GN extends GKK: holds
 GNG extends GNO and GDO: holds
 GNG restricts Rec: holds
 GNL extends GNO and GDO: holds
@@ -74,7 +73,6 @@ GRA extends GDO-LB: holds
 GRA-SS instantiates GRA: holds
 GRA-SS restricts it (GRA): holds
 GRV extends GSV: holds
-GS restricts GO and GN: holds
 GSG extends GKK: holds
 GSN extends GSG: holds
 GSN strengthens GSG: holds
@@ -88,25 +86,27 @@ GSNW strengthens GSN and GnW: holds
 GSV instantiates GnW: holds
 GnW extends GSG: holds
 GnW restricts GSG: holds
-Joint extends GC: holds
+Joint extends Coins: holds
 LDAO extends DAO: holds
 Lib extends GKK: holds
 MCS instantiates GBank: holds
 MCS restricts it (GBank): holds
 MCS extends it (GBank): holds
+Notes extends GKK: holds
 ORH extends GNO: holds
 ORH restricts GRA-SS: holds
 ORH strengthens GRA-SS: holds
 Rec extends GKK: holds
 SC instantiates GCorp: holds
-SC composes it (GCorp) with GS: holds
-SC extends it (GCorp and GS): holds
+SC composes it (GCorp) with Shares: holds
+SC extends it (GCorp and Shares): holds
 SCB instantiates GBank: holds
 SCB restricts it (GBank): holds
 SCB extends it (GBank): holds
 SGSG extends GSG: holds
 SPLLC instantiates GCorp: holds
-Stay extends GC: holds
+Shares restricts GO and Notes: holds
+Stay extends Coins: holds
 TC extends GCorp: holds
 WC instantiates GCoop: holds
 WC extends it (GCoop): holds

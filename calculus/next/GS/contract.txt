@@ -1,5 +1,0 @@
-GS: Grassroots Shares
-GS restricts GO and GN.
-A *share* of Orga is an Orga-note that gives its holder a vote in Orga and a part of its dividends.
-Orga is an organisation.
-1. ■ Issue shares: GN:1, for shares, with the consent of those who decide for Orga.

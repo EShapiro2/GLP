@@ -1,5 +1,5 @@
 FDAO: Funded DAO
-FDAO extends DAO and GC.
+FDAO extends DAO and Coins.
 Vocabulary: x keeps n z-coins for d = dao_coin(x,z,d,*n); x has granted p of d = granted(x,p,d).
 After y gives x's d n z-coins: no longer y holds n z-coins and x keeps n z-coins for d.
 After x grants y n z-coins of d for p, which requires x has not granted p of d: no longer x keeps n z-coins for d, y holds n z-coins and x has granted p of d.

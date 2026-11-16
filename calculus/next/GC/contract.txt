@@ -1,7 +1,0 @@
-GC: Grassroots Coins
-GC relaxes and extends GN.
-A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
-Alice and Bob are parties.
-1. ■ Pay issuer: GN:3, without the consent of Bob, if the coins are Bob-coins.
-2. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
-3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.

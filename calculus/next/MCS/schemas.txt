@@ -13,6 +13,6 @@ MCS:1 ■ Officer leave owed nothing: GO:3 Officer leave <- coin(Orga,Bob,#0).
 MCS:2 ■ Redeem member's coin: ~coin(Bob,Alice), coin(Orga,Alice), ~coin(Orga,Orga), coin(Bob,Orga) <- participant(Bob,Orga), participant(Alice,Orga), coin(Bob,Alice), coin(Orga,Orga) guarded by Bob.
 MCS:3 ■ | Credit limit.
 MCS:3 ■ Swap: DGC:2 <- credit_limit(Actor,Orga).
-MCS:3 ■ Pay: GN:3 <- credit_limit(Actor,Orga).
-MCS:3 ■ Pay issuer: GC:1 <- credit_limit(Actor,Orga).
+MCS:3 ■ Pay: Notes:3 <- credit_limit(Actor,Orga).
+MCS:3 ■ Pay issuer: Coins:1 <- credit_limit(Actor,Orga).
 MCS:3 ■ Pay: DGC:4 <- credit_limit(Actor,Orga).
