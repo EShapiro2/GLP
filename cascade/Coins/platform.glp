@@ -14,6 +14,8 @@ MenuField ::= field(Integer, String, MenuFieldType).
 MenuFieldType ::= person ; key ; agent ; text ; number.
 MenuWord ::= say(String) ; at(Integer).
 Atom ::= identity ; person ; knows(Peer) ; coin(Peer) ; escrow_coin(Peer, Peer, Peer, Speech).
+MayOne ::= may_one(Integer, Integer).
+MayOnes ::= [] ; [MayOne | MayOnes].
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
 RArg ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
 RArgs ::= [] ; [RArg | RArgs].
@@ -277,6 +279,20 @@ schema_base(release, 1).
 schema_base(return, 1).
 schema_base(redeem, 1).
 schema_base(_, 1) :- otherwise | true.
+
+procedure schema_ones(Constant?, MayOnes).
+schema_ones(establish, []).
+schema_ones(acquaint, []).
+schema_ones(introduce, []).
+schema_ones(issue, []).
+schema_ones(swap, []).
+schema_ones(pay, []).
+schema_ones(pay_issuer, []).
+schema_ones(deposit, []).
+schema_ones(release, []).
+schema_ones(return, []).
+schema_ones(redeem, []).
+schema_ones(_, []) :- otherwise | true.
 
 procedure schema_consents(Constant?, Ints).
 schema_consents(_, []) :- otherwise | true.
@@ -2883,28 +2899,54 @@ procedure delta_in1(YesNo?, Delta?, Deltas?, YesNo).
 delta_in1(yes, _, _, yes).
 delta_in1(no, X, Ps, E?) :- delta_in(X?, Ps?, E).
 
-procedure rule_ok(RoleSpecs?, Binding?, YesNo).
-rule_ok(Rs, B, R?) :- ground(Rs?) | rs_len(Rs?, K), pairs_ok(1, K?, Rs?, B?, R).
+procedure rule_ok(RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+rule_ok(Rs, B, Ls, Os, R?) :- ground(Rs?) | rs_len(Rs?, K), pairs_ok(1, K?, Rs?, B?, Ls?, Os?, R).
 
-procedure pairs_ok(Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pairs_ok(I, K, _, _, yes) :- (I? > K?) | true.
-pairs_ok(I, K, Rs, B, R?) :- (I? =< K?), ground(Rs?), ground(B?) | J := (I? + 1), pair_row(I?, J?, K?, Rs?, B?, R1), I1 := (I? + 1), pairs_ok1(R1?, I1?, K?, Rs?, B?, R).
+procedure pairs_ok(Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pairs_ok(I, K, _, _, _, _, yes) :- (I? > K?) | true.
+pairs_ok(I, K, Rs, B, Ls, Os, R?) :- (I? =< K?), ground(Rs?), ground(B?), ground(Ls?), ground(Os?) | J := (I? + 1), pair_row(I?, J?, K?, Rs?, B?, Ls?, Os?, R1), I1 := (I? + 1), pairs_ok1(R1?, I1?, K?, Rs?, B?, Ls?, Os?, R).
 
-procedure pairs_ok1(YesNo?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pairs_ok1(no, _, _, _, _, no).
-pairs_ok1(yes, I, K, Rs, B, R?) :- pairs_ok(I?, K?, Rs?, B?, R).
+procedure pairs_ok1(YesNo?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pairs_ok1(no, _, _, _, _, _, _, no).
+pairs_ok1(yes, I, K, Rs, B, Ls, Os, R?) :- pairs_ok(I?, K?, Rs?, B?, Ls?, Os?, R).
 
-procedure pair_row(Integer?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pair_row(_, J, K, _, _, yes) :- (J? > K?) | true.
-pair_row(I, J, K, Rs, B, R?) :- (J? =< K?), ground(Rs?), ground(B?) | role_person(I?, B?, P), role_person(J?, B?, Q), nth_spec(Rs?, I?, RI), nth_spec(Rs?, J?, RJ), pair_ok(P?, Q?, RI?, RJ?, I?, J?, R1), J1 := (J? + 1), pair_row1(R1?, I?, J1?, K?, Rs?, B?, R).
+procedure pair_row(Integer?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pair_row(_, J, K, _, _, _, _, yes) :- (J? > K?) | true.
+pair_row(I, J, K, Rs, B, Ls, Os, R?) :- (J? =< K?), ground(Rs?), ground(B?), ground(Ls?), ground(Os?) | role_person(I?, B?, P), role_person(J?, B?, Q), nth_spec(Rs?, I?, RI), nth_spec(Rs?, J?, RJ), pair_ok(P?, Q?, RI?, RJ?, I?, J?, Ls?, Os?, R1), J1 := (J? + 1), pair_row1(R1?, I?, J1?, K?, Rs?, B?, Ls?, Os?, R).
 
-procedure pair_row1(YesNo?, Integer?, Integer?, Integer?, RoleSpecs?, Binding?, YesNo).
-pair_row1(no, _, _, _, _, _, no).
-pair_row1(yes, I, J, K, Rs, B, R?) :- pair_row(I?, J?, K?, Rs?, B?, R).
+procedure pair_row1(YesNo?, Integer?, Integer?, Integer?, RoleSpecs?, Binding?, Ints?, MayOnes?, YesNo).
+pair_row1(no, _, _, _, _, _, _, _, no).
+pair_row1(yes, I, J, K, Rs, B, Ls, Os, R?) :- pair_row(I?, J?, K?, Rs?, B?, Ls?, Os?, R).
 
-procedure pair_ok(Peer?, Peer?, RoleSpec?, RoleSpec?, Integer?, Integer?, YesNo).
-pair_ok(P, Q, RI, RJ, I, J, R?) :- (P? =?= Q?) | role_names(RI?, J?, A1), role_names(RJ?, I?, A2), or(A1?, A2?, A), neg(A?, R).
-pair_ok(_, _, _, _, _, _, yes) :- otherwise | true.
+procedure pair_ok(Peer?, Peer?, RoleSpec?, RoleSpec?, Integer?, Integer?, Ints?, MayOnes?, YesNo).
+pair_ok(P, Q, RI, RJ, I, J, Ls, Os, R?) :- (P? =?= Q?), integer(I?), integer(J?), ground(Ls?), ground(Os?) | role_names(RI?, J?, A1), role_names(RJ?, I?, A2), or(A1?, A2?, A), neg(A?, R0), int_in(I?, Ls?, LI), int_in(J?, Ls?, LJ), or(LI?, LJ?, Li), may_one_pair(I?, J?, Os?, Mk), or(Li?, Mk?, OkM), and(R0?, OkM?, R).
+pair_ok(_, _, _, _, _, _, _, _, yes) :- otherwise | true.
+
+procedure int_in(Integer?, Ints?, YesNo).
+int_in(_, [], no).
+int_in(I, [K | Ks], B?) :- integer(I?), integer(K?) | int_in1(I?, K?, Ks?, B).
+
+procedure int_in1(Integer?, Integer?, Ints?, YesNo).
+int_in1(I, K, _, yes) :- (I? =:= K?) | true.
+int_in1(I, _, Ks, B?) :- otherwise | int_in(I?, Ks?, B).
+
+procedure may_one_pair(Integer?, Integer?, MayOnes?, YesNo).
+may_one_pair(_, _, [], no).
+may_one_pair(I, J, [may_one(A, B) | Ms], M?) :- integer(I?), integer(J?), integer(A?), integer(B?) | may_one1(I?, J?, A?, B?, Ms?, M).
+
+procedure may_one1(Integer?, Integer?, Integer?, Integer?, MayOnes?, YesNo).
+may_one1(I, J, A, B, _, yes) :- (I? =:= A?), (J? =:= B?) | true.
+may_one1(I, J, A, B, _, yes) :- (I? =:= B?), (J? =:= A?) | true.
+may_one1(I, J, _, _, Ms, M?) :- otherwise | may_one_pair(I?, J?, Ms?, M).
+
+procedure listed_places(Schema?, Ints).
+listed_places(schema(_, _, _), []).
+listed_places(lschema(_, _, _, Lsts), Ls?) :- listing_places(Lsts?, Ls).
+
+procedure listing_places(Listings?, Ints).
+listing_places([], []).
+listing_places([listing(I, _, _, _, _, _, _) | Lsts], [I? | Ls?]) :- listing_places(Lsts?, Ls).
+listing_places([instances(_, _, _, _, _, _, _) | Lsts], Ls?) :- listing_places(Lsts?, Ls).
 
 procedure role_names(RoleSpec?, Integer?, YesNo).
 role_names(rs(_, A, D, _, _), J, R?) :- integer(J?) | names_role(A?, J?, R1), names_role(D?, J?, R2), or(R1?, R2?, R).
@@ -3752,7 +3794,7 @@ listings_ok1(no, _, _, _, _, no).
 listings_ok1(yes, Lsts, B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
 
 procedure rule_spec_ok(Constant?, Binding?, YesNo).
-rule_spec_ok(Nm, B, Ok?) :- schema_entry(Nm?, E), rule_spec(E?, Rs0), rule_ok(Rs0?, B?, Ok).
+rule_spec_ok(Nm, B, Ok?) :- ground(Nm?) | schema_entry(Nm?, E), rule_spec(E?, Rs0), schema_entry(Nm?, E1), listed_places(E1?, Ls), schema_ones(Nm?, Os), rule_ok(Rs0?, B?, Ls?, Os?, Ok).
 
 procedure rule_spec(Schema?, RoleSpecs).
 rule_spec(schema(_, _, Rs), Rs?).
