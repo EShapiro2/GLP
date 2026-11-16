@@ -6,4 +6,4 @@ Shares:0 - | A *share* of Orga is an Orga-note that gives its holder a vote in O
 Shares:0 - | Alice is a party, Orga an organisation.
 Shares:0 - | Default: those who decide for z for those who decide the issue of shares of z.
 Shares:0 - | Kind of note: share, shares of y for y-notes.
-Shares:1 ■ Issue shares: Notes:1, for shares <- guarded by share_deciders(Alice).
+Shares:1 ■ Issue shares: Notes:1, for shares <- organisation(Alice) guarded by share_deciders(Alice).
