@@ -365,6 +365,7 @@ contract_named(backed, C?) :- backed(C).
 contract_named(wild, C?) :- wild(C).
 contract_named(roles, C?) :- roles(C).
 contract_named(wards, C?) :- wards(C).
+contract_named(feeds, C?) :- feeds(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -401,6 +402,7 @@ introduction_named(backed, no_introduction).
 introduction_named(wild, no_introduction).
 introduction_named(roles, no_introduction).
 introduction_named(wards, no_introduction).
+introduction_named(feeds, no_introduction).
 
 %% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
@@ -479,6 +481,9 @@ pragmas_named(wardclose, pragmas([list('"Friends"', [friend])],
      act(create, '"Create"', [], none, '"Friends"', by([1])),
      act(join, '"Join"', ['""', '""', '"Group"'], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(child_close, '"Child close"', ['""', '""', '"Group"'], none, '"Friends"', by([2]))])).
+pragmas_named(feeds, pragmas([list('"Friends"', [friend]), list('"Feed"', [item])],
+    [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
+     act(post, '"Post"', ['""', '"text"'], none, '"Feed"', by([1]))])).
 pragmas_named(wards, pragmas([list('"Friends"', [friend])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(adopt, '"Adopt"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
@@ -1050,6 +1055,21 @@ backed([schema(acquaint, [],
 %%                          at each e  role(c, _), -role(c, _)
 %%
 %% accept requires at Alice a bond of Carol of some maturity, bond(c, _), a wildcard in an atom a role requires: her machine finds a maturity in her state, and the act neither names nor records it, as DGC's Accept by bond.  boast's exists has the wildcard in its anchor, at the place of the person in whom Bob holds a role.  report's conjunct has it in its anchor likewise, its instances the roles Carol has given, each once whoever holds it, "restricted to the variables the conjunct's literals name and without repetition".  vow has no wildcard: its exists binds g at a person's place of its anchor, accepted(g), which GSC's reader writes a speech-act variable, and the compiler an agent variable, of the kind of its place (vGLP, Section 5.4: "an instance of it in a state is an assignment of the variables it binds under which that person holds the anchor"; compiler/cvac.glp, bound_kinds), so that "Bob has accepted no one" is false of a person who has accepted someone.  rest has a negated atom with wildcards inside a safe formula, not role(_, _), which holds exactly where the state has no atom it matches, "a wildcard in a negated atom is universally quantified, the atom forbidding ... every atom of the state that it matches": the compiler writes the atom the quantifier exists w1 w2 role(w1, w2) (compiler/cvac.glp, wild_fa).  unpoint, as GFF's labeled_unpoint, deletes pointer(c, l) at its base, Alice, c and l in no other atom: they are no local variables, "but for a variable of an atom the schema deletes at the base of the schema: the person who proposes chooses which of their own records the act removes, so the schema-binding binds that variable and the request names it, as the person a pointer points to and its label when Alice removes one of her pointers", its request unpoint(Peer, Peer, Speech) and its pragma line naming no field, the pointer she holds binding both.  office, serve and dissolve are accept and retire at a constant's place, an office's title being a variable over the constants, const(t), as the name of a role in GO: serve's office(c, _) is a variable over the constants local to its role, and dissolve's listed role has the wildcard in its anchor, has_office(c, e, _).  retire's listed role has it in its anchor, has_role(c, e, _), the people Carol has in some role, each once, as GO's retire; each of them is required to hold a role in Carol, role(c, _), a wildcard in an atom a listed role requires, as the Calculus's GSN close required member(e, g, _) of every listed member, and loses every role in her, the cleared role(c, _), a wildcard in a negated atom, as it was.
+%% feeds: an unguarded act whose opener's state it does not change (GFF's Deliver): befriend, post(Alice ; Text), adding item(Alice, Text, Alice), the item with its author, and deliver(Bob, Alice ; Text, Carol), unguarded, opened by Bob, requiring item(Bob, Text, Carol) and friend(Bob, Alice), forbidding item(Alice, Text, Carol) and adding it with received(Alice, Text, Carol, Bob), which names its sender.  After it commits Bob is ready for it still, and Alice refuses his next attempt as unable; he proposes it again only once her ready has come (vGLP 76db5e0, Definition "Proposing", Propose).  feeds/self.glp plays it.
+procedure feeds(Contract).
+feeds([sas(befriend, ['Alice', 'Bob'], [],
+           [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])],
+           [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))],
+           true, ['Alice', 'Bob']),
+       sas(post, ['Alice'], ['Text'],
+           [atom(item, ['Alice', 'Text', 'Alice'])],
+           [not(atom(item, ['Alice', 'Text', 'Alice']))],
+           true, ['Alice']),
+       sas(deliver, ['Bob', 'Alice', 'Carol'], ['Text', 'Carol'],
+           [atom(item, ['Alice', 'Text', 'Carol']), atom(received, ['Alice', 'Text', 'Carol', 'Bob'])],
+           [atom(item, ['Bob', 'Text', 'Carol']), atom(friend, ['Bob', 'Alice']), not(atom(item, ['Alice', 'Text', 'Carol']))],
+           true, [])]).
+
 procedure wild(Contract).
 wild([sas(issue, ['Carol', 'Alice'], ['D'],
           [atom(bond, ['Alice', 'Carol', num('D')]), atom(issued, ['Carol', 'Alice', num('D')])],
