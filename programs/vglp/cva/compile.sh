@@ -49,8 +49,14 @@ contract_file() { # contract_file <contract> ; the file that holds it, its owner
     case "$1" in
         gsg) echo "$GLP_DIR/programs/gsc/GSG.glp" ;;
         gsn) echo "$GLP_DIR/programs/gsc/GSN.glp" ;;
-        gc)  echo "$GLP_DIR/programs/currencies/coins/GC.glp" ;;
+        gc)  echo "$GLP_DIR/programs/currencies/coins/Coins.glp" ;;
         *)   echo "$HERE/contracts.glp" ;;
+    esac
+}
+name_in() { # name_in <contract> ; the name its file gives it, contract_named/2: GC is Coins since 2026-11-16 (Udi's four renames; Code #33, vGLP_inbox.md, 17:12 UTC), and its row here stays gc, coins being vGLP's own contract of contracts.glp
+    case "$1" in
+        gc) echo coins ;;
+        *)  echo "$1" ;;
     esac
 }
 dir_of() { # dir_of <contract> ; the directory of its platform and plays here
@@ -93,7 +99,7 @@ repl() {   # repl <input file> <output file>; the REPL's lines, prompts stripped
 for c in $CONTRACTS; do
     d=$(dir_of "$c")
     src=$(contract_file "$c")
-    printf '%s\ncontract_named(%s, C).\n:quit\n' "$src" "$c" > "$WORK/c.in"
+    printf '%s\ncontract_named(%s, C).\n:quit\n' "$src" "$(name_in "$c")" > "$WORK/c.in"
     repl "$WORK/c.in" "$WORK/$c.c.out"
     ct=$(grep -E '^C = ' "$WORK/$c.c.out" | head -1 | sed -e 's/^C = //')
     # The contract as GSC's reader reads it, as_read/2 of programs/gsc, each schema of the clause syntax, sas/7, in the checker's form with its roles' names, and a schema in that form as it is: the compiler and pragmas.sh take this and keep no copy of the reader (vGLP, Section 5.4, "Speech-act schemas": "A compiler written in GLP takes such a contract ... written as speech-act schemas [GSC]"; vGLP #23, Code_inbox.md, 2026-11-05 14:20 UTC, 1).
@@ -135,7 +141,7 @@ for c in $CONTRACTS; do
         grep -hE '^(Error|✗)' "$WORK/$c".*.out | head -3 >> "$WORK/status"
         continue
     fi
-    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$c" "$rd" "$vt" "$it" "$pr" > "$WORK/p.in"
+    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$(name_in "$c")" "$rd" "$vt" "$it" "$pr" > "$WORK/p.in"
     repl "$WORK/p.in" "$WORK/$c.p.out"
     f="$OUT/$d/platform.vglp"
     if ! awk '

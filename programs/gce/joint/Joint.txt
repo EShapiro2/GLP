@@ -32,3 +32,5 @@ Deposit: Alice [Deposit] <sum>
   Bob [Partner deposit] <sum>
 Withdraw: Alice [Withdraw] <sum> [Partner withdraw] <sum>
   Bob: Alice asks to withdraw from your joint account.
+Escrow: Alice [Deposit coin] <amount> <condition>
+  Carol: Alice asks to deposit coins with you.
