@@ -1,0 +1,41 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract pokes
+%% (../contracts.glp, contract_named(pokes, C): befriend, begin and an unguarded count, a counter, always open to an agent whose person has begun counting, and arm and an unguarded poke of two participants, always open to its opener once armed and befriended), platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA Platform").  It runs two agents, alice and bob, their persons scripted and paced on their screens (../self.glp), and gives each person's log, the views with gave(K, A) where the person answers an approval question, and the network's log of the cargoes it carries.
+%%
+%% play_pokes: alice begins counting, and bob arms; bob asks to befriend alice, she answers yes, and it commits.  Then alice's agent always has count(alice) to take, an own transaction of one participant, and bob's agent always has poke(bob, alice) to propose, an own transaction of two participants, on whose start alice's agent votes.  "At every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger" (vGLP, Section 5.4, "The compilation"; the audit's Finding 1; Udi, 2026-11-16): so neither class starves the other, and alice's counting and bob's pokes commit again and again, interleaved.  The run does not suspend: it is stopped at the REPL's :limit, its logs' tails unbound.
+%% ---------------------------------------------------------------------------
+
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_pokes(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_pokes(LA?, LB?, N?) :-
+    pair([own([A1], propose(begin(A1?))), wait(holds(tick)),
+          approval(befriend(bob, alice), yes),
+          wait(holds(friend(bob)))],
+         [own([B1], propose(arm(B1?))), wait(holds(armed)),
+          own([B2], propose(befriend(B2?, alice))),
+          wait(holds(friend(alice)))],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% merged and routed, the cargoes logged.
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).
