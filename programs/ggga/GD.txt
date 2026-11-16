@@ -23,7 +23,7 @@ After x declares distrust of y, which requires x has not declared distrust of y:
 After x declares distrust of x's friend y, which requires x has not declared distrust of y: x has declared distrust of y and x and y are no longer friends.
 After x withdraws x's declaration of distrust of y: no longer x has declared distrust of y.
 Interface pragmas
-Distrusted: the persons Alice distrusts.
+Distrusted: those Alice distrusts.
 Distrust: Alice [Distrust] [Distrust friend]
 Propagate: Alice [Propagate] <person>
 Cease: Alice [Cease]
