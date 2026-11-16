@@ -1,10 +1,10 @@
 # A run of the cascade on MCS
 
-- Contract: `MCS` (`mcs` to the checker), its owner's two files `programs/go/MCS.txt` and `programs/go/MCS.glp`, copied here as they stood at `4bfc697d`.
+- Contract: `MCS` (`mcs` to the checker), its owner's two files `programs/go/MCS.txt` and `programs/go/MCS.glp`, copied here as they stood at `cb9fe388`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/MCS.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/MCS.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 17:51 UTC by `cascade.sh mcs`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `4bfc697d`; each artefact's source and tool:
+- Run on 2026-11-16 20:04 UTC by `cascade.sh mcs`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `cb9fe388`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
