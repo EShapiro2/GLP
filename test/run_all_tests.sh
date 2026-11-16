@@ -3235,6 +3235,31 @@ check_not "Bonds escrow terms: ... so nothing is released" "received_transfer(re
 check "Bonds escrow terms: the return reaches the depositor" "tagged(alice, received_transfer(return, escrow, \[lot(alice, now, 2)\]))" "$n3_terms"
 check "Bonds escrow terms: the escrow agent holds nothing in escrow at the end" "tagged(escrow, escrowed(\[\]))" "$n3_terms"
 
+echo "--- Bonds Pay and Pay issuer (pay_notes) ---"
+
+# GN:3, a party may pay notes she holds, coins or bonds of any issuer, to a
+# party she knows, with his consent; GC:1, Pay issuer, the payee's own coins,
+# with no consent (the Calculus's Grassroots Notes, ahead of its adoption;
+# Currencies #20, 2026-11-16).
+n3_pay=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+pay_notes.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds pay: no runtime error" "→ suspended" "$n3_pay"
+check_not "Bonds pay: no failed goal" "ERROR" "$n3_pay"
+check "Bonds pay: coins that are not the payee's own are paid with his consent (GN:3)" "tagged(bob, received_transfer(pay, alice, \[lot(alice, now, 2)\]))" "$n3_pay"
+check "Bonds pay: a bond is paid with the payee's consent (GN:3, Pay bond)" "tagged(bob, received_transfer(pay, alice, \[lot(alice, 30, 1)\]))" "$n3_pay"
+check "Bonds pay: the payee holds the coins and the bond" "tagged(bob, holdings(\[lot(alice, now, 2), lot(alice, 30, 1)\]))" "$n3_pay"
+check "Bonds pay: a payee who declines takes nothing" "tagged(carol, declined_transfer(pay, alice))" "$n3_pay"
+check "Bonds pay: ... and the notes come back to the payer" "tagged(alice, transfer_declined(pay, carol))" "$n3_pay"
+check_not "Bonds pay: ... so carol holds nothing" "tagged(carol, holdings(" "$n3_pay"
+check "Bonds pay: the payee's own coins are paid with no consent asked (GC:1, Pay issuer)" "tagged(alice, received(bob, 1))" "$n3_pay"
+check "Bonds pay: the payer's last holdings" "tagged(alice, holdings(\[lot(alice, now, 3)\]))" "$n3_pay"
+
 echo "--- Bonds two escrows open at once (two_escrows) ---"
 
 # One escrow agent holding two date-based agreements at once, agreements([...])
