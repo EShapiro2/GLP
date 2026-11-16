@@ -72,7 +72,7 @@ CSSN:0 - | Alice and Bob are persons, Carol and Dave children; in clause 2 Alice
 CSSN:1 ◆ | Alice is a legal parent of the minor who operates Carol.
 CSSN:2 ■ | A child's acquaintances.
 CSSN:3 ■ | Only a child, Dave, may join the group.
-CSSN:4 ○ Of age: Alice may Carol is of age, no longer Carol is a child, no longer anyone is a parent of Carol, no longer Carol has anyone as a parent and Carol is a person, provided Alice is the creator of Carol, Alice is a parent of Carol, Carol has Alice as a parent and not Carol is of age.
+CSSN:4 ○ Of age: Alice may Carol is of age, no longer Carol is a child, no longer anyone is a parent of Carol, no longer Carol has anyone as a parent and Carol is a person, provided Alice is the creator of Carol, Carol has Bob as a parent and not Carol is of age.
 CSSN:4 ○ | Carol is then a person.
 CSSN:4 ○ | The creator will do so if the minor who operates Carol comes of age, and not before.
 CSSN:5 ○ | A minor who is not a ward.

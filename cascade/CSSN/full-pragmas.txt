@@ -41,5 +41,5 @@ GSNW:3. ■ Child leave: Carol may end her membership in Alice's Grupo, provided
 CSSN:1. ◆ Alice is a legal parent of the minor who operates Carol.
 CSSN:2. ■ A child's acquaintances.
 CSSN:3. ■ Only a child, Dave, may join the group.
-CSSN:4. ○ Of age: Alice may declare Carol of age, provided Alice is the creator of Carol, Alice is a parent of Carol and Carol has Alice as a parent. Carol is then a person. The creator will do so if the minor who operates Carol comes of age, and not before.
+CSSN:4. ○ Of age: Alice may declare Carol of age, provided Alice is the creator of Carol and Carol has Bob as a parent. Carol is then a person. The creator will do so if the minor who operates Carol comes of age, and not before.
 CSSN:5. ○ A minor who is not a ward. Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.

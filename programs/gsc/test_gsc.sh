@@ -2410,11 +2410,31 @@ check "a binding of no parameter, a name occurring in the base, a name written t
       "F = [not_a_parameter(friend), occurs(knows), written_twice(c), bound_twice(retired)]" "$out"
 check "an instance of a contract that names no parameters is a fault" "F = [not_parametric]" "$out"
 check "an addition named establish replaces the base's in its place" \
-      "D = reflexive([friend, knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])]" "$out"
+      "D = parametric([creator, created, retired], reflexive([friend, knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])]" "$out"
 check "and an addition of a new name comes after the base's schemas" \
       "atom(person, ['Alice'])], true, ['Alice'])])" "$(printf '%s\n' "$out" | grep 'sas(sign, ')"
 check "a constant parameter val(bylaws_p) is written bylaws_mcs by the binding bylaws_p = bylaws_mcs" \
       "D = [sas(adopt, ['Alice'], [], [atom(bylaws, ['Alice', val(bylaws_mcs)])], [atom(identity, ['Alice'])], true, ['Alice'])]" "$out"
+# "An instantiation of some of the parameters of a parametric contract is a
+# parametric contract in the others ... and a contract that amends another may
+# declare further parameters, among the predicates and constants of the schemas
+# it adds" (GSC, Definition Parametric contract, f3aeec3): the instance keeps
+# the parameters no binding writes, and those an addition declares after them;
+# an instance writing all six is no parametric contract.
+GNWALL="[ward = child, creator = creator, created = created, guardian_of = parenting, guarded_by = parent_of, retired = retired]"
+NOTEB="parametric([badge], [sas(note, ['Alice'], [], [atom(noted, ['Alice'])], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(badge, ['Alice'])], true, ['Alice'])])"
+out3=$(run "instantiate($GNWP, [ward = child], [], D1)." "instantiate($GNWP, $GNWALL, [], D2), check(D2?, V2)." \
+           "instantiate($GNWP, [ward = child], $NOTEB, D3)." "instantiate($GNWP, $GNWALL, $NOTEB, D4), check(D4?, V4).")
+check "an instance writing ward alone is parametric in the other five" \
+      "D1 = parametric([creator, created, guardian_of, guarded_by, retired], reflexive(" "$out3"
+check "an instance writing all six, three as themselves, is no parametric contract and is certified" \
+      "V2 = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)]" "$out3"
+check_not "and its term declares no parameters" "D2 = parametric(" "$out3"
+check "an addition declaring badge adds it after the unwritten ones" \
+      "D3 = parametric([creator, created, guardian_of, guarded_by, retired, badge], reflexive(" "$out3"
+check "an instance writing all six with that addition is parametric in badge alone, which supplies note" \
+      "D4 = parametric([badge], reflexive(" "$out3"
+check "and is certified" "V4 = syntactically_grassroots_with_wards(acquaint, [child]" "$out3"
 # An instance may name the base's schemas its own way (GSC 22605d6), in its
 # bindings beside the predicates': ward_acquaint = child_acquaint renames the
 # relay act, and an addition named child_acquaint replaces it; a name taken

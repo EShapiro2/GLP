@@ -1,10 +1,10 @@
 # A run of the cascade on CSSN
 
-- Contract: `CSSN` (`cssn` to the checker), its owner's two files `programs/cssn/CSSN.txt` and `programs/cssn/CSSN.glp`, copied here as they stood at `6f917c8f`.
+- Contract: `CSSN` (`cssn` to the checker), its owner's two files `programs/cssn/CSSN.txt` and `programs/cssn/CSSN.glp`, copied here as they stood at `59a5c571`.
 - The paper: `/Users/udi/Grassroots/CSSN (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/cssn/CSSN.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/cssn/CSSN.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 00:34 UTC by `cascade.sh cssn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `6f917c8f`; each artefact's source and tool:
+- Run on 2026-11-16 06:47 UTC by `cascade.sh cssn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `59a5c571`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
@@ -20,4 +20,4 @@
 | `platform.vglp` | `CSSN.glp` read by programs/gsc's as_read/2, and `CSSN.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
 | `platform.glp` | `platform.vglp` | glp_runtime's :emit | the platform compiled to GLP, as emitted |
 | `interface.glp` | `platform.vglp` and `platform.glp` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |
-| `run.log` | `platform.vglp` | programs/cssn, the plays with scripted persons, in the REPL | the plays' logs: play_village play_figure |
+| `run.log` | `platform.vglp` | programs/cssn, the plays with scripted persons, in the REPL | the plays' logs: play_village play_figure play_resigned |

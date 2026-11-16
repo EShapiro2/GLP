@@ -19,7 +19,7 @@ Alice and Bob are persons, Carol and Dave children; in clause 2 Alice and Bob ar
 1. ◆ Enter: GnW:1. Alice is a legal parent of the minor who operates Carol.
 2. ■ A child's acquaintances. Child acquaint: GnW:3 Ward acquaint, only if Alice knows Bob and Alice is a parent of Carol, with the consent of Alice. Children acquaint: GnW:4 Wards acquaint, only if Alice knows Dave, Bob knows Carol, Alice and Bob know each other, Alice is a parent of Carol and Bob is a parent of Dave, with the consent of Alice and Bob.
 3. ■ Child create: GSNW:2 Ward create, only if Carol has Alice as a parent, with the consent of Alice. Join: GSN:3 Join, only if Alice is a person. Child add: GSNW:3 Ward add, only if Bob is a child. Only a child, Dave, may join the group.
-4. ○ Of age: Alice may declare Carol of age, provided Alice is the creator of Carol, Alice is a parent of Carol and Carol has Alice as a parent. Carol is then a person. The creator will do so if the minor who operates Carol comes of age, and not before.
+4. ○ Of age: Alice may declare Carol of age, provided Alice is the creator of Carol and Carol has Bob as a parent. Carol is then a person. The creator will do so if the minor who operates Carol comes of age, and not before.
 5. ○ A minor who is not a ward. Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.
 Logic pragmas.
 Vocabulary: z is of age = of_age(z).
@@ -28,6 +28,7 @@ every guardianship of z has ended: no one is a parent of z and z has no one as a
 After x declares z of age, which requires z is not of age: z is of age, no longer z is a child and every guardianship of z has ended and z is a person.
 Interface pragmas
 Children: those Alice is a parent of.
+Created: those Alice is the creator of.
 Enter: Alice [Enter] <name>
   Carol: Alice asks to be your parent.
 Guardian decisions: Decider [Make parent] <person>
@@ -38,14 +39,14 @@ Guardian decisions: Decider [Make parent] <person>
   Bob [Parent unfriend]
 A child's acquaintances: Alice [Child acquaint]
   Carol: Alice wishes that you and Bob know each other.
-  Bob: Alice wishes that you and her child Carol know each other.
+  Bob: Alice wishes that you and Carol, Alice's child, know each other.
   Alice [Children acquaint]
   Carol: Alice wishes that you and Dave know each other.
   Dave: Alice wishes that you and Carol know each other.
   Bob: Alice wishes that Carol and your child Dave know each other.
 Ward and person: Alice [Child befriend] <child>
   Carol: Alice asks that you and Bob befriend.
-  Bob: Alice asks that you and her child Carol befriend.
+  Bob: Alice asks that you and Carol, Alice's child, befriend.
   Alice [Child unfriend] <child> <person>
   Carol [Child end]
 Wards: Alice [Children befriend] <child>
@@ -65,15 +66,15 @@ Child create: Carol [Child create] <name>
 A ward's group: Carol [Child close]
   Alice [Parent close] <group>
 Ward join: Bob [Child join]
-  Carol: Bob asks you to join his group.
-  Alice: Bob asks that your child Carol join his group.
+  Carol: Bob asks you to join the group.
+  Alice: Bob asks that your child Carol join the group.
   Carol [Children join] <parent>
-  Dave: Carol asks you to join her group.
-  Alice: Carol asks that Dave join her group.
-  Bob: Carol asks that your child Dave join her group.
+  Dave: Carol asks you to join the group.
+  Alice: Carol asks that Dave join the group.
+  Bob: Carol asks that your child Dave join the group.
   Carol [Children of one parent join]
-  Dave: Carol asks you to join her group.
-  Alice: Carol asks that Dave join her group.
+  Dave: Carol asks you to join the group.
+  Alice: Carol asks that Dave join the group.
   Alice [Child withdraw] <leader> <group>
   Carol [Child leave]
   Carol [Child remove]
