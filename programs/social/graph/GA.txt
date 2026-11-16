@@ -1,0 +1,9 @@
+% GA: Grassroots App --- the contract, the one copy, its owner's (organisation/claude.md, "Sessions").
+% Owner: GSA (Udi, 2026-11-16, to GSA #6).  The paper, GSA's main_SGSG.tex, has the Grassroots App's own platform compiled from it (Section 4.1, "The Program"; Appendix A, "The program").
+% Paper: GSA, The Grassroots Super-App and App Store, in preparation
+% Extends: GA composes GPE, Grassroots Physical Encounters (GPE.txt beside this file), with GAS, the Grassroots App Store (GAS.txt beside this file), which composes GPD with GSV, and with GDS, the Grassroots Directory Service (programs/examples/rendezvous/GDS.txt), which extends GRV, which extends GSV; the three meet on GKK, and GAS and GDS on GSV.  It has no clause and no name of its own.
+% Defines: nothing; every term is defined in the contracts it composes.
+% Last changed: 2026-11-16, written by the Calculus at GSA's ask and approved by Udi in its two lines, the title and the first line, with no names line, a contract with no clause of its own needing none (Udi, 2026-11-16, to GSA #6); its Interface pragma GSA's (GSA #6).
+% Schemas: GA.glp beside this file, the full schemas, printed by calculus/tools/adopt.py and never written by hand; a check holds it to what the tool prints.
+Interface pragmas
+Look: 🌱, os
