@@ -1,0 +1,6 @@
+R: A pronoun that names nobody
+Bob and Frank are persons.
+1. ■ Greet: Bob may greet Frank, provided she knows Bob.
+Logic pragmas.
+Vocabulary: x knows y = knows(x,y); x has greeted y = greeted(x,y).
+After x greets y: x has greeted y.

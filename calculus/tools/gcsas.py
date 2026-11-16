@@ -26,7 +26,7 @@ PRAGMAS = "Logic pragmas."
 CLAUSE = re.compile(r"^(\d+)\. ([%s]) (.*)$" % MARKS)
 ENTRY = re.compile(r"^((?:[A-Za-z-]+:\d+)(?:\+[A-Za-z-]+:\d+)*) ([%s-]) (.*)$" % MARKS)
 REF = r"[A-Za-z-]+:\d+"
-PRON = {"Alice": "her", "Alicia": "her", "Carol": "her", "Erin": "her", "Bob": "his", "Dave": "his"}
+PRON = {"Alice": "her", "Alicia": "her", "Carol": "her", "Erin": "her", "Bob": "his", "Dave": "his", "Frank": "his"}
 POSS = {"her": "hers", "his": "his", "its": "its", "their": "theirs"}
 WILD = "_"        # in a place: someone; in a state that must not hold, or that ends: anyone
 WILDW = ("someone", "anyone", "no one")
@@ -1130,9 +1130,90 @@ def act_text(persons, t, b, consent, conds, must=""):
     return s + "."
 
 
+# ---- pronouns and possessives, as a person writes them ------------------------------
+# A pronoun stands for the one person the sentence has already named whom it can name: she, her, hers, herself for a name
+# of PRON with "her"; he, him, his, himself for one with "his"; it, its, itself, they, them, their, theirs, themselves for
+# any other name (an organisation, an AI agent, a service: GLP organisation/writing-style-guide.md, rule 28).  Two such
+# persons named before it, or none, and the sentence is refused.  It is read in what follows the act phrase of an act or
+# the cited act of a citation (", provided", ", only if", ", with the consent of", ", and then"): in the act phrase "her"
+# is already the subject's own (SAS-WRITING.txt).  A possessive state is read by the vocabulary's own phrases:
+# "Y is X's N" ("Y is her N") is "X has Y as a N" where the contract has that phrase, else "Y is a N of X" where it has
+# that one, and "Y is not X's N" their negations; a phrase the vocabulary has as written ("y is x's delegate") stays.
+PRONOUNS = {"she": "her", "her": "her", "hers": "her", "herself": "her", "he": "his", "him": "his", "his": "his", "himself": "his",
+            "it": "its", "its": "its", "itself": "its", "they": "its", "them": "its", "their": "its", "theirs": "its", "themselves": "its"}
+POSSESSIVE = {"her", "his", "its", "their"}
+OBJECT_NEXT = {"and", "or", "as", "to", "in", "from", "for", "with", "on", "by", "of", "at", "is", "are", "has", "have", "does", "do", "may", "must", "will", "than", "but"}
+TAIL = re.compile(r", (?:provided|only if|with the consent of|and then) ")
+
+
+def pron_class(name):
+    return PRON.get(name, "its")
+
+
+def vocab_nouns(lex):
+    """{N: (form, article)} of the vocabulary's possessive shapes: form 'has' for 'x has y as a N', 'of' for 'x is a N of y'."""
+    out = {}
+    for t, _, _ in lex.basic + lex.roles:
+        m = re.fullmatch(r"([b-z]) has ([b-z]) as (an?) ([a-z][a-z ]*?)", t)
+        if m:
+            out.setdefault(m.group(4), ("has", m.group(3)))
+    for t, _, _ in lex.basic + lex.roles:
+        m = re.fullmatch(r"([b-z]) is (an?) ([a-z][a-z ]*?) of ([b-z])", t)
+        if m and m.group(3) not in out:
+            out[m.group(3)] = ("of", m.group(2))
+    return out
+
+
+AGENT_KIND = re.compile(r"\b(person|party|ward|child|AI agent|service|issuer|organisation|bank|cooperative|company|corporation|society|DAO|rider|driver)\b")
+
+
+def natural(s, lex, agents=frozenset()):
+    """The clause sentence s with its pronouns and possessive states in the plain form the grammar reads; agents, the
+    names a pronoun may stand for: the contract's names of persons, wards, organisations and other agents."""
+    m = re.match(r"([A-Z][A-Za-z' -]*?): (.+)$", s)
+    t = m and TAIL.search(m.group(2))
+    if not t:
+        return s
+    k = m.start(2) + t.start()
+    head, tail = s[:k], s[k:]
+    nouns = vocab_nouns(lex)
+    out, pos = [], 0
+    for mm in re.finditer(r"\b(%s)\b" % "|".join(sorted(PRONOUNS, key=len, reverse=True)), tail):
+        w = mm.group(1)
+        before = head + "".join(out) + tail[pos:mm.start()]
+        named = list(dict.fromkeys(x for x in re.findall(NAME, before[len(m.group(1)) + 2:]) if x in agents))
+        who = [x for x in named if pron_class(x) == PRONOUNS[w]]
+        if len(who) != 1:
+            raise Err("the pronoun '%s' names %s" % (w, "both " + " and ".join(who) if who else "no person the sentence has named"))
+        rest = tail[mm.end():]
+        nx = re.match(r" ([A-Za-z]+)", rest)
+        if w in POSSESSIVE and nx and nx.group(1) not in OBJECT_NEXT:      # "her guardian", "her Delos": the possessive; "her as", "her and": the object
+            rep = who[0] + "'s"
+        elif w in ("hers", "theirs") or (w == "his" and not nx):
+            rep = who[0]
+        else:
+            rep = who[0]
+        out.append(tail[pos:mm.start()] + rep)
+        pos = mm.end()
+    tail = "".join(out) + tail[pos:]
+
+    def poss(mm):
+        y, neg, x, N = mm.group(1), mm.group(2), mm.group(3), mm.group(4)
+        if N not in nouns:
+            return mm.group(0)
+        form, art = nouns[N]
+        if form == "has":
+            return "%s %s %s as %s %s" % (x, "does not have" if neg else "has", y, art, N)
+        return "%s is %s%s %s of %s" % (y, "not " if neg else "", art, N, x)
+    pat = r"\b(%s) is (not )?(%s)'s (%s)\b" % (NAME, NAME, "|".join(sorted(map(re.escape, nouns), key=len, reverse=True)) or "(?!)")
+    tail = re.sub(pat, poss, tail)
+    return head + tail
+
+
 def compile_contract(w, n):
     """gr/n -> the entries of sas/n and the entries of its own flat text."""
     c, lex = w.contract(n), w.lexicon(n)
+    agents = frozenset(x for x, ks in kinds_from(w, n, n).items() if any(AGENT_KIND.search(k) for k in ks)) | frozenset(PRON)
     sas, own = [], []
     for kind, l in c.header:
         if kind == "prose":
@@ -1140,7 +1221,9 @@ def compile_contract(w, n):
             own.append(dict(kind="kept", label="%s:0" % n, mark="-", text=l))
     for num, mark, text in c.clauses:
         label = "%s:%d" % (n, num)
-        for s in sentences(text):
+        def one(s):
+            """The entries of sas/ and of the flat text of one sentence s, as written."""
+            sas_n, own_n = [], []
             m = re.match(r"([A-Z][A-Za-z' -]*?): (.+)$", s)
             cm = m and re.match(r"(%s)(?: ([A-Z][A-Za-z' -]*?))?((?:%s)?)((?:, only if .*?)?)((?:, with the consent of .*?)?)((?:, and then .*?)?)((?:%s)?)\.$"
                                 % (REF, TAKEN, VOTES), m.group(2))
@@ -1156,8 +1239,8 @@ def compile_contract(w, n):
                     theirs = {q for _, q, _ in w.lexicon(cm.group(1).split(":")[0]).basic}
                     if any(q in theirs for _, q, _ in e["then"]):
                         raise Err("a strengthening adds a state of the contract it strengthens")
-                    sas.append(e)
-                    own.append(dict(e, conds=phrases_of(conds, lex, ACTOR), persons=[p for p, _ in persons_of(cons, lex)] if cons else [],
+                    sas_n.append(e)
+                    own_n.append(dict(e, conds=phrases_of(conds, lex, ACTOR), persons=[p for p, _ in persons_of(cons, lex)] if cons else [],
                                     effects=phrases_of(then, lex, ACTOR)))
                 elif m:
                     persons, t, b, r, consent, conds, must = read_act(m.group(2)[:vm.start()] + "." if vm else m.group(2), lex)
@@ -1177,21 +1260,35 @@ def compile_contract(w, n):
                     if any(WILD in x[4] for x in eff if not x[0]) or any(a[:1] in "<>" for x in eff for a in x[4]):
                         raise Err("an act cannot make a state hold of someone unnamed, or of a number of persons")
                     body = [(x[0], x[3], x[4]) for x in cnd] + [(False, x[3], x[4]) for x in eff if x[0] and WILD not in x[4]]
-                    sas.append(dict(kind="act", label=label, mark=mark, name=m.group(1), head=head, body=body,
+                    sas_n.append(dict(kind="act", label=label, mark=mark, name=m.group(1), head=head, body=body,
                                     guards=list(dict.fromkeys(g for _, g in persons + cons))))
-                    same = same_of(c, num, names_of(sas[-1]))
-                    sas[-1]["same"] = same
-                    sas[-1]["must"] = [g for _, g in musts]
-                    sas[-1]["votes"] = votes_of(vm.group(0)) if vm else None
-                    if not set(sas[-1]["must"]) <= set(sas[-1]["guards"]):      # one who must consent is one of those who take the act
-                        raise Err("%s: one who must consent is not among its guards: %s" % (m.group(1), ", ".join(sorted(set(sas[-1]["must"]) - set(sas[-1]["guards"])))))
-                    own.append(dict(kind="act", label=label, mark=mark, name=m.group(1), same=same, must=[p for p, _ in musts], persons=list(dict.fromkeys(p for p, _ in persons + cons)), votes=sas[-1]["votes"],
+                    same = same_of(c, num, names_of(sas_n[-1]))
+                    sas_n[-1]["same"] = same
+                    sas_n[-1]["must"] = [g for _, g in musts]
+                    sas_n[-1]["votes"] = votes_of(vm.group(0)) if vm else None
+                    if not set(sas_n[-1]["must"]) <= set(sas_n[-1]["guards"]):      # one who must consent is one of those who take the act
+                        raise Err("%s: one who must consent is not among its guards: %s" % (m.group(1), ", ".join(sorted(set(sas_n[-1]["must"]) - set(sas_n[-1]["guards"])))))
+                    own_n.append(dict(kind="act", label=label, mark=mark, name=m.group(1), same=same, must=[p for p, _ in musts], persons=list(dict.fromkeys(p for p, _ in persons + cons)), votes=sas_n[-1]["votes"],
                                     effects=[(x[0], wild(fill(x[1], x[2]), x[0])) for x in eff], conds=[(x[0], wild(fill(x[1], x[2]), x[0])) for x in cnd]))
                 else:
-                    sas.append(dict(kind="kept", label=label, mark=mark, text=s))
-                    own.append(dict(kind="kept", label=label, mark=mark, text=s))
+                    sas_n.append(dict(kind="kept", label=label, mark=mark, text=s))
+                    own_n.append(dict(kind="kept", label=label, mark=mark, text=s))
             except Err as ex:
                 raise Err("%s, %s: %s" % (label, s[:40], ex))
+            return sas_n, own_n
+        for s in sentences(text):
+            try:
+                a, b = one(s)
+            except Err:
+                try:
+                    s2 = natural(s, lex, agents)          # pronouns and possessives, as a person writes them (SAS-WRITING.txt)
+                except Err as ex:
+                    raise Err("%s, %s: %s" % (label, s[:40], ex))
+                if s2 == s:
+                    raise
+                a, b = one(s2)
+            sas.extend(a)
+            own.extend(b)
     return sas, own
 
 
