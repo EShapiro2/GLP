@@ -1,6 +1,6 @@
 # The contracts of the Calculus's next publication, before their cascade run
 
-For a test of the site, and for nothing else: this is not a publication, and no owner adopts from it.  It is printed from the Calculus's code at ed9032e7, 2026-11-16.
+For a test of the site, and for nothing else: this is not a publication, and no owner adopts from it.  It is printed from the Calculus's code at a369d4ed, 2026-11-16.
 
 66 contracts: the 62 on `main`, five of them renamed (AGORA is Agora, JOINT is Joint, STAY is Stay, LIB is Lib, REC is Rec), and four new: CDC, GN, GS and GA.
 

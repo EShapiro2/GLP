@@ -23,5 +23,5 @@ GRV:2. ■ Invite by link: Alice may register with Dave an invitation link of he
 GRV:3. ■ Use link: Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
 GRV:4. ■ Reconnection. Present: Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship. Match: Dave then gives each the address of the other.
 GDS:1. ■ Open directory: Carol may make her service Dora a directory.
-GDS:2. ■ Listing. List: Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, shown on Dora's page or not; her app then keeps Dora supplied with invitation links of hers. Delist: Alice may delist herself.
+GDS:2. ■ Listing. List me: Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, shown on Dora's page or not; her app then keeps Dora supplied with invitation links of hers. Delist me: Alice may delist herself.
 GDS:3. ■ Lookup: Bob may look Alice up, on Dora's page if she is shown there, and by her email address and name if not; Dora then gives Bob an invitation link of Alice's.
