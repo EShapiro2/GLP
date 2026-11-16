@@ -221,7 +221,7 @@
 # (xviii) the harness of every canonical CVA platform (programs/sglp/cva/;
 #       sGLP's task of 2026-10-18 20:50 UTC, and of 2026-11-04 16:22 UTC, item
 #       3), on the canonical platform of the social graph of the current GSG
-#       cascade record (cascade/GSG/platform.vglp), compiled to GLP by the
+#       cascade record (cascade/Friendship/platform.vglp), compiled to GLP by the
 #       REPL's :emit, with the scripted profiles of tests/cva/scripted_sglp.glp:
 #       the platform's interface printed in sGLP's term form (cva/interface.sh),
 #       the record's interface.glp, its types, its volitional declarations,
@@ -1111,13 +1111,13 @@ sr=$?
     [ ! -e "$WORK/unit_root" ]
 check "a horizon in months is refused by run.sh and by record.sh with exit 2, naming the six units, and nothing made (sGLP's paper, Appendix B)" $?
 # The canonical platform of the social graph of the current GSG cascade
-# record, cascade/GSG/platform.vglp, compiled to GLP by :emit in a scratch
+# record, cascade/Friendship/platform.vglp, compiled to GLP by :emit in a scratch
 # directory under programs/tests, a container with no self.glp, as cascade.sh
 # compiles it.
 CVA="$WORK/cva"; mkdir -p "$CVA/printed"
 EMITD="$GLP_DIR/programs/tests/sglp_cva_emit_$$"
 rm -rf "$EMITD"; mkdir -p "$EMITD"
-cp "$GLP_DIR/cascade/GSG/platform.vglp" "$EMITD/platform.vglp"
+cp "$GLP_DIR/cascade/Friendship/platform.vglp" "$EMITD/platform.vglp"
 repl "$WORK/cva_emit.out" ":emit $EMITD"
 cp "$EMITD/platform.vglp" "$CVA/platform.vglp"; cp "$EMITD/platform.glp" "$CVA/platform.glp" 2>/dev/null
 rm -rf "$EMITD"
@@ -1125,7 +1125,7 @@ rm -rf "$EMITD"
 check "the canonical platform of the social graph compiled to GLP, its agent/5 the compilation's, with its ask stream" $?
 bash "$HERE/cva/interface.sh" "$CVA/platform.vglp" "$CVA/platform.glp" GSG > "$CVA/interface.glp" 2> "$WORK/cva_iface.err"
 st=$?
-[ "$st" -eq 0 ] && cmp -s "$CVA/interface.glp" "$GLP_DIR/cascade/GSG/interface.glp" &&
+[ "$st" -eq 0 ] && cmp -s "$CVA/interface.glp" "$GLP_DIR/cascade/Friendship/interface.glp" &&
     grep -q "^  type('Request', \[propose('Proposal')\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Approval', \[approval('Asking', 'List'('Word'), dual('YesNo'))\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Output', \[view('Key', 'List'('Atom'), 'List'('Key'), 'List'('Approved'), 'List'('Tab')), refused('Approved', 'Key', 'Reason')\]),$" "$CVA/interface.glp" &&

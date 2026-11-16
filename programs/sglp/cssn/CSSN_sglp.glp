@@ -2,9 +2,9 @@
 %% CSSN_sglp.glp --- CSSN's sGLP source: the simulation of the child-safe social
 %% network under sGLP (CSSN, Section 5, "Simulating the Child-Safe Social
 %% Graph"), in the term form the transformation reads (programs/sglp/README.md,
-%% "The term form"), over the canonical CVA platform of programs/cssn/CSSN.glp,
-%% whose interface the cascade prints as cascade/CSSN/interface.glp:
-%%   programs/sglp/transform.sh --interface cascade/CSSN/interface.glp --source programs/sglp/cssn/CSSN_sglp.glp --out <dir>
+%% "The term form"), over the canonical CVA platform of programs/cssn/Children.glp,
+%% whose interface the cascade prints as cascade/Children/interface.glp:
+%%   programs/sglp/transform.sh --interface cascade/Children/interface.glp --source programs/sglp/cssn/CSSN_sglp.glp --out <dir>
 %% The census, the profiles and the run declaration are sGLP's paper's, Section 3
 %% at 0270ac6 (a census draws the persons, person(Key, Role, Attributes); a
 %% dimension of profiles is of one role; a person procedure takes a copy of the
