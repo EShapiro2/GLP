@@ -86,7 +86,15 @@ def run(case):
         try:
             for f in sorted(os.listdir(sx)) if os.path.isdir(sx) else []:
                 try:
-                    out += ['--- interface ' + f[:-4]] + cascade.contract_txt(f[:-4]).rstrip('\n').split('\n')
+                    txt = cascade.contract_txt(f[:-4])
+                    out += ['--- interface ' + f[:-4]] + txt.rstrip('\n').split('\n')
+                    if os.path.isdir(os.path.join(d, 'rev')):      # and, where the case has its texts, ifadopt.py's proposal to the owner
+                        import ifadopt
+                        sv, ifadopt.ROOT = ifadopt.ROOT, d
+                        try:
+                            out += ['--- interface-adopted ' + f[:-4]] + (ifadopt.adopted(f[:-4], txt) or 'none\n').rstrip('\n').split('\n')
+                        finally:
+                            ifadopt.ROOT = sv
                 except Exception as ex:
                     out += ['--- interface ' + f[:-4], 'EXCEPTION %s: %s' % (type(ex).__name__, ex)]
         finally:
