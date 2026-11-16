@@ -1,10 +1,10 @@
 # A run of the cascade on Rec
 
-- Contract: `Rec` (`rec` to the checker), its owner's two files `programs/gce/rec/Rec.txt` and `programs/gce/rec/Rec.glp`, copied here as they stood at `096b2163`.
+- Contract: `Rec` (`rec` to the checker), its owner's two files `programs/gce/rec/Rec.txt` and `programs/gce/rec/Rec.glp`, copied here as they stood at `6f1aa26c`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gce/rec/Rec.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gce/rec/Rec.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 18:04 UTC by `cascade.sh rec`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `096b2163`; each artefact's source and tool:
+- Run on 2026-11-16 19:31 UTC by `cascade.sh rec`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `6f1aa26c`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

@@ -1,10 +1,10 @@
 # A run of the cascade on GSN
 
-- Contract: `GSN` (`gsn` to the checker), its owner's two files `programs/gsc/GSN.txt` and `programs/gsc/GSN.glp`, copied here as they stood at `38cd91d1`.
+- Contract: `GSN` (`gsn` to the checker), its owner's two files `programs/gsc/GSN.txt` and `programs/gsc/GSN.glp`, copied here as they stood at `c57748b5`.
 - The paper: `/Users/udi/Grassroots/GSC (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gsc/GSN.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gsc/GSN.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 17:43 UTC by `cascade.sh gsn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `38cd91d1`; each artefact's source and tool:
+- Run on 2026-11-16 19:34 UTC by `cascade.sh gsn`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `c57748b5`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
