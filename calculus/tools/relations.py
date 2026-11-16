@@ -10,8 +10,8 @@ For each contract NAME of gr/ (or those named), it reads the relations of its fi
 their order, and checks them on the expanded schemas: sasx/NAME.txt against sasx/B.txt of each contract B the line
 names.  It reads the schemas as they are written; it does not run tools/gcsas.py and does not use how gcsas.py made
 them.  One line a relation:
-    NAME extends GB: holds
-    NAME restricts GB: FAILS: <act>: <what breaks it>
+    NAME extends Bonds: holds
+    NAME restricts Bonds: FAILS: <act>: <what breaks it>
 and, with --json, a list of {"contract", "relation", "base", "holds", "failures"} for the site.  Exit 1 if any fails.
 
 The paper is the Calculus (branch main, sections/01-contracts-schemas.tex): Definition def:relations, its items
@@ -129,7 +129,7 @@ def path(n, what):
 def contracts():
     if published():
         return sorted(d for d in os.listdir(ROOT) if os.path.exists(os.path.join(ROOT, d, 'full-schemas.txt')))
-    return sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES'))
+    return sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-'))
 
 
 def _schemas(n, d):
@@ -299,7 +299,7 @@ def match(base, mine):
     for lab in {b['first'] for b in base}:
         bi = [i for i, b in enumerate(base) if b['first'] == lab and i not in got]
         mj = [j for j, a in enumerate(mine) if a['first'] == lab and j not in used and not any(x['name'] == a['name'] for x in base)]
-        if bi and len(bi) != len(mj):          # the act a citation renames beside the ward's forms and vote acts this contract derives of it (GS's Issue shares)
+        if bi and len(bi) != len(mj):          # the act a citation renames beside the ward's forms and vote acts this contract derives of it (Shares's Issue shares)
             bi2 = [i for i in bi if not DERIVED.match(base[i]['name'])]
             mj2 = [j for j in mj if not DERIVED.match(mine[j]['name'])]
             if bi2 and len(bi2) == len(mj2):
@@ -389,7 +389,7 @@ def gworld(n):
 
 
 def kind_forms(base, n):
-    """The base with each act of notes (GN's Issue, Swap, Pay, Escrow, whose atoms are of notes) put as its forms for
+    """The base with each act of notes (Notes's Issue, Swap, Pay, Escrow, whose atoms are of notes) put as its forms for
     the kinds of note n has (gcsas.py's kind_forms, 'Kind of note: ...' of the Logic pragmas): a coin, a bond and a share
     are special cases of a note, and an act of notes is in n as one act for each kind of each note it moves."""
     import gcsas
@@ -441,7 +441,7 @@ def overridden(bases, n, both=False):
         saved = gcsas.ROOT
         gcsas.ROOT = tmp or ROOT
         try:
-            _world['w'] = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(gcsas.ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES')))
+            _world['w'] = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(gcsas.ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
             _world['root'] = gcsas.ROOT
         finally:
             gcsas.ROOT = saved
@@ -502,7 +502,7 @@ def verdicts(n):
             withs = [x for x in re.split(r',\s*|\s+and\s+', extra) if x]      # 'GA composes GPE with GAS and GDS': the composition with each (Helper #5, 2026-11-16)
             base = merge(first, merge_all(withs))
             names = (names if b is None else b) + withs
-            if inst:            # the states the instance puts for states bind the contract composed with it (SC's bylaws, GS's issue of shares)
+            if inst:            # the states the instance puts for states bind the contract composed with it (SC's bylaws, Shares's issue of shares)
                 ex = preds(merge_all(withs) or [])
                 inst['gone'] |= ex - preds(mine)
                 inst['base_preds'] |= ex

@@ -18,7 +18,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GLP = os.environ.get('GLP_DIR') or next((d for d in (os.path.join(os.path.dirname(ROOT), 'GLP'), '/home/user/GLP') if os.path.isdir(d)), None)
 # The contracts renamed (Udi, 2026-11-16, to Code #33 and Calculus #8: "contract names that are not acronyms capitalised
 # not all caps"): their owners' files in GLP keep the old name until Code renames them at adoption.
-GLP_NAME = {'Agora': 'AGORA', 'Joint': 'JOINT', 'Stay': 'STAY', 'Lib': 'LIB', 'Rec': 'REC'}
+GLP_NAME = {'Agora': 'AGORA', 'Joint': 'JOINT', 'Stay': 'STAY', 'Lib': 'LIB', 'Rec': 'REC', 'Coins': 'GC', 'Bonds': 'GB'}
 PRAGMAS = re.compile(r'^(Interface |Implementation |Logic )?[Pp]ragmas\b')
 
 
@@ -69,7 +69,7 @@ def main():
     ref = ref_of(args)
     commit = git('rev-parse', '--short', ref).stdout.strip()
     names = [l.split()[0] for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8') if l.strip()]
-    names += sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES') and f[:-4] not in names)      # a contract the cascade has not run yet (GN, GS)
+    names += sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES-') and f[:-4] not in names)      # a contract the cascade has not run yet (Notes, Shares)
     owners = owner_files(ref)
     owners.update({n: owners[o] for n, o in GLP_NAME.items() if o in owners and n not in owners})      # an owner's file under the old name
     rows, details, same, differ, none, starred = [], [], 0, 0, 0, 0

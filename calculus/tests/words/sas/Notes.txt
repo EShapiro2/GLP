@@ -1,0 +1,19 @@
+Notes
+Notes extends GKK.
+Vocabulary: x holds n y-notes = note(x,y,*n); z holds n w-notes in escrow from x for y on k = escrow_note(z,w,x,y,k,*n).
+After x issues n x-notes: x holds n x-notes.
+After x and y swap n z-notes for m w-notes: no longer x holds n z-notes, y holds n z-notes, no longer y holds m w-notes, x holds m w-notes, y knows z and x knows w.
+After x pays y n z-notes: no longer x holds n z-notes, y holds n z-notes and y knows z.
+After x deposits n w-notes with z for y on k: no longer x holds n w-notes and z holds n w-notes in escrow from x for y on k.
+After z and y release n w-notes that x deposited on k: no longer z holds n w-notes in escrow from x for y on k, y holds n w-notes and y knows w.
+After z and x return n w-notes deposited for y on k: no longer z holds n w-notes in escrow from x for y on k, x holds n w-notes and x knows w.
+Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Notes:1 ■ Issue: note(Alice,Alice,*Sum) <- guarded by Alice.
+Notes:2 ■ Swap: ~note(Alice,Carol,*Sum), note(Bob,Carol,*Sum), ~note(Bob,Dave,*Total), note(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), note(Alice,Carol,*Sum), note(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+Notes:3 ■ Pay: ~note(Alice,Carol,*Sum), note(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), note(Alice,Carol,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+Notes:4 ■ | Escrow.
+Notes:4 ■ Deposit: ~note(Alice,Dave,*Sum), escrow_note(Carol,Dave,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), note(Alice,Dave,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ■ Release: ~escrow_note(Carol,Dave,Alice,Bob,Cond,*Sum), note(Bob,Dave,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_note(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ■ Return: ~escrow_note(Carol,Dave,Alice,Bob,Cond,*Sum), note(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_note(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.

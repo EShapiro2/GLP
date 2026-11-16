@@ -23,7 +23,7 @@ GLP = os.environ.get('GLP_DIR') or next((d for d in (os.path.join(os.path.dirnam
 PARAMETRIC = 'no platform: a parametric contract has none until it is instantiated'
 
 
-def repl(text, timeout=int(os.environ.get('CASCADE_TIMEOUT', 600))):
+def repl(text, timeout=int(os.environ.get('CASCADE_TIMEOUT', 3600))):
     try:
         r = subprocess.run(['bin/glpc'], input=text, capture_output=True, text=True, cwd=os.path.join(GLP, 'glp_runtime'), timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -106,7 +106,7 @@ def contract_txt(n):
             if mm:
                 flat.setdefault(mm.group(1), []).append(mm.group(2))
     own = clause_sentences(n, acts)
-    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES')))
+    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
     kinds = gcsas.kinds_from(w, n)
     one = w.lexicon(n).one
     title = gcsas.get('gr', n)[0]
