@@ -2211,11 +2211,16 @@ void appsScreens(Screens screens) {
     ]) {
       expect(run.control(alice, 'act:$f:carol'), findsOneWidget, reason: f);
     }
-    // Of age requires that she is Carol's creator (CSSN:4), an atom no tab lists: it is drawn on her Contacts, with a picker of the children she created, and not in Carol's row here.
+    // Of age requires that she is Carol's creator (CSSN:4): it is drawn in Carol's row of her Created tab, CSSN's "Created: those Alice is the creator of.", and not in Carol's row here.
     expect(run.control(alice, 'act:of_age:carol'), findsNothing);
-    await run.list(alice, 'knows');
-    expect(run.control(alice, 'pick:of_age::carol'), findsOneWidget);
-    expect(run.control(alice, 'send:of_age:'), findsOneWidget);
+    expect(run.listNamed(alice, 'creator', 'Created'), findsOneWidget);
+    await run.list(alice, 'creator');
+    expect(run.control(alice, 'atom:carol'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'act:of_age:carol'),
+            matching: find.text('Of age')),
+        findsOneWidget);
     await run.list(alice, 'parent');
     await run.top(alice);
     for (final f in [
@@ -2255,7 +2260,7 @@ void appsScreens(Screens screens) {
     await run.list(alice, 'knows');
     await run.top(alice);
     expect(run.textsOf(alice, ca), [
-      'Bob wishes that you and her child Dave know each other.',
+      'Bob wishes that you and Dave, Bob\'s child, know each other.',
       'Contacts: Alice',
       'Children: Dave',
       'yes',
@@ -2309,7 +2314,7 @@ void appsScreens(Screens screens) {
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Bob at his phone: '
       'asked to come to know Alice and to approve the acquaintance of Carol and Dave; (3) '
       'asked to approve Alice\'s attempt that they befriend, with yes and no; '
-      '(6) his Contacts with Of age, Dave picked, which declares Dave of age',
+      '(6) his Created tab with Dave and Of age, which declares Dave of age',
       (tester) async {
     final run = await _cssn(tester, screens, 'bob');
     final bob = run.person('bob');
@@ -2405,8 +2410,7 @@ void appsScreens(Screens screens) {
     expect(
         tester.getTopLeft(run.on(bob, find.byKey(constructKey(a.id)))).dy,
         lessThan(tester.getTopLeft(run.control(bob, 'atom:dave')).dy));
-    // Of age's picker, on this tab, is labelled by the name of its type, as a field given no label is.
-    run.plain(bob, allow: {'Peer'});
+    run.plain(bob);
     await run.shoot(bob, 'cssn-app-3.png');
     await run.answer(bob, 'yes');
     expect(bob.questions('approval'), isEmpty);
@@ -2415,18 +2419,18 @@ void appsScreens(Screens screens) {
         contains(startsWith('view(dave, [friend(carol), ')));
     expect(run.scriptedAtoms('dave'), isNot(contains('friend(carol)')));
     expect(run.scriptedAtoms('carol'), isNot(contains('friend(dave)')));
-    // (6) Bob's Of age, CSSN's "[Of age]" (CSSN:4; of_age(r, p?)): it requires that he is Dave's creator, an atom no tab lists, so it is drawn on his Contacts, with a picker of the children he created, Dave, and not in Dave's row of his Children; it proposes of_age(dave, bob) when tapped, nobody being asked: its one guarding role is Bob's, and Coming of age's pragma carries no question.
+    // (6) Bob's Created tab, CSSN's "Created: those Alice is the creator of.": Dave's row with Of age, CSSN's "[Of age]" (CSSN:4), which requires that he is Dave's creator; it is not in Dave's row of his Children; it proposes of_age(dave, bob) when tapped, nobody being asked: its one guarding role is Bob's, and Coming of age's pragma carries no question.
     await run.list(bob, 'parent');
     await run.top(bob);
     expect(run.control(bob, 'atom:dave'), findsOneWidget);
     expect(run.control(bob, 'act:of_age:dave'), findsNothing);
-    await run.list(bob, 'knows');
-    await run.tap(bob, run.control(bob, 'pick:of_age::dave'));
-    final ofAge = run.control(bob, 'send:of_age:');
+    await run.list(bob, 'creator');
+    await run.top(bob);
+    expect(run.control(bob, 'atom:dave'), findsOneWidget);
+    final ofAge = run.control(bob, 'act:of_age:dave');
     expect(find.descendant(of: ofAge, matching: find.text('Of age')),
         findsOneWidget);
-    await run.foot(bob, ofAge);
-    run.plain(bob, allow: {'Peer'});
+    run.plain(bob);
     await run.shoot(bob, 'cssn-app-6.png');
     await run.tap(bob, ofAge);
     expect(bob.questions('approval'), isEmpty);

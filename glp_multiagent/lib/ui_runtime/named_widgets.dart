@@ -1696,9 +1696,15 @@ class _SocialTabState extends State<SocialTab> {
     final me = ask.me;
     final small = TextStyle(fontSize: 13, color: Colors.grey.shade700);
     final chosenKey = _chosen[composer];
+    // The ways that bind no value beside the row's entry are a choice of their own, the one made while no value is picked: "A button that names several acts is drawn once for the ways of its acts that bind the same values" (vGLP, Section 6.2), and those ways bind the same values, none.  The picker offers the values of the other ways, and a value picked is given up by tapping it again.
+    final bare = cs.where((c) => c.first.rest.isEmpty).firstOrNull;
+    final valued = [
+      for (final c in cs)
+        if (c.first.rest.isNotEmpty) c
+    ];
     final chosen = cs.length == 1
         ? cs.single
-        : cs.where((c) => _valuesKey(c.first) == chosenKey).firstOrNull;
+        : cs.where((c) => _valuesKey(c.first) == chosenKey).firstOrNull ?? bare;
     final shown = chosen ?? [for (final c in cs) ...c];
     final union = <String>[];
     final kept = <String, (ActInfo, DeclaredField)>{};
@@ -1750,7 +1756,6 @@ class _SocialTabState extends State<SocialTab> {
         if (w is int) (at[w] == null ? '' : personName(at[w]!)) else w as String
     ].join();
     final r = request();
-    final rest = first.rest;
     return Container(
       key: socialKey(_id, 'form:$composer'),
       margin: const EdgeInsets.only(top: 6, bottom: 6),
@@ -1762,19 +1767,27 @@ class _SocialTabState extends State<SocialTab> {
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(words),
             ),
-          if (rest.isNotEmpty)
+          if (valued.isNotEmpty)
             Wrap(spacing: 6, runSpacing: 4, children: [
               // A picker labelled by the name of its type, as a field given no label is (vGLP #23, Code_inbox.md, 2026-11-05 13:33 UTC, 1; Section 6.2, "The words a platform shows").
-              Text(_placeName(o, first.act, rest.first), style: small),
-              for (final c in cs)
+              Text(
+                  _placeName(o, valued.first.first.act,
+                      valued.first.first.rest.first),
+                  style: small),
+              for (final c in valued)
                 ChoiceChip(
                   key: socialKey(_id, 'pick:$composer:${_valuesKey(c.first)}'),
                   label: Text([
                     for (final p in c.first.rest) _signed(c.first.at[p]!)
                   ].join(', ')),
                   selected: cs.length == 1 || chosenKey == _valuesKey(c.first),
-                  onSelected: (_) => setState(
-                      () => _chosen[composer] = _valuesKey(c.first)),
+                  onSelected: (_) => setState(() {
+                    if (bare != null && chosenKey == _valuesKey(c.first)) {
+                      _chosen.remove(composer);
+                    } else {
+                      _chosen[composer] = _valuesKey(c.first);
+                    }
+                  }),
                 ),
             ]),
           for (final l in union)

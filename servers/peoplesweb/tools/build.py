@@ -235,7 +235,11 @@ for m in re.finditer(r'^#\s+[a-z]+\s+([A-Z][A-Za-z]*)\s+(\S+)\s+programs/', read
     owners[m.group(1)] = m.group(2)
 
 
-RELATIONS = ('extends', 'restricts', 'amends', 'implements', 'instantiates')
+# The five relations of the Calculus (calculus/README.md, The relations):
+# extends, restricts, strengthens, instantiates and composes, the last read
+# apart below; implements is GSC's, and amends stands while a text in force
+# states it.
+RELATIONS = ('extends', 'restricts', 'strengthens', 'amends', 'implements', 'instantiates')
 
 
 def extends_of(c, lines):
@@ -256,18 +260,29 @@ def extends_of(c, lines):
             # GFP and restricts the composition'), each checked on its own
             # (GSC #16, 2026-11-11 19:45 UTC, from GSC's Section 9).
             c['relation'], c['rels'], cur = m.group(1), {}, m.group(1)
-            c['rels_of'], inst, comp = [], None, None
+            # rels_all: every relation the line states to each contract, in
+            # its order, 'GDO-L extends and strengthens GDO' two; the globe
+            # draws an arrow of two relations split along its length.
+            c['rels_all'] = {}
+            c['rels_of'], inst, comp, pend = [], None, None, []
             for part in re.split(r'\b(' + '|'.join(RELATIONS + ('composes',)) + r')\b', m.group(2)):
                 if part in RELATIONS + ('composes',):
                     cur = part
                     continue
                 named = [t for t in re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b", part) if t in texts and t != c['id']]
+                # 'GDC extends and restricts GC': the contract named takes the
+                # first of the relations written before it.
+                first = pend[0] if pend and not (inst or comp) else cur
                 for t in named:
-                    c['rels'].setdefault(t, cur)
+                    c['rels'].setdefault(t, first)
+                    for r in (pend if not (inst or comp) else []) + [cur]:
+                        if r not in c['rels_all'].setdefault(t, []):
+                            c['rels_all'][t].append(r)
                     if cur == 'instantiates':
                         inst = inst or t
                     if cur == 'composes':
                         comp = comp or inst or t
+                pend = [] if named else pend + [cur]
                 # 'GAS composes GPD with GSV, restricts the composition, and
                 # extends it': a composition with no instance, named by the
                 # first contract composed (GSC's Section 2, GSC 220151a).
@@ -328,6 +343,46 @@ for n in compiled:
     s.pop('raw_items', None)
     with open(os.path.join(WWW, 'specs', f'{c}.json'), 'w', encoding='utf-8') as f:
         json.dump(s, f)
+
+
+# The Calculus (calculus/MIGRATION.md, the section Website, agreed by
+# Website #2, 2026-11-15): until its owner adopts a contract, the Calculus's
+# text of it is on the branch Calculus of GLP, which deploy/sweep.sh unpacks
+# into CALCULUS_DIR; after its adoption it is on main, and its printed
+# artefacts in cascade/NAME/.  calculus/STATE.txt has a line for each
+# contract: its name, its owner, and yes or no for certified by GLP's checker,
+# compiled to GLP, and adopted by its owner.
+CALC = os.environ.get('CALCULUS_DIR') or os.path.join(GLP, 'calculus')
+calc_state = {}
+if os.path.exists(os.path.join(CALC, 'STATE.txt')):
+    for l in read(os.path.join(CALC, 'STATE.txt')).split('\n'):
+        f = l.split()
+        if len(f) == 5:
+            calc_state[f[0]] = {'owner': f[1], 'certified': f[2] == 'yes', 'compiled': f[3] == 'yes', 'adopted': f[4] == 'yes'}
+
+
+def calculus_of(n):
+    """What the site shows of contract n from the Calculus: its state, and,
+    until its owner adopts it, the text proposed; the full contract, from the
+    branch until adoption and from cascade/n/ after it.  A contract is
+    adopted when STATE.txt says so, or when its record of the cascade has
+    its full contract, which its owner's adoption prints there; so a
+    contract adopted on main shows its owner's full contract whatever the
+    branch says, and still does when the branch is closed."""
+    st = calc_state.get(n)
+    own = os.path.join(GLP, 'cascade', n, 'full-contract.txt')
+    if st is None and not os.path.exists(own):
+        return None
+    v = dict(st or {'owner': '', 'certified': True, 'compiled': True})
+    v['adopted'] = bool(st and st['adopted']) or os.path.exists(own)
+    if not v['adopted'] and os.path.exists(os.path.join(CALC, n, 'contract.txt')):
+        v['proposed'] = read(os.path.join(CALC, n, 'contract.txt')).strip()
+    fc = own if v['adopted'] else os.path.join(CALC, n, 'full-contract.txt')
+    if os.path.exists(fc):
+        os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
+        shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))
+        v['full'] = f'stack/{n}/full-contract.txt'
+    return v
 
 
 about = json.loads(read(os.path.join(HERE, 'web', 'about.json')))
@@ -408,6 +463,11 @@ for n in sorted(set(compiled) | set(cat)):
             os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
             shutil.copy(os.path.join(d, f), os.path.join(WWW, 'stack', n, f))
             c['layers'][k] = {'file': f'stack/{n}/{f}', 'lines': read(os.path.join(d, f)).count('\n')}
+    # The Full contract button's text (Udi, 2026-11-15, to Calculus #6,
+    # verbatim: "i want the web to include for each contract a button you
+    # press 'full contract' that show the full contract"), and the Calculus's
+    # proposed text and state.
+    c['calculus'] = calculus_of(n)
     # A contract that builds on one with no platform is drawn building on the nearest shown ones.
     ps = nearest(n)
     c['extends'] = [p for p in ps if not any(p in set(ancestors(q)) for q in ps if q != p)]
@@ -430,17 +490,44 @@ for c in contracts:
 # through the REPL and cached (tools/certify.py); CERTIFY=0 skips both, for a
 # quick build of the pages alone.
 if os.environ.get('CERTIFY', '1') != '0':
-    checks = certify.relations([{'id': c['id'], 'path': texts[c['id']], 'rels': c.get('rels', {}), 'rels_of': c.get('rels_of', [])} for c in contracts])
+    # The relations are not checked for now (Udi, 2026-11-16, to Website #2):
+    # certify.relations checks them by GSC's definitions, 'an extension
+    # deletes nothing', and the Calculus, the authority on the relations since
+    # 2026-11-15, defines them otherwise, so its verdicts would mislead (28 of
+    # 102 'disagree' on the adopted contracts).  RELATIONS_CHECK=1 runs it,
+    # for when it follows the Calculus's definitions.
+    checks = certify.relations([{'id': c['id'], 'path': texts[c['id']], 'rels': c.get('rels', {}), 'rels_of': c.get('rels_of', [])} for c in contracts]) if os.environ.get('RELATIONS_CHECK') == '1' else {}
     arts = certify.artefacts(os.path.join(WWW, 'artefacts'))
 else:
     checks, arts = {}, {}
+NOT_CHECKED = "the site's check does not yet follow the Calculus's definitions of the relations"
 for c in contracts:
-    c['checks'] = checks.get(c['id'], [])
+    c['checks'] = checks.get(c['id']) or (
+        [{'base': b, 'rel': r, 'result': 'open', 'why': NOT_CHECKED} for b, rs in (c.get('rels_all') or {k: [v] for k, v in (c.get('rels') or {}).items()}).items() for r in rs]
+        + [{'base': x['base'], 'rel': x['rel'], 'of': x['of'], 'result': 'open', 'why': NOT_CHECKED} for x in c.get('rels_of', [])])
     a = arts.get(c['id'].lower().replace('-', '_'))
     c['artefact'] = ({'file': 'artefacts/' + a['file'], 'key': a['key']} if a and 'file' in a else {'why': a['why']} if a else None)
 with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
     json.dump({c['id']: c['checks'] for c in contracts if c['checks']}, f, ensure_ascii=False, indent=1)
 
+# A contract the Calculus has and its owner has not written, SGSG today: listed
+# from the Calculus with its proposed text and nothing in force, until its
+# owner adopts it (calculus/MIGRATION.md, Website, item 2).
+for n in sorted(set(calc_state) - set(cat)):
+    v = calculus_of(n)
+    if not v or 'proposed' not in v:
+        continue
+    lines = v['proposed'].split('\n')
+    title = lines[0].split(': ', 1)[1] if ': ' in lines[0] else n
+    m = next((re.match(re.escape(n) + r' extends ([^.]+)\.', l) for l in lines if l.startswith(n + ' extends ')), None)
+    ext = [x for x in re.findall(r'[A-Z][A-Za-z]*(?:-[A-Z][A-Za-z]*)*', m.group(1)) if x in cat] if m else []
+    _a = about.get(n, ['📄', 'other', ''])
+    contracts.append({'id': n, 'title': title, 'label': f'{n}: {title}', 'preamble': '', 'clauses': [], 'pragmas': [],
+                      'extends': ext, 'rels': {x: 'extends' for x in ext}, 'relation': 'extends', 'owner': '' if v['owner'] == 'none' else v['owner'],
+                      'source': 'calculus', 'icon': _a[0], 'family': _a[1], 'about': _a[2] or title + '.',
+                      'cascade': False, 'dir': '', 'paper': {}, 'schemaHeader': [], 'schemas': [], 'verdict': '',
+                      'live': False, 'noteBefore': '', 'layers': {}, 'record': False, 'notCompiled': [],
+                      'checks': [], 'artefact': None, 'calculus': v})
 commit = subprocess.run(['git', '-C', GLP, 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
 for f in os.listdir(os.path.join(HERE, 'web')):
     if f.endswith(('.html', '.js', '.png', '.ico', '.jpg')):

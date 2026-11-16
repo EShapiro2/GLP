@@ -29,18 +29,18 @@ A ward's group: Carol [Ward create] <name>
   Carol [Ward close]
   Alice [Guardian close] <group>
 Ward join: Bob [Ward join]
-  Carol: Bob asks you to join his group.
-  Alice: Bob asks that your ward Carol join his group.
+  Carol: Bob asks you to join the group.
+  Alice: Bob asks that your ward Carol join the group.
   Carol [Wards join] <guardian>
-  Dave: Carol asks you to join her group.
-  Alice: Carol asks that Dave join her group.
-  Bob: Carol asks that your ward Dave join her group.
+  Dave: Carol asks you to join the group.
+  Alice: Carol asks that Dave join the group.
+  Bob: Carol asks that your ward Dave join the group.
   Carol [Wards of one guardian join]
-  Dave: Carol asks you to join her group.
-  Alice: Carol asks that Dave join her group.
+  Dave: Carol asks you to join the group.
+  Alice: Carol asks that Dave join the group.
   Alice [Ward withdraw] <leader> <group>
   Carol [Ward leave]
   Carol [Ward remove]
   Carol [Ward add]
-  Bob: Carol asks you to join her group.
-  Alice: Carol asks that Bob join her group.
+  Bob: Carol asks you to join the group.
+  Alice: Carol asks that Bob join the group.
