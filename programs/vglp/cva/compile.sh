@@ -42,7 +42,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 THEIRS="gsg gsn gc"
-OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter merges coins wardclose numbers bonds intros days linear forms counts shares published leaves readings backed consts"
+OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter merges coins wardclose numbers bonds intros days linear forms counts shares published leaves readings backed consts roles wild wards feeds"
 CONTRACTS="$THEIRS $OURS"
 
 contract_file() { # contract_file <contract> ; the file that holds it, its owner's
@@ -118,7 +118,7 @@ for c in $CONTRACTS; do
         pr=$(grep -E '^P = ' "$WORK/$c.pn.out" | head -1 | sed -e 's/^P = //')
         [ -n "$pr" ] || pr=no_pragmas
     elif [ -f "${src%.glp}.txt" ] \
-        && ! pr=$(bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "$rd" 2> "$WORK/$c.pr.err"); then
+        && ! pr=$(printf '%s\n' "$rd" > "$WORK/$c.rd" && bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "@$WORK/$c.rd" 2> "$WORK/$c.pr.err"); then
         echo "missing $d: its pragmas were not read: $(head -1 "$WORK/$c.pr.err")" >> "$WORK/status"
         continue
     fi

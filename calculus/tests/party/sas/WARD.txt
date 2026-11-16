@@ -1,0 +1,9 @@
+WARD: Wards
+Vocabulary: x is a person = person(x); z is a ward = ward(z); x has y as a guardian = has_guardian(x,y); y is a guardian of x = guardian(y,x); x is retired = retired(x).
+Roles: those who decide for z = deciders(z), listed by z has y as a guardian and y is a guardian of z.
+After x creates z: z is a ward, z has x as a guardian and x is a guardian of z.
+After g retires z, which requires z is not retired: z is retired.
+WARD:0 - | A ward takes an act of a party by those who decide for it.
+WARD:0 - | Alice is a person, Carol a ward.
+WARD:1 ■ Enter: ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol) <- person(Alice) guarded by Alice.
+WARD:2 ■ Retire: retired(Carol) <- ~retired(Carol) guarded by deciders(Carol).

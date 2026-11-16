@@ -1,0 +1,9 @@
+P          commute yes; return yes; recover same
+1 contracts, 0 with a fault
+--- sasx/P.txt
+P: Parameters (expanded schemas)
+P:0 - | d > 1, an integer, is a parameter of P.
+P:0 - | Alice and Bob are persons.
+P:0 - | Environment: y is beyond d of x.
+P:1 ■ Point: points(Alice,Bob) <- points(Alice,<D), ~points(Alice,Bob) guarded by Alice.
+P:1 ■ Mark far: far(Alice,Bob) <- beyond(Alice,Bob), ~far(Alice,Bob) guarded by Alice.

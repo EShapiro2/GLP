@@ -1,0 +1,5 @@
+Q: Qualified
+Q restricts C.
+Vocabulary: x is qualified = q(x).
+Q:0 - | Alice is a person.
+Q:1 ■ Signal: C:1 <- q(Alice).

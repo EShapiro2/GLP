@@ -1,0 +1,10 @@
+N: Numbers (expanded schemas)
+N:0 - | Alice is a person, Bob a person, Sum, Cap and Line numbers.
+N:1 ■ Small: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- le(Sum,Cap), coin(Alice,Alice,*Sum) guarded by Alice.
+N:2 ■ Large: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- ~le(Sum,Cap), coin(Alice,Alice,*Sum) guarded by Alice.
+N:3 ■ True: ~coin(Alice,Alice,*2), coin(Bob,Alice,*2) <- ge(2,1), coin(Alice,Alice,*2) guarded by Alice.
+N:4 ■ False: ~coin(Alice,Alice,*2), coin(Bob,Alice,*2) <- ~ge(2,1), coin(Alice,Alice,*2) guarded by Alice.
+N:5 ■ Two: ~coin(Alice,Alice,*2), coin(Bob,Alice,*2) <- coin(Bob,Alice,#2), coin(Alice,Alice,*2) guarded by Alice.
+N:6 ■ Not two: ~coin(Alice,Alice,*2), coin(Bob,Alice,*2) <- ~coin(Bob,Alice,#2), coin(Alice,Alice,*2) guarded by Alice.
+N:7 ■ Set: ~line(Alice,Bob,_), line(Alice,Bob,Line) <- guarded by Alice.
+N:8 ■ Use: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- line(Alice,Bob,Line), le(Sum,Line), coin(Alice,Alice,*Sum) guarded by Alice.

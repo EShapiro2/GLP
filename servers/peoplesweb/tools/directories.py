@@ -24,6 +24,7 @@ DIRECTORIES = [
     ('programs/social/graph/core/gsnp_phone.glp', 'GAI', ['GAI'], "GSNP's app on the phone"),
     ('programs/social/graph/core/gai_phone.glp', 'GAI', ['GAI'], "GAI's app on the phone"),
     ('programs/social/graph/core/gc_phone.glp', 'Currencies', ['GC'], "GC's app on the phone"),
+    ('programs/social/graph/core/gb_phone.glp', 'Currencies', ['GB'], "GB's app on the phone"),
     ('servers/peoplesweb', 'Website', [], "the site peoplesweb.org: its pages, its build, the papers' PDFs, the test site and the sweep's scripts"),
     ('networking', 'GNA', ['GNA'], 'the networking layer, imported from Dan Bachar\'s grassroots-networking'),
     ('programs/examples/rendezvous', 'GNA', ['GNA'], 'the rendezvous server and the directory, GSV, GRV and GDS'),

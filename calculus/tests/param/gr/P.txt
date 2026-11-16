@@ -1,0 +1,9 @@
+P: Parameters
+d > 1, an integer, is a parameter of P.
+Alice and Bob are persons.
+1. ■ Point: Alice may point to Bob, provided Alice points to fewer than d persons. Mark far: Alice may mark Bob as far, provided Bob is beyond d of Alice.
+Logic pragmas.
+Vocabulary: x points to y = points(x,y); x counts y as far = far(x,y); y is beyond d of x = beyond(x,y).
+After x points to y, which requires x does not point to y: x points to y.
+After x marks y as far, which requires x does not count y as far: x counts y as far.
+Environment: y is beyond d of x.

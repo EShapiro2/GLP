@@ -116,6 +116,15 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
 , \qquad 
 c'_
 {
@@ -126,15 +135,6 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-knows
-}
-(
-c
-)
-\}
 ,\\
 &
 \text{provided } 
@@ -147,13 +147,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-knows
-}
-(
-c
 )
  \in c_
 {
@@ -170,6 +163,13 @@ knows
 (
 \Alice
 )
+,
+\mathit{
+knows
+}
+(
+Carol
+)
  \in c_
 {
 \Bob
@@ -183,46 +183,7 @@ knows
 \}
 \end{align*}
 \iffalse
-mint_coin
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-k
-\cdot
-\text{\textcent}
-(
-\Alice
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
- \in c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-mint_bond
+issue
 \fi
 \begin{align*}
 &
@@ -237,15 +198,11 @@ c_
 }
  \uplus 
 \{
-k
+Sum
 \cdot
-\mathit{
-bond
-}
+\text{\textcent}
 (
 \Alice
-,
-d
 )
 \}
 ,\\
@@ -254,89 +211,18 @@ d
 \mathit{
 identity
 }
-,
-\mathit{
-date
-}
-(
-t
-)
  \in c_
 {
 \Alice
 }
 ,\\
 &
-\text{provided } 
-d
->
-t
-,\\
-&
 \text{guarded by } \{
 \Alice
 \}
 \end{align*}
 \iffalse
-first_date
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-date
-}
-(
-d
-)
-,
-\mathit{
-dated
-}
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-today
-}
-(
-d
-)
- \in c_
-{
-\Alice
-}
-,\\
-&
-\text{provided } 
-\mathit{
-dated
-}
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \emptyset
-\end{align*}
-\iffalse
-advance
+swap
 \fi
 \begin{align*}
 &
@@ -351,98 +237,27 @@ c'_
 }
  \setminus 
 \{
-\mathit{
-date
-}
+Sum
+\cdot
+\text{\textcent}
 (
-t
+Carol
 )
 \}
 ) \uplus 
 \{
-\mathit{
-date
-}
-(
-t1
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-today
-}
-(
-d
-)
-,
-\mathit{
-date
-}
-(
-t
-)
- \in c_
-{
-\Alice
-}
-,\\
-&
-\text{provided } 
-t1
-=
-t
-+ 1
-\land
-t1
-\le
-d
-,\\
-&
-\text{guarded by } \emptyset
-\end{align*}
-\iffalse
-swap_cc
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-k
+Total
 \cdot
 \text{\textcent}
 (
-u
-)
-\}
-) \uplus 
-\{
-k1
-\cdot
-\text{\textcent}
-(
-v
+Dave
 )
 ,
 \mathit{
 knows
 }
 (
-v
+Dave
 )
 \}
 , \qquad 
@@ -457,27 +272,27 @@ c'_
 }
  \setminus 
 \{
-k1
+Total
 \cdot
 \text{\textcent}
 (
-v
+Dave
 )
 \}
 ) \uplus 
 \{
-k
+Sum
 \cdot
 \text{\textcent}
 (
-u
+Carol
 )
 ,
 \mathit{
 knows
 }
 (
-u
+Carol
 )
 \}
 ,\\
@@ -495,11 +310,11 @@ knows
 \Bob
 )
 ,
-k
+Sum
 \cdot
 \text{\textcent}
 (
-u
+Carol
 )
 \}
  \subseteq c_
@@ -519,455 +334,11 @@ knows
 \Alice
 )
 ,
-k1
+Total
 \cdot
 \text{\textcent}
 (
-v
-)
-\}
- \subseteq c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-swap_cb
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-\}
-) \uplus 
-\{
-k1
-\cdot
-\mathit{
-bond
-}
-(
-v
-,
-d1
-)
-,
-\mathit{
-knows
-}
-(
-v
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-k1
-\cdot
-\mathit{
-bond
-}
-(
-v
-,
-d1
-)
-\}
-) \uplus 
-\{
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-,
-\mathit{
-knows
-}
-(
-u
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-k1
-\cdot
-\mathit{
-bond
-}
-(
-v
-,
-d1
-)
-\}
- \subseteq c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-swap_bc
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-\}
-) \uplus 
-\{
-k1
-\cdot
-\text{\textcent}
-(
-v
-)
-,
-\mathit{
-knows
-}
-(
-v
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-k1
-\cdot
-\text{\textcent}
-(
-v
-)
-\}
-) \uplus 
-\{
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-,
-\mathit{
-knows
-}
-(
-u
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-k1
-\cdot
-\text{\textcent}
-(
-v
-)
-\}
- \subseteq c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-swap_bb
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-\}
-) \uplus 
-\{
-k1
-\cdot
-\mathit{
-bond
-}
-(
-v
-,
-d1
-)
-,
-\mathit{
-knows
-}
-(
-v
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-k1
-\cdot
-\mathit{
-bond
-}
-(
-v
-,
-d1
-)
-\}
-) \uplus 
-\{
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-,
-\mathit{
-knows
-}
-(
-u
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-k1
-\cdot
-\mathit{
-bond
-}
-(
-v
-,
-d1
+Dave
 )
 \}
  \subseteq c_
@@ -998,7 +369,7 @@ c_
 }
  \setminus 
 \{
-k
+Sum
 \cdot
 \text{\textcent}
 (
@@ -1017,7 +388,7 @@ c_
 }
  \uplus 
 \{
-k
+Sum
 \cdot
 \text{\textcent}
 (
@@ -1039,7 +410,7 @@ knows
 \Bob
 )
 ,
-k
+Sum
 \cdot
 \text{\textcent}
 (
@@ -1065,7 +436,7 @@ identity
 \}
 \end{align*}
 \iffalse
-redeem_cc
+redeem
 \fi
 \begin{align*}
 &
@@ -1089,14 +460,14 @@ c'_
 \{
 \text{\textcent}
 (
-r
+Carol
 )
 ,
 \mathit{
 knows
 }
 (
-r
+Carol
 )
 \}
 , \qquad 
@@ -1113,115 +484,7 @@ c'_
 \{
 \text{\textcent}
 (
-r
-)
-\}
-) \uplus 
-\{
-\text{\textcent}
-(
-\Bob
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-\text{\textcent}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\text{\textcent}
-(
-r
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-redeem_cb
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-\text{\textcent}
-(
-\Bob
-)
-\}
-) \uplus 
-\{
-\mathit{
-bond
-}
-(
-r
-,
-d1
-)
-,
-\mathit{
-knows
-}
-(
-r
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-bond
-}
-(
-r
-,
-d1
+Carol
 )
 \}
 ) \uplus 
@@ -1258,13 +521,9 @@ knows
 identity
 }
 ,
-\mathit{
-bond
-}
+\text{\textcent}
 (
-r
-,
-d1
+Carol
 )
  \in c_
 {
@@ -1274,892 +533,6 @@ d1
 &
 \text{guarded by } \{
 \Alice
-\}
-\end{align*}
-\iffalse
-redeem_bc
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-bond
-}
-(
-\Bob
-,
-d
-)
-\}
-) \uplus 
-\{
-\text{\textcent}
-(
-r
-)
-,
-\mathit{
-knows
-}
-(
-r
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-\text{\textcent}
-(
-r
-)
-\}
-) \uplus 
-\{
-\mathit{
-bond
-}
-(
-\Bob
-,
-d
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-\mathit{
-bond
-}
-(
-\Bob
-,
-d
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-date
-}
-(
-t
-)
-,
-\text{\textcent}
-(
-r
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-d
-\le
-t
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-redeem_bb
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-bond
-}
-(
-\Bob
-,
-d
-)
-\}
-) \uplus 
-\{
-\mathit{
-bond
-}
-(
-r
-,
-d1
-)
-,
-\mathit{
-knows
-}
-(
-r
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-bond
-}
-(
-r
-,
-d1
-)
-\}
-) \uplus 
-\{
-\mathit{
-bond
-}
-(
-\Bob
-,
-d
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-\mathit{
-bond
-}
-(
-\Bob
-,
-d
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-date
-}
-(
-t
-)
-,
-\mathit{
-bond
-}
-(
-r
-,
-d1
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-d
-\le
-t
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-deposit_c
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-,
-\mathit{
-knows
-}
-(
-u
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-deposit_b
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-,
-\mathit{
-knows
-}
-(
-u
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-release_c
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-,
-\mathit{
-knows
-}
-(
-u
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-release_b
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-,
-\mathit{
-knows
-}
-(
-u
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-return_c
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-,
-\mathit{
-knows
-}
-(
-u
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-k
-\cdot
-\text{\textcent}
-(
-u
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-return_b
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-,
-\mathit{
-knows
-}
-(
-u
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-k
-\cdot
-\mathit{
-bond
-}
-(
-u
-,
-d
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
 \}
 \end{align*}
 \iffalse
@@ -2179,10 +552,10 @@ c_
  \uplus 
 \{
 \mathit{
-place
+listed
 }
 (
-x
+Place
 )
 \}
 ,\\
@@ -2190,6 +563,10 @@ x
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+hosts
 }
  \in c_
 {
@@ -2199,10 +576,10 @@ identity
 &
 \text{provided } 
 \mathit{
-place
+listed
 }
 (
-x
+Place
 )
  \notin c_
 {
@@ -2230,7 +607,7 @@ c'_
 }
  \setminus 
 \{
-k
+Sum
 \cdot
 \text{\textcent}
 (
@@ -2243,11 +620,13 @@ k
 stay
 }
 (
-x
-,
 \Bob
 ,
-d
+Place
+,
+Night
+,
+Sum
 )
 \}
 , \qquad 
@@ -2266,22 +645,16 @@ c_
 booked
 }
 (
-x
+Place
 ,
-d
+Night
 )
 ,
-\mathit{
-guest
-}
+Sum
+\cdot
+\text{\textcent}
 (
-\Alice
-,
-x
-,
-d
-,
-k
+\Bob
 )
 \}
 ,\\
@@ -2299,7 +672,14 @@ knows
 \Bob
 )
 ,
-k
+\mathit{
+today
+}
+(
+Today
+)
+,
+Sum
 \cdot
 \text{\textcent}
 (
@@ -2316,17 +696,10 @@ identity
 }
 ,
 \mathit{
-place
+listed
 }
 (
-x
-)
-,
-\mathit{
-date
-}
-(
-t
+Place
 )
  \in c_
 {
@@ -2339,9 +712,9 @@ t
 booked
 }
 (
-x
+Place
 ,
-d
+Night
 )
  \notin c_
 {
@@ -2350,9 +723,9 @@ d
 ,\\
 &
 \text{provided } 
-d
+Night
 >
-t
+Today
 ,\\
 &
 \text{guarded by } \{
@@ -2371,32 +744,32 @@ c'_
 \Alice
 }
  := 
-c_
+(c_
 {
 \Alice
 }
  \setminus 
 \{
 \mathit{
-booked
-}
-(
-x
-,
-d
-)
-,
-\mathit{
-guest
+stay
 }
 (
 \Bob
 ,
-x
+Place
 ,
-d
+Night
 ,
-k
+Sum
+)
+\}
+) \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
 )
 \}
 , \qquad 
@@ -2405,30 +778,26 @@ c'_
 \Bob
 }
  := 
-(c_
+c_
 {
 \Bob
 }
  \setminus 
 \{
 \mathit{
-stay
+booked
 }
 (
-x
+Place
 ,
-\Alice
-,
-d
+Night
 )
-\}
-) \uplus 
-\{
-k
+,
+Sum
 \cdot
 \text{\textcent}
 (
-\Alice
+\Bob
 )
 \}
 ,\\
@@ -2439,66 +808,64 @@ identity
 }
 ,
 \mathit{
-date
-}
-(
-t
-)
-,
-\mathit{
-booked
-}
-(
-x
-,
-d
-)
-,
-\mathit{
-guest
+stay
 }
 (
 \Bob
 ,
-x
+Place
 ,
-d
+Night
 ,
-k
+Sum
 )
  \in c_
 {
 \Alice
 }
  \text{ and } 
+\{
 \mathit{
 identity
 }
 ,
 \mathit{
-stay
+today
 }
 (
-x
-,
-\Alice
-,
-d
+Today
 )
- \in c_
+,
+\mathit{
+booked
+}
+(
+Place
+,
+Night
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+ \subseteq c_
 {
 \Bob
 }
 ,\\
 &
 \text{provided } 
-d
+Night
 >
-t
+Today
 ,\\
 &
 \text{guarded by } \{
-\Alice
+\Bob
 \}
 \end{align*}
 \iffalse
@@ -2518,14 +885,14 @@ c_
  \uplus 
 \{
 \mathit{
-reviewed
+review
 }
 (
-x
-,
 \Bob
 ,
-d
+Place
+,
+Night
 )
 \}
 , \qquad 
@@ -2538,43 +905,12 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-review
-}
-(
-x
-,
-\Alice
-,
-r
-)
-\}
 ,\\
 &
 \text{provided } 
 \mathit{
 identity
 }
-,
-\mathit{
-stay
-}
-(
-x
-,
-\Bob
-,
-d
-)
-,
-\mathit{
-date
-}
-(
-t
-)
  \in c_
 {
 \Alice
@@ -2583,6 +919,26 @@ t
 \mathit{
 identity
 }
+,
+\mathit{
+stay
+}
+(
+\Alice
+,
+Place
+,
+Night
+,
+Sum
+)
+,
+\mathit{
+today
+}
+(
+Today
+)
  \in c_
 {
 \Bob
@@ -2591,14 +947,14 @@ identity
 &
 \text{provided } 
 \mathit{
-reviewed
+review
 }
 (
-x
-,
 \Bob
 ,
-d
+Place
+,
+Night
 )
  \notin c_
 {
@@ -2607,12 +963,12 @@ d
 ,\\
 &
 \text{provided } 
-d
+Night
 \le
-t
+Today
 ,\\
 &
 \text{guarded by } \{
-\Alice
+\Bob
 \}
 \end{align*}

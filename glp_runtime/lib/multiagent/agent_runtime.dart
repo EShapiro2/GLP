@@ -240,6 +240,12 @@ class AgentRuntime {
   /// and leaves the queue non-empty — and no program that quiesces reaches it.
   int maxQuiescenceCycles = 200000;
 
+  /// Whether set_clock/1 may set this agent's clock (the GLP paper,
+  /// appendix-guards, "Clock access (now/1, set_clock/1)"): not on a
+  /// smartphone, which is what this class runs; a test that sets the date
+  /// says so.
+  final bool clockSettable;
+
   AgentRuntime({
     required this.agentId,
     required this.program,
@@ -252,6 +258,7 @@ class AgentRuntime {
     GlpNetwork? network,
     this.stateStore,
     this.installedApp,
+    this.clockSettable = false,
   })  : directory = directory ?? NetworkDirectory(),
         givenNetwork = network {
     if (network == null) return;
@@ -559,6 +566,7 @@ class AgentRuntime {
 
     // Enable madGLP mode (creates the MadContext)
     engine.enableMadGLP(agentId: selfName);
+    engine.runtime.clockSettable = clockSettable;
 
     // Load the one program (TGLP, def:program).  A directory with a self.glp
     // is linked whole.  A self-contained module file is a program too (TGLP

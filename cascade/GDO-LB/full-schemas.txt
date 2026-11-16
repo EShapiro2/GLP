@@ -1,0 +1,23 @@
+GDO-LB: Location-Based GDO (expanded schemas)
+GKK:0 - | An *identity* is a unique key pair.
+GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | Alice, Bob and Carol are persons.
+GKK:0 - | Reflexive: x knows y.
+GKK:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+GSG:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+GSG:0 - | Alice and Bob are persons.
+GSG:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+GSG:1 ○ | Alice and Bob will become friends only if they trust each other.
+GSG:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+GSG:3 ○ | Loss of Trust.
+GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+GDO:0 - | Alice, Bob and Carol are persons.
+GDO:1+GDO-LB:1 ■ Point friend: points_to(Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), ~points_to(Alice,Bob), may_point_friend(Alice,Bob) guarded by Alice.
+GDO:2+GDO-LB:2 ■ Point transitive: points_to(Alice,Carol) <- knows(Alice,Carol), points_to(Alice,Bob), points_to(Bob,Carol), ~points_to(Alice,Carol), closer(Alice,Carol) guarded by Alice.
+GDO:3+GDO-LB:3 ■ Unpoint: ~points_to(Alice,Bob) <- points_to(Alice,Bob), bound(Alice,D), points_to(Alice,>D), furthest(Alice,Bob) guarded by Alice.
+GDO-LB:0 - | A person has a *location*. d > 0, an integer, and e > 0 are parameters of GDO-LB.
+GDO-LB:0 - | Alice, Bob and Carol are persons.
+GDO-LB:0 - | Environment: the bound is n, for x; either x points to fewer than d persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than e than some person pointed to by x; y is closer to x by more than e than some person pointed to by x; y is furthest from x among the persons x points to.

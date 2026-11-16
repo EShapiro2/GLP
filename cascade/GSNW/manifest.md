@@ -1,19 +1,26 @@
 # A run of the cascade on GSNW
 
-- Contract: `GSNW` (`gsnw` to the checker), its owner's two files `programs/cssn/GSNW.txt` and `programs/cssn/GSNW.glp`, copied here as they stood at `0fb44ce7`.
-- The paper: `git@github.com:EShapiro2/SGLP.git` at `f2b94ded`, for the paper's own record.
-- Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
-- The tools: this repository at `0fb44ce7` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-13 00:43 UTC by `cascade.sh gsnw`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Contract: `GSNW` (`gsnw` to the checker), its owner's two files `programs/cssn/GSNW.txt` and `programs/cssn/GSNW.glp`, copied here as they stood at `6f917c8f`.
+- The paper: `/Users/udi/Grassroots/CSSN (not on this machine)` at `unknown`, for the paper's own record.
+- Adopted from the Calculus: `programs/cssn/GSNW.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/cssn/GSNW.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
+- Run on 2026-11-16 00:31 UTC by `cascade.sh gsnw`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `6f917c8f`; each artefact's source and tool:
 
-| Artefact | What it holds |
-|---|---|
-| `GSNW.txt` | the contract |
-| `GSNW.glp` | the act schemas, as terms |
-| `schemas.txt` | the act schemas in GSC's notation, printed from the terms |
-| `verdict.txt` | the checker's verdict: `syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian_of, guarded_by)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])` |
-| `vmat.tex` | the VMAT form, 38 displays, one per schema |
-| (no platform) | a parametric contract, with no realisation |
+| Artefact | Source | Tool | What it holds |
+|---|---|---|---|
+| `GSNW.txt` | `programs/cssn/GSNW.txt` | copied | the contract, its Logic pragmas and its Interface pragmas |
+| `GSNW.glp` | `programs/cssn/GSNW.txt` | calculus/tools/adopt.py, copied from `programs/cssn/GSNW.glp` | the full schemas, the term the checker reads |
+| `schemas.txt` | `GSNW.txt`'s Logic pragmas | calculus/tools/adopt.py | the speech-act schemas compiled from the Logic pragmas |
+| `full-contract.txt` | `GSNW.txt` and the contracts it is written from | calculus/tools/adopt.py | the full contract, each clause labelled by its origin |
+| `full-pragmas.txt` | the same | calculus/tools/adopt.py | the Logic pragmas' sentences, the relations applied |
+| `flat.txt` | the same | calculus/tools/adopt.py | the flat text, the relations applied |
+| `full-schemas.txt` | the same | calculus/tools/adopt.py | the schemas, the relations applied |
+| `verdict.txt` | `GSNW.glp` | programs/gsc, check/2 | the checker's verdict: `syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])` |
+| `vmat.tex` | `GSNW.glp` | programs/gsc, compile_contract/2 | the VMAT form, 42 displays, one per schema |
+| `platform.vglp` | `GSNW.glp` read by programs/gsc's as_read/2, and `GSNW.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
+| `platform.glp` | `platform.vglp` | glp_runtime's :emit | the platform compiled to GLP, as emitted |
+| `interface.glp` | `platform.vglp` and `platform.glp` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |
+| (no run) | | | vGLP keeps no plays for gsnw |
 
 What the tools refused or lacked:
-- platform: a parametric contract has no realisation (GSC, Definition Parametric contract); its instances are compiled
+- run: vGLP keeps no plays for gsnw

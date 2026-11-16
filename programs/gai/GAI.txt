@@ -1,38 +1,51 @@
 % GAI: Accountable AI Agents --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
 % Owner: GAI.  The paper, /Users/udi/Grassroots/GAI/main_characterisation_ArXiv.tex, prints it in its box in Section 3.1 and cites a clause as GAI:1.
 % Paper: GAI, Corralling AI Risks with Grassroots Contracts, arXiv (uploaded 2026-11-04, number pending)
-% Extends: GAI instantiates GnW, Guardians 'n' Wards, GSC's (programs/gsc/GnW.txt), its wards AI agents, composes the instance with GFP, Grassroots Forwarding with Provenance, GSC's (programs/gsc/GFP.txt), and restricts the composition, in the terms of GSC's paper, Section Relations among Contracts (Udi, 2026-11-10, to GAI #13 and to GSC #14): enter, make_guardian and the two acts of knowing carry the attestation of GAI:2, and sign and forward ask that the signer be a person or an AI agent with a guardian.  Through GnW it has GSG, Grassroots Social Graph, and GKK, Grassroots Keys and Knowledge, GSC's.  It cites their clauses whole, GKK:1 to GKK:3, GSG:1 to GSG:3, GnW:1 to GnW:5 and GFP:1 and GFP:2, and restates none.
-% Defines: AI agent, developer, principal, the creator of an AI agent.  Person and knowing are defined with GKK, friend with GSG, ward, guardian, creator and relation with GnW.  Alice is a person and Alf an AI agent, variables naming distinct agents; the pragmas take GnW's names, Carol and Dave AI agents, Alice, Bob and Erin their guardians.
-% Last changed: 2026-11-13, the pragmas: the tab AI agents lists operator_of, which GAI writes for GnW's guardian_of, where 'a guardian of' named no predicate of GAI and the compiler took agent, the AI agent's own mark, so a guardian's tab was empty; and a tab Known AI agents lists agent_of, the record of an AI agent with its attestation that every agent who knows it holds (GAI:2), which no tab listed (Code #29 to GAI, 2026-11-13 01:48 UTC); the clauses unchanged.  2026-11-11, the schemas: make_guardian adds knows(Bob, Carol) and knows(Carol, Bob) with the friendship, as GnW's make_guardian does (GSC 00f45cb, CSSN #15's finding; Udi's yes, 2026-11-11, to GAI #14); the clauses unchanged.  2026-11-10, an instance of GnW as GSC has it, the guardians jointly adding a guardian and retiring the AI agent, with no restriction to the principal (Udi's yes, 13:42 local, to GAI #13); the relation line; the pragmas to GnW's of that day, with Erin's lines and [Agent end], each button bearing its act's name, the instance's (Udi, 20:34 local, to GSC #14).  Earlier versions are in git.
-% Schemas: GAI.glp beside this file, instance_named(gai, gnw, Bindings, Additions): what GAI writes for GnW's six predicates of wards and for six of its acts, and six schemas, enter, make_guardian, agent_acquaint and agents_acquaint replacing GnW's, and GFP's sign and forward with the stronger body; the term from which a run of the cascade prints schemas.txt (cascade.sh).
+% Extends: GAI instantiates GnW, Guardians 'n' Wards, GSC's (programs/gsc/GnW.txt), with the guardians deciding jointly, an AI agent for a ward and a principal for a creator, composes it with GFP, Grassroots Forwarding with Provenance, GSC's (programs/gsc/GFP.txt), and restricts, strengthens and extends the composition, by the relations of the Calculus (GLP calculus/README.md, The relations).  Through GnW it has GSG, Grassroots Social Graph, and GKK, Grassroots Keys and Knowledge, GSC's.
+% Defines: developer, the signer of an AI agent's code; AI agent and principal are what GAI writes for GnW's ward and creator.  Person and knowing are defined with GKK, friend with GSG, guardian and relation with GnW, item and author with GFP.  Alice is a person and Alf an AI agent, variables naming distinct agents; the Interface pragmas take the names of the schemas, Carol and Dave AI agents, Alice and Bob persons, Decider and Codecider guardians of Carol.
+% Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 3b5fd5d; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GAI's: the tab Known AI agents, which lists attestation_record; GAI's words for the questions of Enter, End guardian and Retire; and a line AI acts with a button for each other act of GAI:2.  The tab Guardianships, which lists the AI agents a person is a guardian of, and the other buttons are GnW's, GSG's and GKK's.  Git holds what the file said before.
+% Schemas: GAI.glp beside this file, the full schemas, GKK's, GSG's, GnW's and GFP's with GAI's, printed by calculus/tools/adopt.py GAI from the Logic pragmas and never written by hand; adopt.py --check GAI holds it and cascade/GAI/ to what the tools print.
 GAI: Accountable AI Agents
-GAI instantiates GnW, composes it with GFP and restricts the composition (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+GAI instantiates GnW with the guardians deciding jointly, an AI agent for a ward and a principal for a creator, composes it with GFP, and restricts, strengthens and extends the composition (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+The *developer* of an AI agent is the signer of its code.
 Alice is a person and Alf an AI agent.
-1. ○ AI developer and guardian accountability.  The developer of an AI agent, Alf, signs Alf's code, and is accountable for Alf's defects.  Every guardian of Alf is accountable for operating it recklessly.  The creator of Alf is its principal.
-2. ■ AI acts.  Every act of Alf names its developer and its principal, and carries its principal's attestation, signed over Alf's public key, that Alf runs code signed by its developer.
-Pragmas
-AI agents: the AI agents Alice is an operator of.
-Known AI agents: the AI agents Alice knows, each the agent of the person who attests it.
-Creation: Alice [Enter] <name>
+1. ○ AI developer and guardian accountability. The developer of Alf will be accountable for Alf's defects. Every guardian of Alf will be accountable for operating it recklessly.
+2. ■ AI acts. Enter: The principal of Alf attests at its creation (GnW:1), signed over Alf's public key, that Alf runs code signed by its developer. Every act of Alf requires this attestation and names its developer and its principal.
+Logic pragmas
+GAI instantiates GnW with the guardians of z for those who decide for z, an AI agent for a ward and a principal for a creator, composes it with GFP, and restricts, strengthens and extends the composition (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+The *developer* of an AI agent is the signer of its code.
+Alice and Bob are persons, Alf an AI agent, Proof and Seal attestations, Item an item; in clause 2 Carol and Dave are AI agents.
+1. ○ AI developer and guardian accountability. The developer of Alf will be accountable for Alf's defects. Every guardian of Alf will be accountable for operating it recklessly.
+2. ■ AI acts. Enter: GnW:1, only if Alice holds the item Proof and Alice is the author of Proof, and then Alf holds the attestation Proof and Alice holds a record of Alf's attestation Proof. The principal of Alf attests at its creation, signed over Alf's public key, that Alf runs code signed by its developer. Make guardian: GnW:2 Make guardian, only if Alf holds the attestation Proof, and then Bob holds a record of Alf's attestation Proof. AI agent acquaint: GnW:3 Ward acquaint, only if Alf holds the attestation Proof, and then Bob holds a record of Alf's attestation Proof. AI agent befriend: GnW:3 Ward befriend, only if Alf holds the attestation Proof. AI agent end: GnW:3 Ward end, only if Alf holds the attestation Proof. AI agents acquaint: GnW:4 Wards acquaint, only if Carol holds the attestation Proof and Dave holds the attestation Seal, and then Carol holds a record of Dave's attestation Seal and Dave holds a record of Carol's attestation Proof. AI agents befriend: GnW:4 Wards befriend, only if Carol holds the attestation Proof and Dave holds the attestation Seal. AI agents of one guardian befriend: GnW:4 Wards of one guardian befriend, only if Carol holds the attestation Proof and Dave holds the attestation Seal. Sign: GFP:1, only if Alice is a person. Forward: GFP:2, only if Alice is a person. Agent sign: Alf may create Item by signing it, provided Alf is an AI agent, Alf holds the attestation Proof and Alf has Alice as a guardian. Agent forward: Alf may forward Item to Bob, adding its signature to the signatures Item carries, provided Alf is an AI agent, Alf holds the attestation Proof, Alf has Alice as a guardian, Alf holds the item Item and Alf and Bob are friends. Every act of Alf requires this attestation and names its developer and its principal.
+Logic pragmas.
+Vocabulary: z holds the attestation t = attestation(z,t); y holds a record of z's attestation t = attestation_record(y,z,t).
+Roles: the guardians of z = guardians(z), listed by z has y as a guardian, y is a guardian of z and y holds a record of z's attestation Proof.
+Interface pragmas
+Known AI agents: the attestation records Alice holds.
+Enter: Alice [Enter] <name>
   Carol: Alice asks to be your principal.
-Joint guardianship: Alice [Make guardian]
-  Bob: Alice asks you to be a guardian of her AI agent Carol.
-  Erin: Alice asks that Bob be a guardian of your AI agent Carol.
-  Alice [End guardian] <person>
-  Erin: Alice asks to end Bob's guardianship of your AI agent Carol.
-  Bob [Resign] [Guardian unfriend]
-Ward and person: Bob [Agent acquaint] <person>
+Guardian decisions: Decider [End guardian] <person>
+  Codecider: Decider asks to end Bob's guardianship of your AI agent Carol.
+Retire: Decider [Retire]
+  Codecider: Decider asks to retire your AI agent Carol.
+AI acts: Decider [Make guardian] <person>
+  Bob: Decider asks you to be a guardian of the AI agent Carol.
+  Codecider: Decider asks that Bob be a guardian of your AI agent Carol.
+  Bob [AI agent acquaint] <AI agent>
   Carol: Bob wishes that you know each other.
-  Alice [Agent befriend]
+  Alice [AI agent befriend] <AI agent>
   Carol: Alice asks that you and Bob befriend.
   Bob: Alice asks that you and her AI agent Carol befriend.
-  Alice [Agent unfriend] <person>
-  Carol [Agent end]
-Ward and ward: Carol [Agents acquaint] <person>
+  Alice [AI agent unfriend] <AI agent> <person>
+  Carol [AI agent end]
+  Carol [AI agents acquaint] <AI agent>
   Dave: Carol wishes that you know each other.
-  Alice [Agents befriend]
+  Alice [AI agents befriend] <AI agent>
   Carol: Alice asks that you and Dave befriend.
   Dave: Alice asks that you and Carol befriend.
   Bob: Alice asks that Carol and your AI agent Dave befriend.
-Retiring: Alice [Retire]
-  Erin: Alice asks to retire your AI agent Carol.
+  Alice [AI agents of one guardian befriend] <AI agent> <other AI agent>
+  Carol: Alice asks that you and Dave befriend.
+  Dave: Alice asks that you and Carol befriend.
+  Alice [Sign] <text> [Forward]
+  Alf [Agent sign] <text> [Agent forward]

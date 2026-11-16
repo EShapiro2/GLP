@@ -128,6 +128,15 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\mathit{Carol}
+)
+\}
 , \qquad 
 c'_
 {
@@ -138,15 +147,6 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-knows
-}
-(
-\mathit{Carol}
-)
-\}
 , \qquad 
 c'_
 {
@@ -172,13 +172,6 @@ knows
 )
 ,
 \mathit{
-knows
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
 person
 }
  \in c_
@@ -195,6 +188,13 @@ knows
 }
 (
 \Alice
+)
+,
+\mathit{
+knows
+}
+(
+\mathit{Carol}
 )
 ,
 \mathit{
@@ -339,7 +339,7 @@ friend
 \}
 \end{align*}
 \iffalse
-unfriend
+person_unfriend
 \fi
 \begin{align*}
 &
@@ -365,38 +365,7 @@ friend
 {
 \Alice
 }
-,\\
-&
-\text{where } K_
-{
-\Alice
-}
- \text{ holds every atom of } c_
-{
-\Alice
-}
- \text{, with its multiplicity, that matches } 
-\mathit{
-listed
-}
-(
-\Bob
-,
-\ast
-)
- \text{ or } 
-\mathit{
-member
-}
-(
-\langle
-\Bob
-\rangle
-\cdot
-\ast
-)
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -423,6 +392,34 @@ friend
 &
 \text{where } K_
 {
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+member
+}
+(
+\ast
+,
+\Bob
+)
+ \text{ or } 
+\mathit{
+listed
+}
+(
+\Bob
+,
+\ast
+)
+,\\
+&
+\text{where } K_
+{
 \Bob
 }
  \text{ holds every atom of } c_
@@ -431,22 +428,20 @@ friend
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
+member
+}
+(
+\ast
+,
+\Alice
+)
+ \text{ or } 
+\mathit{
 listed
 }
 (
 \Alice
 ,
-\ast
-)
- \text{ or } 
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
 \ast
 )
 ,\\
@@ -476,6 +471,10 @@ identity
 }
 ,
 \mathit{
+person
+}
+,
+\mathit{
 friend
 }
 (
@@ -487,12 +486,163 @@ friend
 }
 ,\\
 &
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+message
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+Text
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
 \text{provided } 
 \mathit{
-operator_of
+identity
+}
+,
+\mathit{
+friend
 }
 (
 \Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+person
+}
+,
+\mathit{
+item
+}
+(
+Text
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+Text
+)
+=
+\Bob
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+create
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+leader
+}
+(
+Grupo
+)
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Alice
+)
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+leader
+}
+(
+Grupo
 )
  \notin c_
 {
@@ -503,6 +653,996 @@ operator_of
 \text{guarded by } \{
 \Alice
 \}
+\end{align*}
+\iffalse
+close
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+leader
+}
+(
+Grupo
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+listed
+}
+(
+\ast
+,
+Grupo
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+leader
+}
+(
+Grupo
+)
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+listed
+}
+(
+\ast
+,
+Grupo
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+Grupo
+,
+\Alice
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+Grupo
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+)
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+person
+}
+,
+\mathit{
+leader
+}
+(
+Grupo
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Alice
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+listed
+}
+(
+\ast
+,
+Grupo
+)
+]
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+join
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+member
+}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+listed
+}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+leader
+}
+(
+Grupo
+)
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+member
+}
+(
+Grupo
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+remove
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+listed
+}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+leader
+}
+(
+Grupo
+)
+,
+\mathit{
+person
+}
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+Grupo
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+leave
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+member
+}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+listed
+}
+(
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+person
+}
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+Grupo
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+post
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+posted
+}
+(
+Text
+,
+\Bob
+,
+Grupo
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Alice
+)
+,
+\mathit{
+person
+}
+,
+\mathit{
+item
+}
+(
+Text
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+posted
+}
+(
+Text
+,
+\Bob
+,
+Grupo
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+Text
+)
+=
+\Bob
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+post_own
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+posted
+}
+(
+Text
+,
+\Alice
+,
+Grupo
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+member
+}
+(
+Grupo
+,
+\Alice
+)
+,
+\mathit{
+person
+}
+,
+\mathit{
+item
+}
+(
+Text
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+posted
+}
+(
+Text
+,
+\Alice
+,
+Grupo
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+Text
+)
+=
+\Alice
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+deliver
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+group_delivered
+}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+\mathrm{sgn}(
+Text
+,
+\Alice
+)
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+leader
+}
+(
+Grupo
+)
+,
+\mathit{
+posted
+}
+(
+Text
+,
+Bob
+,
+Grupo
+)
+,
+\mathit{
+listed
+}
+(
+\Bob
+,
+Grupo
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+group_delivered
+}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+Text
+)
+\neq
+\Alice
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+deliver_leader
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+group_delivered
+}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+,
+\mathit{
+item
+}
+(
+\mathrm{sgn}(
+Text
+,
+\Alice
+)
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+leader
+}
+(
+Grupo
+)
+,
+\mathit{
+posted
+}
+(
+Text
+,
+Bob
+,
+Grupo
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+group_delivered
+}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{author}(
+Text
+)
+\neq
+\Alice
+,\\
+&
+\text{guarded by } \emptyset
 \end{align*}
 \iffalse
 enter
@@ -521,21 +1661,15 @@ c_
  \uplus 
 \{
 \mathit{
-principal_of
+identity
 }
-(
-\Bob
-)
 ,
 \mathit{
-operator_of
+ai_agent
 }
-(
-\Bob
-)
 ,
 \mathit{
-friend
+has_guardian
 }
 (
 \Bob
@@ -549,12 +1683,17 @@ knows
 )
 ,
 \mathit{
-agent_of
+friend
 }
 (
 \Bob
+)
 ,
-y
+\mathit{
+attestation
+}
+(
+Proof
 )
 \}
 , \qquad 
@@ -570,14 +1709,6 @@ c_
  \uplus 
 \{
 \mathit{
-identity
-}
-,
-\mathit{
-agent
-}
-,
-\mathit{
 principal
 }
 (
@@ -585,14 +1716,7 @@ principal
 )
 ,
 \mathit{
-operated_by
-}
-(
-\Alice
-)
-,
-\mathit{
-friend
+guardian
 }
 (
 \Alice
@@ -606,10 +1730,19 @@ knows
 )
 ,
 \mathit{
-attestation
+friend
 }
 (
-y
+\Alice
+)
+,
+\mathit{
+attestation_record
+}
+(
+\Alice
+,
+Proof
 )
 \}
 ,\\
@@ -627,11 +1760,11 @@ person
 item
 }
 (
-y
+Proof
 )
  \in c_
 {
-\Alice
+\Bob
 }
 ,\\
 &
@@ -641,16 +1774,16 @@ identity
 }
  \notin c_
 {
-\Bob
+\Alice
 }
 ,\\
 &
 \text{provided } 
 \mathrm{author}(
-y
+Proof
 )
 =
-\Alice
+\Bob
 ,\\
 &
 \text{guarded by } \{
@@ -676,33 +1809,33 @@ c_
  \uplus 
 \{
 \mathit{
-operator_of
+guardian
 }
 (
-\mathit{Carol}
-)
-,
-\mathit{
-friend
-}
-(
-\mathit{Carol}
+\Bob
 )
 ,
 \mathit{
 knows
 }
 (
-\mathit{Carol}
+\Bob
 )
 ,
 \mathit{
-agent_of
+friend
 }
 (
-\mathit{Carol}
+\Bob
+)
 ,
-y
+\mathit{
+attestation_record
+}
+(
+\Bob
+,
+Proof
 )
 \}
 ,\\
@@ -716,28 +1849,10 @@ c_
 {
 \Bob
 }
-,\\
-&
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
  \uplus 
 \{
 \mathit{
-operated_by
-}
-(
-\Alice
-)
-,
-\mathit{
-friend
+has_guardian
 }
 (
 \Alice
@@ -745,19 +1860,26 @@ friend
 ,
 \mathit{
 knows
+}
+(
+\Alice
+)
+,
+\mathit{
+friend
 }
 (
 \Alice
 )
 \}
  \qquad (
-\mathit{Carol}
+\Bob
  \notin 
 \mathrm{ext}_c(
-\mathit{Carol}
+\Bob
 [
 \mathit{
-operated_by
+has_guardian
 }
 (
 \ast
@@ -769,24 +1891,17 @@ operated_by
 &
 c'_
 {
-\mathit{Carol}
+\Bob
 }
  := 
 c_
 {
-\mathit{Carol}
+\Bob
 }
  \uplus 
 \{
 \mathit{
-operated_by
-}
-(
-\Alice
-)
-,
-\mathit{
-friend
+has_guardian
 }
 (
 \Alice
@@ -798,15 +1913,22 @@ knows
 (
 \Alice
 )
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
 \}
  \qquad (
-\mathit{Carol}
+\Bob
  \in 
 \mathrm{ext}_c(
-\mathit{Carol}
+\Bob
 [
 \mathit{
-operated_by
+has_guardian
 }
 (
 \ast
@@ -814,6 +1936,17 @@ operated_by
 ]
 )
 )
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 c'_
@@ -825,10 +1958,10 @@ q
 q
  \in 
 \mathrm{ext}_c(
-\mathit{Carol}
+\Bob
 [
 \mathit{
-operated_by
+has_guardian
 }
 (
 \ast
@@ -852,40 +1985,38 @@ identity
 \mathit{
 person
 }
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
-,
-\mathit{
-operator_of
-}
-(
-\mathit{Carol}
-)
 ,
 \mathit{
 friend
 }
 (
+\mathit{Carol}
+)
+ \in c_
+{
 \Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+ai_agent
+}
+,
+\mathit{
+attestation
+}
+(
+Proof
 )
 ,
 \mathit{
-agent_of
+has_guardian
 }
 (
 \mathit{Carol}
-,
-y
 )
  \in c_
 {
@@ -897,14 +2028,23 @@ identity
 }
 ,
 \mathit{
-agent
+person
 }
 ,
 \mathit{
-operated_by
+guardian
 }
 (
 \Bob
+)
+,
+\mathit{
+attestation_record
+}
+(
+\Bob
+,
+Proof
 )
  \in c_
 {
@@ -920,20 +2060,29 @@ person
 }
 ,
 \mathit{
-operator_of
+guardian
 }
 (
-\mathit{Carol}
+\Bob
+)
+,
+\mathit{
+attestation_record
+}
+(
+\Bob
+,
+Proof
 )
  \in c_
 q
  \qquad (
 q \in 
 \mathrm{ext}_c(
-\mathit{Carol}
+\Bob
 [
 \mathit{
-operated_by
+has_guardian
 }
 (
 \ast
@@ -945,10 +2094,10 @@ operated_by
 &
 \text{provided } 
 \mathit{
-operator_of
+guardian
 }
 (
-\mathit{Carol}
+\Bob
 )
  \notin c_
 {
@@ -957,14 +2106,11 @@ operator_of
  \text{ and } 
 \{
 \mathit{
-operated_by
+retired
 }
-(
-\Alice
-)
 ,
 \mathit{
-friend
+has_guardian
 }
 (
 \Alice
@@ -972,7 +2118,7 @@ friend
 \}
  \cap c_
 {
-\mathit{Carol}
+\Bob
 }
  = \emptyset
 ,\\
@@ -980,376 +2126,7 @@ friend
 \text{guarded by } \{
 \Alice
 ,
-\Bob
-,
-\mathit{Dave}
-\}
-\end{align*}
-\iffalse
-end_guardian
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \qquad (
-\Alice
- \notin 
-\mathrm{ext}_c(
 \mathit{Carol}
-[
-\mathit{
-operated_by
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \qquad (
-\Alice
- \in 
-\mathrm{ext}_c(
-\mathit{Carol}
-[
-\mathit{
-operated_by
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-operator_of
-}
-(
-\mathit{Carol}
-)
-\}
- \qquad (
-\Bob
- \notin 
-\mathrm{ext}_c(
-\mathit{Carol}
-[
-\mathit{
-operated_by
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-operator_of
-}
-(
-\mathit{Carol}
-)
-\}
- \qquad (
-\Bob
- \in 
-\mathrm{ext}_c(
-\mathit{Carol}
-[
-\mathit{
-operated_by
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
- \setminus 
-\{
-\mathit{
-operated_by
-}
-(
-\Bob
-)
-\}
- \qquad (
-\mathit{Carol}
- \notin 
-\mathrm{ext}_c(
-\mathit{Carol}
-[
-\mathit{
-operated_by
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
- \setminus 
-\{
-\mathit{
-operated_by
-}
-(
-\Bob
-)
-\}
- \qquad (
-\mathit{Carol}
- \in 
-\mathrm{ext}_c(
-\mathit{Carol}
-[
-\mathit{
-operated_by
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-q
- := 
-c_
-q
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\mathit{Carol}
-[
-\mathit{
-operated_by
-}
-(
-\ast
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-,\ 
-q \neq 
-\Bob
-,\ 
-q \neq 
-\mathit{Carol}
-)
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
-,
-\mathit{
-operator_of
-}
-(
-\mathit{Carol}
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
-,
-\mathit{
-operator_of
-}
-(
-\mathit{Carol}
-)
- \in c_
-{
-\Bob
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-operated_by
-}
-(
-\Alice
-)
-,
-\mathit{
-operated_by
-}
-(
-\Bob
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
-,
-\mathit{
-operator_of
-}
-(
-\mathit{Carol}
-)
- \in c_
-q
- \qquad (
-q \in 
-\mathrm{ext}_c(
-\mathit{Carol}
-[
-\mathit{
-operated_by
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-\text{provided } 
-\forall 
-\mathit{Dave}
-\,(
-\mathit{
-operated_by
-}
-(
-\mathit{Carol}
-,
-\mathit{Dave}
-)
-\land
-\mathit{Dave}
-\neq
-\Bob
-\rightarrow
-\mathit{
-identity
-}
-(
-\mathit{Dave}
-)
-\land
-\mathit{
-person
-}
-(
-\mathit{Dave}
-)
-\land
-\mathit{
-operator_of
-}
-(
-\mathit{Dave}
-,
-\mathit{Carol}
-)
-)
-,\\
-&
-\text{guarded by } \{
-\Alice
 ,
 \mathit{Dave}
 \}
@@ -1371,7 +2148,7 @@ c_
  \setminus 
 \{
 \mathit{
-operator_of
+guardian
 }
 (
 \Bob
@@ -1390,7 +2167,7 @@ c_
  \setminus 
 \{
 \mathit{
-operated_by
+has_guardian
 }
 (
 \Alice
@@ -1408,7 +2185,7 @@ person
 }
 ,
 \mathit{
-operator_of
+guardian
 }
 (
 \Bob
@@ -1423,7 +2200,7 @@ identity
 }
 ,
 \mathit{
-operated_by
+has_guardian
 }
 (
 \Alice
@@ -1436,6 +2213,371 @@ operated_by
 &
 \text{guarded by } \{
 \Alice
+\}
+\end{align*}
+\iffalse
+end_guardian
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+guardian
+}
+(
+\Bob
+)
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+guardian
+}
+(
+\Bob
+)
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+has_guardian
+}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+has_guardian
+}
+(
+\Alice
+)
+\}
+ \qquad (
+\Bob
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \qquad (
+\mathit{Carol}
+ \notin 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \qquad (
+\mathit{Carol}
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+,\ 
+q \neq 
+\mathit{Carol}
+)
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+guardian
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+has_guardian
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+has_guardian
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+person
+}
+,
+\mathit{
+guardian
+}
+(
+\Bob
+)
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+person
+}
+,
+\mathit{
+guardian
+}
+(
+\Bob
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Bob
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\forall 
+\mathit{Dave}
+\,(
+\mathit{
+has_guardian
+}
+(
+\Bob
+,
+\mathit{Dave}
+)
+\land
+\mathit{Dave}
+\neq
+\Alice
+\rightarrow
+\mathit{
+identity
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+person
+}
+(
+\mathit{Dave}
+)
+\land
+\mathit{
+guardian
+}
+(
+\mathit{Dave}
+,
+\Bob
+)
+)
+,\\
+&
+\text{guarded by } \{
+\mathit{Carol}
+,
+\mathit{Dave}
 \}
 \end{align*}
 \iffalse
@@ -1462,7 +2604,7 @@ friend
 )
 ,
 \mathit{
-operator_of
+guardian
 }
 (
 \Bob
@@ -1488,7 +2630,7 @@ friend
 )
 ,
 \mathit{
-operated_by
+has_guardian
 }
 (
 \Alice
@@ -1513,7 +2655,7 @@ friend
 )
 ,
 \mathit{
-operator_of
+guardian
 }
 (
 \Bob
@@ -1535,7 +2677,7 @@ friend
 )
 ,
 \mathit{
-operated_by
+has_guardian
 }
 (
 \Alice
@@ -1551,7 +2693,7 @@ operated_by
 \}
 \end{align*}
 \iffalse
-agent_acquaint
+ai_agent_acquaint
 \fi
 \begin{align*}
 &
@@ -1593,12 +2735,12 @@ knows
 )
 ,
 \mathit{
-agent_of
+attestation_record
 }
 (
 \Alice
 ,
-y
+Proof
 )
 \}
 ,\\
@@ -1609,11 +2751,11 @@ identity
 }
 ,
 \mathit{
-agent
+ai_agent
 }
 ,
 \mathit{
-operated_by
+has_guardian
 }
 (
 Alice
@@ -1623,7 +2765,7 @@ Alice
 attestation
 }
 (
-y
+Proof
 )
  \in c_
 {
@@ -1650,7 +2792,7 @@ person
 \}
 \end{align*}
 \iffalse
-agent_befriend
+ai_agent_befriend
 \fi
 \begin{align*}
 &
@@ -1709,11 +2851,11 @@ identity
 }
 ,
 \mathit{
-agent
+ai_agent
 }
 ,
 \mathit{
-operated_by
+has_guardian
 }
 (
 \mathit{Carol}
@@ -1725,6 +2867,13 @@ knows
 (
 \Bob
 )
+,
+\mathit{
+attestation
+}
+(
+Proof
+)
  \in c_
 {
 \Alice
@@ -1732,6 +2881,10 @@ knows
  \text{ and } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
 ,
 \mathit{
@@ -1742,8 +2895,11 @@ knows
 )
 ,
 \mathit{
-person
+friend
 }
+(
+\mathit{Carol}
+)
  \in c_
 {
 \Bob
@@ -1754,22 +2910,15 @@ identity
 }
 ,
 \mathit{
-person
-}
-,
-\mathit{
-operator_of
-}
-(
-\Alice
-)
-,
-\mathit{
 friend
 }
 (
 \Bob
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -1777,16 +2926,23 @@ friend
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+retired
+}
+,
 \mathit{
 friend
 }
 (
 \Bob
 )
- \notin c_
+\}
+ \cap c_
 {
 \Alice
 }
+ = \emptyset
  \text{ and } 
 \mathit{
 friend
@@ -1809,7 +2965,238 @@ friend
 \}
 \end{align*}
 \iffalse
-agent_unfriend
+ai_agent_end
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+attestation
+}
+(
+Proof
+)
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+guardian
+}
+(
+\Alice
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+(
+\mathit{
+person
+}
+(
+\Alice
+)
+\lor
+(
+\mathit{
+ai_agent
+}
+(
+\Alice
+)
+\land
+\exists 
+G1
+\,(
+\mathit{
+has_guardian
+}
+(
+\Alice
+,
+G1
+)
+)
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+unfriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+person
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+guardian
+}
+(
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+ai_agent_unfriend
 \fi
 \begin{align*}
 &
@@ -1868,7 +3255,7 @@ identity
 }
 ,
 \mathit{
-operated_by
+has_guardian
 }
 (
 \mathit{Carol}
@@ -1907,13 +3294,6 @@ identity
 \mathit{
 person
 }
-,
-\mathit{
-operator_of
-}
-(
-\Alice
-)
  \in c_
 {
 \mathit{Carol}
@@ -1922,14 +3302,14 @@ operator_of
 &
 \text{provided } 
 \mathit{
-operated_by
+guardian
 }
 (
-\Bob
+\Alice
 )
  \notin c_
 {
-\Alice
+\Bob
 }
 ,\\
 &
@@ -1938,111 +3318,7 @@ operated_by
 \}
 \end{align*}
 \iffalse
-agent_end
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-friend
-}
-(
-\Bob
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-friend
-}
-(
-\Alice
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-agent
-}
-,
-\mathit{
-operated_by
-}
-(
-Alice
-)
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-operated_by
-}
-(
-\Bob
-)
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-agents_acquaint
+ai_agents_acquaint
 \fi
 \begin{align*}
 &
@@ -2065,12 +3341,12 @@ knows
 )
 ,
 \mathit{
-agent_of
+attestation_record
 }
 (
 \Bob
 ,
-z
+Seal
 )
 \}
 , \qquad 
@@ -2093,12 +3369,12 @@ knows
 )
 ,
 \mathit{
-agent_of
+attestation_record
 }
 (
 \Alice
 ,
-y
+Proof
 )
 \}
 ,\\
@@ -2109,11 +3385,11 @@ identity
 }
 ,
 \mathit{
-agent
+ai_agent
 }
 ,
 \mathit{
-operated_by
+has_guardian
 }
 (
 Alice
@@ -2123,7 +3399,7 @@ Alice
 attestation
 }
 (
-y
+Proof
 )
  \in c_
 {
@@ -2135,11 +3411,11 @@ identity
 }
 ,
 \mathit{
-agent
+ai_agent
 }
 ,
 \mathit{
-operated_by
+has_guardian
 }
 (
 Bob
@@ -2149,7 +3425,7 @@ Bob
 attestation
 }
 (
-z
+Seal
 )
  \in c_
 {
@@ -2164,7 +3440,7 @@ z
 \}
 \end{align*}
 \iffalse
-agents_befriend
+ai_agents_befriend
 \fi
 \begin{align*}
 &
@@ -2233,11 +3509,11 @@ identity
 }
 ,
 \mathit{
-agent
+ai_agent
 }
 ,
 \mathit{
-operated_by
+has_guardian
 }
 (
 \mathit{Carol}
@@ -2249,6 +3525,13 @@ knows
 (
 \Bob
 )
+,
+\mathit{
+attestation
+}
+(
+Proof
+)
  \in c_
 {
 \Alice
@@ -2259,11 +3542,11 @@ identity
 }
 ,
 \mathit{
-agent
+ai_agent
 }
 ,
 \mathit{
-operated_by
+has_guardian
 }
 (
 \mathit{Dave}
@@ -2275,6 +3558,13 @@ knows
 (
 \Alice
 )
+,
+\mathit{
+attestation
+}
+(
+Seal
+)
  \in c_
 {
 \Bob
@@ -2283,17 +3573,6 @@ knows
 \mathit{
 identity
 }
-,
-\mathit{
-person
-}
-,
-\mathit{
-operator_of
-}
-(
-\Alice
-)
 ,
 \mathit{
 knows
@@ -2308,6 +3587,10 @@ friend
 (
 \mathit{Dave}
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Carol}
@@ -2318,15 +3601,15 @@ identity
 }
 ,
 \mathit{
-person
-}
-,
-\mathit{
-operator_of
+friend
 }
 (
-\Bob
+\mathit{Carol}
 )
+,
+\mathit{
+person
+}
  \in c_
 {
 \mathit{Dave}
@@ -2334,27 +3617,41 @@ operator_of
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+retired
+}
+,
 \mathit{
 friend
 }
 (
 \Bob
 )
- \notin c_
+\}
+ \cap c_
 {
 \Alice
 }
+ = \emptyset
  \text{ and } 
+\{
+\mathit{
+retired
+}
+,
 \mathit{
 friend
 }
 (
 \Alice
 )
- \notin c_
+\}
+ \cap c_
 {
 \Bob
 }
+ = \emptyset
 ,\\
 &
 \text{guarded by } \{
@@ -2365,6 +3662,186 @@ friend
 \mathit{Carol}
 ,
 \mathit{Dave}
+\}
+\end{align*}
+\iffalse
+ai_agents_of_one_guardian_befriend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+ai_agent
+}
+,
+\mathit{
+has_guardian
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+attestation
+}
+(
+Proof
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+ai_agent
+}
+,
+\mathit{
+has_guardian
+}
+(
+\mathit{Carol}
+)
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+attestation
+}
+(
+Seal
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+person
+}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+retired
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+ \text{ and } 
+\{
+\mathit{
+retired
+}
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \cap c_
+{
+\Bob
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -2389,7 +3866,7 @@ c_
 ) \uplus 
 \{
 \mathit{
-retired_agent
+retired
 }
 \}
  \qquad (
@@ -2399,7 +3876,7 @@ retired_agent
 \Alice
 [
 \mathit{
-friend
+has_guardian
 }
 (
 \ast
@@ -2413,7 +3890,21 @@ friend
 \Alice
 [
 \mathit{
-operated_by
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
 }
 (
 \ast
@@ -2433,14 +3924,14 @@ operated_by
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
-friend
+has_guardian
 }
 (
 \ast
 )
  \text{ or } 
 \mathit{
-operated_by
+friend
 }
 (
 \ast
@@ -2452,7 +3943,7 @@ operated_by
 \Alice
 [
 \mathit{
-friend
+has_guardian
 }
 (
 \ast
@@ -2466,53 +3957,7 @@ friend
 \Alice
 [
 \mathit{
-operated_by
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-c'_
-{
-\Alice
-}
- := 
-(
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-operator_of
-}
-(
-\Alice
-)
-\}
-) \setminus K_
-{
-\Alice
-}
-) \uplus 
-\{
-\mathit{
-retired_agent
-}
-\}
- \qquad (
-\Alice
- \notin 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-friend
+has_guardian
 }
 (
 \ast
@@ -2521,65 +3966,12 @@ friend
 )
 ,\ 
 \Alice
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-operated_by
-}
-(
-\ast
-)
-]
-)
-)
-,\\
-&
-\text{where } K_
-{
-\Alice
-}
- \text{ holds every atom of } c_
-{
-\Alice
-}
- \text{, with its multiplicity, that matches } 
-\mathit{
-friend
-}
-(
-\ast
-)
- \text{ or } 
-\mathit{
-operated_by
-}
-(
-\ast
-)
- \qquad (
-\Alice
  \notin 
 \mathrm{ext}_c(
 \Alice
 [
 \mathit{
 friend
-}
-(
-\ast
-)
-]
-)
-,\ 
-\Alice
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-operated_by
 }
 (
 \ast
@@ -2615,17 +4007,17 @@ friend
 ) \uplus 
 \{
 \mathit{
-retired_agent
+retired
 }
 \}
  \qquad (
 \Alice
- \in 
+ \notin 
 \mathrm{ext}_c(
 \Alice
 [
 \mathit{
-friend
+has_guardian
 }
 (
 \ast
@@ -2639,7 +4031,21 @@ friend
 \Alice
 [
 \mathit{
-operated_by
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
 }
 (
 \ast
@@ -2659,26 +4065,26 @@ operated_by
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
-friend
+has_guardian
 }
 (
 \ast
 )
  \text{ or } 
 \mathit{
-operated_by
+friend
 }
 (
 \ast
 )
  \qquad (
 \Alice
- \in 
+ \notin 
 \mathrm{ext}_c(
 \Alice
 [
 \mathit{
-friend
+has_guardian
 }
 (
 \ast
@@ -2692,7 +4098,442 @@ friend
 \Alice
 [
 \mathit{
-operated_by
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+guardian
+}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \uplus 
+\{
+\mathit{
+retired
+}
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+ \text{ or } 
+\mathit{
+friend
+}
+(
+\ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+guardian
+}
+(
+\Alice
+)
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \uplus 
+\{
+\mathit{
+retired
+}
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+ \text{ or } 
+\mathit{
+friend
+}
+(
+\ast
+)
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+c_
+{
+\Alice
+}
+ \setminus K_
+{
+\Alice
+}
+) \uplus 
+\{
+\mathit{
+retired
+}
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+ \text{ or } 
+\mathit{
+friend
+}
+(
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
 }
 (
 \ast
@@ -2720,13 +4561,6 @@ friend
 (
 \Alice
 )
-,
-\mathit{
-operator_of
-}
-(
-\Alice
-)
 \}
 ) \setminus K_
 {
@@ -2735,7 +4569,7 @@ operator_of
 ) \uplus 
 \{
 \mathit{
-retired_agent
+retired
 }
 \}
  \qquad (
@@ -2745,7 +4579,21 @@ retired_agent
 \Alice
 [
 \mathit{
-friend
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
 }
 (
 \ast
@@ -2759,7 +4607,7 @@ friend
 \Alice
 [
 \mathit{
-operated_by
+friend
 }
 (
 \ast
@@ -2779,14 +4627,14 @@ operated_by
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
-friend
+has_guardian
 }
 (
 \ast
 )
  \text{ or } 
 \mathit{
-operated_by
+friend
 }
 (
 \ast
@@ -2798,7 +4646,21 @@ operated_by
 \Alice
 [
 \mathit{
-friend
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
 }
 (
 \ast
@@ -2812,7 +4674,296 @@ friend
 \Alice
 [
 \mathit{
-operated_by
+friend
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+guardian
+}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \uplus 
+\{
+\mathit{
+retired
+}
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+ \text{ or } 
+\mathit{
+friend
+}
+(
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+guardian
+}
+(
+\Alice
+)
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \uplus 
+\{
+\mathit{
+retired
+}
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+ \text{ or } 
+\mathit{
+friend
+}
+(
+\ast
+)
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
 }
 (
 \ast
@@ -2834,7 +4985,7 @@ c_
  \setminus 
 \{
 \mathit{
-operator_of
+guardian
 }
 (
 \Alice
@@ -2869,7 +5020,7 @@ c_
  \setminus 
 \{
 \mathit{
-operator_of
+guardian
 }
 (
 \Alice
@@ -2907,7 +5058,7 @@ q
  \setminus 
 \{
 \mathit{
-operator_of
+friend
 }
 (
 \Alice
@@ -2920,7 +5071,21 @@ q
 \Alice
 [
 \mathit{
-friend
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
 }
 (
 \ast
@@ -2934,7 +5099,7 @@ q
 \Alice
 [
 \mathit{
-operated_by
+friend
 }
 (
 \ast
@@ -2958,7 +5123,7 @@ q
  \setminus 
 \{
 \mathit{
-friend
+guardian
 }
 (
 \Alice
@@ -2966,12 +5131,26 @@ friend
 \}
  \qquad (
 q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q
  \in 
 \mathrm{ext}_c(
 \Alice
 [
 \mathit{
-friend
+has_guardian
 }
 (
 \ast
@@ -2985,7 +5164,7 @@ q
 \Alice
 [
 \mathit{
-operated_by
+friend
 }
 (
 \ast
@@ -3009,20 +5188,48 @@ q
  \setminus 
 \{
 \mathit{
-friend
+guardian
 }
 (
 \Alice
 )
 ,
 \mathit{
-operator_of
+friend
 }
 (
 \Alice
 )
 \}
  \qquad (
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
 q
  \in 
 \mathrm{ext}_c(
@@ -3037,13 +5244,257 @@ friend
 ]
 )
 ,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \qquad (
 q
  \in 
 \mathrm{ext}_c(
 \Alice
 [
 \mathit{
-operated_by
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{
+guardian
+}
+(
+\Alice
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
+}
+(
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \setminus 
+\{
+\mathit{
+guardian
+}
+(
+\Alice
+)
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+\}
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+,\ 
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+friend
 }
 (
 \ast
@@ -3065,11 +5516,7 @@ identity
 }
 ,
 \mathit{
-agent
-}
-,
-\mathit{
-operated_by
+has_guardian
 }
 (
 \Bob
@@ -3088,7 +5535,7 @@ person
 }
 ,
 \mathit{
-operator_of
+guardian
 }
 (
 \Alice
@@ -3105,6 +5552,68 @@ identity
 }
 ,
 \mathit{
+person
+}
+,
+\mathit{
+guardian
+}
+(
+\Alice
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+guardian
+}
+(
+\Alice
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{
+has_guardian
+}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
 friend
 }
 (
@@ -3130,41 +5639,18 @@ friend
 &
 \text{provided } 
 \mathit{
-identity
+retired
 }
-,
-\mathit{
-person
-}
-,
-\mathit{
-operator_of
-}
-(
+ \notin c_
+{
 \Alice
-)
- \in c_
-q
- \qquad (
-q \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-operated_by
 }
-(
-\ast
-)
-]
-)
-)
 ,\\
 &
 \text{guarded by } \{
 \Bob
 ,
-\mathit{Dave}
+\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -3187,7 +5673,7 @@ c_
 item
 }
 (
-x
+Item
 )
 \}
 ,\\
@@ -3195,6 +5681,10 @@ x
 \text{provided } 
 \mathit{
 identity
+}
+,
+\mathit{
+person
 }
  \in c_
 {
@@ -3207,45 +5697,12 @@ identity
 item
 }
 (
-x
+Item
 )
  \notin c_
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-agent
-}
-(
-\Alice
-)
-\land
-\exists 
-G
-\,(
-\mathit{
-operated_by
-}
-(
-\Alice
-,
-G
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -3266,8 +5723,20 @@ c_
 {
 \Alice
 }
-,\\
-&
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+\mathrm{sgn}(
+Item
+,
+\Bob
+)
+)
+\}
+, \qquad 
 c'_
 {
 \Bob
@@ -3276,6 +5745,139 @@ c'_
 c_
 {
 \Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+item
+}
+(
+Item
+)
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+agent_sign
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+Item
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+ai_agent
+}
+,
+\mathit{
+attestation
+}
+(
+Proof
+)
+,
+\mathit{
+has_guardian
+}
+(
+Alice
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+item
+}
+(
+Item
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+agent_forward
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
 }
  \uplus 
 \{
@@ -3284,99 +5886,13 @@ item
 }
 (
 \mathrm{sgn}(
-x
+Item
 ,
-\Alice
+\Bob
 )
 )
 \}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-item
-}
-(
-x
-)
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-agent
-}
-(
-\Alice
-)
-\land
-\exists 
-G
-\,(
-\mathit{
-operated_by
-}
-(
-\Alice
-,
-G
-)
-)
-)
-)
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-message
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -3386,1073 +5902,12 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{
-item
-}
-(
-x
-)
-\}
 ,\\
 &
 \text{provided } 
 \mathit{
 identity
 }
-,
-\mathit{
-item
-}
-(
-x
-)
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-agent
-}
-(
-\Alice
-)
-\land
-\exists 
-G
-\,(
-\mathit{
-operated_by
-}
-(
-\Alice
-,
-G
-)
-)
-)
-)
-,\\
-&
-\text{provided } 
-\mathrm{author}(
-x
-)
-=
-\Alice
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-create
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-,
-\mathit{
-listed
-}
-(
-\Alice
-,
-n
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
- \in c_
-{
-\Alice
-}
-,\\
-&
-\text{provided } 
-\{
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-,
-\mathit{
-closed
-}
-(
-n
-)
-\}
- \cap c_
-{
-\Alice
-}
- = \emptyset
-,\\
-&
-\text{provided } 
-\langle
-\Alice
-\rangle
-\cdot
-n
- \text{ is an argument of no atom of } c
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-join
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-listed
-}
-(
-\Bob
-,
-n
-)
-\}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-,
-\mathit{
-friend
-}
-(
-\Bob
-)
-,
-\mathit{
-person
-}
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
- \notin c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-leave
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-listed
-}
-(
-\Bob
-,
-n
-)
-\}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-listed
-}
-(
-\Bob
-,
-n
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
-,
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Bob
-\}
-\end{align*}
-\iffalse
-remove
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-listed
-}
-(
-\Bob
-,
-n
-)
-\}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \setminus 
-\{
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
-,
-\mathit{
-listed
-}
-(
-\Bob
-,
-n
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-close
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-\mathit{
-listed
-}
-(
-\Alice
-,
-n
-)
-,
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-\}
-) \uplus 
-\{
-\mathit{
-closed
-}
-(
-n
-)
-\}
-,\\
-&
-c'_
-q
- := 
-c_
-q
- \setminus 
-\{
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-\}
- \qquad (
-q
- \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-listed
-}
-(
-\ast
-,
-n
-)
-]
-)
-,\ 
-q \neq 
-\Alice
-)
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
-,
-\mathit{
-listed
-}
-(
-\Alice
-,
-n
-)
-,
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
- \in c_
-q
- \qquad (
-q \in 
-\mathrm{ext}_c(
-\Alice
-[
-\mathit{
-listed
-}
-(
-\ast
-,
-n
-)
-]
-)
-)
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-post_own
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-posted
-}
-(
-x
-,
-n
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
-,
-\mathit{
-item
-}
-(
-x
-)
-,
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
- \in c_
-{
-\Alice
-}
-,\\
-&
-\text{provided } 
-\mathit{
-posted
-}
-(
-x
-,
-n
-)
- \notin c_
-{
-\Alice
-}
-,\\
-&
-\text{provided } 
-\mathrm{author}(
-x
-)
-=
-\Alice
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-post
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-posted
-}
-(
-x
-,
-n
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
-,
-\mathit{
-item
-}
-(
-x
-)
-,
-\mathit{
-member
-}
-(
-\langle
-\Bob
-\rangle
-\cdot
-n
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-member
-}
-(
-\langle
-\Bob
-\rangle
-\cdot
-n
-)
-,
-\mathit{
-listed
-}
-(
-\Alice
-,
-n
-)
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathit{
-posted
-}
-(
-x
-,
-n
-)
- \notin c_
-{
-\Bob
-}
-,\\
-&
-\text{provided } 
-\mathrm{author}(
-x
-)
-=
-\Alice
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-post_forward
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-posted
-}
-(
-\mathrm{sgn}(
-x
-,
-\Alice
-)
-,
-n
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
-,
-\mathit{
-item
-}
-(
-x
-)
-,
-\mathit{
-member
-}
-(
-\langle
-\Bob
-\rangle
-\cdot
-n
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-member
-}
-(
-\langle
-\Bob
-\rangle
-\cdot
-n
-)
-,
-\mathit{
-listed
-}
-(
-\Alice
-,
-n
-)
-,
-\mathit{
-friend
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-deliver
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-\mathit{
-delivered
-}
-(
-y
-,
-\Bob
-,
-n
-)
-\}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-\mathit{
-item
-}
-(
-\mathrm{sgn}(
-y
-,
-\Alice
-)
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
-,
-\mathit{
-posted
-}
-(
-y
-,
-n
-)
-,
-\mathit{
-listed
-}
-(
-\Bob
-,
-n
-)
 ,
 \mathit{
 friend
@@ -4470,14 +5925,35 @@ identity
 }
 ,
 \mathit{
-member
+ai_agent
+}
+,
+\mathit{
+attestation
 }
 (
-\langle
+Proof
+)
+,
+\mathit{
+has_guardian
+}
+(
+Alice
+)
+,
+\mathit{
+item
+}
+(
+Item
+)
+,
+\mathit{
+friend
+}
+(
 \Alice
-\rangle
-\cdot
-n
 )
  \in c_
 {
@@ -4485,32 +5961,105 @@ n
 }
 ,\\
 &
-\text{provided } 
-\mathit{
-delivered
-}
-(
-y
-,
+\text{guarded by } \{
 \Bob
-,
-n
-)
- \notin c_
+\}
+\end{align*}
+\iffalse
+agent_message
+\fi
+\begin{align*}
+&
+c'_
 {
 \Alice
 }
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+item
+}
+(
+Text
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
 ,\\
 &
 \text{provided } 
-\mathrm{author}(
-y
+\mathit{
+identity
+}
+,
+\mathit{
+friend
+}
+(
+\Bob
 )
-\neq
+ \in c_
+{
 \Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+ai_agent
+}
+,
+\mathit{
+attestation
+}
+(
+Proof
+)
+,
+\mathit{
+has_guardian
+}
+(
+Alice
+)
+,
+\mathit{
+item
+}
+(
+Text
+)
+,
+\mathit{
+friend
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
 ,\\
 &
-\text{guarded by } \emptyset
+\text{guarded by } \{
+\Bob
+\}
 \end{align*}
 \iffalse
 deliver_own
@@ -4529,18 +6078,19 @@ c_
  \uplus 
 \{
 \mathit{
-delivered
+group_delivered
 }
 (
-y
+\Alice
+,
+Text
+,
+Grupo
 ,
 \Bob
-,
-n
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -4556,7 +6106,7 @@ c_
 item
 }
 (
-y
+Text
 )
 \}
 ,\\
@@ -4567,23 +6117,21 @@ identity
 }
 ,
 \mathit{
-member
+leader
 }
 (
-\langle
-\Alice
-\rangle
-\cdot
-n
+Grupo
 )
 ,
 \mathit{
 posted
 }
 (
-y
+Text
 ,
-n
+\Alice
+,
+Grupo
 )
 ,
 \mathit{
@@ -4592,14 +6140,7 @@ listed
 (
 \Bob
 ,
-n
-)
-,
-\mathit{
-friend
-}
-(
-\Bob
+Grupo
 )
  \in c_
 {
@@ -4609,17 +6150,6 @@ friend
 \mathit{
 identity
 }
-,
-\mathit{
-member
-}
-(
-\langle
-\Alice
-\rangle
-\cdot
-n
-)
  \in c_
 {
 \Bob
@@ -4628,14 +6158,16 @@ n
 &
 \text{provided } 
 \mathit{
-delivered
+group_delivered
 }
 (
-y
+\Alice
+,
+Text
+,
+Grupo
 ,
 \Bob
-,
-n
 )
  \notin c_
 {
@@ -4645,7 +6177,7 @@ n
 &
 \text{provided } 
 \mathrm{author}(
-y
+Text
 )
 =
 \Alice
@@ -4654,7 +6186,7 @@ y
 \text{guarded by } \emptyset
 \end{align*}
 \iffalse
-deliver_leader
+post_forward
 \fi
 \begin{align*}
 &
@@ -4670,79 +6202,84 @@ c_
  \uplus 
 \{
 \mathit{
-delivered
+posted
 }
 (
-y
+\mathrm{sgn}(
+Item
 ,
-\Alice
-,
-n
+\Bob
 )
 ,
-\mathit{
-item
-}
-(
-y
+\Bob
+,
+Grupo
 )
 \}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
 ,\\
 &
 \text{provided } 
 \mathit{
 identity
 }
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+person
+}
 ,
 \mathit{
 member
 }
 (
-\langle
+Grupo
+,
 \Alice
-\rangle
-\cdot
-n
 )
 ,
 \mathit{
-posted
+item
 }
 (
-y
-,
-n
+Item
 )
  \in c_
 {
-\Alice
+\Bob
 }
 ,\\
 &
 \text{provided } 
 \mathit{
-delivered
+leader
 }
 (
-y
-,
-\Alice
-,
-n
+Grupo
 )
  \notin c_
 {
-\Alice
+\Bob
 }
 ,\\
 &
-\text{provided } 
-\mathrm{author}(
-y
-)
-\neq
-\Alice
-,\\
-&
-\text{guarded by } \emptyset
+\text{guarded by } \{
+\Bob
+\}
 \end{align*}

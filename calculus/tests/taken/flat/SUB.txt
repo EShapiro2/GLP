@@ -1,0 +1,8 @@
+SUB: A Restriction (flat text)
+CUR:0 - | Alice and Bob are persons, Sum and Total numbers.
+CUR:1 ■ Pay: Alice may no longer Alice holds Sum Alice-coins and Bob holds Sum Alice-coins, provided Alice knows Bob.
+CUR:1+ORG:1+SUB:1 ■ Pay small: Erin may no longer Alice holds Sum Alice-coins and Bob holds Sum Alice-coins, provided Alice knows Bob, Erin is a member of Alice and Erin knows Bob.
+CUR:2 ■ Swap: Alice and Bob may jointly no longer Alice holds Sum Alice-coins, Bob holds Sum Alice-coins, no longer Bob holds Total Bob-coins and Alice holds Total Bob-coins.
+CUR:2+ORG:2 ■ Swap of two organisations: Erin and Frank may jointly no longer Alice holds Sum Alice-coins, Bob holds Sum Alice-coins, no longer Bob holds Total Bob-coins and Alice holds Total Bob-coins, provided Erin is a member of Alice and Frank is a member of Bob.
+ORG:0 - | Erin and Frank are persons, Alice and Bob organisations or persons, Sum and Total numbers.
+SUB:0 - | Alice and Bob are persons, Erin a person, Sum a number.

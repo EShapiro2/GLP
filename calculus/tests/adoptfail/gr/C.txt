@@ -1,0 +1,6 @@
+C: Base
+Alice is a person.
+1. ■ Signal: Alice may signal.
+Logic pragmas.
+Vocabulary: x has signalled = s(x).
+After x signals: x has signalled.

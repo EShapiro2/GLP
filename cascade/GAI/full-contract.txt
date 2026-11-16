@@ -1,0 +1,23 @@
+% Written by tools/expand.py from rev/; do not edit.
+GAI: Accountable AI Agents
+An *identity* is a unique key pair.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, an AI agent of Alice, when he trusts Alice. The *decision rule*, a parameter of GnW, says who decides for an AI agent and how. Here: the guardians deciding jointly. An AI agent takes an act of a party by those who decide for it.
+The *author* of an item is its first signer.
+The *developer* of an AI agent is the signer of its code.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons. Alice, Bob and Erin are persons, Carol and Dave AI agents. Alice is a person and Alf an AI agent.
+GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+GSG:2. ■ Unfriend: Alice may end her friendship with Bob.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+GnW:1. ■ Enter: Alice may create an AI agent, Carol, and establish Carol's identity by choosing Carol's key pair. Alice is then the principal, a guardian and a friend of Carol.
+GnW:2. ■ Guardian decisions. Make guardian: Those who decide for Carol may make Bob, a friend of a guardian of Carol, a guardian and a friend of Carol, with the consent of Bob. Resign: Bob may end his guardianship of Carol. End guardian: Those who decide for Carol, other than Bob, may end Bob's guardianship. Guardian unfriend: Bob may end his friendship with Carol, which ends his guardianship. Carol may not end a friendship with her guardian.
+GnW:3. ■ AI agent and person. AI agent acquaint: Carol, an AI agent of Alice, and Bob may jointly come to know each other. AI agent befriend: Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends. AI agent end, Unfriend, AI agent unfriend: Carol, Bob or Alice may end the relation of Bob and Carol.
+GnW:4. ■ AI agents. AI agents acquaint: Carol, an AI agent of Alice, and Dave, an AI agent of Bob, may jointly come to know each other. AI agents befriend: Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+GnW:5. ■ Retire: Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
+GFP:1. ■ Sign: Alice may create an item by signing it.
+GFP:2. ■ Forward: Alice may forward an item she holds to her friend Bob, adding her signature to the signatures the item carries.
+GAI:1. ○ AI developer and guardian accountability. The developer of Alf will be accountable for Alf's defects. Every guardian of Alf will be accountable for operating it recklessly.
+GAI:2. ■ AI acts. Enter: The principal of Alf attests at its creation (GnW:1), signed over Alf's public key, that Alf runs code signed by its developer. Every act of Alf requires this attestation and names its developer and its principal.

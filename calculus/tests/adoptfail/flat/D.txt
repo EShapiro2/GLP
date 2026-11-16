@@ -1,0 +1,4 @@
+D: Willing (flat text)
+C:0 - | Alice is a person.
+C:1+D:1 ■ Signal: Alice may Alice has signalled, provided Alice is willing.
+D:0 - | Alice is a person.

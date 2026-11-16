@@ -1,131 +1,36 @@
-%% ---------------------------------------------------------------------------
-%% DGC.glp --- Denominated Grassroots Currencies, the contract DGC, Currencies' (Coordination Appendix C; Udi's ruling of 2026-11-04, to Currencies #15), in the term form programs/gsc reads (its README, "Writing a contract").  The clauses are in DGC.txt beside this file, SGC's Section 2.1.  DGC extends GC and GB with the denomination and the acceptances (SGC, Appendix A), so the term holds GB's schemas (programs/currencies/bonds/GB.glp) with the denomination f as the argument after the issuer of every coin and bond, coin(u, f) and bond(u, f, d), and three of its own: accept, payout and spend.  accepts(u, f) in the state of p is one acceptance of u's coins in f in payment, L of them granted at once and one spent by each such coin paid to p (DGC:4).  f is a value, the denomination, written num(f) for want of a value variable in the term form; every role but establish's requires identity; today is an environment predicate, as GB has it.  Written by Currencies #15 Cowork, 2026-11-04, from GB.glp at GLP main b4fb7f13.
-%% ---------------------------------------------------------------------------
-
-NameTerm   ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
-             ; ext(NameTerm, Constant).
-Arg        ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-             ; sgn(Constant, Integer) ; num(Constant).
-Args       ::= [] ; [Arg | Args].
-Atom       ::= atom(Constant, Args).
-Atoms      ::= [] ; [Atom | Atoms].
-Mult       ::= Atom ; times(Arg, Atom).
-Mults      ::= [] ; [Mult | Mults].
-Guard      ::= guarded ; unguarded ; guarded_at(Constant).
-RoleKind   ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
-RoleSpec   ::= rs(Guard, Mults, Mults, Atoms, Atoms)
-             ; crs(RoleKind, Guard, Mults, Mults, Atoms, Atoms).
-RoleSpecs  ::= [] ; [RoleSpec | RoleSpecs].
-Constraint ::= true ; and(Constraint, Constraint)
-             ; gt(Arg, Arg) ; le(Arg, Arg) ; succ(Arg, Arg).
-Reach      ::= reach(NameTerm, Constant, NameTerm).
-Reaches    ::= [] ; [Reach | Reaches].
-Names      ::= [] ; [Constant | Names].
-Schema     ::= schema(Constant, Names, Args, RoleSpecs)
-             ; nschema(Constant, Names, Args, Constraint, RoleSpecs)
-             ; cschema(Constant, Names, Args, Reaches, RoleSpecs).
-Contract   ::= [] ; [Schema | Contract].
-Preds      ::= [] ; [Constant | Preds].
-Declared   ::= Contract ; reflexive(Preds, Contract) ; environment(Preds, Contract).
-
-%% contract_named(dgc, C): the contract, DGC (Coordination Appendix C).
-procedure contract_named(Constant?, Declared).
-contract_named(dgc, environment([today],
-%% GKK:1, Identity: act once, so establish forbids the identity it adds.
-   [schema(establish, ['Alice'], [],
-       [rs(guarded, [atom(identity, [])], [], [], [atom(identity, [])])]),
-%% GKK:2, Acquaintance.
-    schema(acquaint, ['Alice', 'Bob'], [],
-       [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
-        rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
-%% GKK:3, Introduction: p, who knows q and c, introduces c to q, who knows p.
-    schema(introduce, ['Alice', 'Bob'], [pvar(c)],
-       [rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar(c)])], []),
-        rs(guarded, [atom(knows, [pvar(c)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% DGC:1, Minting: p mints k p-coins of f.
-    schema(mint_coin, ['Alice'], [num(f), num(k)],
-       [rs(guarded, [times(num(k), atom(coin, [role(1), num(f)]))], [], [atom(identity, [])], [])]),
-%% DGC:1, Minting: p mints k p-bonds of f maturing at d, later than p's date t.
-    nschema(mint_bond, ['Alice'], [num(f), num(d), num(k), num(t)], gt(num(d), num(t)),
-       [rs(guarded, [times(num(k), atom(bond, [role(1), num(f), num(d)]))], [], [atom(identity, []), atom(date, [num(t)])], [])]),
-%% DGC:2, Date: p's first date is the day, once; no role guards it.
-    schema(first_date, ['Alice'], [num(d)],
-       [rs(unguarded, [atom(date, [num(d)]), atom(dated, [])], [], [atom(identity, []), atom(today, [num(d)])], [atom(dated, [])])]),
-%% DGC:2, Date: p's date advances to the next day, not past the day; no role guards it.
-    nschema(advance, ['Alice'], [num(t), num(t1), num(d)], and(succ(num(t), num(t1)), le(num(t1), num(d))),
-       [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, []), atom(today, [num(d)])], [])]),
-%% DGC:3, Swap: p and q, who know each other, swap k coins of u for k1 coins of v; each comes to know the issuer of what they receive, in f.
-    schema(swap_cc, ['Alice', 'Bob'], [num(f), pvar(u), num(k), pvar(v), num(k1)],
-       [rs(guarded, [times(num(k1), atom(coin, [pvar(v), num(f)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v), num(f)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% DGC:3, Swap: k coins of u for k1 bonds of v maturing at d1, in f.
-    schema(swap_cb, ['Alice', 'Bob'], [num(f), pvar(u), num(k), pvar(v), num(d1), num(k1)],
-       [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(f), num(d1)])), atom(knows, [pvar(v)])], [times(num(k), atom(coin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [times(num(k1), atom(bond, [pvar(v), num(f), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% DGC:3, Swap: k bonds of u maturing at d for k1 coins of v, in f.
-    schema(swap_bc, ['Alice', 'Bob'], [num(f), pvar(u), num(d), num(k), pvar(v), num(k1)],
-       [rs(guarded, [times(num(k1), atom(coin, [pvar(v), num(f)])), atom(knows, [pvar(v)])], [times(num(k), atom(bond, [pvar(u), num(f), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(f), num(d)])), atom(knows, [pvar(u)])], [times(num(k1), atom(coin, [pvar(v), num(f)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% DGC:3, Swap: k bonds of u maturing at d for k1 bonds of v maturing at d1, in f.
-    schema(swap_bb, ['Alice', 'Bob'], [num(f), pvar(u), num(d), num(k), pvar(v), num(d1), num(k1)],
-       [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(f), num(d1)])), atom(knows, [pvar(v)])], [times(num(k), atom(bond, [pvar(u), num(f), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(f), num(d)])), atom(knows, [pvar(u)])], [times(num(k1), atom(bond, [pvar(v), num(f), num(d1)]))], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% DGC:4, Acceptance: p, who holds a coin of u in f, accepts k u-coins in f in payment, a quota of L acceptances.
-    schema(accept_c, ['Alice'], [num(f), pvar(u), num(l)],
-       [rs(guarded, [times(num(l), atom(accepts, [pvar(u), num(f)]))], [], [atom(identity, []), atom(coin, [pvar(u), num(f)])], [])]),
-%% DGC:4, Acceptance: p, who holds a bond of u in f maturing at d, accepts u-coins in f up to L.
-    schema(accept_b, ['Alice'], [num(f), pvar(u), num(d), num(l)],
-       [rs(guarded, [times(num(l), atom(accepts, [pvar(u), num(f)]))], [], [atom(identity, []), atom(bond, [pvar(u), num(f), num(d)])], [])]),
-%% DGC:4, Payment: p pays k q-coins to q, whom p knows, in f.
-    schema(pay, ['Alice', 'Bob'], [num(f), num(k)],
-       [rs(guarded, [], [times(num(k), atom(coin, [role(2), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(unguarded, [times(num(k), atom(coin, [role(2), num(f)]))], [], [atom(identity, [])], [])]),
-%% DGC:5, Payment by the issuer: p pays k of their own coins in f to q, whom p knows, who accepts them, k acceptances spent.
-    schema(payout, ['Alice', 'Bob'], [num(f), num(k)],
-       [rs(guarded, [], [times(num(k), atom(coin, [role(1), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(unguarded, [times(num(k), atom(coin, [role(1), num(f)]))], [times(num(k), atom(accepts, [role(1), num(f)]))], [atom(identity, [])], [])]),
-%% DGC:5, Payment in a third party's coins: p pays k coins of s in f to q, who accepts them, s the issuer a party to the payment and not a guard.
-    schema(spend, ['Alice', 'Bob', 'Carol'], [num(f), num(k)],
-       [rs(guarded, [], [times(num(k), atom(coin, [role(3), num(f)]))], [atom(identity, [])], []),
-        rs(unguarded, [times(num(k), atom(coin, [role(3), num(f)]))], [times(num(k), atom(accepts, [role(3), num(f)]))], [atom(identity, [])], []),
-        rs(unguarded, [], [], [atom(identity, [])], [])]),
-%% DGC:5, Redemption: p redeems a q-coin against a coin of r held by q, whom p knows; p comes to know r, in f.
-    schema(redeem_cc, ['Alice', 'Bob'], [num(f), pvar(r)],
-       [rs(guarded, [atom(coin, [pvar(r), num(f)]), atom(knows, [pvar(r)])], [atom(coin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(unguarded, [atom(coin, [role(2), num(f)])], [atom(coin, [pvar(r), num(f)])], [atom(identity, [])], [])]),
-%% DGC:5, Redemption: p redeems a q-coin against a bond of r maturing at d1 held by q, in f.
-    schema(redeem_cb, ['Alice', 'Bob'], [num(f), pvar(r), num(d1)],
-       [rs(guarded, [atom(bond, [pvar(r), num(f), num(d1)]), atom(knows, [pvar(r)])], [atom(coin, [role(2), num(f)])], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(unguarded, [atom(coin, [role(2), num(f)])], [atom(bond, [pvar(r), num(f), num(d1)])], [atom(identity, [])], [])]),
-%% DGC:5, Redemption: p redeems a q-bond maturing at d, mature by q's date t, against a coin of r held by q, in f.
-    nschema(redeem_bc, ['Alice', 'Bob'], [num(f), num(d), pvar(r), num(t)], le(num(d), num(t)),
-       [rs(guarded, [atom(coin, [pvar(r), num(f)]), atom(knows, [pvar(r)])], [atom(bond, [role(2), num(f), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(unguarded, [atom(bond, [role(2), num(f), num(d)])], [atom(coin, [pvar(r), num(f)])], [atom(identity, []), atom(date, [num(t)])], [])]),
-%% DGC:5, Redemption: p redeems a matured q-bond maturing at d against a bond of r maturing at d1 held by q, in f.
-    nschema(redeem_bb, ['Alice', 'Bob'], [num(f), num(d), pvar(r), num(d1), num(t)], le(num(d), num(t)),
-       [rs(guarded, [atom(bond, [pvar(r), num(f), num(d1)]), atom(knows, [pvar(r)])], [atom(bond, [role(2), num(f), num(d)])], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(unguarded, [atom(bond, [role(2), num(f), num(d)])], [atom(bond, [pvar(r), num(f), num(d1)])], [atom(identity, []), atom(date, [num(t)])], [])]),
-%% DGC:7, Escrow: p deposits k coins of u with the escrow agent e; they know each other, and e comes to know u, in f.
-    schema(deposit_c, ['Alice', 'Carol'], [num(f), pvar(u), num(k)],
-       [rs(guarded, [], [times(num(k), atom(coin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% DGC:7, Escrow: p deposits k bonds of u maturing at d with the escrow agent e; they know each other, in f.
-    schema(deposit_b, ['Alice', 'Carol'], [num(f), pvar(u), num(d), num(k)],
-       [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(f), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(f), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% DGC:7, Escrow: e releases k coins of u to q; they know each other, and q comes to know u, in f.
-    schema(release_c, ['Carol', 'Bob'], [num(f), pvar(u), num(k)],
-       [rs(guarded, [], [times(num(k), atom(coin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% DGC:7, Escrow: e releases k bonds of u maturing at d to q; they know each other, in f.
-    schema(release_b, ['Carol', 'Bob'], [num(f), pvar(u), num(d), num(k)],
-       [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(f), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(f), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% DGC:7, Escrow: e returns k coins of u to the depositor p; they know each other, and p comes to know u, in f.
-    schema(return_c, ['Carol', 'Alice'], [num(f), pvar(u), num(k)],
-       [rs(guarded, [], [times(num(k), atom(coin, [pvar(u), num(f)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(coin, [pvar(u), num(f)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
-%% DGC:7, Escrow: e returns k bonds of u maturing at d to the depositor p; they know each other, in f.
-    schema(return_b, ['Carol', 'Alice'], [num(f), pvar(u), num(d), num(k)],
-       [rs(guarded, [], [times(num(k), atom(bond, [pvar(u), num(f), num(d)]))], [atom(identity, []), atom(knows, [role(2)])], []),
-        rs(guarded, [times(num(k), atom(bond, [pvar(u), num(f), num(d)])), atom(knows, [pvar(u)])], [], [atom(identity, []), atom(knows, [role(1)])], [])])])).
+%% DGC.glp --- printed by adopt.py from DGC.txt: the contract's full schemas, the Calculus's term.glp.txt,
+%% complete in itself.  Not to be edited: edit DGC.txt and run adopt.py DGC.
+% contract_named(dgc, C): the contract, DGC.
+procedure contract_named(Constant?, SDeclared).
+contract_named(dgc, environment([today, one_denomination], reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
+ sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
+ sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
+ sas(issue, ['Alice'], ['Sum', 'Dollar'], [times(num('Sum'), atom(coin, ['Alice', 'Alice']))], [atom(identity, ['Alice']), atom(issued_in, ['Alice', 'Dollar'])], true, ['Alice']),
+ sas(swap, ['Alice', 'Bob', 'Carol', 'Dave'], ['Carol', 'Sum', 'Dave', 'Total'], [not(times(num('Sum'), atom(coin, ['Alice', 'Carol']))), times(num('Sum'), atom(coin, ['Bob', 'Carol'])), not(times(num('Total'), atom(coin, ['Bob', 'Dave']))), times(num('Total'), atom(coin, ['Alice', 'Dave'])), atom(knows, ['Bob', 'Carol']), atom(knows, ['Alice', 'Dave'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), times(num('Sum'), atom(coin, ['Alice', 'Carol'])), times(num('Total'), atom(coin, ['Bob', 'Dave'])), atom(one_denomination, ['Alice', 'Carol', 'Dave'])], true, ['Alice', 'Bob']),
+ sas(pay, ['Alice', 'Bob'], ['Sum'], [not(times(num('Sum'), atom(coin, ['Alice', 'Bob']))), times(num('Sum'), atom(coin, ['Bob', 'Bob']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), times(num('Sum'), atom(coin, ['Alice', 'Bob']))], true, ['Alice']),
+ sas(redeem, ['Alice', 'Bob', 'Carol'], ['Carol'], [not(atom(coin, ['Alice', 'Bob'])), atom(coin, ['Bob', 'Bob']), not(atom(coin, ['Bob', 'Carol'])), atom(coin, ['Alice', 'Carol']), atom(knows, ['Alice', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(coin, ['Alice', 'Bob']), atom(coin, ['Bob', 'Carol']), atom(one_denomination, ['Alice', 'Bob', 'Carol'])], true, ['Alice']),
+ sas(issue_bond, ['Alice'], ['Day', 'Sum', 'Today'], [times(num('Sum'), atom(bond, ['Alice', 'Alice', num('Day')]))], [atom(identity, ['Alice']), atom(today, ['Alice', num('Today')])], gt(num('Day'), num('Today')), ['Alice']),
+ sas(swap_coin_for_bond, ['Alice', 'Bob', 'Carol', 'Dave'], ['Carol', 'Sum', 'Dave', 'Day', 'Total'], [not(times(num('Sum'), atom(coin, ['Alice', 'Carol']))), times(num('Sum'), atom(coin, ['Bob', 'Carol'])), not(times(num('Total'), atom(bond, ['Bob', 'Dave', num('Day')]))), times(num('Total'), atom(bond, ['Alice', 'Dave', num('Day')])), atom(knows, ['Bob', 'Carol']), atom(knows, ['Alice', 'Dave'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), times(num('Sum'), atom(coin, ['Alice', 'Carol'])), times(num('Total'), atom(bond, ['Bob', 'Dave', num('Day')])), atom(one_denomination, ['Alice', 'Carol', 'Dave'])], true, ['Alice', 'Bob']),
+ sas(swap_bonds, ['Alice', 'Bob', 'Carol', 'Dave'], ['Carol', 'Day', 'Sum', 'Dave', 'Term', 'Total'], [not(times(num('Sum'), atom(bond, ['Alice', 'Carol', num('Day')]))), times(num('Sum'), atom(bond, ['Bob', 'Carol', num('Day')])), not(times(num('Total'), atom(bond, ['Bob', 'Dave', num('Term')]))), times(num('Total'), atom(bond, ['Alice', 'Dave', num('Term')])), atom(knows, ['Bob', 'Carol']), atom(knows, ['Alice', 'Dave'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), times(num('Sum'), atom(bond, ['Alice', 'Carol', num('Day')])), times(num('Total'), atom(bond, ['Bob', 'Dave', num('Term')])), atom(one_denomination, ['Alice', 'Carol', 'Dave'])], true, ['Alice', 'Bob']),
+ sas(redeem_coin_against_bond, ['Alice', 'Bob', 'Carol'], ['Carol', 'Day'], [not(atom(coin, ['Alice', 'Bob'])), atom(coin, ['Bob', 'Bob']), not(atom(bond, ['Bob', 'Carol', num('Day')])), atom(bond, ['Alice', 'Carol', num('Day')]), atom(knows, ['Alice', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(coin, ['Alice', 'Bob']), atom(bond, ['Bob', 'Carol', num('Day')]), atom(one_denomination, ['Alice', 'Bob', 'Carol'])], true, ['Alice']),
+ sas(redeem_bond, ['Alice', 'Bob', 'Carol'], ['Day', 'Carol', 'Today'], [not(atom(bond, ['Alice', 'Bob', num('Day')])), atom(bond, ['Bob', 'Bob', num('Day')]), not(atom(coin, ['Bob', 'Carol'])), atom(coin, ['Alice', 'Carol']), atom(knows, ['Alice', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(today, ['Bob', num('Today')]), atom(bond, ['Alice', 'Bob', num('Day')]), atom(coin, ['Bob', 'Carol']), atom(one_denomination, ['Alice', 'Bob', 'Carol'])], le(num('Day'), num('Today')), ['Alice']),
+ sas(redeem_bond_against_bond, ['Alice', 'Bob', 'Carol'], ['Day', 'Carol', 'Term', 'Today'], [not(atom(bond, ['Alice', 'Bob', num('Day')])), atom(bond, ['Bob', 'Bob', num('Day')]), not(atom(bond, ['Bob', 'Carol', num('Term')])), atom(bond, ['Alice', 'Carol', num('Term')]), atom(knows, ['Alice', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(today, ['Bob', num('Today')]), atom(bond, ['Alice', 'Bob', num('Day')]), atom(bond, ['Bob', 'Carol', num('Term')]), atom(one_denomination, ['Alice', 'Bob', 'Carol'])], le(num('Day'), num('Today')), ['Alice']),
+ sas(deposit, ['Alice', 'Carol', 'Dave', 'Bob'], ['Sum', 'Bob', 'Cond', 'Dollar'], [not(times(num('Sum'), atom(coin, ['Alice', 'Dave']))), times(num('Sum'), atom(escrow_coin, ['Carol', 'Dave', 'Alice', 'Bob', 'Cond'])), atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', 'Dollar'])], [atom(identity, ['Alice']), atom(identity, ['Carol']), atom(identity, ['Dave']), atom(knows, ['Alice', 'Carol']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Alice', 'Bob']), times(num('Sum'), atom(coin, ['Alice', 'Dave'])), atom(issued_in, ['Dave', 'Dollar']), not(atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', '_']))], true, ['Alice', 'Carol']),
+ sas(deposit_bond, ['Alice', 'Carol', 'Dave', 'Bob'], ['Day', 'Sum', 'Bob', 'Cond', 'Dollar'], [not(times(num('Sum'), atom(bond, ['Alice', 'Dave', num('Day')]))), times(num('Sum'), atom(escrow_bond, ['Carol', 'Dave', num('Day'), 'Alice', 'Bob', 'Cond'])), atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', 'Dollar'])], [atom(identity, ['Alice']), atom(identity, ['Carol']), atom(identity, ['Dave']), atom(knows, ['Alice', 'Carol']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Alice', 'Bob']), times(num('Sum'), atom(bond, ['Alice', 'Dave', num('Day')])), atom(issued_bond_in, ['Dave', 'Dollar', num('Day')]), not(atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', '_']))], true, ['Alice', 'Carol']),
+ sas(release, ['Carol', 'Bob', 'Dave', 'Alice'], ['Dave', 'Alice', 'Cond', 'Sum'], [not(times(num('Sum'), atom(escrow_coin, ['Carol', 'Dave', 'Alice', 'Bob', 'Cond']))), times(num('Sum'), atom(coin, ['Bob', 'Dave'])), atom(knows, ['Bob', 'Dave'])], [atom(identity, ['Carol']), atom(identity, ['Bob']), atom(knows, ['Carol', 'Bob']), atom(knows, ['Bob', 'Carol']), times(num('Sum'), atom(escrow_coin, ['Carol', 'Dave', 'Alice', 'Bob', 'Cond']))], true, ['Carol', 'Bob']),
+ sas(release_bond, ['Carol', 'Bob', 'Dave', 'Alice'], ['Dave', 'Day', 'Alice', 'Cond', 'Sum'], [not(times(num('Sum'), atom(escrow_bond, ['Carol', 'Dave', num('Day'), 'Alice', 'Bob', 'Cond']))), times(num('Sum'), atom(bond, ['Bob', 'Dave', num('Day')])), atom(knows, ['Bob', 'Dave'])], [atom(identity, ['Carol']), atom(identity, ['Bob']), atom(knows, ['Carol', 'Bob']), atom(knows, ['Bob', 'Carol']), times(num('Sum'), atom(escrow_bond, ['Carol', 'Dave', num('Day'), 'Alice', 'Bob', 'Cond']))], true, ['Carol', 'Bob']),
+ sas(return, ['Carol', 'Alice', 'Dave', 'Bob'], ['Dave', 'Bob', 'Cond', 'Sum'], [not(times(num('Sum'), atom(escrow_coin, ['Carol', 'Dave', 'Alice', 'Bob', 'Cond']))), times(num('Sum'), atom(coin, ['Alice', 'Dave'])), atom(knows, ['Alice', 'Dave'])], [atom(identity, ['Carol']), atom(identity, ['Alice']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Alice', 'Carol']), times(num('Sum'), atom(escrow_coin, ['Carol', 'Dave', 'Alice', 'Bob', 'Cond']))], true, ['Carol', 'Alice']),
+ sas(return_bond, ['Carol', 'Alice', 'Dave', 'Bob'], ['Dave', 'Day', 'Bob', 'Cond', 'Sum'], [not(times(num('Sum'), atom(escrow_bond, ['Carol', 'Dave', num('Day'), 'Alice', 'Bob', 'Cond']))), times(num('Sum'), atom(bond, ['Alice', 'Dave', num('Day')])), atom(knows, ['Alice', 'Dave'])], [atom(identity, ['Carol']), atom(identity, ['Alice']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Alice', 'Carol']), times(num('Sum'), atom(escrow_bond, ['Carol', 'Dave', num('Day'), 'Alice', 'Bob', 'Cond']))], true, ['Carol', 'Alice']),
+ sas(first_issue, ['Alice'], ['Sum', 'Dollar'], [times(num('Sum'), atom(coin, ['Alice', 'Alice'])), atom(issued_in, ['Alice', 'Dollar'])], [atom(identity, ['Alice']), not(atom(issued_in, ['Alice', '_']))], true, ['Alice']),
+ sas(issue_denominated_bond, ['Alice'], ['Day', 'Sum', 'Dollar', 'Today'], [times(num('Sum'), atom(bond, ['Alice', 'Alice', num('Day')])), atom(issued_bond_in, ['Alice', 'Dollar', num('Day')])], [atom(identity, ['Alice']), atom(today, ['Alice', num('Today')])], gt(num('Day'), num('Today')), ['Alice']),
+ sas(deposit_own_coins, ['Alice', 'Carol', 'Bob'], ['Sum', 'Bob', 'Cond', 'Dollar'], [not(times(num('Sum'), atom(coin, ['Alice', 'Alice']))), times(num('Sum'), atom(escrow_coin, ['Carol', 'Alice', 'Alice', 'Bob', 'Cond'])), atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', 'Dollar'])], [atom(identity, ['Alice']), atom(identity, ['Carol']), atom(knows, ['Alice', 'Carol']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Alice', 'Bob']), atom(issued_in, ['Alice', 'Dollar']), not(atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', '_'])), times(num('Sum'), atom(coin, ['Alice', 'Alice']))], true, ['Alice', 'Carol']),
+ sas(deposit_with_the_issuer, ['Alice', 'Carol', 'Bob'], ['Sum', 'Bob', 'Cond', 'Dollar'], [not(times(num('Sum'), atom(coin, ['Alice', 'Carol']))), times(num('Sum'), atom(escrow_coin, ['Carol', 'Carol', 'Alice', 'Bob', 'Cond'])), atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', 'Dollar'])], [atom(identity, ['Alice']), atom(identity, ['Carol']), atom(knows, ['Alice', 'Carol']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Alice', 'Bob']), atom(issued_in, ['Carol', 'Dollar']), not(atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', '_'])), times(num('Sum'), atom(coin, ['Alice', 'Carol']))], true, ['Alice', 'Carol']),
+ sas(deposit_more, ['Alice', 'Carol', 'Dave', 'Bob'], ['Sum', 'Bob', 'Cond', 'Dollar'], [not(times(num('Sum'), atom(coin, ['Alice', 'Dave']))), times(num('Sum'), atom(escrow_coin, ['Carol', 'Dave', 'Alice', 'Bob', 'Cond'])), atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', 'Dollar'])], [atom(identity, ['Alice']), atom(identity, ['Carol']), atom(identity, ['Dave']), atom(knows, ['Alice', 'Carol']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Alice', 'Bob']), atom(issued_in, ['Dave', 'Dollar']), atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', 'Dollar']), times(num('Sum'), atom(coin, ['Alice', 'Dave']))], true, ['Alice', 'Carol']),
+ sas(deposit_own_bonds, ['Alice', 'Carol', 'Bob'], ['Day', 'Sum', 'Bob', 'Cond', 'Dollar'], [not(times(num('Sum'), atom(bond, ['Alice', 'Alice', num('Day')]))), times(num('Sum'), atom(escrow_bond, ['Carol', 'Alice', num('Day'), 'Alice', 'Bob', 'Cond'])), atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', 'Dollar'])], [atom(identity, ['Alice']), atom(identity, ['Carol']), atom(knows, ['Alice', 'Carol']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Alice', 'Bob']), atom(issued_bond_in, ['Alice', 'Dollar', num('Day')]), not(atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', '_'])), times(num('Sum'), atom(bond, ['Alice', 'Alice', num('Day')]))], true, ['Alice', 'Carol']),
+ sas(deposit_bond_with_the_issuer, ['Alice', 'Carol', 'Bob'], ['Day', 'Sum', 'Bob', 'Cond', 'Dollar'], [not(times(num('Sum'), atom(bond, ['Alice', 'Carol', num('Day')]))), times(num('Sum'), atom(escrow_bond, ['Carol', 'Carol', num('Day'), 'Alice', 'Bob', 'Cond'])), atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', 'Dollar'])], [atom(identity, ['Alice']), atom(identity, ['Carol']), atom(knows, ['Alice', 'Carol']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Alice', 'Bob']), atom(issued_bond_in, ['Carol', 'Dollar', num('Day')]), not(atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', '_'])), times(num('Sum'), atom(bond, ['Alice', 'Carol', num('Day')]))], true, ['Alice', 'Carol']),
+ sas(deposit_bond_more, ['Alice', 'Carol', 'Dave', 'Bob'], ['Day', 'Sum', 'Bob', 'Cond', 'Dollar'], [not(times(num('Sum'), atom(bond, ['Alice', 'Dave', num('Day')]))), times(num('Sum'), atom(escrow_bond, ['Carol', 'Dave', num('Day'), 'Alice', 'Bob', 'Cond'])), atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', 'Dollar'])], [atom(identity, ['Alice']), atom(identity, ['Carol']), atom(identity, ['Dave']), atom(knows, ['Alice', 'Carol']), atom(knows, ['Carol', 'Alice']), atom(knows, ['Alice', 'Bob']), atom(issued_bond_in, ['Dave', 'Dollar', num('Day')]), atom(escrow_denomination, ['Carol', 'Alice', 'Bob', 'Cond', 'Dollar']), times(num('Sum'), atom(bond, ['Alice', 'Dave', num('Day')]))], true, ['Alice', 'Carol']),
+ sas(accept, ['Alice', 'Carol'], ['Dollar', 'Limit'], [times(num('Limit'), atom(accepts, ['Alice', 'Carol', 'Dollar']))], [atom(identity, ['Alice']), atom(identity, ['Carol']), atom(coin, ['Alice', 'Carol']), atom(issued_in, ['Carol', 'Dollar'])], true, ['Alice']),
+ sas(accept_by_bond, ['Alice', 'Carol'], ['Dollar', 'Limit', 'Day', 'Due'], [times(num('Limit'), atom(accepts, ['Alice', 'Carol', 'Dollar']))], [atom(identity, ['Alice']), atom(identity, ['Carol']), atom(bond, ['Alice', 'Carol', num('Day')]), atom(issued_bond_in, ['Carol', 'Dollar', num('Due')])], and(le(num('Day'), num('Due')), le(num('Due'), num('Day'))), ['Alice']),
+ sas(pay_accepted_coins, ['Alice', 'Bob', 'Carol'], ['Dollar'], [not(atom(coin, ['Alice', 'Carol'])), atom(coin, ['Bob', 'Carol']), not(atom(accepts, ['Bob', 'Carol', 'Dollar']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(identity, ['Carol']), atom(knows, ['Alice', 'Bob']), atom(issued_in, ['Carol', 'Dollar']), atom(coin, ['Alice', 'Carol']), atom(accepts, ['Bob', 'Carol', 'Dollar'])], true, ['Alice']),
+ sas(pay_own_accepted_coins, ['Alice', 'Bob'], ['Dollar'], [not(atom(coin, ['Alice', 'Alice'])), atom(coin, ['Bob', 'Alice']), not(atom(accepts, ['Bob', 'Alice', 'Dollar']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(issued_in, ['Alice', 'Dollar']), atom(coin, ['Alice', 'Alice']), atom(accepts, ['Bob', 'Alice', 'Dollar'])], true, ['Alice']),
+ sas(pay_accepted_coins_to_the_issuer, ['Alice', 'Bob'], ['Dollar'], [not(atom(coin, ['Alice', 'Bob'])), atom(coin, ['Bob', 'Bob']), not(atom(accepts, ['Bob', 'Bob', 'Dollar']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(issued_in, ['Bob', 'Dollar']), atom(coin, ['Alice', 'Bob']), atom(accepts, ['Bob', 'Bob', 'Dollar'])], true, ['Alice'])]))).

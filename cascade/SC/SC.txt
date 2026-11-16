@@ -5,87 +5,34 @@
 % Last changed: 2026-11-12, by GO #5.
 % Schemas: SC.glp beside this file.
 SC: Shareholding Corporation
-SC instantiates GCorp and restricts it.
-Share is a denomination, and a share of Orga is an Orga-coin denominated in Share.  A shareholding corporation is a corporation with two roles, shareholder, held by every person who holds a share of Orga, and director; the shareholders decide by a majority of the shares they hold, and the directors jointly decide the other acts of Orga.
-Alice and Bob are persons, Orga a shareholding corporation.
-1. ■ Founding.  Alice may found Orga, which issues a number of shares to her, and become its first director.
-2. ■ Shares.  Orga may issue shares by a decision of the shareholders; Bob is a shareholder while he holds one.
-3. ■ Directors.  The shareholders may elect a participant a director, and remove a director.
-4. ■ Dividend.  The directors may decide a dividend, a number of Dollars a share, a shareholder may then claim it from Orga, once, in Dollar-denominated coins for the shares they hold.
-5. ■ Redemption.  DGC:6, for a coin of a denomination other than Share.
-Pragmas
+SC instantiates GCorp with shareholding corporation bylaws and restricts and extends it.
+*Share* is a denomination, and a *share* of Orga is an Orga-coin denominated in Share. A *shareholding corporation* is a corporation whose bylaws name two roles, *shareholder*, held by every person who holds a share of Orga, and *director*, held by its first officer; the shareholders decide the issue of shares and the appointment and the removal of directors, by a majority of the shares they hold, and the directors jointly decide the other acts of Orga.
+Orga is a shareholding corporation.
+1. ■ Issue shares: Those who decide the issue of shares may issue a number of shares of Orga to a person known to Orga; the first shares are issued to its first officer.
+2. ■ Dividend. Set dividend: The directors may set a dividend, a number of Dollars a share. Claim: A shareholder may then claim it from Orga, once, in Dollar-denominated coins for the shares they hold.
+3. ■ Redeem: GC:4 and GB:3, only if the coin is of a denomination other than Share.
+Logic pragmas
+SC instantiates GCorp with shareholding corporation bylaws; x is a director of z for x is entitled to propose m in z; x is a director of z for x is entitled to take m for z; x is a director of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, More is Votes plus 1 and z has fewer than More persons in the role Director for the votes decide m according to the bylaws of z, and restricts and extends it.
+*Share* is a denomination, and a *share* of Orga is an Orga-coin denominated in Share. A *shareholding corporation* is a corporation whose bylaws name two roles, *shareholder*, held by every person who holds a share of Orga, and *director*, held by its first officer; the shareholders decide the issue of shares and the appointment and the removal of directors, by a majority of the shares they hold, and the directors jointly decide the other acts of Orga.
+Alice, Bob, Carol and Erin are persons, Orga a shareholding corporation, Dollar a denomination, Div a dividend, a number of Dollars a share, Sum, Held, Total, Votes and More numbers; Carol is possibly Alice, Bob or Orga.
+1. ■ Issue shares: Alice may issue Sum shares of Orga to Bob, provided Alice is a director of Orga, Orga is an organisation, Orga knows Bob and the votes to issue Sum shares of Orga to Bob carry a majority of the shares of Orga. Vote on issue: Erin may vote to issue Sum shares of Orga to Bob, provided Erin holds a share of Orga and Orga knows Bob. Vote on first issue: Erin may vote to issue Sum shares of Orga to Bob, provided Orga has Erin as its first officer, Orga has not issued shares and Orga knows Bob. The first shares are issued to its first officer.
+2. ■ Dividend. Set dividend: Alice may set Div as a dividend of Orga, provided Alice is a director of Orga, Orga holds the votes of at least Votes persons to set Div as a dividend, More is Votes plus 1 and Orga has fewer than More persons in the role Director. Vote on dividend: Erin may vote to set Div as a dividend of Orga, provided Erin is a director of Orga. Claim: Bob may claim Total Dollar-denominated Carol-coins from Orga as the dividend Div, provided Bob holds a share of Orga, Bob holds exactly Held shares of Orga, Orga has Div as a dividend, Total is Held times Div, Carol has issued coins of the denomination Dollar and Bob accepts a Dollar-denominated Carol-coin in payment. Claim own coins: Bob may claim Total Dollar-denominated Bob-coins from Orga as the dividend Div, provided Bob holds a share of Orga, Bob holds exactly Held shares of Orga, Orga has Div as a dividend, Total is Held times Div, Bob has issued coins of the denomination Dollar and Bob accepts a Dollar-denominated Bob-coin in payment. Claim coins of the corporation: Bob may claim Total Dollar-denominated Orga-coins from Orga as the dividend Div, provided Bob holds a share of Orga, Bob holds exactly Held shares of Orga, Orga has Div as a dividend, Total is Held times Div, Orga has issued coins of the denomination Dollar and Bob accepts a Dollar-denominated Orga-coin in payment.
+3. ■ Redeem: GB:3 Redeem, only if the Bob-coin that Alice redeems is of a denomination other than Share. Redeem coin against bond: GB:3 Redeem coin against bond, only if the Bob-coin that Alice redeems is of a denomination other than Share.
+Logic pragmas.
+Vocabulary: z has issued shares = issued_shares(z); x holds a share of z = share(x,z); x holds n shares of z = share(x,z,*n); x holds exactly n shares of z = share(x,z,#n); z has v as a dividend = dividend(z,v); z has paid y the dividend v in the denomination f = paid_dividend(z,y,v,f); the y-coin that x redeems is of a denomination other than Share = other_denomination(x,y,Share); z holds v's vote to set u as a dividend = vote_dividend(z,v,u); z holds v's vote to issue n shares of z to y = vote_issue(z,v,y,n); the votes to issue n shares of z to y carry a majority of the shares of z = share_majority(z,y,n).
+Roles: the directors of z = directors(z).
+x is a director of z: x holds the role Director in z.
+After v votes to issue n shares of z to y, which requires z does not hold v's vote to issue n shares of z to y: z holds v's vote to issue n shares of z to y.
+After x issues n shares of z to y: y holds n shares of z, z has issued shares and z holds no one's vote to issue n shares of z to y.
+After w votes to set u as a dividend of z, which requires z does not hold w's vote to set u as a dividend: z holds w's vote to set u as a dividend.
+After x sets v as a dividend of z, which requires z does not have v as a dividend: z has v as a dividend and z holds no one's vote to set v as a dividend.
+After y claims n f-denominated w-coins from z as the dividend v, which requires z has not paid y the dividend v in the denomination f: no longer z holds n w-coins, y holds n w-coins and z has paid y the dividend v in the denomination f.
+Environment: the y-coin that x redeems is of a denomination other than Share; the votes to issue n shares of z to y carry a majority of the shares of z.
+Interface pragmas
 Look: 📈, money
-Organisations: the organisations Alice participates in, and her roles in each.
-Coins: the coins Alice holds.
-Bonds: the bonds Alice holds.
 Shareholdings: the shares Alice holds.
-Identity: Alice [Establish]
-Acquaintance: Alice [Acquaint] <person Bob>
-  Bob: Alice asks you to approve this: acquaint.
-Introduction: Alice [Introduce]
-  Bob: Alice asks you to approve this: introduce.
-Friendship: Alice [Befriend]
-  Bob: Alice asks you to approve this: befriend.
-Ending a friendship: Alice [Unfriend]
-Acts of the organisation: Alice [Sign] <act>
-  Bob [Propose]
-  Bob [Vote] <act>
-  Bob [Sc vote] <act>
-  Otto [Move org acquaint] <motion>
-  Otto [Move orgs acquaint] <motion>
-  Bruno [Moveb orgs acquaint] <motion of the other organisation>
-  Otto [Move org befriend] <role> <motion>
-  Otto [Move org unfriend] <motion>
-  Otto [Move orgs befriend] <role> <role> <motion>
-  Bruno [Moveb orgs befriend] <role> <role> <motion of the other organisation>
-  Otto [Move retire] <motion>
-  Otto [Move join] <motion>
-  Otto [Move expel] <motion>
-  Otto [Move appoint] <role> <motion>
-  Otto [Move dismiss] <role> <motion>
-  Otto [Move amend] <bylaws> <new bylaws> <motion>
-  Otto [Move sc issue] <amount> <shares> <motion>
-  Otto [Move sc dividend] <deal> <coins each> <motion>
-Creation: Alice [Found] <organisation> <shares>
-  Orga: Alice asks you to approve this: found.
-Ward and person: Otto [Org acquaint] <person Bob>
-  Bob: Otto asks you to approve this: org acquaint.
-  Otto [Org befriend] <person Bob> <person Alice> <role>
-  Bob: Otto asks you to approve this: org befriend.
-  Alice: Otto asks you to approve this: org befriend.
-  Otto [Org unfriend] <person Bob>
-Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <role>
-  Bruno: Otto asks you to approve this: orgs acquaint.
-  Otto [Orgs befriend] <other organisation> <person Alice> <person Bob> <person Bruno> <role of Alice> <role of Bob> <role of Bruno>
-  Bruno: Otto asks you to approve this: orgs befriend.
-  Alice: Otto asks you to approve this: orgs befriend.
-  Bob: Otto asks you to approve this: orgs befriend.
-Joint guardianship: Bob [Officer unfriend]
-  Otto [Appoint] <person Bob> <role>
-  Bob: Otto asks you to approve this: appoint.
-  Otto [Dismiss] <person Bob> <role>
-  Bob [Resign role]
-Retiring: Otto [Retire]
-Participation: Bob [Join] <person Otto>
-  Otto: Bob asks you to approve this: join.
-  Bob [Leave]
-  Otto [Expel] <person Bob>
-Amendment: Otto [Amend] <new bylaws>
-Minting: Alice [Mint coin] <denomination> <amount>
-  Alice [Mint bond] <denomination> <maturity> <amount>
-Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
-  Bob: Alice asks you to approve this: swap.
-Acceptance: Alice [Accept] <limit>
-Payment: Alice [Pay] <amount>
-  Alice [Payout] <amount>
-  Alice [Spend] <person Bob> <amount>
-Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
-Escrow: Alice [Deposit] <amount>
-  Carol: Alice asks you to approve this: deposit.
-  Carol [Release] <amount>
-  Bob: Carol asks you to approve this: release.
-  Carol [Return] <amount>
-  Alice: Carol asks you to approve this: return.
-Shares: Otto [Sc issue] <amount> <first night>
-Dividend: Otto [Sc dividend] <deal> <coins each>
-  Bob [Sc claim] <denomination> <deal> <amount>
+Issue shares: Alice [Issue shares] <person> <amount>
+  Erin [Vote on issue] <person> <amount> [Vote on first issue] <organisation> <person> <amount>
+Dividend: Alice [Set dividend] <dividend> <votes>
+  Erin [Vote on dividend] <dividend>
+  Bob [Claim] <total> <dividend>

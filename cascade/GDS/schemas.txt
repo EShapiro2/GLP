@@ -1,70 +1,23 @@
-Reflexive predicates: friend, knows
-
-establish: identity(Alice), person(Alice) <-
-    not identity(Alice) guarded by Alice
-
-acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), person(Alice), identity(Bob), person(Bob) guarded by Alice, Bob
-
-introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), person(Alice), identity(Bob), knows(Bob, Alice), person(Bob), identity(Carol), person(Carol) guarded by Alice, Bob
-
-befriend: friend(Alice, Bob), friend(Bob, Alice) <-
-    identity(Alice), knows(Alice, Bob), person(Alice), not friend(Alice, Bob), identity(Bob), knows(Bob, Alice), person(Bob), not friend(Bob, Alice) guarded by Alice, Bob
-
-unfriend: not friend(Alice, Bob), not friend(Bob, Alice) <-
-    identity(Alice), person(Alice), friend(Alice, Bob), not guardian_of(Alice, Bob), identity(Bob), friend(Bob, Alice) guarded by Alice
-
-enter: created(Alice, Carol), guardian_of(Alice, Carol), friend(Alice, Carol), knows(Alice, Carol), identity(Carol), service(Carol), creator(Carol, Alice), guarded_by(Carol, Alice), friend(Carol, Alice), knows(Carol, Alice) <-
-    identity(Alice), person(Alice), not identity(Carol) guarded by Alice, Carol
-
-make_guardian: guardian_of(Bob, Carol), friend(Bob, Carol), knows(Bob, Carol), guarded_by(Carol, Bob), friend(Carol, Bob), knows(Carol, Bob) <-
-    identity(Bob), person(Bob), not guardian_of(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), friend(Alice, Bob), identity(Carol), service(Carol), guarded_by(Carol, Alice), not guarded_by(Carol, Bob), not friend(Carol, Bob), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Bob, Alice, Erin
-
-end_guardian: not guardian_of(Bob, Carol), not guarded_by(Carol, Bob) <-
-    identity(Alice), person(Alice), guardian_of(Alice, Carol), identity(Bob), person(Bob), guardian_of(Bob, Carol), identity(Carol), guarded_by(Carol, Alice), guarded_by(Carol, Bob), forall Erin (guarded_by(Carol, Erin), Erin != Bob -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Alice, Erin
-
-resign: not guardian_of(Bob, Carol), not guarded_by(Carol, Bob) <-
-    identity(Bob), person(Bob), guardian_of(Bob, Carol), identity(Carol), guarded_by(Carol, Bob) guarded by Bob
-
-guardian_unfriend: not friend(Bob, Carol), not guardian_of(Bob, Carol), not friend(Carol, Bob), not guarded_by(Carol, Bob) <-
-    identity(Bob), person(Bob), friend(Bob, Carol), guardian_of(Bob, Carol), identity(Carol), friend(Carol, Bob), guarded_by(Carol, Bob) guarded by Bob
-
-ward_acquaint: knows(Carol, Bob), knows(Bob, Carol) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Bob), person(Bob) guarded by Carol, Bob
-
-ward_befriend: friend(Carol, Bob), friend(Bob, Carol) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), knows(Carol, Bob), not friend(Carol, Bob), identity(Bob), knows(Bob, Carol), person(Bob), not friend(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), friend(Alice, Bob) guarded by Carol, Bob, Alice
-
-ward_unfriend: not friend(Carol, Bob), not friend(Bob, Carol) <-
-    identity(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol) guarded by Alice
-
-ward_end: not friend(Carol, Bob), not friend(Bob, Carol) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), friend(Carol, Bob), not guarded_by(Carol, Bob), identity(Bob), friend(Bob, Carol) guarded by Carol
-
-wards_acquaint: knows(Carol, Dave), knows(Dave, Carol) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Dave), service(Dave), guarded_by(Dave, Bob) guarded by Carol, Dave
-
-wards_befriend: friend(Carol, Dave), friend(Dave, Carol) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), knows(Carol, Dave), not friend(Carol, Dave), identity(Dave), service(Dave), guarded_by(Dave, one(Bob, Alice)), knows(Dave, Carol), not friend(Dave, Carol), identity(Alice), person(Alice), guardian_of(Alice, Carol), knows(Alice, Dave), friend(Alice, one(Bob, Alice)), identity(one(Bob, Alice)), person(one(Bob, Alice)), guardian_of(one(Bob, Alice), Dave) guarded by Carol, Dave, Alice, one(Bob, Alice)
-
-retire: retired(Carol), not friend(Carol, _), not guarded_by(Carol, _), forall Bob (friend(Carol, Bob) -> not friend(Bob, Carol)), forall Erin (guarded_by(Carol, Erin) -> not guardian_of(Erin, Carol)) <-
-    identity(Carol), service(Carol), guarded_by(Carol, Alice), identity(Alice), person(Alice), guardian_of(Alice, Carol), forall Bob (friend(Carol, Bob) -> identity(Bob), friend(Bob, Carol)), forall Erin (guarded_by(Carol, Erin) -> identity(Erin), person(Erin), guardian_of(Erin, Carol)) guarded by Alice, Erin
-
-open_directory: directory(Dora) <-
-    identity(Carol), person(Carol), guardian_of(Carol, Dora), identity(Dora), service(Dora), guarded_by(Dora, Carol), not directory(Dora) guarded by Carol, Dora
-
-list: listed_with(Alice, Dora), listed(Dora, Alice, e, n) <-
-    identity(Alice), person(Alice), knows(Alice, Dora), not listed_with(Alice, Dora), identity(Dora), service(Dora), guarded_by(Dora, Carol), directory(Dora), not listed(Dora, Alice, _, _), not unlisted(Dora, Alice, _, _) guarded by Alice, Dora
-
-list_unlisted: listed_with(Alice, Dora), unlisted(Dora, Alice, e, n) <-
-    identity(Alice), person(Alice), knows(Alice, Dora), not listed_with(Alice, Dora), identity(Dora), service(Dora), guarded_by(Dora, Carol), directory(Dora), not listed(Dora, Alice, _, _), not unlisted(Dora, Alice, _, _) guarded by Alice, Dora
-
-unlist: not listed_with(Alice, Dora), not listed(Dora, Alice, _, _), not unlisted(Dora, Alice, _, _) <-
-    identity(Alice), person(Alice), listed_with(Alice, Dora), identity(Dora), directory(Dora) guarded by Alice
-
-lookup: contact(Bob, a) <-
-    identity(Bob), person(Bob), knows(Bob, Dora), not contact(Bob, a), identity(Dora), service(Dora), guarded_by(Dora, Carol), directory(Dora), listed(Dora, a, e, n) guarded by Bob, Dora
-
-lookup_unlisted: contact(Bob, a) <-
-    identity(Bob), person(Bob), knows(Bob, Dora), not contact(Bob, a), identity(Dora), service(Dora), guarded_by(Dora, Carol), directory(Dora), unlisted(Dora, a, e, n) guarded by Bob, Dora
+GDS: Grassroots Directory Service
+GDS extends GRV.
+Vocabulary: d is a directory = directory(d); d lists x by e under m on its page = lists_shown(d,x,e,m); d lists x by e under m off its page = lists_unshown(d,x,e,m); y holds an invitation link of x from d = holds_link(y,x,d).
+After x makes d a directory, which requires d is not a directory: d is a directory.
+After x lists with d by e under m on its page, which requires d does not list x by e under m on its page: d lists x by e under m on its page.
+After x lists with d by e under m off its page, which requires d does not list x by e under m off its page: d lists x by e under m off its page.
+After x delists from d by e under m on its page: no longer d lists x by e under m on its page.
+After x delists from d by e under m off its page: no longer d lists x by e under m off its page.
+After y looks x up on d's page: y holds an invitation link of x from d.
+After y looks x up with d by address: y holds an invitation link of x from d.
+GDS:0 - | A *directory* is a service with a page every person can read.
+GDS:0 - | Alice, Bob and Carol are persons, Dora a service, Mail an email address, Name a name.
+GDS:1 ■ Open directory: directory(Dora) <- guardian(Carol,Dora), ~directory(Dora) guarded by Carol.
+GDS:2 ■ | Listing.
+GDS:2 ■ List: lists_shown(Dora,Alice,Mail,Name) <- directory(Dora), knows(Alice,Dora), ~lists_shown(Dora,Alice,Mail,Name) guarded by Alice, Dora.
+GDS:2 ■ List unshown: lists_unshown(Dora,Alice,Mail,Name) <- directory(Dora), knows(Alice,Dora), ~lists_unshown(Dora,Alice,Mail,Name) guarded by Alice, Dora.
+GDS:2 ■ | Dora consents having verified Mail as an email address of Alice.
+GDS:2 ■ | Alice lists with a name if she chooses, shown on Dora's page or not, and her app then keeps Dora supplied with invitation links of hers.
+GDS:2 ■ Delist: ~lists_shown(Dora,Alice,Mail,Name) <- lists_shown(Dora,Alice,Mail,Name) guarded by Alice.
+GDS:2 ■ Delist unshown: ~lists_unshown(Dora,Alice,Mail,Name) <- lists_unshown(Dora,Alice,Mail,Name) guarded by Alice.
+GDS:3 ■ Lookup: holds_link(Bob,Alice,Dora) <- knows(Bob,Dora), lists_shown(Dora,Alice,Mail,Name) guarded by Bob.
+GDS:3 ■ Lookup by address: holds_link(Bob,Alice,Dora) <- knows(Bob,Dora), lists_unshown(Dora,Alice,Mail,Name) guarded by Bob.
+GDS:3 ■ | Bob looks Alice up on Dora's page if she is shown there, and by her email address and name if not.

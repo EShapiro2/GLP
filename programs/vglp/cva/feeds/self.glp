@@ -1,0 +1,49 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract feeds
+%% (../contracts.glp, contract_named(feeds, C): befriend, post and an
+%% unguarded deliver whose opener's state it does not change), platform.vglp,
+%% which programs/vglp/cva/compile.sh prints from it.
+%%
+%% play_feeds: alice and bob befriend, and bob posts an item.  Bob's machine
+%%   opens deliver(bob, alice, item), unguarded, which requires the item at
+%%   bob and forbids it at alice, and adds it at alice: it commits.  Bob's
+%%   state is as it was, so he is ready for the part still and proposes it
+%%   once more; alice, who holds the item now, refuses as unable; and bob
+%%   proposes it no more until her ready comes, which it does not, so the run
+%%   suspends (vGLP, Definition "Proposing", Propose: "where another
+%%   participant q refused p's last attempt beta of [t]_j as unable, p has
+%%   recorded ready(beta, q)").  Before 2026-11-15 he proposed it again
+%%   without end (GFF's Deliver; GFF #6, vGLP_inbox, 2026-11-15 21:54 UTC).
+%% ---------------------------------------------------------------------------
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_feeds(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_feeds(LA?, LB?, N?) :-
+    pair([own([A1], propose(befriend(A1?, bob)))],
+         [approval(befriend(alice, bob), yes),
+          wait(holds(friend(alice))),
+          own([B1, B2], propose(post(B1?, speech(utterance(hi), B2?))))],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).

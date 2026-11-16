@@ -1,0 +1,9 @@
+OC: Organisations in a Currency, on Votes
+OC extends MO and CUR.
+Vocabulary: x holds a badge of z = badge(x,z).
+After x grants y a badge of z: y holds a badge of z.
+OC:0 - | Erin and Frank are persons, Alice and Bob organisations, Orga an organisation, Sum and Total numbers.
+OC:1 ■ Pay for an organisation: CUR:1 Pay, taken for Alice by Erin, on the votes of Alice <- member(Erin,Alice).
+OC:2 ■ Grant: badge(Bob,Orga) <- member(Alice,Orga) guarded by Alice on the votes of Orga.
+OC:3 ■ Swap of two organisations: CUR:2 Swap, taken for Alice by Erin and for Bob by Frank, on the votes of Alice and of Bob <- member(Erin,Alice), member(Frank,Bob).
+OC:3 ■ Swap for Alice: CUR:2 Swap, taken for Alice by Erin, on the votes of Alice <- member(Erin,Alice).

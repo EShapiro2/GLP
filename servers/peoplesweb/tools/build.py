@@ -114,9 +114,51 @@ def parse_rules(text):
     return header, out
 
 
+CALC_LINE = re.compile(r'^([A-Za-z]+(?:-[A-Za-z]+)*):(\d+) (\S) (.*)$')
+
+
+def parse_calculus(text):
+    """The schemas as the Calculus's tools print them (schemas.txt and
+    full-schemas.txt of a contract adopted from the Calculus): a line for each
+    speech act, 'GSG:1 ○ Befriend: heads <- body guarded by Alice, Bob.',
+    labelled by the contract and clause it is from, a head or a body atom
+    '~A' its negation; a line 'GSG:1 ○ | ...' is the clause's prose, and the
+    lines with no label, the title and the Logic pragmas, are the header."""
+    header, out = [], []
+    for line in text.split('\n'):
+        if not line.strip():
+            continue
+        m = CALC_LINE.match(line)
+        if not m:
+            header.append(line.strip())
+            continue
+        rest = m.group(4)
+        r = re.match(r'^([^|:][^:]*): (.*?)\s*<-\s*(.*?)\.?$', rest)
+        if rest.startswith('|') or not r:
+            continue
+        body, sep, g = r.group(3).rpartition('guarded by ')
+        if not sep:
+            body, g = r.group(3), ''
+        heads, needs = split_top(r.group(2)), split_top(body)
+        out.append({'name': r.group(1), 'head': f"{r.group(1)}: {r.group(2)}", 'form': 'rule',
+                    'origin': m.group(1), 'clause': int(m.group(2)),
+                    'adds': [h for h in heads if not h.startswith('~')],
+                    'removes': [h[1:] for h in heads if h.startswith('~')],
+                    'body': body.strip(), 'needs': ['not ' + n[1:] if n.startswith('~') else n for n in needs],
+                    'guarded': [x.strip() for x in g.split(',') if x.strip()]})
+    return header, out
+
+
 def parse_schemas(path):
     """schemas.txt, as cascade.sh prints it, into heads and roles: the form
-    by roles of the records before 2026-11, or the form by rules since."""
+    by roles of the records before 2026-11, or the form by rules since; and,
+    of a contract adopted from the Calculus, the Calculus's form, read from
+    full-schemas.txt beside it where it is, which has the acts of the
+    contracts it is written from, each labelled by its origin."""
+    full = os.path.join(os.path.dirname(path), 'full-schemas.txt')
+    for q in (full, path):
+        if os.path.exists(q) and any(CALC_LINE.match(l) for l in read(q).split('\n')):
+            return parse_calculus(read(q))
     if not os.path.exists(path): return [], []
     if re.search(r'^[a-z_0-9]+: .*<-\s*$', read(path), re.M):
         return parse_rules(read(path))
@@ -150,16 +192,23 @@ def contract_text(path):
     meta = [l for l in lines if l.startswith('%')]
     body = [l for l in lines if l.strip() and not l.startswith('%')]
     name, title = body[0].split(': ', 1)
-    # The pragmas follow the clauses under 'Pragmas', or under 'Interface
-    # pragmas' and 'Implementation pragmas', their two kinds (GSC's Section 2;
+    # The pragmas follow the clauses.  A contract adopted from the Calculus
+    # (calculus/MIGRATION.md) has its Logic pragmas after its clauses, under
+    # 'Logic pragmas', and its Interface pragmas after them; an earlier text
+    # has them under 'Pragmas', or under 'Interface pragmas' and
+    # 'Implementation pragmas', their two kinds (GSC's Section 2;
     # Coordination, to_all 2026-11-07 22:13 UTC), the headings kept among them.
     heads = ('Pragmas', 'Interface pragmas', 'Implementation pragmas')
+    box = next((i for i, l in enumerate(body) if l.strip() in heads + ('Logic pragmas',)), len(body))
     end = next((i for i, l in enumerate(body) if l.strip() in heads), len(body))
     clauses, preamble = [], []
-    for l in body[1:end]:
-        m = re.match(r'(\d+)\. (\S) (.+?)\.\s+(.*)$', l)
+    for l in body[1:box]:
+        # A clause's title ends with a full stop, or, in the Calculus's text,
+        # where the title is the clause's act, with a colon; 'sep' keeps
+        # which, so the page prints the clause as it is written.
+        m = re.match(r'(\d+)\. (\S) (.+?)([.:])\s+(.*)$', l)
         if m:
-            clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'text': m.group(4)})
+            clauses.append({'n': int(m.group(1)), 'mod': m.group(2), 'name': m.group(3), 'sep': m.group(4), 'text': m.group(5)})
         elif not clauses:
             # Every line of the box before its clauses, in its order: the
             # extension line, the definitions that are part of the contract
@@ -367,6 +416,10 @@ for n in sorted(set(compiled) | set(cat)):
 
 for c in contracts:
     for s in c['schemas']:
+        # The Calculus's form names each act's origin itself.
+        if s.get('origin'):
+            s['from'] = s.pop('origin')
+            continue
         s['from'] = c['id']
         for a in ancestors(c['id']):
             if a in shown and any(x['name'] == s['name'] for x in next(k for k in contracts if k['id'] == a)['schemas']):
