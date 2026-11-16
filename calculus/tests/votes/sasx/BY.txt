@@ -5,13 +5,13 @@ MO:1 ■ Vote: vote(Orga,Bob,Motion) <- member(Bob,Orga), ~vote(Orga,Bob,Motion)
 CUR:0 - | Alice and Bob are persons, Sum and Total numbers.
 CUR:1 ■ Pay: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum) guarded by Alice.
 CUR:1+OC:1 ■ Pay for an organisation: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~vote_pay_alice(Alice,_,Bob,Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum), member(Erin,Alice), vote_pay_alice(Alice,>=VotesAlice,Bob,Sum), product(DoubleAlice,VotesAlice,2), has_participant(Alice,<DoubleAlice) guarded by Erin taken for Alice by Erin.
-OC:1 ■ Vote of Alice for Pay: vote_pay_alice(Alice,Voter,Bob,Sum) <- member(Voter,Alice), ~vote_pay_alice(Alice,Voter,Bob,Sum) guarded by Voter.
+OC:1 ■ Vote of Alice for Pay: vote_pay_alice(Alice,Voter,Bob,Sum) <- member(Voter,Alice), knows(Alice,Bob), ~vote_pay_alice(Alice,Voter,Bob,Sum) guarded by Voter.
 CUR:2 ■ Swap: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total) guarded by Alice, Bob.
 CUR:2+OC:3 ■ Swap of two organisations: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total), ~vote_swap_alice(Alice,_,Bob,Sum,Total), ~vote_swap_bob(Bob,_,Alice,Sum,Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), member(Erin,Alice), member(Frank,Bob), vote_swap_alice(Alice,>=VotesAlice,Bob,Sum,Total), product(DoubleAlice,VotesAlice,2), has_participant(Alice,<DoubleAlice), vote_swap_bob(Bob,>=VotesBob,Alice,Sum,Total), product(DoubleBob,VotesBob,2), has_participant(Bob,<DoubleBob) guarded by Erin, Frank taken for Alice by Erin and for Bob by Frank.
-OC:3 ■ Vote of Alice for Swap: vote_swap_alice(Alice,Voter,Bob,Sum,Total) <- member(Voter,Alice), ~vote_swap_alice(Alice,Voter,Bob,Sum,Total) guarded by Voter.
-OC:3 ■ Vote of Bob for Swap: vote_swap_bob(Bob,Voter,Alice,Sum,Total) <- member(Voter,Bob), ~vote_swap_bob(Bob,Voter,Alice,Sum,Total) guarded by Voter.
+OC:3 ■ Vote of Alice for Swap: vote_swap_alice(Alice,Voter,Bob,Sum,Total) <- member(Voter,Alice), knows(Alice,Bob), ~vote_swap_alice(Alice,Voter,Bob,Sum,Total) guarded by Voter.
+OC:3 ■ Vote of Bob for Swap: vote_swap_bob(Bob,Voter,Alice,Sum,Total) <- member(Voter,Bob), knows(Bob,Alice), ~vote_swap_bob(Bob,Voter,Alice,Sum,Total) guarded by Voter.
 CUR:2+OC:3 ■ Swap for Alice: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total), ~vote_swap_alice(Alice,_,Bob,Sum,Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), member(Erin,Alice), vote_swap_alice(Alice,>=VotesAlice,Bob,Sum,Total), product(DoubleAlice,VotesAlice,2), has_participant(Alice,<DoubleAlice) guarded by Erin, Bob taken for Alice by Erin.
 OC:0 - | Erin and Frank are persons, Alice and Bob organisations, Orga an organisation, Sum and Total numbers.
 OC:2 ■ Grant: badge(Bob,Orga), ~vote_grant_orga(Orga,_,Alice,Bob) <- member(Alice,Orga), vote_grant_orga(Orga,>=VotesOrga,Alice,Bob), product(DoubleOrga,VotesOrga,2), has_participant(Orga,<DoubleOrga) guarded by Alice.
-OC:2 ■ Vote of Orga for Grant: vote_grant_orga(Orga,Voter,Alice,Bob) <- member(Voter,Orga), ~vote_grant_orga(Orga,Voter,Alice,Bob) guarded by Voter.
+OC:2 ■ Vote of Orga for Grant: vote_grant_orga(Orga,Voter,Alice,Bob) <- member(Voter,Orga), knows(Orga,Alice), knows(Orga,Bob), ~vote_grant_orga(Orga,Voter,Alice,Bob) guarded by Voter.
 BY:0 - | Votes and Double are numbers.

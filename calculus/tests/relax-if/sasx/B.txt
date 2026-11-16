@@ -1,0 +1,3 @@
+B: Base (expanded schemas)
+B:0 - | Alice, Bob and Carol are persons, Sum a number.
+B:1 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob.

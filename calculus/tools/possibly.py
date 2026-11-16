@@ -69,7 +69,7 @@ EXEMPT = {
     ('GSN:4', 'Deliver', 'Alice=Carol'): 'GSN:4 Deliver leader, the leader\'s own receipt of each post (GSN:4: "Its leader delivers it to every current member").',
     ('LDAO:1', 'Delegate own', 'Alice=Dave'): 'LDAO\'s names line, "Carol or Dave possibly Alice": in Delegate own Alice is also Carol, and Carol and Dave are not possibly one person.',
     ('LDAO:1', 'Delegate to the steward', 'Alice=Carol'): 'LDAO\'s names line, "Carol or Dave possibly Alice": in Delegate to the steward Alice is also Dave, and Carol and Dave are not possibly one person.',
-    ('AGORA:4', 'Deliver to poster', 'Alice=Carol'): 'AGORA:4: "The keeper delivers it to every member but the keeper, the poster included."',
+    ('Agora:4', 'Deliver to poster', 'Alice=Carol'): 'Agora:4: "The keeper delivers it to every member but the keeper, the poster included."',
 }
 
 

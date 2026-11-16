@@ -1,0 +1,4 @@
+R: Restricted
+Of B: Alice, Bob and Carol are persons, Sum a number.
+Of R: Alice, Bob and Carol are persons, Sum a number.
+B:1, R:1. ■ Pay checked: Alice may pay Bob Sum Carol-coins, with the consent of Bob, provided Alice knows Bob and Bob knows Alice.

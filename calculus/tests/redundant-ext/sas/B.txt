@@ -1,0 +1,5 @@
+B: Base
+Vocabulary: x knows y = knows(x,y); x holds n y-coins = coin(x,y,*n).
+After x pays y n z-coins: no longer x holds n z-coins and y holds n z-coins.
+B:0 - | Alice, Bob and Carol are persons, Sum a number.
+B:1 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob.

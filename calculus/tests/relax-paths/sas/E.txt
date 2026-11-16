@@ -1,0 +1,6 @@
+E: Both paths
+E extends C and R.
+Vocabulary: x has greeted y = greeted(x,y).
+After x greets y: x has greeted y.
+E:0 - | Alice, Bob and Carol are persons, Sum a number.
+E:1 ■ Greet: greeted(Alice,Bob) <- guarded by Alice.

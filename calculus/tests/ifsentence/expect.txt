@@ -1,0 +1,195 @@
+GKK        commute yes; return yes; recover same
+GSG        commute yes; return yes; recover same
+GSN        commute yes; return yes; recover equivalent
+3 contracts, 0 with a fault
+--- sasx/GKK.txt
+GKK: Grassroots Keys and Knowledge (expanded schemas)
+GKK:0 - | An *identity* is a unique key pair.
+GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | Alice, Bob and Carol are persons.
+GKK:0 - | Reflexive: x knows y.
+GKK:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+--- sasx/GSG.txt
+GSG: Grassroots Social Graph (expanded schemas)
+GKK:0 - | An *identity* is a unique key pair.
+GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | Alice, Bob and Carol are persons.
+GKK:0 - | Reflexive: x knows y.
+GKK:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+GSG:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+GSG:0 - | Alice and Bob are persons.
+GSG:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+GSG:1 ○ | Alice and Bob will become friends only if they trust each other.
+GSG:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+GSG:3 ○ | Loss of Trust.
+GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+--- sasx/GSN.txt
+GSN: Grassroots Social Network (expanded schemas)
+GKK:0 - | An *identity* is a unique key pair.
+GKK:0 - | A *party* to a contract is whoever has an identity.
+GKK:0 - | Alice, Bob and Carol are persons.
+GKK:0 - | Reflexive: x knows y.
+GKK:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+GSG:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+GSG:0 - | Alice and Bob are persons.
+GSG:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+GSG:1 ○ | Alice and Bob will become friends only if they trust each other.
+GSG:2+GSN:3 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice), ~member(Alice,_,Bob), ~member(Bob,_,Alice), ~listed(Alice,Bob,_), ~listed(Bob,Alice,_) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+GSG:3 ○ | Loss of Trust.
+GSG:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+GSN:0 - | A *message*, a parameter of GSN, is what a person sends.
+GSN:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+GSN:1 ■ Message: message(Bob,Alice,Text) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice possibly Alice=Bob.
+GSN:2 ■ | Group.
+GSN:2 ■ Create: leader(Alice,Grupo), member(Alice,Grupo,Alice), listed(Alice,Alice,Grupo) <- ~leader(Alice,Grupo) guarded by Alice.
+GSN:2 ■ | Alice is then its leader and first member.
+GSN:2 ■ Close: ~leader(Alice,Grupo), ~listed(Alice,_,Grupo), ~member(_,Grupo,Alice) <- leader(Alice,Grupo) guarded by Alice.
+GSN:3 ■ | Joining and Leaving.
+GSN:3 ■ Join: member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_) guarded by Alice, Bob possibly Alice=Bob.
+GSN:3 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Alice possibly Alice=Bob.
+GSN:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+GSN:4 ■ | Group messaging.
+GSN:4 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+GSN:4 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo) guarded by Alice.
+GSN:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+GSN:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.
+--- expand.py: exit 0; --check: exit 0
+--- exp/GKK.txt
+% Written by tools/expand.py from rev/; do not edit.
+GKK: Grassroots Keys and Knowledge
+An *identity* is a unique key pair.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity.
+GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+--- exp/GSG.txt
+% Written by tools/expand.py from rev/; do not edit.
+GSG: Grassroots Social Graph
+An *identity* is a unique key pair.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons.
+GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+GSG:2. ■ Unfriend: Alice may end her friendship with Bob.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+--- exp/GSN.txt
+% Written by tools/expand.py from rev/; do not edit.
+GSN: Grassroots Social Network
+An *identity* is a unique key pair.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+A *message*, a parameter of GSN, is what a person sends.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons.
+GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+GSG:2. ■ Unfriend: Alice may end her friendship with Bob.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+GSN:1. ■ Message: Alice may send a message to her friend Bob.
+GSN:2. ■ Group. Create: Alice may create a group, of which she is the leader and first member. Close: Alice may close the group by leaving it.
+GSN:3. ■ Joining and Leaving. Join: Alice, the leader of a group, may add her friend Bob to it, with the consent of Bob. Remove, Leave: Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+GSN:4. ■ Group messaging. Post: A member of a group may send a message to the group. Deliver: Its leader delivers it to every current member.
+--- gx/GKK.txt
+GKK: Grassroots Keys and Knowledge
+Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+--- gx/GSG.txt
+GSG: Grassroots Social Graph
+Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
+GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+GSG:2. ■ Unfriend: Alice may end her friendship with Bob.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+--- gx/GSN.txt
+GSN: Grassroots Social Network
+Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of GSG: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
+Of GSN: A *message*, a parameter of GSN, is what a person sends. Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+GSG:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+GSG:2, GSN:3. ■ Unfriend: Alice may end her friendship with Bob, and then Alice is a member of no group of Bob, Bob is a member of no group of Alice, Alice has Bob as a member of no group and Bob has Alice as a member of no group.
+GSG:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+GSN:1. ■ Message: Alice may send Text to Bob, provided Alice and Bob are friends.
+GSN:2. ■ Group. Create: Alice may create Grupo. Alice is then its leader and first member. Close: Alice may close Grupo by leaving it.
+GSN:3. ■ Joining and Leaving. Join: Alice may add Bob to Grupo, with the consent of Bob, provided Alice is the leader of Grupo and Alice and Bob are friends. Remove: Alice may end Bob's membership in Grupo, provided Alice is the leader of Grupo. Leave: Bob may end his membership in Alice's Grupo.
+GSN:4. ■ Group messaging. Post: Bob may send Text to the group Grupo of Alice, provided Bob is a member of the group Grupo of Alice. Post own: Alice may send Text to the group Grupo of Alice, provided Alice is a member of the group Grupo of Alice. Deliver: Alice delivers Text of Bob in Grupo to Carol, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo and Alice has Carol as a member of the group Grupo. Deliver leader: Alice delivers Text of Bob in Grupo to Alice, provided Alice is the leader of Grupo and Alice has the post Text of Bob in Grupo.
+--- interface GKK
+GKK: Grassroots Keys and Knowledge
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+--- interface GSG
+GSG: Grassroots Social Graph
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+--- interface GSN
+GSN: Grassroots Social Network
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+6. ■ Message.  Alice may send a message to her friend Bob.
+7. ■ Create.  Alice may create a group, of which she is the leader and first member.
+8. ■ Close.  Alice may close the group by leaving it.
+9. ■ Join.  Alice, the leader of a group, may add her friend Bob to it, with the consent of Bob.
+10. ■ Remove.  Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+11. ■ Leave.  Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+12. ■ Post.  A member of a group may send a message to the group.
+13. ■ Post own.  A member of a group may send a message to the group.
+14. ■ Deliver.  Its leader delivers it to every current member.
+15. ■ Deliver leader.  Its leader delivers it to every current member.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+Message: Alice [Message]
+Create: Alice [Create]
+Close: Alice [Close]
+Join: Alice [Join]
+  Bob: Alice asks for your consent to join.
+Remove: Alice [Remove]
+Leave: Bob [Leave]
+Post: Bob [Post]
+Post own: Alice [Post own]

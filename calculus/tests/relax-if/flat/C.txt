@@ -1,0 +1,5 @@
+C: Relaxed with a condition (flat text)
+B:0 - | Alice, Bob and Carol are persons, Sum a number.
+B:1 ■ Pay: Alice and Bob may jointly no longer Alice holds Sum Carol-coins and Bob holds Sum Carol-coins, provided Alice knows Bob.
+B:1+C:1 ■ Pay known: Alice may no longer Alice holds Sum Carol-coins and Bob holds Sum Carol-coins, provided Alice knows Bob and Bob knows Alice.
+C:0 - | Alice, Bob and Carol are persons, Sum a number.

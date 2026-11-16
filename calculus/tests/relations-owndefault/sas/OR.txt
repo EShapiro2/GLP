@@ -1,0 +1,5 @@
+OR: Organisation run by its directors
+OR restricts O.
+OR:0 - | Alice is a person, Orga an organisation, Motion a motion.
+OR:0 - | Default: x holds the role Director in z for x is entitled to vote on m in z.
+OR:1 ■ Act: O:1 Act <- role(Alice,Orga,Director).

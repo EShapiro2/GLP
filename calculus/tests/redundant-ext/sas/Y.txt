@@ -1,0 +1,4 @@
+Y: Citing the act removed
+Y restricts X.
+Y:0 - | Alice, Bob and Carol are persons, Sum a number.
+Y:1 ■ Pay thrice: X:1 Pay twice <- knows(Carol,Alice).

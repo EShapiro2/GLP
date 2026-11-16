@@ -1,0 +1,13 @@
+D: Greetings decided by friends (expanded schemas)
+GKK:0 - | An *identity* is a unique key pair.
+GKK:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+GKK:0 - | Alice, Bob and Carol are persons.
+GKK:0 - | Reflexive: x knows y.
+GKK:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+P:0 - | Alice and Bob are persons.
+P:0 - | Default: the friends of z for those who decide for z.
+P:1+D:1 ■ Greet: greeted(Alice,Bob) <- knows(Alice,Bob) guarded by Alice, friends(Bob).
+D:0 - | Alice and Bob are persons.

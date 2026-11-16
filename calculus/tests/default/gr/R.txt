@@ -1,0 +1,8 @@
+R: Ruled
+Alice is a person, Carol a ward.
+1. ■ Retire: Those who decide for Carol may retire Carol.
+Logic pragmas.
+Vocabulary: z has y as a guardian = has_guardian(z,y); z is retired = retired(z).
+Roles: those who decide for z = deciders(z), listed by z has y as a guardian; any guardian of z = any_guardian(z), any one listed by z has y as a guardian.
+After g retires z, which requires z is not retired: z is retired.
+Default: any guardian of z for those who decide for z.

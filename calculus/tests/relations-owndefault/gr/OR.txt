@@ -1,0 +1,6 @@
+OR: Organisation run by its directors
+OR restricts O.
+Alice is a person, Orga an organisation, Motion a motion.
+1. ■ Act: O:1 Act, only if Alice holds the role Director in Orga.
+Logic pragmas.
+Default: x holds the role Director in z for x is entitled to vote on m in z.

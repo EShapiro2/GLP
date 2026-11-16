@@ -1,0 +1,1 @@
+A publication directory, as tools/publish.py writes it: the first line from NAME/logic-pragmas.txt, or NAME/contract.txt where it has none (S2), the schemas from NAME/full-schemas.txt; S1 fails, S2 holds.

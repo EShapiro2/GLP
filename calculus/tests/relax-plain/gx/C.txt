@@ -1,0 +1,4 @@
+C: Relaxed
+Of B: Alice, Bob and Carol are persons, Sum a number.
+Of C: Alice, Bob and Carol are persons, Sum a number.
+B:1, C:1. ■ Pay free: Alice may pay Bob Sum Carol-coins, provided Alice knows Bob.

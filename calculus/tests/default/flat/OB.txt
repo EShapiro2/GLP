@@ -1,0 +1,8 @@
+OB: Organisation with a board (flat text)
+O:0 - | Alice is a person, Orga an organisation, Motion a motion.
+O:0 - | Parameters: x is entitled to vote on m in z; the votes decide m in z.
+O:0 - | Default: x is a member of z for x is entitled to vote on m in z.
+O:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a member for the votes decide m in z.
+O:1 ■ Vote: Alice may Orga holds Alice's vote on Motion, provided Alice holds the role Director in Orga and not Orga holds Alice's vote on Motion.
+O:1 ■ Act: Alice may Orga has Motion taken, provided Alice is a member of Orga, Orga holds the votes of at least Votes persons on Motion, Double is Votes times 2, Orga has fewer than Double persons in the role Director and not Orga has Motion taken.
+OB:0 - | Orga is an organisation.

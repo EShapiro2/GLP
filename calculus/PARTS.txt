@@ -1,47 +1,15 @@
-All 62 contracts, published at one commit (this one), from Calculus code 2307a5b.
+DRAFT, 2026-11-16: 66 contracts, from Calculus code ed9032e7, before their cascade run.  This file is written again when the run is in, with the commit of GLP it ran on, the count certified and the count with a platform.glp that loads.
 
-Run: every contract certified by GLP's checker (GSC) and compiled by vGLP on GLP branch migration: the 39 outside GO's
-family at eaaea850, GO's 22, ORH and the four currencies again at 0a008eb1 (which adds vGLP-arg, the term passed to the
-reader by a file; no tool that changes a platform differs between the two).  62 certified; 54 with a platform.glp that
-loads; 8 parametric, with no platform until instantiated: GO GBank GCoop GCorp GNO GAN TC GRA.
+The 66: the 62 adopted on main, five of them renamed (Agora, Joint, Stay, Lib, Rec), and CDC, GN, GS and GA.
 
-CHANGES.txt says, contract by contract, what an owner who adopted the earlier publication (a687ab8) finds changed:
-acts added, gone, renamed, changed; 'text only' where only words changed.  Adopt: python3 calculus/tools/adopt.py
---write NAME <dir>; the check: adopt.py --check.
+What changed since code 2307a5b:
+1. Notes (Udi, 2026-11-16).  GN: Grassroots Notes, owner GSC, extends GKK: Issue, Swap, Pay with the payee's consent, Escrow.  A coin, a bond and a share are special cases of a note.  'GC relaxes and extends GN.': Pay issuer (GN:3 without the consent of Bob, if the coins are Bob-coins), Redeem, Pricing.  'GB restricts and extends GC.': 'Issue bond: GN:1, for bonds, with maturity later than the current date.', Redeem.  GS: Grassroots Shares, owner GO, 'GS restricts GO and GN.': 'Issue shares: GN:1, for shares, with the consent of those who decide for Orga.'  SC composes GCorp's instance with GS; its first officer decides the first issue of shares, the shareholders later issues and the appointment and the removal of directors.  DGC:2, GBCC:1, MCS:3 and Agora:6 cite GN's and GC's clauses.  gcsas.py writes each act of notes once for each kind of note it moves, so the acts of notes are renamed in every contract with GC in its chain.
+2. Relaxation, a sixth relation: a relaxing citation, 'N: C:n A, without the consent of P, if conditions', adds the relaxed act and keeps the act cited.  No redundant act: redundant.py finds none in the 66.
+3. Restriction for a special case: 'N: C:n, for KINDs, only if ..., with the consent of ...'.  A role put by cases, and 'decided by ROLE in place of ROLE2' (SC).
+4. CDC: Constitutional Democratic Community, owner GO, 'CDC restricts and strengthens GO.'; GCoop written from it.  GNO: Grassroots Networked Organisation, 'a networked organisation' in GNO, GAN, GNG, GNL, GNM, ORH.
+5. GA: Grassroots App, owner GSA, 'GA composes GPE with GAS and GDS.', with no names line; a contract may have none (FDAO, LDAO, GSV).  GPE:2 Encounter is taken by Alice and Bob, who must consent and are not asked.
+6. Text, by Udi's approval: CnC's first line and clause 1; GKK's definition of a party and a person; GSNP's first line; nine names lines (Agora, GAI, GDC, GLDAO, GRA, GnW, FDAO, LDAO, GSV).
+7. Defaults of parameters; pronouns and possessives; relations.txt for a contract's own default and for 'with D and F'.
+8. Five names: Agora, Joint, Stay, Lib, Rec.  adopt.py and owners.py find an owner's file under its old name by GLP_NAME until it is renamed.
 
-What changed since a687ab8:
-1. Parties (Udi, 2026-11-15).  GKK: 'A *party* to a contract is whoever has an identity.'  GC, GDC, GB, DGC: Alice, Bob
-   and Carol are parties.  GnW: 'A ward takes an act of a party by those who decide for it.'  So an organisation, a
-   ward, holds, pays and issues coins and bonds.  In GO's family each act of a party has, beside the person's form, the
-   organisation's: '<Act> for <Role>', taken for it by an officer on its votes (GO:2), with a vote act; they are derived
-   by the tools, about 90 schemas a contract.
-2. Roles a contract calls possibly one person are marked one(Name, Other) where GSC's Definition Binding lets one agent
-   bear both; where it does not, the contract has an act of one role beside the act: Post own, Ward post own, Propose
-   own, Vote own for and against, Delegate own, Delegate to the steward, Revoke own, Count own for and against, Deposit
-   own coins and bonds, Deposit with the issuer, Pay own accepted coins, Pay accepted coins to the issuer, Claim own
-   coins, Claim coins of the corporation, Bank deposit own coins, Offer own, Want own, Withdraw own.
-3. A ward's acts in a group: Ward leave, Ward remove, Ward add (GSNW); in CSSN Child add is restricted so that no
-   adult joins a child's group (CSSN:3).
-4. DGC's Accept by bond: the bond held and the bond issued in the denomination are of one maturity.
-5. A ward's Retire clears her listings at the leaders of her groups (GSNW, CSSN).
-6. The tools, after a review: recovery keeps a stated condition beside a wildcard deletion; a role that must consent;
-   a negated comparison or count; the readable text keeps every inherited restriction; adopt.py, toglp.py, cascade.py
-   and publish.py stop on a failed step; one who must consent is not shown as asked; cascade.py passes the term to the
-   reader by a file; tests/ has 30 cases.
-
-Not in this publication: the review's findings on the contracts themselves and on Theorem 8, which wait for its
-revised report.
-
-CSSN again, and the tools (commit after 3b5fd5d; Calculus code 6cfa460; CSSN run on migration 58a0593):
-An act whose requirements no binding can meet is no act of the contract: the tools leave out of a contract's term an
-act that requires of one name to be both a person and a ward of the contract's type.  Of the 62 it is CSSN's Child add
-alone (GSNW:3's Ward add restricted by CSSN:3, 'Only a child, Dave, may join the group'), which vGLP refused for
-having no button.  CSSN is certified, its platform.glp loads, and it has no child_add.  The other 61 are as at 3b5fd5d;
-toglp.py, supplied.py, changes.py and tests/ changed, and no other contract's term does.
-
-The Interface lines of the derived acts (commit after 2c4ab86; Calculus code 36d9fde):
-GBank, GCorp and GCoop each gain interface-adopted.txt, 132 lines for their 88 derived acts (an organisation's form
-of each party's act, and the vote acts).  They go once under the Interface pragmas of GBank.txt, GCorp.txt and
-GCoop.txt; vGLP's reader gathers a base's Interface pragmas, so every contract written from the three inherits them.
-Proved the owners' way on migration 86cd39a: bash cascade.sh wc and cb from adopted files, each compiled, platform
-loads.  No contract, term or platform changes; tools/ifadopt.py changed.
+Adopt: python3 calculus/tools/adopt.py --write NAME <dir>; the check: adopt.py --check.

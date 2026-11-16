@@ -1,0 +1,2 @@
+C2: C2
+C2 composes B with D.

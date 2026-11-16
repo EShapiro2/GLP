@@ -1,0 +1,5 @@
+Q: Greetings of minors
+Q instantiates P with greeting rules; parents(z) while minor(z) or friends(z) while ~minor(z) for deciders(z).
+Vocabulary: x is a minor = minor(x).
+Roles: the parents of z = parents(z).
+Q:0 - | Alice and Bob are persons.

@@ -9,7 +9,9 @@
     python3 adopt.py NAME               writes NAME.glp beside NAME's adopted file, and into cascade/NAME/ of GLP NAME.txt,
                                         a copy of the adopted file, NAME.glp, schemas.txt, full-contract.txt,
                                         full-pragmas.txt, flat.txt and full-schemas.txt, compiled from the contracts of
-                                        PATHS.txt, or, where there is none, of the paths --paths would write
+                                        PATHS.txt, or, where there is none, of the paths --paths would write, and
+                                        relations.txt, the verdict of each relation of its first line on those
+                                        schemas, as tools/relations.py prints it
     python3 adopt.py --check NAME       prints nothing and exits 0 where those files are what it would write; else
                                         names each that differs, and exits 1
     --out DIR, after NAME or --check NAME: the files are written, or checked, under DIR in place of the checkout
@@ -103,9 +105,13 @@ def owners():
     return _OWNERS
 
 
+GLP_NAME = {'Agora': 'AGORA', 'Joint': 'JOINT', 'Stay': 'STAY', 'Lib': 'LIB', 'Rec': 'REC'}      # renamed (Udi, 2026-11-16): the owner's file in GLP keeps the old name until Code renames it
+
+
 def owner_file(name):
-    """The owner's NAME.txt in GLP: programs/**/NAME.txt with a '% Owner' line, or None."""
-    return owners().get(name)
+    """The owner's NAME.txt in GLP: programs/**/NAME.txt with a '% Owner' line, or None; for a contract renamed, its
+    file under the old name until Code renames it (GLP_NAME)."""
+    return owners().get(name) or owners().get(GLP_NAME.get(name, name))
 
 
 def adopted_file(name):
@@ -301,6 +307,9 @@ def compile_tree(name, texts):
             if not os.path.exists(p):
                 die('%s: no %s printed; %s' % (name, f, ' | '.join((r.stdout + r.stderr).strip()[-300:] for r in steps)))
             out[f] = read(p)
+        sys.path.insert(0, TOOLS)
+        import relations
+        out['relations.txt'] = relations.text(name, tmp)      # the verdict of each relation of the first line, on these schemas
         return out
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

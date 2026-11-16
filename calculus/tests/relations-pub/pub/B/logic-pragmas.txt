@@ -1,0 +1,2 @@
+B: B
+Alice and Bob are persons.
