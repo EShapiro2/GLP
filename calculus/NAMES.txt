@@ -1,0 +1,83 @@
+The names of the 66 contracts, for the publication after that of 2026-11-16 (Udi, 2026-11-16, to Calculus #8).
+Not yet made: on main the contracts have the names of the first column.
+
+A name is one plain word, or two in their English order.  The title line of a contract is its name.
+
+The file name is the name with a hyphen for each space and no apostrophe: NAME.txt, NAME.glp, cascade/NAME/.
+The row of cascade.sh and the atom of contract_named are the file name in lower case, a hyphen as an underscore.
+
+How a reader knows a name: a name is one of the names of this table and nothing else.  Match the known names longest
+first, so that "Community Bank restricts Bank and extends Coins." names Community Bank, Bank and Coins, and
+"Trading Company and Bank" two contracts.
+A first line is: NAME, then its relations (extends, restricts, relaxes, strengthens, instantiates ... with ..., composes
+... with ...), the contracts after a relation joined by commas and "and"; a reference in parentheses may follow a name.
+A citation is: NAME, a colon, the clause's number, then the act's name where one act is cited: "Community Bank:1",
+"Notes:3", "Organisation:4 Appoint".
+
+name on main | name | file name | row and atom
+GKK | Knowledge | Knowledge | knowledge
+GSG | Friendship | Friendship | friendship
+SGSG | Secure Friendship | Secure-Friendship | secure_friendship
+GD | Distrust | Distrust | distrust
+GD-S | Separating Distrust | Separating-Distrust | separating_distrust
+GFP | Forwarding | Forwarding | forwarding
+GPE | Encounters | Encounters | encounters
+GnW | Guardians | Guardians | guardians
+GSN | Groups | Groups | groups
+GSNW | Warded Groups | Warded-Groups | warded_groups
+GSNP | Provenance Groups | Provenance-Groups | provenance_groups
+CSSN | Children | Children | children
+GAI | Agents | Agents | agents
+GSV | Services | Services | services
+GRV | Rendezvous | Rendezvous | rendezvous
+GDS | Directory | Directory | directory
+GPD | Programs | Programs | programs
+GAS | AppStore | AppStore | appstore
+GA | App | App | app
+GDO | Overlay | Overlay | overlay
+GDO-L | Labelled Overlay | Labelled-Overlay | labelled_overlay
+GDO-LB | Local Overlay | Local-Overlay | local_overlay
+GFF | Feeds | Feeds | feeds
+GFF-PS | Short Feeds | Short-Feeds | short_feeds
+GFF-FR | Resilient Feeds | Resilient-Feeds | resilient_feeds
+GFF-FR-BC | Backchannel Feeds | Backchannel-Feeds | backchannel_feeds
+GRA | Auction | Auction | auction
+GRA-SS | Second-Score Auction | Second-Score-Auction | second_score_auction
+ORH | Rides | Rides | rides
+GDC | Denominated Coins | Denominated-Coins | denominated_coins
+DGC | Denominated Currencies | Denominated-Currencies | denominated_currencies
+Joint | Joint Accounts | Joint-Accounts | joint_accounts
+Stay | Stays | Stays | stays
+Lib | Library | Library | library
+Rec | Recommendations | Recommendations | recommendations
+FDAO | Funded DAO | Funded-DAO | funded_dao
+LDAO | Liquid DAO | Liquid-DAO | liquid_dao
+GO | Organisation | Organisation | organisation
+CDC | Constitution | Constitution | constitution
+GNO | Networked Organisation | Networked-Organisation | networked_organisation
+GBank | Bank | Bank | bank
+CB | Community Bank | Community-Bank | community_bank
+CMB | Commercial Bank | Commercial-Bank | commercial_bank
+SCB | Central Bank | Central-Bank | central_bank
+MCS | Mutual Credit | Mutual-Credit | mutual_credit
+GCC | Community Currency | Community-Currency | community_currency
+GBCC | Backed Currency | Backed-Currency | backed_currency
+GCorp | Corporation | Corporation | corporation
+SC | Shareholding Corporation | Shareholding-Corporation | shareholding_corporation
+SPLLC | Single-Person Company | Single-Person-Company | single_person_company
+TC | Trading Company | Trading-Company | trading_company
+GCoop | Cooperative | Cooperative | cooperative
+WC | Workers' Cooperative | Workers-Cooperative | workers_cooperative
+CnC | Consumers' Cooperative | Consumers-Cooperative | consumers_cooperative
+GDAO | Cooperative DAO | Cooperative-DAO | cooperative_dao
+GLDAO | Liquid Cooperative | Liquid-Cooperative | liquid_cooperative
+GAN | Ads | Ads | ads
+GNG | Gigs | Gigs | gigs
+GNL | Lodging | Lodging | lodging
+GNM | Marketplace | Marketplace | marketplace
+Notes | Notes | Notes | notes
+Coins | Coins | Coins | coins
+Bonds | Bonds | Bonds | bonds
+Shares | Shares | Shares | shares
+Agora | Agora | Agora | agora
+DAO | DAO | DAO | dao
