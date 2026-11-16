@@ -1155,6 +1155,9 @@ void appsScreens(Screens screens) {
         if (t.data != null) t.data!,
     ];
     expect(inGroup, containsAll(['friends', 'Alice', 'Leave', 'Post']));
+    // "A row shows each person once" (vGLP, Section 6.2, "The words a platform shows"): Alice signed the group's name and is its leader, the atom's other argument, so the row holds her name once.
+    expect(inGroup.where((t) => t == 'Alice'), hasLength(1),
+        reason: "bob: the group's row shows Alice once");
     run.plain(bob);
     await run.shoot(bob, 'gsn-c-bob-group.png');
 
@@ -1162,6 +1165,14 @@ void appsScreens(Screens screens) {
     await run.list(alice, 'member');
     await run.top(alice);
     expect(run.control(alice, 'atom:$group'), findsOneWidget);
+    expect(
+        run.tester
+            .widgetList<Text>(find.descendant(
+                of: run.control(alice, 'atom:$group'),
+                matching: find.byType(Text)))
+            .where((t) => t.data == 'Alice'),
+        hasLength(1),
+        reason: "alice: the group's row shows Alice once");
     run.plain(alice);
     await run.shoot(alice, 'gsn-d-alice-group.png');
     await run.list(alice, 'friend');

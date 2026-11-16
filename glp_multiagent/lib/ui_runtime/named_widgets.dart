@@ -1526,9 +1526,15 @@ class _SocialTabState extends State<SocialTab> {
         ? _atomText(e.atom)
         : '${_named(xs.first)}${counted ? '  ${e.count}' : ''}';
     final signed = xs.isEmpty ? null : SpeechAct.of(xs.first);
-    final shows = [
+    // "A row shows each person once: a signer of a speech act is not shown again where the row's other arguments name the same person." (vGLP, Section 6.2, "The words a platform shows").
+    final others = {for (final y in xs.skip(1)) formatTerm(y)};
+    final signers = [
       if (signed != null)
-        [for (final p in signed.signers) personName(p)].join(', '),
+        for (final p in signed.signers)
+          if (!others.contains(formatTerm(p))) p
+    ];
+    final shows = [
+      if (signers.isNotEmpty) [for (final p in signers) personName(p)].join(', '),
       if (xs.length > 1) [for (final y in xs.skip(1)) _signed(y)].join(', '),
     ];
     final small = TextStyle(fontSize: 13, color: Colors.grey.shade700);
