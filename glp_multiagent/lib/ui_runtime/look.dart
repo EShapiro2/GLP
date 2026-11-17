@@ -15,10 +15,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-/// The contract whose look the Grassroots App takes: GAS, the Grassroots App
-/// Store, one of the four its home is compiled from (GSA, Appendix A), until
-/// GSA names the app's contract.
-const String superappContract = 'GAS';
+/// The contract whose look the Grassroots App takes: AppStore, the Grassroots
+/// App Store, one of the four its home is compiled from (GSA, Appendix A),
+/// until GSA names the app's contract; named as calculus/NAMES.txt names its
+/// file, which is the key of the site's about.json.
+const String superappContract = 'AppStore';
 
 /// A family of contracts: its name and its two colours, from and to, the
 /// light and the dark end of its gradient on the site.

@@ -49,9 +49,16 @@ void main() {
   test('a contract with no Look line takes about.json\'s icon and family', () {
     final about = jsonDecode(File('${Directory(programsDir()).parent.path}/servers/peoplesweb/web/about.json')
         .readAsStringSync()) as Map<String, dynamic>;
-    final gkk = (about['GKK'] as List).cast<String>();
-    expect(looks.of('gkk').icon, gkk[0]);
-    expect(looks.of('GKK').family, gkk[1]);
+    // about.json is keyed by a contract's file name (calculus/NAMES.txt), as Knowledge and Community-Bank; a look is found by the name, the file name or the atom.
+    final knowledge = (about['Knowledge'] as List).cast<String>();
+    expect(looks.of('knowledge').icon, knowledge[0]);
+    expect(looks.of('Knowledge').family, knowledge[1]);
+    expect(about.containsKey('Provenance-Groups'), isTrue);
+    for (final n in ['Provenance Groups', 'Provenance-Groups', 'provenance_groups']) {
+      expect(looks.of(n).icon, isNot(Looks.otherIcon), reason: n);
+      expect(looks.of(n).icon, looks.of('Provenance-Groups').icon, reason: n);
+    }
+    expect(looks.of(superappContract).icon, isNot(Looks.otherIcon));
   });
 
   test('the Look line opens the interface pragmas, under either heading, and wins over about.json', () {
@@ -117,7 +124,7 @@ void main() {
   });
 
   test('the theme\'s primary colour is the family\'s dark colour, its buttons filled with it', () {
-    final look = looks.of('GSG');
+    final look = looks.of('Friendship');
     final theme = look.theme(fontFamily: 'Roboto');
     expect(theme.colorScheme.primary, look.colours.to);
     expect(theme.elevatedButtonTheme.style!.backgroundColor!.resolve({}), look.colours.to);
