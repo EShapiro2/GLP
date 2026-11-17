@@ -1781,7 +1781,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     worded_lx(W?, Lx2),
     base_lines(C?, Was?, Lx2?, Lb00),
     worded_ones(W?, Wos),
-    ones_lines(Wos?, Lon),
+    ones_lines(Wos?, Lon0),
+    worded_vones(W?, Wvs),
+    vones_lines(Wvs?, Lvo),
+    lapp(Lon0?, Lvo?, Lon),
     lapp(Lb00?, Lon?, Lb01),
     worded_stands(W?, Wss),
     standing_lines(C?, Wss?, Lsd),
@@ -2833,6 +2836,18 @@ may_ones([], []).
 may_ones([same(J, I)|Ps], [may_one(J?, I?)|Ms?]) :- may_ones(Ps?, Ms).
 may_ones([mark(_)|Ps], Ms?) :- may_ones(Ps?, Ms).
 may_ones([gship(_, _, _)|Ps], Ms?) :- may_ones(Ps?, Ms).
+%% The pairs of persons of different names, one an agent variable that is no role, that a schema's clause names possibly one person, schema_vones(Name, VOnes), each vone(K, L) or vone_any(K), which the platform's rule of a schema-binding reads (text.glp, vars_ok; self.glp, vones_of; vGLP, Section 5.4, "Speech-act schemas as local specifications": "and persons of different names to different persons but for two the clause names as possibly one person").
+procedure worded_vones(Worded?, SVOnesL).
+worded_vones(words(_, _, _, D), Os?) :- vones_of(D?, Os).
+procedure vones_lines(SVOnesL?, Lines).
+vones_lines(Os, ['', 'VOne      ::= vone(Var, Var) ; vone_any(Var).', 'VOnes     ::= [] ; [VOne | VOnes].', 'procedure schema_vones(Constant?, VOnes).'|L?]) :- vones_lines1(Os?, L).
+procedure vones_lines1(SVOnesL?, Lines).
+vones_lines1([], ['schema_vones(_, []) :- otherwise | true.']).
+vones_lines1([vones(_, [])|Os], L?) :- vones_lines1(Os?, L).
+vones_lines1([vones(N, [V|Vs])|Os], [T?, '.'|L?]) :- ground(N?), ground(V?), ground(Vs?) |
+    T0 =.. [schema_vones, N?, [V?|Vs?]],
+    term_to_string(T0?, T),
+    vones_lines1(Os?, L).
 procedure base_lines(Contract?, TActs?, Lxs?, Lines).
 base_lines(C, As, Lx, ['', 'procedure schema_base(Constant?, Integer).'|L?]) :- ground(C?), ground(As?), ground(Lx?) | base_lines1(C?, As?, Lx?, L).
 %% The base of the conjuncts of a schema local to their base, its listed roles' and those of its conjuncts whose instances the attempt names, which have one (q_lines, local.glp).
@@ -3476,10 +3491,11 @@ schema_acts(yes, sfound(Hd, Rs), sfound(Hh, _), S, Fs, Ft, Q, By, Rf, Ws?) :- gr
     same_places(By?, Sm),
     form_text(Hd?, Rs?, Q?, Tx),
     role_acts(Gr?, S?, Vs?, Rs?, Rf?, Fd?, Sm?, Tx?, Ws).
-%% The places of the request that hold roles: "distinct roles are bound to distinct agents, unless the clause says of two names 'possibly one person'" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), and an agent variable is bound by no such rule (vGLP #23, Code_inbox.md, 2026-11-06 12:00 UTC, 1).
+%% The places of the request that hold persons, its roles and its agent variables: persons of different names are bound to different persons, "but for two the clause names as possibly one person" (vGLP, Section 5.4, "Speech-act schemas as local specifications", Udi, 2026-11-17, to vGLP #30), the pairs pragmas.sh gives as same(K, J) (same_places).
 procedure role_places(Args?, Integer?, Ints).
 role_places([], _, []).
 role_places([role(_)|Vs], I, [I?|Is?]) :- integer(I?) | I1 := I? + 1, role_places(Vs?, I1?, Is).
+role_places([pvar(_)|Vs], I, [I?|Is?]) :- integer(I?) | I1 := I? + 1, role_places(Vs?, I1?, Is).
 role_places([V|Vs], I, Is?) :- otherwise, integer(I?), ground(V?) | I1 := I? + 1, role_places(Vs?, I1?, Is).
 %% The fields of an act, field(I, S, T), the k-th field of its pragma at the k-th place field_places counts, a field left empty, an inapplicable field of a schema that shares its button, naming none (README.md beside this file, 2).
 procedure act_fields(Ints?, Strings?, Integer?, FTypes?, Args?, YesNo?, WFields).

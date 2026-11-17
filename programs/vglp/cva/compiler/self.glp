@@ -143,13 +143,30 @@ ones_s(schema(Nm, _, _), ones(Nm?, [])).
 ones_s(cschema(Nm, _, _, _), ones(Nm?, [])).
 ones_s(nschema(Nm, _, _, _), ones(Nm?, [])).
 ones_s(qschema(Nm, _, _, _, _, _, _), ones(Nm?, [])).
-ones_s(schema(Nm, Ns, _, _), ones(Nm?, Ps?)) :- ground(Ns?) | name_pairs(Ns?, Ns?, 1, Ps).
-ones_s(cschema(Nm, Ns, _, _, _), ones(Nm?, Ps?)) :- ground(Ns?) | name_pairs(Ns?, Ns?, 1, Ps).
-ones_s(nschema(Nm, Ns, _, _, _), ones(Nm?, Ps?)) :- ground(Ns?) | name_pairs(Ns?, Ns?, 1, Ps).
-ones_s(qschema(Nm, Ns, _, _, _, _, _, _), ones(Nm?, Ps?)) :- ground(Ns?) | name_pairs(Ns?, Ns?, 1, Ps).
+%% The names of the roles are the first of a schema's names, one for each of its roles; the names after them are the marks of its agent variables that are no roles, one(Name, Other), which programs/gsc/self.glp's as_read writes there (GSC #19, GLP GSC-marks f3314f4e: "Count the roles by the length of the roles' list"), and which vones_of reads.
+ones_s(schema(Nm, Ns, _, Rs), ones(Nm?, Ps?)) :- ground(Ns?), ground(Rs?) | role_names_of(Ns?, Rs?, Ns1), names_pairs(Ns1?, Ps).
+ones_s(cschema(Nm, Ns, _, _, Rs), ones(Nm?, Ps?)) :- ground(Ns?), ground(Rs?) | role_names_of(Ns?, Rs?, Ns1), names_pairs(Ns1?, Ps).
+ones_s(nschema(Nm, Ns, _, _, Rs), ones(Nm?, Ps?)) :- ground(Ns?), ground(Rs?) | role_names_of(Ns?, Rs?, Ns1), names_pairs(Ns1?, Ps).
+ones_s(qschema(Nm, Ns, _, _, _, Rs, _, _), ones(Nm?, Ps?)) :- ground(Ns?), ground(Rs?) | role_names_of(Ns?, Rs?, Ns1), names_pairs(Ns1?, Ps).
+procedure names_pairs(Names?, Sames).
+names_pairs(Ns, Ps?) :- ground(Ns?) | name_pairs(Ns?, Ns?, 1, Ps).
+%% The names of a schema's roles, as many of its names as it has roles.
+procedure role_names_of(Names?, RoleSpecs?, Names).
+role_names_of(_, [], []).
+role_names_of([], [_|_], []).
+role_names_of([N|Ns], [_|Rs], [N?|Ns1?]) :- role_names_of(Ns?, Rs?, Ns1).
+%% The marks of a schema's agent variables that are no roles, its names after those of its roles.
+procedure var_marks_of(Names?, RoleSpecs?, Names).
+var_marks_of(Ns, [], Ns?).
+var_marks_of([], [_|_], []).
+var_marks_of([_|Ns], [_|Rs], Ms?) :- var_marks_of(Ns?, Rs?, Ms).
 procedure name_pairs(Names?, Names?, Integer?, Sames).
 name_pairs([], _, _, []).
-name_pairs([one(_, O)|Ns], All, I, Ps?) :- ground(O?), ground(All?), integer(I?) |
+name_pairs([one(_, O)|Ns], All, I, Ps?) :- ground(O?), ground(All?), integer(I?), O? =?= '_' |
+    I1 := I? + 1,
+    name_pairs(Ns?, All?, I1?, Ps1),
+    any_pairs(All?, 1, I?, Ps1?, Ps).
+name_pairs([one(_, O)|Ns], All, I, Ps?) :- otherwise, ground(O?), ground(All?), integer(I?) |
     name_index(All?, O?, 1, J),
     I1 := I? + 1,
     name_pairs(Ns?, All?, I1?, Ps1),
@@ -165,6 +182,80 @@ name_index([_|Xs], O, K, J?) :- otherwise | K1 := K? + 1, name_index(Xs?, O?, K1
 procedure keep_pair(Integer?, Integer?, Sames?, Sames).
 keep_pair(J, _, Ps, Ps?) :- J? =:= 0 | true.
 keep_pair(J, I, Ps, [same(J?, I?)|Ps?]) :- otherwise | true.
+%% A role marked one(Name, '_'), possibly the person of any of the others (GSC #19, programs/gsc/README.md, GSC-one 5cf7633b): a pair with each other role.
+procedure any_pairs(Names?, Integer?, Integer?, Sames?, Sames).
+any_pairs([], _, _, Ps, Ps?).
+any_pairs([_|Ns], K, I, Ps, Ps1?) :- integer(K?), integer(I?), K? =:= I? | K1 := K? + 1, any_pairs(Ns?, K1?, I?, Ps?, Ps1).
+any_pairs([_|Ns], K, I, Ps, [same(K?, I?)|Ps1?]) :- otherwise, integer(K?), integer(I?) | K1 := K? + 1, any_pairs(Ns?, K1?, I?, Ps?, Ps1).
+
+%% The pairs of persons of different names that a schema's clause names possibly one person where one of them is an agent variable that is no role, each vone(K, L), K and L role(I) or pvar(Name), or vone_any(K), K possibly the person of any of the others; every two other persons of different names are bound to different persons (vGLP, Section 5.4, "Speech-act schemas as local specifications": "and persons of different names to different persons but for two the clause names as possibly one person"; GSC, Definition "Binding" of every agent variable, GSC 8af7b7c).  A role marked one(Name, Other), Other a variable, gives vone(role(I), pvar(Other)); a variable's mark one(Name, Other) gives vone(pvar(Name), K), K the role or the variable named Other; and one(Name, '_') gives vone_any.
+VKey      ::= role(Integer) ; pvar(Constant).
+VOne      ::= vone(VKey, VKey) ; vone_any(VKey).
+VOneL     ::= [] ; [VOne | VOneL].
+SVOnes    ::= vones(Constant, VOneL).
+SVOnesL   ::= [] ; [SVOnes | SVOnesL].
+procedure vones_of(WDeclared?, SVOnesL).
+vones_of([], []).
+vones_of([S|Ss], Os?) :- ground(S?), ground(Ss?) | vones_c([S?|Ss?], Os).
+vones_of(reflexive(_, Ss), Os?) :- ground(Ss?) | vones_c(Ss?, Os).
+vones_of(environment(_, B), Os?) :- ground(B?) | vones_b(B?, Os).
+procedure vones_b(WBody?, SVOnesL).
+vones_b([], []).
+vones_b([S|Ss], Os?) :- ground(S?), ground(Ss?) | vones_c([S?|Ss?], Os).
+vones_b(reflexive(_, Ss), Os?) :- ground(Ss?) | vones_c(Ss?, Os).
+procedure vones_c(WContract?, SVOnesL).
+vones_c([], []).
+vones_c([S|Ss], [O?|Os?]) :- ground(S?) | vones_s(S?, O), vones_c(Ss?, Os).
+procedure vones_s(WSchema?, SVOnes).
+vones_s(schema(Nm, _, _), vones(Nm?, [])).
+vones_s(cschema(Nm, _, _, _), vones(Nm?, [])).
+vones_s(nschema(Nm, _, _, _), vones(Nm?, [])).
+vones_s(qschema(Nm, _, _, _, _, _, _), vones(Nm?, [])).
+vones_s(schema(Nm, Ns, _, Rs), vones(Nm?, Vs?)) :- ground(Ns?), ground(Rs?) | vones_n(Ns?, Rs?, Vs).
+vones_s(cschema(Nm, Ns, _, _, Rs), vones(Nm?, Vs?)) :- ground(Ns?), ground(Rs?) | vones_n(Ns?, Rs?, Vs).
+vones_s(nschema(Nm, Ns, _, _, Rs), vones(Nm?, Vs?)) :- ground(Ns?), ground(Rs?) | vones_n(Ns?, Rs?, Vs).
+vones_s(qschema(Nm, Ns, _, _, _, Rs, _, _), vones(Nm?, Vs?)) :- ground(Ns?), ground(Rs?) | vones_n(Ns?, Rs?, Vs).
+procedure vones_n(Names?, RoleSpecs?, VOneL).
+vones_n(Ns, Rs, Vs?) :- ground(Ns?), ground(Rs?) |
+    role_names_of(Ns?, Rs?, Rn),
+    var_marks_of(Ns?, Rs?, Vm),
+    vones_rn(Rn?, Vm?, Vs).
+procedure vones_rn(Names?, Names?, VOneL).
+vones_rn(Rn, Vm, Vs?) :- ground(Rn?) |
+    role_vones(Rn?, Rn?, 1, Vs1),
+    var_vones(Vm?, Rn?, Vs2),
+    vone_app(Vs1?, Vs2?, Vs).
+%% A role's mark whose Other is no role's name: Other a variable, or '_'.
+procedure role_vones(Names?, Names?, Integer?, VOneL).
+role_vones([], _, _, []).
+role_vones([one(_, O)|Ns], Rn, I, Vs?) :- ground(O?), ground(Rn?), integer(I?), O? =?= '_' |
+    I1 := I? + 1, role_vones(Ns?, Rn?, I1?, Vs1), Vs = [vone_any(role(I?))|Vs1?].
+role_vones([one(_, O)|Ns], Rn, I, Vs?) :- otherwise, ground(O?), ground(Rn?), integer(I?) |
+    name_index(Rn?, O?, 1, J),
+    I1 := I? + 1,
+    role_vones(Ns?, Rn?, I1?, Vs1),
+    role_vone(J?, I?, O?, Vs1?, Vs).
+role_vones([_|Ns], Rn, I, Vs?) :- otherwise, integer(I?) | I1 := I? + 1, role_vones(Ns?, Rn?, I1?, Vs).
+procedure role_vone(Integer?, Integer?, Constant?, VOneL?, VOneL).
+role_vone(J, I, O, Vs, [vone(role(I?), pvar(O?))|Vs?]) :- J? =:= 0 | true.
+role_vone(_, _, _, Vs, Vs?) :- otherwise | true.
+%% A variable's mark, one(Name, Other): Other a role's name, '_', or another variable.
+procedure var_vones(Names?, Names?, VOneL).
+var_vones([], _, []).
+var_vones([one(V, O)|Ms], Rn, Vs?) :- ground(V?), ground(O?), ground(Rn?), O? =?= '_' |
+    var_vones(Ms?, Rn?, Vs1), Vs = [vone_any(pvar(V?))|Vs1?].
+var_vones([one(V, O)|Ms], Rn, Vs?) :- otherwise, ground(V?), ground(O?), ground(Rn?) |
+    name_index(Rn?, O?, 1, J),
+    var_vones(Ms?, Rn?, Vs1),
+    var_vone(J?, V?, O?, Vs1?, Vs).
+var_vones([_|Ms], Rn, Vs?) :- otherwise | var_vones(Ms?, Rn?, Vs).
+procedure var_vone(Integer?, Constant?, Constant?, VOneL?, VOneL).
+var_vone(J, V, O, Vs, [vone(pvar(V?), pvar(O?))|Vs?]) :- J? =:= 0 | true.
+var_vone(J, V, _, Vs, [vone(pvar(V?), role(J?))|Vs?]) :- otherwise | true.
+procedure vone_app(VOneL?, VOneL?, VOneL).
+vone_app([], Ys, Ys?).
+vone_app([X|Xs], Ys, [X?|Zs?]) :- vone_app(Xs?, Ys?, Zs).
+
 %% The possibly-one pairs of the schema Nm, none where Os names it not.
 procedure ones_pairs(Ones?, Constant?, Sames).
 ones_pairs([], _, []).
