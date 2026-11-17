@@ -20,7 +20,7 @@ PROGRAMS="$(cd "$(dirname "$0")/../../.." && pwd)"
 exec perl -CSD -Mutf8 -e '
 use strict; use warnings; use Cwd ();
 my ($top, $programs, $term, $from) = @ARGV;
-# The names of the contracts, read from the table of calculus/NAMES.txt, "name on main | name | file name | row and atom", or "name on main | name | file name | row and atom | row and atom on main", its fifth column "the row and atom on main today, before the renaming" (calculus/NAMES.txt, Calculus-3 d15a5308), a line of four columns or five read alike, the one source of the names: "How a reader knows a name: a name is one of the names of this table and nothing else.  Match the known names longest first, so that \"Community Bank restricts Bank and extends Coins.\" names Community Bank, Bank and Coins, and \"Trading Company and Bank\" two contracts" (calculus/NAMES.txt).  A name of the first column, the name a contract has on main, is the name of its file, as GSG.txt; a name of the second column is the name of the file of its third, "the name with a hyphen for each space and no apostrophe", as Community-Bank.txt (ibid.).  $file_of{N} is the file name of the contract named N, $name_of_file{F} the name of the contract whose file name is F, and $known every name, the longest first.  The table is calculus/NAMES.txt beside programs/, or the file CONTRACT_NAMES names, a table of the same form, as the suite gives its fixtures theirs.
+# The names of the contracts, read from the table of calculus/NAMES.txt, "name on main | name | file name | row and atom", or "name on main | name | file name | row and atom | row and atom on main", its fifth column "the row and atom on main today, before the renaming" (calculus/NAMES.txt, Calculus-3 d15a5308), a line of four columns or five read alike, the one source of the names: "How a reader knows a name: a name is one of the names of this table and nothing else.  Match the known names longest first, so that \"Community Bank restricts Bank and extends Coins.\" names Community Bank, Bank and Coins, and \"Trading Company and Bank\" two contracts" (calculus/NAMES.txt).  A name of the first column, the name a contract has on main, is the name of its file, as Friendship.txt; a name of the second column is the name of the file of its third, "the name with a hyphen for each space and no apostrophe", as Community-Bank.txt (ibid.).  $file_of{N} is the file name of the contract named N, $name_of_file{F} the name of the contract whose file name is F, and $known every name, the longest first.  The table is calculus/NAMES.txt beside programs/, or the file CONTRACT_NAMES names, a table of the same form, as the suite gives its fixtures theirs.
 my (%file_of, %name_of_file);
 {
     my $tf = $ENV{CONTRACT_NAMES} // "$programs/../calculus/NAMES.txt";
@@ -313,7 +313,7 @@ sub any_head { my ($x) = @_; return iface_head($x) || impl_head($x) }
 # An adopted contract carries its Logic pragmas after its clauses, under the line "Logic pragmas", and its Interface pragmas after them (calculus/README.md, "Adopting a contract"): the contract ends at that line, and the lines from it to the next heading of pragmas are skipped, the clauses they repeat being no clauses of the contract.
 sub logic_head { my ($x) = @_; return $x eq "Logic pragmas" }
 sub contract_end { my ($x) = @_; return any_head($x) || logic_head($x) }
-# An instance\x27s own names for the schemas of its base (GSC 22605d6, Section 8, Definition Parametric contract: "An instantiation may also write names of its own for schemas of the contract, a different one for each, so that an act bears the name its instance gives it"): the bindings of instance_named(<name>, Base, Bindings, Additions) in the NAME.glp beside the contract\x27s NAME.txt, a schema of the base bound to the instance\x27s name for it, as ward_acquaint = agent_acquaint (GAI.glp).  A button of a line the instance inherits that names a schema so bound bears the instance\x27s name, [Ward acquaint] reading as [Agent acquaint], so that an act bears the name its instance gives it and the instance\x27s own line of that button replaces it.
+# An instance\x27s own names for the schemas of its base (GSC 22605d6, Section 8, Definition Parametric contract: "An instantiation may also write names of its own for schemas of the contract, a different one for each, so that an act bears the name its instance gives it"): the bindings of instance_named(<name>, Base, Bindings, Additions) in the NAME.glp beside the contract\x27s NAME.txt, a schema of the base bound to the instance\x27s name for it, as ward_acquaint = agent_acquaint (Agents.glp).  A button of a line the instance inherits that names a schema so bound bears the instance\x27s name, [Ward acquaint] reading as [Agent acquaint], so that an act bears the name its instance gives it and the instance\x27s own line of that button replaces it.
 my %bind;
 sub read_bindings {
     my ($f) = @_;
@@ -354,7 +354,7 @@ sub relation_names {
     return () unless @body >= 2;
     # A name is one of the table\x27s, the longest first ($known, above; calculus/NAMES.txt), and a word that is none of them is no name: a first line "<NAME> <relation> ..." whose first words are no name is refused, as a contract it names that is none.
     my $nm = $known;
-    # composes, the composition of contracts (GSC, Section Relations among Contracts), names the contracts composed, "composes A with B", A or B "it", "the instance" or "the composition" where it is what the line has named before, as "GAI instantiates GnW, composes it with GFP and restricts the composition" (GAI.txt) and "GSNP composes GAI with GSN and amends the composition" (GSNP.txt; GAI #13, Code_inbox.md, 2026-11-10 20:39 UTC).
+    # composes, the composition of contracts (GSC, Section Relations among Contracts), names the contracts composed, "composes A with B", A or B "it", "the instance" or "the composition" where it is what the line has named before, as "GAI instantiates GnW, composes it with GFP and restricts the composition" (Agents.txt) and "GSNP composes GAI with GSN and amends the composition" (Provenance-Groups.txt; GAI #13, Code_inbox.md, 2026-11-10 20:39 UTC).
     # relaxes, the sixth relation of the Calculus (calculus/PARTS.txt, 2: "a relaxing citation ... adds the relaxed act and keeps the act cited"), as "GC relaxes and extends GN." (Code #33, vGLP_inbox.md, 2026-11-16 16:50 UTC).
     my $rel = qr/(?:amends|extends|instantiates|implements|restricts|strengthens|relaxes|composes)\b/;
     my $back = qr/(?:it|them|the instance|the composition)/;
@@ -420,7 +420,7 @@ sub visit {
         (my $first = $ext) =~ s/^% Extends:\s*//;
         $first =~ s/\.\s.*$//;
         $first =~ s/\s*\([^()]*\)//g;
-        # A name is one of the table\x27s, the longest first, and a name with a hyphened part, as GDO-L, which GFF extends (GFF.txt), is read whole and not as GDO ($known; calculus/NAMES.txt).
+        # A name is one of the table\x27s, the longest first, and a name with a hyphened part, as GDO-L, which GFF extends (Feeds.txt), is read whole and not as GDO ($known; calculus/NAMES.txt).
         for my $n ($first =~ /($known)(?![\x27\x{2019}]s|\.\w)/g) {
             next if $named{$n}++;
             my $g = find_txt($n, $dir);
@@ -453,7 +453,7 @@ for my $f (@order) {
         pos($t) = $at + 4;
     }
 }
-# The names: those the contract declares, on its line after the title and before clause 1, "Alice, Bob and Carol are persons." (Udi, 2026-10-25, to GSC #8; GKK.txt at GLP ec7c578c), the declaration being part of the contract the reader takes; and, of a contract that declares none, the words of a capital and lower-case letters its clauses write within a sentence, not first in it.
+# The names: those the contract declares, on its line after the title and before clause 1, "Alice, Bob and Carol are persons." (Udi, 2026-10-25, to GSC #8; Knowledge.txt at GLP ec7c578c), the declaration being part of the contract the reader takes; and, of a contract that declares none, the words of a capital and lower-case letters its clauses write within a sentence, not first in it.
 my %is_name;
 for my $f (@order) {
     my $declared = 0;
@@ -481,7 +481,7 @@ for my $f (@order) {
         }
     }
 }
-# The clauses of every contract read, by title, a contract own before those of the contracts it extends, so that a pragma line may name a clause of a contract its contract extends ("A contract that extends others has their pragmas with its own", vGLP, Section 5.4, "The contract words"), as the Guardianship line of GAI.txt names GnW:1.
+# The clauses of every contract read, by title, a contract own before those of the contracts it extends, so that a pragma line may name a clause of a contract its contract extends ("A contract that extends others has their pragmas with its own", vGLP, Section 5.4, "The contract words"), as the Guardianship line of Agents.txt names GnW:1.
 my (%xclause, %xbody);
 for my $f (reverse @order) {
     for my $x (read_txt($f)) {

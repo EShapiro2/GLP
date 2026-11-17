@@ -2,7 +2,7 @@
 %% The play of the canonical CVA platform of vGLP's contract intros
 %% (../contracts.glp, contract_named(intros, C)), platform.vglp, which
 %% programs/vglp/cva/compile.sh prints from it: GKK's acquaintance and
-%% introduction (programs/gsc/GKK.glp) with no identity, so that a contract
+%% introduction (programs/gsc/Knowledge.glp) with no identity, so that a contract
 %% compiled here has an introduction at a commit (vGLP 613ee8d, Section 3.2,
 %% Definition "Introduction Rule, Introduce Peers": "Commit, and Outcome on a
 %% commit, of an attempt of [t]_j at p add the same messages and record for
