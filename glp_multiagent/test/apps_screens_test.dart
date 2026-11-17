@@ -343,6 +343,16 @@ class _Run {
     }
     await tester.pumpWidget(run._phones());
     await tester.pumpAndSettle();
+    // The phones are drawn in the colours of the family of the app's contract, never in the grey of the family other, which a contract with no look found takes (look.dart): on main 9f866949, the contracts renamed, no look was found under an app's name and every app was drawn grey, this test passing (Mac #1, 2026-11-17).
+    final drawn = Theme.of(tester.element(find.byType(AgentSurface).first))
+        .colorScheme
+        .primary;
+    final other = Looks.readSync('${screens.programs}/self.glp')
+        .families[Looks.otherFamily]!
+        .to;
+    expect(drawn, isNot(other),
+        reason: '$app: the phones are drawn in the family other\'s grey: '
+            'no look is found for the app\'s contract');
     return run;
   }
 
