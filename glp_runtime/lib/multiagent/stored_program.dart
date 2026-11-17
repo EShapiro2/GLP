@@ -33,7 +33,13 @@ import 'package:crypto/crypto.dart' as crypto;
 
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart';
 import 'package:glp_runtime/compiler/ast.dart' as ast;
+import 'package:glp_runtime/engine/glp_engine.dart' show GlpEngine;
 import 'package:glp_runtime/engine_v2/code_image.dart' show CodeImage;
+import 'package:glp_runtime/engine_v2/interp.dart' show codeArtefactFromProgram;
+import 'package:glp_runtime/multiagent/identity.dart'
+    show AgentSigner, LayerSigner, PersonIdentity;
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show SimulationNetworkClient;
 import 'package:glp_runtime/multiagent/glp_network.dart' show Application;
 import 'package:glp_runtime/runtime/module_hierarchy.dart' show primitiveScope;
 import 'package:glp_runtime/runtime/terms.dart' as rt;
@@ -130,6 +136,44 @@ class StoredProgram {
     return StoredProgram._(code, app, files,
         (module.artefact as Artefact).toBytes(), module.name, module.directory,
         scope, opaque);
+  }
+
+  /// The compiled program of [program], a directory with a self.glp or a
+  /// self-contained module file, compiled by a host outside any person's
+  /// agent under the key [host] holds, so that the host may give it to an
+  /// agent at its start (IGLP, Implementation Notes, "Boot": "A host may give
+  /// an agent, at its start, the compiled program it runs in place of the
+  /// program's source: a module value, which the loader verifies as it
+  /// verifies a module the agent adopts, and whose certificate's key the host
+  /// accepts").  The certificate is written under [host]'s key.  A program
+  /// whose certificate is refused --- it calls an OS-privileged predicate
+  /// (IGLP, Code Format, the artefact) --- has none for a loader to verify,
+  /// and is refused here, naming the reason.  [app] is the app whose program
+  /// it is, as the host gives it.
+  factory StoredProgram.compile(String program,
+      {required String rootSelfGlpPath,
+      required PersonIdentity host,
+      Application? app}) {
+    final AgentSigner signer = LayerSigner(
+        SimulationNetworkClient.alone(host.keyPair, selfId: 'host'));
+    final engine = GlpEngine(rootSelfGlpPath: rootSelfGlpPath, identity: signer);
+    if (FileSystemEntity.isDirectorySync(program)) {
+      engine.loadProgram(program);
+    } else {
+      engine.loadFile(program);
+    }
+    final module = engine.appModule;
+    if (module == null) {
+      throw StateError('$program compiles to no module value, so there is no '
+          'certificate for a loader to verify');
+    }
+    final refusal = (module.artefact as Artefact).certificateRefusal;
+    if (refusal != null) {
+      throw StateError('$program cannot be given compiled: $refusal');
+    }
+    return StoredProgram.compiled(
+        codeArtefactFromProgram(engine.combinedProgram), module,
+        app: app, files: filesOf(module.directory));
   }
 
   /// The program the store keeps as [bytes] ([toBytes]).
@@ -232,6 +276,11 @@ class StoredProgram {
     }
     return w.toBytes();
   }
+
+  /// The type scope the program's tables were built from: the linked
+  /// program's type definitions and declarations, in which a goal posted to
+  /// it is checked (GlpEngine.runCompiled); null where it has none.
+  ast.Module? get typeScope => _typeScope;
 
   /// The program's module value, its tables built again from its scope by
   /// the construction that built them ([typeIdentityTablesForModule], over

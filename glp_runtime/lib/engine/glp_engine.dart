@@ -181,6 +181,50 @@ class GlpEngine {
     _combined = null;
     _image = null;
     _runner = null;
+    _givenImage = null;
+    _givenEntryPoints = const {};
+  }
+
+  /// The code of the compiled program a host gave the engine to run
+  /// ([runCompiled]), which a posted goal runs in place of
+  /// [combinedProgram]'s; null where the engine runs what it compiled.
+  CodeImage? _givenImage;
+
+  /// The entry points of the compiled program a host gave ([runCompiled]):
+  /// its module's exports, "name/arity".
+  Set<String> _givenEntryPoints = const {};
+
+  /// Run the compiled program a host gives, in place of a program's source
+  /// (IGLP, Implementation Notes, "Boot": "A host may give an agent, at its
+  /// start, the compiled program it runs in place of the program's source: a
+  /// module value, which the loader verifies as it verifies a module the
+  /// agent adopts, and whose certificate's key the host accepts; the agent
+  /// runs it and compiles nothing").  [image] is the code its goals run, the
+  /// program and the root linked as one; [module] its module value, whose
+  /// exports are its entry points ("the procedures that may be posted are
+  /// exactly the entry points", TGLP modules.tex, "Entry and the absence of a
+  /// boot module"); and [scope] the type scope its tables were built from,
+  /// the linked program's type definitions and declarations, in which a goal
+  /// posted to it is checked as a body goal, with the root ([postGoal];
+  /// TGLP modules.tex, "Type-Compatible Attestation Between Agents").  The
+  /// caller verifies the module's certificate; nothing is compiled, and what
+  /// the engine held before is let go.
+  void runCompiled(CodeImage image,
+      {required rt.ModuleTerm? module, required Module? scope}) {
+    clear();
+    final artefact = module?.artefact;
+    final keys = artefact is Artefact
+        ? {for (final e in artefact.exports) '${e.name}/${e.arity}'}
+        : <String>{};
+    _givenImage = image;
+    _givenEntryPoints = keys;
+    _appModule = module;
+    _unitEntryPoints['__program__'] = _UnitEntryPoints(
+        keys,
+        () => scope == null
+            ? primitiveScope()
+            : mergeModuleIntoScope(primitiveScope(), scope,
+                label: module?.name ?? '__program__'));
   }
 
   /// The entry points of each unit the engine holds, by the name it was
@@ -632,6 +676,7 @@ class GlpEngine {
   /// The entry points of every unit the engine holds ([_plainProcedures]).
   Set<String> _entryPoints() => {
         for (final p in _loadedPrograms.values) ..._plainProcedures(p),
+        ..._givenEntryPoints,
       };
 
   /// The label a goal's call to [functor]/[arity] runs at: an entry point of a
@@ -986,11 +1031,17 @@ class GlpEngine {
     // Every conjunct is found, and every input is the goal's to read, before
     // any is put to the machine, so a refused goal leaves nothing queued
     // behind it.
-    final program = combinedProgram;
+    // The code a goal runs: the compiled program a host gave ([runCompiled]),
+    // or the load set's.
+    final given = _givenImage;
+    final program = given == null ? combinedProgram : null;
     final labels = <String>[];
     for (final goal in goals) {
       final procedureLabel = _goalLabel(goal.functor, goal.args.length);
-      if (procedureLabel == null || program.labels[procedureLabel] == null) {
+      if (procedureLabel == null ||
+          (given != null
+              ? given.entryOffsetOf(procedureLabel) == null
+              : program!.labels[procedureLabel] == null)) {
         throw GoalRefused(
             'Predicate ${goal.functor}/${goal.args.length} not found');
       }
@@ -1004,7 +1055,7 @@ class GlpEngine {
     // labels from the image's own program, so an unresolved offset is an
     // internal invariant violation between the object labels and the image
     // symbols, not a user error.
-    final image = _image ??= codeImageFromProgram(program);
+    final image = given ?? (_image ??= codeImageFromProgram(program!));
     final runner = _runner ??= ByteRunner(image);
     final entries = [
       for (final l in labels)
