@@ -433,7 +433,7 @@ Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String,
 RoleAsk   ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).
 Asked     ::= asked(Integer, List(Word)).
 Close     ::= close.
-Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.
+Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; near(Presence).
 %% The peer an acquaintance part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract's acquaintance schemas).
 MeetPeer  ::= peer(Peer) ; nopeer.
 
@@ -651,13 +651,33 @@ agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?)|Thr?], Env) :- ground(Id?), 
     tag_net(NetIn?, Nt),
     merge(Rq?, Nt?, M1),
     merge(M1?, Ans?, M2),
-    merge(M2?, [own|Ow?], In),
+    phone_facts(Ph),
+    merge(M2?, Ph?, M3),
+    merge(M3?, [own|Ow?], In),
     agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [],
         st(Id?, app(G0?, 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).
 %% The atoms of the environment predicates among those given at deployment (env_atom, printed from the contract).
 procedure env_atoms(List(Atom)?, GAtoms).
 env_atoms([], []).
 env_atoms([A|As], G?) :- env_atom(A?, G1), env_atoms(As?, G2), app(G1?, G2?, G).
+%% The facts the phone finds (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the compiled agent reads it from its phone afresh whenever it computes a condition that requires it"; "When a fact Alice's phone finds changes, as when a person comes near, the phone tells Alice's agent, which then checks again which of its own transactions it can take"): the agent declares, when it starts, the agents nearby over Bluetooth and over the local network (GLP, appendix-guards, "Networking seam": declare(nearby(U, S)), U pan or lan), and reads each presence, seen(K) or gone(K), as a trigger near(P).
+procedure phone_facts(Stream(Trigger)).
+phone_facts(Ph?) :-
+    declare(nearby(pan, S1)),
+    declare(nearby(lan, S2)),
+    merge(S1?, S2?, S),
+    tag_near(S?, Ph).
+procedure tag_near(Stream(Presence)?, Stream(Trigger)).
+tag_near([P|Ps], [near(P?)|Ts?]) :- tag_near(Ps?, Ts).
+tag_near([], []).
+%% A presence held in the machine state: nearby(K) from the phone's report that K is seen until its report that K is gone, so that the conditions read it and the view shows it.
+procedure near_set(Presence?, App?, App).
+near_set(seen(K), app(S, N, L, R), app([g(nearby, [p(K?)])|S1?], N?, L?, R?)) :- ground(K?) | drop_near(K?, S?, S1).
+near_set(gone(K), app(S, N, L, R), app(S1?, N?, L?, R?)) :- ground(K?) | drop_near(K?, S?, S1).
+procedure drop_near(Peer?, GAtoms?, GAtoms).
+drop_near(_, [], []).
+drop_near(K, [g(nearby, [p(Q)])|S], S1?) :- K? =?= Q? | drop_near(K?, S?, S1).
+drop_near(K, [A|S], [A?|S1?]) :- otherwise | drop_near(K?, S?, S1).
 
 %% A request question: its question, of the request type Request?, takes the
 %% person's one request, put up once it is made, of a type with the alternative propose(N) for the request name N of each guarded part (vGLP d433f71, Section 5.4, "The compilation"), so that every agent of a contract with a guarded part asks a request question when it starts and the next when it reads the answer to the last; a refresh is no request but a grant addressed to no construct, on which the dispatcher has every construct draw again what it last drew (Section 6.3), and the agent writes nothing on it.
@@ -829,6 +849,13 @@ step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(St?
     st_trie(St?, Tr),
     recheck_find(Pd?, V?, Tr?, St?, F),
     recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).
+%% A presence the phone reports: the machine state takes it, the view is written where it changed, and the agent checks again which of its own transactions it can take (near_set; next).
+step(near(P), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(P?), ground(St?) |
+    st_app(St?, Ap0),
+    st_app(St?, Ap1),
+    near_set(P?, Ap1?, Ap2),
+    set_app(St?, Ap2?, St1),
+    next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     agent_goal(Ls?, In?, no, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
@@ -1028,9 +1055,10 @@ stand_cond1(nostand, unlocked, no, go).
 stand_cond1(nostand, held(_), _, busy).
 stand_cond1(nostand, unlocked, yes, busy).
 procedure stand_take(StandCond?, Constant?, Proposal?, RCond?, St?, RCond, St).
-stand_take(go, S, _, Cd, St, Cd?, St1?) :- ground(St?) |
+stand_take(go, S, _, Cd, St, Cd?, St1?) :- ground(St?), ground(S?) |
     st_app(St?, Ap),
     stand_app(S?, Ap?, Ap1),
+    trust_to(S?, open),
     set_app(St?, Ap1?, St1).
 stand_take(already, _, _, Cd, St, Cd?, St?).
 stand_take(busy, _, N, _, St, rhold(N?), St?).
@@ -1044,9 +1072,15 @@ withdraw_app(S, app(Ms, K, L, R), Ap?) :- ground(S?), ground(R?), ground(L?) |
     lock_of_schema(L?, S?, Ls),
     withdraw_app1(Sk?, Ls?, S?, app(Ms?, K?, L?, R?), Ap).
 procedure withdraw_app1(StandK?, YesNo?, Constant?, App?, App).
-withdraw_app1(at(Kw), no, S, app(Ms, K, L, R), app(Ms?, K?, L?, [ended(std(S?), Kw?)|R?])).
+withdraw_app1(at(Kw), no, S, app(Ms, K, L, R), app(Ms?, K?, L?, [ended(std(S?), Kw?)|R?])) :- ground(S?) | trust_to(S?, closed).
 withdraw_app1(at(_), yes, _, Ap, Ap?).
 withdraw_app1(nostand, _, _, Ap, Ap?).
+%% The phone opened to persons it does not know, over Bluetooth and the local network, from the standing request of a schema the implementation pragmas name until it is withdrawn (vGLP, Section 5.4; GLP, appendix-guards, "Networking seam": declare(trust(U, L))), and left as it is for any other (trust_of).
+procedure trust_to(Constant?, TrustLevel?).
+trust_to(S, T) :- ground(S?) | trust_of(S?, Y), trust_set(Y?, T?).
+procedure trust_set(YesNo?, TrustLevel?).
+trust_set(yes, T) :- ground(T?) | declare(trust(pan, T?)), declare(trust(lan, T?)).
+trust_set(no, _).
 %% The standing request std(S) pending in the record, at(K), standing(std(S), K) recorded and not ended, or nostand.
 StandK    ::= at(Integer) ; nostand.
 procedure standing_live(Recs?, Constant?, Recs?, StandK).
@@ -7377,3 +7411,7 @@ ms_meets([X|Xs], B, R?) :- ground(B?) | mem(X?, B?, R1), ms_meets1(R1?, Xs?, B?,
 procedure(X) ms_meets1(YesNo?, Stream(X)?, Stream(X)?, YesNo).
 ms_meets1(yes, _, _, yes).
 ms_meets1(no, Xs, B, R?) :- ms_meets(Xs?, B?, R).
+
+procedure trust_of(Constant?, YesNo).
+trust_of(encounter, yes).
+trust_of(_, no) :- otherwise | true.

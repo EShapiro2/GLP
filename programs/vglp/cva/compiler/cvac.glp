@@ -15,7 +15,9 @@
 Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Line) ; standless_only(Line)
         ; day_only(Line) ; dayless_only(Line) ; env_only(Line) ; envless_only(Line)
         ; wild_only(Line) ; wildless_only(Line)
-        ; const_only(Line) ; constless_only(Line).
+        ; const_only(Line) ; constless_only(Line)
+        ; found_only(Line) ; foundless_only(Line)
+        ; trust_only(Line) ; trustless_only(Line).
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
 imported procedure local#faults(Contract?, Preds?, NumInfos?, Ones?, Strings).
@@ -53,20 +55,22 @@ compile(Nm, D, V, I, P, E, W, Vl) :- norm_pragmas(P?, Q), compile_intro(Nm?, D?,
 %% A term with no look, no version and no text, vGLP's own contracts' (../contracts.glp, pragmas_named/2), has nolook, version(1, 1) and the empty text.
 procedure norm_pragmas(Pragmas?, WPragmas).
 norm_pragmas(no_pragmas, no_pragmas).
-norm_pragmas(pragmas(Ls, As), pragmas(Ls?, Ts?, [], nolook, version(1, 1), '""')) :- norm_acts(As?, Ts).
-norm_pragmas(pragmas(Ls, As, Ss), pragmas(Ls?, Ts?, Ss?, nolook, version(1, 1), '""')) :- norm_acts(As?, Ts).
-norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?)) :- norm_acts(As?, Ts).
+norm_pragmas(pragmas(Ls, As), pragmas(Ls?, Ts?, [], nolook, version(1, 1), '""', [])) :- norm_acts(As?, Ts).
+norm_pragmas(pragmas(Ls, As, Ss), pragmas(Ls?, Ts?, Ss?, nolook, version(1, 1), '""', [])) :- norm_acts(As?, Ts).
+norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?, [])) :- norm_acts(As?, Ts).
+%% The predicates the phone finds, the seventh argument pragmas.sh prints where the implementation pragmas name one (vGLP, Section 5.4: "An implementation pragma says, of each environment predicate other than the day, whether the phone finds it").
+norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?, Fd?)) :- norm_acts(As?, Ts).
 %% Every act with the types of its fields, [] where it gives none (self.glp, PAct).
 procedure norm_acts(PActs?, TActs).
 norm_acts([], []).
 norm_acts([act(S, B, Fs, Q, T, By)|As], [act(S?, B?, Fs?, Q?, T?, By?, [])|Ts?]) :- norm_acts(As?, Ts).
 norm_acts([act(S, B, Fs, Q, T, By, Ft)|As], [act(S?, B?, Fs?, Q?, T?, By?, Ft?)|Ts?]) :- norm_acts(As?, Ts).
 %% The contract's words, its pragmas, carried through the compiler whole, with its environment predicates and the contract as read, which the platform exports (export_lines).
-WPragmas ::= no_pragmas ; pragmas(PLists, TActs, PStands, PLook, PVersion, String).
+WPragmas ::= no_pragmas ; pragmas(PLists, TActs, PStands, PLook, PVersion, String, PhoneFacts).
 Words ::= words(WPragmas, Preds, Lxs, WDeclared, DevValues).
 %% The words of a contract carrying pragmas, the only contract the compiler prints a platform from (compile3a; vGLP, Section 5.4, "The contract's words"), which every procedure past compile3a takes, with its environment predicates.
 Worded ::= words(Given, Preds, Lxs, WDeclared, DevValues).
-Given  ::= pragmas(PLists, TActs, PStands, PLook, PVersion, String).
+Given  ::= pragmas(PLists, TActs, PStands, PLook, PVersion, String, PhoneFacts).
 %% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): each schema's constraint, its local variables and the role whose local variables the constraint names, the table Nt (local.glp, num_info_of); the contract compiled is its plain form (plain_contract), each schema's head less its local variables, which "the schema-binding does not bind", so that a class term names the schema-binding: its roles and its other variables, "bound by the schema-binding, as a speech-act variable is", in the order of the head.
 procedure compile_intro(Constant?, Declared?, Verdict?, Intro?, Words?).
 compile_intro(Nm, D, V, I, W) :- ground(Nm?), ground(D?) |
@@ -220,9 +224,9 @@ compile3a(_, Nm, _, _, _, _, words(no_pragmas, _, _, _, _)) :- ground(Nm?) |
     send_to_user(['%% compile begin', H?,
         '%% it passes the checks, its verdict, local and effective, and has no pragmas, the words its app shows: the compiler prints a platform only from a contract with pragmas, and refuses one with none (vGLP, Section 5.4, "The contract\'s words").',
         '%% compile end']).
-compile3a(Ps, Nm, C, Rf, E, Nt, words(pragmas(Ls, As, Ss, Lk, Vn, Tx), Ev, Lx, Dn, Vl)) :- ground(Vl?), ground(Ps?), ground(C?), ground(Nt?), ground(Ls?), ground(As?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Ev?), ground(Lx?), ground(Dn?) |
-    word_faults(words(pragmas(Ls?, As?, Ss?, Lk?, Vn?, Tx?), Ev?, Lx?, Dn?, Vl?), C?, Nt?, Ps?, Wf),
-    compile4(Wf?, Nm?, C?, Rf?, E?, Nt?, words(pragmas(Ls?, As?, Ss?, Lk?, Vn?, Tx?), Ev?, Lx?, Dn?, Vl?), Ps?).
+compile3a(Ps, Nm, C, Rf, E, Nt, words(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd), Ev, Lx, Dn, Vl)) :- ground(Fd?), ground(Vl?), ground(Ps?), ground(C?), ground(Nt?), ground(Ls?), ground(As?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Ev?), ground(Lx?), ground(Dn?) |
+    word_faults(words(pragmas(Ls?, As?, Ss?, Lk?, Vn?, Tx?, Fd?), Ev?, Lx?, Dn?, Vl?), C?, Nt?, Ps?, Wf),
+    compile4(Wf?, Nm?, C?, Rf?, E?, Nt?, words(pragmas(Ls?, As?, Ss?, Lk?, Vn?, Tx?, Fd?), Ev?, Lx?, Dn?, Vl?), Ps?).
 
 %% A contract whose words do not name its schemas, or leave a guarded schema with no button, is not compiled, with the lines saying why (word_faults).
 procedure compile4(Lines?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Worded?, Preds?).
@@ -1715,6 +1719,7 @@ pragma_acts(no_pragmas, []).
 pragma_acts(pragmas(_, As), Ts?) :- norm_acts(As?, Ts).
 pragma_acts(pragmas(_, As, _), Ts?) :- norm_acts(As?, Ts).
 pragma_acts(pragmas(_, As, _, _, _, _), Ts?) :- norm_acts(As?, Ts).
+pragma_acts(pragmas(_, As, _, _, _, _, _), Ts?) :- norm_acts(As?, Ts).
 
 %% A schema's variables are named V1, V2, ... in the printed clauses; there are
 %% as many names as vname/3 has.
@@ -1764,7 +1769,19 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     wild_shared(Fx?, Wl?, Fx00),
     worded_lx(W?, Lx9),
     lx_consts(Lx9?, Kn),
-    const_lines(Fx00?, Kn?, Fx0),
+    const_lines(Fx00?, Kn?, Fx01),
+    worded_phone(W?, Ph0),
+    phone_found(Ph0?, Fd),
+    env_any(Fd?, Fy),
+    worded_phone(W?, Ph1),
+    phone_trust(Ph1?, Tr0),
+    env_any(Tr0?, Ty),
+    worded_phone(W?, Ph2),
+    phone_trust(Ph2?, Tr1),
+    trust_lines(Tr1?, Ltr),
+    found_lines(Fx01?, Fy?, Fx02),
+    trust_lines_in(Fx02?, Ty?, Fx03),
+    app(Fx03?, Ltr?, Fx0),
     shared_lines(Fx0?, Gd?, Dy?, En?, Sd?, Fx1),
     proved_rules(C?, Rl),
     worded_lx(W?, Lx7),
@@ -1976,6 +1993,34 @@ shared_lines([standing_only(_)|Ls], G, D, E, no, Ls1?) :- shared_lines(Ls?, G?, 
 shared_lines([standless_only(_)|Ls], G, D, E, yes, Ls1?) :- shared_lines(Ls?, G?, D?, E?, yes, Ls1).
 shared_lines([standless_only(L)|Ls], G, D, E, no, Ls1?) :- shared_lines([L?|Ls?], G?, D?, E?, no, Ls1).
 shared_lines([L|Ls], G, D, E, S, [L?|Ls1?]) :- otherwise | shared_lines(Ls?, G?, D?, E?, S?, Ls1).
+%% A line found_only(L) is printed as L where the phone finds an environment predicate of the contract, and a line foundless_only(L) where it finds none, so that every other platform prints what it printed before (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the compiled agent reads it from its phone afresh whenever it computes a condition that requires it"); the wrappers of the other kinds are looked through.
+procedure found_lines(Lines?, YesNo?, Lines).
+found_lines([], _, []).
+found_lines([found_only(L)|Ls], yes, [L?|R?]) :- found_lines(Ls?, yes, R).
+found_lines([found_only(_)|Ls], no, R?) :- found_lines(Ls?, no, R).
+found_lines([foundless_only(_)|Ls], yes, R?) :- found_lines(Ls?, yes, R).
+found_lines([foundless_only(L)|Ls], no, [L?|R?]) :- found_lines(Ls?, no, R).
+found_lines([guarded_only(found_only(L))|Ls], yes, [guarded_only(L?)|R?]) :- found_lines(Ls?, yes, R).
+found_lines([guarded_only(found_only(_))|Ls], no, R?) :- found_lines(Ls?, no, R).
+found_lines([guarded_only(foundless_only(_))|Ls], yes, R?) :- found_lines(Ls?, yes, R).
+found_lines([guarded_only(foundless_only(L))|Ls], no, [guarded_only(L?)|R?]) :- found_lines(Ls?, no, R).
+found_lines([unguarded_only(found_only(L))|Ls], yes, [unguarded_only(L?)|R?]) :- found_lines(Ls?, yes, R).
+found_lines([unguarded_only(found_only(_))|Ls], no, R?) :- found_lines(Ls?, no, R).
+found_lines([unguarded_only(foundless_only(_))|Ls], yes, R?) :- found_lines(Ls?, yes, R).
+found_lines([unguarded_only(foundless_only(L))|Ls], no, [unguarded_only(L?)|R?]) :- found_lines(Ls?, no, R).
+found_lines([L|Ls], F, [L?|R?]) :- otherwise | found_lines(Ls?, F?, R).
+%% A line trust_only(L) is printed as L where a standing request of the contract opens the phone to persons it does not know, and trustless_only(L) where none does (trust_lines; vGLP, Section 5.4); the wrappers of the other kinds are looked through, as found_lines does.
+procedure trust_lines_in(Lines?, YesNo?, Lines).
+trust_lines_in([], _, []).
+trust_lines_in([trust_only(L)|Ls], yes, [L?|R?]) :- trust_lines_in(Ls?, yes, R).
+trust_lines_in([trust_only(_)|Ls], no, R?) :- trust_lines_in(Ls?, no, R).
+trust_lines_in([trustless_only(_)|Ls], yes, R?) :- trust_lines_in(Ls?, yes, R).
+trust_lines_in([trustless_only(L)|Ls], no, [L?|R?]) :- trust_lines_in(Ls?, no, R).
+trust_lines_in([standing_only(guarded_only(trust_only(L)))|Ls], yes, [standing_only(guarded_only(L?))|R?]) :- trust_lines_in(Ls?, yes, R).
+trust_lines_in([standing_only(guarded_only(trust_only(_)))|Ls], no, R?) :- trust_lines_in(Ls?, no, R).
+trust_lines_in([standing_only(guarded_only(trustless_only(_)))|Ls], yes, R?) :- trust_lines_in(Ls?, yes, R).
+trust_lines_in([standing_only(guarded_only(trustless_only(L)))|Ls], no, [standing_only(guarded_only(L?))|R?]) :- trust_lines_in(Ls?, no, R).
+trust_lines_in([L|Ls], T, [L?|R?]) :- otherwise | trust_lines_in(Ls?, T?, R).
 %% Whether the contract declares a standing act.
 procedure stands_any(PStands?, YesNo).
 stands_any([], no).
@@ -2752,10 +2797,31 @@ lc_of([], _, []).
 lc_of([lc(S1, Bi, Xs, A, Phi, CA, CD)|Lx], S, [local(Bi?, Xs?, A?, Phi?, CA?, CD?)|Ls?]) :- S1? =?= S? | lc_of(Lx?, S?, Ls).
 lc_of([_|Lx], S, Ls?) :- otherwise | lc_of(Lx?, S?, Ls).
 procedure worded_acts(Worded?, TActs).
-worded_acts(words(pragmas(_, As, _, _, _, _), _, _, _, _), As?).
+worded_acts(words(pragmas(_, As, _, _, _, _, _), _, _, _, _), As?).
 %% The standing declarations of a contract carrying pragmas.
 procedure worded_stands(Worded?, PStands).
-worded_stands(words(pragmas(_, _, Ss, _, _, _), _, _, _, _), Ss?).
+worded_stands(words(pragmas(_, _, Ss, _, _, _, _), _, _, _, _), Ss?).
+%% What the phone does for the contract (norm_pragmas): the predicates it finds, and the standing schemas whose standing request opens it to persons it does not know.
+procedure worded_phone(Worded?, PhoneFacts).
+worded_phone(words(pragmas(_, _, _, _, _, _, Ph), _, _, _, _), Ph?).
+procedure phone_found(PhoneFacts?, Preds).
+phone_found([], []).
+phone_found([found(P)|Ps], [P?|Fs?]) :- phone_found(Ps?, Fs).
+phone_found([trust(_)|Ps], Fs?) :- phone_found(Ps?, Fs).
+procedure phone_trust(PhoneFacts?, Preds).
+phone_trust([], []).
+phone_trust([trust(S)|Ps], [S?|Ts?]) :- phone_trust(Ps?, Ts).
+phone_trust([found(_)|Ps], Ts?) :- phone_trust(Ps?, Ts).
+%% trust_of(S, yes) for each standing schema S whose standing request opens the phone (vGLP, Section 5.4: "An implementation pragma may open a person's phone to persons it does not know, over Bluetooth and the local network, from their standing request until they withdraw it"), and trust_of(_, no) for every other: printed where there is one (trust_only lines of the text).
+procedure trust_lines(Preds?, Lines).
+trust_lines([], []).
+trust_lines([S|Ss], ['', 'procedure trust_of(Constant?, YesNo).'|L?]) :- ground(S?), ground(Ss?) | trust_of_lines([S?|Ss?], L).
+procedure trust_of_lines(Preds?, Lines).
+trust_of_lines([], ['trust_of(_, no) :- otherwise | true.']).
+trust_of_lines([S|Ss], [L?|Ls?]) :- ground(S?) |
+    term_to_string(S?, T),
+    string_concat(['trust_of(', T?, ', yes).'], L),
+    trust_of_lines(Ss?, Ls).
 %% The standing tables of the platform (vGLP 7c631b1, Section 5.4, "The contract's words"): schema_standing(S, on(A)) for each standing schema S, A the act whose request makes the standing request, and none for every other; stand_act(M, makes(S)) for the act M whose request makes it, stand_act(M, withdraws(S)) for the act whose request withdraws it, and plain for every other.
 %% The roles of each schema whose persons must consent to its act and are not asked (vGLP, Section 5.4, "The contract's words": "A clause may say that a person, or a ward, must consent to its act: they are a guard of the act, so it is never taken against them, and they are not asked"): schema_consents(S, Is) for each act of the pragmas that carries consents(I) with the types of its fields (self.glp, FType), and [] for every other.
 procedure consent_lines(TActs?, Lines).
@@ -3050,7 +3116,7 @@ request_name_decl([X|Xs], ['', 'procedure request_name(Class?, PName).', X?|Xs1?
 
 %% A contract whose pragmas name what the contract does not hold is not compiled, with a line saying why: a list naming no predicate of the contract, or more than one; a button naming no schema of the contract, the button's text read in lower case being the schema's name ("each bearing its act's name", GSC 2991379, Section 2); a pragma naming more fields than its schema has variables the person fills; a sentence naming a person, Alice, Bob or Carol, that its schema does not have; and a guarded schema no button names (unnamed_lines).
 procedure word_faults(Worded?, Contract?, NumInfos?, Preds?, Lines).
-word_faults(words(pragmas(Ls, As, Ss, _, _, _), _, Lx, _, _), C, Nt, Ps, F?) :- ground(Ls?), ground(As?), ground(Ss?), ground(C?), ground(Ps?), ground(Lx?) |
+word_faults(words(pragmas(Ls, As, Ss, _, _, _, _), _, Lx, _, _), C, Nt, Ps, F?) :- ground(Ls?), ground(As?), ground(Ss?), ground(C?), ground(Ps?), ground(Lx?) |
     contract_preds_lx(C?, Nt?, Lx?, Pr),
     list_faults(Ls?, Pr?, F1),
     act_faults(As?, C?, F2),
@@ -3407,7 +3473,7 @@ a_person(ilist(_, _), _, _, no).
 %% The two widget declarations every platform carries (vGLP, Section 6.2, "The words a platform shows": "The compiler prints three widget declarations for a platform: for its request type, a menu of the buttons and the fields of the contract's acts; for its approval type, the question with the buttons yes and no"), so that no app writes a self.vglp: the approval question drawn by the construct family's approval_sentence, the request question by its social_menu.  With pragmas, the request type's declaration carries the buttons the contract's pragmas give, button(B, Acts), B the label in brackets and Acts the acts it names (Section 5.4, "The contract's words": "A button is of the acts it names"); each act, for each guarding role at which it is proposed, act(F, M, Pre, Binds, Fields, Same, Text): F its schema, M the place of the proposer in its request, Pre the atoms its schema requires and forbids at the proposer's role and what the schemas prove, Binds the places of its request those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, in the schema's order, Same its places possibly one person and Text the text of its request form (Section 6.2: the request widget "draws one button for each way the viewer's state, in the last view written, satisfies the act at the proposer's role, with the values that way binds and the act's fields").  It carries no tab and no row: where the construct family draws a button is its own choice, from the atoms that bind the way (Section 6.2: "How the buttons of one act are arranged, each beside the atoms that bind it or as one button with a picker, is the construct family's").  The approval question's two answers are given by no pragma, so its declaration carries no label, and the construct family draws the name of each (Section 6.2: "A construct family draws the label it is given, and the name of the type where it is given none").  The grammar is README.md's beside this file, 6.
 procedure widget_lines(Worded?, Contract?, Contract?, Preds?, DrawCtx?, Lines).
 widget_lines(_, _, _, [], _, ['', '%% The widget declaration of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence; a contract with no guarded part has no request question.', 'Approval =::= approval_sentence.']).
-widget_lines(words(pragmas(_, As, _, _, _, _), _, _, _, _), C, Ch, Ps, Rf, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent\'s own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract\'s pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer\'s role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument\'s place, at(K), a group\'s, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).', 'Approval =::= approval_sentence.', T?, '.', '', '%% The types of the request widget\'s term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu\'s one alternative is T\'s.', 'RequestMenu ::= social_menu(List(MenuEntry)).', 'MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).', 'MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuField ::= field(Integer, String, MenuFieldType).', 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuWord ::= say(String) ; at(Integer).']) :-
+widget_lines(words(pragmas(_, As, _, _, _, _, _), _, _, _, _), C, Ch, Ps, Rf, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent\'s own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract\'s pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer\'s role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument\'s place, at(K), a group\'s, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).', 'Approval =::= approval_sentence.', T?, '.', '', '%% The types of the request widget\'s term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu\'s one alternative is T\'s.', 'RequestMenu ::= social_menu(List(MenuEntry)).', 'MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).', 'MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuField ::= field(Integer, String, MenuFieldType).', 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuWord ::= say(String) ; at(Integer).']) :-
     ground(As?), ground(C?), ground(Ch?), ground(Ps?), ground(Rf?) |
     act_buttons(As?, C?, Ch?, Ps?, Rf?, [], Bs),
     button_texts(Bs?, Bt),
@@ -3951,7 +4017,7 @@ nth_arg(_, [], role(0)).
 
 %% The lists and the sentences, printed for a contract with pragmas: tabs(Ts), the lists its app shows, tab(Name, P), P the predicate whose atoms the list holds; and sentence_of(C, Me, Ws), the sentence the contract puts to the agent Me on an attempt of the part C, its roles and variables filled in from the binding C names, or [] where it puts none: where the pragma of C's clause has no sentence, or where the sentence names Me, the sentence being put to the guarding roles whose persons it does not name (README.md beside this file, "The pragmas").
 procedure word_lines(Worded?, Contract?, NumInfos?, Lines).
-word_lines(words(pragmas(Ls, As, Ss, Lk, Vn, Tx), Ev, Lx, Dn, Vl), C, Nt, L?) :- ground(Ls?), ground(As?), ground(C?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Dn?), ground(Lx?) |
+word_lines(words(pragmas(Ls, As, Ss, Lk, Vn, Tx, _), Ev, Lx, Dn, Vl), C, Nt, L?) :- ground(Ls?), ground(As?), ground(C?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Dn?), ground(Lx?) |
     export_lines(Dn?, pragmas(Ls?, As?, Ss?, Lk?, Vn?), Tx?, Vn?, Lex0),
     lx_consts(Lx?, Kn),
     rarg_lines(Lex0?, Kn?, Lex),

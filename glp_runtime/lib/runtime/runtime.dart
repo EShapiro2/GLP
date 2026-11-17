@@ -197,6 +197,21 @@ class GlpRuntime {
   /// at its instantiation (IGLP, "Boot" and "Persistence").
   AgentSigner? identity;
 
+  /// The name by which the runtime gives a program the key [hex], 64
+  /// lowercase hex characters: the key itself over a real network, and in a
+  /// simulation the readable name standing for it, so that one person is one
+  /// name everywhere a program meets them, by self_key/1, signature/2,
+  /// decompose_module/4, a presence and a message's sender alike (IGLP,
+  /// Implementation Notes, "Simulation realisation"; Remark "Agent Names").
+  /// Set by the host that binds a simulation's layer ([MadContext.network]).
+  String Function(String hex) keyName = _keyItself;
+
+  /// The key, 64 lowercase hex characters, a name the runtime gave a program
+  /// stands for ([keyName]); the name itself where it names no key.
+  String Function(String name) keyNamed = _keyItself;
+
+  static String _keyItself(String k) => k;
+
   /// The person send_to_user/1 emits to, the '_output'/1 kernel's two ends
   /// (GLP-Spec appendix-guards.tex, "Output to the person": send_to_user(
   /// Stream) "emits each element of Stream to the person operating the

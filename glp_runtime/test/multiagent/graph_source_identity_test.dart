@@ -51,7 +51,8 @@ void main() {
     expect(sig, isA<StructTerm>());
     final s = sig as StructTerm;
     expect(s.functor, 'signed');
-    expect((s.args[0] as ConstTerm).value, a.pub.hex);
+    // The signer by the readable name standing for its key in the simulation.
+    expect((s.args[0] as ConstTerm).value, 'alice');
     expect((s.args[1] as ConstTerm).value, hM,
         reason: 'the Hash is the signing program\'s h(M)');
     final t = s.args[2] as StructTerm;

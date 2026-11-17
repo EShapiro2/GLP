@@ -135,9 +135,12 @@ report(unsigned) :- send_to_user([unsigned]).
       try {
         final result = await engine.runGoal('round_trip');
         expect(result.succeeded, isTrue);
-        // One Signature term: the signer, the signing module's h(M), the term.
+        // One Signature term: the signer, the signing module's h(M), the term;
+        // the signer by the readable name standing for its key in the
+        // simulation, as self_key/1 gives it (IGLP, Implementation Notes,
+        // "Simulation realisation").
         final hM = (engine.appModule!.artefact as Artefact).hM;
-        expect(out, ['signed(${a.pub.hex}, ${_hex(hM)}, attest(pka, pkb))']);
+        expect(out, ['signed(alice, ${_hex(hM)}, attest(pka, pkb))']);
       } finally {
         dir.deleteSync(recursive: true);
       }
@@ -158,7 +161,7 @@ signer(unsigned) :- send_to_user([unsigned]).
       try {
         final result = await engine.runGoal('who');
         expect(result.succeeded, isTrue);
-        expect(out, [a.pub.hex]);
+        expect(out, ['alice']);
       } finally {
         dir.deleteSync(recursive: true);
       }
