@@ -199,7 +199,7 @@ sub tstr {   # a term written back, to compare arguments
     return $t->[0] . "(" . join(",", map { tstr($_) } @{ $t->[1] }) . ")";
 }
 # Each schema, its roles, $roles{S}, each { guarded, listed, comps }, comps its four lists of atoms, each [P, [args]], in the order of rs/5 (added, deleted, required, forbidden); its head, $head{S}, the variables after its roles; and the names of its roles, $rnames{S}, where its head names them (GSC 25b6b3c, Section 2: "the schemas naming their roles as the clauses do").
-my (%roles, %head, %rnames, %ones, %tabpred, @pending, %covered, @lines_out, @faults, %cons);
+my (%roles, %head, %rnames, %ones, %vmarks, %tabpred, @pending, %covered, @lines_out, @faults, %cons);
 sub find_schemas {
     my ($t) = @_;
     return if @$t == 1;
@@ -236,6 +236,25 @@ sub find_schemas {
                         atoms => [ map { [ map { $_->[0] eq "times" ? $_->[1][1] : $_ } @{ $_->[1] } ] } @c ] };
         }
         $roles{$n} = \@rs;
+        # The names after those of the roles are the marks of the schema\x27s agent variables that are no roles, one(Name, Other) (programs/gsc/self.glp, as_read, GLP GSC-marks f3314f4e): no role is named by one, and a role\x27s or a variable\x27s mark whose Other is no role, a variable or \x27_\x27, is $vmarks{S}, each [key, key], a key "r<i>" of the role i, "v<Name>" of the variable or "_" (vGLP, Section 5.4: "and persons of different names to different persons but for two the clause names as possibly one person").
+        if ($named) {
+            my $k = scalar @rs;
+            my @all = @{ $t->[1][1][1] };
+            splice @{ $rnames{$n} }, $k if @{ $rnames{$n} } > $k;
+            $ones{$n} = [ grep { $_->[0] <= $k && $_->[1] <= $k } @{ $ones{$n} // [] } ];
+            my %isrole = map { $rnames{$n}[$_ - 1] => $_ } 1 .. $k;
+            my $i = 0;
+            for my $e (@all) {
+                $i++;
+                next unless $e->[0] eq "one";
+                (my $nm = $e->[1][0][0]) =~ s/^\x27|\x27$//g;
+                (my $o = $e->[1][1][0]) =~ s/^\x27|\x27$//g;
+                my $me = $i <= $k ? "r$i" : "v$nm";
+                my $ot = $o eq "_" ? "_" : exists $isrole{$o} ? "r$isrole{$o}" : "v$o";
+                next if $me =~ /^r/ && $ot =~ /^r/;
+                push @{ $vmarks{$n} }, [$me, $ot];
+            }
+        }
         return;
     }
     find_schemas($_) for @{ $t->[1] };
@@ -780,6 +799,19 @@ for my $f (@order) {
                             # Two roles the clause says are possibly one person may be bound to one person, and a field offers that person for both places (GSC 316d875, Section 2; vGLP, Sections 5.4 and 6.2): same(K, J), K and J their places in the request, its listed roles left out.
                             my %rplace; { my $k = 0; my $jj = 0; for my $r (@{ $roles{$S} }) { $jj++; next if $r->{listed}; $k++; $rplace{$jj} = $k } }
                             my @same = map { "same($rplace{$_->[0]}, $rplace{$_->[1]})" } grep { exists $rplace{ $_->[0] } && exists $rplace{ $_->[1] } } @{ $ones{$S} // [] };
+                            # A mark of an agent variable that is no role, or a role\x27s whose Other is a variable or any of the others: the places of the request, a variable\x27s place after those of the roles in the order of the schema\x27s variables, and "_" every other place of a person (vGLP, Sections 5.4 and 6.2).
+                            if (@{ $vmarks{$S} // [] }) {
+                                my %kplace = map { ("r$_" => $rplace{$_}) } keys %rplace;
+                                my $nr = scalar keys %rplace; my $vi = 0;
+                                for my $h (@{ $head{$S} // [] }) { $vi++; next unless ref $h && $h->[0] eq "pvar"; (my $vn = $h->[1][0][0]) =~ s/^\x27|\x27$//g; $kplace{"v$vn"} = $nr + $vi }
+                                my %seen = map { $_ => 1 } @same;
+                                for my $m (@{ $vmarks{$S} }) {
+                                    my ($a, $b) = @$m;
+                                    next unless exists $kplace{$a};
+                                    my @bs = $b eq "_" ? (grep { $_ ne $a } keys %kplace) : (exists $kplace{$b} ? ($b) : ());
+                                    for my $bb (@bs) { my $x = "same($kplace{$a}, $kplace{$bb})"; push @same, $x unless $seen{$x}++ }
+                                }
+                            }
                             $by{$S} = @same ? "by([$pl], [" . join(", ", @same) . "])" : "by([$pl])";
                             $plof{$S} = $pl;
                             base_read($S, $pl);

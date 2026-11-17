@@ -114,6 +114,11 @@ schema_ones(cheer, [])
 .
 schema_ones(_, []) :- otherwise | true.
 
+VOne      ::= vone(Var, Var) ; vone_any(Var).
+VOnes     ::= [] ; [VOne | VOnes].
+procedure schema_vones(Constant?, VOnes).
+schema_vones(_, []) :- otherwise | true.
+
 procedure schema_consents(Constant?, Ints).
 schema_consents(_, []) :- otherwise | true.
 
@@ -6020,7 +6025,40 @@ listings_ok1(no, _, _, _, _, no).
 listings_ok1(yes, Lsts, B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
 %% The roles Definition "Binding" constrains (rule_ok): the schema's own, each listed role's place with no atom, a listed role's people being no roles a binding sends to people.
 procedure rule_spec_ok(Constant?, Binding?, YesNo).
-rule_spec_ok(Nm, B, Ok?) :- ground(Nm?) | schema_entry(Nm?, E), rule_spec(E?, Rs0), schema_entry(Nm?, E1), listed_places(E1?, Ls), schema_ones(Nm?, Os), rule_ok(Rs0?, B?, Ls?, Os?, Ok).
+rule_spec_ok(Nm, B, Ok?) :- ground(Nm?), ground(B?) | schema_entry(Nm?, E), rule_spec(E?, Rs0), schema_entry(Nm?, E1), listed_places(E1?, Ls), schema_ones(Nm?, Os), rule_ok(Rs0?, B?, Ls?, Os?, Ok1), schema_vones(Nm?, Vo), vars_ok(B?, Vo?, Ok2), and(Ok1?, Ok2?, Ok).
+%% Persons of different names, one of them an agent variable that is no role, go to different persons, but for two the clause names possibly one person, schema_vones (vGLP, Section 5.4, "Speech-act schemas as local specifications": "and persons of different names to different persons but for two the clause names as possibly one person"; GSC, Definition "Binding" of every agent variable, GSC 8af7b7c).  Two roles are rule_ok's.
+PBind     ::= pb(Var, Peer).
+PBinds    ::= [] ; [PBind | PBinds].
+procedure vars_ok(Binding?, VOnes?, YesNo).
+vars_ok(B, Vo, R?) :- person_binds(B?, Ps), vpairs_ok(Ps?, Vo?, R).
+procedure person_binds(Binding?, PBinds).
+person_binds([], []).
+person_binds([b(role(I), p(X))|Bs], [pb(role(I?), X?)|Ps?]) :- person_binds(Bs?, Ps).
+person_binds([b(pvar(N), p(X))|Bs], [pb(pvar(N?), X?)|Ps?]) :- person_binds(Bs?, Ps).
+person_binds([_|Bs], Ps?) :- otherwise | person_binds(Bs?, Ps).
+procedure vpairs_ok(PBinds?, VOnes?, YesNo).
+vpairs_ok([], _, yes).
+vpairs_ok([P|Ps], Vo, R?) :- ground(Ps?), ground(Vo?) | vpair_row(P?, Ps?, Vo?, R1), vpairs_ok1(R1?, Ps?, Vo?, R).
+procedure vpairs_ok1(YesNo?, PBinds?, VOnes?, YesNo).
+vpairs_ok1(no, _, _, no).
+vpairs_ok1(yes, Ps, Vo, R?) :- vpairs_ok(Ps?, Vo?, R).
+procedure vpair_row(PBind?, PBinds?, VOnes?, YesNo).
+vpair_row(_, [], _, yes).
+vpair_row(pb(K, X), [pb(L, Y)|Ps], Vo, R?) :- ground(K?), ground(X?), ground(Vo?) | vpair_ok(K?, X?, L?, Y?, Vo?, R1), vpair_row1(R1?, pb(K?, X?), Ps?, Vo?, R).
+procedure vpair_row1(YesNo?, PBind?, PBinds?, VOnes?, YesNo).
+vpair_row1(no, _, _, _, no).
+vpair_row1(yes, P, Ps, Vo, R?) :- vpair_row(P?, Ps?, Vo?, R).
+procedure vpair_ok(Var?, Peer?, Var?, Peer?, VOnes?, YesNo).
+vpair_ok(role(_), _, role(_), _, _, yes).
+vpair_ok(K, X, L, Y, Vo, R?) :- otherwise, X? =?= Y? | vone_in(K?, L?, Vo?, R).
+vpair_ok(_, _, _, _, _, yes) :- otherwise | true.
+procedure vone_in(Var?, Var?, VOnes?, YesNo).
+vone_in(_, _, [], no).
+vone_in(K, L, [vone(A, B)|_], yes) :- K? =?= A?, L? =?= B? | true.
+vone_in(K, L, [vone(A, B)|_], yes) :- K? =?= B?, L? =?= A? | true.
+vone_in(K, _, [vone_any(A)|_], yes) :- K? =?= A? | true.
+vone_in(_, L, [vone_any(A)|_], yes) :- L? =?= A? | true.
+vone_in(K, L, [_|Vo], R?) :- otherwise | vone_in(K?, L?, Vo?, R).
 procedure rule_spec(Schema?, RoleSpecs).
 rule_spec(schema(_, _, Rs), Rs?).
 rule_spec(lschema(_, _, Rs, Lsts), Rs0?) :- blank_listed(Lsts?, Rs?, Rs0).
