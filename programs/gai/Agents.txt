@@ -23,29 +23,29 @@ Roles: the guardians of z = guardians(z), listed by z has y as a guardian, y is 
 Interface pragmas
 Known AI agents: the attestation records Alice holds.
 Enter: Alice [Enter] <name>
-  Carol: Alice asks to be your principal.
+  Alf: Alice asks to be your principal.
 Guardian decisions: Decider [End guardian] <person>
-  Codecider: Decider asks to end Bob's guardianship of your AI agent Carol.
+  Codecider: Decider asks to end Bob's guardianship of your AI agent Alf.
 Retire: Decider [Retire]
-  Codecider: Decider asks to retire your AI agent Carol.
+  Codecider: Decider asks to retire your AI agent Alf.
 AI acts: Decider [Make guardian] <person>
-  Bob: Decider asks you to be a guardian of the AI agent Carol.
-  Codecider: Decider asks that Bob be a guardian of your AI agent Carol.
+  Bob: Decider asks you to be a guardian of the AI agent Alf.
+  Codecider: Decider asks that Bob be a guardian of your AI agent Alf.
   Bob [AI agent acquaint] <AI agent>
-  Carol: Bob wishes that you know each other.
+  Alf: Bob wishes that you know each other.
   Alice [AI agent befriend] <AI agent>
-  Carol: Alice asks that you and Bob befriend.
-  Bob: Alice asks that you and her AI agent Carol befriend.
+  Alf: Alice asks that you and Bob befriend.
+  Bob: Alice asks that you and her AI agent Alf befriend.
   Alice [AI agent unfriend] <AI agent> <person>
-  Carol [AI agent end]
-  Carol [AI agents acquaint] <AI agent>
-  Dave: Carol wishes that you know each other.
+  Alf [AI agent end]
+  Alf [AI agents acquaint] <AI agent>
+  Will: Alf wishes that you know each other.
   Alice [AI agents befriend] <AI agent>
-  Carol: Alice asks that you and Dave befriend.
-  Dave: Alice asks that you and Carol befriend.
-  Bob: Alice asks that Carol and your AI agent Dave befriend.
+  Alf: Alice asks that you and Will befriend.
+  Will: Alice asks that you and Alf befriend.
+  Bob: Alice asks that Alf and your AI agent Will befriend.
   Alice [AI agents of one guardian befriend] <AI agent> <other AI agent>
-  Carol: Alice asks that you and Dave befriend.
-  Dave: Alice asks that you and Carol befriend.
+  Alf: Alice asks that you and Will befriend.
+  Will: Alice asks that you and Alf befriend.
   Alice [Sign] <text> [Forward]
   Alf [Agent sign] <text> [Agent forward]
