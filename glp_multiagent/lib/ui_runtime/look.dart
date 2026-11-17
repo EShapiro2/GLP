@@ -54,7 +54,13 @@ class ContractLook {
 class Looks {
   final Map<String, FamilyLook> families;
   final Map<String, ({String icon, String family})> contracts;
-  const Looks(this.families, this.contracts);
+
+  /// The contract each program of the tree is compiled from, by the name of
+  /// the program's directory, as `gkk` and `Knowledge`: the title line of
+  /// the text its platform prints, `contract(Text, Schemas)` (vGLP, Section
+  /// 5.4).  An app is named by its directory and its look is its contract's.
+  final Map<String, String> programs;
+  const Looks(this.families, this.contracts, [this.programs = const {}]);
 
   /// The family a contract with none named takes, and the icon.
   static const String otherFamily = 'other';
@@ -67,13 +73,20 @@ class Looks {
     final programs = File(rootSelfGlp).parent;
     final about =
         File('${programs.parent.path}/servers/peoplesweb/web/about.json');
-    final texts = <String>[
-      for (final f in programs.listSync(recursive: true, followLinks: false))
-        if (f is File && f.path.endsWith('.txt')) f.readAsStringSync()
-    ];
+    final texts = <String>[];
+    final platforms = <String, String>{};
+    for (final f in programs.listSync(recursive: true, followLinks: false)) {
+      if (f is! File) continue;
+      if (f.path.endsWith('.txt')) texts.add(f.readAsStringSync());
+      if (f.uri.pathSegments.last == 'platform.vglp') {
+        platforms[f.parent.uri.pathSegments.lastWhere((s) => s.isNotEmpty)] =
+            f.readAsStringSync();
+      }
+    }
     return parse(File('${programs.path}/apps/look.json').readAsStringSync(),
         about: about.existsSync() ? about.readAsStringSync() : null,
-        contractTexts: texts);
+        contractTexts: texts,
+        platforms: platforms);
   }
 
   /// [readSync], for a caller that awaits.
@@ -83,7 +96,9 @@ class Looks {
   /// files of the tree that may be contracts: a contract is a `.txt` with a
   /// `% Owner:` line, named by its first other line, its title, which is its name.
   static Looks parse(String lookJson,
-      {String? about, Iterable<String> contractTexts = const []}) {
+      {String? about,
+      Iterable<String> contractTexts = const [],
+      Map<String, String> platforms = const {}}) {
     final j = jsonDecode(lookJson) as Map<String, dynamic>;
     final fs = <String, FamilyLook>{};
     (j['families'] as Map<String, dynamic>).forEach((k, v) {
@@ -105,7 +120,21 @@ class Looks {
       final c = contractLook(t);
       if (c != null) cs[_key(c.name)] = (icon: c.icon, family: c.family);
     }
-    return Looks(fs, cs);
+    final ps = <String, String>{};
+    platforms.forEach((dir, text) {
+      final t = contractOfPlatform(text);
+      if (t != null) ps[dir.toLowerCase()] = t;
+    });
+    return Looks(fs, cs, ps);
+  }
+
+  /// The name of the contract a platform is compiled from: the title line of
+  /// the text in its `contract(Text, Schemas)`; null where it prints none.
+  static String? contractOfPlatform(String platform) {
+    final m = RegExp(r'^contract\("((?:[^"\\]|\\.)*?)(?:\\n|")', multiLine: true)
+        .firstMatch(platform);
+    final t = m?[1]?.trim();
+    return t == null || t.isEmpty ? null : t;
   }
 
   /// The key a contract's look is kept under: its name in upper case, a
@@ -163,7 +192,9 @@ class Looks {
   /// or of a family the file does not name, is of the family other.
   ContractLook of(String contract) {
     final name = contract.toUpperCase();
-    final c = contracts[_key(contract)];
+    // By the contract's name, or by the name of a program compiled from it.
+    final c = contracts[_key(contract)] ??
+        contracts[_key(programs[contract.toLowerCase()] ?? '')];
     final family =
         c != null && families.containsKey(c.family) ? c.family : otherFamily;
     return ContractLook(name, c?.icon ?? otherIcon, family, families[family]!);

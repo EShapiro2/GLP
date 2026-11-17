@@ -86,6 +86,39 @@ void main() {
     }
   });
 
+  test('an app\'s look is its contract\'s, found by the name of the app\'s directory, and not the family other', () {
+    var apps = 0;
+    for (final f in Directory(programsDir()).listSync(recursive: true).whereType<File>()) {
+      if (f.uri.pathSegments.last != 'platform.vglp') continue;
+      // The apps: programs/apps/<app> and CSSN's, programs/cssn.
+      final rel = f.path.substring(programsDir().length);
+      if (!rel.contains('/apps/') && !rel.endsWith('/cssn/platform.vglp')) continue;
+      final app = f.parent.uri.pathSegments.lastWhere((s) => s.isNotEmpty);
+      final contract = Looks.contractOfPlatform(f.readAsStringSync());
+      expect(contract, isNotNull, reason: '${f.path} prints no contract');
+      expect(looks.programs[app], contract, reason: app);
+      expect(looks.of(app).family, isNot(Looks.otherFamily), reason: '$app, compiled from $contract');
+      expect(looks.of(app).family, looks.of(contract!).family, reason: app);
+      expect(looks.of(app).icon, looks.of(contract).icon, reason: app);
+      apps++;
+    }
+    expect(apps, greaterThanOrEqualTo(9), reason: 'the apps of programs/apps and CSSN\'s');
+    expect(looks.of('gkk').family, looks.of('Knowledge').family);
+    expect(looks.of('gb').family, looks.of('Bonds').family);
+  });
+
+  test('a platform\'s contract is the title line of the text it prints', () {
+    expect(Looks.contractOfPlatform('x(1).\ncontract("Provenance Groups\\nA *group* is ...", [s]).\n'), 'Provenance Groups');
+    expect(Looks.contractOfPlatform('contract("Knowledge", []).'), 'Knowledge');
+    expect(Looks.contractOfPlatform('tabs([a]).'), isNull);
+    final l = Looks.parse(_families,
+        about: '{"Provenance-Groups": ["p", "social", ""]}',
+        platforms: {'gsnp': 'contract("Provenance Groups\\nA group.", []).'});
+    expect(l.of('gsnp').icon, 'p');
+    expect(l.of('GSNP').family, 'social');
+    expect(l.of('nosuch').family, Looks.otherFamily);
+  });
+
   test('a contract with no look, or of a family the file does not name, is of the family other', () {
     final l = Looks.parse(_families, contractTexts: [_contract('Q', ['Look: q, nowhere'])]);
     expect(l.of('NO-SUCH').family, Looks.otherFamily);
