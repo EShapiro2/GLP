@@ -870,7 +870,7 @@ for my $f (@order) {
                                 for my $m (@{ $vmarks{$S} }) {
                                     my ($ma, $mb) = @$m;
                                     next unless exists $kplace{$ma};
-                                    my @bs = $mb eq "_" ? (grep { $_ ne $ma } sort { $kplace{$a} <=> $kplace{$b} } keys %kplace) : (exists $kplace{$mb} ? ($mb) : ());
+                                    my @bs = $mb eq "_" ? (grep { $_ ne $ma } sort { $kplace{$::a} <=> $kplace{$::b} || $::a cmp $::b } keys %kplace) : (exists $kplace{$mb} ? ($mb) : ());
                                     for my $bb (@bs) { my $x = "same($kplace{$ma}, $kplace{$bb})"; push @same, $x unless $seen{$x}++ }
                                 }
                             }
