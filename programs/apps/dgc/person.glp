@@ -26,6 +26,68 @@ miniapp_person(Me, Role, Ps, ch(Ds, Gs?), S?) :-
 
 %% script(Role, Me, Ps, Ss): the script Ss of the role, Me the person's own key and Ps the keys the person knows, each peer named by its key in Ps, by its position there; the issuer of a coin whom the person does not know is a hole of an approval step, filled by matching the approval question (approval(Fs, K, A), below).
 procedure script(Constant?, Key?, List(Key)?, Steps).
+%% Not yet run: the denomination, written here speech(utterance('usd'), cb), waits on its type, a constant the same whoever holds it (Calculus #8, 2026-11-17 15:01 UTC); the platform holds a Speech to its speaker, so only cb's first issue is taken.  This branch is not to be merged until the play runs.
+%% The sovereign market of SGC's paper, Appendix C, on the compiled app (play_sovereign, plays.glp): cb, the central bank, diana, the community bank, bob and frank, households, and escrow, an escrow agent, all in one fiat currency, usd.  Each establishes their identity, issues first in usd (Denominated Coins:1), and comes to know those they transact with (Knowledge:2); cb and diana open a mutual credit line, ten coins each (Notes:2); diana and bob swap fifteen coins each, and diana lends frank fifteen diana-coins for eighteen frank-bonds due day 28 (Notes:2, Swap coin for bond); bob redeems two diana-coins against cb-coins diana holds, and frank one (Coins:2); bob and frank accept cb-coins up to five (Denominated Currencies:3); frank pays one cb-coin to cb (Coins:1, Pay issuer), for a unit of the fiat currency outside the contract; cb pays frank four of its coins (Denominated Currencies:4, Pay own accepted coins), and frank pays three of them to bob, cb taking part as their issuer (Pay accepted coins); diana presents a frank-bond before day 28, which frank's machine refuses, sets the clock to day 28 and presents it again (Bonds:2); and frank deposits two diana-coins with escrow for bob on the condition day 30, which escrow returns to him (Notes:4).  Each waits on its own screen, so that a request is made once what it needs of its proposer holds.
+script(sovereign_cb, Me, [Diana, Frank, Bob], [clock(86400000), own([A1], propose(establish(A1?))), wait(holds(identity)),
+        own([A2], propose(first_issue(A2?, speech(utterance('usd'), cb), 30))), wait(has(coin(Me?, speech(utterance('usd'), cb)), 30)),
+        own([M1], propose(acquaint(M1?, Diana?))), wait(holds(knows(Diana?))),
+        own([M2], propose(acquaint(M2?, Frank?))), wait(holds(knows(Frank?))),
+        own([M3], propose(acquaint(M3?, Bob?))), wait(holds(knows(Bob?))),
+        own([A3, A4], propose(swap(A3?, Diana?, A4?, Diana?, speech(utterance('usd'), cb), 10, 10))), wait(has(coin(Diana?, speech(utterance('usd'), cb)), 10)),
+        wait(has(coin(Me?, speech(utterance('usd'), cb)), 21)),
+        own([A5], propose(pay_own_accepted_coins(A5?, Frank?, speech(utterance('usd'), cb)))), wait(lacks(coin(Me?, speech(utterance('usd'), cb)), 21)),
+        own([A6], propose(pay_own_accepted_coins(A6?, Frank?, speech(utterance('usd'), cb)))), wait(lacks(coin(Me?, speech(utterance('usd'), cb)), 20)),
+        own([A7], propose(pay_own_accepted_coins(A7?, Frank?, speech(utterance('usd'), cb)))), wait(lacks(coin(Me?, speech(utterance('usd'), cb)), 19)),
+        own([A8], propose(pay_own_accepted_coins(A8?, Frank?, speech(utterance('usd'), cb)))), wait(lacks(coin(Me?, speech(utterance('usd'), cb)), 18)), look]) :-
+    ground(Me?), ground(Diana?), ground(Frank?), ground(Bob?) | true.
+script(sovereign_diana, Me, [Cb, Bob, Frank, Escrow], [clock(86400000), own([D1], propose(establish(D1?))), wait(holds(identity)),
+        own([D2], propose(first_issue(D2?, speech(utterance('usd'), cb), 45))), wait(has(coin(Me?, speech(utterance('usd'), cb)), 45)),
+        approval(acquaint(Cb?, Me?), yes),
+        own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
+        own([M2], propose(acquaint(M2?, Frank?))), wait(holds(knows(Frank?))),
+        own([M3], propose(acquaint(M3?, Escrow?))), wait(holds(knows(Escrow?))),
+        approval(swap(Cb?, Me?, Cb?, Me?, speech(utterance('usd'), cb), 10, 10), yes), wait(has(coin(Cb?, speech(utterance('usd'), cb)), 10)),
+        own([D3, D4], propose(swap(D3?, Bob?, D4?, Bob?, speech(utterance('usd'), cb), 15, 15))), wait(has(coin(Bob?, speech(utterance('usd'), cb)), 15)),
+        own([D5, D6], propose(swap_coin_for_bond(D5?, Frank?, D6?, speech(utterance('usd'), cb), 15, Frank?, 28, 18))), wait(has(bond(Frank?, 28, speech(utterance('usd'), cb)), 18)),
+        wait(lacks(coin(Cb?, speech(utterance('usd'), cb)), 8)),
+        own([D7, D8], propose(redeem_bond(D7?, Frank?, 28, speech(utterance('usd'), cb), D8?))), wait(refused_by(redeem_bond(Me?, Frank?, 28, speech(utterance('usd'), cb), Me?), Frank?)),
+        clock(2419200000),
+        own([D9, D10], propose(redeem_bond(D9?, Frank?, 28, speech(utterance('usd'), cb), D10?))), wait(lacks(bond(Frank?, 28, speech(utterance('usd'), cb)), 18)), look]) :-
+    ground(Me?), ground(Cb?), ground(Bob?), ground(Frank?), ground(Escrow?) | true.
+script(sovereign_bob, Me, [Cb, Diana, Frank], [clock(86400000), own([B1], propose(establish(B1?))), wait(holds(identity)),
+        own([B2], propose(first_issue(B2?, speech(utterance('usd'), cb), 15))), wait(has(coin(Me?, speech(utterance('usd'), cb)), 15)),
+        approval(acquaint(Cb?, Me?), yes), approval(acquaint(Diana?, Me?), yes),
+        approval(swap(Diana?, Me?, Diana?, Me?, speech(utterance('usd'), cb), 15, 15), yes), wait(has(coin(Diana?, speech(utterance('usd'), cb)), 15)),
+        own([B3], propose(redeem(B3?, Diana?, Cb?, speech(utterance('usd'), cb)))), wait(lacks(coin(Diana?, speech(utterance('usd'), cb)), 15)),
+        own([B4], propose(redeem(B4?, Diana?, Cb?, speech(utterance('usd'), cb)))), wait(lacks(coin(Diana?, speech(utterance('usd'), cb)), 14)),
+        own([B5], propose(accept(B5?, Cb?, speech(utterance('usd'), cb), 5))), wait(has(accepts(Cb?, speech(utterance('usd'), cb)), 5)),
+        approval(acquaint(Frank?, Me?), yes),
+        wait(has(coin(Cb?, speech(utterance('usd'), cb)), 5)), look]) :-
+    ground(Me?), ground(Cb?), ground(Diana?), ground(Frank?) | true.
+script(sovereign_frank, Me, [Cb, Diana, Bob, Escrow], [clock(86400000), own([F1], propose(establish(F1?))), wait(holds(identity)),
+        own([F2], propose(first_issue(F2?, speech(utterance('usd'), cb), 10))), wait(has(coin(Me?, speech(utterance('usd'), cb)), 10)),
+        own([F3], propose(issue_denominated_bond(F3?, 28, speech(utterance('usd'), cb), 18))), wait(has(bond(Me?, 28, speech(utterance('usd'), cb)), 18)),
+        approval(acquaint(Cb?, Me?), yes), approval(acquaint(Diana?, Me?), yes),
+        approval(swap_coin_for_bond(Diana?, Me?, Diana?, speech(utterance('usd'), cb), 15, Me?, 28, 18), yes), wait(has(coin(Diana?, speech(utterance('usd'), cb)), 15)),
+        own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
+        own([M2], propose(acquaint(M2?, Escrow?))), wait(holds(knows(Escrow?))),
+        own([F4], propose(redeem(F4?, Diana?, Cb?, speech(utterance('usd'), cb)))), wait(has(coin(Cb?, speech(utterance('usd'), cb)), 1)),
+        own([F5], propose(accept(F5?, Cb?, speech(utterance('usd'), cb), 5))), wait(has(accepts(Cb?, speech(utterance('usd'), cb)), 5)),
+        own([F6], propose(pay_issuer(F6?, Cb?, speech(utterance('usd'), cb), 1))), wait(lacks(coin(Cb?, speech(utterance('usd'), cb)), 1)),
+        wait(has(coin(Cb?, speech(utterance('usd'), cb)), 4)),
+        own([F7], propose(pay_accepted_coins(F7?, Bob?, Cb?, speech(utterance('usd'), cb)))), wait(lacks(coin(Cb?, speech(utterance('usd'), cb)), 4)),
+        own([F8], propose(pay_accepted_coins(F8?, Bob?, Cb?, speech(utterance('usd'), cb)))), wait(lacks(coin(Cb?, speech(utterance('usd'), cb)), 3)),
+        own([F9], propose(pay_accepted_coins(F9?, Bob?, Cb?, speech(utterance('usd'), cb)))), wait(lacks(coin(Cb?, speech(utterance('usd'), cb)), 2)),
+        own([F10, F11], propose(deposit(F10?, Escrow?, Diana?, speech(utterance('usd'), cb), 2, Bob?, speech(utterance('day 30'), F11?)))), wait(lacks(coin(Diana?, speech(utterance('usd'), cb)), 13)),
+        approval(return(Escrow?, Me?, Diana?, speech(utterance('usd'), cb), Bob?, speech(utterance('day 30'), Me?), 2), yes), wait(has(coin(Diana?, speech(utterance('usd'), cb)), 13)), look]) :-
+    ground(Me?), ground(Cb?), ground(Diana?), ground(Bob?), ground(Escrow?) | true.
+script(sovereign_escrow, Me, [Diana, Frank], [clock(86400000), own([G1], propose(establish(G1?))), wait(holds(identity)),
+        approval(acquaint(Diana?, Me?), yes), approval(acquaint(Frank?, Me?), yes),
+        approval([[B1, B2, B3, B4]], deposit(Frank?, Me?, Diana?, speech(utterance('usd'), cb), 2, B1?, speech(utterance('day 30'), Frank?)), yes),
+        wait(has(escrow_coin(Diana?, speech(utterance('usd'), cb), Frank?, B2?, speech(utterance('day 30'), Frank?)), 2)),
+        own([G2], propose(return(G2?, Frank?, Diana?, speech(utterance('usd'), cb), B3?, speech(utterance('day 30'), Frank?), 2))),
+        wait(lacks(escrow_coin(Diana?, speech(utterance('usd'), cb), Frank?, B4?, speech(utterance('day 30'), Frank?)))), look]) :-
+    ground(Me?), ground(Diana?), ground(Frank?) | true.
 script(_, _, _, []) :- otherwise | true.
 
 %% The person.
