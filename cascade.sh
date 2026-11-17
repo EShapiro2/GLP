@@ -564,7 +564,14 @@ if [ "$PARAMETRIC" = 0 ] && [ ${#NAMES[@]} -eq 1 ]; then
     fi
 fi
 if [ "$PARAMETRIC" = 0 ]; then
+# The values the developer gives, one atom a line in $FILE.values beside the contract, its owner's, as the contract's Vocabulary writes them (vGLP 922ac53, Section 5.4: "A platform is deployed when its developer compiles it, giving the compiler the values"; Code #33 with vGLP #30, 2026-11-17: NAME.values), passed as compile/6's sixth argument, as programs/vglp/cva/compile.sh passes them; with no such file compile/5, as before.
+if [ -f "$SRC/$FILE.values" ]; then
+    DV="dev(\"[$(grep -v '^[[:space:]]*$' "$SRC/$FILE.values" | paste -s -d, - | sed -e 's/,/, /g')]\")"
+    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$NAME" "$RD" "$VT" "$INTRO" "$PR" "$DV" > "$WORK/p.in"
+    cp "$SRC/$FILE.values" "$OUT/$FILE.values"
+else
 printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$NAME" "$RD" "$VT" "$INTRO" "$PR" > "$WORK/p.in"
+fi
 repl "$WORK/p.in" "$WORK/p.out"
 awk '
     $0 == "%% compile begin" { on = 1; next }
