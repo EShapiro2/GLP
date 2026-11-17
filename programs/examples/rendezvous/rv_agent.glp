@@ -416,7 +416,7 @@ exported procedure admit_redeem(Key?, Key?, Signature?, Integer?, SignalReply,
 %% redeem_addresses/8 dispatches on what it reports.
 admit_redeem(Id, R, signed(K, _, invitation(I, Rv, _, Serial, Expiry)), T,
              ReplyR?, Pending, Pending1?) :-
-    K? =?= I?, Rv? =?= Id?, integer(Serial?), integer(Expiry?),
+    K? =?= I?, string(I?), Rv? =?= Id?, integer(Serial?), integer(Expiry?),
     T? < Expiry? |
     peer_address(I?, PeerAddressI),
     peer_address(R?, PeerAddressR),
