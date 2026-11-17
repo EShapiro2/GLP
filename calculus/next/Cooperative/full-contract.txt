@@ -1,8 +1,8 @@
 % Written by tools/expand.py from rev/; do not edit.
 Cooperative
-An *identity* is a unique key pair.
+An *identity* is a unique cryptographic key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. Here: bylaws. An organisation takes an act of a party by those who decide for it.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. Here: bylaws. An organisation takes an act of a party by those who decide for the organisation.
 An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
 A *constitutional democratic community* is an organisation whose bylaws name one role, *member*, held by every participant, and are *egalitarian*: the rule by which the members decide an act names no member and no other role.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
@@ -12,7 +12,7 @@ A *bond* is a note that is a unit of its issuer's debt, due at its maturity date
 A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
 A *cooperative* is an organisation whose bylaws name one more role, *board member*; the members decide by a majority of the members, one member one vote, but for the acts the bylaws delegate to the board or to another role.
 Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice and Bob are persons. Alice and Bob are persons, Carol and Dave organisations. Alice and Bob are persons, Orga an organisation. Alice and Bob are persons, Orga a constitutional democratic community. Alice, Bob and Carol are parties. Alice and Bob are parties. Alice is a party.
-Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
