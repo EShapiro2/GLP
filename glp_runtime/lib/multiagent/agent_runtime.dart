@@ -246,6 +246,16 @@ class AgentRuntime {
   /// says so.
   final bool clockSettable;
 
+  /// The compiled program the host gives the agent to run in place of
+  /// [program]'s source (IGLP, Implementation Notes, "Boot": "A host may give
+  /// an agent, at its start, the compiled program it runs in place of the
+  /// program's source: a module value, which the loader verifies as it
+  /// verifies a module the agent adopts, and whose certificate's key the host
+  /// accepts; the agent runs it and compiles nothing").  The host accepts the
+  /// key by giving the program; the agent verifies the module's certificate
+  /// ([_verifyCompiled]).  Null where the agent compiles [program].
+  final StoredProgram? compiled;
+
   AgentRuntime({
     required this.agentId,
     required this.program,
@@ -259,6 +269,7 @@ class AgentRuntime {
     this.stateStore,
     this.installedApp,
     this.clockSettable = false,
+    this.compiled,
   })  : directory = directory ?? NetworkDirectory(),
         givenNetwork = network {
     if (network == null) return;
@@ -435,7 +446,7 @@ class AgentRuntime {
     // save, so set at a start where the application crashed since it last
     // ran (IGLP db0a117, Persistence, When and Restart).
     final crashed = store != null && await store.loadRunning();
-    _setUp();
+    _setUpProgram();
     if (saved != null && await _restoreOrLose(store!, saved)) {
       _log('INIT: restored the state saved at termination '
           '(${saved.length} bytes), GQ=${_runtime!.gq.length}');
@@ -535,7 +546,7 @@ class AgentRuntime {
       _updateRefusal = null;
       _updated = false;
       _programToKeep = false;
-      _setUp();
+      _setUpProgram();
       return false;
     }
   }
@@ -547,6 +558,41 @@ class AgentRuntime {
   /// [program]'s compilation, and nothing is compiled: the version it
   /// terminated under, where a restart refused an update (IGLP 61f3283,
   /// Termination and Restart).
+  /// Set the agent up under the program it is to run: the compiled program
+  /// its host gave it, verified, where it gave one, and else [program]'s
+  /// compilation.
+  void _setUpProgram() {
+    final given = compiled;
+    if (given != null) _verifyCompiled(given);
+    _setUp(stored: given);
+  }
+
+  /// The loader's first step on the module of a compiled program the host
+  /// gave (IGLP, Code Format, "Loader"): the body hashes to the certificate's
+  /// compiled identity, and the certificate's signature verifies under the
+  /// key it carries.
+  static void _verifyCompiled(StoredProgram given) {
+    final module = given.module;
+    if (module == null) {
+      throw ArgumentError('the compiled program given holds no module, so '
+          'there is no certificate to verify');
+    }
+    final artefact = module.artefact as Artefact;
+    final cert = artefact.certificate;
+    if (cert.isRefused) {
+      throw ArgumentError('the compiled program given carries no certificate');
+    }
+    if (!bytesEqual(
+        Artefact.compiledIdentityOf(artefact.toBytes()), cert.hBin)) {
+      throw ArgumentError('the compiled program given does not hash to its '
+          'certificate\'s compiled identity');
+    }
+    if (!cert.verifies()) {
+      throw ArgumentError('the certificate of the compiled program given does '
+          'not verify under the key it carries');
+    }
+  }
+
   void _setUp({StoredProgram? stored}) {
     final selfName = name; // its key over a given network ([name])
     _output('[INIT] Creating MadContext...');
@@ -582,8 +628,11 @@ class AgentRuntime {
       _code = stored.code;
       _image = stored.image;
       _appModule = stored.module;
-      _log('INIT: running the program the store keeps, the version the agent '
-          'terminated under, in place of $program\'s compilation');
+      _log(identical(stored, compiled)
+          ? 'INIT: running the compiled program the host gave; nothing is '
+              'compiled'
+          : 'INIT: running the program the store keeps, the version the agent '
+              'terminated under, in place of $program\'s compilation');
     } else {
       if (FileSystemEntity.isDirectorySync(program)) {
         _log('INIT: Loading program from $program');
@@ -821,7 +870,7 @@ class AgentRuntime {
     // entry of its procedure there; a goal of a module launched by run/3 runs
     // that module's code, which the update leaves as it is.
     final savedApp = kept.module;
-    _setUp();
+    _setUpProgram();
     _restore(saved,
         savedUnder: savedUnder,
         savedAppModule: savedApp == null
