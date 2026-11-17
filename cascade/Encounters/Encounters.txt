@@ -3,7 +3,7 @@
 % Paper: GSA, The Grassroots Super-App and App Store, in preparation
 % Extends: GKK, Grassroots Keys and Knowledge, GSC's.  It cites its clauses whole and restates none.
 % Defines: nearby and place, defined in the box after the declaration, a contract being self-contained.  Person and knowing a person are defined with GKK; Alice and Bob are variables naming distinct persons.
-% Last changed: 2026-11-15, the Calculus's text adopted, at the branch Calculus 79ec48f, its Logic pragmas as mended there (first adopted at c475902), by calculus/MIGRATION.md, which Udi confirmed: the contract as the Calculus has it, its Logic pragmas after the clauses, and the Interface and Implementation pragmas keyed to its clauses' titles, their buttons its acts (GSA #6); 2026-11-07, written by GSA #2 Cowork with Udi, who settled it in chat (23:08 UTC): knowing a person is knowing their key, so two who have both opened the place and are nearby know each other, with no further act; Udi's first priority, two phones befriending over BLE and the LAN.
+% Last changed: 2026-11-17, its Implementation pragma Found by the phone, by vGLP 922ac53, Section 5.4 (GSA #7); 2026-11-15, the Calculus's text adopted, at the branch Calculus 79ec48f, its Logic pragmas as mended there (first adopted at c475902), by calculus/MIGRATION.md, which Udi confirmed: the contract as the Calculus has it, its Logic pragmas after the clauses, and the Interface and Implementation pragmas keyed to its clauses' titles, their buttons its acts (GSA #6); 2026-11-07, written by GSA #2 Cowork with Udi, who settled it in chat (23:08 UTC): knowing a person is knowing their key, so two who have both opened the place and are nearby know each other, with no further act; Udi's first priority, two phones befriending over BLE and the LAN.
 % Schemas: Encounters.glp beside this file, the full schemas, printed from the Logic pragmas by calculus/tools/adopt.py and never written by hand; a check holds it to what the tool prints.
 Encounters
 Encounters extends Knowledge (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
@@ -30,4 +30,5 @@ Open place: Alice [Open place] [Close place]
 Implementation pragmas
 Open place: while the place is open Alice's app sets the trust of Bluetooth and of the local network open, and closed otherwise (GNA).
 Nearby: an environment predicate, nearby(Alice, Bob), the persons the networking layer reports nearby, which Alice's app keeps current.
+Found by the phone: x is nearby y.
 Encounter: Alice stands on [Open place] until [Close place]; the two phones exchange keys (GNA, open trust).
