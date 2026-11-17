@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Grassroots Project">
+<meta property="og:title" content="Feedback · The Grassroots Project">
+<meta property="og:description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">
+<meta property="og:url" content="https://peoplesweb.org/feedback.html">
+<meta property="og:image" content="https://peoplesweb.org/og.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The grassroots contracts on a globe, beside the name of the Grassroots Project">
+<meta name="twitter:card" content="summary_large_image">
+<title>Feedback · The Grassroots Project</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f5f7;--ink:#1d1d1f;--ink2:#3a3a3c;--blue:#0a7aff}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-decoration:none;overflow-wrap:anywhere}
+a:hover{text-decoration:underline}
+main{max-width:1120px;margin:0 auto;padding:36px 24px 90px}
+main>*{max-width:732px}
+h1{font-size:clamp(32px,5vw,44px);letter-spacing:-.025em;line-height:1.08;margin:6px 0 18px;font-weight:800}
+p{margin:0 0 16px;font-size:18px;color:var(--ink2)}
+form{margin-top:28px;background:#fff;border-radius:20px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 6px 20px rgba(0,0,0,.05);padding:22px 22px 18px}
+form h2{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+form .small{font-size:15px;color:#6e6e73;margin:0 0 14px}
+label{display:block;font-size:14px;font-weight:600;margin:12px 0 6px;color:var(--ink2)}
+textarea,input[type=email]{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid #d2d2d7;border-radius:12px;background:#fff;color:var(--ink)}
+textarea{min-height:160px;resize:vertical}
+textarea:focus,input[type=email]:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,122,255,.2)}
+button{margin-top:16px;font:inherit;font-size:16px;font-weight:600;color:#fff;background:var(--blue);border:none;border-radius:999px;padding:10px 22px;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+#said{margin:12px 0 0;font-size:15px}
+#said.bad{color:#c0392b}
+@media (max-width:900px){main{padding:26px 16px 70px}form{padding:18px 16px 14px}}
+</style>
+</head>
+<body>
+<header id="bar" data-tab="feedback"></header>
+<script src="nav.js"></script>
+<main>
+  <h1>Feedback</h1>
+  <p>This site is made and kept up by Claude, an AI agent, from what is in the public repository <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener">https://github.com/EShapiro2/GLP</a>: the contracts, the papers, the code and the record of who answers for what.</p>
+  <p>Feedback, questions, comments and suggestions go to its sister repository, <a href="https://github.com/udi-shapiro/Grassroots-Audit" target="_blank" rel="noopener">https://github.com/udi-shapiro/Grassroots-Audit</a>, as pull requests.</p>
+  <p>If you are not sure how to make a pull request, ask Claude, ChatGPT or any other AI agent to make it for you, or fill the feedback form below:</p>
+  <form id="fb">
+    <h2>Feedback form</h2>
+    <p class="small">We mail you a link; when you open it, your feedback is posted to the sister repository as a pull request, signed "a visitor".  Your address is not posted.</p>
+    <label for="fbt">Your feedback</label>
+    <textarea id="fbt" maxlength="5000" required></textarea>
+    <label for="fbe">Your email address</label>
+    <input id="fbe" type="email" maxlength="200" autocomplete="email" required>
+    <button id="fbs" type="submit">Send</button>
+    <p id="said" role="status"></p>
+  </form>
+</main>
+<script>
+// The form (Udi, 2026-11-17, to Website #3): the server mails a link, and its
+// opening posts the feedback as a pull request (bin/server.dart, lib/feedback.dart).
+// The API is the live server's, at the site's root, here and under /next.
+(function(){
+  const f = document.getElementById('fb'), said = document.getElementById('said'), b = document.getElementById('fbs');
+  const from = document.referrer && document.referrer.startsWith(location.origin + '/') ? document.referrer : '';
+  f.addEventListener('submit', async e => {
+    e.preventDefault();
+    b.disabled = true; said.className = ''; said.textContent = 'Sending…';
+    try {
+      const r = await fetch('/api/feedback/post', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text: document.getElementById('fbt').value, email: document.getElementById('fbe').value, from})});
+      const j = r.ok ? await r.json() : {error: 'The form is not open yet.  Please make a pull request as this page says.'};
+      if (j.ok){ said.textContent = 'We have mailed you a link.  Open it within two days to post your feedback.'; f.reset(); }
+      else { said.className = 'bad'; said.textContent = j.error; }
+    } catch (_) { said.className = 'bad'; said.textContent = 'We could not reach the site; please try again later.'; }
+    b.disabled = false;
+  });
+})();
+</script>
+</body>
+</html>

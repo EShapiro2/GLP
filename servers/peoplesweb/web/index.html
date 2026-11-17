@@ -174,6 +174,12 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
 #pop h4{margin:0 0 8px;font-size:18px;letter-spacing:-.01em}
 #pop p{margin:7px 0;font-size:15px;color:#3a3a3c}
 #pop code{font-size:12.5px;background:var(--bg);padding:1px 5px;border-radius:5px}
+#pop .card{max-height:calc(100vh - 40px);overflow-y:auto}
+#ntip{position:fixed;background:rgba(29,29,31,.94);color:#fff;border-radius:14px;padding:14px 16px;font-size:13.5px;line-height:1.5;max-width:360px;min-width:200px;opacity:0;pointer-events:none;transition:opacity .12s;z-index:40;backdrop-filter:blur(8px);box-shadow:0 10px 30px rgba(0,0,0,.3);max-height:60vh;overflow-y:auto}
+#ntip b{display:block;font-size:15.5px;margin-bottom:6px}
+#ntip a{display:block;color:#8ec6ff;font-weight:600;cursor:pointer;padding:2px 0}
+#ntip a span{display:block;color:#d9d9de;font-weight:400;font-size:12.5px;margin-bottom:4px}
+.stat.list{cursor:pointer}.stat.list .v{color:var(--blue)}
 #pop .x{float:right;border:none;background:rgba(118,118,128,.12);width:26px;height:26px;border-radius:50%;cursor:pointer;color:var(--mute)}
 @media (max-width:640px){
   #tip{max-width:none}
@@ -227,7 +233,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
       <h1>Social contracts that run.</h1>
       <p>Apps owned and run by the people who use them, on their own phones: no company, server or blockchain in the middle. Each app starts as a contract, a few rules in plain English saying who may do what, with whose agreement. Any group can start an app on its own, and separate groups can later join into one. Programs turn the contract into the app, and a theorem guarantees that every app built this way can grow like that, from the bottom up.</p>
     </div>
-    <div class="sh"><h2>Grassroots Contracts</h2><span class="hq"><a href="qr.svg" target="_blank" rel="noopener" title="Scan to open peoplesweb.org"><img src="qr.svg" alt="QR code of peoplesweb.org" width="84" height="84"></a><span id="hint">drag to turn, scroll to zoom</span></span></div>
+    <div class="sh"><h2>Grassroots Contracts</h2><span class="hq"><a href="qr.svg" target="_blank" rel="noopener" title="Scan to open peoplesweb.org"><img src="qr.svg" alt="QR code of peoplesweb.org" width="84" height="84"></a><span id="hint">drag to turn the globe, scroll to zoom</span></span></div>
     <div class="card" id="mapcard"><svg id="graph"></svg><div id="tip"></div></div>
     <p class="small" style="text-align:center;margin-top:28px">The content of this site is derived from the GLP repository, <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener">https://github.com/EShapiro2/GLP</a>.</p>
   </section>
@@ -240,12 +246,13 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
     <div id="plist"></div>
   </section>
   <section id="tab-projects" class="tab">
-    <div class="pt"><h1>Projects</h1><p>Each project with its papers, and under each paper its contracts and its directories in the <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener" style="color:var(--blue)">GLP repository</a>. A directory with no paper is under Code.</p></div>
+    <div class="pt"><h1>Projects</h1><p>Each project with code, its papers, and under each paper its contracts and its directories in the <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener" style="color:var(--blue)">GLP repository</a>. A directory with no paper is under Code.</p></div>
     <div class="ptools"><button class="pill" id="pexp">Expand all</button><button class="pill ghost" id="pcol">Collapse all</button></div>
     <div id="ptree"></div>
   </section>
   <section id="view"></section>
 </main>
+<div id="ntip" role="tooltip"></div>
 <div id="pop"><div class="card"><button class="x" id="popx">✕</button><div id="popc"></div></div></div>
 <script src="data.js"></script>
 <script>
@@ -290,9 +297,6 @@ const STAGES = [
 
 /* ---------- help ---------- */
 const HELP = {
-  contract: ['What is a contract?', `<p>A few plain rules about what people may do with each other. Alice, Bob and Carol stand for any people.</p>
-    <p><b>■ Enforced</b>: the app makes it so; nobody can break it.<br><b>◆ Attested</b>: you state it is true, and sign it.<br><b>○ Undertaken</b>: a promise you make; the app cannot check it.</p>
-    <p>A contract builds on the ones it extends: everything they allow is allowed here too.</p>`],
   hood: ['Under the hood', `<p>Nobody writes the app by hand. A chain of programs, the <i>cascade</i>, translates the English contract step by step into the code each person's device runs. Each layer is generated from the one above it.</p>`],
   acts: ['Speech-act schemas', `<p>Each rule becomes one or more <b>speech acts</b>: who takes part, what each must already have, and what each gains or loses.</p>
     <p><b>?</b> after a role: the act happens only if that person wants it. A role without it is affected without being asked.</p>
@@ -829,6 +833,14 @@ function drawGlobe(){
   tip.onmouseleave = () => { if (LASTPT === 'mouse') HIDETIP(); };
 }
 let DRAGGED = false, LASTPT = 'mouse', TIPID = null, HIDETIP = () => {};
+// The kind of the last pointer anywhere on the page, so that a touch screen's
+// tap is not taken for a hover.
+document.addEventListener('pointerdown', e => { LASTPT = e.pointerType || 'mouse'; }, true);
+// The Builds on and Used by balloon closes when the page scrolls, or on a tap
+// elsewhere.
+let NTOFF = () => {};
+window.addEventListener('scroll', () => NTOFF(), {passive: true});
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#ntip, [data-names]')) NTOFF(); }, true);
 function globeNav(){
   const g = $('#graph'), pts = new Map();
   let drag = null, pinch = null;
@@ -959,7 +971,7 @@ function route(){
     if (TAB !== was) window.scrollTo(0, 0);
     const d = TAB === 'projects' && TOPROJ && document.querySelector(`.proj[data-proj="${TOPROJ}"]`);
     TOPROJ = null;
-    if (d){ d.open = true; d.scrollIntoView({block: 'start'}); window.scrollBy(0, -($('#bar').offsetHeight + 12)); }
+    if (d){ document.querySelectorAll('.proj[open]').forEach(o => { if (o !== d) o.open = false; }); d.open = true; d.scrollIntoView({block: 'start'}); window.scrollBy(0, -($('#bar').offsetHeight + 12)); }
     return; }
   const v = $('#view'); v.style.display = 'block'; v.classList.remove('zoomin'); void v.offsetWidth; v.classList.add('zoomin');
   const y = window.scrollY;
@@ -969,10 +981,20 @@ function route(){
 }
 
 /* ---------- a contract ---------- */
+// Where the Projects tab shows the owner a contract names: its project; the
+// project that holds it, where it is a paper (GNA, of GSA); or Code's branch,
+// where it is a project with no paper (GCE).
+const projOf = o => D.projects.some(p => p.id === o && hasCode(p)) ? o
+  : (D.projects.find(p => hasCode(p) && p.papers.some(k => k.key === o)) || {}).id
+  || ((D.noPaper || []).some(p => p.id === o) && D.code.some(d => d.who === o) ? 'Code' : null);
 function page(c, hood){
   const kids = D.contracts.filter(k => k.extends.includes(c.id));
-  const own = c.acts[1];
   const link = id => `<a data-go="${id}">${esc(NM(id))}</a>`;
+  // Builds on and Used by: the box shows how many contracts, and a click on
+  // it opens a balloon with their names, each a link to its contract (Udi,
+  // 2026-11-17, to Website #3); the names in the box, on a line that does
+  // not break, ran over the next box where they were many.
+  const names = (k, ids, none) => `<div class="stat${ids.length ? ' list' : ''}"${ids.length ? ` data-names="${esc(ids.join(' '))}" data-title="${k}" title="Show the contract${ids.length > 1 ? 's' : ''}"` : ''}><div class="k">${k}</div><div class="v">${ids.length || '–'}</div><div class="s">${ids.length ? 'contract' + (ids.length > 1 ? 's' : '') : none}</div></div>`;
   $('#view').innerHTML = `
     <span class="crumbs" data-go="">‹ All contracts</span>
     <div class="prod">${icon(c)}
@@ -980,13 +1002,12 @@ function page(c, hood){
       <div class="acts">${c.live ? `<a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a>` : ''}</div></div></div>
     <div class="stats">
       <div class="stat"><div class="k">Rules</div><div class="v">${c.clauses.length}</div><div class="s">in English</div></div>
-      <div class="stat"><div class="k">Speech acts</div><div class="v">${c.acts[0] ? own : '–'}</div><div class="s">${c.acts[0] ? 'of its own' : 'not compiled'}</div></div>
-      <div class="stat"><div class="k">Builds on</div><div class="v">${c.extends.length ? c.extends.map(link).join(', ') : '–'}</div><div class="s">${c.extends.length ? 'contract' + (c.extends.length > 1 ? 's' : '') : 'the base'}</div></div>
-      <div class="stat"><div class="k">Used by</div><div class="v">${kids.length ? kids.map(k => link(k.id)).join(', ') : '–'}</div><div class="s">${kids.length ? 'contract' + (kids.length > 1 ? 's' : '') : 'none yet'}</div></div>
-      <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
+      ${names('Builds on', c.extends, 'the base')}
+      ${names('Used by', kids.map(k => k.id), 'none yet')}
+      <div class="stat"><div class="k">By</div><div class="v">${projOf(c.owner) ? `<a href="#projects" data-proj="${esc(projOf(c.owner))}" title="Under Projects">${esc(c.owner)}</a>` : esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
     </div>
     ${stripHtml(c)}
-    <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
+    <div class="sec"><div class="sh"><h2>The contract</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
       ${c.clauses.length || c.preamble ? `<div class="card rules" id="cbox">${boxHtml(c, false)}</div>` : `<p class="small">No text in force.</p>`}
       ${calcHtml(c)}
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
@@ -999,6 +1020,34 @@ function page(c, hood){
     </div>
     <div id="hood" class="sec"></div>`;
   $('#view').querySelectorAll('[data-go]').forEach(a => a.onclick = () => go(a.dataset.go || null));
+  // By: the project's name opens it under Projects (Udi, 2026-11-17, to
+  // Website #3).
+  $('#view').querySelectorAll('.stat [data-proj]').forEach(a => a.onclick = () => { TOPROJ = a.dataset.proj; });
+  // Builds on and Used by: hovering the box shows a balloon of the globe's
+  // design with the contracts, each with its line and a link to it; on a touch
+  // screen a tap shows it (Udi, 2026-11-17, to Website #3).
+  const nt = $('#ntip');
+  let ntHide = null, ntFor = null;
+  const ntOff = () => { nt.style.opacity = 0; nt.style.pointerEvents = 'none'; ntFor = null; };
+  NTOFF = ntOff;
+  const ntOn = s => {
+    clearTimeout(ntHide);
+    nt.innerHTML = `<b>${esc(NM(c.id))}: ${esc(s.dataset.title.toLowerCase())}</b>` + s.dataset.names.split(' ').map(id =>
+      `<a data-ntgo="${esc(id)}">${esc(NM(id))}${C[id] && C[id].about && C[id].about !== C[id].title + '.' ? `<span>${esc(C[id].about)}</span>` : ''}</a>`).join('');
+    nt.querySelectorAll('[data-ntgo]').forEach(a => a.onclick = () => { ntOff(); go(a.dataset.ntgo); });
+    const r = s.getBoundingClientRect(), w = Math.min(360, window.innerWidth - 16);
+    nt.style.left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8)) + 'px';
+    nt.style.width = w + 'px';
+    nt.style.top = (r.bottom + 6) + 'px';
+    nt.style.opacity = 1; nt.style.pointerEvents = 'auto'; ntFor = s;
+  };
+  $('#view').querySelectorAll('[data-names]').forEach(s => {
+    s.onmouseenter = e => { if (e.pointerType === 'touch' || LASTPT !== 'mouse') return; ntOn(s); };
+    s.onmouseleave = () => { if (LASTPT === 'mouse') ntHide = setTimeout(ntOff, 350); };
+    s.onclick = () => { if (ntFor === s) ntOff(); else ntOn(s); };
+  });
+  nt.onmouseenter = () => clearTimeout(ntHide);
+  nt.onmouseleave = () => { if (LASTPT === 'mouse') ntHide = setTimeout(ntOff, 200); };
   $('#hoodbtn').onclick = () => go(c.id, !hood);
   const tf = $('#tf');
   if (tf) tf.querySelectorAll('button').forEach(bt => bt.onclick = () => {
@@ -1060,10 +1109,10 @@ function hoodHtml(c, schemas){
   $('#hood').innerHTML = `
     <div class="sh"><h2>Under the hood${Q('hood')}</h2><span>from the English text to the running app</span></div>
     <div class="stack">
-    <div class="card layer">${n(1)}<h3>The Grassroots Contract${Q('contract')}</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.map(NM).join(' and ') : ''}, above.</p></div>
+    <div class="card layer">${n(1)}<h3>The Grassroots Contract</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.map(NM).join(' and ') : ''}, above.</p></div>
     <div class="card layer">${n(2)}<h3>Speech-Act Schemas${Q('acts')}</h3>
       <p class="sum">${own.length} of its own${inh.length ? `, and ${inh.length} from ${[...new Set(inh.map(s => NM(s.from)))].join(', ')}` : ''}.</p>
-      ${own.map((s, i) => schemaHtml(s, i < 2)).join('')}
+      ${own.map(s => schemaHtml(s, true)).join('')}
       ${inh.length ? `<p class="more" id="mt">Show the ${inh.length} inherited acts</p><div id="inh" style="display:none">${inh.map(s => schemaHtml(s, false)).join('')}</div>` : ''}
     </div>
     <div class="card layer">${n(3)}<h3>Grassroots Check${Q('check')}</h3><p class="sum">The checker's verdict on the speech-act schemas:</p><span class="verdict">${esc(c.verdict || 'not checked')}</span></div>
@@ -1178,10 +1227,14 @@ function projHtml(p){
       ${q.dirs.length || q.contracts.length ? `<ul>${branch('Directories', q.dirs.map(dirLi))}${branch('Contracts', q.contracts.map(conLi))}</ul>` : ''}</li>`).join('')}
     ${branch('Directories of the whole project', p.dirs.map(dirLi))}</ul></div></details>`;
 }
-$('#ptree').innerHTML = D.projects.map(projHtml).join('')
+// Only the projects with code: a contract or a directory (Udi, 2026-11-17, to
+// Website #3); a project with papers alone is on the Papers tab.
+const withCode = D.projects.filter(hasCode);
+const noPaperCode = (D.noPaper || []).filter(p => D.code.some(d => d.who === p.id));
+$('#ptree').innerHTML = withCode.map(projHtml).join('')
   + `<details class="card proj" data-proj="Code"><summary><b>Code</b><span class="nm2">The projects with no paper, and the directories with no paper, each with the project that answers for it</span>
-    <span class="cnt">${[nOf((D.noPaper || []).length, 'project', 'projects'), nOf(D.code.length, 'directory', 'directories')].filter(Boolean).join(' · ')}</span><span class="chev">›</span></summary>
-    <div class="tree"><ul>${branch('Projects with no paper', (D.noPaper || []).map(noPaperLi))}${branch('Directories', D.code.map(dirLi))}</ul></div></details>`
+    <span class="cnt">${[nOf(noPaperCode.length, 'project', 'projects'), nOf(D.code.length, 'directory', 'directories')].filter(Boolean).join(' · ')}</span><span class="chev">›</span></summary>
+    <div class="tree"><ul>${branch('Projects with no paper', noPaperCode.map(noPaperLi))}${branch('Directories', D.code.map(dirLi))}</ul></div></details>`
   + ((D.unaccounted || []).length ? `<p class="why">No entry yet answers for ${D.unaccounted.map(p => `<code>${esc(p)}</code>`).join(', ')}.</p>` : '')
   + ((D.faults || []).length ? `<p class="why">${D.faults.map(esc).join('; ')}.</p>` : '');
 $('#pexp').onclick = () => document.querySelectorAll('.proj').forEach(d => d.open = true);
