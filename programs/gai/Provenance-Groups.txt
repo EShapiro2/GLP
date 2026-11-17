@@ -6,7 +6,7 @@
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 3b5fd5d; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GAI's: a line for each of its two clauses, with the buttons of Message, Post and Post own, which take no field since the item sent is one the sender holds, of Agent message and of Post forward.  The tab Items is GFP's and the other buttons are GSN's, GAI's, GnW's, GSG's and GKK's.  Git holds what the file said before.
 % Schemas: Provenance-Groups.glp beside this file, the full schemas, GKK's, GSG's, GSN's, GnW's, GFP's and GAI's with GSNP's, printed by calculus/tools/adopt.py Provenance-Groups from the Logic pragmas and never written by hand; adopt.py --check Provenance-Groups holds it and cascade/Provenance-Groups/ to what the tools print.
 Provenance Groups
-Provenance Groups instantiates Groups with items authored by their senders, composes it with Agents (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231), and restricts and extends the composition.
+Provenance Groups instantiates Groups with items authored by their senders for messages, composes it with Agents (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231), and restricts and extends the composition.
 1. ■ Agent message: An AI agent may send a message to a friend (Groups:1).
 2. ■ Post forward: A member of a group, not its leader, may forward an item they hold to the group, adding their signature.
 Logic pragmas
