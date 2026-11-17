@@ -17,6 +17,8 @@ D=$(date -u +%Y-%m-%d)
 OUT=/Users/udi/Grassroots/tmp/nightly-$D.txt
 # The clone is Code's and stays on main; a pull that is not a fast-forward is said and nothing runs.
 # main alone is fetched: a pull of every branch met a fetch in a worktree of the same clone, the worktrees sharing its refs, and stopped (Mac #1, 2026-11-16).
+# cron has no key agent, and the key's passphrase is in the login keychain, so the pull of 2026-11-17 was refused, "Permission denied (publickey)", and nothing ran: the login session's agent, launchd's socket, holds the key (Mac #1, 2026-11-17).
+[ -n "$SSH_AUTH_SOCK" ] || export SSH_AUTH_SOCK="$(ls /private/tmp/com.apple.launchd.*/Listeners 2>/dev/null | head -1)"
 if ! git pull --ff-only origin main > "$OUT" 2>&1; then echo "nightly: git pull --ff-only origin main failed; nothing run" >> "$OUT"; exit 1; fi
 echo "main $(git log --format=%h -1)" >> "$OUT"
 # The Mac sleeps at night, so it missed 2026-10-29 and 2026-10-30: pmset wakes it at 01:58 UTC
