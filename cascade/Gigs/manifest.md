@@ -1,10 +1,10 @@
 # A run of the cascade on Gigs
 
-- Contract: `Gigs` (`gigs` to the checker), its owner's two files `programs/go/Gigs.txt` and `programs/go/Gigs.glp`, copied here as they stood at `5aad315a`.
+- Contract: `Gigs` (`gigs` to the checker), its owner's two files `programs/go/Gigs.txt` and `programs/go/Gigs.glp`, copied here as they stood at `14578e3b`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/Gigs.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Gigs.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-17 13:49 UTC by `cascade.sh gigs`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `5aad315a`; each artefact's source and tool:
+- Run on 2026-11-17 15:28 UTC by `cascade.sh gigs`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `14578e3b`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
