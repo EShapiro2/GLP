@@ -93,6 +93,9 @@ void main() {
           reason: '$me knows $other once the encounter commits: $out');
       expect(out.indexOf(stood.single), lessThan(out.indexOf('knows($other)')),
           reason: '$me stands before knowing $other: $out');
+      expect(out, contains('trust(open)'),
+          reason: '$me\'s Trust stream gives open once the encounter '
+              'stands: $out');
     }
   }, timeout: Timeout.none);
 }

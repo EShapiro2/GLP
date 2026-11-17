@@ -42,7 +42,7 @@ Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
 EnStart ::= encounters(Key).
 EnPIns  ::= [EnStart | PersonIn(Drawn)].
 
-imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?, Stream(Ask(Question))).
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?, Stream(Presence)?, Stream(TrustLevel), Stream(Ask(Question))).
 imported procedure platform#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
 %% The agent's initial goal: the person channel, whose input starts with the entry, and the network channel.
@@ -58,7 +58,9 @@ procedure run_agent(Key?, PersonIn(Drawn)?, PersonOut(Drawn), Stream(NetMsg(Cont
 run_agent(K, PIn, POut?, N, NOut?) :-
     ground(K?) |
     net_in(N?, NIn),
-    platform # agent(K?, NIn?, NOut1, Thread, [], Asks),
+    platform # agent(K?, NIn?, NOut1, Thread, [], Phone?, Trust, Asks),
+    adjacent(K?, O),
+    host(Trust?, O?, Phone),
     net_out(NOut1?, NOut),
     platform # dispatch(Asks?, ch(PIn?, POut), MCh),
     to_person(MCh?, Thread?).
@@ -74,3 +76,13 @@ net_in([], []).
 procedure net_out(Stream(Net)?, Stream(NetMsg(Content))).
 net_out([msg(Q, C) | Ns], [msg(Q?, C?) | Ms?]) :- net_out(Ns?, Ms).
 net_out([], []).
+
+%% The host, the phone the platform runs on, and nothing else (vGLP-trust d853af8d: the platform calls no declare/1; its agent is given its presences on Phone and writes its trust level on Trust).  The two phones are adjacent, as the harness's adjacency is total; the host gives the agent seen of the other once the agent's trust is open, as the networking layer would under open trust (IGLP, Implementation Notes, "Simulation realisation"), and gone of it once closed, and tells the person each trust level the agent writes, trust(open) or trust(closed).
+procedure adjacent(Peer?, Peer).
+adjacent(alice, bob).
+adjacent(bob, alice).
+
+procedure host(Stream(TrustLevel)?, Peer?, Stream(Presence)).
+host([open | Ts], O, [seen(O?) | Ps?]) :- ground(O?) | send_to_user([trust(open)]), host(Ts?, O?, Ps).
+host([closed | Ts], O, [gone(O?) | Ps?]) :- ground(O?) | send_to_user([trust(closed)]), host(Ts?, O?, Ps).
+host([], O, []) :- ground(O?) | true.
