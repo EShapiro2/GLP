@@ -246,7 +246,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
     <div id="plist"></div>
   </section>
   <section id="tab-projects" class="tab">
-    <div class="pt"><h1>Projects</h1><p>Each project with its papers, and under each paper its contracts and its directories in the <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener" style="color:var(--blue)">GLP repository</a>. A directory with no paper is under Code.</p></div>
+    <div class="pt"><h1>Projects</h1><p>Each project with code, its papers, and under each paper its contracts and its directories in the <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener" style="color:var(--blue)">GLP repository</a>. A directory with no paper is under Code.</p></div>
     <div class="ptools"><button class="pill" id="pexp">Expand all</button><button class="pill ghost" id="pcol">Collapse all</button></div>
     <div id="ptree"></div>
   </section>
@@ -987,9 +987,9 @@ function route(){
 // Where the Projects tab shows the owner a contract names: its project; the
 // project that holds it, where it is a paper (GNA, of GSA); or Code's branch,
 // where it is a project with no paper (GCE).
-const projOf = o => D.projects.some(p => p.id === o) ? o
-  : (D.projects.find(p => p.papers.some(k => k.key === o)) || {}).id
-  || ((D.noPaper || []).some(p => p.id === o) ? 'Code' : null);
+const projOf = o => D.projects.some(p => p.id === o && hasCode(p)) ? o
+  : (D.projects.find(p => hasCode(p) && p.papers.some(k => k.key === o)) || {}).id
+  || ((D.noPaper || []).some(p => p.id === o) && D.code.some(d => d.who === o) ? 'Code' : null);
 function page(c, hood){
   const kids = D.contracts.filter(k => k.extends.includes(c.id));
   const own = c.acts[1];
@@ -1232,10 +1232,14 @@ function projHtml(p){
       ${q.dirs.length || q.contracts.length ? `<ul>${branch('Directories', q.dirs.map(dirLi))}${branch('Contracts', q.contracts.map(conLi))}</ul>` : ''}</li>`).join('')}
     ${branch('Directories of the whole project', p.dirs.map(dirLi))}</ul></div></details>`;
 }
-$('#ptree').innerHTML = D.projects.map(projHtml).join('')
+// Only the projects with code: a contract or a directory (Udi, 2026-11-17, to
+// Website #3); a project with papers alone is on the Papers tab.
+const withCode = D.projects.filter(hasCode);
+const noPaperCode = (D.noPaper || []).filter(p => D.code.some(d => d.who === p.id));
+$('#ptree').innerHTML = withCode.map(projHtml).join('')
   + `<details class="card proj" data-proj="Code"><summary><b>Code</b><span class="nm2">The projects with no paper, and the directories with no paper, each with the project that answers for it</span>
-    <span class="cnt">${[nOf((D.noPaper || []).length, 'project', 'projects'), nOf(D.code.length, 'directory', 'directories')].filter(Boolean).join(' · ')}</span><span class="chev">›</span></summary>
-    <div class="tree"><ul>${branch('Projects with no paper', (D.noPaper || []).map(noPaperLi))}${branch('Directories', D.code.map(dirLi))}</ul></div></details>`
+    <span class="cnt">${[nOf(noPaperCode.length, 'project', 'projects'), nOf(D.code.length, 'directory', 'directories')].filter(Boolean).join(' · ')}</span><span class="chev">›</span></summary>
+    <div class="tree"><ul>${branch('Projects with no paper', noPaperCode.map(noPaperLi))}${branch('Directories', D.code.map(dirLi))}</ul></div></details>`
   + ((D.unaccounted || []).length ? `<p class="why">No entry yet answers for ${D.unaccounted.map(p => `<code>${esc(p)}</code>`).join(', ')}.</p>` : '')
   + ((D.faults || []).length ? `<p class="why">${D.faults.map(esc).join('; ')}.</p>` : '');
 $('#pexp').onclick = () => document.querySelectorAll('.proj').forEach(d => d.open = true);
