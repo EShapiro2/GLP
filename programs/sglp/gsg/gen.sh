@@ -49,8 +49,8 @@ cat <<'H'
 %% GSG_sglp.glp --- the sGLP source of a simulation of GSG, the Grassroots Social Graph
 %% (programs/sglp/gsg), in the term form the transformation reads (programs/sglp/README.md,
 %% "The term form"), the profiles over the canonical platform's questions and nothing of its
-%% interface, which is the platform's as the cascade holds it (cascade/GSG/interface.glp).
-%% It is written for the canonical platform of GSG as recorded, cascade/GSG/platform.glp, and
+%% interface, which is the platform's as the cascade holds it (cascade/Friendship/interface.glp).
+%% It is written for the canonical platform of GSG as recorded, cascade/Friendship/platform.glp, and
 %% six agents, keyed p1 to p6 (cva/run.sh).  Printed by gen.sh beside this file.
 %%
 %%   p1  Alice   meets Bob and Carol; introduces them to each other (GKK:3); befriends Bob and

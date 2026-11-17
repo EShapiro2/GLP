@@ -5,7 +5,7 @@
 #
 #   bash programs/sglp/lbm/sim/census.sh <platform.glp> <printed> <census> <out>
 #
-#   <platform.glp>  the platform's canonical compilation, cascade/GDO/platform.glp;
+#   <platform.glp>  the platform's canonical compilation, cascade/Overlay/platform.glp;
 #   <printed>       the directory holding profiles.glp and population.glp printed
 #                   by programs/sglp/transform.sh --interface from GDO_sglp.glp;
 #   <census>        the census's name, gd_town40 or gd_town100;

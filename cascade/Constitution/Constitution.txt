@@ -1,9 +1,9 @@
-% CDC: Constitutional Democratic Community --- the contract, the one copy, its owner's (claude.md, "Sessions").
-% Owner: GO (Udi, 2026-11-16, to GO #7).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 7, Grassroots Cooperatives, and cites a clause as CDC:1.
+% Constitution --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-16, to GO #7).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 7, Grassroots Cooperatives, and cites a clause as Constitution:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GO, restricting and strengthening it.
-% Last changed: 2026-11-16, by GO #7.
-% Schemas: CDC.glp beside this file.
+% Extends: Organisation, restricting and strengthening it.
+% Last changed: 2026-11-16, by GO #8.
+% Schemas: Constitution.glp beside this file.
 Constitution
 Constitution restricts and strengthens Organisation.
 A *constitutional democratic community* is an organisation whose bylaws name one role, *member*, held by every participant, and are *egalitarian*: the rule by which the members decide an act names no member and no other role.
