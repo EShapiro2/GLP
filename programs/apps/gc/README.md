@@ -4,7 +4,7 @@ The app of GC, grassroots currencies, as a mini-app of the Grassroots Super-App 
 
 ## The contract
 
-GC is Currencies' contract (Coordination Appendix C); its clauses are `programs/currencies/coins/GC.txt`, as GC's paper, Section 2.1, and GSC's paper have them, and its act schemas `programs/currencies/coins/GC.glp`.  GC extends GKK, the base contract (`programs/gsc/GKK.txt`; the app `../gkk`), whose clauses it cites, and not GSG: no act of it requires a friend.
+GC is Currencies' contract (Coordination Appendix C); its clauses are `programs/currencies/coins/Coins.txt`, as GC's paper, Section 2.1, and GSC's paper have them, and its act schemas `programs/currencies/coins/Coins.glp`.  GC extends GKK, the base contract (`programs/gsc/Knowledge.txt`; the app `../gkk`), whose clauses it cites, and not GSG: no act of it requires a friend.
 
 1. *Issue.*  Alice may issue Alice-coins.
 2. *Swap.*  Alice and Bob, who know each other, may jointly swap coins they hold.
@@ -16,8 +16,8 @@ GKK:1 is the schema `establish`, guarded by the person, which adds `identity` an
 
 ## The cascade
 
-1. The act schemas, `programs/currencies/coins/GC.glp`; the checker's verdict `syntactically_grassroots`.
-2. The canonical CVA platform of the schemas (vGLP, Section 3.2, Definition "Canonical CVA Platform"), compiled into vGLP (Section 5.4, "The compilation"): `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GC.glp, the platform of the recorded run of the cascade on GC, `cascade/GC/platform.vglp`.  `bash programs/apps/compile.sh --check` re-prints it and compares; `bash programs/apps/compile.sh` writes it.
+1. The act schemas, `programs/currencies/coins/Coins.glp`; the checker's verdict `syntactically_grassroots`.
+2. The canonical CVA platform of the schemas (vGLP, Section 3.2, Definition "Canonical CVA Platform"), compiled into vGLP (Section 5.4, "The compilation"): `platform.vglp`, as `programs/vglp/cva/compiler` prints it from Coins.glp, the platform of the recorded run of the cascade on GC, `cascade/Coins/platform.vglp`.  `bash programs/apps/compile.sh --check` re-prints it and compares; `bash programs/apps/compile.sh` writes it.
 3. GLP: the canonical compilation (vGLP, Section 6.3) compiles `platform.vglp` when the directory loads.
 4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/3`, which the super-app activates by `run/3`.
 

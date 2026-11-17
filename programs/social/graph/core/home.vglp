@@ -37,7 +37,7 @@
 %% each agent presents the introduction to its person; the friendship forms
 %% on mutual consent): one goal per introduction, its card asking the
 %% person in GKK's words, its pragma Introduction, "Bob: Alice asks to
-%% introduce Carol to you." (programs/gsc/GKK.txt), the introducer and the
+%% introduce Carol to you." (programs/gsc/Knowledge.txt), the introducer and the
 %% other party filled in, and decide_intro reads the person's answer with a
 %% clause per answer.  The card is drawn by the widget the compiled platforms
 %% draw their approval question by, approval_sentence, whose words are

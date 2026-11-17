@@ -1,9 +1,9 @@
-% GAN: Grassroots Ad Network --- the contract, the one copy, its owner's (claude.md, "Sessions").
-% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 5.2 and cites a clause as GAN:1.
+% Ads --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 5.2 and cites a clause as Ads:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GNO and GDO, Grassroots Directed Overlay, GRH's (programs/lbm).
-% Last changed: 2026-11-12, by GO #5.
-% Schemas: GAN.glp beside this file.
+% Extends: Networked Organisation and Overlay, Grassroots Directed Overlay, GRH's (programs/lbm).
+% Last changed: 2026-11-16, by GO #8.
+% Schemas: Ads.glp beside this file.
 Ads
 Ads extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
 An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the Orga-coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
