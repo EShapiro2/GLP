@@ -1706,6 +1706,8 @@ POSITIVE_FILES=(
     # Type checking of =.. and ..= (TGLP typed-constant-readers.tex): run in
     # Section ZG.
     "$TC_DIR/positive/term_univ.glp"
+    # The root's RName and OneOf: run in Section ZG.
+    "$TC_DIR/positive/one_of.glp"
     "$TC_DIR/positive/merge_basic.glp"
     "$TC_DIR/positive/append_list.glp"
     "$TC_DIR/positive/copy_stream.glp"
@@ -7552,6 +7554,18 @@ check "ZG5 Term: a Stream(Integer) is passed at Term?" "N2 = 1" "$zg5"
 check "ZG5 Term: a Term is produced" "T1 = box(3)" "$zg5"
 check "ZG5 Term: a type that is Term by a bare alternative" "H1 = p(var(x))" "$zg5"
 check "ZG5 Term: a list of Terms" "N3 = 4" "$zg5"
+
+# The root's RName and OneOf (programs/self.glp): a role name marked
+# one(Name, Others), Others one name, the list of names, or '_' (vGLP, Section
+# 5.4; GSC, Definition Binding).
+zg_oneof=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/typechecker/positive/one_of.glp
+count(['Alice', 'Bob', one('Carol', ['Alice', 'Bob']), one('Dave', '_'), one('Erin', 'Alice')], N).
+:quit
+HEREDOC
+2>&1)
+check "ZG5 OneOf: the program loads" "Loaded: .*one_of.glp" "$zg_oneof"
+check "ZG5 OneOf: Others one name, a list of names, or '_'" "N = 4" "$zg_oneof"
 
 # The refusals, each for its reason.
 zg_term() { # zg_term <file>: the REPL's output on loading a negative
