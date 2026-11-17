@@ -7,9 +7,9 @@
 # screen shows, "<time>\t<agent>\toutput\t<element>", and the clock last).  The
 # monitor and the measures are measurement, no part of the app.
 #
-#   python3 measure.py <log> <CSSN.glp> [--edges <file>] [--json <file>] [--months <k>] [--horizon <s>]
+#   python3 measure.py <log> <Children.glp> [--edges <file>] [--json <file>] [--months <k>] [--horizon <s>]
 #
-# <CSSN.glp> is the contract the run's platform was compiled from (the cascade
+# <Children.glp> is the contract the run's platform was compiled from (the cascade
 # record's copy); --months the months measured (12); --horizon the run's horizon
 # in seconds, the state at the end of the log being the state at it.
 #
@@ -36,7 +36,7 @@
 # yes, between the request and the commit, to an attempt or a hello of the same
 # part, whoever's attempt that was; and its precondition held in the states the
 # agents' views showed before the instant of the commit, each condition of the
-# schema (CSSN.glp, the repository's copy of the contract) read at the request's
+# schema (Children.glp, the repository's copy of the contract) read at the request's
 # binding: atom, not, and, or, ne and forall, the reflexive predicates holding of
 # their holder, and a listed role's agents those its forall ranges over.  Every
 # exception is reported.
@@ -118,8 +118,8 @@ def show(x):
     if isinstance(x, tuple): return "%s(%s)" % (x[0], ", ".join(show(a) for a in x[1]))
     return str(x)
 
-# ---- The schemas of the contract (CSSN.glp) ----------------------------------
-# The contract as adopt.py prints it: contract_named(cssn, reflexive(Preds, [sas(Name, Roles, Vars, Effects, Pre,
+# ---- The schemas of the contract (Children.glp) ----------------------------------
+# The contract as adopt.py prints it: contract_named(children, reflexive(Preds, [sas(Name, Roles, Vars, Effects, Pre,
 # Constraint, Guards), ...])), an atom written atom(Pred, [Holder | Args]) over the role names, and the agent's
 # state holding Pred(Args).  A request propose(C) names the roles of C in the order of Roles, then the variables
 # in the order of Vars; a role Roles names after them is listed, its agents those a forall of Pre ranges over.

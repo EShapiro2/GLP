@@ -71,8 +71,11 @@ cascade_files() {
         echo "directory"
     else
         git -C "$GLP_DIR" rev-parse -q --verify "refs/tags/$src" > /dev/null || return 1
-        git -C "$GLP_DIR" show "$src:cascade/$name/platform.glp" > "$dest/platform.glp" 2>/dev/null &&
-            git -C "$GLP_DIR" show "$src:cascade/$name/interface.glp" > "$dest/interface.glp" 2>/dev/null || return 1
+        # The record's directory is the tag's, cascade/<directory>/<date>: a
+        # record made before the contracts were renamed is under its old name.
+        local dir=${src#cascade/}; dir=${dir%/*}
+        git -C "$GLP_DIR" show "$src:cascade/$dir/platform.glp" > "$dest/platform.glp" 2>/dev/null &&
+            git -C "$GLP_DIR" show "$src:cascade/$dir/interface.glp" > "$dest/interface.glp" 2>/dev/null || return 1
         git -C "$GLP_DIR" rev-parse --short=8 "$src^{commit}"
     fi
 }
@@ -150,7 +153,7 @@ if [ -n "$UNTIL" ]; then
     [[ "$UC" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [ -z "${UX:-}" ] ||
         { echo "record.sh: --until is '<count> <unit>'" >&2; exit 2; }
 fi
-[[ "$NAME" =~ ^[A-Z][A-Z0-9]*$ ]] || { echo "record.sh: a contract's name is a letter acronym, as GSG" >&2; exit 2; }
+[[ "$NAME" =~ ^[A-Z][A-Za-z0-9+-]*$ ]] || { echo "record.sh: a contract's name is its file name, as Friendship (calculus/NAMES.txt)" >&2; exit 2; }
 if [ "$RECORD" = 1 ] && [ "$ROOT" != "$GLP_DIR/simulation" ]; then
     echo "record.sh: --record commits a record under simulation/ only" >&2; exit 2
 fi
