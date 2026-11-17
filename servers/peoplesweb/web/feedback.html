@@ -29,7 +29,18 @@ main{max-width:1120px;margin:0 auto;padding:36px 24px 90px}
 main>*{max-width:732px}
 h1{font-size:clamp(32px,5vw,44px);letter-spacing:-.025em;line-height:1.08;margin:6px 0 18px;font-weight:800}
 p{margin:0 0 16px;font-size:18px;color:var(--ink2)}
-@media (max-width:900px){main{padding:26px 16px 70px}}
+form{margin-top:28px;background:#fff;border-radius:20px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 6px 20px rgba(0,0,0,.05);padding:22px 22px 18px}
+form h2{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+form .small{font-size:15px;color:#6e6e73;margin:0 0 14px}
+label{display:block;font-size:14px;font-weight:600;margin:12px 0 6px;color:var(--ink2)}
+textarea,input[type=email]{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid #d2d2d7;border-radius:12px;background:#fff;color:var(--ink)}
+textarea{min-height:160px;resize:vertical}
+textarea:focus,input[type=email]:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,122,255,.2)}
+button{margin-top:16px;font:inherit;font-size:16px;font-weight:600;color:#fff;background:var(--blue);border:none;border-radius:999px;padding:10px 22px;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+#said{margin:12px 0 0;font-size:15px}
+#said.bad{color:#c0392b}
+@media (max-width:900px){main{padding:26px 16px 70px}form{padding:18px 16px 14px}}
 </style>
 </head>
 <body>
@@ -40,6 +51,37 @@ p{margin:0 0 16px;font-size:18px;color:var(--ink2)}
   <p>This site is made and kept up by Claude, an AI agent, from what is in the public repository <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener">https://github.com/EShapiro2/GLP</a>: the contracts, the papers, the code and the record of who answers for what.</p>
   <p>Feedback, questions, comments and suggestions go to its sister repository, <a href="https://github.com/udi-shapiro/Grassroots-Audit" target="_blank" rel="noopener">https://github.com/udi-shapiro/Grassroots-Audit</a>, as pull requests.</p>
   <p>If you are not sure how to make a pull request, ask Claude, ChatGPT or any other AI agent to make it for you.</p>
+  <form id="fb">
+    <h2>Or write it here</h2>
+    <p class="small">We mail you a link; when you open it, your feedback is posted to the sister repository as a pull request, signed "a visitor".  Your address is not posted.</p>
+    <label for="fbt">Your feedback</label>
+    <textarea id="fbt" maxlength="5000" required></textarea>
+    <label for="fbe">Your email address</label>
+    <input id="fbe" type="email" maxlength="200" autocomplete="email" required>
+    <button id="fbs" type="submit">Send</button>
+    <p id="said" role="status"></p>
+  </form>
 </main>
+<script>
+// The form (Udi, 2026-11-17, to Website #3): the server mails a link, and its
+// opening posts the feedback as a pull request (bin/server.dart, lib/feedback.dart).
+// The API is the live server's, at the site's root, here and under /next.
+(function(){
+  const f = document.getElementById('fb'), said = document.getElementById('said'), b = document.getElementById('fbs');
+  const from = document.referrer && document.referrer.startsWith(location.origin + '/') ? document.referrer : '';
+  f.addEventListener('submit', async e => {
+    e.preventDefault();
+    b.disabled = true; said.className = ''; said.textContent = 'Sending…';
+    try {
+      const r = await fetch('/api/feedback/post', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text: document.getElementById('fbt').value, email: document.getElementById('fbe').value, from})});
+      const j = r.ok ? await r.json() : {error: 'The form is not open yet.  Please make a pull request as this page says.'};
+      if (j.ok){ said.textContent = 'We have mailed you a link.  Open it within two days to post your feedback.'; f.reset(); }
+      else { said.className = 'bad'; said.textContent = j.error; }
+    } catch (_) { said.className = 'bad'; said.textContent = 'We could not reach the site; please try again later.'; }
+    b.disabled = false;
+  });
+})();
+</script>
 </body>
 </html>
