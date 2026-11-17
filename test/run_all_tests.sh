@@ -300,7 +300,7 @@ a1=$("$REPL_RUN" <<HEREDOC
 $TYPED/p.glp
 $BOOK/streams/producers_consumers/merge_simple.glp
 $TYPED/merge_standalone.glp
-$TYPED/run1.glp
+$TYPED/run1
 p(X).
 merge([1,2,3], [a,b], Xs).
 merge2([c,d], Out).

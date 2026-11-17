@@ -1,0 +1,8 @@
+% The vanilla meta-interpreter, parameterised by the type of the goals it
+% interprets (TGLP modules.tex, "Procedure declarations": a meta-program over
+% a module's goals is parameterised by their type, Goal(M#Procedure)); the
+% clauses it reads, clause/2, are the program's, in its self.glp.
+exported procedure(G) run(Goal(G)?).
+run(true).
+run((A, B)) :- run(A?), run(B?).
+run(A) :- otherwise | clause(A?, B), run(B?).

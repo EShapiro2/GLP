@@ -1,0 +1,16 @@
+% The program the meta-interpreter runs: merge, and the facts p, q and r.
+exported procedure merge(Stream(Constant)?, Stream(Constant)?, Stream(Constant)).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], [], []).
+
+exported procedure p(Constant?).
+p(a).
+p(b).
+
+exported procedure q(Constant?).
+q(X) :- p(X?).
+q(a).
+
+exported procedure r(Constant?, Constant?).
+r(a, b).

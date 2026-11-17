@@ -396,8 +396,6 @@ programs/tests/typed/real_guard.glp	open-decl	in_f/2
 programs/tests/typed/real_guard.glp	open-decl	only_real/2
 programs/tests/typed/real_guard.glp	open-decl	real_or_other/2
 programs/tests/typed/real_guard.glp	open-decl	twice/2
-programs/tests/typed/run1.glp	open-decl	clause/2
-programs/tests/typed/run1.glp	open-decl	run/1
 programs/tests/typed/test_defined_guards.glp	open-decl	channel/1
 programs/tests/typed/test_defined_guards.glp	open-decl	test/2
 programs/tests/typed/test_defined_guards_all.glp	open-decl	bind_response/3
