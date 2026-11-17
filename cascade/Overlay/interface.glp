@@ -21,7 +21,7 @@ interface([
   type('Atom', [identity, person, knows('Peer'), friend('Peer'), points_to('Peer')]),
   type('MayOne', [may_one('Integer', 'Integer')]),
   type('MayOnes', [[], ['MayOne' | 'MayOnes']]),
-  type('VOne', [vone('Var', 'Var'), vone_any('Var')]),
+  type('VOne', [vone('Var', 'Var'), vone_any('Var'), vone_all]),
   type('VOnes', [[], ['VOne' | 'VOnes']]),
   type('RNameTerm', [own('Integer'), own_var('Constant'), nvar('Constant'), ext('RNameTerm', 'Constant'), ext_any('RNameTerm')]),
   type('RArg', [role('Integer'), pvar('Constant'), svar('Constant'), nterm('RNameTerm'), sgn('Constant', 'Integer'), num('Constant'), real('Constant'), any, ilist('Integer', 'String'), item_of('RArg'), val('Constant')]),

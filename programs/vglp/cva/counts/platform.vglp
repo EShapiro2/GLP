@@ -220,7 +220,7 @@ RHMult    ::= hm(Integer, RAtom).
 RHMults   ::= [] ; [RHMult | RHMults].
 RConjunct ::= conjunct(RArgs, Integer, RAtom, RForm, RHMults, RHMults, RForms).
 RConjuncts ::= [] ; [RConjunct | RConjuncts].
-RName     ::= Constant ; one(Constant, Constant).
+RName     ::= Constant ; one(Constant, OneOf).
 RNames    ::= [] ; [RName | RNames].
 RSchema   ::= schema(Constant, RArgs, RRoleSpecs) ; cschema(Constant, RArgs, RReaches, RRoleSpecs) ; nschema(Constant, RArgs, RConstraint, RRoleSpecs) ; schema(Constant, RNames, RArgs, RRoleSpecs) ; cschema(Constant, RNames, RArgs, RReaches, RRoleSpecs) ; nschema(Constant, RNames, RArgs, RConstraint, RRoleSpecs) ; qschema(Constant, RArgs, RArgs, RConstraint, RRoleSpecs, RConjuncts, RForms) ; qschema(Constant, RNames, RArgs, RArgs, RConstraint, RRoleSpecs, RConjuncts, RForms).
 RContract ::= [] ; [RSchema | RContract].
@@ -253,6 +253,13 @@ contract("", with(environment([cap, wt], [schema(start, [], [rs(guarded, [atom(s
 exported procedure version(Integer, Integer).
 version(1, 1)
 .
+
+%% The values the developer gave when compiling the platform, the atoms of the environment predicates the developer gives (vGLP, Section 5.4), which the agent holds from startup.
+procedure developer_values(List(Atom)).
+developer_values([cap(3), wt(4), wt(2)])
+.
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
+agent(Id, NetIn, Out?, Thr?) :- developer_values(Vs), agent(Id?, NetIn?, Out, Thr, Vs?).
 
 %% The peer a request name N of an acquaintance part names beside the agent Me, peer(Q), or none, nopeer: the acquaintance schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).
