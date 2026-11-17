@@ -1,4 +1,0 @@
-R: Ruled (flat text)
-R:0 - | Alice is a person, Carol a ward.
-R:0 - | Default: any guardian of z for those who decide for z.
-R:1 ■ Retire: Any guardian of Carol may Carol is retired, provided not Carol is retired.

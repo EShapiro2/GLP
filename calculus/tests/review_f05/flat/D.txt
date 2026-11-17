@@ -1,3 +1,0 @@
-D: Instantiate the role (flat text)
-C:0 - | Alice is a person.
-C:1 ■ Act: Alice and those who oversee Alice may jointly Alice is ready. Must consent: those who oversee Alice.

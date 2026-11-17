@@ -1,5 +1,0 @@
-AUT: Authored Messages
-AUT instantiates MSG with item(y,t@x) for message(y,x,t), and composes it with Forwarding.
-AUT:0 - | Alice and Bob are persons, Text a message, Item an item.
-AUT:1 ■ Message: MSG:1 <- item(Alice,Text), author(Alice,Text).
-AUT:1 ■ Forward other: Forwarding:2 <- ~author(Alice,Item).

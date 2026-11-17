@@ -1,5 +1,0 @@
-R: One act, renamed, a consent repeated (expanded schemas)
-K:0 - | Alice, Bob and Carol are persons.
-K:1+R:1 ■ Grant: token(Bob) <- trusted(Bob,Carol) guarded by Alice, Bob, Carol.
-K:1 ■ Take: token(Alice) <- guarded by Alice.
-R:0 - | Alice, Bob and Carol are persons.

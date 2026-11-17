@@ -1,4 +1,0 @@
-SUB: A Restriction
-SUB extends ORG.
-SUB:0 - | Alice and Bob are persons, Erin a person, Sum a number.
-SUB:1 ■ Pay small: ORG:1 Pay for an organisation <- knows(Erin,Bob).

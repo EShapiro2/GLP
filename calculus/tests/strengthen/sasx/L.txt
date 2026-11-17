@@ -1,6 +1,0 @@
-L: Lists (expanded schemas)
-K:0 - | Alice and Bob are persons.
-K:1+L:1 ■ Meet: met(Alice,Bob), met(Bob,Alice), lists(Alice,Bob) <- ~met(Alice,Bob) guarded by Alice, Bob.
-K:2+L:1 ■ Part: ~met(Alice,Bob), ~met(Bob,Alice), ~lists(Alice,Bob), ~tag(Alice,_,Bob) <- met(Alice,Bob), met(Bob,Alice), lists(Alice,Bob) guarded by Alice.
-L:0 - | Alice and Bob are persons, Tag a tag.
-L:2 ■ Tag: tag(Alice,Tag,Bob) <- lists(Alice,Bob) guarded by Alice.

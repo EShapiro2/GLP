@@ -1,4 +1,0 @@
-X: Written out
-Of B: Alice, Bob and Carol are persons, Sum a number.
-Of X: Alice, Bob and Carol are persons, Sum a number.
-B:1. ■ Pay: Alice may pay Bob Sum Carol-coins, with the consent of Bob, provided Alice knows Bob.

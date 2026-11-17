@@ -1,3 +1,0 @@
-D: Both
-D composes P with Q.
-D:0 - | Alice is a person.

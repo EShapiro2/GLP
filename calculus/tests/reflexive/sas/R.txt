@@ -1,7 +1,0 @@
-R: Notes
-R extends K.
-After x notes y: x has noted y.
-After x notes x's own name: x has noted x.
-R:0 - | Alice and Bob are persons, Bob possibly Alice.
-R:1 ■ Note: noted(Alice,Bob) <- knows(Alice,Bob) guarded by Alice possibly Alice=Bob.
-R:1 ■ Note self: noted(Alice,Alice) <- guarded by Alice.

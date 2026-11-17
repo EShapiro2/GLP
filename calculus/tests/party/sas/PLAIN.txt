@@ -1,4 +1,0 @@
-PLAIN: A Currency Without Wards
-PLAIN extends CUR.
-PLAIN:0 - | Alice and Bob are parties, Sum a number.
-PLAIN:1 ■ Pay known: CUR:1 Pay <- knows(Bob,Alice).

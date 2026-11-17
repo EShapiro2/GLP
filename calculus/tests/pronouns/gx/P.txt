@@ -1,6 +1,0 @@
-P: Pronouns and possessives
-Of P: Alice, Bob, Erin and Frank are persons, Carol a person, Orga an organisation, Club a club.
-P:1. ■ Ward end: Carol may end her friendship with Bob, provided Carol does not have Bob as a guardian.
-P:2. ■ Greet guardian: Bob may greet Alice, provided Bob has Alice as a guardian. Greet known: Erin may greet Bob, provided Erin knows Bob. Greet self: Frank may greet Erin, provided Frank knows Frank.
-P:3. ■ Greet friend: Alice may greet Frank, provided Frank is a friend of Alice. Greet stranger: Alice may greet Bob, provided Bob is not a friend of Alice. Greet of hers: Erin may greet Frank, provided Frank is a friend of Erin.
-P:4. ■ Greet member: Frank may greet Orga, provided Orga has Frank as a member. Greet outsider: Orga may greet Bob, provided Orga does not have Bob as a member. Greet their member: Orga may greet Frank, provided Orga has Frank as a member. Greet in her club: Alice may greet Frank, provided Frank is a member of Alice's Club.
