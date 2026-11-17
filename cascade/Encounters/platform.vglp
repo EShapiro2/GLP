@@ -378,9 +378,28 @@ exported procedure version(Integer, Integer).
 version(1, 1)
 .
 
+procedure stand_meets(Preds).
+stand_meets([encounter]).
+procedure stand_meet_name(Constant?, Peer?, Peer?, MeetName).
+stand_meet_name(encounter, A, B, meetname(encounter(A?, B?))).
+stand_meet_name(_, _, _, nomeetname) :- otherwise | true.
+procedure meet_standing(Proposal?, StandOf).
+meet_standing(encounter(_, _), standing_of(encounter)).
+meet_standing(_, notstanding) :- otherwise | true.
+
 %% The peer a request name N of an acquaintance part names beside the agent Me, peer(Q), or none, nopeer: the acquaintance schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).
 meeting_peer(acquaint(V1, V2), Me, P?)
+:-
+ground(V1?)
+,
+ground(V2?)
+,
+ground(Me?)
+|
+meet_other(V1?, V2?, Me?, P)
+.
+meeting_peer(encounter(V1, V2), Me, P?)
 :-
 ground(V1?)
 ,
@@ -678,6 +697,35 @@ procedure drop_near(Peer?, GAtoms?, GAtoms).
 drop_near(_, [], []).
 drop_near(K, [g(nearby, [p(Q)])|S], S1?) :- K? =?= Q? | drop_near(K?, S?, S1).
 drop_near(K, [A|S], [A?|S1?]) :- otherwise | drop_near(K?, S?, S1).
+%% Under a standing request of an acquaintance act, the machine sends the hello to each person it is about to propose the act with (vGLP, Section 5.4): on the phone's report that K is seen, where a standing request of a standing acquaintance schema stands, hello to K carrying the request name with the agent and K in its two roles, unless K is known or already sent to (meet_hello).
+LiveMeet  ::= meet(Constant) ; nomeet.
+MeetName  ::= meetname(Proposal) ; nomeetname.
+StandOf   ::= standing_of(Constant) ; notstanding.
+procedure near_hello(Presence?, St?, Stream(Net), Stream(Net)?, Stream(Output), Stream(Output)?, St).
+near_hello(seen(K), St, Out?, Out1, Thr?, Thr1, St1?) :- ground(K?), ground(St?) |
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    st_id(St?, Me),
+    stand_meets(Sm),
+    live_meet(Sm?, R?, Lm),
+    near_hello1(Lm?, Me?, K?, St?, Out, Out1?, Thr, Thr1?, St1).
+near_hello(gone(_), St, Out1?, Out1, Thr1?, Thr1, St?).
+procedure live_meet(Preds?, Recs?, LiveMeet).
+live_meet([], _, nomeet).
+live_meet([S|Ss], R, L?) :- ground(S?), ground(R?) |
+    standing_live(R?, S?, R?, Sk),
+    live_meet1(Sk?, S?, Ss?, R?, L).
+procedure live_meet1(StandK?, Constant?, Preds?, Recs?, LiveMeet).
+live_meet1(at(_), S, _, _, meet(S?)).
+live_meet1(nostand, _, Ss, R, L?) :- live_meet(Ss?, R?, L).
+procedure near_hello1(LiveMeet?, Peer?, Peer?, St?, Stream(Net), Stream(Net)?, Stream(Output), Stream(Output)?, St).
+near_hello1(nomeet, _, _, St, Out1?, Out1, Thr1?, Thr1, St?).
+near_hello1(meet(S), Me, K, St, Out?, Out1, Thr?, Thr1, St1?) :- ground(S?), ground(Me?), ground(K?) |
+    stand_meet_name(S?, Me?, K?, Nm),
+    near_hello2(Nm?, K?, St?, Out, Out1?, Thr, Thr1?, St1).
+procedure near_hello2(MeetName?, Peer?, St?, Stream(Net), Stream(Net)?, Stream(Output), Stream(Output)?, St).
+near_hello2(meetname(N), K, St, Out?, Out1, Thr?, Thr1, St1?) :- meet_hello(peer(K?), N?, St?, Out, Out1?, Thr, Thr1?, St1).
+near_hello2(nomeetname, _, St, Out1?, Out1, Thr1?, Thr1, St?).
 
 %% A request question: its question, of the request type Request?, takes the
 %% person's one request, put up once it is made, of a type with the alternative propose(N) for the request name N of each guarded part (vGLP d433f71, Section 5.4, "The compilation"), so that every agent of a contract with a guarded part asks a request question when it starts and the next when it reads the answer to the last; a refresh is no request but a grant addressed to no construct, on which the dispatcher has every construct draw again what it last drew (Section 6.3), and the agent writes nothing on it.
@@ -855,7 +903,8 @@ step(near(P), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(P?)
     st_app(St?, Ap1),
     near_set(P?, Ap1?, Ap2),
     set_app(St?, Ap2?, St1),
-    next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).
+    near_hello(P?, St1?, Out, Out1?, Thr, Thr1?, St2),
+    next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, H?, St2?).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     agent_goal(Ls?, In?, no, Ans, Thr, Out, Ow, Approvals?, H?, St?).
 
@@ -1568,8 +1617,23 @@ greet_unless(no, P, N, St, Ans?, Ans1, St?) :- ground(P?), ground(N?), ground(St
     st_id(St?, Me),
     st_ms(St?, S),
     name_class(N?, S?, C),
-    greet_at(C?, Me?, P?, N?, R),
-    merge(R?, Ans1?, Ans).
+    st_app(St?, Ap),
+    app_recs(Ap?, R),
+    meet_standing(N?, So),
+    greet_or_stand(So?, R?, C?, Me?, P?, N?, Ans, Ans1?).
+%% A hello of a standing acquaintance act whose standing request stands at the agent is answered by it, as the person's yes, without asking the person (vGLP, Section 5.4: "Under a standing request of an acquaintance act, the machine ... answers a hello that arrives by its standing request, without asking its person").
+procedure greet_or_stand(StandOf?, Recs?, Class?, Peer?, Peer?, Proposal?, Stream(Trigger), Stream(Trigger)?).
+greet_or_stand(standing_of(S), R, C, Me, P, N, Ans?, Ans1) :- ground(S?), ground(R?) |
+    standing_live(R?, S?, R?, Sk),
+    greet_or_stand1(Sk?, C?, Me?, P?, N?, Ans, Ans1?).
+greet_or_stand(notstanding, _, C, Me, P, N, Ans?, Ans1) :-
+    greet_at(C?, Me?, P?, N?, Rr),
+    merge(Rr?, Ans1?, Ans).
+procedure greet_or_stand1(StandK?, Class?, Peer?, Peer?, Proposal?, Stream(Trigger), Stream(Trigger)?).
+greet_or_stand1(at(_), _, _, _, N, [greeted(N?)|Ans1?], Ans1).
+greet_or_stand1(nostand, C, Me, P, N, Ans?, Ans1) :-
+    greet_at(C?, Me?, P?, N?, Rr),
+    merge(Rr?, Ans1?, Ans).
 procedure greet_at(Class?, Peer?, Peer?, Proposal?, Stream(Trigger)).
 greet_at(C, Me, P, N, R?) :- ground(C?), ground(Me?) |
     question_words(C?, Me?, Ws),
