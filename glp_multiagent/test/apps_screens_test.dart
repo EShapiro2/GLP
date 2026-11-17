@@ -940,7 +940,15 @@ void appsScreens(Screens screens) {
     await run.join(carol);
 
     // (b) Alice types Bob's key into Acquaint's field and taps Acquaint (GKK:2): her request's hello asks Bob, at the top of his Contacts, GKK's question "Alice wishes that you know each other.", with yes and no; he taps yes, his request of the same acquaintance, and each then knows the other, neither asked again.  Then Alice and Carol meet.
+    // Carol's key as if Alice had typed it into Acquaint's field before, in the field's store (typed_before.dart), before the form is drawn again.
+    TypedBefore.record('menu:${alice.name}:field:acquaint::2', carol.name);
     await run.meetByKey(alice, bob, shot: 'gkk-b-bob-asked-to-meet.png');
+    // Acquaint's field offers a key Alice typed in it before only where she may acquaint that person: "A family may offer in a text field the values its person typed in it before, where the field takes them at the person's state" (vGLP, Section 6.2, Remark "Construct Families").  Bob, whom she now knows, is not offered; Carol, typed before and not yet known, is.
+    await run.list(alice, 'knows');
+    expect(run.control(alice, 'before:field:acquaint::2:${carol.name}'),
+        findsOneWidget);
+    expect(run.control(alice, 'before:field:acquaint::2:${bob.name}'),
+        findsNothing);
     await run.meetByKey(alice, carol);
     expect(alice.atoms,
         unorderedEquals(['identity', 'person', 'knows(bob)', 'knows(carol)']));
