@@ -1,0 +1,76 @@
+%% programs/tests/encounters_nearby/program --- the agents' program of glp_runtime/test/multiagent/encounters_nearby_test.dart: Encounters' canonical platform, its agent and its dispatcher, run by each agent of the boot harness over the agent's own network channel, with no super-app.  The test makes the program directory from this self.glp and Encounters' platform as cascade.sh prints it, cascade/Encounters/platform.vglp, which the canonical compilation compiles when the directory loads (vGLP, Section 6.3, "The canonical compilation"), so the platform is the one copy and is never written again here.
+%%
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"); a boot defines no agent/2, the program answers it, and the person's first act names the entry the program starts, here encounters(K), with the agent's own key K (IGLP, Implementation Notes, "Boot": "At the agent's first start the application sends on the person channel the act that starts its program, with the agent's own key and the keys of the peers the person knows, none at a first start"); in the simulation K is the readable name standing for the key (Remark "Agent Names"; "Simulation realisation": "a destination, in a global name or in a message, is a key or a readable name standing for one"), the name by which the agents' nearby declarations are given the other.  The platform's network messages, msg(Q, C), are the agent's network output, which send_to_net/1 sends to agent Q, and its network input is the platform's: a message msg(Q, C) reaches agent Q as it was sent, its content naming the sender, as the conversations of a super-app carry it (programs/apps/gkk/miniapp.glp, route_net/6).  The platform declares the environment predicate nearby by the phone's nearby declarations and the trust its standing requests open (cascade/Encounters/platform.glp, phone_facts/1 and trust_to/2; Encounters' Implementation pragmas); this program declares nothing of its own.
+%%
+%% The types of platform.vglp that this file's declarations name, written again, as programs/apps/gkk/self.glp writes them, but for those the compilation forms --- Question, Drawn and Ask(Q) --- which the linker writes into every module that imports a compiled procedure (vGLP, Section 6.3, "The canonical compilation").
+
+Peer      ::= Key.
+Class     ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; open_place(Peer) ; close_place(Peer) ; encounter(Peer, Peer).
+Proposal  ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Peer) ; open_place(Peer) ; close_place(Peer) ; encounter(Peer, Peer).
+Request   ::= propose(Proposal).
+Atom      ::= identity ; person ; knows(Peer) ; open_place ; nearby(Peer).
+Speech    ::= speech(Utterance, Peer).
+Utterance ::= utterance(String) ; program(Module) ; Speech.
+YesNo     ::= yes ; no.
+Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
+Vote      ::= yes(Bindings) ; yes(Bindings, GAtoms) ; no(Reason).
+Decision  ::= commit(Binding) ; abort(Peer, Reason) ; yield.
+Rho       ::= one(Class) ; rho(Proposal) ; std(Constant).
+Names     ::= none ; request(Rho, Integer).
+Attempt   ::= attempt(Peer, Integer, Integer, Class, Names).
+Cargo     ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision) ; yield(Attempt) ; ready(Attempt) ; request(Rho, Integer).
+Content   ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Net       ::= msg(Peer, Content).
+Asking    ::= Attempt ; hello(Peer, Proposal).
+Approval  ::= approval(Asking, List(Word), YesNo?).
+Word      ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Number) ; held(Atom, Integer).
+Var       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any ; item_of(Var) ; val(Constant) ; inst(Integer, Integer, Var).
+NTerm     ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant) ; ext_any(NTerm) ; own_iv(Var) ; ext_iv(NTerm, Var).
+CName     ::= community(Peer) ; dot(CName, Speech) ; dot_any(CName).
+Val       ::= p(Peer) ; s(Speech) ; c(CName) ; n(Integer) ; r(Real) ; i(Utterance) ; lv(Constant, Constant) ; any ; v(Constant).
+Vals      ::= [] ; [Val | Vals].
+GAtom     ::= g(Constant, Vals).
+GAtoms    ::= [] ; [GAtom | GAtoms].
+Bind      ::= b(Var, Val).
+Binding   ::= [] ; [Bind | Binding].
+Bindings  ::= [] ; [Binding | Bindings].
+Approved  ::= Proposal.
+Output    ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
+Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
+
+%% The person's input: the entry with the agent's own key first, then the grants on the dispatcher's questions (written again in the boot file, programs/tests/encounters_nearby/boot.glp).
+EnStart ::= encounters(Key).
+EnPIns  ::= [EnStart | PersonIn(Drawn)].
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?, Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+%% The agent's initial goal: the person channel, whose input starts with the entry, and the network channel.
+exported procedure agent(Channel(EnPIns, PersonOut(Drawn))?, Channel(Stream(NetMsg(Content)), Stream(NetMsg(Content)))?).
+agent(ch(In, POut?), ch(N, NOut?)) :- start(In?, POut, N?, NOut).
+
+procedure start(EnPIns?, PersonOut(Drawn), Stream(NetMsg(Content))?, Stream(NetMsg(Content))).
+start([encounters(K) | PIn], POut?, N, NOut?) :-
+    run_agent(K?, PIn?, POut, N?, NOut).
+
+%% The platform's agent with the agent's key and no environment atoms at its start, its network the agent's, and its dispatcher over the person channel, the agent's thread of outputs its construct 0.
+procedure run_agent(Key?, PersonIn(Drawn)?, PersonOut(Drawn), Stream(NetMsg(Content))?, Stream(NetMsg(Content))).
+run_agent(K, PIn, POut?, N, NOut?) :-
+    ground(K?) |
+    net_in(N?, NIn),
+    platform # agent(K?, NIn?, NOut1, Thread, [], Asks),
+    net_out(NOut1?, NOut),
+    platform # dispatch(Asks?, ch(PIn?, POut), MCh),
+    to_person(MCh?, Thread?).
+
+procedure to_person(Channel(Stream(Input(Drawn)), Stream(Output))?, Stream(Output)?).
+to_person(ch(_, O?), O).
+
+%% The agent's network messages, NetMsg(Content) on the network channel, as the platform's, Net.
+procedure net_in(Stream(NetMsg(Content))?, Stream(Net)).
+net_in([msg(Q, C) | Ms], [msg(Q?, C?) | Ns?]) :- net_in(Ms?, Ns).
+net_in([], []).
+
+procedure net_out(Stream(Net)?, Stream(NetMsg(Content))).
+net_out([msg(Q, C) | Ns], [msg(Q?, C?) | Ms?]) :- net_out(Ns?, Ms).
+net_out([], []).
