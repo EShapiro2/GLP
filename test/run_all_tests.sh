@@ -14,7 +14,7 @@
 #   H - retired (old-generation CSSN modules); CSSN is Section K
 #   I - self.glp Procedure Tests (shared procs, shadowing, local shadow, type error)
 #   J - CSSG v2 Modules (child_agent with parent(X) output keys)
-#   K - CSSN, the child-safe social network (programs/cssn): the canonical platform of CSSN.glp and the village
+#   K - CSSN, the child-safe social network (programs/cssn): the canonical platform of Children.glp and the village
 #   L - Dynamic Module Dispatch Tests (activate + M # goal)
 #   M - Multi-Isolate (madGLP) Tests (dart test, one isolate per agent; run in Section Q)
 #   N - Currencies Modules (project-directory loading, plays 1-12)
@@ -2623,8 +2623,8 @@ fi  # Section I
 if _section K; then
 # =============================================================================
 # Section K: the child-safe social network (programs/cssn), CSSN Section 4:
-# its program is the canonical CVA platform of its contract, programs/cssn/
-# CSSN.glp (CSSN Appendix B.2), which vGLP's compiler prints, platform.vglp
+# its program is the canonical CVA platform of its contract, Children,
+# programs/cssn/Children.glp (CSSN Appendix B.2), which vGLP's compiler prints, platform.vglp
 # (programs/cssn/compile.sh), wrapped as a mini-app of the Grassroots
 # Super-App by the entry miniapp/3 (miniapp.glp, the same file as the apps'),
 # certified; and the village of CSSN Section 4.6, "Village Demonstration"
@@ -2641,36 +2641,35 @@ echo ""
 
 CSSN_DIR="$GLP_DIR/programs/cssn"
 
-# The contract's act schemas (CSSN Appendix C.2), programs/cssn/CSSN.glp, in
-# the term form programs/gsc reads (CSSN.glp at a261cb74, its comments at
-# 89e11f96, CSSN #9 Cowork): GSC's verdict on it, by the conditions for a
+# The contract's act schemas (CSSN Appendix C.2), programs/cssn/Children.glp,
+# in the term form programs/gsc reads, printed by calculus/tools/adopt.py: GSC's verdict on it, by the conditions for a
 # contract with wards (GAI ddf0a33, sections/wards.tex; CSSN, Appendix B.4):
 # "The marks are child, its guardianship (child, identity, parent,
 # parenting), its leaving mark retired, the introductory act acquaint, which
 # adds knows, and the relay acts child_acquaint and child_acquaint_2, by which GSC's
 # checker certifies the contract syntactically grassroots with wards"
-# (CSSN.glp), with traceable provenance and volition.  The platform committed
+# (CSSN, Appendix B.4), with traceable provenance and volition.  The platform committed
 # in programs/cssn is what the compiler prints from it (compile.sh --check)
-# and the platform of the record of the cascade on CSSN.
-echo "--- CSSN contract, GSC's verdict, the platform ---"
+# and the platform of the record of the cascade on Children.
+echo "--- Children contract, GSC's verdict, the platform ---"
 k_contract=$(bash "$CSSN_DIR/compile.sh" --check 2>&1; echo "exit $?")
-check "CSSN contract: GSC gives a verdict" "verdict: " "$k_contract"
-check "CSSN contract: syntactically grassroots with wards, acquaint the introductory act, child the mark, its guardianship" "verdict: syntactically_grassroots_with_wards(acquaint, \[child\], \[guardianship(child, parent, has_parent)\], " "$k_contract"
-check "CSSN contract: ... child_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(child_acquaint, " "$k_contract"
-check "CSSN contract: ... children_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(children_acquaint, " "$k_contract"
-check "CSSN contract: ... identity and person the atoms its introductory act requires" "verdict: syntactically_grassroots_with_wards(.*, \[identity, person\])$" "$k_contract"
-check_not "CSSN contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
-check_not "CSSN contract: it satisfies volition" "volition(" "$k_contract"
-check_not "CSSN contract: it is not malformed" "malformed(" "$k_contract"
+check "Children contract: GSC gives a verdict" "verdict: " "$k_contract"
+check "Children contract: syntactically grassroots with wards, acquaint the introductory act, child the mark, its guardianship" "verdict: syntactically_grassroots_with_wards(acquaint, \[child\], \[guardianship(child, parent, has_parent)\], " "$k_contract"
+check "Children contract: ... child_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(child_acquaint, " "$k_contract"
+check "Children contract: ... children_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(children_acquaint, " "$k_contract"
+check "Children contract: ... identity and person the atoms its introductory act requires" "verdict: syntactically_grassroots_with_wards(.*, \[identity, person\])$" "$k_contract"
+check_not "Children contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
+check_not "Children contract: it satisfies volition" "volition(" "$k_contract"
+check_not "Children contract: it is not malformed" "malformed(" "$k_contract"
 # The canonical CVA platform of the contract (vGLP a890465, Section 5.4, "Act schemas as local specifications": "the listed roles of a schema have one base, which is its only guarding role or, if it is not a guarding role, its first role"): child_close(r, p?, r[listed(*, n)] ; n), its listed role based at r, its first role, which does not guard, compiles, r the opener of the part p guards (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, items 1 and 5).
-check "CSSN contract: compiled to its canonical CVA platform, platform.vglp as the compiler prints it" "^platform.vglp: as printed$" "$k_contract"
-check "CSSN contract: compile.sh --check exits 0" "^exit 0$" "$k_contract"
-# CSSN, Section 4.6.1, "The program": compiled "with knows its introduction predicate" (CSSN.glp, introduction_named(cssn, introduction(knows)), after GKK).
-check "CSSN contract: compiled with knows its introduction predicate" "^introduction: introduction(knows)$" "$k_contract"
-if cmp -s "$CSSN_DIR/platform.vglp" "$GLP_DIR/cascade/CSSN/platform.vglp"; then
-    _check_pass "CSSN: platform.vglp is the platform of the recorded run of the cascade on CSSN"
+check "Children contract: compiled to its canonical CVA platform, platform.vglp as the compiler prints it" "^platform.vglp: as printed$" "$k_contract"
+check "Children contract: compile.sh --check exits 0" "^exit 0$" "$k_contract"
+# CSSN, Section 4.6.1, "The program": compiled "with knows its introduction predicate" (Children.glp, introduction_named(children, introduction(knows)), after Knowledge).
+check "Children contract: compiled with knows its introduction predicate" "^introduction: introduction(knows)$" "$k_contract"
+if cmp -s "$CSSN_DIR/platform.vglp" "$GLP_DIR/cascade/Children/platform.vglp"; then
+    _check_pass "CSSN: platform.vglp is the platform of the recorded run of the cascade on Children"
 else
-    _check_fail "CSSN: platform.vglp is the platform of the recorded run of the cascade on CSSN" "programs/cssn/platform.vglp differs from cascade/CSSN/platform.vglp"
+    _check_fail "CSSN: platform.vglp is the platform of the recorded run of the cascade on Children" "programs/cssn/platform.vglp differs from cascade/Children/platform.vglp"
 fi
 if cmp -s "$GLP_DIR/programs/apps/gsg/miniapp.glp" "$CSSN_DIR/miniapp.glp"; then
     _check_pass "CSSN: miniapp.glp is the same file as the apps'"
@@ -10322,11 +10321,14 @@ echo ""
 # committed artefacts to what the tools print"); until 2026-11-11 fourteen
 # records, gfp, gpd, gas, grv, gsv, gds, gpe, bcc, gcc, gff_i, gff_ps, gff_fr,
 # gff_fr_bc and gsnw, were recorded and never checked.
-for cas_c in gkk gfp gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gpd gas grv gsv gds gpe agora gdo gdc dgc gcc gd gdo_l gra gff gff_ps gff_fr gff_fr_bc gdo_lb gra_ss dao ldao fdao rec stay lib joint cb cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc; do
-    cas_n=$(awk -v c="$cas_c" '$1 == "#" && $2 == c { print $3; exit }' "$GLP_DIR/cascade.sh")
-    [ -n "$cas_n" ] || cas_n=$(printf '%s' "$cas_c" | tr a-z_ A-Z-)
+# The rows and each one's record are read from cascade.sh's own table, "    <row>) FILE=<file name>;", so that a contract renamed or added there is checked here and none is passed over in silence (Code #33, 2026-11-17: after the renaming of 2026-11-16 the list written here by hand named rows that were no more, and the section checked two records of 66 and passed); a row with no record is skipped only where its contract is dormant, gfwc.
+for cas_row in $(sed -n 's/^    \([a-z0-9_]*\)) FILE=\([A-Za-z0-9-]*\);.*/\1:\2/p' "$GLP_DIR/cascade.sh"); do
+    cas_c=${cas_row%%:*}; cas_n=${cas_row#*:}
     cas_o="cascade/$cas_n"
-    [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
+    if [ ! -f "$GLP_DIR/$cas_o/manifest.md" ]; then
+        [ "$cas_c" = gfwc ] || _check_fail "cascade $cas_c: its record is there" "no $cas_o/manifest.md"
+        continue
+    fi
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
     # A contract its owner has adopted from the Calculus also has the artefacts
     # calculus/tools/adopt.py prints (claude.md "Code", "The record of a
@@ -10340,10 +10342,10 @@ for cas_c in gkk gfp gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gpd gas grv gsv g
     check "cascade $cas_c: cascade.sh --check exits 0" "^exit 0$" "$cas_out"
 done
 # A composition of contracts, recorded in cascade/<NAME>+<NAME>/ (vGLP 7c631b1, Section 5.4, "The contract's words": "The compiler takes one contract or several: of several it prints the platform of their composition"; cascade.sh, several contracts): GSN and GC, both extending GKK.
-for cas_cs in "gsn gc"; do
-    cas_n=$(printf '%s' "$cas_cs" | tr a-z_ A-Z- | tr ' ' +)
+for cas_cs in "groups coins"; do
+    cas_n=Groups+Coins
     cas_o="cascade/$cas_n"
-    [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
+    if [ ! -f "$GLP_DIR/$cas_o/manifest.md" ]; then _check_fail "cascade $cas_n: its record is there" "no $cas_o/manifest.md"; continue; fi
     cas_out=$(bash "$GLP_DIR/cascade.sh" $cas_cs --check 2>&1; echo "exit $?")
     for cas_f in $(cd "$GLP_DIR/$cas_o" && ls | grep -vx manifest.md); do
         check "cascade $cas_n: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"

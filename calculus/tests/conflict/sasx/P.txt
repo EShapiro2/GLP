@@ -1,4 +1,0 @@
-P: First (expanded schemas)
-C:0 - | Alice is a person.
-C:1 ■ Mark: red(Alice) <- guarded by Alice.
-P:0 - | Alice is a person.

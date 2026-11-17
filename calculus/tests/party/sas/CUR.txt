@@ -1,8 +1,0 @@
-CUR: A Currency
-Vocabulary: x knows y = knows(x,y); x holds n y-coins = coin(x,y,*n).
-After x pays y n x-coins: no longer x holds n x-coins and y holds n x-coins.
-After x and y swap n x-coins for m y-coins: no longer x holds n x-coins, y holds n x-coins, no longer y holds m y-coins and x holds m y-coins.
-CUR:0 - | A *party* to a contract is whoever has an identity.
-CUR:0 - | Alice and Bob are parties, Sum and Total numbers.
-CUR:1 ■ Pay: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum) guarded by Alice.
-CUR:2 ■ Swap: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total) guarded by Alice, Bob.

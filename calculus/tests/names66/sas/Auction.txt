@@ -1,6 +1,0 @@
-Auction
-Auction extends Knowledge.
-Vocabulary: x bids to y = bids(x,y).
-After x bids to y: x bids to y.
-Auction:0 - | Alice and Bob are persons.
-Auction:1 ■ Bid: bids(Alice,Bob) <- knows(Alice,Bob) guarded by Alice.

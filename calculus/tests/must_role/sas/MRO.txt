@@ -1,4 +1,0 @@
-MRO: Overseen Club
-MRO instantiates MRC with overseers(z) for deciders(z).
-Roles: the overseers of z = overseers(z), listed by z has y as a member and y is a member of z.
-MRO:0 - | Bob is a person, Orga a club.

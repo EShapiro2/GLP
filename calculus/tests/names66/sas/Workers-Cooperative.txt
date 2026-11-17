@@ -1,6 +1,0 @@
-Workers' Cooperative
-Workers' Cooperative restricts Cooperative.
-Workers' Cooperative:0 - | A *workers' cooperative* is a cooperative whose members work for it.
-Workers' Cooperative:0 - | Alice and Bob are persons, Coop a cooperative.
-Workers' Cooperative:1 ■ Join: Cooperative:1 <- knows(Alice,Bob).
-Workers' Cooperative:1 ■ | The workers' cooperative pays its workers.

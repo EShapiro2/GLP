@@ -1,3 +1,0 @@
-P: Parameters
-Of P: d > 1, an integer, is a parameter of P. Alice and Bob are persons. Environment: y is beyond d of x.
-P:1. ■ Point: Alice may point to Bob, provided Alice points to fewer than D persons. Mark far: Alice may mark Bob as far, provided Bob is beyond D of Alice.

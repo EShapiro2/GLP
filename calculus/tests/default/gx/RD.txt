@@ -1,4 +1,0 @@
-RD: Ruled at its default
-Of R: Alice is a person, Carol a ward. Default: any guardian of z for those who decide for z.
-Of RD: Carol is a ward.
-R:1. ■ Retire: Any guardian of Carol may retire Carol.

@@ -68,6 +68,17 @@ void main() {
     expect(Looks.contractLook(_contract('W', ['Look: w, social'], heading: 'Interface pragmas'))!.name, 'W');
   });
 
+  test('a contract whose title line is its name is found by its name, its file name and its atom', () {
+    final text = ['% Owner: GO, by Udi\'s ruling', 'Community Bank', 'Alice and Bob are persons.',
+      '1. ■ Something.  Alice may do it.', 'Interface pragmas', 'Look: 🏦, os'].join('\n');
+    expect(Looks.contractLook(text)!.name, 'COMMUNITY BANK');
+    final l = Looks.parse(_families, contractTexts: [text]);
+    for (final n in ['Community Bank', 'Community-Bank', 'community_bank']) {
+      expect(l.of(n).icon, '🏦', reason: n);
+      expect(l.of(n).family, 'os', reason: n);
+    }
+  });
+
   test('a contract with no look, or of a family the file does not name, is of the family other', () {
     final l = Looks.parse(_families, contractTexts: [_contract('Q', ['Look: q, nowhere'])]);
     expect(l.of('NO-SUCH').family, Looks.otherFamily);

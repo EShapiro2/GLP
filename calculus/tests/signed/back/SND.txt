@@ -1,4 +1,0 @@
-SND: Signed Messages
-SND instantiates MSG with y holds the item t signed by x for y has the message t from x, and composes it with Forwarding.
-Alice and Bob are persons, Text a message, Item an item.
-1. ■ Forward twice: Alice may send Item signed by Bob to Bob, provided Alice holds the item Item signed by Bob and Alice and Bob are friends.

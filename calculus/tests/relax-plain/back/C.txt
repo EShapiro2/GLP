@@ -1,4 +1,0 @@
-C: Relaxed
-C relaxes B.
-Alice, Bob and Carol are persons, Sum a number.
-1. ■ Pay free: B:1 Pay, without the consent of Bob.

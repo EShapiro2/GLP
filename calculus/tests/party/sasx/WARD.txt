@@ -1,5 +1,0 @@
-WARD: Wards (expanded schemas)
-WARD:0 - | A ward takes an act of a party by those who decide for it.
-WARD:0 - | Alice is a person, Carol a ward.
-WARD:1 ■ Enter: ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol) <- person(Alice) guarded by Alice.
-WARD:2 ■ Retire: retired(Carol) <- ~retired(Carol) guarded by deciders(Carol).

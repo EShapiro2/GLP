@@ -1,5 +1,0 @@
-V: A Restriction that Leaves No One to Take an Act
-Of W: Alice is a person, Carol a ward.
-Of V: Alice is a person, Carol a ward.
-W:1. ■ Establish: Alice may establish an identity.
-W:2. ■ Enter: Alice may enter Carol.

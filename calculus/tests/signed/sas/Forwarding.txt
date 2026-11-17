@@ -1,9 +1,0 @@
-Forwarding
-Forwarding extends Friendship.
-Vocabulary: x holds the item t = item(x,t).
-After x creates t by signing it, which requires x does not hold the item t: x holds the item t.
-After x forwards t to y, adding x's signature to the signatures t carries: y holds the item t signed by x.
-Forwarding:0 - | The *author* of an item is its first signer.
-Forwarding:0 - | Alice and Bob are persons, Item an item.
-Forwarding:1 ■ Sign: item(Alice,Item) <- ~item(Alice,Item) guarded by Alice.
-Forwarding:2 ■ Forward: item(Bob,Item@Alice) <- item(Alice,Item), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.

@@ -1,7 +1,0 @@
-DAO
-DAO extends Knowledge.
-Vocabulary: x delegates to y in o = delegates(x,y,o).
-After x delegates to y in o: x delegates to y in o.
-DAO:0 - | Alice and Bob are persons, Org a networked organisation.
-DAO:1 ■ Delegate: delegates(Alice,Bob,Org) <- knows(Alice,Bob) guarded by Alice.
-DAO:1 ■ | DAO bylaws name a steward.

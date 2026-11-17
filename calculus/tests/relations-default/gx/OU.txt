@@ -1,4 +1,0 @@
-OU: Organisation deciding as one
-Of O: Alice is a person, Orga an organisation, Motion a motion. Parameters: x is entitled to vote on m in z; the votes decide m in z. Default: x is a member of z for x is entitled to vote on m in z. Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a member for the votes decide m in z.
-Of OU: Orga is an organisation, Votes and More numbers.
-O:1. ■ Vote: Alice may vote on Motion in Orga, provided Alice is a member of Orga. Act: Alice may take Motion for Orga, provided Alice is a member of Orga, Orga holds the votes of at least Votes persons on Motion, More is Votes plus 1 and Orga has fewer than More persons as a member.
