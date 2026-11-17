@@ -1650,7 +1650,13 @@ class _SocialTabState extends State<SocialTab> {
   GTerm? _fieldValue(SocialState s, RequestOffers o, ActInfo a, DeclaredField f,
       String field, String pick, GTerm me) {
     if (f.type == 'person') return _picked[pick];
-    final t = _form(field).text.trim();
+    return _textValue(s, o, a, f, _form(field).text, me);
+  }
+
+  /// The value the text [text] gives the field [f] of [a], which is not a person field, or null where the field does not take it ([_fieldValue]).
+  GTerm? _textValue(SocialState s, RequestOffers o, ActInfo a, DeclaredField f,
+      String text, GTerm me) {
+    final t = text.trim();
     if (t.isEmpty) return null;
     switch (f.type) {
       case 'number':
@@ -1735,6 +1741,20 @@ class _SocialTabState extends State<SocialTab> {
     bool given(String l) => kept[l]!.$2.type == 'person'
         ? _picked[pickKey(l)] != null
         : _form(fieldKey(l)).text.trim().isNotEmpty;
+    // Whether the field [l] takes the value typed before [v] at the person's state: a way shown has the field, the field takes [v], and the act is offered with it ([ActInfo.lacks], [ActInfo.distinct]), "where the field takes them at the person's state" (vGLP, Section 6.2, Remark "Construct Families").
+    bool takes(String l, String v) {
+      for (final w in shown) {
+        for (final f in w.act.fields) {
+          if (f.label != l) continue;
+          final x = _textValue(s, o, w.act, f, v, me);
+          if (x == null) continue;
+          final at = {...w.at, f.place: x};
+          if (w.act.lacks(s.atoms, at) && w.act.distinct(at)) return true;
+        }
+      }
+      return false;
+    }
+
     GTerm? request() {
       for (final w in chosen ?? const <_Way>[]) {
         final ls = {for (final f in w.act.fields) f.label};
@@ -1823,9 +1843,10 @@ class _SocialTabState extends State<SocialTab> {
                 autofillHints: autofillHintsFor(kept[l]!.$2.type),
                 onChanged: (_) => setState(() {}),
               ),
-              // "the values its person typed in it before" (vGLP, Section 6.2, Remark "Construct Families"): the store is this person's, and their own key is not offered, an act binding distinct roles to distinct agents (GSC, Definition Binding).
+              // "the values its person typed in it before, where the field takes them at the person's state" (vGLP, Section 6.2, Remark "Construct Families"): the store is this person's, and a value is offered only where the act is offered with it, so Acquaint's field offers no person the viewer knows and not the viewer's own key.
               typedBeforeChips(beforeKey(l), _form(fieldKey(l)),
                   omit: formatTerm(me),
+                  takes: (v) => takes(l, v),
                   keyOf: (v) => socialKey(_id, 'before:${fieldKey(l)}:$v'),
                   onPicked: () => setState(() {})),
               // An agent variable, "by key or picked among the persons the viewer knows", the viewer among them, a person in no role (programs/vglp/cva/compiler/README.md, 6; vGLP, Section 5.4, "The contract's words": "A field is typed, a person by key or picked among the persons the viewer knows").
