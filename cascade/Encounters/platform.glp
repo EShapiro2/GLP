@@ -16,6 +16,8 @@ MenuWord ::= say(String) ; at(Integer).
 Atom ::= identity ; person ; knows(Peer) ; open_place ; nearby(Peer).
 MayOne ::= may_one(Integer, Integer).
 MayOnes ::= [] ; [MayOne | MayOnes].
+VOne ::= vone(Var, Var) ; vone_any(Var).
+VOnes ::= [] ; [VOne | VOnes].
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
 RArg ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
 RArgs ::= [] ; [RArg | RArgs].
@@ -222,6 +224,8 @@ CondX ::= cx(Constraint, Forms, GAtoms, Ints).
 BindOr ::= nobind ; bind(Binding).
 HMatch ::= pm(BindOr, SAtoms).
 HMatches ::= [] ; [HMatch | HMatches].
+PBind ::= pb(Var, Peer).
+PBinds ::= [] ; [PBind | PBinds].
 
 Question ::= request_r(Request?) ; approval_w(Approval).
 
@@ -281,6 +285,9 @@ schema_ones(open_place, []).
 schema_ones(close_place, []).
 schema_ones(encounter, []).
 schema_ones(_, []) :- otherwise | true.
+
+procedure schema_vones(Constant?, VOnes).
+schema_vones(_, []) :- otherwise | true.
 
 procedure schema_standing(Constant?, StandOn).
 schema_standing(encounter, on(open_place)).
@@ -3897,7 +3904,45 @@ listings_ok1(no, _, _, _, _, no).
 listings_ok1(yes, Lsts, B, Id, S, Ok?) :- listings_ok(Lsts?, B?, Id?, S?, Ok).
 
 procedure rule_spec_ok(Constant?, Binding?, YesNo).
-rule_spec_ok(Nm, B, Ok?) :- ground(Nm?) | schema_entry(Nm?, E), rule_spec(E?, Rs0), schema_entry(Nm?, E1), listed_places(E1?, Ls), schema_ones(Nm?, Os), rule_ok(Rs0?, B?, Ls?, Os?, Ok).
+rule_spec_ok(Nm, B, Ok?) :- ground(Nm?), ground(B?) | schema_entry(Nm?, E), rule_spec(E?, Rs0), schema_entry(Nm?, E1), listed_places(E1?, Ls), schema_ones(Nm?, Os), rule_ok(Rs0?, B?, Ls?, Os?, Ok1), schema_vones(Nm?, Vo), vars_ok(B?, Vo?, Ok2), and(Ok1?, Ok2?, Ok).
+
+procedure vars_ok(Binding?, VOnes?, YesNo).
+vars_ok(B, Vo, R?) :- person_binds(B?, Ps), vpairs_ok(Ps?, Vo?, R).
+
+procedure person_binds(Binding?, PBinds).
+person_binds([], []).
+person_binds([b(role(I), p(X)) | Bs], [pb(role(I?), X?) | Ps?]) :- person_binds(Bs?, Ps).
+person_binds([b(pvar(N), p(X)) | Bs], [pb(pvar(N?), X?) | Ps?]) :- person_binds(Bs?, Ps).
+person_binds([_ | Bs], Ps?) :- otherwise | person_binds(Bs?, Ps).
+
+procedure vpairs_ok(PBinds?, VOnes?, YesNo).
+vpairs_ok([], _, yes).
+vpairs_ok([P | Ps], Vo, R?) :- ground(Ps?), ground(Vo?) | vpair_row(P?, Ps?, Vo?, R1), vpairs_ok1(R1?, Ps?, Vo?, R).
+
+procedure vpairs_ok1(YesNo?, PBinds?, VOnes?, YesNo).
+vpairs_ok1(no, _, _, no).
+vpairs_ok1(yes, Ps, Vo, R?) :- vpairs_ok(Ps?, Vo?, R).
+
+procedure vpair_row(PBind?, PBinds?, VOnes?, YesNo).
+vpair_row(_, [], _, yes).
+vpair_row(pb(K, X), [pb(L, Y) | Ps], Vo, R?) :- ground(K?), ground(X?), ground(Vo?) | vpair_ok(K?, X?, L?, Y?, Vo?, R1), vpair_row1(R1?, pb(K?, X?), Ps?, Vo?, R).
+
+procedure vpair_row1(YesNo?, PBind?, PBinds?, VOnes?, YesNo).
+vpair_row1(no, _, _, _, no).
+vpair_row1(yes, P, Ps, Vo, R?) :- vpair_row(P?, Ps?, Vo?, R).
+
+procedure vpair_ok(Var?, Peer?, Var?, Peer?, VOnes?, YesNo).
+vpair_ok(role(_), _, role(_), _, _, yes).
+vpair_ok(K, X, L, Y, Vo, R?) :- otherwise, (X? =?= Y?) | vone_in(K?, L?, Vo?, R).
+vpair_ok(_, _, _, _, _, yes) :- otherwise | true.
+
+procedure vone_in(Var?, Var?, VOnes?, YesNo).
+vone_in(_, _, [], no).
+vone_in(K, L, [vone(A, B) | _], yes) :- (K? =?= A?), (L? =?= B?) | true.
+vone_in(K, L, [vone(A, B) | _], yes) :- (K? =?= B?), (L? =?= A?) | true.
+vone_in(K, _, [vone_any(A) | _], yes) :- (K? =?= A?) | true.
+vone_in(_, L, [vone_any(A) | _], yes) :- (L? =?= A?) | true.
+vone_in(K, L, [_ | Vo], R?) :- otherwise | vone_in(K?, L?, Vo?, R).
 
 procedure rule_spec(Schema?, RoleSpecs).
 rule_spec(schema(_, _, Rs), Rs?).
@@ -4943,7 +4988,7 @@ constructs([spawn(Id, Q, Gs, Ds?) | Ss]) :- construct(Id?, Q?, Gs?, Ds), constru
 constructs([]).
 
 procedure construct(Integer?, Question?, Inputs(Drawn)?, Stream(Draw(Drawn))).
-construct(Id, request_r(X?), Gs, Ds?) :- answer_request([], X, Gs1?, _, Done), run_request_r(Id?, named(social_menu([button('Establish', [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button('Acquaint', [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, person, key)], [], [])]), button('Introduce', [act(introduce, 2, [1, 2], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button('Open place', [act(open_place, 1, [1], [req(identity, []), forb(open_place, [])], [], [], [], [])]), button('Close place', [act(close_place, 1, [1], [req(identity, []), req(open_place, [])], [], [], [], [])])]), form(propose, [field('Proposal', menu([label('Establish', form(establish, [field('Peer', peer)])), label('Acquaint', form(acquaint, [field('Peer', peer), field(person, peer)])), label('Introduce', form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Open place', form(open_place, [field('Peer', peer)])), label('Close place', form(close_place, [field('Peer', peer)])), form(encounter, [field('Peer', peer), field('Peer', peer)])]))])), [input([])], Done?, Gs?, Gs1, Ds).
+construct(Id, request_r(X?), Gs, Ds?) :- answer_request([], X, Gs1?, _, Done), run_request_r(Id?, named(social_menu([button('Establish', [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button('Acquaint', [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, person, key)], [], [])]), button('Introduce', [act(introduce, 2, [1, 2, 3], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button('Open place', [act(open_place, 1, [1], [req(identity, []), forb(open_place, [])], [], [], [], [])]), button('Close place', [act(close_place, 1, [1], [req(identity, []), req(open_place, [])], [], [], [], [])])]), form(propose, [field('Proposal', menu([label('Establish', form(establish, [field('Peer', peer)])), label('Acquaint', form(acquaint, [field('Peer', peer), field(person, peer)])), label('Introduce', form(introduce, [field('Peer', peer), field('Peer', peer), field('Peer', peer)])), label('Open place', form(open_place, [field('Peer', peer)])), label('Close place', form(close_place, [field('Peer', peer)])), form(encounter, [field('Peer', peer), field('Peer', peer)])]))])), [input([])], Done?, Gs?, Gs1, Ds).
 construct(Id, approval_w(X), Gs, Ds?) :- present_approval([], X?, Gs1?, _, Vs, Done), run_approval_w(Id?, named(approval_sentence, form(approval, [field('Asking', menu([form(attempt, [field('Peer', shown), field('Integer', shown), field('Integer', shown), field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(open_place, [field('Peer', shown)]), form(close_place, [field('Peer', shown)]), form(encounter, [field('Peer', shown), field('Peer', shown)])])), field('Names', menu([shown, form(request, [field('Rho', menu([form(one, [field('Class', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(open_place, [field('Peer', shown)]), form(close_place, [field('Peer', shown)]), form(encounter, [field('Peer', shown), field('Peer', shown)])]))]), form(rho, [field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(open_place, [field('Peer', shown)]), form(close_place, [field('Peer', shown)]), form(encounter, [field('Peer', shown), field('Peer', shown)])]))]), form(std, [field('Constant', shown)])])), field('Integer', shown)])]))]), form(hello, [field('Peer', shown), field('Proposal', menu([form(establish, [field('Peer', shown)]), form(acquaint, [field('Peer', shown), field('Peer', shown)]), form(introduce, [field('Peer', shown), field('Peer', shown), field('Peer', shown)]), form(open_place, [field('Peer', shown)]), form(close_place, [field('Peer', shown)]), form(encounter, [field('Peer', shown), field('Peer', shown)])]))])])), field('List(Word)', thread(menu([form(text, [field('String', shown)]), form(person, [field('Peer', shown)]), form(named, [field('String', shown), field('Peer', shown)]), form(valued, [field('String', shown), field('Number', shown)]), form(held, [field('Atom', menu([shown, shown, form(knows, [field('Peer', shown)]), shown, form(nearby, [field('Peer', shown)])])), field('Integer', shown)])]))), field('YesNo', buttons([yes, no]))])), Vs?, Done?, Gs?, Gs1, Ds).
 
 procedure output(Widget(Drawn)?, Stream(Output)?, Inputs(Drawn)?, Stream(Draw(Drawn))).
