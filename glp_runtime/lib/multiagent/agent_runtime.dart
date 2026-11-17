@@ -53,6 +53,7 @@ import 'package:glp_runtime/runtime/saved_state.dart';
 import 'package:glp_runtime/runtime/machine_state.dart' show GoalId, GoalRef;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/wire/codec.dart' show bytesEqual;
+import 'package:glp_runtime/wire/instruction_codec.dart' show encodeCode;
 import 'package:glp_runtime/multiagent/agent_state_store.dart';
 import 'package:glp_runtime/multiagent/stored_program.dart';
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
@@ -551,13 +552,6 @@ class AgentRuntime {
     }
   }
 
-  /// Make the engine, load the agent's one program into it, and bind the
-  /// network: everything of the agent but its local state, which the boot
-  /// creates ([_boot]) or a saved state restores ([_restore]).  Given
-  /// [stored], the program the store keeps, the agent runs it in place of
-  /// [program]'s compilation, and nothing is compiled: the version it
-  /// terminated under, where a restart refused an update (IGLP 61f3283,
-  /// Termination and Restart).
   /// Set the agent up under the program it is to run: the compiled program
   /// its host gave it, verified, where it gave one, and else [program]'s
   /// compilation.
@@ -570,7 +564,13 @@ class AgentRuntime {
   /// The loader's first step on the module of a compiled program the host
   /// gave (IGLP, Code Format, "Loader"): the body hashes to the certificate's
   /// compiled identity, and the certificate's signature verifies under the
-  /// key it carries.
+  /// key it carries ([Artefact.certificateRefusal], as run/2 and run/3 ask
+  /// it).  And the code the agent runs is that module's code linked with the
+  /// root's, as every program's is ([GlpEngine.combinedProgram]): each
+  /// procedure the module compiles is compiled there to the same
+  /// instructions, encoded with the procedures they call by name, the two codes
+  /// differing only in where the root's procedures and the kernels stand in
+  /// the table of symbols.
   static void _verifyCompiled(StoredProgram given) {
     final module = given.module;
     if (module == null) {
@@ -578,21 +578,43 @@ class AgentRuntime {
           'there is no certificate to verify');
     }
     final artefact = module.artefact as Artefact;
-    final cert = artefact.certificate;
-    if (cert.isRefused) {
-      throw ArgumentError('the compiled program given carries no certificate');
+    final refusal = artefact.certificateRefusal;
+    if (refusal != null) {
+      throw ArgumentError('the compiled program given is not run: $refusal');
     }
-    if (!bytesEqual(
-        Artefact.compiledIdentityOf(artefact.toBytes()), cert.hBin)) {
-      throw ArgumentError('the compiled program given does not hash to its '
-          'certificate\'s compiled identity');
+    final runs = {
+      for (final sym in Artefact.fromBytes(given.code).symbols.reversed)
+        sym.signature: sym
+    };
+    // A procedure's instructions, the procedures they call numbered by name,
+    // so that the two codes' tables of symbols do not differ them.
+    final number = <String, int>{};
+    Uint8List byName(List<Object> ops) => encodeCode(ops,
+        procIndexOf: (name) => number.putIfAbsent(name, () => number.length));
+    var same = true;
+    for (final a in artefact.symbols) {
+      if (!a.compiled) continue;
+      final b = runs[a.signature];
+      if (b == null ||
+          !b.compiled ||
+          !bytesEqual(byName(a.ops), byName(b.ops))) {
+        same = false;
+        break;
+      }
     }
-    if (!cert.verifies()) {
-      throw ArgumentError('the certificate of the compiled program given does '
-          'not verify under the key it carries');
+    if (!same) {
+      throw ArgumentError('the code of the compiled program given is not its '
+          'module\'s code');
     }
   }
 
+  /// Make the engine, load the agent's one program into it, and bind the
+  /// network: everything of the agent but its local state, which the boot
+  /// creates ([_boot]) or a saved state restores ([_restore]).  Given
+  /// [stored], the program the store keeps, the agent runs it in place of
+  /// [program]'s compilation, and nothing is compiled: the version it
+  /// terminated under, where a restart refused an update (IGLP 61f3283,
+  /// Termination and Restart).
   void _setUp({StoredProgram? stored}) {
     final selfName = name; // its key over a given network ([name])
     _output('[INIT] Creating MadContext...');
@@ -628,6 +650,11 @@ class AgentRuntime {
       _code = stored.code;
       _image = stored.image;
       _appModule = stored.module;
+      // The engine runs it: a goal posted to it, the initial goal at a first
+      // start, is checked against its entry points and its type scope and
+      // runs its code ([GlpEngine.runCompiled]).
+      engine.runCompiled(stored.image,
+          module: stored.module, scope: stored.typeScope);
       _log(identical(stored, compiled)
           ? 'INIT: running the compiled program the host gave; nothing is '
               'compiled'
