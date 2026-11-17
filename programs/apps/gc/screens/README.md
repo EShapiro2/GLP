@@ -12,16 +12,16 @@ The script builds the bundled assets (`tool/sync_glp_assets.sh`), boots the simu
 
 | File | What it shows |
 |---|---|
-| `gc-a-alice-mint.png` | Alice issues coins (Notes:1): her Coins tab, the tab of Coins, once she has typed 2 into Issue's field amount, on her Contacts tab, and tapped Issue: a row for her coins, Alice, and their count, 2, with Swap, Pay and Deposit. |
+| `gc-a-alice-mint.png` | Alice issues coins (Notes:1): her Coins tab, the tab of Coins, once she has typed 2 into Issue's field amount, on her Contacts tab, and tapped Issue: a row for her coins, Alice, and their count, 2, with Swap and Pay. |
 | `gc-b-bob-asked.png` | Alice asks Bob to swap (Notes:2): Bob's first tab, Contacts, badged, with the question of Coins' Interface pragmas, "Alice asks to swap coins with you.", under it amount given: 2, issuer wanted: Bob, amount wanted: 3, Contacts: Bob, Coins: Alice 2, and the answers yes and no, at its top; below, his name, Acquaint with its field person and Issue with its field amount. |
-| `gc-c-bob-holdings.png` | Bob's Coins tab once he has answered yes and the swap has committed: a row for the Alice-coins he holds, Alice, 2, with Swap, Pay and Deposit, and Pay issuer and Redeem, the two buttons of a coin whose issuer is another person. |
-| `gc-d-alice-pay.png` | Alice pays two Bob-coins to Bob by Pay issuer (Coins:1): her Coins tab after the payment: one Bob-coin left, the row Bob, 1, with Swap, Pay, Deposit, Pay issuer and Redeem. |
+| `gc-c-bob-holdings.png` | Bob's Coins tab once he has answered yes and the swap has committed: a row for the Alice-coins he holds, Alice, 2, with Swap and Pay, and Pay issuer and Redeem, the two buttons of a coin whose issuer is another person. |
+| `gc-d-alice-pay.png` | Alice pays two Bob-coins to Bob by Pay issuer (Coins:1): her Coins tab after the payment: one Bob-coin left, the row Bob, 1, with Swap, Pay, Pay issuer and Redeem. |
 
 ## The village market
 
 The same test then plays the village market of GC's paper, Appendix "Village Market Demonstration", on the app, the six villagers at their phones and a conversation between each two who transact, seven in all, each act a tap: each establishes their identity and meets those they transact with (GKK:1, GKK:2); each issues the coins the operations need, 30, 39, 25, 35, 20 and 28 (Notes:1); then the six operations, symmetric mutual credit, Alice with Bob and with Charlie 15 coins each, Charlie with Eve 10, Eve with Frank 10, asymmetric mutual credit, Diana's 20 diana-coins for 24 bob-coins and her 15 for 18 frank-coins, Eve's portfolio swap, 5 frank-coins to Charlie for 5 alice-coins, and Alice's sale of 10 bob-coins to Eve for 4 frank-coins, each a swap proposed by Swap in the other party's row of the proposer's Contacts with its four fields, which the other party is asked about and answers yes (Notes:2); the payments, Bob to Alice 5, Eve to Charlie 6, Frank to Diana 3, Eve to Alice 3, in coins of the payee, by Pay issuer (Coins:1); and Frank's redemption of 5 diana-coins, one at a time, each against a frank-coin Diana holds (Coins:2).  At the end each villager's Coins tab lists the holdings of the paper's Table 1, a row for each issuer with its count, their own coins included, in the order of the villager's state, and is shot.
 
-Each row of a Coins tab carries Swap, Pay and Deposit, and Pay issuer and Redeem where the coin's issuer is another person.
+Each row of a Coins tab carries Swap and Pay; Deposit where the person knows two others, an escrow agent and a beneficiary, the three persons of a deposit being distinct (Notes:4); and Pay issuer and Redeem where the coin's issuer is another person.
 
 | File | What it shows |
 |---|---|
