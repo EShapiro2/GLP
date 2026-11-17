@@ -17,14 +17,14 @@ Notes:2 ■ Swap bonds: ~bond(Alice,Carol,Day,*Sum), bond(Bob,Carol,Day,*Sum), ~
 Notes:3 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
 Notes:3+Coins:1 ■ Pay issuer: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum) guarded by Alice.
 Notes:3 ■ Pay bond: ~bond(Alice,Carol,Day,*Sum), bond(Bob,Carol,Day,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), bond(Alice,Carol,Day,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
-Notes:4 ■ | Escrow.
-Notes:4 ■ Deposit: ~coin(Alice,Dave,*Sum), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), coin(Alice,Dave,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Deposit bond: ~bond(Alice,Dave,Day,*Sum), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), bond(Alice,Dave,Day,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Release bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Bob,Dave,Day,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Return bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Alice,Dave,Day,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
+Notes:4 ○ | Escrow.
+Notes:4 ○ Deposit: ~coin(Alice,Dave,*Sum), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), coin(Alice,Dave,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Deposit bond: ~bond(Alice,Dave,Day,*Sum), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), bond(Alice,Dave,Day,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Release bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Bob,Dave,Day,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Return bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Alice,Dave,Day,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ | Carol will release them only if Cond is met, and return them only if it fails.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 Coins:0 - | Carol is possibly Alice or Bob.
 Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
