@@ -11,7 +11,7 @@
 // /next, which the bar marks as such.
 (function(){
   const TABS = [['home', 'Home', './'], ['contracts', 'Contracts', './#contracts'], ['papers', 'Papers', './#papers'],
-                ['projects', 'Projects', './#projects'], ['how', 'How it works', 'how.html']];
+                ['projects', 'Projects', './#projects'], ['how', 'How it works', 'how.html'], ['feedback', 'Feedback', 'feedback.html']];
   const TEST = /\/next\//.test(location.pathname);
   document.head.insertAdjacentHTML('beforeend', `<style>
 #bar{position:sticky;top:0;z-index:10;background:rgba(245,245,247,.82);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid rgba(0,0,0,.06);font:15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -30,7 +30,8 @@
 @media (max-width:900px){.bar-in{flex-wrap:wrap;padding:8px 16px}.bar-logo{font-size:14.5px}
   .bar-tabs{order:3;width:100%;margin:0 -6px;overflow-x:auto;scrollbar-width:none}.bar-tabs::-webkit-scrollbar{display:none}
   .bar-tabs a{padding:5px 10px;font-size:14px}.bar-search{flex:1 1 70px;max-width:150px;min-width:70px}.bar-search input{width:100%}}
-@media (max-width:480px){.bar-tabs{justify-content:space-between;gap:0;margin:0 -4px;width:calc(100% + 8px)}.bar-tabs a{padding:5px 7px;font-size:13px}}
+@media (max-width:480px){.bar-tabs{justify-content:space-between;flex-wrap:wrap;gap:0;margin:0 -4px;width:calc(100% + 8px);overflow:visible}.bar-tabs a{padding:5px 4px;font-size:12px;letter-spacing:-.01em}}
+@media (max-width:380px){.bar-tabs{justify-content:center;gap:2px 6px}}
 </style>`);
   const bar = document.getElementById('bar');
   bar.insertAdjacentHTML('afterbegin', `<div class="bar-in">
