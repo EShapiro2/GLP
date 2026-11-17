@@ -963,7 +963,7 @@ function route(){
     if (TAB !== was) window.scrollTo(0, 0);
     const d = TAB === 'projects' && TOPROJ && document.querySelector(`.proj[data-proj="${TOPROJ}"]`);
     TOPROJ = null;
-    if (d){ d.open = true; d.scrollIntoView({block: 'start'}); window.scrollBy(0, -($('#bar').offsetHeight + 12)); }
+    if (d){ document.querySelectorAll('.proj[open]').forEach(o => { if (o !== d) o.open = false; }); d.open = true; d.scrollIntoView({block: 'start'}); window.scrollBy(0, -($('#bar').offsetHeight + 12)); }
     return; }
   const v = $('#view'); v.style.display = 'block'; v.classList.remove('zoomin'); void v.offsetWidth; v.classList.add('zoomin');
   const y = window.scrollY;
@@ -973,6 +973,12 @@ function route(){
 }
 
 /* ---------- a contract ---------- */
+// Where the Projects tab shows the owner a contract names: its project; the
+// project that holds it, where it is a paper (GNA, of GSA); or Code's branch,
+// where it is a project with no paper (GCE).
+const projOf = o => D.projects.some(p => p.id === o) ? o
+  : (D.projects.find(p => p.papers.some(k => k.key === o)) || {}).id
+  || ((D.noPaper || []).some(p => p.id === o) ? 'Code' : null);
 function page(c, hood){
   const kids = D.contracts.filter(k => k.extends.includes(c.id));
   const own = c.acts[1];
@@ -992,7 +998,7 @@ function page(c, hood){
       <div class="stat"><div class="k">Speech acts</div><div class="v">${c.acts[0] ? own : '–'}</div><div class="s">${c.acts[0] ? 'of its own' : 'not compiled'}</div></div>
       ${names('Builds on', c.extends, 'the base')}
       ${names('Used by', kids.map(k => k.id), 'none yet')}
-      <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
+      <div class="stat"><div class="k">By</div><div class="v">${projOf(c.owner) ? `<a href="#projects" data-proj="${esc(projOf(c.owner))}" title="Under Projects">${esc(c.owner)}</a>` : esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
     </div>
     ${stripHtml(c)}
     <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
@@ -1008,6 +1014,9 @@ function page(c, hood){
     </div>
     <div id="hood" class="sec"></div>`;
   $('#view').querySelectorAll('[data-go]').forEach(a => a.onclick = () => go(a.dataset.go || null));
+  // By: the project's name opens it under Projects (Udi, 2026-11-17, to
+  // Website #3).
+  $('#view').querySelectorAll('.stat [data-proj]').forEach(a => a.onclick = () => { TOPROJ = a.dataset.proj; });
   $('#view').querySelectorAll('[data-names]').forEach(s => s.onclick = () => {
     $('#popc').innerHTML = `<h4>${esc(NM(c.id))}: ${s.dataset.title.toLowerCase()}</h4><div class="names">${s.dataset.names.split(' ').map(link).join('')}</div>`;
     $('#popc').querySelectorAll('[data-go]').forEach(a => a.onclick = () => { $('#pop').style.display = 'none'; go(a.dataset.go); });
