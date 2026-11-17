@@ -27,7 +27,7 @@ Interface pragmas
 Look: 📈, money
 Shareholdings: the shares Alice holds.
 Officers: Decider [Appoint] <person> <role>
-  Bob: Decider asks you to be an officer of the organisation Carol.
+  Bob: Decider asks you to be an officer of the organisation Orga.
   Decider [End officer] <person>
   Bob [Resign] [Officer unfriend]
 Issue: AliceOfficer [Issue shares by any officer for Alice] <decider> <amount>
