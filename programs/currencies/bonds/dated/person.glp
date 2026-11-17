@@ -183,6 +183,14 @@ instruments_of([bond(I, M, S)|Xs], [X?|Ys?]) :-
     string(I?), integer(M?), integer(S?) |
     X = bond(I?, M?, S?),
     instruments_of(Xs?, Ys).
+instruments_of([escrow_coin(I, S, _, _, _)|Xs], [X?|Ys?]) :-
+    string(I?), integer(S?) |
+    X = coin(I?, S?),
+    instruments_of(Xs?, Ys).
+instruments_of([escrow_bond(I, M, S, _, _, _)|Xs], [X?|Ys?]) :-
+    string(I?), integer(M?), integer(S?) |
+    X = bond(I?, M?, S?),
+    instruments_of(Xs?, Ys).
 instruments_of([], []).
 
 %% The open transfer cards put to the escrow program: each it accepts is
