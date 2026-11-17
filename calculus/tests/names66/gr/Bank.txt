@@ -1,0 +1,8 @@
+Bank
+Bank extends Knowledge.
+A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank.
+Alice and Bob are persons, Acct an account.
+1. ■ Open: Alice and Bob may jointly open the account Acct, provided Alice and Bob know each other. Bank accounts stay open until both close them.
+Logic pragmas.
+Vocabulary: x holds the account n with y = account(x,n,y).
+After x and y open the account n: x holds the account n with y and y holds the account n with x.

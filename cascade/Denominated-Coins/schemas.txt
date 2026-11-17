@@ -1,0 +1,12 @@
+Denominated Coins
+Denominated Coins extends and restricts Coins.
+Vocabulary: x has issued coins of the denomination f = issued_in(x,f).
+After x issues n f-denominated x-coins: x holds n x-coins and x has issued coins of the denomination f.
+Denominated Coins:0 - | *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
+Denominated Coins:0 - | Alice and Bob are parties, Dollar a fiat currency, Sum a number.
+Denominated Coins:1 ■ First issue: coin(Alice,Alice,*Sum), issued_in(Alice,Dollar) <- ~issued_in(Alice,_) guarded by Alice.
+Denominated Coins:1 ■ Issue: Notes:1 Issue <- issued_in(Alice,Dollar).
+Denominated Coins:2 ○ | Denomination.
+Denominated Coins:2 ○ | A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
+Denominated Coins:3 ○ | Pricing.
+Denominated Coins:3 ○ | Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.

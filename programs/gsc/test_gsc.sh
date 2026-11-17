@@ -66,6 +66,18 @@ term() {    # term <owner's file> <name> ; the contract's term, as it prints it
     | sed -e 's/^\(GLP> \)*//' | grep -E '^C = ' | head -1 | sed -e 's/^C = //'
 }
 
+contract_term() {   # contract_term <owner's directory> <name on main> ; the contract's term, by its file and atom under either name of calculus/NAMES.txt: the new file name and the atom of contract_named, the file name in lower case, a hyphen as an underscore, where its file is there, and the name on main otherwise, so the checks hold before and after the renaming (Code #33's task, 2026-11-16 20:57 UTC)
+  local dir="$1" old="$2" new atom
+  new=$(awk -F' [|] ' -v o="$old" '$1 == o { print $3; exit }' "$GLP_DIR/calculus/NAMES.txt")
+  if [ -n "$new" ] && [ -f "$dir/$new.glp" ]; then
+    atom=$(printf '%s' "$new" | tr 'A-Z-' 'a-z_')
+    term "$dir/$new.glp" "$atom"
+  else
+    atom=$(printf '%s' "$old" | tr 'A-Z-' 'a-z_')
+    term "$dir/$old.glp" "$atom"
+  fi
+}
+
 instance() { # instance <owner's file> <name> <base's term> ; an instance's contract, instantiate/4 of the bindings and additions its file prints, instance_named(Name, Base, Bindings, Additions), on the base's term, as cascade.sh's read_contract makes it (GSC 22605d6, Definition Parametric contract)
   local out bs a
   out=$(cd "$GLP_DIR/glp_runtime" \
@@ -136,17 +148,17 @@ check_eq "as_read descends an environment contract's reflexive body as unnamed/2
 # GAI and GSNP are instances of GnW, instance_named(gai, gnw, ...) and instance_named(gsnp, gnw, ...) (GLP 6154e1e6; Udi, 2026-11-10, to GAI #13 and to GSC #14): each read as its instance of GnW's term.
 GNWI=$(term "$GLP_DIR/programs/gsc/gnw_parametric.glp" gnw_parametric)   # GnW as GSC wrote it by hand until its adoption from the Calculus (2026-11-15), the tests' fixture; GnW.glp is printed from GnW.txt and is no parametric term
 # GSNP and GAI are adopted from the Calculus by GAI (2026-11-15): each file holds its full schemas, a term of its own and no instance of GnW, knows reflexive.
-GSNPT=$(term "$GLP_DIR/programs/gai/GSNP.glp" gsnp)
+GSNPT=$(contract_term "$GLP_DIR/programs/gai" GSNP)
 check "GSNP's contract is reflexive, in the clause syntax" "reflexive([knows], [sas(" "$GSNPT"
 GSNPV=$(asread "$GSNPT")
 check "as_read gives GSNP its wrapper, each schema in the checker's form" "reflexive([knows], [schema(" "$GSNPV"
 check "and reads the author of its message, author(Text) = a role" "eq(author_of(svar('Text')), role(" "$GSNPV"
 # A ward role has at most one guardian role (GSC a885275, def:relay, clause 1: "with at most one other role sigma of chi, its guardian role"): GAI's agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, have none (GnW:3 and GnW:4, GLP 2e8797b8), and the checker finds them as the relay acts of GAI's introduction with wards, a ward party with no guardian role written ward(Role, Mark, no_guardian) (programs/gsc/wards, Cloud #12, 2026-11-09).
-GAIT=$(term "$GLP_DIR/programs/gai/GAI.glp" gai)
+GAIT=$(contract_term "$GLP_DIR/programs/gai" GAI)
 check "GAI's contract is grassroots with wards, its relay acts agent_acquaint, a ward role and a free role, and agents_acquaint, two ward roles, each ward role with no guardian role" \
       "V = syntactically_grassroots_with_wards(acquaint, [ai_agent], [guardianship(ai_agent, guardian, has_guardian)], [relay(ai_agent_acquaint, ward(1, ai_agent, no_guardian), free(2)), relay(ai_agents_acquaint, ward(1, ai_agent, no_guardian), ward(2, ai_agent, no_guardian))], [identity, person])" \
       "$(run "check($GAIT, V).")"
-DGCT=$(term "$GLP_DIR/programs/currencies/sovereign/DGC.glp" dgc)
+DGCT=$(contract_term "$GLP_DIR/programs/currencies/sovereign" DGC)
 # DGC is adopted from the Calculus by Currencies (2026-11-15): DGC.glp is the full schemas in the clause syntax, an environment declaration over them; as_read gives it in the checker's form, and gives a contract in the checker's form as it is.
 check "DGC's contract is an environment contract, knows reflexive within it" "environment([today, one_denomination], reflexive([knows], [sas(" "$DGCT"
 DGCV=$(asread "$DGCT")
@@ -2410,11 +2422,31 @@ check "a binding of no parameter, a name occurring in the base, a name written t
       "F = [not_a_parameter(friend), occurs(knows), written_twice(c), bound_twice(retired)]" "$out"
 check "an instance of a contract that names no parameters is a fault" "F = [not_parametric]" "$out"
 check "an addition named establish replaces the base's in its place" \
-      "D = reflexive([friend, knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])]" "$out"
+      "D = parametric([creator, created, retired], reflexive([friend, knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(welcomed, ['Alice'])]" "$out"
 check "and an addition of a new name comes after the base's schemas" \
       "atom(person, ['Alice'])], true, ['Alice'])])" "$(printf '%s\n' "$out" | grep 'sas(sign, ')"
 check "a constant parameter val(bylaws_p) is written bylaws_mcs by the binding bylaws_p = bylaws_mcs" \
       "D = [sas(adopt, ['Alice'], [], [atom(bylaws, ['Alice', val(bylaws_mcs)])], [atom(identity, ['Alice'])], true, ['Alice'])]" "$out"
+# "An instantiation of some of the parameters of a parametric contract is a
+# parametric contract in the others ... and a contract that amends another may
+# declare further parameters, among the predicates and constants of the schemas
+# it adds" (GSC, Definition Parametric contract, f3aeec3): the instance keeps
+# the parameters no binding writes, and those an addition declares after them;
+# an instance writing all six is no parametric contract.
+GNWALL="[ward = child, creator = creator, created = created, guardian_of = parenting, guarded_by = parent_of, retired = retired]"
+NOTEB="parametric([badge], [sas(note, ['Alice'], [], [atom(noted, ['Alice'])], [atom(identity, ['Alice']), atom(person, ['Alice']), atom(badge, ['Alice'])], true, ['Alice'])])"
+out3=$(run "instantiate($GNWP, [ward = child], [], D1)." "instantiate($GNWP, $GNWALL, [], D2), check(D2?, V2)." \
+           "instantiate($GNWP, [ward = child], $NOTEB, D3)." "instantiate($GNWP, $GNWALL, $NOTEB, D4), check(D4?, V4).")
+check "an instance writing ward alone is parametric in the other five" \
+      "D1 = parametric([creator, created, guardian_of, guarded_by, retired], reflexive(" "$out3"
+check "an instance writing all six, three as themselves, is no parametric contract and is certified" \
+      "V2 = syntactically_grassroots_with_wards(acquaint, [child], [guardianship(child, parenting, parent_of)]" "$out3"
+check_not "and its term declares no parameters" "D2 = parametric(" "$out3"
+check "an addition declaring badge adds it after the unwritten ones" \
+      "D3 = parametric([creator, created, guardian_of, guarded_by, retired, badge], reflexive(" "$out3"
+check "an instance writing all six with that addition is parametric in badge alone, which supplies note" \
+      "D4 = parametric([badge], reflexive(" "$out3"
+check "and is certified" "V4 = syntactically_grassroots_with_wards(acquaint, [child]" "$out3"
 # An instance may name the base's schemas its own way (GSC 22605d6), in its
 # bindings beside the predicates': ward_acquaint = child_acquaint renames the
 # relay act, and an addition named child_acquaint replaces it; a name taken
@@ -2624,9 +2656,9 @@ check "a signed term whose signer is no role of its schema is malformed, not a f
       "V2 = malformed([signed(resign, 1, atom(item, [sgn('Item', 0)]), not_agent_role), signed(resign, 1, atom(item, [sgn('Item', 0)]), not_required)])" "$out"
 
 # GKK, GSG and GnW as adopted from the Calculus (2026-11-15, GLP branch Calculus c475902): each NAME.glp is the full schemas, printed from NAME.txt by calculus/tools/adopt.py, and is certified.
-AGKK=$(term "$GLP_DIR/programs/gsc/GKK.glp" gkk)
-AGSG=$(term "$GLP_DIR/programs/gsc/GSG.glp" gsg)
-AGNW=$(term "$GLP_DIR/programs/gsc/GnW.glp" gnw)
+AGKK=$(contract_term "$GLP_DIR/programs/gsc" GKK)
+AGSG=$(contract_term "$GLP_DIR/programs/gsc" GSG)
+AGNW=$(contract_term "$GLP_DIR/programs/gsc" GnW)
 out=$(run "check($AGKK, V1)." "check($AGSG, V2)." "check($AGNW, V3).")
 check "GKK as adopted is certified" "V1 = syntactically_grassroots" "$out"
 check "GSG as adopted is certified" "V2 = syntactically_grassroots" "$out"
@@ -2634,8 +2666,8 @@ check "GnW as adopted is certified with wards, ward its mark, guardian and has_g
       "V3 = syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])" "$out"
 
 # GFP and GSN as adopted from the Calculus (2026-11-15, GLP branch Calculus c475902): each begins with the adopted GKK's schemas and is certified; an item and a message are speech acts with a name, a forwarded item is signed over, and a post is delivered once to each member.
-AGFP=$(term "$GLP_DIR/programs/gsc/GFP.glp" gfp)
-AGSN=$(term "$GLP_DIR/programs/gsc/GSN.glp" gsn)
+AGFP=$(contract_term "$GLP_DIR/programs/gsc" GFP)
+AGSN=$(contract_term "$GLP_DIR/programs/gsc" GSN)
 check "GFP as adopted begins with the adopted GKK's schemas, knows reflexive" "${AGKK%])}" "$AGFP"
 check "GSN as adopted begins with the adopted GKK's schemas, knows reflexive" "${AGKK%])}" "$AGSN"
 check "GFP's forward adds the item signed over by the forwarder" "atom(item, ['Bob', sgn('Item', 'Alice')])" "$AGFP"

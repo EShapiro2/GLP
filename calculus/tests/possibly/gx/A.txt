@@ -1,3 +1,0 @@
-A: Apart
-Of A: Alice and Bob are persons.
-A:1. ■ Greet: Alice may greet Bob.

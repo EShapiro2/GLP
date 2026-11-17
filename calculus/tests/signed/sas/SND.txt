@@ -1,4 +1,0 @@
-SND: Signed Messages
-SND instantiates MSG with item(y,t@x) for message(y,x,t), and composes it with GFP.
-SND:0 - | Alice and Bob are persons, Text a message, Item an item.
-SND:1 ■ Forward twice: item(Bob,Item@Bob@Alice) <- item(Alice,Item@Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.

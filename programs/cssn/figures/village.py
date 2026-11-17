@@ -3,7 +3,7 @@
 #
 #   python3 programs/cssn/figures/village.py <log> [<png>]
 #
-# <log> is the REPL's output of play_village(A, B, G, F, C, D, E), or cascade/CSSN/run.log, whose first seven lists are the screens of alice, bob, grace, frank, carol, dave and eve, in that order; <png> defaults to programs/cssn/figures/cssn-village.png.  The font is Calibri where it is installed (the style guide: never Arial), with Helvetica in its place where it is not.
+# <log> is the REPL's output of play_village(A, B, G, F, C, D, E), or cascade/Children/run.log, whose first seven lists are the screens of alice, bob, grace, frank, carol, dave and eve, in that order; <png> defaults to programs/cssn/figures/cssn-village.png.  The font is Calibri where it is installed (the style guide: never Arial), with Helvetica in its place where it is not.
 
 import os
 import re

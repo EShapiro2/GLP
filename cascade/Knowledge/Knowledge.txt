@@ -1,0 +1,34 @@
+% GKK: Grassroots Keys and Knowledge --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GSC.  The paper, /Users/udi/Grassroots/GSC/main.tex, prints it in its box in Section 2.1 and cites a clause as GKK:1; GSG, GSN and GC quote it as what they extend.
+% Paper: GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231
+% Extends: nothing; it is the base contract every contract extends (Udi, 2026-10-20).
+% Defines: an identity, a unique key pair; knowing a person, holding their public key (GSC's paper, Section 2.1); Alice, Bob and Carol are variables naming distinct persons.
+% Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus c475902; calculus/MIGRATION.md; Udi's confirmation of the plan, and his yes to GSC #17 on the definition of an identity without ', chosen by the person who has it'): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GSC's, their lines named by the clauses' new titles.  Git holds what the file said before.
+% Schemas: Knowledge.glp beside this file, the full schemas, printed by calculus/tools/adopt.py GKK from the Logic pragmas and never written by hand; adopt.py --check GKK holds it and cascade/Knowledge/ to what the tools print.
+Knowledge
+An *identity* is a unique cryptographic key pair.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Logic pragmas
+An *identity* is a unique cryptographic key pair.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Alice, Bob and Carol are persons.
+1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Logic pragmas.
+Vocabulary: x has an identity = identity(x); x is a person = person(x); x knows y = knows(x,y).
+x and y know each other: x knows y and y knows x.
+After x establishes an identity, which requires x does not have an identity: x has an identity and x is a person.
+After x and y come to know each other: x and y know each other.
+After x introduces z to y: y knows z.
+Reflexive: x knows y.
+Interface pragmas
+Contacts: those Alice knows.
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <person>
+  Bob: Alice wishes that you know each other.
+Introduce: Alice [Introduce]
+  Bob: Alice asks to introduce Carol to you.

@@ -1,4 +1,0 @@
-CLX: Club of Officers
-CLX instantiates CLB with officers(z) for deciders(z).
-Roles: the officers of z = officers(z), listed by z has y as a member and y is a member of z.
-CLX:0 - | Alice and Bob are persons, Orga a club.

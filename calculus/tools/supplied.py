@@ -6,11 +6,13 @@ Run from the top: python3 tools/supplied.py; its last line is the count, 0 when 
 # schema of the contract adds, an environment predicate, a reflexive predicate or a parameter.  Prints, per contract,
 # every required predicate that is none of the four; numbers' states left out (they are constraints).
 import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 sys.path.insert(0, 'tools'); import gcsas
 import toglp
 PARAMS = set()
-names = sorted(f[:-4] for f in os.listdir('sasx') if f.endswith('.txt'))
-w = gcsas.World(sorted(f[:-4] for f in os.listdir('gr') if f.endswith('.txt') and not f.startswith('NOTES')))
+names = NM.names_in('sasx')
+w = gcsas.World(NM.names_in('gr'))
 NUM = {'le', 'ge', 'gt', 'lt', 'sum', 'product', 'today', 'author'}      # author(x,t): eq(author_of(t), x), a constraint too (toglp.py)
 bad = 0
 for n in names:

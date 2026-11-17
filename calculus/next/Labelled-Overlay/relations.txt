@@ -1,0 +1,2 @@
+Labelled Overlay extends Overlay: holds
+Labelled Overlay strengthens Overlay: holds

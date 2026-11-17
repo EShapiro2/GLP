@@ -1,5 +1,0 @@
-W: No act no binding enables
-Of W: Alice is a person, Carol a ward.
-W:1. ■ Establish: Alice may establish an identity.
-W:2. ■ Enter: Alice may enter Carol.
-W:3. ■ Wave: Carol may wave, provided Carol is a person and Carol is a ward. Greet: Carol may greet.

@@ -91,7 +91,7 @@ exported procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 %% compiler bundled with the super-app being trusted by installing it.
 agent(Id, UserIn, NetIn, Outs) :-
     self_key(K),
-    agent(Id?, UserIn?, NetIn?, Outs?, host([], [], [], [K?])).
+    agent(Id?, UserIn?, NetIn?, Outs?, host([], [], [], trust([K?], []))).
 
 procedure agent(Key?, UserInStream?, NetInStream?, OutputsList?, Host?).
 
@@ -233,11 +233,10 @@ agent(Id, [declined(Other)|UserIn], NetIn, Outs, Host) :-
 %% --- The super-app (SGSG paper, Section 3): install, invite, consent,
 %% reconnect ---
 
-%% Install a certified mini-app.  The compiler's certificate is accepted when
-%% its key is one the person trusts (Section 6.4), and the creator's
-%% certification must be signed over this source identity with the checker's
-%% verdict, as the checker prints it, certifying the contract.  signature/2 assigns unsigned on a
-%% forged certification, and the super-app refuses to install it (Section 6.1).
+%% Install a certified mini-app under its developer's warranty, GPD:4, making
+%% the checks of GPD's Implementation pragma (verify_install/4).  signature/2
+%% assigns unsigned on a forged warranty, and the super-app refuses to install
+%% it (Section 6.1).
 %% Every mini-app is installed alike: its grants are its end of its person
 %% channel, at Opaque (Section 3, "What the super-app grants a mini-app"),
 %% held until its activation.
@@ -301,9 +300,16 @@ agent(Id, [msg(person, Id1, decline_invite(App, From))|UserIn], NetIn, Outs,
 
 %% The person trusts a compiler's key: a certificate under it is accepted.
 agent(Id, [msg(person, Id1, trust(K))|UserIn], NetIn, Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
+      host(Apps, Atts, Pend, trust(Cs, Ds))) :-
     Id? =?= Id1?, ground(K?) |
-    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, [K? | Trusted?])).
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, trust([K? | Cs?], Ds?))).
+
+%% The person trusts a developer, GPD:2: a program whose warranty the
+%% developer signed is then installable (GPD:4).
+agent(Id, [msg(person, Id1, trust_developer(K))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, trust(Cs, Ds))) :-
+    Id? =?= Id1?, ground(K?) |
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, trust(Cs?, [K? | Ds?]))).
 
 %% The names of the installed mini-apps, for a play to read back.
 agent(Id, [msg(person, Id1, installed(Names?))|UserIn], NetIn, Outs,
@@ -461,16 +467,28 @@ agent(_, _, [], Outs, Host) :- close_outputs(Outs?), close_host(Host?).
 
 %% --- Installation and the certifications (Sections 3 and 6.4) ---
 
-%% verify_install(M, CSig, Trusted, V): what load_file/2 gave must be a Module
-%% (a forged artefact is its text), the compiler's key must be trusted, and the
-%% creator's certification signed over the module's source identity with a
-%% verdict of the checker that certifies the contract (cert_check/4).
-procedure verify_install(Content?, String?, Stream(String)?, Verdict).
-verify_install(M, CSig, Trusted, V?) :-
+%% verify_install(M, W, Trust, V): GPD's Implementation pragma, "before
+%% installing a program, Alice's app checks that its developer is one she
+%% trusts, that its schemas pass the checker, and that its compiler's
+%% certificate matches its code" (GSA paper, Section 3; docs/compiled-home.md
+%% in GSA's repository, Section 4.3).  What load_file/2 gave must be a Module,
+%% a forged artefact being its text.  The compiler's certificate matches the
+%% code where decompose_module/4 gives its identities, and its key is one the
+%% person trusts as a compiler.  The developer's warranty W is publish(Src,
+%% Cmp), the program's two identities, signed by its developer (GPD:1): it must
+%% verify by signature/2, bind this program's source and compiled identities,
+%% and be signed by the person's own key, a program they published (GPD:4,
+%% Install own), or by a developer they trust (GPD:2, GPD:4).  The check that
+%% the schemas pass the checker waits on reading a module's contract from GLP
+%% (docs/compiled-home.md, Section 5, blocker 3).
+procedure verify_install(Content?, String?, Trust?, Verdict).
+verify_install(M, W, trust(Cs, Ds), V?) :-
     module(M?) |
-    decompose_module(M?, CK, Src, _),
-    key_trusted(CK?, Trusted?, T),
-    creator_check(T?, CSig?, Src?, M?, V).
+    decompose_module(M?, CK, Src, Cmp),
+    key_trusted(CK?, Cs?, T),
+    signature(W?, Sg),
+    self_key(Me),
+    warranty_check(T?, Sg?, Src?, Cmp?, Me?, Ds?, M?, V).
 verify_install(_, _, _, refused) :- otherwise | true.
 
 procedure key_trusted(String?, Stream(String)?, Constant).
@@ -478,36 +496,31 @@ key_trusted(K, [K1 | _], true) :- K? =?= K1? | true.
 key_trusted(K, [_ | Ks], T?) :- otherwise | key_trusted(K?, Ks?, T).
 key_trusted(_, [], false).
 
-procedure creator_check(Constant?, String?, String?, Module?, Verdict).
-creator_check(true, CSig, Src, M, V?) :-
-    signature(CSig?, Sg),
-    cert_signed(Sg?, Src?, M?, V).
-creator_check(false, _, _, _, refused).
+%% warranty_check(T, Sg, Src, Cmp, Me, Ds, M, V): with the compiler trusted,
+%% the warranty signed over publish(Src, Cmp) of this very program; anything
+%% else --- a term that is not a signed term, signed over another term or over
+%% another program's identities --- is refused.
+procedure warranty_check(Constant?, Signature?, String?, String?, Key?, List(Key)?, Module?, Verdict).
+warranty_check(true, signed(K, _, publish(Src1, Cmp1)), Src, Cmp, Me, Ds, M, V?) :-
+    Src? =?= Src1?, Cmp? =?= Cmp1? |
+    developer_trusted(K?, Me?, Ds?, D),
+    installable(D?, M?, V).
+warranty_check(_, _, _, _, _, _, _, refused) :- otherwise | true.
 
-%% cert_signed(Sg, Src, V): the certification taken apart.  Where it verifies
-%% it is read by its shape; where it is unsigned --- a forgery --- the
-%% installation is refused, as under a key the person does not trust.
-procedure cert_signed(Signature?, String?, Module?, Verdict).
-cert_signed(Sg, Src, M, V?) :- cert_check(Sg?, Src?, M?, V).
+%% developer_trusted(K, Me, Ds, D): the warranty's signer is the person, who
+%% published the program, or a developer the person trusts.
+procedure developer_trusted(Key?, Key?, List(Key)?, Constant).
+developer_trusted(K, Me, _, true) :- K? =?= Me? | true.
+developer_trusted(K, _, Ds, D?) :- otherwise | key_member(K?, Ds?, D).
 
-%% The certification is read inside the signed term by its shape, its functor matched in the head and its source identity compared in the guard (TGLP, Type checking of guards); what is unsigned is refused with every other term.  The
-%% developer's warranty carries the checker's verdict as the checker prints it,
-%% and a program is installed only where that verdict certifies its contract
-%% (GSA paper, Section 3, "A grassroots program is compiled from its
-%% contract"): syntactically_grassroots, for a contract of agent roles or of
-%% listed roles, and the two verdicts with wards, the verdicts on which the
-%% cascade's compiler compiles (programs/gsc/check.glp, verdict/2 and
-%% wards_verdict1/4; compile.glp, compile_on/3).  not_grassroots(Faults),
-%% malformed(Faults) and any other term, the word grassroots among them, are
-%% refused.
-procedure cert_check(Signature?, String?, Module?, Verdict).
-cert_check(signed(_, _, creator_cert(Src1, _, syntactically_grassroots)), Src, M, ok(M?)) :-
-    Src? =?= Src1? | true.
-cert_check(signed(_, _, creator_cert(Src1, _, syntactically_grassroots_with_wards(_, _, _, _, _))), Src, M, ok(M?)) :-
-    Src? =?= Src1? | true.
-cert_check(signed(_, _, creator_cert(Src1, _, grassroots_with_wards(_, _, _, _, _))), Src, M, ok(M?)) :-
-    Src? =?= Src1? | true.
-cert_check(_, _, _, refused) :- otherwise | true.
+procedure key_member(Key?, List(Key)?, Constant).
+key_member(K, [K1 | _], true) :- K? =?= K1? | true.
+key_member(K, [_ | Ks], T?) :- otherwise | key_member(K?, Ks?, T).
+key_member(_, [], false).
+
+procedure installable(Constant?, Module?, Verdict).
+installable(true, M, ok(M?)).
+installable(false, _, refused).
 
 %% install_step(V, App, CSig, Ui, Apps, Apps1): a mini-app installed is held
 %% idle with its end of its person channel; one refused has its person
@@ -766,7 +779,7 @@ identity_match(_, _, _, _, _, refused) :- otherwise | true.
 %% mini-app installed here, and the conversation opens; where it is unsigned
 %% --- a forgery --- the join is refused, the end kept closed, and no
 %% conversation opens (Section 6.1).
-procedure join_signed(Signature?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure join_signed(Signature?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Trust?).
 join_signed(Sg, Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     undertaking_check(Sg?, Src?, Ok0),
     take_invited(From?, Src?, Pend?, Pend1, I),
@@ -774,7 +787,7 @@ join_signed(Sg, Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted
     root_step(Ok?, I1?, Id?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
               Apps1?, Atts?, Pend1?, Trusted?).
 
-procedure root_step(Verdict?, Kept?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure root_step(Verdict?, Kept?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Trust?).
 root_step(ok(M), kept(App, Mine), Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     self_key(K),
     sign(undertaking(Src?), K?, Up),
@@ -794,7 +807,7 @@ root_step(_, I, Id, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
 %% mini-app installed here and the end the invitation carried is accepted;
 %% where it is unsigned --- a forgery --- no end is accepted, the end is
 %% closed, and nothing is delivered (Section 6.1).
-procedure root_signed(Signature?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure root_signed(Signature?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Trust?).
 root_signed(Sg, Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     undertaking_check(Sg?, Src?, Ok0),
     take_joining(From?, Src?, Pend?, Pend1, I),
@@ -802,7 +815,7 @@ root_signed(Sg, Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted
     accept_root_step(Ok?, I1?, Id?, From?, UserIn?, NetIn?, Outs?,
                      Apps1?, Atts?, Pend1?, Trusted?).
 
-procedure accept_root_step(Verdict?, Kept?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure accept_root_step(Verdict?, Kept?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Trust?).
 accept_root_step(ok(M), kept(App, End), Id, From, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     ground(App?) |
     deliver(App?, From?, End?, Id?, M?, Apps?, Apps1, UserIn?, UserIn1),
@@ -1013,7 +1026,7 @@ rbs(_, [], []).
 %% consent variables and each of the two it introduces receives them FROM the
 %% introducer, so both ends are held; the consent to the introduction is what
 %% releases them, and it is kept, since one introduction holds several links.
-procedure pending_step(Constant?, GlobalName?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure pending_step(Constant?, GlobalName?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Trust?).
 pending_step(true, Name, _, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     authorise_link(Name?, authorise),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).

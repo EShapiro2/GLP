@@ -1,0 +1,39 @@
+Interface pragmas
+Found: Gov [Found] <orga> <alice> <role>
+  Alice: Gov asks for your consent to found.
+Acts of the organisation: Bob [Propose] <motion> [Vote] <motion>
+  Alice [Act] <motion> <votes>
+Participation: Bob [Join] <orga> <decider>
+  Decider: Bob asks for your consent to join.
+  Codecider: Bob asks for your consent to join.
+  Bob [Leave] [Officer leave]
+  Decider [Expel] <bob>
+  Codecider: Decider asks for your consent to expel.
+  Decider [Officer expel] <bob>
+  Codecider: Decider asks for your consent to officer expel.
+Officers: Bob [Appoint] <role>
+  Decider: Bob asks for your consent to appoint.
+  Codecider: Bob asks for your consent to appoint.
+  Bob [Resign]
+  Decider [End officer] <bob>
+  Codecider: Decider asks for your consent to end officer.
+  Bob [Officer unfriend]
+  Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+Amend: Alice [Amend] <motion> <votes>
+Ward and person: Carol [Organisation acquaint] <bob>
+  Bob: Carol asks for your consent to organisation acquaint.
+  Carol [Organisation befriend]
+  Bob: Carol asks for your consent to organisation befriend.
+  Alice: Carol asks for your consent to organisation befriend.
+  Carol [Organisation end]
+  Alice [Organisation unfriend] <carol> <bob>
+Wards: Carol [Organisations acquaint] <dave>
+  Dave: Carol asks for your consent to organisations acquaint.
+  Carol [Organisations befriend] <bob>
+  Dave: Carol asks for your consent to organisations befriend.
+  Alice: Carol asks for your consent to organisations befriend.
+  Bob: Carol asks for your consent to organisations befriend.
+  Carol [Organisations of one officer befriend]
+  Dave: Carol asks for your consent to organisations of one officer befriend.
+  Alice: Carol asks for your consent to organisations of one officer befriend.

@@ -13,9 +13,3 @@ filter_even([X|Xs], [X?|Ys?]) :-
 filter_even([X|Xs], Ys?) :-
     X? mod 2 =\= 0 |
     filter_even(Xs?, Ys).
-
-%% Metainterpreter support
-procedure reduce(_?, _).
-reduce(filter_even([], []), true).
-reduce(filter_even([X|Xs], [X?|Ys?]), filter_even(Xs?, Ys)) :- X? mod 2 =:= 0 | true.
-reduce(filter_even([X|Xs], Ys?), filter_even(Xs?, Ys)) :- X? mod 2 =\= 0 | true.

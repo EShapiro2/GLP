@@ -1,0 +1,26 @@
+% Liquid Cooperative --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 7.3 and cites a clause as Liquid Cooperative:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: Cooperative DAO.
+% Last changed: 2026-11-16, by GO #8.
+% Schemas: Liquid-Cooperative.glp beside this file.
+Liquid Cooperative
+Liquid Cooperative extends Cooperative DAO.
+A member's *delegate* is another member whose vote counts for theirs.
+Bob and Carol are persons.
+1. ■ Delegating. Delegate: Bob, a member, may make Carol, a member he knows, his delegate, one at a time. Revoke: Bob may revoke it.
+2. ■ Count: A member who has not voted on a proposal counts as voting as their delegate did, down a chain of delegates, and can no longer vote on it.
+Logic pragmas
+Liquid Cooperative extends Cooperative DAO.
+A member's *delegate* is another member whose vote counts for theirs.
+Bob and Carol are persons.
+1. ■ Delegating. Delegate: Bob may make Carol his delegate in Orga, provided Bob is a member of Orga, Carol is a member of Orga and Bob knows Carol. Revoke: Bob may revoke his delegation to Carol in Orga.
+2. ■ Count. A member who has not voted on a proposal counts as voting as their delegate did, down a chain of delegates, and can no longer vote on it.
+Logic pragmas.
+Vocabulary: y has a delegate in z = delegating(y,z); z holds the delegation of y to x = delegation(z,y,x).
+After y makes x y's delegate in z, which requires y does not have a delegate in z: y has a delegate in z and z holds the delegation of y to x.
+After y revokes y's delegation to x in z: no longer y has a delegate in z and no longer z holds the delegation of y to x.
+Interface pragmas
+Look: 🗳️, governance
+Delegations: the DAOs in which Alice is delegating.
+Delegating: Bob [Delegate] [Revoke]

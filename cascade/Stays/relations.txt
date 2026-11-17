@@ -1,0 +1,1 @@
+Stays extends Coins: holds

@@ -462,6 +462,9 @@ play_forged_cert(P, I?) :- superapp_plays # play_forged_cert(P?, I).
 imported procedure superapp_plays#play_verdict(Key?, Constant?, Stream(Constant)).
 exported procedure play_verdict(Key?, Constant?, Stream(Constant)).
 play_verdict(P, Kind, I?) :- superapp_plays # play_verdict(P?, Kind?, I).
+imported procedure superapp_plays#play_warranty(Key?, Constant?, Stream(Constant)).
+exported procedure play_warranty(Key?, Constant?, Stream(Constant)).
+play_warranty(P, Kind, I?) :- superapp_plays # play_warranty(P?, Kind?, I).
 
 imported procedure superapp_plays#play_forged_invite(Key?, Key?, AgentToUserStream).
 exported procedure play_forged_invite(Key?, Key?, AgentToUserStream).

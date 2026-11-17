@@ -10,6 +10,7 @@ Figure 1 of the paper, and the programs that print them.
     DIR/NAME/flat.txt               its flat text (flat/)
     DIR/NAME/full-schemas.txt       its expanded schemas (sasx/)
     DIR/NAME/term.glp.txt           the expanded schemas as the term GLP's checker reads (glp/)
+    DIR/NAME/relations.txt          a verdict for each relation of its first line, on the schemas (tools/relations.py)
     DIR/NAME/verdict.txt, vmat.tex, interface.txt, platform.vglp, platform.glp    the abstraction cascade (cascade/NAME/)
     DIR/NAME/interface-adopted.txt  the Interface pragmas of interface.txt keyed by the titles of the contract's own
                                     clauses, for its owner's adopted file, proposed to the owner (tools/ifadopt.py)
@@ -18,7 +19,11 @@ Figure 1 of the paper, and the programs that print them.
     DIR/README.md, OWNERS.md, MIGRATION.md, STATE.txt (a line for each contract: name, owner, certified, compiled (yes, no or parametric), adopted), STATUS.txt, VERDICTS.txt, tools/, tests/
 """
 import os, shutil, sys, tempfile
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, 'tools'))
+import relations
 MAP = [('rev', '%s.txt', 'contract.txt'), ('gr', '%s.txt', 'logic-pragmas.txt'), ('sas', '%s.txt', 'schemas.txt'),
        ('exp', '%s.txt', 'full-contract.txt'), ('gx', '%s.txt', 'full-pragmas.txt'), ('flat', '%s.txt', 'flat.txt'),
        ('sasx', '%s.txt', 'full-schemas.txt'), ('glp', '%s.glp.txt', 'term.glp.txt')]
@@ -30,18 +35,21 @@ def state(out, names):
     import re
     own, same, cert, comp = {}, {}, {}, {}
     for l in open(os.path.join(ROOT, 'OWNERS.md'), encoding='utf-8'):
-        m = re.match(r'\| (\S+) \| ([^|]+) \|[^|]*\| ([^|]*) \|', l)
+        m = re.match(r'\| ([^|]+?) \| ([^|]+) \|[^|]*\| ([^|]*) \|', l)      # a name may be two words
         if m and m.group(1) != 'Contract': own[m.group(1)] = m.group(2).strip().replace(' ', '_'); same[m.group(1)] = m.group(3).strip() == 'same'
     for l in open(os.path.join(ROOT, 'glp', 'VERDICTS.txt'), encoding='utf-8'):
-        if l.strip(): cert[l.split()[0]] = l.split(None, 1)[1].startswith('syntactically_grassroots')
+        if l.strip(): cert[NM.name_of(l.split()[0])] = l.split(None, 1)[1].startswith('syntactically_grassroots')
     for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8'):
-        if l.strip(): comp[l.split()[0]] = 'parametric' if 'a parametric contract' in l else 'platform.glp' in l
-    own['SGSG'] = 'SPM'      # it has no text in GLP yet; SPM's paper has it
-    own['AGORA'] = 'Currencies'      # Udi, 2026-11-15; its owner line in GLP names Talmon, for Currencies to correct
+        if l.strip(): comp[NM.name_of(l.split()[0])] = 'parametric' if 'a parametric contract' in l else 'platform.glp' in l
+    own['Secure Friendship'] = 'SPM'      # it has no text in GLP yet; SPM's paper has it
+    own['Constitution'] = 'GO'      # it has no text in GLP yet; GO's, in programs/go (Udi, 2026-11-16, to GO #7)
+    own['Notes'] = 'GSC'      # new, Udi's text of 2026-11-16; no text in GLP yet (Calculus #7)
+    own['Shares'] = 'GO'      # likewise
+    own['Agora'] = 'Currencies'      # Udi, 2026-11-15; its owner line in GLP names Talmon, for Currencies to correct
     yn = lambda b: b if isinstance(b, str) else 'yes' if b else 'no'      # compiled: yes, no, or parametric, certified with no platform until instantiated
     with open(os.path.join(out, 'STATE.txt'), 'w', encoding='utf-8') as f:
         for n in names:
-            f.write('%s %s %s %s %s\n' % (n, own.get(n, 'none'), yn(cert.get(n)), yn(comp.get(n)), yn(same.get(n))))
+            f.write('%s %s %s %s %s\n' % (NM.file_of(n), own.get(n, 'none'), yn(cert.get(n)), yn(comp.get(n)), yn(same.get(n))))
 
 
 def main(out, hold=()):
@@ -69,22 +77,23 @@ def main(out, hold=()):
 
 
 def build(out, hold=()):
-    names = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES'))
+    names = NM.names_in(os.path.join(ROOT, 'rev'))
     names = [n for n in names if n not in hold]      # a contract with no certificate is held out
     missing = []
     for n in names:
-        d = os.path.join(out, n); os.makedirs(d, exist_ok=True)
+        d = os.path.join(out, NM.file_of(n)); os.makedirs(d, exist_ok=True)
         for src, pat, dst in MAP:
-            p = os.path.join(ROOT, src, pat % n)
+            p = os.path.join(ROOT, src, pat % NM.file_of(n))
             if os.path.exists(p): shutil.copyfile(p, os.path.join(d, dst))
             else: missing.append('%s: %s' % (n, dst))
-        c = os.path.join(ROOT, 'cascade', n)
+        open(os.path.join(d, 'relations.txt'), 'w', encoding='utf-8').write(relations.text(n, ROOT))      # tools/relations.py
+        c = os.path.join(ROOT, 'cascade', NM.file_of(n))
         for f in sorted(os.listdir(c)) if os.path.isdir(c) else []:
-            shutil.copyfile(os.path.join(c, f), os.path.join(d, 'interface.txt' if f == n + '.txt' else f))
-        param = any(l.split()[:1] == [n] and 'a parametric contract' in l for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8'))
+            shutil.copyfile(os.path.join(c, f), os.path.join(d, 'interface.txt' if f == NM.file_of(n) + '.txt' else f))
+        param = any(l.split()[:1] == [NM.file_of(n)] and 'a parametric contract' in l for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8'))
         for f in ('verdict.txt',) if param else ('verdict.txt', 'platform.glp'):      # a parametric contract has no platform until instantiated
             if not os.path.exists(os.path.join(d, f)): missing.append('%s: %s' % (n, f))
-    for f, g in (('README-PUBLIC.md', 'README.md'), ('OWNERS.md', 'OWNERS.md'), ('LAYERS.txt', 'LAYERS.txt'), ('MIGRATION.md', 'MIGRATION.md'), ('cascade/STATUS.txt', 'STATUS.txt'), ('glp/VERDICTS.txt', 'VERDICTS.txt')):
+    for f, g in (('README-PUBLIC.md', 'README.md'), ('NAMES.txt', 'NAMES.txt'), ('OWNERS.md', 'OWNERS.md'), ('LAYERS.txt', 'LAYERS.txt'), ('MIGRATION.md', 'MIGRATION.md'), ('cascade/STATUS.txt', 'STATUS.txt'), ('glp/VERDICTS.txt', 'VERDICTS.txt')):
         if os.path.exists(os.path.join(ROOT, f)): shutil.copyfile(os.path.join(ROOT, f), os.path.join(out, g))
     state(out, names)
     for d in ('tools', 'tests'):

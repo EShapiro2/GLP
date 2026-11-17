@@ -1,0 +1,5 @@
+Interface pragmas
+Open store: Carol [Open store]
+Listing: Carol [List] [Delist]
+Store trust: Alice [Trust store] [Untrust store]
+Install from store: Alice [Install from store] <prog> <bob>

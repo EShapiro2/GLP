@@ -1,0 +1,9 @@
+Changes from old to new, for an owner who adopted the first.
+
+S:
+  relations.txt changed
+    was: S strengthens B: holds
+    now: S strengthens B: FAILS: B:1+S:1 Meet: an added effect of a state of the contract strengthened: badge(Alice)
+
+Summary: 1 contracts; own acts changed 0; inherited acts changed only 0; relations.txt only 1; text only 0; unchanged 0; new 0; no longer published 0.
+With an own act added, gone, renamed or changed: none.

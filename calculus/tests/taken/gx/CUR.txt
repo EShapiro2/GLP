@@ -1,4 +1,0 @@
-CUR: A Currency
-Of CUR: Alice and Bob are persons, Sum and Total numbers.
-CUR:1. ■ Pay: Alice may pay Bob Sum Alice-coins, provided Alice knows Bob.
-CUR:2. ■ Swap: Alice and Bob may jointly swap Sum Alice-coins for Total Bob-coins.

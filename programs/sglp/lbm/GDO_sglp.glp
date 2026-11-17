@@ -2,9 +2,9 @@
 %% GDO_sglp.glp --- GDO's sGLP source: the simulation of the grassroots directed
 %% overlay under sGLP, in the term form the transformation reads
 %% (programs/sglp/README.md, "The term form"), over the canonical CVA platform
-%% of programs/lbm/GDO.glp, whose interface the cascade prints as
-%% cascade/GDO/interface.glp:
-%%   programs/sglp/transform.sh --interface cascade/GDO/interface.glp --source programs/sglp/lbm/GDO_sglp.glp --out <dir>
+%% of programs/lbm/Overlay.glp, whose interface the cascade prints as
+%% cascade/Overlay/interface.glp:
+%%   programs/sglp/transform.sh --interface cascade/Overlay/interface.glp --source programs/sglp/lbm/GDO_sglp.glp --out <dir>
 %% Written on CSSN's pattern (programs/sglp/cssn/CSSN_sglp.glp; CSSN, Section 5) by
 %% LBM (Ohad), 2026-11-03.  The questions are the platform's two: Menu,
 %% the request question, Request?, and Approval, approval(Asking, Words, YesNo?); its

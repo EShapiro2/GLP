@@ -26,11 +26,13 @@ import re
 import subprocess
 import sys
 import unicodedata
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 
 MARKS = {'■': r'\enf', '◆': r'\att', '○': r'\und'}
 END_BOX = ('Interface pragmas', 'Implementation pragmas', 'Pragmas', 'Logic pragmas')
 # A contract renamed in the revision: its revised name -> its original's name.
-RENAMED = {'GCC': 'CC'}
+RENAMED = {'Community Currency': 'CC'}      # its original in GLP is CC.txt (the name on main GCC, NAMES.txt)
 # Dropped in the revision (Udi, 2026-11-13), said once under the lead-in.
 DROPPED = ('Three contracts are dropped.  GCC (Grassroots Community Coins) and BCC, whose communities '
            'have no ward, give way to CC, renamed GCC, and to GBCC.  GFF-I\'s two conditions are now GFF:2 and GFF:3.')
@@ -282,13 +284,13 @@ def relation_names(c, name, names):
     with the contract's own name."""
     for l in c.header_lines[:1]:
         if l.startswith(name + ' '):
-            words = re.findall(r'[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*', l)
-            return [w for w in dict.fromkeys(words) if w in names and w != name]
+            words = [nm for _, _, nm in NM.find(re.sub(r'\s*\([^()]*\)', '', l[len(name):]), names)]      # the known names, longest first (tools/names.py), a paper's reference in parentheses no name ('Grassroots App')
+            return [w for w in dict.fromkeys(words) if w != name]
     return []
 
 
 def order(contracts):
-    """The canonical order (Udi, 2026-11-13): by layer (GKK is layer 0; any other contract
+    """The canonical order (Udi, 2026-11-13): by layer (Knowledge is layer 0; any other contract
     is one more than the highest layer among the contracts its relation line names); within
     a layer by the list of those contracts, each list sorted in this order and compared
     entry by entry; ties by name.  tools/table.py computes the same order."""
@@ -695,7 +697,8 @@ def questions(rev_dir, names):
             if re.match(r'^[ADOQX]\d+', line):
                 continue
             first = line.split()[0].rstrip(':,')
-            cur = None if line.startswith(('NOTES', 'For each', 'In all', 'Counts')) else (first if first in names else '*')
+            known = [nm for s, _, nm in NM.find(line, names) if s == 0] or [NM.of_glp(first)]      # a name of one or two words, or the name on main the notes have
+            cur = None if line.startswith(('NOTES', 'For each', 'In all', 'Counts')) else (known[0] if known[0] in names else '*')
     return out
 
 
@@ -716,7 +719,7 @@ def main():
     revised = {}
     for f in sorted(os.listdir(args.rev)):
         if f.endswith('.txt') and not f.startswith('NOTES-'):
-            revised[f[:-4]] = Contract(original_box(os.path.join(args.rev, f)), True, f)
+            revised[NM.name_of(f[:-4])] = Contract(original_box(os.path.join(args.rev, f)), True, f)
     if not revised:
         sys.exit('revtex: no contract in %s' % args.rev)
     names, deps = order(revised)
@@ -731,12 +734,13 @@ def main():
         rev = revised[name]
         orig = None
         oname = RENAMED.get(name, name)
+        oname = NM.file_of(oname) if NM.file_of(oname) in originals else NM.glp_name(oname)      # the owner's file under its file name, or its name on main until Code renames it
         if oname in originals:
             orig = Contract(original_box(os.path.join(args.glp, originals[oname])), False, originals[oname])
         else:
             warn('%s has no original; its whole text is marked as inserted' % name)
-        if not rev.title_line.startswith(name + ':'):
-            warn("%s: the title line does not open with '%s:'" % (name, name))
+        if not (rev.title_line.startswith(name + ':') or rev.title_line == name):      # or the name alone
+            warn("%s: the title line does not open with '%s:' and is not the name alone" % (name, name))
         lines, hs, cs = box_tex(name, rev, orig)
         out += [''] + lines
         if asked.get(name):
@@ -746,7 +750,7 @@ def main():
                 out.append(r'\item[D%d.] ' % qn + emit_plain(tokenize(q, True)))
             out.append(r'\end{description}')
         print('%-10s %-36s %-22s clauses: %d kept, %d deleted, %d new; header: %d changed, %d new, %d deleted'
-              % (name, originals.get(RENAMED.get(name, name), '(none)'), ' '.join(deps[name]) or '-', cs[0], cs[1], cs[2], hs[0], hs[1], hs[2]))
+              % (name, originals.get(NM.file_of(RENAMED.get(name, name)), originals.get(NM.glp_name(RENAMED.get(name, name)), '(none)')), ' '.join(deps[name]) or '-', cs[0], cs[1], cs[2], hs[0], hs[1], hs[2]))
     if asked.get('*'):
         out += ['', r'\paragraph{Several contracts}', r'\begin{description}[leftmargin=2.6em,labelwidth=2.2em,labelsep=0.4em,nosep,font=\normalfont\bfseries]']
         for q in asked['*']:

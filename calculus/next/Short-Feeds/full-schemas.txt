@@ -1,0 +1,35 @@
+Short Feeds (expanded schemas)
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:0 - | Alice and Bob are persons.
+Friendship:1+Labelled Overlay:4 ■ Befriend: friend(Alice,Bob), friend(Bob,Alice), pointer(Alice,Bob,Bob), pointer(Bob,Alice,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2+Labelled Overlay:4 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice), ~pointer(Alice,Bob,Bob), ~pointer(Bob,Alice,Alice) <- friend(Alice,Bob), friend(Bob,Alice), pointer(Alice,Bob,Bob), pointer(Bob,Alice,Alice) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Overlay:0 - | Alice, Bob and Carol are persons.
+Overlay:1 ■ Point friend: points_to(Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), ~points_to(Alice,Bob) guarded by Alice.
+Overlay:2 ■ Point transitive: points_to(Alice,Carol) <- knows(Alice,Carol), points_to(Alice,Bob), points_to(Bob,Carol), ~points_to(Alice,Carol) guarded by Alice.
+Overlay:3 ■ Unpoint: ~points_to(Alice,Bob) <- points_to(Alice,Bob) guarded by Alice.
+Labelled Overlay:0 - | A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice.
+Labelled Overlay:0 - | Alice, Bob, Carol, Dave and Erin are persons, Erin is possibly any of the others; in clause 2 Carol is possibly Dave.
+Labelled Overlay:1 ■ Labeled point friend: pointer(Alice,Bob,Dave) <- friend(Alice,Bob), friend(Bob,Alice), pointer(Bob,Erin,Dave), ~pointer(Alice,Bob,Dave) guarded by Alice possibly Alice=Erin, Bob=Erin, Dave=Erin.
+Labelled Overlay:2+Feeds:3 ■ Labeled point transitive: pointer(Alice,Carol,Dave) <- knows(Alice,Carol), pointer(Alice,Bob,Dave), pointer(Bob,Carol,Dave), ~pointer(Alice,Carol,Dave), knows(Carol,Alice) guarded by Alice possibly Carol=Dave.
+Labelled Overlay:2+Feeds:3 ■ Labeled point transitive friend: pointer(Alice,Carol,Dave) <- knows(Alice,Carol), friend(Alice,Bob), friend(Bob,Alice), pointer(Bob,Carol,Dave), ~pointer(Alice,Carol,Dave), knows(Carol,Alice) guarded by Alice possibly Carol=Dave.
+Labelled Overlay:3 ■ Labeled unpoint: ~pointer(Alice,Carol,Dave) <- pointer(Alice,Carol,Dave) guarded by Alice.
+Labelled Overlay:3 ■ Labeled unpoint self: ~pointer(Alice,Dave,Dave) <- ~friend(Alice,Dave), pointer(Alice,Dave,Dave) guarded by Alice.
+Labelled Overlay:4 ■ | Friend pointers.
+Feeds:0 - | A *feed* is named by its author.
+Feeds:0 - | Alice, Bob and Carol are persons, Item an item, Bob and Carol possibly one person.
+Feeds:1 ■ Post: item(Alice,Item,Alice) <- ~item(Alice,Item,Alice) guarded by Alice.
+Feeds:1 ■ | Alice has a feed, and the item is created or received.
+Feeds:2 ■ Deliver: item(Alice,Item,Carol), received(Alice,Item,Carol,Bob) <- pointer(Alice,Bob,Carol), knows(Bob,Alice), item(Bob,Item,Carol), ~item(Alice,Item,Carol) possibly Bob=Carol.
+Short Feeds:0 - | Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.
+Short Feeds:1 ■ Shorten: ~pointer(Alice,Bob,Dave), pointer(Alice,Carol,Dave) <- knows(Alice,Carol), knows(Carol,Alice), pointer(Bob,Carol,Dave), ~pointer(Alice,Carol,Dave), pointer(Alice,Bob,Dave) possibly Carol=Dave.

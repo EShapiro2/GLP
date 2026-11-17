@@ -14,5 +14,5 @@ B: text only
 C: unchanged
 D: new in this publication
 
-Summary: 4 contracts; own acts changed 1; inherited acts changed only 0; text only 1; unchanged 1; new 1; no longer published 0.
+Summary: 4 contracts; own acts changed 1; inherited acts changed only 0; relations.txt only 0; text only 1; unchanged 1; new 1; no longer published 0.
 With an own act added, gone, renamed or changed: A.

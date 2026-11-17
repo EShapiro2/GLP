@@ -1,0 +1,36 @@
+% The vanilla meta-interpreter, meta.glp, run over the goals of prog.glp,
+% Goal(prog#Procedure) (TGLP modules.tex, "Procedure declarations"); the clause
+% database, clause/2, is prog's clauses as data.
+Goal(G) ::= true ; (Goal(G), Goal(G)) ; G.
+
+imported procedure meta#run(Goal(prog#Procedure)?).
+
+exported procedure clause(Goal(prog#Procedure)?, Goal(prog#Procedure)).
+clause(true, true).
+clause((A, B), (A?, B?)).
+clause(merge([X|Xs], Ys, [X?|Zs?]), merge(Ys?, Xs?, Zs)).
+clause(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+clause(merge([], [], []), true).
+clause(p(a), true).
+clause(p(b), true).
+clause(q(X), p(X?)).
+clause(q(a), true).
+clause(r(a, b), true).
+
+exported procedure run(Goal(prog#Procedure)?).
+run(G) :- meta # run(G?).
+
+exported procedure run2(Stream(Constant)).
+run2(Ys?) :- meta # run((merge([], [], Xs1), merge([], Xs1?, Ys))).
+
+exported procedure run3(Stream(Constant)).
+run3(Ys?) :- meta # run(merge([], [a], Ys)).
+
+exported procedure run4(Stream(Constant)).
+run4(Ys?) :- meta # run(merge([], [], Ys)).
+
+exported procedure run6(Stream(Constant)).
+run6(Ys?) :- meta # run(merge([a], [], Ys)).
+
+exported procedure runA(Stream(Constant)).
+runA(X?) :- meta # run(merge([], [], X)).

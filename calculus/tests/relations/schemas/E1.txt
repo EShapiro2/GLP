@@ -1,0 +1,4 @@
+E1: E1 (expanded schemas)
+B:1 ■ Meet: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+B:3 ■ Mark: badge(Alice) <- ~badge(Alice) guarded by Alice.
+E1:1 ■ Wave: waved(Alice) <- guarded by Alice.

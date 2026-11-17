@@ -1,0 +1,2 @@
+Interface pragmas
+Delegating: Bob [Delegate] [Revoke]

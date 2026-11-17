@@ -1,47 +1,20 @@
-All 62 contracts, published at one commit (this one), from Calculus code 2307a5b.
+All 66 contracts under their names of calculus/NAMES.txt (Udi, 2026-11-16), from Calculus code ee7ccc55.
 
-Run: every contract certified by GLP's checker (GSC) and compiled by vGLP on GLP branch migration: the 39 outside GO's
-family at eaaea850, GO's 22, ORH and the four currencies again at 0a008eb1 (which adds vGLP-arg, the term passed to the
-reader by a file; no tool that changes a platform differs between the two).  62 certified; 54 with a platform.glp that
-loads; 8 parametric, with no platform until instantiated: GO GBank GCoop GCorp GNO GAN TC GRA.
+A name is one plain word, or two in their English order; a contract's title line is its name; a citation reads
+"Community Bank:1".  60 contracts are renamed and six keep their names: Notes, Coins, Bonds, Shares, Agora, DAO.  The
+contracts are otherwise those of the publication of 2026-11-16 on main (Calculus code 32d16c50): no word but the names
+and the titles changes, and no term.
 
-CHANGES.txt says, contract by contract, what an owner who adopted the earlier publication (a687ab8) finds changed:
-acts added, gone, renamed, changed; 'text only' where only words changed.  Adopt: python3 calculus/tools/adopt.py
---write NAME <dir>; the check: adopt.py --check.
+Run, at Calculus code ee7ccc55: 66 certified by GLP's checker (GSC); 63 with a platform.glp that loads; 3 parametric,
+with no platform until instantiated: Ads, Networked Organisation, Auction.  calculus/next/STATE.txt has a line a
+contract.
 
-What changed since a687ab8:
-1. Parties (Udi, 2026-11-15).  GKK: 'A *party* to a contract is whoever has an identity.'  GC, GDC, GB, DGC: Alice, Bob
-   and Carol are parties.  GnW: 'A ward takes an act of a party by those who decide for it.'  So an organisation, a
-   ward, holds, pays and issues coins and bonds.  In GO's family each act of a party has, beside the person's form, the
-   organisation's: '<Act> for <Role>', taken for it by an officer on its votes (GO:2), with a vote act; they are derived
-   by the tools, about 90 schemas a contract.
-2. Roles a contract calls possibly one person are marked one(Name, Other) where GSC's Definition Binding lets one agent
-   bear both; where it does not, the contract has an act of one role beside the act: Post own, Ward post own, Propose
-   own, Vote own for and against, Delegate own, Delegate to the steward, Revoke own, Count own for and against, Deposit
-   own coins and bonds, Deposit with the issuer, Pay own accepted coins, Pay accepted coins to the issuer, Claim own
-   coins, Claim coins of the corporation, Bank deposit own coins, Offer own, Want own, Withdraw own.
-3. A ward's acts in a group: Ward leave, Ward remove, Ward add (GSNW); in CSSN Child add is restricted so that no
-   adult joins a child's group (CSSN:3).
-4. DGC's Accept by bond: the bond held and the bond issued in the denomination are of one maturity.
-5. A ward's Retire clears her listings at the leaders of her groups (GSNW, CSSN).
-6. The tools, after a review: recovery keeps a stated condition beside a wildcard deletion; a role that must consent;
-   a negated comparison or count; the readable text keeps every inherited restriction; adopt.py, toglp.py, cascade.py
-   and publish.py stop on a failed step; one who must consent is not shown as asked; cascade.py passes the term to the
-   reader by a file; tests/ has 30 cases.
+The checks: gcsas.py 66 contracts, 0 with a fault; tests.py 54 cases, 0 that differ; relations.py 112 relations, 112
+hold; supplied.py, typecheck_places.py, possibly.py, redundant.py 0.
 
-Not in this publication: the review's findings on the contracts themselves and on Theorem 8, which wait for its
-revised report.
+calculus/next/NAME/, by file name, has each contract's files for adoption: contract.txt, logic-pragmas.txt,
+schemas.txt, full-contract.txt, full-pragmas.txt, flat.txt, full-schemas.txt, relations.txt, term.glp.txt,
+verdict.txt, interface.txt and interface-adopted.txt; the platforms are printed at adoption.
 
-CSSN again, and the tools (commit after 3b5fd5d; Calculus code 6cfa460; CSSN run on migration 58a0593):
-An act whose requirements no binding can meet is no act of the contract: the tools leave out of a contract's term an
-act that requires of one name to be both a person and a ward of the contract's type.  Of the 62 it is CSSN's Child add
-alone (GSNW:3's Ward add restricted by CSSN:3, 'Only a child, Dave, may join the group'), which vGLP refused for
-having no button.  CSSN is certified, its platform.glp loads, and it has no child_add.  The other 61 are as at 3b5fd5d;
-toglp.py, supplied.py, changes.py and tests/ changed, and no other contract's term does.
-
-The Interface lines of the derived acts (commit after 2c4ab86; Calculus code 36d9fde):
-GBank, GCorp and GCoop each gain interface-adopted.txt, 132 lines for their 88 derived acts (an organisation's form
-of each party's act, and the vote acts).  They go once under the Interface pragmas of GBank.txt, GCorp.txt and
-GCoop.txt; vGLP's reader gathers a base's Interface pragmas, so every contract written from the three inherits them.
-Proved the owners' way on migration 86cd39a: bash cascade.sh wc and cb from adopted files, each compiled, platform
-loads.  No contract, term or platform changes; tools/ifadopt.py changed.
+Adopt: python3 calculus/tools/adopt.py --write NAME <dir>; the check: adopt.py --check.  adopt.py finds an owner's
+file under its file name, and under its name on main until it is renamed.

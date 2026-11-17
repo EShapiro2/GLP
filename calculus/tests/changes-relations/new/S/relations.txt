@@ -1,0 +1,1 @@
+S strengthens B: FAILS: B:1+S:1 Meet: an added effect of a state of the contract strengthened: badge(Alice)

@@ -1,8 +1,0 @@
-SUB: A Restriction
-Of CUR: Alice and Bob are persons, Sum and Total numbers.
-Of ORG: Erin and Frank are persons, Alice and Bob organisations or persons, Sum and Total numbers.
-Of SUB: Alice and Bob are persons, Erin a person, Sum a number.
-CUR:1. ■ Pay: Alice may pay Bob Sum Alice-coins, provided Alice knows Bob.
-CUR:1, ORG:1, SUB:1. ■ Pay small: Alice may pay Bob Sum Alice-coins, taken for Alice by Erin, provided Alice knows Bob, Erin is a member of Alice and Erin knows Bob.
-CUR:2. ■ Swap: Alice and Bob may jointly swap Sum Alice-coins for Total Bob-coins.
-CUR:2, ORG:2. ■ Swap of two organisations: Alice and Bob may jointly swap Sum Alice-coins for Total Bob-coins, taken for Alice by Erin and for Bob by Frank, provided Erin is a member of Alice and Frank is a member of Bob.

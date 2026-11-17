@@ -1,0 +1,5 @@
+Workers' Cooperative
+Workers' Cooperative restricts Cooperative.
+A *workers' cooperative* is a cooperative whose members work for it.
+Alice and Bob are persons, Coop a cooperative.
+1. ■ Join: Cooperative:1, only if Alice knows Bob. The workers' cooperative pays its workers.

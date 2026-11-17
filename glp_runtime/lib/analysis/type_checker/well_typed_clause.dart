@@ -415,9 +415,12 @@ ClauseCheckResult checkClause(
   // Step 1: Check head well-typing
   final (headResult, modedHeadTerm) = _checkHeadWithTerm(clause, procDecl, dfa, env);
   constructedModedHead = modedHeadTerm;
-  if (!headResult.isWellTyped) {
-    errors.add(HeadError(clause.headFunctor, headResult.errors));
-  }
+  // The head's errors are added after the guards are read (below): a pair of
+  // the head one of whose occurrences a guard narrows is checked at the
+  // narrowed type, "A variable tested by a guard atom has the meet as its type
+  // in the whole clause, its head included" (TGLP typed-glp.tex, "Type
+  // checking of guards").
+  final headErrorsAt = errors.length;
   for (final entry in headResult.variableTypes.entries) {
     allVariableTypes[entry.key] = entry.value;
     variableLocations[entry.key] = 'head';
@@ -555,9 +558,24 @@ ClauseCheckResult checkClause(
     }
   }
 
-  // Step 3: Check variable pair duality across clause
+  // The head's own errors, but for the pair of the head a guard narrowed an
+  // occurrence of, which Step 3 checks at the narrowed type.
+  bool narrowedPair(WellTypedError e) =>
+      e is NonDualError &&
+      (narrowedByGuard.containsKey(e.baseName) ||
+          narrowedByGuard.containsKey('${e.baseName}?'));
+  final headErrors = [
+    for (final e in headResult.errors)
+      if (!narrowedPair(e)) e
+  ];
+  if (headErrors.isNotEmpty) {
+    errors.insert(headErrorsAt, HeadError(clause.headFunctor, headErrors));
+  }
+
+  // Step 3: Check variable pair duality across clause, a head occurrence at
+  // the type a guard narrowed it to where one did.
   final dualityErrors = _checkClauseDuality(
-    allVariableTypes,
+    {...allVariableTypes, ...narrowedByGuard},
     variableLocations,
     dfa,
   );

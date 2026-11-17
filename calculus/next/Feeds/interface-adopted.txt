@@ -1,0 +1,3 @@
+Interface pragmas
+Post: Alice [Post] <item>
+Labeled point transitive: Alice [Labeled point transitive] [Labeled point transitive friend] <dave>

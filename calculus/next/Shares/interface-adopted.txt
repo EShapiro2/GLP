@@ -1,0 +1,87 @@
+Interface pragmas
+Issue shares: AliceOfficer [Issue shares for Alice] <decider> <sum>
+  Decider: AliceOfficer asks for your consent to issue shares for alice.
+  Codecider: AliceOfficer asks for your consent to issue shares for alice.
+Swap: Alice [Swap shares] <sum> <dave> <total>
+  Bob: Alice asks for your consent to swap shares.
+  AliceOfficer [Swap shares for Alice] <sum> <total> <votesalice>
+  Bob: AliceOfficer asks for your consent to swap shares for alice.
+  Alice [Swap shares for Bob] <bobofficer> <sum> <dave> <total> <votesbob>
+  BobOfficer: Alice asks for your consent to swap shares for bob.
+  AliceOfficer [Swap shares for Alice and Bob] <bobofficer> <sum> <total> <votesalice> <votesbob>
+  BobOfficer: AliceOfficer asks for your consent to swap shares for alice and bob.
+Pay: Alice [Pay share] <sum>
+  Bob: Alice asks for your consent to pay share.
+  AliceOfficer [Pay share for Alice] <sum> <votesalice>
+  Bob: AliceOfficer asks for your consent to pay share for alice.
+  Alice [Pay share for Bob] <bobofficer> <sum> <votesbob>
+  BobOfficer: Alice asks for your consent to pay share for bob.
+  AliceOfficer [Pay share for Alice and Bob] <bobofficer> <sum> <votesalice> <votesbob>
+  BobOfficer: AliceOfficer asks for your consent to pay share for alice and bob.
+Escrow: Alice [Deposit share] <sum> <cond>
+  Carol: Alice asks for your consent to deposit share.
+  AliceOfficer [Deposit share for Alice] <sum> <cond> <votesalice>
+  Carol: AliceOfficer asks for your consent to deposit share for alice.
+  Alice [Deposit share for Carol] <carolofficer> <sum> <cond> <votescarol>
+  CarolOfficer: Alice asks for your consent to deposit share for carol.
+  AliceOfficer [Deposit share for Alice and Carol] <carolofficer> <sum> <cond> <votesalice> <votescarol>
+  CarolOfficer: AliceOfficer asks for your consent to deposit share for alice and carol.
+  Carol [Release share] <sum>
+  Bob: Carol asks for your consent to release share.
+  CarolOfficer [Release share for Carol] <sum> <votescarol>
+  Bob: CarolOfficer asks for your consent to release share for carol.
+  Carol [Release share for Bob] <bobofficer> <sum> <votesbob>
+  BobOfficer: Carol asks for your consent to release share for bob.
+  CarolOfficer [Release share for Carol and Bob] <bobofficer> <cond> <sum> <votescarol> <votesbob>
+  BobOfficer: CarolOfficer asks for your consent to release share for carol and bob.
+  Carol [Return share] <sum>
+  Alice: Carol asks for your consent to return share.
+  CarolOfficer [Return share for Carol] <sum> <votescarol>
+  Alice: CarolOfficer asks for your consent to return share for carol.
+  Carol [Return share for Alice] <aliceofficer> <sum> <votesalice>
+  AliceOfficer: Carol asks for your consent to return share for alice.
+  CarolOfficer [Return share for Carol and Alice] <aliceofficer> <cond> <sum> <votescarol> <votesalice>
+  AliceOfficer: CarolOfficer asks for your consent to return share for carol and alice.
+Issue shares: AliceOfficer [Issue shares for Alice] <decider> <sum>
+  Decider: AliceOfficer asks for your consent to issue shares for alice.
+  Codecider: AliceOfficer asks for your consent to issue shares for alice.
+Swap: AliceOfficer [Swap shares for Alice] <sum> <total> <votesalice>
+  Bob: AliceOfficer asks for your consent to swap shares for alice.
+  Voter [Vote of Alice for Swap shares] <bob> <sum> <carol> <total> <dave>
+  Alice [Swap shares for Bob] <bobofficer> <sum> <dave> <total> <votesbob>
+  BobOfficer: Alice asks for your consent to swap shares for bob.
+  Voter [Vote of Bob for Swap shares] <alice> <sum> <carol> <total> <dave>
+  AliceOfficer [Swap shares for Alice and Bob] <bobofficer> <sum> <total> <votesalice> <votesbob>
+  BobOfficer: AliceOfficer asks for your consent to swap shares for alice and bob.
+Pay: AliceOfficer [Pay share for Alice] <sum> <votesalice>
+  Bob: AliceOfficer asks for your consent to pay share for alice.
+  Voter [Vote of Alice for Pay share] <bob> <sum> <carol>
+  Alice [Pay share for Bob] <bobofficer> <sum> <votesbob>
+  BobOfficer: Alice asks for your consent to pay share for bob.
+  Voter [Vote of Bob for Pay share] <alice> <sum> <carol>
+  AliceOfficer [Pay share for Alice and Bob] <bobofficer> <sum> <votesalice> <votesbob>
+  BobOfficer: AliceOfficer asks for your consent to pay share for alice and bob.
+Escrow: AliceOfficer [Deposit share for Alice] <sum> <cond> <votesalice>
+  Carol: AliceOfficer asks for your consent to deposit share for alice.
+  Voter [Vote of Alice for Deposit share] <sum> <dave> <carol> <bob> <cond>
+  Alice [Deposit share for Carol] <carolofficer> <sum> <cond> <votescarol>
+  CarolOfficer: Alice asks for your consent to deposit share for carol.
+  Voter [Vote of Carol for Deposit share] <alice> <sum> <dave> <bob> <cond>
+  AliceOfficer [Deposit share for Alice and Carol] <carolofficer> <sum> <cond> <votesalice> <votescarol>
+  CarolOfficer: AliceOfficer asks for your consent to deposit share for alice and carol.
+  CarolOfficer [Release share for Carol] <sum> <votescarol>
+  Bob: CarolOfficer asks for your consent to release share for carol.
+  Voter [Vote of Carol for Release share] <bob> <sum> <dave> <alice> <cond>
+  Carol [Release share for Bob] <bobofficer> <sum> <votesbob>
+  BobOfficer: Carol asks for your consent to release share for bob.
+  Voter [Vote of Bob for Release share] <carol> <sum> <dave> <alice> <cond>
+  CarolOfficer [Release share for Carol and Bob] <bobofficer> <cond> <sum> <votescarol> <votesbob>
+  BobOfficer: CarolOfficer asks for your consent to release share for carol and bob.
+  CarolOfficer [Return share for Carol] <sum> <votescarol>
+  Alice: CarolOfficer asks for your consent to return share for carol.
+  Voter [Vote of Carol for Return share] <alice> <sum> <dave> <bob> <cond>
+  Carol [Return share for Alice] <aliceofficer> <sum> <votesalice>
+  AliceOfficer: Carol asks for your consent to return share for alice.
+  Voter [Vote of Alice for Return share] <carol> <sum> <dave> <bob> <cond>
+  CarolOfficer [Return share for Carol and Alice] <aliceofficer> <cond> <sum> <votescarol> <votesalice>
+  AliceOfficer: CarolOfficer asks for your consent to return share for carol and alice.

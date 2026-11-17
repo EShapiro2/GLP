@@ -1,0 +1,5 @@
+Guardians
+Guardians extends Knowledge.
+A *guardian* of a ward decides for it. The *decision rule*, a parameter of Guardians, says who decides for a ward and how.
+Alice and Bob are persons.
+1. ■ Appoint: Alice may make Bob a guardian, provided Alice knows Bob. Guardians are persons.

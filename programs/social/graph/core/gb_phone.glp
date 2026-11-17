@@ -79,13 +79,13 @@ invite_called(Me, App, [_ | Qs], Who, Cmds?, Rest) :-
     otherwise | invite_called(Me?, App?, Qs?, Who?, Cmds, Rest?).
 invite_called(_, _, [], _, Rest?, Rest).
 
-%% The creator's certification, signed here over the mini-app's source identity, the contract's act schemas (programs/currencies/bonds/GB.glp) and the checker's verdict (GSG paper, Section 2, "A mini-app is a certified program"), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
+%% The person publishes the program they install, by GPD:1, and installs it as their own, by GPD:4: the developer's warranty is publish(Src, Cmp), the program's source and compiled identities, signed with sign/3 under the person's key (GSA paper, Section 3, "A grassroots program is compiled from its contract"; docs/compiled-home.md in GSA's repository, Section 4), as the super-app's plays sign it (superapp_plays.glp, certified/3); and the compiler's key the artefact's certificate carries, which the person trusts.
 procedure certified(Content?, String, String).
 certified(M, CK?, CSig?) :-
     module(M?) |
-    decompose_module(M?, CK, Src, _),
+    decompose_module(M?, CK, Src, Cmp),
     self_key(K),
-    sign(creator_cert(Src?, [establish, acquaint, introduce, issue, swap, pay, redeem, issue_bond, swap_coin_for_bond, swap_bonds, redeem_coin_against_bond, redeem_bond, redeem_bond_against_bond, deposit, deposit_bond, release, release_bond, return, return_bond], syntactically_grassroots), K?, CSig).
+    sign(publish(Src?, Cmp?), K?, CSig).
 
 %% The mini-app's scripted person activated from the module value by run/3, at the type identity of the second template's opaque instance at the type the module's exports record for miniapp_person/5, on the person's end of the person channel whose other end the super-app installs the mini-app with; where the person channel's type the module records for the person is not the entry's, no person runs, its end held for good.  Written again from superapp_plays.glp (miniapp_person_run/6, person_at/8) and core/self.glp (hold_person/1), which do not export them, as in gc_phone.glp.
 procedure miniapp_person_run(Content?, Key?, Constant?, List(Key)?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(Opaque)).

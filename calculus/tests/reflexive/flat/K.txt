@@ -1,4 +1,0 @@
-K: Base (flat text)
-K:0 - | Alice and Bob are persons.
-K:0 - | Reflexive: x knows y.
-K:1 ■ Meet: Alice and Bob may jointly Alice knows Bob and Bob knows Alice.

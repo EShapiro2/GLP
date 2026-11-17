@@ -1,0 +1,67 @@
+Rendezvous
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ■ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Person unfriend.  Alice may end her friendship with Bob.
+6. ■ Enter.  Alice may create a ward, Carol, and establish Carol's identity by choosing Carol's key pair, and Carol must consent.
+7. ■ Make guardian.  Those who decide for Carol may make Bob, a friend of a guardian of Carol, a guardian and a friend of Carol, with the consent of Bob.
+8. ■ Resign.  Bob may end his guardianship of Carol.
+9. ■ End guardian.  Those who decide for Carol, other than Bob, may end Bob's guardianship.
+10. ■ Guardian unfriend.  Bob may end his friendship with Carol, which ends his guardianship.
+11. ■ Ward acquaint.  Carol, a ward of Alice, and Bob may jointly come to know each other.
+12. ■ Ward befriend.  Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends.
+13. ■ Ward end.  Carol, Bob or Alice may end the relation of Bob and Carol.
+14. ■ Unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
+15. ■ Ward unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
+16. ■ Wards acquaint.  Carol, a ward of Alice, and Dave, a ward of Bob, may jointly come to know each other.
+17. ■ Wards befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+18. ■ Wards of one guardian befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+19. ■ Retire.  Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
+20. ■ Open server.  Carol may make her service Dave a rendezvous server.
+21. ■ Sign link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+22. ■ Invite by link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+23. ■ Use link.  Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
+24. ■ Present.  Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship.
+25. ■ Match.  Dave then gives each the address of the other.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Person unfriend: Alice [Person unfriend]
+Enter: Alice [Enter] <carol>
+Make guardian: Bob [Make guardian] <carol>
+  Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
+Resign: Bob [Resign]
+End guardian: Decider [End guardian] <bob>
+  Codecider: Decider asks for your consent to end guardian.
+Guardian unfriend: Bob [Guardian unfriend]
+Ward acquaint: Carol [Ward acquaint] <bob>
+  Bob: Carol asks for your consent to ward acquaint.
+Ward befriend: Carol [Ward befriend]
+  Bob: Carol asks for your consent to ward befriend.
+  Alice: Carol asks for your consent to ward befriend.
+Ward end: Carol [Ward end]
+Unfriend: Bob [Unfriend]
+Ward unfriend: Alice [Ward unfriend] <carol> <bob>
+Wards acquaint: Carol [Wards acquaint] <dave>
+  Dave: Carol asks for your consent to wards acquaint.
+Wards befriend: Carol [Wards befriend] <bob>
+  Dave: Carol asks for your consent to wards befriend.
+  Alice: Carol asks for your consent to wards befriend.
+  Bob: Carol asks for your consent to wards befriend.
+Wards of one guardian befriend: Carol [Wards of one guardian befriend]
+  Dave: Carol asks for your consent to wards of one guardian befriend.
+  Alice: Carol asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+Open server: Carol [Open server]
+Sign link: Alice [Sign link] <link>
+Invite by link: Alice [Invite by link]
+Use link: Bob [Use link] <alice> <link>
+Present: Alice [Present]

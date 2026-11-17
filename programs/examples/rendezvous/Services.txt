@@ -1,0 +1,25 @@
+% GSV: Grassroots Services --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GNA, a paper of the GSA project (Udi, 2026-11-10 13:49 UTC, to GSA #3).  The paper, /Users/udi/Grassroots/GNA/main.tex, Section 6, prints it in its box.
+% Paper: GNA, GLP Networking API and Services, in preparation
+% Extends: GSV instantiates GnW, Guardians 'n' Wards, GSC's (programs/gsc/Guardians.txt), in the terms of GSC's paper, Definition Parametric contract: ward at service, and creator, created, guardian_of, guarded_by and retired at themselves.  It has GnW's clauses, GnW:1 to GnW:5, of a service, and no clause of its own: a person creates a service by GnW:1.  GRV, GDS (beside this file) and GAS (programs/social/graph) extend it.
+% Defines: service, defined in the box after the declaration.  Person, ward and guardian are defined with GKK and GnW.
+% Last changed: 2026-11-16, its Interface pragmas of GnW's Guardian decisions and Retire, asking the other guardians, GnW's lines having gone with GnW's default rule, any guardian alone (GSC #19, GSA_inbox.md, 2026-11-16 16:54 UTC; GSA #7); 2026-11-15, the Calculus's text adopted, at the branch Calculus 79ec48f, its Logic pragmas as mended there (first adopted at c475902), by calculus/MIGRATION.md, which Udi confirmed: the contract as the Calculus has it, its Logic pragmas after the clauses, and the Interface and Implementation pragmas keyed to its act names (GSA #6); 2026-11-10, written by GSA #3 Cowork (Udi, 2026-11-10 13:52 UTC, approving its text): the one definition GRV, GDS and GAS each held, a ward operated by a machine at an address every person can reach, GnW being parametric since that day.
+% Schemas: Services.glp beside this file, the full schemas, printed from the Logic pragmas by calculus/tools/adopt.py and never written by hand; a check holds it to what the tool prints.
+Services
+Services instantiates Guardians with the guardians deciding jointly (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+A *service* is a ward operated by a machine at an address every person can reach.
+Logic pragmas
+Services instantiates Guardians with the guardians of z for those who decide for z (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+A *service* is a ward operated by a machine at an address every person can reach.
+Logic pragmas.
+Roles: the guardians of z = guardians(z), listed by z has y as a guardian and y is a guardian of z.
+Interface pragmas
+Look: 🖥️, network
+Guardian decisions: Decider [Make guardian] <person>
+  Bob: Decider asks you to be a guardian of the service Carol.
+  Codecider: Decider asks that Bob be a guardian of your service Carol.
+  Decider [End guardian] <person>
+  Codecider: Decider asks to end Bob's guardianship of your service Carol.
+  Bob [Resign] [Guardian unfriend]
+Retire: Decider [Retire]
+  Codecider: Decider asks to retire your service Carol.

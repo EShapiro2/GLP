@@ -4,5 +4,7 @@ publish_to: none
 environment:
   sdk: ^3.9.4
 dependencies:
+  crypto: ^3.0.0
+  mailer: ^6.4.1
   glp_runtime:
     path: ../../glp_runtime

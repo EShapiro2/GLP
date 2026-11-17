@@ -1,0 +1,5 @@
+Short Feeds
+Short Feeds extends Feeds.
+After x replaces a w-pointer to y by a w-pointer to z, which requires x does not have a w-pointer to z: no longer x has a w-pointer to y and x has a w-pointer to z.
+Short Feeds:0 - | Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.
+Short Feeds:1 ■ Shorten: ~pointer(Alice,Bob,Dave), pointer(Alice,Carol,Dave) <- knows(Alice,Carol), knows(Carol,Alice), pointer(Bob,Carol,Dave), ~pointer(Alice,Carol,Dave), pointer(Alice,Bob,Dave) possibly Carol=Dave.

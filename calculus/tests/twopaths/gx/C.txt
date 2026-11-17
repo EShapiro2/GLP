@@ -1,3 +1,0 @@
-C: Base
-Of C: Alice is a person.
-C:1. ■ Mark: Alice may mark herself.

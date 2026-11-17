@@ -1,6 +1,6 @@
 # GDO's simulation under sGLP
 
-The grassroots directed overlay simulated on the pattern of CSSN's Section 5 (`programs/sglp/cssn/CSSN_sglp.glp`; `simulation/CSSN/`): stochastic persons in place of people on the canonical CVA platform the cascade compiles from GDO's schemas, `cascade/GDO/platform.glp`, by the harness of every canonical platform, `programs/sglp/cva/`.  What the clauses permit (GDO:1 to GDO:3) the platform enforces; what the paper's Location-Based, Bounded Out-Degree Instance says a person's machine takes is the stochastic person's menu, `programs/sglp/lbm/GDO_sglp.glp`.  No Python: the source is sGLP in the term form, the run is the REPL's, and the measures are an awk script over the log.
+The grassroots directed overlay simulated on the pattern of CSSN's Section 5 (`programs/sglp/cssn/CSSN_sglp.glp`; `simulation/CSSN/`): stochastic persons in place of people on the canonical CVA platform the cascade compiles from GDO's schemas, `cascade/Overlay/platform.glp`, by the harness of every canonical platform, `programs/sglp/cva/`.  What the clauses permit (GDO:1 to GDO:3) the platform enforces; what the paper's Location-Based, Bounded Out-Degree Instance says a person's machine takes is the stochastic person's menu, `programs/sglp/lbm/GDO_sglp.glp`.  No Python: the source is sGLP in the term form, the run is the REPL's, and the measures are an awk script over the log.
 
 ## The files
 
@@ -43,11 +43,11 @@ From the repository root, with the REPL built (`glp_runtime/bin/glpc`):
 
 ```bash
 # the printed modules, from the source over the platform's interface
-bash programs/sglp/transform.sh --interface cascade/GDO/interface.glp --source programs/sglp/lbm/GDO_sglp.glp --out <dir>
+bash programs/sglp/transform.sh --interface cascade/Overlay/interface.glp --source programs/sglp/lbm/GDO_sglp.glp --out <dir>
 # one run: 40 persons, 30 days, seed 1 (the run declaration's), its log and draw
-bash programs/sglp/cva/run.sh cascade/GDO/platform.glp <dir> census "30 days" 1 <log>
+bash programs/sglp/cva/run.sh cascade/Overlay/platform.glp <dir> census "30 days" 1 <log>
 # the map, the measures, and a replay page of one or more records (directories holding 1.log and 1.census)
-bash programs/sglp/lbm/sim/census.sh cascade/GDO/platform.glp <dir> gd_town40 <map>
+bash programs/sglp/lbm/sim/census.sh cascade/Overlay/platform.glp <dir> gd_town40 <map>
 awk -v census=<map> -v days=6 -f programs/sglp/lbm/sim/overlay.awk <log>
 bash programs/sglp/lbm/sim/table.sh <record> ...
 bash programs/sglp/lbm/sim/replay.sh <out.html> <record> ...
@@ -59,4 +59,4 @@ bash programs/sglp/cva/record.sh --check simulation/GDO-LB/<date>/<name>
 
 A day of forty persons takes about two minutes at d = 3 and four at d = 8; a day of a hundred persons six to eleven minutes (main `98ca7d4ca`).  The records: `simulation/GDO/2026-11-14` (the world standing still) and `simulation/GDO-LB/2026-11-14` (GDO-LB, the persons travelling and the friendships changing), each record of the form `cva/record.sh` writes, `record.sh --check` passing on it.
 
-The source is the realisation of GDO-LB, Location-Based GDO (`programs/lbm/GDO-LB.txt`, the restriction of GDO by its three conditions, GRH's): until GSC's term form of forall and exists and vGLP's environment predicates reach the cascade and GDO-LB compiles to a platform of its own, the conditions are the stochastic person's policy over GDO's platform, `gd_choose`, and the person's location, d and e are its attributes.
+The source is the realisation of GDO-LB, Location-Based GDO (`programs/lbm/Local-Overlay.txt`, the restriction of GDO by its three conditions, GRH's): until GSC's term form of forall and exists and vGLP's environment predicates reach the cascade and GDO-LB compiles to a platform of its own, the conditions are the stochastic person's policy over GDO's platform, `gd_choose`, and the person's location, d and e are its attributes.

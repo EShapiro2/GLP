@@ -1,0 +1,6 @@
+Q: Greetings of minors
+Q instantiates P with greeting rules; the parents of z while z is a minor, or the friends of z while z is not a minor for those who decide for z.
+Alice and Bob are persons.
+Logic pragmas.
+Vocabulary: x is a minor = minor(x).
+Roles: the parents of z = parents(z).

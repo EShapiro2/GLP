@@ -1,9 +1,0 @@
-CLB: Club
-CLB extends GKK.
-Vocabulary: y is a member of z = member(y,z); z has y as a member = has_member(z,y).
-Roles: those who decide for z = deciders(z), listed by z has y as a member and y is a member of z.
-After g makes y a member of z, which requires y is not a member of z: y is a member of z and z has y as a member.
-After g ends y's membership in z: no longer y is a member of z and no longer z has y as a member.
-CLB:0 - | Alice and Bob are persons, Orga a club.
-CLB:1 ■ Admit: member(Bob,Orga), has_member(Orga,Bob) <- ~member(Bob,Orga) guarded by deciders(Orga), Bob.
-CLB:1 ■ Expel: ~member(Bob,Orga), ~has_member(Orga,Bob) <- member(Bob,Orga), has_member(Orga,Bob) guarded by deciders(Orga,-Bob).

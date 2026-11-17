@@ -1,0 +1,5 @@
+RG: Ruled by all its guardians
+RG instantiates R with the guardians of z for those who decide for z.
+Carol is a ward.
+Logic pragmas.
+Roles: the guardians of z = guardians(z), listed by z has y as a guardian.

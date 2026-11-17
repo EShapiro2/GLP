@@ -1,0 +1,13 @@
+Workers' Cooperative
+Workers' Cooperative instantiates Cooperative with bylaws that delegate no act, and extends it.
+A *workers' cooperative* is a cooperative whose members work for it.
+Alice, Bob and Carol are persons, Orga a workers' cooperative, Iris an issuer, Dollar a fiat currency, Sum, Votes and Double numbers.
+1. ■ Pay for work: Alice may pay Bob Sum Iris-coins of Orga for Bob's work, provided Alice is a member of Orga, Orga holds the votes of at least Votes persons to pay Bob Sum Iris-coins, Double is Votes times 2, Orga has fewer than Double persons as a participant, Bob is a member of Orga and Bob accepts Sum Dollar-denominated Iris-coins in payment. Vote to pay: Carol may vote to pay Bob Sum Iris-coins of Orga for Bob's work, provided Carol is a member of Orga and Orga has Bob as a participant.
+2. ■ Distribute: Alice may distribute an Iris-coin of Orga to Bob, provided Alice is a member of Orga, Orga holds the votes of at least Votes persons to distribute an Iris-coin to Bob, Double is Votes times 2, Orga has fewer than Double persons as a participant, Bob is a member of Orga, Bob accepts a Dollar-denominated Iris-coin in payment and Orga has distributed no more coins to Bob than to any other member. Vote to distribute: Carol may vote to distribute an Iris-coin of Orga to Bob, provided Carol is a member of Orga and Orga has Bob as a participant.
+Logic pragmas.
+Vocabulary: z holds v's vote to pay y n w-coins = vote_pay(z,v,y,w,n); z holds v's vote to distribute a w-coin to y = vote_distribute(z,v,y,w); z has distributed a coin to y = distributed(z,y); z has distributed no more coins to y than to any other member = least_share(z,y).
+After v votes to pay y n w-coins of z for y's work, which requires z does not hold v's vote to pay y n w-coins: z holds v's vote to pay y n w-coins.
+After x pays y n w-coins of z for y's work: no longer z holds n w-coins, y holds n w-coins and z holds no one's vote to pay y n w-coins.
+After v votes to distribute a w-coin of z to y, which requires z does not hold v's vote to distribute a w-coin to y: z holds v's vote to distribute a w-coin to y.
+After x distributes a w-coin of z to y: no longer z holds a w-coin, y holds a w-coin, z has distributed a coin to y and z holds no one's vote to distribute a w-coin to y.
+Environment: z has distributed no more coins to y than to any other member.

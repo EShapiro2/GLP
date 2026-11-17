@@ -47,7 +47,7 @@ UserContent ::= connect(Key)
               ; unfriend(Key)
               %% The super-app (GSG paper, Section 3).  install: the person
               %% installs a certified mini-app --- its module value, its
-              %% creator's certification, and the mini-app's end of its person
+              %% developer's warranty, and the mini-app's end of its person
               %% channel (the super-app user interface holds the other end; in
               %% a play, the play does), at the template's parameter, opaque to
               %% the super-app, which holds it at Opaque (TGLP modules.tex,
@@ -67,6 +67,8 @@ UserContent ::= connect(Key)
               %% trust: the person trusts a compiler's key (Section 6.4); the
               %% bundled compiler's, trusted by installing the super-app.
               ; trust(String)
+              %% trust_developer: the person trusts a developer's key, GPD:2.
+              ; trust_developer(Key)
               %% installed: the names of the mini-apps installed, for a play.
               ; installed(Stream(Constant)?)
               %% GPE:1, Open Place: the person declares the place they are in
@@ -207,13 +209,10 @@ Offer     ::= none ; offer(RootChannel(Opaque)).
 Consent   ::= none ; app(Constant).
 Kept      ::= none ; kept(Constant, RootChannel(Opaque)).
 
-%% The creator's certification, signed over the source identity together with
-%% the contract's act schemas and the checker's verdict (Sections 3 and 6.4).
-CreatorCert ::= creator_cert(String, Stream(Constant), Constant).
-
 %% Host state: the installed mini-apps, the attestations minted at the
-%% befriending, the invitations pending a volition, and the keys of the
-%% compilers the person trusts (the bundled compilers' by installation).
+%% befriending, the invitations pending a volition, and what the person
+%% trusts: the keys of the compilers (the bundled compilers' by installation)
+%% and the keys of the developers (GPD:2).
 %%   app(Name, Content, CreatorSig, Status), Content the module value load_file/2
 %%   gave (a Module where the certificate verified): Status is idle(Ui),
 %%   holding the mini-app's end of its person channel until activation, or
@@ -249,7 +248,8 @@ Pending      ::= invited(Constant, Key, String, RootChannel(Opaque))
                ; intro_via(Key, Key)
                ; held(GlobalName, Constant).
 PendingInv   ::= [] ; [Pending | PendingInv].
-Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
+Trust ::= trust(Stream(String), List(Key)).
+Host ::= host(AppList, AttestList, PendingInv, Trust).
 
 %% The vocabulary of the super-app's own person interface (core/home.vglp, its
 %% compilation home.glp): an ask on its ask stream, and the person's grants on

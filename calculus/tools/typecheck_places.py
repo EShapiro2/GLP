@@ -4,6 +4,8 @@ writes with two types: a number num(X), a speech-act variable or a constant val(
 place two alternatives of one functor and does not load.  Run from anywhere: python3 tools/typecheck_places.py
 """
 import sys, re, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import toglp
@@ -24,7 +26,7 @@ def kind(a):
     if a.startswith("'") or re.fullmatch(r'[A-Z]\w*', a): return 'name'
     return 'other'
 bad = {}
-names = sorted(f[:-4] for f in os.listdir(ROOT + '/sasx') if f.endswith('.txt'))
+names = NM.names_in(ROOT + '/sasx')
 for n in names:
     t = toglp.contract_term(n)[0]
     types = {}

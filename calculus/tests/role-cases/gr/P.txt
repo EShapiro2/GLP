@@ -1,0 +1,9 @@
+P: Greetings
+P extends Knowledge.
+Alice and Bob are persons.
+1. ■ Greet: Alice may greet Bob, with the consent of those who decide for Bob, provided Alice knows Bob.
+Logic pragmas.
+Vocabulary: x has greeted y = greeted(x,y).
+Roles: those who decide for z = deciders(z); the friends of z = friends(z).
+After x greets y: x has greeted y.
+Default: the friends of z for those who decide for z.

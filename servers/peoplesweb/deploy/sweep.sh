@@ -37,34 +37,30 @@ python3 -I servers/peoplesweb/tools/papers_sync.py || true
 # with the token in /etc/glp/github-papers-token, which Udi places; without it
 # nothing is published, and the site links the PDFs it serves.
 python3 -I servers/peoplesweb/tools/papers_publish.py || true
+# The verified posts of the feedback form, committed to the branch feedback of
+# GLP with the same token (tools/feedback_publish.py), from which Audit's
+# session opens their pull requests.
+python3 -I servers/peoplesweb/tools/feedback_publish.py || true
 chown -R glp:glp /var/lib/glp/papers
-# The Calculus (calculus/MIGRATION.md, the section Website): until each owner
-# adopts its contract, the Calculus's texts are on the branch Calculus of GLP.
-# It is fetched into a repository apart from the live clone, which is shallow
-# (deploy/test.sh says why), and its calculus/ is unpacked into
-# /var/lib/glp/calculus/site, which the live build and the test build read as
-# CALCULUS_DIR.  These are texts the build reads and nothing it runs.  Where
-# the branch is gone the directory is removed; where it cannot be fetched it
-# stays as it was, and the sweep goes on.
-CW=/var/lib/glp/calculus
-URL=$(git remote get-url origin)
-if sudo -u glp git ls-remote --exit-code --heads "$URL" Calculus >/dev/null 2>&1; then
-	{ sudo -u glp mkdir -p "$CW" &&
-	  { [ -d "$CW/repo" ] || sudo -u glp git init -q --bare "$CW/repo"; } &&
-	  sudo -u glp git -C "$CW/repo" fetch -q --depth 1 "$URL" Calculus &&
-	  sudo -u glp rm -rf "$CW/new" && sudo -u glp mkdir -p "$CW/new" &&
-	  sudo -u glp sh -c "git -C '$CW/repo' archive FETCH_HEAD calculus | tar -x -C '$CW/new'" &&
-	  sudo -u glp rm -rf "$CW/site" && sudo -u glp mv "$CW/new" "$CW/site"; } ||
-	  echo "sweep: the branch Calculus was not fetched; the site shows it as last fetched" >&2
-else
-	[ $? -eq 2 ] && rm -rf "$CW/site"
-fi
-sudo -u glp env PAPERS_DIR=/var/lib/glp/papers CALCULUS_DIR="$CW/site/calculus" python3 -I servers/peoplesweb/tools/build.py
-# The test site is under /test of Caddy's root and is not the live build's to
-# delete (deploy/test.sh).
-rsync -a --delete --exclude /test/ servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
+# The Calculus's texts are on main, in calculus/ and in each contract's record,
+# every contract being adopted there since 2026-11-16, and the build reads
+# them from the clone.  Until 2026-11-17 the sweep also unpacked the branch
+# Calculus of GLP into /var/lib/glp/calculus for the build to read; that
+# branch is closed, and its seven contracts under names main no longer has
+# showed on the site beside main's, 73 contracts for 66.  What it left on the
+# server is removed.
+rm -rf /var/lib/glp/calculus
+sudo -u glp env PAPERS_DIR=/var/lib/glp/papers python3 -I servers/peoplesweb/tools/build.py
+# The test site is under /next of Caddy's root and is not the live build's to
+# delete (deploy/test.sh).  Until 2026-11-17 it was under /test, which this
+# copy now removes.
+rsync -a --delete --exclude /next/ servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
 [ "$old" = "$new" ] || systemctl restart peoplesweb
-# The test site, peoplesweb.org/test: the site as the branch Website-site has it,
+# The test site, peoplesweb.org/next: the site as the branch Website-site has it,
 # over the repository as main has it.  Last, so that a failure there leaves
 # the live site published.
-sh servers/peoplesweb/deploy/test.sh || echo "sweep: the test site, peoplesweb.org/test, was not built" >&2
+sh servers/peoplesweb/deploy/test.sh || echo "sweep: the test site, peoplesweb.org/next, was not built" >&2
+# Until 2026-11-17 a second site, built by a script of its own, showed at
+# /next the contracts' new names before they were made on main; what it left
+# on the server is removed.
+rm -rf /var/lib/glp/next
