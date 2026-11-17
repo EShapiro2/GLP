@@ -14,33 +14,33 @@ Children
 13. ■ Post own.  A member of a group may send a message to the group.
 14. ■ Deliver.  Its leader delivers it to every current member.
 15. ■ Deliver leader.  Its leader delivers it to every current member.
-16. ◆ Enter.  Alice may create a child, Carol, and establish Carol's identity by choosing Carol's key pair, only if Alice is a legal parent of the minor who operates Carol, and Carol must consent.
-17. ■ Make parent.  Those who decide for Carol may make Bob, a friend of a parent of Carol, a parent and a friend of Carol, with the consent of Bob.
-18. ■ Resign.  Bob may end his guardianship of Carol.
-19. ■ End parent.  Those who decide for Carol, other than Bob, may end Bob's guardianship.
-20. ■ Parent unfriend.  Bob may end his friendship with Carol, which ends his guardianship.
-21. ■ Child acquaint.  Carol, a child of Alice, and Bob may jointly come to know each other, only if Alice knows Bob, and with the consent of Alice.
-22. ■ Child befriend.  Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends.
-23. ■ Child end.  Carol, Bob or Alice may end the relation of Bob and Carol.
-24. ■ Unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
-25. ■ Child unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
-26. ■ Children acquaint.  Carol, a child of Alice, and Dave, a child of Bob, may jointly come to know each other, only if Alice knows Dave and Bob knows Carol, and with the consent of Alice and Bob, who know each other, Alice and Bob possibly one person.
-27. ■ Children befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
-28. ■ Children of one parent befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
-29. ■ Retire.  Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
-30. ■ Child message.  Carol may send a message to a friend (Groups:1).
-31. ■ Child post.  Carol may send a message to a group (Groups:4).
-32. ■ Child post own.  Carol may send a message to a group (Groups:4).
-33. ■ Child create.  Carol may create a group (Groups:2), only with the consent of Alice, a parent of Carol.
-34. ■ Child close.  Carol may close it (Groups:2).
-35. ■ Parent close.  Alice, a parent of Carol, may close it.
-36. ■ Child join.  Carol may join a group (Groups:3) only with the consent of Alice, a parent of Carol.
-37. ■ Children join.  Carol may join a group (Groups:3) only with the consent of Alice, a parent of Carol.
-38. ■ Children of one parent join.  Carol may join a group (Groups:3) only with the consent of Alice, a parent of Carol.
-39. ■ Child withdraw.  Carol may join a group (Groups:3) only with the consent of Alice, a parent of Carol.
-40. ■ Child leave.  Carol may join a group (Groups:3) only with the consent of Alice, a parent of Carol.
-41. ■ Child remove.  Carol may join a group (Groups:3) only with the consent of Alice, a parent of Carol.
-42. ○ Of age.  The creator of Carol may declare Carol of age, which ends every guardianship of Carol, and Carol is then a person.
+16. ◆ Enter.  Alice may create a child, Wendy, and establish Wendy's identity by choosing Wendy's key pair, only if Alice is a legal parent of the minor who operates Wendy, and Wendy must consent.
+17. ■ Make parent.  Those who decide for Wendy may make Bob, a friend of a parent of Wendy, a parent and a friend of Wendy, with the consent of Bob.
+18. ■ Resign.  Bob may end his guardianship of Wendy.
+19. ■ End parent.  Those who decide for Wendy, other than Bob, may end Bob's guardianship.
+20. ■ Parent unfriend.  Bob may end his friendship with Wendy, which ends his guardianship.
+21. ■ Child acquaint.  Wendy, a child of Alice, and Bob may jointly come to know each other, only if Alice knows Bob, and with the consent of Alice.
+22. ■ Child befriend.  Wendy may enter a relation with Bob with the consent of Bob and Alice, provided Wendy and Bob know each other and Alice and Bob are friends.
+23. ■ Child end.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+24. ■ Unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+25. ■ Child unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+26. ■ Children acquaint.  Wendy, a child of Alice, and Will, a child of Bob, may jointly come to know each other, only if Alice knows Will and Bob knows Wendy, and with the consent of Alice and Bob, who know each other, Alice and Bob possibly one person.
+27. ■ Children befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+28. ■ Children of one parent befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+29. ■ Retire.  Those who decide for Wendy may retire Wendy; every guardianship and relation of Wendy then ends and Wendy can take no act.
+30. ■ Child message.  Wendy may send a message to a friend (Groups:1).
+31. ■ Child post.  Wendy may send a message to a group (Groups:4).
+32. ■ Child post own.  Wendy may send a message to a group (Groups:4).
+33. ■ Child create.  Wendy may create a group (Groups:2), only with the consent of Alice, a parent of Wendy.
+34. ■ Child close.  Wendy may close it (Groups:2).
+35. ■ Parent close.  Alice, a parent of Wendy, may close it.
+36. ■ Child join.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
+37. ■ Children join.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
+38. ■ Children of one parent join.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
+39. ■ Child withdraw.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
+40. ■ Child leave.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
+41. ■ Child remove.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
+42. ○ Of age.  The creator of Wendy may declare Wendy of age, which ends every guardianship of Wendy, and Wendy is then a person.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -59,54 +59,54 @@ Remove: Alice [Remove]
 Leave: Bob [Leave]
 Post: Bob [Post] <text>
 Post own: Alice [Post own] <text>
-Enter: Alice [Enter] <carol>
-Make parent: Bob [Make parent] <carol>
+Enter: Alice [Enter] <wendy>
+Make parent: Bob [Make parent] <wendy>
   Decider: Bob asks for your consent to make parent.
   Codecider: Bob asks for your consent to make parent.
 Resign: Bob [Resign]
 End parent: Decider [End parent] <bob>
   Codecider: Decider asks for your consent to end parent.
 Parent unfriend: Bob [Parent unfriend]
-Child acquaint: Carol [Child acquaint] <bob>
-  Bob: Carol asks for your consent to child acquaint.
-  Alice: Carol asks for your consent to child acquaint.
-Child befriend: Carol [Child befriend]
-  Bob: Carol asks for your consent to child befriend.
-  Alice: Carol asks for your consent to child befriend.
-Child end: Carol [Child end]
+Child acquaint: Wendy [Child acquaint] <bob>
+  Bob: Wendy asks for your consent to child acquaint.
+  Alice: Wendy asks for your consent to child acquaint.
+Child befriend: Wendy [Child befriend]
+  Bob: Wendy asks for your consent to child befriend.
+  Alice: Wendy asks for your consent to child befriend.
+Child end: Wendy [Child end]
 Unfriend: Bob [Unfriend]
-Child unfriend: Alice [Child unfriend] <carol> <bob>
-Children acquaint: Carol [Children acquaint] <dave> <bob>
-  Dave: Carol asks for your consent to children acquaint.
-  Alice: Carol asks for your consent to children acquaint.
-  Bob: Carol asks for your consent to children acquaint.
-Children befriend: Carol [Children befriend] <bob>
-  Dave: Carol asks for your consent to children befriend.
-  Alice: Carol asks for your consent to children befriend.
-  Bob: Carol asks for your consent to children befriend.
-Children of one parent befriend: Carol [Children of one parent befriend]
-  Dave: Carol asks for your consent to children of one parent befriend.
-  Alice: Carol asks for your consent to children of one parent befriend.
+Child unfriend: Alice [Child unfriend] <wendy> <bob>
+Children acquaint: Wendy [Children acquaint] <will> <bob>
+  Will: Wendy asks for your consent to children acquaint.
+  Alice: Wendy asks for your consent to children acquaint.
+  Bob: Wendy asks for your consent to children acquaint.
+Children befriend: Wendy [Children befriend] <bob>
+  Will: Wendy asks for your consent to children befriend.
+  Alice: Wendy asks for your consent to children befriend.
+  Bob: Wendy asks for your consent to children befriend.
+Children of one parent befriend: Wendy [Children of one parent befriend]
+  Will: Wendy asks for your consent to children of one parent befriend.
+  Alice: Wendy asks for your consent to children of one parent befriend.
 Retire: Decider [Retire]
   Codecider: Decider asks for your consent to retire.
-Child message: Carol [Child message] <text>
-Child post: Carol [Child post] <text>
-Child post own: Carol [Child post own] <text>
-Child create: Carol [Child create] <grupo>
-  Alice: Carol asks for your consent to child create.
-Child close: Carol [Child close]
+Child message: Wendy [Child message] <text>
+Child post: Wendy [Child post] <text>
+Child post own: Wendy [Child post own] <text>
+Child create: Wendy [Child create] <grupo>
+  Alice: Wendy asks for your consent to child create.
+Child close: Wendy [Child close]
 Parent close: Alice [Parent close] <grupo>
 Child join: Bob [Child join]
-  Carol: Bob asks for your consent to child join.
+  Wendy: Bob asks for your consent to child join.
   Alice: Bob asks for your consent to child join.
-Children join: Carol [Children join] <bob>
-  Dave: Carol asks for your consent to children join.
-  Alice: Carol asks for your consent to children join.
-  Bob: Carol asks for your consent to children join.
-Children of one parent join: Carol [Children of one parent join]
-  Dave: Carol asks for your consent to children of one parent join.
-  Alice: Carol asks for your consent to children of one parent join.
+Children join: Wendy [Children join] <bob>
+  Will: Wendy asks for your consent to children join.
+  Alice: Wendy asks for your consent to children join.
+  Bob: Wendy asks for your consent to children join.
+Children of one parent join: Wendy [Children of one parent join]
+  Will: Wendy asks for your consent to children of one parent join.
+  Alice: Wendy asks for your consent to children of one parent join.
 Child withdraw: Alice [Child withdraw] <bob> <grupo>
-Child leave: Carol [Child leave]
-Child remove: Carol [Child remove]
+Child leave: Wendy [Child leave]
+Child remove: Wendy [Child remove]
 Of age: Alice [Of age]

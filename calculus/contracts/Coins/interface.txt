@@ -6,9 +6,9 @@ Coins
 5. ■ Swap.  Alice and Bob, who know each other, may jointly swap notes they hold.
 6. ■ Pay.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
 7. ■ Pay issuer.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
-8. ■ Deposit.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol.
-9. ■ Release.  Carol and Bob may jointly release them to Bob.
-10. ■ Return.  Carol and Alice may jointly return them to Alice.
+8. ○ Deposit.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol.
+9. ○ Release.  Carol and Bob may jointly release them to Bob.
+10. ○ Return.  Carol and Alice may jointly return them to Alice.
 11. ■ Redeem.  Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
 Pragmas
 Establish: Alice [Establish]
