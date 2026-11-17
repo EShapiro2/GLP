@@ -14,7 +14,7 @@
 #   H - retired (old-generation CSSN modules); CSSN is Section K
 #   I - self.glp Procedure Tests (shared procs, shadowing, local shadow, type error)
 #   J - CSSG v2 Modules (child_agent with parent(X) output keys)
-#   K - CSSN, the child-safe social network (programs/cssn): the canonical platform of CSSN.glp and the village
+#   K - CSSN, the child-safe social network (programs/cssn): the canonical platform of Children.glp and the village
 #   L - Dynamic Module Dispatch Tests (activate + M # goal)
 #   M - Multi-Isolate (madGLP) Tests (dart test, one isolate per agent; run in Section Q)
 #   N - Currencies Modules (project-directory loading, plays 1-12)
@@ -2623,8 +2623,8 @@ fi  # Section I
 if _section K; then
 # =============================================================================
 # Section K: the child-safe social network (programs/cssn), CSSN Section 4:
-# its program is the canonical CVA platform of its contract, programs/cssn/
-# CSSN.glp (CSSN Appendix B.2), which vGLP's compiler prints, platform.vglp
+# its program is the canonical CVA platform of its contract, Children,
+# programs/cssn/Children.glp (CSSN Appendix B.2), which vGLP's compiler prints, platform.vglp
 # (programs/cssn/compile.sh), wrapped as a mini-app of the Grassroots
 # Super-App by the entry miniapp/3 (miniapp.glp, the same file as the apps'),
 # certified; and the village of CSSN Section 4.6, "Village Demonstration"
@@ -2641,36 +2641,35 @@ echo ""
 
 CSSN_DIR="$GLP_DIR/programs/cssn"
 
-# The contract's act schemas (CSSN Appendix C.2), programs/cssn/CSSN.glp, in
-# the term form programs/gsc reads (CSSN.glp at a261cb74, its comments at
-# 89e11f96, CSSN #9 Cowork): GSC's verdict on it, by the conditions for a
+# The contract's act schemas (CSSN Appendix C.2), programs/cssn/Children.glp,
+# in the term form programs/gsc reads, printed by calculus/tools/adopt.py: GSC's verdict on it, by the conditions for a
 # contract with wards (GAI ddf0a33, sections/wards.tex; CSSN, Appendix B.4):
 # "The marks are child, its guardianship (child, identity, parent,
 # parenting), its leaving mark retired, the introductory act acquaint, which
 # adds knows, and the relay acts child_acquaint and child_acquaint_2, by which GSC's
 # checker certifies the contract syntactically grassroots with wards"
-# (CSSN.glp), with traceable provenance and volition.  The platform committed
+# (CSSN, Appendix B.4), with traceable provenance and volition.  The platform committed
 # in programs/cssn is what the compiler prints from it (compile.sh --check)
-# and the platform of the record of the cascade on CSSN.
-echo "--- CSSN contract, GSC's verdict, the platform ---"
+# and the platform of the record of the cascade on Children.
+echo "--- Children contract, GSC's verdict, the platform ---"
 k_contract=$(bash "$CSSN_DIR/compile.sh" --check 2>&1; echo "exit $?")
-check "CSSN contract: GSC gives a verdict" "verdict: " "$k_contract"
-check "CSSN contract: syntactically grassroots with wards, acquaint the introductory act, child the mark, its guardianship" "verdict: syntactically_grassroots_with_wards(acquaint, \[child\], \[guardianship(child, parent, has_parent)\], " "$k_contract"
-check "CSSN contract: ... child_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(child_acquaint, " "$k_contract"
-check "CSSN contract: ... children_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(children_acquaint, " "$k_contract"
-check "CSSN contract: ... identity and person the atoms its introductory act requires" "verdict: syntactically_grassroots_with_wards(.*, \[identity, person\])$" "$k_contract"
-check_not "CSSN contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
-check_not "CSSN contract: it satisfies volition" "volition(" "$k_contract"
-check_not "CSSN contract: it is not malformed" "malformed(" "$k_contract"
+check "Children contract: GSC gives a verdict" "verdict: " "$k_contract"
+check "Children contract: syntactically grassroots with wards, acquaint the introductory act, child the mark, its guardianship" "verdict: syntactically_grassroots_with_wards(acquaint, \[child\], \[guardianship(child, parent, has_parent)\], " "$k_contract"
+check "Children contract: ... child_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(child_acquaint, " "$k_contract"
+check "Children contract: ... children_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(children_acquaint, " "$k_contract"
+check "Children contract: ... identity and person the atoms its introductory act requires" "verdict: syntactically_grassroots_with_wards(.*, \[identity, person\])$" "$k_contract"
+check_not "Children contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
+check_not "Children contract: it satisfies volition" "volition(" "$k_contract"
+check_not "Children contract: it is not malformed" "malformed(" "$k_contract"
 # The canonical CVA platform of the contract (vGLP a890465, Section 5.4, "Act schemas as local specifications": "the listed roles of a schema have one base, which is its only guarding role or, if it is not a guarding role, its first role"): child_close(r, p?, r[listed(*, n)] ; n), its listed role based at r, its first role, which does not guard, compiles, r the opener of the part p guards (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, items 1 and 5).
-check "CSSN contract: compiled to its canonical CVA platform, platform.vglp as the compiler prints it" "^platform.vglp: as printed$" "$k_contract"
-check "CSSN contract: compile.sh --check exits 0" "^exit 0$" "$k_contract"
-# CSSN, Section 4.6.1, "The program": compiled "with knows its introduction predicate" (CSSN.glp, introduction_named(cssn, introduction(knows)), after GKK).
-check "CSSN contract: compiled with knows its introduction predicate" "^introduction: introduction(knows)$" "$k_contract"
-if cmp -s "$CSSN_DIR/platform.vglp" "$GLP_DIR/cascade/CSSN/platform.vglp"; then
-    _check_pass "CSSN: platform.vglp is the platform of the recorded run of the cascade on CSSN"
+check "Children contract: compiled to its canonical CVA platform, platform.vglp as the compiler prints it" "^platform.vglp: as printed$" "$k_contract"
+check "Children contract: compile.sh --check exits 0" "^exit 0$" "$k_contract"
+# CSSN, Section 4.6.1, "The program": compiled "with knows its introduction predicate" (Children.glp, introduction_named(children, introduction(knows)), after Knowledge).
+check "Children contract: compiled with knows its introduction predicate" "^introduction: introduction(knows)$" "$k_contract"
+if cmp -s "$CSSN_DIR/platform.vglp" "$GLP_DIR/cascade/Children/platform.vglp"; then
+    _check_pass "CSSN: platform.vglp is the platform of the recorded run of the cascade on Children"
 else
-    _check_fail "CSSN: platform.vglp is the platform of the recorded run of the cascade on CSSN" "programs/cssn/platform.vglp differs from cascade/CSSN/platform.vglp"
+    _check_fail "CSSN: platform.vglp is the platform of the recorded run of the cascade on Children" "programs/cssn/platform.vglp differs from cascade/Children/platform.vglp"
 fi
 if cmp -s "$GLP_DIR/programs/apps/gsg/miniapp.glp" "$CSSN_DIR/miniapp.glp"; then
     _check_pass "CSSN: miniapp.glp is the same file as the apps'"
