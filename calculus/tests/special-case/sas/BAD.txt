@@ -1,4 +1,0 @@
-BAD: A restriction for a kind it does not have
-BAD restricts Coins.
-BAD:0 - | Alice is a party, Day a maturity date, Today a date.
-BAD:1 ■ Issue bond: Notes:1, for bonds <- gt(Day,Today).

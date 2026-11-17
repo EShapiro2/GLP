@@ -1,7 +1,0 @@
-E: Both paths (expanded schemas)
-B:0 - | Alice, Bob and Carol are persons, Sum a number.
-B:1+C:1 ■ Pay free: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice.
-C:0 - | Alice, Bob and Carol are persons, Sum a number.
-R:0 - | Alice, Bob and Carol are persons, Sum a number.
-E:0 - | Alice, Bob and Carol are persons, Sum a number.
-E:1 ■ Greet: greeted(Alice,Bob) <- guarded by Alice.

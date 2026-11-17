@@ -1,8 +1,0 @@
-Guardians
-Guardians extends Knowledge.
-Vocabulary: x is a guardian of y = guardian(x,y).
-After x makes y a guardian: y is a guardian of x.
-Guardians:0 - | A *guardian* of a ward decides for it. The *decision rule*, a parameter of Guardians, says who decides for a ward and how.
-Guardians:0 - | Alice and Bob are persons.
-Guardians:1 ■ Appoint: guardian(Bob,Alice) <- knows(Alice,Bob) guarded by Alice.
-Guardians:1 ■ | Guardians are persons.

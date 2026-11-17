@@ -1,4 +1,0 @@
-D: Willing
-Of C: Alice is a person.
-Of D: Alice is a person.
-C:1, D:1. ■ Signal: Alice may signal, provided Alice is willing.

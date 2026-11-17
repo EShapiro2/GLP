@@ -1,5 +1,0 @@
-RD: Ruled at its default (expanded schemas)
-R:0 - | Alice is a person, Carol a ward.
-R:0 - | Default: any guardian of z for those who decide for z.
-R:1 ■ Retire: retired(Carol) <- ~retired(Carol) guarded by any_guardian(Carol).
-RD:0 - | Carol is a ward.

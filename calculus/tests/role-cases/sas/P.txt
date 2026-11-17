@@ -1,8 +1,0 @@
-P: Greetings
-P extends Knowledge.
-Vocabulary: x has greeted y = greeted(x,y).
-Roles: those who decide for z = deciders(z); the friends of z = friends(z).
-After x greets y: x has greeted y.
-P:0 - | Alice and Bob are persons.
-P:0 - | Default: the friends of z for those who decide for z.
-P:1 ■ Greet: greeted(Alice,Bob) <- knows(Alice,Bob) guarded by Alice, deciders(Bob).

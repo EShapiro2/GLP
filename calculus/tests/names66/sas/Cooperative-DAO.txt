@@ -1,3 +1,0 @@
-Cooperative DAO
-Cooperative DAO composes Cooperative with DAO.
-Cooperative DAO:0 - | A *cooperative DAO* is a cooperative that delegates as a DAO does.

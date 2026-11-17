@@ -1,4 +1,0 @@
-C: Relaxed with a condition
-C relaxes B.
-Alice, Bob and Carol are persons, Sum a number.
-1. ■ Pay known: B:1 Pay, without the consent of Bob, if Bob knows Alice.

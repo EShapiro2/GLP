@@ -1,6 +1,0 @@
-E: Both, the other order
-Of C: Alice is a person.
-Of Q: Alice is a person.
-Of P: Alice is a person.
-Of E: Alice is a person.
-C:1, Q:1, P:1. ■ Signal: Alice may signal, provided Alice is qualified and Alice is willing.

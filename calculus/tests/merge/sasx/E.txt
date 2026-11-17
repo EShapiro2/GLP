@@ -1,6 +1,0 @@
-E: Both, the other order (expanded schemas)
-C:0 - | Alice is a person.
-C:1+Q:1+P:1 ■ Signal: s(Alice) <- q(Alice), w(Alice) guarded by Alice.
-Q:0 - | Alice is a person.
-P:0 - | Alice is a person.
-E:0 - | Alice is a person.
