@@ -530,7 +530,7 @@ requests_split([again(N) | Ts], [again(N?) | As?], Bs?) :- requests_split(Ts?, A
 requests_split([T | Ts], As?, [T? | Bs?]) :- otherwise | requests_split(Ts?, As, Bs).
 
 procedure trust_change(App?, St?, Stream(Output), Stream(Output)?).
-trust_change(Ap0, St, T?, T1) :- ground(Ap0?), ground(St?) | app_recs(Ap0?, R0), st_app(St?, Ap1), app_recs(Ap1?, R1), trust_schemas(Ts0), trust_schemas(Ts1), live_trust(Ts0?, R0?, B0), live_trust(Ts1?, R1?, B1), trust_out(B0?, B1?, T, T1).
+trust_change(Ap0, St, T?, T1) :- ground(Ap0?), ground(St?) | app_recs(Ap0?, R0), st_app(St?, Ap1), app_recs(Ap1?, R1), trust_schemas(Ts0), trust_schemas(Ts1), live_trust(Ts0?, R0?, B0), live_trust(Ts1?, R1?, B1), trust_out(B0?, B1?, T, T1?).
 
 procedure live_trust(Preds?, Recs?, YesNo).
 live_trust([], _, no).

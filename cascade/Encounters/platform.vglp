@@ -949,7 +949,7 @@ trust_change(Ap0, St, T?, T1) :- ground(Ap0?), ground(St?) |
     trust_schemas(Ts1),
     live_trust(Ts0?, R0?, B0),
     live_trust(Ts1?, R1?, B1),
-    trust_out(B0?, B1?, T, T1).
+    trust_out(B0?, B1?, T, T1?).
 procedure live_trust(Preds?, Recs?, YesNo).
 live_trust([], _, no).
 live_trust([S|Ss], R, B?) :- ground(S?), ground(R?) |
