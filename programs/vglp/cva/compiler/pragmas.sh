@@ -220,9 +220,11 @@ sub find_schemas {
             for my $e (@{ $t->[1][1][1] }) {
                 $i++;
                 next unless $e->[0] eq "one";
-                (my $o = $e->[1][1][0]) =~ s/^\x27|\x27$//g;
-                my ($j) = grep { $rnames{$n}[$_ - 1] eq $o } 1 .. scalar @{ $rnames{$n} };
-                push @{ $ones{$n} }, [$i, $j] if defined $j;
+                # Its others, one or a list (the Calculus prints one(Name, Others), GSC #19 and Calculus #8, 2026-11-17), each read as above.
+                for my $o (map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($e->[1][1][0] eq "[]" ? map { $_->[0] } @{ $e->[1][1][1] } : ($e->[1][1][0]))) {
+                    my ($j) = grep { $rnames{$n}[$_ - 1] eq $o } 1 .. scalar @{ $rnames{$n} };
+                    push @{ $ones{$n} }, [$i, $j] if defined $j;
+                }
             }
         }
         my @rs;
@@ -248,12 +250,16 @@ sub find_schemas {
                 $i++;
                 next unless $e->[0] eq "one";
                 (my $nm = $e->[1][0][0]) =~ s/^\x27|\x27$//g;
-                (my $o = $e->[1][1][0]) =~ s/^\x27|\x27$//g;
                 my $me = $i <= $k ? "r$i" : "v$nm";
-                my $ot = $o eq "_" ? "_" : exists $isrole{$o} ? "r$isrole{$o}" : "v$o";
-                next if $me =~ /^r/ && $ot =~ /^r/;
-                push @{ $vmarks{$n} }, [$me, $ot];
+                for my $o (map { (my $x = $_) =~ s/^\x27|\x27$//g; $x } ($e->[1][1][0] eq "[]" ? map { $_->[0] } @{ $e->[1][1][1] } : ($e->[1][1][0]))) {
+                    my $ot = $o eq "_" ? "_" : exists $isrole{$o} ? "r$isrole{$o}" : "v$o";
+                    next if $me =~ /^r/ && $ot =~ /^r/;
+                    push @{ $vmarks{$n} }, [$me, $ot];
+                }
             }
+        } else {
+            # A schema that declares no names, as the compiler\x27s fixtures write it, has no names to keep apart: each agent variable possibly any of the others.
+            for my $h (@{ $head{$n} // [] }) { next unless ref $h && $h->[0] eq "pvar"; (my $vn = $h->[1][0][0]) =~ s/^\x27|\x27$//g; push @{ $vmarks{$n} }, ["v$vn", "_"] }
         }
         return;
     }
@@ -332,6 +338,61 @@ sub any_head { my ($x) = @_; return iface_head($x) || impl_head($x) }
 # An adopted contract carries its Logic pragmas after its clauses, under the line "Logic pragmas", and its Interface pragmas after them (calculus/README.md, "Adopting a contract"): the contract ends at that line, and the lines from it to the next heading of pragmas are skipped, the clauses they repeat being no clauses of the contract.
 sub logic_head { my ($x) = @_; return $x eq "Logic pragmas" }
 sub contract_end { my ($x) = @_; return any_head($x) || logic_head($x) }
+# A line a contract inherits from its base is read with the names the contract gives the persons of the acts it names, wherever they differ from the base\x27s: "the inherited line is read with Orga for Wendy wherever the instance renames the role, and every other name of the base\x27s line as the instance names it" (GSC #19, vGLP_inbox.md, 2026-11-17 12:33 UTC; GSC, Section 2: "A name in a pragma is the schema\x27s role of that name"; the Calculus\x27s Definition Operations, instantiation).  A name maps to the name at the same place of the same act\x27s schema, among its roles and among its agent variables, in the base\x27s term, its NAME.glp beside its NAME.txt, and in the contract\x27s term.
+my %base_names;
+sub top_split {
+    my ($s) = @_;
+    my (@out, $d, $cur); $d = 0; $cur = "";
+    for my $ch (split //, $s) {
+        if ($ch eq "," && $d == 0) { push @out, $cur; $cur = ""; next }
+        $d++ if $ch eq "(" || $ch eq "["; $d-- if $ch eq ")" || $ch eq "]";
+        $cur .= $ch;
+    }
+    push @out, $cur if $cur =~ /\S/;
+    return @out;
+}
+sub read_base_names {
+    my ($f) = @_;
+    return $base_names{$f} if exists $base_names{$f};
+    my %bn;
+    (my $g = $f) =~ s/\.txt$/.glp/;
+    if (-f $g && open my $h, "<", $g) {
+        my $t = do { local $/; <$h> };
+        close $h;
+        $t =~ s/^\s*%.*$//mg;
+        while ($t =~ /\bsas\(\s*(\w+)\s*,\s*(?=\[)/g) {
+            my $sn = $1; my $at = pos($t);
+            my ($ns, $next) = inside($t, $at);
+            my $rest = substr($t, $next);
+            $rest =~ /^\s*,\s*\[/ or next;
+            my ($vs) = inside($rest, index($rest, "["));
+            my @names = map { /^\s*(?:one\(\s*)?\x27([^\x27]*)\x27/ ? $1 : () } top_split($ns);
+            my @vars = map { /^\s*\x27([^\x27]*)\x27/ ? $1 : () } top_split($vs);
+            my %isv = map { $_ => 1 } @vars;
+            my %isn = map { $_ => 1 } @names;
+            $bn{$sn} = { roles => [ grep { !$isv{$_} } @names ], vars => [ grep { $isn{$_} } @vars ] };
+        }
+    }
+    return $base_names{$f} = \%bn;
+}
+sub inst_renamed {
+    my ($f, $rest) = @_;
+    my $bn = read_base_names($f);
+    my %map;
+    while ($rest =~ /\[([^\]]+)\]/g) {
+        my $sb = act_name($1); my $si = act_name(bound_button($1));
+        next unless exists $bn->{$sb} && exists $rnames{$si};
+        my @br = @{ $bn->{$sb}{roles} }; my @ir = @{ $rnames{$si} };
+        for my $i (0 .. $#br) { next unless defined $ir[$i]; $map{ $br[$i] } //= $ir[$i] if $br[$i] ne $ir[$i] }
+        my @iv = map { (ref $_ && $_->[0] eq "pvar") ? do { (my $x = $_->[1][0][0]) =~ s/^\x27|\x27$//g; $x } : () } @{ $head{$si} // [] };
+        my @bv = @{ $bn->{$sb}{vars} };
+        for my $j (0 .. $#bv) { next unless defined $iv[$j]; $map{ $bv[$j] } //= $iv[$j] if $bv[$j] ne $iv[$j] }
+    }
+    return $rest unless %map;
+    my $alt = join("|", map { quotemeta } sort { length($b) <=> length($a) || $a cmp $b } keys %map);
+    $rest =~ s/\b($alt)\b/$map{$1}/g;
+    return $rest;
+}
 # An instance\x27s own names for the schemas of its base (GSC 22605d6, Section 8, Definition Parametric contract: "An instantiation may also write names of its own for schemas of the contract, a different one for each, so that an act bears the name its instance gives it"): the bindings of instance_named(<name>, Base, Bindings, Additions) in the NAME.glp beside the contract\x27s NAME.txt, a schema of the base bound to the instance\x27s name for it, as ward_acquaint = agent_acquaint (Agents.glp).  A button of a line the instance inherits that names a schema so bound bears the instance\x27s name, [Ward acquaint] reading as [Agent acquaint], so that an act bears the name its instance gives it and the instance\x27s own line of that button replaces it.
 my %bind;
 sub read_bindings {
@@ -685,6 +746,7 @@ for my $f (@order) {
             push @lines_out, "\x03$#pending";
         };
         # A pragma line (GSC 25b6b3c, Section 2, its first paragraph; the guide, step 7; vGLP 8aa82f0, Section 5.4, "The contract words"): the line names the person who proposes, then a button for each act they propose and any field they fill; an indented line names another person who proposes, likewise, or a person asked, a colon and the question put to them, a question line belonging to the nearest button line above it.  "A name in a pragma is the schema role of that name, the schemas naming their roles as the clauses do" (GSC 25b6b3c, Section 2): each name is the role its schema term names so, $rnames{S}, and a name no role of the schema bears, in a question, is the agent variable of an act with one, as Carol of GKK:3 is c of introduce, filled by its field; any other is a fault.  "A button is offered only to the person named before it", by([G]), G the role of that person, which must be guarding; "the persons named before the questions are asked", each question put to the role of the person it names, the proposer having []; and "a person no line names is never asked", so a guarding role an act needs that the line names neither as its proposer nor as asked is a fault, the act never asking that person.  A question naming the one guarding role of an act is text of its request form.
+        $rest = inst_renamed($f, $rest) if $f ne $top;
         if ($rest !~ /^\[/) {
             my @parts = split /\x01/, $rest;
             # A name in a pragma is the schema\x27s role of that name, a name the contract\x27s declaration gives a person or a ward (vGLP 722343d, Section 5.4), whichever contract\x27s declaration gave it: the declared names and the names of the roles of the contract\x27s schemas, each line\x27s names then held to the roles of the schemas its buttons name (below).
@@ -806,10 +868,10 @@ for my $f (@order) {
                                 for my $h (@{ $head{$S} // [] }) { $vi++; next unless ref $h && $h->[0] eq "pvar"; (my $vn = $h->[1][0][0]) =~ s/^\x27|\x27$//g; $kplace{"v$vn"} = $nr + $vi }
                                 my %seen = map { $_ => 1 } @same;
                                 for my $m (@{ $vmarks{$S} }) {
-                                    my ($a, $b) = @$m;
-                                    next unless exists $kplace{$a};
-                                    my @bs = $b eq "_" ? (grep { $_ ne $a } keys %kplace) : (exists $kplace{$b} ? ($b) : ());
-                                    for my $bb (@bs) { my $x = "same($kplace{$a}, $kplace{$bb})"; push @same, $x unless $seen{$x}++ }
+                                    my ($ma, $mb) = @$m;
+                                    next unless exists $kplace{$ma};
+                                    my @bs = $mb eq "_" ? (grep { $_ ne $ma } sort { $kplace{$a} <=> $kplace{$b} } keys %kplace) : (exists $kplace{$mb} ? ($mb) : ());
+                                    for my $bb (@bs) { my $x = "same($kplace{$ma}, $kplace{$bb})"; push @same, $x unless $seen{$x}++ }
                                 }
                             }
                             $by{$S} = @same ? "by([$pl], [" . join(", ", @same) . "])" : "by([$pl])";

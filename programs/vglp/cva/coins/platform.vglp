@@ -102,9 +102,15 @@ schema_ones(pay, [])
 .
 schema_ones(_, []) :- otherwise | true.
 
-VOne      ::= vone(Var, Var) ; vone_any(Var).
+VOne      ::= vone(Var, Var) ; vone_any(Var) ; vone_all.
 VOnes     ::= [] ; [VOne | VOnes].
 procedure schema_vones(Constant?, VOnes).
+schema_vones(mint, [vone_all])
+.
+schema_vones(swap, [vone_all])
+.
+schema_vones(pay, [vone_all])
+.
 schema_vones(_, []) :- otherwise | true.
 
 procedure schema_consents(Constant?, Ints).
@@ -6050,6 +6056,7 @@ vpair_ok(K, X, L, Y, Vo, R?) :- otherwise, X? =?= Y? | vone_in(K?, L?, Vo?, R).
 vpair_ok(_, _, _, _, _, yes) :- otherwise | true.
 procedure vone_in(Var?, Var?, VOnes?, YesNo).
 vone_in(_, _, [], no).
+vone_in(_, _, [vone_all|_], yes).
 vone_in(K, L, [vone(A, B)|_], yes) :- K? =?= A?, L? =?= B? | true.
 vone_in(K, L, [vone(A, B)|_], yes) :- K? =?= B?, L? =?= A? | true.
 vone_in(K, _, [vone_any(A)|_], yes) :- K? =?= A? | true.
