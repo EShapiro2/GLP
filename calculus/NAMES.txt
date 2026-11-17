@@ -1,5 +1,6 @@
-The names of the 66 contracts, for the publication after that of 2026-11-16 (Udi, 2026-11-16, to Calculus #8).
-Not yet made: on main the contracts have the names of the first column.
+The names of the 66 contracts (Udi, 2026-11-16, to Calculus #8), on main since 24318f2c (2026-11-17).
+The first and the fifth column are the names, rows and atoms of before the renaming; their headings keep their words,
+since the readers of this table find it by them.
 
 A name is one plain word, or two in their English order.  The title line of a contract is its name.
 
@@ -22,7 +23,7 @@ An apostrophe in a name is the ASCII one, ', in the table and in every contract.
 A test may add made-up contracts: rows of the same form after the table's, in a table of its own that it builds from
 this one.
 
-The fifth column is the row and atom on main today, before the renaming: the name on main in lower case, every
+The fifth column is the row and atom before the renaming: the name of the first column in lower case, every
 character that is not a letter or a digit an underscore.
 
 name on main | name | file name | row and atom | row and atom on main

@@ -1,10 +1,10 @@
 Backed Currency (flat text)
-Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Knowledge:0 - | Alice, Bob and Carol are persons.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
-Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2+Guardians:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
 Knowledge:3+Guardians:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
@@ -14,7 +14,7 @@ Friendship:1 ○ | Alice and Bob will become friends only if they trust each oth
 Friendship:2+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Guardians:0 - | Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for it.
+Guardians:0 - | Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
 Guardians:0 - | Alice and Bob are persons, Carol and Dave organisations; in clause 4 Alice and Bob are possibly one person.
 Guardians:0 - | Default: any officer of z for those who decide for z.
 Guardians:1 ■ Enter: Alice and Carol may jointly Carol has an identity, Carol is an organisation, Carol has Alice as an officer, Alice is the creator of Carol, Alice is an officer of Carol, Alice knows Carol, Carol knows Alice, Alice counts Carol as a friend and Carol counts Alice as a friend, provided Alice is a person and not Carol has an identity. Must consent: Carol.

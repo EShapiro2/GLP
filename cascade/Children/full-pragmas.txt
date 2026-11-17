@@ -1,11 +1,11 @@
 Children
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
 Of Groups: A *message*, a parameter of Groups, is what a person sends. Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
-Of Guardians: Bob *trusts* Carol, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a child and how. A child takes an act of a party by those who decide for it. Alice and Bob are persons, Carol and Dave children; in clause 4 Alice and Bob are possibly one person. Default: any parent of z for those who decide for z.
+Of Guardians: Bob *trusts* Carol, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a child and how. A child takes an act of a party by those who decide for the child. Alice and Bob are persons, Carol and Dave children; in clause 4 Alice and Bob are possibly one person. Default: any parent of z for those who decide for z.
 Of Warded Groups: Alice and Bob are persons, Carol and Dave children, Grupo a group, Text a message; in clause 1 Carol is possibly Alice.
 Of Children: Alice and Bob are persons, Carol and Dave children; in clause 2 Alice and Bob are possibly one person.
-Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
 Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
 Friendship:1, Guardians:3. ■ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
