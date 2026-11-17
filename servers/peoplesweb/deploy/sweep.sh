@@ -37,6 +37,10 @@ python3 -I servers/peoplesweb/tools/papers_sync.py || true
 # with the token in /etc/glp/github-papers-token, which Udi places; without it
 # nothing is published, and the site links the PDFs it serves.
 python3 -I servers/peoplesweb/tools/papers_publish.py || true
+# The verified posts of the feedback form, committed to the branch feedback of
+# GLP with the same token (tools/feedback_publish.py), from which Audit's
+# session opens their pull requests.
+python3 -I servers/peoplesweb/tools/feedback_publish.py || true
 chown -R glp:glp /var/lib/glp/papers
 # The Calculus's texts are on main, in calculus/ and in each contract's record,
 # every contract being adopted there since 2026-11-16, and the build reads
