@@ -8,7 +8,7 @@
 It finds, for each contract whose file name changed: its old file, OLD.txt and OLD.glp; its old record, cascade/OLD;
 its old row, "cascade.sh <old atom>"; and its old atom, contract_named(<old atom>.  It does not find a contract's old
 name in prose, in a title or in a citation, which a reader mends by eye.  The records (cascade/), the Calculus's
-texts (calculus/next/) and the simulations' records are left out: they are printed, not written.
+texts (calculus/contracts/) and the simulations' records are left out: they are printed, not written.
 """
 import os, re, subprocess, sys, collections
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,7 +25,7 @@ for r in rows:
     pats += [r'(?<![A-Za-z0-9_-])%s\.(?:txt|glp)\b' % o, r'cascade/%s(?![A-Za-z0-9+_-])' % o,
              r'cascade\.sh %s\b' % a, r'contract_named\(%s\b' % a]
 RX = re.compile('|'.join(pats))
-SKIP = ('cascade/', 'calculus/next/', 'simulation/', 'calculus/NAMES.txt', 'tools/names_left.py')
+SKIP = ('cascade/', 'calculus/contracts/', 'simulation/', 'calculus/NAMES.txt', 'tools/names_left.py')
 found = collections.defaultdict(list)
 for f in subprocess.run(['git', '-C', ROOT, 'ls-files'], capture_output=True, text=True).stdout.split('\n'):
     if not f or f.startswith(SKIP) or f.endswith(('.png', '.pdf', '.jpg', '.ttf')):
