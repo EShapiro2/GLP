@@ -4,7 +4,7 @@ imported procedure agents#app(Key?, PersonChannel(agents#Drawn)?, Stream(Convers
 imported procedure agents#app_child(Key?, ParentEnds?, PersonChannel(agents#Drawn)?, Stream(Conversation)?).
 imported procedure host#host(Key?, Stream(SgCmd)?, Stream(SgNotify), Stream(Conversation), SgOutStream, SgInStream?, Stream(SgPending)?, Integer?).
 imported procedure host#sg_switch(SgOutStream?, Stream(SgEntry)?).
-imported procedure person#person(Key?, _?, PersonIn(agents#Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Stream(Watched)?, Stream(_)).
+imported procedure person#person(Key?, PersonOut(agents#Drawn)?, PersonIn(agents#Drawn), Stream(SgNotify)?, Stream(SgCmd), Script?, Stream(Watched)?, Stream(Logged)).
 
 procedure party(Key?, Script?, Stream(Conversation)?, Stream(Watched)?, SgInStream?, SgOutStream).
 party(Id, Script, Setup, Watch, SgIn, SgOut?) :-
@@ -33,11 +33,11 @@ enter2(P, Q, R, [parent(P?, CP?), parent(Q?, CQ?)], [entered(R?, PEnd?, [Q?])], 
     new_channel(CP, PEnd),
     new_channel(CQ, QEnd).
 
-procedure log(Key?, Stream(_)?).
+procedure log(Key?, Stream(Logged)?).
 log(Id, [M|Ms]) :- ground(M?) | send_to_user([tagged(Id?, M?)]), log(Id?, Ms?).
 log(_, []).
 
-procedure log_shown(Key?, Stream(_)?, Stream(Watched)).
+procedure log_shown(Key?, Stream(Logged)?, Stream(Watched)).
 log_shown(Id, [M|Ms], [watched(Id?, M?)|Ws?]) :-
     ground(Id?), ground(M?) |
     send_to_user([tagged(Id?, M?)]),

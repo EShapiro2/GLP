@@ -17,23 +17,27 @@
 %% (vGLP at 7838827, Definition "Person Channel, Person Writer, GLP with
 %% Persons, Grant"; vGLP #5 Cowork, 2026-10-03 21:13 UTC, Q1): it holds its
 %% writer for good and goes on watching, and reads what the dispatcher sends
-%% it as any term, _?, as fragments/self.glp says.
+%% it as the person channel's draws, passing over any draw it does not answer.
 %%
 %% The types of chat.vglp and those its compilation adds, written again for
 %% the declarations of the procedures imported from its compiled module.
 
 
+%% What the person logs: the input box drawn, and each withdrawal.
+Logged ::= drawn(Integer, Widget(Drawn), Marked) ; withdrawn(Integer).
+Marked ::= input(Path).
+
 imported procedure chat#chat(Peer?, Stream(Msg), Stream(Ask(Question))).
 imported procedure chat#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
-exported procedure play_chat(Stream(Msg), Stream(_)).
+exported procedure play_chat(Stream(Msg), Stream(Logged)).
 play_chat(Out?, Log?) :-
     chat # chat(bob, Out, Asks),
     chat # dispatch(Asks?, ch(Gs?, Ds), _),
     chatting_person(Ds?, Gs, Log).
 
-procedure chatting_person(_?, PersonIn(Drawn), Stream(_)).
+procedure chatting_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 chatting_person([draw(Id, W, stream_string_r(input(Q))) | Ds],
                 [input(Id?, Q?, "hello"), input(Id?, Q?, stream_string_r(input([]))),
                  input(Id?, Q?, "world") | Gs?],
@@ -43,17 +47,20 @@ chatting_person([draw(Id, W, stream_string_r(input(Q))) | Ds],
 chatting_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     chatting_person(Ds?, Gs, Log).
+chatting_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    chatting_person(Ds?, Gs, Log).
 
 %% A stream question takes two grants as two elements and stays open: the
 %% person submits two texts, the stream has two elements and an open tail,
 %% and the input box is not withdrawn.
-exported procedure play_chat_two(Stream(Msg), Stream(_)).
+exported procedure play_chat_two(Stream(Msg), Stream(Logged)).
 play_chat_two(Out?, Log?) :-
     chat # chat(carol, Out, Asks),
     chat # dispatch(Asks?, ch(Gs?, Ds), _),
     two_texts_person(Ds?, Gs, Log).
 
-procedure two_texts_person(_?, PersonIn(Drawn), Stream(_)).
+procedure two_texts_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 two_texts_person([draw(Id, W, stream_string_r(input(Q))) | Ds],
                  [input(Id?, Q?, "one"), input(Id?, Q?, "two") | Gs?],
                  [drawn(Id?, W?, input(Q?)) | Log?]) :-
@@ -61,4 +68,7 @@ two_texts_person([draw(Id, W, stream_string_r(input(Q))) | Ds],
     two_texts_person(Ds?, Gs, Log).
 two_texts_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
+    two_texts_person(Ds?, Gs, Log).
+two_texts_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
     two_texts_person(Ds?, Gs, Log).
