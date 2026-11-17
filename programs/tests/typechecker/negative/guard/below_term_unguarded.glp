@@ -1,0 +1,7 @@
+% A signed term as signature/2 reports it, its term of type Term.
+Signed ::= signed(Key, Hash, Term) ; unsigned.
+
+procedure first_key(Signed?, Key).
+first_key(signed(_, _, attest(I, _)), I?).
+first_key(signed(_, _, _), "none") :- otherwise | true.
+first_key(unsigned, "none").
