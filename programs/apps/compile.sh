@@ -22,7 +22,7 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
-APPS="gkk gsg gsn gsnp gai gc gb gff"
+APPS="gkk gsg gsn gsnp gai gc gb gff dgc"
 
 contract_of() { # contract_of <app> ; the checker's name of its contract
     case "$1" in
@@ -34,6 +34,7 @@ contract_of() { # contract_of <app> ; the checker's name of its contract
         gc) echo coins ;;
         gb) echo bonds ;;
         gff) echo feeds ;;
+        dgc) echo denominated_currencies ;;
     esac
 }
 file_of() { # file_of <app> ; the owner's file that holds its contract
@@ -46,6 +47,7 @@ file_of() { # file_of <app> ; the owner's file that holds its contract
         gc) echo "$GLP_DIR/programs/currencies/coins/Coins.glp" ;;
         gb) echo "$GLP_DIR/programs/currencies/bonds/Bonds.glp" ;;
         gff) echo "$GLP_DIR/programs/gff/Feeds.glp" ;;
+        dgc) echo "$GLP_DIR/programs/currencies/sovereign/Denominated-Currencies.glp" ;;
     esac
 }
 

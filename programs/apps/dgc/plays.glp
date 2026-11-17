@@ -1,0 +1,19 @@
+%% plays.glp --- the Denominated Currencies mini-app activated as the super-app activates it (GSG paper, Section 2, "Activation and joining"): by run/3, under the type identity of its entry miniapp/3, with its grants; and, for each two executions that transact, with the two ends of the conversation between them; with no super-app, as programs/apps/gb/plays.glp.
+
+imported procedure person#miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+
+%% play_sovereign(A, B, C, D, E): the sovereign market of SGC's paper, Appendix C, on the compiled app: cb, the central bank, diana, the community bank, bob and frank, households, and escrow, the escrow agent, under the roles sovereign_cb to sovereign_escrow (person.glp), each with a conversation with those it transacts with.
+exported procedure play_sovereign(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
+play_sovereign(A?, B?, C?, D?, E?) :-
+    self_module(M),
+    find_type(miniapp/3, T),
+    run(miniapp(cb, ch(GC?, PC), ch([conversation(diana, ch(DC?, CD)), conversation(frank, ch(FC?, CF)), conversation(bob, ch(BC?, CB))], _)), T?, M?),
+    person # miniapp_person(cb, sovereign_cb, [diana, frank, bob], ch(PC?, GC), A),
+    run(miniapp(diana, ch(GD?, PD), ch([conversation(cb, ch(CD?, DC)), conversation(bob, ch(BD?, DB)), conversation(frank, ch(FD?, DF)), conversation(escrow, ch(XD?, DX))], _)), T?, M?),
+    person # miniapp_person(diana, sovereign_diana, [cb, bob, frank, escrow], ch(PD?, GD), B),
+    run(miniapp(bob, ch(GB?, PB), ch([conversation(cb, ch(CB?, BC)), conversation(diana, ch(DB?, BD)), conversation(frank, ch(FB?, BF))], _)), T?, M?),
+    person # miniapp_person(bob, sovereign_bob, [cb, diana, frank], ch(PB?, GB), C),
+    run(miniapp(frank, ch(GF?, PF), ch([conversation(cb, ch(CF?, FC)), conversation(diana, ch(DF?, FD)), conversation(bob, ch(BF?, FB)), conversation(escrow, ch(XF?, FX))], _)), T?, M?),
+    person # miniapp_person(frank, sovereign_frank, [cb, diana, bob, escrow], ch(PF?, GF), D),
+    run(miniapp(escrow, ch(GX?, PX), ch([conversation(diana, ch(DX?, XD)), conversation(frank, ch(FX?, XF))], _)), T?, M?),
+    person # miniapp_person(escrow, sovereign_escrow, [diana, frank], ch(PX?, GX), E).
