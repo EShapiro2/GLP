@@ -16,7 +16,7 @@ MenuWord ::= say(String) ; at(Integer).
 Atom ::= identity ; person ; knows(Peer) ; friend(Peer) ; ward ; has_guardian(Peer) ; creator(Peer) ; guardian(Peer) ; retired.
 MayOne ::= may_one(Integer, Integer).
 MayOnes ::= [] ; [MayOne | MayOnes].
-VOne ::= vone(Var, Var) ; vone_any(Var).
+VOne ::= vone(Var, Var) ; vone_any(Var) ; vone_all.
 VOnes ::= [] ; [VOne | VOnes].
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
 RArg ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
@@ -3911,6 +3911,7 @@ vpair_ok(_, _, _, _, _, yes) :- otherwise | true.
 
 procedure vone_in(Var?, Var?, VOnes?, YesNo).
 vone_in(_, _, [], no).
+vone_in(_, _, [vone_all | _], yes).
 vone_in(K, L, [vone(A, B) | _], yes) :- (K? =?= A?), (L? =?= B?) | true.
 vone_in(K, L, [vone(A, B) | _], yes) :- (K? =?= B?), (L? =?= A?) | true.
 vone_in(K, _, [vone_any(A) | _], yes) :- (K? =?= A?) | true.
