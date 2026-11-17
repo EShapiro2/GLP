@@ -16,6 +16,9 @@ User=glp
 Group=glp
 WorkingDirectory=/srv/glp/servers/peoplesweb
 Environment=HOST=127.0.0.1 PORT=8080 MAX_WORLDS=3
+# The SMTP relay of the directory's verification mail, which the feedback
+# form's mail uses too (lib/feedback.dart); absent, the form stays closed.
+EnvironmentFile=-/etc/glp/directory.env
 ExecStart=/srv/glp/servers/peoplesweb/run.sh
 Restart=on-failure
 NoNewPrivileges=yes
