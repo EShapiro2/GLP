@@ -1,27 +1,40 @@
 #!/bin/sh
 # peoplesweb.org/next: the site as it will be under the contracts' new names
 # (calculus/NAMES.txt; Udi, 2026-11-16, to Website #2: "i want to confirm
-# their layout ... before making them live").  The names are not yet made on
-# main, so tools/names_tree.py writes from the live clone a tree in which each
-# contract has its new name, and deploy/test.sh builds the test branch's site
-# over that tree, into /next.  Nothing of the tree is run, and it has no
-# world, so /next shows no running app.  Where main has no calculus/NAMES.txt
-# /next is removed; where a step fails, /next stays as it was and the sweep
-# says so.  deploy/sweep.sh runs this last.  Until 2026-11-16 20:55 UTC it was
-# built over the branch pub2, the publication of that day before it reached
-# main; when a branch has the renamed tree itself, this builds over it.
+# their layout ... before making them live").  The renamed tree is the branch
+# names of GLP, which Code keeps, the contracts there having their new names,
+# files and records; this checks it out apart from the live clone, in
+# /var/lib/glp/next/names, and runs that branch's own build of the site over
+# it, with SITE_TEST=1 (tools/build.py: the build writes no world, the pages
+# calling the live server) and no question asked of GLP, into /next.  So
+# /next is the site the merge of that branch into main will make live.  What
+# is pushed to that branch runs here each hour as the user glp before it is on
+# main, as the test site's branch does (deploy/test.sh): only Code pushes it.
+# Where the branch is gone /next is removed; where it cannot be fetched or
+# does not build, /next stays as it was and the sweep says so.
+# deploy/sweep.sh runs this last.  Until 2026-11-17 the names were on no
+# branch, and a tool, tools/names_tree.py, wrote a stand-in tree from main.
 set -e
+BRANCH=${NEXT_BRANCH:-names}
 GLP=${GLP_ROOT:-/srv/glp}
 WORK=${NEXT_WORK:-/var/lib/glp/next}
 WWW=${NEXT_WWW:-/var/www/peoplesweb.org/next}
 AS=${TEST_AS-sudo -u glp}
 cd "$GLP"
-URL=$(git remote get-url origin)
-if [ ! -f calculus/NAMES.txt ]; then rm -rf "$WWW"; exit 0; fi
+URL=${NEXT_URL:-$(git remote get-url origin)}
+if $AS git ls-remote --exit-code --heads "$URL" "$BRANCH" >/dev/null 2>&1; then :; else
+	[ $? -eq 2 ] && rm -rf "$WWW"
+	exit 0
+fi
 $AS mkdir -p "$WORK"
-$AS rm -rf "$WORK/src"
-$AS mkdir -p "$WORK/src"
-$AS sh -c "git -C '$GLP' archive HEAD programs cascade cascade.sh calculus | tar -x -C '$WORK/src'"
-$AS python3 -I servers/peoplesweb/tools/names_tree.py "$WORK/src" "$WORK/tree"
-TEST_URL="$URL" GLP_ROOT="$WORK/tree" TEST_WORK="$WORK/site" TEST_WWW="$WWW" CERTIFY=0 CALCULUS_DIR="$WORK/none" \
-	sh "$GLP/servers/peoplesweb/deploy/test.sh"
+# What the stand-in tree left.
+$AS rm -rf "$WORK/src" "$WORK/tree" "$WORK/site"
+[ -d "$WORK/names/.git" ] || $AS git init -q "$WORK/names"
+$AS git -C "$WORK/names" fetch -q --depth 1 "$URL" "$BRANCH"
+$AS git -C "$WORK/names" checkout -q -f --detach FETCH_HEAD
+$AS git -C "$WORK/names" clean -q -fdx
+$AS env GLP_ROOT="$WORK/names" BUILD_DIR="$WORK/build" SITE_TEST=1 CERTIFY=0 \
+	PAPERS_DIR="${PAPERS_DIR:-/var/lib/glp/papers}" \
+	python3 -I "$WORK/names/servers/peoplesweb/tools/build.py"
+mkdir -p "$WWW"
+rsync -a --delete "$WORK/build/www/" "$WWW/"
