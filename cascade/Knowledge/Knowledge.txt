@@ -4,7 +4,7 @@
 % Extends: nothing; it is the base contract every contract extends (Udi, 2026-10-20).
 % Defines: an identity, a unique key pair; knowing a person, holding their public key (GSC's paper, Section 2.1); Alice, Bob and Carol are variables naming distinct persons.
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus c475902; calculus/MIGRATION.md; Udi's confirmation of the plan, and his yes to GSC #17 on the definition of an identity without ', chosen by the person who has it'): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GSC's, their lines named by the clauses' new titles.  Git holds what the file said before.
-% Schemas: GKK.glp beside this file, the full schemas, printed by calculus/tools/adopt.py GKK from the Logic pragmas and never written by hand; adopt.py --check GKK holds it and cascade/GKK/ to what the tools print.
+% Schemas: Knowledge.glp beside this file, the full schemas, printed by calculus/tools/adopt.py GKK from the Logic pragmas and never written by hand; adopt.py --check GKK holds it and cascade/Knowledge/ to what the tools print.
 Knowledge
 An *identity* is a unique key pair.
 Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
