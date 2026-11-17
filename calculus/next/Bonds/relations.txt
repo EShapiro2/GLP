@@ -1,0 +1,2 @@
+Bonds restricts Coins: holds
+Bonds extends Coins: holds

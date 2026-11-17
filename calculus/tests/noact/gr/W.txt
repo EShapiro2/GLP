@@ -1,0 +1,11 @@
+W: No act no binding enables
+Alice is a person, Carol a ward.
+1. ■ Establish: Alice may establish an identity.
+2. ■ Enter: Alice may enter Carol.
+3. ■ Wave: Carol may wave, provided Carol is a person and Carol is a ward. Greet: Carol may greet.
+Logic pragmas.
+Vocabulary: x has an identity = identity(x); x is a person = person(x); x is a ward = ward(x); x has y as a guardian = has_guardian(x,y); x is a guardian of y = guardian(x,y); x has waved = waved(x); x has greeted = greeted(x).
+After x establishes an identity, which requires x does not have an identity: x has an identity and x is a person.
+After x enters y, which requires y does not have an identity: y has an identity, y is a ward, y has x as a guardian and x is a guardian of y.
+After x waves: x has waved.
+After x greets: x has greeted.

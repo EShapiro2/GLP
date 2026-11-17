@@ -1,0 +1,13 @@
+Library
+Library extends Knowledge.
+Vocabulary: x has shelved t = shelved(x,t); x has t on the shelf = shelf(x,t); y holds t of x until e = borrowed(y,t,x,e); the current date is e, for x = today(x,e).
+After x puts t on x's shelf under a new name of x's, which requires x has not shelved t: x has shelved t and x has t on the shelf.
+After x lends y t from x's shelf until e: no longer x has t on the shelf and y holds t of x until e.
+After y returns t borrowed from x until e: no longer y holds t of x until e and x has t on the shelf.
+Library:0 - | Alice and Bob are persons, Tome a thing, Day a day and Today a date.
+Library:1 ◆ Shelve: shelved(Alice,Tome), shelf(Alice,Tome) <- ~shelved(Alice,Tome) guarded by Alice.
+Library:1 ◆ | Tome is a thing of Alice's own.
+Library:2 ■ Lend: ~shelf(Alice,Tome), borrowed(Bob,Tome,Alice,Day) <- knows(Alice,Bob), knows(Bob,Alice), today(Alice,Today), gt(Day,Today), shelf(Alice,Tome) guarded by Alice, Bob.
+Library:3 ■ Return: ~borrowed(Bob,Tome,Alice,Day), shelf(Alice,Tome) <- borrowed(Bob,Tome,Alice,Day) guarded by Bob.
+Library:4 ○ | On time.
+Library:4 ○ | Bob will return a borrowed thing by the agreed day.

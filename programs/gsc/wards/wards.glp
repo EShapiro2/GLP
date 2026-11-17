@@ -21,7 +21,9 @@
 % M; for each, the guardianship candidates of each other mark are found
 % once, the four clauses of def:guardianship asking of M nothing but the mark
 % and of the kinds nothing but f; the nonempty sets M of marks having
-% candidates are then tried in turn, each meeting clauses 2 and 3 of
+% candidates, and meeting on their own clauses 2 and 3 of def:kinds as far as
+% a single mark decides them (admissible_marks), are then tried in turn, in
+% the order of the marks and each as it is built (try_subsets), each meeting clauses 2 and 3 of
 % def:kinds, and each choice of one guardianship per mark with which C has
 % guardianships (the last sentence of def:guardianship); the first with an
 % introductory act unobstructed among the free and the relay acts of every
@@ -2790,6 +2792,124 @@ cands_lists(C, AF, F, [Mk|Mks], [G?|R?]) :-
     cands_for(C?, AF?, F?, Mk?, G),
     cands_lists(C?, AF?, F?, Mks?, R).
 
+% A candidate (m, v, u) is left out where a guarding role pi of a schema of C
+% requires m and no other mark of M, forbids no iota, requires no f, requires
+% no atom of u, and has in the body of its schema no disjunction with the
+% disjunct f(pi): then C has no guardianships on any choice holding it (the
+% last sentence of def:guardianship, as guards_ok_k decides it), since pi
+% requires a mark in M and an atom of the u of its guardianship only for m,
+% whose u it does not require (req_mark_u), and pi can act only by a
+% disjunction whose disjuncts cover f (can_act, keys_cover).
+procedure needed_cands(GuardLists?, Preds?, Contract?, Constant?, Constant?, Preds?, GuardLists).
+needed_cands([], _, _, _, _, _, []).
+needed_cands([L|Ls], [Mk|Mks], C, Io, F, M, [L1?|R?]) :-
+    ground(L?), ground(Ls?), ground(Mk?), ground(Mks?), ground(C?), ground(Io?), ground(F?),
+    ground(M?) |
+    needed_list(L?, C?, Io?, F?, M?, L1),
+    needed_cands(Ls?, Mks?, C?, Io?, F?, M?, R).
+needed_cands([_|_], [], _, _, _, _, []).
+
+procedure needed_list(Guardianships?, Contract?, Constant?, Constant?, Preds?, Guardianships).
+needed_list([], _, _, _, _, []).
+needed_list([guardianship(Mk, V, U)|Gs], C, Io, F, M, R?) :-
+    ground(Mk?), ground(V?), ground(U?), ground(Gs?), ground(C?), ground(Io?), ground(F?),
+    ground(M?) |
+    cand_needed(C?, Io?, F?, M?, Mk?, U?, A),
+    needed_list(Gs?, C?, Io?, F?, M?, R1),
+    keep_cand(A?, guardianship(Mk?, V?, U?), R1?, R).
+
+procedure keep_cand(Ans?, Guardianship?, Guardianships?, Guardianships).
+keep_cand(yes, G, R, [G?|R?]).
+keep_cand(no, _, R, R?).
+
+procedure cand_needed(Contract?, Constant?, Constant?, Preds?, Constant?, Constant?, Ans).
+cand_needed([], _, _, _, _, _, yes).
+cand_needed([S|Ss], Io, F, M, Mk, U, R?) :-
+    ground(S?), ground(Ss?), ground(Io?), ground(F?), ground(M?), ground(Mk?), ground(U?) |
+    sch_roles(S?, Rs),
+    sch_forms(S?, Fs0),
+    conj_flat(Fs0?, [], Fs),
+    roles_cand_needed(Rs?, Fs?, 1, Io?, F?, M?, Mk?, U?, A1),
+    cand_needed(Ss?, Io?, F?, M?, Mk?, U?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure roles_cand_needed(RoleSpecs?, Forms?, Integer?, Constant?, Constant?, Preds?, Constant?,
+                            Constant?, Ans).
+roles_cand_needed([], _, _, _, _, _, _, _, yes).
+roles_cand_needed([RS|Rs], Fs, I, Io, F, M, Mk, U, R?) :-
+    ground(RS?), ground(Rs?), ground(Fs?), integer(I?), ground(Io?), ground(F?), ground(M?),
+    ground(Mk?), ground(U?) |
+    is_guarding(RS?, G),
+    rs_req(RS?, Req),
+    rs_forb(RS?, N),
+    role_cand_needed(G?, Req?, N?, Fs?, I?, Io?, F?, M?, Mk?, U?, A1),
+    I1 := I? + 1,
+    roles_cand_needed(Rs?, Fs?, I1?, Io?, F?, M?, Mk?, U?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure role_cand_needed(Ans?, Atoms?, Atoms?, Forms?, Integer?, Constant?, Constant?, Preds?,
+                           Constant?, Constant?, Ans).
+role_cand_needed(no, _, _, _, _, _, _, _, _, _, yes).
+role_cand_needed(yes, Req, N, Fs, I, Io, F, M, Mk, U, R?) :-
+    ground(Req?), ground(N?), ground(Fs?), integer(I?), ground(Io?), ground(F?), ground(M?),
+    ground(Mk?), ground(U?) |
+    atoms_member(N?, atom(Io?, []), A1),
+    atoms_member(Req?, atom(F?, []), A2),
+    marks_in(Req?, M?, Rm),
+    only_mark(Rm?, Mk?, A3),
+    has_pred(Req?, U?, A4),
+    f_disjunct(Fs?, I?, F?, A5),
+    or_yes(A1?, A2?, A12),
+    or_yes(A4?, A5?, A45),
+    flip(A3?, NA3),
+    or_yes(A12?, A45?, A1245),
+    or_yes(NA3?, A1245?, R).
+
+% only_mark(Ms, Mk, R): Ms is [Mk].
+procedure only_mark(Preds?, Constant?, Ans).
+only_mark([P], Mk, yes) :- P? =?= Mk? | true.
+only_mark(_, _, no) :- otherwise | true.
+
+% f_disjunct(Fs, I, F, R): some conjunct among Fs is a disjunction, or a
+% formula, one of whose disjuncts is f(pi), pi the role I.
+procedure f_disjunct(Forms?, Integer?, Constant?, Ans).
+f_disjunct([], _, _, no).
+f_disjunct([Fm|Fs], I, F, R?) :- ground(Fm?), ground(Fs?), integer(I?), ground(F?) |
+    disjuncts(Fm?, [], Ds),
+    has_f_disjunct(Ds?, I?, F?, A),
+    f_disjunct(Fs?, I?, F?, B),
+    or_yes(A?, B?, R).
+
+procedure has_f_disjunct(Forms?, Integer?, Constant?, Ans).
+has_f_disjunct([], _, _, no).
+has_f_disjunct([fa(role(J), atom(P, []))|_], I, F, yes) :-
+    J? =:= I?, ground(P?), ground(F?), P? =?= F? | true.
+has_f_disjunct([_|Ds], I, F, R?) :- otherwise, ground(Ds?), integer(I?), ground(F?) |
+    has_f_disjunct(Ds?, I?, F?, R).
+
+% The guardianship of a passive mark is read by no part of the search but the
+% answer: no guarding role requires the mark, so it adds nothing to that C
+% has guardianships but through the safe formula that a role can act, whose
+% disjunct for a mark not in AMs fails it either way (keys_cover); and a
+% relay act is asked only of the marks that are not passive, its ward roles
+% theirs (relays_for, party_rk).  So a choice succeeds exactly when the same
+% choice with the first candidate of each passive mark does, and the first
+% choice that succeeds, in the order of the combinations, has that first
+% candidate; the other candidates of a passive mark are left out.
+procedure first_if_passive(Contract?, Preds?, GuardLists?, GuardLists).
+first_if_passive(_, [], _, []).
+first_if_passive(C, [Mk|Ms], [L|Ls], R?) :-
+    ground(C?), ground(Mk?), ground(Ms?), ground(L?), ground(Ls?) |
+    passive_mark(C?, Mk?, Pa),
+    first_if_passive(C?, Ms?, Ls?, R1),
+    first_cand(Pa?, L?, R1?, R).
+first_if_passive(_, [_|_], [], []).
+
+procedure first_cand(Ans?, Guardianships?, GuardLists?, GuardLists).
+first_cand(yes, [G|_], R, [[G?]|R?]).
+first_cand(yes, [], R, [[]|R?]).
+first_cand(no, L, R, [L?|R?]).
+
 % The combinations: one guardianship per mark, in the order of M.
 procedure prepend_each(Guardianship?, GuardLists?, GuardLists?, GuardLists).
 prepend_each(_, [], T, T?).
@@ -2841,7 +2961,9 @@ try_set1(no, _, Ms, C, Rf, AF, Io, F, W?) :-
 try_set1(yes, M, Ms, C, Rf, AF, Io, F, W?) :-
     ground(M?), ground(Ms?), ground(C?), ground(Rf?), ground(AF?), ground(Io?),
     ground(F?) |
-    cands_lists(C?, AF?, F?, M?, Ls),
+    cands_lists(C?, AF?, F?, M?, Ls0),
+    needed_cands(Ls0?, M?, C?, Io?, F?, M?, Ls1),
+    first_if_passive(C?, M?, Ls1?, Ls),
     combos(Ls?, Cbs),
     try_combos(Cbs?, C?, Rf?, M?, [Io?, F?], W1),
     try_set2(W1?, Ms?, C?, Rf?, AF?, Io?, F?, W).
@@ -2863,27 +2985,112 @@ try_sets([M|Ms], C, Rf, AF, Io, F, W?) :-
     kinds_schemas(C?, Io?, F?, M?, A),
     try_set1(A?, M?, Ms?, C?, Rf?, AF?, Io?, F?, W).
 
-% The nonempty subsets of a list of marks, those holding its first mark
-% first.
-procedure prepend_mark(Constant?, PredSets?, PredSets?, PredSets).
-prepend_mark(_, [], T, T?).
-prepend_mark(P, [S|Ss], T, [[P?|S?]|R?]) :- ground(Ss?), ground(T?) |
-    prepend_mark(P?, Ss?, T?, R).
+% The nonempty subsets of a list of marks, tried one at a time, those
+% holding its first mark first, each holding its marks in the order of the
+% list; the first with an introduction with wards is the answer.  Rev holds
+% the marks chosen so far, the last first.
+procedure try_subsets(Preds?, Preds?, Contract?, Preds?, Preds?, Constant?, Constant?, Wards).
+try_subsets([], Rev, C, Rf, AF, Io, F, W?) :-
+    ground(Rev?), ground(C?), ground(Rf?), ground(AF?), ground(Io?), ground(F?) |
+    try_chosen(Rev?, C?, Rf?, AF?, Io?, F?, W).
+try_subsets([P|Ps], Rev, C, Rf, AF, Io, F, W?) :-
+    ground(P?), ground(Ps?), ground(Rev?), ground(C?), ground(Rf?), ground(AF?),
+    ground(Io?), ground(F?) |
+    try_subsets(Ps?, [P?|Rev?], C?, Rf?, AF?, Io?, F?, W1),
+    try_subsets1(W1?, Ps?, Rev?, C?, Rf?, AF?, Io?, F?, W).
 
-procedure subsets1(PredSets?, Constant?, PredSets).
-subsets1(Ss, P, R?) :- ground(Ss?), ground(P?) |
-    prepend_mark(P?, Ss?, Ss?, R).
+procedure try_subsets1(Wards?, Preds?, Preds?, Contract?, Preds?, Preds?, Constant?, Constant?,
+                       Wards).
+try_subsets1(introduction_with_wards(Nm, M, Gs, Rs, K), _, _, _, _, _, _, _,
+             introduction_with_wards(Nm?, M?, Gs?, Rs?, K?)).
+try_subsets1(no_introduction_with_wards, Ps, Rev, C, Rf, AF, Io, F, W?) :-
+    ground(Ps?), ground(Rev?), ground(C?), ground(Rf?), ground(AF?), ground(Io?),
+    ground(F?) |
+    try_subsets(Ps?, Rev?, C?, Rf?, AF?, Io?, F?, W).
 
-procedure subsets(Preds?, PredSets).
-subsets([], [[]]).
-subsets([P|Ps], R?) :- ground(P?), ground(Ps?) |
-    subsets(Ps?, Ss),
-    subsets1(Ss?, P?, R).
+% The set of the marks chosen, none being no set.
+procedure try_chosen(Preds?, Contract?, Preds?, Preds?, Constant?, Constant?, Wards).
+try_chosen([], _, _, _, _, _, no_introduction_with_wards).
+try_chosen([P|Rev], C, Rf, AF, Io, F, W?) :-
+    ground(P?), ground(Rev?), ground(C?), ground(Rf?), ground(AF?), ground(Io?),
+    ground(F?) |
+    rev_preds([P?|Rev?], [], M),
+    try_sets([M?], C?, Rf?, AF?, Io?, F?, W).
 
-procedure nonempty_sets(PredSets?, PredSets).
-nonempty_sets([], []).
-nonempty_sets([[]|Ss], R?) :- ground(Ss?) | nonempty_sets(Ss?, R).
-nonempty_sets([[P|Ps]|Ss], [[P?|Ps?]|R?]) :- ground(Ss?) | nonempty_sets(Ss?, R).
+procedure rev_preds(Preds?, Preds?, Preds).
+rev_preds([], A, A?).
+rev_preds([P|Ps], A, R?) :- ground(P?), ground(Ps?), ground(A?) |
+    rev_preds(Ps?, [P?|A?], R).
+
+% The marks that can be in M for iota Io and f F.  Clauses 2 and 3 of
+% def:kinds, as kinds_role decides them, ask of every role of every schema
+% that where it adds a mark in M it adds iota, and that where it deletes a
+% mark in M it adds f; each holds of M exactly when it holds of each mark of
+% M, so a mark added at a role that does not add iota, or deleted at a role
+% that does not add f, is in no M that meets them, and is left out.
+procedure admissible_marks(Preds?, Contract?, Constant?, Constant?, Preds).
+admissible_marks([], _, _, _, []).
+admissible_marks([Mk|Ms], C, Io, F, R?) :-
+    ground(Mk?), ground(Ms?), ground(C?), ground(Io?), ground(F?) |
+    mark_admissible(C?, Io?, F?, Mk?, A0),
+    mark_added(C?, Mk?, A1),
+    both_yes(A0?, A1?, A),
+    admissible_marks(Ms?, C?, Io?, F?, R1),
+    keep_mark(A?, Mk?, R1?, R).
+
+% Some schema adds each type in M (Definition Types, def:kinds, clause 2,
+% GSC a3c95d9: "and some schema adds each type in M"): a mark that no schema
+% adds, an environment predicate among them, is the type of no ward, and is
+% left out.
+procedure mark_added(Contract?, Constant?, Ans).
+mark_added([], _, no).
+mark_added([S|Ss], Mk, R?) :- ground(S?), ground(Ss?), ground(Mk?) |
+    sch_roles(S?, Rs),
+    roles_add_mark(Rs?, Mk?, A1),
+    mark_added(Ss?, Mk?, A2),
+    or_yes(A1?, A2?, R).
+
+procedure roles_add_mark(RoleSpecs?, Constant?, Ans).
+roles_add_mark([], _, no).
+roles_add_mark([RS|Rs], Mk, R?) :- ground(RS?), ground(Rs?), ground(Mk?) |
+    rs_add(RS?, P),
+    atoms_member(P?, atom(Mk?, []), A1),
+    roles_add_mark(Rs?, Mk?, A2),
+    or_yes(A1?, A2?, R).
+
+procedure keep_mark(Ans?, Constant?, Preds?, Preds).
+keep_mark(yes, Mk, R, [Mk?|R?]).
+keep_mark(no, _, R, R?).
+
+procedure mark_admissible(Contract?, Constant?, Constant?, Constant?, Ans).
+mark_admissible([], _, _, _, yes).
+mark_admissible([S|Ss], Io, F, Mk, R?) :-
+    ground(S?), ground(Ss?), ground(Io?), ground(F?), ground(Mk?) |
+    sch_roles(S?, Rs),
+    mark_roles_ok(Rs?, Io?, F?, Mk?, A1),
+    mark_admissible(Ss?, Io?, F?, Mk?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure mark_roles_ok(RoleSpecs?, Constant?, Constant?, Constant?, Ans).
+mark_roles_ok([], _, _, _, yes).
+mark_roles_ok([RS|Rs], Io, F, Mk, R?) :-
+    ground(RS?), ground(Rs?), ground(Io?), ground(F?), ground(Mk?) |
+    rs_add(RS?, P),
+    rs_del(RS?, D),
+    mark_role_ok(P?, D?, Io?, F?, Mk?, A1),
+    mark_roles_ok(Rs?, Io?, F?, Mk?, A2),
+    both_yes(A1?, A2?, R).
+
+procedure mark_role_ok(Atoms?, Atoms?, Constant?, Constant?, Constant?, Ans).
+mark_role_ok(P, D, Io, F, Mk, R?) :-
+    ground(P?), ground(D?), ground(Io?), ground(F?), ground(Mk?) |
+    atoms_member(P?, atom(Mk?, []), AM),
+    atoms_member(P?, atom(Io?, []), AI),
+    atoms_member(D?, atom(Mk?, []), DM),
+    atoms_member(P?, atom(F?, []), AF),
+    if_then(AM?, AI?, B1),
+    if_then(DM?, AF?, B2),
+    both_yes(B1?, B2?, R).
 
 % The marks with a guardianship candidate on their own, for the mark f F.
 procedure marks_with_cands1(Guardianships?, Constant?, Preds?, Contract?, Preds?, Constant?,
@@ -2914,10 +3121,9 @@ try_f(yes, Io, F, Marks, C, Rf, AF, W?) :-
     ground(Io?), ground(F?), ground(Marks?), ground(C?), ground(Rf?),
     ground(AF?) |
     preds_diff(Marks?, [Io?, F?], Rest),
-    marks_with_cands(Rest?, C?, AF?, F?, MC),
-    subsets(MC?, Ss),
-    nonempty_sets(Ss?, Sets),
-    try_sets(Sets?, C?, Rf?, AF?, Io?, F?, W).
+    admissible_marks(Rest?, C?, Io?, F?, Adm),
+    marks_with_cands(Adm?, C?, AF?, F?, MC),
+    try_subsets(MC?, [], C?, Rf?, AF?, Io?, F?, W).
 
 procedure try_fs1(Wards?, Preds?, Constant?, Preds?, Contract?, Preds?, Preds?, Wards).
 try_fs1(introduction_with_wards(Nm, M, Gs, Rs, K), _, _, _, _, _, _,

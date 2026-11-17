@@ -3,12 +3,14 @@
 #
 #   bash programs/vglp/cva/compiler/compose.sh [--base <NAME> <reading> <pragmas>] <NAME> <reading> <pragmas> <intro> [<NAME> <reading> <pragmas> <intro> ...]
 #
+# A reading or the pragmas may be written @<file>, and is then read from that file.
+#
 # Each contract is given by its name, as the record names it (GSN), its reading, the term GSC's as_read/2 prints of its schemas, its pragmas, as pragmas.sh prints them of its NAME.txt and that reading, and its introduction predicate, introduction(P) or no_introduction; the third contract they amend, where one is given, by its name, its reading and its pragmas after --base.  Prints three lines, the reading, the pragmas and the introduction predicate of the composition, which the compiler's compile/5 takes as it takes one contract's; or, on a refusal, the line saying why on the standard error, and exits 1.  Exits 2 on a bad argument.
 #
 # With a third contract, a schema of it is in the composition where every contract keeps it, the same schema, and not where one deletes it or replaces it, writing a schema of its name differently; each contract's schemas that the third lacks or writes differently are its added schemas, and are in the composition.  Without one, every schema of the contracts is, which is the composition where all extend the third.  The pragmas likewise: a tab, a button or a standing declaration of the third's pragmas is in the composition where every contract with pragmas has it as the third writes it, and each contract's that the third lacks or writes differently are; and then a button stands while the composition has an act it names and a tab while it has the predicate the tab lists (vGLP, Section 5.4: "an inherited tab standing while the contract has the predicate it lists, as an inherited button stands while the contract has an act it names").
 #
 # The forms the paper leaves open, the composer's (README.md beside this file, "Composition"):
-# - The schemas are taken in the order of the contracts, each contract's in its own order, a schema of a name already taken being the same schema or refused.  Two schemas are the same where their terms are the same up to the names of their variables, each name in pvar, svar, num, real, nvar, own_var and the speech act of sgn renamed in the order of its first occurrence, as GKK's introduce is pvar('Carol') in GSN.glp and pvar(c) in GC.glp; the first is kept.  The names of the roles are part of the schema, since a pragma names a role by them.
+# - The schemas are taken in the order of the contracts, each contract's in its own order, a schema of a name already taken being the same schema or refused.  Two schemas are the same where their terms are the same up to the names of their variables, each name in pvar, svar, num, real, nvar, own_var and the speech act of sgn renamed in the order of its first occurrence, as GKK's introduce is pvar('Carol') in Groups.glp and pvar(c) in GC.glp; the first is kept.  The names of the roles are part of the schema, since a pragma names a role by them.
 # - The environment predicates and the reflexive predicates are the union of the contracts', in their order; and so are the parameters of a parametric contract, parametric(Params, D), the paper saying nothing of composing one: the composition is parametric in the union, outermost, where any contract is.
 # - The tabs, list(Name, Words), are taken by name, the same text once, and a tab of one name with different words refused; the buttons by their text, each contract's acts of one button together, the same acts once, and a button of one text whose acts differ refused; a standing declaration by its schema, likewise.  A contract with no pragmas adds none.
 # - The introduction predicate is the one the contracts name, no_introduction where none does; two that name different ones are refused.
@@ -141,6 +143,8 @@ sub compose_items {
 my $eq = sub { $_[0] eq $_[1] };
 my $schema_same = sub { canonical($_[0]) eq canonical($_[1]) };
 my @args = @ARGV;
+# A reading or the pragmas may come in a file, the argument then @<file>: a term over 128 KB cannot be one argument of a command on Linux (pragmas.sh has the same; Code #33, vGLP_inbox, 2026-11-15 22:57 UTC).
+for my $a (@args) { if ($a =~ /^\@(.+)$/s) { my $tf = $1; open(my $th, "<:encoding(UTF-8)", $tf) or die "compose.sh: $tf: the file of the term cannot be read\n"; local $/; $a = <$th>; close $th; $a =~ s/\s+\z//; } }
 my $nbase = shift @args;
 my ($bname, $brd, $bpr) = $nbase ? splice(@args, 0, 3) : ();
 my $bread = $nbase ? reading_parts($bname, $brd) : undef;

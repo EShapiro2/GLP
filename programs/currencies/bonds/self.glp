@@ -23,15 +23,31 @@
 %% issuer, kind and maturity, lot(Issuer, Due, K), its due `now` for coins and
 %% the maturity date for bonds: the cent^k_{u,*} of Section 3.4.
 
-Instrument ::= coin(Issuer, Serial) ; bond(Issuer, Maturity, Serial).
+Instrument ::= coin(Issuer, Serial) ; bond(Issuer, Maturity, Serial)
+             ; escrow_coin(Issuer, Serial, Depositor, Beneficiary, Condition)
+             ; escrow_bond(Issuer, Maturity, Serial, Depositor, Beneficiary, Condition).
 Lot        ::= lot(Issuer, Due, Amount).
 Serial     ::= Integer.
 
-%% The three escrow transfers of clause 7: a deposit by the depositor with the
-%% escrow agent, a release by the escrow agent to the beneficiary, a return by
-%% the escrow agent to the depositor.  Each is a transfer of one lot guarded by
-%% both participants, and the kind is what the receiver's card shows.
-Kind ::= deposit ; release ; return.
+%% The three escrow transfers of Notes:4: a deposit by the depositor with the
+%% escrow agent, for a beneficiary, on a condition the three agree; a release
+%% by the escrow agent to the beneficiary; a return by the escrow agent to the
+%% depositor.  Each is a transfer of one lot guarded by both participants, and
+%% the kind and the terms --- the depositor, the beneficiary and the condition
+%% --- are what the receiver's card shows.  What the escrow agent holds in
+%% escrow is no holding of its own: each coin and each bond deposited is a
+%% record, escrow_coin or escrow_bond, of the instrument, its depositor, its
+%% beneficiary and its condition (the atoms escrow_coin and escrow_bond of the
+%% speech-act schemas), which a release gives to the beneficiary it names and
+%% a return to the depositor it names, and no other act reaches.  A condition
+%% is a day, met once the current date has reached it, or an agreement the
+%% three know by its name, which the escrow agent judges.
+%% A payment of notes, coins or bonds of any issuer, to a payee who consents
+%% (Notes:3) is a transfer of the same kind with no terms: pay, guarded by both.
+%% A payment of the payee's own coins takes no consent (Coins:1, Pay issuer).
+Kind ::= deposit ; release ; return ; pay.
+Terms ::= terms(Depositor, Beneficiary, Condition) ; none.
+Condition ::= day(Date) ; agreed(Constant).
 
 %% The counterparty's answer to a swap: the instruments it gives, or the
 %% offered instruments returned.
@@ -61,7 +77,7 @@ TransferResponse ::= transfer_accept ; transfer_decline(Stream(Instrument)).
 PeerContent ::= pay(Stream(Instrument), PayResponse?)
               ; swap(Lot, Stream(Instrument), SwapResponse?)
               ; redeem(Instrument, Key, Constant, RedeemResponse?)
-              ; transfer(Kind, Stream(Instrument), TransferResponse?).
+              ; transfer(Kind, Terms, Stream(Instrument), TransferResponse?).
 PeerMsg     ::= msg(Key, Key, PeerContent).
 
 %% What the social graph hands the mini-app on its channel to the social graph
@@ -93,7 +109,7 @@ OutputEntry ::= user_output(Stream(ScreenMsg)?)
               ; friend_output(Key, Stream(PeerMsg)?).
 
 %% The screen: the holdings, tallied by issuer and due, after every change of
-%% them; the date after every advance; and what each act came to.  A due is `now` for coins and the maturity date for
+%% them, and what it holds in escrow after every change of that; and what each act came to; date(D) is the scripted person's, the day of the clock it set, which the agent reads and does not show.  A due is `now` for coins and the maturity date for
 %% bonds.  A redemption names the instrument presented, by its issuer and its
 %% due, as well as the instrument taken: redeemed(Friend, GiveDue, WantIssuer,
 %% WantDue) at the bearer, and presented(From, GiveDue, WantIssuer, WantDue)
@@ -110,8 +126,8 @@ Holdings ::= List(Lot).
 %% SGC/docs/screen-field-names-2026-10-14.md).  The shapes are unchanged.
 ScreenContent ::= holdings(Holdings)
                 ; opened(Friend)
-                ; date_advanced(Date)
-                ; minted(Amount, Due)
+                ; issued(Amount, Due)
+                ; not_later(Maturity, Date)
                 ; paying(Friend, Amount)
                 ; paid(Friend, Amount)
                 ; not_accepted(Friend, Amount)
@@ -134,12 +150,17 @@ ScreenContent ::= holdings(Holdings)
                 ; transferred(Kind, Friend)
                 ; transfer_declined(Kind, Friend)
                 ; received_transfer(Kind, From, Lots)
+                ; escrowed(EscrowLots)
                 ; declined_transfer(Kind, From)
                 ; lacking(Issuer, Due, Amount)
-                ; no_conversation(Friend).
+                ; no_conversation(Friend)
+                ; date(Date).
 Date ::= Integer.
 Menu ::= List(Lot).
 Lots ::= List(Lot).
+%% What a party holds in escrow, tallied by issuer, due and terms.
+EscrowLot ::= in_escrow(Issuer, Due, Amount, Depositor, Beneficiary, Condition).
+EscrowLots ::= List(EscrowLot).
 ScreenMsg ::= msg(Constant, Constant, ScreenContent).
 
 %% The type of the agent's output to its person, the reserved name Output:
@@ -163,10 +184,10 @@ UserInMsg ::= accept_swap(Key, Lot, Stream(Instrument), SwapResponse?)
             ; redeem_menu_from(Key, Instrument, Stream(Lot))
             ; redeem_not_mature_by(Key, Instrument)
             ; redeem_declined_by(Key, Instrument)
-            ; accept_transfer(Kind, Key, Stream(Instrument), TransferResponse?)
+            ; accept_transfer(Kind, Key, Terms, Stream(Instrument), TransferResponse?)
             ; decline_transfer(Kind, Key, Stream(Instrument), TransferResponse?)
             ; transfer_accepted(Kind, Key)
-            ; transfer_declined_by(Kind, Key, Stream(Instrument)).
+            ; transfer_declined_by(Kind, Key, Terms, Stream(Instrument)).
 
 %% The offer a swap responder carries: the proposer, the lot it wants, the
 %% instruments it offers.  The offer a transfer responder carries: the kind,
@@ -176,7 +197,7 @@ UserInMsg ::= accept_swap(Key, Lot, Stream(Instrument), SwapResponse?)
 %% of an instrument and of a lot, above, over the named types of the
 %% requests below and Serial ::= Integer.
 SwapOffer     ::= offer(From, Want, Offered).
-TransferOffer ::= offer_transfer(Kind, From, Given).
+TransferOffer ::= offer_transfer(Kind, From, Terms, Given).
 From          ::= Key.
 Want          ::= Lot.
 Offered       ::= List(Instrument).
@@ -216,14 +237,15 @@ Depositor   ::= Key.
 Issuer      ::= Key.
 Due         ::= Constant.
 
-Request ::= mint(Amount)
-          ; mint(Amount, Maturity)
+Request ::= issue(Amount)
+          ; issue(Amount, Maturity)
           ; swap(Friend, GiveIssuer, GiveDue, GiveAmount, WantIssuer, WantDue, WantAmount)
-          ; pay(Friend, Amount)
+          ; pay_issuer(Friend, Amount)
+          ; pay(Friend, Issuer, Due, Amount)
           ; redeem(Friend, GiveDue, WantIssuer, WantDue)
-          ; deposit(EscrowAgent, Issuer, Due, Amount)
-          ; release(Beneficiary, Issuer, Due, Amount)
-          ; return(Depositor, Issuer, Due, Amount).
+          ; deposit(EscrowAgent, Issuer, Due, Amount, Beneficiary, Condition)
+          ; release(Beneficiary, Issuer, Due, Amount, Depositor, Condition)
+          ; return(Depositor, Issuer, Due, Amount, Beneficiary, Condition).
 
 %% A responder's card: the offer, which the agent writes for the person to
 %% see, and the person's answer, yes accepting and no declining.
@@ -248,22 +270,26 @@ TransferCard ::= card(TransferOffer, YesNo?).
 %% =============================================================================
 
 %% A script: the person's acts, in order.  A step is a request, granted on the
-%% agent's request form --- mint(K) for coins and mint(K, D) for bonds; an
-%% advance of the calendar, which in a headless run the play drives; an
-%% acceptance of a swap or of a transfer the named party proposes, granted on
-%% its card; or a wait for a screen message.  A due is `now` for coins and the
+%% agent's request form --- issue(K) for coins and issue(K, D) for bonds; a
+%% setting of the machine's clock to a day, clock(T), or forward to it,
+%% advance(T), which in a headless run the play drives; an
+%% acceptance of a swap or of a transfer the named party proposes, or a
+%% refusal of a transfer, granted on its card; or a wait for a screen message.  A due is `now` for coins and the
 %% maturity date for bonds.
-Step ::= mint(Integer)
-       ; mint(Integer, Integer)
+Step ::= issue(Integer)
+       ; issue(Integer, Integer)
+       ; clock(Integer)
        ; advance(Integer)
        ; swap(Key, Key, Constant, Integer, Key, Constant, Integer)
-       ; pay(Key, Integer)
+       ; pay_issuer(Key, Integer)
+       ; pay(Key, Key, Constant, Integer)
        ; redeem(Key, Constant, Key, Constant)
-       ; deposit(Key, Key, Constant, Integer)
-       ; release(Key, Key, Constant, Integer)
-       ; return(Key, Key, Constant, Integer)
+       ; deposit(Key, Key, Constant, Integer, Key, Condition)
+       ; release(Key, Key, Constant, Integer, Key, Condition)
+       ; return(Key, Key, Constant, Integer, Key, Condition)
        ; accept(Key)
        ; accept_transfer(Key)
+       ; decline_transfer(Key)
        ; await(ScreenContent).
 Script ::= [] ; [Step | Script].
 
@@ -285,7 +311,7 @@ Script ::= [] ; [Step | Script].
 %% agreements([...]): the escrow agent is one party whose volitions are those
 %% of the escrow programs of the agreements it holds, so a deposit is accepted,
 %% and taken when it arrives, by the first agreement that provides for it, and
-%% every other message of its screen, an advance of its date among them, goes
+%% every other message of its screen, the date among them, goes
 %% to every agreement (Currencies, 2026-10-13 08:01 UTC).
 Agreement ::= none
             ; dated_escrow(Key, Key, Lot, Integer, Phase, Integer)
@@ -376,7 +402,69 @@ tally([bond(I, M, _)|Rest], Acc, Lots?) :-
     ground(I?), integer(M?) |
     tally_add(I?, M?, Acc?, Acc1),
     tally(Rest?, Acc1?, Lots).
+tally([escrow_coin(_, _, _, _, _)|Rest], Acc, Lots?) :- tally(Rest?, Acc?, Lots).
+tally([escrow_bond(_, _, _, _, _, _)|Rest], Acc, Lots?) :- tally(Rest?, Acc?, Lots).
 tally([], Acc, Acc?).
+
+%% What is held in escrow, tallied by issuer, due and terms, in order of
+%% first appearance.
+procedure escrow_tally(Stream(Instrument)?, EscrowLots?, EscrowLots).
+escrow_tally([escrow_coin(I, _, P, Q, C)|Rest], Acc, Lots?) :-
+    ground(I?), ground(P?), ground(Q?), ground(C?) |
+    escrow_add(I?, now, P?, Q?, C?, Acc?, Acc1),
+    escrow_tally(Rest?, Acc1?, Lots).
+escrow_tally([escrow_bond(I, M, _, P, Q, C)|Rest], Acc, Lots?) :-
+    ground(I?), integer(M?), ground(P?), ground(Q?), ground(C?) |
+    escrow_add(I?, M?, P?, Q?, C?, Acc?, Acc1),
+    escrow_tally(Rest?, Acc1?, Lots).
+escrow_tally([coin(_, _)|Rest], Acc, Lots?) :- escrow_tally(Rest?, Acc?, Lots).
+escrow_tally([bond(_, _, _)|Rest], Acc, Lots?) :- escrow_tally(Rest?, Acc?, Lots).
+escrow_tally([], Acc, Acc?).
+
+procedure escrow_add(Key?, Constant?, Key?, Key?, Condition?, EscrowLots?, EscrowLots).
+escrow_add(I, D, P, Q, C, [in_escrow(I2, D2, N, P2, Q2, C2)|Rest], [in_escrow(I2?, D2?, N1?, P2?, Q2?, C2?)|Rest?]) :-
+    I? =?= I2?, D? =?= D2?, P? =?= P2?, Q? =?= Q2?, C? =?= C2? |
+    N1 := N? + 1.
+escrow_add(I, D, P, Q, C, [L|Rest], [L?|Rest1?]) :- otherwise | escrow_add(I?, D?, P?, Q?, C?, Rest?, Rest1).
+escrow_add(I, D, P, Q, C, [], [in_escrow(I?, D?, 1, P?, Q?, C?)]).
+
+%% The instruments of a deposit as the escrow agent holds them: each a record
+%% of the instrument, the depositor, the beneficiary and the condition.
+procedure to_escrow(Stream(Instrument)?, Key?, Key?, Condition?, Stream(Instrument)).
+to_escrow([coin(I, S)|Xs], P, Q, C, [escrow_coin(I?, S?, P?, Q?, C?)|Ys?]) :-
+    ground(P?), ground(Q?), ground(C?) |
+    to_escrow(Xs?, P?, Q?, C?, Ys).
+to_escrow([bond(I, M, S)|Xs], P, Q, C, [escrow_bond(I?, M?, S?, P?, Q?, C?)|Ys?]) :-
+    ground(P?), ground(Q?), ground(C?) |
+    to_escrow(Xs?, P?, Q?, C?, Ys).
+to_escrow([X|Xs], P, Q, C, [X?|Ys?]) :-
+    otherwise |
+    to_escrow(Xs?, P?, Q?, C?, Ys).
+to_escrow([], _, _, _, []).
+
+%% K instruments of Issuer and due D held in escrow from P for Q on C, out of
+%% the holdings, as instruments: ok, with them and the rest; or fail --- the
+%% precondition of Release and Return does not hold --- with those found and
+%% the rest.
+procedure select_escrow(Key?, Constant?, Integer?, Key?, Key?, Condition?, Stream(Instrument)?, Status, Stream(Instrument), Stream(Instrument)).
+select_escrow(_, _, 0, _, _, _, Hs, ok, [], Hs?).
+select_escrow(Issuer, D, K, P, Q, C, [escrow_coin(I, S, P1, Q1, C1)|Rest], Status?, [coin(I?, S?)|Sel?], Rem?) :-
+    K? > 0, Issuer? =?= I?, D? =?= now, P? =?= P1?, Q? =?= Q1?, C? =?= C1? |
+    K1 := K? - 1,
+    select_escrow(Issuer?, D?, K1?, P?, Q?, C?, Rest?, Status, Sel, Rem).
+select_escrow(Issuer, D, K, P, Q, C, [escrow_bond(I, M, S, P1, Q1, C1)|Rest], Status?, [bond(I?, M?, S?)|Sel?], Rem?) :-
+    K? > 0, Issuer? =?= I?, D? =?= M?, P? =?= P1?, Q? =?= Q1?, C? =?= C1? |
+    K1 := K? - 1,
+    select_escrow(Issuer?, D?, K1?, P?, Q?, C?, Rest?, Status, Sel, Rem).
+select_escrow(Issuer, D, K, P, Q, C, [X|Rest], Status?, Sel?, [X?|Rem?]) :-
+    otherwise |
+    select_escrow(Issuer?, D?, K?, P?, Q?, C?, Rest?, Status, Sel, Rem).
+select_escrow(_, _, K, _, _, _, [], fail, [], []) :- K? > 0 | true.
+
+%% The current date, as the machine's clock gives it: the time now/1 gives, in
+%% milliseconds, in whole days (the atom today of the speech-act schemas).
+procedure today(Integer).
+today(Day?) :- now(T), Day := floor(T? / 86400000).
 
 procedure tally_add(Key?, Constant?, List(Lot)?, List(Lot)).
 tally_add(I, D, [lot(I2, D2, N)|Rest], [lot(I2?, D2?, N1?)|Rest?]) :-
@@ -393,6 +481,10 @@ menu_of(Id, [coin(I, _)|Rest], Acc, Menu?) :-
     menu_of(Id?, Rest?, Acc?, Menu).
 menu_of(Id, [bond(I, _, _)|Rest], Acc, Menu?) :-
     Id? =?= I? |
+    menu_of(Id?, Rest?, Acc?, Menu).
+menu_of(Id, [escrow_coin(_, _, _, _, _)|Rest], Acc, Menu?) :-
+    menu_of(Id?, Rest?, Acc?, Menu).
+menu_of(Id, [escrow_bond(_, _, _, _, _, _)|Rest], Acc, Menu?) :-
     menu_of(Id?, Rest?, Acc?, Menu).
 menu_of(Id, [coin(I, _)|Rest], Acc, Menu?) :-
     otherwise |
@@ -462,13 +554,13 @@ inject_redeem_result(Resp, Q, D, R, D1, [Y|Ys], [Y?|Ys1?]) :-
     inject_redeem_result(Resp?, Q?, D?, R?, D1?, Ys?, Ys1).
 
 %% The receiver's answer to a proposed transfer, when it comes.
-procedure inject_transfer_result(TransferResponse?, Kind?, Key?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_transfer_result(transfer_accept, Kind, Q, Ys, [transfer_accepted(Kind?, Q?)|Ys?]) :-
+procedure inject_transfer_result(TransferResponse?, Kind?, Key?, Terms?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_transfer_result(transfer_accept, Kind, Q, _, Ys, [transfer_accepted(Kind?, Q?)|Ys?]) :-
     ground(Kind?), ground(Q?) | true.
-inject_transfer_result(transfer_decline(Given), Kind, Q, Ys, [transfer_declined_by(Kind?, Q?, Given?)|Ys?]) :-
-    ground(Kind?), ground(Q?), ground(Given?) | true.
-inject_transfer_result(R, Kind, Q, [Y|Ys], [Y?|Ys1?]) :-
-    inject_transfer_result(R?, Kind?, Q?, Ys?, Ys1).
+inject_transfer_result(transfer_decline(Given), Kind, Q, Terms, Ys, [transfer_declined_by(Kind?, Q?, Terms?, Given?)|Ys?]) :-
+    ground(Kind?), ground(Q?), ground(Terms?), ground(Given?) | true.
+inject_transfer_result(R, Kind, Q, Terms, [Y|Ys], [Y?|Ys1?]) :-
+    inject_transfer_result(R?, Kind?, Q?, Terms?, Ys?, Ys1).
 
 %% The bodies of the swap responder's two answers (decide_swap): the
 %% acceptance, on yes, and the decline, on no.  Each hands the agent the offer
@@ -480,8 +572,8 @@ procedure decline_answer(Key?, Stream(Instrument)?, SwapResponse, Stream(UserInM
 decline_answer(From, Offered, Resp?, [decline_swap(From?, Offered?, Resp)]).
 
 %% The same for the transfer responder (decide_transfer).
-procedure accept_transfer_answer(Kind?, Key?, Stream(Instrument)?, TransferResponse, Stream(UserInMsg)).
-accept_transfer_answer(Kind, From, Given, Resp?, [accept_transfer(Kind?, From?, Given?, Resp)]).
+procedure accept_transfer_answer(Kind?, Key?, Terms?, Stream(Instrument)?, TransferResponse, Stream(UserInMsg)).
+accept_transfer_answer(Kind, From, Terms, Given, Resp?, [accept_transfer(Kind?, From?, Terms?, Given?, Resp)]).
 
 procedure decline_transfer_answer(Kind?, Key?, Stream(Instrument)?, TransferResponse, Stream(UserInMsg)).
 decline_transfer_answer(Kind, From, Given, Resp?, [decline_transfer(Kind?, From?, Given?, Resp)]).
@@ -516,6 +608,14 @@ village :- village # market.
 imported procedure village#two_escrows.
 exported procedure two_escrows.
 two_escrows :- village # two_escrows.
+
+imported procedure village#pay_notes.
+exported procedure pay_notes.
+pay_notes :- village # pay_notes.
+
+imported procedure village#escrow_terms.
+exported procedure escrow_terms.
+escrow_terms :- village # escrow_terms.
 
 imported procedure credit_line#run.
 exported procedure credit_line.

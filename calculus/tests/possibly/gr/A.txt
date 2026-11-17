@@ -1,0 +1,6 @@
+A: Apart
+Alice and Bob are persons.
+1. ■ Greet: Alice may greet Bob.
+Logic pragmas.
+Vocabulary: y is greeted by x = greeted(y,x).
+After x greets y: y is greeted by x.

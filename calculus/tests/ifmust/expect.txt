@@ -1,0 +1,274 @@
+Knowledge  commute yes; return yes; recover same
+Friendship commute yes; return yes; recover same
+Guardians  commute yes; return yes; recover same
+3 contracts, 0 with a fault
+--- sasx/Friendship.txt
+Friendship (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:0 - | Alice and Bob are persons.
+Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+--- sasx/Guardians.txt
+Guardians (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1+Guardians:3 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2+Guardians:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:0 - | Alice and Bob are persons.
+Friendship:1+Guardians:3 ■ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Guardians:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
+Guardians:0 - | Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+Guardians:1 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
+Guardians:1 ■ | Alice chooses Carol's key pair.
+Guardians:2 ■ | Guardian decisions.
+Guardians:2 ■ Make guardian: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), has_guardian(Carol,Alice), friend(Bob,Alice), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by deciders(Carol), Bob.
+Guardians:2 ■ Resign: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by Bob.
+Guardians:2 ■ End guardian: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by deciders(Carol,-Bob).
+Guardians:2 ■ Guardian unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- friend(Bob,Carol), friend(Carol,Bob), guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by Bob.
+Guardians:2 ■ | Carol may not end a friendship with her guardian.
+Guardians:3 ■ | Ward and person.
+Guardians:3 ■ Ward acquaint: knows(Carol,Bob), knows(Bob,Carol) <- ward(Carol), has_guardian(Carol,Alice), person(Bob) guarded by Carol, Bob.
+Guardians:3 ■ Ward befriend: friend(Carol,Bob), friend(Bob,Carol) <- ward(Carol), ~retired(Carol), has_guardian(Carol,Alice), person(Bob), knows(Carol,Bob), knows(Bob,Carol), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Bob), ~friend(Bob,Carol) guarded by Carol, Bob, Alice.
+Guardians:3 ■ Ward end: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~guardian(Bob,Carol), ~has_guardian(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+Guardians:3 ■ Unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob) <- ~guardian(Bob,Carol), friend(Bob,Carol), friend(Carol,Bob) guarded by Bob.
+Guardians:3 ■ Ward unfriend: ~friend(Carol,Bob), ~friend(Bob,Carol) <- has_guardian(Carol,Alice), ~guardian(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Alice.
+Guardians:4 ■ | Wards.
+Guardians:4 ■ Wards acquaint: knows(Carol,Dave), knows(Dave,Carol) <- ward(Carol), has_guardian(Carol,Alice), ward(Dave), has_guardian(Dave,Bob) guarded by Carol, Dave possibly Alice=Bob.
+Guardians:4 ■ Wards befriend: friend(Carol,Dave), friend(Dave,Carol) <- ward(Carol), ~retired(Carol), has_guardian(Carol,Alice), ward(Dave), ~retired(Dave), has_guardian(Dave,Bob), knows(Carol,Dave), knows(Dave,Carol), knows(Alice,Dave), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Dave), ~friend(Dave,Carol) guarded by Carol, Dave, Alice, Bob possibly Alice=Bob.
+Guardians:4 ■ Wards of one guardian befriend: friend(Carol,Dave), friend(Dave,Carol) <- ward(Carol), ~retired(Carol), has_guardian(Carol,Alice), ward(Dave), ~retired(Dave), has_guardian(Dave,Alice), knows(Carol,Dave), knows(Dave,Carol), ~friend(Carol,Dave), ~friend(Dave,Carol) guarded by Carol, Dave, Alice.
+Guardians:5 ■ Retire: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~friend(Carol,_), ~friend(_,Carol) <- ~retired(Carol) guarded by deciders(Carol).
+Guardians:5 ■ | Carol can then take no act.
+--- sasx/Knowledge.txt
+Knowledge (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+--- expand.py: exit 0; --check: exit 0
+--- exp/Friendship.txt
+% Written by tools/expand.py from rev/; do not edit.
+Friendship
+An *identity* is a unique key pair.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+--- exp/Guardians.txt
+% Written by tools/expand.py from rev/; do not edit.
+Guardians
+An *identity* is a unique key pair.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons. Alice, Bob and Erin are persons, Carol and Dave wards.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Guardians:1. ■ Enter: Alice may create a ward, Carol, and establish Carol's identity by choosing Carol's key pair. Alice is then the creator, a guardian and a friend of Carol.
+Guardians:2. ■ Guardian decisions. Make guardian: Those who decide for Carol may make Bob, a friend of a guardian of Carol, a guardian and a friend of Carol, with the consent of Bob. Resign: Bob may end his guardianship of Carol. End guardian: Those who decide for Carol, other than Bob, may end Bob's guardianship. Guardian unfriend: Bob may end his friendship with Carol, which ends his guardianship. Carol may not end a friendship with her guardian.
+Guardians:3. ■ Ward and person. Ward acquaint: Carol, a ward of Alice, and Bob may jointly come to know each other. Ward befriend: Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends. Ward end, Unfriend, Ward unfriend: Carol, Bob or Alice may end the relation of Bob and Carol.
+Guardians:4. ■ Wards. Wards acquaint: Carol, a ward of Alice, and Dave, a ward of Bob, may jointly come to know each other. Wards befriend: Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+Guardians:5. ■ Retire: Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
+--- exp/Knowledge.txt
+% Written by tools/expand.py from rev/; do not edit.
+Knowledge
+An *identity* is a unique key pair.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+--- gx/Friendship.txt
+Friendship
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+--- gx/Guardians.txt
+Guardians
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
+Of Guardians: Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for it. Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+Knowledge:1, Guardians:3. ■ Establish: Alice may establish an identity, and then Alice is a person. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+Friendship:1, Guardians:3. ■ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
+Friendship:2, Guardians:3. ■ Person unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Guardians:1. ■ Enter: Alice may create Carol, and Carol must consent, provided Alice is a person. Alice chooses Carol's key pair.
+Guardians:2. ■ Guardian decisions. Make guardian: Those who decide for Carol may make Bob a guardian of Carol, with the consent of Bob, provided Carol is a ward, Carol is not retired, Bob is a person, Carol has Alice as a guardian and Bob counts Alice as a friend. Resign: Bob may end his guardianship of Carol. End guardian: Those who decide for Carol, other than Bob, may end Bob's guardianship of Carol. Guardian unfriend: Bob may end his friendship with his ward Carol. Carol may not end a friendship with her guardian.
+Guardians:3. ■ Ward and person. Ward acquaint: Carol and Bob may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian and Bob is a person. Ward befriend: Carol and Bob may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Bob is a person, Carol and Bob know each other and Alice and Bob are friends. Ward end: Carol may end her friendship with Bob, provided Bob is not a guardian of Carol and Carol does not have Bob as a guardian. Unfriend: Bob may end his friendship with Carol, provided Bob is not a guardian of Carol. Ward unfriend: Alice may end the friendship of Carol and Bob, provided Carol has Alice as a guardian and Bob is not a guardian of Carol.
+Guardians:4. ■ Wards. Wards acquaint: Carol and Dave may jointly come to know each other, provided Carol is a ward, Carol has Alice as a guardian, Dave is a ward and Dave has Bob as a guardian. Wards befriend: Carol and Dave may jointly become friends, with the consent of Alice and Bob, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Bob as a guardian, Carol and Dave know each other, Alice knows Dave and Alice and Bob are friends. Wards of one guardian befriend: Carol and Dave may jointly become friends, with the consent of Alice, provided Carol is a ward, Carol is not retired, Carol has Alice as a guardian, Dave is a ward, Dave is not retired, Dave has Alice as a guardian and Carol and Dave know each other.
+Guardians:5. ■ Retire: Those who decide for Carol may retire Carol. Carol can then take no act.
+--- gx/Knowledge.txt
+Knowledge
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+--- interface Friendship
+Friendship
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+--- interface-adopted Friendship
+Interface pragmas
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+--- interface Guardians
+Guardians
+1. ■ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ■ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Person unfriend.  Alice may end her friendship with Bob.
+6. ■ Enter.  Alice may create a ward, Carol, and establish Carol's identity by choosing Carol's key pair, and Carol must consent.
+7. ■ Make guardian.  Those who decide for Carol may make Bob, a friend of a guardian of Carol, a guardian and a friend of Carol, with the consent of Bob.
+8. ■ Resign.  Bob may end his guardianship of Carol.
+9. ■ End guardian.  Those who decide for Carol, other than Bob, may end Bob's guardianship.
+10. ■ Guardian unfriend.  Bob may end his friendship with Carol, which ends his guardianship.
+11. ■ Ward acquaint.  Carol, a ward of Alice, and Bob may jointly come to know each other.
+12. ■ Ward befriend.  Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends.
+13. ■ Ward end.  Carol, Bob or Alice may end the relation of Bob and Carol.
+14. ■ Unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
+15. ■ Ward unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
+16. ■ Wards acquaint.  Carol, a ward of Alice, and Dave, a ward of Bob, may jointly come to know each other.
+17. ■ Wards befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+18. ■ Wards of one guardian befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+19. ■ Retire.  Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Person unfriend: Alice [Person unfriend]
+Enter: Alice [Enter]
+Make guardian: Bob [Make guardian]
+  Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
+Resign: Bob [Resign]
+End guardian: Decider [End guardian]
+  Codecider: Decider asks for your consent to end guardian.
+Guardian unfriend: Bob [Guardian unfriend]
+Ward acquaint: Carol [Ward acquaint]
+  Bob: Carol asks for your consent to ward acquaint.
+Ward befriend: Carol [Ward befriend]
+  Bob: Carol asks for your consent to ward befriend.
+  Alice: Carol asks for your consent to ward befriend.
+Ward end: Carol [Ward end]
+Unfriend: Bob [Unfriend]
+Ward unfriend: Alice [Ward unfriend]
+Wards acquaint: Carol [Wards acquaint]
+  Dave: Carol asks for your consent to wards acquaint.
+Wards befriend: Carol [Wards befriend]
+  Dave: Carol asks for your consent to wards befriend.
+  Alice: Carol asks for your consent to wards befriend.
+  Bob: Carol asks for your consent to wards befriend.
+Wards of one guardian befriend: Carol [Wards of one guardian befriend]
+  Dave: Carol asks for your consent to wards of one guardian befriend.
+  Alice: Carol asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+--- interface-adopted Guardians
+Interface pragmas
+Enter: Alice [Enter]
+Guardian decisions: Bob [Make guardian]
+  Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
+  Bob [Resign]
+  Decider [End guardian]
+  Codecider: Decider asks for your consent to end guardian.
+  Bob [Guardian unfriend]
+Ward and person: Alice [Establish]
+  Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+  Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+  Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+  Alice [Person unfriend]
+  Carol [Ward acquaint]
+  Bob: Carol asks for your consent to ward acquaint.
+  Carol [Ward befriend]
+  Bob: Carol asks for your consent to ward befriend.
+  Alice: Carol asks for your consent to ward befriend.
+  Carol [Ward end]
+  Bob [Unfriend]
+  Alice [Ward unfriend]
+Wards: Carol [Wards acquaint]
+  Dave: Carol asks for your consent to wards acquaint.
+  Carol [Wards befriend]
+  Dave: Carol asks for your consent to wards befriend.
+  Alice: Carol asks for your consent to wards befriend.
+  Bob: Carol asks for your consent to wards befriend.
+  Carol [Wards of one guardian befriend]
+  Dave: Carol asks for your consent to wards of one guardian befriend.
+  Alice: Carol asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+--- interface Knowledge
+Knowledge
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+--- interface-adopted Knowledge
+Interface pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.

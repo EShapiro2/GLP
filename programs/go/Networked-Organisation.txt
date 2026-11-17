@@ -1,0 +1,37 @@
+% Networked Organisation --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 5, Grassroots Network Organisations and cites a clause as Networked Organisation:1.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: Backed Currency, restricting it.
+% Last changed: 2026-11-16, by GO #8.
+% Schemas: Networked-Organisation.glp beside this file.
+Networked Organisation
+Networked Organisation extends Backed Currency and restricts it.
+A *networked organisation* is a backed community currency whose bylaws also name the role *arbiter*. A *provider* is a person whose *stake*, the Orga-coins they hold, is at least *S*, a number of Orga-coins, and a *customer* is a person who accepts Orga-coins. A treasurer is a provider. A *dispute* is over Orga-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+Alice, Bob and Carol are persons, Orga a networked organisation.
+1. ■ Set stake: The treasurers may set S.
+2. ■ Arbitration. Raise: Either Alice or Bob, the parties to a dispute, may raise it to an arbiter, Carol. Arbitrate: Carol may then decide the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.
+Logic pragmas
+Networked Organisation extends Backed Currency and restricts it.
+A *networked organisation* is a backed community currency whose bylaws also name the role *arbiter*. A *provider* is a person whose *stake*, the Orga-coins they hold, is at least *S*, a number of Orga-coins, and a *customer* is a person who accepts Orga-coins. A treasurer is a provider. A *dispute* is over Orga-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+Alice, Bob and Carol are persons, Orga a networked organisation, S and Held numbers; in clause 2 Alice is the customer and Bob the provider.
+1. ■ Set stake: The treasurers of Orga may set the stake of Orga at S, provided Orga is an organisation.
+2. ■ Arbitration. Raise: Alice may raise to Carol her dispute with the provider Bob over Orga-coins, provided Orga-coins are locked between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Provider raise: Bob may raise to Carol his dispute with the customer Alice over Orga-coins, provided Orga-coins are locked between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Arbitrate: Carol may decide the release to Alice and to Bob of the Orga-coins locked between them. The coins are released less the fee the terms set, which is released to Carol.
+Logic pragmas.
+Vocabulary: z has the stake at the number n = stake(z,n); x has z-coins locked as the customer of y = customer_lock(x,y,z); y has z-coins locked as the provider of x = provider_lock(y,x,z); w holds the dispute of x and y over z-coins = dispute(w,x,y,z).
+z-coins are locked between the provider y and the customer x: y has z-coins locked as the provider of x and x has z-coins locked as the customer of y.
+x is an arbiter of z: x holds the role Arbiter in z and z has x in the role Arbiter.
+the earlier stake of z has ended: z has the stake at no number.
+x is a customer of z: x accepts a Dollar-denominated z-coin in payment.
+y is a provider of z: z has the stake at the number S, y holds Held z-coins and Held is at least S.
+After g sets the stake of z at n: the earlier stake of z has ended and z has the stake at the number n.
+After x raises to w x's dispute with the provider y over z-coins, which requires w does not hold the dispute of x and y over z-coins: w holds the dispute of x and y over z-coins.
+After y raises to w y's dispute with the customer x over z-coins, which requires w does not hold the dispute of x and y over z-coins: w holds the dispute of x and y over z-coins.
+After w decides the release to x and to y of the z-coins locked between them: no longer w holds the dispute of x and y over z-coins and no longer z-coins are locked between the provider y and the customer x.
+Parameters: x has z-coins locked as the customer of y; y has z-coins locked as the provider of x.
+Interface pragmas
+Look: 🕸️, network
+Set stake: Decider [Set stake] <organisation> <stake>
+  Codecider: Decider asks to set the stake of Orga.
+Arbitration: Alice [Raise] <arbiter>
+  Bob [Provider raise] <arbiter>
+  Carol [Arbitrate]

@@ -1,0 +1,2 @@
+F: F (expanded schemas)
+F:1 ■ Wave: waved(Alice,Bob) <- ~waved(Alice,Bob) guarded by Alice.

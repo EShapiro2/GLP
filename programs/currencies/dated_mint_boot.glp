@@ -2,7 +2,7 @@
 %%   :artefact programs/currencies/bonds/dated programs/social/graph/core
 %%   :boot programs/currencies/dated_mint_boot.glp programs/social/graph/core
 %%
-%% alice, alone, knows no peer: she trusts the compiler's key, reads the certified artefact dated.glpw from graph/core with load_file/2, installs it with one end of a person channel and activates it, with no invitation and no peer; the other end of the person channel is the mini-app's own scripted person (programs/currencies/bonds/dated/plays.glp, miniapp_person/5) under the role mint, who mints 3, play_mint's script, and its screen goes to the person, one line each: play_mint's screen, [minted(3, now), holdings([lot(alice, now, 3)]) | _].
+%% alice, alone, knows no peer: she trusts the compiler's key, reads the certified artefact dated.glpw from graph/core with load_file/2, installs it with one end of a person channel and activates it, with no invitation and no peer; the other end of the person channel is the mini-app's own scripted person (programs/currencies/bonds/dated/plays.glp, miniapp_person/5) under the role mint, who mints 3, play_mint's script, and its screen goes to the person, one line each: play_mint's screen, [issued(3, now), holdings([lot(alice, now, 3)]) | _].
 %%
 %% The boot settles, as gc_boot.glp's does: the boot harness reduces each event until the program is quiescent, as the device runtime does (IGLP, Implementation Notes: "On each event the agent binds what the event delivers, reduces until quiescent").
 

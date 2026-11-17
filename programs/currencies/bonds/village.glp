@@ -50,35 +50,35 @@
 %%
 %% Entry point: market/0, exported by self.glp as village/0.
 
-imported procedure dated#bonds(Key?, PersonChannel(dated#Drawn)?, Stream(Conversation(PeerMsg))?, Stream(Integer)?).
-imported procedure dated#person(Key?, PersonOut(dated#Drawn)?, PersonIn(dated#Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure dated#bonds(Key?, PersonChannel(dated#Drawn)?, Stream(Conversation(PeerMsg))?).
+imported procedure dated#person(Key?, PersonOut(dated#Drawn)?, PersonIn(dated#Drawn), Script?, Agreement?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts
 %% =============================================================================
 
 procedure script(Key?, Script).
-script(alice, [mint(15), swap(bob, alice, now, 15, bob, now, 15),
-               mint(15), swap(charlie, alice, now, 15, charlie, now, 15),
+script(alice, [issue(15), swap(bob, alice, now, 15, bob, now, 15),
+               issue(15), swap(charlie, alice, now, 15, charlie, now, 15),
                swap(eve, bob, now, 10, frank, now, 4)]).
-script(bob, [mint(15), accept(alice), mint(24, 25), accept(diana),
-             pay(alice, 5), advance(25)]).
-script(charlie, [mint(15), accept(alice), mint(10),
+script(bob, [issue(15), accept(alice), issue(24, 25), accept(diana),
+             pay_issuer(alice, 5)]).
+script(charlie, [issue(15), accept(alice), issue(10),
                  swap(eve, charlie, now, 10, eve, now, 10), accept(eve),
-                 deposit(escrow, frank, now, 5)]).
-script(diana, [mint(20), swap(bob, diana, now, 20, bob, 25, 24),
-               mint(15), swap(frank, diana, now, 15, frank, 28, 18),
+                 deposit(escrow, frank, now, 5, frank, day(30))]).
+script(diana, [issue(20), swap(bob, diana, now, 20, bob, 25, 24),
+               issue(15), swap(frank, diana, now, 15, frank, 28, 18),
                redeem(frank, 28, frank, now),
                await(presented(frank, now, frank, 28)), await(presented(frank, now, frank, 28)),
                await(presented(frank, now, frank, 28)), await(presented(frank, now, frank, 28)),
                await(presented(frank, now, frank, 28)),
                redeem(frank, 28, frank, now)]).
-script(eve, [mint(10), accept(charlie), mint(10),
+script(eve, [issue(10), accept(charlie), issue(10),
              swap(frank, eve, now, 10, frank, now, 10),
-             pay(charlie, 6), swap(charlie, frank, now, 5, alice, now, 5),
-             pay(alice, 3), accept(alice)]).
-script(frank, [mint(18, 28), accept(diana), mint(10), accept(eve),
-               pay(diana, 3),
+             pay_issuer(charlie, 6), swap(charlie, frank, now, 5, alice, now, 5),
+             pay_issuer(alice, 3), accept(alice)]).
+script(frank, [issue(18, 28), accept(diana), issue(10), accept(eve),
+               pay_issuer(diana, 3),
                await(not_mature_for(diana, 28)), advance(28),
                redeem(diana, now, frank, 28), redeem(diana, now, frank, 28),
                redeem(diana, now, frank, 28), redeem(diana, now, frank, 28),
@@ -99,6 +99,7 @@ script(escrow, [await(received_transfer(deposit, charlie, [lot(frank, now, 5)]))
 
 exported procedure market.
 market :-
+    day_one,
     script(alice, SA),
     villager(alice, SA?, [conversation(bob, ch(AB?, BA)), conversation(charlie, ch(AC?, CA)),
                           conversation(eve, ch(AE?, EA))]),
@@ -106,7 +107,7 @@ market :-
     villager(bob, SB?, [conversation(alice, ch(BA?, AB)), conversation(diana, ch(BD?, DB))]),
     script(charlie, SC),
     villager(charlie, SC?, [conversation(alice, ch(CA?, AC)), conversation(eve, ch(CE?, EC)),
-                            conversation(escrow, ch(CG?, GC))]),
+                            conversation(escrow, ch(CG?, GC)), conversation(frank, ch(CF?, FC))]),
     script(diana, SD),
     villager(diana, SD?, [conversation(bob, ch(DB?, BD)), conversation(frank, ch(DF?, FD))]),
     script(eve, SE),
@@ -114,7 +115,7 @@ market :-
                         conversation(frank, ch(EF?, FE))]),
     script(frank, SF),
     villager(frank, SF?, [conversation(diana, ch(FD?, DF)), conversation(eve, ch(FE?, EF)),
-                          conversation(escrow, ch(FG?, GF))]),
+                          conversation(escrow, ch(FG?, GF)), conversation(charlie, ch(FC?, CF))]),
     script(escrow, SG),
     escrow_agent(escrow, SG?, dated_escrow(charlie, frank, lot(frank, now, 5), 30, awaiting, 0),
                  [conversation(charlie, ch(GC?, CG)), conversation(frank, ch(GF?, FG))]).
@@ -134,10 +135,11 @@ market :-
 
 exported procedure two_escrows.
 two_escrows :-
-    villager(charlie, [mint(4), swap(frank, charlie, now, 4, frank, now, 4),
-                       deposit(escrow, frank, now, 2), deposit(escrow, frank, now, 2)],
+    day_one,
+    villager(charlie, [issue(4), swap(frank, charlie, now, 4, frank, now, 4),
+                       deposit(escrow, frank, now, 2, frank, day(30)), deposit(escrow, frank, now, 2, frank, day(30))],
              [conversation(frank, ch(CF?, FC)), conversation(escrow, ch(CG?, GC))]),
-    villager(frank, [mint(4), accept(charlie), accept_transfer(escrow), accept_transfer(escrow)],
+    villager(frank, [issue(4), accept(charlie), accept_transfer(escrow), accept_transfer(escrow)],
              [conversation(charlie, ch(FC?, CF)), conversation(escrow, ch(FG?, GF))]),
     escrow_agent(escrow,
                  [await(received_transfer(deposit, charlie, [lot(frank, now, 2)])),
@@ -150,6 +152,49 @@ two_escrows :-
 %% One villager: the mini-app, activated with its person channel, its
 %% conversations and its calendar; the scripted person on the other end of the
 %% channel, under no agreement; and its screen logged.
+%% A play begins on day 1: the machine's clock, the one clock of every agent
+%% of the play, is set to it, and a scripted person sets it forward
+%% (dated/person.glp, the step advance).
+%% The terms of an escrow (Notes:4), and the maturity of a bond (Bonds:1): alice asks
+%% for bonds maturing on day 1, the current date, and none is issued; she asks
+%% to deposit two of her coins for carol, whom she does not know, and nothing
+%% is sent; she deposits them with the escrow agent for bob on day 30; the
+%% escrow agent asks to release them to alice, who is not the beneficiary,
+%% and to release them to bob on another condition, and holds no such record;
+%% and returns them to alice, their depositor.
+exported procedure escrow_terms.
+escrow_terms :-
+    day_one,
+    villager(alice,
+             [issue(2, 1), issue(2), deposit(escrow, alice, now, 2, carol, day(30)),
+              deposit(escrow, alice, now, 2, bob, day(30)), accept_transfer(escrow)],
+             [conversation(bob, ch(AB?, BA)), conversation(escrow, ch(AG?, GA))]),
+    villager(bob, [], [conversation(alice, ch(BA?, AB)), conversation(escrow, ch(BG?, GB))]),
+    villager(escrow,
+             [accept_transfer(alice),
+              release(alice, alice, now, 2, alice, day(30)),
+              release(bob, alice, now, 2, alice, day(31)),
+              return(alice, alice, now, 2, bob, day(30))],
+             [conversation(alice, ch(GA?, AG)), conversation(bob, ch(GB?, BG))]).
+
+%% Pay (Notes:3) and Pay issuer (Coins:1): alice issues coins and bonds; she pays
+%% bob two of her coins and a bond, which are not his own, with his consent;
+%% she asks to pay carol a coin, and carol declines, so it comes back; and bob
+%% pays alice one of her coins back, her own, which she takes unasked.
+exported procedure pay_notes.
+pay_notes :-
+    day_one,
+    villager(alice,
+             [issue(4), issue(1, 30), pay(bob, alice, now, 2), pay(bob, alice, 30, 1),
+              pay(carol, alice, now, 1), await(received(bob, 1))],
+             [conversation(bob, ch(AB?, BA)), conversation(carol, ch(AC?, CA))]),
+    villager(bob, [accept_transfer(alice), accept_transfer(alice), pay_issuer(alice, 1)],
+             [conversation(alice, ch(BA?, AB))]),
+    villager(carol, [decline_transfer(alice)], [conversation(alice, ch(CA?, AC))]).
+
+exported procedure day_one.
+day_one :- set_clock(86400000).
+
 exported procedure villager(Key?, Script?, Stream(Conversation(PeerMsg))?).
 villager(Id, Script, Convs) :-
     ground(Id?) |
@@ -160,8 +205,8 @@ villager(Id, Script, Convs) :-
 exported procedure escrow_agent(Key?, Script?, Agreement?, Stream(Conversation(PeerMsg))?).
 escrow_agent(Id, Script, Ag, Convs) :-
     ground(Id?) |
-    dated # bonds(Id?, ch(Grants?, Draws), Convs?, Cal?),
-    dated # person(Id?, Draws?, Grants, Cal, Script?, Ag?, Screen),
+    dated # bonds(Id?, ch(Grants?, Draws), Convs?),
+    dated # person(Id?, Draws?, Grants, Script?, Ag?, Screen),
     log(Id?, Screen?).
 
 %% The screen messages, logged as tagged(Party, Message).

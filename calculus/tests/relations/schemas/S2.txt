@@ -1,0 +1,4 @@
+S2: S2 (expanded schemas)
+B:1+S2:1 ■ Meet: knows(Alice,Bob), knows(Bob,Alice), met(Alice,Bob) <- guarded by Alice, Bob.
+B:2+S2:1 ■ Part: ~knows(Alice,Bob), ~met(Alice,Bob) <- knows(Alice,Bob), met(Alice,Bob) guarded by Alice.
+B:3 ■ Mark: badge(Alice) <- ~badge(Alice) guarded by Alice.

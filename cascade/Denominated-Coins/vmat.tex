@@ -1,0 +1,1032 @@
+\iffalse
+establish
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+person
+}
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+acquaint
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+introduce
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+issue
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+issued_in
+}
+(
+Dollar
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+swap
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+\}
+) \uplus 
+\{
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+)
+\}
+) \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+)
+\}
+ \subseteq c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+pay
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+pay_issuer
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+\Bob
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+deposit
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+Dave
+,
+\Alice
+,
+Bob
+,
+Cond
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Bob
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+release
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+Dave
+,
+Alice
+,
+\Bob
+,
+Cond
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+Dave
+,
+Alice
+,
+\Bob
+,
+Cond
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+return
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+Dave
+,
+\Bob
+,
+Bob
+,
+Cond
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+\}
+,\\
+&
+\text{provided } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+Sum
+\cdot
+\mathit{
+escrow_coin
+}
+(
+Dave
+,
+\Bob
+,
+Bob
+,
+Cond
+)
+\}
+ \subseteq c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+\}
+\end{align*}
+\iffalse
+redeem
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+Carol
+)
+,
+\mathit{
+knows
+}
+(
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\text{\textcent}
+(
+Carol
+)
+\}
+) \uplus 
+\{
+\text{\textcent}
+(
+\Bob
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\text{\textcent}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\text{\textcent}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+first_issue
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+\Alice
+)
+,
+\mathit{
+issued_in
+}
+(
+Dollar
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+issued_in
+}
+(
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}

@@ -1,0 +1,4 @@
+DAO
+DAO extends Knowledge.
+Alice and Bob are persons, Org a networked organisation.
+1. ■ Delegate: Alice may delegate to Bob in Org, provided Alice knows Bob. DAO bylaws name a steward.

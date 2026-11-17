@@ -7,8 +7,3 @@
 exported procedure(X) append(Stream(X)?, Stream(X)?, Stream(X)).
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
-
-%% Metainterpreter support
-exported procedure reduce(_?, _).
-reduce(append([], Ys, Ys?), true).
-reduce(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).

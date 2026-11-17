@@ -1,0 +1,3 @@
+Interface pragmas
+Open place: Alice [Open place] [Close place]
+Encounter: Alice [Encounter]

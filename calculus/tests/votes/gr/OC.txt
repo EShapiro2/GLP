@@ -1,0 +1,9 @@
+OC: Organisations in a Currency, on Votes
+OC extends MO and CUR.
+Erin and Frank are persons, Alice and Bob organisations, Orga an organisation, Sum and Total numbers.
+1. ■ Pay for an organisation: CUR:1 Pay, taken for Alice by Erin, only if Erin is a member of Alice, on the votes of Alice for it.
+2. ■ Grant: Alice may grant Bob a badge of Orga, provided Alice is a member of Orga, on the votes of Orga for it.
+3. ■ Swap of two organisations: CUR:2 Swap, taken for Alice by Erin and for Bob by Frank, only if Erin is a member of Alice and Frank is a member of Bob, on the votes of Alice and of Bob for it. Swap for Alice: CUR:2 Swap, taken for Alice by Erin, only if Erin is a member of Alice, on the votes of Alice for it.
+Logic pragmas.
+Vocabulary: x holds a badge of z = badge(x,z).
+After x grants y a badge of z: y holds a badge of z.

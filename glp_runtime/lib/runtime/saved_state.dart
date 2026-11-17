@@ -122,8 +122,17 @@ class _Out {
     _b.addByte(v);
   }
 
-  /// Zigzag LEB128.
-  void sint(int v) => uint(v >= 0 ? v << 1 : ((-v) << 1) - 1);
+  /// Zigzag LEB128, of every 64-bit integer: the zigzag of an integer of
+  /// magnitude 2^62 or more has its top bit set, so its seven-bit groups are
+  /// taken with the unsigned shift.
+  void sint(int v) {
+    var z = (v << 1) ^ (v >> 63);
+    while ((z & ~0x7F) != 0) {
+      _b.addByte((z & 0x7F) | 0x80);
+      z >>>= 7;
+    }
+    _b.addByte(z);
+  }
 
   void f64(double v) {
     final d = ByteData(8)..setFloat64(0, v, Endian.little);
@@ -175,7 +184,7 @@ class _In {
 
   int sint() {
     final z = uint();
-    return (z & 1) == 0 ? z >> 1 : -((z + 1) >> 1);
+    return (z >>> 1) ^ -(z & 1);
   }
 
   double f64() {

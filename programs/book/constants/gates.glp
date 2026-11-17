@@ -24,18 +24,3 @@ exported procedure not(BitList?, BitList).
 not([], []).
 not([one|Xs], [zero|Zs?]) :- not(Xs?, Zs).
 not([zero|Xs], [one|Zs?]) :- not(Xs?, Zs).
-
-exported procedure reduce(_?, _).
-reduce(and([], [], []), true).
-reduce(and([one|Xs], [one|Ys], [one|Zs?]), and(Xs?, Ys?, Zs)).
-reduce(and([one|Xs], [zero|Ys], [zero|Zs?]), and(Xs?, Ys?, Zs)).
-reduce(and([zero|Xs], [one|Ys], [zero|Zs?]), and(Xs?, Ys?, Zs)).
-reduce(and([zero|Xs], [zero|Ys], [zero|Zs?]), and(Xs?, Ys?, Zs)).
-reduce(or([], [], []), true).
-reduce(or([one|Xs], [one|Ys], [one|Zs?]), or(Xs?, Ys?, Zs)).
-reduce(or([one|Xs], [zero|Ys], [one|Zs?]), or(Xs?, Ys?, Zs)).
-reduce(or([zero|Xs], [one|Ys], [one|Zs?]), or(Xs?, Ys?, Zs)).
-reduce(or([zero|Xs], [zero|Ys], [zero|Zs?]), or(Xs?, Ys?, Zs)).
-reduce(not([], []), true).
-reduce(not([one|Xs], [zero|Zs?]), not(Xs?, Zs)).
-reduce(not([zero|Xs], [one|Zs?]), not(Xs?, Zs)).

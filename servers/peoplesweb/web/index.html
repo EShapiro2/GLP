@@ -5,17 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="The Grassroots App Store">
-<meta property="og:title" content="The Grassroots App Store">
+<meta property="og:site_name" content="The Grassroots Project">
+<meta property="og:title" content="The Grassroots Project">
 <meta property="og:description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">
 <meta property="og:url" content="https://peoplesweb.org/">
 <meta property="og:image" content="https://peoplesweb.org/og.jpg">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="The grassroots contracts on a globe, beside the name of the Grassroots App Store">
+<meta property="og:image:alt" content="The grassroots contracts on a globe, beside the name of the Grassroots Project">
 <meta name="twitter:card" content="summary_large_image">
-<title>The Grassroots App Store</title>
+<title>The Grassroots Project</title>
 <link rel="icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -29,14 +29,6 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 button{font:inherit}
-header{position:sticky;top:0;z-index:10;background:rgba(245,245,247,.82);backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid rgba(0,0,0,.06)}
-.hin{max-width:1120px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:16px}
-.logo{font-weight:700;font-size:16px;letter-spacing:-.01em;cursor:pointer;display:flex;align-items:center;gap:9px}
-.logo .mark{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 200deg,#4f7bd9,#2bb3a0,#9b7bd4,#f0b54a,#4f7bd9)}
-.search{margin-left:auto;position:relative}
-.search input{width:min(300px,46vw);padding:8px 12px 8px 32px;border:none;border-radius:10px;background:rgba(118,118,128,.12);font:inherit;font-size:14px;outline:none}
-.search input:focus{background:#fff;box-shadow:0 0 0 3px rgba(10,122,255,.25)}
-.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.5}
 main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 /* home */
 .hero h1{font-size:clamp(30px,4.4vw,44px);letter-spacing:-.025em;line-height:1.08;margin:8px 0 10px;font-weight:800}
@@ -44,6 +36,8 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .sh{display:flex;align-items:baseline;justify-content:space-between;margin:34px 0 12px}
 .sh h2{font-size:22px;letter-spacing:-.015em;margin:0;font-weight:700}
 .sh span{color:var(--mute);font-size:14px}
+.sh .hq{display:flex;flex-direction:column;align-items:stretch;gap:6px;width:max-content;margin-left:auto}.sh .hq img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid var(--line)}
+@media (max-width:640px){.sh .hq{align-items:flex-end}.sh .hq img{width:84px}}
 .card{background:var(--card);border-radius:20px;box-shadow:var(--shadow)}
 #mapcard{position:relative;overflow:hidden;padding:6px}
 #graph{display:block;width:100%;height:auto;touch-action:none;-webkit-user-select:none;user-select:none}
@@ -51,7 +45,7 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .node{cursor:pointer}
 .node rect.bg{filter:drop-shadow(0 3px 6px rgba(0,0,0,.12));transition:transform .15s}
 .node:hover rect.bg{filter:drop-shadow(0 6px 12px rgba(0,0,0,.18)) brightness(1.05)}
-.node text{font:600 14px Inter,sans-serif;fill:#1d1d1f;pointer-events:none}
+.node text{font:500 14px Inter,sans-serif;fill:#1d1d1f;pointer-events:none}
 .node .ic{font-size:15px}
 .node.dim{opacity:.15}
 .node.hit rect.bg{stroke:#1d1d1f;stroke-width:2.5}
@@ -136,10 +130,13 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .q:hover{background:var(--blue);color:#fff}
 .rules{padding:20px 24px}
 .pre{color:var(--mute);font-style:italic;margin-bottom:6px;white-space:pre-line}
+.pre em{font-weight:600;color:var(--ink)}
 ol.cl{padding:0;margin:0;list-style:none}
 ol.cl li{display:grid;grid-template-columns:24px 22px 1fr;gap:2px;padding:10px 0;border-bottom:1px solid var(--line)}
 ol.cl li:last-child{border-bottom:none}
 ol.cl .n{color:var(--faint);font-weight:600}
+ol.cl.full li{grid-template-columns:minmax(64px,max-content) 22px 1fr;gap:2px 8px}ol.cl.full .n{font-size:12.5px;white-space:nowrap;padding-top:2px}
+.seg{display:inline-flex;background:rgba(118,118,128,.12);border-radius:999px;padding:2px}.seg button{border:none;background:none;border-radius:999px;padding:5px 14px;font-weight:600;font-size:13px;color:var(--mute);cursor:pointer}.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 ol.cl b{font-weight:600}
 .note{color:var(--mute);font-size:14px;margin:0 0 8px}
 .small{font-size:13px;color:var(--faint)}
@@ -154,6 +151,7 @@ ol.cl b{font-weight:600}
 .layer details{margin-top:10px}
 .layer summary{cursor:pointer;font-size:14px;color:var(--blue);font-weight:500;list-style:none}
 .layer summary::-webkit-details-marker{display:none}
+.rules.txt{white-space:pre-wrap;font-size:14px;line-height:1.55}.fullc{margin-top:10px}.fullc summary{list-style:none}.fullc summary::-webkit-details-marker{display:none}.fullc .txt{white-space:pre-wrap;font-size:14px;line-height:1.55;margin-top:10px;max-height:70vh;overflow:auto}
 .code{font:12px/1.55 var(--mono);background:#1d1d1f;color:#e5e5ea;border-radius:12px;padding:14px 16px;max-height:460px;overflow:auto;white-space:pre;margin-top:10px}
 .code a{color:#64b5ff}
 .verdict{font:13px var(--mono);background:#e8f8ee;color:#1c7c3f;border-radius:8px;padding:5px 10px;display:inline-block;word-break:break-word;margin-top:8px}
@@ -177,7 +175,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
 #pop p{margin:7px 0;font-size:15px;color:#3a3a3c}
 #pop code{font-size:12.5px;background:var(--bg);padding:1px 5px;border-radius:5px}
 #pop .x{float:right;border:none;background:rgba(118,118,128,.12);width:26px;height:26px;border-radius:50%;cursor:pointer;color:var(--mute)}
-@media (max-width:640px){.hin{padding:10px 16px;gap:10px}.logo{font-size:14.5px;white-space:nowrap}.search input{width:96px}
+@media (max-width:640px){
   #tip{max-width:none}
   .app .pill.ghost{display:none}.shelf{grid-template-columns:minmax(0,1fr);padding:6px 16px}.prod .icon{width:96px;height:96px;font-size:48px;border-radius:22px}
   .tog{padding:14px 16px}.tog .minis{display:none}.tog .cnt{margin-left:auto}
@@ -189,28 +187,62 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
   table.roles td{border:none;padding:3px 0}
   table.roles td[data-k]:not(:empty)::before{content:attr(data-k);display:block;font-weight:600;color:var(--faint);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
   table.roles td[data-k]:empty{display:none}}
-.getapp{margin-left:auto;font-size:14px;font-weight:600;white-space:nowrap}.getapp+.getapp2,.getapp2{font-size:14px;font-weight:600;white-space:nowrap;margin-left:16px}.getapp2+.search{margin-left:0}
+/* the tabs of this page: home, contracts, papers, projects (nav.js) */
+.tab{display:none}
+.pt{margin:6px 0 18px}.pt h1{font-size:clamp(28px,4vw,38px);letter-spacing:-.025em;line-height:1.1;margin:0 0 6px;font-weight:800}.pt p{color:var(--mute);font-size:16px;max-width:680px;margin:0}
+/* papers, by project */
+.pgrp{display:grid;grid-template-columns:190px minmax(0,1fr);gap:0 24px;padding:4px 20px;margin-top:12px}
+.pgrp .who{padding:14px 0}.pgrp .who b{display:block;font-size:16px}.pgrp .who small{color:var(--mute);font-size:13px;line-height:1.35;display:block}
+.pgrp .who a{color:var(--blue);font-size:13px}
+.pgrp .cites .cite{padding:14px 0;border-bottom:1px solid var(--line);font-size:14.5px;line-height:1.5}.pgrp .cites .cite:last-child{border-bottom:0}
+.pgrp a{color:var(--blue)}
+/* projects: a tree of project, paper, contracts and directories */
+.ptools{display:flex;gap:10px;margin:0 0 4px}
+.proj{margin-top:12px}
+.proj>summary{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;list-style:none;border-radius:20px}
+.proj>summary::-webkit-details-marker{display:none}
+.proj>summary b{font-size:17px;letter-spacing:-.01em}.proj>summary .nm2{color:var(--mute);font-size:14px;flex:1;min-width:0}
+.proj>summary .cnt{color:var(--mute);font-size:13.5px;white-space:nowrap}
+.proj>summary .chev{color:var(--faint);font-size:20px;line-height:1;transition:transform .2s}
+.proj[open]>summary{border-bottom:1px solid var(--line);border-radius:20px 20px 0 0}.proj[open]>summary .chev{transform:rotate(90deg)}
+.tree{padding:10px 20px 16px;font-size:14.5px;line-height:1.5}
+.tree ul{list-style:none;margin:0;padding:0 0 0 20px;border-left:1px solid var(--line)}
+.tree>ul{padding-left:0;border-left:0}
+.tree li{padding:5px 0 1px;position:relative}
+.tree ul ul>li::before{content:"";position:absolute;left:-20px;top:17px;width:13px;border-top:1px solid var(--line)}
+.tree .lab{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--faint);text-transform:uppercase;margin-right:8px}
+.tree a{color:var(--blue);overflow-wrap:anywhere}.tree code{font:12.5px var(--mono)}
+.tree .nt{color:var(--mute)}.tree .k{color:var(--mute);display:inline-block;min-width:72px}
+.tree .none{color:var(--faint)}
+@media (max-width:640px){.pgrp{grid-template-columns:minmax(0,1fr);padding:4px 16px}.pgrp .who{padding:14px 0 0}
+  .proj>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:14px 16px}.proj>summary .chev{grid-column:2;grid-row:1}.proj>summary .nm2,.proj>summary .cnt{grid-column:1/-1;white-space:normal}.tree{padding:10px 16px 14px}.tree ul{padding-left:14px}.tree ul ul>li::before{left:-14px;width:9px}}
 </style>
 </head>
 <body>
-<header><div class="hin">
-  <div class="logo" id="home"><span class="mark"></span>The Grassroots App Store</div>
-  <div class="search"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7" stroke="#000" stroke-width="2.4" fill="none"/><path d="M15.5 15.5L21 21" stroke="#000" stroke-width="2.4" stroke-linecap="round"/></svg><input id="q" placeholder="Search" autocomplete="off"></div>
-</div></header>
+<header id="bar" data-tab="home" data-search></header>
+<script src="nav.js"></script>
 <main>
-  <section id="top">
+  <section id="tab-home" class="tab">
     <div class="hero">
       <h1>Social contracts that run.</h1>
       <p>Apps owned and run by the people who use them, on their own phones: no company, server or blockchain in the middle. Each app starts as a contract, a few rules in plain English saying who may do what, with whose agreement. Any group can start an app on its own, and separate groups can later join into one. Programs turn the contract into the app, and a theorem guarantees that every app built this way can grow like that, from the bottom up.</p>
-      <a class="btn blue" href="how.html" style="margin:-10px 0 26px">How it works&nbsp;→</a>
     </div>
-    <div class="sh"><h2>Grassroots Contracts</h2><span id="hint">drag to turn, scroll to zoom</span></div>
+    <div class="sh"><h2>Grassroots Contracts</h2><span class="hq"><a href="qr.svg" target="_blank" rel="noopener" title="Scan to open peoplesweb.org"><img src="qr.svg" alt="QR code of peoplesweb.org" width="84" height="84"></a><span id="hint">drag to turn, scroll to zoom</span></span></div>
     <div class="card" id="mapcard"><svg id="graph"></svg><div id="tip"></div></div>
+    <p class="small" style="text-align:center;margin-top:28px">The content of this site is derived from the GLP repository, <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener">https://github.com/EShapiro2/GLP</a>.</p>
+  </section>
+  <section id="tab-contracts" class="tab">
+    <div class="pt"><h1>Contracts</h1><p id="ccount"></p></div>
     <div id="shelves"></div>
-    <div class="sh"><h2>Foundational Papers</h2></div>
-    <div class="card refs" id="found"></div>
-    <div class="sh"><h2>Directories</h2></div>
-    <div class="card refs" id="dirs"></div>
+  </section>
+  <section id="tab-papers" class="tab">
+    <div class="pt"><h1>Papers</h1><p>The papers of each project, and after them the earlier papers the projects build on.</p></div>
+    <div id="plist"></div>
+  </section>
+  <section id="tab-projects" class="tab">
+    <div class="pt"><h1>Projects</h1><p>Each project with its papers, and under each paper its contracts and its directories in the <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener" style="color:var(--blue)">GLP repository</a>. A directory with no paper is under Code.</p></div>
+    <div class="ptools"><button class="pill" id="pexp">Expand all</button><button class="pill ghost" id="pcol">Collapse all</button></div>
+    <div id="ptree"></div>
   </section>
   <section id="view"></section>
 </main>
@@ -231,6 +263,12 @@ const grad = c => `linear-gradient(160deg, ${FAM[famOf(c)][0]}, ${FAM[famOf(c)][
 // Served by a live server (Render, the lab server, localhost): the app is next to this page.
 // Served as a static copy (GitHub Pages, a local file): the app is on Render.
 const LIVE = '';
+// A contract's name, 'Community Bank', where its id is its file name,
+// 'Community-Bank' (calculus/NAMES.txt); on the globe a name of two words is
+// on two lines (Udi, 2026-11-16).
+const NM = id => (C[id] && C[id].name) || id;
+const LINES = id => { const w = NM(id).split(' '); return w.length < 2 ? w : [w[0], w.slice(1).join(' ')]; };
+const WID = id => Math.max(...LINES(id).map(w => w.length));
 const appUrl = c => `${LIVE}app.html?c=${c.id.toLowerCase()}`;
 const icon = (c, cls = '') => `<div class="icon ${cls}" style="background:${grad(c)}">${c.icon}</div>`;
 const openBtn = (c, cls = 'pill') => c.live
@@ -244,10 +282,10 @@ const notWhy = c => c.notCompiled && c.notCompiled.length ? 'The compiler refuse
 // The stages of the cascade a contract may have reached, in order, each
 // deciding of a contract whether it got that far (stripHtml; the globe's key).
 const STAGES = [
-  ['Schemas', c => c.schemas.length > 0],
+  ['Schemas', c => c.acts[0] > 0],
   ['Checked', c => /^syntactically_grassroots/.test(c.verdict || '')],
-  ['Platform', c => !!(c.layers && c.layers.platform && c.live)],
-  ['Compiled', c => !!(c.layers && c.layers.glp)],
+  ['Platform', c => !!(c.layers && c.layers.platform && (c.platform || c.live))],
+  ['Compiled', c => !!(c.layers && c.layers.glp && (c.platform || c.live))],
   ['Running', c => !!c.live]];
 
 /* ---------- help ---------- */
@@ -284,6 +322,8 @@ function citeHtml(P){
   const link = P.arxiv ? a(`https://arxiv.org/abs/${P.arxiv}`, `arXiv:${P.arxiv}`)
       + (P.updated ? ` · ${a(P.updated, 'Updated')}${P.updated_on ? ` (${esc(P.updated_on)})` : ''}` : '')
       + (P.venue ? `; ${esc(P.venue)}` : '')
+    : P.url ? a(P.url, esc(cap(P.state || 'PDF')))
+      + (P.pdf ? ` · ${a(P.pdf, 'Updated')}${P.pdf_on ? ` (${esc(P.pdf_on)})` : ''}` : '')
     : P.pdf ? `${a(P.pdf, esc(cap(P.state || 'PDF')))}${P.pdf_on ? ` (${esc(P.pdf_on)})` : ''}`
     : esc(cap(P.state || ''));
   return P.title ? `<div class="cite"><i>${esc(P.title)}</i>${P.authors ? `. ${esc(P.authors)}` : ''}.${link ? ` ${link}` : ''}</div>`
@@ -292,16 +332,19 @@ function citeHtml(P){
 
 /* ---------- the globe ---------- */
 // The contracts on a sphere (agreed with Udi, 2026-11-07): GKK at the north
-// pole, a ring per depth, the fullest on the equator; each contract's
+// pole, a ring per depth, the rings equally spaced; each contract's
 // longitude near its parents' and its children's, so a contract stands over
 // what is built on it and between what it is built on, and arrows cross as
 // little as can be (Udi, 2026-11-10); each contract an ellipse painted on the
 // surface, its name horizontal; each arrow painted on the surface too, along
 // the great circle from a contract to one built on it, turning with the globe
 // (Udi, 2026-11-10); extends widens from a point to its tip, restricts
-// narrows to one, amends keeps one width and is barred, implements is dashed
-// and instantiates dotted; drag turns the globe, the wheel zooms, the far side
+// narrows to one, strengthens keeps one wide width, amends keeps one width and
+// is barred, implements is dashed, instantiates dotted and composes dash-dotted; drag turns the globe, the wheel zooms, the far side
 // is hidden.
+// The contract at the pole, the one written from no other: GKK, Knowledge
+// by the names of calculus/NAMES.txt.
+const ROOT = (D.contracts.find(c => !c.extends.some(p => C[p])) || D.contracts[0]).id;
 const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {}, RING = [], WAY = {};
 function depthOf(id){
   if (DEPTH[id] !== undefined) return DEPTH[id];
@@ -310,15 +353,14 @@ function depthOf(id){
 }
 function layout(){
   D.contracts.forEach(c => depthOf(c.id));
-  // The rings' colatitudes: the ring with the most contracts on the equator
-  // (Udi, 2026-11-08), the rings above it evenly from the pole, those below
-  // it evenly as seen in the first view, tilted by V.tilt, down to near the
-  // globe's bottom edge, so the rings that face away are not run together.
-  const maxd0 = MAXD(), cnt = d => D.contracts.filter(c => DEPTH[c.id] === d).length;
-  let dm = 1; for (let d = 1; d <= maxd0; d++) if (cnt(d) > cnt(dm)) dm = d;
-  const deg = Math.PI/180, north = 90*deg / (dm + 0.6), c0 = Math.cos(90*deg + V.tilt), c1 = -0.93;
-  for (let d = 0; d <= maxd0; d++) RING[d] = d === 0 ? 0 : d <= dm ? north * (d + 0.6)
-    : Math.min(90*deg + north * (d - dm), Math.acos(c0 + (c1 - c0) * (d - dm) / (maxd0 - dm)) - V.tilt);
+  // The rings' colatitudes: equally spaced from the pole down to near the
+  // globe's bottom edge as the first view shows it, tilted by V.tilt (Udi,
+  // 2026-11-16, to Website #2: "try spacing layers more equally, not wait for
+  // the largest to be on the equator"; until then the fullest ring was on the
+  // equator, Udi, 2026-11-08, and the rings below it were crowded).
+  const maxd0 = MAXD(), thMax = Math.acos(-0.93) - V.tilt;
+  // The first ring half a step further from the pole, where a ring is short.
+  for (let d = 0; d <= maxd0; d++) RING[d] = d === 0 ? 0 : thMax * (d + 0.5) / (maxd0 + 0.5);
   // Where to start: each contract in the range of its first parent, the range
   // shared among its children by how many leaves each has below it.
   D.contracts.forEach(c => { const p = c.extends.find(x => C[x]); if (p) (KIDS[p] = KIDS[p] || []).push(c.id); });
@@ -328,7 +370,7 @@ function layout(){
     const ks = KIDS[id] || [], tot = ks.reduce((n, k) => n + leaves(k), 0);
     let x = lo;
     for (const k of ks){ const w = (hi - lo) * leaves(k) / tot; place(k, x, x + w); x += w; }
-  })('GKK', -80 * Math.PI/180, 80 * Math.PI/180);
+  })(ROOT, -80 * Math.PI/180, 80 * Math.PI/180);
   // The rings as the layers of a layered drawing, each relation an edge from
   // the contract to the one built on it.  The order along the rings and the
   // longitudes are found from the contracts alone, each placed by all its
@@ -347,12 +389,27 @@ function layout(){
   // children (going up) along their rings, a relation that passes more rings
   // weighing less; the order with the fewest crossings of the arrows between
   // neighbouring rings kept.
-  const crossings = () => { const I = {}; Lr.forEach(r => r.forEach((v, i) => I[v] = i)); let n = 0;
-    for (let d = 0; d < maxd; d++){
-      const es = []; Lr[d].forEach(u => DN[u].forEach(v => { if (DEPTH[v] === d + 1) es.push([I[u], I[v]]); }));
-      for (let i = 0; i < es.length; i++) for (let j = i + 1; j < es.length; j++)
-        if ((es[i][0] - es[j][0]) * (es[i][1] - es[j][1]) < 0) n++;
-    }
+  // The crossings counted are those of all the arrows, an arrow that passes
+  // several rings taken as straight between its two contracts' places along
+  // their rings (Udi, 2026-11-16: the globe of 66 contracts "is a total
+  // mess"; until then only the arrows between neighbouring rings were
+  // counted, and the long ones crossed as they fell).  GKK, at the pole, has
+  // every longitude: its arrow starts where it ends.
+  const EDG = []; D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => EDG.push([p, c.id])));
+  const place = () => { const P = {}; Lr.forEach(r => r.forEach((v, i) => P[v] = (i + 0.5) / r.length)); return P; };
+  const xs = (P, e, f) => {
+    const [u1, v1] = e, [u2, v2] = f, a1 = DEPTH[u1], b1 = DEPTH[v1], a2 = DEPTH[u2], b2 = DEPTH[v2];
+    const lo = Math.max(a1, a2), hi = Math.min(b1, b2);
+    if (lo >= hi || (a1 === 0 && a2 === 0)) return 0;
+    const at = (u, v, a, b2_, d) => { const pu = a === 0 ? P[v] : P[u]; return pu + (P[v] - pu) * (d - a) / (b2_ - a); };
+    return (at(u1, v1, a1, b1, lo) - at(u2, v2, a2, b2, lo)) * (at(u1, v1, a1, b1, hi) - at(u2, v2, a2, b2, hi)) < 0 ? 1 : 0; };
+  const crossings = () => { const P = place(); let n = 0;
+    for (let i = 0; i < EDG.length; i++) for (let j = i + 1; j < EDG.length; j++) n += xs(P, EDG[i], EDG[j]);
+    return n; };
+  // The crossings of the arrows at the contracts a and b with all the others.
+  const INC = {}; EDG.forEach(e => e.forEach(v => (INC[v] = INC[v] || []).push(e)));
+  const near = (P, a, b) => { let n = 0;
+    for (const e of [...(INC[a] || []), ...(INC[b] || []).filter(e => !e.includes(a))]) for (const f of EDG) if (e !== f) n += xs(P, e, f);
     return n; };
   // Then each pair of neighbours on a ring is swapped where that crosses fewer
   // arrows to the rings above and below, until no swap helps.  The whole is
@@ -373,26 +430,23 @@ function layout(){
       if (n < bestN){ bestN = n; best = Lr.map(r => r.slice()); }
     }
     best.forEach((r, d) => Lr[d] = r);
-    for (let pass = 0, swapped = true; swapped && pass < 50; pass++){
+    for (let pass = 0, swapped = true; swapped && pass < 30; pass++){
       swapped = false;
-      const I = {}; Lr.forEach(r => r.forEach((v, i) => I[v] = i));
-      const cost = (a, b) => { let n = 0;
-        for (const nb of [UP, DN]) for (const x of nb[a]) for (const y of nb[b])
-          if (span(x, a) === 1 && span(y, b) === 1 && DEPTH[x] === DEPTH[y] && I[x] > I[y]) n++;
-        return n; };
+      const P = place();
       for (let d = 1; d <= maxd; d++) for (let i = 0; i + 1 < Lr[d].length; i++){
-        const a = Lr[d][i], b = Lr[d][i+1];
-        if (cost(b, a) < cost(a, b)){ Lr[d][i] = b; Lr[d][i+1] = a; I[a] = i + 1; I[b] = i; swapped = true; }
+        const a = Lr[d][i], b = Lr[d][i+1], before = near(P, a, b), pa = P[a], pb = P[b];
+        P[a] = pb; P[b] = pa;
+        if (near(P, a, b) < before){ Lr[d][i] = b; Lr[d][i+1] = a; swapped = true; } else { P[a] = pa; P[b] = pb; }
       }
     }
     return crossings(); };
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   let best = null, bestN = Infinity;
-  for (let t = 0; t < 12; t++){
+  for (let t = 0; t < 10; t++){
     if (t){ const ord = {}; D.contracts.forEach(c => ord[c.id] = rnd());
       const pos = {}; (function walk(id, lo, hi){ pos[id] = (lo + hi) / 2;
         const ks = (KIDS[id] || []).slice().sort((a, b) => ord[a] - ord[b]), tot = ks.reduce((n, k) => n + leaves(k), 0);
-        let x = lo; for (const k of ks){ const w2 = (hi - lo) * leaves(k) / tot; walk(k, x, x + w2); x += w2; } })('GKK', -1, 1);
+        let x = lo; for (const k of ks){ const w2 = (hi - lo) * leaves(k) / tot; walk(k, x, x + w2); x += w2; } })(ROOT, -1, 1);
       start.forEach((r, d) => Lr[d] = r.slice().sort((a, b) => pos[a] - pos[b]));
     } else start.forEach((r, d) => Lr[d] = r.slice());
     const n = sweep();
@@ -408,7 +462,7 @@ function layout(){
   // less (GKK, at the pole, has no longitude), the drawing centred, and the
   // gaps restored in the ring's order.  A ring too full even for that sets
   // alternate names on a second row, toward the wider gap beside it.
-  const lim = 170 * Math.PI/180, w = id => 0.33*FS0()*id.length + 0.8*FS0();
+  const lim = 170 * Math.PI/180, w = id => 0.33*FS0()*WID(id) + 0.8*FS0();
   const pairs = [];
   for (let d = 1; d <= maxd; d++){
     const ring = Lr[d], R = 265 * Math.sin(RING[d]);
@@ -437,7 +491,7 @@ function layout(){
     const nx = {};
     for (let d = 1; d <= maxd; d++) Lr[d].forEach(v => {
       let s = 0, t = 0;
-      [...UP[v], ...DN[v]].forEach(u => { if (u !== 'GKK'){ const g = 1 / span(u, v); s += g * X[u]; t += g; } });
+      [...UP[v], ...DN[v]].forEach(u => { if (u !== ROOT){ const g = 1 / span(u, v); s += g * X[u]; t += g; } });
       nx[v] = t ? (X[v] + s / t) / 2 : X[v]; });
     let lo = Infinity, hi = -Infinity;
     for (const v in nx){ X[v] = nx[v]; lo = Math.min(lo, X[v]); hi = Math.max(hi, X[v]); }
@@ -448,10 +502,10 @@ function layout(){
   // within 75 degrees of its centre, at the start.
   let off = 0, most = -1;
   for (let a = -180; a < 180; a++){
-    const n = [...REAL].filter(id => id !== 'GKK' && Math.cos(X[id] - a * Math.PI/180) > Math.cos(75 * Math.PI/180)).length;
+    const n = [...REAL].filter(id => id !== ROOT && Math.cos(X[id] - a * Math.PI/180) > Math.cos(75 * Math.PI/180)).length;
     if (n > most){ most = n; off = a * Math.PI/180; }
   }
-  REAL.forEach(id => { if (id !== 'GKK') PHI[id] = X[id] - off; });
+  REAL.forEach(id => { if (id !== ROOT) PHI[id] = X[id] - off; });
   // Each long arrow's waypoints, one on each ring it passes, which it is drawn
   // through (drawGlobe): on each ring a place clear of the names there, half
   // a name's width and the width of an arrow from each, and of the arrows
@@ -508,7 +562,8 @@ const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
 // globe, the names drawn larger so they can be read and tapped, and the key
 // set below the globe (Udi, 2026-11-09).
 const NARROW = () => (($('#mapcard') && $('#mapcard').clientWidth) || innerWidth) < 640;
-const FS0 = () => NARROW() ? 16 : 11;
+// Smaller names and thinner arrows since the 66 contracts (Udi, 2026-11-16).
+const FS0 = () => NARROW() ? 11 : 7.5;
 // The globe fills the card's width, a sliver to each side (Udi, 2026-11-09):
 // on a wide card a radius of 548 in a view 1120 wide, on a phone 290 in a
 // view 600 wide; a zoom is relative to that.
@@ -533,8 +588,24 @@ function drawGlobe(){
     if (run.length) s += `<polyline points="${run.join(' ')}" fill="none" stroke="#ccd8e2"/>`;
   }
   const k = S/265;
+  // The solid arrows' outlines, in units of the globe's scale: the shaft's
+  // half-width at its tail and at its head's base, and the head's half-width.
+  // A pair of contracts with two relations ('GDO-L extends and strengthens
+  // GDO') has one arrow split along its length, its left side the first
+  // relation's outline and its right side the second's; a third relation is a
+  // slim arrow of its own outline along the middle, drawn darker (Udi,
+  // 2026-11-15, to Website #2).
+  const RELCOL = {extends: '#3b7dd8', restricts: '#d64550', strengthens: '#2a9d6f', relaxes: '#17a5b8', instantiates: '#8b5fd3', composes: '#e39a2d', implements: '#6b7785', amends: '#8d6e63'};
+  const SOLID = {extends: [0.4, 4.2, 7.5], restricts: [4.2, 0.4, 2.8], strengthens: [3.4, 3.4, 7.5], amends: [2.2, 2.2, 6.5]};
+  const solids = rs => rs.length > 1 && rs.every(r => SOLID[r]);
   // The key's arrows, drawn flat in its corner, each a straight shaft and head:
   // extends and restricts a tapered shaft, amends one of one width.
+  const split = (p, q, A, B, hl, fill, op = '.85') => {
+    const [px, py] = p, [qx, qy] = q, dx = qx-px, dy = qy-py, Ln = Math.hypot(dx, dy) || 1, ux = dx/Ln, uy = dy/Ln, nx = -uy, ny = ux;
+    const bx = qx - ux*hl, by = qy - uy*hl;
+    const pts = [[px+nx*A[0],py+ny*A[0]],[bx+nx*A[1],by+ny*A[1]],[bx+nx*A[2],by+ny*A[2]],[qx,qy],[bx-nx*B[2],by-ny*B[2]],[bx-nx*B[1],by-ny*B[1]],[px-nx*B[0],py-ny*B[0]]];
+    return `<polygon points="${pts.map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity="${op}"/>`; };
+  const combo = (p, q, rs, fill) => split(p, q, SOLID[rs[0]], SOLID[rs[1]], 10, fill) + (rs[2] ? split(p, q, SOLID[rs[2]].map(x => x*0.4), SOLID[rs[2]].map(x => x*0.4), 10, fill, '1') : '');
   const taper = (p, q, w0, w1, hl, hw, fill, pad0, pad1) => {
     let [px, py] = p, [qx, qy] = q;
     const dx = qx-px, dy = qy-py, Ln = Math.hypot(dx, dy) || 1, ux = dx/Ln, uy = dy/Ln, nx = -uy, ny = ux;
@@ -551,7 +622,7 @@ function drawGlobe(){
   const stroked = (p, q, dash, fill, pad0, pad1, kz = k) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*kz, hw = 6.5*kz, cx = bx-ux*hl, cy = by-uy*hl;
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`
       + `<polygon points="${[[bx, by], [cx-uy*hw, cy+ux*hw], [cx+uy*hw, cy-ux*hw]].map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
-  const fs = Math.max(NARROW() ? 15 : 10, FS0()*k), rx = id => 0.33*fs*id.length + 0.8*fs, ry = 1.1*fs;
+  const fs = Math.max(NARROW() ? 10 : 7, FS0()*k), rx = id => 0.33*fs*WID(id) + 0.8*fs, ry0 = 1.1*fs, RY = id => LINES(id).length > 1 ? 1.75*fs : ry0, ry = ry0;
   // Each arrow painted on the sphere: a smooth curve on the surface from the
   // contract to the one built on it, through the waypoints the layout keeps
   // for it on the rings it passes, so it goes between the names there; its
@@ -571,7 +642,7 @@ function drawGlobe(){
   // The angle from a contract's centre to the edge of its ellipse, toward T, a
   // direction on the sphere there.
   const edgeAngle = (id, T) => {
-    const rxa = (rx(id) + 2) / S, rya = (ry + 2) / S;
+    const rxa = (rx(id) + 2) / S, rya = (RY(id) + 2) / S;
     if (DEPTH[id] === 0) return (rxa + rya) / 2;
     const ph = PHI[id], t = th(id), E = [Math.cos(ph), 0, -Math.sin(ph)], Nn = [-Math.cos(t)*Math.sin(ph), Math.sin(t), -Math.cos(t)*Math.cos(ph)];
     return 1 / Math.sqrt((dot3(T, E)/rxa)**2 + (dot3(T, Nn)/rya)**2); };
@@ -601,8 +672,12 @@ function drawGlobe(){
         pts.push(vec(t0 + (t1 - t0) * u, f)); }
     }
     return pts; };
-  const paint = (p, q, rel, fill) => {
-    const U = curve(p, q), sl = [0];
+  const paint = (p, q, rel) => ribbon(curve(p, q), p, q, (Array.isArray(rel) ? rel : [rel]).map(r => RELCOL[r] || RELCOL.extends), true);
+  // A ribbon along the points U of the sphere, from the edge of contract p's
+  // ellipse, or from U's start where p is null, to q's or U's end, in the
+  // colours cols, a part of its length each, with a head or none.
+  const ribbon = (U, p, q, cols, head) => {
+    const sl = [0];
     for (let i = 1; i < U.length; i++) sl.push(sl[i-1] + Math.acos(Math.max(-1, Math.min(1, dot3(U[i-1], U[i])))));
     const total = sl[sl.length-1];
     if (total < 1e-4) return '';
@@ -611,47 +686,67 @@ function drawGlobe(){
       return nrm(add3(U[i-1].map(x => x*(1-f)), U[i], f)); };
     const tan = a => nrm(add3(at(Math.min(total, a + 1e-3)), at(Math.max(0, a - 1e-3)), -1));
     const side = (a, e) => { const P = at(a); return add3(P.map(x => x*Math.cos(e)), nrm(crs(P, tan(a))), Math.sin(e)); };
-    const a0 = edgeAngle(p, tan(0)), a1 = total - edgeAngle(q, tan(total));
-    const u = 1/265, hl = (rel === 'restricts' ? 7 : rel === 'amends' ? 9 : 10) * u;
-    const hw = (rel === 'restricts' ? 2.8 : rel === 'amends' || rel === 'implements' || rel === 'instantiates' ? 6.5 : 7.5) * u;
-    const [w0, w1] = rel === 'restricts' ? [4.2*u, 0.4*u] : rel === 'amends' ? [2.2*u, 2.2*u] : [0.4*u, 4.2*u];
-    const aB = a1 - hl;
+    const a0 = p ? edgeAngle(p, tan(0)) : 0, a1 = total - (q ? edgeAngle(q, tan(total)) : 0);
+    // Every arrow has one outline, and its colour says the relation (RELCOL);
+    // an arrow of two relations is coloured half and half along its length,
+    // one of three a third each, the head in the last (Udi, 2026-11-15, to
+    // Website #2).
+    const u = 1/265, rs = cols, hl = 6.5*u, hw = 3.4*u, w = 0.85*u;
+    const aB = head ? a1 - hl : a1;
     if (aB <= a0) return '';
     const front = a => projv(at(a))[2] > 0.02;
-    // The shaft's arc lengths, with the points where it passes the limb.
-    const n = Math.max(2, Math.ceil((aB - a0) / (0.8 * Math.PI/180))), as = [];
-    for (let i = 0; i <= n; i++) as.push(a0 + (aB - a0) * i / n);
-    const runs = []; let run = [];
-    for (let i = 0; i < as.length; i++){
-      if (i && front(as[i]) !== front(as[i-1])){
-        let lo = as[i-1], hi = as[i];
-        for (let k2 = 0; k2 < 24; k2++){ const m = (lo + hi)/2; if (front(m) === front(as[i-1])) lo = m; else hi = m; }
-        if (front(as[i])) run = [hi]; else { run.push(lo); runs.push(run); run = []; }
-      }
-      if (front(as[i])) run.push(as[i]);
-    }
-    if (run.length) runs.push(run);
     const xy = v => { const [X0, Y0] = projv(v); return X0.toFixed(1) + ',' + Y0.toFixed(1); };
-    const dash = rel === 'implements' ? `${7*k} ${4*k}` : rel === 'instantiates' ? `0.1 ${4.5*k}` : null;
     let out = '';
-    for (const r of runs){
-      if (r.length < 2) continue;
-      if (dash){ out += `<polyline points="${r.map(a => xy(at(a))).join(' ')}" fill="none" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`; continue; }
-      const e = a => w0 + (w1 - w0) * (a - a0) / (aB - a0);
-      out += `<polygon points="${[...r.map(a => xy(side(a, e(a)))), ...r.slice().reverse().map(a => xy(side(a, -e(a))))].join(' ')}" fill="${fill}" fill-opacity=".85"/>`;
-    }
-    if (front(aB) && front(a1))
-      out += `<polygon points="${[xy(side(aB, hw)), xy(at(a1)), xy(side(aB, -hw))].join(' ')}" fill="${fill}" fill-opacity=".85"/>`;
-    const am = (a0 + a1) / 2 - 4*u;
-    if (rel === 'amends' && front(am))
-      out += `<line x1="${xy(side(am, 6*u)).replace(',', '" y1="')}" x2="${xy(side(am, -6*u)).replace(',', '" y2="')}" stroke="${fill}" stroke-width="${(2.2*k).toFixed(1)}" stroke-opacity=".85"/>`;
+    rs.forEach((r, j) => {
+      const lo = a0 + (aB - a0) * j / rs.length, hi = a0 + (aB - a0) * (j + 1) / rs.length, col = r;
+      const n = Math.max(2, Math.ceil((hi - lo) / (0.8 * Math.PI/180))), as = [];
+      for (let i = 0; i <= n; i++) as.push(lo + (hi - lo) * i / n);
+      const runs = []; let run = [];
+      for (let i = 0; i < as.length; i++){
+        if (i && front(as[i]) !== front(as[i-1])){
+          let l2 = as[i-1], h2 = as[i];
+          for (let k2 = 0; k2 < 24; k2++){ const m = (l2 + h2)/2; if (front(m) === front(as[i-1])) l2 = m; else h2 = m; }
+          if (front(as[i])) run = [h2]; else { run.push(l2); runs.push(run); run = []; }
+        }
+        if (front(as[i])) run.push(as[i]);
+      }
+      if (run.length) runs.push(run);
+      for (const q2 of runs) if (q2.length > 1)
+        out += `<polygon points="${[...q2.map(a => xy(side(a, w))), ...q2.slice().reverse().map(a => xy(side(a, -w)))].join(' ')}" fill="${col}" fill-opacity=".85"/>`;
+    });
+    if (head && front(aB) && front(a1))
+      out += `<polygon points="${[xy(side(aB, hw)), xy(at(a1)), xy(side(aB, -hw))].join(' ')}" fill="${rs[rs.length-1]}" fill-opacity=".85"/>`;
     return out; };
   // Each arrow in the colour of the family of the contract it comes from: its
   // head touches the other contract's ellipse, which shows that one's colour,
   // so the arrow shows where it comes from (Udi, 2026-11-10).
-  D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
-    s += paint(p, c.id, (c.rels && c.rels[p]) || c.relation, FAM[famOf(C[p])][1]);
-  }));
+  // A composition has two origins: 'GAS composes GPD with GSV' is a line from
+  // each of the two that merge along the way into one trunk, which arrives at
+  // GAS; each line has its own relation's colour ('GAI instantiates GnW,
+  // composes it with GFP': GnW's is instantiates'), and the trunk the colours
+  // of what the contract does to the composition, a part each, or composes'
+  // where it says nothing (Udi, 2026-11-15, to Website #2).
+  const composed = c => {
+    const ps = c.extends.filter(p => C[p] && c.rels && c.rels[p] === 'composes'), of = (c.rels_of || []).filter(x => x.of === 'composition');
+    if (ps.length === 1 && of.length && C[of[0].base] && !ps.includes(of[0].base)) ps.unshift(of[0].base);
+    return ps.length >= 2 ? {ps, trunk: of.map(x => x.rel)} : null; };
+  const unit = id => vec(th(id), PHI[id]);
+  D.contracts.forEach(c => {
+    const cm = composed(c);
+    c.extends.filter(p => C[p] && !(cm && cm.ps.includes(p))).forEach(p => {
+      const all = c.rels_all && c.rels_all[p];
+      s += paint(p, c.id, all && all.length ? all : (c.rels && c.rels[p]) || c.relation);
+    });
+    if (!cm) return;
+    // The lines meet at one point, between the composed contracts and the
+    // composing one, however many are composed ('GA composes GPE with GAS
+    // and GDS' three).
+    const Ps = cm.ps.map(unit), Cv = unit(c.id), M = nrm(Ps.reduce((a, P) => add3(a, P, 0.5/Ps.length), Cv.map(x => x*0.5))), K = nrm(add3(M.map(x => x*1.5), Cv, -0.5));
+    const leg = P => { const o = []; for (let i = 0; i <= 40; i++){ const t = i/40; o.push(nrm(add3(add3(P.map(x => x*(1-t)*(1-t)), K, 2*t*(1-t)), M, t*t))); } return o; };
+    const trunk = []; for (let i = 0; i <= 30; i++) trunk.push(nrm(add3(M.map(x => x*(1 - i/30)), Cv, i/30)));
+    cm.ps.forEach((p, i) => { s += ribbon(leg(Ps[i]), p, null, [RELCOL[(c.rels && c.rels[p]) || 'composes']], false); });
+    s += ribbon(trunk, null, c.id, (cm.trunk.length ? cm.trunk : ['composes']).map(r => RELCOL[r] || RELCOL.composes), true);
+  });
   D.contracts.forEach(c => {
     const [X, Y, Z] = pos[c.id];
     if (Z < 0.02 || X < -60 || X > GW+60 || Y < -40 || Y > GH+40) return;
@@ -663,24 +758,28 @@ function drawGlobe(){
     const de = Math.hypot(Ce[0]-Cp[0], Ce[1]-Cp[1]) || 1e-6, dn = Math.hypot(Cn[0]-Cp[0], Cn[1]-Cp[1]) || 1e-6;
     const fe = Math.max(0.55, Math.min(1, de/(S*Math.sin(t)*eps))), fn = Math.max(0.55, Math.min(1, dn/(S*eps)));
     const ex = (Ce[0]-Cp[0])/de*rx(c.id)*fe, ey = (Ce[1]-Cp[1])/de*rx(c.id)*fe;
-    const nx2 = (Cn[0]-Cp[0])/dn*ry*fn, ny2 = (Cn[1]-Cp[1])/dn*ry*fn;
-    const m = DEPTH[c.id] === 0 ? [rx(c.id), 0, 0, ry*Math.max(0.55, Math.abs(Math.sin(al)))*Math.sign(Math.cos(al) || 1)].map(x => x.toFixed(2)).join(' ')
+    const nx2 = (Cn[0]-Cp[0])/dn*RY(c.id)*fn, ny2 = (Cn[1]-Cp[1])/dn*RY(c.id)*fn;
+    const m = DEPTH[c.id] === 0 ? [rx(c.id), 0, 0, RY(c.id)*Math.max(0.55, Math.abs(Math.sin(al)))*Math.sign(Math.cos(al) || 1)].map(x => x.toFixed(2)).join(' ')
       : [ex, ey, nx2, ny2].map(x => x.toFixed(2)).join(' ');
     const col = FAM[famOf(c)];
     s += `<g class="node" data-id="${c.id}">
-      <ellipse rx="1" ry="1" fill="color-mix(in srgb, ${col[0]} 26%, white)" stroke="${col[1]}" stroke-width="1.6" transform="matrix(${m} ${X.toFixed(1)} ${Y.toFixed(1)})" vector-effect="non-scaling-stroke"/>
-      <text x="${X.toFixed(1)}" y="${(Y + 0.36*fs).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}">${c.id}</text></g>`;
+      <ellipse rx="1" ry="1" fill="color-mix(in srgb, ${col[0]} 26%, white)" stroke="${col[1]}" stroke-width="1" transform="matrix(${m} ${X.toFixed(1)} ${Y.toFixed(1)})" vector-effect="non-scaling-stroke"/>
+      ${LINES(c.id).map((ln, i, a) => `<text x="${X.toFixed(1)}" y="${(Y + 0.36*fs + (i - (a.length - 1)/2) * 1.12*fs).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}">${esc(ln)}</text>`).join('')}</g>`;
   });
   // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
-  const KEY = ['extends', 'restricts', 'amends', 'implements', 'instantiates'].map(r => [r, r]);
-  const nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
-  s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="150" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
+  // The key has each relation the globe draws: of the five of the Calculus
+  // (calculus/README.md, The relations), of implements, GSC's, and of amends,
+  // while a text in force still states it.
+  const ALL = D.contracts.flatMap(c => Object.values(c.rels_all || {}));
+  const USED = new Set([...D.contracts.flatMap(c => [c.relation, ...Object.values(c.rels || {})]), ...ALL.flat()]);
+  const KEY = ['extends', 'restricts', 'strengthens', 'relaxes', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r])
+    .concat([...new Set(ALL.filter(rs => rs.length > 1).sort((a, b) => a.length - b.length).map(rs => rs.join('|')))].map(x => [x.split('|'), x.split('|').join(', ').replace(/, ([^,]*)$/, ' and $1')]));
+  const KW = Math.max(150, 84 + 6.6*Math.max(...KEY.map(([, t]) => t.length))), nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
+  s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="${KW}" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   KEY.forEach(([r, t], i) => { const y = ky + 24*i, p = [kx, y], q = [kx + 54, y];
-    s += r === 'restricts' ? taper(p, q, 4.2*kk, 0.4*kk, 7*kk, 2.8*kk, kc, 0, 0)
-      : r === 'amends' ? taper(p, q, 2.2*kk, 2.2*kk, 9*kk, 6.5*kk, kc, 0, 0) + cross(p, q, 6*kk, kc, 0, 0, kk)
-      : r === 'implements' ? stroked(p, q, `${7*kk} ${4*kk}`, kc, 0, 0, kk)
-      : r === 'instantiates' ? stroked(p, q, `0.1 ${4.5*kk}`, kc, 0, 0, kk)
-      : taper(p, q, 0.4*kk, 4.2*kk, 10*kk, 7.5*kk, kc, 0, 0);
+    const rs = Array.isArray(r) ? r : [r], x1 = kx + 44;
+    rs.forEach((z, j) => { s += `<rect x="${(kx + (x1 - kx)*j/rs.length).toFixed(1)}" y="${y - 2.4}" width="${((x1 - kx)/rs.length).toFixed(1)}" height="4.8" fill="${RELCOL[z]}" fill-opacity=".85"/>`; });
+    s += `<polygon points="${x1},${y - 6.5} ${kx + 54},${y} ${x1},${y + 6.5}" fill="${RELCOL[rs[rs.length-1]]}" fill-opacity=".85"/>`;
     s += `<text x="${kx + 66}" y="${y + 4}" font-size="12.5" fill="#33404d">${t}</text>`; });
   s += `</g>`;
   // Level with the key, how far the contracts got: the number of contracts in
@@ -692,14 +791,14 @@ function drawGlobe(){
   // contract, as it would beside the key.
   const CNT = [['contracts', D.contracts.length],
                ...STAGES.map(([n], i) => [n, D.contracts.filter(c => STAGES.slice(0, i + 1).every(([, reached]) => reached(c))).length])];
-  const cx2 = nar ? kx + 170 : GW - 150, cb = ky - 20 + 24*KEY.length + 16, cy2 = cb - (24*CNT.length + 16) + 20;
+  const cx2 = nar ? kx + KW + 20 : GW - 150, cb = ky - 20 + 24*KEY.length + 16, cy2 = cb - (24*CNT.length + 16) + 20;
   s += `<g class="key"><rect x="${cx2-12}" y="${cy2-20}" width="150" height="${24*CNT.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   CNT.forEach(([n, k], i) => { const y = cy2 + 24*i;
     if (i === 1) s += `<line x1="${cx2-4}" y1="${y-12}" x2="${cx2+130}" y2="${y-12}" stroke="#d5dee7"/>`;
     s += `<text x="${cx2}" y="${y + 4}" font-size="12.5" fill="#33404d">${n}</text>`
        + `<text x="${cx2 + 130}" y="${y + 4}" font-size="12.5" font-weight="600" text-anchor="end" fill="#33404d">${k}</text>`; });
   s += `</g>`;
-  const g = $('#graph'); g.setAttribute('viewBox', nar ? `${CX - 300} ${CY - 302} 600 772` : `0 0 ${GW} ${GH}`); g.innerHTML = s;
+  const g = $('#graph'); g.setAttribute('viewBox', nar ? `${CX - 300} ${CY - 302} 600 ${Math.max(772, 632 + 24*KEY.length + 16)}` : `0 0 ${GW} ${GH}`); g.innerHTML = s;
   const tip = $('#tip'), wrap = $('#mapcard');
   let hideT = null;
   const show = (c, e) => {
@@ -707,7 +806,7 @@ function drawGlobe(){
     // The balloon ends with the link that opens the contract, on every screen
     // (Udi, 2026-11-10).
     tip.innerHTML = `<b>${esc(c.label)}</b>${c.about !== c.title + '.' ? esc(c.about) : ''}${citeHtml(c.paper || {})}`
-      + `<a class="open" data-tipgo="${c.id}">Open ${esc(c.id)}</a>`;
+      + `<a class="open" data-tipgo="${c.id}">Open ${esc(NM(c.id))}</a>`;
     tip.style.opacity = 1; tip.style.pointerEvents = 'auto';
     if (NARROW()){ tip.style.left = '8px'; tip.style.right = '8px'; }
     else { tip.style.right = ''; tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 14, r.width - 380)) + 'px'; }
@@ -812,7 +911,7 @@ function lastRows(){
 /* ---------- search ---------- */
 function doSearch(){
   const q = $('#q').value.trim().toLowerCase();
-  const hit = c => !q || [c.id, c.title, c.about, ...c.clauses.map(x => x.name + ' ' + x.text)].join(' ').toLowerCase().includes(q);
+  const hit = c => !q || [c.id, c.name || '', c.title, c.about, ...c.clauses.map(x => x.name + ' ' + x.text)].join(' ').toLowerCase().includes(q);
   document.querySelectorAll('.node').forEach(n => { const h = hit(C[n.dataset.id]); n.classList.toggle('dim', !h); n.classList.toggle('hit', !!q && h); });
   document.querySelectorAll('.edge').forEach(e => e.classList.toggle('dim', !!q));
   document.querySelectorAll('.app').forEach(a => a.classList.toggle('dim', !hit(C[a.dataset.id])));
@@ -820,12 +919,25 @@ function doSearch(){
     g.style.display = q && !any ? 'none' : ''; g.classList.toggle('open', q ? any : OPEN.has(+g.dataset.g)); });
   lastRows();
 }
-$('#q').addEventListener('input', () => { if (C[location.hash.slice(1).replace(/-hood$/, '')]) go(null); doSearch(); });
+// The search is of the contracts: typed anywhere but on the globe or the
+// shelves, it opens the shelves.
+$('#q').addEventListener('input', () => { if (!['home', 'contracts'].includes(TAB)) go(null); doSearch(); });
 $('#q').addEventListener('keydown', e => { if (e.key === 'Enter'){ const a = document.querySelector('.app:not(.dim)'); if (a) go(a.dataset.id); } });
 
 /* ---------- routing ---------- */
+// The page's tabs (nav.js): home, the paragraph and the globe; contracts, the
+// shelves; papers; projects; each shown by the address after the #, a
+// contract's page by its name there, under the tab contracts.  A tab's
+// section is named tab-<name>, so that the browser, finding nothing named by
+// the address, does not scroll the section under the bar.
+const TABS = ['home', 'contracts', 'papers', 'projects'];
+let TAB = 'home', TOPROJ = null;
 function go(id, hood){ location.hash = id ? `#${id}${hood ? '-hood' : ''}` : '#contracts'; }
-$('#home').onclick = () => { $('#q').value = ''; doSearch(); go(null); };
+// Home is the page's address with nothing after it, which a link would load
+// again: it is shown in place.
+document.querySelectorAll('#bar [data-t="home"]').forEach(a => a.onclick = e => {
+  e.preventDefault(); $('#q').value = ''; doSearch();
+  history.pushState(null, '', location.pathname); route(); window.scrollTo(0, 0); });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if ($('#pop').style.display === 'flex'){ $('#pop').style.display = 'none'; return; }
@@ -838,8 +950,17 @@ function route(){
   const h = location.hash.slice(1);
   const part = h.endsWith('-hood') ? 'hood' : '';
   const id = part ? h.slice(0, -5) : h;
-  if (!C[id]){ LAST = null; $('#view').style.display = 'none'; $('#top').style.display = ''; lastRows(); return; }
-  $('#top').style.display = 'none';
+  const was = TAB;
+  TAB = C[id] ? 'view' : TABS.includes(h) ? h : 'home';
+  TABS.forEach(t => $('#tab-' + t).style.display = t === TAB ? 'block' : 'none');
+  setTab(TAB === 'view' ? 'contracts' : TAB);
+  if (!C[id]){ LAST = null; $('#view').style.display = 'none';
+    if (TAB === 'home') drawGlobe(); if (TAB === 'contracts') lastRows();
+    if (TAB !== was) window.scrollTo(0, 0);
+    const d = TAB === 'projects' && TOPROJ && document.querySelector(`.proj[data-proj="${TOPROJ}"]`);
+    TOPROJ = null;
+    if (d){ d.open = true; d.scrollIntoView({block: 'start'}); window.scrollBy(0, -($('#bar').offsetHeight + 12)); }
+    return; }
   const v = $('#view'); v.style.display = 'block'; v.classList.remove('zoomin'); void v.offsetWidth; v.classList.add('zoomin');
   const y = window.scrollY;
   page(C[id], part === 'hood');
@@ -850,8 +971,8 @@ function route(){
 /* ---------- a contract ---------- */
 function page(c, hood){
   const kids = D.contracts.filter(k => k.extends.includes(c.id));
-  const own = c.schemas.filter(s => s.from === c.id).length;
-  const link = id => `<a data-go="${id}">${id}</a>`;
+  const own = c.acts[1];
+  const link = id => `<a data-go="${id}">${esc(NM(id))}</a>`;
   $('#view').innerHTML = `
     <span class="crumbs" data-go="">‹ All contracts</span>
     <div class="prod">${icon(c)}
@@ -859,18 +980,15 @@ function page(c, hood){
       <div class="acts">${c.live ? `<a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a>` : ''}</div></div></div>
     <div class="stats">
       <div class="stat"><div class="k">Rules</div><div class="v">${c.clauses.length}</div><div class="s">in English</div></div>
-      <div class="stat"><div class="k">Speech acts</div><div class="v">${c.schemas.length ? own : '–'}</div><div class="s">${c.schemas.length ? 'of its own' : 'not compiled'}</div></div>
+      <div class="stat"><div class="k">Speech acts</div><div class="v">${c.acts[0] ? own : '–'}</div><div class="s">${c.acts[0] ? 'of its own' : 'not compiled'}</div></div>
       <div class="stat"><div class="k">Builds on</div><div class="v">${c.extends.length ? c.extends.map(link).join(', ') : '–'}</div><div class="s">${c.extends.length ? 'contract' + (c.extends.length > 1 ? 's' : '') : 'the base'}</div></div>
       <div class="stat"><div class="k">Used by</div><div class="v">${kids.length ? kids.map(k => link(k.id)).join(', ') : '–'}</div><div class="s">${kids.length ? 'contract' + (kids.length > 1 ? 's' : '') : 'none yet'}</div></div>
-      <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(c.id)}</div></div>
+      <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
     </div>
     ${stripHtml(c)}
-    <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2></div>
-      <div class="card rules">
-      ${c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
-      <div class="pre">${esc(c.preamble)}</div>
-      <ol class="cl">${c.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}.</b> ${esc(cl.text)}</span></li>`).join('')}</ol>
-      </div>
+    <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
+      ${c.clauses.length || c.preamble ? `<div class="card rules" id="cbox">${boxHtml(c, false)}</div>` : `<p class="small">No text in force.</p>`}
+      ${calcHtml(c)}
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
       ${c.dir ? `<p class="small">In the repository: <a href="https://github.com/EShapiro2/GLP/tree/main/${esc(c.dir)}" target="_blank" rel="noopener"><code>${esc(c.dir)}</code></a>.</p>` : ''}
     </div>
@@ -882,11 +1000,59 @@ function page(c, hood){
     <div id="hood" class="sec"></div>`;
   $('#view').querySelectorAll('[data-go]').forEach(a => a.onclick = () => go(a.dataset.go || null));
   $('#hoodbtn').onclick = () => go(c.id, !hood);
-  if (hood){ $('#hood').style.display = 'block'; hoodHtml(c); setTimeout(() => $('#hood').scrollIntoView({behavior:'smooth', block:'start'}), 60); }
+  const tf = $('#tf');
+  if (tf) tf.querySelectorAll('button').forEach(bt => bt.onclick = () => {
+    tf.querySelectorAll('button').forEach(z => z.classList.toggle('on', z === bt));
+    if (!bt.dataset.f){ $('#cbox').innerHTML = boxHtml(c, null); return; }
+    detail(c).then(d => { if (bt.classList.contains('on') && d.fullc) $('#cbox').innerHTML = boxHtml(c, d.fullc); }); });
+  const fd = $('#view').querySelector('details[data-full]');
+  if (fd) fd.addEventListener('toggle', async () => {
+    fd.querySelector('summary').textContent = fd.open ? 'Hide the full contract' : 'Full contract';
+    if (!fd.open || fd.dataset.done) return; fd.dataset.done = 1;
+    try { const r = await fetch(fd.dataset.full); if (!r.ok) throw 0; fd.querySelector('.txt').textContent = (await r.text()).split('\n').filter(l => !l.startsWith('%')).join('\n').trim(); }
+    catch (e){ fd.querySelector('.txt').textContent = 'Not available.'; }
+  });
+  if (hood){ $('#hood').style.display = 'block'; $('#hood').innerHTML = '<p class="small">Loading…</p>'; detail(c).then(d => { hoodHtml(c, d.schemas); $('#hood').scrollIntoView({behavior:'smooth', block:'start'}); }); }
 }
 
-function hoodHtml(c){
-  const own = c.schemas.filter(s => s.from === c.id), inh = c.schemas.filter(s => s.from !== c.id);
+// The Calculus (calculus/MIGRATION.md, the section Website): until its owner
+// adopts a contract, the text the Calculus proposes, from the branch Calculus
+// of GLP, with its state; the button Full contract, the contract with every
+// clause it has from the contracts it is written from (Udi, 2026-11-15, to
+// Calculus #6).
+// The contract's box: the contract as its owner wrote it, terse, or the full
+// contract, with every clause it has from the contracts it is written from,
+// each numbered by the contract it is from; the same form and the same box,
+// the two-state button above it choosing (Udi, 2026-11-16, to Website #2).
+// A contract's schemas and full contract, fetched when first asked for
+// (detail/<NAME>.json, tools/build.py).
+const DETAIL = {};
+const detail = c => DETAIL[c.id] || (DETAIL[c.id] = fetch(`detail/${encodeURIComponent(c.id)}.json`).then(r => r.json()).catch(() => ({schemas: [], fullc: null})));
+// A contract's text marks a term it defines with asterisks, *identity*: the
+// page shows the term emphasised and not the marks (Udi, 2026-11-16, to
+// Website #2): bold in the definitions, which are in italics, and in
+// italics in a clause.
+const term = s => esc(s).replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+function boxHtml(c, full){
+  const x = full || c;
+  return `${!full && c.noteBefore ? `<p class="note">${esc(c.noteBefore)}</p>` : ''}
+      <div class="pre">${term(x.preamble)}</div>
+      <ol class="cl${full ? ' full' : ''}">${x.clauses.map(cl => `<li><span class="n">${cl.n}</span><span title="${({'■':'enforced','◆':'attested','○':'undertaken'})[cl.mod]}">${cl.mod}</span><span><b>${esc(cl.name)}${cl.sep || '.'}</b> ${term(cl.text)}</span></li>`).join('')}</ol>`;
+}
+function calcHtml(c){
+  const k = c.calculus; if (!k) return '';
+  const yn = b => b ? 'yes' : 'no';
+  const br = `https://github.com/EShapiro2/GLP/tree/Calculus/calculus/${encodeURIComponent(c.id)}`;
+  const full = k.full ? `<details class="fullc" data-full="${esc(k.full)}"><summary class="btn grey">Full contract</summary><div class="card rules txt">Loading…</div></details>` : '';
+  if (k.adopted) return k.hasFull ? '' : full;
+  return `<div class="sh" style="margin-top:22px"><h2>Proposed by the Calculus</h2></div>
+      <p class="small">The text of ${esc(NM(c.id))} in the Calculus, published on the <a href="${br}" target="_blank" rel="noopener">branch Calculus</a> of GLP; ${k.owner && k.owner !== 'none' ? `its owner, ${esc(k.owner)}, has not adopted it yet` : 'it has no owner yet'} (<a href="https://github.com/EShapiro2/GLP/blob/Calculus/calculus/MIGRATION.md" target="_blank" rel="noopener">the migration plan</a>).  Certified by GLP's checker: ${yn(k.certified)}.  Compiled to GLP: ${yn(k.compiled)}.</p>
+      ${k.proposed ? `<div class="card rules txt">${esc(k.proposed)}</div>` : ''}
+      ${full}`;
+}
+
+function hoodHtml(c, schemas){
+  const own = schemas.filter(s => s.from === c.id), inh = schemas.filter(s => s.from !== c.id);
   const L = c.layers, col = FAM[famOf(c)][1];
   const n = i => `<span class="num" style="background:${col}">${i}</span>`;
   const codeLayer = (key, title, sum) => L[key] ? `<div class="sub2"><h4>${title}${Q(key)}</h4>
@@ -894,9 +1060,9 @@ function hoodHtml(c){
   $('#hood').innerHTML = `
     <div class="sh"><h2>Under the hood${Q('hood')}</h2><span>from the English text to the running app</span></div>
     <div class="stack">
-    <div class="card layer">${n(1)}<h3>The Grassroots Contract${Q('contract')}</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.join(' and ') : ''}, above.</p></div>
+    <div class="card layer">${n(1)}<h3>The Grassroots Contract${Q('contract')}</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.map(NM).join(' and ') : ''}, above.</p></div>
     <div class="card layer">${n(2)}<h3>Speech-Act Schemas${Q('acts')}</h3>
-      <p class="sum">${own.length} of its own${inh.length ? `, and ${inh.length} from ${[...new Set(inh.map(s => s.from))].join(', ')}` : ''}.</p>
+      <p class="sum">${own.length} of its own${inh.length ? `, and ${inh.length} from ${[...new Set(inh.map(s => NM(s.from)))].join(', ')}` : ''}.</p>
       ${own.map((s, i) => schemaHtml(s, i < 2)).join('')}
       ${inh.length ? `<p class="more" id="mt">Show the ${inh.length} inherited acts</p><div id="inh" style="display:none">${inh.map(s => schemaHtml(s, false)).join('')}</div>` : ''}
     </div>
@@ -944,7 +1110,8 @@ function relsHtml(c){
   const mk = {agrees: '✓', given: '✓', disagrees: '✗', open: '–'};
   const say = {agrees: 'agrees with its schemas', given: 'agrees, given an invariant', disagrees: 'disagrees with its schemas', open: 'not checked'};
   return `<div class="sec"><div class="sh"><h2>Relations</h2></div><div class="card refs rels">${c.checks.map(r =>
-    `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(c.id)} ${esc(r.rel)} ${r.of ? `its ${esc(r.of)} of ` : ''}<a data-go="${esc(r.base)}">${esc(r.base)}</a></b>: ${say[r.result]}<div class="why">${esc(r.why)}</div></div></div>`).join('')}</div></div>`;
+    r.line ? `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(r.line)}</b>: ${r.result === 'agrees' ? 'holds' : 'does not hold'}<div class="why">${esc(r.why)}</div></div></div>` :
+    `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(NM(c.id))} ${esc(r.rel)} ${r.of ? `its ${esc(r.of)} of ` : ''}<a data-go="${esc(r.base)}">${esc(NM(r.base))}</a></b>: ${say[r.result]}<div class="why">${esc(r.why)}</div></div></div>`).join('')}</div></div>`;
 }
 // The app as a certified artefact, the .glpw the Grassroots App installs.
 function artHtml(c){
@@ -958,7 +1125,7 @@ function schemaHtml(s, open){
   if (s.form === 'rule'){
     const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
     const who = s.guarded.length ? 'needs the will of ' + s.guarded.join(' and ') : 'nobody is asked';
-    return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${s.from}</span></summary>
+    return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${esc(NM(s.from))}</span></summary>
       <div class="say">${esc(who)}</div>
       ${s.adds.length ? `<div class="rule"><b>Adds</b>${at(s.adds, 'add')}</div>` : ''}
       ${s.removes.length ? `<div class="rule"><b>Removes</b>${at(s.removes, 'del')}</div>` : ''}
@@ -967,28 +1134,67 @@ function schemaHtml(s, open){
   const willing = s.parties.filter(p => p.endsWith('?')).map(p => p.slice(0, -1));
   const say = `${s.parties.length === 1 ? 'One person' : s.parties.length + ' roles'}; ${willing.length ? 'needs the will of ' + willing.join(' and ') : 'nobody is asked'}${s.vars.length ? '; values: ' + s.vars.join(', ') : ''}${s.constraint ? '; only if ' + s.constraint : ''}.`;
   const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
-  return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.head)}</span><span class="fr">${s.from}</span></summary>
+  return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.head)}</span><span class="fr">${esc(NM(s.from))}</span></summary>
     <div class="say">${esc(say)}</div>
     <table class="roles"><tr><th>At</th><th>Needs · must not have</th><th>Gets</th><th>Loses</th></tr>
     ${s.roles.map(r => `<tr><td class="r">${esc(r.role)}</td><td data-k="Needs · must not have">${at(r.need,'need')}${at(r.not,'not')}</td><td data-k="Gets">${at(r.add,'add')}</td><td data-k="Loses">${at(r.del,'del')}</td></tr>`).join('')}</table></details>`;
 }
 
-$('#found').innerHTML = (D.foundational || []).map(citeHtml).join('');
-// Who answers for each directory of GLP, every directory accounted for
-// (tools/directories.py; Udi, 2026-11-11, to Coordination #14): the project,
-// its papers, and for a project with no paper its text under papers/.
-function dirHtml(e){
-  const a = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
-  const gh = `https://github.com/EShapiro2/GLP/${e.dir ? 'tree' : 'blob'}/main/${e.path}`;
-  const papers = e.cites.length ? e.cites.map(P => P.arxiv ? a(`https://arxiv.org/abs/${P.arxiv}`, `<i>${esc(P.title)}</i>`) : P.pdf ? a(P.pdf, `<i>${esc(P.title)}</i>`) : `<i>${esc(P.title)}</i>`).join('; ')
-    : e.text ? a(`https://github.com/EShapiro2/GLP/tree/main/${e.text}`, 'no paper; what it is and does') : 'no paper';
-  return `<div class="cite">${a(gh, `<code>${esc(e.path)}</code>`)}: <b>${esc(e.who)}</b>, ${papers}${e.note ? `; ${esc(e.note)}` : ''}.</div>`;
+/* ---------- papers ---------- */
+// Every paper, by project (tools/directories.py, PROJECTS), each with its
+// full citation, and after them the papers no project holds (Udi, 2026-11-12,
+// to GSA #5).
+const projHead = p => `<b>${esc(p.id)}</b>${p.name ? `<small>${esc(p.name)}</small>` : ''}`;
+const hasCode = p => p.dirs.length || p.papers.some(q => q.dirs.length || q.contracts.length);
+$('#plist').innerHTML = D.projects.filter(p => p.papers.length).map(p => `<div class="card pgrp"><div class="who">${projHead(p)}${hasCode(p) ? `<a href="#projects" data-proj="${esc(p.id)}">Its contracts and directories</a>` : ''}</div>
+    <div class="cites">${p.papers.map(q => citeHtml(q.cite)).join('')}</div></div>`).join('')
+  + ((D.otherPapers || []).length ? `<div class="card pgrp"><div class="who"><b>Earlier papers</b></div><div class="cites">${D.otherPapers.map(citeHtml).join('')}</div></div>` : '');
+
+/* ---------- projects ---------- */
+// A tree in which each project, paper, contract and directory is once (Udi,
+// 2026-11-12, to GSA #5; tools/directories.py, tree): a project's papers;
+// under a paper its directories and its contracts; under a contract what is
+// its own, its text or its directory, its app, its phone file and its record
+// of the cascade; and under Code the directories with no paper, each with
+// the project that answers for it.
+const ghPath = e => `<a href="https://github.com/EShapiro2/GLP/${e.dir ? 'tree' : 'blob'}/main/${esc(e.path)}" target="_blank" rel="noopener"><code>${esc(e.path)}</code></a>`;
+const paperLink = P => { const t = `<i>${esc(P.title || '')}</i>`;
+  const href = P.arxiv ? `https://arxiv.org/abs/${P.arxiv}` : P.url || P.pdf || '';
+  return href ? `<a href="${href}" target="_blank" rel="noopener">${t}</a>` : t; };
+const dirLi = e => `<li>${ghPath(e)}${e.who ? ` <b>${esc(e.who)}</b>` : ''}${e.note ? ` <span class="nt">${esc(e.note)}</span>` : ''}${e.text ? ` <a href="https://github.com/EShapiro2/GLP/tree/main/${esc(e.text)}" target="_blank" rel="noopener">what it is and does</a>` : ''}${
+  (e.contracts || []).length ? `<ul>${e.contracts.map(conLi).join('')}</ul>` : ''}</li>`;
+const conLi = c => `<li><a href="#${esc(c.id)}"><b>${esc(NM(c.id))}</b></a>${C[c.id] ? ` <span class="nt">${esc(C[c.id].title)}</span>` : ''}
+  <ul>${c.items.map(i => `<li><span class="k">${esc(i.k)}</span>${ghPath(i)}</li>`).join('')}</ul></li>`;
+// A project with no paper (tools/directories.py, NO_PAPER): its name, its
+// name in full, and its repository where its work is not in GLP.
+const noPaperLi = p => `<li><b>${esc(p.id)}</b> <span class="nt">${esc(p.name)}</span>${p.repo ? ` <a href="https://github.com/${esc(p.repo)}" target="_blank" rel="noopener"><code>${esc(p.repo)}</code></a>` : ''}</li>`;
+const branch = (lab, lis) => lis.length ? `<li><span class="lab">${lab}</span><ul>${lis.join('')}</ul></li>` : '';
+const nOf = (n, one, many) => n ? `${n} ${n === 1 ? one : many}` : '';
+function projHtml(p){
+  const cs = p.papers.reduce((n, q) => n + q.contracts.length, 0), ds = p.papers.reduce((n, q) => n + q.dirs.length, 0) + p.dirs.length;
+  return `<details class="card proj" data-proj="${esc(p.id)}"><summary><b>${esc(p.id)}</b><span class="nm2">${esc(p.name || '')}</span>
+    <span class="cnt">${[nOf(p.papers.length, 'paper', 'papers'), nOf(cs, 'contract', 'contracts'), nOf(ds, 'directory', 'directories')].filter(Boolean).join(' · ')}</span><span class="chev">›</span></summary>
+    <div class="tree"><ul>${p.papers.map(q => `<li><span class="lab">Paper</span>${paperLink(q.cite)}
+      ${q.dirs.length || q.contracts.length ? `<ul>${branch('Directories', q.dirs.map(dirLi))}${branch('Contracts', q.contracts.map(conLi))}</ul>` : ''}</li>`).join('')}
+    ${branch('Directories of the whole project', p.dirs.map(dirLi))}</ul></div></details>`;
 }
-$('#dirs').innerHTML = (D.directories || []).map(dirHtml).join('')
-  + ((D.unaccounted || []).length ? `<div class="cite">No entry yet answers for ${D.unaccounted.map(p => `<code>${esc(p)}</code>`).join(', ')}.</div>` : '');
+$('#ptree').innerHTML = D.projects.map(projHtml).join('')
+  + `<details class="card proj" data-proj="Code"><summary><b>Code</b><span class="nm2">The projects with no paper, and the directories with no paper, each with the project that answers for it</span>
+    <span class="cnt">${[nOf((D.noPaper || []).length, 'project', 'projects'), nOf(D.code.length, 'directory', 'directories')].filter(Boolean).join(' · ')}</span><span class="chev">›</span></summary>
+    <div class="tree"><ul>${branch('Projects with no paper', (D.noPaper || []).map(noPaperLi))}${branch('Directories', D.code.map(dirLi))}</ul></div></details>`
+  + ((D.unaccounted || []).length ? `<p class="why">No entry yet answers for ${D.unaccounted.map(p => `<code>${esc(p)}</code>`).join(', ')}.</p>` : '')
+  + ((D.faults || []).length ? `<p class="why">${D.faults.map(esc).join('; ')}.</p>` : '');
+$('#pexp').onclick = () => document.querySelectorAll('.proj').forEach(d => d.open = true);
+$('#pcol').onclick = () => document.querySelectorAll('.proj').forEach(d => d.open = false);
+// From a project's papers to the project in the tree, which route opens once
+// it shows the tree.
+document.querySelectorAll('#plist [data-proj]').forEach(a => a.onclick = () => { TOPROJ = a.dataset.proj; });
+$('#ccount').textContent = `${D.contracts.length} contracts, by family. ${D.contracts.filter(c => c.live).length} run as apps on this site.`;
+// A search another page sent here, index.html?q=...#contracts (nav.js).
+$('#q').value = new URLSearchParams(location.search).get('q') || '';
 V.zoom = BASEZ();
 layout(); drawGlobe(); globeNav(); drawShelves(); route();
-window.addEventListener('resize', () => { if ($('#top').style.display !== 'none') drawShelves(); });
+window.addEventListener('resize', () => { if (TAB === 'contracts') drawShelves(); });
 </script>
 </body>
 </html>

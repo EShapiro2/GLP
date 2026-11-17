@@ -1,0 +1,6 @@
+Separating Distrust
+Separating Distrust restricts Distrust.
+Separating Distrust:0 - | Alice, Bob and Carol are persons.
+Separating Distrust:1 ○ Befriend: Friendship:1 <- ~distrusts(Alice,Bob), ~distrusts(Bob,Alice).
+Separating Distrust:2 ○ | Taking sides.
+Separating Distrust:2 ○ | Alice, whose friend Bob has declared distrust of Carol, will eventually declare distrust of Carol or end her friendship with Bob, unless Bob withdraws the declaration.

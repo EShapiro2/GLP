@@ -5,13 +5,39 @@
 # devices`, then, for each iPhone that is not unavailable, its name, its UDID
 # (the argument of build.sh) and the app's line from `xcrun devicectl device
 # info apps`, or that it has none; the app is GLP_BUNDLE_ID, by default the
-# Xcode project's (common.sh).
+# Xcode project's (common.sh).  Before them, when adb is on the path, the
+# Android phones adb sees: each one's serial (the argument of build.sh), its
+# state, model and Android version, and whether the app, the Gradle project's
+# applicationId (glp_multiagent/android/app/build.gradle.kts), is installed.
 set -u
 ME=devices.sh
 HERE=$(cd "$(dirname "$0")" && pwd)
 . "$HERE/common.sh"
 APP_ID=$BUNDLE_ID
 command -v xcrun >/dev/null || { echo "devices.sh: no xcrun; this runs on the Mac" >&2; exit 2; }
+if command -v adb >/dev/null; then
+    ANDROID_ID=$(sed -n 's/^[[:space:]]*applicationId = "\([^"]*\)".*/\1/p' "$GLP/glp_multiagent/android/app/build.gradle.kts" | head -1)
+    serials=$(adb devices | awk 'NR > 1 && NF >= 2 { print $1 "\t" $2 }')
+    if [ -z "$serials" ]; then
+        echo "devices.sh: no Android phone seen by adb"
+    else
+        while IFS=$'\t' read -r serial state; do
+            if [ "$state" != device ]; then
+                echo "== Android $serial ($state): unlock it and allow USB debugging for this Mac"
+                continue
+            fi
+            model=$(adb -s "$serial" shell getprop ro.product.model </dev/null | tr -d '\r')
+            version=$(adb -s "$serial" shell getprop ro.build.version.release </dev/null | tr -d '\r')
+            echo "== Android $model, serial $serial (Android $version)"
+            if adb -s "$serial" shell pm list packages "$ANDROID_ID" </dev/null | tr -d '\r' | grep -qx "package:$ANDROID_ID"; then
+                echo "   $ANDROID_ID installed"
+            else
+                echo "   no Grassroots App ($ANDROID_ID)"
+            fi
+        done <<< "$serials"
+    fi
+    echo
+fi
 xcrun devicectl list devices
 J=$(mktemp -d)
 trap 'rm -rf "$J"' EXIT

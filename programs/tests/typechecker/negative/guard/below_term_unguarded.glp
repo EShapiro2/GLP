@@ -1,0 +1,4 @@
+procedure first_key(Signature?, Key).
+first_key(signed(_, _, attest(I, _)), I?).
+first_key(signed(_, _, _), "none") :- otherwise | true.
+first_key(unsigned, "none").

@@ -1,0 +1,32 @@
+          edges trans  mean optim stretch ideal optedge optcovr
+day 1       245     8  1290   931    1.39  1282     69%     56%
+day 2       292    32  1652   967    1.71  1680     60%     58%
+day 3       301    49  1748   976    1.79  1857     62%     62%
+day 4       305    55  1871   976    1.92  1809     62%     63%
+requests by class:
+  point_transitive   143
+  acquaint           757
+  unpoint            170
+  befriend           636
+  establish          100
+  unfriend           103
+  introduce          1017
+  point_friend       378
+refusals by class and refuser (own machine / a peer's):
+  unpoint own              80
+  point_transitive peer    126
+  acquaint own             54
+  acquaint peer            111
+approvals answered:
+  yes    2353
+churn: pointings made 395, ended 90; friendships made 1272 (314 after the first day), ended 206
+pointings made / ended by day: 0:251/6 1:74/27 2:36/27 3:34/30
+overlay at the end: 305 edges over 100 persons; out-degree 0:0 1:0 2:1 3:93 4:6; 0 with none, 6 above d=3
+pointing edges: mean 1871 m, longest 11354 m (l1)
+ideal, the d nearest friends at the end: 300 edges, mean 1809 m
+bound, the d nearest persons of all: 300 edges, mean 976 m
+against the optimum (every person pointing to its d nearest of all): stretch 1.92, gap 895 m; optimal edges 188 of 305 pointings (62%), covering 63% of the optimum's 300 edges
+against the ideal of friends (the d nearest friends): stretch 1.03, gap 62 m; 219 pointings to one of them (72%)
+pointings to a friend: 250; to a person who is not a friend (transitive): 55
+cumulative friendship graph: 1 components; pointings across components: 0
+summary	edges=305	maxdeg=4	over=6	mean=1871	optimum=976	stretch=1.92	gap=895	optedge=62	optcover=63	ideal=1809	transitive=55	made=395	ended=90	made1=144	ended1=84	fmade1=314	fended1=166	trans_req=143	trans_peer=126	across=0

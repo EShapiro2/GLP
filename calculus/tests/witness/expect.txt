@@ -1,0 +1,2 @@
+K          ERROR K:1, Go: Alice may go, provided Alice is tied: 'someone' in a state defined by several states, which would not be one person: Alice is tied to someone
+1 contracts, 1 with a fault

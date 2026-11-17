@@ -1,0 +1,6 @@
+Q: Restricts
+Q restricts C.
+Alice is a person.
+1. ■ Mark: C:1, only if Alice has a pass.
+Logic pragmas.
+Vocabulary: x has a pass = p(x).

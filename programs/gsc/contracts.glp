@@ -6,11 +6,11 @@
 %
 % The contracts the checker is for are their owners' and live with their
 % code, one copy each (claude.md "Sessions", the cascade rule; Coordination
-% Appendix C): GSC's are programs/gsc/GSG.glp and GSN.glp, the social
-% network of GSC, Section 3.3; GAI's programs/gai/GSNP.glp, the social
-% network with provenance, and programs/gai/GAI.glp; the currency's
+% Appendix C): GSC's are programs/gsc/Friendship.glp and Groups.glp, the social
+% network of GSC, Section 3.3; GAI's programs/gai/Provenance-Groups.glp, the social
+% network with provenance, and programs/gai/Agents.glp; the currency's
 % programs/currencies/coins/GC.glp (Appendix B), the child-safe social
-% network's programs/cssn/CSSN.glp and the federation's
+% network's programs/cssn/Children.glp and the federation's
 % programs/federation/GFWC.glp.  Each prints its term by contract_named/2 in
 % a REPL session on the file, and test_gsc.sh passes the term to check/2,
 % traceable_preds/2, compile_contract/2 and compile_schema_in/3.  A fixture that
@@ -34,7 +34,7 @@
 % The social graph as Section 3.3 printed it before the signed term (GSC
 % 63b301f): item(x, a, f), the item x by a as received from f.  A fixture, the
 % base of the variant below, sg_tri_cschema, since GSC's language admits no
-% signed term and the contract GSNP carries one (programs/gai/GSNP.glp); it
+% signed term and the contract GSNP carries one (programs/gai/Provenance-Groups.glp); it
 % certifies nothing of GSNP.
 procedure sg_plain(Contract).
 sg_plain([schema(befriend, [],
@@ -541,7 +541,7 @@ sg_refl_forbidden(S, reflexive([friend], C?)) :- befriend_own(own_forb, S?, C).
 % drafted it in Legal's inbox on 2026-08-15 and 2026-08-16 and as it was
 % brought to their paper on 2026-10-09 (send, parent_child, friend reflexive,
 % the five expanded schemas); CSSN has since revised the contract, and the
-% contract is programs/cssn/CSSN.glp, CSSN's, which certifies this
+% contract is programs/cssn/Children.glp, CSSN's, which certifies this
 % fixture of nothing.
 %
 % unfriend, child_unfriend, leave, child_leave and child_leave_2 each stand
@@ -800,7 +800,9 @@ sn_cond_listed(S, C?) :-
       [sas(wake, ['Alice'], [n],
          [atom(woken, ['Alice', n])],
          [exists([x], atom(listed, ['Alice', x, n]), atom(busy, [x]))],
-         true, ['Alice'])], C).
+         true, ['Alice']),
+       % occupy(Alice?) : identity, +busy(Alice), which adds the busy wake's condition reads (GSC, Section 3.2).
+       sas(occupy, ['Alice'], [], [atom(busy, ['Alice'])], [atom(identity, ['Alice'])], true, ['Alice'])], C).
 
 procedure sn_cond_listed_named(WContract?, WContract).
 sn_cond_listed_named(S, C?) :-
@@ -808,7 +810,9 @@ sn_cond_listed_named(S, C?) :-
       [sas(wake, ['Alice', x], [n],
          [atom(woken, ['Alice', n])],
          [exists([x], atom(listed, ['Alice', x, n]), atom(busy, [x]))],
-         true, ['Alice'])], C).
+         true, ['Alice']),
+       % occupy(Alice?) : identity, +busy(Alice), which adds the busy wake's condition reads (GSC, Section 3.2).
+       sas(occupy, ['Alice'], [], [atom(busy, ['Alice'])], [atom(identity, ['Alice'])], true, ['Alice'])], C).
 
 % --- a listed reading role the guarding role records ------------------------
 % idle(Alice?, Alice[listed(*, n)]; n) :  identity, listed(Alice, n), +idled(n)
@@ -874,7 +878,10 @@ procedure sgn_listed(Contract).
 sgn_listed([cschema(note, [svar(x), svar(n)], [],
        [rs(guarded, [], [], [atom(item, [svar(x)])], []),
         crs(listed(1, club, [svar(n)]), unguarded,
-            [atom(got, [sgn(x, 2)])], [], [atom(item, [svar(x)])], [])])]).
+            [atom(got, [sgn(x, 2)])], [], [atom(item, [svar(x)])], [])]),
+    % sign and enlist add item and club, which note requires (GSC, Section 3.2).
+    schema(sign, [svar(x)], [rs(guarded, [atom(item, [svar(x)])], [], [], [])]),
+    schema(enlist, [svar(n)], [rs(guarded, [atom(club, [role(1), svar(n)])], [], [], [])])]).
 
 % --- negative: listed roles formed otherwise than Definition Role allows ----
 % close_b(a?, pi_2[listed(*, n)] ; n) :  identity, +closed(n)
@@ -901,7 +908,15 @@ ls_faults([cschema(close_b, [svar(n)], [],
     cschema(close_h, [svar(n)], [],
        [rs(guarded, [atom(closed, [svar(n)])], [], [atom(identity, [])], []),
         crs(listed(1, listed, [svar(m)]), unguarded,
-            [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])])]).
+            [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
+    % establish, create, sign and receive add identity, listed, member, item
+    % and got, which the three schemas require (GSC, Section 3.2).
+    schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]),
+    schema(create, [svar(n)],
+       [rs(guarded, [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [],
+                    [atom(identity, [])], [])]),
+    schema(sign, [svar(x)], [rs(guarded, [atom(item, [svar(x)])], [], [], [])]),
+    schema(receive, [svar(x)], [rs(guarded, [atom(got, [role(1), svar(x)])], [], [], [])])]).
 
 % --- negative: the head of a schema -----------------------------------------
 % sign(p? ; x, x, p) :  +item(y)
@@ -927,14 +942,23 @@ gather_listed(A, cschema(gather, [svar(n)], [],
      crs(listed(1, club, [svar(n)]), unguarded,
          [atom(A?, [])], [], [atom(child, [])], [])])).
 
+% enlist(p? ; n) : identity, person, not retired, +club(p, n), which adds
+% club, the anchor of gather's listed role (GSC, Section 3.2, "A contract is
+% required to supply what its acts require ... the anchor of a quantifier
+% among them").
+procedure gather_enlist(Schema).
+gather_enlist(schema(enlist, [svar(n)],
+    [rs(guarded, [atom(club, [role(1), svar(n)])], [],
+                 [atom(identity, []), atom(person, [])], [atom(retired, [])])])).
+
 procedure wd_listed(Declared).
-wd_listed(C?) :- wd_retire(Rt), gather_listed(noted, G), wd_leaving_with(Rt?, [G?], C).
+wd_listed(C?) :- wd_retire(Rt), gather_listed(noted, G), gather_enlist(E), wd_leaving_with(Rt?, [G?, E?], C).
 
 procedure wd_listed_leaving(Declared).
-wd_listed_leaving(C?) :- wd_retire(Rt), gather_listed(retired, G), wd_leaving_with(Rt?, [G?], C).
+wd_listed_leaving(C?) :- wd_retire(Rt), gather_listed(retired, G), gather_enlist(E), wd_leaving_with(Rt?, [G?, E?], C).
 
 % ===========================================================================
-% GKK's introduce changed in one place (programs/gsc/GKK.glp; GSC, Section
+% GKK's introduce changed in one place (programs/gsc/Knowledge.glp; GSC, Section
 % 7.1: "introduce's role Alice requires knows(Bob) ... an atom of traceable
 % provenance naming the other role", and introduce "adds knows(c) at Bob, c
 % an argument of knows(c), which Alice requires")
@@ -1070,7 +1094,7 @@ uo_other([schema(establish, [],
 % and requires none" (Section 3.2): an atom marked - with the wildcard among
 % its arguments, any, or in place of the speech-act variable of a name term
 % among them, ext_any(Sigma) for Sigma.*, as GSN's unfriend writes it
-% (GSN.glp).  Each fixture below adds a schema to GSN, or changes GKK's
+% (Groups.glp).  Each fixture below adds a schema to GSN, or changes GKK's
 % establish, as its owner writes it.
 
 % --- negative: a cleared atom puts no edge in the role graph ---------------
@@ -1087,7 +1111,9 @@ cl_no_edge(S, C?) :-
       [schema(shun, ['Alice', 'Bob'], [],
          [rs(guarded,   [], [atom(listed, [role(2), any])], [atom(identity, [])], []),
           rs(unguarded, [], [atom(member, [nterm(ext_any(own(1)))]), atom(note, [])],
-                        [atom(identity, [])], [])])], C).
+                        [atom(identity, [])], [])]),
+       % jot(Alice?) : identity, +note, which adds the note shun deletes (GSC, Section 3.2).
+       schema(jot, ['Alice'], [], [rs(guarded, [atom(note, [])], [], [atom(identity, [])], [])])], C).
 
 % shun(Alice?, Bob; n) :  identity, -listed(Bob, n)    identity, -member(<Alice>.*), -note
 % The same with Alice deleting listed(Bob, n), which she then requires, an
@@ -1099,7 +1125,9 @@ cl_edge(S, C?) :-
       [schema(shun, ['Alice', 'Bob'], [svar(n)],
          [rs(guarded,   [], [atom(listed, [role(2), svar(n)])], [atom(identity, [])], []),
           rs(unguarded, [], [atom(member, [nterm(ext_any(own(1)))]), atom(note, [])],
-                        [atom(identity, [])], [])])], C).
+                        [atom(identity, [])], [])]),
+       % jot(Alice?) : identity, +note, which adds the note shun deletes (GSC, Section 3.2).
+       schema(jot, ['Alice'], [], [rs(guarded, [atom(note, [])], [], [atom(identity, [])], [])])], C).
 
 % --- negative: a cleared atom is no change a role makes ---------------------
 % purge(Alice?, Bob) :  identity, friend(Bob), -listed(Bob, *)    identity, -member(<Alice>.*)
@@ -1150,7 +1178,9 @@ cl_wild(S, C?) :-
          [rs(guarded, [atom(swept, [])], [], [atom(identity, [])], []),
           crs(listed(1, listed, [any]), unguarded,
               [], [atom(note, []), atom(member, [nterm(ext_any(own(1)))])],
-              [atom(identity, [])], [])])], C).
+              [atom(identity, [])], [])]),
+       % jot(Alice?) : identity, +note, which adds the note sweep's listed role deletes (GSC, Section 3.2).
+       schema(jot, ['Alice'], [], [rs(guarded, [atom(note, [])], [], [atom(identity, [])], [])])], C).
 
 % --- negative: a multiplicity on an atom with the wildcard ------------------
 % drop(Alice?; k) :  identity, -k.listed(Alice, *), -k.member(<Alice>.*), +k.seen(*), +note
@@ -1562,7 +1592,9 @@ nm_or(C?) :-
     ncontract_app(B?,
       [nschema(mint, [num(d), num(k), num(t)], or(gt(num(d), num(t)), le(num(d), num(0))),
          [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
-                      [atom(identity, []), atom(date, [num(t)])], [])])], C).
+                      [atom(identity, []), atom(date, [num(t)])], [])]),
+       % clock(Alice?; t) : identity, +date(t), which adds the date mint requires (GSC, Section 3.2).
+       schema(clock, [num(t)], [rs(guarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).
 
 % --- negative: a product of two value variables ----------------------------
 % mint(Alice?; d, k, t) | d * k <= t : identity, date(t), +k.bond(Alice, d)
@@ -1574,7 +1606,9 @@ nm_nonlinear(C?) :-
     ncontract_app(B?,
       [nschema(mint, [num(d), num(k), num(t)], le(mul(num(d), num(k)), num(t)),
          [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
-                      [atom(identity, []), atom(date, [num(t)])], [])])], C).
+                      [atom(identity, []), atom(date, [num(t)])], [])]),
+       % clock(Alice?; t) : identity, +date(t), which adds the date mint requires (GSC, Section 3.2).
+       schema(clock, [num(t)], [rs(guarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).
 
 % --- signing conditions (def:numbers, GSC 10fcc92) --------------------------
 % A constraint may hold signing conditions signed(u, y) and unsigned(u, y),
@@ -1669,7 +1703,11 @@ sig_malformed(C?) :-
          [rs(guarded, [atom(closed, [svar(n)])],
                       [atom(listed, [role(1), svar(n)])], [atom(identity, [])], []),
           crs(listed(1, listed, [svar(n)]), unguarded,
-              [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])])], C).
+              [], [atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])]),
+       % create(Alice?; n) : identity, +listed(Alice, n), +member(<Alice>.n), which adds what close requires (GSC, Section 3.2).
+       schema(create, [svar(n)],
+         [rs(guarded, [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [],
+                      [atom(identity, [])], [])])], C).
 
 % --- an equality of name terms over no agent role of the schema -------------
 % tag(Alice?; n) | <pi_3> = <Alice> : identity, +tagged(n)
@@ -1695,7 +1733,12 @@ nm_reading_role(C?) :-
       [nschema(mature, [num(d), num(t)], le(num(d), num(t)),
          [rs(guarded,   [atom(coin, [role(2)])], [atom(bond, [role(2), num(d)])],
                         [atom(identity, []), atom(knows, [role(2)])], []),
-          rs(unguarded, [], [], [atom(identity, []), atom(date, [num(t)])], [])])], C).
+          rs(unguarded, [], [], [atom(identity, []), atom(date, [num(t)])], [])]),
+       % issue(Alice?, Bob?; d) and clock(Alice?; t) add the bond and the date mature requires (GSC, Section 3.2).
+       schema(issue, [num(d)],
+         [rs(guarded, [atom(bond, [role(2), num(d)])], [], [atom(identity, []), atom(knows, [role(2)])], []),
+          rs(guarded, [atom(coin, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [])]),
+       schema(clock, [num(t)], [rs(guarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).
 
 % --- a variable occurring in a signature atom as its multiplicity ----------
 % tally(Alice, Bob; k) :  identity, knows(Bob)    identity, +k.tallied(Alice)
@@ -1721,7 +1764,9 @@ nm_mult_kept(C?) :-
     ncontract_app(B?,
       [schema(spend, [num(k)],
          [rs(guarded, [], [atom(coin, [role(1)])],
-                      [atom(identity, []), times(num(k), atom(coin, [role(1)]))], [])])], C).
+                      [atom(identity, []), times(num(k), atom(coin, [role(1)]))], [])]),
+       % mint(Alice?) : identity, +coin(Alice), which adds the coin spend requires (GSC, Section 3.2).
+       schema(mint, [], [rs(guarded, [atom(coin, [role(1)])], [], [atom(identity, [])], [])])], C).
 
 % --- negative: a multiplicity on an atom forbidden -------------------------
 % hoard(Alice?; k) : identity, not k.coin(Alice), +coin(Alice)
@@ -1779,7 +1824,9 @@ nm_head(C?) :-
     ncontract_app(B?,
       [nschema(mint, [num(5), num(k), num(k)], gt(num(d), num(t)),
          [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
-                      [atom(identity, []), atom(date, [num(t)])], [])])], C).
+                      [atom(identity, []), atom(date, [num(t)])], [])]),
+       % clock(Alice?; t) : identity, +date(t), which adds the date mint requires (GSC, Section 3.2).
+       schema(clock, [num(t)], [rs(guarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).
 
 % --- the contracts by name -------------------------------------------------
 % A fixture that stands alone, by name.  An unknown name is the empty
@@ -2080,7 +2127,7 @@ nn_tag_loose(C?) :-
 % at Alice, adds sent(x, Bob) there, and adds item(sgn(x, Alice)) at Bob,
 % where friend(Alice) is required.  The checker's fixture, the base of
 % sg_sgn_loose below; the network with provenance is GSNP, GAI's contract,
-% programs/gai/GSNP.glp, which test_gsc.sh reads.
+% programs/gai/Provenance-Groups.glp, which test_gsc.sh reads.
 procedure sg_items(Contract).
 sg_items([schema(befriend, [],
        [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
@@ -2108,6 +2155,16 @@ sg_items([schema(befriend, [],
 % sgn_intro_plain is the same with got(y) and got(x) in place of the signed
 % terms: an added atom then names a speech-act variable and not the other
 % party, and the contract has no introductory act.
+% Acts that add what a fixture's acts require and nothing of the fixture adds,
+% so that the fixture supplies what its acts require (GSC, Section 3.2, "A
+% contract is required to supply what its acts require") and is decided on
+% its own point: Name(Alice?) : +P, and Name(Alice?) : +P(Alice).
+procedure sup_mark(Constant?, Constant?, Schema).
+sup_mark(Nm, P, schema(Nm?, [], [rs(guarded, [atom(P?, [])], [], [], [])])).
+
+procedure sup_self(Constant?, Constant?, Schema).
+sup_self(Nm, P, schema(Nm?, [], [rs(guarded, [atom(P?, [role(1)])], [], [], [])])).
+
 procedure sgn_sign(Schema).
 sgn_sign(schema(sign, [svar(x)], [rs(guarded, [atom(item, [svar(x)])], [], [], [])])).
 
@@ -2147,8 +2204,9 @@ procedure sgn_other_role(Contract).
 sgn_other_role([S?,
     schema(forward, [svar(x)],
        [rs(guarded,   [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []),
-        rs(unguarded, [atom(item, [sgn(x, 2)])], [], [atom(friend, [role(1)])], [])])]) :-
-    sgn_sign(S).
+        rs(unguarded, [atom(item, [sgn(x, 2)])], [], [atom(friend, [role(1)])], [])]),
+    T?]) :-
+    sgn_sign(S), sup_self(trust, friend, T).
 
 procedure sgn_not_required(Contract).
 sgn_not_required([schema(sign, [svar(x)],
@@ -2165,14 +2223,17 @@ procedure sgn_unguarded_signer(Contract).
 sgn_unguarded_signer([S?,
     schema(forward, [svar(x)],
        [rs(unguarded, [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []),
-        rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])]) :-
-    sgn_sign(S).
+        rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])]),
+    T?]) :-
+    sgn_sign(S), sup_self(trust, friend, T).
 
 procedure sgn_community(Contract).
 sgn_community([cschema(sign, [svar(x)], [], [rs(guarded, [atom(item, [svar(x)])], [], [], [])]),
     schema(forward, [svar(x)],
        [rs(guarded,   [atom(sent, [svar(x), role(2)])], [], [atom(item, [svar(x)])], []),
-        rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])])]).
+        rs(unguarded, [atom(item, [sgn(x, 1)])], [], [atom(friend, [role(1)])], [])]),
+    T?]) :-
+    sup_self(trust, friend, T).
 
 % --- negative: a signed speech act from an untraceable record --------------
 % note(p?; x, u) : +tagged(x, u)      tag(p?; x, u) : tagged(x, u), +item(sgn(x, p))
@@ -2335,7 +2396,10 @@ wd_no_g(C?) :-
                            [atom(identity, []), atom(person, [])], []),
                rs(guarded, [atom(identity, []), atom(child, []), atom(friend, [role(1)])], [],
                            [], [atom(identity, [])])]),
-            O?, B?, [A?, K?], C).
+            O?, B?, [A?, K?, S?], C),
+    % own_parent(p?) : +parent(p), which adds parent, required by of_age and
+    % the two relay acts (GSC, Section 3.2); enter still adds none.
+    sup_self(own_parent, parent, S).
 
 procedure wd_no_w(Declared).
 wd_no_w(C?) :-
@@ -2347,7 +2411,10 @@ wd_no_w(C?) :-
                            [atom(identity, []), atom(person, [])], []),
                rs(guarded, [atom(identity, []), atom(parent, [role(1)]), atom(child, []),
                             atom(friend, [role(1)])], [], [], [atom(identity, [])])]),
-            O?, B?, [A?, K?], C).
+            O?, B?, [A?, K?, S?], C),
+    % own_parenting(p?) : +parenting(p), which adds parenting, required by
+    % of_age and the two relay acts (GSC, Section 3.2); enter still adds none.
+    sup_self(own_parenting, parenting, S).
 
 procedure wd_sigma_marked(Declared).
 wd_sigma_marked(C?) :-
@@ -3076,7 +3143,9 @@ wd_clear_g(C?) :-
             [A?, K?,
              schema(drop, [],
                [rs(guarded, [], [atom(note, []), atom(parent, [any])],
-                            [atom(identity, []), atom(person, [])], [])])], C).
+                            [atom(identity, []), atom(person, [])], [])]), S?], C),
+    % jot(p?) : +note, which adds the note drop deletes (GSC, Section 3.2).
+    sup_mark(jot, note, S).
 
 % --- wr: AI agents, their guardians and the record --------------------------
 % The schemas of GAI's contract with wards, as its appendix describes them, in

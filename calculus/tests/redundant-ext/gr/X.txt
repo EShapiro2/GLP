@@ -1,0 +1,5 @@
+X: Written out
+X extends B.
+Alice, Bob and Carol are persons, Sum a number.
+1. ■ Pay twice: Alice may pay Bob Sum Carol-coins, with the consent of Bob, provided Alice knows Bob and Bob knows Alice.
+Logic pragmas.

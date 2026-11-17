@@ -1,0 +1,12 @@
+%% Overlay.glp --- printed by adopt.py from Overlay.txt: the contract's full schemas, the Calculus's term.glp.txt,
+%% complete in itself.  Not to be edited: edit Overlay.txt and run adopt.py Overlay.
+% contract_named(overlay, C): the contract, Overlay.
+procedure contract_named(Constant?, SDeclared).
+contract_named(overlay, reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
+ sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
+ sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
+ sas(befriend, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))], true, ['Alice', 'Bob']),
+ sas(unfriend, ['Alice', 'Bob'], [], [not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], true, ['Alice']),
+ sas(point_friend, ['Alice', 'Bob'], [], [atom(points_to, ['Alice', 'Bob'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice']), not(atom(points_to, ['Alice', 'Bob']))], true, ['Alice']),
+ sas(point_transitive, ['Alice', 'Bob', 'Carol'], ['Carol'], [atom(points_to, ['Alice', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Carol']), atom(points_to, ['Alice', 'Bob']), atom(points_to, ['Bob', 'Carol']), not(atom(points_to, ['Alice', 'Carol']))], true, ['Alice']),
+ sas(unpoint, ['Alice', 'Bob'], ['Bob'], [not(atom(points_to, ['Alice', 'Bob']))], [atom(identity, ['Alice']), atom(points_to, ['Alice', 'Bob'])], true, ['Alice'])])).

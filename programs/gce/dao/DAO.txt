@@ -3,25 +3,49 @@
 % Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none.
 % Defines: DAO, steward, member, proposal, vote.  A DAO is named by its steward, as a group by its leader (GSN).  Clause 6 is enforced: the steward's agent keeps the number of members and a tally of each proposal's votes, and the steward can decide a proposal only on a majority; every vote is delivered to every member.
 % Schemas: DAO.glp beside this file.
-DAO: Grassroots DAO
-Alice and Bob are persons.  DAO extends GKK.
-1. ■ Founding.  Alice may found a DAO under a name of their own not used before; Alice is its steward and first member.
-2. ■ Joining.  Alice, the steward of a DAO, may admit Bob, whom they know and who is not yet a member, by an act of both.
-3. ■ Proposing.  A member of a DAO may make a proposal to it, each proposal once; its steward records it and delivers it to every member but the steward, the proposer included.
-4. ■ Voting.  A member who holds a proposal of their DAO may vote for or against it, once and before the steward decides it; the steward records the vote and delivers it to every member but the steward.
-5. ■ Deciding.  The steward may decide a proposal, passed or rejected, once; the steward delivers the decision to every member but the steward.
-6. ■ Majority.  The steward decides a proposal only once more than half of the DAO's members at that time have voted the same way on it, and passes it exactly when they voted for it.
-Pragmas
+DAO
+DAO extends Knowledge.
+Alice and Bob are persons.
+1. ■ Found: Alice may found a DAO under a new name of hers; Alice is then its steward and first member.
+2. ■ Join: Alice, the steward of a DAO, may admit Bob, whom she knows and who is not yet a member, with the consent of Bob.
+3. ■ Proposing. Propose: A member of a DAO may make a proposal to it, each proposal once; its steward records it. Deliver proposal: The steward delivers it to every member but the steward, the proposer included.
+4. ■ Voting. Vote for, Vote against: A member who holds a proposal of their DAO may vote for or against it, once and before the steward decides it; the steward records the vote. Deliver vote: The steward delivers the vote to every member but the steward.
+5. ■ Deciding. Pass, Reject: The steward may decide a proposal, passed or rejected, once. Deliver decision: The steward delivers the decision to every member but the steward.
+6. ■ Majority. The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.
+Logic pragmas
+DAO extends Knowledge.
+Alice, Bob and Carol are persons, Delos a DAO and Prop a proposal, Votes and Double numbers, Carol possibly Alice or Bob.
+1. ■ Found: Alice may found Delos under a new name of hers.
+2. ■ Join: Alice may admit Bob to Delos, with the consent of Bob, provided Alice is the steward of Delos and Alice knows Bob.
+3. ■ Proposing. Propose: Carol may make the proposal Prop to Alice's Delos, provided Carol is a member of Alice's Delos and Alice is the steward of Delos. Propose own: Alice may make the proposal Prop to Alice's Delos, provided Alice is a member of Alice's Delos and Alice is the steward of Delos. Deliver proposal: Alice delivers Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Prop of Delos and Alice has Bob as a member of Delos.
+4. ■ Voting. Vote for: Carol may vote for Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos. Vote own for: Alice may vote for Prop of Alice's Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos. Vote against: Carol may vote against Prop of Alice's Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos. Vote own against: Alice may vote against Prop of Alice's Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos and Alice has not decided Prop of Delos. Deliver vote for: Alice delivers Carol's vote for Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos and Alice has Bob as a member of Delos. Deliver vote against: Alice delivers Carol's vote against Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos and Alice has Bob as a member of Delos.
+5. ■ Deciding. Pass: Alice may pass Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds the votes of at least Votes persons for Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos. Reject: Alice may reject Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds the votes of at least Votes persons against Prop of Delos, Double is Votes times 2 and Alice has fewer than Double persons as a member of Delos. Deliver pass: Alice delivers to Bob the decision that Prop of Delos is passed, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Alice has Bob as a member of Delos. Deliver reject: Alice delivers to Bob the decision that Prop of Delos is rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected and Alice has Bob as a member of Delos.
+6. ■ Majority. The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.
+Logic pragmas.
+Vocabulary: x is the steward of d = steward(x,d); x is a member of y's d = member(x,d,y); x has y as a member of d = listed(x,y,d); x has proposed p to y's d = proposed(x,p,d,y); x holds p of d = proposal(x,p,d); x has delivered p of d to y = delivered(x,p,d,y); x has voted on p of d = voted(x,p,d); x holds y's vote for p of d = vote_for(x,y,p,d); x holds y's vote against p of d = vote_against(x,y,p,d); x has delivered y's vote on p of d to z = delivered_vote(x,y,p,d,z); x has decided p of d = decided(x,p,d); x holds p of d as passed = passed(x,p,d); x holds p of d as rejected = rejected(x,p,d); x has delivered the decision on p of d to y = delivered_decision(x,p,d,y).
+After x founds d under a new name of x's, which requires x is not the steward of d: x is the steward of d, x is a member of x's d and x has x as a member of d.
+After x admits y to d, which requires y is not a member of x's d: y is a member of x's d and x has y as a member of d.
+After y makes the proposal p to x's d, which requires x does not hold p of d: y has proposed p to x's d and x holds p of d.
+After x delivers p of d to y, which requires x has not delivered p of d to y: x has delivered p of d to y and y holds p of d.
+After y votes for p of x's d, which requires y has not voted on p of d: y has voted on p of d and x holds y's vote for p of d.
+After y votes against p of x's d, which requires y has not voted on p of d: y has voted on p of d and x holds y's vote against p of d.
+After x delivers y's vote for p of d to z, which requires x has not delivered y's vote on p of d to z: x has delivered y's vote on p of d to z and z holds y's vote for p of d.
+After x delivers y's vote against p of d to z, which requires x has not delivered y's vote on p of d to z: x has delivered y's vote on p of d to z and z holds y's vote against p of d.
+After x passes p of d, which requires x has not decided p of d: x has decided p of d and x holds p of d as passed.
+After x rejects p of d, which requires x has not decided p of d: x has decided p of d and x holds p of d as rejected.
+After x delivers to y the decision that p of d is passed, which requires x has not delivered the decision on p of d to y: x has delivered the decision on p of d to y and y holds p of d as passed.
+After x delivers to y the decision that p of d is rejected, which requires x has not delivered the decision on p of d to y: x has delivered the decision on p of d to y and y holds p of d as rejected.
+Interface pragmas
 DAOs: the DAOs Alice is a member of.
 Proposals: the proposals Alice sees.
-For: the yes votes Alice has seen.
-Against: the no votes Alice has seen.
-Passed: the passed proposals Alice knows.
-Founding: Alice [Found] <name>
-Joining: Alice [Admit] <person>
+For: each vote for a proposal Alice has seen.
+Against: each vote against a proposal Alice has seen.
+Passed: what Alice holds as passed.
+Found: Alice [Found] <delos>
+Join: Alice [Join]
   Bob: Alice invites you to their DAO.
-Proposing: Bob [Propose] <proposal>
-  Alice [Propose own] <proposal>
-Voting: Bob [Vote for] <proposal> [Vote against] <proposal>
-  Alice [Vote own for] <proposal> [Vote own against] <proposal>
-Deciding: Alice [Pass] <proposal> [Reject] <proposal>
+Proposing: Carol [Propose] <prop>
+  Alice [Propose own] <prop>
+Voting: Carol [Vote for] [Vote against]
+  Alice [Vote own for] [Vote own against]
+Deciding: Alice [Pass] <votes> [Reject] <votes>

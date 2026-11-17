@@ -1,0 +1,8 @@
+Interface pragmas
+Open directory: Carol [Open directory]
+Listing: Alice [List me] <mail> <name>
+  Dora: Alice asks for your consent to list me.
+  Alice [List me unshown] <mail> <name>
+  Dora: Alice asks for your consent to list me unshown.
+  Alice [Delist me] <dora> [Delist me unshown] <dora>
+Lookup: Bob [Lookup] [Lookup by address]

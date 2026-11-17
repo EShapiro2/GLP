@@ -220,8 +220,8 @@
 #       three answers.
 # (xviii) the harness of every canonical CVA platform (programs/sglp/cva/;
 #       sGLP's task of 2026-10-18 20:50 UTC, and of 2026-11-04 16:22 UTC, item
-#       3), on the canonical platform of the social graph of the current GSG
-#       cascade record (cascade/GSG/platform.vglp), compiled to GLP by the
+#       3), on the canonical platform of the social graph of the current Friendship
+#       cascade record (cascade/Friendship/platform.vglp), compiled to GLP by the
 #       REPL's :emit, with the scripted profiles of tests/cva/scripted_sglp.glp:
 #       the platform's interface printed in sGLP's term form (cva/interface.sh),
 #       the record's interface.glp, its types, its volitional declarations,
@@ -762,8 +762,8 @@ tr '\n' ' ' < "$WORK/txmoded.2" > "$WORK/txmoded.2.flat"
     [ "$(grep -c '^relay_1(A, Type, ' "$WORK/txmoded.2")" -eq 1 ] && ! grep -q '^relay_1(_, ' "$WORK/txmoded.2" &&
     grep -q "present_1(_, _, panel(\[\]), panel(\[\]), panel(\[\]), C0, C0?, Fs0?, Fs0, _, _) \. " "$WORK/txmoded.2.flat" &&
     grep -q "present_1(A, Type, panel(\[card(Z1, Z2?) | Z4\]), panel(\[card(Z1?, Z3) | Z5?\]), panel(\[card(Z1?, '[$]h'(C0?, 0)) | S1?\]), C0, N2?, \[slot(F1) | G1?\], Fs0, Mon, Log) :- ground(Z1?) , integer(C0?) | ':='(N1, '+'(C0?, 1)) , answer_1(A?, Type?, C0?, 0, F1?, Z3?, Z2, Mon?, Log?) , present_2(A?, Type?, Z4?, Z5, S1, N1?, N2, G1, Fs0?, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
-    grep -q "answer_1(Integer?, Constant?, Integer?, Integer?, _?, YesNo?, YesNo, MutualRef?, MutualRef?)\. answer_1(A, Type, C, J, F, Y, Y?, Mon, Log) :- ground(Y?) , ground(F?) | stream_append(time(Time), Mon?, _) , whole_frame(F?, C?, J?, Y?, E) , stream_append(entry(Time?, A?, Type?, E?), Log?, _) \. " "$WORK/txmoded.2.flat" &&
-    grep -q "present_2(Integer?, Constant?, List(Card)?, List(Card), _, Integer?, Integer, Stream(Slot(_)), Stream(Slot(_))?, MutualRef?, MutualRef?)\. present_2(_, _, \[\], \[\], \[\], C0, C0?, Fs0?, Fs0, _, _) \. present_2(A, Type, \[card(Z1, Z2?) | Z4\], \[card(Z1?, Z3) | Z5?\], \[card(Z1?, '[$]h'(C0?, 0)) | S1?\], C0, N2?, \[slot(F1) | G1?\], Fs0, Mon, Log) :- ground(Z1?) , integer(C0?) | ':='(N1, '+'(C0?, 1)) , answer_1(A?, Type?, C0?, 0, F1?, Z3?, Z2, Mon?, Log?) , present_2(A?, Type?, Z4?, Z5, S1, N1?, N2, G1, Fs0?, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "answer_1(Integer?, Constant?, Integer?, Integer?, Term?, YesNo?, YesNo, MutualRef?, MutualRef?)\. answer_1(A, Type, C, J, F, Y, Y?, Mon, Log) :- ground(Y?) , ground(F?) | stream_append(time(Time), Mon?, _) , whole_frame(F?, C?, J?, Y?, E) , stream_append(entry(Time?, A?, Type?, E?), Log?, _) \. " "$WORK/txmoded.2.flat" &&
+    grep -q "present_2(Integer?, Constant?, List(Card)?, List(Card), Term, Integer?, Integer, Stream(Slot(Term)), Stream(Slot(Term))?, MutualRef?, MutualRef?)\. present_2(_, _, \[\], \[\], \[\], C0, C0?, Fs0?, Fs0, _, _) \. present_2(A, Type, \[card(Z1, Z2?) | Z4\], \[card(Z1?, Z3) | Z5?\], \[card(Z1?, '[$]h'(C0?, 0)) | S1?\], C0, N2?, \[slot(F1) | G1?\], Fs0, Mon, Log) :- ground(Z1?) , integer(C0?) | ':='(N1, '+'(C0?, 1)) , answer_1(A?, Type?, C0?, 0, F1?, Z3?, Z2, Mon?, Log?) , present_2(A?, Type?, Z4?, Z5, S1, N1?, N2, G1, Fs0?, Mon?, Log?) \. " "$WORK/txmoded.2.flat" &&
     ! grep -q '^present_3\|^answer_2' "$WORK/txmoded.2"
 check "a writer-mode type with positions the person writes inside an argument the program writes is translated: shown whole once the term the program writes has no reader, the panel and its list of cards built and shown once complete, each card's answer a question of its own, logged in the panel as shown whole" $?
 grep -q '^%% not transformed: a rated goal of a procedure with an output argument(key(give, 2))$' "$WORK/txmoded.3" &&
@@ -1110,22 +1110,22 @@ sr=$?
     [ "$sr" -eq 2 ] && grep -q '^record.sh: the unit of --until is second, minute, hour, day, week or year, singular or plural, not month$' "$WORK/unit_rec.out" &&
     [ ! -e "$WORK/unit_root" ]
 check "a horizon in months is refused by run.sh and by record.sh with exit 2, naming the six units, and nothing made (sGLP's paper, Appendix B)" $?
-# The canonical platform of the social graph of the current GSG cascade
-# record, cascade/GSG/platform.vglp, compiled to GLP by :emit in a scratch
+# The canonical platform of the social graph of the current Friendship cascade
+# record, cascade/Friendship/platform.vglp, compiled to GLP by :emit in a scratch
 # directory under programs/tests, a container with no self.glp, as cascade.sh
 # compiles it.
 CVA="$WORK/cva"; mkdir -p "$CVA/printed"
 EMITD="$GLP_DIR/programs/tests/sglp_cva_emit_$$"
 rm -rf "$EMITD"; mkdir -p "$EMITD"
-cp "$GLP_DIR/cascade/GSG/platform.vglp" "$EMITD/platform.vglp"
+cp "$GLP_DIR/cascade/Friendship/platform.vglp" "$EMITD/platform.vglp"
 repl "$WORK/cva_emit.out" ":emit $EMITD"
 cp "$EMITD/platform.vglp" "$CVA/platform.vglp"; cp "$EMITD/platform.glp" "$CVA/platform.glp" 2>/dev/null
 rm -rf "$EMITD"
 [ -s "$CVA/platform.glp" ] && grep -q '^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question)))\.$' "$CVA/platform.glp"
 check "the canonical platform of the social graph compiled to GLP, its agent/5 the compilation's, with its ask stream" $?
-bash "$HERE/cva/interface.sh" "$CVA/platform.vglp" "$CVA/platform.glp" GSG > "$CVA/interface.glp" 2> "$WORK/cva_iface.err"
+bash "$HERE/cva/interface.sh" "$CVA/platform.vglp" "$CVA/platform.glp" Friendship > "$CVA/interface.glp" 2> "$WORK/cva_iface.err"
 st=$?
-[ "$st" -eq 0 ] && cmp -s "$CVA/interface.glp" "$GLP_DIR/cascade/GSG/interface.glp" &&
+[ "$st" -eq 0 ] && cmp -s "$CVA/interface.glp" "$GLP_DIR/cascade/Friendship/interface.glp" &&
     grep -q "^  type('Request', \[propose('Proposal')\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Approval', \[approval('Asking', 'List'('Word'), dual('YesNo'))\]),$" "$CVA/interface.glp" &&
     grep -q "^  type('Output', \[view('Key', 'List'('Atom'), 'List'('Key'), 'List'('Approved'), 'List'('Tab')), refused('Approved', 'Key', 'Reason')\]),$" "$CVA/interface.glp" &&
@@ -1136,7 +1136,7 @@ st=$?
     grep -q "^  volitional('Approval', '\\\\'Approval\\\\'', approval_w, greet(" "$CVA/interface.glp" &&
     grep -q "^  compiled(agent, 5),$" "$CVA/interface.glp" && grep -q "^  compiled(request1, 3),$" "$CVA/interface.glp" &&
     [ "$(grep -c '^  type(' "$CVA/interface.glp")" -ge "$(grep -cE '^[A-Z][A-Za-z0-9_]* *::=' "$CVA/platform.vglp")" ]
-check "the platform's interface in sGLP's term form, the GSG record's interface.glp: its types, Request, propose(Proposal), Approval and Output among them, and the root's it names, Key and List, its volitional declarations, Request?'s request and Approval's respond and greet, with the constants and functors of their asks, and its compiled predicates (vGLP d433f71, \"The compilation\")" $?
+check "the platform's interface in sGLP's term form, the Friendship record's interface.glp: its types, Request, propose(Proposal), Approval and Output among them, and the root's it names, Key and List, its volitional declarations, Request?'s request and Approval's respond and greet, with the constants and functors of their asks, and its compiled predicates (vGLP d433f71, \"The compilation\")" $?
 [ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/cva_iface.err"
 bash "$HERE/transform.sh" --interface "$CVA/interface.glp" --source "$HERE/tests/cva/scripted_sglp.glp" --out "$CVA/printed" > "$WORK/cva_tx.out" 2>&1
 st=$?

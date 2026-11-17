@@ -2,7 +2,7 @@
 
 The screens of GAI's figure of GSG's app (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, item 5), in the figure's order: Alice's and Bob's phones as the construct family draws the app, one screen with the tabs Contacts and Friends, the lists of GKK's and GSG's pragmas, drawn from the last view the agent wrote (`../README.md`, "The screens").  Each file is one phone's screen taken on the iOS Simulator, an iPhone 16e, 390 by 844 points at 3 pixels a point, its status bar at 9:41 with full signal, Wi-Fi and battery, in the light theme, set in Roboto; the simulator's screenshot is the display alone, so it is framed as the phone, in a black bezel with rounded corners, 1080 by 2220 pixels on white, as vGLP's figure of the app is (`vGLP/figures/gsg-app-friends.png`).
 
-They are taken by `glp_multiagent/tool/sim_screens.sh`, which plays on the simulator the scenario of `glp_multiagent/test/apps_screens_test.dart`: it loads this app, runs its entry `miniapp/4` for Alice and for Bob over one conversation, and takes each person's acts by tapping and typing on the tab's controls.  From `glp_multiagent/`:
+They are taken by `glp_multiagent/tool/sim_screens.sh`, which plays on the simulator the scenario of `glp_multiagent/test/apps_screens_test.dart`: it loads this app, runs its entry `miniapp/3` for Alice and for Bob over one conversation, and takes each person's acts by tapping and typing on the tab's controls.  From `glp_multiagent/`:
 
 ```bash
 bash tool/sim_screens.sh
@@ -12,6 +12,6 @@ The script builds the bundled assets (`tool/sync_glp_assets.sh`), boots the simu
 
 | File | What it shows |
 |---|---|
-| `gsg-a-bob-asked.png` | Alice, who has met Bob (GKK:2), taps Befriend beside him (GSG:1): Bob's Friends tab, the tab of GSG, with GSG's question "Alice asks to be your friend." and the answers yes and no at its top. |
-| `gsg-b-alice-friends.png` | Alice's Friends tab after the befriend commits: a row for Bob, the atom friend(bob), with Introduce, GKK's "[Introduce]", and Unfriend, GSG's "[Unfriend]", the acts offered in his row while they are friends (vGLP b4022ce, Section "Widgets"). |
-| `gsg-c-alice-ended.png` | Alice's Contacts tab after Bob ends the friendship (GSG:2): her name; Acquaint, GKK's "[Acquaint]", with its field "person", GKK's "<person>"; and Bob listed, knows(bob), with Introduce, GKK's "[Introduce]", and Befriend, GSG's "[Befriend]"; her Friends tab lists no one. |
+| `gsg-a-bob-asked.png` | Alice, who has come to know Bob (GKK:2), taps Befriend beside him (GSG:1): Bob's first tab, Contacts, badged, with GSG's question "Alice asks to be your friend.", under it the atom Alice's role requires, "Contacts: Bob", and the answers yes and no at its top; below it his name, Acquaint with its field person, and Alice's row with Introduce and Befriend. |
+| `gsg-b-alice-friends.png` | Alice's Friends tab after the befriend commits: a row for Bob, the atom friend(bob), with Unfriend, GSG's "[Unfriend]", the act offered in his row while they are friends. |
+| `gsg-c-alice-ended.png` | Alice's Contacts tab after Bob ends the friendship (GSG:2): her name; Acquaint, GKK's "[Acquaint]", with its field person; and Bob's row, knows(bob), with Introduce, GKK's "[Introduce]", and Befriend, GSG's "[Befriend]"; her Friends tab lists no one. |

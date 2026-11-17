@@ -1,0 +1,4 @@
+D: Willing
+D restricts C.
+Alice is a person.
+1. ■ Signal: C:2, only if Alice is willing.

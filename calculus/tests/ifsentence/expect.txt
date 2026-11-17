@@ -1,0 +1,218 @@
+Knowledge  commute yes; return yes; recover same
+Friendship commute yes; return yes; recover same
+Groups     commute yes; return yes; recover equivalent
+3 contracts, 0 with a fault
+--- sasx/Friendship.txt
+Friendship (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:0 - | Alice and Bob are persons.
+Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+--- sasx/Groups.txt
+Groups (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:0 - | Alice and Bob are persons.
+Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2+Groups:3 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice), ~member(Alice,_,Bob), ~member(Bob,_,Alice), ~listed(Alice,Bob,_), ~listed(Bob,Alice,_) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Groups:0 - | A *message*, a parameter of Groups, is what a person sends.
+Groups:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+Groups:1 ■ Message: message(Bob,Alice,Text) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice possibly Alice=Bob.
+Groups:2 ■ | Group.
+Groups:2 ■ Create: leader(Alice,Grupo), member(Alice,Grupo,Alice), listed(Alice,Alice,Grupo) <- ~leader(Alice,Grupo) guarded by Alice.
+Groups:2 ■ | Alice is then its leader and first member.
+Groups:2 ■ Close: ~leader(Alice,Grupo), ~listed(Alice,_,Grupo), ~member(_,Grupo,Alice) <- leader(Alice,Grupo) guarded by Alice.
+Groups:3 ■ | Joining and Leaving.
+Groups:3 ■ Join: member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_) guarded by Alice, Bob possibly Alice=Bob.
+Groups:3 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Alice possibly Alice=Bob.
+Groups:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+Groups:4 ■ | Group messaging.
+Groups:4 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+Groups:4 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo) guarded by Alice.
+Groups:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+Groups:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.
+--- sasx/Knowledge.txt
+Knowledge (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+--- expand.py: exit 0; --check: exit 0
+--- exp/Friendship.txt
+% Written by tools/expand.py from rev/; do not edit.
+Friendship
+An *identity* is a unique key pair.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+--- exp/Groups.txt
+% Written by tools/expand.py from rev/; do not edit.
+Groups
+An *identity* is a unique key pair.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+A *message*, a parameter of Groups, is what a person sends.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Groups:1. ■ Message: Alice may send a message to her friend Bob.
+Groups:2. ■ Group. Create: Alice may create a group, of which she is the leader and first member. Close: Alice may close the group by leaving it.
+Groups:3. ■ Joining and Leaving. Join: Alice, the leader of a group, may add her friend Bob to it, with the consent of Bob. Remove, Leave: Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+Groups:4. ■ Group messaging. Post: A member of a group may send a message to the group. Deliver: Its leader delivers it to every current member.
+--- exp/Knowledge.txt
+% Written by tools/expand.py from rev/; do not edit.
+Knowledge
+An *identity* is a unique key pair.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+--- gx/Friendship.txt
+Friendship
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+--- gx/Groups.txt
+Groups
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
+Of Groups: A *message*, a parameter of Groups, is what a person sends. Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+Friendship:2, Groups:3. ■ Unfriend: Alice may end her friendship with Bob, and then Alice is a member of no group of Bob, Bob is a member of no group of Alice, Alice has Bob as a member of no group and Bob has Alice as a member of no group.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Groups:1. ■ Message: Alice may send Text to Bob, provided Alice and Bob are friends.
+Groups:2. ■ Group. Create: Alice may create Grupo. Alice is then its leader and first member. Close: Alice may close Grupo by leaving it.
+Groups:3. ■ Joining and Leaving. Join: Alice may add Bob to Grupo, with the consent of Bob, provided Alice is the leader of Grupo and Alice and Bob are friends. Remove: Alice may end Bob's membership in Grupo, provided Alice is the leader of Grupo. Leave: Bob may end his membership in Alice's Grupo.
+Groups:4. ■ Group messaging. Post: Bob may send Text to the group Grupo of Alice, provided Bob is a member of the group Grupo of Alice. Post own: Alice may send Text to the group Grupo of Alice, provided Alice is a member of the group Grupo of Alice. Deliver: Alice delivers Text of Bob in Grupo to Carol, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo and Alice has Carol as a member of the group Grupo. Deliver leader: Alice delivers Text of Bob in Grupo to Alice, provided Alice is the leader of Grupo and Alice has the post Text of Bob in Grupo.
+--- gx/Knowledge.txt
+Knowledge
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+--- interface Friendship
+Friendship
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+--- interface-adopted Friendship
+Interface pragmas
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+--- interface Groups
+Groups
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+6. ■ Message.  Alice may send a message to her friend Bob.
+7. ■ Create.  Alice may create a group, of which she is the leader and first member.
+8. ■ Close.  Alice may close the group by leaving it.
+9. ■ Join.  Alice, the leader of a group, may add her friend Bob to it, with the consent of Bob.
+10. ■ Remove.  Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+11. ■ Leave.  Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+12. ■ Post.  A member of a group may send a message to the group.
+13. ■ Post own.  A member of a group may send a message to the group.
+14. ■ Deliver.  Its leader delivers it to every current member.
+15. ■ Deliver leader.  Its leader delivers it to every current member.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+Message: Alice [Message]
+Create: Alice [Create]
+Close: Alice [Close]
+Join: Alice [Join]
+  Bob: Alice asks for your consent to join.
+Remove: Alice [Remove]
+Leave: Bob [Leave]
+Post: Bob [Post]
+Post own: Alice [Post own]
+--- interface-adopted Groups
+Interface pragmas
+Message: Alice [Message]
+Group: Alice [Create] [Close]
+Joining and Leaving: Alice [Unfriend]
+  Alice [Join]
+  Bob: Alice asks for your consent to join.
+  Alice [Remove]
+  Bob [Leave]
+Group messaging: Bob [Post]
+  Alice [Post own]
+--- interface Knowledge
+Knowledge
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+--- interface-adopted Knowledge
+Interface pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.

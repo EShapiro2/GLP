@@ -1,0 +1,7 @@
+FGT: Forgetting
+FGT extends Knowledge.
+Alice is a person.
+1. ■ Forget: Alice may forget everyone, provided Alice knows someone.
+Logic pragmas.
+x knows no one: no longer x knows anyone.
+After x forgets everyone: x knows no one.

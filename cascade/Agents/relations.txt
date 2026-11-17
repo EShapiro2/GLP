@@ -1,0 +1,5 @@
+Agents instantiates Guardians: holds
+Agents composes it (Guardians) with Forwarding: holds
+Agents restricts it (Guardians and Forwarding): holds
+Agents strengthens it (Guardians and Forwarding): holds
+Agents extends it (Guardians and Forwarding): holds

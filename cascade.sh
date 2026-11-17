@@ -44,21 +44,44 @@
 #   gsn         GSN   GSC         programs/gsc              social_network
 #   gnw         GnW   GSC         programs/gsc              ---
 #   gsnp        GSNP  GAI         programs/gai              ---
-#   gc          GC    Currencies  programs/currencies/coins currency
-#   gb          GB    Currencies  programs/currencies/bonds ---
+#   gc, coins   Coins Currencies  programs/currencies/coins currency
+#   gb, bonds   Bonds Currencies  programs/currencies/bonds ---
 #   cssn        CSSN  CSSN        programs/cssn             programs/cssn (CSSN's, the village)
 #   gsnw        GSNW  CSSN        programs/cssn             ---
 #   gfwc        GFWC  GFWC        programs/federation       ---
 #   gai         GAI   GAI         programs/gai              ---
 #   gff         GFF   GFF         programs/gff              programs/apps/gff (GFF's, the app's plays)
-#   agora       AGORA Currencies  programs/currencies/agora ---
+#   agora       Agora Currencies  programs/currencies/agora ---
 #   gdo         GDO   GRH         programs/lbm              ---
 #   dgc         DGC   Currencies  programs/currencies/sovereign ---
 #   gcc         GCC   Currencies  programs/currencies/gcc   ---
 #   gdc         GDC   Currencies  programs/currencies/gdc   ---
-#   bcc         BCC   Currencies  programs/currencies/bcc   ---
 #   gra         GRA   GRH         programs/lbm              ---
-#   gff_i       GFF-I GFF         programs/gff              ---
+#   cb          CB    GO          programs/go               ---
+#   cmb         CMB   GO          programs/go               ---
+#   cnc         CnC   GO          programs/go               ---
+#   gan         GAN   GO          programs/go               ---
+#   gbcc        GBCC  GO          programs/go               ---
+#   gbank       GBank GO          programs/go               ---
+#   gcoop       GCoop GO          programs/go               ---
+#   gcorp       GCorp GO          programs/go               ---
+#   gdao        GDAO  GO          programs/go               ---
+#   gldao       GLDAO GO          programs/go               ---
+#   gng         GNG   GO          programs/go               ---
+#   gnl         GNL   GO          programs/go               ---
+#   gnm         GNM   GO          programs/go               ---
+#   gno         GNO   GO          programs/go               ---
+#   go          GO    GO          programs/go               ---
+#   mcs         MCS   GO          programs/go               ---
+#   orh         ORH   GO          programs/go               ---
+#   sc          SC    GO          programs/go               ---
+#   scb         SCB   GO          programs/go               ---
+#   spllc       SPLLC GO          programs/go               ---
+#   tc          TC    GO          programs/go               ---
+#   wc          WC    GO          programs/go               ---
+#   gdo_lb      GDO-LB GRH        programs/lbm              ---
+#   gra_ss      GRA-SS GRH        programs/lbm              ---
+#   sgsg        SGSG  SPM         programs/social/spm       ---
 #   gff_ps      GFF-PS GFF        programs/gff              ---
 #   gff_fr      GFF-FR GFF        programs/gff              ---
 #   gff_fr_bc   GFF-FR-BC GFF     programs/gff              ---
@@ -68,10 +91,10 @@
 #   dao         DAO   GCE         programs/gce/dao          ---
 #   ldao        LDAO  GCE         programs/gce/ldao         ---
 #   fdao        FDAO  GCE         programs/gce/fdao         ---
-#   rec         REC   GCE         programs/gce/rec          ---
-#   stay        STAY  GCE         programs/gce/stay         ---
-#   lib         LIB   GCE         programs/gce/lib          ---
-#   joint       JOINT GCE         programs/gce/joint        ---
+#   rec         Rec   GCE         programs/gce/rec          ---
+#   stay        Stay  GCE         programs/gce/stay         ---
+#   lib         Lib   GCE         programs/gce/lib          ---
+#   joint       Joint GCE         programs/gce/joint        ---
 #
 # The steps, and the artefacts written to cascade/<NAME>/ at the repository
 # root --- outside programs/, since every .glp and .vglp under a program's
@@ -112,6 +135,25 @@
 # the paper's repository and commit, the GLP commit the tools were at, and
 # what each step gave.
 #
+# A contract its owner has adopted from the Calculus (claude.md "Code", "The
+# record of a contract adopted from the Calculus", Coordination #16,
+# 2026-11-15; calculus/README.md, "Adopting a contract") is known by its
+# NAME.txt having a line "Logic pragmas": the owner's % lines, the contract, the
+# line "Logic pragmas" and its Logic pragmas, and where it has them the line
+# "Interface pragmas" and its Interface pragmas.  Its NAME.glp is printed by
+# calculus/tools/adopt.py NAME, contract_named(<contract>, Term), Term the full
+# schemas, complete in itself.  Its record differs from the one above in step 2
+# and adds four artefacts:
+#   1. NAME.txt and NAME.glp, copied as they stand at the run; NAME.glp must be
+#      what adopt.py prints from the NAME.txt beside it, its term the term.glp.txt
+#      adopt.py prints, so that term.glp.txt is not kept beside it.
+#   2. schemas.txt, full-contract.txt, full-pragmas.txt, flat.txt and
+#      full-schemas.txt: as calculus/tools/adopt.py NAME prints them, run here on
+#      a scratch copy of the adopted files (adopt.py --paths) so that it writes
+#      nothing in the repository; notation_contract/1 is not run.
+#   3 to 7 as above, on NAME.glp's term, the full schemas, with no other
+#      contract's schemas added.
+#
 # A step that gives nothing --- a contract the checker refuses is not compiled,
 # an uncompiled platform has no .glp and no run, a platform with no plays has no
 # run --- writes no artefact for it, and the manifest says so; the script
@@ -140,6 +182,7 @@ MODE=write
 case "${!#}" in --check|--record) MODE="${!#}"; set -- "${@:1:$#-1}" ;; esac
 [ $# -ge 1 ] || usage
 NAMES=("$@")
+# A row's key is the contract's row and atom of calculus/NAMES.txt, its file name in lower case, a hyphen an underscore; FILE is its file name (the renaming of 2026-11-16, Udi).
 
 # lookup <contract>: its NAME.txt and NAME.glp's name, FILE, its owner's
 # directory, OWNER, its paper, PAPER, and its plays, PLAYDIR, PLAYAT and
@@ -148,51 +191,78 @@ lookup() {
 PLAYAT=""          # the owner's plays, a directory of the repository, where it keeps them
 PLAYLIMIT=600000   # the reductions the plays' REPL session may take
 case "$1" in
-    gfp)  FILE=GFP;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;   # GSC's, extends GSG (GSC #13, 2026-11-07)
-    gpd)  FILE=GPD;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GFP (GSA #2, 2026-11-07)
-    gas)  FILE=GAS;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GPD (GSA #2, 2026-11-07)
-    grv)  FILE=GRV;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), extends GSV (GSA #2, 2026-11-07; on GSV, GSA #3, 2026-11-10)
-    gsv)  FILE=GSV;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), instantiates GnW (GSA #3, 2026-11-10)
-    gds)  FILE=GDS;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), extends GSV (GSA #2, 2026-11-08; on GSV, GSA #3, 2026-11-10)
-    gpe)  FILE=GPE;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GKK (GSA #2, 2026-11-07)
-    gkk)  FILE=GKK;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR=""
+    forwarding) FILE=Forwarding;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;   # GSC's, extends GSG (GSC #13, 2026-11-07)
+    programs) FILE=Programs;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GFP (GSA #2, 2026-11-07)
+    appstore) FILE=AppStore;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GPD (GSA #2, 2026-11-07)
+    rendezvous) FILE=Rendezvous;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), extends GSV (GSA #2, 2026-11-07; on GSV, GSA #3, 2026-11-10)
+    services) FILE=Services;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), instantiates GnW (GSA #3, 2026-11-10)
+    directory) FILE=Directory;  OWNER="programs/examples/rendezvous"; PAPER="/Users/udi/Grassroots/GNA";  PLAYDIR="" ;;   # GSA's (GNA), extends GSV (GSA #2, 2026-11-08; on GSV, GSA #3, 2026-11-10)
+    encounters) FILE=Encounters;  OWNER="programs/social/graph";      PAPER="/Users/udi/Grassroots/GSA";  PLAYDIR="" ;;   # GSA's, extends GKK (GSA #2, 2026-11-07)
+    knowledge) FILE=Knowledge;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR=""
           PLAYAT="programs/apps/gkk" ;;
-    gsg)  FILE=GSG;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_graph" ;;
-    gsn)  FILE=GSN;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_network"
+    friendship) FILE=Friendship;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_graph" ;;
+    groups) FILE=Groups;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="social_network"
           PLAYLIMIT=6000000 ;;   # the standing approvals' Requests take GSN's play past 600000 (vGLP f0acbc1; Code #12, 2026-10-20)
-    gnw)  FILE=GnW;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;   # GSC's, amends GSG (Udi, 2026-11-10, to GSC #14; GAI's programs/gai until 6415bff0)
-    gsnp) FILE=GSNP; OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
-    gc)   FILE=GC;   OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC";   PLAYDIR="currency" ;;
-    gb)   FILE=GB;   OWNER="programs/currencies/bonds"; PAPER="/Users/udi/Grassroots/GB";   PLAYDIR="" ;;
-    gsnw) FILE=GSNW; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR="" ;;   # CSSN's, parametric, the base CSSN instantiates (Udi, 2026-11-10, to GSC #14 and CSSN #14, its % Owner line)
-    cssn) FILE=CSSN; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR=""
+    guardians) FILE=Guardians;  OWNER="programs/gsc";              PAPER="/Users/udi/Grassroots/GSC";  PLAYDIR="" ;;   # GSC's, amends GSG (Udi, 2026-11-10, to GSC #14; GAI's programs/gai until 6415bff0)
+    provenance_groups) FILE=Provenance-Groups; OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
+    coins) FILE=Coins; OWNER="programs/currencies/coins"; PAPER="/Users/udi/Grassroots/GC";   PLAYDIR="currency" ;;
+    bonds) FILE=Bonds; OWNER="programs/currencies/bonds"; PAPER="/Users/udi/Grassroots/GB";   PLAYDIR="" ;;
+    warded_groups) FILE=Warded-Groups; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR="" ;;   # CSSN's, parametric, the base CSSN instantiates (Udi, 2026-11-10, to GSC #14 and CSSN #14, its % Owner line)
+    children) FILE=Children; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR=""
           PLAYAT="programs/cssn"; PLAYLIMIT=100000000 ;;
     gfwc) FILE=GFWC; OWNER="programs/federation";       PAPER="/Users/udi/Grassroots/GFWC"; PLAYDIR="" ;;
-    gai)  FILE=GAI;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
-    gff)  FILE=GFF;  OWNER="programs/gff";              PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR=""
+    agents) FILE=Agents;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
+    feeds) FILE=Feeds;  OWNER="programs/gff";              PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR=""
           PLAYAT="programs/apps/gff"; PLAYLIMIT=30000000 ;;   # the five persons' play, the same limit as Section APPS's
-    agora) FILE=AGORA; OWNER="programs/currencies/agora"; PAPER="";                           PLAYDIR="" ;;
-    gdo)  FILE=GDO;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/GRH";  PLAYDIR="" ;;
-    dgc)  FILE=DGC;  OWNER="programs/currencies/sovereign"; PAPER="/Users/udi/Grassroots/SGC"; PLAYDIR="" ;;
-    gcc)  FILE=GCC;  OWNER="programs/currencies/gcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
-    gdc)  FILE=GDC;  OWNER="programs/currencies/gdc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
-    bcc)  FILE=BCC;  OWNER="programs/currencies/bcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
-    gra)  FILE=GRA;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/GRH";  PLAYDIR="" ;;
-    gff_i) FILE=GFF-I; OWNER="programs/gff";               PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
-    gff_ps) FILE=GFF-PS; OWNER="programs/gff";             PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
-    gff_fr) FILE=GFF-FR; OWNER="programs/gff";             PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
-    gff_fr_bc) FILE=GFF-FR-BC; OWNER="programs/gff";       PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GFF-FR (Udi, 2026-11-07; GFF #3)
-    gd)   FILE=GD;   OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;   # SRC, a paper of the GGGA project, prints GD (Udi, 2026-11-05; GGGA #3)
-    gd_s) FILE=GD-S; OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;
-    gdo_l) FILE=GDO-L; OWNER="programs/gff";            PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GDO (Udi, 2026-11-05; GFF #3)
+    agora) FILE=Agora; OWNER="programs/currencies/agora"; PAPER="";                           PLAYDIR="" ;;
+    overlay) FILE=Overlay;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/GRH";  PLAYDIR="" ;;
+    denominated_currencies) FILE=Denominated-Currencies;  OWNER="programs/currencies/sovereign"; PAPER="/Users/udi/Grassroots/SGC"; PLAYDIR="" ;;
+    community_currency) FILE=Community-Currency;  OWNER="programs/currencies/gcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
+    denominated_coins) FILE=Denominated-Coins;  OWNER="programs/currencies/gdc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
+    auction) FILE=Auction;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/GRH";  PLAYDIR="" ;;
+    short_feeds) FILE=Short-Feeds; OWNER="programs/gff";             PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
+    resilient_feeds) FILE=Resilient-Feeds; OWNER="programs/gff";             PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
+    backchannel_feeds) FILE=Backchannel-Feeds; OWNER="programs/gff";       PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GFF-FR (Udi, 2026-11-07; GFF #3)
+    distrust) FILE=Distrust;   OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;   # SRC, a paper of the GGGA project, prints GD (Udi, 2026-11-05; GGGA #3)
+    separating_distrust) FILE=Separating-Distrust; OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;
+    labelled_overlay) FILE=Labelled-Overlay; OWNER="programs/gff";            PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GDO (Udi, 2026-11-05; GFF #3)
     dao) FILE=DAO;  OWNER="programs/gce/dao";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GKK (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    ldao) FILE=LDAO; OWNER="programs/gce/ldao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    fdao) FILE=FDAO; OWNER="programs/gce/fdao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO and GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    rec) FILE=REC;  OWNER="programs/gce/rec";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GKK (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    stay) FILE=STAY; OWNER="programs/gce/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    lib) FILE=LIB;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    joint) FILE=JOINT; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    *) echo "cascade.sh: no contract named $1; the names are gkk gfp gpd gas grv gsv gds gpe gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gff agora gdo dgc gcc gdc bcc gra gd gd_s gdo_l gff_i gff_ps gff_fr gff_fr_bc dao ldao fdao rec stay lib joint" >&2; exit 2 ;;
+    liquid_dao) FILE=Liquid-DAO; OWNER="programs/gce/ldao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
+    funded_dao) FILE=Funded-DAO; OWNER="programs/gce/fdao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO and GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
+    recommendations) FILE=Recommendations;  OWNER="programs/gce/rec";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GKK (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
+    stays) FILE=Stays; OWNER="programs/gce/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
+    library) FILE=Library;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
+    joint_accounts) FILE=Joint-Accounts; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
+    community_bank) FILE=Community-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's twenty-three, each its % Owner line's (Udi, 2026-11-09, to GO #3); rows added 2026-11-12, the contracts having been checked and never recorded (Udi, 2026-11-12, to Code #28)
+    commercial_bank) FILE=Commercial-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    consumers_cooperative) FILE=Consumers-Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    ads) FILE=Ads; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    backed_currency) FILE=Backed-Currency; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    bank) FILE=Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    cooperative) FILE=Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    corporation) FILE=Corporation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    cooperative_dao) FILE=Cooperative-DAO; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    liquid_cooperative) FILE=Liquid-Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    gigs) FILE=Gigs; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    lodging) FILE=Lodging; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    marketplace) FILE=Marketplace; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    networked_organisation) FILE=Networked-Organisation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    organisation) FILE=Organisation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    mutual_credit) FILE=Mutual-Credit; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    rides) FILE=Rides; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    notes) FILE=Notes; OWNER="programs/gsc"; PAPER="/Users/udi/Grassroots/GSC"; PLAYDIR="" ;;   # the notes, GSC's (the Calculus's publication of 2026-11-16)
+    app) FILE=App; OWNER="programs/social/graph"; PAPER=""; PLAYDIR="" ;;   # GSA's (the Calculus's publication of 2026-11-16)
+    constitution) FILE=Constitution; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's (the Calculus's publication of 2026-11-16)
+    shares) FILE=Shares; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # the shares, GO's (the Calculus's publication of 2026-11-16)
+    shareholding_corporation) FILE=Shareholding-Corporation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    central_bank) FILE=Central-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    single_person_company) FILE=Single-Person-Company; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    trading_company) FILE=Trading-Company; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    workers_cooperative) FILE=Workers-Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    local_overlay) FILE=Local-Overlay; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
+    second_score_auction) FILE=Second-Score-Auction; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
+    secure_friendship) FILE=Secure-Friendship; OWNER="programs/social/spm"; PAPER="/Users/udi/Grassroots/SPM"; PLAYDIR="" ;;   # SPM's, adopted from the Calculus (SPM #1, 2026-11-15)
+    *) echo "cascade.sh: no contract named $1; the names are forwarding programs appstore rendezvous services directory encounters knowledge friendship groups guardians provenance_groups coins bonds warded_groups children gfwc agents feeds agora overlay denominated_currencies community_currency denominated_coins auction short_feeds resilient_feeds backchannel_feeds distrust separating_distrust labelled_overlay dao liquid_dao funded_dao recommendations stays library joint_accounts community_bank commercial_bank consumers_cooperative ads backed_currency bank cooperative corporation cooperative_dao liquid_cooperative gigs lodging marketplace networked_organisation organisation mutual_credit rides notes app constitution shares shareholding_corporation central_bank single_person_company trading_company workers_cooperative local_overlay second_score_auction secure_friendship" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not
@@ -319,9 +389,41 @@ if grep -q "^introduction_named($n," "$src/$f.glp"; then
     [ -n "$IT" ] && INTRO="$IT"
 fi
 }
+# adopted_print: an adopted contract's artefacts as calculus/tools/adopt.py
+# prints them (calculus/README.md, "Adopting a contract"), into $OUT.  adopt.py
+# finds the adopted contracts under programs/ and reads one not adopted from
+# the branch Calculus of this clone; with --out it writes under a scratch
+# directory, cascade/NAME/ and the owner's NAME.glp, so that the repository is
+# not written (adopt.py at f4650ab of the Calculus's repository, Helper #7,
+# 2026-11-15).
+ADOPT_PRINTS="schemas.txt full-contract.txt full-pragmas.txt flat.txt full-schemas.txt"
+adopted_print() {
+    local A="$WORK/adopt"
+    mkdir -p "$A" || exit 2
+    if ! GLP_DIR="$GLP_DIR" python3 "$GLP_DIR/calculus/tools/adopt.py" "$FILE" --out "$A" > "$WORK/adopt.out" 2>&1; then
+        say "calculus/tools/adopt.py $FILE failed: $(head -3 "$WORK/adopt.out")"
+        exit 1
+    fi
+    if ! cmp -s "$A/$OWNER/$FILE.glp" "$SRC/$FILE.glp"; then
+        say "$OWNER/$FILE.glp is not what calculus/tools/adopt.py $FILE prints from $OWNER/$FILE.txt; its owner runs it"
+        diff "$SRC/$FILE.glp" "$A/$OWNER/$FILE.glp" | head -10
+        exit 1
+    fi
+    for f in $ADOPT_PRINTS; do
+        if [ ! -f "$A/cascade/$FILE/$f" ]; then
+            say "calculus/tools/adopt.py $FILE printed no $f"
+            exit 1
+        fi
+        cp "$A/cascade/$FILE/$f" "$OUT/$f"
+    done
+    say "adopted: $FILE.glp and $(echo $ADOPT_PRINTS | sed -e 's/ /, /g') as calculus/tools/adopt.py prints them"
+}
+ADOPTED=0
 if [ ${#NAMES[@]} -eq 1 ]; then
     cp "$SRC/$CTXT" "$OUT/$CTXT"
     cp "$SRC/$FILE.glp" "$OUT/$FILE.glp"
+    grep -qx 'Logic pragmas' "$SRC/$CTXT" && ADOPTED=1
+    [ "$ADOPTED" = 1 ] && adopted_print
     read_contract "$NAME" "$SRC" "$FILE"
 else
     # The composition: each contract read, with its pragmas, as when it is
@@ -358,7 +460,7 @@ else
         Tn=$(printf '%s' "$TF" | tr 'A-Z-' 'a-z_')
         [ -f "$TD/$TF.glp" ] || { say "the third contract the contracts amend, $TF, has no $TF.glp beside its $TF.txt"; exit 1; }
         read_contract "$Tn" "$TD" "$TF"
-        if ! P=$(bash "$PRAG" "${THIRD[0]}" "$RD" 2> "$WORK/pr.err"); then
+        if ! P=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$PRAG" "${THIRD[0]}" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
             say "the pragmas of $TF, the third contract the contracts amend, were not read: $(head -1 "$WORK/pr.err")"
             exit 1
         fi
@@ -371,7 +473,7 @@ else
         cp "${SRCS[i]}/${FILES[i]}.glp" "$OUT/${FILES[i]}.glp"
         read_contract "${NAMES[i]}" "${SRCS[i]}" "${FILES[i]}"
         P=no_pragmas
-        if [ "${CTXTS[i]}" = "${FILES[i]}.txt" ] && ! P=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${SRCS[i]}/${CTXTS[i]}" "$RD" 2> "$WORK/pr.err"); then
+        if [ "${CTXTS[i]}" = "${FILES[i]}.txt" ] && ! P=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${SRCS[i]}/${CTXTS[i]}" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
             say "the pragmas of ${FILES[i]} were not read: $(head -1 "$WORK/pr.err")"
             exit 1
         fi
@@ -388,7 +490,9 @@ fi
 
 # 2. The schemas in GSC's notation, printed from the term by programs/gsc: a
 # token to a line between its lines "%% notation begin" and "%% notation end",
-# an empty line ending a line of the text (programs/gsc/notation.glp).
+# an empty line ending a line of the text (programs/gsc/notation.glp).  An
+# adopted contract's schemas.txt is the Calculus's, printed by adopt.py above.
+if [ "$ADOPTED" = 0 ]; then
 printf '%s\n:limit 10000000\nnotation_contract(%s).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/n.in"
 repl "$WORK/n.in" "$WORK/n.out"
 perl -ne '
@@ -408,9 +512,10 @@ fi
 # "tau: H <-", H empty in a schema that adds and deletes nothing, and its body
 # on the next line, indented (GSC, Section 3.2; programs/gsc/notation.glp).
 say "schemas.txt: $(grep -cE '^[a-z_0-9]*: .* <-$' "$OUT/schemas.txt") schemas"
+fi
 
 # 3. The verdict, and 4. the VMAT form, from programs/gsc.
-printf '%s\n:limit 10000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
+printf '%s\n:limit 1000000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
 repl "$WORK/v.in" "$WORK/v.out"
 VT=$(grep -E '^V = ' "$WORK/v.out" | head -1 | sed -e 's/^V = //')
 if [ -z "$VT" ]; then
@@ -421,7 +526,7 @@ fi
 printf '%s\n' "$VT" > "$OUT/verdict.txt"
 say "verdict: $VT"
 
-printf '%s\n:limit 10000000\ncompile_contract(%s, %s).\n:quit\n' "$GLP_DIR/programs/gsc/" "$NAME" "$CT" > "$WORK/m.in"
+printf '%s\n:limit 1000000000\ncompile_contract(%s, %s).\n:quit\n' "$GLP_DIR/programs/gsc/" "$NAME" "$CT" > "$WORK/m.in"
 repl "$WORK/m.in" "$WORK/m.out"
 # What the compiler prints between the goal and its status line: the displays,
 # a token to a line, or the lines of its refusal.
@@ -453,7 +558,7 @@ if [ "$PARAMETRIC" = 1 ]; then
 fi
 if [ "$PARAMETRIC" = 0 ] && [ ${#NAMES[@]} -eq 1 ]; then
     PR=no_pragmas
-    if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "$RD" 2> "$WORK/pr.err"); then
+    if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
         say "its pragmas were not read: $(head -1 "$WORK/pr.err")"
         exit 1
     fi
@@ -564,6 +669,41 @@ paper_line() {   # paper_line <paper directory>: its remote and its commit
             echo "  - \`${FILES[i]}\`: \`${OWNERS[i]}/${CTXTS[i]}\` and \`${OWNERS[i]}/${FILES[i]}.glp\`; the paper $(paper_line "${PAPERS[i]}")."
         done
     fi
+    if [ "$ADOPTED" = 1 ]; then
+    echo "- Adopted from the Calculus: \`$OWNER/$CTXT\` is the contract, its Logic pragmas and its Interface pragmas, and \`$OWNER/$FILE.glp\` the full schemas as calculus/tools/adopt.py prints them from it (claude.md \"Code\", \"The record of a contract adopted from the Calculus\"; calculus/README.md, \"Adopting a contract\")."
+    echo "- Run on $(date -u '+%Y-%m-%d %H:%M UTC') by \`cascade.sh ${NAMES[*]}\`; the suite's Section CAS re-runs it and holds these files to what the tools print."
+    echo "- Every source and every tool at this repository's \`$GLP_COMMIT\`; each artefact's source and tool:"
+    echo ""
+    echo "| Artefact | Source | Tool | What it holds |"
+    echo "|---|---|---|---|"
+    echo "| \`$CTXT\` | \`$OWNER/$CTXT\` | copied | the contract, its Logic pragmas and its Interface pragmas |"
+    echo "| \`$FILE.glp\` | \`$OWNER/$CTXT\` | calculus/tools/adopt.py, copied from \`$OWNER/$FILE.glp\` | the full schemas, the term the checker reads |"
+    echo "| \`schemas.txt\` | \`$CTXT\`'s Logic pragmas | calculus/tools/adopt.py | the speech-act schemas compiled from the Logic pragmas |"
+    echo "| \`full-contract.txt\` | \`$CTXT\` and the contracts it is written from | calculus/tools/adopt.py | the full contract, each clause labelled by its origin |"
+    echo "| \`full-pragmas.txt\` | the same | calculus/tools/adopt.py | the Logic pragmas' sentences, the relations applied |"
+    echo "| \`flat.txt\` | the same | calculus/tools/adopt.py | the flat text, the relations applied |"
+    echo "| \`full-schemas.txt\` | the same | calculus/tools/adopt.py | the schemas, the relations applied |"
+    echo "| \`verdict.txt\` | \`$FILE.glp\` | programs/gsc, check/2 | the checker's verdict: \`$VT\` |"
+    if grep -q '^% not compiled' "$OUT/vmat.tex"; then
+        echo "| \`vmat.tex\` | \`$FILE.glp\` | programs/gsc, compile_contract/2 | the compiler to VMAT's refusal |"
+    else
+        echo "| \`vmat.tex\` | \`$FILE.glp\` | programs/gsc, compile_contract/2 | the VMAT form, $(grep -c '^\\begin{align\*}$' "$OUT/vmat.tex") displays, one per schema |"
+    fi
+    if [ "$COMPILED" = 1 ]; then
+        echo "| \`platform.vglp\` | \`$FILE.glp\` read by programs/gsc's as_read/2, and \`$CTXT\`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |"
+        echo "| \`platform.glp\` | \`platform.vglp\` | glp_runtime's :emit | the platform compiled to GLP, as emitted |"
+        echo "| \`interface.glp\` | \`platform.vglp\` and \`platform.glp\` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |"
+        if [ "$RUN" = 1 ]; then
+            echo "| \`run.log\` | \`platform.vglp\` | ${PLAYS#$GLP_DIR/}, the plays with scripted persons, in the REPL | the plays' logs: $(printf '%s\n' "$GOALS" | sed -e 's/(.*//' | tr '\n' ' ')|"
+        else
+            echo "| (no run) | | | ${NOTE[${#NOTE[@]}-1]#run: } |"
+        fi
+    elif [ "$PARAMETRIC" = 1 ]; then
+        echo "| (no platform) | | | a parametric contract, with no realisation |"
+    else
+        echo "| \`platform.vglp\` | \`$FILE.glp\` | programs/vglp/cva/compiler, compile/5 | the CVA compiler's refusal, and no platform.glp and no run |"
+    fi
+    else
     echo "- The tools: this repository at \`$GLP_COMMIT\` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP)${PLAYS:+, ${PLAYS#$GLP_DIR/} (the plays with scripted persons)}."
     echo "- Run on $(date -u '+%Y-%m-%d %H:%M UTC') by \`cascade.sh ${NAMES[*]}\`; the suite's Section CAS re-runs it and holds these files to what the tools print."
     echo ""
@@ -594,6 +734,7 @@ paper_line() {   # paper_line <paper directory>: its remote and its commit
     else
         echo "| \`platform.vglp\` | the CVA compiler's refusal, and no platform.glp and no run |"
     fi
+    fi
     if [ ${#NOTE[@]} -gt 0 ]; then
         echo ""
         echo "What the tools refused or lacked:"
@@ -606,7 +747,8 @@ if [ "$MODE" = "--check" ]; then
     [ -d "$REC" ] || { say "no record in cascade/$FILE"; exit 1; }
     # Every artefact the run made and every one in the record, the manifest
     # aside, which names the run.
-    for f in $( (ls "$OUT"; ls "$REC") | grep -vx manifest.md | sort -u); do
+    # relations.txt aside too: calculus/tools/adopt.py writes it into the record and adopt.py --check holds it.
+    for f in $( (ls "$OUT"; ls "$REC") | grep -vx manifest.md | grep -vx relations.txt | sort -u); do
         if [ -f "$OUT/$f" ] || [ -f "$REC/$f" ]; then
             if [ -f "$OUT/$f" ] && [ -f "$REC/$f" ] && cmp -s "$OUT/$f" "$REC/$f"; then
                 echo "$f: as printed"
@@ -621,6 +763,8 @@ if [ "$MODE" = "--check" ]; then
 fi
 
 [ "$STATUS" = 0 ] || exit 1
+# relations.txt in the record is adopt.py's and stays (Helper #12, 2026-11-16: a run deleted it).
+[ -f "$REC/relations.txt" ] && cp "$REC/relations.txt" "$OUT/relations.txt"
 rm -rf "$REC" && mkdir -p "$REC" && cp "$OUT"/* "$REC"/ || { say "the record could not be written"; exit 1; }
 say "written to cascade/$FILE"
 

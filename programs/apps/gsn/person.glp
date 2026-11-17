@@ -5,6 +5,7 @@
 %% The roles, by which the super-app's plays choose a script, each with the keys its person knows (alice: bob; bob: alice), the person's own key the first argument; the group is named friends by alice, its leader, and each content is a speech act of its author:
 %%   alice  establishes her identity (GKK:1); asks to know bob; once her agent knows him, asks to come to know him (GKK:2); once she knows him, offers him friendship (GSG:1); once they are friends, creates the group; once she sees herself its member, adds bob to it; once she sees him listed, sends him the message 'Hi Bob', her last request, since nothing on her screen shows a message committed, and her agent drops a request made while the message is open.
 %%   bob    establishes his identity; asks to know alice; once his agent knows her, answers yes to her asking to come to know him, and then to her offer of friendship; answers yes to her adding him to the group; once he sees her message, sent after he joined, sends the group the message 'Hi all'; once he sees it delivered to him, leaves the group.
+%% Each class names its persons in the order of its schema in programs/gsc/Groups.glp: join(Bob, Alice, g) and leave(Bob, Alice, g), the member first and the leader second; message(Bob, Alice, t), the receiver first and the sender second; post(Alice, Bob, t, g), the leader first and the author second.  The atoms the scripts wait for are the contract's: member(g, Alice), a member of the group g of the leader Alice; listed(Bob, g), the leader having Bob as a member of g; message(Alice, t), the message t from Alice; group_message(Bob, t, g, Alice), the message t of Bob in g delivered by Alice.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo).
@@ -31,18 +32,18 @@ script(alice, Me, [Bob], [own([A1], propose(establish(A1?))), wait(holds(identit
                           own([A2], propose(befriend(A2?, Bob?))),
                           wait(holds(friend(Bob?))),
                           own([A3, A4], propose(create(A3?, speech(utterance(friends), A4?)))),
-                          wait(holds(member(dot(community(Me?), speech(utterance(friends), Me?))))),
-                          own([A5, A6], propose(join(A5?, Bob?, speech(utterance(friends), A6?)))),
+                          wait(holds(member(speech(utterance(friends), Me?), Me?))),
+                          own([A5, A6], propose(join(Bob?, A5?, speech(utterance(friends), A6?)))),
                           wait(holds(listed(Bob?, speech(utterance(friends), Me?)))),
-                          own([A7, A8], propose(message(A7?, Bob?, speech(utterance('Hi Bob'), A8?))))]) :-
+                          own([A7, A8], propose(message(Bob?, A7?, speech(utterance('Hi Bob'), A8?))))]) :-
     ground(Me?), ground(Bob?) | true.
 script(bob, Me, [Alice], [own([B1], propose(establish(B1?))), wait(holds(identity)), approval(acquaint(Alice?, Me?), yes),
                           approval(befriend(Alice?, Me?), yes),
-                          approval(join(Alice?, Me?, speech(utterance(friends), Alice?)), yes),
-                          wait(holds(received(speech(utterance('Hi Bob'), Alice?), Alice?))),
-                          own([B2, B3], propose(post(B2?, Alice?, speech(utterance('Hi all'), B3?), speech(utterance(friends), Alice?)))),
-                          wait(holds(received_in(speech(utterance('Hi all'), Me?), Alice?, speech(utterance(friends), Alice?)))),
-                          own([B4], propose(leave(Alice?, B4?, speech(utterance(friends), Alice?))))]) :-
+                          approval(join(Me?, Alice?, speech(utterance(friends), Alice?)), yes),
+                          wait(holds(message(Alice?, speech(utterance('Hi Bob'), Alice?)))),
+                          own([B2, B3], propose(post(Alice?, B2?, speech(utterance('Hi all'), B3?), speech(utterance(friends), Alice?)))),
+                          wait(holds(group_message(Me?, speech(utterance('Hi all'), Me?), speech(utterance(friends), Alice?), Alice?))),
+                          own([B4], propose(leave(B4?, Alice?, speech(utterance(friends), Alice?))))]) :-
     ground(Me?), ground(Alice?) | true.
 script(_, _, _, []) :- otherwise | true.
 

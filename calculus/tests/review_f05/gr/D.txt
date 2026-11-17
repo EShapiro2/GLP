@@ -1,0 +1,4 @@
+D: Instantiate the role
+D instantiates C with those who oversee x for those who decide for x.
+Logic pragmas.
+Roles: those who oversee x = overseers(x).

@@ -7,8 +7,3 @@
 procedure(X) list(Stream(X)?).
 list([]).
 list([_|Xs]) :- list(Xs?).
-
-%% reduce clauses for metainterpreter
-procedure reduce(_?, _).
-reduce(list([]), true).
-reduce(list([_|Xs]), list(Xs?)).

@@ -1,0 +1,3 @@
+Rides extends Networked Organisation: holds
+Rides restricts Second-Score Auction: holds
+Rides strengthens Second-Score Auction: holds

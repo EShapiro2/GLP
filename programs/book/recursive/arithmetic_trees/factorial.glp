@@ -9,10 +9,3 @@ factorial(N, F?) :-
     N1 := N? - 1,
     factorial(N1?, F1),
     F := N? * F1?.
-
-%% Metainterpreter support
-exported procedure reduce(_?, _).
-reduce(factorial(0, 1), true).
-reduce(factorial(1, 1), true).
-reduce(factorial(N, F?), (N1 := N? - 1, factorial(N1?, F1), F := N? * F1?)) :- N? > 1 | true.
-reduce((X? := T), true) :- X := T?.

@@ -1,5 +1,5 @@
 // The directory's listings and their links (GNA Section 7, the contract GDS,
-// programs/examples/rendezvous/GDS.txt, with its implementation pragmas).
+// programs/examples/rendezvous/Directory.txt, with its implementation pragmas).
 //
 // A listing is an email address of a person's that the directory verified,
 // with a name of their choosing if they give one, listed or unlisted (GDS:2),

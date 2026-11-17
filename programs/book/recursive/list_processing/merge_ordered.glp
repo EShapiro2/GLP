@@ -11,11 +11,3 @@ merge([X|Xs], [Y|Ys], [X?,Y?|Zs?]) :- X? =:= Y? | merge(Xs?, Ys?, Zs).
 merge([X|Xs], [Y|Ys], [Y?|Zs?]) :- X? > Y? | merge([X?|Xs?], Ys?, Zs).
 merge([], [X|Xs], [X?|Xs?]).
 merge(Xs, [], Xs?).
-
-%% reduce clauses for metainterpreter
-exported procedure reduce(_?, _).
-reduce(merge([X|Xs], [Y|Ys], [X?|Zs?]), merge(Xs?, [Y?|Ys?], Zs)) :- X? < Y? | true.
-reduce(merge([X|Xs], [Y|Ys], [X?,Y?|Zs?]), merge(Xs?, Ys?, Zs)) :- X? =:= Y? | true.
-reduce(merge([X|Xs], [Y|Ys], [Y?|Zs?]), merge([X?|Xs?], Ys?, Zs)) :- X? > Y? | true.
-reduce(merge([], [X|Xs], [X?|Xs?]), true).
-reduce(merge(Xs, [], Xs?), true).

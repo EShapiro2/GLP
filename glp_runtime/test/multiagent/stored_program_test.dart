@@ -63,9 +63,9 @@ void main() {
       expect(keptTables.procedureIdentity(key), identity, reason: key);
     }
     // find_type/3 at the identities of the mini-apps' types, as the
-    // Grassroots App's goals take it: the root's templates miniapp/4 and
+    // Grassroots App's goals take it: the root's templates miniapp/3 and
     // miniapp_person/5, each of two type parameters.
-    for (final key in ['miniapp/4', 'miniapp_person/5']) {
+    for (final key in ['miniapp/3', 'miniapp_person/5']) {
       final template = tables.parametric.contains(key)
           ? key
           : tables.parametric.firstWhere((k) => k.endsWith(':$key'));

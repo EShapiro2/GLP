@@ -1,20 +1,20 @@
 %% ---------------------------------------------------------------------------
 %% The plays of the canonical CVA platform of GSC's social graph
-%% (GSC's, programs/gsc/GSG.glp, the social graph),
+%% (GSC's, programs/gsc/Friendship.glp, the social graph),
 %% platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase
 %% commit coordinated by the initiating agent (vGLP, Section 3.2, Definition
 %% "Canonical CVA Platform").  Each runs two agents, alice and bob, their
 %% persons scripted and paced on their screens (../self.glp), and gives each
 %% person's log, the views with gave(K, A) where the person answers an approval question,
 %% and the network's log of the cargoes it carries.  Each person's first request
-%% establishes their identity, establish(P) (GKK:1, Identity), a class of one
+%% establishes their identity, establish(P) (GKK:1, Establish), a class of one
 %% participant guarded by them and applied at its Propose, every other role of
 %% the contract requiring identity; and the two come to know each other, acquaint(p?, q?) (GKK:2,
-%% Acquaintance), a meeting schema, alice's request the cold call, the hello, on
+%% Acquaint), a meeting schema, alice's request the cold call, the hello, on
 %% which bob is asked, his yes his request of it (vGLP, Section 5.4, "The
 %% compilation"), its two-phase commit then run with both approvals standing, before
 %% they befriend, befriend requiring knows of the other at each role (GSG:1;
-%% programs/gsc/GSG.glp, which extends GKK).  Where a person proposes a class that names
+%% programs/gsc/Friendship.glp, which extends GKK).  Where a person proposes a class that names
 %% their agent, the script holds a hole there and the person writes into it
 %% the agent's own key, which the request question shows (../self.glp,
 %% own(Ks, R)).

@@ -103,7 +103,7 @@ class ApprovalWording {
     return classes;
   }
 
-  /// The classes GAI's tasks word, the initiator `I` their first argument `A` and the person asked `Me` their second, a person other than `I`: `befriend(A, Me)`, "Alice asks to be your friend.", Accept and Decline; `join(A, Me, n)`, `n` the group's name, a speech act, "Alice asks you to join the group friends.", its text the group's name, Join and Decline; and `agent_befriend(R, Q, P)` ([_agentBefriend]) and `agent_meet(R, Q, P, Y)` ([_agentMeet]).  And GKK's, which every contract of GSC's extends (programs/gsc/GKK.glp; GSC #5 Cowork, Code_inbox.md, 2026-10-20 17:53 UTC): `meet(A, Me)`, GKK:2, "Alice asks to meet you in person.", Yes and No; and `introduce(A, Me, C)`, GKK:3, `C` the person introduced, "Alice introduces Carol to you.", Yes and No.  And GC's swap, `swap(A, Me, U, V)`, GC:2, `A` giving a `U`-coin and taking a `V`-coin, in the words of Currencies' task (Code_inbox.md, Currencies #11 Cowork, 2026-10-20 18:10 UTC, task 2, (b)): "Alice asks to swap an Alice-coin for a Bob-coin.", Yes and No.  Null for every other class.
+  /// The classes GAI's tasks word, the initiator `I` their first argument `A` and the person asked `Me` their second, a person other than `I`: `befriend(A, Me)`, "Alice asks to be your friend.", Accept and Decline; `join(A, Me, n)`, `n` the group's name, a speech act, "Alice asks you to join the group friends.", its text the group's name, Join and Decline; and `agent_befriend(R, Q, P)` ([_agentBefriend]) and `agent_meet(R, Q, P, Y)` ([_agentMeet]).  And GKK's, which every contract of GSC's extends (programs/gsc/Knowledge.glp; GSC #5 Cowork, Code_inbox.md, 2026-10-20 17:53 UTC): `meet(A, Me)`, GKK:2, "Alice asks to meet you in person.", Yes and No; and `introduce(A, Me, C)`, GKK:3, `C` the person introduced, "Alice introduces Carol to you.", Yes and No.  And GC's swap, `swap(A, Me, U, V)`, GC:2, `A` giving a `U`-coin and taking a `V`-coin, in the words of Currencies' task (Code_inbox.md, Currencies #11 Cowork, 2026-10-20 18:10 UTC, task 2, (b)): "Alice asks to swap an Alice-coin for a Bob-coin.", Yes and No.  Null for every other class.
   static ApprovalWording? _worded(GTerm initiator, String schema,
       List<GTerm> args, SocialState? state) {
     final i = formatTerm(initiator);
@@ -149,7 +149,7 @@ class ApprovalWording {
     return null;
   }
 
-  /// `agent_befriend(R, Q, P)`, the AI agent `R` and `Q`, who know each other, entering a friendship by an act of both and of its principal `P` (GnW:2; `agent_befriend(r?, q?, p?)`, programs/gai/GAI.glp at GLP 9d736804), asked at `Q` and at `P`, in the words of GAI's task (Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (b) and (c)).  At the principal, whose last view holds `principal_of(R)` (`enter` adds it at `p`): "Alf asks to befriend Bob.", "Approve?", Yes and No.  At `Q`, who holds `R` recorded, `agent_of(R, P, Y)`, since `agent_befriend` requires that `R` knows `Q`, and every agent an AI agent knows, other than its principal, came to know it by `agent_meet` or `agents_meet`, which record it there (GAI's paper, Section 3.3, part 2): "Alf, an AI agent of Alice, asks to befriend you.", "Developer: Acme", the developer named by the attestation of that record ([SocialState.developerOf]), "Befriend Alf?", Yes and No.  Null where no view is drawn, so that whom it is asked cannot be told, or where the view holds no record of `R` naming `P` its principal.
+  /// `agent_befriend(R, Q, P)`, the AI agent `R` and `Q`, who know each other, entering a friendship by an act of both and of its principal `P` (GnW:2; `agent_befriend(r?, q?, p?)`, programs/gai/Agents.glp at GLP 9d736804), asked at `Q` and at `P`, in the words of GAI's task (Code_inbox.md, GAI #5 Cowork, 2026-10-19 20:36 UTC, (b) and (c)).  At the principal, whose last view holds `principal_of(R)` (`enter` adds it at `p`): "Alf asks to befriend Bob.", "Approve?", Yes and No.  At `Q`, who holds `R` recorded, `agent_of(R, P, Y)`, since `agent_befriend` requires that `R` knows `Q`, and every agent an AI agent knows, other than its principal, came to know it by `agent_meet` or `agents_meet`, which record it there (GAI's paper, Section 3.3, part 2): "Alf, an AI agent of Alice, asks to befriend you.", "Developer: Acme", the developer named by the attestation of that record ([SocialState.developerOf]), "Befriend Alf?", Yes and No.  Null where no view is drawn, so that whom it is asked cannot be told, or where the view holds no record of `R` naming `P` its principal.
   static ApprovalWording? _agentBefriend(
       List<GTerm> args, SocialState? state) {
     final (r, q, p) = (args[0], args[1], args[2]);
@@ -176,7 +176,7 @@ class ApprovalWording {
         question: 'Befriend $agent?');
   }
 
-  /// `agent_meet(R, Q, P, Y)`, the AI agent `R` coming to know `Q` by an act of both and of its principal `P`, presenting its attestation `Y`, `Q` recording `R`, `P` and `Y` (GnW:2, GAI:2; `agent_meet(r?, q?, p? ; y)`, programs/gai/GAI.glp at GLP 88d85368), asked at `Q` and at `P`, in words drawn by analogy with [_agentBefriend]'s (Code #12's brief for GAI #6's task, Code_inbox.md, 2026-10-20 20:12 UTC, item 4), for GAI's confirmation.  At the principal, whose last view holds `principal_of(R)`: "Alf asks to meet Bob.", "Approve?", Yes and No.  At `Q`, who sees the AI agent's principal and its developer at the meeting: "Alf, an AI agent of Alice, asks to meet you.", "Developer: Acme Ltd", the developer named by the attestation ([SocialState.developerIn]), "Meet Alf?", Yes and No.  Null where no view is drawn, so that whom it is asked cannot be told, or `Y` is no speech act.
+  /// `agent_meet(R, Q, P, Y)`, the AI agent `R` coming to know `Q` by an act of both and of its principal `P`, presenting its attestation `Y`, `Q` recording `R`, `P` and `Y` (GnW:2, GAI:2; `agent_meet(r?, q?, p? ; y)`, programs/gai/Agents.glp at GLP 88d85368), asked at `Q` and at `P`, in words drawn by analogy with [_agentBefriend]'s (Code #12's brief for GAI #6's task, Code_inbox.md, 2026-10-20 20:12 UTC, item 4), for GAI's confirmation.  At the principal, whose last view holds `principal_of(R)`: "Alf asks to meet Bob.", "Approve?", Yes and No.  At `Q`, who sees the AI agent's principal and its developer at the meeting: "Alf, an AI agent of Alice, asks to meet you.", "Developer: Acme Ltd", the developer named by the attestation ([SocialState.developerIn]), "Meet Alf?", Yes and No.  Null where no view is drawn, so that whom it is asked cannot be told, or `Y` is no speech act.
   static ApprovalWording? _agentMeet(List<GTerm> args, SocialState? state) {
     final (r, q, p, y) = (args[0], args[1], args[2], args[3]);
     final developer = SocialState.developerIn(y);
@@ -593,7 +593,7 @@ class SocialState {
 
   static bool _same(GTerm a, GTerm b) => formatTerm(a) == formatTerm(b);
 
-  /// The principal of the AI agent [r] that the person holds recorded, `agent_of(r, p, y)`, with its attestation `y`, which `agent_meet` and `agents_meet` add at the agent the AI agent comes to know (GnW:2, GAI:2; programs/gai/GAI.glp at GLP 88d85368; GAI's paper, Table "The local state of an agent p": "triples (r,q,y) of an AI agent r, its principal q and its attestation y that p holds recorded"); null where the person holds no such record of [r].
+  /// The principal of the AI agent [r] that the person holds recorded, `agent_of(r, p, y)`, with its attestation `y`, which `agent_meet` and `agents_meet` add at the agent the AI agent comes to know (GnW:2, GAI:2; programs/gai/Agents.glp at GLP 88d85368; GAI's paper, Table "The local state of an agent p": "triples (r,q,y) of an AI agent r, its principal q and its attestation y that p holds recorded"); null where the person holds no such record of [r].
   GTerm? principalOf(GTerm r) => [
         for (final x in _args('agent_of', 3))
           if (_same(x[0], r)) x[1]
@@ -605,7 +605,7 @@ class SocialState {
           if (_same(x[0], r)) x[2]
       ].firstOrNull;
 
-  /// The developer an attestation [y] names: the first signer of the code it carries.  "The developer of an AI agent is the person who signed its code" (GAI:1), and the attestation is `sgn(x, p)`, `x` the code signed by its developer, signed over by the principal (`enter(p?, r? ; x)`, programs/gai/GAI.glp at GLP 5744daec), so its developer is its first signer (GAI #5 Cowork, Code_inbox.md, 2026-10-19 20:36 UTC, item 5: "the signer of the code item being the developer").  Null where [y] is no speech act.
+  /// The developer an attestation [y] names: the first signer of the code it carries.  "The developer of an AI agent is the person who signed its code" (GAI:1), and the attestation is `sgn(x, p)`, `x` the code signed by its developer, signed over by the principal (`enter(p?, r? ; x)`, programs/gai/Agents.glp at GLP 5744daec), so its developer is its first signer (GAI #5 Cowork, Code_inbox.md, 2026-10-19 20:36 UTC, item 5: "the signer of the code item being the developer").  Null where [y] is no speech act.
   static GTerm? developerIn(GTerm y) => SpeechAct.of(y)?.signers.first;
 
   /// The developer of the AI agent [r] that the person holds recorded, read from its attestation ([developerIn]); null where they hold no record of [r].
@@ -1526,9 +1526,15 @@ class _SocialTabState extends State<SocialTab> {
         ? _atomText(e.atom)
         : '${_named(xs.first)}${counted ? '  ${e.count}' : ''}';
     final signed = xs.isEmpty ? null : SpeechAct.of(xs.first);
-    final shows = [
+    // "A row shows each person once: a signer of a speech act is not shown again where the row's other arguments name the same person." (vGLP, Section 6.2, "The words a platform shows").
+    final others = {for (final y in xs.skip(1)) formatTerm(y)};
+    final signers = [
       if (signed != null)
-        [for (final p in signed.signers) personName(p)].join(', '),
+        for (final p in signed.signers)
+          if (!others.contains(formatTerm(p))) p
+    ];
+    final shows = [
+      if (signers.isNotEmpty) [for (final p in signers) personName(p)].join(', '),
       if (xs.length > 1) [for (final y in xs.skip(1)) _signed(y)].join(', '),
     ];
     final small = TextStyle(fontSize: 13, color: Colors.grey.shade700);
@@ -1644,7 +1650,13 @@ class _SocialTabState extends State<SocialTab> {
   GTerm? _fieldValue(SocialState s, RequestOffers o, ActInfo a, DeclaredField f,
       String field, String pick, GTerm me) {
     if (f.type == 'person') return _picked[pick];
-    final t = _form(field).text.trim();
+    return _textValue(s, o, a, f, _form(field).text, me);
+  }
+
+  /// The value the text [text] gives the field [f] of [a], which is not a person field, or null where the field does not take it ([_fieldValue]).
+  GTerm? _textValue(SocialState s, RequestOffers o, ActInfo a, DeclaredField f,
+      String text, GTerm me) {
+    final t = text.trim();
     if (t.isEmpty) return null;
     switch (f.type) {
       case 'number':
@@ -1696,9 +1708,15 @@ class _SocialTabState extends State<SocialTab> {
     final me = ask.me;
     final small = TextStyle(fontSize: 13, color: Colors.grey.shade700);
     final chosenKey = _chosen[composer];
+    // The ways that bind no value beside the row's entry are a choice of their own, the one made while no value is picked: "A button that names several acts is drawn once for the ways of its acts that bind the same values" (vGLP, Section 6.2), and those ways bind the same values, none.  The picker offers the values of the other ways, and a value picked is given up by tapping it again.
+    final bare = cs.where((c) => c.first.rest.isEmpty).firstOrNull;
+    final valued = [
+      for (final c in cs)
+        if (c.first.rest.isNotEmpty) c
+    ];
     final chosen = cs.length == 1
         ? cs.single
-        : cs.where((c) => _valuesKey(c.first) == chosenKey).firstOrNull;
+        : cs.where((c) => _valuesKey(c.first) == chosenKey).firstOrNull ?? bare;
     final shown = chosen ?? [for (final c in cs) ...c];
     final union = <String>[];
     final kept = <String, (ActInfo, DeclaredField)>{};
@@ -1718,9 +1736,25 @@ class _SocialTabState extends State<SocialTab> {
         b.acts.length == 1 ? kept[l]!.$2.place : union.indexOf(l) + 1;
     String fieldKey(String l) => 'field:$composer:${number(l)}';
     String pickKey(String l) => '$composer:${number(l)}';
+    String beforeKey(String l) =>
+        'menu:${formatTerm(me)}:${fieldKey(l)}';
     bool given(String l) => kept[l]!.$2.type == 'person'
         ? _picked[pickKey(l)] != null
         : _form(fieldKey(l)).text.trim().isNotEmpty;
+    // Whether the field [l] takes the value typed before [v] at the person's state: a way shown has the field, the field takes [v], and the act is offered with it ([ActInfo.lacks], [ActInfo.distinct]), "where the field takes them at the person's state" (vGLP, Section 6.2, Remark "Construct Families").
+    bool takes(String l, String v) {
+      for (final w in shown) {
+        for (final f in w.act.fields) {
+          if (f.label != l) continue;
+          final x = _textValue(s, o, w.act, f, v, me);
+          if (x == null) continue;
+          final at = {...w.at, f.place: x};
+          if (w.act.lacks(s.atoms, at) && w.act.distinct(at)) return true;
+        }
+      }
+      return false;
+    }
+
     GTerm? request() {
       for (final w in chosen ?? const <_Way>[]) {
         final ls = {for (final f in w.act.fields) f.label};
@@ -1750,7 +1784,6 @@ class _SocialTabState extends State<SocialTab> {
         if (w is int) (at[w] == null ? '' : personName(at[w]!)) else w as String
     ].join();
     final r = request();
-    final rest = first.rest;
     return Container(
       key: socialKey(_id, 'form:$composer'),
       margin: const EdgeInsets.only(top: 6, bottom: 6),
@@ -1762,19 +1795,27 @@ class _SocialTabState extends State<SocialTab> {
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(words),
             ),
-          if (rest.isNotEmpty)
+          if (valued.isNotEmpty)
             Wrap(spacing: 6, runSpacing: 4, children: [
               // A picker labelled by the name of its type, as a field given no label is (vGLP #23, Code_inbox.md, 2026-11-05 13:33 UTC, 1; Section 6.2, "The words a platform shows").
-              Text(_placeName(o, first.act, rest.first), style: small),
-              for (final c in cs)
+              Text(
+                  _placeName(o, valued.first.first.act,
+                      valued.first.first.rest.first),
+                  style: small),
+              for (final c in valued)
                 ChoiceChip(
                   key: socialKey(_id, 'pick:$composer:${_valuesKey(c.first)}'),
                   label: Text([
                     for (final p in c.first.rest) _signed(c.first.at[p]!)
                   ].join(', ')),
                   selected: cs.length == 1 || chosenKey == _valuesKey(c.first),
-                  onSelected: (_) => setState(
-                      () => _chosen[composer] = _valuesKey(c.first)),
+                  onSelected: (_) => setState(() {
+                    if (bare != null && chosenKey == _valuesKey(c.first)) {
+                      _chosen.remove(composer);
+                    } else {
+                      _chosen[composer] = _valuesKey(c.first);
+                    }
+                  }),
                 ),
             ]),
           for (final l in union)
@@ -1802,7 +1843,10 @@ class _SocialTabState extends State<SocialTab> {
                 autofillHints: autofillHintsFor(kept[l]!.$2.type),
                 onChanged: (_) => setState(() {}),
               ),
-              typedBeforeChips('menu:${fieldKey(l)}', _form(fieldKey(l)),
+              // "the values its person typed in it before, where the field takes them at the person's state" (vGLP, Section 6.2, Remark "Construct Families"): the store is this person's, and a value is offered only where the act is offered with it, so Acquaint's field offers no person the viewer knows and not the viewer's own key.
+              typedBeforeChips(beforeKey(l), _form(fieldKey(l)),
+                  omit: formatTerm(me),
+                  takes: (v) => takes(l, v),
                   keyOf: (v) => socialKey(_id, 'before:${fieldKey(l)}:$v'),
                   onPicked: () => setState(() {})),
               // An agent variable, "by key or picked among the persons the viewer knows", the viewer among them, a person in no role (programs/vglp/cva/compiler/README.md, 6; vGLP, Section 5.4, "The contract's words": "A field is typed, a person by key or picked among the persons the viewer knows").
@@ -1829,7 +1873,7 @@ class _SocialTabState extends State<SocialTab> {
                     for (final l in union) {
                       if (kept[l]!.$2.type != 'person') {
                         TypedBefore.record(
-                            'menu:${fieldKey(l)}', _form(fieldKey(l)).text);
+                            beforeKey(l), _form(fieldKey(l)).text);
                       }
                     }
                     setState(() {

@@ -1,8 +1,0 @@
-establish: identity(Alice) <-
-    not identity(Alice) guarded by Alice
-
-acquaint: knows(Alice, Bob), knows(Bob, Alice) <-
-    identity(Alice), identity(Bob) guarded by Alice, Bob
-
-introduce: knows(Bob, Carol) <-
-    identity(Alice), knows(Alice, Bob), knows(Alice, Carol), identity(Bob), knows(Bob, Alice) guarded by Alice, Bob
