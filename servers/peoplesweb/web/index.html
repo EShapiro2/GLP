@@ -175,8 +175,10 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
 #pop p{margin:7px 0;font-size:15px;color:#3a3a3c}
 #pop code{font-size:12.5px;background:var(--bg);padding:1px 5px;border-radius:5px}
 #pop .card{max-height:calc(100vh - 40px);overflow-y:auto}
-#pop .names{display:flex;flex-direction:column;gap:6px;margin-top:10px;min-width:220px}
-#pop .names a{color:var(--blue);cursor:pointer;font-size:16px;font-weight:600}
+#ntip{position:fixed;background:rgba(29,29,31,.94);color:#fff;border-radius:14px;padding:14px 16px;font-size:13.5px;line-height:1.5;max-width:360px;min-width:200px;opacity:0;pointer-events:none;transition:opacity .12s;z-index:40;backdrop-filter:blur(8px);box-shadow:0 10px 30px rgba(0,0,0,.3);max-height:60vh;overflow-y:auto}
+#ntip b{display:block;font-size:15.5px;margin-bottom:6px}
+#ntip a{display:block;color:#8ec6ff;font-weight:600;cursor:pointer;padding:2px 0}
+#ntip a span{display:block;color:#d9d9de;font-weight:400;font-size:12.5px;margin-bottom:4px}
 .stat.list{cursor:pointer}.stat.list .v{color:var(--blue)}
 #pop .x{float:right;border:none;background:rgba(118,118,128,.12);width:26px;height:26px;border-radius:50%;cursor:pointer;color:var(--mute)}
 @media (max-width:640px){
@@ -250,6 +252,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
   </section>
   <section id="view"></section>
 </main>
+<div id="ntip" role="tooltip"></div>
 <div id="pop"><div class="card"><button class="x" id="popx">✕</button><div id="popc"></div></div></div>
 <script src="data.js"></script>
 <script>
@@ -833,6 +836,14 @@ function drawGlobe(){
   tip.onmouseleave = () => { if (LASTPT === 'mouse') HIDETIP(); };
 }
 let DRAGGED = false, LASTPT = 'mouse', TIPID = null, HIDETIP = () => {};
+// The kind of the last pointer anywhere on the page, so that a touch screen's
+// tap is not taken for a hover.
+document.addEventListener('pointerdown', e => { LASTPT = e.pointerType || 'mouse'; }, true);
+// The Builds on and Used by balloon closes when the page scrolls, or on a tap
+// elsewhere.
+let NTOFF = () => {};
+window.addEventListener('scroll', () => NTOFF(), {passive: true});
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#ntip, [data-names]')) NTOFF(); }, true);
 function globeNav(){
   const g = $('#graph'), pts = new Map();
   let drag = null, pinch = null;
@@ -1017,11 +1028,31 @@ function page(c, hood){
   // By: the project's name opens it under Projects (Udi, 2026-11-17, to
   // Website #3).
   $('#view').querySelectorAll('.stat [data-proj]').forEach(a => a.onclick = () => { TOPROJ = a.dataset.proj; });
-  $('#view').querySelectorAll('[data-names]').forEach(s => s.onclick = () => {
-    $('#popc').innerHTML = `<h4>${esc(NM(c.id))}: ${s.dataset.title.toLowerCase()}</h4><div class="names">${s.dataset.names.split(' ').map(link).join('')}</div>`;
-    $('#popc').querySelectorAll('[data-go]').forEach(a => a.onclick = () => { $('#pop').style.display = 'none'; go(a.dataset.go); });
-    $('#pop').style.display = 'flex';
+  // Builds on and Used by: hovering the box shows a balloon of the globe's
+  // design with the contracts, each with its line and a link to it; on a touch
+  // screen a tap shows it (Udi, 2026-11-17, to Website #3).
+  const nt = $('#ntip');
+  let ntHide = null, ntFor = null;
+  const ntOff = () => { nt.style.opacity = 0; nt.style.pointerEvents = 'none'; ntFor = null; };
+  NTOFF = ntOff;
+  const ntOn = s => {
+    clearTimeout(ntHide);
+    nt.innerHTML = `<b>${esc(NM(c.id))}: ${esc(s.dataset.title.toLowerCase())}</b>` + s.dataset.names.split(' ').map(id =>
+      `<a data-ntgo="${esc(id)}">${esc(NM(id))}${C[id] && C[id].about && C[id].about !== C[id].title + '.' ? `<span>${esc(C[id].about)}</span>` : ''}</a>`).join('');
+    nt.querySelectorAll('[data-ntgo]').forEach(a => a.onclick = () => { ntOff(); go(a.dataset.ntgo); });
+    const r = s.getBoundingClientRect(), w = Math.min(360, window.innerWidth - 16);
+    nt.style.left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8)) + 'px';
+    nt.style.width = w + 'px';
+    nt.style.top = (r.bottom + 6) + 'px';
+    nt.style.opacity = 1; nt.style.pointerEvents = 'auto'; ntFor = s;
+  };
+  $('#view').querySelectorAll('[data-names]').forEach(s => {
+    s.onmouseenter = e => { if (e.pointerType === 'touch' || LASTPT !== 'mouse') return; ntOn(s); };
+    s.onmouseleave = () => { if (LASTPT === 'mouse') ntHide = setTimeout(ntOff, 350); };
+    s.onclick = () => { if (ntFor === s) ntOff(); else ntOn(s); };
   });
+  nt.onmouseenter = () => clearTimeout(ntHide);
+  nt.onmouseleave = () => { if (LASTPT === 'mouse') ntHide = setTimeout(ntOff, 200); };
   $('#hoodbtn').onclick = () => go(c.id, !hood);
   const tf = $('#tf');
   if (tf) tf.querySelectorAll('button').forEach(bt => bt.onclick = () => {
