@@ -45,7 +45,7 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .node{cursor:pointer}
 .node rect.bg{filter:drop-shadow(0 3px 6px rgba(0,0,0,.12));transition:transform .15s}
 .node:hover rect.bg{filter:drop-shadow(0 6px 12px rgba(0,0,0,.18)) brightness(1.05)}
-.node text{font:600 14px Inter,sans-serif;fill:#1d1d1f;pointer-events:none}
+.node text{font:500 14px Inter,sans-serif;fill:#1d1d1f;pointer-events:none}
 .node .ic{font-size:15px}
 .node.dim{opacity:.15}
 .node.hit rect.bg{stroke:#1d1d1f;stroke-width:2.5}
@@ -263,6 +263,12 @@ const grad = c => `linear-gradient(160deg, ${FAM[famOf(c)][0]}, ${FAM[famOf(c)][
 // Served by a live server (Render, the lab server, localhost): the app is next to this page.
 // Served as a static copy (GitHub Pages, a local file): the app is on Render.
 const LIVE = '';
+// A contract's name, 'Community Bank', where its id is its file name,
+// 'Community-Bank' (calculus/NAMES.txt); on the globe a name of two words is
+// on two lines (Udi, 2026-11-16).
+const NM = id => (C[id] && C[id].name) || id;
+const LINES = id => { const w = NM(id).split(' '); return w.length < 2 ? w : [w[0], w.slice(1).join(' ')]; };
+const WID = id => Math.max(...LINES(id).map(w => w.length));
 const appUrl = c => `${LIVE}app.html?c=${c.id.toLowerCase()}`;
 const icon = (c, cls = '') => `<div class="icon ${cls}" style="background:${grad(c)}">${c.icon}</div>`;
 const openBtn = (c, cls = 'pill') => c.live
@@ -336,6 +342,9 @@ function citeHtml(P){
 // narrows to one, strengthens keeps one wide width, amends keeps one width and
 // is barred, implements is dashed, instantiates dotted and composes dash-dotted; drag turns the globe, the wheel zooms, the far side
 // is hidden.
+// The contract at the pole, the one written from no other: GKK, Knowledge
+// by the names of calculus/NAMES.txt.
+const ROOT = (D.contracts.find(c => !c.extends.some(p => C[p])) || D.contracts[0]).id;
 const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {}, RING = [], WAY = {};
 function depthOf(id){
   if (DEPTH[id] !== undefined) return DEPTH[id];
@@ -361,7 +370,7 @@ function layout(){
     const ks = KIDS[id] || [], tot = ks.reduce((n, k) => n + leaves(k), 0);
     let x = lo;
     for (const k of ks){ const w = (hi - lo) * leaves(k) / tot; place(k, x, x + w); x += w; }
-  })('GKK', -80 * Math.PI/180, 80 * Math.PI/180);
+  })(ROOT, -80 * Math.PI/180, 80 * Math.PI/180);
   // The rings as the layers of a layered drawing, each relation an edge from
   // the contract to the one built on it.  The order along the rings and the
   // longitudes are found from the contracts alone, each placed by all its
@@ -437,7 +446,7 @@ function layout(){
     if (t){ const ord = {}; D.contracts.forEach(c => ord[c.id] = rnd());
       const pos = {}; (function walk(id, lo, hi){ pos[id] = (lo + hi) / 2;
         const ks = (KIDS[id] || []).slice().sort((a, b) => ord[a] - ord[b]), tot = ks.reduce((n, k) => n + leaves(k), 0);
-        let x = lo; for (const k of ks){ const w2 = (hi - lo) * leaves(k) / tot; walk(k, x, x + w2); x += w2; } })('GKK', -1, 1);
+        let x = lo; for (const k of ks){ const w2 = (hi - lo) * leaves(k) / tot; walk(k, x, x + w2); x += w2; } })(ROOT, -1, 1);
       start.forEach((r, d) => Lr[d] = r.slice().sort((a, b) => pos[a] - pos[b]));
     } else start.forEach((r, d) => Lr[d] = r.slice());
     const n = sweep();
@@ -453,7 +462,7 @@ function layout(){
   // less (GKK, at the pole, has no longitude), the drawing centred, and the
   // gaps restored in the ring's order.  A ring too full even for that sets
   // alternate names on a second row, toward the wider gap beside it.
-  const lim = 170 * Math.PI/180, w = id => 0.33*FS0()*id.length + 0.8*FS0();
+  const lim = 170 * Math.PI/180, w = id => 0.33*FS0()*WID(id) + 0.8*FS0();
   const pairs = [];
   for (let d = 1; d <= maxd; d++){
     const ring = Lr[d], R = 265 * Math.sin(RING[d]);
@@ -482,7 +491,7 @@ function layout(){
     const nx = {};
     for (let d = 1; d <= maxd; d++) Lr[d].forEach(v => {
       let s = 0, t = 0;
-      [...UP[v], ...DN[v]].forEach(u => { if (u !== 'GKK'){ const g = 1 / span(u, v); s += g * X[u]; t += g; } });
+      [...UP[v], ...DN[v]].forEach(u => { if (u !== ROOT){ const g = 1 / span(u, v); s += g * X[u]; t += g; } });
       nx[v] = t ? (X[v] + s / t) / 2 : X[v]; });
     let lo = Infinity, hi = -Infinity;
     for (const v in nx){ X[v] = nx[v]; lo = Math.min(lo, X[v]); hi = Math.max(hi, X[v]); }
@@ -493,10 +502,10 @@ function layout(){
   // within 75 degrees of its centre, at the start.
   let off = 0, most = -1;
   for (let a = -180; a < 180; a++){
-    const n = [...REAL].filter(id => id !== 'GKK' && Math.cos(X[id] - a * Math.PI/180) > Math.cos(75 * Math.PI/180)).length;
+    const n = [...REAL].filter(id => id !== ROOT && Math.cos(X[id] - a * Math.PI/180) > Math.cos(75 * Math.PI/180)).length;
     if (n > most){ most = n; off = a * Math.PI/180; }
   }
-  REAL.forEach(id => { if (id !== 'GKK') PHI[id] = X[id] - off; });
+  REAL.forEach(id => { if (id !== ROOT) PHI[id] = X[id] - off; });
   // Each long arrow's waypoints, one on each ring it passes, which it is drawn
   // through (drawGlobe): on each ring a place clear of the names there, half
   // a name's width and the width of an arrow from each, and of the arrows
@@ -554,7 +563,7 @@ const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
 // set below the globe (Udi, 2026-11-09).
 const NARROW = () => (($('#mapcard') && $('#mapcard').clientWidth) || innerWidth) < 640;
 // Smaller names and thinner arrows since the 66 contracts (Udi, 2026-11-16).
-const FS0 = () => NARROW() ? 13 : 9;
+const FS0 = () => NARROW() ? 11 : 7.5;
 // The globe fills the card's width, a sliver to each side (Udi, 2026-11-09):
 // on a wide card a radius of 548 in a view 1120 wide, on a phone 290 in a
 // view 600 wide; a zoom is relative to that.
@@ -613,7 +622,7 @@ function drawGlobe(){
   const stroked = (p, q, dash, fill, pad0, pad1, kz = k) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*kz, hw = 6.5*kz, cx = bx-ux*hl, cy = by-uy*hl;
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`
       + `<polygon points="${[[bx, by], [cx-uy*hw, cy+ux*hw], [cx+uy*hw, cy-ux*hw]].map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
-  const fs = Math.max(NARROW() ? 12 : 8.5, FS0()*k), rx = id => 0.33*fs*id.length + 0.8*fs, ry = 1.1*fs;
+  const fs = Math.max(NARROW() ? 10 : 7, FS0()*k), rx = id => 0.33*fs*WID(id) + 0.8*fs, ry0 = 1.1*fs, RY = id => LINES(id).length > 1 ? 1.75*fs : ry0, ry = ry0;
   // Each arrow painted on the sphere: a smooth curve on the surface from the
   // contract to the one built on it, through the waypoints the layout keeps
   // for it on the rings it passes, so it goes between the names there; its
@@ -633,7 +642,7 @@ function drawGlobe(){
   // The angle from a contract's centre to the edge of its ellipse, toward T, a
   // direction on the sphere there.
   const edgeAngle = (id, T) => {
-    const rxa = (rx(id) + 2) / S, rya = (ry + 2) / S;
+    const rxa = (rx(id) + 2) / S, rya = (RY(id) + 2) / S;
     if (DEPTH[id] === 0) return (rxa + rya) / 2;
     const ph = PHI[id], t = th(id), E = [Math.cos(ph), 0, -Math.sin(ph)], Nn = [-Math.cos(t)*Math.sin(ph), Math.sin(t), -Math.cos(t)*Math.cos(ph)];
     return 1 / Math.sqrt((dot3(T, E)/rxa)**2 + (dot3(T, Nn)/rya)**2); };
@@ -682,7 +691,7 @@ function drawGlobe(){
     // an arrow of two relations is coloured half and half along its length,
     // one of three a third each, the head in the last (Udi, 2026-11-15, to
     // Website #2).
-    const u = 1/265, rs = cols, hl = 8*u, hw = 4.6*u, w = 1.4*u;
+    const u = 1/265, rs = cols, hl = 6.5*u, hw = 3.4*u, w = 0.85*u;
     const aB = head ? a1 - hl : a1;
     if (aB <= a0) return '';
     const front = a => projv(at(a))[2] > 0.02;
@@ -749,13 +758,13 @@ function drawGlobe(){
     const de = Math.hypot(Ce[0]-Cp[0], Ce[1]-Cp[1]) || 1e-6, dn = Math.hypot(Cn[0]-Cp[0], Cn[1]-Cp[1]) || 1e-6;
     const fe = Math.max(0.55, Math.min(1, de/(S*Math.sin(t)*eps))), fn = Math.max(0.55, Math.min(1, dn/(S*eps)));
     const ex = (Ce[0]-Cp[0])/de*rx(c.id)*fe, ey = (Ce[1]-Cp[1])/de*rx(c.id)*fe;
-    const nx2 = (Cn[0]-Cp[0])/dn*ry*fn, ny2 = (Cn[1]-Cp[1])/dn*ry*fn;
-    const m = DEPTH[c.id] === 0 ? [rx(c.id), 0, 0, ry*Math.max(0.55, Math.abs(Math.sin(al)))*Math.sign(Math.cos(al) || 1)].map(x => x.toFixed(2)).join(' ')
+    const nx2 = (Cn[0]-Cp[0])/dn*RY(c.id)*fn, ny2 = (Cn[1]-Cp[1])/dn*RY(c.id)*fn;
+    const m = DEPTH[c.id] === 0 ? [rx(c.id), 0, 0, RY(c.id)*Math.max(0.55, Math.abs(Math.sin(al)))*Math.sign(Math.cos(al) || 1)].map(x => x.toFixed(2)).join(' ')
       : [ex, ey, nx2, ny2].map(x => x.toFixed(2)).join(' ');
     const col = FAM[famOf(c)];
     s += `<g class="node" data-id="${c.id}">
-      <ellipse rx="1" ry="1" fill="color-mix(in srgb, ${col[0]} 26%, white)" stroke="${col[1]}" stroke-width="1.6" transform="matrix(${m} ${X.toFixed(1)} ${Y.toFixed(1)})" vector-effect="non-scaling-stroke"/>
-      <text x="${X.toFixed(1)}" y="${(Y + 0.36*fs).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}">${c.id}</text></g>`;
+      <ellipse rx="1" ry="1" fill="color-mix(in srgb, ${col[0]} 26%, white)" stroke="${col[1]}" stroke-width="1" transform="matrix(${m} ${X.toFixed(1)} ${Y.toFixed(1)})" vector-effect="non-scaling-stroke"/>
+      ${LINES(c.id).map((ln, i, a) => `<text x="${X.toFixed(1)}" y="${(Y + 0.36*fs + (i - (a.length - 1)/2) * 1.12*fs).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}">${esc(ln)}</text>`).join('')}</g>`;
   });
   // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
   // The key has each relation the globe draws: of the five of the Calculus
@@ -797,7 +806,7 @@ function drawGlobe(){
     // The balloon ends with the link that opens the contract, on every screen
     // (Udi, 2026-11-10).
     tip.innerHTML = `<b>${esc(c.label)}</b>${c.about !== c.title + '.' ? esc(c.about) : ''}${citeHtml(c.paper || {})}`
-      + `<a class="open" data-tipgo="${c.id}">Open ${esc(c.id)}</a>`;
+      + `<a class="open" data-tipgo="${c.id}">Open ${esc(NM(c.id))}</a>`;
     tip.style.opacity = 1; tip.style.pointerEvents = 'auto';
     if (NARROW()){ tip.style.left = '8px'; tip.style.right = '8px'; }
     else { tip.style.right = ''; tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 14, r.width - 380)) + 'px'; }
@@ -902,7 +911,7 @@ function lastRows(){
 /* ---------- search ---------- */
 function doSearch(){
   const q = $('#q').value.trim().toLowerCase();
-  const hit = c => !q || [c.id, c.title, c.about, ...c.clauses.map(x => x.name + ' ' + x.text)].join(' ').toLowerCase().includes(q);
+  const hit = c => !q || [c.id, c.name || '', c.title, c.about, ...c.clauses.map(x => x.name + ' ' + x.text)].join(' ').toLowerCase().includes(q);
   document.querySelectorAll('.node').forEach(n => { const h = hit(C[n.dataset.id]); n.classList.toggle('dim', !h); n.classList.toggle('hit', !!q && h); });
   document.querySelectorAll('.edge').forEach(e => e.classList.toggle('dim', !!q));
   document.querySelectorAll('.app').forEach(a => a.classList.toggle('dim', !hit(C[a.dataset.id])));
@@ -963,7 +972,7 @@ function route(){
 function page(c, hood){
   const kids = D.contracts.filter(k => k.extends.includes(c.id));
   const own = c.acts[1];
-  const link = id => `<a data-go="${id}">${id}</a>`;
+  const link = id => `<a data-go="${id}">${esc(NM(id))}</a>`;
   $('#view').innerHTML = `
     <span class="crumbs" data-go="">‹ All contracts</span>
     <div class="prod">${icon(c)}
@@ -974,7 +983,7 @@ function page(c, hood){
       <div class="stat"><div class="k">Speech acts</div><div class="v">${c.acts[0] ? own : '–'}</div><div class="s">${c.acts[0] ? 'of its own' : 'not compiled'}</div></div>
       <div class="stat"><div class="k">Builds on</div><div class="v">${c.extends.length ? c.extends.map(link).join(', ') : '–'}</div><div class="s">${c.extends.length ? 'contract' + (c.extends.length > 1 ? 's' : '') : 'the base'}</div></div>
       <div class="stat"><div class="k">Used by</div><div class="v">${kids.length ? kids.map(k => link(k.id)).join(', ') : '–'}</div><div class="s">${kids.length ? 'contract' + (kids.length > 1 ? 's' : '') : 'none yet'}</div></div>
-      <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(c.id)}</div></div>
+      <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
     </div>
     ${stripHtml(c)}
     <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
@@ -1037,7 +1046,7 @@ function calcHtml(c){
   const full = k.full ? `<details class="fullc" data-full="${esc(k.full)}"><summary class="btn grey">Full contract</summary><div class="card rules txt">Loading…</div></details>` : '';
   if (k.adopted) return k.hasFull ? '' : full;
   return `<div class="sh" style="margin-top:22px"><h2>Proposed by the Calculus</h2></div>
-      <p class="small">The text of ${esc(c.id)} in the Calculus, published on the <a href="${br}" target="_blank" rel="noopener">branch Calculus</a> of GLP; ${k.owner && k.owner !== 'none' ? `its owner, ${esc(k.owner)}, has not adopted it yet` : 'it has no owner yet'} (<a href="https://github.com/EShapiro2/GLP/blob/Calculus/calculus/MIGRATION.md" target="_blank" rel="noopener">the migration plan</a>).  Certified by GLP's checker: ${yn(k.certified)}.  Compiled to GLP: ${yn(k.compiled)}.</p>
+      <p class="small">The text of ${esc(NM(c.id))} in the Calculus, published on the <a href="${br}" target="_blank" rel="noopener">branch Calculus</a> of GLP; ${k.owner && k.owner !== 'none' ? `its owner, ${esc(k.owner)}, has not adopted it yet` : 'it has no owner yet'} (<a href="https://github.com/EShapiro2/GLP/blob/Calculus/calculus/MIGRATION.md" target="_blank" rel="noopener">the migration plan</a>).  Certified by GLP's checker: ${yn(k.certified)}.  Compiled to GLP: ${yn(k.compiled)}.</p>
       ${k.proposed ? `<div class="card rules txt">${esc(k.proposed)}</div>` : ''}
       ${full}`;
 }
@@ -1051,9 +1060,9 @@ function hoodHtml(c, schemas){
   $('#hood').innerHTML = `
     <div class="sh"><h2>Under the hood${Q('hood')}</h2><span>from the English text to the running app</span></div>
     <div class="stack">
-    <div class="card layer">${n(1)}<h3>The Grassroots Contract${Q('contract')}</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.join(' and ') : ''}, above.</p></div>
+    <div class="card layer">${n(1)}<h3>The Grassroots Contract${Q('contract')}</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.map(NM).join(' and ') : ''}, above.</p></div>
     <div class="card layer">${n(2)}<h3>Speech-Act Schemas${Q('acts')}</h3>
-      <p class="sum">${own.length} of its own${inh.length ? `, and ${inh.length} from ${[...new Set(inh.map(s => s.from))].join(', ')}` : ''}.</p>
+      <p class="sum">${own.length} of its own${inh.length ? `, and ${inh.length} from ${[...new Set(inh.map(s => NM(s.from)))].join(', ')}` : ''}.</p>
       ${own.map((s, i) => schemaHtml(s, i < 2)).join('')}
       ${inh.length ? `<p class="more" id="mt">Show the ${inh.length} inherited acts</p><div id="inh" style="display:none">${inh.map(s => schemaHtml(s, false)).join('')}</div>` : ''}
     </div>
@@ -1102,7 +1111,7 @@ function relsHtml(c){
   const say = {agrees: 'agrees with its schemas', given: 'agrees, given an invariant', disagrees: 'disagrees with its schemas', open: 'not checked'};
   return `<div class="sec"><div class="sh"><h2>Relations</h2></div><div class="card refs rels">${c.checks.map(r =>
     r.line ? `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(r.line)}</b>: ${r.result === 'agrees' ? 'holds' : 'does not hold'}<div class="why">${esc(r.why)}</div></div></div>` :
-    `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(c.id)} ${esc(r.rel)} ${r.of ? `its ${esc(r.of)} of ` : ''}<a data-go="${esc(r.base)}">${esc(r.base)}</a></b>: ${say[r.result]}<div class="why">${esc(r.why)}</div></div></div>`).join('')}</div></div>`;
+    `<div class="rel ${r.result}"><span class="mk">${mk[r.result]}</span><div><b>${esc(NM(c.id))} ${esc(r.rel)} ${r.of ? `its ${esc(r.of)} of ` : ''}<a data-go="${esc(r.base)}">${esc(NM(r.base))}</a></b>: ${say[r.result]}<div class="why">${esc(r.why)}</div></div></div>`).join('')}</div></div>`;
 }
 // The app as a certified artefact, the .glpw the Grassroots App installs.
 function artHtml(c){
@@ -1116,7 +1125,7 @@ function schemaHtml(s, open){
   if (s.form === 'rule'){
     const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
     const who = s.guarded.length ? 'needs the will of ' + s.guarded.join(' and ') : 'nobody is asked';
-    return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${s.from}</span></summary>
+    return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${esc(NM(s.from))}</span></summary>
       <div class="say">${esc(who)}</div>
       ${s.adds.length ? `<div class="rule"><b>Adds</b>${at(s.adds, 'add')}</div>` : ''}
       ${s.removes.length ? `<div class="rule"><b>Removes</b>${at(s.removes, 'del')}</div>` : ''}
@@ -1125,7 +1134,7 @@ function schemaHtml(s, open){
   const willing = s.parties.filter(p => p.endsWith('?')).map(p => p.slice(0, -1));
   const say = `${s.parties.length === 1 ? 'One person' : s.parties.length + ' roles'}; ${willing.length ? 'needs the will of ' + willing.join(' and ') : 'nobody is asked'}${s.vars.length ? '; values: ' + s.vars.join(', ') : ''}${s.constraint ? '; only if ' + s.constraint : ''}.`;
   const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
-  return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.head)}</span><span class="fr">${s.from}</span></summary>
+  return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.head)}</span><span class="fr">${esc(NM(s.from))}</span></summary>
     <div class="say">${esc(say)}</div>
     <table class="roles"><tr><th>At</th><th>Needs · must not have</th><th>Gets</th><th>Loses</th></tr>
     ${s.roles.map(r => `<tr><td class="r">${esc(r.role)}</td><td data-k="Needs · must not have">${at(r.need,'need')}${at(r.not,'not')}</td><td data-k="Gets">${at(r.add,'add')}</td><td data-k="Loses">${at(r.del,'del')}</td></tr>`).join('')}</table></details>`;
@@ -1154,7 +1163,7 @@ const paperLink = P => { const t = `<i>${esc(P.title || '')}</i>`;
   return href ? `<a href="${href}" target="_blank" rel="noopener">${t}</a>` : t; };
 const dirLi = e => `<li>${ghPath(e)}${e.who ? ` <b>${esc(e.who)}</b>` : ''}${e.note ? ` <span class="nt">${esc(e.note)}</span>` : ''}${e.text ? ` <a href="https://github.com/EShapiro2/GLP/tree/main/${esc(e.text)}" target="_blank" rel="noopener">what it is and does</a>` : ''}${
   (e.contracts || []).length ? `<ul>${e.contracts.map(conLi).join('')}</ul>` : ''}</li>`;
-const conLi = c => `<li><a href="#${esc(c.id)}"><b>${esc(c.id)}</b></a>${C[c.id] ? ` <span class="nt">${esc(C[c.id].title)}</span>` : ''}
+const conLi = c => `<li><a href="#${esc(c.id)}"><b>${esc(NM(c.id))}</b></a>${C[c.id] ? ` <span class="nt">${esc(C[c.id].title)}</span>` : ''}
   <ul>${c.items.map(i => `<li><span class="k">${esc(i.k)}</span>${ghPath(i)}</li>`).join('')}</ul></li>`;
 // A project with no paper (tools/directories.py, NO_PAPER): its name, its
 // name in full, and its repository where its work is not in GLP.
