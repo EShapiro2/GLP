@@ -419,7 +419,10 @@ PVersion  ::= version(Integer, Integer).
 RPragmas  ::= pragmas(PLists, TActs, PStands, PLook, PVersion).
 Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStands)
             ; pragmas(PLists, PActs, PStands, PLook, PVersion, String)
-            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String, Preds).
+            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String, PhoneFacts).
+%% What the phone does for the contract, from its implementation pragmas (vGLP, Section 5.4): an environment predicate it finds, found(P), and a standing schema whose standing request opens the phone to persons it does not know, trust(S).
+PhoneFact  ::= found(Constant) ; trust(Constant).
+PhoneFacts ::= [] ; [PhoneFact | PhoneFacts].
 %% What a schema does to the atom a standing declaration stands on (cvac.glp, standing_lines): makes the standing request, withdraws it, or neither.
 StandAct  ::= makes(Constant) ; withdraws(Constant) ; plain.
 

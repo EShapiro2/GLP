@@ -604,7 +604,7 @@ stand_cond1(nostand, held(_), _, busy).
 stand_cond1(nostand, unlocked, yes, busy).
 
 procedure stand_take(StandCond?, Constant?, Proposal?, RCond?, St?, RCond, St).
-stand_take(go, S, _, Cd, St, Cd?, St1?) :- ground(St?) | st_app(St?, Ap), stand_app(S?, Ap?, Ap1), set_app(St?, Ap1?, St1).
+stand_take(go, S, _, Cd, St, Cd?, St1?) :- ground(St?), ground(S?) | st_app(St?, Ap), stand_app(S?, Ap?, Ap1), trust_to(S?, open), set_app(St?, Ap1?, St1).
 stand_take(already, _, _, Cd, St, Cd?, St?).
 stand_take(busy, _, N, _, St, rhold(N?), St?).
 
@@ -615,9 +615,16 @@ procedure withdraw_app(Constant?, App?, App).
 withdraw_app(S, app(Ms, K, L, R), Ap?) :- ground(S?), ground(R?), ground(L?) | standing_live(R?, S?, R?, Sk), lock_of_schema(L?, S?, Ls), withdraw_app1(Sk?, Ls?, S?, app(Ms?, K?, L?, R?), Ap).
 
 procedure withdraw_app1(StandK?, YesNo?, Constant?, App?, App).
-withdraw_app1(at(Kw), no, S, app(Ms, K, L, R), app(Ms?, K?, L?, [ended(std(S?), Kw?) | R?])).
+withdraw_app1(at(Kw), no, S, app(Ms, K, L, R), app(Ms?, K?, L?, [ended(std(S?), Kw?) | R?])) :- ground(S?) | trust_to(S?, closed).
 withdraw_app1(at(_), yes, _, Ap, Ap?).
 withdraw_app1(nostand, _, _, Ap, Ap?).
+
+procedure trust_to(Constant?, TrustLevel?).
+trust_to(S, T) :- ground(S?) | trust_of(S?, Y), trust_set(Y?, T?).
+
+procedure trust_set(YesNo?, TrustLevel?).
+trust_set(yes, T) :- ground(T?) | declare(trust(pan, T?)), declare(trust(lan, T?)).
+trust_set(no, _).
 
 procedure standing_live(Recs?, Constant?, Recs?, StandK).
 standing_live([], _, _, nostand).
@@ -4915,6 +4922,10 @@ ms_meets([X | Xs], B, R?) :- ground(B?) | mem(X?, B?, R1), ms_meets1(R1?, Xs?, B
 procedure(X) ms_meets1(YesNo?, Stream(X)?, Stream(X)?, YesNo).
 ms_meets1(yes, _, _, yes).
 ms_meets1(no, Xs, B, R?) :- ms_meets(Xs?, B?, R).
+
+procedure trust_of(Constant?, YesNo).
+trust_of(encounter, yes).
+trust_of(_, no) :- otherwise | true.
 
 %% --- the dispatcher (programs/vglp/dispatcher.glp) ---
 

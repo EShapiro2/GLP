@@ -1100,7 +1100,7 @@ for my $S (sort keys %covered) {
 # Each button line and what the rule gives it, on the standard error, where PRAGMAS_LINES is set.
 print STDERR map { /^\x03(\d+)$/ ? map { "$_\n" } @{ $line_of[$1] // [] } : "$_\n" } @lines_out, @dup_out if $ENV{PRAGMAS_LINES};
 # The standing lines of the implementation pragmas, of the contract and of every contract it extends (GSC 1a8e31c, Section 2: "An implementation pragma may declare that a person\x27s act stands for every act of a clause that the person guards: \x60\x60Encounter: Alice stands on [Open place] until [Close place]\x27\x27 says that Alice\x27s act Open place is her standing request of every act of Encounter she guards, so that she is asked nothing, and that her act Close place withdraws it"; vGLP 7c631b1, Section 5.4, "The contract\x27s words"): "<Clause>: <Name> stands on [<Start>] until [<Stop>]", read as standing(S, A, W) for each schema S of the clause, the schemas bearing its title as a button bears its name, A the schema of the button [<Start>] and W that of [<Stop>]; what follows on the line, after a semicolon, is how the app realises it, which no term carries.
-my (@stands, %stand_seen);
+my (@stands, %stand_seen, %stand_by_start);
 for my $f (@order) {
     my $impl = 0;
     for my $x (read_txt($f)) {
@@ -1124,6 +1124,7 @@ for my $f (@order) {
                 next;
             }
         }
+        push @{ $stand_by_start{$start} }, @cl;
         for my $S (@cl) {
             my $t = "standing(" . q_atom($S) . ", " . q_atom($start) . ", " . q_atom($stop) . ")";
             push @stands, $t unless $stand_seen{$t}++;
@@ -1154,8 +1155,22 @@ for my $f (@order) {
             my $pd = $voc_pred{$ph};
             unless (defined $pd) { push @faults, "pragmas.sh: $f: the line \"Found by the phone\" names \"$ph\", which no Vocabulary entry has\n"; next }
             unless ($pd eq "nearby") { push @faults, "pragmas.sh: $f: the phone finds \"$ph\", $pd, for which GLP\x27s networking seam declares no stream (GLP, appendix-guards, \"Networking seam\"): a gap for GLP\n"; next }
-            push @found, q_atom($pd) unless $found_seen{$pd}++;
+            push @found, "found(" . q_atom($pd) . ")" unless $found_seen{$pd}++;
         }
+    }
+}
+# The trust a standing request opens (vGLP, Section 5.4: "An implementation pragma may open a person\x27s phone to persons it does not know, over Bluetooth and the local network, from their standing request until they withdraw it, as Open place does"): an implementation line of the clause whose act makes a standing request, saying that the trust of Bluetooth and of the local network is open, as "Open place: while the place is open Alice\x27s app sets the trust of Bluetooth and of the local network open, and closed otherwise (GNA)."; trust(S) for each standing schema S whose standing request that act makes.
+for my $f (@order) {
+    my $impl = 0;
+    for my $x (read_txt($f)) {
+        if (impl_head($x)) { $impl = 1; next }
+        if (iface_head($x)) { $impl = 0; next }
+        next unless $impl && $x =~ /^([^:]+?):.*\btrust of Bluetooth and of the local network open\b/;
+        my $t = $1;
+        (my $a = lc $t) =~ s/\s+/_/g;
+        my ($start) = realising($a);
+        unless ($stand_by_start{$start}) { push @faults, "pragmas.sh: $f: the line \"$x\" opens the trust from the act of $t, which makes no standing request of the contract\n"; next }
+        for my $S (@{ $stand_by_start{$start} }) { push @found, "trust(" . q_atom($S) . ")" unless $found_seen{"trust $S"}++ }
     }
 }
 if (@faults) { print STDERR @faults; exit 1 }
