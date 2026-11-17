@@ -1,2 +1,0 @@
-GNO extends GBCC: holds
-GNO restricts it (GBCC): holds

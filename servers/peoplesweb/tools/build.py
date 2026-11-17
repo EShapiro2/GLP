@@ -231,18 +231,10 @@ def contract_text(path):
 # record cascade/NAME/ and, here, its page.  A reader knows a name as one of
 # the known names and nothing else, matched longest first.  The site shows
 # the name and writes paths and addresses by the file name; it takes each
-# name from the contract's title line, and from NAMES.txt the name a contract
-# had before, by which web/about.json may still know its look.
+# name from the contract's title line, and reads no table of names.  The keys
+# of web/about.json are file names.
 def file_of(name):
     return name.replace("'", '').replace(' ', '-')
-
-
-WAS = {}   # file name -> the name on main before
-_nt = os.path.join(GLP, 'calculus', 'NAMES.txt')
-for _l in read(_nt).split('\n') if os.path.exists(_nt) else []:
-    _f = [x.strip() for x in _l.split('|')]
-    if len(_f) == 4 and _f[0] != 'name on main':
-        WAS[_f[2]] = _f[0]
 
 # Every contract's text, wherever its owner keeps it: programs/**/NAME.txt.
 texts = {}
@@ -393,9 +385,10 @@ for n in compiled:
 
 # The Calculus (calculus/MIGRATION.md, the section Website, agreed by
 # Website #2, 2026-11-15): until its owner adopts a contract, the Calculus's
-# text of it is on the branch Calculus of GLP, which deploy/sweep.sh unpacks
-# into CALCULUS_DIR; after its adoption it is on main, and its printed
-# artefacts in cascade/NAME/.  calculus/STATE.txt has a line for each
+# text of it is in CALCULUS_DIR, which until 2026-11-17 deploy/sweep.sh
+# unpacked from the branch Calculus of GLP, now closed; after its adoption it
+# is on main, and its printed artefacts in cascade/NAME/, as every contract is
+# since 2026-11-16.  calculus/STATE.txt, where there is one, has a line for each
 # contract: its name, its owner, and yes or no for certified by GLP's checker,
 # compiled to GLP, and adopted by its owner.
 CALC = os.environ.get('CALCULUS_DIR') or os.path.join(GLP, 'calculus')
@@ -492,7 +485,7 @@ for n in sorted(set(compiled) | set(cat)):
     d = os.path.join(GLP, 'cascade', n)
     # The icon and family the contract's Look line names, where its owner
     # wrote one, and else about.json's, which holds them until then.
-    _a = about.get(n) or about.get(WAS.get(n, '')) or ['📄', 'other', '']
+    _a = about.get(n) or ['📄', 'other', '']
     _icon, _family = look_line(c.get('pragmas', [])) or (_a[0], _a[1])
     c['icon'], c['family'], c['about'] = _icon, _family, _a[2] or c['title'] + '.'
     # The shown name starts with the letters, and a contract built on another

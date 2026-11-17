@@ -14,8 +14,8 @@
 #   <census>   gd_town40, gd_town100 or gd_town200, the run declaration's census;
 #   <until>    the horizon, the run declaration's, "6 days";
 #   <cascade>  the cascade record of GDO whose platform is run: a tag
-#              cascade/GDO/<date>, or a directory holding platform.glp and
-#              interface.glp; the newest tag cascade/GDO/* where none is given.
+#              cascade/Overlay/<date>, or a directory holding platform.glp and
+#              interface.glp; the newest tag cascade/Overlay/* where none is given.
 #
 # The record holds what cva/record.sh writes --- GDO_sglp.glp as run, the
 # printed profiles.glp and population.glp, 1.log, 1.draw and manifest.md, on
@@ -27,7 +27,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../../.." && pwd)"
 [ $# -ge 4 ] && [ $# -le 5 ] || { echo "usage: record.sh <dest> '<cfg>' <census> '<count> <unit>' [<cascade tag|dir>]" >&2; exit 2; }
 DEST=$1; CFG=$2; CENSUS=$3; UNTIL=$4
-CAS=${5:-$(git -C "$GLP_DIR" tag -l 'cascade/GDO/*' --sort=-creatordate | head -1)}
+CAS=${5:-$(git -C "$GLP_DIR" tag -l 'cascade/Overlay/*' --sort=-creatordate | head -1)}
 [ -n "$CAS" ] || { echo "record.sh: no cascade record of GDO" >&2; exit 2; }
 [ ! -e "$DEST" ] || { echo "record.sh: $DEST exists" >&2; exit 2; }
 N=${UNTIL%% *}; U=${UNTIL##* }; U1=${U%s}
@@ -45,7 +45,8 @@ mkdir -p "$(dirname "$DEST")" && mv "$REC" "$DEST" || exit 1
 # the map, over the platform the record ran
 mkdir -p "$WORK/cas"
 case "$CAS" in
-    cascade/GDO/*) git show "$CAS:cascade/GDO/platform.glp" > "$WORK/cas/platform.glp" || exit 1 ;;
+    cascade/*/*) CASD=${CAS#cascade/}; CASD=${CASD%/*}
+                 git show "$CAS:cascade/$CASD/platform.glp" > "$WORK/cas/platform.glp" || exit 1 ;;
     *) cp "$CAS/platform.glp" "$WORK/cas/platform.glp" || exit 1 ;;
 esac
 bash "$HERE/census.sh" "$WORK/cas/platform.glp" "$DEST" "$CENSUS" "$DEST/1.census" || exit 1

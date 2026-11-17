@@ -1,3 +1,0 @@
-BYX: Bylaws Extended
-BYX extends BY.
-BYX:0 - | Alice is an organisation.

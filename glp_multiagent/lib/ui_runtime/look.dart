@@ -15,10 +15,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-/// The contract whose look the Grassroots App takes: GAS, the Grassroots App
-/// Store, one of the four its home is compiled from (GSA, Appendix A), until
-/// GSA names the app's contract.
-const String superappContract = 'GAS';
+/// The contract whose look the Grassroots App takes: AppStore, the Grassroots
+/// App Store, one of the four its home is compiled from (GSA, Appendix A),
+/// until GSA names the app's contract; named as calculus/NAMES.txt names its
+/// file, which is the key of the site's about.json.
+const String superappContract = 'AppStore';
 
 /// A family of contracts: its name and its two colours, from and to, the
 /// light and the dark end of its gradient on the site.
@@ -80,7 +81,7 @@ class Looks {
 
   /// The looks from the text of `look.json`, of `about.json` and of the
   /// files of the tree that may be contracts: a contract is a `.txt` with a
-  /// `% Owner:` line, named by its first other line, `NAME: Title`.
+  /// `% Owner:` line, named by its first other line, its title, which is its name.
   static Looks parse(String lookJson,
       {String? about, Iterable<String> contractTexts = const []}) {
     final j = jsonDecode(lookJson) as Map<String, dynamic>;
@@ -97,15 +98,22 @@ class Looks {
     if (about != null) {
       (jsonDecode(about) as Map<String, dynamic>).forEach((k, v) {
         final a = (v as List).cast<String>();
-        cs[k.toUpperCase()] = (icon: a[0], family: a[1]);
+        cs[_key(k)] = (icon: a[0], family: a[1]);
       });
     }
     for (final t in contractTexts) {
       final c = contractLook(t);
-      if (c != null) cs[c.name] = (icon: c.icon, family: c.family);
+      if (c != null) cs[_key(c.name)] = (icon: c.icon, family: c.family);
     }
     return Looks(fs, cs);
   }
+
+  /// The key a contract's look is kept under: its name in upper case, a
+  /// hyphen or an underscore as a space, so that a contract is found by its
+  /// name, `Community Bank`, by its file name, `Community-Bank`, and by its
+  /// atom, `community_bank` (calculus/NAMES.txt).
+  static String _key(String name) =>
+      name.toUpperCase().replaceAll(RegExp(r'[-_ ]+'), ' ').trim();
 
   static const _heads = {
     'Pragmas',
@@ -124,9 +132,14 @@ class Looks {
       for (final l in lines)
         if (l.trim().isNotEmpty && !l.startsWith('%')) l.trim()
     ];
-    if (body.isEmpty || !body.first.contains(': ')) return null;
-    final name =
-        body.first.substring(0, body.first.indexOf(': ')).toUpperCase();
+    if (body.isEmpty) return null;
+    // "The title line of a contract is its name" (calculus/NAMES.txt), as
+    // `Community Bank`; a title written `NAME: Title` names it by NAME.
+    final title = body.first;
+    final name = (title.contains(': ')
+            ? title.substring(0, title.indexOf(': '))
+            : title)
+        .toUpperCase();
     final start = body.indexWhere(_heads.contains);
     if (start < 0) return null;
     for (final l in body.skip(start + 1)) {
@@ -150,7 +163,7 @@ class Looks {
   /// or of a family the file does not name, is of the family other.
   ContractLook of(String contract) {
     final name = contract.toUpperCase();
-    final c = contracts[name];
+    final c = contracts[_key(contract)];
     final family =
         c != null && families.containsKey(c.family) ? c.family : otherFamily;
     return ContractLook(name, c?.icon ?? otherIcon, family, families[family]!);

@@ -1,0 +1,52 @@
+Funded DAO (flat text)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice.
+Knowledge:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice and Alice knows Carol.
+DAO:0 - | Alice, Bob and Carol are persons, Delos a DAO and Prop a proposal, Votes and Double numbers, Carol possibly Alice or Bob.
+DAO:1 ■ Found: Alice may Alice is the steward of Delos, Alice is a member of Alice's Delos and Alice has Alice as a member of Delos, provided not Alice is the steward of Delos.
+DAO:2 ■ Join: Alice and Bob may jointly Bob is a member of Alice's Delos and Alice has Bob as a member of Delos, provided Alice is the steward of Delos, Alice knows Bob and not Bob is a member of Alice's Delos.
+DAO:3 ■ | Proposing.
+DAO:3 ■ Propose: Carol may Carol has proposed Prop to Alice's Delos and Alice holds Prop of Delos, provided Carol is a member of Alice's Delos, Alice is the steward of Delos and not Alice holds Prop of Delos. Possibly one: Alice=Carol.
+DAO:3 ■ Propose own: Alice may Alice has proposed Prop to Alice's Delos and Alice holds Prop of Delos, provided Alice is a member of Alice's Delos, Alice is the steward of Delos and not Alice holds Prop of Delos.
+DAO:3 ■ Deliver proposal: Alice has delivered Prop of Delos to Bob and Bob holds Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice has Bob as a member of Delos and not Alice has delivered Prop of Delos to Bob.
+DAO:4 ■ | Voting.
+DAO:4 ■ Vote for: Carol may Carol has voted on Prop of Delos and Alice holds Carol's vote for Prop of Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos, not Alice has decided Prop of Delos and not Carol has voted on Prop of Delos. Possibly one: Alice=Carol.
+DAO:4 ■ Vote own for: Alice may Alice has voted on Prop of Delos and Alice holds Alice's vote for Prop of Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos, not Alice has decided Prop of Delos and not Alice has voted on Prop of Delos.
+DAO:4 ■ Vote against: Carol may Carol has voted on Prop of Delos and Alice holds Carol's vote against Prop of Delos, provided Carol is a member of Alice's Delos, Carol holds Prop of Delos, Alice is the steward of Delos, not Alice has decided Prop of Delos and not Carol has voted on Prop of Delos. Possibly one: Alice=Carol.
+DAO:4 ■ Vote own against: Alice may Alice has voted on Prop of Delos and Alice holds Alice's vote against Prop of Delos, provided Alice is a member of Alice's Delos, Alice holds Prop of Delos, Alice is the steward of Delos, not Alice has decided Prop of Delos and not Alice has voted on Prop of Delos.
+DAO:4 ■ Deliver vote for: Alice has delivered Carol's vote on Prop of Delos to Bob and Bob holds Carol's vote for Prop of Delos, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos, Alice has Bob as a member of Delos and not Alice has delivered Carol's vote on Prop of Delos to Bob. Possibly one: Alice=Carol, Bob=Carol.
+DAO:4 ■ Deliver vote against: Alice has delivered Carol's vote on Prop of Delos to Bob and Bob holds Carol's vote against Prop of Delos, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos, Alice has Bob as a member of Delos and not Alice has delivered Carol's vote on Prop of Delos to Bob. Possibly one: Alice=Carol, Bob=Carol.
+DAO:5 ■ | Deciding.
+DAO:5 ■ Pass: Alice may Alice has decided Prop of Delos and Alice holds Prop of Delos as passed, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds the votes of at least Votes persons for Prop of Delos, Double is Votes times 2, Alice has fewer than Double persons as a member of Delos and not Alice has decided Prop of Delos.
+DAO:5 ■ Reject: Alice may Alice has decided Prop of Delos and Alice holds Prop of Delos as rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds the votes of at least Votes persons against Prop of Delos, Double is Votes times 2, Alice has fewer than Double persons as a member of Delos and not Alice has decided Prop of Delos.
+DAO:5 ■ Deliver pass: Alice has delivered the decision on Prop of Delos to Bob and Bob holds Prop of Delos as passed, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed, Alice has Bob as a member of Delos and not Alice has delivered the decision on Prop of Delos to Bob.
+DAO:5 ■ Deliver reject: Alice has delivered the decision on Prop of Delos to Bob and Bob holds Prop of Delos as rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected, Alice has Bob as a member of Delos and not Alice has delivered the decision on Prop of Delos to Bob.
+DAO:6 ■ | Majority.
+DAO:6 ■ | The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.
+Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Notes:1 ■ Issue: Alice may Alice holds Sum Alice-coins.
+Notes:2 ■ Swap: Alice and Bob may jointly no longer Alice holds Sum Carol-coins, Bob holds Sum Carol-coins, no longer Bob holds Total Dave-coins, Alice holds Total Dave-coins, Bob knows Carol and Alice knows Dave, provided Alice knows Bob and Bob knows Alice. Possibly one: Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+Notes:3 ■ Pay: Alice and Bob may jointly no longer Alice holds Sum Carol-coins, Bob holds Sum Carol-coins and Bob knows Carol, provided Alice knows Bob. Possibly one: Alice=Carol, Bob=Carol.
+Notes:3+Coins:1 ■ Pay issuer: Alice may no longer Alice holds Sum Bob-coins and Bob holds Sum Bob-coins, provided Alice knows Bob.
+Notes:4 ■ | Escrow.
+Notes:4 ■ Deposit: Alice and Carol may jointly no longer Alice holds Sum Dave-coins and Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, provided Alice knows Carol, Carol knows Alice and Alice knows Bob. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ■ Release: Carol and Bob may jointly no longer Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, Bob holds Sum Dave-coins and Bob knows Dave, provided Carol knows Bob and Bob knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ■ Return: Carol and Alice may jointly no longer Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, Alice holds Sum Dave-coins and Alice knows Dave, provided Carol knows Alice and Alice knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
+Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
+Coins:0 - | Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob.
+Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
+Coins:2 ■ Redeem: Alice may no longer Alice holds a Bob-coin, Bob holds a Bob-coin, no longer Bob holds a Carol-coin, Alice holds a Carol-coin and Alice knows Carol, provided Alice knows Bob. Possibly one: Alice=Carol, Bob=Carol.
+Coins:3 ○ | Pricing.
+Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+Funded DAO:0 - | Alice, Bob, Carol and Dave are persons, Delos a DAO and Prop a proposal, Sum a number, Carol possibly Alice or Bob, Dave possibly Alice, Bob or Carol.
+Funded DAO:1 ■ Fund: Carol may no longer Carol holds Sum Dave-coins and Alice keeps Sum Dave-coins for Delos, provided Carol is a member of Alice's Delos and Alice is the steward of Delos. Possibly one: Alice=Carol.
+Funded DAO:2 ■ Grant: Alice may no longer Alice keeps Sum Dave-coins for Delos, Carol holds Sum Dave-coins and Alice has granted Prop of Delos, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed, Carol has proposed Prop to Alice's Delos and not Alice has granted Prop of Delos. Possibly one: Alice=Carol.
+Funded DAO:3 ○ | Amount.
+Funded DAO:3 ○ | The steward will grant a passed proposal the amount it asks for, as far as the DAO's coins allow.

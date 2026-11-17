@@ -1,0 +1,36 @@
+Programs
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+6. ■ Sign.  Alice may create an item by signing it.
+7. ■ Forward.  Alice may forward an item she holds to her friend Bob, adding her signature to the signatures the item carries.
+8. ◆ Publish.  Carol may publish a program by signing it, attesting that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
+9. ■ Trust.  Alice may declare trust in Carol, whom she knows, as a developer.
+10. ■ Untrust.  Alice may withdraw the declaration.
+11. ■ Offer.  Carol may offer a program she holds to her friend Alice by forwarding it to her.
+12. ■ Install own.  Alice may install a program she published, as well as a program offered to her whose developer she trusts.
+13. ■ Install.  Alice may install a program she published, as well as a program offered to her whose developer she trusts.
+14. ■ Invite.  Alice may invite her friend Bob to join her in a program she installed, with the consent of Bob, who trusts its developer; Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
+15. ■ Leave.  Alice may leave a program she installed; it is then no longer installed, and her participation in it with every participant ends.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+Sign: Alice [Sign] <item>
+Forward: Alice [Forward]
+Publish: Carol [Publish] <prog>
+Trust: Alice [Trust]
+Untrust: Alice [Untrust]
+Offer: Carol [Offer]
+Install own: Alice [Install own]
+Install: Alice [Install]
+Invite: Alice [Invite]
+  Bob: Alice asks for your consent to invite.
+Leave: Alice [Leave]

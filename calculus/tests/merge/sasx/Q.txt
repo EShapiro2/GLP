@@ -1,4 +1,0 @@
-Q: Qualified (expanded schemas)
-C:0 - | Alice is a person.
-C:1+Q:1 ■ Signal: s(Alice) <- q(Alice) guarded by Alice.
-Q:0 - | Alice is a person.

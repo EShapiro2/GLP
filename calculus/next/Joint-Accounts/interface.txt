@@ -1,0 +1,44 @@
+Joint Accounts
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ■ Issue.  Alice may issue Alice-notes.
+5. ■ Swap.  Alice and Bob, who know each other, may jointly swap notes they hold.
+6. ■ Pay.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
+7. ■ Pay issuer.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
+8. ■ Deposit coin.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol.
+9. ■ Release.  Carol and Bob may jointly release them to Bob.
+10. ■ Return.  Carol and Alice may jointly return them to Alice.
+11. ■ Redeem.  Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
+12. ■ Open account.  Alice and Bob, who know each other, may jointly open a joint account, under a new name of Alice's.
+13. ■ Deposit.  Either of them may move coins they hold into their joint account.
+14. ■ Partner deposit.  Either of them may move coins they hold into their joint account.
+15. ■ Withdraw.  Alice and Bob may jointly move coins from their joint account to either of them.
+16. ■ Partner withdraw.  Alice and Bob may jointly move coins from their joint account to either of them.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Issue: Alice [Issue] <sum>
+Swap: Alice [Swap] <sum> <dave> <total>
+  Bob: Alice asks for your consent to swap.
+Pay: Alice [Pay] <sum>
+  Bob: Alice asks for your consent to pay.
+Pay issuer: Alice [Pay issuer] <sum>
+Deposit coin: Alice [Deposit coin] <sum> <cond>
+  Carol: Alice asks for your consent to deposit coin.
+Release: Carol [Release] <sum>
+  Bob: Carol asks for your consent to release.
+Return: Carol [Return] <sum>
+  Alice: Carol asks for your consent to return.
+Redeem: Alice [Redeem] <carol>
+Open account: Alice [Open account] <acct>
+  Bob: Alice asks for your consent to open account.
+Deposit: Alice [Deposit] <sum>
+Partner deposit: Bob [Partner deposit] <sum>
+Withdraw: Alice [Withdraw] <sum>
+  Bob: Alice asks for your consent to withdraw.
+Partner withdraw: Alice [Partner withdraw] <sum>
+  Bob: Alice asks for your consent to partner withdraw.

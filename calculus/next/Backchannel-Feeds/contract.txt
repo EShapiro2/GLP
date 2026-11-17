@@ -1,0 +1,4 @@
+Backchannel Feeds
+Backchannel Feeds extends Resilient Feeds.
+Alice, Bob, Carol and Dave are persons, Bob and Dave possibly one person.
+1. ■ Back forward: Alice, who has Dave-pointers to Bob and to Carol and receives an item of Dave's feed first from Bob, forwards it to Carol.

@@ -1,2 +1,0 @@
-GNG extends GNO and GDO: holds
-GNG restricts Rec: holds

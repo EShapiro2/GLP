@@ -1,0 +1,9 @@
+Local Overlay
+Local Overlay restricts Overlay.
+Vocabulary: the bound is n, for x = bound(x,n); either x points to fewer than d persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than e than some person pointed to by x = may_point_friend(x,y); y is closer to x by more than e than some person pointed to by x = closer(x,y); y is furthest from x among the persons x points to = furthest(x,y).
+Local Overlay:0 - | A person has a *location*. d > 0, an integer, and e > 0 are parameters of Local Overlay.
+Local Overlay:0 - | Alice, Bob and Carol are persons.
+Local Overlay:0 - | Environment: the bound is n, for x; either x points to fewer than d persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than e than some person pointed to by x; y is closer to x by more than e than some person pointed to by x; y is furthest from x among the persons x points to.
+Local Overlay:1 ■ Point friend: Overlay:1 <- may_point_friend(Alice,Bob).
+Local Overlay:2 ■ Point transitive: Overlay:2 <- closer(Alice,Carol).
+Local Overlay:3 ■ Unpoint: Overlay:3 <- bound(Actor,D), points_to(Alice,>D), furthest(Alice,Bob).

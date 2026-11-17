@@ -41,7 +41,6 @@ if [ -d servers/peoplesweb/cache ]; then
 fi
 $AS env GLP_ROOT="$GLP" BUILD_DIR="$WORK/build" SITE_TEST=1 CERTIFY_CACHE="$WORK/cache" CERTIFY="${CERTIFY:-1}" \
 	PAPERS_DIR="${PAPERS_DIR:-/var/lib/glp/papers}" \
-	CALCULUS_DIR="${CALCULUS_DIR:-/var/lib/glp/calculus/site/calculus}" \
 	python3 -I "$WORK/site/servers/peoplesweb/tools/build.py"
 mkdir -p "$WWW"
 rsync -a --delete "$WORK/build/www/" "$WWW/"

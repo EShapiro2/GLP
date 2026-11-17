@@ -17,7 +17,7 @@ cat <<H
 %% ---------------------------------------------------------------------------
 %% The sGLP source of GSG's village simulation (programs/sglp/gsg), printed by
 %% genV.sh $V $DAYS $SEED $LOC $KEEN, in the term form the transformation reads, over the
-%% canonical platform of GSG as recorded, cascade/GSG/platform.glp and interface.glp.
+%% canonical platform of GSG as recorded, cascade/Friendship/platform.glp and interface.glp.
 %%
 %% It is CSSN's simulation of the social graph (programs/sglp/cssn/CSSN_sglp.glp; CSSN,
 %% Section 5) without the children.  The census: villages of ten households, a household of

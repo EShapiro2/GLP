@@ -1,0 +1,42 @@
+% GDS: Grassroots Directory Service --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GNA, a paper of the GSA project (Udi, 2026-11-08).  The paper, /Users/udi/Grassroots/GNA/main.tex, Section 6, prints it in its box and cites a clause as GDS:1.
+% Paper: GNA, GLP Networking API and Services, in preparation
+% Extends: GRV, Grassroots Rendezvous, GNA's (Rendezvous.txt beside this file), which extends GSV, Grassroots Services, which instantiates GnW, GSC's (programs/gsc/Guardians.txt): a directory is a service (Udi, 2026-11-10 13:52 UTC), and the invitation links it hands out are GRV's, the listed person's own, registered by them (GRV:2).
+% Defines: directory and listing, defined in the box after the declaration.  Rendezvous server and invitation link are defined with GRV.
+% Last changed: 2026-11-15, the Calculus's text adopted, at the branch Calculus 79ec48f, its Logic pragmas as mended there (first adopted at c475902), by calculus/MIGRATION.md, which Udi confirmed: the contract as the Calculus has it, its Logic pragmas after the clauses, and the Interface and Implementation pragmas keyed to its clauses' titles, their buttons its acts (GSA #6); 2026-11-11 (second), Contact gives the link as its web address (GRV; Udi, 2026-11-11, to GSA #4); 2026-11-11, Unlist on a line of its own, Dora's question belonging to List and List unlisted, the button line nearest above it (docs/speech-act-schemas-guide.md, item 7), since Dora guards no act of unlist (Udi, 2026-11-11, approving GSA #4; Code #27, 2026-11-10 21:46 UTC); 2026-11-10 (second), Listing asks the directory, 'Dora: Alice asks to be listed.' (Udi, 2026-11-10 21:14 UTC; Code #27, 20:42 UTC); 2026-11-10, on GSV: a directory is a service with a page every person can read, and Carol makes her service Dora a directory; the schemas written (Udi, 2026-11-10 13:52 UTC, approving GSA #3); 2026-11-08, written by GSA #2 Cowork from Udi's design (2026-11-08 07:06 UTC: a page at <address>/directory, listed by a verified email and possibly a name, unlisted people retrieved by email and name) his decision that the directory is a ward of its own (07:12 UTC), and the name and its own section, GDS (07:17 UTC); the links are the listed person's own, so GRV is untouched (07:16 UTC).
+% Schemas: Directory.glp beside this file, the full schemas, printed from the Logic pragmas by calculus/tools/adopt.py and never written by hand; a check holds it to what the tool prints.
+Directory
+Directory extends Rendezvous.
+A *directory* is a service with a page every person can read.
+Alice, Bob and Carol are persons, Dora a service.
+1. ■ Open directory: Carol may make her service Dora a directory.
+2. ■ Listing. List me: Alice may list herself with Dora by an email address of hers that Dora verified, with a name if she chooses, shown on Dora's page or not; her app then keeps Dora supplied with invitation links of hers. Delist me: Alice may delist herself.
+3. ■ Lookup: Bob may look Alice up, on Dora's page if she is shown there, and by her email address and name if not; Dora then gives Bob an invitation link of Alice's.
+Logic pragmas
+Directory extends Rendezvous.
+A *directory* is a service with a page every person can read.
+Alice, Bob and Carol are persons, Dora a service, Mail an email address, Name a name.
+1. ■ Open directory: Carol may make Dora a directory, provided Carol is a guardian of Dora.
+2. ■ Listing. List me: Alice may list with Dora by Mail under Name on its page, with the consent of Dora, provided Dora is a directory and Alice knows Dora. List me unshown: Alice may list with Dora by Mail under Name off its page, with the consent of Dora, provided Dora is a directory and Alice knows Dora. Dora consents having verified Mail as an email address of Alice. Alice lists with a name if she chooses, shown on Dora's page or not, and her app then keeps Dora supplied with invitation links of hers. Delist me: Alice may delist from Dora by Mail under Name on its page. Delist me unshown: Alice may delist from Dora by Mail under Name off its page.
+3. ■ Lookup: Bob may look Alice up on Dora's page, provided Bob knows Dora and Dora lists Alice by Mail under Name on its page. Lookup by address: Bob may look Alice up with Dora by address, provided Bob knows Dora and Dora lists Alice by Mail under Name off its page. Bob looks Alice up on Dora's page if she is shown there, and by her email address and name if not.
+Logic pragmas.
+Vocabulary: d is a directory = directory(d); d lists x by e under m on its page = lists_shown(d,x,e,m); d lists x by e under m off its page = lists_unshown(d,x,e,m); y holds an invitation link of x from d = holds_link(y,x,d).
+After x makes d a directory, which requires d is not a directory: d is a directory.
+After x lists with d by e under m on its page, which requires d does not list x by e under m on its page: d lists x by e under m on its page.
+After x lists with d by e under m off its page, which requires d does not list x by e under m off its page: d lists x by e under m off its page.
+After x delists from d by e under m on its page: no longer d lists x by e under m on its page.
+After x delists from d by e under m off its page: no longer d lists x by e under m off its page.
+After y looks x up on d's page: y holds an invitation link of x from d.
+After y looks x up with d by address: y holds an invitation link of x from d.
+Interface pragmas
+Look: 📇, network
+Open directory: Carol [Open directory]
+Listing: Alice [List me] <mail> <name> [List me unshown] <mail> <name>
+  Dora: Alice asks to be listed.
+  Alice [Delist me] <dora> [Delist me unshown] <dora>
+Lookup: Bob [Lookup] [Lookup by address]
+Implementation pragmas
+Listing: the directory verifies an email address by sending it a message with a link, which Alice opens.
+Listing, Lookup: Alice's app makes invitation links every so often, registers each with her rendezvous server (GRV:2) and gives them to Dora; Dora keeps a buffer of unexpired ones, at least one, and asks Alice's app for more by how often Alice is looked up, two when one is taken, and so on; a link given to Dora expires a day after it is made, so Alice's app renews them daily while it runs, and a lookup finds none when it has been off longer.
+Lookup: the directory's page is at <address>/directory; a person shown there is shown by name where they gave one and by email address otherwise, and a click on one is a lookup.
+Lookup: the link is given as its web address, which opens the Grassroots App, which redeems it (GRV:3).

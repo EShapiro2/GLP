@@ -1,2 +1,0 @@
-GDC extends Coins: holds
-GDC restricts Coins: holds

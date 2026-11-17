@@ -1,0 +1,3 @@
+Consumers' Cooperative instantiates Cooperative and Trading Company: holds
+Consumers' Cooperative restricts it (Cooperative and Trading Company): holds
+Consumers' Cooperative extends it (Cooperative and Trading Company): holds

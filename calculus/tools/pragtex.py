@@ -4,6 +4,8 @@
     python3 tools/pragtex.py        writes sections/contracts-pragmas.tex, the contracts in the order of Table 1
 """
 import os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import table
@@ -21,7 +23,7 @@ def tex(s):
 
 
 def box(name):
-    lines = [l.rstrip('\n') for l in open(os.path.join(ROOT, 'gr', name + '.txt'), encoding='utf-8') if l.strip()]
+    lines = [l.rstrip('\n') for l in open(os.path.join(ROOT, 'gr', NM.file_of(name) + '.txt'), encoding='utf-8') if l.strip()]
     out = [r'\begin{contractbox}{%s}' % tex(lines[0]), r'\raggedright']
     items = False
     for l in lines[1:]:

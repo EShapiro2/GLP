@@ -1,7 +1,0 @@
-E: Both paths (flat text)
-B:0 - | Alice, Bob and Carol are persons, Sum a number.
-B:1+C:1 ■ Pay free: Alice may no longer Alice holds Sum Carol-coins and Bob holds Sum Carol-coins, provided Alice knows Bob.
-C:0 - | Alice, Bob and Carol are persons, Sum a number.
-R:0 - | Alice, Bob and Carol are persons, Sum a number.
-E:0 - | Alice, Bob and Carol are persons, Sum a number.
-E:1 ■ Greet: Alice may Alice has greeted Bob.

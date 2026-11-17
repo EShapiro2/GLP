@@ -1,4 +1,0 @@
-GDAO: Grassroots DAO
-GDAO instantiates GCoop with DAO bylaws.
-GDAO:0 - | A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer, and delegate to the steward the admission of a member.
-GDAO:0 - | Orga is a DAO.

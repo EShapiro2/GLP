@@ -1,0 +1,12 @@
+Labelled Overlay
+Labelled Overlay extends and strengthens Overlay.
+A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice.
+Alice, Bob, Carol, Dave and Erin are persons, Erin is possibly any of the others; in clause 2 Carol is possibly Dave.
+1. ■ Labeled point friend: Alice may add a Dave-pointer to Bob, provided Alice and Bob are friends and Bob has a Dave-pointer to Erin.
+2. ■ Labeled point transitive: Alice may add a Dave-pointer to Carol, provided Alice knows Carol, Alice has a Dave-pointer to Bob and Bob has a Dave-pointer to Carol. Labeled point transitive friend: Alice may add a Dave-pointer to Carol, provided Alice knows Carol, Alice and Bob are friends and Bob has a Dave-pointer to Carol.
+3. ■ Labeled unpoint: Alice may remove her Dave-pointer to Carol. Labeled unpoint self: Alice may remove her Dave-pointer to Dave, provided Alice does not count Dave as a friend.
+4. ■ Friend pointers. Befriend: Friendship:1, and then Alice has a Bob-pointer to Bob and Bob has an Alice-pointer to Alice. Unfriend: Friendship:2, and then no longer Alice has a Bob-pointer to Bob and no longer Bob has an Alice-pointer to Alice.
+Logic pragmas.
+Vocabulary: x has a w-pointer to y = pointer(x,y,w).
+After x adds a w-pointer to y, which requires x does not have a w-pointer to y: x has a w-pointer to y.
+After x removes x's w-pointer to y: no longer x has a w-pointer to y.

@@ -1,5 +1,0 @@
-C: Base
-Vocabulary: x has signalled = s(x).
-After x signals: x has signalled.
-C:0 - | Alice is a person.
-C:1 ■ Signal: s(Alice) <- guarded by Alice.

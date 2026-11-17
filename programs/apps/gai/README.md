@@ -4,12 +4,12 @@ The app of GAI, accountable AI agents, as a mini-app of the Grassroots Super-App
 
 ## The contract
 
-GAI is GAI's contract, adopted from the Calculus.  Its clauses, its relation to GnW and GFP, its Logic pragmas and its Interface pragmas are `programs/gai/GAI.txt`, and nowhere else.  Its speech-act schemas are `programs/gai/GAI.glp`, the full schemas, printed by `calculus/tools/adopt.py GAI` from the Logic pragmas; `cascade/GAI/full-schemas.txt` prints them by the clauses they come from, and the checker's verdict is `cascade/GAI/verdict.txt`.
+GAI is GAI's contract, adopted from the Calculus.  Its clauses, its relation to GnW and GFP, its Logic pragmas and its Interface pragmas are `programs/gai/Agents.txt`, and nowhere else.  Its speech-act schemas are `programs/gai/Agents.glp`, the full schemas, printed by `calculus/tools/adopt.py Agents` from the Logic pragmas; `cascade/Agents/full-schemas.txt` prints them by the clauses they come from, and the checker's verdict is `cascade/Agents/verdict.txt`.
 
 ## The cascade
 
-1. The speech-act schemas, `programs/gai/GAI.glp`, and the checker's verdict on them, `programs/gsc`'s `check/2`.
-2. The canonical CVA platform of the schemas, `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GAI.glp and the pragmas of GAI.txt and of the contracts it is written from; `bash programs/apps/compile.sh --check` re-prints it and compares.
+1. The speech-act schemas, `programs/gai/Agents.glp`, and the checker's verdict on them, `programs/gsc`'s `check/2`.
+2. The canonical CVA platform of the schemas, `platform.vglp`, as `programs/vglp/cva/compiler` prints it from Agents.glp and the pragmas of Agents.txt and of the contracts it is written from; `bash programs/apps/compile.sh --check` re-prints it and compares.
 3. GLP: the canonical compilation compiles `platform.vglp` when the directory loads.
 4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/3`.
 

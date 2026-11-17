@@ -6,11 +6,11 @@
 %
 % The contracts the checker is for are their owners' and live with their
 % code, one copy each (claude.md "Sessions", the cascade rule; Coordination
-% Appendix C): GSC's are programs/gsc/GSG.glp and GSN.glp, the social
-% network of GSC, Section 3.3; GAI's programs/gai/GSNP.glp, the social
-% network with provenance, and programs/gai/GAI.glp; the currency's
+% Appendix C): GSC's are programs/gsc/Friendship.glp and Groups.glp, the social
+% network of GSC, Section 3.3; GAI's programs/gai/Provenance-Groups.glp, the social
+% network with provenance, and programs/gai/Agents.glp; the currency's
 % programs/currencies/coins/GC.glp (Appendix B), the child-safe social
-% network's programs/cssn/CSSN.glp and the federation's
+% network's programs/cssn/Children.glp and the federation's
 % programs/federation/GFWC.glp.  Each prints its term by contract_named/2 in
 % a REPL session on the file, and test_gsc.sh passes the term to check/2,
 % traceable_preds/2, compile_contract/2 and compile_schema_in/3.  A fixture that
@@ -34,7 +34,7 @@
 % The social graph as Section 3.3 printed it before the signed term (GSC
 % 63b301f): item(x, a, f), the item x by a as received from f.  A fixture, the
 % base of the variant below, sg_tri_cschema, since GSC's language admits no
-% signed term and the contract GSNP carries one (programs/gai/GSNP.glp); it
+% signed term and the contract GSNP carries one (programs/gai/Provenance-Groups.glp); it
 % certifies nothing of GSNP.
 procedure sg_plain(Contract).
 sg_plain([schema(befriend, [],
@@ -541,7 +541,7 @@ sg_refl_forbidden(S, reflexive([friend], C?)) :- befriend_own(own_forb, S?, C).
 % drafted it in Legal's inbox on 2026-08-15 and 2026-08-16 and as it was
 % brought to their paper on 2026-10-09 (send, parent_child, friend reflexive,
 % the five expanded schemas); CSSN has since revised the contract, and the
-% contract is programs/cssn/CSSN.glp, CSSN's, which certifies this
+% contract is programs/cssn/Children.glp, CSSN's, which certifies this
 % fixture of nothing.
 %
 % unfriend, child_unfriend, leave, child_leave and child_leave_2 each stand
@@ -958,7 +958,7 @@ procedure wd_listed_leaving(Declared).
 wd_listed_leaving(C?) :- wd_retire(Rt), gather_listed(retired, G), gather_enlist(E), wd_leaving_with(Rt?, [G?, E?], C).
 
 % ===========================================================================
-% GKK's introduce changed in one place (programs/gsc/GKK.glp; GSC, Section
+% GKK's introduce changed in one place (programs/gsc/Knowledge.glp; GSC, Section
 % 7.1: "introduce's role Alice requires knows(Bob) ... an atom of traceable
 % provenance naming the other role", and introduce "adds knows(c) at Bob, c
 % an argument of knows(c), which Alice requires")
@@ -1094,7 +1094,7 @@ uo_other([schema(establish, [],
 % and requires none" (Section 3.2): an atom marked - with the wildcard among
 % its arguments, any, or in place of the speech-act variable of a name term
 % among them, ext_any(Sigma) for Sigma.*, as GSN's unfriend writes it
-% (GSN.glp).  Each fixture below adds a schema to GSN, or changes GKK's
+% (Groups.glp).  Each fixture below adds a schema to GSN, or changes GKK's
 % establish, as its owner writes it.
 
 % --- negative: a cleared atom puts no edge in the role graph ---------------
@@ -2127,7 +2127,7 @@ nn_tag_loose(C?) :-
 % at Alice, adds sent(x, Bob) there, and adds item(sgn(x, Alice)) at Bob,
 % where friend(Alice) is required.  The checker's fixture, the base of
 % sg_sgn_loose below; the network with provenance is GSNP, GAI's contract,
-% programs/gai/GSNP.glp, which test_gsc.sh reads.
+% programs/gai/Provenance-Groups.glp, which test_gsc.sh reads.
 procedure sg_items(Contract).
 sg_items([schema(befriend, [],
        [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),

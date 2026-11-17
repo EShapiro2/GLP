@@ -13,12 +13,14 @@ white space is one space and the line is stripped; blank lines are left out.  Ne
 directory, or $GLP_DIR, and git; Python's standard library and nothing else.
 """
 import difflib, os, re, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GLP = os.environ.get('GLP_DIR') or next((d for d in (os.path.join(os.path.dirname(ROOT), 'GLP'), '/home/user/GLP') if os.path.isdir(d)), None)
 # The contracts renamed (Udi, 2026-11-16, to Code #33 and Calculus #8: "contract names that are not acronyms capitalised
 # not all caps"): their owners' files in GLP keep the old name until Code renames them at adoption.
-GLP_NAME = {'Agora': 'AGORA', 'Joint': 'JOINT', 'Stay': 'STAY', 'Lib': 'LIB', 'Rec': 'REC', 'Coins': 'GC', 'Bonds': 'GB'}
+GLP_NAME = NM.glp_name      # and the names of NAMES.txt (Udi, 2026-11-16): the first column, the name on GLP's main
 PRAGMAS = re.compile(r'^(Interface |Implementation |Logic )?[Pp]ragmas\b')
 
 
@@ -68,13 +70,14 @@ def main():
         sys.exit('owners.py: no clone of GLP beside this directory, and no $GLP_DIR')
     ref = ref_of(args)
     commit = git('rev-parse', '--short', ref).stdout.strip()
-    names = [l.split()[0] for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8') if l.strip()]
-    names += sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'rev')) if f.endswith('.txt') and not f.startswith('NOTES-') and f[:-4] not in names)      # a contract the cascade has not run yet (Notes, Shares)
-    owners = owner_files(ref)
-    owners.update({n: owners[o] for n, o in GLP_NAME.items() if o in owners and n not in owners})      # an owner's file under the old name
+    names = [NM.name_of(l.split()[0]) for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8') if l.strip()]
+    names += [n for n in NM.names_in(os.path.join(ROOT, 'rev')) if n not in names]      # a contract the cascade has not run yet (Notes, Shares)
+    files = owner_files(ref)
+    owners = {n: files.get(NM.file_of(n)) or files.get(GLP_NAME(n)) for n in names}      # the owner's file under its file name, or its name on main until Code renames it
+    owners = {n: o for n, o in owners.items() if o}
     rows, details, same, differ, none, starred = [], [], 0, 0, 0, 0
     for n in names:
-        ours = contract_lines(open(os.path.join(ROOT, 'rev', n + '.txt'), encoding='utf-8').read(), False)
+        ours = contract_lines(open(os.path.join(ROOT, 'rev', NM.file_of(n) + '.txt'), encoding='utf-8').read(), False)
         if n not in owners:
             none += 1
             rows.append('| %s | none in GLP | | | |' % n)

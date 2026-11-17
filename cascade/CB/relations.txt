@@ -1,3 +1,0 @@
-CB instantiates GBank: holds
-CB restricts it (GBank): holds
-CB extends it (GBank): holds

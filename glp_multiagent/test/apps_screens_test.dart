@@ -4,7 +4,7 @@
 ///
 /// The agent writes its view, `view(S, K)`, its machine state and the persons it knows, on construct 0 when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), drawn by `last_state`, the widget the platform declares for `Stream(Output)`.  The platform declares `Menu =::= social_menu` and `Approval =::= approval_sentence.` (`programs/apps/<app>/platform.vglp`, as vGLP's compiler prints it; GSNP's, GAI's and GC's apps declare them again in their `self.vglp`): the request question is drawn with the last view on construct 0 (vGLP e924f73, Section 6.2) as the app's tabs, Friends and, where the request type offers `create`, Groups, and, where it offers `mint`, Coins, and each approval question as one sentence and two buttons at the top of the tab it concerns (`lib/ui_runtime/named_widgets.dart`, `tab_screen.dart`), as GAI's task words them (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, and its sentence for a join at 11:35 UTC).  GKK's, GSG's and GSN's apps are compiled from contracts with pragmas, and their tabs are the lists the view names, each word on them the contract's (vGLP 1126f4f, Sections 5.4, 6.2 and 8).  Every act of a person at a phone is a tap or a keystroke on a control of the tabs, found by its key (`socialKey`, `tabKey`, `listTabKey`, `constructKey`): Join, Add, Befriend, Accept, End friendship, Send, Create, Add member and the rest; a scripted agent's acts are its scripted person's, as in the app's plays.  No term is hand-fed to the bridge or to the program.
 ///
-/// And CSSN's mini-app (`programs/cssn`), in the scenario of CSSN's app (CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app"): Alice, Bob, Carol and Dave, a conversation between each two, as CSSN's plays hand them (`programs/cssn/plays.glp`), one of them at their phone and the other three scripted by CSSN's person (`programs/cssn/person.glp`, the roles `fig_alice` to `fig_dave`), "each run has one live person, whose screen the figure shows" (the same); its screens written to `programs/cssn/figures/cssn-app-<n>.png`, n the figure's number of the screen.  CSSN's app is compiled from its contract and its pragmas, CSSN.txt's and those of the contracts it extends, so every word on its screens is the contract's (claude.md, "Sessions"; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, the buttons of CSSN's acts beside a child's row in Children, Child acquaint, Child befriend and Of age among them, and the questions of CSSN's pragmas, "Alice asks that Carol and your child Dave befriend.".
+/// And CSSN's mini-app (`programs/cssn`), in the scenario of CSSN's app (CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app"): Alice, Bob, Carol and Dave, a conversation between each two, as CSSN's plays hand them (`programs/cssn/plays.glp`), one of them at their phone and the other three scripted by CSSN's person (`programs/cssn/person.glp`, the roles `fig_alice` to `fig_dave`), "each run has one live person, whose screen the figure shows" (the same); its screens written to `programs/cssn/figures/cssn-app-<n>.png`, n the figure's number of the screen.  CSSN's app is compiled from its contract and its pragmas, Children.txt's and those of the contracts it extends, so every word on its screens is the contract's (claude.md, "Sessions"; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, the buttons of CSSN's acts beside a child's row in Children, Child acquaint, Child befriend and Of age among them, and the questions of CSSN's pragmas, "Alice asks that Carol and your child Dave befriend.".
 ///
 /// The screens are set in Roboto, the Material font, with MaterialIcons, both loaded from the Flutter SDK's own copies (`bin/cache/artifacts/material_fonts`), in the light theme.  The scenario runs on two kinds of phone ([Screens]):
 ///
@@ -27,6 +27,7 @@ import 'package:glp_multiagent/isolate_protocol.dart'
     show runtimeTermOf, screenTermOf;
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/look.dart';
+import 'package:glp_multiagent/ui_runtime/typed_before.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/manifest.dart';
@@ -884,6 +885,8 @@ void main() => appsScreens(Screens.flat(programsDir()));
 
 /// The scenario, the four apps' screens in their figures' order, on [screens]: here, and on the simulator (`integration_test/apps_screens_test.dart`).
 void appsScreens(Screens screens) {
+  // Each scenario starts with nothing typed before: the store of what a person typed is the app's, kept for its session (lib/ui_runtime/typed_before.dart).
+  setUp(TypedBefore.clear);
   // GKK's, GSG's, GSN's and GC's apps are compiled from their contracts with their pragmas, and every word on their screens is the contract's or one of the platform's four, yes, no, declined and unable (vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; Section 8): each tab a list the contract's pragmas name, Contacts, Friends, Groups and Coins, each button the label in brackets and each field the name in angle brackets, each question the sentence after them; a field no pragma names drawn by its type's name, as Meet's field for the peer's key, Peer (Section 6.2: "A construct family draws the label it is given, and the name of the type where it is given none").  Where a button is drawn is the request's widget term's (Section 6.2): beside each person or group the view lists, of an act that names one, and on the tab of its contract, of an act that names none, and Meet with a field for the key.
   testWidgets(
       'GKK\'s app on three phones: Alice establishes her identity; Bob asked '
@@ -1045,7 +1048,7 @@ void appsScreens(Screens screens) {
     // The group's row in a member's Groups, the atom member(n, a) of their state, its name and its leader.
     const group = 'member($friends, alice)';
 
-    // Five tabs, the lists of GKK's, GSG's and GSN's pragmas: Contacts, Friends, Groups, Messages, "Messages: the messages Alice received.", and Posts, "Posts: the posts Alice received in her groups." (programs/gsc/GSN.txt at GLP 1aab4307), the predicates received and received_in.
+    // Five tabs, the lists of GKK's, GSG's and GSN's pragmas: Contacts, Friends, Groups, Messages, "Messages: the messages Alice received.", and Posts, "Posts: the posts Alice received in her groups." (programs/gsc/Groups.txt at GLP 1aab4307), the predicates received and received_in.
     expect(run.listNamed(alice, 'knows', 'Contacts'), findsOneWidget);
     expect(run.listNamed(alice, 'friend', 'Friends'), findsOneWidget);
     expect(run.listNamed(alice, 'member', 'Groups'), findsOneWidget);
@@ -1626,7 +1629,7 @@ void appsScreens(Screens screens) {
       'item on his Contacts tab and sending it to Eve by Message, Eve, Carol '
       'and Bob forwarding it by Forward from their Friends tabs, and the '
       'screens of Bob\'s Items and Friends tabs and Fay\'s Items tab', (tester) async {
-    // GSNP's app (programs/apps/gsnp), compiled down the cascade from GSNP.glp (programs/gai/GSNP.glp), an instance of GnW, and its pragmas, GSNP.txt with those of GSN, GFP, GAI, GnW, GSG and GKK, which it is written from: six tabs, Contacts, Friends, Groups, Guardianships, Items and Known AI agents (programs/apps/gsnp/platform.vglp, tabs/1), "Known AI agents: the attestation records Alice holds." (GAI.txt)
+    // GSNP's app (programs/apps/gsnp), compiled down the cascade from Provenance-Groups.glp (programs/gai/Provenance-Groups.glp), an instance of GnW, and its pragmas, Provenance-Groups.txt with those of GSN, GFP, GAI, GnW, GSG and GKK, which it is written from: six tabs, Contacts, Friends, Groups, Guardianships, Items and Known AI agents (programs/apps/gsnp/platform.vglp, tabs/1), "Known AI agents: the attestation records Alice holds." (Agents.txt)
     final run = await _Run.start(tester, screens, 'gsnp',
         chain: const ['dan', 'eve', 'carol', 'bob', 'fay']);
     final dan = run.person('dan');
@@ -1819,7 +1822,7 @@ void appsScreens(Screens screens) {
     // Befriend (GSG:1), Bob, once he knows Alf, offering Alice friendship and Alice answering yes.
     await run.befriend(bob, alice);
 
-    // Agent befriend Alf and Bob (GnW:3): (gai-c) Alice proposing that Alf befriend Bob, GAI's "Alice [Agent befriend]", agent_befriend requiring friend(bob) at her, its form open in Bob's row of her Friends tab, the row filling Bob, Alf, the one AI agent she operates, picked, and the button; (gai-d) Bob asked to befriend Alf, an AI agent of Alice, "Alice asks that you and her AI agent Alf befriend." (GAI.txt, "Ward and person"), at the top of his first tab; Alf's program and Bob answer yes.
+    // Agent befriend Alf and Bob (GnW:3): (gai-c) Alice proposing that Alf befriend Bob, GAI's "Alice [Agent befriend]", agent_befriend requiring friend(bob) at her, its form open in Bob's row of her Friends tab, the row filling Bob, Alf, the one AI agent she operates, picked, and the button; (gai-d) Bob asked to befriend Alf, an AI agent of Alice, "Alice asks that you and her AI agent Alf befriend." (Agents.txt, "Ward and person"), at the top of his first tab; Alf's program and Bob answer yes.
     await run.list(alice, 'friend');
     await run.top(alice);
     await run.tap(alice, run.control(alice, 'act:ai_agent_befriend:bob'));
@@ -1891,7 +1894,7 @@ void appsScreens(Screens screens) {
       'GAI\'s paper in its order, Alice creating Alf with her attestation, '
       'Bob proposing Alf\'s acquaintance with him, Alice proposing its '
       'befriending him, and Alice retiring it, Alf\'s program scripted', (tester) async {
-    // GAI's app (programs/apps/gai), compiled from GAI.glp, an instance of GnW composed with GFP, and GAI.txt with the pragmas of GFP, GnW, GSG and GKK (programs/apps/gai/platform.vglp, tabs/1): five tabs, Contacts, Friends, Guardianships, Items and Known AI agents, "Known AI agents: the attestation records Alice holds." (GAI.txt); no screen of it goes in GAI's paper (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC).  The play is the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The atoms the acts of the example add and delete"), in the order of play_agents of programs/apps/gai (programs/apps/gai/person.glp and README.md, at GAI 6008f30; GAI #14, Code_inbox.md, 2026-11-13 00:47 UTC): by GnW:3 Bob proposes that Alf and he know each other and Alice proposes their friendship, and neither sees on their own screen what the other's act did, so each proposes on what their own screen shows.  Establish Alice and Bob; Alice signs the attestation y and enters Alf with it; Alice asks to come to know Bob; Bob, once he knows Alice, proposes Agent acquaint, Alf answering yes; Bob, once he knows Alf, offers Alice friendship, Alice answering yes; Alice, once Bob is her friend, proposes Agent befriend, Alf and Bob answering yes; and Alice, once it has ended, retires Alf, which ends Alf's friendships.  No attempt is refused.  Alf's item, which it signs and sends to Bob, is GSNP's, the full platform, above; there is no unfriend.
+    // GAI's app (programs/apps/gai), compiled from Agents.glp, an instance of GnW composed with GFP, and Agents.txt with the pragmas of GFP, GnW, GSG and GKK (programs/apps/gai/platform.vglp, tabs/1): five tabs, Contacts, Friends, Guardianships, Items and Known AI agents, "Known AI agents: the attestation records Alice holds." (Agents.txt); no screen of it goes in GAI's paper (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC).  The play is the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The atoms the acts of the example add and delete"), in the order of play_agents of programs/apps/gai (programs/apps/gai/person.glp and README.md, at GAI 6008f30; GAI #14, Code_inbox.md, 2026-11-13 00:47 UTC): by GnW:3 Bob proposes that Alf and he know each other and Alice proposes their friendship, and neither sees on their own screen what the other's act did, so each proposes on what their own screen shows.  Establish Alice and Bob; Alice signs the attestation y and enters Alf with it; Alice asks to come to know Bob; Bob, once he knows Alice, proposes Agent acquaint, Alf answering yes; Bob, once he knows Alf, offers Alice friendship, Alice answering yes; Alice, once Bob is her friend, proposes Agent befriend, Alf and Bob answering yes; and Alice, once it has ended, retires Alf, which ends Alf's friendships.  No attempt is refused.  Alf's item, which it signs and sends to Bob, is GSNP's, the full platform, above; there is no unfriend.
     final run = await _Run.start(tester, screens, 'gai',
         chain: const ['alice', 'alf', 'bob'],
         pairs: const [('alice', 'alf'), ('alf', 'bob'), ('bob', 'alice')],
@@ -1980,7 +1983,7 @@ void appsScreens(Screens screens) {
     run.finish();
   }, timeout: Timeout.none);
 
-  // GFF's app (programs/apps/gff), compiled down the cascade from GFF.glp and its pragmas, GFF.txt, with those of GDO-L, GDO, GSG and GKK, which it is written from (programs/apps/gff/README.md): five tabs, Contacts, Friends, Pointing, Posts and Feeds, and the buttons Point, Unpoint, Labeled point, Labeled unpoint and Post, GFF's "[Post] <item>".  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp and README.md, "Running it", steps 1 to 8), each act a tap or a picked or typed field.
+  // GFF's app (programs/apps/gff), compiled down the cascade from Feeds.glp and its pragmas, Feeds.txt, with those of GDO-L, GDO, GSG and GKK, which it is written from (programs/apps/gff/README.md): five tabs, Contacts, Friends, Pointing, Posts and Feeds, and the buttons Point, Unpoint, Labeled point, Labeled unpoint and Post, GFF's "[Post] <item>".  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp and README.md, "Running it", steps 1 to 8), each act a tap or a picked or typed field.
   testWidgets(
       'GFF\'s app on four phones, the play of GFF\'s feeds: the friendships, '
       'each friend with a pointer to the other; (1) Alice\'s Posts after '
@@ -2168,7 +2171,7 @@ void appsScreens(Screens screens) {
     run.finish();
   }, timeout: Timeout.none);
 
-  // CSSN's app is compiled from its contract and its pragmas, CSSN.txt and those of the contracts it extends, GKK, GSG, GSN and GnW (programs/cssn/CSSN.txt; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, "Children: the children Alice is parenting."; each button the label in brackets, Enter, Child acquaint, Child befriend, Child adult befriend, Of age, Child join, Child unfriend, Child leave, Child close and Parent unfriend; each question the sentence of the role asked, "Alice asks that Carol and your child Dave befriend."; and the answers yes and no.  Enter is a meeting schema, enter(p?, r?): a parent types the child's key into its field, CSSN's "<child>", and the request's hello asks the child's phone the question of the child's role, "Alice asks to be your parent." (Section 5.4, "The compilation").  The scenario is CSSN's Figure 3's (CSSN, Section 4.6, "In the Grassroots App").
+  // CSSN's app is compiled from its contract and its pragmas, Children.txt and those of the contracts it extends, GKK, GSG, GSN and GnW (programs/cssn/Children.txt; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, "Children: the children Alice is parenting."; each button the label in brackets, Enter, Child acquaint, Child befriend, Child adult befriend, Of age, Child join, Child unfriend, Child leave, Child close and Parent unfriend; each question the sentence of the role asked, "Alice asks that Carol and your child Dave befriend."; and the answers yes and no.  Enter is a meeting schema, enter(p?, r?): a parent types the child's key into its field, CSSN's "<child>", and the request's hello asks the child's phone the question of the child's role, "Alice asks to be your parent." (Section 5.4, "The compilation").  The scenario is CSSN's Figure 3's (CSSN, Section 4.6, "In the Grassroots App").
   testWidgets(
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Alice at her '
       'phone: (1) her Children tab, Carol her child with the buttons of the '
@@ -2559,7 +2562,7 @@ void appsScreens(Screens screens) {
     expect(run.control(carol, 'atom:dave'), findsOneWidget);
     expect(run.control(carol, 'atom:bob'), findsNothing);
     expect(run.control(carol, 'act:child_end:dave'), findsOneWidget);
-    // The rows in the order of her state, the newest first: Dave, then Alice; Child message beside each, and Child end beside Dave alone: a ward is not offered the button to end a friendship with her guardian (GnW.txt, Ward end; CSSN.txt, the menu of programs/cssn/platform.vglp), so none beside Alice, her parent.
+    // The rows in the order of her state, the newest first: Dave, then Alice; Child message beside each, and Child end beside Dave alone: a ward is not offered the button to end a friendship with her guardian (Guardians.txt, Ward end; Children.txt, the menu of programs/cssn/platform.vglp), so none beside Alice, her parent.
     expect(run.texts(carol), containsAllInOrder(['Friends', 'Dave', 'Alice']));
     for (final q in ['dave', 'alice']) {
       expect(run.control(carol, 'act:child_message:$q'), findsOneWidget,
@@ -2569,7 +2572,7 @@ void appsScreens(Screens screens) {
     expect(run.control(carol, 'act:child_end:alice'), findsNothing);
     run.plain(carol);
     await run.shoot(carol, 'cssn-app-5.png');
-    // Carol ends the friendship with Dave, her own act, Child end beside Dave, child_end(carol, dave) (CSSN.txt, "Carol [Child end]"): nobody is asked.
+    // Carol ends the friendship with Dave, her own act, Child end beside Dave, child_end(carol, dave) (Children.txt, "Carol [Child end]"): nobody is asked.
     await run.tap(carol, run.control(carol, 'act:child_end:dave'));
     expect(carol.questions('approval'), isEmpty);
     expect(carol.atoms, unorderedEquals([

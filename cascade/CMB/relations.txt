@@ -1,3 +1,0 @@
-CMB instantiates GBank: holds
-CMB restricts it (GBank): holds
-CMB extends it (GBank): holds

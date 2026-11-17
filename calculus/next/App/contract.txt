@@ -1,0 +1,2 @@
+App
+App composes Encounters with AppStore and Directory.

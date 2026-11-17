@@ -14,7 +14,7 @@
 #   H - retired (old-generation CSSN modules); CSSN is Section K
 #   I - self.glp Procedure Tests (shared procs, shadowing, local shadow, type error)
 #   J - CSSG v2 Modules (child_agent with parent(X) output keys)
-#   K - CSSN, the child-safe social network (programs/cssn): the canonical platform of CSSN.glp and the village
+#   K - CSSN, the child-safe social network (programs/cssn): the canonical platform of Children.glp and the village
 #   L - Dynamic Module Dispatch Tests (activate + M # goal)
 #   M - Multi-Isolate (madGLP) Tests (dart test, one isolate per agent; run in Section Q)
 #   N - Currencies Modules (project-directory loading, plays 1-12)
@@ -2623,8 +2623,8 @@ fi  # Section I
 if _section K; then
 # =============================================================================
 # Section K: the child-safe social network (programs/cssn), CSSN Section 4:
-# its program is the canonical CVA platform of its contract, programs/cssn/
-# CSSN.glp (CSSN Appendix B.2), which vGLP's compiler prints, platform.vglp
+# its program is the canonical CVA platform of its contract, Children,
+# programs/cssn/Children.glp (CSSN Appendix B.2), which vGLP's compiler prints, platform.vglp
 # (programs/cssn/compile.sh), wrapped as a mini-app of the Grassroots
 # Super-App by the entry miniapp/3 (miniapp.glp, the same file as the apps'),
 # certified; and the village of CSSN Section 4.6, "Village Demonstration"
@@ -2641,36 +2641,35 @@ echo ""
 
 CSSN_DIR="$GLP_DIR/programs/cssn"
 
-# The contract's act schemas (CSSN Appendix C.2), programs/cssn/CSSN.glp, in
-# the term form programs/gsc reads (CSSN.glp at a261cb74, its comments at
-# 89e11f96, CSSN #9 Cowork): GSC's verdict on it, by the conditions for a
+# The contract's act schemas (CSSN Appendix C.2), programs/cssn/Children.glp,
+# in the term form programs/gsc reads, printed by calculus/tools/adopt.py: GSC's verdict on it, by the conditions for a
 # contract with wards (GAI ddf0a33, sections/wards.tex; CSSN, Appendix B.4):
 # "The marks are child, its guardianship (child, identity, parent,
 # parenting), its leaving mark retired, the introductory act acquaint, which
 # adds knows, and the relay acts child_acquaint and child_acquaint_2, by which GSC's
 # checker certifies the contract syntactically grassroots with wards"
-# (CSSN.glp), with traceable provenance and volition.  The platform committed
+# (CSSN, Appendix B.4), with traceable provenance and volition.  The platform committed
 # in programs/cssn is what the compiler prints from it (compile.sh --check)
-# and the platform of the record of the cascade on CSSN.
-echo "--- CSSN contract, GSC's verdict, the platform ---"
+# and the platform of the record of the cascade on Children.
+echo "--- Children contract, GSC's verdict, the platform ---"
 k_contract=$(bash "$CSSN_DIR/compile.sh" --check 2>&1; echo "exit $?")
-check "CSSN contract: GSC gives a verdict" "verdict: " "$k_contract"
-check "CSSN contract: syntactically grassroots with wards, acquaint the introductory act, child the mark, its guardianship" "verdict: syntactically_grassroots_with_wards(acquaint, \[child\], \[guardianship(child, parent, has_parent)\], " "$k_contract"
-check "CSSN contract: ... child_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(child_acquaint, " "$k_contract"
-check "CSSN contract: ... children_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(children_acquaint, " "$k_contract"
-check "CSSN contract: ... identity and person the atoms its introductory act requires" "verdict: syntactically_grassroots_with_wards(.*, \[identity, person\])$" "$k_contract"
-check_not "CSSN contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
-check_not "CSSN contract: it satisfies volition" "volition(" "$k_contract"
-check_not "CSSN contract: it is not malformed" "malformed(" "$k_contract"
+check "Children contract: GSC gives a verdict" "verdict: " "$k_contract"
+check "Children contract: syntactically grassroots with wards, acquaint the introductory act, child the mark, its guardianship" "verdict: syntactically_grassroots_with_wards(acquaint, \[child\], \[guardianship(child, parent, has_parent)\], " "$k_contract"
+check "Children contract: ... child_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(child_acquaint, " "$k_contract"
+check "Children contract: ... children_acquaint a relay act" "verdict: syntactically_grassroots_with_wards(.*relay(children_acquaint, " "$k_contract"
+check "Children contract: ... identity and person the atoms its introductory act requires" "verdict: syntactically_grassroots_with_wards(.*, \[identity, person\])$" "$k_contract"
+check_not "Children contract: its predicates have traceable provenance" "untraceable(" "$k_contract"
+check_not "Children contract: it satisfies volition" "volition(" "$k_contract"
+check_not "Children contract: it is not malformed" "malformed(" "$k_contract"
 # The canonical CVA platform of the contract (vGLP a890465, Section 5.4, "Act schemas as local specifications": "the listed roles of a schema have one base, which is its only guarding role or, if it is not a guarding role, its first role"): child_close(r, p?, r[listed(*, n)] ; n), its listed role based at r, its first role, which does not guard, compiles, r the opener of the part p guards (vGLP #16 Cowork to Code, 2026-10-19 15:57 UTC, items 1 and 5).
-check "CSSN contract: compiled to its canonical CVA platform, platform.vglp as the compiler prints it" "^platform.vglp: as printed$" "$k_contract"
-check "CSSN contract: compile.sh --check exits 0" "^exit 0$" "$k_contract"
-# CSSN, Section 4.6.1, "The program": compiled "with knows its introduction predicate" (CSSN.glp, introduction_named(cssn, introduction(knows)), after GKK).
-check "CSSN contract: compiled with knows its introduction predicate" "^introduction: introduction(knows)$" "$k_contract"
-if cmp -s "$CSSN_DIR/platform.vglp" "$GLP_DIR/cascade/CSSN/platform.vglp"; then
-    _check_pass "CSSN: platform.vglp is the platform of the recorded run of the cascade on CSSN"
+check "Children contract: compiled to its canonical CVA platform, platform.vglp as the compiler prints it" "^platform.vglp: as printed$" "$k_contract"
+check "Children contract: compile.sh --check exits 0" "^exit 0$" "$k_contract"
+# CSSN, Section 4.6.1, "The program": compiled "with knows its introduction predicate" (Children.glp, introduction_named(children, introduction(knows)), after Knowledge).
+check "Children contract: compiled with knows its introduction predicate" "^introduction: introduction(knows)$" "$k_contract"
+if cmp -s "$CSSN_DIR/platform.vglp" "$GLP_DIR/cascade/Children/platform.vglp"; then
+    _check_pass "CSSN: platform.vglp is the platform of the recorded run of the cascade on Children"
 else
-    _check_fail "CSSN: platform.vglp is the platform of the recorded run of the cascade on CSSN" "programs/cssn/platform.vglp differs from cascade/CSSN/platform.vglp"
+    _check_fail "CSSN: platform.vglp is the platform of the recorded run of the cascade on Children" "programs/cssn/platform.vglp differs from cascade/Children/platform.vglp"
 fi
 if cmp -s "$GLP_DIR/programs/apps/gsg/miniapp.glp" "$CSSN_DIR/miniapp.glp"; then
     _check_pass "CSSN: miniapp.glp is the same file as the apps'"
@@ -4020,6 +4019,15 @@ echo ""
 # -----------------------------------------------------------------------------
 echo "--- The canonical CVA platform of an act-schema contract ---"
 CVA="$GLP_DIR/programs/vglp/cva"
+# The names of the contracts are those of the table of calculus/NAMES.txt and nothing else ("How a reader knows a name: a name is one of the names of this table and nothing else"), which pragmas.sh and compile.sh read; the fixtures of this section are named in a table of the same form, the table of calculus/NAMES.txt and a row for each fixture, which CONTRACT_NAMES names for this section ("A test may add made-up contracts: rows of the same form after the table's, in a table of its own that it builds from this one", calculus/NAMES.txt).  A row has the table's columns, four, or five where the table has "row and atom on main" (Calculus-3 d15a5308), a fixture's atom on main its atom, since it is not renamed.
+CVA_NAMES=$(mktemp)
+cat "$GLP_DIR/calculus/NAMES.txt" > "$CVA_NAMES"
+cva_cols=$(awk -F'|' '{ x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x) } x == "name on main" { print NF; exit }' "$CVA_NAMES")
+for cva_x in XA XB XB-L XB2 XC XC2 XD XE XG XG-L XH XI XJ XK XL XLF XLI XLX XM XN XNONE XO XP XQ XR XS XT XU XV XVB XVE XVF XVO XVT XW; do
+    cva_a=$(printf '%s' "$cva_x" | tr 'A-Z-' 'a-z_')
+    if [ "$cva_cols" = 5 ]; then printf '%s | %s | %s | %s | %s\n' "$cva_x" "$cva_x" "$cva_x" "$cva_a" "$cva_a"; else printf '%s | %s | %s | %s\n' "$cva_x" "$cva_x" "$cva_x" "$cva_a"; fi >> "$CVA_NAMES"
+done
+export CONTRACT_NAMES="$CVA_NAMES"
 
 # Guarded: set -e would end the run without totals on a red compile.sh.
 cva_print=$(bash "$CVA/compile.sh" --check 2>&1 || true)
@@ -4329,19 +4337,19 @@ check "CVA compiler, text: ... a platform printed (twin)" "the canonical CVA pla
 
 # The pragmas of a contract that extends another (vGLP 40f8444, Section 5.4, "The contract's words", its last sentence: "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its line replaces the inherited one"): GAI's GSNP writes its own [Message] line, which replaces GSN's.
 # GSNP.glp prints its own contract since GAI adopted it from the Calculus (GAI 6e426c50), contract_named(gsnp, ...) in the clause syntax, sas/7: term.sh prints it, and pragmas.sh takes it as GSC's reader reads it, as_read/2 of programs/gsc, with its roles' names, as cascade.sh and compile.sh give it (GnW's Decider and Codecider are roles of its schemas, which the reading names).
-cva_gsnp_term=$(bash "$CVA/compiler/term.sh" "$GLP_DIR/programs/gai/GSNP.glp" gsnp 2>&1)
+cva_gsnp_term=$(bash "$CVA/compiler/term.sh" "$GLP_DIR/programs/gai/Provenance-Groups.glp" provenance_groups 2>&1)
 cva_gsnp_read=$(printf '%s\n:limit 10000000\nas_read(%s, R).\n:quit\n' "$GLP_DIR/programs/gsc/" "$cva_gsnp_term" | "$REPL_RUN" 2>&1 | sed -e 's/^\(GLP> \)*//' | grep '^R = ' | head -1 | sed -e 's/^R = //')
-cva_gsnp_pragmas=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "$cva_gsnp_read" 2>&1 || true)
+cva_gsnp_pragmas=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/Provenance-Groups.txt" "$cva_gsnp_read" 2>&1 || true)
 # The term from a file, @<file>: a term over 128 KB cannot be an argument of a command on Linux (Calculus #6 and Helper #8, 2026-11-15 22:48 UTC: WC's and SC's terms).
 cva_tf=$(mktemp)
 printf '%s\n' "$cva_gsnp_read" > "$cva_tf"
-cva_gsnp_pragmas_f=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "@$cva_tf" 2>&1 || true)
+cva_gsnp_pragmas_f=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/Provenance-Groups.txt" "@$cva_tf" 2>&1 || true)
 if [ -n "$cva_gsnp_pragmas" ] && [ "$cva_gsnp_pragmas" = "$cva_gsnp_pragmas_f" ]; then _check_pass "CVA pragmas: the term read from a file, @<file>, gives what the term as an argument gives (GSNP.txt)"; else _check_fail "CVA pragmas: the term read from a file, @<file>, gives what the term as an argument gives (GSNP.txt)" "the two outputs differ"; fi
 head -c 200000 /dev/zero | tr '\0' ' ' >> "$cva_tf"
-cva_gsnp_pragmas_b=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "@$cva_tf" 2>&1 || true)
+cva_gsnp_pragmas_b=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/Provenance-Groups.txt" "@$cva_tf" 2>&1 || true)
 if [ "$cva_gsnp_pragmas" = "$cva_gsnp_pragmas_b" ]; then _check_pass "CVA pragmas: ... and so does a file of over 128 KB"; else _check_fail "CVA pragmas: ... and so does a file of over 128 KB" "the two outputs differ"; fi
 rm -f "$cva_tf"
-check "CVA pragmas: GSNP's [Message] line replaces GSN's, the lines matched by button (GSNP.txt)" "^GSN: Message: Alice \[Message\] <text>: replaced by the line of GSNP.txt with a button of the same name$" "$cva_gsnp_pragmas"
+check "CVA pragmas: GSNP's [Message] line replaces GSN's, the lines matched by button (GSNP.txt)" "^Groups: Message: Alice \[Message\] <text>: replaced by the line of Provenance-Groups.txt with a button of the same name$" "$cva_gsnp_pragmas"
 # An instance's own names for the schemas of its base (GSC 22605d6, Section 8, Definition Parametric contract: "An instantiation may also write names of its own for schemas of the contract, a different one for each, so that an act bears the name its instance gives it"; Code #27, Cloud-vGLP_inbox.md, 2026-11-10 20:39 UTC, 2): XI, instance_named(xi, xb, [ward = child, ward_link = child_link], []), writing no line of its own, has XB's [Ward link] as [Child link], the act child_link (names); and without the bindings the button names no act (bare).
 cva_in=$(mktemp -d)
 printf '%s\n' 'XB: Base' 'Alice is a person.' '1. ■ Link. Alice may link.' 'Pragmas' 'Links: the links Alice holds.' 'Link: Alice [Ward link]' > "$cva_in/XB.txt"
@@ -4410,6 +4418,45 @@ check "CVA pragmas: a first line with an instantiation's words after with, and r
 check "CVA pragmas: ... two contracts instantiated, and them (firstline)" "^XJ.txt XK.txt XL.txt $" "$cva_pa_l"
 check "CVA pragmas: ... extends, restricts and strengthens two contracts (firstline)" "^XJ.txt XK.txt XM.txt $" "$cva_pa_m"
 check "CVA pragmas: ... relaxes, the Calculus's sixth relation, as GC's 'GC relaxes and extends GN.' (firstline; Code #33, 2026-11-16 16:50 UTC)" "^XJ.txt XR.txt $" "$cva_pa_r"
+# The names of the contracts (calculus/NAMES.txt: "How a reader knows a name: a name is one of the names of this table and nothing else.  Match the known names longest first, so that \"Community Bank restricts Bank and extends Coins.\" names Community Bank, Bank and Coins, and \"Trading Company and Bank\" two contracts"; "The file name is the name with a hyphen for each space and no apostrophe"): a first line naming a contract of two words and the two of one word in it, each found by its file name (names2); a contract of two words and one of one word joined by and, the name with an apostrophe read and its file found without it (names2_and); a first line in the names of the first column, as on main (names2_main); a word in neither column, after a relation and first in the line, refused (names2_none, names2_lead); and a citation of a clause of a contract of two words, Community Bank:1, naming no person in a contract with no declaration of names, so that a question naming the Bank is text (names2_cite).
+cva_nm=$(mktemp -d)
+printf '%s\n' 'Bank' 'Alice is a person.' '1. ■ Open: Alice may open an account.' > "$cva_nm/Bank.txt"
+printf '%s\n' 'Coins' 'Alice is a person.' '1. ■ Mint: Alice may mint coins.' > "$cva_nm/Coins.txt"
+printf '%s\n' 'Trading Company' 'Alice is a person.' '1. ■ Trade: Alice may trade.' > "$cva_nm/Trading-Company.txt"
+printf '%s\n' 'Community Bank' 'Community Bank restricts Bank and extends Coins.' '1. ■ Leave: Community Bank:1, only if Alice and Bob agree.' 'Pragmas' 'Left: the banks Alice left.' 'Leave: Alice [Leave]' '  Bob: Alice leaves the Bank.' > "$cva_nm/Community-Bank.txt"
+printf '%s\n' "Workers' Cooperative" "Workers' Cooperative extends Trading Company and Bank." 'Alice is a person.' > "$cva_nm/Workers-Cooperative.txt"
+printf '%s\n' 'GBank' 'Alice is a person.' '1. ■ Open: Alice may open an account.' > "$cva_nm/GBank.txt"
+printf '%s\n' 'CB: Community Bank' 'CB restricts GBank and extends Coins.' 'Alice is a person.' > "$cva_nm/CB.txt"
+printf '%s\n' 'Community Bank' 'Community Bank restricts Bank and extends Coinz.' 'Alice is a person.' > "$cva_nm/None.txt"
+printf '%s\n' 'Comunity Bank' 'Comunity Bank restricts Bank.' 'Alice is a person.' > "$cva_nm/Lead.txt"
+cva_nm_two=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Community-Bank.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_and=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Workers-Cooperative.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_main=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/CB.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_none=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/None.txt" 2>&1; echo "exit $?")
+cva_nm_lead=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Lead.txt" 2>&1; echo "exit $?")
+cva_nm_cite=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$cva_nm/Community-Bank.txt" "[schema(leave, ['Alice', 'Bob'], [], [rs(guarded, [atom(left, [role(2)])], [], [atom(member, [role(2)])], [atom(left, [role(2)])]), rs(guarded, [], [], [], [])])]" 2>&1; echo "exit $?")
+# The same first lines read by a table of the other form: the table of this section with its lines of four columns given a fifth, the row and atom on main, or its lines of five given four, so that pragmas.sh reads a table of four columns and of five alike (calculus/NAMES.txt, Calculus-3 d15a5308: "The fifth column is the row and atom on main today, before the renaming") (names3).
+cva_nm_t=$(mktemp)
+awk -F'|' -v OFS='|' '{ x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x) } x == "name on main" { f = 1; if (NF == 4) { print $0 " | row and atom on main"; next } } f && NF == 4 { a = tolower(x); gsub(/[^a-z0-9]/, "_", a); print $0 " | " a; next } f && NF == 5 { print $1 OFS $2 OFS $3 OFS $4; next } { print }' "$CVA_NAMES" > "$cva_nm_t"
+cva_nm_t_cols=$(awk -F'|' '{ x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x) } x == "name on main" { print NF; exit }' "$cva_nm_t")
+cva_nm3_two=$(CONTRACT_NAMES="$cva_nm_t" bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Community-Bank.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm3_main=$(CONTRACT_NAMES="$cva_nm_t" bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/CB.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+rm -f "$cva_nm_t"
+rm -rf "$cva_nm"
+check "CVA pragmas: the table of the other form, of four columns where this section's has five and of five where it has four (names3)" "^[45]$" "$cva_nm_t_cols"
+check_not "CVA pragmas: ... and not of the columns of this section's table (names3)" "^$cva_cols$" "$cva_nm_t_cols"
+check "CVA pragmas: ... Community Bank, Bank and Coins found by it (names3)" "^Bank.txt Coins.txt Community-Bank.txt $" "$cva_nm3_two"
+check "CVA pragmas: ... CB, GBank and Coins, names of the first column, found by it (names3)" "^GBank.txt Coins.txt CB.txt $" "$cva_nm3_main"
+check "CVA pragmas: a first line naming Community Bank, a name of two words, read longest first, and Bank and Coins in it, each found by its file name (names2)" "^Bank.txt Coins.txt Community-Bank.txt $" "$cva_nm_two"
+check "CVA pragmas: ... Trading Company and Bank, two contracts, after Workers' Cooperative, its file found without the apostrophe (names2_and)" "^Trading-Company.txt Bank.txt Workers-Cooperative.txt $" "$cva_nm_and"
+check "CVA pragmas: ... a first line in the names of the first column, CB restricts GBank and extends Coins, as on main (names2_main)" "^GBank.txt Coins.txt CB.txt $" "$cva_nm_main"
+check "CVA pragmas: ... a word in neither column after a relation refused, named (names2_none)" "names no contract at \"Coinz\"" "$cva_nm_none"
+check_not "CVA pragmas: ... and pragmas.sh does not exit 0 (names2_none)" "^exit 0$" "$cva_nm_none"
+check "CVA pragmas: ... a first line whose first words are in neither column refused, named (names2_lead)" "names no contract at \"Comunity Bank\", no name of calculus/NAMES.txt" "$cva_nm_lead"
+check_not "CVA pragmas: ... and pragmas.sh does not exit 0 (names2_lead)" "^exit 0$" "$cva_nm_lead"
+check "CVA pragmas: a citation of a clause of a contract of two words, Community Bank:1, names no person, so the question naming the Bank is text (names2_cite)" "act('leave', '\"Leave\"', \[\], said(\[\[\], \[person(1), text('\" leaves the Bank.\"')\]\]), '\"Left\"', by(\[1\]))" "$cva_nm_cite"
+check "CVA pragmas: ... the contract shown by its name, Community Bank, and not by its file name (names2_cite)" "^Community Bank: Leave: Alice \[Leave\]: fields none$" "$cva_nm_cite"
+check "CVA pragmas: ... and pragmas.sh exits 0 (names2_cite)" "^exit 0$" "$cva_nm_cite"
 # A person who must consent (vGLP, Section 5.4, "The contract's words": "A clause may say that a person, or a ward, must consent to its act: they are a guard of the act, so it is never taken against them, and they are not asked"; the Calculus's GnW, Enter; Udi, 2026-11-15): the reader takes the line with no question to Carol and gives the act consents(1), her role; a line that asks her is refused; and the platform the compiler prints holds schema_consents(enter, [1]), by which her agent takes a hello and a start of the act with no question (consent).
 cva_pc=$(mktemp -d)
 printf '%s\n' '% Owner: vGLP.' 'XN: Test' 'Alice is a person, Carol a ward.' '1. ■ Enter: Alice may create Carol, and Carol must consent.' 'Interface pragmas' 'Wards: the wards of Alice.' 'Enter: Alice [Enter] <carol>' > "$cva_pc/XN.txt"
@@ -5171,7 +5218,7 @@ check_not "CVA backed: no error" "Error" "$cva_backed"
 cva_sg_text=$(cat "$CVA/social_graph/platform.vglp")
 cva_nd_text=$(cat "$CVA/nudge/platform.vglp")
 check "CVA exports: the platform exports contract(Text, Schemas), typed" "^exported procedure contract(String, Exported).$" "$cva_sg_text"
-check "CVA exports: ... the contract as GSC's reader reads it, with its names, its clauses as text, from GSG.txt" "^contract(\"GSG: Grassroots Social Graph\\\\nGSG extends GKK.\\\\nAlice \*trusts\* Bob when .*\\\\nAlice and Bob are persons.\\\\n1. .*\", with(reflexive(\[knows\], \[schema(establish, \['Alice'\], \[\], \[rs(guarded, \[atom(identity, \[\]), atom(person, \[\])\], \[\], \[\], \[atom(identity, \[\])\])\]), " "$cva_sg_text"
+check "CVA exports: ... the contract as GSC's reader reads it, with its names, its clauses as text, from GSG.txt" "^contract(\"Friendship\\\\nFriendship extends Knowledge.\\\\nAlice \*trusts\* Bob when .*\\\\nAlice and Bob are persons.\\\\n1. .*\", with(reflexive(\[knows\], \[schema(establish, \['Alice'\], \[\], \[rs(guarded, \[atom(identity, \[\]), atom(person, \[\])\], \[\], \[\], \[atom(identity, \[\])\])\]), " "$cva_sg_text"
 check "CVA exports: ... and its pragmas, each word as the platform reads it, a string, the look among them, nolook for a contract writing none, and the version; vGLP's own nudge, written as a term, with no text" "^contract(\"\", with(\[schema(befriend, \[\], \[rs(guarded, \[atom(friend, \[role(2)\])\], \[\], \[\], \[atom(friend, \[role(2)\])\]), .*, pragmas(\[list(\"Friends\", \[friend\])\], \[act(befriend, \"Befriend\", \[\], said(\[\[\], \[person(1), text(\" asks.\")\]\]), \"Friends\", by(\[1\]))\], \[\], nolook, version(1, 1))))$" "$cva_nd_text"
 check "CVA exports: ... and version(Current, Back), version(1, 1) with no Version line" "^exported procedure version(Integer, Integer).$" "$cva_sg_text"
 check "CVA exports: ... version(1, 1)" "^version(1, 1)$" "$cva_sg_text"
@@ -6609,17 +6656,17 @@ cva_c3_rd() {   # cva_c3_rd <contract> <NAME.glp>: the contract as GSC's reader 
     ct=$(printf '%s\ncontract_named(%s, C).\n:quit\n' "$2" "$1" | "$REPL_RUN" 2>&1 | sed -e 's/^\(GLP> \)*//' | grep '^C = ' | head -1 | sed -e 's/^C = //')
     printf '%s\n:limit 10000000\nas_read(%s, R).\n:quit\n' "$GLP_DIR/programs/gsc/" "$ct" | "$REPL_RUN" 2>&1 | sed -e 's/^\(GLP> \)*//' | grep '^R = ' | head -1 | sed -e 's/^R = //'
 }
-cva_c3_gsg=$(cva_c3_rd gsg "$GLP_DIR/programs/gsc/GSG.glp")
-cva_c3_gnw=$(cva_c3_rd gnw "$GLP_DIR/programs/gsc/GnW.glp")
-cva_c3_pgsg=$(bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gsc/GSG.txt" "$cva_c3_gsg" 2>&1)
+cva_c3_gsg=$(cva_c3_rd friendship "$GLP_DIR/programs/gsc/Friendship.glp")
+cva_c3_gnw=$(cva_c3_rd guardians "$GLP_DIR/programs/gsc/Guardians.glp")
+cva_c3_pgsg=$(bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gsc/Friendship.txt" "$cva_c3_gsg" 2>&1)
 cva_c3_real=$(bash "$CVA/compiler/compose.sh" --base GSG "$cva_c3_gsg" "$cva_c3_pgsg" GSG "$cva_c3_gsg" "$cva_c3_pgsg" no_introduction GnW "$cva_c3_gnw" no_pragmas no_introduction 2>&1; echo "exit $?")
 cva_c3_realu=$(bash "$CVA/compiler/compose.sh" GSG "$cva_c3_gsg" "$cva_c3_pgsg" no_introduction GnW "$cva_c3_gnw" no_pragmas no_introduction 2>&1; echo "exit $?")
 check "CVA composition over a third: GSG and GnW over GSG, GnW's establish and not GSG's, the composition GnW's reading (gsg)" "^same$" "$([ -n "$cva_c3_gnw" ] && [ "$(printf '%s\n' "$cva_c3_real" | sed -n 1p)" = "$cva_c3_gnw" ] && echo same || echo differs)"
 check "CVA composition over a third: ... and compose.sh exits 0 (gsg)" "^exit 0$" "$cva_c3_real"
 check "CVA composition over a third: GSG and GnW with no third refused, a schema written differently by both, acquaint since the Calculus's publication of 2026-11-16 and establish before it (gsg)" "the schema [a-z_]* is written differently by GSG and GnW" "$cva_c3_realu"
 # The third, cascade.sh's (README.md beside compose.sh, "Composition"), from the contracts each is written from, pragmas.sh --from: GSG, GnW and GSN each written from GSG, and GnW and GSN, which GSNW amends, from GKK and GSG.
-cva_c3_from=$(bash "$CVA/compiler/pragmas.sh" --from "$GLP_DIR/programs/cssn/GSNW.txt" 2>&1 | sed -e 's|.*/programs/||' | tr '\n' ' ')
-check "CVA composition over a third: pragmas.sh --from gives the contracts GSNW is written from, each before the contracts written from it, GSNW last (from)" "^gsc/GKK.txt gsc/GSG.txt gsc/GSN.txt gsc/GnW.txt cssn/GSNW.txt $" "$cva_c3_from"
+cva_c3_from=$(bash "$CVA/compiler/pragmas.sh" --from "$GLP_DIR/programs/cssn/Warded-Groups.txt" 2>&1 | sed -e 's|.*/programs/||' | tr '\n' ' ')
+check "CVA composition over a third: pragmas.sh --from gives the contracts GSNW is written from, each before the contracts written from it, GSNW last (from)" "^gsc/Knowledge.txt gsc/Friendship.txt gsc/Groups.txt gsc/Guardians.txt cssn/Warded-Groups.txt $" "$cva_c3_from"
 # The line saying what a contract is written from, in GSC's form (GSC df5e454, Section 2: "each relation is followed by the contract it is to, or by `it' for the contract named last, the relations joined by `and', and an instantiation says after the contract's name, between commas, what it writes for what"; Code #27, Cloud-vGLP_inbox.md, 2026-11-10 18:04 UTC, 2).
 cva_wf=$(mktemp -d)
 printf '%s\n' 'XB: Base' 'Alice is a person.' '1. ■ Establish. Alice may establish her identity.' > "$cva_wf/XB.txt"
@@ -6647,6 +6694,8 @@ check "CVA written from: composes, 'composes it with XC', the instance composed 
 check "CVA written from: a relation followed by no contract's name refused, named (none)" "names no contract at \"the bylaws of XB and restricts it\"" "$cva_wf_n"
 check "CVA written from: ... and pragmas.sh exits other than 0 (none)" "^exit [1-9]" "$cva_wf_n"
 check "CVA written from: 'it' with no contract named before it refused (bare)" "names no contract at \"it\"" "$cva_wf_t"
+rm -f "$CVA_NAMES"
+unset CONTRACT_NAMES
 echo ""
 
 
@@ -9019,7 +9068,7 @@ check "SG child-safe platform on two smartphones: alice's message reaches bob" "
 rm -f "$SG_CORE"/*.glpw
 
 # Physical encounters (GSA paper, Section 4, the box GPE; Appendix "The
-# Operating System", "Nearby"; programs/social/graph/GPE.txt): the social
+# Operating System", "Nearby"; programs/social/graph/Encounters.txt): the social
 # graph with the operating system's Nearby around it (graph/core/place.glp,
 # os_phone/6), which declares to the layer a watch on the agents nearby over
 # the PAN and the LAN, declare(nearby(U, S)).  Two smartphones that do not
@@ -9210,7 +9259,7 @@ check "APPS gsn network: the run suspends, no agent left with an own transaction
 check_not "APPS gsn network: ... and is not stopped at the limit" "capped" "$apps_gsn"
 
 # GSNP's app, programs/apps/gsnp: the same host on GSNP's platform, its wrapper the same file as GSG's; the play of GAI's GSNP figure (Code_inbox.md, GAI #3 Cowork, 2026-10-19 13:31 UTC, item 4), five executions over four conversations, dan's with eve, eve's with carol, carol's with bob and bob's with fay (play_provenance), on GSNP's contract and pragmas (programs/gai/GSNP.glp and GSNP.txt), its views carrying the pending approvals and the tabs of the pragmas, Contacts, Friends, Groups, AI agents and Items: each establishes their identity; in dan and eve, eve and carol, carol and bob, and bob and fay, the first comes to know the second by their key, the second asked by its hello and answering yes, and then they become friends, the second asked and answering yes (GKK:2, GSG:1); dan signs the item 'Flood on Main Street' (GSNP:1, Authorship), which records him its author, and sends it to eve in a message, which carries it as he signed it (GSN:1, Message), nobody asked; eve forwards it to carol, and carol to bob (GSNP:2, Forwarding), nobody asked, the item of forward(p, q, y) being y signed by p, so that bob holds it signed by dan, then by eve, then by carol (programs/gai/GSNP.glp, the schemas sign, message and forward).
-check "APPS gsnp: platform.vglp is what vGLP's compiler prints from GSNP.glp" "^gsnp/platform.vglp: as printed$" "$apps_print"
+check "APPS gsnp: platform.vglp is what vGLP's compiler prints from Provenance-Groups.glp" "^gsnp/platform.vglp: as printed$" "$apps_print"
 # The request type proposes the guarded classes only: GSNP's fifteen schemas that mark a role, and not drop, deliver or deliver_own, unguarded.  agent_acquaint(Peer, Peer) and agents_acquaint(Peer, Peer, Speech), as GAI's, since GAI 2e8797b8 and the readings (vGLP 6abbed9 and 7892aeb): the check of the GAI app, above.
 apps_gsnp_proposal=$(awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$GLP_DIR/programs/apps/gsnp/platform.vglp")
 check "APPS gsnp: the request type proposes the guarded classes, GKK's, GSG's, GSN's, GnW's, GFP's and GAI's with agent_message and post_forward, not deliver, deliver_leader or deliver_own" "^establish(Peer) acquaint(Peer, Peer) introduce(Peer, Peer, Peer) befriend(Peer, Peer) person_unfriend(Peer, Peer) message(Peer, Peer, Speech) create(Peer, Speech) close(Peer, Speech) join(Peer, Peer, Speech) remove(Peer, Peer, Speech) leave(Peer, Peer, Speech) post(Peer, Peer, Speech, Speech) post_own(Peer, Speech, Speech) enter(Peer, Peer, Speech) make_guardian(Peer, Peer, Peer, Speech) resign(Peer, Peer) end_guardian(Peer, Peer, Peer) guardian_unfriend(Peer, Peer) ai_agent_acquaint(Peer, Peer) ai_agent_befriend(Peer, Peer, Peer) ai_agent_end(Peer, Peer) unfriend(Peer, Peer) ai_agent_unfriend(Peer, Peer, Peer) ai_agents_acquaint(Peer, Peer, Speech) ai_agents_befriend(Peer, Peer, Peer, Peer) ai_agents_of_one_guardian_befriend(Peer, Peer, Peer) retire(Peer, Peer) sign(Peer, Speech) forward(Peer, Peer, Speech) agent_sign(Peer, Speech) agent_forward(Peer, Peer, Speech) agent_message(Peer, Peer, Speech) post_forward(Peer, Peer, Speech, Speech) $" "$apps_gsnp_proposal"
@@ -9272,8 +9321,8 @@ check_not "APPS gsnp agents: no error" "Error" "$apps_gsnp_ag"
 check "APPS gsnp agents: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$apps_gsnp_ag"
 check_not "APPS gsnp agents: ... and is not stopped at the limit" "capped" "$apps_gsnp_ag"
 
-# GFF's app, programs/apps/gff: the same host on GFF's platform (programs/gff/GFF.glp and GFF.txt, adopted from the Calculus, 2026-11-15), its wrapper the same file as GSG's; GFF's play, play_feeds (programs/apps/gff/README.md, "Running it"; GFF #5, 2026-11-12, and GFF #6, 2026-11-15), four executions, alice, bob, carol and dave, over four conversations, alice's with bob, bob's with carol, carol's with dave and bob's with dave: each two friends meet and befriend (GKK:2, GSG:1), each having a pointer to the other labeled by the other (GDO-L's definitions); alice posts two items (GFF:1), which reach bob (GFF:2); carol adds an alice-pointer to bob, her friend (GDO-L:1), and both items reach her; dave adds one to carol likewise, and both reach him; carol introduces dave to bob and bob to dave (GKK:3), and dave adds an alice-pointer to bob (GFF:3); alice posts a third item, which reaches bob, carol and dave, each once; carol removes her alice-pointer to bob (GDO-L:3); alice posts a fourth item, which reaches bob and dave and not carol.  The run then suspends: since vGLP a25e7471 the opener of an unguarded part proposes it again only once the refuser's ready has come (vGLP, Definition Proposing, Propose), so Deliver is not proposed without end.
-check "APPS gff: platform.vglp is what vGLP's compiler prints from GFF.glp" "^gff/platform.vglp: as printed$" "$apps_print"
+# GFF's app, programs/apps/gff: the same host on GFF's platform (programs/gff/Feeds.glp and Feeds.txt, the contract Feeds, adopted from the Calculus), its wrapper the same file as GSG's; GFF's play, play_feeds (programs/apps/gff/README.md, "Running it"; GFF #5, 2026-11-12, and GFF #6, 2026-11-15), four executions, alice, bob, carol and dave, over four conversations, alice's with bob, bob's with carol, carol's with dave and bob's with dave: each two friends meet and befriend (Knowledge:2, Friendship:1), each having a pointer to the other labeled by the other (Labelled Overlay's definitions); alice posts two items (Feeds:1), which reach bob (Feeds:2); carol adds an alice-pointer to bob, her friend (Labelled Overlay:1), and both items reach her; dave adds one to carol likewise, and both reach him; carol introduces dave to bob and bob to dave (Knowledge:3), and dave adds an alice-pointer to bob (Feeds:3); alice posts a third item, which reaches bob, carol and dave, each once; carol removes her alice-pointer to bob (Labelled Overlay:3); alice posts a fourth item, which reaches bob and dave and not carol.  The run then suspends: since vGLP a25e7471 the opener of an unguarded part proposes it again only once the refuser's ready has come (vGLP, Definition Proposing, Propose), so Deliver is not proposed without end.
+check "APPS gff: platform.vglp is what vGLP's compiler prints from Feeds.glp" "^gff/platform.vglp: as printed$" "$apps_print"
 if cmp -s "$GLP_DIR/programs/apps/gsg/miniapp.glp" "$GLP_DIR/programs/apps/gff/miniapp.glp"; then
     _check_pass "APPS gff: miniapp.glp is the same file as GSG's app's"
 else
@@ -9307,11 +9356,11 @@ check "APPS gff feeds: the run suspends, no agent left with an own transaction o
 check_not "APPS gff feeds: ... and is not stopped at the limit" "capped" "$apps_gff"
 
 # GAI's app, programs/apps/gai: the same host on GAI's platform, its wrapper the same file as GSG's; the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The components that change in the example"; GAI at e4d935c), on GAI's contract (programs/gai/GAI.glp), three executions over three conversations, alice's with alf, alf's with bob and bob's with alice (play_agents), in the paper's order: alice and bob establish their identities (GKK:1), come to know each other (GKK:2; acquaint) and befriend (GSG:1; befriend), alice proposing and bob answering yes; alice signs her attestation y, 'Alf runs code signed by Acme Ltd' (GAI:2; sign(p? ; x)), and enters alf with it, which answers yes, she its principal, a guardian and its friend and holding the record agent_of(alf, y), alf holding attestation(y) (GnW:1, GAI:1, GAI:2; enter(p?, r? ; y)); alice proposes alf's acquaintance with bob, alf and bob answering yes, bob recording agent_of(alf, y) (GnW:3, GAI:2; agent_acquaint(r?, q?, p? ; y)), and once it is done, no longer among her pending approvals, alf's befriending bob, alf and bob answering yes (GnW:3; agent_befriend(r?, q?, p?)); and once that is done alice retires alf (GnW:5; retire(r, p?), the AI agent its first role), which ends alf's friendships with her and, by the listed role Carol[friend(*)], with bob, nobody asked, alice holding retired_of(alf) and alf retired.  The final states are those of the paper's table after Retire, less the item, which alf signs and sends to bob on GSNP's app, the full platform (GAI has no message); there is no unfriend.
-check "APPS gai: platform.vglp is what vGLP's compiler prints from GAI.glp" "^gai/platform.vglp: as printed$" "$apps_print"
-if cmp -s "$GLP_DIR/programs/apps/gai/platform.vglp" "$GLP_DIR/cascade/GAI/platform.vglp"; then
+check "APPS gai: platform.vglp is what vGLP's compiler prints from Agents.glp" "^gai/platform.vglp: as printed$" "$apps_print"
+if cmp -s "$GLP_DIR/programs/apps/gai/platform.vglp" "$GLP_DIR/cascade/Agents/platform.vglp"; then
     _check_pass "APPS gai: platform.vglp is the platform of the recorded run of the cascade on GAI"
 else
-    _check_fail "APPS gai: platform.vglp is the platform of the recorded run of the cascade on GAI" "programs/apps/gai/platform.vglp differs from cascade/GAI/platform.vglp"
+    _check_fail "APPS gai: platform.vglp is the platform of the recorded run of the cascade on GAI" "programs/apps/gai/platform.vglp differs from cascade/Agents/platform.vglp"
 fi
 # The request type proposes the guarded classes: every schema of GAI marks a role, seventeen, GnW:2's make_guardian, end_guardian, resign and guardian_unfriend among them (programs/gai/GAI.glp and GAI.txt, "seventeen over fifteen predicates").  agent_acquaint and agents_acquaint have two roles each since GAI 2e8797b8 (2026-11-08, "GnW:3 and GnW:4: a ward comes to know any agent by an act of the two"), and by the readings (vGLP 6abbed9 and 7892aeb, Section 5.4) an attestation required at a role other than the proposer's and recorded at the other is read there and named by no request: agent_acquaint's y, Bob proposing, is read at Carol's role; agents_acquaint's z at Dave's, Carol proposing and her y, the base's, a place of the request.
 apps_gai_proposal=$(awk '/^Proposal ::=$/{on=1;next} on&&/^\.$/{exit} on&&!/^;$/{printf "%s ", $0}' "$GLP_DIR/programs/apps/gai/platform.vglp")
@@ -10272,11 +10321,14 @@ echo ""
 # committed artefacts to what the tools print"); until 2026-11-11 fourteen
 # records, gfp, gpd, gas, grv, gsv, gds, gpe, bcc, gcc, gff_i, gff_ps, gff_fr,
 # gff_fr_bc and gsnw, were recorded and never checked.
-for cas_c in gkk gfp gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gpd gas grv gsv gds gpe agora gdo gdc dgc gcc gd gdo_l gra gff gff_ps gff_fr gff_fr_bc gdo_lb gra_ss dao ldao fdao rec stay lib joint cb cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc; do
-    cas_n=$(awk -v c="$cas_c" '$1 == "#" && $2 == c { print $3; exit }' "$GLP_DIR/cascade.sh")
-    [ -n "$cas_n" ] || cas_n=$(printf '%s' "$cas_c" | tr a-z_ A-Z-)
+# The rows and each one's record are read from cascade.sh's own table, "    <row>) FILE=<file name>;", so that a contract renamed or added there is checked here and none is passed over in silence (Code #33, 2026-11-17: after the renaming of 2026-11-16 the list written here by hand named rows that were no more, and the section checked two records of 66 and passed); a row with no record is skipped only where its contract is dormant, gfwc.
+for cas_row in $(sed -n 's/^    \([a-z0-9_]*\)) FILE=\([A-Za-z0-9-]*\);.*/\1:\2/p' "$GLP_DIR/cascade.sh"); do
+    cas_c=${cas_row%%:*}; cas_n=${cas_row#*:}
     cas_o="cascade/$cas_n"
-    [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
+    if [ ! -f "$GLP_DIR/$cas_o/manifest.md" ]; then
+        [ "$cas_c" = gfwc ] || _check_fail "cascade $cas_c: its record is there" "no $cas_o/manifest.md"
+        continue
+    fi
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
     # A contract its owner has adopted from the Calculus also has the artefacts
     # calculus/tools/adopt.py prints (claude.md "Code", "The record of a
@@ -10290,10 +10342,10 @@ for cas_c in gkk gfp gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gpd gas grv gsv g
     check "cascade $cas_c: cascade.sh --check exits 0" "^exit 0$" "$cas_out"
 done
 # A composition of contracts, recorded in cascade/<NAME>+<NAME>/ (vGLP 7c631b1, Section 5.4, "The contract's words": "The compiler takes one contract or several: of several it prints the platform of their composition"; cascade.sh, several contracts): GSN and GC, both extending GKK.
-for cas_cs in "gsn gc"; do
-    cas_n=$(printf '%s' "$cas_cs" | tr a-z_ A-Z- | tr ' ' +)
+for cas_cs in "groups coins"; do
+    cas_n=Groups+Coins
     cas_o="cascade/$cas_n"
-    [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
+    if [ ! -f "$GLP_DIR/$cas_o/manifest.md" ]; then _check_fail "cascade $cas_n: its record is there" "no $cas_o/manifest.md"; continue; fi
     cas_out=$(bash "$GLP_DIR/cascade.sh" $cas_cs --check 2>&1; echo "exit $?")
     for cas_f in $(cd "$GLP_DIR/$cas_o" && ls | grep -vx manifest.md); do
         check "cascade $cas_n: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"

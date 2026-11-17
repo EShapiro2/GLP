@@ -1,6 +1,0 @@
-GD-S: Separating GD
-GD-S restricts GD.
-GD-S:0 - | Alice, Bob and Carol are persons.
-GD-S:1 ○ Befriend: GSG:1 <- ~distrusts(Alice,Bob), ~distrusts(Bob,Alice).
-GD-S:2 ○ | Taking sides.
-GD-S:2 ○ | Alice, whose friend Bob has declared distrust of Carol, will eventually declare distrust of Carol or end her friendship with Bob, unless Bob withdraws the declaration.

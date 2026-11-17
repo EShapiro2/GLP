@@ -4,12 +4,12 @@ The app of GSNP, the grassroots social network with provenance, as a mini-app of
 
 ## The contract
 
-GSNP is GAI's contract, adopted from the Calculus.  Its two clauses, its relation to GSN and GAI, its Logic pragmas and its Interface pragmas are `programs/gai/GSNP.txt`, and nowhere else.  Its speech-act schemas are `programs/gai/GSNP.glp`, the full schemas, printed by `calculus/tools/adopt.py GSNP` from the Logic pragmas; `cascade/GSNP/full-schemas.txt` prints them by the clauses they come from, and the checker's verdict is `cascade/GSNP/verdict.txt`.
+GSNP is GAI's contract, adopted from the Calculus.  Its two clauses, its relation to GSN and GAI, its Logic pragmas and its Interface pragmas are `programs/gai/Provenance-Groups.txt`, and nowhere else.  Its speech-act schemas are `programs/gai/Provenance-Groups.glp`, the full schemas, printed by `calculus/tools/adopt.py Provenance-Groups` from the Logic pragmas; `cascade/Provenance-Groups/full-schemas.txt` prints them by the clauses they come from, and the checker's verdict is `cascade/Provenance-Groups/verdict.txt`.
 
 ## The cascade
 
-1. The speech-act schemas, `programs/gai/GSNP.glp`, and the checker's verdict on them, `programs/gsc`'s `check/2`.
-2. The canonical CVA platform of the schemas, `platform.vglp`, as `programs/vglp/cva/compiler` prints it from GSNP.glp and the pragmas of GSNP.txt and of the contracts it is written from; `bash programs/apps/compile.sh --check` re-prints it and compares.
+1. The speech-act schemas, `programs/gai/Provenance-Groups.glp`, and the checker's verdict on them, `programs/gsc`'s `check/2`.
+2. The canonical CVA platform of the schemas, `platform.vglp`, as `programs/vglp/cva/compiler` prints it from Provenance-Groups.glp and the pragmas of Provenance-Groups.txt and of the contracts it is written from; `bash programs/apps/compile.sh --check` re-prints it and compares.
 3. GLP: the canonical compilation compiles `platform.vglp` when the directory loads.
 4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/3`.
 

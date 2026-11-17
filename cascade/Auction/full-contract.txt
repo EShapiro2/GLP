@@ -1,0 +1,23 @@
+% Written by tools/expand.py from rev/; do not edit.
+Auction
+An *identity* is a unique key pair.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+A person has a *location*. d > 0, an integer, and e > 0 are parameters of Local Overlay.
+A *pickup delay* is measured from the award. The *terms* of a call, a parameter of Auction, state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice and Bob are persons. Alice is a rider and Bob a driver. A person can be either a rider or a driver but not both.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Overlay:1, Local Overlay:1. ■ Point friend: Alice, who does not point to her friend Bob, may point to Bob, only if either Alice points to fewer than d persons and Bob is closest to Alice among all of Alice's unpointed friends, or Bob is closer to Alice by more than e than some person pointed to by Alice.
+Overlay:2, Local Overlay:2. ■ Point transitive: Alice, who knows Carol and points to Bob who points to Carol, may point to Carol, only if Carol is closer to Alice by more than e than some person pointed to by Alice.
+Overlay:3, Local Overlay:3. ■ Unpoint: Alice, who points to Bob, may cease pointing to Bob, only if Alice points to more than d persons, with Bob furthest from Alice among them.
+Auction:1. ■ Call. Call: Alice, who has no open call and no ride, may call for bids on a ride from the persons Alice points to, stating the pickup point, the destination, the bidding period and the terms. Forward call: Each of them forwards the call to the persons they point to.
+Auction:2. ■ Bid: Bob, who received the call, may bid a fare and a pickup delay before the bidding period ends; Alice may not open a bid before then.
+Auction:3. ■ Award. Award: After the bidding period ends, Alice may award the ride to the bidder the terms select among the bidders who have no ride, at the fare the terms set; Alice's fare and the deposit the terms set for Bob are then locked. Close: If the terms select no bidder, Alice may close the call.
+Auction:4. ■ Pickup: The pickup is recorded when Alice and Bob are both at the pickup point.
+Auction:5. ■ Arrive: When Alice and Bob are both at the destination, the fare and the deposit are released to Alice and to Bob as the terms say.
+Auction:6. ■ Cancel: If no pickup is recorded within the maximum pickup delay, Alice may cancel; the fare and the deposit are then released to Alice and to Bob as the terms say.
+Auction:7. ■ Withdraw: Alice may withdraw her open call before the bidding period ends.

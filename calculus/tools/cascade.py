@@ -13,6 +13,8 @@ the PATH and a clone of GLP beside this directory, or $GLP_DIR; it writes a scra
 programs/tests/cascade_emit/ and removes it.
 """
 import os, re, shutil, subprocess, sys, tempfile
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import toglp
@@ -106,7 +108,7 @@ def contract_txt(n):
             if mm:
                 flat.setdefault(mm.group(1), []).append(mm.group(2))
     own = clause_sentences(n, acts)
-    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
+    w = gcsas.World(NM.names_in(os.path.join(ROOT, 'gr')))
     kinds = gcsas.kinds_from(w, n)
     one = w.lexicon(n).one
     title = gcsas.get('gr', n)[0]
@@ -157,8 +159,8 @@ def ok(line):
 
 
 def run(n):
-    name = re.sub(r'[^a-z0-9]', '_', n.lower())
-    out = os.path.join(ROOT, 'cascade', n)
+    name = NM.atom_of(n)      # the row of cascade.sh and the atom of contract_named, NAMES.txt's fourth column
+    out = os.path.join(ROOT, 'cascade', NM.file_of(n))
     os.makedirs(out, exist_ok=True)
     for f in RUN_FILES:             # what an earlier run wrote: none of it is left beside the outputs of this one
         if os.path.exists(os.path.join(out, f)):
@@ -191,7 +193,7 @@ def run(n):
     if any(l.startswith('% not compiled') for l in vm):
         res = 'certified; VMAT not compiled: ' + next(l for l in vm if l.startswith('% not compiled'))[:80]
     if ct.startswith('parametric('):      # a parametric contract is certified and has no platform until it is instantiated (vGLP, 5.4; vGLP #28, 2026-11-15)
-        for f in ('platform.vglp', 'platform.glp', 'run.log', n + '.txt', 'interface-adopted.txt'):
+        for f in ('platform.vglp', 'platform.glp', 'run.log', NM.file_of(n) + '.txt', 'interface-adopted.txt'):
             if os.path.exists(os.path.join(out, f)):
                 os.remove(os.path.join(out, f))
         return res + '; ' + PARAMETRIC
@@ -200,8 +202,8 @@ def run(n):
     rdf.write(rd)
     rdf.close()
     for _ in range(4 * txt.count('\n') + 60):     # the reader of the pragmas says which names a line leaves unnamed: a field is added for each, as many rounds as lines need (a contract with the ward's forms of its parties' acts needs more than 60)
-        put(n + '.txt', txt)
-        pr = subprocess.run(['bash', GLP + '/programs/vglp/cva/compiler/pragmas.sh', os.path.join(out, n + '.txt'), '@' + rdf.name], capture_output=True, text=True)
+        put(NM.file_of(n) + '.txt', txt)
+        pr = subprocess.run(['bash', GLP + '/programs/vglp/cva/compiler/pragmas.sh', os.path.join(out, NM.file_of(n) + '.txt'), '@' + rdf.name], capture_output=True, text=True)
         m = re.search(r'the pragma "([^"]+)" leaves unnamed the variable (.*?) of ', pr.stderr)
         if pr.returncode == 0 or not m:
             break
@@ -247,9 +249,9 @@ def run(n):
 
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('-')]
-    names = args
+    names = [NM.name_of(a) for a in args]      # a contract by its name or its file name
     if not names:
-        names = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'sasx')) if f.endswith('.txt'))
+        names = NM.names_in(os.path.join(ROOT, 'sasx'))
     from concurrent.futures import ThreadPoolExecutor      # each contract is run by processes of its own, four at a time
 
     def one(n):
@@ -257,7 +259,7 @@ def main():
             r = run(n)
         except Exception as ex:
             r = 'EXCEPTION %s: %s' % (type(ex).__name__, str(ex)[:120])
-        line = '%-10s %s' % (n, r)
+        line = '%-10s %s' % (NM.file_of(n), r)      # a line by the file name, one word
         print(line, flush=True)
         return line
     with ThreadPoolExecutor(max_workers=int(os.environ.get('JOBS', os.cpu_count() or 1))) as ex:

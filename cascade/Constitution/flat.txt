@@ -1,0 +1,74 @@
+Constitution (flat text)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2+Guardians:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
+Knowledge:3+Guardians:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:0 - | Alice and Bob are persons.
+Friendship:1+Guardians:3 ■ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend, not Bob counts Alice as a friend, Alice is a person and Bob is a person.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Guardians:0 - | Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for it.
+Guardians:0 - | Alice and Bob are persons, Carol and Dave organisations; in clause 4 Alice and Bob are possibly one person.
+Guardians:0 - | Default: any officer of z for those who decide for z.
+Guardians:1 ■ Enter: Alice and Carol may jointly Carol has an identity, Carol is an organisation, Carol has Alice as an officer, Alice is the creator of Carol, Alice is an officer of Carol, Alice knows Carol, Carol knows Alice, Alice counts Carol as a friend and Carol counts Alice as a friend, provided Alice is a person and not Carol has an identity. Must consent: Carol.
+Guardians:1 ■ | Alice chooses Carol's key pair.
+Guardians:2 ■ | Guardian decisions.
+Guardians:2+Organisation:4 ■ Appoint: Those who decide for Carol and Bob may jointly Bob is an officer of Carol, Carol has Bob as an officer, Bob knows Carol, Carol knows Bob, Bob counts Carol as a friend, Carol counts Bob as a friend, Bob holds the role Role in Carol and Carol has Bob in the role Role, provided Carol is an organisation, not Carol is retired, Bob is a person, Carol has Alice as an officer, Bob counts Alice as a friend, not Bob is an officer of Carol, not Carol has Bob as an officer and Bob is a participant of Carol.
+Guardians:2+Organisation:4 ■ Resign: Bob may no longer Bob is an officer of Carol, no longer Carol has Bob as an officer, no longer Bob holds the role anyone in Carol and no longer Carol has Bob in the role anyone.
+Guardians:2+Organisation:4 ■ End officer: Those who decide for Carol, other than Bob, may no longer Bob is an officer of Carol, no longer Carol has Bob as an officer, no longer Bob holds the role anyone in Carol and no longer Carol has Bob in the role anyone.
+Guardians:2+Organisation:4 ■ Officer unfriend: Bob may no longer Bob counts Carol as a friend, no longer Carol counts Bob as a friend, no longer Bob is an officer of Carol, no longer Carol has Bob as an officer, no longer Bob holds the role anyone in Carol and no longer Carol has Bob in the role anyone.
+Guardians:2 ■ | Carol may not end a friendship with her officer.
+Guardians:3 ■ | Ward and person.
+Guardians:3 ■ Organisation acquaint: Carol and Bob may jointly Carol knows Bob and Bob knows Carol, provided Carol is an organisation, Carol has Alice as an officer and Bob is a person.
+Guardians:3 ■ Organisation befriend: Carol, Bob and Alice may jointly Carol counts Bob as a friend and Bob counts Carol as a friend, provided Carol is an organisation, not Carol is retired, Carol has Alice as an officer, Bob is a person, Carol knows Bob, Bob knows Carol, Alice counts Bob as a friend, Bob counts Alice as a friend, not Carol counts Bob as a friend and not Bob counts Carol as a friend.
+Guardians:3 ■ Organisation end: Carol may no longer Carol counts Bob as a friend and no longer Bob counts Carol as a friend, provided not Carol has Bob as an officer.
+Guardians:3 ■ Unfriend: Bob may no longer Bob counts Carol as a friend and no longer Carol counts Bob as a friend, provided not Bob is an officer of Carol.
+Guardians:3 ■ Organisation unfriend: Alice may no longer Carol counts Bob as a friend and no longer Bob counts Carol as a friend, provided Carol has Alice as an officer and not Bob is an officer of Carol.
+Guardians:4 ■ | Wards.
+Guardians:4 ■ Organisations acquaint: Carol and Dave may jointly Carol knows Dave and Dave knows Carol, provided Carol is an organisation, Carol has Alice as an officer, Dave is an organisation and Dave has Bob as an officer. Possibly one: Alice=Bob.
+Guardians:4 ■ Organisations befriend: Carol, Dave, Alice and Bob may jointly Carol counts Dave as a friend and Dave counts Carol as a friend, provided Carol is an organisation, not Carol is retired, Carol has Alice as an officer, Dave is an organisation, not Dave is retired, Dave has Bob as an officer, Carol knows Dave, Dave knows Carol, Alice knows Dave, Alice counts Bob as a friend, Bob counts Alice as a friend, not Carol counts Dave as a friend and not Dave counts Carol as a friend. Possibly one: Alice=Bob.
+Guardians:4 ■ Organisations of one officer befriend: Carol, Dave and Alice may jointly Carol counts Dave as a friend and Dave counts Carol as a friend, provided Carol is an organisation, not Carol is retired, Carol has Alice as an officer, Dave is an organisation, not Dave is retired, Dave has Alice as an officer, Carol knows Dave, Dave knows Carol, not Carol counts Dave as a friend and not Dave counts Carol as a friend.
+Guardians:5+Organisation:4 ■ Retire: Those who decide for Carol may Carol is retired, no longer anyone is an officer of Carol, no longer Carol has anyone as an officer, no longer Carol counts anyone as a friend, no longer anyone counts Carol as a friend, no longer anyone holds the role anyone in Carol and no longer Carol has anyone in the role anyone, provided not Carol is retired.
+Guardians:5 ■ | Carol can then take no act.
+Organisation:0 - | An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
+Organisation:0 - | Alice and Bob are persons, Gov and Orga organisations, Motion an act of Orga, Role a role, Votes and Double numbers.
+Organisation:0 - | Parameters: x is entitled to propose m in z; x is entitled to vote on m in z; x is entitled to take m for z; the votes decide m according to the bylaws of z.
+Organisation:0 - | Default: those who decide for z for those who decide the officers of z.
+Organisation:0 - | Default: x is an officer of z for x is entitled to propose m in z.
+Organisation:0 - | Default: x is an officer of z for x is entitled to vote on m in z.
+Organisation:0 - | Default: x is an officer of z for x is entitled to take m for z.
+Organisation:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as an officer for the votes decide m according to the bylaws of z.
+Organisation:1 ■ Found: Gov, Alice and Orga may jointly Orga has an identity, Orga is an organisation, Gov is the creator of Orga, Orga has Alice as its first officer, Alice is an officer of Orga, Orga has Alice as an officer, Alice holds the role Role in Orga, Orga has Alice in the role Role, Alice is a participant of Orga, Orga has Alice as a participant, Alice knows Orga, Orga knows Alice, Alice counts Orga as a friend and Orga counts Alice as a friend, provided Alice is a person and not Orga has an identity. Must consent: Orga.
+Organisation:2 ■ | Acts of the organisation.
+Organisation:2 ■ Propose: Bob may Orga has Motion proposed, provided Bob is a participant of Orga and not Orga has Motion proposed.
+Organisation:2 ■ Vote: Bob may Orga holds Bob's vote on Motion, provided Bob is a participant of Orga, Orga is an organisation, Orga has Motion proposed and not Orga holds Bob's vote on Motion.
+Organisation:2 ■ Act: Alice may Orga has Motion taken, provided Alice is a participant of Orga, Orga holds the votes of at least Votes persons on Motion, Double is Votes times 2, Orga has fewer than Double persons as a participant and not Orga has Motion taken.
+Organisation:3 ■ | Participation.
+Organisation:3+Constitution:1 ■ Join: Bob and those who decide for Orga may jointly Bob is a participant of Orga, Orga has Bob as a participant and no longer Orga holds anyone's vote on whether Bob becomes a participant of Orga, provided not Bob is a participant of Orga, Orga holds the votes of at least VotesOrga persons on whether Bob becomes a participant of Orga, DoubleOrga is VotesOrga times 2 and Orga has fewer than DoubleOrga persons as a participant.
+Constitution:1 ■ Vote of Orga for Join: Voter may Orga holds Voter's vote on whether Bob becomes a participant of Orga, provided Voter is a participant of Orga, Orga knows Bob and not Orga holds Voter's vote on whether Bob becomes a participant of Orga.
+Organisation:3 ■ Leave: Bob may no longer Bob is a participant of Orga and no longer Orga has Bob as a participant, provided not Bob is an officer of Orga.
+Organisation:3 ■ Officer leave: Bob may no longer Bob is a participant of Orga, no longer Orga has Bob as a participant, no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
+Organisation:3+Constitution:2 ■ Expel: Those who decide for Orga may no longer Bob is a participant of Orga, no longer Orga has Bob as a participant and no longer Orga holds anyone's vote on whether Orga ends Bob's participation in Orga, provided not Bob is an officer of Orga, Orga holds the votes of at least VotesOrga persons on whether Orga ends Bob's participation in Orga, DoubleOrga is VotesOrga times 2 and Orga has fewer than DoubleOrga persons as a participant.
+Constitution:2 ■ Vote of Orga for Expel: Voter may Orga holds Voter's vote on whether Orga ends Bob's participation in Orga, provided Voter is a participant of Orga, Orga knows Bob and not Orga holds Voter's vote on whether Orga ends Bob's participation in Orga.
+Organisation:3+Constitution:2 ■ Officer expel: Those who decide for Orga may no longer Bob is a participant of Orga, no longer Orga has Bob as a participant, no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga, no longer Orga has Bob in the role anyone and no longer Orga holds anyone's vote on whether Orga ends Bob's participation and Bob's office in Orga, provided Orga holds the votes of at least VotesOrga persons on whether Orga ends Bob's participation and Bob's office in Orga, DoubleOrga is VotesOrga times 2 and Orga has fewer than DoubleOrga persons as a participant.
+Constitution:2 ■ Vote of Orga for Officer expel: Voter may Orga holds Voter's vote on whether Orga ends Bob's participation and Bob's office in Orga, provided Voter is a participant of Orga, Orga knows Bob and not Orga holds Voter's vote on whether Orga ends Bob's participation and Bob's office in Orga.
+Organisation:3 ■ | Every role Bob holds in Orga ends with his participation.
+Organisation:4 ■ | Officers.
+Organisation:4 ■ | The decision names his role.
+Organisation:5+Constitution:3 ■ Amend: Alice may Orga has its bylaws amended and Orga has Motion taken, provided Alice is a participant of Orga, Orga is an organisation, Orga has Motion proposed, Orga holds the votes of at least Votes persons on Motion, Double is Votes times 2, Orga has fewer than Double persons as a participant, not Orga has Motion taken and Motion keeps the bylaws of Orga egalitarian.
+Organisation:6 ○ | Accountability.
+Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
+Constitution:0 - | A *constitutional democratic community* is an organisation whose bylaws name one role, *member*, held by every participant, and are *egalitarian*: the rule by which the members decide an act names no member and no other role.
+Constitution:0 - | Alice and Bob are persons, Orga a constitutional democratic community, Motion an act of Orga.
+Constitution:0 - | Environment: m keeps the bylaws of z egalitarian.
+Constitution:0 - | Default: x is a member of z for x is entitled to propose m in z.
+Constitution:0 - | Default: x is a member of z for x is entitled to vote on m in z.
+Constitution:0 - | Default: x is a member of z for x is entitled to take m for z.
+Constitution:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z.

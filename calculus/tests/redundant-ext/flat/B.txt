@@ -1,3 +1,0 @@
-B: Base (flat text)
-B:0 - | Alice, Bob and Carol are persons, Sum a number.
-B:1 ■ Pay: Alice and Bob may jointly no longer Alice holds Sum Carol-coins and Bob holds Sum Carol-coins, provided Alice knows Bob.

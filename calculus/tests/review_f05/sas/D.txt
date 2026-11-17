@@ -1,3 +1,0 @@
-D: Instantiate the role
-D instantiates C with overseers(x) for deciders(x).
-Roles: those who oversee x = overseers(x).

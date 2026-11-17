@@ -5,14 +5,14 @@
 #   bash programs/apps/compile.sh --check    print into a scratch directory and compare
 #
 #   <app>  contract  owner's file
-#   gkk    gkk       programs/gsc/GKK.glp
-#   gsg    gsg       programs/gsc/GSG.glp
-#   gsn    gsn       programs/gsc/GSN.glp
-#   gsnp   gsnp      programs/gai/GSNP.glp
-#   gai    gai       programs/gai/GAI.glp
+#   gkk    knowledge       programs/gsc/Knowledge.glp
+#   gsg    friendship       programs/gsc/Friendship.glp
+#   gsn    groups       programs/gsc/Groups.glp
+#   gsnp   provenance_groups      programs/gai/Provenance-Groups.glp
+#   gai    agents       programs/gai/Agents.glp
 #   gc     gc        programs/currencies/coins/Coins.glp
 #   gb     gb        programs/currencies/bonds/Bonds.glp
-#   gff    gff       programs/gff/GFF.glp     (GFF, adopted from the Calculus, which has no GFF-I: Udi, 2026-11-15, to GFF #6)
+#   gff    feeds       programs/gff/Feeds.glp     (GFF, adopted from the Calculus, which has no GFF-I: Udi, 2026-11-15, to GFF #6)
 #
 # The steps are cascade.sh's 1, 2 and 4: the contract, contract_named/2, from the owner's file; the checker's verdict on it, programs/gsc's check/2; and the compiler, programs/vglp/cva/compiler's compile/5, on the contract, its verdict, its introduction predicate, introduction_named/2 where the owner's file names one and no_introduction otherwise, and its pragmas, the words its app shows, read from the NAME.txt beside the owner's file and from those of the contracts it extends by programs/vglp/cva/compiler/pragmas.sh (vGLP, Section 5.4, "The contract's words"), each act the schema its button names (GSC, Section 2).  What the compiler prints between its lines "%% compile begin" and "%% compile end" is the platform.
 #
@@ -26,26 +26,26 @@ APPS="gkk gsg gsn gsnp gai gc gb gff"
 
 contract_of() { # contract_of <app> ; the checker's name of its contract
     case "$1" in
-        gkk) echo gkk ;;
-        gsg) echo gsg ;;
-        gsn) echo gsn ;;
-        gsnp) echo gsnp ;;
-        gai) echo gai ;;
+        gkk) echo knowledge ;;
+        gsg) echo friendship ;;
+        gsn) echo groups ;;
+        gsnp) echo provenance_groups ;;
+        gai) echo agents ;;
         gc) echo coins ;;
         gb) echo bonds ;;
-        gff) echo gff ;;
+        gff) echo feeds ;;
     esac
 }
 file_of() { # file_of <app> ; the owner's file that holds its contract
     case "$1" in
-        gkk) echo "$GLP_DIR/programs/gsc/GKK.glp" ;;
-        gsg) echo "$GLP_DIR/programs/gsc/GSG.glp" ;;
-        gsn) echo "$GLP_DIR/programs/gsc/GSN.glp" ;;
-        gsnp) echo "$GLP_DIR/programs/gai/GSNP.glp" ;;
-        gai) echo "$GLP_DIR/programs/gai/GAI.glp" ;;
+        gkk) echo "$GLP_DIR/programs/gsc/Knowledge.glp" ;;
+        gsg) echo "$GLP_DIR/programs/gsc/Friendship.glp" ;;
+        gsn) echo "$GLP_DIR/programs/gsc/Groups.glp" ;;
+        gsnp) echo "$GLP_DIR/programs/gai/Provenance-Groups.glp" ;;
+        gai) echo "$GLP_DIR/programs/gai/Agents.glp" ;;
         gc) echo "$GLP_DIR/programs/currencies/coins/Coins.glp" ;;
         gb) echo "$GLP_DIR/programs/currencies/bonds/Bonds.glp" ;;
-        gff) echo "$GLP_DIR/programs/gff/GFF.glp" ;;
+        gff) echo "$GLP_DIR/programs/gff/Feeds.glp" ;;
     esac
 }
 

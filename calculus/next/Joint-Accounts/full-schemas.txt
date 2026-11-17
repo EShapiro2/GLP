@@ -1,0 +1,32 @@
+Joint Accounts (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Notes:1 ■ Issue: coin(Alice,Alice,*Sum) <- guarded by Alice.
+Notes:2 ■ Swap: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~coin(Bob,Dave,*Total), coin(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), coin(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+Notes:3 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+Notes:3+Coins:1 ■ Pay issuer: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum) guarded by Alice.
+Notes:4 ■ | Escrow.
+Notes:4 ■ Deposit coin: ~coin(Alice,Dave,*Sum), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), coin(Alice,Dave,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ■ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ■ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
+Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
+Coins:0 - | Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob.
+Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
+Coins:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Coins:3 ○ | Pricing.
+Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
+Joint Accounts:0 - | Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
+Joint Accounts:1 ■ Open account: account(Alice,Acct), joint(Alice,Acct,Bob), joint(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~account(Alice,Acct) guarded by Alice, Bob.
+Joint Accounts:2 ■ Deposit: ~coin(Alice,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Bob,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Alice,Carol,*Sum) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Joint Accounts:2 ■ Partner deposit: ~coin(Bob,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Alice,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Bob,Carol,*Sum) guarded by Bob possibly Alice=Carol, Bob=Carol.
+Joint Accounts:3 ■ Withdraw: ~joint_coin(Alice,Carol,Acct,Bob,*Sum), coin(Alice,Carol,*Sum) <- joint_coin(Alice,Carol,Acct,Bob,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+Joint Accounts:3 ■ Partner withdraw: ~joint_coin(Alice,Carol,Acct,Bob,*Sum), coin(Bob,Carol,*Sum) <- joint_coin(Alice,Carol,Acct,Bob,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.

@@ -1,0 +1,8 @@
+Joint Accounts
+Joint Accounts extends Knowledge.
+Alice and Bob are persons, Acct a joint account.
+1. ■ Open: Alice and Bob may jointly open the joint account Acct, provided Alice and Bob know each other.
+Logic pragmas.
+Vocabulary: x holds the joint account n with y = joint(x,n,y).
+x and y hold the joint account n: x holds the joint account n with y and y holds the joint account n with x.
+After x and y open the joint account n: x and y hold the joint account n.

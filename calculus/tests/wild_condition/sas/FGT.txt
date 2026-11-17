@@ -1,6 +1,0 @@
-FGT: Forgetting
-FGT extends GKK.
-x knows no one: no longer x knows anyone.
-After x forgets everyone: x knows no one.
-FGT:0 - | Alice is a person.
-FGT:1 ■ Forget: ~knows(Alice,_) <- knows(Alice,_) guarded by Alice.

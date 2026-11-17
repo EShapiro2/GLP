@@ -1,9 +1,0 @@
-R: Wildcard extent refused
-Vocabulary: x has y as a guardian = has_guardian(x,y); y is a guardian of x = guardian(y,x); x is a member of the group g of y = member(x,g,y); x has y as a member of the group g = listed(x,y,g); x is retired = retired(x).
-After x becomes a guardian of z: x is a guardian of z and z has x as a guardian.
-After x adds y to g: x has y as a member of the group g.
-After x retires z: z is retired, no one is a guardian of z, z has no one as a guardian, z is a member of no group of anyone and no one has z as a member of any group.
-R:0 - | Alice, Bob and Carol are persons, Grupo a group.
-R:1 ■ Guard: guardian(Alice,Carol), has_guardian(Carol,Alice) <- guarded by Alice, Carol.
-R:2 ■ Join: listed(Bob,Carol,Grupo) <- guarded by Bob, Carol.
-R:3 ■ Retire: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~member(Carol,_,_), ~listed(_,Carol,_) <- guardian(Alice,Carol) guarded by Alice.

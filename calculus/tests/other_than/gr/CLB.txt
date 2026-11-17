@@ -1,5 +1,5 @@
 CLB: Club
-CLB extends GKK.
+CLB extends Knowledge.
 Alice and Bob are persons, Orga a club.
 1. ■ Admit: Those who decide for Orga may make Bob a member of Orga, with the consent of Bob. Expel: Those who decide for Orga, other than Bob, may end Bob's membership in Orga.
 Logic pragmas.

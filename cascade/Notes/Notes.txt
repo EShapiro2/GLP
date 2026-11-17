@@ -1,12 +1,12 @@
 % GN: Grassroots Notes --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: GSC (Udi, 2026-11-16, to Calculus #6, reported by Calculus #7).  Coins (GC), bonds (GB) and shares (SC) are special cases of notes.
 % Paper: GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231
-% Extends: GN extends GKK, Grassroots Keys and Knowledge, GSC's (GKK.txt beside this file), by the relations of the Calculus (GLP calculus/README.md, The relations).
+% Extends: GN extends GKK, Grassroots Keys and Knowledge, GSC's (Knowledge.txt beside this file), by the relations of the Calculus (GLP calculus/README.md, The relations).
 % Defines: note, Alice-note.
 % Last changed: 2026-11-16, adopted from the Calculus's publication (its repository's branch code ed9032e7): the contract and its Logic pragmas are the Calculus's, as calculus/tools/adopt.py --write prints them, and the Interface pragmas GSC's (GSC #19).
 % Schemas: GN.glp beside this file, the full schemas, printed by calculus/tools/adopt.py GN from the Logic pragmas and never written by hand; adopt.py --check GN holds it and cascade/GN/ to what the tools print.
 Notes
-Notes extends GKK.
+Notes extends Knowledge.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Alice, Bob and Carol are parties.
 1. ■ Issue: Alice may issue Alice-notes.
@@ -14,7 +14,7 @@ Alice, Bob and Carol are parties.
 3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
 4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
 Logic pragmas
-Notes extends GKK.
+Notes extends Knowledge.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 1. ■ Issue: Alice may issue Sum Alice-notes.

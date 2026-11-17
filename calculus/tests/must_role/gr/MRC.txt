@@ -1,5 +1,5 @@
 MRC: Club
-MRC extends GKK.
+MRC extends Knowledge.
 Bob is a person, Orga a club.
 1. ■ Join: Bob may join Orga, and those who decide for Orga must consent.
 Logic pragmas.

@@ -1,6 +1,0 @@
-B: Bank (flat text)
-B:0 - | Bob is a person, Orga a bank, Sum, Line, Held and Total numbers.
-B:1 ■ Issue: Bob may Bob holds Sum Bob-coins.
-B:2 ■ Set: Orga may no longer Orga has Bob's line at the number anyone and Orga has Bob's line at the number Line.
-B:3 ■ Credit: Bob may no longer Bob holds Sum Bob-coins and Orga holds Sum Bob-coins, provided Orga holds exactly Held Bob-coins, Orga has Bob's line at the number Line, Total is Held plus Sum and Total is at most Line.
-B:3 ■ Double: Bob may no longer Bob holds 2 Bob-coins and Orga holds 2 Bob-coins, provided Line is more than 2.
