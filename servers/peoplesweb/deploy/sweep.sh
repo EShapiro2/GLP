@@ -47,15 +47,16 @@ chown -R glp:glp /var/lib/glp/papers
 # server is removed.
 rm -rf /var/lib/glp/calculus
 sudo -u glp env PAPERS_DIR=/var/lib/glp/papers python3 -I servers/peoplesweb/tools/build.py
-# The test site is under /test of Caddy's root and is not the live build's to
-# delete (deploy/test.sh).
-rsync -a --delete --exclude /test/ --exclude /next/ servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
+# The test site is under /next of Caddy's root and is not the live build's to
+# delete (deploy/test.sh).  Until 2026-11-17 it was under /test, which this
+# copy now removes.
+rsync -a --delete --exclude /next/ servers/peoplesweb/build/www/ /var/www/peoplesweb.org/
 [ "$old" = "$new" ] || systemctl restart peoplesweb
-# The test site, peoplesweb.org/test: the site as the branch Website-site has it,
+# The test site, peoplesweb.org/next: the site as the branch Website-site has it,
 # over the repository as main has it.  Last, so that a failure there leaves
 # the live site published.
-sh servers/peoplesweb/deploy/test.sh || echo "sweep: the test site, peoplesweb.org/test, was not built" >&2
-# The site under the contracts' new names, peoplesweb.org/next
-# (deploy/next.sh); after the test site, a failure there leaving both as they
-# are.
-sh servers/peoplesweb/deploy/next.sh || echo "sweep: the site under the new names, peoplesweb.org/next, was not built" >&2
+sh servers/peoplesweb/deploy/test.sh || echo "sweep: the test site, peoplesweb.org/next, was not built" >&2
+# Until 2026-11-17 a second site, built by a script of its own, showed at
+# /next the contracts' new names before they were made on main; what it left
+# on the server is removed.
+rm -rf /var/lib/glp/next
