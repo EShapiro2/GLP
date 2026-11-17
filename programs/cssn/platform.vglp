@@ -24,23 +24,23 @@ person_unfriend(Peer, Peer)
 ;
 message(Peer, Peer, Speech)
 ;
-create(Peer, Constant)
+create(Peer, Speech)
 ;
-close(Peer, List(Peer), Constant)
+close(Peer, List(Peer), Speech)
 ;
-join(Peer, Peer, Constant)
+join(Peer, Peer, Speech)
 ;
-remove(Peer, Peer, Constant)
+remove(Peer, Peer, Speech)
 ;
-leave(Peer, Peer, Constant)
+leave(Peer, Peer, Speech)
 ;
-post(Peer, Peer, Speech, Constant)
+post(Peer, Peer, Speech, Speech)
 ;
-post_own(Peer, Speech, Constant)
+post_own(Peer, Speech, Speech)
 ;
-deliver(Peer, Peer, Peer, Speech, Constant)
+deliver(Peer, Peer, Peer, Speech, Speech)
 ;
-deliver_leader(Peer, Peer, Speech, Constant)
+deliver_leader(Peer, Peer, Speech, Speech)
 ;
 enter(Peer, Peer)
 ;
@@ -72,27 +72,27 @@ retire(Peer, Peer, List(Peer), List(Peer), List(Peer), List(Peer))
 ;
 child_message(Peer, Peer, Speech)
 ;
-child_post(Peer, Peer, Speech, Constant)
+child_post(Peer, Peer, Speech, Speech)
 ;
-child_post_own(Peer, Speech, Constant)
+child_post_own(Peer, Speech, Speech)
 ;
-child_create(Peer, Peer, Constant)
+child_create(Peer, Peer, Speech)
 ;
-child_close(Peer, List(Peer), Constant)
+child_close(Peer, List(Peer), Speech)
 ;
-parent_close(Peer, Peer, List(Peer), Constant)
+parent_close(Peer, Peer, List(Peer), Speech)
 ;
-child_join(Peer, Peer, Peer, Constant)
+child_join(Peer, Peer, Peer, Speech)
 ;
-children_join(Peer, Peer, Peer, Peer, Constant)
+children_join(Peer, Peer, Peer, Peer, Speech)
 ;
-children_of_one_parent_join(Peer, Peer, Peer, Constant)
+children_of_one_parent_join(Peer, Peer, Peer, Speech)
 ;
-child_withdraw(Peer, Peer, Peer, Constant)
+child_withdraw(Peer, Peer, Peer, Speech)
 ;
-child_leave(Peer, Peer, Constant)
+child_leave(Peer, Peer, Speech)
 ;
-child_remove(Peer, Peer, Constant)
+child_remove(Peer, Peer, Speech)
 ;
 of_age(Peer, Peer, List(Peer))
 .
@@ -110,19 +110,19 @@ person_unfriend(Peer, Peer)
 ;
 message(Peer, Peer, Speech)
 ;
-create(Peer, Constant)
+create(Peer, Speech)
 ;
-close(Peer, Constant)
+close(Peer, Speech)
 ;
-join(Peer, Peer, Constant)
+join(Peer, Peer, Speech)
 ;
-remove(Peer, Peer, Constant)
+remove(Peer, Peer, Speech)
 ;
-leave(Peer, Peer, Constant)
+leave(Peer, Peer, Speech)
 ;
-post(Peer, Peer, Speech, Constant)
+post(Peer, Peer, Speech, Speech)
 ;
-post_own(Peer, Speech, Constant)
+post_own(Peer, Speech, Speech)
 ;
 enter(Peer, Peer)
 ;
@@ -154,27 +154,27 @@ retire(Peer, Peer)
 ;
 child_message(Peer, Peer, Speech)
 ;
-child_post(Peer, Peer, Speech, Constant)
+child_post(Peer, Peer, Speech, Speech)
 ;
-child_post_own(Peer, Speech, Constant)
+child_post_own(Peer, Speech, Speech)
 ;
-child_create(Peer, Peer, Constant)
+child_create(Peer, Peer, Speech)
 ;
-child_close(Peer, Constant)
+child_close(Peer, Speech)
 ;
-parent_close(Peer, Peer, Constant)
+parent_close(Peer, Peer, Speech)
 ;
-child_join(Peer, Peer, Peer, Constant)
+child_join(Peer, Peer, Peer, Speech)
 ;
-children_join(Peer, Peer, Peer, Peer, Constant)
+children_join(Peer, Peer, Peer, Peer, Speech)
 ;
-children_of_one_parent_join(Peer, Peer, Peer, Constant)
+children_of_one_parent_join(Peer, Peer, Peer, Speech)
 ;
-child_withdraw(Peer, Peer, Peer, Constant)
+child_withdraw(Peer, Peer, Peer, Speech)
 ;
-child_leave(Peer, Peer, Constant)
+child_leave(Peer, Peer, Speech)
 ;
-child_remove(Peer, Peer, Constant)
+child_remove(Peer, Peer, Speech)
 ;
 of_age(Peer, Peer)
 .
@@ -208,17 +208,17 @@ friend(Peer)
 ;
 message(Peer, Speech)
 ;
-leader(Constant)
+leader(Speech)
 ;
-member(Constant, Peer)
+member(Speech, Peer)
 ;
-listed(Peer, Constant)
+listed(Peer, Speech)
 ;
-posted(Speech, Peer, Constant)
+posted(Speech, Peer, Speech)
 ;
-group_delivered(Peer, Speech, Constant, Peer)
+group_delivered(Peer, Speech, Speech, Peer)
 ;
-group_message(Peer, Speech, Constant, Peer)
+group_message(Peer, Speech, Speech, Peer)
 ;
 child
 ;
@@ -231,10 +231,6 @@ parent(Peer)
 retired
 ;
 of_age
-;
-listed(Peer, Integer)
-;
-member(Integer, Peer)
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -248,17 +244,17 @@ atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
 .
 atom_of(g(message, [p(V1), s(V2)]), shown(message(V1?, V2?)))
 .
-atom_of(g(leader, [v(V1)]), shown(leader(V1?)))
+atom_of(g(leader, [s(V1)]), shown(leader(V1?)))
 .
-atom_of(g(member, [v(V1), p(V2)]), shown(member(V1?, V2?)))
+atom_of(g(member, [s(V1), p(V2)]), shown(member(V1?, V2?)))
 .
-atom_of(g(listed, [p(V1), v(V2)]), shown(listed(V1?, V2?)))
+atom_of(g(listed, [p(V1), s(V2)]), shown(listed(V1?, V2?)))
 .
-atom_of(g(posted, [s(V1), p(V2), v(V3)]), shown(posted(V1?, V2?, V3?)))
+atom_of(g(posted, [s(V1), p(V2), s(V3)]), shown(posted(V1?, V2?, V3?)))
 .
-atom_of(g(group_delivered, [p(V1), s(V2), v(V3), p(V4)]), shown(group_delivered(V1?, V2?, V3?, V4?)))
+atom_of(g(group_delivered, [p(V1), s(V2), s(V3), p(V4)]), shown(group_delivered(V1?, V2?, V3?, V4?)))
 .
-atom_of(g(group_message, [p(V1), s(V2), v(V3), p(V4)]), shown(group_message(V1?, V2?, V3?, V4?)))
+atom_of(g(group_message, [p(V1), s(V2), s(V3), p(V4)]), shown(group_message(V1?, V2?, V3?, V4?)))
 .
 atom_of(g(child, []), shown(child))
 .
@@ -272,14 +268,10 @@ atom_of(g(retired, []), shown(retired))
 .
 atom_of(g(of_age, []), shown(of_age))
 .
-atom_of(g(listed, [p(V1), n(V2)]), shown(listed(V1?, V2?)))
-.
-atom_of(g(member, [n(V1), p(V2)]), shown(member(V1?, V2?)))
-.
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, []), atom(person, [])], [])]), schema(message, [svar('Text')], [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(person, [])], [])]), schema(create, [num('Grupo')], [rs(guarded, [atom(leader, [num('Grupo')]), atom(member, [num('Grupo'), role(1)]), atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(person, [])], [atom(leader, [num('Grupo')])])]), lschema(close, [num('Grupo')], [rs(guarded, [], [atom(leader, [num('Grupo')]), atom(listed, [any, num('Grupo')])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(member, [num('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, listed, [role(2), num('Grupo')], fcons(true), [], [])]), schema(join, [num('Grupo')], [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(friend, [role(1)]), atom(person, [])], [])]), schema(remove, [num('Grupo')], [rs(unguarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, []), atom(leader, [num('Grupo')]), atom(person, [])], [])]), schema(leave, [num('Grupo')], [rs(guarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, [])], [])]), schema(post, [svar('Text'), num('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), num('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), num('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(member, [num('Grupo'), role(1)]), atom(person, [])], [])]), schema(post_own, [svar('Text'), num('Grupo')], [rs(guarded, [atom(posted, [svar('Text'), role(1), num('Grupo')])], [], [atom(identity, []), atom(member, [num('Grupo'), role(1)]), atom(person, [])], [atom(posted, [svar('Text'), role(1), num('Grupo')])])]), schema(deliver, [pvar('Bob'), svar('Text'), num('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(2)])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), num('Grupo')]), atom(listed, [role(2), num('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(2)])]), rs(unguarded, [atom(group_message, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)])], [], [atom(identity, [])], [])]), schema(deliver_leader, [pvar('Bob'), svar('Text'), num('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)]), atom(group_message, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), num('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)])])]), schema(enter, [], [rs(guarded, [atom(identity, []), atom(child, []), atom(has_parent, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(parent, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), lschema(make_parent, [], [rs(guarded, [atom(parent, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)])], [atom(parent, [role(2)])]), rs(unguarded, [atom(has_parent, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], [atom(retired, []), atom(has_parent, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], [])], [listing(4, 2, has_parent, [role(4)], fcons(true), [], [])]), schema(resign, [], [rs(guarded, [], [atom(parent, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_parent, [role(1)])], [atom(identity, [])], [])]), lschema(end_parent, [], [rs(unguarded, [], [atom(parent, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_parent, [role(1)])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], [])], [listing(4, 2, has_parent, [role(4)], fcons(ne(role(4), role(1))), [], [])]), schema(parent_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(parent, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_parent, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(child_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(parent, [role(1)]), atom(person, [])], [])]), schema(child_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), schema(child_end, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, [])], [atom(has_parent, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], [atom(parent, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(child_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [atom(parent, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(children_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(4)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [role(4)]), atom(parent, [role(1)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(parent, [role(2)]), atom(person, [])], [])]), schema(children_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(children_of_one_parent_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), lschema(retire, [], [rs(unguarded, [atom(retired, [])], [atom(has_parent, [any]), atom(friend, [any]), atom(member, [any, any])], [atom(identity, []), atom(has_parent, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(1)])], []), rs(unguarded, [], [atom(parent, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(listed, [role(1), any])], [atom(identity, [])], [])], [listing(3, 1, has_parent, [role(3)], fcons(true), [], []), listing(4, 1, has_parent, [role(4)], fcons(true), [], []), listing(5, 1, friend, [role(5)], fcons(true), [], []), listing(6, 1, member, [any, role(6)], fcons(true), [], [])]), schema(child_message, [svar('Text')], [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(child, []), atom(friend, [role(1)])], [atom(retired, [])])]), schema(child_post, [svar('Text'), num('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), num('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), num('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(child, []), atom(member, [num('Grupo'), role(1)])], [atom(retired, [])])]), schema(child_post_own, [svar('Text'), num('Grupo')], [rs(guarded, [atom(posted, [svar('Text'), role(1), num('Grupo')])], [], [atom(identity, []), atom(child, []), atom(member, [num('Grupo'), role(1)])], [atom(retired, []), atom(posted, [svar('Text'), role(1), num('Grupo')])])]), schema(child_create, [num('Grupo')], [rs(guarded, [atom(leader, [num('Grupo')]), atom(member, [num('Grupo'), role(1)]), atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(2)])], [atom(retired, []), atom(leader, [num('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), lschema(child_close, [num('Grupo')], [rs(guarded, [], [atom(leader, [num('Grupo')]), atom(listed, [any, num('Grupo')])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), rs(unguarded, [], [atom(member, [num('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, listed, [role(2), num('Grupo')], fcons(true), [], [])]), lschema(parent_close, [num('Grupo')], [rs(unguarded, [], [atom(leader, [num('Grupo')]), atom(listed, [any, num('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], []), rs(unguarded, [], [atom(member, [num('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(3, 1, listed, [role(3), num('Grupo')], fcons(true), [], [])]), schema(child_join, [num('Grupo')], [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(has_parent, [role(3)])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(person, []), atom(friend, [role(1)]), atom(friend, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(2)]), atom(person, [])], [])]), schema(children_join, [num('Grupo')], [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(4)])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(knows, [role(1)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(3)]), atom(person, [])], [])]), schema(children_of_one_parent_join, [num('Grupo')], [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(3)])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(parent, [role(1)]), atom(person, [])], [])]), schema(child_withdraw, [num('Grupo')], [rs(unguarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(unguarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], [])]), schema(child_leave, [num('Grupo')], [rs(guarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), rs(unguarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, [])], [])]), schema(child_remove, [num('Grupo')], [rs(unguarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, []), atom(leader, [num('Grupo')]), atom(child, [])], [atom(retired, [])])]), lschema(of_age, [], [rs(unguarded, [atom(of_age, []), atom(person, [])], [atom(child, []), atom(has_parent, [any])], [atom(identity, []), atom(has_parent, [pvar('Bob')])], [atom(of_age, [])]), rs(guarded, [], [], [atom(identity, []), atom(creator, [role(1)]), atom(person, [])], []), rs(unguarded, [], [atom(parent, [role(1)])], [atom(identity, [])], [])], [listing(3, 1, has_parent, [role(3)], fcons(true), [], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, []), atom(person, [])], [])]), schema(message, [svar('Text')], [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(person, [])], [])]), schema(create, [svar('Grupo')], [rs(guarded, [atom(leader, [svar('Grupo')]), atom(member, [svar('Grupo'), role(1)]), atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(person, [])], [atom(leader, [svar('Grupo')])])]), lschema(close, [svar('Grupo')], [rs(guarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(member, [svar('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, listed, [role(2), svar('Grupo')], fcons(true), [], [])]), schema(join, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(friend, [role(1)]), atom(person, [])], [])]), schema(remove, [svar('Grupo')], [rs(unguarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(person, [])], [])]), schema(leave, [svar('Grupo')], [rs(guarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, [])], [])]), schema(post, [svar('Text'), svar('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), svar('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), svar('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(member, [svar('Grupo'), role(1)]), atom(person, [])], [])]), schema(post_own, [svar('Text'), svar('Grupo')], [rs(guarded, [atom(posted, [svar('Text'), role(1), svar('Grupo')])], [], [atom(identity, []), atom(member, [svar('Grupo'), role(1)]), atom(person, [])], [atom(posted, [svar('Text'), role(1), svar('Grupo')])])]), schema(deliver, [pvar('Bob'), svar('Text'), svar('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(2)])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), svar('Grupo')]), atom(listed, [role(2), svar('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(2)])]), rs(unguarded, [atom(group_message, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)])], [], [atom(identity, [])], [])]), schema(deliver_leader, [pvar('Bob'), svar('Text'), svar('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)]), atom(group_message, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), svar('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)])])]), schema(enter, [], [rs(guarded, [atom(identity, []), atom(child, []), atom(has_parent, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(parent, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), lschema(make_parent, [], [rs(guarded, [atom(parent, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)])], [atom(parent, [role(2)])]), rs(unguarded, [atom(has_parent, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], [atom(retired, []), atom(has_parent, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], [])], [listing(4, 2, has_parent, [role(4)], fcons(true), [], [])]), schema(resign, [], [rs(guarded, [], [atom(parent, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_parent, [role(1)])], [atom(identity, [])], [])]), lschema(end_parent, [], [rs(unguarded, [], [atom(parent, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_parent, [role(1)])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], [])], [listing(4, 2, has_parent, [role(4)], fcons(ne(role(4), role(1))), [], [])]), schema(parent_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(parent, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_parent, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(child_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(parent, [role(1)]), atom(person, [])], [])]), schema(child_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), schema(child_end, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, [])], [atom(has_parent, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], [atom(parent, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(child_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [atom(parent, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(children_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(4)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [role(4)]), atom(parent, [role(1)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(parent, [role(2)]), atom(person, [])], [])]), schema(children_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(children_of_one_parent_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), lschema(retire, [], [rs(unguarded, [atom(retired, [])], [atom(has_parent, [any]), atom(friend, [any]), atom(member, [any, any])], [atom(identity, []), atom(has_parent, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(1)])], []), rs(unguarded, [], [atom(parent, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(listed, [role(1), any])], [atom(identity, [])], [])], [listing(3, 1, has_parent, [role(3)], fcons(true), [], []), listing(4, 1, has_parent, [role(4)], fcons(true), [], []), listing(5, 1, friend, [role(5)], fcons(true), [], []), listing(6, 1, member, [any, role(6)], fcons(true), [], [])]), schema(child_message, [svar('Text')], [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(child, []), atom(friend, [role(1)])], [atom(retired, [])])]), schema(child_post, [svar('Text'), svar('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), svar('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), svar('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(child, []), atom(member, [svar('Grupo'), role(1)])], [atom(retired, [])])]), schema(child_post_own, [svar('Text'), svar('Grupo')], [rs(guarded, [atom(posted, [svar('Text'), role(1), svar('Grupo')])], [], [atom(identity, []), atom(child, []), atom(member, [svar('Grupo'), role(1)])], [atom(retired, []), atom(posted, [svar('Text'), role(1), svar('Grupo')])])]), schema(child_create, [svar('Grupo')], [rs(guarded, [atom(leader, [svar('Grupo')]), atom(member, [svar('Grupo'), role(1)]), atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(2)])], [atom(retired, []), atom(leader, [svar('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), lschema(child_close, [svar('Grupo')], [rs(guarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), rs(unguarded, [], [atom(member, [svar('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, listed, [role(2), svar('Grupo')], fcons(true), [], [])]), lschema(parent_close, [svar('Grupo')], [rs(unguarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], []), rs(unguarded, [], [atom(member, [svar('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(3, 1, listed, [role(3), svar('Grupo')], fcons(true), [], [])]), schema(child_join, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(has_parent, [role(3)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(person, []), atom(friend, [role(1)]), atom(friend, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(2)]), atom(person, [])], [])]), schema(children_join, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(4)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(knows, [role(1)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(3)]), atom(person, [])], [])]), schema(children_of_one_parent_join, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(3)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(parent, [role(1)]), atom(person, [])], [])]), schema(child_withdraw, [svar('Grupo')], [rs(unguarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(unguarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], [])]), schema(child_leave, [svar('Grupo')], [rs(guarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), rs(unguarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, [])], [])]), schema(child_remove, [svar('Grupo')], [rs(unguarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(child, [])], [atom(retired, [])])]), lschema(of_age, [], [rs(unguarded, [atom(of_age, []), atom(person, [])], [atom(child, []), atom(has_parent, [any])], [atom(identity, []), atom(has_parent, [pvar('Bob')])], [atom(of_age, [])]), rs(guarded, [], [], [atom(identity, []), atom(creator, [role(1)]), atom(person, [])], []), rs(unguarded, [], [atom(parent, [role(1)])], [atom(identity, [])], [])], [listing(3, 1, has_parent, [role(3)], fcons(true), [], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -295,23 +287,23 @@ schema_entry(person_unfriend, schema(person_unfriend, [], [rs(guarded, [], [atom
 .
 schema_entry(message, schema(message, [svar('Text')], [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(person, [])], [])]))
 .
-schema_entry(create, schema(create, [num('Grupo')], [rs(guarded, [atom(leader, [num('Grupo')]), atom(member, [num('Grupo'), role(1)]), atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(person, [])], [atom(leader, [num('Grupo')])])]))
+schema_entry(create, schema(create, [svar('Grupo')], [rs(guarded, [atom(leader, [svar('Grupo')]), atom(member, [svar('Grupo'), role(1)]), atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(person, [])], [atom(leader, [svar('Grupo')])])]))
 .
-schema_entry(close, lschema(close, [num('Grupo')], [rs(guarded, [], [atom(leader, [num('Grupo')]), atom(listed, [any, num('Grupo')])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(member, [num('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, listed, [role(2), num('Grupo')], fcons(true), [], [])]))
+schema_entry(close, lschema(close, [svar('Grupo')], [rs(guarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(member, [svar('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, listed, [role(2), svar('Grupo')], fcons(true), [], [])]))
 .
-schema_entry(join, schema(join, [num('Grupo')], [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(friend, [role(1)]), atom(person, [])], [])]))
+schema_entry(join, schema(join, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(friend, [role(1)]), atom(person, [])], [])]))
 .
-schema_entry(remove, schema(remove, [num('Grupo')], [rs(unguarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, []), atom(leader, [num('Grupo')]), atom(person, [])], [])]))
+schema_entry(remove, schema(remove, [svar('Grupo')], [rs(unguarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(person, [])], [])]))
 .
-schema_entry(leave, schema(leave, [num('Grupo')], [rs(guarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, [])], [])]))
+schema_entry(leave, schema(leave, [svar('Grupo')], [rs(guarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, [])], [])]))
 .
-schema_entry(post, schema(post, [svar('Text'), num('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), num('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), num('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(member, [num('Grupo'), role(1)]), atom(person, [])], [])]))
+schema_entry(post, schema(post, [svar('Text'), svar('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), svar('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), svar('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(member, [svar('Grupo'), role(1)]), atom(person, [])], [])]))
 .
-schema_entry(post_own, schema(post_own, [svar('Text'), num('Grupo')], [rs(guarded, [atom(posted, [svar('Text'), role(1), num('Grupo')])], [], [atom(identity, []), atom(member, [num('Grupo'), role(1)]), atom(person, [])], [atom(posted, [svar('Text'), role(1), num('Grupo')])])]))
+schema_entry(post_own, schema(post_own, [svar('Text'), svar('Grupo')], [rs(guarded, [atom(posted, [svar('Text'), role(1), svar('Grupo')])], [], [atom(identity, []), atom(member, [svar('Grupo'), role(1)]), atom(person, [])], [atom(posted, [svar('Text'), role(1), svar('Grupo')])])]))
 .
-schema_entry(deliver, schema(deliver, [pvar('Bob'), svar('Text'), num('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(2)])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), num('Grupo')]), atom(listed, [role(2), num('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(2)])]), rs(unguarded, [atom(group_message, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)])], [], [atom(identity, [])], [])]))
+schema_entry(deliver, schema(deliver, [pvar('Bob'), svar('Text'), svar('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(2)])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), svar('Grupo')]), atom(listed, [role(2), svar('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(2)])]), rs(unguarded, [atom(group_message, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)])], [], [atom(identity, [])], [])]))
 .
-schema_entry(deliver_leader, schema(deliver_leader, [pvar('Bob'), svar('Text'), num('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)]), atom(group_message, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), num('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)])])]))
+schema_entry(deliver_leader, schema(deliver_leader, [pvar('Bob'), svar('Text'), svar('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)]), atom(group_message, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), svar('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)])])]))
 .
 schema_entry(enter, schema(enter, [], [rs(guarded, [atom(identity, []), atom(child, []), atom(has_parent, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(parent, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]))
 .
@@ -343,27 +335,27 @@ schema_entry(retire, lschema(retire, [], [rs(unguarded, [atom(retired, [])], [at
 .
 schema_entry(child_message, schema(child_message, [svar('Text')], [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(child, []), atom(friend, [role(1)])], [atom(retired, [])])]))
 .
-schema_entry(child_post, schema(child_post, [svar('Text'), num('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), num('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), num('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(child, []), atom(member, [num('Grupo'), role(1)])], [atom(retired, [])])]))
+schema_entry(child_post, schema(child_post, [svar('Text'), svar('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), svar('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), svar('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(child, []), atom(member, [svar('Grupo'), role(1)])], [atom(retired, [])])]))
 .
-schema_entry(child_post_own, schema(child_post_own, [svar('Text'), num('Grupo')], [rs(guarded, [atom(posted, [svar('Text'), role(1), num('Grupo')])], [], [atom(identity, []), atom(child, []), atom(member, [num('Grupo'), role(1)])], [atom(retired, []), atom(posted, [svar('Text'), role(1), num('Grupo')])])]))
+schema_entry(child_post_own, schema(child_post_own, [svar('Text'), svar('Grupo')], [rs(guarded, [atom(posted, [svar('Text'), role(1), svar('Grupo')])], [], [atom(identity, []), atom(child, []), atom(member, [svar('Grupo'), role(1)])], [atom(retired, []), atom(posted, [svar('Text'), role(1), svar('Grupo')])])]))
 .
-schema_entry(child_create, schema(child_create, [num('Grupo')], [rs(guarded, [atom(leader, [num('Grupo')]), atom(member, [num('Grupo'), role(1)]), atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(2)])], [atom(retired, []), atom(leader, [num('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]))
+schema_entry(child_create, schema(child_create, [svar('Grupo')], [rs(guarded, [atom(leader, [svar('Grupo')]), atom(member, [svar('Grupo'), role(1)]), atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(2)])], [atom(retired, []), atom(leader, [svar('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]))
 .
-schema_entry(child_close, lschema(child_close, [num('Grupo')], [rs(guarded, [], [atom(leader, [num('Grupo')]), atom(listed, [any, num('Grupo')])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), rs(unguarded, [], [atom(member, [num('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, listed, [role(2), num('Grupo')], fcons(true), [], [])]))
+schema_entry(child_close, lschema(child_close, [svar('Grupo')], [rs(guarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), rs(unguarded, [], [atom(member, [svar('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(2, 1, listed, [role(2), svar('Grupo')], fcons(true), [], [])]))
 .
-schema_entry(parent_close, lschema(parent_close, [num('Grupo')], [rs(unguarded, [], [atom(leader, [num('Grupo')]), atom(listed, [any, num('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], []), rs(unguarded, [], [atom(member, [num('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(3, 1, listed, [role(3), num('Grupo')], fcons(true), [], [])]))
+schema_entry(parent_close, lschema(parent_close, [svar('Grupo')], [rs(unguarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], []), rs(unguarded, [], [atom(member, [svar('Grupo'), role(1)])], [atom(identity, [])], [])], [listing(3, 1, listed, [role(3), svar('Grupo')], fcons(true), [], [])]))
 .
-schema_entry(child_join, schema(child_join, [num('Grupo')], [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(has_parent, [role(3)])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(person, []), atom(friend, [role(1)]), atom(friend, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(2)]), atom(person, [])], [])]))
+schema_entry(child_join, schema(child_join, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(has_parent, [role(3)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(person, []), atom(friend, [role(1)]), atom(friend, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(2)]), atom(person, [])], [])]))
 .
-schema_entry(children_join, schema(children_join, [num('Grupo')], [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(4)])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(knows, [role(1)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(3)]), atom(person, [])], [])]))
+schema_entry(children_join, schema(children_join, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(4)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(knows, [role(1)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(3)]), atom(person, [])], [])]))
 .
-schema_entry(children_of_one_parent_join, schema(children_of_one_parent_join, [num('Grupo')], [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(3)])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(parent, [role(1)]), atom(person, [])], [])]))
+schema_entry(children_of_one_parent_join, schema(children_of_one_parent_join, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(3)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(parent, [role(1)]), atom(person, [])], [])]))
 .
-schema_entry(child_withdraw, schema(child_withdraw, [num('Grupo')], [rs(unguarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(unguarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], [])]))
+schema_entry(child_withdraw, schema(child_withdraw, [svar('Grupo')], [rs(unguarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(unguarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], [])]))
 .
-schema_entry(child_leave, schema(child_leave, [num('Grupo')], [rs(guarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), rs(unguarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, [])], [])]))
+schema_entry(child_leave, schema(child_leave, [svar('Grupo')], [rs(guarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), rs(unguarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, [])], [])]))
 .
-schema_entry(child_remove, schema(child_remove, [num('Grupo')], [rs(unguarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, []), atom(leader, [num('Grupo')]), atom(child, [])], [atom(retired, [])])]))
+schema_entry(child_remove, schema(child_remove, [svar('Grupo')], [rs(unguarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(child, [])], [atom(retired, [])])]))
 .
 schema_entry(of_age, lschema(of_age, [], [rs(unguarded, [atom(of_age, []), atom(person, [])], [atom(child, []), atom(has_parent, [any])], [atom(identity, []), atom(has_parent, [pvar('Bob')])], [atom(of_age, [])]), rs(guarded, [], [], [atom(identity, []), atom(creator, [role(1)]), atom(person, [])], []), rs(unguarded, [], [atom(parent, [role(1)])], [atom(identity, [])], [])], [listing(3, 1, has_parent, [role(3)], fcons(true), [], [])]))
 .
@@ -469,7 +461,7 @@ schema_forms(child_post, [sform(at(2), for(fa(role(2), atom(person, [])), fand(f
 .
 schema_forms(child_post_own, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([pvar('G1')], role(1), atom(has_parent, [pvar('G1')]), fcons(true)))))])
 .
-schema_forms(child_close, [sform(cond, fforall([role(2)], role(1), atom(listed, [role(1), role(2), num('Grupo')]), fcons(true), [fa(role(2), atom(identity, [role(2)])), fa(role(2), atom(member, [role(2), num('Grupo'), role(1)]))])), sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([pvar('G1')], role(1), atom(has_parent, [pvar('G1')]), fcons(true)))))])
+schema_forms(child_close, [sform(cond, fforall([role(2)], role(1), atom(listed, [role(1), role(2), svar('Grupo')]), fcons(true), [fa(role(2), atom(identity, [role(2)])), fa(role(2), atom(member, [role(2), svar('Grupo'), role(1)]))])), sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([pvar('G1')], role(1), atom(has_parent, [pvar('G1')]), fcons(true)))))])
 .
 schema_forms(child_join, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([pvar('G1')], role(1), atom(has_parent, [pvar('G1')]), fcons(true)))))])
 .
@@ -484,7 +476,7 @@ schema_held(end_parent, [hp(2, [atom(has_parent, [pvar('~1')])]), hp(4, [atom(id
 .
 schema_held(retire, [hp(1, [atom(has_parent, [pvar('~1')])]), hp(3, [atom(identity, []), atom(person, []), atom(parent, [role(1)])]), hp(1, [atom(has_parent, [pvar('~1')])]), hp(4, [atom(identity, []), atom(parent, [role(1)])]), hp(1, [atom(friend, [pvar('~1')])]), hp(5, [atom(identity, []), atom(friend, [role(1)])]), hp(1, [atom(member, [any, pvar('~2')])]), hp(6, [atom(identity, [])])])
 .
-schema_held(child_close, [hp(1, [atom(listed, [pvar('~1'), num('Grupo')])]), hp(2, [atom(identity, []), atom(member, [num('Grupo'), role(1)])])])
+schema_held(child_close, [hp(1, [atom(listed, [pvar('~1'), svar('Grupo')])]), hp(2, [atom(identity, []), atom(member, [svar('Grupo'), role(1)])])])
 .
 schema_held(_, []) :- otherwise | true.
 
@@ -700,25 +692,25 @@ binding_of(person_unfriend(V1, V2), person_unfriend, [b(role(1), p(V1?)), b(role
 .
 binding_of(message(V1, V2, V3), message, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Text'), s(V3?))])
 .
-binding_of(create(V1, V2), create, [b(role(1), p(V1?)), b(num('Grupo'), v(V2?))])
+binding_of(create(V1, V2), create, [b(role(1), p(V1?)), b(svar('Grupo'), s(V2?))])
 .
 binding_of(close(V1, V2, V3), close, B?)
 :-
-listed_binding(close, [b(role(1), p(V1?)), b(num('Grupo'), v(V3?))], [ppl(V2?)], B)
+listed_binding(close, [b(role(1), p(V1?)), b(svar('Grupo'), s(V3?))], [ppl(V2?)], B)
 .
-binding_of(join(V1, V2, V3), join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Grupo'), v(V3?))])
+binding_of(join(V1, V2, V3), join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Grupo'), s(V3?))])
 .
-binding_of(remove(V1, V2, V3), remove, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Grupo'), v(V3?))])
+binding_of(remove(V1, V2, V3), remove, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Grupo'), s(V3?))])
 .
-binding_of(leave(V1, V2, V3), leave, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Grupo'), v(V3?))])
+binding_of(leave(V1, V2, V3), leave, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Grupo'), s(V3?))])
 .
-binding_of(post(V1, V2, V3, V4), post, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Text'), s(V3?)), b(num('Grupo'), v(V4?))])
+binding_of(post(V1, V2, V3, V4), post, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Text'), s(V3?)), b(svar('Grupo'), s(V4?))])
 .
-binding_of(post_own(V1, V2, V3), post_own, [b(role(1), p(V1?)), b(svar('Text'), s(V2?)), b(num('Grupo'), v(V3?))])
+binding_of(post_own(V1, V2, V3), post_own, [b(role(1), p(V1?)), b(svar('Text'), s(V2?)), b(svar('Grupo'), s(V3?))])
 .
-binding_of(deliver(V1, V2, V3, V4, V5), deliver, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Bob'), p(V3?)), b(svar('Text'), s(V4?)), b(num('Grupo'), v(V5?))])
+binding_of(deliver(V1, V2, V3, V4, V5), deliver, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Bob'), p(V3?)), b(svar('Text'), s(V4?)), b(svar('Grupo'), s(V5?))])
 .
-binding_of(deliver_leader(V1, V2, V3, V4), deliver_leader, [b(role(1), p(V1?)), b(pvar('Bob'), p(V2?)), b(svar('Text'), s(V3?)), b(num('Grupo'), v(V4?))])
+binding_of(deliver_leader(V1, V2, V3, V4), deliver_leader, [b(role(1), p(V1?)), b(pvar('Bob'), p(V2?)), b(svar('Text'), s(V3?)), b(svar('Grupo'), s(V4?))])
 .
 binding_of(enter(V1, V2), enter, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
@@ -756,31 +748,31 @@ listed_binding(retire, [b(role(1), p(V1?)), b(role(2), p(V2?))], [ppl(V3?), ppl(
 .
 binding_of(child_message(V1, V2, V3), child_message, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Text'), s(V3?))])
 .
-binding_of(child_post(V1, V2, V3, V4), child_post, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Text'), s(V3?)), b(num('Grupo'), v(V4?))])
+binding_of(child_post(V1, V2, V3, V4), child_post, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Text'), s(V3?)), b(svar('Grupo'), s(V4?))])
 .
-binding_of(child_post_own(V1, V2, V3), child_post_own, [b(role(1), p(V1?)), b(svar('Text'), s(V2?)), b(num('Grupo'), v(V3?))])
+binding_of(child_post_own(V1, V2, V3), child_post_own, [b(role(1), p(V1?)), b(svar('Text'), s(V2?)), b(svar('Grupo'), s(V3?))])
 .
-binding_of(child_create(V1, V2, V3), child_create, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Grupo'), v(V3?))])
+binding_of(child_create(V1, V2, V3), child_create, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Grupo'), s(V3?))])
 .
 binding_of(child_close(V1, V2, V3), child_close, B?)
 :-
-listed_binding(child_close, [b(role(1), p(V1?)), b(num('Grupo'), v(V3?))], [ppl(V2?)], B)
+listed_binding(child_close, [b(role(1), p(V1?)), b(svar('Grupo'), s(V3?))], [ppl(V2?)], B)
 .
 binding_of(parent_close(V1, V2, V3, V4), parent_close, B?)
 :-
-listed_binding(parent_close, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Grupo'), v(V4?))], [ppl(V3?)], B)
+listed_binding(parent_close, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Grupo'), s(V4?))], [ppl(V3?)], B)
 .
-binding_of(child_join(V1, V2, V3, V4), child_join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(num('Grupo'), v(V4?))])
+binding_of(child_join(V1, V2, V3, V4), child_join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(svar('Grupo'), s(V4?))])
 .
-binding_of(children_join(V1, V2, V3, V4, V5), children_join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(role(4), p(V4?)), b(num('Grupo'), v(V5?))])
+binding_of(children_join(V1, V2, V3, V4, V5), children_join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(role(4), p(V4?)), b(svar('Grupo'), s(V5?))])
 .
-binding_of(children_of_one_parent_join(V1, V2, V3, V4), children_of_one_parent_join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(num('Grupo'), v(V4?))])
+binding_of(children_of_one_parent_join(V1, V2, V3, V4), children_of_one_parent_join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(svar('Grupo'), s(V4?))])
 .
-binding_of(child_withdraw(V1, V2, V3, V4), child_withdraw, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(num('Grupo'), v(V4?))])
+binding_of(child_withdraw(V1, V2, V3, V4), child_withdraw, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(svar('Grupo'), s(V4?))])
 .
-binding_of(child_leave(V1, V2, V3), child_leave, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Grupo'), v(V3?))])
+binding_of(child_leave(V1, V2, V3), child_leave, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Grupo'), s(V3?))])
 .
-binding_of(child_remove(V1, V2, V3), child_remove, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Grupo'), v(V3?))])
+binding_of(child_remove(V1, V2, V3), child_remove, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Grupo'), s(V3?))])
 .
 binding_of(of_age(V1, V2, V3), of_age, B?)
 :-
@@ -858,7 +850,7 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 ,
-val_const(num('Grupo'), B?, V2)
+val_speech(svar('Grupo'), B?, D?, V2)
 .
 class_of(close, B, D, close(V1?, V2?, V3?))
 :-
@@ -870,7 +862,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 copies_of(B?, 2, V2)
 ,
-val_const(num('Grupo'), B?, V3)
+val_speech(svar('Grupo'), B?, D?, V3)
 .
 class_of(join, B, D, join(V1?, V2?, V3?))
 :-
@@ -882,7 +874,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_const(num('Grupo'), B?, V3)
+val_speech(svar('Grupo'), B?, D?, V3)
 .
 class_of(remove, B, D, remove(V1?, V2?, V3?))
 :-
@@ -894,7 +886,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_const(num('Grupo'), B?, V3)
+val_speech(svar('Grupo'), B?, D?, V3)
 .
 class_of(leave, B, D, leave(V1?, V2?, V3?))
 :-
@@ -906,7 +898,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_const(num('Grupo'), B?, V3)
+val_speech(svar('Grupo'), B?, D?, V3)
 .
 class_of(post, B, D, post(V1?, V2?, V3?, V4?))
 :-
@@ -920,7 +912,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Text'), B?, D?, V3)
 ,
-val_const(num('Grupo'), B?, V4)
+val_speech(svar('Grupo'), B?, D?, V4)
 .
 class_of(post_own, B, D, post_own(V1?, V2?, V3?))
 :-
@@ -932,7 +924,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_speech(svar('Text'), B?, D?, V2)
 ,
-val_const(num('Grupo'), B?, V3)
+val_speech(svar('Grupo'), B?, D?, V3)
 .
 class_of(deliver, B, D, deliver(V1?, V2?, V3?, V4?, V5?))
 :-
@@ -948,7 +940,7 @@ val_peer(pvar('Bob'), B?, D?, V3)
 ,
 val_speech(svar('Text'), B?, D?, V4)
 ,
-val_const(num('Grupo'), B?, V5)
+val_speech(svar('Grupo'), B?, D?, V5)
 .
 class_of(deliver_leader, B, D, deliver_leader(V1?, V2?, V3?, V4?))
 :-
@@ -962,7 +954,7 @@ val_peer(pvar('Bob'), B?, D?, V2)
 ,
 val_speech(svar('Text'), B?, D?, V3)
 ,
-val_const(num('Grupo'), B?, V4)
+val_speech(svar('Grupo'), B?, D?, V4)
 .
 class_of(enter, B, D, enter(V1?, V2?))
 :-
@@ -1160,7 +1152,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Text'), B?, D?, V3)
 ,
-val_const(num('Grupo'), B?, V4)
+val_speech(svar('Grupo'), B?, D?, V4)
 .
 class_of(child_post_own, B, D, child_post_own(V1?, V2?, V3?))
 :-
@@ -1172,7 +1164,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_speech(svar('Text'), B?, D?, V2)
 ,
-val_const(num('Grupo'), B?, V3)
+val_speech(svar('Grupo'), B?, D?, V3)
 .
 class_of(child_create, B, D, child_create(V1?, V2?, V3?))
 :-
@@ -1184,7 +1176,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_const(num('Grupo'), B?, V3)
+val_speech(svar('Grupo'), B?, D?, V3)
 .
 class_of(child_close, B, D, child_close(V1?, V2?, V3?))
 :-
@@ -1196,7 +1188,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 copies_of(B?, 2, V2)
 ,
-val_const(num('Grupo'), B?, V3)
+val_speech(svar('Grupo'), B?, D?, V3)
 .
 class_of(parent_close, B, D, parent_close(V1?, V2?, V3?, V4?))
 :-
@@ -1210,7 +1202,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 copies_of(B?, 3, V3)
 ,
-val_const(num('Grupo'), B?, V4)
+val_speech(svar('Grupo'), B?, D?, V4)
 .
 class_of(child_join, B, D, child_join(V1?, V2?, V3?, V4?))
 :-
@@ -1224,7 +1216,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(role(3), B?, D?, V3)
 ,
-val_const(num('Grupo'), B?, V4)
+val_speech(svar('Grupo'), B?, D?, V4)
 .
 class_of(children_join, B, D, children_join(V1?, V2?, V3?, V4?, V5?))
 :-
@@ -1240,7 +1232,7 @@ val_peer(role(3), B?, D?, V3)
 ,
 val_peer(role(4), B?, D?, V4)
 ,
-val_const(num('Grupo'), B?, V5)
+val_speech(svar('Grupo'), B?, D?, V5)
 .
 class_of(children_of_one_parent_join, B, D, children_of_one_parent_join(V1?, V2?, V3?, V4?))
 :-
@@ -1254,7 +1246,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(role(3), B?, D?, V3)
 ,
-val_const(num('Grupo'), B?, V4)
+val_speech(svar('Grupo'), B?, D?, V4)
 .
 class_of(child_withdraw, B, D, child_withdraw(V1?, V2?, V3?, V4?))
 :-
@@ -1268,7 +1260,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(role(3), B?, D?, V3)
 ,
-val_const(num('Grupo'), B?, V4)
+val_speech(svar('Grupo'), B?, D?, V4)
 .
 class_of(child_leave, B, D, child_leave(V1?, V2?, V3?))
 :-
@@ -1280,7 +1272,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_const(num('Grupo'), B?, V3)
+val_speech(svar('Grupo'), B?, D?, V3)
 .
 class_of(child_remove, B, D, child_remove(V1?, V2?, V3?))
 :-
@@ -1292,7 +1284,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_const(num('Grupo'), B?, V3)
+val_speech(svar('Grupo'), B?, D?, V3)
 .
 class_of(of_age, B, D, of_age(V1?, V2?, V3?))
 :-
@@ -1324,7 +1316,7 @@ name_class(create(V1, V2), _, create(V1?, V2?))
 .
 name_class(close(V1, V3), St, C?)
 :-
-listed_class(close, [b(role(1), p(V1?)), b(num('Grupo'), v(V3?))], St?, C)
+listed_class(close, [b(role(1), p(V1?)), b(svar('Grupo'), s(V3?))], St?, C)
 .
 name_class(join(V1, V2, V3), _, join(V1?, V2?, V3?))
 .
@@ -1380,11 +1372,11 @@ name_class(child_create(V1, V2, V3), _, child_create(V1?, V2?, V3?))
 .
 name_class(child_close(V1, V3), St, C?)
 :-
-listed_class(child_close, [b(role(1), p(V1?)), b(num('Grupo'), v(V3?))], St?, C)
+listed_class(child_close, [b(role(1), p(V1?)), b(svar('Grupo'), s(V3?))], St?, C)
 .
 name_class(parent_close(V1, V2, V4), St, C?)
 :-
-listed_class(parent_close, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Grupo'), v(V4?))], St?, C)
+listed_class(parent_close, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Grupo'), s(V4?))], St?, C)
 .
 name_class(child_join(V1, V2, V3, V4), _, child_join(V1?, V2?, V3?, V4?))
 .
@@ -1701,7 +1693,7 @@ sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 % The contract the platform is compiled from (vGLP, Section 5.4, "The contract's words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC's reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC's reader's and the pragmas', named with an R before them.
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
-RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant) ; const(Constant).
+RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
 RArgs     ::= [] ; [RArg | RArgs].
 RAtom     ::= atom(Constant, RArgs) ; times(RArg, RAtom) ; rest(RArg, RArg, RAtom).
 RAtoms    ::= [] ; [RAtom | RAtoms].
@@ -1747,7 +1739,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("Children\nChildren instantiates Warded Groups with the guardians deciding jointly for the decision rule, a child for a ward and a parent for a guardian, and restricts and extends it.\nAlice and Bob are persons, Wendy and Will children.\n1. ◆ Enter: Guardians:1, only if Alice is a legal parent of the minor who operates Wendy.\n2. ■ A child's acquaintances. Child acquaint: Guardians:3, only if Alice knows Bob, and with the consent of Alice. Children acquaint: Guardians:4, only if Alice knows Will and Bob knows Wendy, and with the consent of Alice and Bob, who know each other, Alice and Bob possibly one person.\n3. ■ Child create: Warded Groups:2, only with the consent of Alice, a parent of Wendy. Only a child, Will, may join the group.\n4. ○ Of age: The creator of Wendy may declare Wendy of age, which ends every guardianship of Wendy, and Wendy is then a person. The creator will do so if the minor who operates Wendy comes of age, and not before.\n5. ○ A minor who is not a ward. Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, ['Bob', 'Alice', 'Carol'], [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, []), atom(person, [])], [])]), schema(message, ['Bob', 'Alice'], [svar('Text')], [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(person, [])], [])]), schema(create, ['Alice'], [const('Grupo')], [rs(guarded, [atom(leader, [num('Grupo')]), atom(member, [num('Grupo'), role(1)]), atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(person, [])], [atom(leader, [num('Grupo')])])]), cschema(close, ['Alice', 'E1'], [const('Grupo')], [], [rs(guarded, [], [atom(leader, [num('Grupo')]), atom(listed, [any, num('Grupo')])], [atom(identity, []), atom(person, [])], []), crs(listed(1, listed, [num('Grupo')]), unguarded, [], [atom(member, [num('Grupo'), role(1)])], [atom(identity, [])], [])]), schema(join, ['Bob', 'Alice'], [const('Grupo')], [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(friend, [role(1)]), atom(person, [])], [])]), schema(remove, ['Bob', 'Alice'], [const('Grupo')], [rs(unguarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, []), atom(leader, [num('Grupo')]), atom(person, [])], [])]), schema(leave, ['Bob', 'Alice'], [const('Grupo')], [rs(guarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, [])], [])]), schema(post, ['Alice', 'Bob'], [svar('Text'), const('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), num('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), num('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(member, [num('Grupo'), role(1)]), atom(person, [])], [])]), schema(post_own, ['Alice'], [svar('Text'), const('Grupo')], [rs(guarded, [atom(posted, [svar('Text'), role(1), num('Grupo')])], [], [atom(identity, []), atom(member, [num('Grupo'), role(1)]), atom(person, [])], [atom(posted, [svar('Text'), role(1), num('Grupo')])])]), schema(deliver, ['Alice', 'Carol', one('Bob', ['Alice', 'Carol'])], [pvar('Bob'), svar('Text'), const('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(2)])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), num('Grupo')]), atom(listed, [role(2), num('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(2)])]), rs(unguarded, [atom(group_message, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)])], [], [atom(identity, [])], [])]), schema(deliver_leader, ['Alice', one('Bob', 'Alice')], [pvar('Bob'), svar('Text'), const('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)]), atom(group_message, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), num('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), num('Grupo'), role(1)])])]), schema(enter, ['Wendy', 'Alice'], [], [rs(guarded, [atom(identity, []), atom(child, []), atom(has_parent, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(parent, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), cschema(make_parent, ['Bob', 'Wendy', 'Decider', 'Codecider'], [], [], [rs(guarded, [atom(parent, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)])], [atom(parent, [role(2)])]), rs(unguarded, [atom(has_parent, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], [atom(retired, []), atom(has_parent, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], []), crs(listed(2, has_parent, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], [])]), schema(resign, ['Bob', 'Wendy'], [], [rs(guarded, [], [atom(parent, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_parent, [role(1)])], [atom(identity, [])], [])]), qschema(end_parent, ['Bob', 'Wendy', 'Decider', 'Codecider'], [], [pvar('Codecider'), svar('Codecider'), num('Codecider')], true, [rs(unguarded, [], [atom(parent, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_parent, [role(1)])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], []), crs(qlisted(2, has_parent, [role(4)], [role(4)]), guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], [])], [], [fforall([role(4)], role(2), atom(has_parent, [role(4)]), fcons(ne(role(4), role(1))), [fa(role(4), atom(identity, [])), fa(role(4), atom(person, [])), fa(role(4), atom(parent, [role(2)]))])]), schema(parent_unfriend, ['Bob', 'Wendy'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(parent, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_parent, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(child_acquaint, ['Wendy', 'Bob', 'Alice'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(parent, [role(1)]), atom(person, [])], [])]), schema(child_befriend, ['Wendy', 'Bob', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), qschema(child_end, ['Wendy', 'Bob'], [], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, [])], [atom(has_parent, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true))))]), schema(unfriend, ['Bob', 'Wendy'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], [atom(parent, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(child_unfriend, ['Wendy', 'Bob', 'Alice'], [], [rs(unguarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [atom(parent, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(children_acquaint, ['Wendy', 'Will', 'Alice', one('Bob', 'Alice')], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(4)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [role(4)]), atom(parent, [role(1)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(parent, [role(2)]), atom(person, [])], [])]), schema(children_befriend, ['Wendy', 'Will', 'Alice', one('Bob', 'Alice')], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(children_of_one_parent_befriend, ['Wendy', 'Will', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), qschema(retire, ['Wendy', 'Decider', 'Codecider', 'E1', 'E2', 'E3'], [], [pvar('E3'), svar('E3'), num('E3'), pvar('E2'), svar('E2'), num('E2'), pvar('E1'), svar('E1'), num('E1'), pvar('Codecider'), svar('Codecider'), num('Codecider'), pvar('E3'), svar('E3'), num('E3'), pvar('E2'), svar('E2'), num('E2'), pvar('E1'), svar('E1'), num('E1')], true, [rs(unguarded, [atom(retired, [])], [atom(has_parent, [any]), atom(friend, [any]), atom(member, [any, any])], [atom(identity, []), atom(has_parent, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(1)])], []), crs(qlisted(1, has_parent, [role(3)], [role(3)]), guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(1)])], []), crs(qlisted(1, has_parent, [role(4)], [role(4)]), unguarded, [], [atom(parent, [role(1)])], [atom(identity, [])], []), crs(qlisted(1, friend, [role(5)], [role(5)]), unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), crs(qlisted(1, member, [any, role(6)], [role(6)]), unguarded, [], [atom(listed, [role(1), any])], [atom(identity, [])], [])], [conjunct([role(4)], 1, atom(has_parent, [role(4)]), fcons(true), [], [], [fnot(fa(role(4), atom(parent, [role(1)])))]), conjunct([role(5)], 1, atom(friend, [role(5)]), fcons(true), [], [], [fnot(fa(role(5), atom(friend, [role(1)])))]), conjunct([role(6)], 1, atom(member, [any, role(6)]), fcons(true), [], [], [fnot(fa(role(6), atom(listed, [role(1), any])))])], [fforall([role(3)], role(1), atom(has_parent, [role(3)]), fcons(true), [fa(role(3), atom(identity, [])), fa(role(3), atom(person, [])), fa(role(3), atom(parent, [role(1)]))]), fforall([role(4)], role(1), atom(has_parent, [role(4)]), fcons(true), [fa(role(4), atom(identity, [])), fa(role(4), atom(parent, [role(1)]))]), fforall([role(5)], role(1), atom(friend, [role(5)]), fcons(true), [fa(role(5), atom(identity, [])), fa(role(5), atom(friend, [role(1)]))]), fforall([role(6)], role(1), atom(member, [any, role(6)]), fcons(true), [fa(role(6), atom(identity, []))])]), qschema(child_message, ['Bob', 'Wendy'], [svar('Text')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(child, []), atom(friend, [role(1)])], [atom(retired, [])])], [], [for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(child, [])), fexists([svar('G1')], role(2), atom(has_parent, [svar('G1')]), fcons(true))))]), qschema(child_post, ['Alice', 'Wendy'], [svar('Text'), const('Grupo')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(unguarded, [atom(posted, [svar('Text'), role(2), num('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), num('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(child, []), atom(member, [num('Grupo'), role(1)])], [atom(retired, [])])], [], [for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(child, [])), fexists([svar('G1')], role(2), atom(has_parent, [svar('G1')]), fcons(true))))]), qschema(child_post_own, ['Wendy'], [svar('Text'), const('Grupo')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [atom(posted, [svar('Text'), role(1), num('Grupo')])], [], [atom(identity, []), atom(child, []), atom(member, [num('Grupo'), role(1)])], [atom(retired, []), atom(posted, [svar('Text'), role(1), num('Grupo')])])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true))))]), schema(child_create, ['Wendy', 'Alice'], [const('Grupo')], [rs(guarded, [atom(leader, [num('Grupo')]), atom(member, [num('Grupo'), role(1)]), atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(2)])], [atom(retired, []), atom(leader, [num('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), qschema(child_close, ['Wendy', 'E1'], [const('Grupo')], [pvar('G1'), svar('G1'), num('G1'), pvar('E1'), svar('E1'), num('E1'), pvar('E1'), svar('E1'), num('E1')], true, [rs(guarded, [], [atom(leader, [num('Grupo')]), atom(listed, [any, num('Grupo')])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), crs(qlisted(1, listed, [role(2), num('Grupo')], [role(2)]), unguarded, [], [atom(member, [num('Grupo'), role(1)])], [atom(identity, [])], [])], [conjunct([role(2)], 1, atom(listed, [role(2), num('Grupo')]), fcons(true), [], [], [fnot(fa(role(2), atom(member, [num('Grupo'), role(1)])))])], [fforall([role(2)], role(1), atom(listed, [role(2), num('Grupo')]), fcons(true), [fa(role(2), atom(identity, [])), fa(role(2), atom(member, [num('Grupo'), role(1)]))]), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true))))]), cschema(parent_close, ['Wendy', 'Alice', 'E1'], [const('Grupo')], [], [rs(unguarded, [], [atom(leader, [num('Grupo')]), atom(listed, [any, num('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], []), crs(listed(1, listed, [num('Grupo')]), unguarded, [], [atom(member, [num('Grupo'), role(1)])], [atom(identity, [])], [])]), qschema(child_join, ['Wendy', 'Bob', 'Alice'], [const('Grupo')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(has_parent, [role(3)])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(person, []), atom(friend, [role(1)]), atom(friend, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(2)]), atom(person, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true))))]), schema(children_join, ['Will', 'Wendy', 'Alice', 'Bob'], [const('Grupo')], [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(4)])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(knows, [role(1)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(3)]), atom(person, [])], [])]), schema(children_of_one_parent_join, ['Will', 'Wendy', 'Alice'], [const('Grupo')], [rs(guarded, [atom(member, [num('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(3)])], [atom(member, [num('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), num('Grupo')])], [], [atom(identity, []), atom(leader, [num('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(parent, [role(1)]), atom(person, [])], [])]), schema(child_withdraw, ['Wendy', 'Bob', 'Alice'], [const('Grupo')], [rs(unguarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(unguarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], [])]), qschema(child_leave, ['Wendy', 'Alice'], [const('Grupo')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), rs(unguarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true))))]), qschema(child_remove, ['Bob', 'Wendy'], [const('Grupo')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(unguarded, [], [atom(member, [num('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), num('Grupo')])], [atom(identity, []), atom(leader, [num('Grupo')]), atom(child, [])], [atom(retired, [])])], [], [for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(child, [])), fexists([svar('G1')], role(2), atom(has_parent, [svar('G1')]), fcons(true))))]), cschema(of_age, ['Wendy', 'Alice', 'E1'], [pvar('Bob')], [], [rs(unguarded, [atom(of_age, []), atom(person, [])], [atom(child, []), atom(has_parent, [any])], [atom(identity, []), atom(has_parent, [pvar('Bob')])], [atom(of_age, [])]), rs(guarded, [], [], [atom(identity, []), atom(creator, [role(1)]), atom(person, [])], []), crs(listed(1, has_parent, []), unguarded, [], [atom(parent, [role(1)])], [atom(identity, [])], [])])]), pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Groups", [member]), list("Messages", [message]), list("Posts", [group_message]), list("Children", [parent]), list("Created", [creator])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(message, "Message", ["", "", "text"], none, "Groups", by([2])), act(create, "Create", ["", "name"], none, "Groups", by([1])), act(close, "Close", [], none, "Groups", by([1])), act(join, "Join", [], said([[person(2), text(" asks you to join her group.")], []]), "Groups", by([2])), act(remove, "Remove", [], none, "Groups", by([2])), act(leave, "Leave", [], none, "Groups", by([1])), act(post, "Post", ["", "", "text"], none, "Groups", by([2])), act(post_own, "Post own", ["", "text"], none, "Groups", by([1])), act(resign, "Resign", [], none, "", by([1])), act(unfriend, "Unfriend", [], none, "", by([1])), act(person_unfriend, "Person unfriend", [], none, "", by([1])), act(enter, "Enter", ["name"], said([[person(2), text(" asks to be your parent.")], []]), "Children", by([2])), act(make_parent, "Make parent", ["person"], said([[person(3), text(" asks you to be a parent of the child "), person(2), text(".")], [], [person(3), text(" asks that "), person(1), text(" be a parent of your child "), person(2), text(".")]]), "Children", by([3])), act(end_parent, "End parent", ["person"], said([[], [person(3), text(" asks to end "), person(1), text("'s parenthood of your child "), person(2), text(".")]]), "Children", by([3])), act(parent_unfriend, "Parent unfriend", [], none, "Children", by([1])), act(child_acquaint, "Child acquaint", [], said([[person(3), text(" wishes that you and "), person(2), text(" know each other.")], [person(3), text(" wishes that you and "), person(1), text(", "), person(3), text("'s child, know each other.")], []]), "Children", by([3])), act(children_acquaint, "Children acquaint", [], said([[person(3), text(" wishes that you and "), person(2), text(" know each other.")], [person(3), text(" wishes that you and "), person(1), text(" know each other.")], [], [person(3), text(" wishes that "), person(1), text(" and your child "), person(2), text(" know each other.")]]), "Children", by([3], [same(4, 3)])), act(child_befriend, "Child befriend", ["child"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(", "), person(3), text("'s child, befriend.")], []]), "Children", by([3])), act(child_unfriend, "Child unfriend", ["child", "person"], none, "Children", by([3])), act(child_end, "Child end", [], none, "Children", by([1])), act(children_befriend, "Children befriend", ["child"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], [], [person(3), text(" asks that "), person(1), text(" and your child "), person(2), text(" befriend.")]]), "Children", by([3], [same(4, 3)])), act(children_of_one_parent_befriend, "Children of one parent befriend", ["child", "other child"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], []]), "Children", by([3])), act(retire, "Retire", [], said([[], [person(2), text(" asks to retire your child "), person(1), text(".")]]), "Children", by([2])), act(child_message, "Child message", ["", "", "text"], none, "Children", by([2])), act(child_post, "Child post", ["", "", "text"], none, "Children", by([2])), act(child_post_own, "Child post own", ["", "text"], none, "Children", by([1])), act(child_create, "Child create", ["", "", "name"], said([[], [person(1), text(" asks to create a group.")]]), "Children", by([1])), act(child_close, "Child close", [], none, "Children", by([1])), act(parent_close, "Parent close", ["", "", "group"], none, "Children", by([2])), act(child_join, "Child join", [], said([[person(2), text(" asks you to join the group.")], [], [person(2), text(" asks that your child "), person(1), text(" join the group.")]]), "Children", by([2])), act(children_join, "Children join", ["", "", "", "parent"], said([[person(2), text(" asks you to join the group.")], [], [person(2), text(" asks that "), person(1), text(" join the group.")], [person(2), text(" asks that your child "), person(1), text(" join the group.")]]), "Children", by([2])), act(children_of_one_parent_join, "Children of one parent join", [], said([[person(2), text(" asks you to join the group.")], [], [person(2), text(" asks that "), person(1), text(" join the group.")]]), "Children", by([2])), act(child_withdraw, "Child withdraw", ["", "leader", "", "group"], none, "Children", by([3])), act(child_leave, "Child leave", [], none, "Children", by([1])), act(child_remove, "Child remove", [], none, "Children", by([2])), act(of_age, "Of age", [], none, "Children", by([2]))], [], nolook, version(1, 1))))
+contract("Children\nChildren instantiates Warded Groups with the guardians deciding jointly, a child for a ward and a parent for a guardian, and restricts and extends it.\nAlice and Bob are persons, Wendy and Will children.\n1. ◆ Enter: Guardians:1, only if Alice is a legal parent of the minor who operates Wendy.\n2. ■ A child's acquaintances. Child acquaint: Guardians:3, only if Alice knows Bob, and with the consent of Alice. Children acquaint: Guardians:4, only if Alice knows Will and Bob knows Wendy, and with the consent of Alice and Bob, who know each other, Alice and Bob possibly one person.\n3. ■ Child create: Warded Groups:2, only with the consent of Alice, a parent of Wendy. Only a child, Will, may join the group.\n4. ○ Of age: The creator of Wendy may declare Wendy of age, which ends every guardianship of Wendy, and Wendy is then a person. The creator will do so if the minor who operates Wendy comes of age, and not before.\n5. ○ A minor who is not a ward. Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, ['Bob', 'Alice', 'Carol'], [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, []), atom(person, [])], [])]), schema(message, ['Bob', 'Alice'], [svar('Text')], [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(1)]), atom(person, [])], [])]), schema(create, ['Alice'], [svar('Grupo')], [rs(guarded, [atom(leader, [svar('Grupo')]), atom(member, [svar('Grupo'), role(1)]), atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(person, [])], [atom(leader, [svar('Grupo')])])]), cschema(close, ['Alice', 'E1'], [svar('Grupo')], [], [rs(guarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, []), atom(person, [])], []), crs(listed(1, listed, [svar('Grupo')]), unguarded, [], [atom(member, [svar('Grupo'), role(1)])], [atom(identity, [])], [])]), schema(join, ['Bob', 'Alice'], [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(friend, [role(1)]), atom(person, [])], [])]), schema(remove, ['Bob', 'Alice'], [svar('Grupo')], [rs(unguarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(person, [])], [])]), schema(leave, ['Bob', 'Alice'], [svar('Grupo')], [rs(guarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, [])], [])]), schema(post, ['Alice', 'Bob'], [svar('Text'), svar('Grupo')], [rs(unguarded, [atom(posted, [svar('Text'), role(2), svar('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), svar('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(member, [svar('Grupo'), role(1)]), atom(person, [])], [])]), schema(post_own, ['Alice'], [svar('Text'), svar('Grupo')], [rs(guarded, [atom(posted, [svar('Text'), role(1), svar('Grupo')])], [], [atom(identity, []), atom(member, [svar('Grupo'), role(1)]), atom(person, [])], [atom(posted, [svar('Text'), role(1), svar('Grupo')])])]), schema(deliver, ['Alice', 'Carol', one('Bob', ['Alice', 'Carol'])], [pvar('Bob'), svar('Text'), svar('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(2)])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), svar('Grupo')]), atom(listed, [role(2), svar('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(2)])]), rs(unguarded, [atom(group_message, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)])], [], [atom(identity, [])], [])]), schema(deliver_leader, ['Alice', one('Bob', 'Alice')], [pvar('Bob'), svar('Text'), svar('Grupo')], [rs(unguarded, [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)]), atom(group_message, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(posted, [svar('Text'), pvar('Bob'), svar('Grupo')])], [atom(group_delivered, [pvar('Bob'), svar('Text'), svar('Grupo'), role(1)])])]), schema(enter, ['Wendy', 'Alice'], [], [rs(guarded, [atom(identity, []), atom(child, []), atom(has_parent, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(parent, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), cschema(make_parent, ['Bob', 'Wendy', 'Decider', 'Codecider'], [], [], [rs(guarded, [atom(parent, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)])], [atom(parent, [role(2)])]), rs(unguarded, [atom(has_parent, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], [atom(retired, []), atom(has_parent, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], []), crs(listed(2, has_parent, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], [])]), schema(resign, ['Bob', 'Wendy'], [], [rs(guarded, [], [atom(parent, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_parent, [role(1)])], [atom(identity, [])], [])]), qschema(end_parent, ['Bob', 'Wendy', 'Decider', 'Codecider'], [], [pvar('Codecider'), svar('Codecider'), num('Codecider')], true, [rs(unguarded, [], [atom(parent, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_parent, [role(1)])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], []), crs(qlisted(2, has_parent, [role(4)], [role(4)]), guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(2)])], [])], [], [fforall([role(4)], role(2), atom(has_parent, [role(4)]), fcons(ne(role(4), role(1))), [fa(role(4), atom(identity, [])), fa(role(4), atom(person, [])), fa(role(4), atom(parent, [role(2)]))])]), schema(parent_unfriend, ['Bob', 'Wendy'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(parent, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_parent, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(child_acquaint, ['Wendy', 'Bob', 'Alice'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(parent, [role(1)]), atom(person, [])], [])]), schema(child_befriend, ['Wendy', 'Bob', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), qschema(child_end, ['Wendy', 'Bob'], [], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, [])], [atom(has_parent, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true))))]), schema(unfriend, ['Bob', 'Wendy'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(person, [])], [atom(parent, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [])]), schema(child_unfriend, ['Wendy', 'Bob', 'Alice'], [], [rs(unguarded, [], [atom(friend, [role(2)]), atom(member, [any, role(2)]), atom(listed, [role(2), any])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(member, [any, role(1)]), atom(listed, [role(1), any])], [atom(identity, [])], [atom(parent, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(children_acquaint, ['Wendy', 'Will', 'Alice', one('Bob', 'Alice')], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(4)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [role(4)]), atom(parent, [role(1)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(parent, [role(2)]), atom(person, [])], [])]), schema(children_befriend, ['Wendy', 'Will', 'Alice', one('Bob', 'Alice')], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(children_of_one_parent_befriend, ['Wendy', 'Will', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), qschema(retire, ['Wendy', 'Decider', 'Codecider', 'E1', 'E2', 'E3'], [], [pvar('E3'), svar('E3'), num('E3'), pvar('E2'), svar('E2'), num('E2'), pvar('E1'), svar('E1'), num('E1'), pvar('Codecider'), svar('Codecider'), num('Codecider'), pvar('E3'), svar('E3'), num('E3'), pvar('E2'), svar('E2'), num('E2'), pvar('E1'), svar('E1'), num('E1')], true, [rs(unguarded, [atom(retired, [])], [atom(has_parent, [any]), atom(friend, [any]), atom(member, [any, any])], [atom(identity, []), atom(has_parent, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(1)])], []), crs(qlisted(1, has_parent, [role(3)], [role(3)]), guarded, [], [], [atom(identity, []), atom(person, []), atom(parent, [role(1)])], []), crs(qlisted(1, has_parent, [role(4)], [role(4)]), unguarded, [], [atom(parent, [role(1)])], [atom(identity, [])], []), crs(qlisted(1, friend, [role(5)], [role(5)]), unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), crs(qlisted(1, member, [any, role(6)], [role(6)]), unguarded, [], [atom(listed, [role(1), any])], [atom(identity, [])], [])], [conjunct([role(4)], 1, atom(has_parent, [role(4)]), fcons(true), [], [], [fnot(fa(role(4), atom(parent, [role(1)])))]), conjunct([role(5)], 1, atom(friend, [role(5)]), fcons(true), [], [], [fnot(fa(role(5), atom(friend, [role(1)])))]), conjunct([role(6)], 1, atom(member, [any, role(6)]), fcons(true), [], [], [fnot(fa(role(6), atom(listed, [role(1), any])))])], [fforall([role(3)], role(1), atom(has_parent, [role(3)]), fcons(true), [fa(role(3), atom(identity, [])), fa(role(3), atom(person, [])), fa(role(3), atom(parent, [role(1)]))]), fforall([role(4)], role(1), atom(has_parent, [role(4)]), fcons(true), [fa(role(4), atom(identity, [])), fa(role(4), atom(parent, [role(1)]))]), fforall([role(5)], role(1), atom(friend, [role(5)]), fcons(true), [fa(role(5), atom(identity, [])), fa(role(5), atom(friend, [role(1)]))]), fforall([role(6)], role(1), atom(member, [any, role(6)]), fcons(true), [fa(role(6), atom(identity, []))])]), qschema(child_message, ['Bob', 'Wendy'], [svar('Text')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(unguarded, [atom(message, [role(2), svar('Text')])], [], [atom(identity, []), atom(friend, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(child, []), atom(friend, [role(1)])], [atom(retired, [])])], [], [for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(child, [])), fexists([svar('G1')], role(2), atom(has_parent, [svar('G1')]), fcons(true))))]), qschema(child_post, ['Alice', 'Wendy'], [svar('Text'), svar('Grupo')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(unguarded, [atom(posted, [svar('Text'), role(2), svar('Grupo')])], [], [atom(identity, [])], [atom(posted, [svar('Text'), role(2), svar('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(child, []), atom(member, [svar('Grupo'), role(1)])], [atom(retired, [])])], [], [for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(child, [])), fexists([svar('G1')], role(2), atom(has_parent, [svar('G1')]), fcons(true))))]), qschema(child_post_own, ['Wendy'], [svar('Text'), svar('Grupo')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [atom(posted, [svar('Text'), role(1), svar('Grupo')])], [], [atom(identity, []), atom(child, []), atom(member, [svar('Grupo'), role(1)])], [atom(retired, []), atom(posted, [svar('Text'), role(1), svar('Grupo')])])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true))))]), schema(child_create, ['Wendy', 'Alice'], [svar('Grupo')], [rs(guarded, [atom(leader, [svar('Grupo')]), atom(member, [svar('Grupo'), role(1)]), atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(child, []), atom(has_parent, [role(2)])], [atom(retired, []), atom(leader, [svar('Grupo')])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), qschema(child_close, ['Wendy', 'E1'], [svar('Grupo')], [pvar('G1'), svar('G1'), num('G1'), pvar('E1'), svar('E1'), num('E1'), pvar('E1'), svar('E1'), num('E1')], true, [rs(guarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), crs(qlisted(1, listed, [role(2), svar('Grupo')], [role(2)]), unguarded, [], [atom(member, [svar('Grupo'), role(1)])], [atom(identity, [])], [])], [conjunct([role(2)], 1, atom(listed, [role(2), svar('Grupo')]), fcons(true), [], [], [fnot(fa(role(2), atom(member, [svar('Grupo'), role(1)])))])], [fforall([role(2)], role(1), atom(listed, [role(2), svar('Grupo')]), fcons(true), [fa(role(2), atom(identity, [])), fa(role(2), atom(member, [svar('Grupo'), role(1)]))]), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true))))]), cschema(parent_close, ['Wendy', 'Alice', 'E1'], [svar('Grupo')], [], [rs(unguarded, [], [atom(leader, [svar('Grupo')]), atom(listed, [any, svar('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], []), crs(listed(1, listed, [svar('Grupo')]), unguarded, [], [atom(member, [svar('Grupo'), role(1)])], [atom(identity, [])], [])]), qschema(child_join, ['Wendy', 'Bob', 'Alice'], [svar('Grupo')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(has_parent, [role(3)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(person, []), atom(friend, [role(1)]), atom(friend, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(2)]), atom(person, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true))))]), schema(children_join, ['Will', 'Wendy', 'Alice', 'Bob'], [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(4)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(knows, [role(1)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(friend, [role(3)]), atom(person, [])], [])]), schema(children_of_one_parent_join, ['Will', 'Wendy', 'Alice'], [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [atom(identity, []), atom(friend, [role(2)]), atom(child, []), atom(has_parent, [role(3)])], [atom(member, [svar('Grupo'), any])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(child, []), atom(has_parent, [role(3)]), atom(friend, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(2)]), atom(parent, [role(1)]), atom(person, [])], [])]), schema(child_withdraw, ['Wendy', 'Bob', 'Alice'], [svar('Grupo')], [rs(unguarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, []), atom(has_parent, [role(3)])], []), rs(unguarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, [])], []), rs(guarded, [], [], [atom(identity, []), atom(parent, [role(1)]), atom(person, [])], [])]), qschema(child_leave, ['Wendy', 'Alice'], [svar('Grupo')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, []), atom(child, [])], [atom(retired, [])]), rs(unguarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(child, [])), fexists([svar('G1')], role(1), atom(has_parent, [svar('G1')]), fcons(true))))]), qschema(child_remove, ['Bob', 'Wendy'], [svar('Grupo')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(unguarded, [], [atom(member, [svar('Grupo'), role(2)])], [atom(identity, [])], []), rs(guarded, [], [atom(listed, [role(1), svar('Grupo')])], [atom(identity, []), atom(leader, [svar('Grupo')]), atom(child, [])], [atom(retired, [])])], [], [for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(child, [])), fexists([svar('G1')], role(2), atom(has_parent, [svar('G1')]), fcons(true))))]), cschema(of_age, ['Wendy', 'Alice', 'E1'], [pvar('Bob')], [], [rs(unguarded, [atom(of_age, []), atom(person, [])], [atom(child, []), atom(has_parent, [any])], [atom(identity, []), atom(has_parent, [pvar('Bob')])], [atom(of_age, [])]), rs(guarded, [], [], [atom(identity, []), atom(creator, [role(1)]), atom(person, [])], []), crs(listed(1, has_parent, []), unguarded, [], [atom(parent, [role(1)])], [atom(identity, [])], [])])]), pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Groups", [member]), list("Messages", [message]), list("Posts", [group_message]), list("Children", [parent]), list("Created", [creator])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(message, "Message", ["", "", "text"], none, "Groups", by([2])), act(create, "Create", ["", "name"], none, "Groups", by([1])), act(close, "Close", [], none, "Groups", by([1])), act(join, "Join", [], said([[person(2), text(" asks you to join her group.")], []]), "Groups", by([2])), act(remove, "Remove", [], none, "Groups", by([2])), act(leave, "Leave", [], none, "Groups", by([1])), act(post, "Post", ["", "", "text"], none, "Groups", by([2])), act(post_own, "Post own", ["", "text"], none, "Groups", by([1])), act(resign, "Resign", [], none, "", by([1])), act(unfriend, "Unfriend", [], none, "", by([1])), act(person_unfriend, "Person unfriend", [], none, "", by([1])), act(enter, "Enter", ["name"], said([[person(2), text(" asks to be your parent.")], []]), "Children", by([2])), act(make_parent, "Make parent", ["person"], said([[person(3), text(" asks you to be a parent of the child "), person(2), text(".")], [], [person(3), text(" asks that "), person(1), text(" be a parent of your child "), person(2), text(".")]]), "Children", by([3])), act(end_parent, "End parent", ["person"], said([[], [person(3), text(" asks to end "), person(1), text("'s parenthood of your child "), person(2), text(".")]]), "Children", by([3])), act(parent_unfriend, "Parent unfriend", [], none, "Children", by([1])), act(child_acquaint, "Child acquaint", [], said([[person(3), text(" wishes that you and "), person(2), text(" know each other.")], [person(3), text(" wishes that you and "), person(1), text(", "), person(3), text("'s child, know each other.")], []]), "Children", by([3])), act(children_acquaint, "Children acquaint", [], said([[person(3), text(" wishes that you and "), person(2), text(" know each other.")], [person(3), text(" wishes that you and "), person(1), text(" know each other.")], [], [person(3), text(" wishes that "), person(1), text(" and your child "), person(2), text(" know each other.")]]), "Children", by([3], [same(4, 3)])), act(child_befriend, "Child befriend", ["child"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(", "), person(3), text("'s child, befriend.")], []]), "Children", by([3])), act(child_unfriend, "Child unfriend", ["child", "person"], none, "Children", by([3])), act(child_end, "Child end", [], none, "Children", by([1])), act(children_befriend, "Children befriend", ["child"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], [], [person(3), text(" asks that "), person(1), text(" and your child "), person(2), text(" befriend.")]]), "Children", by([3], [same(4, 3)])), act(children_of_one_parent_befriend, "Children of one parent befriend", ["child", "other child"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], []]), "Children", by([3])), act(retire, "Retire", [], said([[], [person(2), text(" asks to retire your child "), person(1), text(".")]]), "Children", by([2])), act(child_message, "Child message", ["", "", "text"], none, "Children", by([2])), act(child_post, "Child post", ["", "", "text"], none, "Children", by([2])), act(child_post_own, "Child post own", ["", "text"], none, "Children", by([1])), act(child_create, "Child create", ["", "", "name"], said([[], [person(1), text(" asks to create a group.")]]), "Children", by([1])), act(child_close, "Child close", [], none, "Children", by([1])), act(parent_close, "Parent close", ["", "", "group"], none, "Children", by([2])), act(child_join, "Child join", [], said([[person(2), text(" asks you to join the group.")], [], [person(2), text(" asks that your child "), person(1), text(" join the group.")]]), "Children", by([2])), act(children_join, "Children join", ["", "", "", "parent"], said([[person(2), text(" asks you to join the group.")], [], [person(2), text(" asks that "), person(1), text(" join the group.")], [person(2), text(" asks that your child "), person(1), text(" join the group.")]]), "Children", by([2])), act(children_of_one_parent_join, "Children of one parent join", [], said([[person(2), text(" asks you to join the group.")], [], [person(2), text(" asks that "), person(1), text(" join the group.")]]), "Children", by([2])), act(child_withdraw, "Child withdraw", ["", "leader", "", "group"], none, "Children", by([3])), act(child_leave, "Child leave", [], none, "Children", by([1])), act(child_remove, "Child remove", [], none, "Children", by([2])), act(of_age, "Of age", [], none, "Children", by([2]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -7935,8 +7927,6 @@ kind_ok(svar(_), c(_), no).
 kind_ok(num(_), n(_), yes).
 kind_ok(num(_), r(_), yes).
 kind_ok(num(_), lv(_, _), yes).
-%% A variable over the constants is a value variable, num(X) in the schemas the text carries, its value a constant, v(C), as the image of a constant the contract names is (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it"); the place of an atom is of one type, so no variable over the numbers is matched with a constant.
-kind_ok(num(_), v(_), yes).
 kind_ok(num(_), p(_), no).
 kind_ok(num(_), s(_), no).
 kind_ok(num(_), c(_), no).
@@ -8021,12 +8011,6 @@ val_real(V, B, K?) :- ground(B?) | lookup(V?, B?, F), real_found(F?, K).
 procedure real_found(Found?, Real).
 real_found(found(r(K)), K?).
 real_found(_, 0.0) :- otherwise | true.
-%% The constant of a variable over the constants of a class term, written in the term (class_of); none where none is bound, which a schema-binding of a class never leaves.
-procedure val_const(Var?, Binding?, Constant).
-val_const(V, B, C?) :- ground(B?) | lookup(V?, B?, F), const_found(F?, C).
-procedure const_found(Found?, Constant).
-const_found(found(v(C)), C?).
-const_found(_, none) :- otherwise | true.
 %% Whether the constraint holds under the binding, every number it names bound: and(C1, C2), C1 and C2; eq(X, Y), X = Y; le(X, Y), X =< Y; lt(X, Y), X < Y; ge(X, Y), X >= Y; gt(X, Y), X > Y; succ(X, Y), Y = X + 1; or(C1, C2), C1 or C2, X and Y the values of the expressions under the binding.  A number not bound makes a comparison false.
 procedure con_holds(Constraint?, Binding?, YesNo).
 con_holds(true, _, yes).
@@ -8365,17 +8349,11 @@ schema_head(lschema(_, Hd, _, _), Hd?).
 procedure hd_nums_bound(Vars?, Binding?, YesNo).
 hd_nums_bound([], _, yes).
 hd_nums_bound([num(X)|Vs], B, Ok?) :- ground(X?), ground(B?) |
-    lookup(num(X?), B?, F),
-    is_value(F?, O1),
+    num_of(num(X?), B?, K),
+    is_num(K?, O1),
     hd_nums_bound(Vs?, B?, O2),
     and(O1?, O2?, Ok).
 hd_nums_bound([_|Vs], B, Ok?) :- otherwise | hd_nums_bound(Vs?, B?, Ok).
-%% A value variable of the head is bound to a value: a number, or, a variable over the constants, a constant.
-procedure is_value(Found?, YesNo).
-is_value(found(n(_)), yes).
-is_value(found(r(_)), yes).
-is_value(found(v(_)), yes).
-is_value(_, no) :- otherwise | true.
 procedure is_num(NumRes?, YesNo).
 is_num(num_is(_), yes).
 is_num(no_num, no).
