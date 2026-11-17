@@ -123,7 +123,6 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .stat .k{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--faint);text-transform:uppercase}
 .stat .v{font-size:19px;font-weight:700;color:#3a3a3c;margin-top:2px;white-space:nowrap}
 .stat .v a{color:var(--blue);cursor:pointer}
-#acts{scroll-margin-top:72px}
 .stat .s{font-size:12px;color:var(--mute)}
 .sec{margin-top:30px}
 .sec .sh{margin:0 0 10px}
@@ -944,7 +943,7 @@ $('#q').addEventListener('keydown', e => { if (e.key === 'Enter'){ const a = doc
 // section is named tab-<name>, so that the browser, finding nothing named by
 // the address, does not scroll the section under the bar.
 const TABS = ['home', 'contracts', 'papers', 'projects'];
-let TAB = 'home', TOPROJ = null, TOACTS = false;
+let TAB = 'home', TOPROJ = null;
 function go(id, hood){ location.hash = id ? `#${id}${hood ? '-hood' : ''}` : '#contracts'; }
 // Home is the page's address with nothing after it, which a link would load
 // again: it is shown in place.
@@ -990,7 +989,6 @@ const projOf = o => D.projects.some(p => p.id === o && hasCode(p)) ? o
   || ((D.noPaper || []).some(p => p.id === o) && D.code.some(d => d.who === o) ? 'Code' : null);
 function page(c, hood){
   const kids = D.contracts.filter(k => k.extends.includes(c.id));
-  const own = c.acts[1];
   const link = id => `<a data-go="${id}">${esc(NM(id))}</a>`;
   // Builds on and Used by: the box shows how many contracts, and a click on
   // it opens a balloon with their names, each a link to its contract (Udi,
@@ -1004,7 +1002,6 @@ function page(c, hood){
       <div class="acts">${c.live ? `<a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a>` : ''}</div></div></div>
     <div class="stats">
       <div class="stat"><div class="k">Rules</div><div class="v">${c.clauses.length}</div><div class="s">in English</div></div>
-      <div class="stat"><div class="k">Speech acts</div><div class="v">${c.acts[0] ? (own ? `<a data-toacts title="The speech-act schemas, under the hood">${own}</a>` : own) : '–'}</div><div class="s">${c.acts[0] ? 'of its own' : 'not compiled'}</div></div>
       ${names('Builds on', c.extends, 'the base')}
       ${names('Used by', kids.map(k => k.id), 'none yet')}
       <div class="stat"><div class="k">By</div><div class="v">${projOf(c.owner) ? `<a href="#projects" data-proj="${esc(projOf(c.owner))}" title="Under Projects">${esc(c.owner)}</a>` : esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
@@ -1064,15 +1061,7 @@ function page(c, hood){
     try { const r = await fetch(fd.dataset.full); if (!r.ok) throw 0; fd.querySelector('.txt').textContent = (await r.text()).split('\n').filter(l => !l.startsWith('%')).join('\n').trim(); }
     catch (e){ fd.querySelector('.txt').textContent = 'Not available.'; }
   });
-  if (hood){ $('#hood').style.display = 'block'; $('#hood').innerHTML = '<p class="small">Loading…</p>'; detail(c).then(d => { hoodHtml(c, d.schemas);
-    // From the Speech acts box: the schemas of its own, all open, in view.
-    const a = TOACTS && $('#acts'); TOACTS = false;
-    if (a){ a.querySelectorAll(':scope > details.schema').forEach(x => x.open = true); a.scrollIntoView({behavior:'smooth', block:'start'}); }
-    else $('#hood').scrollIntoView({behavior:'smooth', block:'start'}); }); }
-  // The number of speech acts opens them, under the hood (Udi, 2026-11-17, to
-  // Website #3: "how can I (or anyone) can see them? why not make this a link").
-  const ta = $('#view').querySelector('[data-toacts]');
-  if (ta) ta.onclick = () => { TOACTS = true; if (hood){ $('#hood').innerHTML = ''; page(c, true); } else go(c.id, true); };
+  if (hood){ $('#hood').style.display = 'block'; $('#hood').innerHTML = '<p class="small">Loading…</p>'; detail(c).then(d => { hoodHtml(c, d.schemas); $('#hood').scrollIntoView({behavior:'smooth', block:'start'}); }); }
 }
 
 // The Calculus (calculus/MIGRATION.md, the section Website): until its owner
@@ -1121,9 +1110,9 @@ function hoodHtml(c, schemas){
     <div class="sh"><h2>Under the hood${Q('hood')}</h2><span>from the English text to the running app</span></div>
     <div class="stack">
     <div class="card layer">${n(1)}<h3>The Grassroots Contract</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.map(NM).join(' and ') : ''}, above.</p></div>
-    <div class="card layer" id="acts">${n(2)}<h3>Speech-Act Schemas${Q('acts')}</h3>
+    <div class="card layer">${n(2)}<h3>Speech-Act Schemas${Q('acts')}</h3>
       <p class="sum">${own.length} of its own${inh.length ? `, and ${inh.length} from ${[...new Set(inh.map(s => NM(s.from)))].join(', ')}` : ''}.</p>
-      ${own.map((s, i) => schemaHtml(s, i < 2)).join('')}
+      ${own.map(s => schemaHtml(s, true)).join('')}
       ${inh.length ? `<p class="more" id="mt">Show the ${inh.length} inherited acts</p><div id="inh" style="display:none">${inh.map(s => schemaHtml(s, false)).join('')}</div>` : ''}
     </div>
     <div class="card layer">${n(3)}<h3>Grassroots Check${Q('check')}</h3><p class="sum">The checker's verdict on the speech-act schemas:</p><span class="verdict">${esc(c.verdict || 'not checked')}</span></div>
