@@ -443,6 +443,14 @@ compile(Nm, O, V, I, P) :- wdeclared_of(O?, R), compile_w5(R?, Nm?, V?, I?, P?).
 procedure compile_w5(WDeclOpt?, Constant?, Verdict?, Intro?, Pragmas?).
 compile_w5(wparam, Nm, _, _, _) :- not_instantiated(Nm?).
 compile_w5(wdecl(D), Nm, V, I, P) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?).
+%% compile(Name, Contract, Verdict, Intro, Pragmas, Values): the same, with the values the developer gives, dev(Text), Text the list of their atoms, or nodev (cvac.glp, dev_lines; vGLP 922ac53, Section 5.4).
+DevValues ::= nodev ; dev(String).
+imported procedure cvac#compile(Constant?, Declared?, Verdict?, Intro?, Pragmas?, Preds?, WDeclared?, DevValues?).
+exported procedure compile(Constant?, WOffered?, Verdict?, Intro?, Pragmas?, DevValues?).
+compile(Nm, O, V, I, P, Vl) :- wdeclared_of(O?, R), compile_w6(R?, Nm?, V?, I?, P?, Vl?).
+procedure compile_w6(WDeclOpt?, Constant?, Verdict?, Intro?, Pragmas?, DevValues?).
+compile_w6(wparam, Nm, _, _, _, _) :- not_instantiated(Nm?).
+compile_w6(wdecl(D), Nm, V, I, P, Vl) :- ground(D?) | unnamed(D?, D0), env_of(D?, E), cvac # compile(Nm?, D0?, V?, I?, P?, E?, D?, Vl?).
 procedure env_of(WDeclared?, Preds).
 env_of(environment(Ps, _), Ps?).
 env_of(_, []) :- otherwise | true.
