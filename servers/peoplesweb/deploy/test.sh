@@ -1,5 +1,6 @@
 #!/bin/sh
-# The test site, peoplesweb.org/test (Udi, 2026-11-12, to GSA #5: a change to
+# The test site, peoplesweb.org/next (under /test until 2026-11-17; Udi, to
+# Website #3: "next is good"; Udi, 2026-11-12, to GSA #5: a change to
 # the site is shown first on a test site under /test, and made live on his
 # approval).  It is the site as the branch Website-site of GLP has it: that
 # branch's servers/peoplesweb, its pages and its build, run over the
@@ -22,7 +23,7 @@ set -e
 BRANCH=${TEST_BRANCH:-Website-site}
 GLP=${GLP_ROOT:-/srv/glp}
 WORK=${TEST_WORK:-/var/lib/glp/test}
-WWW=${TEST_WWW:-/var/www/peoplesweb.org/test}
+WWW=${TEST_WWW:-/var/www/peoplesweb.org/next}
 AS=${TEST_AS-sudo -u glp}
 cd "$GLP"
 URL=${TEST_URL:-$(git remote get-url origin)}

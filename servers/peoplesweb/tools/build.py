@@ -22,7 +22,7 @@ contract; and programs/apps/look.json each family's name and colours, which
 the app's asset sync reads too.  build/ and
 programs/vglp/cva/web_worlds/ are generated, gitignored, and this script rebuilds them whole.
 
-The test site, peoplesweb.org/test (deploy/test.sh), is this script of another
+The test site, peoplesweb.org/next (deploy/test.sh), is this script of another
 branch run over the repository as main has it: GLP_ROOT names the repository,
 BUILD_DIR where the site is written, and SITE_TEST=1 says that the build
 writes no world, the test pages using the live server's worlds, and that the
