@@ -2826,16 +2826,12 @@ procedure phone_trust(PhoneFacts?, Preds).
 phone_trust([], []).
 phone_trust([trust(S)|Ps], [S?|Ts?]) :- phone_trust(Ps?, Ts).
 phone_trust([found(_)|Ps], Ts?) :- phone_trust(Ps?, Ts).
-%% trust_of(S, yes) for each standing schema S whose standing request opens the phone (vGLP, Section 5.4: "An implementation pragma may open a person's phone to persons it does not know, over Bluetooth and the local network, from their standing request until they withdraw it"), and trust_of(_, no) for every other: printed where there is one (trust_only lines of the text).
+%% trust_schemas(Ss), the standing schemas whose standing request opens the phone to persons it does not know (vGLP, Section 5.4: "An implementation pragma may open a person's phone to persons it does not know, over Bluetooth and the local network, from their standing request until they withdraw it"), printed where there is one (trust_only lines of the text).
 procedure trust_lines(Preds?, Lines).
 trust_lines([], []).
-trust_lines([S|Ss], ['', 'procedure trust_of(Constant?, YesNo).'|L?]) :- ground(S?), ground(Ss?) | trust_of_lines([S?|Ss?], L).
-procedure trust_of_lines(Preds?, Lines).
-trust_of_lines([], ['trust_of(_, no) :- otherwise | true.']).
-trust_of_lines([S|Ss], [L?|Ls?]) :- ground(S?) |
-    term_to_string(S?, T),
-    string_concat(['trust_of(', T?, ', yes).'], L),
-    trust_of_lines(Ss?, Ls).
+trust_lines([S|Ss], ['', 'procedure trust_schemas(Preds).', L?]) :- ground(S?), ground(Ss?) |
+    term_to_string([S?|Ss?], T),
+    string_concat(['trust_schemas(', T?, ').'], L).
 %% The standing tables of the platform (vGLP 7c631b1, Section 5.4, "The contract's words"): schema_standing(S, on(A)) for each standing schema S, A the act whose request makes the standing request, and none for every other; stand_act(M, makes(S)) for the act M whose request makes it, stand_act(M, withdraws(S)) for the act whose request withdraws it, and plain for every other.
 %% The roles of each schema whose persons must consent to its act and are not asked (vGLP, Section 5.4, "The contract's words": "A clause may say that a person, or a ward, must consent to its act: they are a guard of the act, so it is never taken against them, and they are not asked"): schema_consents(S, Is) for each act of the pragmas that carries consents(I) with the types of its fields (self.glp, FType), and [] for every other.
 procedure consent_lines(TActs?, Lines).

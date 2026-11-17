@@ -554,7 +554,7 @@ GAtoms    ::= [] ; [GAtom | GAtoms].
 %% The program's output to its person is of the type of the views, view(Id, S, K, A, Ts): Id the agent's own key (vGLP 12f629d, Section 5.4, "The compilation": "its own key k"); S a machine state, a list of the contract's atoms, each of the type Atom the compiler prints from the contract and written as the contract writes it; K the persons the agent knows, in the order of identifiers; and A the approvals its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part, a term of Proposal, in which no Stream or List occurs (Definition "Effective Local Specification"), so that no Stream or List is under another (Definition "Volitional Procedure, Interactive Type": "never under another Stream or List"); and the notices, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined, or unable(Lacks, Has), the atoms the schema requires at the voter that its state lacks and those it forbids that its state has, as the contract writes them (vGLP e286276, Section 5.4, "The compilation": "the approvals A its person made that are pending, each by its request name, a request's own and an answer's that of its attempt's part"; "a notice refused(N, q, d): N the request name of the part of the refused attempt, q its refuser and d the reason"; "The compilation defines Output as the type of the views and the notices, and declares for the type Stream(Output) of the output a widget that draws the last view written and the notices written after it"; "Act schemas"; Definition "Widget Declaration").  A contract with no guarded part has no approvals, and its A is always empty: Approved is then Constant, of which it holds none.
 Approved  ::= Proposal.
 %% The view of a contract with pragmas carries also the lists its app shows, each tab(Name, P), its name and the predicate P whose atoms in the machine state it lists, as the contract's pragmas give them, or tab(Name, P, counted) where the contract adds or deletes P with a multiplicity, each atom it lists shown with its count (vGLP 40f8444, Section 5.4, "The contract's words": "The tab lists the atoms of that predicate in the state, each with its count where the contract adds or deletes the predicate with a multiplicity, the view carrying the whole state"; "the tab's name and its predicate into the view the agent writes"), last in the view, view(Id, S, K, A, Ts).
-Output    ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
+Output    ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason) ; trust(TrustLevel).
 Tab       ::= tab(String, Constant) ; tab(String, Constant, Constant).
 Shown     ::= shown(Atom) ; unshown.
 Stream(Output) =::= last_state.
@@ -660,8 +660,10 @@ ApprovalRes ::= approval_for(Attempt) ; noapproval.
 %% When it starts, its view is written on the output: its own key, the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
 %% Where the contract requires the day, the agent reads the date from its phone whenever it reads a trigger, before it computes a condition, and holds today(d), d that date, beside its app state until the next (dated; vGLP, Section 5.4, "Speech-act schemas as local specifications": "we assume that every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition").  It takes no calendar.
 %% Where the contract declares environment predicates other than the day, the agent takes, when the platform is deployed, their atoms, written as the contract writes them, List(Atom), and holds them in its machine state from startup, its first view showing them ("An environment predicate is the day, by the calendar, or a value the contract declares and does not fix, as BCC's f and GFF-FR's d: given when the platform is deployed, held from startup", vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "its value is given when the platform is deployed, and the compiled agent holds the atom from startup").
-exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?).
-agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?)|Thr?], Env) :- ground(Id?), ground(Env?) |
+%% Where the phone finds a fact of the contract, or a standing request opens the phone to persons it does not know, the agent takes the facts on a stream of presences, seen(K) or gone(K), and writes its trust requests, open or closed, on a stream out, both served by its host, whose operating system makes the declarations (vGLP, Section 5.4; GSA, Section 2: a certified program reaches the hardware through a GLP channel its host gives it, and calls no privileged predicate; GLP, appendix-guards, "Networking seam").
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?, Stream(Presence)?, Stream(TrustLevel)).
+agent(Id, NetIn, Out?, Shown?, Env, Phone, Tw?) :- ground(Id?), ground(Env?) |
+    trust_split([view(Id?, V0?, [], [], Ts?)|Thr?], Shown, Tw),
     env_atoms(Env?, G0),
     env_atoms(Env?, G1),
     atoms_of(G1?, V0),
@@ -670,7 +672,7 @@ agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?)|Thr?], Env) :- ground(Id?), 
     tag_net(NetIn?, Nt),
     merge(Rq?, Nt?, M1),
     merge(M1?, Ans?, M2),
-    phone_facts(Ph),
+    tag_near(Phone?, Ph),
     merge(M2?, Ph?, M3),
     merge(M3?, [own|Ow?], In),
     agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [],
@@ -679,13 +681,7 @@ agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?)|Thr?], Env) :- ground(Id?), 
 procedure env_atoms(List(Atom)?, GAtoms).
 env_atoms([], []).
 env_atoms([A|As], G?) :- env_atom(A?, G1), env_atoms(As?, G2), app(G1?, G2?, G).
-%% The facts the phone finds (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the compiled agent reads it from its phone afresh whenever it computes a condition that requires it"; "When a fact Alice's phone finds changes, as when a person comes near, the phone tells Alice's agent, which then checks again which of its own transactions it can take"): the agent declares, when it starts, the agents nearby over Bluetooth and over the local network (GLP, appendix-guards, "Networking seam": declare(nearby(U, S)), U pan or lan), and reads each presence, seen(K) or gone(K), as a trigger near(P).
-procedure phone_facts(Stream(Trigger)).
-phone_facts(Ph?) :-
-    declare(nearby(pan, S1)),
-    declare(nearby(lan, S2)),
-    merge(S1?, S2?, S),
-    tag_near(S?, Ph).
+%% The facts the phone finds, the presences its host reports (vGLP, Section 5.4: "When a fact Alice's phone finds changes, as when a person comes near, the phone tells Alice's agent, which then checks again which of its own transactions it can take"), each read as a trigger near(P).
 procedure tag_near(Stream(Presence)?, Stream(Trigger)).
 tag_near([P|Ps], [near(P?)|Ts?]) :- tag_near(Ps?, Ts).
 tag_near([], []).
@@ -929,7 +925,8 @@ next_n(Th, Kick, Ap0, Ns, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-
     app(Ag?, Ls?, L0),
     requests_first(L0?, L1),
     show_state(Ap0?, St?, Thr, Thr1?),
-    put_notices(Ns?, Thr1, Thr2?),
+    trust_change(Ap0?, St?, Thr1, Thr1t?),
+    put_notices(Ns?, Thr1t, Thr2?),
     agent_goal(L1?, In?, U?, Ans, Thr2, Out, Ow1, Approvals1?, H1?, St1?).
 
 %% The triggers of the agent goal's own list with every request it puts up again before the rest, each kind in its order: "After every dispatch that changes the app state or consumes a start the agent goal puts up again every request of its person it holds, and then the starts it holds" (vGLP e22e2ad, Section 5.4, "The compilation"), so a request still unread stands before a recheck a later dispatch puts up.
@@ -942,6 +939,35 @@ requests_split([], [], []).
 requests_split([again(N)|Ts], [again(N?)|As?], Bs?) :- requests_split(Ts?, As, Bs).
 requests_split([T|Ts], As?, [T?|Bs?]) :- otherwise | requests_split(Ts?, As, Bs).
 
+%% The trust request after a dispatch: open where a standing request of a schema that opens the phone (trust_schemas) has come to stand, closed where the last such has been withdrawn (vGLP, Section 5.4: "An implementation pragma may open a person's phone to persons it does not know, over Bluetooth and the local network, from their standing request until they withdraw it"), written as trust(L) on the output, which the agent hands its host on its trust stream (trust_split).
+procedure trust_change(App?, St?, Stream(Output), Stream(Output)?).
+trust_change(Ap0, St, T?, T1) :- ground(Ap0?), ground(St?) |
+    app_recs(Ap0?, R0),
+    st_app(St?, Ap1),
+    app_recs(Ap1?, R1),
+    trust_schemas(Ts0),
+    trust_schemas(Ts1),
+    live_trust(Ts0?, R0?, B0),
+    live_trust(Ts1?, R1?, B1),
+    trust_out(B0?, B1?, T, T1).
+procedure live_trust(Preds?, Recs?, YesNo).
+live_trust([], _, no).
+live_trust([S|Ss], R, B?) :- ground(S?), ground(R?) |
+    standing_live(R?, S?, R?, Sk),
+    live_trust1(Sk?, Ss?, R?, B).
+procedure live_trust1(StandK?, Preds?, Recs?, YesNo).
+live_trust1(at(_), _, _, yes).
+live_trust1(nostand, Ss, R, B?) :- live_trust(Ss?, R?, B).
+procedure trust_out(YesNo?, YesNo?, Stream(Output), Stream(Output)?).
+trust_out(no, yes, [trust(open)|T1?], T1).
+trust_out(yes, no, [trust(closed)|T1?], T1).
+trust_out(yes, yes, T1?, T1).
+trust_out(no, no, T1?, T1).
+%% The output to the person and the trust requests to the host, apart.
+procedure trust_split(Stream(Output)?, Stream(Output), Stream(TrustLevel)).
+trust_split([trust(L)|Os], Sh?, [L?|Tw?]) :- trust_split(Os?, Sh, Tw).
+trust_split([O|Os], [O?|Sh?], Tw?) :- otherwise | trust_split(Os?, Sh, Tw).
+trust_split([], [], []).
 %% The view after the dispatch, written where the machine state differs, as a multiset, from that before it, or the approvals pending differ.
 procedure show_state(App?, St?, Stream(Output), Stream(Output)?).
 show_state(Ap0, St, Thr?, Thr1) :- ground(Ap0?), ground(St?) |
@@ -1104,10 +1130,9 @@ stand_cond1(nostand, unlocked, no, go).
 stand_cond1(nostand, held(_), _, busy).
 stand_cond1(nostand, unlocked, yes, busy).
 procedure stand_take(StandCond?, Constant?, Proposal?, RCond?, St?, RCond, St).
-stand_take(go, S, _, Cd, St, Cd?, St1?) :- ground(St?), ground(S?) |
+stand_take(go, S, _, Cd, St, Cd?, St1?) :- ground(St?) |
     st_app(St?, Ap),
     stand_app(S?, Ap?, Ap1),
-    trust_to(S?, open),
     set_app(St?, Ap1?, St1).
 stand_take(already, _, _, Cd, St, Cd?, St?).
 stand_take(busy, _, N, _, St, rhold(N?), St?).
@@ -1121,15 +1146,9 @@ withdraw_app(S, app(Ms, K, L, R), Ap?) :- ground(S?), ground(R?), ground(L?) |
     lock_of_schema(L?, S?, Ls),
     withdraw_app1(Sk?, Ls?, S?, app(Ms?, K?, L?, R?), Ap).
 procedure withdraw_app1(StandK?, YesNo?, Constant?, App?, App).
-withdraw_app1(at(Kw), no, S, app(Ms, K, L, R), app(Ms?, K?, L?, [ended(std(S?), Kw?)|R?])) :- ground(S?) | trust_to(S?, closed).
+withdraw_app1(at(Kw), no, S, app(Ms, K, L, R), app(Ms?, K?, L?, [ended(std(S?), Kw?)|R?])).
 withdraw_app1(at(_), yes, _, Ap, Ap?).
 withdraw_app1(nostand, _, _, Ap, Ap?).
-%% The phone opened to persons it does not know, over Bluetooth and the local network, from the standing request of a schema the implementation pragmas name until it is withdrawn (vGLP, Section 5.4; GLP, appendix-guards, "Networking seam": declare(trust(U, L))), and left as it is for any other (trust_of).
-procedure trust_to(Constant?, TrustLevel?).
-trust_to(S, T) :- ground(S?) | trust_of(S?, Y), trust_set(Y?, T?).
-procedure trust_set(YesNo?, TrustLevel?).
-trust_set(yes, T) :- ground(T?) | declare(trust(pan, T?)), declare(trust(lan, T?)).
-trust_set(no, _).
 %% The standing request std(S) pending in the record, at(K), standing(std(S), K) recorded and not ended, or nostand.
 StandK    ::= at(Integer) ; nostand.
 procedure standing_live(Recs?, Constant?, Recs?, StandK).
@@ -7476,6 +7495,5 @@ procedure(X) ms_meets1(YesNo?, Stream(X)?, Stream(X)?, YesNo).
 ms_meets1(yes, _, _, yes).
 ms_meets1(no, Xs, B, R?) :- ms_meets(Xs?, B?, R).
 
-procedure trust_of(Constant?, YesNo).
-trust_of(encounter, yes).
-trust_of(_, no) :- otherwise | true.
+procedure trust_schemas(Preds).
+trust_schemas([encounter]).
