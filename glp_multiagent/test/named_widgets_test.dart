@@ -29,7 +29,7 @@ const _speech = "rec('Speech', form(speech, [field('Utterance', "
 /// The default widget of `Approval ::= approval(Attempt, YesNo?)` over the
 /// classes [classes], each `form(F, [...])`, standing for the proposals too,
 /// as the canonical compilation emits it (programs/apps/gsg and gsn, the
-/// construct of `approval_w`; cascade/GSG/platform.glp as cascade.sh prints
+/// construct of `approval_w`; cascade/Friendship/platform.glp as cascade.sh prints
 /// it): `Attempt ::= attempt(Peer, Integer, Integer, Class, Names)`, `Names
 /// ::= none ; request(Rho, Integer)`, `Rho ::= one(Class) ; rho(Proposal)`
 /// (vGLP f0acbc1, Definition "Attempt").
@@ -55,13 +55,13 @@ const _gsnJoin =
 const _gsnMessage =
     "form(message, [field('Peer', shown), field('Peer', shown), field('Speech', $_speech)])";
 
-/// GAI's agent_befriend, `agent_befriend(r?, q?, p?)` (programs/gai/GAI.glp at
+/// GAI's agent_befriend, `agent_befriend(r?, q?, p?)` (programs/gai/Agents.glp at
 /// GLP 9d736804), as programs/apps/gai/platform.vglp prints its Class.
 const _gaiAgentBefriend = "form(agent_befriend, [field('Peer', shown), "
     "field('Peer', shown), field('Peer', shown)])";
 
 /// CSSN's child_befriend, `child_befriend(r?, s?, p?, q?)`
-/// (programs/cssn/CSSN.glp), as programs/cssn/platform.vglp prints its Class.
+/// (programs/cssn/Children.glp), as programs/cssn/platform.vglp prints its Class.
 const _cssnChildBefriend = "form(child_befriend, [field('Peer', shown), "
     "field('Peer', shown), field('Peer', shown), field('Peer', shown)])";
 
@@ -70,16 +70,16 @@ const _childBefriendView = 'approval(attempt(alice, 4, 4, child_befriend('
     'carol, dave, alice, bob), none), input([2]))';
 
 /// CSSN's enter_2, `enter_2(p?, q?, r?)`
-/// (programs/cssn/CSSN.glp), as programs/cssn/platform.vglp prints their
+/// (programs/cssn/Children.glp), as programs/cssn/platform.vglp prints their
 /// Class.
 const _cssnEnter2 = "form(enter_2, [field('Peer', shown), "
     "field('Peer', shown), field('Peer', shown)])";
 
 /// GKK's meet and introduce, `meet(p?, q?)` and `introduce(p?, q? ; c)`
-/// (programs/gsc/GKK.glp), and CSSN's meetings of a child, `child_meet(r?,
+/// (programs/gsc/Knowledge.glp), and CSSN's meetings of a child, `child_meet(r?,
 /// a?, p?)` and `child_meet_2(r?, s?, p?, q?)`, and joinings of a child,
 /// `child_join(a?, s?, p? ; n)` and `child_join_2(r?, s?, p?, q? ; n)`
-/// (programs/cssn/CSSN.glp), as programs/cssn/platform.vglp prints their
+/// (programs/cssn/Children.glp), as programs/cssn/platform.vglp prints their
 /// Class.
 const _meet = "form(meet, [field('Peer', shown), field('Peer', shown)])";
 const _introduce = "form(introduce, [field('Peer', shown), "

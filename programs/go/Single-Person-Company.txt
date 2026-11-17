@@ -1,9 +1,9 @@
-% SPLLC: Single-Person Limited-Liability Company --- the contract, the one copy, its owner's (claude.md, "Sessions").
-% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 6.1 and cites a clause as SPLLC:1.
+% Single-Person Company --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 6.1 and cites a clause as Single-Person Company:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GCorp, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-12, by GO #5.
-% Schemas: SPLLC.glp beside this file.
+% Extends: Corporation, instantiating its bylaws and restricting it.
+% Last changed: 2026-11-16, by GO #8.
+% Schemas: Single-Person-Company.glp beside this file.
 Single-Person Company
 Single-Person Company instantiates Corporation with single-person limited-liability company bylaws.
 A *single-person limited-liability company* is a corporation whose bylaws name one role, the *sole officer*, who decides every act of the company, and admit no participant but the sole officer.
