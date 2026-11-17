@@ -109,7 +109,8 @@ Future<Map<String, Object?>> post(Map body) async {
       'You, or someone who gave this address, wrote feedback on $_site.\n\n'
       'To post it, open this link within two days:\n\n$link\n\n'
       'It will then be a pull request in https://github.com/$_repo, signed "a visitor", within two hours; your address is not in it.  '
-      'If you did not write it, ignore this mail and nothing is posted.\n');
+      'If you did not write it, ignore this mail and nothing is posted.\n\n'
+      'This mail is sent by the site, and a reply to it is not read.\n');
   if (!sent) return {'error': 'We could not send the mail; please try again later.'};
   posts.add({'id': id, 'token': token, 'email': email, 'text': text, 'from': from, 'at': now.toIso8601String(), 'verified': false});
   _save(posts);
