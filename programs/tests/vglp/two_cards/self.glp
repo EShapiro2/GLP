@@ -20,6 +20,10 @@
 ParentCard ::= card(Constant, YesNo?).
 ChildCard  ::= card(Integer?).
 
+%% What the person logs: each card it answers, and every other draw and
+%% withdrawal as it came.
+Logged ::= parent(Constant) ; child ; drawn(Drawn) ; withdrawn(Integer).
+
 imported procedure parent#parent(Stream(YesNo), Stream(Ask(Question))).
 imported procedure child#child(Stream(Integer), Stream(Ask(Question))).
 imported procedure child#dispatch(Stream(Ask(Question))?,
@@ -27,7 +31,7 @@ imported procedure child#dispatch(Stream(Ask(Question))?,
 
 %% Both modules at once, their ask streams merged, served by the child's
 %% dispatcher: P the parent's answers, C the child's.
-exported procedure play_cards(Stream(YesNo), Stream(Integer), Stream(_)).
+exported procedure play_cards(Stream(YesNo), Stream(Integer), Stream(Logged)).
 play_cards(P?, C?, Log?) :-
     parent # parent(P, A1),
     child # child(C, A2),
@@ -37,7 +41,7 @@ play_cards(P?, C?, Log?) :-
 
 %% person(Ds?, Gs, Log): at the draw of each card with the person's position
 %% marked input(Q), grant its answer at Q; log every draw and withdrawal.
-procedure person(_?, PersonIn(Drawn), Stream(_)).
+procedure person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 person([draw(Id, _, parent_card_w(card(C, input(Q)))) | Ds],
        [input(Id?, Q?, yes) | Gs?], [parent(C?) | Log?]) :-
     ground(Id?), ground(C?), ground(Q?) |
