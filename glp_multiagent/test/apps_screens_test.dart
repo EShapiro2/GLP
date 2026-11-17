@@ -1013,13 +1013,12 @@ void appsScreens(Screens screens) {
     expect(run.listNamed(alice, 'friend', 'Friends'), findsOneWidget);
     expect(run.on(alice, find.byKey(listTabKey('member'))), findsNothing);
 
-    // Each establishes their identity (GKK:1), and Alice comes to know Bob by his key (GKK:2).  Bob's row in her Contacts then has the buttons of the acts that require knows of him at her role, Introduce, its field a key, and GSG's "[Befriend]"; not Acquaint, which requires no atom of knows, nor GSG's "[Unfriend]", which requires friend of him: "A button is drawn in the row of a tab's entry ... in a row of the tab whose predicate the act requires or deletes at the proposer's role naming the entry" (vGLP 516a0a2, Section 6.2).
+    // Each establishes their identity (GKK:1), and Alice comes to know Bob by his key (GKK:2).  Bob's row in her Contacts then has GSG's "[Befriend]", which requires knows of him at her role: "A button is drawn in the row of a tab's entry ... in a row of the tab whose predicate the act requires or deletes at the proposer's role naming the entry" (vGLP 516a0a2, Section 6.2); not Acquaint, which requires no atom of knows, nor GSG's "[Unfriend]", which requires friend of him.  Nor Introduce: it requires that Alice know Carol, and a way binds "persons of different names bound to different persons" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), so with Bob the one person she knows there is no way to introduce anyone to him.
     await run.join(alice);
     await run.join(bob);
     await run.meetByKey(alice, bob);
     expect(run.control(alice, 'act:befriend:bob'), findsOneWidget);
-    expect(run.control(alice, 'act:introduce:bob'), findsOneWidget);
-    for (final f in ['acquaint', 'unfriend']) {
+    for (final f in ['acquaint', 'unfriend', 'introduce']) {
       expect(run.control(alice, 'act:$f:bob'), findsNothing, reason: f);
     }
 
