@@ -10036,6 +10036,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 ,\\
@@ -10091,6 +10093,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 ,\\
@@ -10328,6 +10332,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 \}
 ,\\
@@ -10393,6 +10399,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 \}
 ,\\
@@ -10633,27 +10641,31 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-\}
-) \uplus 
-\{
 Total
 \cdot
 \text{\textcent}
 (
 Dave
-)
 ,
+Dollar
+)
+\}
+) \uplus 
+\{
 \mathit{
 knows
 }
 (
-Dave
+Carol
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+,
+Dollar
 )
 \}
 , \qquad 
@@ -10668,27 +10680,31 @@ c'_
 }
  \setminus 
 \{
-Total
-\cdot
-\text{\textcent}
-(
-Dave
-)
-\}
-) \uplus 
-\{
 Sum
 \cdot
 \text{\textcent}
 (
 Carol
-)
 ,
+Dollar
+)
+\}
+) \uplus 
+\{
 \mathit{
 knows
 }
 (
-Carol
+Dave
+)
+,
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+,
+Dollar
 )
 \}
 ,\\
@@ -10707,30 +10723,16 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-Carol
-,
-Dave
-)
-,
-\mathit{
-all_stay_backed
-}
-(
-Orga
-)
-,
-\mathit{
 person
 }
 ,
-Sum
+Total
 \cdot
 \text{\textcent}
 (
-Carol
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -10751,14 +10753,23 @@ knows
 )
 ,
 \mathit{
+all_stay_backed
+}
+(
+Orga
+)
+,
+\mathit{
 person
 }
 ,
-Total
+Sum
 \cdot
 \text{\textcent}
 (
-Dave
+Carol
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -10783,10 +10794,50 @@ c'_
 \Alice
 }
  := 
-(
 (c_
 {
 \Alice
+}
+ \setminus 
+\{
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+,
+Dollar
+)
+\}
+) \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+,
+Dollar
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+(
+(c_
+{
+\Bob
 }
  \setminus 
 \{
@@ -10795,37 +10846,41 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \setminus K_
 {
-\Alice
+\Bob
 }
 ) \uplus 
 \{
-Total
-\cdot
-\text{\textcent}
-(
-Dave
-)
-,
 \mathit{
 knows
 }
 (
 Dave
 )
+,
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+,
+Dollar
+)
 \}
 ,\\
 &
 \text{where } K_
 {
-\Alice
+\Bob
 }
  \text{ holds every atom of } c_
 {
-\Alice
+\Bob
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
@@ -10834,7 +10889,7 @@ vote_swap_alice
 (
 \ast
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
@@ -10844,42 +10899,6 @@ Total
 ,
 Dave
 )
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-Total
-\cdot
-\text{\textcent}
-(
-Dave
-)
-\}
-) \uplus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-,
-\mathit{
-knows
-}
-(
-Carol
-)
-\}
 ,\\
 &
 c'_
@@ -10907,26 +10926,16 @@ knows
 )
 ,
 \mathit{
-one_denomination
+person
 }
-(
-Carol
 ,
-Dave
-)
-,
-\mathit{
-all_stay_backed
-}
-(
-Orga
-)
-,
-Sum
+Total
 \cdot
 \text{\textcent}
 (
-Carol
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -10947,14 +10956,19 @@ knows
 )
 ,
 \mathit{
-person
+all_stay_backed
 }
+(
+Orga
+)
 ,
-Total
+Sum
 \cdot
 \text{\textcent}
 (
-Dave
+Carol
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -10998,7 +11012,7 @@ Dave
 role
 }
 (
-\Alice
+\Bob
 ,
 Treasurer
 )
@@ -11020,11 +11034,11 @@ X1
 vote_swap_alice
 }
 (
-\Alice
+\Bob
 ,
 X1
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
@@ -11051,7 +11065,7 @@ X2
 has_role
 }
 (
-\Alice
+\Bob
 ,
 X2
 ,
@@ -11063,7 +11077,7 @@ DoubleAlice
 ,\\
 &
 \text{guarded by } \{
-\Bob
+\Alice
 ,
 \mathit{Carol}
 \}
@@ -11202,85 +11216,53 @@ c'_
 \Alice
 }
  := 
+(
 (c_
 {
 \Alice
 }
  \setminus 
 \{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-\}
-) \uplus 
-\{
 Total
 \cdot
 \text{\textcent}
 (
 Dave
-)
 ,
-\mathit{
-knows
-}
-(
-Dave
-)
-\}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-(
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-Total
-\cdot
-\text{\textcent}
-(
-Dave
+Dollar
 )
 \}
 ) \setminus K_
 {
-\Bob
+\Alice
 }
 ) \uplus 
 \{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-,
 \mathit{
 knows
 }
 (
 Carol
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+,
+Dollar
 )
 \}
 ,\\
 &
 \text{where } K_
 {
-\Bob
+\Alice
 }
  \text{ holds every atom of } c_
 {
-\Bob
+\Alice
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
@@ -11289,7 +11271,7 @@ vote_swap_bob
 (
 \ast
 ,
-\Alice
+\Bob
 ,
 Sum
 ,
@@ -11299,6 +11281,46 @@ Total
 ,
 Dave
 )
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+,
+Dollar
+)
+\}
+) \uplus 
+\{
+\mathit{
+knows
+}
+(
+Dave
+)
+,
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+,
+Dollar
+)
+\}
 ,\\
 &
 c'_
@@ -11325,31 +11347,13 @@ knows
 \Bob
 )
 ,
-\mathit{
-one_denomination
-}
-(
-Carol
-,
-Dave
-)
-,
-\mathit{
-all_stay_backed
-}
-(
-Orga
-)
-,
-\mathit{
-person
-}
-,
-Sum
+Total
 \cdot
 \text{\textcent}
 (
-Carol
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -11369,11 +11373,24 @@ knows
 \Alice
 )
 ,
-Total
+\mathit{
+all_stay_backed
+}
+(
+Orga
+)
+,
+\mathit{
+person
+}
+,
+Sum
 \cdot
 \text{\textcent}
 (
-Dave
+Carol
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -11417,7 +11434,7 @@ Dave
 role
 }
 (
-\Bob
+\Alice
 ,
 Treasurer
 )
@@ -11439,11 +11456,11 @@ X1
 vote_swap_bob
 }
 (
-\Bob
+\Alice
 ,
 X1
 ,
-\Alice
+\Bob
 ,
 Sum
 ,
@@ -11470,7 +11487,7 @@ X2
 has_role
 }
 (
-\Bob
+\Alice
 ,
 X2
 ,
@@ -11482,7 +11499,7 @@ DoubleBob
 ,\\
 &
 \text{guarded by } \{
-\Alice
+\Bob
 ,
 \mathit{Carol}
 \}
@@ -11628,11 +11645,13 @@ c'_
 }
  \setminus 
 \{
-Sum
+Total
 \cdot
 \text{\textcent}
 (
-Carol
+Dave
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -11641,18 +11660,20 @@ Carol
 }
 ) \uplus 
 \{
-Total
-\cdot
-\text{\textcent}
-(
-Dave
-)
-,
 \mathit{
 knows
 }
 (
-Dave
+Carol
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+,
+Dollar
 )
 \}
 ,\\
@@ -11667,7 +11688,7 @@ Dave
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
-vote_swap_alice
+vote_swap_bob
 }
 (
 \ast
@@ -11696,11 +11717,13 @@ c'_
 }
  \setminus 
 \{
-Total
+Sum
 \cdot
 \text{\textcent}
 (
-Dave
+Carol
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -11709,18 +11732,20 @@ Dave
 }
 ) \uplus 
 \{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-,
 \mathit{
 knows
 }
 (
-Carol
+Dave
+)
+,
+Total
+\cdot
+\text{\textcent}
+(
+Dave
+,
+Dollar
 )
 \}
 ,\\
@@ -11735,7 +11760,7 @@ Carol
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
-vote_swap_bob
+vote_swap_alice
 }
 (
 \ast
@@ -11787,27 +11812,13 @@ knows
 \Bob
 )
 ,
-\mathit{
-one_denomination
-}
-(
-Carol
-,
-Dave
-)
-,
-\mathit{
-all_stay_backed
-}
-(
-Orga
-)
-,
-Sum
+Total
 \cdot
 \text{\textcent}
 (
-Carol
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -11827,11 +11838,20 @@ knows
 \Alice
 )
 ,
-Total
+\mathit{
+all_stay_backed
+}
+(
+Orga
+)
+,
+Sum
 \cdot
 \text{\textcent}
 (
-Dave
+Carol
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -11875,7 +11895,7 @@ Dave
 role
 }
 (
-\Alice
+\Bob
 ,
 Treasurer
 )
@@ -11924,7 +11944,7 @@ Dave
 role
 }
 (
-\Bob
+\Alice
 ,
 Treasurer
 )
@@ -11946,11 +11966,11 @@ X1
 vote_swap_alice
 }
 (
-\Alice
+\Bob
 ,
 X1
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
@@ -11977,7 +11997,7 @@ X2
 has_role
 }
 (
-\Alice
+\Bob
 ,
 X2
 ,
@@ -11994,11 +12014,11 @@ X3
 vote_swap_bob
 }
 (
-\Bob
+\Alice
 ,
 X3
 ,
-\Alice
+\Bob
 ,
 Sum
 ,
@@ -12025,7 +12045,7 @@ X4
 has_role
 }
 (
-\Bob
+\Alice
 ,
 X4
 ,
@@ -12063,6 +12083,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -12076,6 +12098,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -12106,6 +12130,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -12115,6 +12141,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 ,
 \mathit{
@@ -12140,15 +12168,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-Carol
-,
-Dave
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -12164,6 +12183,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -12196,6 +12217,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -12232,6 +12255,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -12249,6 +12274,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -12309,6 +12336,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -12318,6 +12347,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 ,
 \mathit{
@@ -12354,15 +12385,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-Carol
-,
-Dave
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -12374,6 +12396,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -12406,6 +12430,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -12670,6 +12696,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -12683,6 +12711,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -12715,6 +12745,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -12728,6 +12760,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 ,
 \mathit{
@@ -12793,15 +12827,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-Carol
-,
-Dave
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -12817,6 +12842,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -12845,6 +12872,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -13110,6 +13139,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -13127,6 +13158,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -13188,6 +13221,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -13201,6 +13236,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 ,
 \mathit{
@@ -13277,15 +13314,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-Carol
-,
-Dave
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -13297,6 +13325,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -13325,6 +13355,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -13564,6 +13596,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -13577,6 +13611,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 ,
 \mathit{
@@ -13607,6 +13643,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -13620,6 +13658,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -13645,15 +13685,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-Carol
-,
-Dave
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -13673,6 +13704,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -13705,6 +13738,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -13745,6 +13780,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -13762,6 +13799,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 ,
 \mathit{
@@ -13824,6 +13863,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -13837,6 +13878,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -13873,15 +13916,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-Carol
-,
-Dave
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -13897,6 +13931,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -13929,6 +13965,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -14203,6 +14241,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -14216,6 +14256,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 ,
 \mathit{
@@ -14248,6 +14290,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -14265,6 +14309,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -14332,15 +14378,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-Carol
-,
-Dave
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -14360,6 +14397,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -14388,6 +14427,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -14663,6 +14704,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -14680,6 +14723,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 ,
 \mathit{
@@ -14743,6 +14788,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -14760,6 +14807,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -14838,15 +14887,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-Carol
-,
-Dave
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -14862,6 +14902,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -14890,6 +14932,8 @@ bond
 Dave
 ,
 Term
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -15122,13 +15166,22 @@ c_
 {
 \Alice
 }
- \setminus 
+ \uplus 
 \{
+\mathit{
+knows
+}
+(
+Carol
+)
+,
 Sum
 \cdot
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 , \qquad 
@@ -15141,25 +15194,32 @@ c_
 {
 \Bob
 }
- \uplus 
+ \setminus 
 \{
 Sum
 \cdot
 \text{\textcent}
 (
 Carol
-)
 ,
-\mathit{
-knows
-}
-(
-Carol
+Dollar
 )
 \}
 ,\\
 &
 \text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
 \{
 \mathit{
 identity
@@ -15169,7 +15229,7 @@ identity
 knows
 }
 (
-\Bob
+\Alice
 )
 ,
 \mathit{
@@ -15188,21 +15248,11 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
- \in c_
 {
 \Bob
 }
@@ -15235,6 +15285,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 , \qquad 
@@ -15254,6 +15306,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ,\\
@@ -15294,6 +15348,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -15335,6 +15391,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -15380,6 +15438,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ,\\
@@ -15427,6 +15487,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -15634,9 +15696,38 @@ c'_
 \Alice
 }
  := 
-(c_
+c_
 {
 \Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Carol
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+,
+Dollar
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
 }
  \setminus 
 \{
@@ -15645,21 +15736,23 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \setminus K_
 {
-\Alice
+\Bob
 }
 ,\\
 &
 \text{where } K_
 {
-\Alice
+\Bob
 }
  \text{ holds every atom of } c_
 {
-\Alice
+\Bob
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
@@ -15668,39 +15761,12 @@ vote_pay_alice
 (
 \ast
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
 Carol
 )
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-,
-\mathit{
-knows
-}
-(
-Carol
-)
-\}
 ,\\
 &
 c'_
@@ -15715,6 +15781,18 @@ c_
 ,\\
 &
 \text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
 \{
 \mathit{
 identity
@@ -15724,7 +15802,7 @@ identity
 knows
 }
 (
-\Bob
+\Alice
 )
 ,
 \mathit{
@@ -15739,21 +15817,11 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-person
-}
- \in c_
 {
 \Bob
 }
@@ -15787,7 +15855,7 @@ knows
 role
 }
 (
-\Alice
+\Bob
 ,
 Treasurer
 )
@@ -15809,11 +15877,11 @@ X1
 vote_pay_alice
 }
 (
-\Alice
+\Bob
 ,
 X1
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
@@ -15836,7 +15904,7 @@ X2
 has_role
 }
 (
-\Alice
+\Bob
 ,
 X2
 ,
@@ -15848,7 +15916,7 @@ DoubleAlice
 ,\\
 &
 \text{guarded by } \{
-\Bob
+\Alice
 ,
 \mathit{Carol}
 \}
@@ -15972,60 +16040,42 @@ c'_
 \Alice
 }
  := 
+(
 c_
 {
 \Alice
 }
- \setminus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-\}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-(
-c_
-{
-\Bob
-}
  \setminus K_
 {
-\Bob
+\Alice
 }
 ) \uplus 
 \{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-,
 \mathit{
 knows
 }
 (
 Carol
 )
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+,
+Dollar
+)
 \}
 ,\\
 &
 \text{where } K_
 {
-\Bob
+\Alice
 }
  \text{ holds every atom of } c_
 {
-\Bob
+\Alice
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
@@ -16034,12 +16084,34 @@ vote_pay_bob
 (
 \ast
 ,
-\Alice
+\Bob
 ,
 Sum
 ,
 Carol
 )
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \setminus 
+\{
+Sum
+\cdot
+\text{\textcent}
+(
+Carol
+,
+Dollar
+)
+\}
 ,\\
 &
 c'_
@@ -16054,6 +16126,14 @@ c_
 ,\\
 &
 \text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
 \{
 \mathit{
 identity
@@ -16063,7 +16143,7 @@ identity
 knows
 }
 (
-\Bob
+\Alice
 )
 ,
 \mathit{
@@ -16082,17 +16162,11 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
 {
 \Bob
 }
@@ -16126,7 +16200,7 @@ knows
 role
 }
 (
-\Bob
+\Alice
 ,
 Treasurer
 )
@@ -16148,11 +16222,11 @@ X1
 vote_pay_bob
 }
 (
-\Bob
+\Alice
 ,
 X1
 ,
-\Alice
+\Bob
 ,
 Sum
 ,
@@ -16175,7 +16249,7 @@ X2
 has_role
 }
 (
-\Bob
+\Alice
 ,
 X2
 ,
@@ -16187,7 +16261,7 @@ DoubleBob
 ,\\
 &
 \text{guarded by } \{
-\Alice
+\Bob
 ,
 \mathit{Carol}
 \}
@@ -16311,23 +16385,33 @@ c'_
 \Alice
 }
  := 
-(c_
+(
+c_
 {
 \Alice
 }
- \setminus 
+ \setminus K_
+{
+\Alice
+}
+) \uplus 
 \{
+\mathit{
+knows
+}
+(
+Carol
+)
+,
 Sum
 \cdot
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
-) \setminus K_
-{
-\Alice
-}
 ,\\
 &
 \text{where } K_
@@ -16340,7 +16424,7 @@ Carol
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
-vote_pay_alice
+vote_pay_bob
 }
 (
 \ast
@@ -16358,31 +16442,25 @@ c'_
 \Bob
 }
  := 
-(
-c_
+(c_
 {
 \Bob
 }
- \setminus K_
-{
-\Bob
-}
-) \uplus 
+ \setminus 
 \{
 Sum
 \cdot
 \text{\textcent}
 (
 Carol
-)
 ,
-\mathit{
-knows
-}
-(
-Carol
+Dollar
 )
 \}
+) \setminus K_
+{
+\Bob
+}
 ,\\
 &
 \text{where } K_
@@ -16395,7 +16473,7 @@ Carol
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
-vote_pay_bob
+vote_pay_alice
 }
 (
 \ast
@@ -16431,6 +16509,14 @@ c_
 ,\\
 &
 \text{provided } 
+\mathit{
+identity
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
 \{
 \mathit{
 identity
@@ -16440,7 +16526,7 @@ identity
 knows
 }
 (
-\Bob
+\Alice
 )
 ,
 \mathit{
@@ -16455,17 +16541,11 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
 {
 \Bob
 }
@@ -16499,7 +16579,7 @@ knows
 role
 }
 (
-\Alice
+\Bob
 ,
 Treasurer
 )
@@ -16541,7 +16621,7 @@ knows
 role
 }
 (
-\Bob
+\Alice
 ,
 Treasurer
 )
@@ -16563,11 +16643,11 @@ X1
 vote_pay_alice
 }
 (
-\Alice
+\Bob
 ,
 X1
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
@@ -16590,7 +16670,7 @@ X2
 has_role
 }
 (
-\Alice
+\Bob
 ,
 X2
 ,
@@ -16607,11 +16687,11 @@ X3
 vote_pay_bob
 }
 (
-\Bob
+\Alice
 ,
 X3
 ,
-\Alice
+\Bob
 ,
 Sum
 ,
@@ -16634,7 +16714,7 @@ X4
 has_role
 }
 (
-\Bob
+\Alice
 ,
 X4
 ,
@@ -16676,6 +16756,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
 , \qquad 
@@ -16699,6 +16781,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -16743,6 +16827,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -16794,6 +16880,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -16847,6 +16935,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -16898,6 +16988,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -17152,6 +17244,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
 ,\\
@@ -17181,6 +17275,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -17261,6 +17357,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -17511,6 +17609,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -17569,6 +17669,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -17656,6 +17758,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -17876,7 +17980,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
 , \qquad 
@@ -17897,7 +18003,9 @@ Sum
 escrow_coin
 }
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 ,
 \Alice
 ,
@@ -17919,16 +18027,6 @@ Cond
 Dollar
 )
 \}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
 ,\\
 &
 \text{provided } 
@@ -17966,7 +18064,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -17991,21 +18091,6 @@ person
  \in c_
 {
 \Bob
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-issued_in
-}
-(
-Dollar
-)
- \in c_
-{
-\mathit{Carol}
 }
 ,\\
 &
@@ -18054,7 +18139,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -18082,7 +18169,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 \Bob
 ,
@@ -18109,7 +18196,9 @@ Sum
 escrow_coin
 }
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 ,
 \Alice
 ,
@@ -18144,17 +18233,6 @@ c_
 }
 ,\\
 &
-c'_
-{
-\mathit{Dave}
-}
- := 
-c_
-{
-\mathit{Dave}
-}
-,\\
-&
 \text{provided } 
 \{
 \mathit{
@@ -18186,7 +18264,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -18218,21 +18298,6 @@ identity
 }
 ,
 \mathit{
-issued_in
-}
-(
-Dollar
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -18243,7 +18308,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -18274,7 +18339,7 @@ person
 }
  \in c_
 {
-\mathit{Dave}
+\mathit{Carol}
 }
 ,\\
 &
@@ -18313,7 +18378,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 \Bob
 ,
@@ -18352,7 +18417,7 @@ DoubleAlice
 \text{guarded by } \{
 \Bob
 ,
-\mathit{Dave}
+\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -18503,7 +18568,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
 ,\\
@@ -18530,7 +18597,9 @@ Sum
 escrow_coin
 }
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 ,
 \Alice
 ,
@@ -18575,7 +18644,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Bob
 ,
@@ -18591,17 +18660,6 @@ c'_
 c_
 {
 \mathit{Carol}
-}
-,\\
-&
-c'_
-{
-\mathit{Dave}
-}
- := 
-c_
-{
-\mathit{Dave}
 }
 ,\\
 &
@@ -18640,7 +18698,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -18668,21 +18728,6 @@ identity
 }
 ,
 \mathit{
-issued_in
-}
-(
-Dollar
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -18693,7 +18738,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -18724,7 +18769,7 @@ person
 }
  \in c_
 {
-\mathit{Dave}
+\mathit{Carol}
 }
 ,\\
 &
@@ -18765,7 +18810,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Bob
 ,
@@ -18802,7 +18847,7 @@ DoubleCarol
 \text{guarded by } \{
 \Alice
 ,
-\mathit{Dave}
+\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -18953,7 +18998,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -18981,7 +19028,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 \Bob
 ,
@@ -19013,7 +19060,9 @@ Sum
 escrow_coin
 }
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 ,
 \Alice
 ,
@@ -19058,7 +19107,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Bob
 ,
@@ -19085,21 +19134,6 @@ c'_
 c_
 {
 \mathit{Dave}
-}
-,\\
-&
-c'_
-{
-\mathit{p}_{
-5
-}
-}
- := 
-c_
-{
-\mathit{p}_{
-5
-}
 }
 ,\\
 &
@@ -19134,7 +19168,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -19162,21 +19198,6 @@ identity
 }
 ,
 \mathit{
-issued_in
-}
-(
-Dollar
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -19187,7 +19208,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -19209,6 +19230,55 @@ role
 }
 (
 \Alice
+,
+Treasurer
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Bob
+)
+,
+\mathit{
+role
+}
+(
+\Bob
 ,
 Treasurer
 )
@@ -19219,57 +19289,6 @@ person
  \in c_
 {
 \mathit{Dave}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-\mathit{
-knows
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-\mathit{
-knows
-}
-(
-Bob
-)
-,
-\mathit{
-role
-}
-(
-\Bob
-,
-Treasurer
-)
-,
-\mathit{
-person
-}
- \in c_
-{
-\mathit{p}_{
-5
-}
 }
 ,\\
 &
@@ -19308,7 +19327,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 \Bob
 ,
@@ -19360,7 +19379,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Bob
 ,
@@ -19395,11 +19414,9 @@ DoubleCarol
 ,\\
 &
 \text{guarded by } \{
-\mathit{Dave}
+\mathit{Carol}
 ,
-\mathit{p}_{
-5
-}
+\mathit{Dave}
 \}
 \end{align*}
 \iffalse
@@ -19424,9 +19441,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
 , \qquad 
@@ -19447,9 +19466,11 @@ Sum
 escrow_bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -19471,16 +19492,6 @@ Cond
 Dollar
 )
 \}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
 ,\\
 &
 \text{provided } 
@@ -19520,9 +19531,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -19547,23 +19560,6 @@ person
  \in c_
 {
 \Bob
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
- \in c_
-{
-\mathit{Carol}
 }
 ,\\
 &
@@ -19614,9 +19610,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -19644,7 +19642,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -19673,9 +19671,11 @@ Sum
 escrow_bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -19707,17 +19707,6 @@ c'_
 c_
 {
 \mathit{Carol}
-}
-,\\
-&
-c'_
-{
-\mathit{Dave}
-}
- := 
-c_
-{
-\mathit{Dave}
 }
 ,\\
 &
@@ -19754,9 +19743,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -19788,23 +19779,6 @@ identity
 }
 ,
 \mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -19815,7 +19789,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -19846,7 +19820,7 @@ person
 }
  \in c_
 {
-\mathit{Dave}
+\mathit{Carol}
 }
 ,\\
 &
@@ -19885,7 +19859,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -19926,7 +19900,7 @@ DoubleAlice
 \text{guarded by } \{
 \Bob
 ,
-\mathit{Dave}
+\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -20083,9 +20057,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
 ,\\
@@ -20112,9 +20088,11 @@ Sum
 escrow_bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -20159,7 +20137,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -20177,17 +20155,6 @@ c'_
 c_
 {
 \mathit{Carol}
-}
-,\\
-&
-c'_
-{
-\mathit{Dave}
-}
- := 
-c_
-{
-\mathit{Dave}
 }
 ,\\
 &
@@ -20228,9 +20195,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -20258,23 +20227,6 @@ identity
 }
 ,
 \mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -20285,7 +20237,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -20316,7 +20268,7 @@ person
 }
  \in c_
 {
-\mathit{Dave}
+\mathit{Carol}
 }
 ,\\
 &
@@ -20357,7 +20309,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -20396,7 +20348,7 @@ DoubleCarol
 \text{guarded by } \{
 \Alice
 ,
-\mathit{Dave}
+\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -20553,9 +20505,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -20583,7 +20537,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -20617,9 +20571,11 @@ Sum
 escrow_bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -20664,7 +20620,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -20693,21 +20649,6 @@ c'_
 c_
 {
 \mathit{Dave}
-}
-,\\
-&
-c'_
-{
-\mathit{p}_{
-5
-}
-}
- := 
-c_
-{
-\mathit{p}_{
-5
-}
 }
 ,\\
 &
@@ -20744,9 +20685,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -20774,23 +20717,6 @@ identity
 }
 ,
 \mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -20801,7 +20727,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -20823,6 +20749,55 @@ role
 }
 (
 \Alice
+,
+Treasurer
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Bob
+)
+,
+\mathit{
+role
+}
+(
+\Bob
 ,
 Treasurer
 )
@@ -20833,57 +20808,6 @@ person
  \in c_
 {
 \mathit{Dave}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-\mathit{
-knows
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-\mathit{
-knows
-}
-(
-Bob
-)
-,
-\mathit{
-role
-}
-(
-\Bob
-,
-Treasurer
-)
-,
-\mathit{
-person
-}
- \in c_
-{
-\mathit{p}_{
-5
-}
 }
 ,\\
 &
@@ -20922,7 +20846,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -20976,7 +20900,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -21013,11 +20937,9 @@ DoubleCarol
 ,\\
 &
 \text{guarded by } \{
-\mathit{Dave}
+\mathit{Carol}
 ,
-\mathit{p}_{
-5
-}
+\mathit{Dave}
 \}
 \end{align*}
 \iffalse
@@ -21034,21 +20956,22 @@ c_
 {
 \Alice
 }
- \setminus 
+ \uplus 
 \{
-Sum
-\cdot
 \mathit{
-escrow_coin
+knows
 }
 (
 Dave
+)
 ,
-Alice
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
 ,
-\Bob
-,
-Cond
+Dollar
 )
 \}
 , \qquad 
@@ -21061,26 +20984,28 @@ c_
 {
 \Bob
 }
- \uplus 
+ \setminus 
 \{
 Sum
 \cdot
-\text{\textcent}
-(
-Dave
-)
-,
 \mathit{
-knows
+escrow_coin
 }
 (
 Dave
+,
+Dollar
+,
+Alice
+,
+\Alice
+,
+Cond
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -21090,6 +21015,26 @@ knows
 }
 (
 \Bob
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
 )
 ,
 \mathit{
@@ -21111,33 +21056,16 @@ escrow_coin
 (
 Dave
 ,
+Dollar
+,
 Alice
 ,
-\Bob
+\Alice
 ,
 Cond
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-\mathit{
-person
-}
- \in c_
 {
 \Bob
 }
@@ -21159,9 +21087,38 @@ c'_
 \Alice
 }
  := 
-(c_
+c_
 {
 \Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Dave
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+,
+Dollar
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
 }
  \setminus 
 \{
@@ -21173,26 +21130,28 @@ escrow_coin
 (
 Dave
 ,
+Dollar
+,
 Alice
 ,
-\Bob
+\Alice
 ,
 Cond
 )
 \}
 ) \setminus K_
 {
-\Alice
+\Bob
 }
 ,\\
 &
 \text{where } K_
 {
-\Alice
+\Bob
 }
  \text{ holds every atom of } c_
 {
-\Alice
+\Bob
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
@@ -21201,7 +21160,7 @@ vote_release_carol
 (
 \ast
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
@@ -21211,33 +21170,6 @@ Alice
 ,
 Cond
 )
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Dave
-)
-,
-\mathit{
-knows
-}
-(
-Dave
-)
-\}
 ,\\
 &
 c'_
@@ -21252,7 +21184,6 @@ c_
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -21262,6 +21193,26 @@ knows
 }
 (
 \Bob
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
 )
 ,
 \mathit{
@@ -21279,33 +21230,16 @@ escrow_coin
 (
 Dave
 ,
+Dollar
+,
 Alice
 ,
-\Bob
+\Alice
 ,
 Cond
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-\mathit{
-person
-}
- \in c_
 {
 \Bob
 }
@@ -21332,21 +21266,21 @@ Dave
 knows
 }
 (
-Alice
+\Bob
 )
 ,
 \mathit{
 knows
 }
 (
-\Bob
+Alice
 )
 ,
 \mathit{
 role
 }
 (
-\Alice
+\Bob
 ,
 Treasurer
 )
@@ -21368,11 +21302,11 @@ X1
 vote_release_carol
 }
 (
-\Alice
+\Bob
 ,
 X1
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
@@ -21399,7 +21333,7 @@ X2
 has_role
 }
 (
-\Alice
+\Bob
 ,
 X2
 ,
@@ -21411,7 +21345,7 @@ DoubleCarol
 ,\\
 &
 \text{guarded by } \{
-\Bob
+\Alice
 ,
 \mathit{Carol}
 \}
@@ -21550,9 +21484,70 @@ c'_
 \Alice
 }
  := 
+(
 c_
 {
 \Alice
+}
+ \setminus K_
+{
+\Alice
+}
+) \uplus 
+\{
+\mathit{
+knows
+}
+(
+Dave
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+,
+Dollar
+)
+\}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+vote_release_bob
+}
+(
+\ast
+,
+\Bob
+,
+Sum
+,
+Dave
+,
+Alice
+,
+Cond
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
 }
  \setminus 
 \{
@@ -21564,72 +21559,15 @@ escrow_coin
 (
 Dave
 ,
+Dollar
+,
 Alice
-,
-\Bob
-,
-Cond
-)
-\}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-(
-c_
-{
-\Bob
-}
- \setminus K_
-{
-\Bob
-}
-) \uplus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Dave
-)
-,
-\mathit{
-knows
-}
-(
-Dave
-)
-\}
-,\\
-&
-\text{where } K_
-{
-\Bob
-}
- \text{ holds every atom of } c_
-{
-\Bob
-}
- \text{, with its multiplicity, that matches } 
-\mathit{
-vote_release_bob
-}
-(
-\ast
 ,
 \Alice
 ,
-Sum
-,
-Dave
-,
-Alice
-,
 Cond
 )
+\}
 ,\\
 &
 c'_
@@ -21644,7 +21582,6 @@ c_
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -21654,6 +21591,22 @@ knows
 }
 (
 \Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
 )
 ,
 \mathit{
@@ -21675,29 +21628,16 @@ escrow_coin
 (
 Dave
 ,
+Dollar
+,
 Alice
 ,
-\Bob
+\Alice
 ,
 Cond
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
 {
 \Bob
 }
@@ -21724,21 +21664,21 @@ Dave
 knows
 }
 (
-Alice
+\Bob
 )
 ,
 \mathit{
 knows
 }
 (
-\Bob
+Alice
 )
 ,
 \mathit{
 role
 }
 (
-\Bob
+\Alice
 ,
 Treasurer
 )
@@ -21760,11 +21700,11 @@ X1
 vote_release_bob
 }
 (
-\Bob
+\Alice
 ,
 X1
 ,
-\Alice
+\Bob
 ,
 Sum
 ,
@@ -21791,7 +21731,7 @@ X2
 has_role
 }
 (
-\Bob
+\Alice
 ,
 X2
 ,
@@ -21803,7 +21743,7 @@ DoubleBob
 ,\\
 &
 \text{guarded by } \{
-\Alice
+\Bob
 ,
 \mathit{Carol}
 \}
@@ -21942,31 +21882,33 @@ c'_
 \Alice
 }
  := 
-(c_
+(
+c_
 {
 \Alice
 }
- \setminus 
+ \setminus K_
+{
+\Alice
+}
+) \uplus 
 \{
-Sum
-\cdot
 \mathit{
-escrow_coin
+knows
 }
 (
 Dave
+)
 ,
-Alice
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
 ,
-\Bob
-,
-Cond
+Dollar
 )
 \}
-) \setminus K_
-{
-\Alice
-}
 ,\\
 &
 \text{where } K_
@@ -21979,7 +21921,7 @@ Cond
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
-vote_release_carol
+vote_release_bob
 }
 (
 \ast
@@ -22001,31 +21943,33 @@ c'_
 \Bob
 }
  := 
-(
-c_
+(c_
 {
 \Bob
 }
- \setminus K_
-{
-\Bob
-}
-) \uplus 
+ \setminus 
 \{
 Sum
 \cdot
-\text{\textcent}
-(
-Dave
-)
-,
 \mathit{
-knows
+escrow_coin
 }
 (
 Dave
+,
+Dollar
+,
+Alice
+,
+\Alice
+,
+Cond
 )
 \}
+) \setminus K_
+{
+\Bob
+}
 ,\\
 &
 \text{where } K_
@@ -22038,7 +21982,7 @@ Dave
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
-vote_release_bob
+vote_release_carol
 }
 (
 \ast
@@ -22078,7 +22022,6 @@ c_
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -22088,6 +22031,22 @@ knows
 }
 (
 \Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
 )
 ,
 \mathit{
@@ -22105,29 +22064,16 @@ escrow_coin
 (
 Dave
 ,
+Dollar
+,
 Alice
 ,
-\Bob
+\Alice
 ,
 Cond
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
 {
 \Bob
 }
@@ -22154,21 +22100,21 @@ Dave
 knows
 }
 (
-Alice
+\Bob
 )
 ,
 \mathit{
 knows
 }
 (
-\Bob
+Alice
 )
 ,
 \mathit{
 role
 }
 (
-\Alice
+\Bob
 ,
 Treasurer
 )
@@ -22203,21 +22149,21 @@ Dave
 knows
 }
 (
-Alice
+\Bob
 )
 ,
 \mathit{
 knows
 }
 (
-\Bob
+Alice
 )
 ,
 \mathit{
 role
 }
 (
-\Bob
+\Alice
 ,
 Treasurer
 )
@@ -22239,11 +22185,11 @@ X1
 vote_release_carol
 }
 (
-\Alice
+\Bob
 ,
 X1
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
@@ -22270,7 +22216,7 @@ X2
 has_role
 }
 (
-\Alice
+\Bob
 ,
 X2
 ,
@@ -22287,11 +22233,11 @@ X3
 vote_release_bob
 }
 (
-\Bob
+\Alice
 ,
 X3
 ,
-\Alice
+\Bob
 ,
 Sum
 ,
@@ -22318,7 +22264,7 @@ X4
 has_role
 }
 (
-\Bob
+\Alice
 ,
 X4
 ,
@@ -22361,6 +22307,8 @@ Dave
 ,
 Day
 ,
+Dollar
+,
 Alice
 ,
 \Bob
@@ -22389,6 +22337,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -22433,6 +22383,8 @@ escrow_bond
 Dave
 ,
 Day
+,
+Dollar
 ,
 Alice
 ,
@@ -22498,6 +22450,8 @@ Dave
 ,
 Day
 ,
+Dollar
+,
 Alice
 ,
 \Bob
@@ -22560,6 +22514,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -22611,6 +22567,8 @@ escrow_bond
 Dave
 ,
 Day
+,
+Dollar
 ,
 Alice
 ,
@@ -22905,6 +22863,8 @@ Dave
 ,
 Day
 ,
+Dollar
+,
 Alice
 ,
 \Bob
@@ -22939,6 +22899,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -23023,6 +22985,8 @@ escrow_bond
 Dave
 ,
 Day
+,
+Dollar
 ,
 Alice
 ,
@@ -23313,6 +23277,8 @@ Dave
 ,
 Day
 ,
+Dollar
+,
 Alice
 ,
 \Bob
@@ -23380,6 +23346,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -23471,6 +23439,8 @@ escrow_bond
 Dave
 ,
 Day
+,
+Dollar
 ,
 Alice
 ,
@@ -23720,21 +23690,22 @@ c_
 {
 \Alice
 }
- \setminus 
+ \uplus 
 \{
-Sum
-\cdot
 \mathit{
-escrow_coin
+knows
 }
 (
 Dave
+)
 ,
-\Bob
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
 ,
-Bob
-,
-Cond
+Dollar
 )
 \}
 , \qquad 
@@ -23747,26 +23718,28 @@ c_
 {
 \Bob
 }
- \uplus 
+ \setminus 
 \{
 Sum
 \cdot
-\text{\textcent}
-(
-Dave
-)
-,
 \mathit{
-knows
+escrow_coin
 }
 (
 Dave
+,
+Dollar
+,
+\Alice
+,
+Bob
+,
+Cond
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -23776,6 +23749,26 @@ knows
 }
 (
 \Bob
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
 )
 ,
 \mathit{
@@ -23797,7 +23790,9 @@ escrow_coin
 (
 Dave
 ,
-\Bob
+Dollar
+,
+\Alice
 ,
 Bob
 ,
@@ -23805,25 +23800,6 @@ Cond
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-\mathit{
-person
-}
- \in c_
 {
 \Bob
 }
@@ -23845,9 +23821,38 @@ c'_
 \Alice
 }
  := 
-(c_
+c_
 {
 \Alice
+}
+ \uplus 
+\{
+\mathit{
+knows
+}
+(
+Dave
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+,
+Dollar
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+(c_
+{
+\Bob
 }
  \setminus 
 \{
@@ -23859,7 +23864,9 @@ escrow_coin
 (
 Dave
 ,
-\Bob
+Dollar
+,
+\Alice
 ,
 Bob
 ,
@@ -23868,17 +23875,17 @@ Cond
 \}
 ) \setminus K_
 {
-\Alice
+\Bob
 }
 ,\\
 &
 \text{where } K_
 {
-\Alice
+\Bob
 }
  \text{ holds every atom of } c_
 {
-\Alice
+\Bob
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
@@ -23887,7 +23894,7 @@ vote_return_carol
 (
 \ast
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
@@ -23897,33 +23904,6 @@ Bob
 ,
 Cond
 )
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Dave
-)
-,
-\mathit{
-knows
-}
-(
-Dave
-)
-\}
 ,\\
 &
 c'_
@@ -23938,7 +23918,6 @@ c_
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -23948,6 +23927,26 @@ knows
 }
 (
 \Bob
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
 )
 ,
 \mathit{
@@ -23965,7 +23964,9 @@ escrow_coin
 (
 Dave
 ,
-\Bob
+Dollar
+,
+\Alice
 ,
 Bob
 ,
@@ -23973,25 +23974,6 @@ Cond
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-\mathit{
-person
-}
- \in c_
 {
 \Bob
 }
@@ -24032,7 +24014,7 @@ Bob
 role
 }
 (
-\Alice
+\Bob
 ,
 Treasurer
 )
@@ -24054,11 +24036,11 @@ X1
 vote_return_carol
 }
 (
-\Alice
+\Bob
 ,
 X1
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
@@ -24085,7 +24067,7 @@ X2
 has_role
 }
 (
-\Alice
+\Bob
 ,
 X2
 ,
@@ -24097,7 +24079,7 @@ DoubleCarol
 ,\\
 &
 \text{guarded by } \{
-\Bob
+\Alice
 ,
 \mathit{Carol}
 \}
@@ -24236,9 +24218,70 @@ c'_
 \Alice
 }
  := 
+(
 c_
 {
 \Alice
+}
+ \setminus K_
+{
+\Alice
+}
+) \uplus 
+\{
+\mathit{
+knows
+}
+(
+Dave
+)
+,
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
+,
+Dollar
+)
+\}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{, with its multiplicity, that matches } 
+\mathit{
+vote_return_alice
+}
+(
+\ast
+,
+\Bob
+,
+Sum
+,
+Dave
+,
+Bob
+,
+Cond
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
 }
  \setminus 
 \{
@@ -24250,72 +24293,15 @@ escrow_coin
 (
 Dave
 ,
-\Bob
-,
-Bob
-,
-Cond
-)
-\}
-,\\
-&
-c'_
-{
-\Bob
-}
- := 
-(
-c_
-{
-\Bob
-}
- \setminus K_
-{
-\Bob
-}
-) \uplus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Dave
-)
-,
-\mathit{
-knows
-}
-(
-Dave
-)
-\}
-,\\
-&
-\text{where } K_
-{
-\Bob
-}
- \text{ holds every atom of } c_
-{
-\Bob
-}
- \text{, with its multiplicity, that matches } 
-\mathit{
-vote_return_alice
-}
-(
-\ast
+Dollar
 ,
 \Alice
 ,
-Sum
-,
-Dave
-,
 Bob
 ,
 Cond
 )
+\}
 ,\\
 &
 c'_
@@ -24330,7 +24316,6 @@ c_
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -24340,6 +24325,22 @@ knows
 }
 (
 \Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
 )
 ,
 \mathit{
@@ -24361,7 +24362,9 @@ escrow_coin
 (
 Dave
 ,
-\Bob
+Dollar
+,
+\Alice
 ,
 Bob
 ,
@@ -24369,21 +24372,6 @@ Cond
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
 {
 \Bob
 }
@@ -24424,7 +24412,7 @@ Bob
 role
 }
 (
-\Bob
+\Alice
 ,
 Treasurer
 )
@@ -24446,11 +24434,11 @@ X1
 vote_return_alice
 }
 (
-\Bob
+\Alice
 ,
 X1
 ,
-\Alice
+\Bob
 ,
 Sum
 ,
@@ -24477,7 +24465,7 @@ X2
 has_role
 }
 (
-\Bob
+\Alice
 ,
 X2
 ,
@@ -24489,7 +24477,7 @@ DoubleAlice
 ,\\
 &
 \text{guarded by } \{
-\Alice
+\Bob
 ,
 \mathit{Carol}
 \}
@@ -24628,31 +24616,33 @@ c'_
 \Alice
 }
  := 
-(c_
+(
+c_
 {
 \Alice
 }
- \setminus 
+ \setminus K_
+{
+\Alice
+}
+) \uplus 
 \{
-Sum
-\cdot
 \mathit{
-escrow_coin
+knows
 }
 (
 Dave
+)
 ,
-\Bob
+Sum
+\cdot
+\text{\textcent}
+(
+Dave
 ,
-Bob
-,
-Cond
+Dollar
 )
 \}
-) \setminus K_
-{
-\Alice
-}
 ,\\
 &
 \text{where } K_
@@ -24665,7 +24655,7 @@ Cond
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
-vote_return_carol
+vote_return_alice
 }
 (
 \ast
@@ -24687,31 +24677,33 @@ c'_
 \Bob
 }
  := 
-(
-c_
+(c_
 {
 \Bob
 }
- \setminus K_
-{
-\Bob
-}
-) \uplus 
+ \setminus 
 \{
 Sum
 \cdot
-\text{\textcent}
-(
-Dave
-)
-,
 \mathit{
-knows
+escrow_coin
 }
 (
 Dave
+,
+Dollar
+,
+\Alice
+,
+Bob
+,
+Cond
 )
 \}
+) \setminus K_
+{
+\Bob
+}
 ,\\
 &
 \text{where } K_
@@ -24724,7 +24716,7 @@ Dave
 }
  \text{, with its multiplicity, that matches } 
 \mathit{
-vote_return_alice
+vote_return_carol
 }
 (
 \ast
@@ -24764,7 +24756,6 @@ c_
 ,\\
 &
 \text{provided } 
-\{
 \mathit{
 identity
 }
@@ -24774,6 +24765,22 @@ knows
 }
 (
 \Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\{
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
 )
 ,
 \mathit{
@@ -24791,7 +24798,9 @@ escrow_coin
 (
 Dave
 ,
-\Bob
+Dollar
+,
+\Alice
 ,
 Bob
 ,
@@ -24799,21 +24808,6 @@ Cond
 )
 \}
  \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
 {
 \Bob
 }
@@ -24854,7 +24848,7 @@ Bob
 role
 }
 (
-\Alice
+\Bob
 ,
 Treasurer
 )
@@ -24903,7 +24897,7 @@ Bob
 role
 }
 (
-\Bob
+\Alice
 ,
 Treasurer
 )
@@ -24925,11 +24919,11 @@ X1
 vote_return_carol
 }
 (
-\Alice
+\Bob
 ,
 X1
 ,
-\Bob
+\Alice
 ,
 Sum
 ,
@@ -24956,7 +24950,7 @@ X2
 has_role
 }
 (
-\Alice
+\Bob
 ,
 X2
 ,
@@ -24973,11 +24967,11 @@ X3
 vote_return_alice
 }
 (
-\Bob
+\Alice
 ,
 X3
 ,
-\Alice
+\Bob
 ,
 Sum
 ,
@@ -25004,7 +24998,7 @@ X4
 has_role
 }
 (
-\Bob
+\Alice
 ,
 X4
 ,
@@ -25047,6 +25041,8 @@ Dave
 ,
 Day
 ,
+Dollar
+,
 \Bob
 ,
 Bob
@@ -25075,6 +25071,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -25119,6 +25117,8 @@ escrow_bond
 Dave
 ,
 Day
+,
+Dollar
 ,
 \Bob
 ,
@@ -25184,6 +25184,8 @@ Dave
 ,
 Day
 ,
+Dollar
+,
 \Bob
 ,
 Bob
@@ -25246,6 +25248,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -25297,6 +25301,8 @@ escrow_bond
 Dave
 ,
 Day
+,
+Dollar
 ,
 \Bob
 ,
@@ -25591,6 +25597,8 @@ Dave
 ,
 Day
 ,
+Dollar
+,
 \Bob
 ,
 Bob
@@ -25625,6 +25633,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -25709,6 +25719,8 @@ escrow_bond
 Dave
 ,
 Day
+,
+Dollar
 ,
 \Bob
 ,
@@ -25999,6 +26011,8 @@ Dave
 ,
 Day
 ,
+Dollar
+,
 \Bob
 ,
 Bob
@@ -26066,6 +26080,8 @@ bond
 Dave
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -26157,6 +26173,8 @@ escrow_bond
 Dave
 ,
 Day
+,
+Dollar
 ,
 \Bob
 ,
@@ -26411,20 +26429,24 @@ c'_
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ) \uplus 
 \{
-\text{\textcent}
-(
-Carol
-)
-,
 \mathit{
 knows
 }
 (
 Carol
+)
+,
+\text{\textcent}
+(
+Carol
+,
+Dollar
 )
 \}
 , \qquad 
@@ -26442,6 +26464,8 @@ c'_
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -26449,6 +26473,8 @@ Carol
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ,\\
@@ -26466,15 +26492,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-\Bob
-,
-Carol
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -26488,6 +26505,8 @@ person
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
  \in c_
 {
@@ -26501,6 +26520,8 @@ identity
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
  \in c_
 {
@@ -26532,6 +26553,8 @@ c'_
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -26540,16 +26563,18 @@ c'_
 }
 ) \uplus 
 \{
-\text{\textcent}
-(
-Carol
-)
-,
 \mathit{
 knows
 }
 (
 Carol
+)
+,
+\text{\textcent}
+(
+Carol
+,
+Dollar
 )
 \}
 ,\\
@@ -26589,6 +26614,8 @@ c'_
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -26596,6 +26623,8 @@ Carol
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ,\\
@@ -26624,15 +26653,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-\Bob
-,
-Carol
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -26642,6 +26662,8 @@ Orga
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
  \in c_
 {
@@ -26655,6 +26677,8 @@ identity
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
  \in c_
 {
@@ -26676,14 +26700,14 @@ knows
 knows
 }
 (
-\Bob
+Carol
 )
 ,
 \mathit{
 knows
 }
 (
-Carol
+\Bob
 )
 ,
 \mathit{
@@ -26876,6 +26900,8 @@ c'_
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -26887,6 +26913,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -26915,6 +26943,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -26922,6 +26952,8 @@ Day
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ,\\
@@ -26939,15 +26971,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-\Bob
-,
-Carol
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -26961,6 +26984,8 @@ person
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
  \in c_
 {
@@ -26978,6 +27003,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
  \in c_
 {
@@ -27009,6 +27036,8 @@ c'_
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -27024,6 +27053,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -27076,6 +27107,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -27083,6 +27116,8 @@ Day
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ,\\
@@ -27111,15 +27146,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-\Bob
-,
-Carol
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -27129,6 +27155,8 @@ Orga
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
  \in c_
 {
@@ -27146,6 +27174,8 @@ bond
 Carol
 ,
 Day
+,
+Dollar
 )
  \in c_
 {
@@ -27377,6 +27407,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -27384,6 +27416,8 @@ Day
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 ,
 \mathit{
@@ -27408,6 +27442,8 @@ c'_
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -27419,6 +27455,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 ,\\
@@ -27433,15 +27471,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-one_denomination
-}
-(
-\Bob
-,
-Carol
 )
 ,
 \mathit{
@@ -27462,6 +27491,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
  \in c_
 {
@@ -27482,6 +27513,8 @@ Today
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
  \in c_
 {
@@ -27523,6 +27556,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -27534,6 +27569,8 @@ Day
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 ,
 \mathit{
@@ -27582,6 +27619,8 @@ c'_
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -27593,6 +27632,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 ,\\
@@ -27621,15 +27662,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-\Bob
-,
-Carol
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -27643,6 +27675,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
  \in c_
 {
@@ -27663,6 +27697,8 @@ Today
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
  \in c_
 {
@@ -27898,6 +27934,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -27909,6 +27947,8 @@ bond
 Carol
 ,
 Term
+,
+Dollar
 )
 ,
 \mathit{
@@ -27937,6 +27977,8 @@ bond
 Carol
 ,
 Term
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -27948,6 +27990,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 ,\\
@@ -27962,15 +28006,6 @@ knows
 }
 (
 \Bob
-)
-,
-\mathit{
-one_denomination
-}
-(
-\Bob
-,
-Carol
 )
 ,
 \mathit{
@@ -27991,6 +28026,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
  \in c_
 {
@@ -28015,6 +28052,8 @@ bond
 Carol
 ,
 Term
+,
+Dollar
 )
  \in c_
 {
@@ -28056,6 +28095,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -28071,6 +28112,8 @@ bond
 Carol
 ,
 Term
+,
+Dollar
 )
 ,
 \mathit{
@@ -28125,6 +28168,8 @@ bond
 Carol
 ,
 Term
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -28136,6 +28181,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 ,\\
@@ -28164,15 +28211,6 @@ knows
 )
 ,
 \mathit{
-one_denomination
-}
-(
-\Bob
-,
-Carol
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -28186,6 +28224,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
  \in c_
 {
@@ -28210,6 +28250,8 @@ bond
 Carol
 ,
 Term
+,
+Dollar
 )
  \in c_
 {
@@ -28449,6 +28491,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 ,
 \mathit{
@@ -28517,6 +28561,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 ,
 \mathit{
@@ -28775,6 +28821,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -28849,6 +28897,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -29111,6 +29161,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 , \qquad 
@@ -29132,6 +29184,8 @@ escrow_coin
 }
 (
 \Alice
+,
+Dollar
 ,
 \Alice
 ,
@@ -29176,13 +29230,6 @@ Bob
 )
 ,
 \mathit{
-issued_in
-}
-(
-Dollar
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -29198,6 +29245,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -29271,6 +29320,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -29327,6 +29378,8 @@ escrow_coin
 (
 \Alice
 ,
+Dollar
+,
 \Alice
 ,
 Bob
@@ -29381,13 +29434,6 @@ Bob
 )
 ,
 \mathit{
-issued_in
-}
-(
-Dollar
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -29399,6 +29445,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -29566,6 +29614,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 ,\\
@@ -29593,6 +29643,8 @@ escrow_coin
 }
 (
 \Alice
+,
+Dollar
 ,
 \Alice
 ,
@@ -29677,13 +29729,6 @@ Bob
 )
 ,
 \mathit{
-issued_in
-}
-(
-Dollar
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -29699,6 +29744,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -29862,6 +29909,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -29922,6 +29971,8 @@ escrow_coin
 }
 (
 \Alice
+,
+Dollar
 ,
 \Alice
 ,
@@ -30017,13 +30068,6 @@ Bob
 )
 ,
 \mathit{
-issued_in
-}
-(
-Dollar
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -30035,6 +30079,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -30290,6 +30336,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 , \qquad 
@@ -30311,6 +30359,8 @@ escrow_coin
 }
 (
 \Bob
+,
+Dollar
 ,
 \Alice
 ,
@@ -30370,6 +30420,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -30386,13 +30438,6 @@ knows
 }
 (
 \Alice
-)
-,
-\mathit{
-issued_in
-}
-(
-Dollar
 )
 ,
 \mathit{
@@ -30450,6 +30495,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -30505,6 +30552,8 @@ escrow_coin
 }
 (
 \Bob
+,
+Dollar
 ,
 \Alice
 ,
@@ -30571,6 +30620,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -30587,13 +30638,6 @@ knows
 }
 (
 \Alice
-)
-,
-\mathit{
-issued_in
-}
-(
-Dollar
 )
 ,
 \mathit{
@@ -30745,6 +30789,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ,\\
@@ -30772,6 +30818,8 @@ escrow_coin
 }
 (
 \Bob
+,
+Dollar
 ,
 \Alice
 ,
@@ -30871,6 +30919,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -30887,13 +30937,6 @@ knows
 }
 (
 \Alice
-)
-,
-\mathit{
-issued_in
-}
-(
-Dollar
 )
  \in c_
 {
@@ -31041,6 +31084,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -31101,6 +31146,8 @@ escrow_coin
 }
 (
 \Bob
+,
+Dollar
 ,
 \Alice
 ,
@@ -31207,6 +31254,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -31223,13 +31272,6 @@ knows
 }
 (
 \Alice
-)
-,
-\mathit{
-issued_in
-}
-(
-Dollar
 )
  \in c_
 {
@@ -31468,7 +31510,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
 , \qquad 
@@ -31489,7 +31533,9 @@ Sum
 escrow_coin
 }
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 ,
 \Alice
 ,
@@ -31511,16 +31557,6 @@ Cond
 Dollar
 )
 \}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
 ,\\
 &
 \text{provided } 
@@ -31551,7 +31587,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -31589,21 +31627,6 @@ person
  \in c_
 {
 \Bob
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-issued_in
-}
-(
-Dollar
-)
- \in c_
-{
-\mathit{Carol}
 }
 ,\\
 &
@@ -31633,7 +31656,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -31661,7 +31686,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 \Bob
 ,
@@ -31688,7 +31713,9 @@ Sum
 escrow_coin
 }
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 ,
 \Alice
 ,
@@ -31723,17 +31750,6 @@ c_
 }
 ,\\
 &
-c'_
-{
-\mathit{Dave}
-}
- := 
-c_
-{
-\mathit{Dave}
-}
-,\\
-&
 \text{provided } 
 \{
 \mathit{
@@ -31758,7 +31774,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -31803,21 +31821,6 @@ identity
 }
 ,
 \mathit{
-issued_in
-}
-(
-Dollar
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -31828,7 +31831,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -31859,7 +31862,7 @@ person
 }
  \in c_
 {
-\mathit{Dave}
+\mathit{Carol}
 }
 ,\\
 &
@@ -31879,7 +31882,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 \Bob
 ,
@@ -31918,7 +31921,7 @@ DoubleAlice
 \text{guarded by } \{
 \Bob
 ,
-\mathit{Dave}
+\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -31941,7 +31944,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
 ,\\
@@ -31968,7 +31973,9 @@ Sum
 escrow_coin
 }
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 ,
 \Alice
 ,
@@ -32013,7 +32020,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Bob
 ,
@@ -32029,17 +32036,6 @@ c'_
 c_
 {
 \mathit{Carol}
-}
-,\\
-&
-c'_
-{
-\mathit{Dave}
-}
- := 
-c_
-{
-\mathit{Dave}
 }
 ,\\
 &
@@ -32071,7 +32067,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -32112,21 +32110,6 @@ identity
 }
 ,
 \mathit{
-issued_in
-}
-(
-Dollar
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -32137,7 +32120,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -32168,7 +32151,7 @@ person
 }
  \in c_
 {
-\mathit{Dave}
+\mathit{Carol}
 }
 ,\\
 &
@@ -32190,7 +32173,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Bob
 ,
@@ -32227,7 +32210,7 @@ DoubleCarol
 \text{guarded by } \{
 \Alice
 ,
-\mathit{Dave}
+\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -32250,7 +32233,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -32278,7 +32263,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 \Bob
 ,
@@ -32310,7 +32295,9 @@ Sum
 escrow_coin
 }
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 ,
 \Alice
 ,
@@ -32355,7 +32342,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Bob
 ,
@@ -32385,21 +32372,6 @@ c_
 }
 ,\\
 &
-c'_
-{
-\mathit{p}_{
-5
-}
-}
- := 
-c_
-{
-\mathit{p}_{
-5
-}
-}
-,\\
-&
 \text{provided } 
 \{
 \mathit{
@@ -32424,7 +32396,9 @@ Sum
 \cdot
 \text{\textcent}
 (
-\mathit{Carol}
+Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -32465,21 +32439,6 @@ identity
 }
 ,
 \mathit{
-issued_in
-}
-(
-Dollar
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -32490,7 +32449,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -32512,6 +32471,55 @@ role
 }
 (
 \Alice
+,
+Treasurer
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Bob
+)
+,
+\mathit{
+role
+}
+(
+\Bob
 ,
 Treasurer
 )
@@ -32522,57 +32530,6 @@ person
  \in c_
 {
 \mathit{Dave}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-\mathit{
-knows
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-\mathit{
-knows
-}
-(
-Bob
-)
-,
-\mathit{
-role
-}
-(
-\Bob
-,
-Treasurer
-)
-,
-\mathit{
-person
-}
- \in c_
-{
-\mathit{p}_{
-5
-}
 }
 ,\\
 &
@@ -32592,7 +32549,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 \Bob
 ,
@@ -32644,7 +32601,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Bob
 ,
@@ -32679,11 +32636,9 @@ DoubleCarol
 ,\\
 &
 \text{guarded by } \{
-\mathit{Dave}
+\mathit{Carol}
 ,
-\mathit{p}_{
-5
-}
+\mathit{Dave}
 \}
 \end{align*}
 \iffalse
@@ -32711,6 +32666,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 \}
 , \qquad 
@@ -32734,6 +32691,8 @@ escrow_bond
 \Alice
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -32778,15 +32737,6 @@ Bob
 )
 ,
 \mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -32806,6 +32756,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -32883,6 +32835,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -32943,6 +32897,8 @@ escrow_bond
 ,
 Day
 ,
+Dollar
+,
 \Alice
 ,
 Bob
@@ -32997,15 +32953,6 @@ Bob
 )
 ,
 \mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -33021,6 +32968,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -33194,6 +33143,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 \}
 ,\\
@@ -33223,6 +33174,8 @@ escrow_bond
 \Alice
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -33309,15 +33262,6 @@ Bob
 )
 ,
 \mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -33337,6 +33281,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -33506,6 +33452,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -33570,6 +33518,8 @@ escrow_bond
 \Alice
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -33667,15 +33617,6 @@ Bob
 )
 ,
 \mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
-,
-\mathit{
 all_stay_backed
 }
 (
@@ -33691,6 +33632,8 @@ bond
 \Alice
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -33954,6 +33897,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 , \qquad 
@@ -33977,6 +33922,8 @@ escrow_bond
 \Bob
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -34040,6 +33987,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -34056,15 +34005,6 @@ knows
 }
 (
 \Alice
-)
-,
-\mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
 )
 ,
 \mathit{
@@ -34126,6 +34066,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -34185,6 +34127,8 @@ escrow_bond
 \Bob
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -34255,6 +34199,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -34271,15 +34217,6 @@ knows
 }
 (
 \Alice
-)
-,
-\mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
 )
 ,
 \mathit{
@@ -34437,6 +34374,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 ,\\
@@ -34466,6 +34405,8 @@ escrow_bond
 \Bob
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -34571,6 +34512,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -34587,15 +34530,6 @@ knows
 }
 (
 \Alice
-)
-,
-\mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
 )
  \in c_
 {
@@ -34749,6 +34683,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -34813,6 +34749,8 @@ escrow_bond
 \Bob
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -34925,6 +34863,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -34941,15 +34881,6 @@ knows
 }
 (
 \Alice
-)
-,
-\mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
 )
  \in c_
 {
@@ -35194,9 +35125,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
 , \qquad 
@@ -35217,9 +35150,11 @@ Sum
 escrow_bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -35241,16 +35176,6 @@ Cond
 Dollar
 )
 \}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
 ,\\
 &
 \text{provided } 
@@ -35283,9 +35208,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -35323,23 +35250,6 @@ person
  \in c_
 {
 \Bob
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
- \in c_
-{
-\mathit{Carol}
 }
 ,\\
 &
@@ -35371,9 +35281,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -35401,7 +35313,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -35430,9 +35342,11 @@ Sum
 escrow_bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -35467,17 +35381,6 @@ c_
 }
 ,\\
 &
-c'_
-{
-\mathit{Dave}
-}
- := 
-c_
-{
-\mathit{Dave}
-}
-,\\
-&
 \text{provided } 
 \{
 \mathit{
@@ -35504,9 +35407,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -35551,23 +35456,6 @@ identity
 }
 ,
 \mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -35578,7 +35466,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -35609,7 +35497,7 @@ person
 }
  \in c_
 {
-\mathit{Dave}
+\mathit{Carol}
 }
 ,\\
 &
@@ -35629,7 +35517,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -35670,7 +35558,7 @@ DoubleAlice
 \text{guarded by } \{
 \Bob
 ,
-\mathit{Dave}
+\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -35695,9 +35583,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
 ,\\
@@ -35724,9 +35614,11 @@ Sum
 escrow_bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -35771,7 +35663,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -35789,17 +35681,6 @@ c'_
 c_
 {
 \mathit{Carol}
-}
-,\\
-&
-c'_
-{
-\mathit{Dave}
-}
- := 
-c_
-{
-\mathit{Dave}
 }
 ,\\
 &
@@ -35833,9 +35714,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -35876,23 +35759,6 @@ identity
 }
 ,
 \mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -35903,7 +35769,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -35934,7 +35800,7 @@ person
 }
  \in c_
 {
-\mathit{Dave}
+\mathit{Carol}
 }
 ,\\
 &
@@ -35956,7 +35822,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -35995,7 +35861,7 @@ DoubleCarol
 \text{guarded by } \{
 \Alice
 ,
-\mathit{Dave}
+\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -36020,9 +35886,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -36050,7 +35918,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -36084,9 +35952,11 @@ Sum
 escrow_bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 ,
 \Alice
 ,
@@ -36131,7 +36001,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -36163,21 +36033,6 @@ c_
 }
 ,\\
 &
-c'_
-{
-\mathit{p}_{
-5
-}
-}
- := 
-c_
-{
-\mathit{p}_{
-5
-}
-}
-,\\
-&
 \text{provided } 
 \{
 \mathit{
@@ -36204,9 +36059,11 @@ Sum
 bond
 }
 (
-\mathit{Carol}
+Dave
 ,
 Day
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -36247,23 +36104,6 @@ identity
 }
 ,
 \mathit{
-issued_bond_in
-}
-(
-Dollar
-,
-Day
-)
- \in c_
-{
-\mathit{Carol}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
 knows
 }
 (
@@ -36274,7 +36114,7 @@ knows
 knows
 }
 (
-\mathit{Carol}
+Dave
 )
 ,
 \mathit{
@@ -36296,6 +36136,55 @@ role
 }
 (
 \Alice
+,
+Treasurer
+)
+,
+\mathit{
+person
+}
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{
+identity
+}
+,
+\mathit{
+knows
+}
+(
+\Alice
+)
+,
+\mathit{
+knows
+}
+(
+Dave
+)
+,
+\mathit{
+knows
+}
+(
+\Bob
+)
+,
+\mathit{
+knows
+}
+(
+Bob
+)
+,
+\mathit{
+role
+}
+(
+\Bob
 ,
 Treasurer
 )
@@ -36306,57 +36195,6 @@ person
  \in c_
 {
 \mathit{Dave}
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-\mathit{
-knows
-}
-(
-\mathit{Carol}
-)
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-\mathit{
-knows
-}
-(
-Bob
-)
-,
-\mathit{
-role
-}
-(
-\Bob
-,
-Treasurer
-)
-,
-\mathit{
-person
-}
- \in c_
-{
-\mathit{p}_{
-5
-}
 }
 ,\\
 &
@@ -36376,7 +36214,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -36430,7 +36268,7 @@ Sum
 ,
 Dollar
 ,
-\mathit{Carol}
+Dave
 ,
 Day
 ,
@@ -36467,11 +36305,9 @@ DoubleCarol
 ,\\
 &
 \text{guarded by } \{
-\mathit{Dave}
+\mathit{Carol}
 ,
-\mathit{p}_{
-5
-}
+\mathit{Dave}
 \}
 \end{align*}
 \iffalse
@@ -36496,21 +36332,11 @@ Limit
 accepts
 }
 (
-\Bob
+Carol
 ,
 Dollar
 )
 \}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
 ,\\
 &
 \text{provided } 
@@ -36520,7 +36346,9 @@ identity
 ,
 \text{\textcent}
 (
-\Bob
+Carol
+,
+Dollar
 )
 ,
 \mathit{
@@ -36529,21 +36357,6 @@ person
  \in c_
 {
 \Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-issued_in
-}
-(
-Dollar
-)
- \in c_
-{
-\Bob
 }
 ,\\
 &
@@ -36578,7 +36391,7 @@ Limit
 accepts
 }
 (
-\Bob
+Carol
 ,
 Dollar
 )
@@ -36604,7 +36417,7 @@ Limit
 ,
 Dollar
 ,
-\Bob
+Carol
 )
 ,\\
 &
@@ -36616,17 +36429,6 @@ c'_
 c_
 {
 \Bob
-}
-,\\
-&
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
 }
 ,\\
 &
@@ -36637,26 +36439,13 @@ identity
 ,
 \text{\textcent}
 (
-\Bob
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
+Carol
 ,
-\mathit{
-issued_in
-}
-(
 Dollar
 )
  \in c_
 {
-\Bob
+\Alice
 }
  \text{ and } 
 \mathit{
@@ -36674,7 +36463,7 @@ knows
 knows
 }
 (
-\Bob
+Carol
 )
 ,
 \mathit{
@@ -36691,7 +36480,7 @@ person
 }
  \in c_
 {
-\mathit{Carol}
+\Bob
 }
 ,\\
 &
@@ -36711,7 +36500,7 @@ Limit
 ,
 Dollar
 ,
-\Bob
+Carol
 )
 )
 \ge
@@ -36742,7 +36531,7 @@ DoubleAlice
 ,\\
 &
 \text{guarded by } \{
-\mathit{Carol}
+\Bob
 \}
 \end{align*}
 \iffalse
@@ -36898,6 +36687,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
 ,
 \mathit{
@@ -37031,6 +36822,8 @@ bond
 \Bob
 ,
 Day
+,
+Dollar
 )
  \in c_
 {
@@ -37167,6 +36960,8 @@ c_
 \text{\textcent}
 (
 \mathit{Carol}
+,
+Dollar
 )
 \}
 , \qquad 
@@ -37195,6 +36990,8 @@ Dollar
 \text{\textcent}
 (
 \mathit{Carol}
+,
+Dollar
 )
 \}
 , \qquad 
@@ -37235,6 +37032,8 @@ person
 \text{\textcent}
 (
 \mathit{Carol}
+,
+Dollar
 )
  \in c_
 {
@@ -37297,6 +37096,8 @@ c'_
 \text{\textcent}
 (
 \mathit{Carol}
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -37353,6 +37154,8 @@ Dollar
 \text{\textcent}
 (
 \mathit{Carol}
+,
+Dollar
 )
 \}
 ,\\
@@ -37401,6 +37204,8 @@ Orga
 \text{\textcent}
 (
 \mathit{Carol}
+,
+Dollar
 )
  \in c_
 {
@@ -37660,6 +37465,8 @@ c_
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 , \qquad 
@@ -37688,6 +37495,8 @@ Dollar
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 ,\\
@@ -37725,6 +37534,8 @@ person
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
  \in c_
 {
@@ -37772,6 +37583,8 @@ c'_
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -37828,6 +37641,8 @@ Dollar
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 ,\\
@@ -37872,6 +37687,8 @@ Orga
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
  \in c_
 {
@@ -38000,6 +37817,8 @@ c_
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 , \qquad 
@@ -38028,6 +37847,8 @@ Dollar
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ,\\
@@ -38058,6 +37879,8 @@ person
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
  \in c_
 {
@@ -38112,6 +37935,8 @@ c'_
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ) \setminus K_
@@ -38168,6 +37993,8 @@ Dollar
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ,\\
@@ -38205,6 +38032,8 @@ Orga
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
  \in c_
 {
@@ -38342,6 +38171,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -38351,6 +38182,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 , \qquad 
@@ -38370,6 +38203,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -38379,6 +38214,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 ,\\
@@ -38407,6 +38244,8 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -38431,6 +38270,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -39727,6 +39568,8 @@ Held
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 ,
 \mathit{
