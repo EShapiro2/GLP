@@ -418,7 +418,8 @@ PVersion  ::= version(Integer, Integer).
 %% The pragmas the platform exports in contract(Text, Schemas), the text apart (cvac.glp, export_lines).
 RPragmas  ::= pragmas(PLists, TActs, PStands, PLook, PVersion).
 Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStands)
-            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String).
+            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String)
+            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String, Preds).
 %% What a schema does to the atom a standing declaration stands on (cvac.glp, standing_lines): makes the standing request, withdraws it, or neither.
 StandAct  ::= makes(Constant) ; withdraws(Constant) ; plain.
 

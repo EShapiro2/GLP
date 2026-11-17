@@ -11,7 +11,8 @@
 Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Line) ; standless_only(Line)
         ; day_only(Line) ; dayless_only(Line) ; env_only(Line) ; envless_only(Line)
         ; wild_only(Line) ; wildless_only(Line)
-        ; const_only(Line) ; constless_only(Line).
+        ; const_only(Line) ; constless_only(Line)
+        ; found_only(Line) ; foundless_only(Line).
 Lines ::= [] ; [Line | Lines].
 
 exported procedure fixed_text(Lines).
@@ -61,8 +62,10 @@ fixed_text([
     'RoleAsk   ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).',
     'Asked     ::= asked(Integer, List(Word)).',
     'Close     ::= close.',
-    guarded_only('Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.'),
-    unguarded_only('Trigger   ::= net(Net) ; answered(Attempt, YesNo) ; recheck ; own.'),
+    guarded_only(foundless_only('Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.')),
+    guarded_only(found_only('Trigger   ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; near(Presence).')),
+    unguarded_only(foundless_only('Trigger   ::= net(Net) ; answered(Attempt, YesNo) ; recheck ; own.')),
+    unguarded_only(found_only('Trigger   ::= net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; near(Presence).')),
     '%% The peer an acquaintance part names beside the agent, peer(Q), or none, nopeer (meeting_peer, which the compiler prints from the contract\'s acquaintance schemas).',
     'MeetPeer  ::= peer(Peer) ; nopeer.',
     '',
@@ -287,7 +290,10 @@ fixed_text([
     guarded_only('    merge(Rq?, Nt?, M1),'),
     unguarded_only('    merge([], Nt?, M1),'),
     '    merge(M1?, Ans?, M2),',
-    '    merge(M2?, [own|Ow?], In),',
+    foundless_only('    merge(M2?, [own|Ow?], In),'),
+    found_only('    phone_facts(Ph),'),
+    found_only('    merge(M2?, Ph?, M3),'),
+    found_only('    merge(M3?, [own|Ow?], In),'),
     '    agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [],',
     envless_only('        st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).'),
     env_only('        st(Id?, app(G0?, 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).'),
@@ -295,6 +301,24 @@ fixed_text([
     env_only('procedure env_atoms(List(Atom)?, GAtoms).'),
     env_only('env_atoms([], []).'),
     env_only('env_atoms([A|As], G?) :- env_atom(A?, G1), env_atoms(As?, G2), app(G1?, G2?, G).'),
+    found_only('%% The facts the phone finds (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the compiled agent reads it from its phone afresh whenever it computes a condition that requires it"; "When a fact Alice\'s phone finds changes, as when a person comes near, the phone tells Alice\'s agent, which then checks again which of its own transactions it can take"): the agent declares, when it starts, the agents nearby over Bluetooth and over the local network (GLP, appendix-guards, "Networking seam": declare(nearby(U, S)), U pan or lan), and reads each presence, seen(K) or gone(K), as a trigger near(P).'),
+    found_only('procedure phone_facts(Stream(Trigger)).'),
+    found_only('phone_facts(Ph?) :-'),
+    found_only('    declare(nearby(pan, S1)),'),
+    found_only('    declare(nearby(lan, S2)),'),
+    found_only('    merge(S1?, S2?, S),'),
+    found_only('    tag_near(S?, Ph).'),
+    found_only('procedure tag_near(Stream(Presence)?, Stream(Trigger)).'),
+    found_only('tag_near([P|Ps], [near(P?)|Ts?]) :- tag_near(Ps?, Ts).'),
+    found_only('tag_near([], []).'),
+    found_only('%% A presence held in the machine state: nearby(K) from the phone\'s report that K is seen until its report that K is gone, so that the conditions read it and the view shows it.'),
+    found_only('procedure near_set(Presence?, App?, App).'),
+    found_only('near_set(seen(K), app(S, N, L, R), app([g(nearby, [p(K?)])|S1?], N?, L?, R?)) :- ground(K?) | drop_near(K?, S?, S1).'),
+    found_only('near_set(gone(K), app(S, N, L, R), app(S1?, N?, L?, R?)) :- ground(K?) | drop_near(K?, S?, S1).'),
+    found_only('procedure drop_near(Peer?, GAtoms?, GAtoms).'),
+    found_only('drop_near(_, [], []).'),
+    found_only('drop_near(K, [g(nearby, [p(Q)])|S], S1?) :- K? =?= Q? | drop_near(K?, S?, S1).'),
+    found_only('drop_near(K, [A|S], [A?|S1?]) :- otherwise | drop_near(K?, S?, S1).'),
     '',
     guarded_only('%% A request question: its question, of the request type Request?, takes the'),
     guarded_only('%% person\'s one request, put up once it is made, of a type with the alternative propose(N) for the request name N of each guarded part (vGLP d433f71, Section 5.4, "The compilation"), so that every agent of a contract with a guarded part asks a request question when it starts and the next when it reads the answer to the last; a refresh is no request but a grant addressed to no construct, on which the dispatcher has every construct draw again what it last drew (Section 6.3), and the agent writes nothing on it.'),
@@ -487,6 +511,13 @@ fixed_text([
     '    st_trie(St?, Tr),',
     '    recheck_find(Pd?, V?, Tr?, St?, F),',
     '    recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?).',
+    found_only('%% A presence the phone reports: the machine state takes it, the view is written where it changed, and the agent checks again which of its own transactions it can take (near_set; next).'),
+    found_only('step(near(P), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :- ground(P?), ground(St?) |'),
+    found_only('    st_app(St?, Ap0),'),
+    found_only('    st_app(St?, Ap1),'),
+    found_only('    near_set(P?, Ap1?, Ap2),'),
+    found_only('    set_app(St?, Ap2?, St1),'),
+    found_only('    next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?).'),
     'step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St) :-',
     '    agent_goal(Ls?, In?, no, Ans, Thr, Out, Ow, Approvals?, H?, St?).',
     '',

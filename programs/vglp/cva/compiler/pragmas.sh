@@ -1130,6 +1130,34 @@ for my $f (@order) {
         }
     }
 }
+# The environment predicates the phone finds, from the implementation pragmas of the contract and of every contract it extends (vGLP, Section 5.4, "Speech-act schemas as local specifications": "An implementation pragma says, of each environment predicate other than the day, whether the phone finds it, as \x60Found by the phone: x is nearby y.\x27"), each phrase read by the Vocabulary of the Logic pragmas, as envkinds.sh reads it.  The phone finds a predicate only by a declaration of GLP\x27s networking seam (GLP, appendix-guards, "Networking seam": declare(nearby(U, S))), so a found predicate other than nearby is refused, named, a gap for GLP.
+my (%voc_pred, @found, %found_seen);
+for my $f (@order) {
+    for my $x (read_txt($f)) {
+        next unless $x =~ /^Vocabulary:\s*(.*)$/;
+        for my $e (split /;\s*/, $1) {
+            next unless $e =~ /^\s*(.*?)\s*=\s*([a-z_][A-Za-z0-9_]*)\s*\(/;
+            my ($ph, $pd) = ($1, $2);
+            $ph =~ s/\s+/ /g; $ph =~ s/\.$//;
+            $voc_pred{$ph} //= $pd;
+        }
+    }
+}
+for my $f (@order) {
+    my $impl = 0;
+    for my $x (read_txt($f)) {
+        if (impl_head($x)) { $impl = 1; next }
+        if (iface_head($x)) { $impl = 0; next }
+        next unless $impl && $x =~ /^Found by the phone:\s*(.*?)\.?\s*$/;
+        for my $ph (split /;\s*/, $1) {
+            $ph =~ s/\s+/ /g; $ph =~ s/^\s+|\s+$//g; $ph =~ s/\.$//;
+            my $pd = $voc_pred{$ph};
+            unless (defined $pd) { push @faults, "pragmas.sh: $f: the line \"Found by the phone\" names \"$ph\", which no Vocabulary entry has\n"; next }
+            unless ($pd eq "nearby") { push @faults, "pragmas.sh: $f: the phone finds \"$ph\", $pd, for which GLP\x27s networking seam declares no stream (GLP, appendix-guards, \"Networking seam\"): a gap for GLP\n"; next }
+            push @found, q_atom($pd) unless $found_seen{$pd}++;
+        }
+    }
+}
 if (@faults) { print STDERR @faults; exit 1 }
 # The term printed, pragmas(Lists, Acts, Stands, Look, Version, Text) (README.md beside this file, 1): the look of the contract itself, look(Icon, Family) or nolook; its version, its own line or, having none, the line of the nearest contract it extends that has one, or version(1, 1); and its clauses as text, the lines of its NAME.txt after the meta-information up to its first pragmas heading, joined by a newline (vGLP b413fe1, Section 5.4: the platform exports "contract(Text, Schemas), the contract it is compiled from, its clauses as text and its schemas with the pragmas").
 my $lk = $look{$top} ? "look(" . q_string($look{$top}[0]) . ", " . q_string($look{$top}[1]) . ")" : "nolook";
@@ -1140,5 +1168,6 @@ for my $x (@own) { next if $x =~ /^%/; last if contract_end($x); push @cl, $x }
 pop @cl while @cl && $cl[-1] !~ /\S/;
 my $tx = join("\n", @cl);
 $tx =~ s/\\/\\\\/g; $tx =~ s/"/\\"/g; $tx =~ s/\n/\\n/g;
-print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "], [" . join(", ", @stands) . "], $lk, $vn, " . q_atom("\"$tx\"") . ")\n";
+# A contract the phone finds a fact for carries a seventh argument, the predicates found, so that every other contract prints the term it printed before.
+print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "], [" . join(", ", @stands) . "], $lk, $vn, " . q_atom("\"$tx\"") . (@found ? ", [" . join(", ", @found) . "]" : "") . ")\n";
 ' "$1" "$PROGRAMS" "${2:-}" "$FROM"

@@ -81,7 +81,7 @@ Word ::= text(String) ; person(Peer) ; named(String, Peer) ; valued(String, Numb
 RoleAsk ::= q(Peer, Integer, List(Word)) ; ql(List(Peer), Integer, List(Word)).
 Asked ::= asked(Integer, List(Word)).
 Close ::= close.
-Trigger ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own.
+Trigger ::= req(Request) ; again(Proposal) ; greeted(Proposal) ; net(Net) ; answered(Attempt, YesNo) ; recheck ; own ; near(Presence).
 MeetPeer ::= peer(Peer) ; nopeer.
 Var ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; sgn(Constant, Integer) ; nterm(NTerm) ; num(Constant) ; any ; item_of(Var) ; val(Constant) ; inst(Integer, Integer, Var).
 NTerm ::= own(Integer) ; own_var(Constant) ; ext(NTerm, Constant) ; ext_any(NTerm) ; own_iv(Var) ; ext_iv(NTerm, Var).
@@ -362,11 +362,27 @@ meeting_peer(acquaint(V1, V2), Me, P?) :- ground(V1?), ground(V2?), ground(Me?) 
 meeting_peer(_, _, nopeer) :- otherwise | true.
 
 exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?, Stream(Ask(Question))).
-agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?) | Thr?], Env, D?) :- ground(Id?), ground(Env?) | env_atoms(Env?, G0), env_atoms(Env?, G1), atoms_of(G1?, V0), tabs(Ts), request(Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, M2), merge(M2?, [own | Ow?], In), agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [], st(Id?, app(G0?, 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), []), D2), merge(D1?, D2?, D).
+agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?) | Thr?], Env, D?) :- ground(Id?), ground(Env?) | env_atoms(Env?, G0), env_atoms(Env?, G1), atoms_of(G1?, V0), tabs(Ts), request(Rq, D1), tag_net(NetIn?, Nt), merge(Rq?, Nt?, M1), merge(M1?, Ans?, M2), phone_facts(Ph), merge(M2?, Ph?, M3), merge(M3?, [own | Ow?], In), agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [], st(Id?, app(G0?, 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), []), D2), merge(D1?, D2?, D).
 
 procedure env_atoms(List(Atom)?, GAtoms).
 env_atoms([], []).
 env_atoms([A | As], G?) :- env_atom(A?, G1), env_atoms(As?, G2), app(G1?, G2?, G).
+
+procedure phone_facts(Stream(Trigger)).
+phone_facts(Ph?) :- declare(nearby(pan, S1)), declare(nearby(lan, S2)), merge(S1?, S2?, S), tag_near(S?, Ph).
+
+procedure tag_near(Stream(Presence)?, Stream(Trigger)).
+tag_near([P | Ps], [near(P?) | Ts?]) :- tag_near(Ps?, Ts).
+tag_near([], []).
+
+procedure near_set(Presence?, App?, App).
+near_set(seen(K), app(S, N, L, R), app([g(nearby, [p(K?)]) | S1?], N?, L?, R?)) :- ground(K?) | drop_near(K?, S?, S1).
+near_set(gone(K), app(S, N, L, R), app(S1?, N?, L?, R?)) :- ground(K?) | drop_near(K?, S?, S1).
+
+procedure drop_near(Peer?, GAtoms?, GAtoms).
+drop_near(_, [], []).
+drop_near(K, [g(nearby, [p(Q)]) | S], S1?) :- (K? =?= Q?) | drop_near(K?, S?, S1).
+drop_near(K, [A | S], [A? | S1?]) :- otherwise | drop_near(K?, S?, S1).
 
 procedure request(Stream(Trigger), Stream(Ask(Question))).
 request(S1?, [ask('Request?', request_r(X)) | D?]) :- request1(S1, X?, D).
@@ -464,6 +480,7 @@ step(net(msg(_, intro(_, Q))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, 
 step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(To?), ground(F?), ground(X?), ground(St?) | st_app(St?, Ap0), message_cond(X?, St?, Cd, St1), dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
 step(answered(At, YN), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(At?), ground(YN?), ground(St?) | st_app(St?, Ap0), close_approval(At?, Approvals?, Approvals1), answer_cond(At?, St?, Cd, St1), dispatch_answer(Cd?, YN?, At?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals1?, H?, St1?, D).
 step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(St?) | st_pends(St?, Pd), st_view(St?, V), st_trie(St?, Tr), recheck_find(Pd?, V?, Tr?, St?, F), recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
+step(near(P), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(P?), ground(St?) | st_app(St?, Ap0), st_app(St?, Ap1), near_set(P?, Ap1?, Ap2), set_app(St?, Ap2?, St1), next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- agent_goal(Ls?, In?, no, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
 
 procedure next(Then?, YesNo?, App?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
