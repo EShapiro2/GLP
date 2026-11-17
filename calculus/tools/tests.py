@@ -25,7 +25,20 @@ def reload_tools():
             importlib.reload(sys.modules[m])
 
 
+WRITTEN = ('sas', 'sasx', 'sasx-all', 'flat', 'gx', 'back')     # what a case's run writes beside its sources
+
+
 def run(case):
+    """The output of a case, and nothing left beside its sources: what the run wrote is removed when it ends, so that a
+    run of the tests leaves the tree as it found it."""
+    try:
+        return run_named(case)
+    finally:
+        for x in WRITTEN:
+            shutil.rmtree(os.path.join(ROOT, 'tests', case, x), ignore_errors=True)
+
+
+def run_named(case):
     """The output of a case; with the case's own NAMES.txt, its made-up contracts after the table's (NAMES.txt: 'A test
     may add made-up contracts ... in a table of its own'), for this process and the tools it runs."""
     extra = os.path.join(ROOT, 'tests', case, 'NAMES.txt')
@@ -57,7 +70,7 @@ def run_case(case):
         finally:
             os.chdir(cwd)
     gcsas.ROOT = d
-    for x in ('sas', 'sasx', 'sasx-all', 'flat', 'gx', 'back'):     # what an earlier run wrote
+    for x in WRITTEN:     # what an earlier run wrote
         shutil.rmtree(os.path.join(d, x), ignore_errors=True)
     gcsas.NOUNS.clear()
     gcsas.REMOVE = os.path.exists(os.path.join(d, 'remove'))      # the removal of redundant acts, for the cases that ask it
