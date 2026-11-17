@@ -2840,7 +2840,7 @@ may_ones([gship(_, _, _)|Ps], Ms?) :- may_ones(Ps?, Ms).
 procedure worded_vones(Worded?, SVOnesL).
 worded_vones(words(_, _, _, D), Os?) :- vones_of(D?, Os).
 procedure vones_lines(SVOnesL?, Lines).
-vones_lines(Os, ['', 'VOne      ::= vone(Var, Var) ; vone_any(Var).', 'VOnes     ::= [] ; [VOne | VOnes].', 'procedure schema_vones(Constant?, VOnes).'|L?]) :- vones_lines1(Os?, L).
+vones_lines(Os, ['', 'VOne      ::= vone(Var, Var) ; vone_any(Var) ; vone_all.', 'VOnes     ::= [] ; [VOne | VOnes].', 'procedure schema_vones(Constant?, VOnes).'|L?]) :- vones_lines1(Os?, L).
 procedure vones_lines1(SVOnesL?, Lines).
 vones_lines1([], ['schema_vones(_, []) :- otherwise | true.']).
 vones_lines1([vones(_, [])|Os], L?) :- vones_lines1(Os?, L).
