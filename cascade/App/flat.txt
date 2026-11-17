@@ -1,10 +1,10 @@
 App (flat text)
-Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Knowledge:0 - | Alice, Bob and Carol are persons.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
-Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2+Guardians:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
 Knowledge:3+Guardians:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
 Encounters:0 - | A person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is.
@@ -38,7 +38,7 @@ Programs:4 ■ Install: Alice may Alice has Prog of Carol installed, provided Al
 Programs:5 ■ Invite: Alice and Bob may jointly Bob holds Prog signed by Alice of Carol, Bob has Prog signed by Alice of Carol installed, Alice is a participant of Prog of Carol with Bob and Bob is a participant of Prog of Carol with Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has Prog of Carol installed and Bob trusts Carol as a developer. Possibly one: Alice=Carol, Bob=Carol.
 Programs:5 ■ | Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
 Programs:6 ■ Leave: Alice may no longer Alice has Prog of Carol installed, no longer Alice is a participant of Prog of Carol with anyone and no longer anyone is a participant of Prog of Carol with Alice. Possibly one: Alice=Carol.
-Guardians:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
+Guardians:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
 Guardians:0 - | Alice and Bob are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
 Guardians:0 - | Default: any guardian of z for those who decide for z.
 Guardians:1 ■ Enter: Alice and Carol may jointly Carol has an identity, Carol is a ward, Carol has Alice as a guardian, Alice is the creator of Carol, Alice is a guardian of Carol, Alice knows Carol, Carol knows Alice, Alice counts Carol as a friend and Carol counts Alice as a friend, provided Alice is a person and not Carol has an identity. Must consent: Carol.

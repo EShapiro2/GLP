@@ -11,7 +11,7 @@ After g ends y's guardianship of z: no longer y is a guardian of z and no longer
 After y ends y's friendship with y's ward z: y and z are no longer friends, no longer y is a guardian of z and no longer z has y as a guardian.
 After g ends the friendship of x and y: x and y are no longer friends.
 After g retires z, which requires z is not retired: z is retired, z has no guardians and z has no friends.
-Guardians:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
+Guardians:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
 Guardians:0 - | Alice and Bob are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
 Guardians:0 - | Default: any guardian of z for those who decide for z.
 Guardians:1 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.

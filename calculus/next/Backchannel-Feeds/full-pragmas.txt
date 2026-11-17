@@ -1,12 +1,12 @@
 Backchannel Feeds
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
 Of Overlay: Alice, Bob and Carol are persons.
 Of Labelled Overlay: A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice. Alice, Bob, Carol, Dave and Erin are persons, Erin is possibly any of the others; in clause 2 Carol is possibly Dave.
 Of Feeds: A *feed* is named by its author. Alice, Bob and Carol are persons, Item an item, Bob and Carol possibly one person.
 Of Resilient Feeds: d > 1, an integer, is a parameter of Resilient Feeds. Alice, Bob, Carol, Dave and Erin are persons, Dave and Erin are possibly any of the others.
 Of Backchannel Feeds: Alice, Bob, Carol and Dave are persons, Item an item, Bob and Dave possibly one person.
-Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Friendship:1, Labelled Overlay:4. ■ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, and then Alice has a Bob-pointer to Bob and Bob has an Alice-pointer to Alice. Alice and Bob will become friends only if they trust each other.

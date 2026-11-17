@@ -1,10 +1,10 @@
 Auction
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
 Of Overlay: Alice, Bob and Carol are persons.
 Of Local Overlay: A person has a *location*. d > 0, an integer, and e > 0 are parameters of Local Overlay. Alice, Bob and Carol are persons. Environment: the bound is n, for x; either x points to fewer than d persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than e than some person pointed to by x; y is closer to x by more than e than some person pointed to by x; y is furthest from x among the persons x points to.
 Of Auction: A *pickup delay* is measured from the award. The *terms* of a call, a parameter of Auction, state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released. Alice is a rider and Bob a driver, Trip a call. A person can be either a rider or a driver but not both. Environment: x is a rider; x is a driver; the bidding period of x's call c has ended; x is at the pickup point with y; x is at the destination with y; no pickup of x's ride is recorded within the maximum pickup delay. Parameters: the terms of x's call c select y; the terms of x's call c select no bidder.
-Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Friendship:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
