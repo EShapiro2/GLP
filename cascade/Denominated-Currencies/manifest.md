@@ -1,10 +1,10 @@
 # A run of the cascade on Denominated-Currencies
 
-- Contract: `Denominated-Currencies` (`denominated_currencies` to the checker), its owner's two files `programs/currencies/sovereign/Denominated-Currencies.txt` and `programs/currencies/sovereign/Denominated-Currencies.glp`, copied here as they stood at `aafb987b`.
+- Contract: `Denominated-Currencies` (`denominated_currencies` to the checker), its owner's two files `programs/currencies/sovereign/Denominated-Currencies.txt` and `programs/currencies/sovereign/Denominated-Currencies.glp`, copied here as they stood at `838b1ad3`.
 - The paper: `/Users/udi/Grassroots/SGC (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/currencies/sovereign/Denominated-Currencies.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/currencies/sovereign/Denominated-Currencies.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-17 10:31 UTC by `cascade.sh denominated_currencies`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `aafb987b`; each artefact's source and tool:
+- Run on 2026-11-17 13:12 UTC by `cascade.sh denominated_currencies`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `838b1ad3`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
