@@ -1,6 +1,8 @@
 % A list of role names, the root's Names, each a name or one(Name, Others),
 % Others one name, the list of names, or '_' (programs/self.glp, RName and
-% OneOf): count/2 counts the names marked possibly one with others.
+% OneOf): count/2 counts the names marked possibly one with others, and
+% others_of/2 reads Others as a list, its constant alternative narrowed by the
+% guard constant/1 (TGLP, "Type checking of guards").
 procedure count(Names?, Integer).
 count(Ns, N?) :- count(Ns?, 0, N).
 
@@ -16,3 +18,8 @@ others([_ | Os], K?) :- length(Os?, K0), K := K0? + 1.
 procedure length(List(Constant)?, Integer).
 length([], 0).
 length([_ | Os], K?) :- length(Os?, K0), K := K0? + 1.
+
+procedure others_of(OneOf?, List(Constant)).
+others_of(C, [C?]) :- constant(C?) | true.
+others_of([], []).
+others_of([C | Cs], [C? | Cs?]).
