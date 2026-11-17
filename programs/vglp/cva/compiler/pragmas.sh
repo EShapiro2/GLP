@@ -340,6 +340,8 @@ sub logic_head { my ($x) = @_; return $x eq "Logic pragmas" }
 sub contract_end { my ($x) = @_; return any_head($x) || logic_head($x) }
 # A line a contract inherits from its base is read with the names the contract gives the persons of the acts it names, wherever they differ from the base\x27s: "the inherited line is read with Orga for Wendy wherever the instance renames the role, and every other name of the base\x27s line as the instance names it" (GSC #19, vGLP_inbox.md, 2026-11-17 12:33 UTC; GSC, Section 2: "A name in a pragma is the schema\x27s role of that name"; the Calculus\x27s Definition Operations, instantiation).  A name maps to the name at the same place of the same act\x27s schema, among its roles and among its agent variables, in the base\x27s term, its NAME.glp beside its NAME.txt, and in the contract\x27s term.
 my %base_names;
+# The buttons a contract replaces, by the line of its base (below).
+my %replaced;
 sub top_split {
     my ($s) = @_;
     my (@out, $d, $cur); $d = 0; $cur = "";
@@ -375,23 +377,41 @@ sub read_base_names {
     }
     return $base_names{$f} = \%bn;
 }
+# A name is renamed only where the instance renames that role, and a role both share keeps its name (GSC #19, vGLP_inbox.md, 2026-11-17 12:33 UTC): a name of the base\x27s schema maps to the name at its place in the instance\x27s schema only where the base\x27s schema bears no role or variable of the instance\x27s name and the instance\x27s bears none of the base\x27s, so that Commercial Bank\x27s expel, adding DeciderB at the place of Organisation\x27s Codecider, renames nothing.  A button the contract replaces with a line of its own is not read from the base\x27s line (vGLP, Section 5.4, "The contract\x27s words": "its button ... replaces the inherited one"), so that Joint Accounts\x27 own [Deposit] maps no name of Coins\x27 Escrow line.  The names of a button line, and of the question lines after it, which belong to it, are renamed by the schemas of that line\x27s buttons.
 sub inst_renamed {
-    my ($f, $rest) = @_;
+    my ($f, $ln, $rest) = @_;
     my $bn = read_base_names($f);
-    my %map;
-    while ($rest =~ /\[([^\]]+)\]/g) {
-        my $sb = act_name($1); my $si = act_name(bound_button($1));
-        next unless exists $bn->{$sb} && exists $rnames{$si};
-        my @br = @{ $bn->{$sb}{roles} }; my @ir = @{ $rnames{$si} };
-        for my $i (0 .. $#br) { next unless defined $ir[$i]; $map{ $br[$i] } //= $ir[$i] if $br[$i] ne $ir[$i] }
-        my @iv = map { (ref $_ && $_->[0] eq "pvar") ? do { (my $x = $_->[1][0][0]) =~ s/^\x27|\x27$//g; $x } : () } @{ $head{$si} // [] };
-        my @bv = @{ $bn->{$sb}{vars} };
-        for my $j (0 .. $#bv) { next unless defined $iv[$j]; $map{ $bv[$j] } //= $iv[$j] if $bv[$j] ne $iv[$j] }
+    my @parts = split /\x01/, $rest, -1;
+    my (@groups, $pi);
+    $pi = -1;
+    for my $i (0 .. $#parts) {
+        my $isb = $i == 0 ? $parts[$i] =~ /^[A-Z][A-Za-z]*\s+\[/ : $parts[$i] =~ /^\s+[A-Z][A-Za-z]*\s+\[/;
+        if ($isb || !@groups) { $pi++ if $isb; push @groups, { pi => ($isb ? $pi : -1), idx => [] } }
+        push @{ $groups[-1]{idx} }, $i;
     }
-    return $rest unless %map;
-    my $alt = join("|", map { quotemeta } sort { length($b) <=> length($a) || $a cmp $b } keys %map);
-    $rest =~ s/\b($alt)\b/$map{$1}/g;
-    return $rest;
+    for my $g (@groups) {
+        my %map;
+        if ($g->{pi} >= 0) {
+            my $k = "$f\x02$ln\x02$g->{pi}";
+            my $bp = $parts[ $g->{idx}[0] ];
+            while ($bp =~ /\[([^\]]+)\]/g) {
+                my $sb = act_name($1); my $si = act_name(bound_button($1));
+                next if $replaced{$k} && $replaced{$k}{$sb};
+                next unless exists $bn->{$sb} && exists $rnames{$si};
+                my @br = @{ $bn->{$sb}{roles} }; my @ir = @{ $rnames{$si} };
+                my @iv = map { (ref $_ && $_->[0] eq "pvar") ? do { (my $x = $_->[1][0][0]) =~ s/^\x27|\x27$//g; $x } : () } @{ $head{$si} // [] };
+                my @bv = @{ $bn->{$sb}{vars} };
+                my %inb = map { $_ => 1 } (@br, @bv);
+                my %ini = map { $_ => 1 } (grep { defined } @ir, @iv);
+                for my $i (0 .. $#br) { next unless defined $ir[$i]; $map{ $br[$i] } //= $ir[$i] if $br[$i] ne $ir[$i] && !$ini{ $br[$i] } && !$inb{ $ir[$i] } }
+                for my $j (0 .. $#bv) { next unless defined $iv[$j]; $map{ $bv[$j] } //= $iv[$j] if $bv[$j] ne $iv[$j] && !$ini{ $bv[$j] } && !$inb{ $iv[$j] } }
+            }
+        }
+        next unless %map;
+        my $alt = join("|", map { quotemeta } sort { length($b) <=> length($a) || $a cmp $b } keys %map);
+        $parts[$_] =~ s/\b($alt)\b/$map{$1}/g for @{ $g->{idx} };
+    }
+    return join("\x01", @parts);
 }
 # An instance\x27s own names for the schemas of its base (GSC 22605d6, Section 8, Definition Parametric contract: "An instantiation may also write names of its own for schemas of the contract, a different one for each, so that an act bears the name its instance gives it"): the bindings of instance_named(<name>, Base, Bindings, Additions) in the NAME.glp beside the contract\x27s NAME.txt, a schema of the base bound to the instance\x27s name for it, as ward_acquaint = agent_acquaint (Agents.glp).  A button of a line the instance inherits that names a schema so bound bears the instance\x27s name, [Ward acquaint] reading as [Agent acquaint], so that an act bears the name its instance gives it and the instance\x27s own line of that button replaces it.
 my %bind;
@@ -643,7 +663,6 @@ for my $f (@order) {
     }
 }
 # A button of a contract is replaced where a contract extending it writes a button of its name: "where the contract writes a button of an inherited button’s name, its button, with its fields and its questions, replaces the inherited one, the other buttons of the inherited line standing" (vGLP 4236349, Section 5.4, "The contract’s words", its last sentence), as GSN’s [Close] on a line of its own would leave the [Create] of the line it was on.  $replaced{K}{B} is the line of the extending contract that replaces the button B of the line K, and a line all of whose buttons are replaced is gone, its questions with it.
-my %replaced;
 for my $k (@line_keys) {
     my ($f) = split /\x02/, $k;
     for my $b (@{ $line_buttons{$k} }) {
@@ -746,7 +765,7 @@ for my $f (@order) {
             push @lines_out, "\x03$#pending";
         };
         # A pragma line (GSC 25b6b3c, Section 2, its first paragraph; the guide, step 7; vGLP 8aa82f0, Section 5.4, "The contract words"): the line names the person who proposes, then a button for each act they propose and any field they fill; an indented line names another person who proposes, likewise, or a person asked, a colon and the question put to them, a question line belonging to the nearest button line above it.  "A name in a pragma is the schema role of that name, the schemas naming their roles as the clauses do" (GSC 25b6b3c, Section 2): each name is the role its schema term names so, $rnames{S}, and a name no role of the schema bears, in a question, is the agent variable of an act with one, as Carol of GKK:3 is c of introduce, filled by its field; any other is a fault.  "A button is offered only to the person named before it", by([G]), G the role of that person, which must be guarding; "the persons named before the questions are asked", each question put to the role of the person it names, the proposer having []; and "a person no line names is never asked", so a guarding role an act needs that the line names neither as its proposer nor as asked is a fault, the act never asking that person.  A question naming the one guarding role of an act is text of its request form.
-        $rest = inst_renamed($f, $rest) if $f ne $top;
+        $rest = inst_renamed($f, $ln, $rest) if $f ne $top;
         if ($rest !~ /^\[/) {
             my @parts = split /\x01/, $rest;
             # A name in a pragma is the schema\x27s role of that name, a name the contract\x27s declaration gives a person or a ward (vGLP 722343d, Section 5.4), whichever contract\x27s declaration gave it: the declared names and the names of the roles of the contract\x27s schemas, each line\x27s names then held to the roles of the schemas its buttons name (below).
