@@ -88,12 +88,12 @@ agent(ch(_, [self(K?)]), ch(_, [])) :- self_key(K).
       manager.start();
       await manager.settle();
       expect(manager.faults, isEmpty);
-      for (final (agent, key) in [('alice', alice!), ('bob', bob!)]) {
-        // A key prints bare where it reads as an atom, and quoted where it
-        // begins with a digit (formatTerm).
-        expect(manager.outputOf(agent),
-            [matches(RegExp("^self\\('?${key.hex}'?\\)\$"))],
-            reason: '$agent: self_key/1 assigns the key made at its spawn');
+      for (final agent in ['alice', 'bob']) {
+        // In the simulation self_key/1 assigns the readable name standing for
+        // the key made at the agent's spawn, as the seam names the agent
+        // everywhere (IGLP, Implementation Notes, "Simulation realisation").
+        expect(manager.outputOf(agent), ['self($agent)'],
+            reason: '$agent: self_key/1 assigns the name of its key');
       }
     }, timeout: Timeout.none);
 
