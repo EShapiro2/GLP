@@ -10322,11 +10322,14 @@ echo ""
 # committed artefacts to what the tools print"); until 2026-11-11 fourteen
 # records, gfp, gpd, gas, grv, gsv, gds, gpe, bcc, gcc, gff_i, gff_ps, gff_fr,
 # gff_fr_bc and gsnw, were recorded and never checked.
-for cas_c in gkk gfp gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gpd gas grv gsv gds gpe agora gdo gdc dgc gcc gd gdo_l gra gff gff_ps gff_fr gff_fr_bc gdo_lb gra_ss dao ldao fdao rec stay lib joint cb cmb cnc gan gbcc gbank gcoop gcorp gdao gldao gng gnl gnm gno go mcs orh sc scb spllc tc wc; do
-    cas_n=$(awk -v c="$cas_c" '$1 == "#" && $2 == c { print $3; exit }' "$GLP_DIR/cascade.sh")
-    [ -n "$cas_n" ] || cas_n=$(printf '%s' "$cas_c" | tr a-z_ A-Z-)
+# The rows and each one's record are read from cascade.sh's own table, "    <row>) FILE=<file name>;", so that a contract renamed or added there is checked here and none is passed over in silence (Code #33, 2026-11-17: after the renaming of 2026-11-16 the list written here by hand named rows that were no more, and the section checked two records of 66 and passed); a row with no record is skipped only where its contract is dormant, gfwc.
+for cas_row in $(sed -n 's/^    \([a-z0-9_]*\)) FILE=\([A-Za-z0-9-]*\);.*/\1:\2/p' "$GLP_DIR/cascade.sh"); do
+    cas_c=${cas_row%%:*}; cas_n=${cas_row#*:}
     cas_o="cascade/$cas_n"
-    [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
+    if [ ! -f "$GLP_DIR/$cas_o/manifest.md" ]; then
+        [ "$cas_c" = gfwc ] || _check_fail "cascade $cas_c: its record is there" "no $cas_o/manifest.md"
+        continue
+    fi
     cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
     # A contract its owner has adopted from the Calculus also has the artefacts
     # calculus/tools/adopt.py prints (claude.md "Code", "The record of a
@@ -10340,10 +10343,10 @@ for cas_c in gkk gfp gsg gsn gnw gsnp gc gb cssn gsnw gfwc gai gpd gas grv gsv g
     check "cascade $cas_c: cascade.sh --check exits 0" "^exit 0$" "$cas_out"
 done
 # A composition of contracts, recorded in cascade/<NAME>+<NAME>/ (vGLP 7c631b1, Section 5.4, "The contract's words": "The compiler takes one contract or several: of several it prints the platform of their composition"; cascade.sh, several contracts): GSN and GC, both extending GKK.
-for cas_cs in "gsn gc"; do
-    cas_n=$(printf '%s' "$cas_cs" | tr a-z_ A-Z- | tr ' ' +)
+for cas_cs in "groups coins"; do
+    cas_n=Groups+Coins
     cas_o="cascade/$cas_n"
-    [ -f "$GLP_DIR/$cas_o/manifest.md" ] || continue
+    if [ ! -f "$GLP_DIR/$cas_o/manifest.md" ]; then _check_fail "cascade $cas_n: its record is there" "no $cas_o/manifest.md"; continue; fi
     cas_out=$(bash "$GLP_DIR/cascade.sh" $cas_cs --check 2>&1; echo "exit $?")
     for cas_f in $(cd "$GLP_DIR/$cas_o" && ls | grep -vx manifest.md); do
         check "cascade $cas_n: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
