@@ -30,54 +30,54 @@ Interface pragmas
 Children: those Alice is a parent of.
 Created: those Alice is the creator of.
 Enter: Alice [Enter] <name>
-  Carol: Alice asks to be your parent.
+  Wendy: Alice asks to be your parent.
 Guardian decisions: Decider [Make parent] <person>
-  Bob: Decider asks you to be a parent of the child Carol.
-  Codecider: Decider asks that Bob be a parent of your child Carol.
+  Bob: Decider asks you to be a parent of the child Wendy.
+  Codecider: Decider asks that Bob be a parent of your child Wendy.
   Decider [End parent] <person>
-  Codecider: Decider asks to end Bob's parenthood of your child Carol.
+  Codecider: Decider asks to end Bob's parenthood of your child Wendy.
   Bob [Parent unfriend]
 A child's acquaintances: Alice [Child acquaint]
-  Carol: Alice wishes that you and Bob know each other.
-  Bob: Alice wishes that you and Carol, Alice's child, know each other.
+  Wendy: Alice wishes that you and Bob know each other.
+  Bob: Alice wishes that you and Wendy, Alice's child, know each other.
   Alice [Children acquaint]
-  Carol: Alice wishes that you and Dave know each other.
-  Dave: Alice wishes that you and Carol know each other.
-  Bob: Alice wishes that Carol and your child Dave know each other.
+  Wendy: Alice wishes that you and Will know each other.
+  Will: Alice wishes that you and Wendy know each other.
+  Bob: Alice wishes that Wendy and your child Will know each other.
 Ward and person: Alice [Child befriend] <child>
-  Carol: Alice asks that you and Bob befriend.
-  Bob: Alice asks that you and Carol, Alice's child, befriend.
+  Wendy: Alice asks that you and Bob befriend.
+  Bob: Alice asks that you and Wendy, Alice's child, befriend.
   Alice [Child unfriend] <child> <person>
-  Carol [Child end]
+  Wendy [Child end]
 Wards: Alice [Children befriend] <child>
-  Carol: Alice asks that you and Dave befriend.
-  Dave: Alice asks that you and Carol befriend.
-  Bob: Alice asks that Carol and your child Dave befriend.
+  Wendy: Alice asks that you and Will befriend.
+  Will: Alice asks that you and Wendy befriend.
+  Bob: Alice asks that Wendy and your child Will befriend.
   Alice [Children of one parent befriend] <child> <other child>
-  Carol: Alice asks that you and Dave befriend.
-  Dave: Alice asks that you and Carol befriend.
+  Wendy: Alice asks that you and Will befriend.
+  Will: Alice asks that you and Wendy befriend.
 Retire: Decider [Retire]
-  Codecider: Decider asks to retire your child Carol.
-A ward's messages: Carol [Child message] <text>
-  Carol [Child post] <text>
-  Carol [Child post own] <text>
-Child create: Carol [Child create] <name>
-  Alice: Carol asks to create a group.
-A ward's group: Carol [Child close]
+  Codecider: Decider asks to retire your child Wendy.
+A ward's messages: Wendy [Child message] <text>
+  Wendy [Child post] <text>
+  Wendy [Child post own] <text>
+Child create: Wendy [Child create] <name>
+  Alice: Wendy asks to create a group.
+A ward's group: Wendy [Child close]
   Alice [Parent close] <group>
 Ward join: Bob [Child join]
-  Carol: Bob asks you to join the group.
-  Alice: Bob asks that your child Carol join the group.
-  Carol [Children join] <parent>
-  Dave: Carol asks you to join the group.
-  Alice: Carol asks that Dave join the group.
-  Bob: Carol asks that your child Dave join the group.
-  Carol [Children of one parent join]
-  Dave: Carol asks you to join the group.
-  Alice: Carol asks that Dave join the group.
+  Wendy: Bob asks you to join the group.
+  Alice: Bob asks that your child Wendy join the group.
+  Wendy [Children join] <parent>
+  Will: Wendy asks you to join the group.
+  Alice: Wendy asks that Will join the group.
+  Bob: Wendy asks that your child Will join the group.
+  Wendy [Children of one parent join]
+  Will: Wendy asks you to join the group.
+  Alice: Wendy asks that Will join the group.
   Alice [Child withdraw] <leader> <group>
-  Carol [Child leave]
-  Carol [Child remove]
+  Wendy [Child leave]
+  Wendy [Child remove]
 Of age: Alice [Of age]
 Implementation pragmas
 Introduction: knows.

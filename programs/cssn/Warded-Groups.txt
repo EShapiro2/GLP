@@ -22,25 +22,25 @@ Logic pragmas.
 After w withdraws y from x's g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
 After y closes the group g of z: no longer z is the leader of g, z has no one as a member of the group g and no one is a member of the group g of z.
 Interface pragmas
-A ward's messages: Carol [Ward message] <text>
-  Carol [Ward post] <text>
-  Carol [Ward post own] <text>
-A ward's group: Carol [Ward create] <name>
-  Carol [Ward close]
+A ward's messages: Wendy [Ward message] <text>
+  Wendy [Ward post] <text>
+  Wendy [Ward post own] <text>
+A ward's group: Wendy [Ward create] <name>
+  Wendy [Ward close]
   Alice [Guardian close] <group>
 Ward join: Bob [Ward join]
-  Carol: Bob asks you to join the group.
-  Alice: Bob asks that your ward Carol join the group.
-  Carol [Wards join] <guardian>
-  Dave: Carol asks you to join the group.
-  Alice: Carol asks that Dave join the group.
-  Bob: Carol asks that your ward Dave join the group.
-  Carol [Wards of one guardian join]
-  Dave: Carol asks you to join the group.
-  Alice: Carol asks that Dave join the group.
+  Wendy: Bob asks you to join the group.
+  Alice: Bob asks that your ward Wendy join the group.
+  Wendy [Wards join] <guardian>
+  Will: Wendy asks you to join the group.
+  Alice: Wendy asks that Will join the group.
+  Bob: Wendy asks that your ward Will join the group.
+  Wendy [Wards of one guardian join]
+  Will: Wendy asks you to join the group.
+  Alice: Wendy asks that Will join the group.
   Alice [Ward withdraw] <leader> <group>
-  Carol [Ward leave]
-  Carol [Ward remove]
-  Carol [Ward add]
-  Bob: Carol asks you to join the group.
-  Alice: Carol asks that Bob join the group.
+  Wendy [Ward leave]
+  Wendy [Ward remove]
+  Wendy [Ward add]
+  Bob: Wendy asks you to join the group.
+  Alice: Wendy asks that Bob join the group.
