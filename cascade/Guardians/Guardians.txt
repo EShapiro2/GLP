@@ -40,27 +40,27 @@ Default: any guardian of z for those who decide for z.
 Interface pragmas
 Guardianships: those Alice is a guardian of.
 Enter: Alice [Enter] <name>
-  Carol: Alice asks to be your guardian.
+  Wendy: Alice asks to be your guardian.
 Guardian decisions: Decider [Make guardian] <person>
-  Bob: Decider asks you to be a guardian of the ward Carol.
+  Bob: Decider asks you to be a guardian of the ward Wendy.
   Decider [End guardian] <person>
   Bob [Resign] [Guardian unfriend]
 Ward and person: Bob [Ward acquaint] <person>
-  Carol: Bob wishes that you know each other.
+  Wendy: Bob wishes that you know each other.
   Alice [Ward befriend] <ward>
-  Carol: Alice asks that you and Bob befriend.
-  Bob: Alice asks that you and her ward Carol befriend.
+  Wendy: Alice asks that you and Bob befriend.
+  Bob: Alice asks that you and her ward Wendy befriend.
   Alice [Ward unfriend] <ward> <person>
-  Carol [Ward end]
+  Wendy [Ward end]
   Bob [Unfriend]
   Alice [Person unfriend]
-Wards: Carol [Wards acquaint] <person>
-  Dave: Carol wishes that you know each other.
+Wards: Wendy [Wards acquaint] <person>
+  Will: Wendy wishes that you know each other.
   Alice [Wards befriend] <ward>
-  Carol: Alice asks that you and Dave befriend.
-  Dave: Alice asks that you and Carol befriend.
-  Bob: Alice asks that Carol and your ward Dave befriend.
+  Wendy: Alice asks that you and Will befriend.
+  Will: Alice asks that you and Wendy befriend.
+  Bob: Alice asks that Wendy and your ward Will befriend.
   Alice [Wards of one guardian befriend] <ward> <other ward>
-  Carol: Alice asks that you and Dave befriend.
-  Dave: Alice asks that you and Carol befriend.
+  Wendy: Alice asks that you and Will befriend.
+  Will: Alice asks that you and Wendy befriend.
 Retire: Decider [Retire]
