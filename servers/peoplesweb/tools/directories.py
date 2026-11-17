@@ -2,7 +2,7 @@
 
 Each entry is a path of GLP, the project that answers for it, the papers of that project, by their directory keys in tools/papers.py, and a note.  The most specific path that covers a file or a directory is the one that answers for it.  A project with no paper has a subdirectory of papers/ in GLP, named by its acronym, with a text that says what it is and does (Udi, 2026-11-11, to Coordination #14: "fine, so let's organise it as such"), which the project writes and the site links.
 """
-import os
+import os, re
 
 DIRECTORIES = [
     ('programs/self.glp', 'GLP', ['GLP-Spec'], 'the root scope of every program'),
@@ -46,13 +46,14 @@ DIRECTORIES = [
     ('calculus', 'Calculus', [], "the Calculus: each contract in its text and what its tools print of it, until its owner adopts it; the tools and the tests (Coordination #16, 2026-11-15, by calculus/MIGRATION.md)"),
     ('organisation', 'Coordination', [], "the organisation's rules: claude.md, the style guide and claudese.md"),
     ('programs/apps', 'Code', [], "the apps' boot files and compile.sh"),
-    ('programs/apps/gkk', 'GSC', ['GSC'], "GKK's app"),
-    ('programs/apps/gsg', 'GSC', ['GSC'], "GSG's app"),
-    ('programs/apps/gsn', 'GSC', ['GSC'], "GSN's app"),
-    ('programs/apps/gai', 'GAI', ['GAI'], "GAI's app"),
-    ('programs/apps/gsnp', 'GAI', ['GAI'], "GSNP's app"),
-    ('programs/apps/gb', 'Currencies', ['GB'], "GB's app"),
-    ('programs/apps/gc', 'Currencies', ['GC'], "GC's app"),
+    ('programs/apps/gkk', 'GSC', ['GSC'], "the app of Knowledge"),
+    ('programs/apps/gsg', 'GSC', ['GSC'], "the app of Friendship"),
+    ('programs/apps/gsn', 'GSC', ['GSC'], "the app of Groups"),
+    ('programs/apps/gai', 'GAI', ['GAI'], "the app of Agents"),
+    ('programs/apps/gsnp', 'GAI', ['GAI'], "the app of Provenance Groups"),
+    ('programs/apps/gb', 'Currencies', ['GB'], "the app of Bonds"),
+    ('programs/apps/gc', 'Currencies', ['GC'], "the app of Coins"),
+    ('programs/apps/dgc', 'Currencies', ['SGC'], "the app of Denominated Currencies"),
     ('programs/apps/look.json', 'GSA', ['GSA'], "the families' names and colours"),
     ('cascade', 'Code', [], 'the recorded runs of the cascade'),
     ('cascade.sh', 'Code', [], 'the cascade'),
@@ -195,6 +196,15 @@ def tree(root, contracts):
     contracts is a list of (name, path of its NAME.txt from root, key of its paper or None).  Returns (projects, code, faults): projects a list of {id, name, papers: [{key, dirs, contracts}], dirs}; code a list of the directories with no paper, each with who, its text under papers/ where it has one, and its contracts; faults what does not fit the tree, for the build to print."""
     faults = []
     low = lambda n: n.lower().replace('-', '_')
+    # An app keeps its directory's name when its contract is renamed
+    # (programs/apps/gkk is the app of Knowledge since 2026-11-17), so the
+    # app of a contract is read from programs/apps/compile.sh, which names
+    # the owner's file of each app's contract; its phone file is named after
+    # the app.  A contract no line names has the app of its own name.
+    app_of = {}
+    cs = os.path.join(root, 'programs', 'apps', 'compile.sh')
+    for m in re.finditer(r'^\s*([a-z0-9_]+)\) echo "\$GLP_DIR/programs/\S*?([A-Za-z-]+)\.glp" ;;', open(cs, encoding='utf-8').read() if os.path.exists(cs) else '', re.M):
+        app_of[m.group(2)] = m.group(1)
     there = lambda p: os.path.exists(os.path.join(root, p))
     isdir = lambda p: os.path.isdir(os.path.join(root, p))
     entry_paths = {e[0] for e in DIRECTORIES}
@@ -206,7 +216,8 @@ def tree(root, contracts):
     def items(n, p):
         d = os.path.dirname(p)
         out = [{'k': 'directory', 'path': d, 'dir': True}] if len(held[d]) == 1 and d not in entry_paths else [{'k': 'text', 'path': p, 'dir': False}]
-        for k, q in (('app', f'programs/apps/{low(n)}'), ('phone file', f'programs/social/graph/core/{low(n)}_phone.glp'), ('record', f'cascade/{n}')):
+        a = app_of.get(n, low(n))
+        for k, q in (('app', f'programs/apps/{a}'), ('phone file', f'programs/social/graph/core/{a}_phone.glp'), ('record', f'cascade/{n}')):
             if there(q):
                 out.append({'k': k, 'path': q, 'dir': isdir(q)})
                 if q in entry_paths:

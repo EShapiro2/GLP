@@ -5,7 +5,7 @@ A *party* to a contract is whoever has an identity, and a *person* is a party wh
 A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank. Here: community bank bylaws.
 A *community bank* is a bank whose members know each other; the bank serves the organisation of its members.
 A *savings bank* is a community bank that keeps savings.
-Alice, Bob and Carol are persons. Alice and Bob are persons, Acct an account.
+Alice, Bob and Carol are persons, Acct an account.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.

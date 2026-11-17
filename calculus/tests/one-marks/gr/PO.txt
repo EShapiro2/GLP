@@ -1,0 +1,8 @@
+PO: Possibly One
+Alice, Bob, Carol, Dave and Erin are persons, Erin is possibly any of the others; in clause 2 Carol is possibly Dave; in clause 3 Carol is possibly Alice or Bob.
+1. ■ Tag: Alice may tag Bob for Dave, provided Bob has a tag on Erin for Dave.
+2. ■ Pass: Alice may tag Carol for Dave, provided Alice has a tag on Bob for Dave.
+3. ■ Note: Alice may tag Bob for Carol.
+Logic pragmas.
+Vocabulary: x has a tag on y for w = tag(x,y,w).
+After x tags y for w, which requires x does not have a tag on y for w: x has a tag on y for w.

@@ -1,4 +1,5 @@
 OA         commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
 1 contracts, 0 with a fault
 --- sasx/OA.txt
 OA: An Organisation's Act (expanded schemas)

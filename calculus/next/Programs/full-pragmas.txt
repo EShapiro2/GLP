@@ -1,8 +1,9 @@
 Programs
-Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
-Of Forwarding: The *author* of an item is its first signer. Alice and Bob are persons, Item an item.
-Of Programs: A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration. Alice, Bob, Carol and Dave are persons, Carol and Dave possibly Alice, Bob or one person, Prog a program.
+Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Of Forwarding: The *author* of an item is its first signer.
+Of Programs: A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration. Carol and Erin are possibly Alice, Bob or one person.
+Alice, Bob, Carol and Erin are persons, Item an item, Prog a program.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -13,7 +14,7 @@ Forwarding:1. ■ Sign: Alice may create Item by signing it.
 Forwarding:2. ■ Forward: Alice may forward Item to Bob, adding her signature to the signatures Item carries, provided Alice holds the item Item and Alice and Bob are friends.
 Programs:1. ◆ Publish: Carol may publish Prog by signing it. Carol attests that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
 Programs:2. ■ Developer Trust. Trust: Alice may declare trust in Carol as a developer, provided Alice knows Carol. Untrust: Alice may withdraw her declaration of trust in Carol as a developer.
-Programs:3. ■ Offer: Carol may offer Prog of Dave to Alice, provided Carol holds Prog of Dave and Carol and Alice are friends. Carol offers it by forwarding it to Alice.
+Programs:3. ■ Offer: Carol may offer Prog of Erin to Alice, provided Carol holds Prog of Erin and Carol and Alice are friends. Carol offers it by forwarding it to Alice.
 Programs:4. ■ Install own: Alice may install her own Prog, provided Alice holds Prog of Alice. Install: Alice may install Prog of Carol, provided Alice holds Prog of Carol and Alice trusts Carol as a developer.
 Programs:5. ■ Invite: Alice may invite Bob to join in Prog of Carol, with the consent of Bob, provided Alice and Bob are friends, Alice has Prog of Carol installed and Bob trusts Carol as a developer. Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
 Programs:6. ■ Leave: Alice may leave Prog of Carol.

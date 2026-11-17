@@ -3,7 +3,7 @@ Second-Score Auction
 An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 A *second-score auction* awards the second score.
-Alice, Bob and Carol are persons. Alice and Bob are persons.
+Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.

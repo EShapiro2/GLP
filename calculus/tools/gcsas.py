@@ -19,6 +19,7 @@ Standard library only.
 import itertools, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import names as NAMES_      # the names of the contracts and their files (tools/names.py, NAMES.txt)
+import nameslines          # the one names line of a full contract (tools/nameslines.py)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NAME = r"[A-Z][A-Za-z]*"
@@ -28,7 +29,7 @@ PRAGMAS = "Logic pragmas."
 CLAUSE = re.compile(r"^(\d+)\. ([%s]) (.*)$" % MARKS)
 ENTRY = re.compile(r"^((?:%s)(?:\+%s)*) ([%s-]) (.*)$" % (NAMES_.REF, NAMES_.REF, MARKS))      # a label: names and numbers, "Notes:3+Coins:1", a name of one or two words
 REF = NAMES_.REF
-PRON = {"Alice": "her", "Alicia": "her", "Carol": "her", "Erin": "her", "Bob": "his", "Dave": "his", "Frank": "his"}
+PRON = {"Alice": "her", "Alicia": "her", "Carol": "her", "Erin": "her", "Wendy": "her", "Bob": "his", "Dave": "his", "Frank": "his", "Will": "his"}
 POSS = {"her": "hers", "his": "his", "its": "its", "their": "theirs"}
 WILD = "_"        # in a place: someone; in a state that must not hold, or that ends: anyone
 WILDW = ("someone", "anyone", "no one")
@@ -1556,6 +1557,50 @@ def kinds_line(c):
     return out
 
 
+def own_for(w, n, p):
+    """The names n puts for names of p, its own: where n instantiates p with a kind for a kind ('an organisation for a
+    ward'), the first name p's chain gives the kind replaced (Guardians' Wendy) is the name n's own names line gives the
+    kind put, the last if it gives two (Organisation's Gov and Orga: Orga), and that no contract n is written from
+    names (Children's Wendy and Will are Warded Groups', so Children keeps them) (Udi, 2026-11-17, to Calculus #8)."""
+    memo = w.__dict__.setdefault("_own_for", {})
+    if (n, p) in memo:
+        return memo[(n, p)]
+    c = w.contract(n)
+    parents, subs, _ = first_line(c, w.known)
+    mp = {}
+    if p in parents:
+        pk = kinds_from(w, p)
+        own = kinds_line(c)
+        for item in subs.get(p, []):
+            if split_for(item, w.lexicon(p)) is not None or " for " not in item:
+                continue
+            new, old = (re.sub(r"^(?:an?|the) ", "", x.strip()) for x in item.split(" for ", 1))
+            olds = [x for x, ks in pk.items() if old in ks and x not in mp]
+            mine = [x for x, ks in own.items() if new in ks and x not in pk]
+            if olds and mine:
+                mp[olds[0]] = mine[-1]
+    memo[(n, p)] = mp
+    return mp
+
+
+KEEP_KEYS = ("label", "name", "oname", "names", "tname", "target", "of", "kind", "mark", "kindof")
+
+
+def rename_names(x, mp, key=None):
+    """x with each name of mp put for, whole words; the labels and the names of acts as they are."""
+    if not mp or key in KEEP_KEYS:
+        return x
+    if isinstance(x, str):
+        return map_text(x, mp)
+    if isinstance(x, dict):
+        return {rename_names(k, mp): rename_names(v, mp, k) for k, v in x.items()}
+    if isinstance(x, list):
+        return [rename_names(v, mp) for v in x]
+    if isinstance(x, tuple):
+        return tuple(rename_names(v, mp) for v in x)
+    return x
+
+
 def kinds_from(w, n, origin=None, memo=None):
     """The kinds of the names of the contract origin as n has them, with the words n's first lines put for words;
     with no origin, of the names of n and of every contract it is written from."""
@@ -1567,7 +1612,9 @@ def kinds_from(w, n, origin=None, memo=None):
     for p in parents:
         if origin is not None and origin not in order([p], w):
             continue
+        mp = own_for(w, n, p)
         for x, ks in kinds_from(w, p, origin).items():
+            x = mp.get(x, x)
             for k in ks:
                 for item in subs.get(p, []):
                     if split_for(item, w.lexicon(p)) is None:
@@ -2067,7 +2114,7 @@ def expand_schemas(w, n):
     lex = w.lexicon(n)
     entries, have = [], {}
     for p in parents:
-        inherit(entries, have, instantiate_schemas(expand_schemas(w, p), derive_atoms(subs.get(p, []), lex.votes)), ("head", "body", "guards"))
+        inherit(entries, have, rename_names(instantiate_schemas(expand_schemas(w, p), derive_atoms(subs.get(p, []), lex.votes)), own_for(w, n, p)), ("head", "body", "guards"))
     for p in parents:
         entries = instantiate_schemas(entries, derive_atoms(binds_sas(w, p), lex.votes))
     entries = kind_forms(w, n, entries)
@@ -2717,7 +2764,7 @@ def expand_text(w, n, own):
     parents, subs, _ = first_line(c, w.known)
     entries, have = [], {}
     for p in parents:
-        inherit(entries, have, instantiate_text(w, w.flat[p], derive_items(subs.get(p, []), w.lexicon(p)), p, n), ("effects", "conds", "persons"))
+        inherit(entries, have, rename_names(instantiate_text(w, w.flat[p], derive_items(subs.get(p, []), w.lexicon(p)), p, n), own_for(w, n, p)), ("effects", "conds", "persons"))
     for p in parents:
         for item, q in w.binds(p):
             entries = instantiate_text(w, entries, [item], q, n)
@@ -3095,6 +3142,42 @@ def origin_phrase(w, e):
     return best[1] if best else None
 
 
+KINDS2 = {}      # {contract: [(name, its kinds)]}: a name with two kinds neither of which is under the other
+
+
+def unite_names(entries, n):
+    """The names lines of n's chain, in the kept entries X:0 of its expanded entries, united into one names line,
+    an entry n:0 at the place of the first (tools/nameslines.py); what else a names line said stays in its entry, each
+    sentence once; an entry left with nothing is dropped."""
+    head = [e for e in entries if e["kind"] == "kept" and e["label"].endswith(":0")]
+    sents = [s for e in head for s in nameslines.split_sentences(e["text"])]
+    named = [s for s in sents if nameslines.is_names(s)]
+    if not named:
+        return entries
+    rest = repr([e for e in entries if not (e["kind"] == "kept" and e["label"].endswith(":0"))])
+    line, findings, _ = nameslines.unite(named, sents, rest)
+    KINDS2[n] = findings
+    out, seen, at = [], set(), None
+    for e in entries:
+        if not (e["kind"] == "kept" and e["label"].endswith(":0")):
+            out.append(e)
+            continue
+        keep = []
+        for s in nameslines.split_sentences(e["text"]):
+            p = nameslines.parse(s)
+            if p is None:
+                keep.append(s)
+                continue
+            if at is None:
+                at = len(out)
+            keep += [r for r in p[1] if r not in seen]
+            seen.update(p[1])
+        if keep:
+            out.append(dict(e, text=" ".join(keep)))
+    out.insert(at, dict(kind="kept", label="%s:0" % n, mark="-", text=line[0], united=True))
+    return out
+
+
 def expanded(w, n):
     """The expanded contract of n, in the grammar: the names lines and each clause of its expanded schemas, labelled
     by its origin, its acts written with their act phrases.  The phrases are defined in the contracts of origin."""
@@ -3104,6 +3187,9 @@ def expanded(w, n):
     head = []
     prose, clauses, of = [], [], {}
     for e in w.sasx[n]:
+        if e.get("united"):
+            head.append(e["text"])
+            continue
         if e["label"].endswith(":0"):
             c0 = e["label"][:-2]
             if c0 not in of:
@@ -3121,7 +3207,7 @@ def expanded(w, n):
             clauses[-1][3].append(txt)
         else:
             clauses.append([e["label"].split("+")[0], e["label"], e["mark"], [txt]])
-    return [w.contract(n).title] + head + prose + ["%s. %s %s" % (l.replace("+", ", "), m, " ".join(ts)) for _, l, m, ts in clauses]
+    return [w.contract(n).title] + prose + head + ["%s. %s %s" % (l.replace("+", ", "), m, " ".join(ts)) for _, l, m, ts in clauses]
 
 
 def decompile(w, n):
@@ -3309,10 +3395,10 @@ def main():
         try:
             sas, own = compile_contract(w, n)
             write_sas(w, n, sas)
-            flat = [e for e in text_at_defaults(w, n, expand_text(w, n, own)) if not e.get("generic")]      # printed at the defaults; inherited open (expand_schemas keeps w.sasx open); an act of notes in its kinds' forms only
+            flat = unite_names([e for e in text_at_defaults(w, n, expand_text(w, n, own)) if not e.get("generic")], n)      # printed at the defaults; inherited open (expand_schemas keeps w.sasx open); an act of notes in its kinds' forms only
             put("flat", n, [w.contract(n).title + " (flat text)"] + [flat_line(e) for e in flat])
             sx0 = expand_schemas(w, n)
-            sx = [e for e in schemas_at_defaults(w, n, sx0) if not e.get("generic")]
+            sx = unite_names([e for e in schemas_at_defaults(w, n, sx0) if not e.get("generic")], n)
             gone = untakable(w, n, [read_schema_line(schema_line(e)) for e in sx if e["kind"] == "act"])      # an act no agent can take is no act of the contract
             keep = os.path.join(ROOT, "sasx-all", NAMES_.file_of(n) + ".txt")      # sasx/ with the untakable acts kept, for relations.py alone: a restriction may make a base's act untakable
             if gone:
@@ -3360,6 +3446,10 @@ def main():
             if c == n:
                 print("%-10s untakable %s %s: %s" % (n, l, nm, why))
         print("%-10s %s" % (n, "; ".join(res)))
+    two = [(n, x, ks) for n in names for x, ks in KINDS2.get(n, [])]
+    print("names: %d names of two kinds neither of which is under the other" % len(two))
+    for n, x, ks in two:
+        print("kinds: %s: %s is %s" % (n, x, " and ".join("%s ('%s')" % k for k in ks)))
     print("%d contracts, %d with a fault" % (len(names), bad))
     return 1 if bad else 0
 
