@@ -68,6 +68,7 @@ PARL = "Parameters: "   # 'Parameters: x is entitled to propose m in z.': a stat
 ENVL = "Environment: "   # 'Environment: x is nearby y.': a state the platform gives, an environment predicate of the term; no act adds or ends it
 KNDL = "Kind of note: "   # 'Kind of note: bond, y-bonds due Day for y-notes.': a kind of Notes's notes (Udi, 2026-11-16: special cases, not instances); see kind_forms
 KINDL = re.compile(r"^Kind of note: ([a-z]+), (.+?) for ([b-z])-notes(; its acts keep their names)?\.$")
+KINDR = re.compile(r"^Kind of note: ([a-z]+), ([A-Z][a-z]*)-denominated ([b-z])-([a-z]+)s(.*?) for ([b-z])-\4s\5\.$")      # 'Kind of note: coin, Dollar-denominated y-coins for y-coins.': the kind with one more place, its denomination
 REFL = "Reflexive: "   # 'Reflexive: x knows y.': every agent holding the state's atoms holds x knows x; no act adds or ends it
 ARITH = "Vocabulary: n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k); x is the author of t = author(x,t)."   # of every contract; the author of an item is its first signer (GFP), read by toglp.py as eq(author_of(t), x)
 ACTOR = "Actor"   # in a citation: the first of those who take the act cited
@@ -524,6 +525,7 @@ def read_gr(name, d="gr"):
     c.header = []      # (kind, line): vocabulary, roles, definitions, prose and names, in order
     c.clauses = []     # (number, mark, text)
     c.kinds = []       # the kinds of note it declares: (word, noun, slot place, whether its acts keep their names)
+    c.refines = []     # the kinds it gives one more place, their denomination: (word, the name of the denomination)
     dfl = []           # the 'Default: ' lines, read once every 'Parameters: ' line is
     for i, l in enumerate(lines[1:]):
         m = CLAUSE.match(l)
@@ -533,6 +535,12 @@ def read_gr(name, d="gr"):
             continue
         elif i == 0 and re.match(re.escape(name) + r" (extends|restricts|strengthens|instantiates|composes|relaxes)\b", l):
             c.first = l
+        elif KINDR.match(l):
+            m = KINDR.match(l)
+            if m.group(1) != m.group(4):
+                raise Err("%s: '%s' gives the kind %s a place, and its nouns are of %s" % (name, l, m.group(1), m.group(4)))
+            c.refines.append((m.group(1), m.group(2)))
+            c.header.append(("prose", l))      # a kept declaration, as 'Kind of note:'
         elif KINDL.match(l):
             m = KINDL.match(l)
             c.kinds.append((m.group(1), m.group(2), m.group(3), bool(m.group(4))))
@@ -883,6 +891,7 @@ class World:
         kind_phrases(self, n, lex)
         for name, fams in self.vote_families(n, lex, parents, subs):
             lex.voted[name] = [add_family(lex, f) for f in fams]
+        refine_phrases(self, n, lex)      # after the votes: an act on votes is voted on in its phrase without the denomination
         self.lex[n] = lex
         self.binds(n)          # refuses two different states put for one state
         del self.lex[n]
@@ -945,7 +954,10 @@ class World:
                         e = entries[hit[0]]
                         actname = e["name"]
                         _, ir = inv_basic(lex)
-                        best = best_phrase(e, lex, act_phrases(lex), [guard_text(g, ir) for g in e["guards"]])
+                        plain = [a for a in act_phrases(lex) if a[0] not in REFINED]      # voted on in a phrase of the text, the denomination taken out where its phrase has none (refine_phrases)
+                        best = min([b for b in (best_phrase(e, lex, plain, [guard_text(g, ir) for g in e["guards"]]),
+                                                best_phrase(unrefine_entry(self, p, e), lex, plain, [guard_text(g, ir) for g in e["guards"]])) if b],
+                                   key=lambda b: b[0], default=None)
                         if not best:
                             raise Err("no act phrase has the effects of the act cited")
                         t, b = best[1], best[2]
@@ -966,7 +978,10 @@ class World:
         for sp in self.party[n]:
             if not sp["votes"]:
                 continue
-            best = best_phrase(sp["act"], lex, act_phrases(lex), [guard_text(g, ir) for g in sp["act"]["guards"]])
+            plain = [a for a in act_phrases(lex) if a[0] not in REFINED]
+            gts = [guard_text(g, ir) for g in sp["act"]["guards"]]
+            best = min([b for b in (best_phrase(sp["act"], lex, plain, gts), best_phrase(unrefine_entry(self, n, sp["act"], lex), lex, plain, gts)) if b],
+                       key=lambda b: b[0], default=None)
             if not best:
                 raise Err("%s %s: no act phrase has the effects of the act" % (n, sp["name"]))
             t, b = best[1], best[2]
@@ -1835,7 +1850,7 @@ def more(a, b):
 
 
 def both(a, b, fields):
-    """An act that a contract has by two paths: it has the restrictions of both."""
+    """An act that a contract has by two paths: it has the restrictions of both, and the weaker of the two marks."""
     o = dict(a)
     for f in fields:
         o[f] = more(a[f], b[f])
@@ -1847,6 +1862,8 @@ def both(a, b, fields):
     o["names"] = dict(a.get("names", {}), **b.get("names", {}))
     if "oname" in b and "oname" not in a:
         o["oname"], o["name"], o["mark"] = b["oname"], b["name"], b["mark"]
+    if a["mark"] in MARKS and b["mark"] in MARKS:     # by two paths in two modalities: the weaker (Calculus #8, 2026-11-17)
+        o["mark"] = max(a["mark"], b["mark"], key=MARKS.index)
     return o
 
 
@@ -2171,7 +2188,7 @@ def expand_schemas(w, n):
                 entries += [e] + (new_votes(entries, gen[2]) if gen else [])
             else:
                 entries.append(e)
-    entries = kind_forms(w, n, entries)
+    entries = refine_entries(w, n, kind_forms(w, n, entries))
     derive_party(w, n, lex, entries)
     unclash(entries)
     if REMOVE:
@@ -2200,6 +2217,218 @@ def kinds_of(w, n):
             raise Err("%s: two kinds of note keep the names of the acts" % n)
         memo[n] = out
     return memo[n]
+
+
+def refines_of(w, n):
+    """The kinds of note n's chain gives one more place, their denomination (Udi's and Calculus #8's, 2026-11-17: the
+    coin carries its denomination as it carries its issuer's key): {word: the name of the denomination}."""
+    memo = w.__dict__.setdefault("_refines", {})
+    if n not in memo:
+        c = w.contract(n)
+        parents, _, _ = first_line(c, w.known)
+        out = {}
+        for p in parents:
+            for k, v in refines_of(w, p).items():
+                out.setdefault(k, v)
+        for word, name in getattr(c, "refines", []):
+            out.setdefault(word, name)
+        memo[n] = out
+    return memo[n]
+
+
+def refine_map(w, n, lex):
+    """{(predicate, places, mark): (its predicate with the denomination, [('v', index, mark) | ('x', name, mark)])}: each
+    state of a kind refines_of gives a place, 'x holds n y-coins' = coin(x,y,*n), and the state its noun with the
+    denomination makes of it, 'x holds n f-denominated y-coins' = coin(x,y,f,*n), read in the lexicon."""
+    memo = w.__dict__.setdefault("_refmap", {})
+    rs = refines_of(w, n)
+    if not rs:
+        return {}
+    if n in memo:
+        return memo[n]
+    out = {}
+    strip = lambda a: a.lstrip(MARK)
+    for word, dname in rs.items():
+        preds = {word, "escrow_" + word}
+        for t, p, args in lex.basic:
+            if p not in preds or "-denominated" in t:
+                continue
+            used = set(tvars(t))
+            f = [v for v in "fghijklmnopqrstuvw" if v not in used][0]
+            t2 = re.sub(r"\ba ([b-z])-%s\b" % word, r"an %s-denominated \1-%s" % (f, word), t)
+            t2 = re.sub(r"(?<!denominated )\b(n |exactly n )?([b-z])-%ss\b" % word, r"\1%s-denominated \2-%ss" % (f, word), t2)
+            found = None
+            for tb, pb, ab in lex.basic:
+                mp = same_phrase(tb, t2)
+                if mp is not None and tb != t:
+                    found = (pb, ab, {v: u for u, v in mp.items()})
+                    break
+            if not found:
+                raise Err("%s: the kind %s with its denomination has no state for '%s' ('%s')" % (n, word, t, t2))
+            pb, ab, inv = found
+            gpl = [strip(a) for a in args]
+            spec = []
+            for a in ab:
+                mark = a[:len(a) - len(strip(a))]
+                pl = inv.get(strip(a), strip(a))
+                spec.append(("x", dname, mark) if pl == f else ("v", gpl.index(pl), mark))
+            out[(p, len(args), (args[-1][:1] if args and args[-1][:1] in MARK else ""))] = (pb, spec)
+    memo[n] = out
+    return out
+
+
+def refine_lit(l, rmap, name=None):
+    """A literal of a kind with its denomination: coin(Alice,Carol) is coin(Alice,Carol,Dollar); with name, that name
+    for the denomination (a place of a phrase)."""
+    neg, p, a = l[0], l[1], tuple(l[2])
+    k = (p, len(a), (a[-1][:1] if a and a[-1][:1] in MARK else ""))
+    if k not in rmap:
+        return l
+    pb, spec = rmap[k]
+    vals = [x.lstrip(MARK) for x in a]
+    return (neg, pb, tuple(m + (vals[i] if t_ == "v" else (name or i)) for t_, i, m in spec))
+
+
+def refine_entries(w, n, entries, text=False):
+    """The acts of n with each atom of a kind its chain gives the denomination put with it (refine_map): in the schemas
+    the literals, in the flat text the phrases, read and written in the lexicon."""
+    lex = w.lexicon(n)
+    rmap = refine_map(w, n, lex)
+    if not rmap:
+        return entries
+    out = []
+    if text:
+        ib, _ = inv_basic(lex)
+        def ph(x, s):
+            ls = lits_of(s, lex)
+            if len(ls) != 1:
+                return (x, s)
+            l = ls[0]
+            r = refine_lit(l, rmap)
+            if r == l:
+                return (x, s)
+            return (x, phrase_of((False,) + tuple(r[1:]), ib))
+        for e in entries:
+            if e["kind"] == "act":
+                def once(xs):
+                    res, made = [], set()
+                    for x in xs:
+                        r = ph(*x)
+                        if r != x or r in made:
+                            if r in made or (r != x and r in xs):
+                                continue
+                            made.add(r)
+                        res.append(r)
+                    return res
+                e = dict(e, effects=once(e["effects"]), conds=once(e["conds"]))
+            out.append(e)
+        return out
+    def once(ls):
+        """The literals refined, a literal the refinement makes twice once (an act inherited by two paths, one with the
+        denomination and one not, is one act); a literal the act had twice before stays twice."""
+        res, made = [], set()
+        for l in ls:
+            r = refine_lit(l, rmap)
+            if r != l or r in made:
+                if r in made or (r != l and r in ls):
+                    continue
+                made.add(r)
+            res.append(r)
+        return res
+    for e in entries:
+        if e["kind"] == "act":
+            e = dict(e, head=once(e["head"]), body=once(e["body"]))
+        out.append(e)
+    return out
+
+
+def refine_noun(s, word, f):
+    """The nouns of a kind in a phrase with the denomination f: 'a y-coin' is 'an f-denominated y-coin', 'n y-coins'
+    'n f-denominated y-coins'."""
+    s = re.sub(r"\ba ([b-z]|%s)-%s\b" % (NAME, word), r"an %s-denominated \1-%s" % (f, word), s)
+    return re.sub(r"(?<!denominated )(?<![A-Za-z-])([b-z]|%s)-%ss\b" % (NAME, word), r"%s-denominated \1-%ss" % (f, word), s)
+
+
+REFINED = set()      # the act phrases refine_phrases made, with the denomination
+
+
+def unrefine_lits(ls, lex):
+    """Literals with the denomination taken out, by the map refine_phrases keeps on the lexicon."""
+    inv = lex.__dict__.get("rinv")
+    if not inv:
+        return ls
+    out = []
+    for l in ls:
+        spec = inv.get((l[1], len(l[2])))
+        if spec is None:
+            out.append(l)
+            continue
+        old = sorted((i, j) for j, (t_, i, m) in enumerate(spec) if t_ == "v")
+        out.append((l[0], l[1], tuple(l[2][j] for _, j in old)))
+    return out
+
+
+def unrefine_entry(w, n, e, lex=None):
+    """An act of n with the denomination taken out of its atoms, as its phrase without it reads it."""
+    try:
+        rmap = refine_map(w, n, lex or w.lexicon(n))
+    except Err:
+        return e
+    if not rmap:
+        return e
+    inv = {(pb, len(spec)): spec for pb, spec in rmap.values()}
+    def un(l):
+        spec = inv.get((l[1], len(l[2])))
+        if spec is None:
+            return l
+        old = sorted((i, j) for j, (t_, i, m) in enumerate(spec) if t_ == "v")
+        return (l[0], l[1], tuple(l[2][j] for _, j in old))
+    return dict(e, head=[un(l) for l in e["head"]], body=[un(l) for l in e["body"]])
+
+
+def refine_phrases(w, n, lex):
+    """The act phrases of n's acts of a kind its chain gives the denomination, with it: 'x issues n y-coins' gives 'x
+    issues n f-denominated y-coins', its effects the states with the denomination (refine_map)."""
+    rs = refines_of(w, n)
+    if not rs:
+        return
+    have = {t for t, _, _ in lex.defs}
+    lex.rdefs = []
+    try:
+        lex.rinv = {(pb, len(spec)): spec for pb, spec in refine_map(w, n, lex).values()}
+    except Err:
+        lex.rinv = {}
+    try:
+        rmap = refine_map(w, n, lex)
+    except Err:
+        return
+    for t, r, act in list(lex.defs):
+        if not act or "-denominated" in t:
+            continue
+        used = set(tvars(t)) | set(tvars(r))
+        f = [v for v in "fghijklmnopqrstuvw" if v not in used][0]
+        try:
+            lits = pattern(r, lex)
+        except Err:
+            continue
+        ref = [refine_lit(l, rmap, f) for l in lits]
+        if ref == lits:
+            continue
+        t2 = t
+        for word in rs:
+            t2 = refine_noun(t2, word, f)
+        r2 = fold_states(ref, lex)      # each state of the kind with the denomination, and the others as they are (a vote's)
+        if t2 == t or t2 in have:
+            continue
+        try:
+            pattern(r2, lex)      # an act phrase whose effects, with the denomination, are states of the lexicon (not a vote's)
+        except Err:
+            continue
+        have.add(t2)
+        REFINED.add(t2)
+        lex.__dict__.setdefault("rdefs", []).append((t2, r2, True))      # for writing the acts only, not for reading the text
+        if t in lex.req:
+            lex.req[t2] = refine_noun(lex.req[t], list(rs)[0], f) if len(rs) == 1 else lex.req[t]
 
 
 def kind_alts(w, k):
@@ -2630,10 +2859,13 @@ def gen_vote(lex, o, org, k, name, label, mark, taker=None, agents=None):
     _, ir = inv_basic(lex)
     sv, _ = subject(f["t"])
     full = None
-    for b, _ in match_some(pattern(r, lex), o["head"]):
-        for fb in subject_bindings(sv, b, [guard_text(g, ir) for g in o["guards"]]):
-            if all(v in fb for v in tvars(f["t"])) and fb[f["zp"]] == org:
-                full = fb
+    for head in (o["head"], unrefine_lits(o["head"], lex)):      # the act's phrase without the denomination (refine_phrases)
+        for b, _ in match_some(pattern(r, lex), head):
+            for fb in subject_bindings(sv, b, [guard_text(g, ir) for g in o["guards"]]):
+                if all(v in fb for v in tvars(f["t"])) and fb[f["zp"]] == org:
+                    full = fb
+                    break
+            if full:
                 break
         if full:
             break
@@ -2818,7 +3050,7 @@ def expand_text(w, n, own):
                 entries += [e] + (new_votes(entries, gen[2]) if gen else [])
             else:
                 entries.append(e)
-    entries = kind_forms(w, n, entries, True)
+    entries = refine_entries(w, n, kind_forms(w, n, entries, True), True)
     derive_party(w, n, lex, entries, True)
     unclash(entries)
     if REMOVE:          # the acts expand_schemas removes, removed from the text too, so that the two commute
@@ -2878,12 +3110,18 @@ def phi(lines, lex):
 
 def inv_basic(lex):
     """Predicates to phrases; a predicate with a number of copies has its own phrase, under 'pred*'."""
-    return {p + (a[-1][0] if a and a[-1][:1] in MARK else ""): (t, a) for t, p, a in lex.basic}, {p: (t, a) for t, p, a in lex.roles}
+    ib = {}
+    for t, p, a in lex.basic:
+        k = p + (a[-1][0] if a and a[-1][:1] in MARK else "")
+        ib[k] = (t, a)
+        ib["%s/%d" % (k, len(a))] = (t, a)      # by its number of places too: a coin's state with its denomination, coin(x,y,f), beside coin(x,y)
+    return ib, {p: (t, a) for t, p, a in lex.roles}
 
 
 def tb_of(l, ib):
     """The phrase of a literal and its binding."""
-    t, args = ib[l[1] + (l[2][-1][0] if l[2] and l[2][-1][:1] in MARK else "")]
+    k = l[1] + (l[2][-1][0] if l[2] and l[2][-1][:1] in MARK else "")
+    t, args = ib.get("%s/%d" % (k, len(l[2]))) or ib[k]
     return t, {a.lstrip(MARK): v.lstrip(MARK) if a[:1] in MARK else v for a, v in zip(args, l[2])}
 
 
@@ -3072,7 +3310,7 @@ def subject_bindings(sv, b, gts):
 
 
 def act_phrases(lex):
-    return [(t, pattern(r, lex)) for t, r, isact in lex.defs if isact]
+    return [(t, pattern(r, lex)) for t, r, isact in lex.defs + lex.__dict__.get("rdefs", []) if isact]
 
 
 def best_phrase(e, lex, acts, gts, prefer=None):

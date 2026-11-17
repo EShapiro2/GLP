@@ -124,6 +124,27 @@ def num_places(acts, values):
     return frozenset(places)
 
 
+BARE = ('condition', 'message', 'item', 'utterance', 'proposal', 'attestation', 'act')     # the kinds of what persons say, agree, propose or attest (an act of Orga, which an officer proposes): a value of one is a speech act, written bare (Calculus #8, 2026-11-17 16:42 UTC)
+
+
+def value_kinds(acts, agents, kinds, values, places, consts):
+    """The values of the names lines, written by their kind (GSC #19, Calculus_inbox.md, 2026-11-17 15:09 UTC; GLP
+    programs/gsc/README.md, 'Writing a contract', on value types): a value the contract counts or computes with is a
+    number, num(X), a date among them (schema_nums); a value of a kind persons say or agree, a condition, a message,
+    an item or an utterance, a proposal, an attestation or an act, or a value a schema signs or authors, is a speech
+    act, bare; every other value is a constant, const(X).  Returns (const, bare)."""
+    vals = {x for x in kinds if x not in agents and x not in consts}
+    nums = set()
+    for e in acts:
+        nums |= schema_nums(e['head'] + e['body'], values, places)
+    nums |= {x for x in vals if any(k.split()[0] == 'number' for k in kinds[x])}      # a value whose kind is a number
+    bare = {x for x in vals if any(k.split()[0] in BARE for k in kinds[x])}
+    # a value a schema signs or authors, Prog@Alice's sgn(Prog, Alice) or author(Alice, Prog)'s author_of(Prog), is an utterance, bare
+    lits = [l for e in acts for l in e['head'] + e['body']]
+    bare |= vals & ({a.lstrip('*#').split('@')[0] for l in lits for a in l[2] if '@' in a} | {l[2][1] for l in lits if l[1] == 'author' and len(l[2]) > 1})
+    return frozenset(vals - bare - nums), frozenset(bare - nums)
+
+
 def const_places(acts, consts):
     """The places of predicates, (predicate, arity, position), at which some schema of the contract writes a constant
     the contract names, val(C): GBCC's and GNO's role(Alice, Orga, val('Treasurer')).  A name of no agent at such a
@@ -194,7 +215,7 @@ def binding_holds(e, x, y):
     return x in rs and y in rs and not names(x, y) and not names(y, x)
 
 
-def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset(), acts=(), anyof=frozenset()):
+def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset(), acts=(), anyof=frozenset(), cvals=frozenset(), nvals=frozenset()):
     # A name of the act that holds, in what the act requires, the state that lists a role of those who decide, of the
     # same agent, is the one of them who decides, Decider: "Bob, a friend of a guardian of Carol" (GnW:2) is a friend
     # of the guardian who decides, as CSSN's make_guardian had it (Alice, a guardian, deciding).
@@ -219,9 +240,10 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                         e = dict(e, head=sub(e['head']), body=[l for l in sub(e['body']) if l != (False, pp, tuple(d if x == n else x for x in hit[2]))])
                     break
     lits = e['head'] + e['body']
-    nums = schema_nums(lits, values, places)
+    nums = schema_nums(lits, values, places) | {a for l in lits for a in l[2] if a in nvals}
     cvars = {a for l in lits for i, a in enumerate(l[2]) if (l[1], len(l[2]), i) in cplaces and re.fullmatch(gcsas.NAME, a)
              and a not in consts and a not in nums and a not in agents}
+    cvars |= {a for l in lits for a in l[2] if a in cvals and a not in consts and a not in nums and a not in agents}      # a value of a kind no person says or agrees, const(X) (value_kinds)
     holderless = lambda l: l[1] in values or l[1] in ARITH or l[1] in ('sum', 'product', 'author') or not l[2] or l[2][0] not in agents
     roles = []
     for l in lits:
@@ -443,6 +465,8 @@ def contract_term(n):
     consts -= {x for e in acts for x in schema_nums(e['head'] + e['body'], values, places)
                if any(x.startswith(k) and x != k and 'number' in ks for k, ks in kinds.items())}
     cplaces = const_places(acts, consts)
+    cvals, _ = value_kinds(acts, agents, kinds, values, places, consts)
+    nvals = frozenset(x for x in kinds if x not in agents and any(k.split()[0] == 'number' for k in kinds[x]))
     # A predicate the Logic pragmas declare reflexive, 'Reflexive: x knows y.' (GKK's, and so every contract's
     # written from GKK), is declared reflexive in the term, as GSC's GnW declares knows (GSC's Section "Contracts with
     # Wards", "Reflexive predicates"; GLP programs/gsc/GnW.glp), with or without wards; gcsas.py writes no atom p(x,x).
@@ -466,7 +490,7 @@ def contract_term(n):
             amemo[(o, num)] = frozenset(a for cl, a, b in gcsas.possibly(w.contract(o)) if b == '*' and (cl is None or num in cl)) if o in w.known else frozenset()
         return amemo[(o, num)]
     for e in acts:
-        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces, persons_of(e), acts, anyof(e))
+        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces, persons_of(e), acts, anyof(e), cvals, nvals)
         if t is None:
             roles += 1
         else:

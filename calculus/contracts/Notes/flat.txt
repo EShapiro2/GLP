@@ -12,8 +12,8 @@ Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in
 Notes:1 ■ Issue: Alice may Alice holds Sum Alice-notes.
 Notes:2 ■ Swap: Alice and Bob may jointly no longer Alice holds Sum Carol-notes, Bob holds Sum Carol-notes, no longer Bob holds Total Dave-notes, Alice holds Total Dave-notes, Bob knows Carol and Alice knows Dave, provided Alice knows Bob and Bob knows Alice. Possibly one: Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
 Notes:3 ■ Pay: Alice and Bob may jointly no longer Alice holds Sum Carol-notes, Bob holds Sum Carol-notes and Bob knows Carol, provided Alice knows Bob. Possibly one: Alice=Carol, Bob=Carol.
-Notes:4 ■ | Escrow.
-Notes:4 ■ Deposit: Alice and Carol may jointly no longer Alice holds Sum Dave-notes and Carol holds Sum Dave-notes in escrow from Alice for Bob on Cond, provided Alice knows Carol, Carol knows Alice and Alice knows Bob. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Release: Carol and Bob may jointly no longer Carol holds Sum Dave-notes in escrow from Alice for Bob on Cond, Bob holds Sum Dave-notes and Bob knows Dave, provided Carol knows Bob and Bob knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Return: Carol and Alice may jointly no longer Carol holds Sum Dave-notes in escrow from Alice for Bob on Cond, Alice holds Sum Dave-notes and Alice knows Dave, provided Carol knows Alice and Alice knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
+Notes:4 ○ | Escrow.
+Notes:4 ○ Deposit: Alice and Carol may jointly no longer Alice holds Sum Dave-notes and Carol holds Sum Dave-notes in escrow from Alice for Bob on Cond, provided Alice knows Carol, Carol knows Alice and Alice knows Bob. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Release: Carol and Bob may jointly no longer Carol holds Sum Dave-notes in escrow from Alice for Bob on Cond, Bob holds Sum Dave-notes and Bob knows Dave, provided Carol knows Bob and Bob knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Return: Carol and Alice may jointly no longer Carol holds Sum Dave-notes in escrow from Alice for Bob on Cond, Alice holds Sum Dave-notes and Alice knows Dave, provided Carol knows Alice and Alice knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ | Carol will release them only if Cond is met, and return them only if it fails.

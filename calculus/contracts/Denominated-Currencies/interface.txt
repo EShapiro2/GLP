@@ -4,30 +4,30 @@ Denominated Currencies
 3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 4. ■ Issue.  Alice may issue Alice-notes, for bonds, with maturity later than the current date.
 5. ■ Issue bond.  Alice may issue Alice-notes, for bonds, with maturity later than the current date.
-6. ■ Swap.  Alice and Bob, who know each other, may jointly swap notes they hold, only if the coins and bonds are of one denomination.
-7. ■ Swap coin for bond.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-bonds due Day, provided Alice and Bob know each other and the coins and bonds of Carol and Dave are of one denomination.
-8. ■ Swap bonds.  Alice and Bob, who know each other, may jointly swap notes they hold, only if the coins and bonds are of one denomination.
+6. ○ Swap.  Alice and Bob, who know each other, may jointly swap notes they hold, only if the coins and bonds are of one denomination.
+7. ○ Swap coin for bond.  Alice and Bob may jointly swap Sum Dollar-denominated Carol-coins for Total Dollar-denominated Dave-bonds due Day, provided Alice and Bob know each other.
+8. ○ Swap bonds.  Alice and Bob, who know each other, may jointly swap notes they hold, only if the coins and bonds are of one denomination.
 9. ■ Pay.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
 10. ■ Pay issuer.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
 11. ■ Pay bond.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
-12. ■ Deposit.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
-13. ■ Deposit bond.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
-14. ■ Release.  Carol and Bob may jointly release them to Bob, only if the coins and bonds are of one denomination.
-15. ■ Release bond.  Carol and Bob may jointly release them to Bob, only if the coins and bonds are of one denomination.
-16. ■ Return.  Carol and Alice may jointly return them to Alice, only if the coins and bonds are of one denomination.
-17. ■ Return bond.  Carol and Alice may jointly return them to Alice, only if the coins and bonds are of one denomination.
-18. ■ Redeem.  Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows, only if the coins and bonds are of one denomination.
-19. ■ Redeem coin against bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows, only if the coins and bonds are of one denomination.
-20. ■ Redeem bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows, only if the coins and bonds are of one denomination.
-21. ■ Redeem bond against bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows, only if the coins and bonds are of one denomination.
+12. ○ Deposit.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
+13. ○ Deposit bond.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
+14. ○ Release.  Carol and Bob may jointly release them to Bob, only if the coins and bonds are of one denomination.
+15. ○ Release bond.  Carol and Bob may jointly release them to Bob, only if the coins and bonds are of one denomination.
+16. ○ Return.  Carol and Alice may jointly return them to Alice, only if the coins and bonds are of one denomination.
+17. ○ Return bond.  Carol and Alice may jointly return them to Alice, only if the coins and bonds are of one denomination.
+18. ○ Redeem.  Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows, only if the coins and bonds are of one denomination.
+19. ○ Redeem coin against bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows, only if the coins and bonds are of one denomination.
+20. ○ Redeem bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows, only if the coins and bonds are of one denomination.
+21. ○ Redeem bond against bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows, only if the coins and bonds are of one denomination.
 22. ■ First issue.  Alice may issue Alice-coins denominated by a fiat currency.
 23. ■ Issue denominated bond.  Alice may issue Alice-bonds denominated by a fiat currency, of a maturity later than the current date.
-24. ■ Deposit own coins.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
-25. ■ Deposit with the issuer.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
-26. ■ Deposit more.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
-27. ■ Deposit own bonds.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
-28. ■ Deposit bond with the issuer.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
-29. ■ Deposit bond more.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
+24. ○ Deposit own coins.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
+25. ○ Deposit with the issuer.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
+26. ○ Deposit more.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
+27. ○ Deposit own bonds.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
+28. ○ Deposit bond with the issuer.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
+29. ○ Deposit bond more.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination.
 30. ■ Accept.  Alice may accept Dollar-denominated Carol-coins in payment up to a limit of her choosing, if she holds a Dollar-denominated Carol-coin or Carol-bond; each such coin paid to Alice counts against the limit, and Alice may accept again.
 31. ■ Accept by bond.  Alice may accept Dollar-denominated Carol-coins in payment up to a limit of her choosing, if she holds a Dollar-denominated Carol-coin or Carol-bond; each such coin paid to Alice counts against the limit, and Alice may accept again.
 32. ■ Pay accepted coins.  Alice may pay Bob, whom she knows, coins she holds that Bob accepts.
@@ -40,12 +40,12 @@ Acquaint: Alice [Acquaint] <bob>
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
 Issue: Alice [Issue] <sum>
-Issue bond: Alice [Issue bond] <day> <sum>
-Swap: Alice [Swap] <sum> <total>
+Issue bond: Alice [Issue bond] <day> <dollar> <sum>
+Swap: Alice [Swap] <dave> <sum> <total>
   Bob: Alice asks for your consent to swap.
-Swap coin for bond: Alice [Swap coin for bond] <sum> <day> <total>
+Swap coin for bond: Alice [Swap coin for bond] <sum> <dave> <day> <total>
   Bob: Alice asks for your consent to swap coin for bond.
-Swap bonds: Alice [Swap bonds] <sum> <term> <total>
+Swap bonds: Alice [Swap bonds] <sum> <dave> <term> <total>
   Bob: Alice asks for your consent to swap bonds.
 Pay: Alice [Pay] <sum>
   Bob: Alice asks for your consent to pay.
@@ -64,26 +64,26 @@ Return: Carol [Return] <sum>
   Alice: Carol asks for your consent to return.
 Return bond: Carol [Return bond] <sum>
   Alice: Carol asks for your consent to return bond.
-Redeem: Alice [Redeem]
-Redeem coin against bond: Alice [Redeem coin against bond] <day>
-Redeem bond: Alice [Redeem bond]
-Redeem bond against bond: Alice [Redeem bond against bond] <term>
-First issue: Alice [First issue] <sum> <dollar>
-Issue denominated bond: Alice [Issue denominated bond] <day> <sum> <dollar>
+Redeem: Alice [Redeem] <carol>
+Redeem coin against bond: Alice [Redeem coin against bond] <carol> <day>
+Redeem bond: Alice [Redeem bond] <carol>
+Redeem bond against bond: Alice [Redeem bond against bond] <carol> <term>
+First issue: Alice [First issue] <dollar> <sum>
+Issue denominated bond: Alice [Issue denominated bond] <day> <dollar> <sum>
 Deposit own coins: Alice [Deposit own coins] <sum> <cond>
   Carol: Alice asks for your consent to deposit own coins.
-Deposit with the issuer: Alice [Deposit with the issuer] <sum> <cond> <dollar>
+Deposit with the issuer: Alice [Deposit with the issuer] <sum> <cond>
   Carol: Alice asks for your consent to deposit with the issuer.
-Deposit more: Alice [Deposit more] <sum> <cond> <dollar>
+Deposit more: Alice [Deposit more] <sum> <cond>
   Carol: Alice asks for your consent to deposit more.
 Deposit own bonds: Alice [Deposit own bonds] <sum> <cond>
   Carol: Alice asks for your consent to deposit own bonds.
-Deposit bond with the issuer: Alice [Deposit bond with the issuer] <sum> <cond> <dollar>
+Deposit bond with the issuer: Alice [Deposit bond with the issuer] <sum> <cond>
   Carol: Alice asks for your consent to deposit bond with the issuer.
-Deposit bond more: Alice [Deposit bond more] <sum> <cond> <dollar>
+Deposit bond more: Alice [Deposit bond more] <sum> <cond>
   Carol: Alice asks for your consent to deposit bond more.
 Accept: Alice [Accept] <limit>
 Accept by bond: Alice [Accept by bond] <limit>
-Pay accepted coins: Alice [Pay accepted coins] <dollar>
+Pay accepted coins: Alice [Pay accepted coins]
 Pay own accepted coins: Alice [Pay own accepted coins]
 Pay accepted coins to the issuer: Alice [Pay accepted coins to the issuer]

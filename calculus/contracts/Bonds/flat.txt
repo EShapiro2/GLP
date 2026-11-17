@@ -17,14 +17,14 @@ Notes:2 ■ Swap bonds: Alice and Bob may jointly no longer Alice holds Sum Caro
 Notes:3 ■ Pay: Alice and Bob may jointly no longer Alice holds Sum Carol-coins, Bob holds Sum Carol-coins and Bob knows Carol, provided Alice knows Bob. Possibly one: Alice=Carol, Bob=Carol.
 Notes:3+Coins:1 ■ Pay issuer: Alice may no longer Alice holds Sum Bob-coins and Bob holds Sum Bob-coins, provided Alice knows Bob.
 Notes:3 ■ Pay bond: Alice and Bob may jointly no longer Alice holds Sum Carol-bonds due Day, Bob holds Sum Carol-bonds due Day and Bob knows Carol, provided Alice knows Bob. Possibly one: Alice=Carol, Bob=Carol.
-Notes:4 ■ | Escrow.
-Notes:4 ■ Deposit: Alice and Carol may jointly no longer Alice holds Sum Dave-coins and Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, provided Alice knows Carol, Carol knows Alice and Alice knows Bob. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Deposit bond: Alice and Carol may jointly no longer Alice holds Sum Dave-bonds due Day and Carol holds Sum Dave-bonds due Day in escrow from Alice for Bob on Cond, provided Alice knows Carol, Carol knows Alice and Alice knows Bob. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Release: Carol and Bob may jointly no longer Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, Bob holds Sum Dave-coins and Bob knows Dave, provided Carol knows Bob and Bob knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Release bond: Carol and Bob may jointly no longer Carol holds Sum Dave-bonds due Day in escrow from Alice for Bob on Cond, Bob holds Sum Dave-bonds due Day and Bob knows Dave, provided Carol knows Bob and Bob knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Return: Carol and Alice may jointly no longer Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, Alice holds Sum Dave-coins and Alice knows Dave, provided Carol knows Alice and Alice knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Return bond: Carol and Alice may jointly no longer Carol holds Sum Dave-bonds due Day in escrow from Alice for Bob on Cond, Alice holds Sum Dave-bonds due Day and Alice knows Dave, provided Carol knows Alice and Alice knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
+Notes:4 ○ | Escrow.
+Notes:4 ○ Deposit: Alice and Carol may jointly no longer Alice holds Sum Dave-coins and Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, provided Alice knows Carol, Carol knows Alice and Alice knows Bob. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Deposit bond: Alice and Carol may jointly no longer Alice holds Sum Dave-bonds due Day and Carol holds Sum Dave-bonds due Day in escrow from Alice for Bob on Cond, provided Alice knows Carol, Carol knows Alice and Alice knows Bob. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Release: Carol and Bob may jointly no longer Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, Bob holds Sum Dave-coins and Bob knows Dave, provided Carol knows Bob and Bob knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Release bond: Carol and Bob may jointly no longer Carol holds Sum Dave-bonds due Day in escrow from Alice for Bob on Cond, Bob holds Sum Dave-bonds due Day and Bob knows Dave, provided Carol knows Bob and Bob knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Return: Carol and Alice may jointly no longer Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, Alice holds Sum Dave-coins and Alice knows Dave, provided Carol knows Alice and Alice knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Return bond: Carol and Alice may jointly no longer Carol holds Sum Dave-bonds due Day in escrow from Alice for Bob on Cond, Alice holds Sum Dave-bonds due Day and Alice knows Dave, provided Carol knows Alice and Alice knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ | Carol will release them only if Cond is met, and return them only if it fails.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 Coins:0 - | Carol is possibly Alice or Bob.
 Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
