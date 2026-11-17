@@ -106,7 +106,8 @@ Future<Map<String, Object?>> post(Map body) async {
   final id = _hex(3);
   final link = '$_site/api/feedback/verify?t=$token';
   final sent = await _mail(email, 'Confirm your feedback to the Grassroots Project',
-      'You, or someone who gave this address, wrote feedback on $_site.\n\n'
+      'You, or someone who gave this address, wrote feedback on $_site:\n\n'
+      '${_excerpt(text)}\n\n'
       'To post it, open this link within two days:\n\n$link\n\n'
       'It will then be a pull request in https://github.com/$_repo, signed "a visitor", within two hours; your address is not in it.  '
       'If you did not write it, ignore this mail and nothing is posted.\n\n'
@@ -115,6 +116,20 @@ Future<Map<String, Object?>> post(Map body) async {
   posts.add({'id': id, 'token': token, 'email': email, 'text': text, 'from': from, 'at': now.toIso8601String(), 'verified': false});
   _save(posts);
   return {'ok': true};
+}
+
+/// The feedback as the mail quotes it: its first 400 characters, each line
+/// set off by "> ", and "..." where it goes on (Udi, 2026-11-17, to Website
+/// #3: "add the content of the pull request to the mail, or at least its
+/// first line with ....").
+String _excerpt(String text) {
+  var cut = text;
+  if (text.length > 400) {
+    final head = text.substring(0, 400);
+    final sp = head.lastIndexOf(RegExp(r'\s'));
+    cut = '${(sp > 300 ? head.substring(0, sp) : head).trimRight()} ...';
+  }
+  return cut.split('\n').map((l) => '> $l').join('\n');
 }
 
 /// GET /api/feedback/verify?t=<token>: writes the post into the outbox, once,
