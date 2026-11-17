@@ -297,9 +297,6 @@ const STAGES = [
 
 /* ---------- help ---------- */
 const HELP = {
-  contract: ['What is a contract?', `<p>A few plain rules about what people may do with each other. Alice, Bob and Carol stand for any people.</p>
-    <p><b>■ Enforced</b>: the app makes it so; nobody can break it.<br><b>◆ Attested</b>: you state it is true, and sign it.<br><b>○ Undertaken</b>: a promise you make; the app cannot check it.</p>
-    <p>A contract's first line says how it builds on other contracts: it extends, restricts, relaxes or strengthens them, instantiates them, or composes them, as the Grassroots Contracts Calculus defines these relations.</p>`],
   hood: ['Under the hood', `<p>Nobody writes the app by hand. A chain of programs, the <i>cascade</i>, translates the English contract step by step into the code each person's device runs. Each layer is generated from the one above it.</p>`],
   acts: ['Speech-act schemas', `<p>Each rule becomes one or more <b>speech acts</b>: who takes part, what each must already have, and what each gains or loses.</p>
     <p><b>?</b> after a role: the act happens only if that person wants it. A role without it is affected without being asked.</p>
@@ -1012,7 +1009,7 @@ function page(c, hood){
       <div class="stat"><div class="k">By</div><div class="v">${projOf(c.owner) ? `<a href="#projects" data-proj="${esc(projOf(c.owner))}" title="Under Projects">${esc(c.owner)}</a>` : esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
     </div>
     ${stripHtml(c)}
-    <div class="sec"><div class="sh"><h2>The contract${Q('contract')}</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
+    <div class="sec"><div class="sh"><h2>The contract</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
       ${c.clauses.length || c.preamble ? `<div class="card rules" id="cbox">${boxHtml(c, false)}</div>` : `<p class="small">No text in force.</p>`}
       ${calcHtml(c)}
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
@@ -1114,7 +1111,7 @@ function hoodHtml(c, schemas){
   $('#hood').innerHTML = `
     <div class="sh"><h2>Under the hood${Q('hood')}</h2><span>from the English text to the running app</span></div>
     <div class="stack">
-    <div class="card layer">${n(1)}<h3>The Grassroots Contract${Q('contract')}</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.map(NM).join(' and ') : ''}, above.</p></div>
+    <div class="card layer">${n(1)}<h3>The Grassroots Contract</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.map(NM).join(' and ') : ''}, above.</p></div>
     <div class="card layer">${n(2)}<h3>Speech-Act Schemas${Q('acts')}</h3>
       <p class="sum">${own.length} of its own${inh.length ? `, and ${inh.length} from ${[...new Set(inh.map(s => NM(s.from)))].join(', ')}` : ''}.</p>
       ${own.map((s, i) => schemaHtml(s, i < 2)).join('')}
