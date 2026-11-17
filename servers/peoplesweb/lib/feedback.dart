@@ -31,6 +31,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:logging/logging.dart';
 import 'package:mailer/mailer.dart' as m;
 import 'package:mailer/smtp_server.dart';
 
@@ -194,12 +195,27 @@ Future<bool> _mail(String to, String subject, String body) async {
     ..recipients.add(to)
     ..subject = subject
     ..text = body;
+  // The relay's answers, kept for the log where the mail is refused: the
+  // mailer logs each at FINE under 'Connection', and the commands, which
+  // carry the login, with '> ' before them, which are left out.
+  final answers = <String>[];
+  Logger.root.level = Level.FINE;
+  final sub = Logger.root.onRecord.listen((r) {
+    if (r.loggerName == 'Connection' && r.level == Level.FINE && !r.message.startsWith('> ')) {
+      answers.add(r.message.trim());
+      if (answers.length > 6) answers.removeAt(0);
+    }
+  });
   try {
     await m.send(msg, server);
     return true;
   } catch (e) {
-    stderr.writeln('feedback: mail: $e');
+    // One line, so that the journal holds the whole of it under 'feedback: mail:'.
+    final said = '$e; the relay answered: ${answers.join(' | ')}'.replaceAll(RegExp(r'\s*\n\s*'), ' / ');
+    stderr.writeln('feedback: mail: $said');
     return false;
+  } finally {
+    await sub.cancel();
   }
 }
 
