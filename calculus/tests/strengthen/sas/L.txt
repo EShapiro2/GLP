@@ -1,8 +1,0 @@
-L: Lists
-L extends and strengthens K.
-Vocabulary: x lists y = lists(x,y); x has the tag t of y = tag(x,t,y).
-After x tags y with t: x has the tag t of y.
-L:0 - | Alice and Bob are persons, Tag a tag.
-L:1 ■ Meet: K:1 + lists(Alice,Bob) <-.
-L:1 ■ Part: K:2 + ~lists(Alice,Bob), ~tag(Alice,_,Bob) <-.
-L:2 ■ Tag: tag(Alice,Tag,Bob) <- lists(Alice,Bob) guarded by Alice.

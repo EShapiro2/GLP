@@ -9,8 +9,8 @@
 #   <source>   GSG_sglp.glp, GSG12_sglp.glp, GSGV1_sglp.glp or GSGV3_sglp.glp, beside this
 #              script; it is recorded as GSG_sglp.glp, the name cva/record.sh gives the
 #              owner's source;
-#   <cascade>  a tag cascade/GSG/<date>, or a directory holding platform.glp and
-#              interface.glp; the newest tag cascade/GSG/* where none is given;
+#   <cascade>  a tag cascade/Friendship/<date>, or a directory holding platform.glp and
+#              interface.glp; the newest tag cascade/Friendship/* where none is given;
 #   after --, options passed to cva/record.sh, such as --seeds 1,7.
 #
 # The record holds what cva/record.sh writes: GSG_sglp.glp as run, the printed
@@ -24,7 +24,7 @@ DEST=$1; SRC=$2; shift 2
 CAS=""
 if [ $# -gt 0 ] && [ "$1" != "--" ]; then CAS=$1; shift; fi
 [ $# -gt 0 ] && [ "$1" = "--" ] && shift
-CAS=${CAS:-$(git -C "$GLP_DIR" tag -l 'cascade/GSG/*' --sort=-creatordate | head -1)}
+CAS=${CAS:-$(git -C "$GLP_DIR" tag -l 'cascade/Friendship/*' --sort=-creatordate | head -1)}
 [ -n "$CAS" ] || { echo "record.sh: no cascade record of GSG" >&2; exit 2; }
 [ -f "$HERE/$SRC" ] || { echo "record.sh: no source $HERE/$SRC" >&2; exit 2; }
 [ ! -e "$DEST" ] || { echo "record.sh: $DEST exists" >&2; exit 2; }

@@ -1,3 +1,0 @@
-OB: Organisation with a board
-OB instantiates O with board bylaws; role(x,z,Director) for voter(x,z,m); vote(z,>=Votes,m), product(Double,Votes,2), has_role(z,<Double,Director) for decided(z,m), and extends it.
-OB:0 - | Orga is an organisation.

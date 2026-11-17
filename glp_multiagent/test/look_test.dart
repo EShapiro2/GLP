@@ -49,9 +49,16 @@ void main() {
   test('a contract with no Look line takes about.json\'s icon and family', () {
     final about = jsonDecode(File('${Directory(programsDir()).parent.path}/servers/peoplesweb/web/about.json')
         .readAsStringSync()) as Map<String, dynamic>;
-    final gkk = (about['GKK'] as List).cast<String>();
-    expect(looks.of('gkk').icon, gkk[0]);
-    expect(looks.of('GKK').family, gkk[1]);
+    // about.json is keyed by a contract's file name (calculus/NAMES.txt), as Knowledge and Community-Bank; a look is found by the name, the file name or the atom.
+    final knowledge = (about['Knowledge'] as List).cast<String>();
+    expect(looks.of('knowledge').icon, knowledge[0]);
+    expect(looks.of('Knowledge').family, knowledge[1]);
+    expect(about.containsKey('Provenance-Groups'), isTrue);
+    for (final n in ['Provenance Groups', 'Provenance-Groups', 'provenance_groups']) {
+      expect(looks.of(n).icon, isNot(Looks.otherIcon), reason: n);
+      expect(looks.of(n).icon, looks.of('Provenance-Groups').icon, reason: n);
+    }
+    expect(looks.of(superappContract).icon, isNot(Looks.otherIcon));
   });
 
   test('the Look line opens the interface pragmas, under either heading, and wins over about.json', () {
@@ -66,6 +73,17 @@ void main() {
     expect(l.of('Y').icon, 'y', reason: 'a Look line not first is none');
     expect(l.of('Z').family, Looks.otherFamily, reason: 'a text with no % Owner: line is no contract');
     expect(Looks.contractLook(_contract('W', ['Look: w, social'], heading: 'Interface pragmas'))!.name, 'W');
+  });
+
+  test('a contract whose title line is its name is found by its name, its file name and its atom', () {
+    final text = ['% Owner: GO, by Udi\'s ruling', 'Community Bank', 'Alice and Bob are persons.',
+      '1. ■ Something.  Alice may do it.', 'Interface pragmas', 'Look: 🏦, os'].join('\n');
+    expect(Looks.contractLook(text)!.name, 'COMMUNITY BANK');
+    final l = Looks.parse(_families, contractTexts: [text]);
+    for (final n in ['Community Bank', 'Community-Bank', 'community_bank']) {
+      expect(l.of(n).icon, '🏦', reason: n);
+      expect(l.of(n).family, 'os', reason: n);
+    }
   });
 
   test('a contract with no look, or of a family the file does not name, is of the family other', () {
@@ -106,7 +124,7 @@ void main() {
   });
 
   test('the theme\'s primary colour is the family\'s dark colour, its buttons filled with it', () {
-    final look = looks.of('GSG');
+    final look = looks.of('Friendship');
     final theme = look.theme(fontFamily: 'Roboto');
     expect(theme.colorScheme.primary, look.colours.to);
     expect(theme.elevatedButtonTheme.style!.backgroundColor!.resolve({}), look.colours.to);

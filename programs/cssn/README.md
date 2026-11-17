@@ -1,14 +1,14 @@
 # CSSN's app
 
-The app of CSSN, the child-safe social network (CSSN, Section 4), as a mini-app of the Grassroots Super-App (GSA's paper), compiled down the abstraction cascade from its contract: its schemas, `CSSN.glp`, and its Interface pragmas, the lines after `Interface pragmas` in `CSSN.txt` and in the `NAME.txt` of each contract it is written from, GSNW (`GSNW.txt`, beside it) and GSN, GnW, GSG and GKK (`programs/gsc`).  Every word the app shows is the contract's (`organisation/claude.md`, "Sessions": "THE CONTRACT IS THE SOURCE OF ALL TRUTH RELATED TO THE APP"; vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows").
+The app of CSSN, the child-safe social network (CSSN, Section 4), as a mini-app of the Grassroots Super-App (GSA's paper), compiled down the abstraction cascade from its contract: its schemas, `Children.glp`, and its Interface pragmas, the lines after `Interface pragmas` in `Children.txt` and in the `NAME.txt` of each contract it is written from, Warded Groups (`Warded-Groups.txt`, beside it) and Groups, Guardians, Friendship and Knowledge (`programs/gsc`).  The contracts' names are `calculus/NAMES.txt`'s.  Every word the app shows is the contract's (`organisation/claude.md`, "Sessions": "THE CONTRACT IS THE SOURCE OF ALL TRUTH RELATED TO THE APP"; vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows").
 
 ## The contract
 
-`CSSN.txt` and `GSNW.txt` are adopted from the Calculus (`calculus/README.md`, "Adopting a contract"): each holds the contract, its Logic pragmas, both the Calculus's, and CSSN's Interface pragmas, the tab `Children: those Alice is a parent of.` and, for each clause whose acts the contract names, a line with a button for each act, its fields, and a question for each other person asked (vGLP, Section 5.4); `CSSN.txt` ends with its Implementation pragma, `Introduction: knows.`  `CSSN.glp` and `GSNW.glp` are the full schemas as `calculus/tools/adopt.py` prints them from the Logic pragmas, never written by hand; `adopt.py --check` holds them, and `cascade/CSSN/` and `cascade/GSNW/`, to what the tools print.
+`Children.txt` and `Warded-Groups.txt` are adopted from the Calculus (`calculus/README.md`, "Adopting a contract"): each holds the contract, its Logic pragmas, both the Calculus's, and CSSN's Interface pragmas, the tab `Children: those Alice is a parent of.` and, for each clause whose acts the contract names, a line with a button for each act, its fields, and a question for each other person asked (vGLP, Section 5.4); `Children.txt` ends with its Implementation pragma, `Introduction: knows.`  `Children.glp` and `Warded-Groups.glp` are the full schemas as `calculus/tools/adopt.py` prints them from the Logic pragmas, never written by hand; `adopt.py --check` holds them, and `cascade/Children/` and `cascade/Warded-Groups/`, to what the tools print.
 
 ## The cascade
 
-1. The schemas, `CSSN.glp`; GSC's checker's verdict `syntactically_grassroots_with_wards` (`programs/gsc`).
+1. The schemas, `Children.glp`; GSC's checker's verdict `syntactically_grassroots_with_wards` (`programs/gsc`).
 2. The canonical CVA platform, `platform.vglp`, as vGLP's compiler prints it from the schemas, the verdict, the introduction predicate `knows` and the pragmas: `bash programs/cssn/compile.sh` prints it, `--check` re-prints it and compares.
 3. GLP: the canonical compilation compiles `platform.vglp` when the directory loads.
 4. The mini-app: `miniapp.glp` wraps the compiled agent and its dispatcher in the root's entry template `miniapp/3`.
@@ -19,8 +19,8 @@ The platform carries the two widget declarations the compiler prints, `Approval 
 
 | File | What it holds |
 |---|---|
-| `CSSN.txt`, `CSSN.glp`, `GSNW.txt`, `GSNW.glp` | the two contracts, adopted from the Calculus, and their schemas as printed |
-| `platform.vglp` | the canonical CVA platform of CSSN, as printed |
+| `Children.txt`, `Children.glp`, `Warded-Groups.txt`, `Warded-Groups.glp` | the two contracts, adopted from the Calculus, and their schemas as printed |
+| `platform.vglp` | the canonical CVA platform of Children, as printed |
 | `compile.sh` | prints `platform.vglp` from the contract, or checks it |
 | `miniapp.glp` | `miniapp/3`, the same file as `../apps/gsg/miniapp.glp` |
 | `person.glp` | the scripted person, by role, with the keys the person knows, by which its script names its peers: the village's seven, and `fig_alice` to `fig_dave` of the app's scenario; `village_person/6`, a parent looking also at their children's phones |

@@ -20,6 +20,8 @@ A line: NAME, the redundant act (its label and name), "by" the act that makes it
 conditions, persons.  Pairs equal both ways are listed apart.  Standard library only.
 """
 import os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import gcsas, toglp
@@ -172,8 +174,8 @@ def redundant_pairs(n, w, acts):
 
 
 def main():
-    w = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
-    names = sys.argv[1:] or sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'sasx')) if f.endswith('.txt'))
+    w = gcsas.World(NM.names_in(os.path.join(ROOT, 'gr')))
+    names = sys.argv[1:] or NM.names_in(os.path.join(ROOT, 'sasx'))
     tot, totb, counts = 0, 0, []
     for n in names:
         red, both = survey(n, w)

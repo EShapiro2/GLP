@@ -20,8 +20,10 @@ contract the entry gives
 Standard library only.
 """
 import os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 
-LINE = re.compile(r"^((?:[A-Za-z-]+:\d+)(?:\+[A-Za-z-]+:\d+)*) ([■◆○-]) (.*)$")
+LINE = re.compile(r"^((?:%s)(?:\+%s)*) ([■◆○-]) (.*)$" % (NM.REF, NM.REF))      # a label: names of one or two words
 DERIVED = re.compile(r"^(?:.+ for .+|Vote of .+)$")
 
 
@@ -49,7 +51,7 @@ def text(path):
 
 
 def own_of(n, labels):
-    return any(x.split(':')[0] == n for x in labels)
+    return any(NM.of_glp(x.split(':')[0]) == n for x in labels)      # a label of an earlier publication may have the name on main
 
 
 def relations_changed(po, pn):
@@ -84,9 +86,14 @@ def compare(n, old, new):
     return added, gone, renamed, changed
 
 
+def dir_of(base, n):
+    """The directory of contract n in a publication: its file name, or in an earlier publication its name on main."""
+    return next((d for d in (os.listdir(base) if os.path.isdir(base) else []) if NM.of_glp(d) == n), NM.file_of(n))
+
+
 def entry(n, od, nd):
     """The lines of contract n's entry, and its case for the summary."""
-    po, pn = os.path.join(od, n), os.path.join(nd, n)
+    po, pn = os.path.join(od, dir_of(od, n)), os.path.join(nd, dir_of(nd, n))
     if not os.path.isdir(po):
         return ['%s: new in this publication' % n], 'new'
     if not os.path.isdir(pn):
@@ -99,7 +106,7 @@ def entry(n, od, nd):
     out = []
     o_add, o_gone, o_ren, o_chg = compare(n, own_o, own_n)
     i_add, i_gone, i_ren, i_chg = compare(n, inh_o, inh_n)
-    src = lambda a: a[2][0].split(':')[0]
+    src = lambda a: NM.of_glp(a[2][0].split(':')[0])
     for a in o_add: out.append('  own act added: %s' % a[0])
     for a in o_gone: out.append('  own act gone: %s' % a[0])
     for b, a in o_ren: out.append('  own act renamed: %s, now %s' % (b[0], a[0]))
@@ -130,8 +137,8 @@ def entry(n, od, nd):
 
 
 def changes(od, nd):
-    names = sorted({d for d in os.listdir(od) if os.path.isdir(os.path.join(od, d, '')) and os.path.exists(os.path.join(od, d, 'full-schemas.txt'))} |
-                   {d for d in os.listdir(nd) if os.path.isdir(os.path.join(nd, d, '')) and os.path.exists(os.path.join(nd, d, 'full-schemas.txt'))})
+    names = sorted({NM.of_glp(d) for d in os.listdir(od) if os.path.isdir(os.path.join(od, d, '')) and os.path.exists(os.path.join(od, d, 'full-schemas.txt'))} |
+                   {NM.of_glp(d) for d in os.listdir(nd) if os.path.isdir(os.path.join(nd, d, '')) and os.path.exists(os.path.join(nd, d, 'full-schemas.txt'))})
     lines, cases, owned = ['Changes from %s to %s, for an owner who adopted the first.' % (od, nd), ''], {}, []
     for n in names:
         e, c = entry(n, od, nd)

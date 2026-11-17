@@ -1,4 +1,0 @@
-D: Greetings decided by friends
-D restricts P.
-D:0 - | Alice and Bob are persons.
-D:1 ■ Greet: P:1, decided by friends(Bob) in place of deciders(Bob) <-.

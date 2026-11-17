@@ -1,2 +1,0 @@
-GNM extends GNO and GDO: holds
-GNM restricts Rec: holds

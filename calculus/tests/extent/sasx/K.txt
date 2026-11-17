@@ -1,5 +1,0 @@
-K: Wildcard extent (expanded schemas)
-K:0 - | Alice, Bob and Carol are persons, Grupo a group.
-K:1 ■ Guard: guardian(Alice,Carol), has_guardian(Carol,Alice) <- guarded by Alice, Carol.
-K:2 ■ Join: member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) <- guarded by Bob, Carol.
-K:3 ■ Retire: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~member(Carol,_,_), ~listed(_,Carol,_) <- guardian(Alice,Carol) guarded by Alice.

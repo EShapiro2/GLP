@@ -1,9 +1,0 @@
-GDO: Grassroots Directed Overlay
-GDO extends GSG.
-Vocabulary: x points to y = points_to(x,y).
-After x points to y, which requires x does not point to y: x points to y.
-After x ceases pointing to y: no longer x points to y.
-GDO:0 - | Alice, Bob and Carol are persons.
-GDO:1 ■ Point friend: points_to(Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), ~points_to(Alice,Bob) guarded by Alice.
-GDO:2 ■ Point transitive: points_to(Alice,Carol) <- knows(Alice,Carol), points_to(Alice,Bob), points_to(Bob,Carol), ~points_to(Alice,Carol) guarded by Alice.
-GDO:3 ■ Unpoint: ~points_to(Alice,Bob) <- points_to(Alice,Bob) guarded by Alice.

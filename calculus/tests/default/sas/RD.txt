@@ -1,3 +1,0 @@
-RD: Ruled at its default
-RD extends R.
-RD:0 - | Carol is a ward.

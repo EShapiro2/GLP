@@ -1,3 +1,0 @@
-R: Ruled
-Of R: Alice is a person, Carol a ward. Default: any guardian of z for those who decide for z.
-R:1. ■ Retire: Any guardian of Carol may retire Carol.

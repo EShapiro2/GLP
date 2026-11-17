@@ -21,7 +21,7 @@ BEGIN {
 cat <<'H'
 %% GSG12_sglp.glp --- the sGLP source of the larger simulation of GSG (programs/sglp/gsg), in the
 %% term form the transformation reads, for the canonical platform of GSG as recorded,
-%% cascade/GSG/platform.glp, and twelve agents, keyed p01 to p12.  Printed by gen12.sh.
+%% cascade/Friendship/platform.glp, and twelve agents, keyed p01 to p12.  Printed by gen12.sh.
 %%
 %% Two circles of six, p01 Alice to p06 Frank and p07 Grace to p12 Leo, joined by one
 %% acquaintance, Frank's and Grace's.  Each person meets its two neighbours in its circle

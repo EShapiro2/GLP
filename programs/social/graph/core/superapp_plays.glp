@@ -505,7 +505,7 @@ play_forged_cert(Me, Installed?) :-
 %% Finding 1, creator_cert(Src, Acts, Verdict), signed by the person over the
 %% source identity, whose verdict is the one Kind names, each as the checker
 %% prints it (programs/gsc/check.glp): with_wards,
-%% syntactically_grassroots_with_wards, cascade/GAI's verdict; wards,
+%% syntactically_grassroots_with_wards, cascade/Agents's verdict; wards,
 %% grassroots_with_wards, of the same terms; not_grassroots, the verdict on a
 %% contract with no introductory act; malformed, the verdict on a contract with
 %% a schema not formed as a schema is; and word, the word grassroots, which the

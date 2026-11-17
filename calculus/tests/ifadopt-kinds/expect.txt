@@ -1,19 +1,19 @@
-GKK        commute yes; return yes; recover same
+Knowledge  commute yes; return yes; recover same
 Notes      commute yes; return yes; recover same
 Coins      commute yes; return yes; recover same
 Bonds      commute yes; return yes; recover same
-Joint      commute yes; return yes; recover same
+Joint Accounts commute yes; return yes; recover same
 5 contracts, 0 with a fault
 --- sasx/Bonds.txt
 Bonds (expanded schemas)
-GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-GKK:0 - | Alice, Bob and Carol are persons.
-GKK:0 - | Reflexive: x knows y.
-GKK:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
-GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
-GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: coin(Alice,Alice,*Sum) <- guarded by Alice.
@@ -46,14 +46,14 @@ Bonds:2 ■ Redeem bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~coin(Bob,Caro
 Bonds:2 ■ Redeem bond against bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~bond(Bob,Carol,Term), bond(Alice,Carol,Term), knows(Alice,Carol) <- knows(Alice,Bob), today(Bob,Today), le(Day,Today), bond(Alice,Bob,Day), bond(Bob,Carol,Term) guarded by Alice possibly Alice=Carol, Bob=Carol.
 --- sasx/Coins.txt
 Coins (expanded schemas)
-GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-GKK:0 - | Alice, Bob and Carol are persons.
-GKK:0 - | Reflexive: x knows y.
-GKK:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
-GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
-GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: coin(Alice,Alice,*Sum) <- guarded by Alice.
@@ -71,26 +71,16 @@ Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Coins:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
---- sasx/GKK.txt
-GKK: Grassroots Keys and Knowledge (expanded schemas)
-GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-GKK:0 - | Alice, Bob and Carol are persons.
-GKK:0 - | Reflexive: x knows y.
-GKK:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
-GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
-GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
---- sasx/Joint.txt
-Joint: Joint Accounts (expanded schemas)
-GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-GKK:0 - | Alice, Bob and Carol are persons.
-GKK:0 - | Reflexive: x knows y.
-GKK:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
-GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
-GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+--- sasx/Joint-Accounts.txt
+Joint Accounts (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: coin(Alice,Alice,*Sum) <- guarded by Alice.
@@ -108,22 +98,32 @@ Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Coins:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
-Joint:0 - | Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
-Joint:1 ■ Open account: account(Alice,Acct), joint(Alice,Acct,Bob), joint(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~account(Alice,Acct) guarded by Alice, Bob.
-Joint:2 ■ Deposit: ~coin(Alice,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Bob,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Alice,Carol,*Sum) guarded by Alice possibly Alice=Carol, Bob=Carol.
-Joint:2 ■ Partner deposit: ~coin(Bob,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Alice,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Bob,Carol,*Sum) guarded by Bob possibly Alice=Carol, Bob=Carol.
-Joint:3 ■ Withdraw: ~joint_coin(Alice,Carol,Acct,Bob,*Sum), coin(Alice,Carol,*Sum) <- joint_coin(Alice,Carol,Acct,Bob,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
-Joint:3 ■ Partner withdraw: ~joint_coin(Alice,Carol,Acct,Bob,*Sum), coin(Bob,Carol,*Sum) <- joint_coin(Alice,Carol,Acct,Bob,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+Joint Accounts:0 - | Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
+Joint Accounts:1 ■ Open account: account(Alice,Acct), joint(Alice,Acct,Bob), joint(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~account(Alice,Acct) guarded by Alice, Bob.
+Joint Accounts:2 ■ Deposit: ~coin(Alice,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Bob,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Alice,Carol,*Sum) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Joint Accounts:2 ■ Partner deposit: ~coin(Bob,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Alice,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Bob,Carol,*Sum) guarded by Bob possibly Alice=Carol, Bob=Carol.
+Joint Accounts:3 ■ Withdraw: ~joint_coin(Alice,Carol,Acct,Bob,*Sum), coin(Alice,Carol,*Sum) <- joint_coin(Alice,Carol,Acct,Bob,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+Joint Accounts:3 ■ Partner withdraw: ~joint_coin(Alice,Carol,Acct,Bob,*Sum), coin(Bob,Carol,*Sum) <- joint_coin(Alice,Carol,Acct,Bob,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+--- sasx/Knowledge.txt
+Knowledge (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 --- sasx/Notes.txt
 Notes (expanded schemas)
-GKK:0 - | An *identity* is a unique key pair.
-GKK:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-GKK:0 - | Alice, Bob and Carol are persons.
-GKK:0 - | Reflexive: x knows y.
-GKK:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
-GKK:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
-GKK:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: note(Alice,Alice,*Sum) <- guarded by Alice.
@@ -143,9 +143,9 @@ A *note* includes its issuer's public key, is signed by their private key, and g
 A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
 Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are parties. Alice and Bob are parties.
-GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Notes:1, Bonds:1. ■ Issue: Alice may issue Alice-notes, for bonds, with maturity later than the current date.
 Notes:2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
 Notes:3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
@@ -161,9 +161,9 @@ An *identity* is a unique key pair.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are parties. Alice and Bob are parties.
-GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Notes:1. ■ Issue: Alice may issue Alice-notes.
 Notes:2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
 Notes:3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
@@ -171,24 +171,16 @@ Notes:4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a c
 Coins:1. ■ Pay issuer: Notes:3, without the consent of Bob, if the coins are Bob-coins.
 Coins:2. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
 Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
---- exp/GKK.txt
+--- exp/Joint-Accounts.txt
 % Written by tools/expand.py from rev/; do not edit.
-GKK: Grassroots Keys and Knowledge
-An *identity* is a unique key pair.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
---- exp/Joint.txt
-% Written by tools/expand.py from rev/; do not edit.
-Joint: Joint Accounts
+Joint Accounts
 An *identity* is a unique key pair.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are parties. Alice and Bob are parties. Alice and Bob are persons.
-GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Notes:1. ■ Issue: Alice may issue Alice-notes.
 Notes:2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
 Notes:3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
@@ -196,31 +188,39 @@ Notes:4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a c
 Coins:1. ■ Pay issuer: Notes:3, without the consent of Bob, if the coins are Bob-coins.
 Coins:2. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
 Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
-Joint:1. ■ Open account: Alice and Bob, who know each other, may jointly open a joint account, under a new name of Alice's.
-Joint:2. ■ Deposit: Either of them may move coins they hold into their joint account.
-Joint:3. ■ Withdraw: Alice and Bob may jointly move coins from their joint account to either of them.
+Joint Accounts:1. ■ Open account: Alice and Bob, who know each other, may jointly open a joint account, under a new name of Alice's.
+Joint Accounts:2. ■ Deposit: Either of them may move coins they hold into their joint account.
+Joint Accounts:3. ■ Withdraw: Alice and Bob may jointly move coins from their joint account to either of them.
+--- exp/Knowledge.txt
+% Written by tools/expand.py from rev/; do not edit.
+Knowledge
+An *identity* is a unique key pair.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 --- exp/Notes.txt
 % Written by tools/expand.py from rev/; do not edit.
 Notes
 An *identity* is a unique key pair.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are parties.
-GKK:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Notes:1. ■ Issue: Alice may issue Alice-notes.
 Notes:2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
 Notes:3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
 Notes:4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
 --- gx/Bonds.txt
 Bonds
-Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Of Bonds: A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date. Alice, Bob and Carol are parties, Day and Term maturity dates, Today a date; Carol is possibly Alice or Bob. Kind of note: bond, y-bonds due Day for y-notes.
-GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Notes:1. ■ Issue: Alice may issue Sum Alice-coins.
 Notes:1, Bonds:1. ■ Issue bond: Alice may issue Sum Alice-bonds due Day, provided the current date is Today and Day is more than Today.
 Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other. Swap coin for bond: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-bonds due Day, provided Alice and Bob know each other. Swap bonds: Alice and Bob may jointly swap Sum Carol-bonds due Day for Total Dave-bonds due Term, provided Alice and Bob know each other.
@@ -233,12 +233,12 @@ Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept t
 Bonds:2. ■ Redeem coin against bond: Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob. Redeem bond: Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today. Redeem bond against bond: Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.
 --- gx/Coins.txt
 Coins
-Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
-GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Notes:1. ■ Issue: Alice may issue Sum Alice-coins.
 Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
 Notes:3. ■ Pay: Alice may pay Bob Sum Carol-coins, with the consent of Bob, provided Alice knows Bob.
@@ -246,21 +246,15 @@ Notes:3, Coins:1. ■ Pay issuer: Alice may pay the issuer Bob Sum Bob-coins, pr
 Notes:4. ■ Escrow. Deposit: Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
 Coins:2. ■ Redeem: Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
 Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
---- gx/GKK.txt
-GKK: Grassroots Keys and Knowledge
-Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
---- gx/Joint.txt
-Joint: Joint Accounts
-Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+--- gx/Joint-Accounts.txt
+Joint Accounts
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
-Of Joint: Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
-GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Of Joint Accounts: Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Notes:1. ■ Issue: Alice may issue Sum Alice-coins.
 Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
 Notes:3. ■ Pay: Alice may pay Bob Sum Carol-coins, with the consent of Bob, provided Alice knows Bob.
@@ -268,16 +262,22 @@ Notes:3, Coins:1. ■ Pay issuer: Alice may pay the issuer Bob Sum Bob-coins, pr
 Notes:4. ■ Escrow. Deposit coin: Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
 Coins:2. ■ Redeem: Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
 Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
-Joint:1. ■ Open account: Alice and Bob may jointly open the joint account Acct under a new name of Alice's, provided Alice and Bob know each other.
-Joint:2. ■ Deposit: Alice may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct. Partner deposit: Bob may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct.
-Joint:3. ■ Withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Alice. Partner withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Bob.
+Joint Accounts:1. ■ Open account: Alice and Bob may jointly open the joint account Acct under a new name of Alice's, provided Alice and Bob know each other.
+Joint Accounts:2. ■ Deposit: Alice may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct. Partner deposit: Bob may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct.
+Joint Accounts:3. ■ Withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Alice. Partner withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Bob.
+--- gx/Knowledge.txt
+Knowledge
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 --- gx/Notes.txt
 Notes
-Of GKK: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
 Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
-GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Notes:1. ■ Issue: Alice may issue Sum Alice-notes.
 Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-notes for Total Dave-notes, provided Alice and Bob know each other.
 Notes:3. ■ Pay: Alice may pay Bob Sum Carol-notes, with the consent of Bob, provided Alice knows Bob.
@@ -403,26 +403,8 @@ Escrow: Alice [Deposit]
   Bob: Carol asks for your consent to release.
   Carol [Return]
   Alice: Carol asks for your consent to return.
---- interface GKK
-GKK: Grassroots Keys and Knowledge
-1. ○ Establish.  Alice may establish an identity once.
-2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
-3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-Pragmas
-Establish: Alice [Establish]
-Acquaint: Alice [Acquaint]
-  Bob: Alice asks for your consent to acquaint.
-Introduce: Alice [Introduce]
-  Bob: Alice asks for your consent to introduce.
---- interface-adopted GKK
-Interface pragmas
-Establish: Alice [Establish]
-Acquaint: Alice [Acquaint]
-  Bob: Alice asks for your consent to acquaint.
-Introduce: Alice [Introduce]
-  Bob: Alice asks for your consent to introduce.
---- interface Joint
-Joint: Joint Accounts
+--- interface Joint-Accounts
+Joint Accounts
 1. ○ Establish.  Alice may establish an identity once.
 2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
 3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -466,7 +448,7 @@ Withdraw: Alice [Withdraw]
   Bob: Alice asks for your consent to withdraw.
 Partner withdraw: Alice [Partner withdraw]
   Bob: Alice asks for your consent to partner withdraw.
---- interface-adopted Joint
+--- interface-adopted Joint-Accounts
 Interface pragmas
 Open account: Alice [Open account]
   Bob: Alice asks for your consent to open account.
@@ -478,6 +460,24 @@ Withdraw: Alice [Withdraw]
   Bob: Alice asks for your consent to partner withdraw.
 Escrow: Alice [Deposit coin]
   Carol: Alice asks for your consent to deposit coin.
+--- interface Knowledge
+Knowledge
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+--- interface-adopted Knowledge
+Interface pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint]
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
 --- interface Notes
 Notes
 1. ○ Establish.  Alice may establish an identity once.

@@ -1,1 +1,0 @@
-GAN extends GNO and GDO: holds

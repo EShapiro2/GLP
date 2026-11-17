@@ -1,3 +1,0 @@
-OD: Organisation at its defaults
-OD extends O.
-OD:0 - | Orga is an organisation.

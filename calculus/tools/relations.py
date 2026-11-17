@@ -65,6 +65,8 @@ not read); the pairs of names possibly one, and 'taken for'.
 Standard library only.
 """
 import json, os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 from collections import Counter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -92,7 +94,7 @@ def split_top(s):
     return out
 
 
-LINE = re.compile(r'^((?:[A-Za-z0-9-]+:\d+)(?:\+[A-Za-z0-9-]+:\d+)*) ([■◆○-]) (.*)$')
+LINE = re.compile(r'^((?:%s)(?:\+%s)*) ([■◆○-]) (.*)$' % (NM.REF, NM.REF))      # a label: names of one or two words (tools/names.py)
 
 
 _cache = {}
@@ -119,20 +121,20 @@ def path(n, what):
     NAME/contract.txt), whose second line is the first line; 'schemas' its expanded schemas (SCHEMAS/NAME.txt, or
     NAME/full-schemas.txt)."""
     if not published():
-        keep = os.path.join(ROOT, 'sasx-all', n + '.txt')      # the untakable acts kept (gcsas.py): a first line is judged on the acts before they are left out
+        keep = os.path.join(ROOT, 'sasx-all', NM.file_of(n) + '.txt')      # the untakable acts kept (gcsas.py): a first line is judged on the acts before they are left out
         if what == 'schemas' and SCHEMAS == 'sasx' and os.path.exists(keep):
             return keep
-        return os.path.join(ROOT, 'gr' if what == 'first' else SCHEMAS, n + '.txt')
+        return os.path.join(ROOT, 'gr' if what == 'first' else SCHEMAS, NM.file_of(n) + '.txt')
     if what == 'schemas':
-        return os.path.join(ROOT, n, 'full-schemas.txt')
-    p = os.path.join(ROOT, n, 'logic-pragmas.txt')
-    return p if os.path.exists(p) else os.path.join(ROOT, n, 'contract.txt')
+        return os.path.join(ROOT, NM.file_of(n), 'full-schemas.txt')
+    p = os.path.join(ROOT, NM.file_of(n), 'logic-pragmas.txt')
+    return p if os.path.exists(p) else os.path.join(ROOT, NM.file_of(n), 'contract.txt')
 
 
 def contracts():
     if published():
-        return sorted(d for d in os.listdir(ROOT) if os.path.exists(os.path.join(ROOT, d, 'full-schemas.txt')))
-    return sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-'))
+        return sorted(NM.name_of(d) for d in os.listdir(ROOT) if os.path.exists(os.path.join(ROOT, d, 'full-schemas.txt')))
+    return NM.names_in(os.path.join(ROOT, 'gr'))
 
 
 def _schemas(n, d):
@@ -440,11 +442,11 @@ def overridden(bases, n, both=False):
             for c in contracts():
                 p = path(c, 'first')            # NAME/logic-pragmas.txt, or NAME/contract.txt where there is none
                 if os.path.exists(p):
-                    shutil.copyfile(p, os.path.join(tmp, 'gr', c + '.txt'))
+                    shutil.copyfile(p, os.path.join(tmp, 'gr', NM.file_of(c) + '.txt'))
         saved = gcsas.ROOT
         gcsas.ROOT = tmp or ROOT
         try:
-            _world['w'] = gcsas.World(sorted(f[:-4] for f in os.listdir(os.path.join(gcsas.ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES-')))
+            _world['w'] = gcsas.World(NM.names_in(os.path.join(gcsas.ROOT, 'gr')))
             _world['root'] = gcsas.ROOT
         finally:
             gcsas.ROOT = saved

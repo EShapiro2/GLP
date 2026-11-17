@@ -1,5 +1,5 @@
 FGT: Forgetting
-FGT extends GKK.
+FGT extends Knowledge.
 Alice is a person.
 1. ■ Forget: Alice may forget everyone, provided Alice knows someone.
 Logic pragmas.

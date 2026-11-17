@@ -1,0 +1,4 @@
+Provenance Groups instantiates Groups: holds
+Provenance Groups composes it (Groups) with Agents: holds
+Provenance Groups restricts it (Groups and Agents): holds
+Provenance Groups extends it (Groups and Agents): holds

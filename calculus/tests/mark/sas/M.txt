@@ -1,7 +1,0 @@
-M: Possibly one, marked
-Vocabulary: x is a founder of c = founder(x,c); y is greeted by x = greeted(y,x).
-After x and y found c: x is a founder of c and y is a founder of c.
-After x greets y: y is greeted by x.
-M:0 - | Alice and Bob are persons, Club a club, Bob possibly Alice.
-M:1 ■ Found: founder(Alice,Club), founder(Bob,Club) <- guarded by Alice, Bob possibly Alice=Bob.
-M:1 ■ Greet: greeted(Bob,Alice) <- guarded by Alice possibly Alice=Bob.

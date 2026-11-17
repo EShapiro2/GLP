@@ -1,0 +1,13 @@
+Interface pragmas
+Listing: Bob [Post] <listing>
+  Alice [Pass]
+  Bob [Withdraw listing]
+Book: Alice [Book] <listing>
+  Bob: Alice asks for your consent to book.
+Check-in and checkout: Alice [Check in] [Check out]
+Cancelling: Alice [Cancel]
+  Bob [Host cancel]
+  Alice [No-show]
+Raise: Alice [Raise] <carol>
+  Bob [Provider raise] <carol>
+Recommend: Alice [Recommend]

@@ -1,5 +1,0 @@
-R: Notes
-Of K: Alice and Bob are persons. Reflexive: x knows y.
-Of R: Alice and Bob are persons, Bob possibly Alice.
-K:1. ■ Meet: Alice and Bob may jointly meet.
-R:1. ■ Note: Alice may note Bob, provided Alice knows Bob. Note self: Alice may note Alice.

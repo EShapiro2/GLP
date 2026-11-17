@@ -1,2 +1,0 @@
-GFF extends GDO-L: holds
-GFF restricts GDO-L: holds

@@ -1,4 +1,0 @@
-M: Possibly one, marked (expanded schemas)
-M:0 - | Alice and Bob are persons, Club a club, Bob possibly Alice.
-M:1 ■ Found: founder(Alice,Club), founder(Bob,Club) <- guarded by Alice, Bob possibly Alice=Bob.
-M:1 ■ Greet: greeted(Bob,Alice) <- guarded by Alice possibly Alice=Bob.

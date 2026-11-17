@@ -1,333 +1,68 @@
-DRAFT, 2026-11-16: printed before the cascade run of the 66 is assembled; it is printed again then.
-Changes from the publication at Calculus code 2307a5b (the 62 adopted on main) to code 32d16c50, for an owner who adopted the first.
+Changes from the publication of 2026-11-16 on main (Calculus code 32d16c50) to the renamed one (Calculus code ee7ccc55), for an owner who adopted the first.
 
-Renamed, the contract's name and nothing else (Udi, 2026-11-16): AGORA is Agora.  JOINT is Joint.  STAY is Stay.  LIB is Lib.  REC is Rec.  GC is Coins.  GB is Bonds.  The title line of Coins and of Bonds is its one word.  Below, each is compared with itself under its old name.
-New: CDC (owner GO), Notes (owner GSC), Shares (owner GO), GA (owner GSA).  The title line of Notes and of Shares is its one word.
+Every contract: its name, and with it its title line, which is the name, and the names in its first line and in its citations.  No other word of any contract changes; no act is added, gone or changed; no term changes (the 66 terms were printed before and after and are the same).
+The file of a contract is its file name of calculus/NAMES.txt, and the atom of contract_named and the row of cascade.sh its lower case with underscores.
 
-Agora:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
-  derived acts: 3, before 3
-Bonds:
-  own act gone: Swap
-  own act gone: Swap bonds
-  own act gone: Deposit
-  own act gone: Deposit bond
-  own act gone: Release
-  own act gone: Release bond
-  own act gone: Return
-  own act gone: Return bond
-  inherited act added: Swap, from Notes
-  inherited act added: Swap bonds, from Notes
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited act added: Deposit, from Notes
-  inherited act added: Deposit bond, from Notes
-  inherited act added: Release, from Notes
-  inherited act added: Release bond, from Notes
-  inherited act added: Return, from Notes
-  inherited act added: Return bond, from Notes
-  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
-  derived acts: 1, before 1
-CB:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-CDC: new in this publication
-CMB:
-  own act changed: Loan by the directors
-    was: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Day,*Total), bond(Orga,Bob,Day,*Total), ~vote_lend(Orga,_,Bob,Sum,Day) <- role(Alice,Orga,Director), vote_lend(Orga,>=Votes,Bob,Sum,Day), sum(More,Votes,1), has_role(Orga,<More,Director), participant(Bob,Orga), ~role(Bob,Orga,_), coin(Orga,Orga,*Sum), bond(Bob,Bob,Day,*Total) guarded by Alice, Bob.
-    now: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Day,*Total), bond(Orga,Bob,Day,*Total), ~vote_lend(Orga,_,Bob,Sum,Day) <- role(Alice,Orga,Director), vote_lend(Orga,>=Votes,Bob,Sum,Day), product(Double,Votes,2), has_role(Orga,<Double,Director), participant(Bob,Orga), ~role(Bob,Orga,_), coin(Orga,Orga,*Sum), bond(Bob,Bob,Day,*Total) guarded by Alice, Bob.
-  own act changed: Set lending limit
-    was: ~lending_limit(Orga,Carol,_), lending_limit(Orga,Carol,Limit), ~vote_limit(Orga,_,Carol,Limit) <- role(Alice,Orga,Director), vote_limit(Orga,>=Votes,Carol,Limit), sum(More,Votes,1), has_role(Orga,<More,Director), has_role(Orga,Carol,Lender) guarded by Alice.
-    now: ~lending_limit(Orga,Carol,_), lending_limit(Orga,Carol,Limit), ~vote_limit(Orga,_,Carol,Limit) <- role(Alice,Orga,Director), vote_limit(Orga,>=Votes,Carol,Limit), product(Double,Votes,2), has_role(Orga,<Double,Director), has_role(Orga,Carol,Lender) guarded by Alice.
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-CSSN:
-  own act changed: Of age
-    was: of_age(Carol), ~child(Carol), ~parent(_,Carol), ~has_parent(Carol,_), person(Carol) <- creator(Alice,Carol), parent(Alice,Carol), has_parent(Carol,Alice), ~of_age(Carol), child(Carol) guarded by Alice.
-    now: of_age(Carol), ~child(Carol), ~parent(_,Carol), ~has_parent(Carol,_), person(Carol) <- creator(Alice,Carol), has_parent(Carol,Bob), ~of_age(Carol), child(Carol) guarded by Alice.
-  inherited acts changed: 1 (Child end from GnW)
-CnC:
-  own act changed: Join
-    was: participant(Bob,Orga), has_participant(Orga,Bob) <- ~participant(Bob,Orga), paid_fee(Orga,Bob) guarded by Bob, deciders(Orga).
-    now: participant(Bob,Orga), has_participant(Orga,Bob), ~vote_join_orga(Orga,_,Bob) <- ~participant(Bob,Orga), vote_join_orga(Orga,>=VotesOrga,Bob), product(DoubleOrga,VotesOrga,2), has_participant(Orga,<DoubleOrga), paid_fee(Orga,Bob) guarded by Bob, deciders(Orga).
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 5 (Organisation end from GnW, Expel from GO, Officer expel from GO, Amend from GO, Pay from Notes)
-  derived acts: 102, before 89, changed
-Coins:
-  own act gone: Issue
-  own act gone: Swap
-  own act renamed: Pay, now Pay issuer
-  inherited act added: Issue, from Notes
-  inherited act added: Swap, from Notes
-  inherited act added: Pay, from Notes
-  inherited act added: Deposit, from Notes
-  inherited act added: Release, from Notes
-  inherited act added: Return, from Notes
-  inherited acts changed: 1 (Establish from GKK)
-DAO:
-  inherited acts changed: 1 (Establish from GKK)
-DGC:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
-  derived acts: 1, before 1
-FDAO:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Deposit, from Notes
-  inherited act added: Release, from Notes
-  inherited act added: Return, from Notes
-  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
-GA: new in this publication
-GAI:
-  own act changed: AI agent end
-    was: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~guardian(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol), attestation(Carol,Proof) guarded by Carol.
-    now: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~has_guardian(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol), attestation(Carol,Proof) guarded by Carol.
-GAN:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-GAS:
-  inherited acts changed: 1 (Ward end from GnW)
-GBCC:
-  own act added: Pay issuer
-  own act added: Pay bond
-  own act changed: Pay
-    was: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum), all_stay_backed(Alice,Orga) guarded by Alice.
-    now: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,*Sum), all_stay_backed(Alice,Orga) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
-  inherited acts changed: 3 (Organisation end from GnW, Act from GO, Amend from GO)
-  derived acts: 99, before 89, changed
-GBank:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 6 (Organisation end from GnW, Propose from GO, Vote from GO, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-GCC:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-GCoop:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 9 (Organisation end from GnW, Propose from GO, Vote from GO, Act from GO, Join from GO, Expel from GO, Officer expel from GO, Amend from GO, Pay from Notes)
-  derived acts: 102, before 89, changed
-GCorp:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 6 (Organisation end from GnW, Propose from GO, Vote from GO, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-GD:
-  inherited acts changed: 1 (Establish from GKK)
-GD-S:
-  inherited acts changed: 1 (Establish from GKK)
-GDAO:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 6 (Organisation end from GnW, Join from GO, Expel from GO, Officer expel from GO, Amend from GO, Pay from Notes)
-  derived acts: 102, before 89, changed
-GDC:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Deposit, from Notes
-  inherited act added: Release, from Notes
-  inherited act added: Return, from Notes
-  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
-GDO:
-  inherited acts changed: 1 (Establish from GKK)
-GDO-L:
-  inherited acts changed: 1 (Establish from GKK)
-GDO-LB:
-  inherited acts changed: 1 (Establish from GKK)
-GDS:
-  own act renamed: List, now List me
-  own act renamed: List unshown, now List me unshown
-  own act renamed: Delist, now Delist me
-  own act renamed: Delist unshown, now Delist me unshown
-  inherited acts changed: 1 (Ward end from GnW)
-GFF:
-  inherited acts changed: 1 (Establish from GKK)
-GFF-FR:
-  inherited acts changed: 1 (Establish from GKK)
-GFF-FR-BC:
-  inherited acts changed: 1 (Establish from GKK)
-GFF-PS:
-  inherited acts changed: 1 (Establish from GKK)
-GFP:
-  inherited acts changed: 1 (Establish from GKK)
-GKK:
-  own act changed: Establish
-    was: identity(Alice) <- ~identity(Alice) guarded by Alice.
-    now: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
-GLDAO:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 6 (Organisation end from GnW, Join from GO, Expel from GO, Officer expel from GO, Amend from GO, Pay from Notes)
-  derived acts: 102, before 89, changed
-GNG:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-GNL:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-GNM:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-GNO:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-GO:
-  own act changed: Propose
-    was: proposed(Orga,Motion) <- proposer(Bob,Orga,Motion), ~proposed(Orga,Motion) guarded by Bob.
-    now: proposed(Orga,Motion) <- officer(Bob,Orga), ~proposed(Orga,Motion) guarded by Bob.
-  own act changed: Vote
-    was: vote(Orga,Bob,Motion) <- voter(Bob,Orga,Motion), organisation(Orga), proposed(Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.
-    now: vote(Orga,Bob,Motion) <- officer(Bob,Orga), organisation(Orga), proposed(Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.
-  own act changed: Act
-    was: taken(Orga,Motion) <- taker(Alice,Orga,Motion), decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
-    now: taken(Orga,Motion) <- officer(Alice,Orga), vote(Orga,>=Votes,Motion), product(Double,Votes,2), has_officer(Orga,<Double), ~taken(Orga,Motion) guarded by Alice.
-  own act changed: Amend
-    was: amended(Orga), taken(Orga,Motion) <- taker(Alice,Orga,Motion), organisation(Orga), proposed(Orga,Motion), decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
-    now: amended(Orga), taken(Orga,Motion) <- officer(Alice,Orga), organisation(Orga), proposed(Orga,Motion), vote(Orga,>=Votes,Motion), product(Double,Votes,2), has_officer(Orga,<Double), ~taken(Orga,Motion) guarded by Alice.
-  inherited acts changed: 1 (Organisation end from GnW)
-GPD:
-  inherited acts changed: 1 (Establish from GKK)
-GPE:
-  own act changed: Encounter
-    was: knows(Alice,Bob), knows(Bob,Alice) <- ~knows(Alice,Bob), ~knows(Bob,Alice), nearby(Alice,Bob), nearby(Bob,Alice), open_place(Alice), open_place(Bob) guarded by Alice, Bob.
-    now: knows(Alice,Bob), knows(Bob,Alice) <- ~knows(Alice,Bob), ~knows(Bob,Alice), nearby(Alice,Bob), nearby(Bob,Alice), open_place(Alice), open_place(Bob) guarded by Alice, Bob must Alice, Bob.
-  inherited acts changed: 1 (Establish from GKK)
-GRA:
-  inherited acts changed: 1 (Establish from GKK)
-GRA-SS:
-  inherited acts changed: 1 (Establish from GKK)
-GRV:
-  inherited acts changed: 1 (Ward end from GnW)
-GSG:
-  inherited acts changed: 1 (Establish from GKK)
-GSN:
-  inherited acts changed: 1 (Establish from GKK)
-GSNP:
-  inherited acts changed: 1 (AI agent end from GnW)
-GSNW:
-  own act changed: Ward end
-    was: ~friend(Carol,Bob), ~friend(Bob,Carol), ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <- ~guardian(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
-    now: ~friend(Carol,Bob), ~friend(Bob,Carol), ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <- ~has_guardian(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
-  own act changed: Retire
-    was: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~friend(Carol,_), ~friend(_,Carol), ~member(Carol,_,_), ~listed(_,Carol,_) <- ~retired(Carol) guarded by deciders(Carol).
-    now: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~friend(Carol,_), ~friend(_,Carol), ~member(Carol,_,_), ~listed(_,Carol,_) <- ~retired(Carol) guarded by any_guardian(Carol).
-  inherited acts changed: 2 (Make guardian from GnW, End guardian from GnW)
-GSV:
-  inherited acts changed: 1 (Ward end from GnW)
-GnW:
-  own act gone: Establish
-  own act changed: Make guardian
-    was: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), has_guardian(Carol,Alice), friend(Bob,Alice), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by deciders(Carol), Bob.
-    now: guardian(Bob,Carol), has_guardian(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- ward(Carol), ~retired(Carol), person(Bob), has_guardian(Carol,Alice), friend(Bob,Alice), ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) guarded by any_guardian(Carol), Bob.
-  own act changed: End guardian
-    was: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by deciders(Carol,-Bob).
-    now: ~guardian(Bob,Carol), ~has_guardian(Carol,Bob) <- guardian(Bob,Carol), has_guardian(Carol,Bob) guarded by any_guardian(Carol,-Bob).
-  own act changed: Ward end
-    was: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~guardian(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
-    now: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~has_guardian(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
-  own act changed: Retire
-    was: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~friend(Carol,_), ~friend(_,Carol) <- ~retired(Carol) guarded by deciders(Carol).
-    now: retired(Carol), ~guardian(_,Carol), ~has_guardian(Carol,_), ~friend(Carol,_), ~friend(_,Carol) <- ~retired(Carol) guarded by any_guardian(Carol).
-  inherited act added: Establish, from GKK
-Joint:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Deposit coin, from Notes
-  inherited act added: Release, from Notes
-  inherited act added: Return, from Notes
-  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
-LDAO:
-  inherited acts changed: 1 (Establish from GKK)
-Lib:
-  inherited acts changed: 1 (Establish from GKK)
-MCS:
-  own act added: Pay issuer
-  own act added: Pay bond
-  own act changed: Pay
-    was: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum), credit_limit(Alice,Orga) guarded by Alice.
-    now: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,*Sum), credit_limit(Alice,Orga) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
-  inherited acts changed: 3 (Organisation end from GnW, Act from GO, Amend from GO)
-  derived acts: 99, before 89, changed
-Notes: new in this publication
-ORH:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-Rec:
-  inherited acts changed: 1 (Establish from GKK)
-SC:
-  own act gone: Redeem
-  own act gone: Redeem coin against bond
-  own act gone: Issue shares
-  own act gone: Vote on issue
-  own act gone: Vote on first issue
-  own act changed: Set dividend
-    was: dividend(Orga,Div), ~vote_dividend(Orga,_,Div) <- role(Alice,Orga,Director), vote_dividend(Orga,>=Votes,Div), sum(More,Votes,1), has_role(Orga,<More,Director), ~dividend(Orga,Div) guarded by Alice.
-    now: dividend(Orga,Div), ~vote_dividend(Orga,_,Div) <- role(Alice,Orga,Director), vote_dividend(Orga,>=Votes,Div), product(Double,Votes,2), has_role(Orga,<Double,Director), ~dividend(Orga,Div) guarded by Alice.
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited act added: Redeem, from Coins
-  inherited act added: Redeem coin against bond, from Bonds
-  inherited act added: Issue shares, from Notes
-  inherited act added: Issue shares by shareholders, from Notes
-  inherited act added: Swap shares, from Notes
-  inherited act added: Pay share, from Notes
-  inherited act added: Deposit share, from Notes
-  inherited act added: Release share, from Notes
-  inherited act added: Return share, from Notes
-  inherited acts changed: 7 (Person unfriend from GSG, Appoint from GnW, End officer from GnW, Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 128, before 89, changed
-SCB:
-  own act changed: Lend
-    was: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Term,*Total), bond(Orga,Bob,Term,*Total), ~vote_lend(Orga,_,Bob,Sum,Term) <- role(Alice,Orga,Governor), vote_lend(Orga,>=Votes,Bob,Sum,Term), sum(More,Votes,1), has_role(Orga,<More,Governor), participant(Bob,Orga), ~role(Bob,Orga,_), policy_rate(Orga,Term,Rate), product(Interest,Sum,Rate), sum(Total,Sum,Interest), coin(Orga,Orga,*Sum), bond(Bob,Bob,Term,*Total) guarded by Alice, Bob.
-    now: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Term,*Total), bond(Orga,Bob,Term,*Total), ~vote_lend(Orga,_,Bob,Sum,Term) <- role(Alice,Orga,Governor), vote_lend(Orga,>=Votes,Bob,Sum,Term), product(Double,Votes,2), has_role(Orga,<Double,Governor), participant(Bob,Orga), ~role(Bob,Orga,_), policy_rate(Orga,Term,Rate), product(Interest,Sum,Rate), sum(Total,Sum,Interest), coin(Orga,Orga,*Sum), bond(Bob,Bob,Term,*Total) guarded by Alice, Bob.
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-SGSG:
-  inherited acts changed: 1 (Establish from GKK)
-SPLLC:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 4 (Organisation end from GnW, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-Shares: new in this publication
-Stay:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Deposit, from Notes
-  inherited act added: Release, from Notes
-  inherited act added: Return, from Notes
-  inherited acts changed: 2 (Establish from GKK, Pay from Notes)
-TC:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 6 (Organisation end from GnW, Propose from GO, Vote from GO, Act from GO, Amend from GO, Pay from Notes)
-  derived acts: 99, before 89, changed
-WC:
-  inherited act added: Pay issuer, from Notes
-  inherited act added: Pay bond, from Notes
-  inherited acts changed: 6 (Organisation end from GnW, Join from GO, Expel from GO, Officer expel from GO, Amend from GO, Pay from Notes)
-  derived acts: 103, before 90, changed
+60 renamed, name on main then name, then file name:
+GKK: Knowledge (Knowledge.txt)
+GSG: Friendship (Friendship.txt)
+SGSG: Secure Friendship (Secure-Friendship.txt)
+GD: Distrust (Distrust.txt)
+GD-S: Separating Distrust (Separating-Distrust.txt)
+GFP: Forwarding (Forwarding.txt)
+GPE: Encounters (Encounters.txt)
+GnW: Guardians (Guardians.txt)
+GSN: Groups (Groups.txt)
+GSNW: Warded Groups (Warded-Groups.txt)
+GSNP: Provenance Groups (Provenance-Groups.txt)
+CSSN: Children (Children.txt)
+GAI: Agents (Agents.txt)
+GSV: Services (Services.txt)
+GRV: Rendezvous (Rendezvous.txt)
+GDS: Directory (Directory.txt)
+GPD: Programs (Programs.txt)
+GAS: AppStore (AppStore.txt)
+GA: App (App.txt)
+GDO: Overlay (Overlay.txt)
+GDO-L: Labelled Overlay (Labelled-Overlay.txt)
+GDO-LB: Local Overlay (Local-Overlay.txt)
+GFF: Feeds (Feeds.txt)
+GFF-PS: Short Feeds (Short-Feeds.txt)
+GFF-FR: Resilient Feeds (Resilient-Feeds.txt)
+GFF-FR-BC: Backchannel Feeds (Backchannel-Feeds.txt)
+GRA: Auction (Auction.txt)
+GRA-SS: Second-Score Auction (Second-Score-Auction.txt)
+ORH: Rides (Rides.txt)
+GDC: Denominated Coins (Denominated-Coins.txt)
+DGC: Denominated Currencies (Denominated-Currencies.txt)
+Joint: Joint Accounts (Joint-Accounts.txt)
+Stay: Stays (Stays.txt)
+Lib: Library (Library.txt)
+Rec: Recommendations (Recommendations.txt)
+FDAO: Funded DAO (Funded-DAO.txt)
+LDAO: Liquid DAO (Liquid-DAO.txt)
+GO: Organisation (Organisation.txt)
+CDC: Constitution (Constitution.txt)
+GNO: Networked Organisation (Networked-Organisation.txt)
+GBank: Bank (Bank.txt)
+CB: Community Bank (Community-Bank.txt)
+CMB: Commercial Bank (Commercial-Bank.txt)
+SCB: Central Bank (Central-Bank.txt)
+MCS: Mutual Credit (Mutual-Credit.txt)
+GCC: Community Currency (Community-Currency.txt)
+GBCC: Backed Currency (Backed-Currency.txt)
+GCorp: Corporation (Corporation.txt)
+SC: Shareholding Corporation (Shareholding-Corporation.txt)
+SPLLC: Single-Person Company (Single-Person-Company.txt)
+TC: Trading Company (Trading-Company.txt)
+GCoop: Cooperative (Cooperative.txt)
+WC: Workers' Cooperative (Workers-Cooperative.txt)
+CnC: Consumers' Cooperative (Consumers-Cooperative.txt)
+GDAO: Cooperative DAO (Cooperative-DAO.txt)
+GLDAO: Liquid Cooperative (Liquid-Cooperative.txt)
+GAN: Ads (Ads.txt)
+GNG: Gigs (Gigs.txt)
+GNL: Lodging (Lodging.txt)
+GNM: Marketplace (Marketplace.txt)
 
-Summary: 66 contracts; own acts changed 16; inherited acts changed only 46; relations.txt only 0; text only 0; unchanged 0; new 4; no longer published 0.
-With an own act added, gone, renamed or changed: Bonds, CMB, CSSN, CnC, Coins, GAI, GBCC, GDS, GKK, GO, GPE, GSNW, GnW, MCS, SC, SCB.
+Not renamed: Notes, Coins, Bonds, Shares, Agora, DAO.

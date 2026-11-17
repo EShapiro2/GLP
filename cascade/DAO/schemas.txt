@@ -1,5 +1,5 @@
-DAO: Grassroots DAO
-DAO extends GKK.
+DAO
+DAO extends Knowledge.
 Vocabulary: x is the steward of d = steward(x,d); x is a member of y's d = member(x,d,y); x has y as a member of d = listed(x,y,d); x has proposed p to y's d = proposed(x,p,d,y); x holds p of d = proposal(x,p,d); x has delivered p of d to y = delivered(x,p,d,y); x has voted on p of d = voted(x,p,d); x holds y's vote for p of d = vote_for(x,y,p,d); x holds y's vote against p of d = vote_against(x,y,p,d); x has delivered y's vote on p of d to z = delivered_vote(x,y,p,d,z); x has decided p of d = decided(x,p,d); x holds p of d as passed = passed(x,p,d); x holds p of d as rejected = rejected(x,p,d); x has delivered the decision on p of d to y = delivered_decision(x,p,d,y).
 After x founds d under a new name of x's, which requires x is not the steward of d: x is the steward of d, x is a member of x's d and x has x as a member of d.
 After x admits y to d, which requires y is not a member of x's d: y is a member of x's d and x has y as a member of d.

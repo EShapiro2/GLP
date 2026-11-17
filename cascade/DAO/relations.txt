@@ -1,1 +1,1 @@
-DAO extends GKK: holds
+DAO extends Knowledge: holds

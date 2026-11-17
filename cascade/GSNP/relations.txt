@@ -1,4 +1,0 @@
-GSNP instantiates GSN: holds
-GSNP composes it (GSN) with GAI: holds
-GSNP restricts it (GSN and GAI): holds
-GSNP extends it (GSN and GAI): holds

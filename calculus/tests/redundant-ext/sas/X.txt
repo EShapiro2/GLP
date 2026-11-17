@@ -1,4 +1,0 @@
-X: Written out
-X extends B.
-X:0 - | Alice, Bob and Carol are persons, Sum a number.
-X:1 ■ Pay twice: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum) guarded by Alice, Bob.

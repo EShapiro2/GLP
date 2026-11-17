@@ -1,11 +1,11 @@
 #!/bin/bash
-# The child-safe social network's program: the canonical CVA platform of its contract (CSSN, Section 5.1, "The program"; Appendix C.5), which vGLP's compiler prints from the contract's act schemas, CSSN.glp, in the term form programs/gsc reads (vGLP, Section 5.4, "The compilation" and "Act schemas as local specifications").  The platform is committed in this directory, which loads it, and this script holds it to what the compiler prints, as programs/apps/compile.sh does for the apps and cascade.sh for the recorded runs of the cascade.
+# The child-safe social network's program: the canonical CVA platform of its contract (CSSN, Section 5.1, "The program"; Appendix C.5), which vGLP's compiler prints from the contract's act schemas, Children.glp, in the term form programs/gsc reads (vGLP, Section 5.4, "The compilation" and "Act schemas as local specifications").  The platform is committed in this directory, which loads it, and this script holds it to what the compiler prints, as programs/apps/compile.sh does for the apps and cascade.sh for the recorded runs of the cascade.
 #
 #   bash programs/cssn/compile.sh            print into programs/cssn/platform.vglp
 #   bash programs/cssn/compile.sh <dir>      print into <dir>/platform.vglp
 #   bash programs/cssn/compile.sh --check    print into a scratch directory and compare
 #
-# The steps are cascade.sh's 1, 2 and 4: the contract, an instance of GSNW, instance_named(cssn, gsnw, Bindings, Additions), from CSSN.glp, formed by programs/vglp/cva/compiler/term.sh, and the contract as GSC's reader reads it, programs/gsc's as_read/2; the checker's verdict on it, programs/gsc's check/2; and the compiler, programs/vglp/cva/compiler's compile/5, on the contract as read, its verdict, its introduction predicate, introduction_named(cssn, I) where CSSN.glp names one and no_introduction otherwise, and its pragmas, the words its app shows, read from CSSN.txt and from the NAME.txt of the contracts it extends by programs/vglp/cva/compiler/pragmas.sh on the contract as read (vGLP, Section 5.4, "The contract's words"), as programs/apps/compile.sh reads each app's.  What the compiler prints between its lines "%% compile begin" and "%% compile end" is the platform.
+# The steps are cascade.sh's 1, 2 and 4: the contract, its full schemas, contract_named(children, C), from Children.glp, read by programs/vglp/cva/compiler/term.sh, and the contract as GSC's reader reads it, programs/gsc's as_read/2; the checker's verdict on it, programs/gsc's check/2; and the compiler, programs/vglp/cva/compiler's compile/5, on the contract as read, its verdict, its introduction predicate, introduction_named(children, I) where Children.glp names one and no_introduction otherwise, and its pragmas, the words its app shows, read from Children.txt and from the NAME.txt of the contracts it extends by programs/vglp/cva/compiler/pragmas.sh on the contract as read (vGLP, Section 5.4, "The contract's words"), as programs/apps/compile.sh reads each app's.  What the compiler prints between its lines "%% compile begin" and "%% compile end" is the platform.
 #
 # Prints the verdict, the introduction predicate and, where it compiled, the file.  Exits 0 if the contract was compiled and, with --check, the file in place is what the compiler prints; 1 otherwise, the compiler's lines saying why; 2 on a bad argument.
 
@@ -13,7 +13,7 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
-SRC="$HERE/CSSN.glp"
+SRC="$HERE/Children.glp"
 
 CHECK=0
 case "$#:${1:-}" in
@@ -31,8 +31,8 @@ repl() {   # repl <input file> <output file>; the REPL's lines, prompts stripped
     (cd "$RT" && bin/glpc < "$1" 2>&1) | sed -e 's/^\(GLP> \)*//' > "$2"
 }
 
-# The contract: its term, an instance's, formed from its base, GSNW, by programs/gsc's instantiate/4, CSSN.glp printing instance_named(cssn, gsnw, Bindings, Additions) (GSC, Definition Parametric contract), by programs/vglp/cva/compiler/term.sh, as cascade.sh's read_contract and programs/apps/compile.sh form it.
-CT=$(bash "$GLP_DIR/programs/vglp/cva/compiler/term.sh" "$SRC" cssn 2> "$WORK/t.err")
+# The contract: its term, the full schemas Children.glp prints, contract_named(children, C), by programs/vglp/cva/compiler/term.sh, as cascade.sh's read_contract and programs/apps/compile.sh form it.
+CT=$(bash "$GLP_DIR/programs/vglp/cva/compiler/term.sh" "$SRC" children 2> "$WORK/t.err")
 if [ -z "$CT" ]; then
     echo "contract: not printed: $(head -1 "$WORK/t.err")"
     exit 1
@@ -48,18 +48,18 @@ if [ -z "$RD" ]; then
     exit 1
 fi
 
-# Its introduction predicate, where CSSN.glp names one.
+# Its introduction predicate, where Children.glp names one.
 INTRO=no_introduction
-if grep -q '^introduction_named(cssn,' "$SRC"; then
-    printf '%s\nintroduction_named(cssn, I).\n:quit\n' "$SRC" > "$WORK/i.in"
+if grep -q '^introduction_named(children,' "$SRC"; then
+    printf '%s\nintroduction_named(children, I).\n:quit\n' "$SRC" > "$WORK/i.in"
     repl "$WORK/i.in" "$WORK/i.out"
     IT=$(grep -E '^I = ' "$WORK/i.out" | head -1 | sed -e 's/^I = //')
     [ -n "$IT" ] && INTRO="$IT"
 fi
 echo "introduction: $INTRO"
 
-# Its pragmas, from CSSN.txt and those of the contracts it extends.
-if ! PR=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$HERE/CSSN.txt" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
+# Its pragmas, from Children.txt and those of the contracts it extends.
+if ! PR=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$HERE/Children.txt" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
     echo "pragmas: not read: $(head -1 "$WORK/pr.err")"
     exit 1
 fi
@@ -76,7 +76,7 @@ fi
 echo "verdict: $VT"
 
 # The compiler, on the contract as read, its verdict, its introduction predicate and its pragmas.
-printf '%s\n:limit 1000000000\ncompile(cssn, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$RD" "$VT" "$INTRO" "$PR" > "$WORK/p.in"
+printf '%s\n:limit 1000000000\ncompile(children, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$RD" "$VT" "$INTRO" "$PR" > "$WORK/p.in"
 repl "$WORK/p.in" "$WORK/p.out"
 if ! awk '
     $0 == "%% compile begin" { on = 1; next }

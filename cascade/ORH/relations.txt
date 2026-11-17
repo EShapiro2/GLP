@@ -1,3 +1,0 @@
-ORH extends GNO: holds
-ORH restricts GRA-SS: holds
-ORH strengthens GRA-SS: holds

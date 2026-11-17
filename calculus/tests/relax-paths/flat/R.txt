@@ -1,4 +1,0 @@
-R: Restricted (flat text)
-B:0 - | Alice, Bob and Carol are persons, Sum a number.
-B:1+R:1 ■ Pay checked: Alice and Bob may jointly no longer Alice holds Sum Carol-coins and Bob holds Sum Carol-coins, provided Alice knows Bob and Bob knows Alice.
-R:0 - | Alice, Bob and Carol are persons, Sum a number.

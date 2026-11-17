@@ -1,0 +1,4 @@
+Interface pragmas
+Labeled point friend: Alice [Labeled point friend] <dave>
+Labeled point transitive: Alice [Labeled point transitive] [Labeled point transitive friend] <dave>
+Labeled unpoint: Alice [Labeled unpoint] [Labeled unpoint self]

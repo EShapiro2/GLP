@@ -1,8 +1,0 @@
-MRO: Overseen Club
-Of GKK: An *identity* is a unique key pair. Alice, Bob and Carol are persons. A party to a contract must have an identity. Reflexive: x knows y.
-Of MRC: Bob is a person, Orga a club.
-Of MRO: Bob is a person, Orga a club.
-GKK:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
-GKK:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-GKK:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-MRC:1. ■ Join: Bob may join Orga, and the overseers of Orga must consent.

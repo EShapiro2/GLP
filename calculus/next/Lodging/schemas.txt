@@ -1,0 +1,39 @@
+Lodging
+Lodging extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Networked Organisation and Recommendations.
+Vocabulary: y has l posted in z = posted(y,l,z); x has received l of y in z = received(x,l,y,z); x has nights of l booked with y = booked(x,l,y); y has nights of l booked by x = booked_by(y,l,x); x is at the place of l on the first night = at_place(x,l); x is checked in at l of y = checked_in(x,l,y); x leaves the place of l after the last night = leaves(x,l); x has checked out of l of y = checked_out(x,l,y); it is before the first night of l, for x = before_first_night(x,l); no check-in at l is recorded on the first night while x is at the place = no_show(x,l).
+y is a host of z: y is a provider of z.
+x is a traveller of z: x is a customer of z.
+x and y have a booking of l: x has nights of l booked with y and y has nights of l booked by x.
+After y posts l in z, which requires y does not have l posted in z: y has l posted in z.
+After l of y goes to x in z, which requires x has not received l of y in z: x has received l of y in z.
+After x passes l of y to w in z, which requires w has not received l of y in z: w has received l of y in z.
+After y withdraws l from z: no longer y has l posted in z.
+After x books nights of l of y in z, which requires x and y do not have a booking of l: x and y have a booking of l and z-coins are locked between the provider y and the customer x.
+After x records x's check-in at l of y, which requires x is not checked in at l of y: x is checked in at l of y.
+After x records x's checkout from l of y in z: no longer x is checked in at l of y, x has checked out of l of y, no longer x and y have a booking of l and no longer z-coins are locked between the provider y and the customer x.
+After x cancels x's booking of l of y in z: no longer x and y have a booking of l and no longer z-coins are locked between the provider y and the customer x.
+After y cancels y's booking of l by x in z: no longer x and y have a booking of l and no longer z-coins are locked between the provider y and the customer x.
+Lodging:0 - | A *host* is a provider and a *traveller* a customer. A *listing* names a place, the nights offered and the price a night in Orga-coins; its terms say what is released to whom on cancellation.
+Lodging:0 - | Alice, Bob and Carol are persons, Orga a networked organisation, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a traveller, in clause 5 an arbiter, and in clause 6 Skill is the listing.
+Lodging:0 - | Environment: x is at the place of l on the first night; x leaves the place of l after the last night; it is before the first night of l, for x; no check-in at l is recorded on the first night while x is at the place.
+Lodging:1 ■ | Listing.
+Lodging:1 ■ Post: posted(Bob,Listing,Orga) <- stake(Orga,S), coin(Bob,Orga,*Held), ge(Held,S), ~posted(Bob,Listing,Orga) guarded by Bob.
+Lodging:1 ■ | Bob posts the listing to the travellers he points to.
+Lodging:1 ■ Send listing: received(Alice,Listing,Bob,Orga) <- posted(Bob,Listing,Orga), points_to(Bob,Alice), accepts(Alice,Orga,Dollar), ~received(Alice,Listing,Bob,Orga).
+Lodging:1 ■ Pass: received(Carol,Listing,Bob,Orga) <- accepts(Alice,Orga,Dollar), received(Alice,Listing,Bob,Orga), points_to(Alice,Carol), accepts(Carol,Orga,Mark), ~received(Carol,Listing,Bob,Orga) guarded by Alice.
+Lodging:1 ■ Withdraw listing: ~posted(Bob,Listing,Orga) <- posted(Bob,Listing,Orga) guarded by Bob.
+Lodging:2 ■ Book: booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- accepts(Alice,Orga,Dollar), posted(Bob,Listing,Orga), knows(Alice,Bob), knows(Bob,Alice), ~booked(Alice,Listing,Bob), ~booked_by(Bob,Listing,Alice) guarded by Alice, Bob.
+Lodging:2 ■ | Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
+Lodging:3 ■ | Check-in and checkout.
+Lodging:3 ■ Check in: checked_in(Alice,Listing,Bob) <- booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), at_place(Alice,Listing), ~checked_in(Alice,Listing,Bob) guarded by Alice.
+Lodging:3 ■ Check out: ~checked_in(Alice,Listing,Bob), checked_out(Alice,Listing,Bob), ~booked(Alice,Listing,Bob), ~booked_by(Bob,Listing,Alice), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- leaves(Alice,Listing), checked_in(Alice,Listing,Bob), booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Alice.
+Lodging:3 ■ | The payment and the deposit are then released to Bob.
+Lodging:4 ■ | Cancelling.
+Lodging:4 ■ Cancel: ~booked(Alice,Listing,Bob), ~booked_by(Bob,Listing,Alice), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- before_first_night(Alice,Listing), booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Alice.
+Lodging:4 ■ Host cancel: ~booked(Alice,Listing,Bob), ~booked_by(Bob,Listing,Alice), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- before_first_night(Bob,Listing), booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Bob.
+Lodging:4 ■ | The payment and the deposit are then released to Alice and to Bob as the terms say.
+Lodging:4 ■ No-show: ~booked(Alice,Listing,Bob), ~booked_by(Bob,Listing,Alice), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- no_show(Alice,Listing), booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Alice.
+Lodging:4 ■ | The payment and the deposit are then both released to Alice.
+Lodging:5 ■ Raise: Networked Organisation:2 Raise <- checked_in(Alice,Listing,Bob).
+Lodging:5 ■ Provider raise: Networked Organisation:2 Provider raise <- booked_by(Bob,Listing,Alice).
+Lodging:6 ◆ Recommend: Recommendations:1 <- checked_out(Alice,Skill,Bob).

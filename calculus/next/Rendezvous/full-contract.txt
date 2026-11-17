@@ -1,0 +1,23 @@
+% Written by tools/expand.py from rev/; do not edit.
+Rendezvous
+An *identity* is a unique key pair.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. Here: the guardians deciding jointly. A ward takes an act of a party by those who decide for it.
+A *service* is a ward operated by a machine at an address every person can reach.
+An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice and Bob are persons. Alice and Bob are persons, Carol and Dave wards. Alice, Bob and Carol are persons, Dave a service.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Guardians:1. ■ Enter: Alice may create a ward, Carol, and establish Carol's identity by choosing Carol's key pair. Alice is then the creator, a guardian and a friend of Carol.
+Guardians:2. ■ Guardian decisions. Make guardian: Those who decide for Carol may make Bob, a friend of a guardian of Carol, a guardian and a friend of Carol, with the consent of Bob. Resign: Bob may end his guardianship of Carol. End guardian: Those who decide for Carol, other than Bob, may end Bob's guardianship. Guardian unfriend: Bob may end his friendship with Carol, which ends his guardianship. Carol may not end a friendship with her guardian.
+Guardians:3. ■ Ward and person. Ward acquaint: Carol, a ward of Alice, and Bob may jointly come to know each other. Ward befriend: Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends. Ward end, Unfriend, Ward unfriend: Carol, Bob or Alice may end the relation of Bob and Carol.
+Guardians:4. ■ Wards. Wards acquaint: Carol, a ward of Alice, and Dave, a ward of Bob, may jointly come to know each other. Wards befriend: Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+Guardians:5. ■ Retire: Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
+Rendezvous:1. ■ Open server: Carol may make her service Dave a rendezvous server.
+Rendezvous:2. ■ Invite by link: Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+Rendezvous:3. ■ Use link: Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
+Rendezvous:4. ■ Reconnection. Present: Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship. Match: Dave then gives each the address of the other.

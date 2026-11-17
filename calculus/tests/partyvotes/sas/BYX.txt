@@ -1,4 +1,0 @@
-BYX: Bylaws, Restricted
-BYX extends BYL.
-BYX:0 - | Alice and Bob are parties, Sum a number.
-BYX:1 ■ Pay known: CUR:1 Pay <- knows(Bob,Alice).

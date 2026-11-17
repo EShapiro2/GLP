@@ -1,0 +1,3 @@
+Children instantiates Warded Groups: holds
+Children restricts it (Warded Groups): holds
+Children extends it (Warded Groups): holds

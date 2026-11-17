@@ -1,4 +1,0 @@
-K: Base (expanded schemas)
-K:0 - | Alice and Bob are persons.
-K:1 ■ Meet: met(Alice,Bob), met(Bob,Alice) <- ~met(Alice,Bob) guarded by Alice, Bob.
-K:2 ■ Part: ~met(Alice,Bob), ~met(Bob,Alice) <- met(Alice,Bob), met(Bob,Alice) guarded by Alice.
