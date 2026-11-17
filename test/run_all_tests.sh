@@ -4338,19 +4338,19 @@ check "CVA compiler, text: ... a platform printed (twin)" "the canonical CVA pla
 
 # The pragmas of a contract that extends another (vGLP 40f8444, Section 5.4, "The contract's words", its last sentence: "an inherited button, with its fields and its questions, stands while the contract has an act it names, an act the contract replaces being gone and its button with it; and where the contract writes a button of an inherited button's name, its line replaces the inherited one"): GAI's GSNP writes its own [Message] line, which replaces GSN's.
 # GSNP.glp prints its own contract since GAI adopted it from the Calculus (GAI 6e426c50), contract_named(gsnp, ...) in the clause syntax, sas/7: term.sh prints it, and pragmas.sh takes it as GSC's reader reads it, as_read/2 of programs/gsc, with its roles' names, as cascade.sh and compile.sh give it (GnW's Decider and Codecider are roles of its schemas, which the reading names).
-cva_gsnp_term=$(bash "$CVA/compiler/term.sh" "$GLP_DIR/programs/gai/GSNP.glp" gsnp 2>&1)
+cva_gsnp_term=$(bash "$CVA/compiler/term.sh" "$GLP_DIR/programs/gai/Provenance-Groups.glp" provenance_groups 2>&1)
 cva_gsnp_read=$(printf '%s\n:limit 10000000\nas_read(%s, R).\n:quit\n' "$GLP_DIR/programs/gsc/" "$cva_gsnp_term" | "$REPL_RUN" 2>&1 | sed -e 's/^\(GLP> \)*//' | grep '^R = ' | head -1 | sed -e 's/^R = //')
-cva_gsnp_pragmas=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "$cva_gsnp_read" 2>&1 || true)
+cva_gsnp_pragmas=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/Provenance-Groups.txt" "$cva_gsnp_read" 2>&1 || true)
 # The term from a file, @<file>: a term over 128 KB cannot be an argument of a command on Linux (Calculus #6 and Helper #8, 2026-11-15 22:48 UTC: WC's and SC's terms).
 cva_tf=$(mktemp)
 printf '%s\n' "$cva_gsnp_read" > "$cva_tf"
-cva_gsnp_pragmas_f=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "@$cva_tf" 2>&1 || true)
+cva_gsnp_pragmas_f=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/Provenance-Groups.txt" "@$cva_tf" 2>&1 || true)
 if [ -n "$cva_gsnp_pragmas" ] && [ "$cva_gsnp_pragmas" = "$cva_gsnp_pragmas_f" ]; then _check_pass "CVA pragmas: the term read from a file, @<file>, gives what the term as an argument gives (GSNP.txt)"; else _check_fail "CVA pragmas: the term read from a file, @<file>, gives what the term as an argument gives (GSNP.txt)" "the two outputs differ"; fi
 head -c 200000 /dev/zero | tr '\0' ' ' >> "$cva_tf"
-cva_gsnp_pragmas_b=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/GSNP.txt" "@$cva_tf" 2>&1 || true)
+cva_gsnp_pragmas_b=$(PRAGMAS_LINES=1 bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gai/Provenance-Groups.txt" "@$cva_tf" 2>&1 || true)
 if [ "$cva_gsnp_pragmas" = "$cva_gsnp_pragmas_b" ]; then _check_pass "CVA pragmas: ... and so does a file of over 128 KB"; else _check_fail "CVA pragmas: ... and so does a file of over 128 KB" "the two outputs differ"; fi
 rm -f "$cva_tf"
-check "CVA pragmas: GSNP's [Message] line replaces GSN's, the lines matched by button (GSNP.txt)" "^GSN: Message: Alice \[Message\] <text>: replaced by the line of GSNP.txt with a button of the same name$" "$cva_gsnp_pragmas"
+check "CVA pragmas: GSNP's [Message] line replaces GSN's, the lines matched by button (GSNP.txt)" "^Groups: Message: Alice \[Message\] <text>: replaced by the line of Provenance-Groups.txt with a button of the same name$" "$cva_gsnp_pragmas"
 # An instance's own names for the schemas of its base (GSC 22605d6, Section 8, Definition Parametric contract: "An instantiation may also write names of its own for schemas of the contract, a different one for each, so that an act bears the name its instance gives it"; Code #27, Cloud-vGLP_inbox.md, 2026-11-10 20:39 UTC, 2): XI, instance_named(xi, xb, [ward = child, ward_link = child_link], []), writing no line of its own, has XB's [Ward link] as [Child link], the act child_link (names); and without the bindings the button names no act (bare).
 cva_in=$(mktemp -d)
 printf '%s\n' 'XB: Base' 'Alice is a person.' '1. ■ Link. Alice may link.' 'Pragmas' 'Links: the links Alice holds.' 'Link: Alice [Ward link]' > "$cva_in/XB.txt"
@@ -5219,7 +5219,7 @@ check_not "CVA backed: no error" "Error" "$cva_backed"
 cva_sg_text=$(cat "$CVA/social_graph/platform.vglp")
 cva_nd_text=$(cat "$CVA/nudge/platform.vglp")
 check "CVA exports: the platform exports contract(Text, Schemas), typed" "^exported procedure contract(String, Exported).$" "$cva_sg_text"
-check "CVA exports: ... the contract as GSC's reader reads it, with its names, its clauses as text, from GSG.txt" "^contract(\"GSG: Grassroots Social Graph\\\\nGSG extends GKK.\\\\nAlice \*trusts\* Bob when .*\\\\nAlice and Bob are persons.\\\\n1. .*\", with(reflexive(\[knows\], \[schema(establish, \['Alice'\], \[\], \[rs(guarded, \[atom(identity, \[\]), atom(person, \[\])\], \[\], \[\], \[atom(identity, \[\])\])\]), " "$cva_sg_text"
+check "CVA exports: ... the contract as GSC's reader reads it, with its names, its clauses as text, from GSG.txt" "^contract(\"Friendship\\\\nFriendship extends Knowledge.\\\\nAlice \*trusts\* Bob when .*\\\\nAlice and Bob are persons.\\\\n1. .*\", with(reflexive(\[knows\], \[schema(establish, \['Alice'\], \[\], \[rs(guarded, \[atom(identity, \[\]), atom(person, \[\])\], \[\], \[\], \[atom(identity, \[\])\])\]), " "$cva_sg_text"
 check "CVA exports: ... and its pragmas, each word as the platform reads it, a string, the look among them, nolook for a contract writing none, and the version; vGLP's own nudge, written as a term, with no text" "^contract(\"\", with(\[schema(befriend, \[\], \[rs(guarded, \[atom(friend, \[role(2)\])\], \[\], \[\], \[atom(friend, \[role(2)\])\]), .*, pragmas(\[list(\"Friends\", \[friend\])\], \[act(befriend, \"Befriend\", \[\], said(\[\[\], \[person(1), text(\" asks.\")\]\]), \"Friends\", by(\[1\]))\], \[\], nolook, version(1, 1))))$" "$cva_nd_text"
 check "CVA exports: ... and version(Current, Back), version(1, 1) with no Version line" "^exported procedure version(Integer, Integer).$" "$cva_sg_text"
 check "CVA exports: ... version(1, 1)" "^version(1, 1)$" "$cva_sg_text"
@@ -6657,17 +6657,17 @@ cva_c3_rd() {   # cva_c3_rd <contract> <NAME.glp>: the contract as GSC's reader 
     ct=$(printf '%s\ncontract_named(%s, C).\n:quit\n' "$2" "$1" | "$REPL_RUN" 2>&1 | sed -e 's/^\(GLP> \)*//' | grep '^C = ' | head -1 | sed -e 's/^C = //')
     printf '%s\n:limit 10000000\nas_read(%s, R).\n:quit\n' "$GLP_DIR/programs/gsc/" "$ct" | "$REPL_RUN" 2>&1 | sed -e 's/^\(GLP> \)*//' | grep '^R = ' | head -1 | sed -e 's/^R = //'
 }
-cva_c3_gsg=$(cva_c3_rd gsg "$GLP_DIR/programs/gsc/GSG.glp")
-cva_c3_gnw=$(cva_c3_rd gnw "$GLP_DIR/programs/gsc/GnW.glp")
-cva_c3_pgsg=$(bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gsc/GSG.txt" "$cva_c3_gsg" 2>&1)
+cva_c3_gsg=$(cva_c3_rd friendship "$GLP_DIR/programs/gsc/Friendship.glp")
+cva_c3_gnw=$(cva_c3_rd guardians "$GLP_DIR/programs/gsc/Guardians.glp")
+cva_c3_pgsg=$(bash "$CVA/compiler/pragmas.sh" "$GLP_DIR/programs/gsc/Friendship.txt" "$cva_c3_gsg" 2>&1)
 cva_c3_real=$(bash "$CVA/compiler/compose.sh" --base GSG "$cva_c3_gsg" "$cva_c3_pgsg" GSG "$cva_c3_gsg" "$cva_c3_pgsg" no_introduction GnW "$cva_c3_gnw" no_pragmas no_introduction 2>&1; echo "exit $?")
 cva_c3_realu=$(bash "$CVA/compiler/compose.sh" GSG "$cva_c3_gsg" "$cva_c3_pgsg" no_introduction GnW "$cva_c3_gnw" no_pragmas no_introduction 2>&1; echo "exit $?")
 check "CVA composition over a third: GSG and GnW over GSG, GnW's establish and not GSG's, the composition GnW's reading (gsg)" "^same$" "$([ -n "$cva_c3_gnw" ] && [ "$(printf '%s\n' "$cva_c3_real" | sed -n 1p)" = "$cva_c3_gnw" ] && echo same || echo differs)"
 check "CVA composition over a third: ... and compose.sh exits 0 (gsg)" "^exit 0$" "$cva_c3_real"
 check "CVA composition over a third: GSG and GnW with no third refused, a schema written differently by both, acquaint since the Calculus's publication of 2026-11-16 and establish before it (gsg)" "the schema [a-z_]* is written differently by GSG and GnW" "$cva_c3_realu"
 # The third, cascade.sh's (README.md beside compose.sh, "Composition"), from the contracts each is written from, pragmas.sh --from: GSG, GnW and GSN each written from GSG, and GnW and GSN, which GSNW amends, from GKK and GSG.
-cva_c3_from=$(bash "$CVA/compiler/pragmas.sh" --from "$GLP_DIR/programs/cssn/GSNW.txt" 2>&1 | sed -e 's|.*/programs/||' | tr '\n' ' ')
-check "CVA composition over a third: pragmas.sh --from gives the contracts GSNW is written from, each before the contracts written from it, GSNW last (from)" "^gsc/GKK.txt gsc/GSG.txt gsc/GSN.txt gsc/GnW.txt cssn/GSNW.txt $" "$cva_c3_from"
+cva_c3_from=$(bash "$CVA/compiler/pragmas.sh" --from "$GLP_DIR/programs/cssn/Warded-Groups.txt" 2>&1 | sed -e 's|.*/programs/||' | tr '\n' ' ')
+check "CVA composition over a third: pragmas.sh --from gives the contracts GSNW is written from, each before the contracts written from it, GSNW last (from)" "^gsc/Knowledge.txt gsc/Friendship.txt gsc/Groups.txt gsc/Guardians.txt cssn/Warded-Groups.txt $" "$cva_c3_from"
 # The line saying what a contract is written from, in GSC's form (GSC df5e454, Section 2: "each relation is followed by the contract it is to, or by `it' for the contract named last, the relations joined by `and', and an instantiation says after the contract's name, between commas, what it writes for what"; Code #27, Cloud-vGLP_inbox.md, 2026-11-10 18:04 UTC, 2).
 cva_wf=$(mktemp -d)
 printf '%s\n' 'XB: Base' 'Alice is a person.' '1. ■ Establish. Alice may establish her identity.' > "$cva_wf/XB.txt"
