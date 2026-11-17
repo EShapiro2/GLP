@@ -504,7 +504,7 @@ for n in sorted(set(compiled) | set(cat)):
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
     c['live'], c['noteBefore'], c['layers'] = n in compiled, '', {}
     # Whether the record has a platform, whatever runs: on a test site built
-    # over a tree with no world (deploy/next.sh) nothing is live, and the
+    # over a tree with no world nothing is live, and the
     # table still counts the platforms printed and compiled.
     c['platform'] = has_platform(n)
     # Why a contract with a record has no app: the compiler's reasons, as
