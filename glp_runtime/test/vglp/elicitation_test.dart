@@ -367,32 +367,46 @@ Question  ::= stream_line_r(Stream(Line)?).
 Ask(Q)    ::= ask(Constant, Q).
 View_hole ::= hole.
 View_skel_line ::= line(String, View_hole).
-Drawn     ::= stream_line_r(_) ; View_skel_line.
+Questioned(S) ::= S ; input(Path).
+View_pending_status ::= Status ; pending(Path).
+View_written_line ::= line(Questioned(String), View_pending_status).
+View_answered_stream_line ::= input(Path) ;
+    [Questioned(View_written_line) | View_answered_stream_line].
+Drawn     ::= stream_line_r(View_answered_stream_line) ; View_skel_line.
+Marked    ::= input(Path).
+Logged    ::= drawn(Integer, Widget(Drawn), Marked) ;
+    drawn(Integer, View_answered_stream_line) ; withdrawn(Integer).
 
 imported procedure chat#chat(Peer?, Stream(Msg), Stream(Ask(Question))).
 imported procedure chat#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
-exported procedure play_chat(Stream(Msg), Stream(_)).
+exported procedure play_chat(Stream(Msg), Stream(Logged)).
 play_chat(Out?, Log?) :-
     chat # chat(bob, Out, Asks),
     chat # dispatch(Asks?, ch(Gs?, Ds), _),
     chatting_person(Ds?, Gs, Log).
 
-procedure chatting_person(_?, PersonIn(Drawn), Stream(_)).
+procedure chatting_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 chatting_person([draw(Id, W, stream_line_r(input(Q))) | Ds],
                 [input(Id?, Q?, line("hi", hole)),
                  input(Id?, Q?, line("yo", hole)) | Gs?],
                 [drawn(Id?, W?, input(Q?)) | Log?]) :-
     ground(Id?), ground(W?), ground(Q?) |
     watching(Ds?, Gs, Log).
+chatting_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    chatting_person(Ds?, Gs, Log).
 
-procedure watching(_?, PersonIn(Drawn), Stream(_)).
+procedure watching(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 watching([draw(Id, _, stream_line_r(V)) | Ds], Gs?, [drawn(Id?, V?) | Log?]) :-
     ground(Id?), ground(V?) |
     watching(Ds?, Gs, Log).
 watching([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
+    watching(Ds?, Gs, Log).
+watching([_ | Ds], Gs?, Log?) :-
+    otherwise |
     watching(Ds?, Gs, Log).
 ''');
     });
@@ -443,19 +457,22 @@ exported procedure (Price?)*quote(Price).
 Price    ::= price(Real).
 Question ::= price_r(Price?).
 Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= price_r(_) ; Price.
+View_price_r ::= Price ; input(Path).
+Drawn    ::= price_r(View_price_r) ; Price.
+Marked   ::= input(Path).
+Logged   ::= drawn(Integer, Widget(Drawn), Marked) ; withdrawn(Integer).
 
 imported procedure quote#quote(Price, Stream(Ask(Question))).
 imported procedure quote#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
-exported procedure play_quote(Price, Stream(_)).
+exported procedure play_quote(Price, Stream(Logged)).
 play_quote(P?, Log?) :-
     quote # quote(P, Asks),
     quote # dispatch(Asks?, ch(Gs?, Ds), _),
     pricing_person(Ds?, Gs, Log).
 
-procedure pricing_person(_?, PersonIn(Drawn), Stream(_)).
+procedure pricing_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 pricing_person([draw(Id, W, price_r(input(Q))) | Ds],
                [input(Id?, Q?, price_r(input([]))), input(Id?, Q?, price(2.5)) | Gs?],
                [drawn(Id?, W?, input(Q?)) | Log?]) :-
@@ -463,6 +480,9 @@ pricing_person([draw(Id, W, price_r(input(Q))) | Ds],
     pricing_person(Ds?, Gs, Log).
 pricing_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
+    pricing_person(Ds?, Gs, Log).
+pricing_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
     pricing_person(Ds?, Gs, Log).
 ''');
     });
@@ -511,19 +531,22 @@ Choice   ::= a ; b.
 Pick     ::= 'odd one'(Choice).
 Question ::= pick_r(Pick?).
 Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= pick_r(_) ; Pick.
+View_pick_r ::= Pick ; input(Path).
+Drawn    ::= pick_r(View_pick_r) ; Pick.
+Marked   ::= input(Path).
+Logged   ::= drawn(Integer, Widget(Drawn), Marked) ; withdrawn(Integer).
 
 imported procedure pick#pick(Pick, Stream(Ask(Question))).
 imported procedure pick#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
-exported procedure play_pick(Pick, Stream(_)).
+exported procedure play_pick(Pick, Stream(Logged)).
 play_pick(P?, Log?) :-
     pick # pick(P, Asks),
     pick # dispatch(Asks?, ch(Gs?, Ds), _),
     picking_person(Ds?, Gs, Log).
 
-procedure picking_person(_?, PersonIn(Drawn), Stream(_)).
+procedure picking_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 picking_person([draw(Id, W, pick_r(input(Q))) | Ds],
                [input(Id?, Q?, 'odd one'(b)) | Gs?],
                [drawn(Id?, W?, input(Q?)) | Log?]) :-
@@ -531,6 +554,9 @@ picking_person([draw(Id, W, pick_r(input(Q))) | Ds],
     picking_person(Ds?, Gs, Log).
 picking_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
+    picking_person(Ds?, Gs, Log).
+picking_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
     picking_person(Ds?, Gs, Log).
 ''');
     });
@@ -615,9 +641,26 @@ Question ::= list_integer_r(List(Integer)?) ; stream_integer_r(Stream(Integer)?)
            ; post_r(Post?) ; card_w(Card) ; lot_r(Lot?) ; list_opt_r(List(Opt)?)
            ; lines_r(Lines?).
 Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= list_integer_r(_) ; stream_integer_r(_) ; post_r(_) ; card_w(_)
-           ; lot_r(_) ; list_opt_r(_) ; lines_r(_) ; Post ; Constant ; Reply
+Drawn    ::= list_integer_r(View_list_integer_r)
+           ; stream_integer_r(View_stream_integer_r)
+           ; post_r(Questioned(View_open_post)) ; card_w(View_card)
+           ; lot_r(View_lot_r) ; list_opt_r(View_list_opt_r)
+           ; lines_r(View_lines_r) ; Post ; Constant ; Reply
            ; Lot ; Opt ; [DrawnEnd | DrawnNil].
+Questioned(S) ::= S ; input(Path).
+View_list_integer_r ::= List(Integer) ; input(Path).
+View_stream_integer_r ::= Stream(Integer) ; input(Path).
+View_open_post ::= post(String, Questioned(Stream(String)))
+           ; tags(Questioned(List(Constant))) ; quit.
+View_open_reply ::= reply(String, Questioned(Stream(String))).
+View_card ::= card(Peer, Questioned(View_open_reply)).
+View_lot_r ::= Lot ; input(Path).
+View_list_opt_r ::= List(Opt) ; input(Path).
+View_lines_r ::= Lines ; input(Path).
+Marked   ::= input(Path).
+Seen     ::= View_open_post ; View_card ; Marked.
+Logged   ::= drawn(Integer, Widget(Drawn), Marked) ; drawn(Integer, Seen)
+           ; withdrawn(Integer).
 DrawnEnd ::= end.
 DrawnNil ::= [].
 
@@ -632,12 +675,12 @@ imported procedure b#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
 %% A list: two numbers, then its end, [end].
-exported procedure play_numbers(List(Integer), Stream(_)).
+exported procedure play_numbers(List(Integer), Stream(Logged)).
 play_numbers(Ns?, Log?) :-
     b # numbers(Ns, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
     numbers_person(Ds?, Gs, Log).
 
-procedure numbers_person(_?, PersonIn(Drawn), Stream(_)).
+procedure numbers_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 numbers_person([draw(Id, W, list_integer_r(input(Q))) | Ds],
                [input(Id?, Q?, 1), input(Id?, Q?, 2), input(Id?, Q?, [end]) | Gs?],
                [drawn(Id?, W?, input(Q?)) | Log?]) :-
@@ -646,14 +689,17 @@ numbers_person([draw(Id, W, list_integer_r(input(Q))) | Ds],
 numbers_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     numbers_person(Ds?, Gs, Log).
+numbers_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    numbers_person(Ds?, Gs, Log).
 
 %% A stream: a number, [end], [], and a number.
-exported procedure play_counts(Stream(Integer), Stream(_)).
+exported procedure play_counts(Stream(Integer), Stream(Logged)).
 play_counts(Cs?, Log?) :-
     b # counts(Cs, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
     counts_person(Ds?, Gs, Log).
 
-procedure counts_person(_?, PersonIn(Drawn), Stream(_)).
+procedure counts_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 counts_person([draw(Id, W, stream_integer_r(input(Q))) | Ds],
               [input(Id?, Q?, 1), input(Id?, Q?, [end]), input(Id?, Q?, []),
                input(Id?, Q?, 2) | Gs?],
@@ -663,15 +709,18 @@ counts_person([draw(Id, W, stream_integer_r(input(Q))) | Ds],
 counts_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     counts_person(Ds?, Gs, Log).
+counts_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    counts_person(Ds?, Gs, Log).
 
 %% A post: the form with [] at its stream, then two lines into the stream
 %% at the position the redrawn view marks.
-exported procedure play_post(Post, Stream(_)).
+exported procedure play_post(Post, Stream(Logged)).
 play_post(P?, Log?) :-
     b # poster(P, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
     post_person(Ds?, Gs, Log).
 
-procedure post_person(_?, PersonIn(Drawn), Stream(_)).
+procedure post_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 post_person([draw(Id, W, post_r(input(Q))) | Ds],
             [input(Id?, Q?, post(hi, [])) | Gs?],
             [drawn(Id?, W?, input(Q?)) | Log?]) :-
@@ -685,14 +734,17 @@ post_person([draw(Id, _, post_r(post(S, input(Q)))) | Ds],
 post_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     post_person(Ds?, Gs, Log).
+post_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    post_person(Ds?, Gs, Log).
 
 %% Tags: the form with [] at its list, then a tag and the list's end.
-exported procedure play_tags(Post, Stream(_)).
+exported procedure play_tags(Post, Stream(Logged)).
 play_tags(P?, Log?) :-
     b # poster(P, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
     tags_person(Ds?, Gs, Log).
 
-procedure tags_person(_?, PersonIn(Drawn), Stream(_)).
+procedure tags_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 tags_person([draw(Id, _, post_r(input(Q))) | Ds],
             [input(Id?, Q?, tags([])) | Gs?],
             [drawn(Id?, input(Q?)) | Log?]) :-
@@ -706,15 +758,18 @@ tags_person([draw(Id, _, post_r(tags(input(Q)))) | Ds],
 tags_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     tags_person(Ds?, Gs, Log).
+tags_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    tags_person(Ds?, Gs, Log).
 
 %% A card the program writes holding the person's reply, which holds a
 %% stream: the reply, then a line into its stream.
-exported procedure play_respond(Reply, Stream(_)).
+exported procedure play_respond(Reply, Stream(Logged)).
 play_respond(R?, Log?) :-
     b # respond(R, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
     respond_person(Ds?, Gs, Log).
 
-procedure respond_person(_?, PersonIn(Drawn), Stream(_)).
+procedure respond_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 respond_person([draw(Id, _, card_w(card(F, input(Q)))) | Ds],
                [input(Id?, Q?, reply(hi, [])) | Gs?],
                [drawn(Id?, card(F?, input(Q?))) | Log?]) :-
@@ -728,14 +783,17 @@ respond_person([draw(Id, _, card_w(card(F, reply(S, input(Q))))) | Ds],
 respond_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     respond_person(Ds?, Gs, Log).
+respond_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    respond_person(Ds?, Gs, Log).
 
 %% A lot: its issuer a key.
-exported procedure play_lot(Lot, Stream(_)).
+exported procedure play_lot(Lot, Stream(Logged)).
 play_lot(L?, Log?) :-
     b # lot(L, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
     lot_person(Ds?, Gs, Log).
 
-procedure lot_person(_?, PersonIn(Drawn), Stream(_)).
+procedure lot_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 lot_person([draw(Id, W, lot_r(input(Q))) | Ds],
            [input(Id?, Q?, lot('0a1b', 5)) | Gs?],
            [drawn(Id?, W?, input(Q?)) | Log?]) :-
@@ -744,14 +802,17 @@ lot_person([draw(Id, W, lot_r(input(Q))) | Ds],
 lot_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     lot_person(Ds?, Gs, Log).
+lot_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    lot_person(Ds?, Gs, Log).
 
 %% A list whose element type has [], a constant: none, [], then its end.
-exported procedure play_opts(List(Opt), Stream(_)).
+exported procedure play_opts(List(Opt), Stream(Logged)).
 play_opts(Os?, Log?) :-
     b # opts(Os, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
     opts_person(Ds?, Gs, Log).
 
-procedure opts_person(_?, PersonIn(Drawn), Stream(_)).
+procedure opts_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 opts_person([draw(Id, W, list_opt_r(input(Q))) | Ds],
             [input(Id?, Q?, none), input(Id?, Q?, []), input(Id?, Q?, [end]) | Gs?],
             [drawn(Id?, W?, input(Q?)) | Log?]) :-
@@ -760,14 +821,17 @@ opts_person([draw(Id, W, list_opt_r(input(Q))) | Ds],
 opts_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     opts_person(Ds?, Gs, Log).
+opts_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    opts_person(Ds?, Gs, Log).
 
 %% An alias of a stream: two lines, and [end] answering nothing.
-exported procedure play_write(Lines, Stream(_)).
+exported procedure play_write(Lines, Stream(Logged)).
 play_write(Ls?, Log?) :-
     b # write(Ls, Asks), b # dispatch(Asks?, ch(Gs?, Ds), _),
     write_person(Ds?, Gs, Log).
 
-procedure write_person(_?, PersonIn(Drawn), Stream(_)).
+procedure write_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 write_person([draw(Id, W, lines_r(input(Q))) | Ds],
              [input(Id?, Q?, one), input(Id?, Q?, [end]), input(Id?, Q?, two) | Gs?],
              [drawn(Id?, W?, input(Q?)) | Log?]) :-
@@ -775,6 +839,9 @@ write_person([draw(Id, W, lines_r(input(Q))) | Ds],
     write_person(Ds?, Gs, Log).
 write_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
+    write_person(Ds?, Gs, Log).
+write_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
     write_person(Ds?, Gs, Log).
 ''');
     });
@@ -912,7 +979,13 @@ Card     ::= card(Peer, YesNo?, YesNo?).
 Nest     ::= nest(Peer, Card).
 Question ::= card_w(Card) ; nest_w(Nest).
 Ask(Q)   ::= ask(Constant, Q).
-Drawn    ::= card_w(_) ; nest_w(_) ; YesNo.
+Questioned(S) ::= S ; input(Path).
+View_card ::= card(Peer, Questioned(YesNo), Questioned(YesNo)).
+View_nest ::= nest(Peer, View_card).
+Drawn    ::= card_w(View_card) ; nest_w(View_nest) ; YesNo.
+Seen     ::= View_card ; View_nest.
+Logged   ::= drawn(Integer, Widget(Drawn), View_card) ; drawn(Integer, Seen) ;
+    withdrawn(Integer).
 
 imported procedure two#respond(Offer?, Both, Stream(Ask(Question))).
 imported procedure two#nested(Both, Stream(Ask(Question))).
@@ -921,13 +994,13 @@ imported procedure two#dispatch(Stream(Ask(Question))?,
 
 %% The person grants no at the second question and then yes at the first,
 %% each at the position the view marks.
-exported procedure play_each(Both, Stream(_)).
+exported procedure play_each(Both, Stream(Logged)).
 play_each(B?, Log?) :-
     two # respond(offer(bob), B, Asks),
     two # dispatch(Asks?, ch(Gs?, Ds), _),
     each_person(Ds?, Gs, Log).
 
-procedure each_person(_?, PersonIn(Drawn), Stream(_)).
+procedure each_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 each_person([draw(Id, W, card_w(card(P, input(Q2), input(Q3)))) | Ds],
             [input(Id?, Q3?, no), input(Id?, Q2?, yes) | Gs?],
             [drawn(Id?, W?, card(P?, input(Q2?), input(Q3?))) | Log?]) :-
@@ -936,15 +1009,18 @@ each_person([draw(Id, W, card_w(card(P, input(Q2), input(Q3)))) | Ds],
 each_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     each_person(Ds?, Gs, Log).
+each_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    each_person(Ds?, Gs, Log).
 
 %% The person grants no at the second question only.
-exported procedure play_second(Both, Stream(_)).
+exported procedure play_second(Both, Stream(Logged)).
 play_second(B?, Log?) :-
     two # respond(offer(bob), B, Asks),
     two # dispatch(Asks?, ch(Gs?, Ds), _),
     second_person(Ds?, Gs, Log).
 
-procedure second_person(_?, PersonIn(Drawn), Stream(_)).
+procedure second_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 second_person([draw(Id, _, card_w(card(P, input(Q2), input(Q3)))) | Ds],
               [input(Id?, Q3?, no) | Gs?],
               [drawn(Id?, card(P?, input(Q2?), input(Q3?))) | Log?]) :-
@@ -953,17 +1029,20 @@ second_person([draw(Id, _, card_w(card(P, input(Q2), input(Q3)))) | Ds],
 second_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     second_person(Ds?, Gs, Log).
+second_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    second_person(Ds?, Gs, Log).
 
 %% The person grants terms of the questions' type at positions at which the
 %% card holds no question: the peer's, [1]; past the card's arguments, [4];
 %% the root, []; and below a question, [2, 1].
-exported procedure play_nowhere(Both, Stream(_)).
+exported procedure play_nowhere(Both, Stream(Logged)).
 play_nowhere(B?, Log?) :-
     two # respond(offer(bob), B, Asks),
     two # dispatch(Asks?, ch(Gs?, Ds), _),
     nowhere_person(Ds?, Gs, Log).
 
-procedure nowhere_person(_?, PersonIn(Drawn), Stream(_)).
+procedure nowhere_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 nowhere_person([draw(Id, _, card_w(V)) | Ds],
                [input(Id?, [1], yes), input(Id?, [4], no), input(Id?, [], yes),
                 input(Id?, [2, 1], yes) | Gs?],
@@ -973,16 +1052,19 @@ nowhere_person([draw(Id, _, card_w(V)) | Ds],
 nowhere_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
     nowhere_person(Ds?, Gs, Log).
+nowhere_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    nowhere_person(Ds?, Gs, Log).
 
 %% The nested card: the person grants no at its second question and then yes
 %% at its first, each at the position the view marks.
-exported procedure play_nested(Both, Stream(_)).
+exported procedure play_nested(Both, Stream(Logged)).
 play_nested(B?, Log?) :-
     two # nested(B, Asks),
     two # dispatch(Asks?, ch(Gs?, Ds), _),
     nest_person(Ds?, Gs, Log).
 
-procedure nest_person(_?, PersonIn(Drawn), Stream(_)).
+procedure nest_person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 nest_person([draw(Id, _, nest_w(nest(P, card(P1, input(Q2), input(Q3))))) | Ds],
             [input(Id?, Q3?, no), input(Id?, Q2?, yes) | Gs?],
             [drawn(Id?, nest(P?, card(P1?, input(Q2?), input(Q3?)))) | Log?]) :-
@@ -990,6 +1072,9 @@ nest_person([draw(Id, _, nest_w(nest(P, card(P1, input(Q2), input(Q3))))) | Ds],
     nest_person(Ds?, Gs, Log).
 nest_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
     ground(Id?) |
+    nest_person(Ds?, Gs, Log).
+nest_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
     nest_person(Ds?, Gs, Log).
 ''');
     });
