@@ -1,26 +1,26 @@
-# A run of the cascade on GPD
+# A run of the cascade on Programs
 
-- Contract: `GPD` (`gpd` to the checker), its owner's two files `programs/social/graph/GPD.txt` and `programs/social/graph/GPD.glp`, copied here as they stood at `0ab2bc6d`.
+- Contract: `Programs` (`programs` to the checker), its owner's two files `programs/social/graph/Programs.txt` and `programs/social/graph/Programs.glp`, copied here as they stood at `872af9ab`.
 - The paper: `/Users/udi/Grassroots/GSA (not on this machine)` at `unknown`, for the paper's own record.
-- Adopted from the Calculus: `programs/social/graph/GPD.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/social/graph/GPD.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-16 19:37 UTC by `cascade.sh gpd`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `0ab2bc6d`; each artefact's source and tool:
+- Adopted from the Calculus: `programs/social/graph/Programs.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/social/graph/Programs.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
+- Run on 2026-11-16 23:56 UTC by `cascade.sh programs`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `872af9ab`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
-| `GPD.txt` | `programs/social/graph/GPD.txt` | copied | the contract, its Logic pragmas and its Interface pragmas |
-| `GPD.glp` | `programs/social/graph/GPD.txt` | calculus/tools/adopt.py, copied from `programs/social/graph/GPD.glp` | the full schemas, the term the checker reads |
-| `schemas.txt` | `GPD.txt`'s Logic pragmas | calculus/tools/adopt.py | the speech-act schemas compiled from the Logic pragmas |
-| `full-contract.txt` | `GPD.txt` and the contracts it is written from | calculus/tools/adopt.py | the full contract, each clause labelled by its origin |
+| `Programs.txt` | `programs/social/graph/Programs.txt` | copied | the contract, its Logic pragmas and its Interface pragmas |
+| `Programs.glp` | `programs/social/graph/Programs.txt` | calculus/tools/adopt.py, copied from `programs/social/graph/Programs.glp` | the full schemas, the term the checker reads |
+| `schemas.txt` | `Programs.txt`'s Logic pragmas | calculus/tools/adopt.py | the speech-act schemas compiled from the Logic pragmas |
+| `full-contract.txt` | `Programs.txt` and the contracts it is written from | calculus/tools/adopt.py | the full contract, each clause labelled by its origin |
 | `full-pragmas.txt` | the same | calculus/tools/adopt.py | the Logic pragmas' sentences, the relations applied |
 | `flat.txt` | the same | calculus/tools/adopt.py | the flat text, the relations applied |
 | `full-schemas.txt` | the same | calculus/tools/adopt.py | the schemas, the relations applied |
-| `verdict.txt` | `GPD.glp` | programs/gsc, check/2 | the checker's verdict: `syntactically_grassroots` |
-| `vmat.tex` | `GPD.glp` | programs/gsc, compile_contract/2 | the VMAT form, 15 displays, one per schema |
-| `platform.vglp` | `GPD.glp` read by programs/gsc's as_read/2, and `GPD.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
+| `verdict.txt` | `Programs.glp` | programs/gsc, check/2 | the checker's verdict: `syntactically_grassroots` |
+| `vmat.tex` | `Programs.glp` | programs/gsc, compile_contract/2 | the VMAT form, 15 displays, one per schema |
+| `platform.vglp` | `Programs.glp` read by programs/gsc's as_read/2, and `Programs.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
 | `platform.glp` | `platform.vglp` | glp_runtime's :emit | the platform compiled to GLP, as emitted |
 | `interface.glp` | `platform.vglp` and `platform.glp` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |
-| (no run) | | | vGLP keeps no plays for gpd |
+| (no run) | | | vGLP keeps no plays for programs |
 
 What the tools refused or lacked:
-- run: vGLP keeps no plays for gpd
+- run: vGLP keeps no plays for programs

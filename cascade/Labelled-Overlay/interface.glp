@@ -1,4 +1,4 @@
-%% The interface of the canonical CVA platform of GDO-L in sGLP's term form
+%% The interface of the canonical CVA platform of Labelled-Overlay in sGLP's term form
 %% (programs/sglp/README.md, "The term form"), printed by programs/sglp/cva/interface.sh
 %% from platform.vglp and platform.glp beside it: the types the platform defines
 %% and those of the root it names, its volitional procedure declarations, and

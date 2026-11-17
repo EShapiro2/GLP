@@ -1,7 +1,7 @@
 %% gds_agent.glp - the directory's agent
 %%
 %% The agent of a directory, GNA Section 7, "Grassroots Directory Service",
-%% the contract GDS (GDS.txt beside this file), written by hand from the
+%% the contract GDS (Directory.txt beside this file), written by hand from the
 %% contract and the section as rv_agent.glp is from GRV.  It runs on the
 %% headless layer under the directory's own key, hosted by servers/directory
 %% (bin/directory_server.dart), which holds the listings and their links in its
