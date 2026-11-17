@@ -101,7 +101,14 @@ for app in $APPS; do
         OK=0
         continue
     fi
+    # The developer's values, NAME.values beside the contract's file, its owner's (vGLP 922ac53, Section 5.4), as cascade.sh passes them; with none, compile/5.
+    vf="${src%.glp}.values"
+    if [ -f "$vf" ]; then
+        dv="dev(\"[$(grep -v '^[[:space:]]*$' "$vf" | paste -s -d, - | sed -e 's/,/, /g')]\")"
+        printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$name" "$rd" "$vt" "$intro" "$pr" "$dv" > "$WORK/p.in"
+    else
     printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$GLP_DIR/programs/vglp/cva/compiler/" "$name" "$rd" "$vt" "$intro" "$pr" > "$WORK/p.in"
+    fi
     repl "$WORK/p.in" "$WORK/p.out"
     mkdir -p "$WORK/out/$app"
     out="$WORK/out/$app/platform.vglp"

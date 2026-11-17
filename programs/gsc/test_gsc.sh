@@ -164,6 +164,11 @@ check "DGC's contract is an environment contract, knows reflexive within it" "en
 DGCV=$(asread "$DGCT")
 check "as_read gives DGC its wrappers, each schema in the checker's form" "environment([today, one_denomination], reflexive([knows], [schema(" "$DGCV"
 check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCV" "$(asread "$DGCV")"
+# as_read keeps the mark one(Name, Other) of an agent variable that is no role, in the read names after the roles' (Definition Binding, GSC 8af7b7c: distinct agent variables to distinct agents but for two the schema marks as possibly one; vGLP #30's question, 2026-11-17)
+out=$(run "as_read([sas(lu, ['Alice', 'Carol', one('Dave', 'Carol')], ['Carol', 'Dave'], [not(atom(pointer, ['Alice', 'Carol', 'Dave']))], [atom(pointer, ['Alice', 'Carol', 'Dave'])], true, ['Alice'])], R).")
+check "as_read keeps a variable's mark of possibly one after the roles' names" "schema(lu, ['Alice', one('Dave', 'Carol')], [pvar('Carol'), pvar('Dave')]" "$out"
+out=$(run "as_read([sas(lu, ['Alice', 'Carol', 'Dave'], ['Carol', 'Dave'], [not(atom(pointer, ['Alice', 'Carol', 'Dave']))], [atom(pointer, ['Alice', 'Carol', 'Dave'])], true, ['Alice'])], R).")
+check "and adds no mark where the variables are not marked" "schema(lu, ['Alice'], [pvar('Carol'), pvar('Dave')]" "$out"
 check "GSN's close as the checker reads it deletes member(<Alice>.n) at Alice, as Section 3.2 writes it" \
       "cschema(close, ['Alice', 'Bob'], [svar(n)], [], [rs(guarded, [atom(closed, [svar(n)])], [atom(listed, [role(1), svar(n)]), atom(member, [nterm(ext(own(1), n))])], [atom(identity, [])], [])" "$GSNV"
 # A listed role is named by the variable its quantifier binds, the clause's

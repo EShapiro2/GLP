@@ -79,18 +79,45 @@ def exempt(e, pr):
     return EXEMPT.get((re.split(r'[+]', e['label'])[0], e['name'], pr))
 
 
+def term_names(n):
+    """The Names of each schema of n's term, in the order of the acts of toglp.schemas(n): [(names, {(x, y)})], the
+    second the pairs its marks say are possibly one, one(Name, Other), one(Name, [Others]) and one(Name, '_')."""
+    t, _, roles = toglp.contract_term(n)
+    if roles:
+        return None
+    out = []
+    for m in re.finditer(r"sas\('?[A-Za-z0-9_-]+'?, \[((?:[^\[\]]|\[[^\[\]]*\])*)\]", t):
+        items = re.findall(r"one\('([A-Za-z0-9_]+)', (?:'([^']*)'|\[([^\]]*)\])\)|'([A-Za-z0-9_]+)'", m.group(1))
+        names = [a or d for a, b, c, d in items]
+        pairs = set()
+        for a, b, c, d in items:
+            if a:
+                ys = [y for y in names if y != a] if b == '_' else [b] if b else re.findall(r"'([^']+)'", c)
+                pairs |= {tuple(sorted((a, y))) for y in ys}
+        out.append((names, pairs))
+    return out
+
+
 def survey(n):
     out = []
     acts = [e for e in toglp.schemas(n) if e['kind'] == 'act']
-    for e in toglp.schemas(n):
-        if e['kind'] != 'act' or not e.get('same'):
-            continue
+    tn = term_names(n)
+    tn = dict(zip(range(len(acts)), tn)) if tn and len(tn) == len(acts) else {}
+    for i, e in enumerate(acts):
         rs = roles_of(e)
+        names, marked = tn.get(i, ([], set()))
+        declared = {tuple(sorted(p.split('='))) for p in e.get('same', [])}
+        for x, y in sorted(marked - declared):      # no pair the declaration does not call possibly one has a mark
+            out.append((n, e['label'] + ' ' + e['name'], '%s=%s' % (x, y), 'does not hold: marked one in the term, and not declared possibly one'))
+        if not e.get('same'):
+            continue
         for pr in e['same']:
             x, y = pr.split('=')
             miss = [z for z in (x, y) if z not in rs]
-            if miss:
-                out.append((n, e['label'] + ' ' + e['name'], pr, 'not a role: ' + ', '.join(miss)))
+            if miss:      # a pair of which one is no role: the term marks it, where both are agent variables of its Names
+                gone = [z for z in (x, y) if z not in names]
+                st = ('not a role, not an agent: ' + ', '.join(gone)) if gone else ('not a role, marked: ' + ', '.join(miss)) if tuple(sorted((x, y))) in marked else 'does not hold: not a role, and not marked in the term: ' + ', '.join(miss)
+                out.append((n, e['label'] + ' ' + e['name'], pr, st))
                 continue
             a = names_other(e, x, y)
             b = names_other(e, y, x)
@@ -117,7 +144,7 @@ def main():
         print('%-10s %-36s %-12s %s' % r)
     bad = sum(1 for r in rows if r[3].startswith('does not hold'))
     cnt = lambda w: sum(1 for r in rows if r[3].startswith(w))
-    print('%d contracts, %d pairs possibly one agent: %d hold, %d covered by an act of one role, %d exempt, %d not roles; %d for which Binding does not hold' % (len(names), len(rows), cnt('holds'), cnt('covered'), cnt('exempt'), cnt('not a role'), bad))
+    print('%d contracts, %d pairs possibly one agent: %d hold, %d covered by an act of one role, %d exempt, %d not roles (%d marked in the term, %d not agents); %d for which Binding does not hold or a mark is wrong' % (len(names), len(rows), cnt('holds'), cnt('covered'), cnt('exempt'), cnt('not a role'), cnt('not a role, marked'), cnt('not a role, not an agent'), bad))
     sys.exit(1 if bad else 0)
 
 

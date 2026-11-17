@@ -172,7 +172,13 @@ for c in $CONTRACTS; do
         grep -hE '^(Error|✗)' "$WORK/$c".*.out | head -3 >> "$WORK/status"
         continue
     fi
-    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$(name_in "$c")" "$rd" "$vt" "$it" "$pr" > "$WORK/p.in"
+    # The values the developer gives, one atom a line in <dir>/values beside the platform, as the contract's Vocabulary writes them (vGLP 922ac53, Section 5.4: "A platform is deployed when its developer compiles it, giving the compiler the values"), passed as dev(Text), Text their list; nodev where there is no such file.
+    if [ -f "$HERE/$d/values" ]; then
+        dv="dev(\"[$(grep -v '^[[:space:]]*$' "$HERE/$d/values" | paste -s -d, - | sed -e 's/,/, /g')]\")"
+    else
+        dv=nodev
+    fi
+    printf '%s\n:limit 1000000000\ncompile(%s, %s, %s, %s, %s, %s).\n:quit\n' "$HERE/compiler/" "$(name_in "$c")" "$rd" "$vt" "$it" "$pr" "$dv" > "$WORK/p.in"
     repl "$WORK/p.in" "$WORK/$c.p.out"
     f="$OUT/$d/platform.vglp"
     if ! awk '

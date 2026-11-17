@@ -393,6 +393,29 @@ def gworld(n):
     return _world['w'], _world['root']
 
 
+def own_names(acts, n, b):
+    """The base's acts with n's own names put for the base's (gcsas.py's own_for: Organisation's Orga for Guardians'
+    Wendy)."""
+    import gcsas
+    try:
+        w, root = gworld(n)
+    except Exception:
+        return acts
+    saved = gcsas.ROOT
+    gcsas.ROOT = root
+    try:
+        mp = gcsas.own_for(w, n, b) if n in w.known and b in w.known else {}
+    except gcsas.Err:
+        mp = {}
+    finally:
+        gcsas.ROOT = saved
+    if not mp:
+        return acts
+    f = lambda s: gcsas.map_text(s, mp)
+    return [dict(a, head=Counter({f(l): c for l, c in a['head'].items()}), body=Counter({f(l): c for l, c in a['body'].items()}),
+                 guards={f(g) for g in a['guards']}) for a in acts]
+
+
 def kind_forms(base, n):
     """The base with each act of notes (Notes's Issue, Swap, Pay, Escrow, whose atoms are of notes) put as its forms for
     the kinds of note n has (gcsas.py's kind_forms, 'Kind of note: ...' of the Logic pragmas): a coin, a bond and a share
@@ -497,7 +520,7 @@ def verdicts(n):
                 for c in bs[1:]:
                     s = merge(s, schemas(c))
             ws = words(extra)
-            base = substitute(s, ws)
+            base = own_names(substitute(s, ws), n, b)
             inst = {'from': bs, 'words': ws, 'gone': preds(base) - preds(mine), 'roles_gone': roles(base) - roles(mine),
                     'base_preds': preds(base), 'defaulted': overridden(bs, n)}
             names = bs

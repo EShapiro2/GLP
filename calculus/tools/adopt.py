@@ -295,7 +295,7 @@ def compile_tree(name, texts):
             for d, t in (('rev', rev), ('gr', gr)):
                 with open(os.path.join(tmp, d, NM.file_of(n) + '.txt'), 'w', encoding='utf-8', newline='') as f:
                     f.write(t)
-        for t in ('gcsas.py', 'toglp.py', 'expand.py', 'revtex.py', 'names.py'):
+        for t in ('gcsas.py', 'toglp.py', 'expand.py', 'revtex.py', 'names.py', 'nameslines.py'):
             shutil.copy(os.path.join(TOOLS, t), os.path.join(tmp, 'tools', t))
         shutil.copy(os.path.join(TOOLS, '..', 'NAMES.txt'), os.path.join(tmp, 'NAMES.txt'))      # the names (tools/names.py)
         run = lambda *a: subprocess.run([sys.executable] + list(a), cwd=tmp, capture_output=True, text=True)

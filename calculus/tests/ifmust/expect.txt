@@ -1,19 +1,20 @@
 Knowledge  commute yes; return yes; recover same
 Friendship commute yes; return yes; recover same
 Guardians  commute yes; return yes; recover same
+names: 1 names of two kinds neither of which is under the other
+kinds: Guardians: Carol is person ('Alice, Bob and Carol are persons.') and ward ('Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.')
 3 contracts, 0 with a fault
 --- sasx/Friendship.txt
 Friendship (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Friendship:0 - | Alice, Bob and Carol are persons.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:0 - | Alice and Bob are persons.
 Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
@@ -23,21 +24,20 @@ Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust
 Guardians (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Guardians:0 - | Alice and Bob are persons, Carol and Dave wards.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1+Guardians:3 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2+Guardians:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
 Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:0 - | Alice and Bob are persons.
 Friendship:1+Guardians:3 ■ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice, Bob.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 Guardians:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
-Guardians:0 - | Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
 Guardians:1 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), creator(Alice,Carol), guardian(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
 Guardians:1 ■ | Alice chooses Carol's key pair.
 Guardians:2 ■ | Guardian decisions.
@@ -74,7 +74,7 @@ Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice
 Friendship
 An *identity* is a unique key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -87,7 +87,7 @@ Guardians
 An *identity* is a unique key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity. Alice and Bob are persons. Alice, Bob and Erin are persons, Carol and Dave wards.
+Alice and Bob are persons, Carol and Dave wards. A *party* to a contract is whoever has an identity.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -109,8 +109,9 @@ Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 --- gx/Friendship.txt
 Friendship
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Reflexive: x knows y.
+Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -119,9 +120,10 @@ Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
 Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 --- gx/Guardians.txt
 Guardians
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts. Alice and Bob are persons.
-Of Guardians: Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for it. Alice, Bob and Erin are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Reflexive: x knows y.
+Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Of Guardians: Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for it. In clause 4 Alice and Bob are possibly one person.
+Alice and Bob are persons, Carol and Dave wards.
 Knowledge:1, Guardians:3. ■ Establish: Alice may establish an identity, and then Alice is a person. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
 Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
@@ -135,7 +137,8 @@ Guardians:4. ■ Wards. Wards acquaint: Carol and Dave may jointly come to know 
 Guardians:5. ■ Retire: Those who decide for Carol may retire Carol. Carol can then take no act.
 --- gx/Knowledge.txt
 Knowledge
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity. Reflexive: x knows y.
+Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.

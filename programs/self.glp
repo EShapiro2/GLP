@@ -291,7 +291,12 @@ SgChannel(T) ::= ch(Stream(SgToApp(T)), Stream(AppToSg)?).
 % A schema sas(Name, Names, Vars, Head, Body, Constraint, Guards); a contract
 % the list of its schemas; a contract declared with its reflexive or its
 % environment predicates.
-RName     ::= Constant ; one(Constant, Constant).
+% one(Name, Others) marks a role that may be bound to the same person as
+% roles named before it in Names: Others is one such name, the list of them,
+% or '_' for any of them (vGLP, Section 5.4; GSC, Definition Binding; GSC #19,
+% Code_inbox 2026-11-17 11:31 UTC).
+RName     ::= Constant ; one(Constant, OneOf).
+OneOf     ::= Constant ; List(Constant).
 Names      ::= [] ; [RName | Names].
 SNT    ::= own(Constant) ; ext(SNT, Constant).
 % typed(T, X), the speech-act variable X of the type T, as typed(email, x)

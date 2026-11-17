@@ -9,64 +9,59 @@ Liquid Cooperative commute yes; return yes; recover same
 Savings Bank commute yes; return yes; recover same
 Second-Score Auction commute yes; return yes; recover same
 Workers' Cooperative commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
 11 contracts, 0 with a fault
 --- sasx/Auction.txt
 Auction (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Auction:0 - | Alice, Bob and Carol are persons.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
-Auction:0 - | Alice and Bob are persons.
 Auction:1 ■ Bid: bids(Alice,Bob) <- knows(Alice,Bob) guarded by Alice.
 --- sasx/Bank.txt
 Bank (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Bank:0 - | Alice, Bob and Carol are persons, Acct an account.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Bank:0 - | A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank.
-Bank:0 - | Alice and Bob are persons, Acct an account.
 Bank:1 ■ Open: account(Alice,Acct,Bob), account(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice) guarded by Alice, Bob.
 Bank:1 ■ | Bank accounts stay open until both close them.
 --- sasx/Community-Bank.txt
 Community Bank (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Community Bank:0 - | Alice, Bob and Carol are persons, Acct an account.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Bank:0 - | A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank.
-Bank:0 - | Alice and Bob are persons, Acct an account.
 Bank:1+Community Bank:1 ■ Open: account(Alice,Acct,Bob), account(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Bob) guarded by Alice, Bob.
 Bank:1 ■ | Bank accounts stay open until both close them.
 Community Bank:0 - | A *community bank* is a bank whose members know each other; the bank serves the organisation of its members.
-Community Bank:0 - | Alice and Bob are persons, Acct an account.
 --- sasx/Cooperative-DAO.txt
 Cooperative DAO (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Cooperative DAO:0 - | Alice, Bob and Carol are persons, Coop a cooperative, Org a networked organisation.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Cooperative:0 - | A *cooperative* is owned by its members.
-Cooperative:0 - | Alice and Bob are persons, Coop a cooperative.
 Cooperative:1 ■ Join: member(Alice,Coop) <- member(Bob,Coop) guarded by Alice, Bob.
 Cooperative:1 ■ | Cooperative members vote.
-DAO:0 - | Alice and Bob are persons, Org a networked organisation.
 DAO:1 ■ Delegate: delegates(Alice,Bob,Org) <- knows(Alice,Bob) guarded by Alice.
 DAO:1 ■ | DAO bylaws name a steward.
 Cooperative DAO:0 - | A *cooperative DAO* is a cooperative that delegates as a DAO does.
@@ -74,27 +69,25 @@ Cooperative DAO:0 - | A *cooperative DAO* is a cooperative that delegates as a D
 Cooperative (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Cooperative:0 - | Alice, Bob and Carol are persons, Coop a cooperative.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Cooperative:0 - | A *cooperative* is owned by its members.
-Cooperative:0 - | Alice and Bob are persons, Coop a cooperative.
 Cooperative:1 ■ Join: member(Alice,Coop) <- member(Bob,Coop) guarded by Alice, Bob.
 Cooperative:1 ■ | Cooperative members vote.
 --- sasx/DAO.txt
 DAO (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+DAO:0 - | Alice, Bob and Carol are persons, Org a networked organisation.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
-DAO:0 - | Alice and Bob are persons, Org a networked organisation.
 DAO:1 ■ Delegate: delegates(Alice,Bob,Org) <- knows(Alice,Bob) guarded by Alice.
 DAO:1 ■ | DAO bylaws name a steward.
 --- sasx/Knowledge.txt
@@ -111,70 +104,60 @@ Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice
 Liquid Cooperative (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Liquid Cooperative:0 - | Alice, Bob and Carol are persons, Coop a cooperative, Org a networked organisation.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Cooperative:0 - | A *cooperative* is owned by its members.
-Cooperative:0 - | Alice and Bob are persons, Coop a cooperative.
 Cooperative:1 ■ Join: member(Alice,Coop) <- member(Bob,Coop) guarded by Alice, Bob.
 Cooperative:1 ■ | Cooperative members vote.
-DAO:0 - | Alice and Bob are persons, Org a networked organisation.
 DAO:1+Liquid Cooperative:1 ■ Delegate: delegates(Alice,Bob,Org) <- knows(Alice,Bob), member(Bob,Coop) guarded by Alice.
 DAO:1 ■ | DAO bylaws name a steward.
 Cooperative DAO:0 - | A *cooperative DAO* is a cooperative that delegates as a DAO does.
-Liquid Cooperative:0 - | Alice and Bob are persons, Coop a cooperative, Org a networked organisation.
 --- sasx/Savings-Bank.txt
 Savings Bank (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Savings Bank:0 - | Alice, Bob and Carol are persons, Acct an account.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Bank:0 - | A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank.
-Bank:0 - | Alice and Bob are persons, Acct an account.
 Bank:1+Community Bank:1+Savings Bank:1 ■ Open: account(Alice,Acct,Bob), account(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Bob), knows(Bob,Alice) guarded by Alice, Bob.
 Bank:1 ■ | Bank accounts stay open until both close them.
 Community Bank:0 - | A *community bank* is a bank whose members know each other; the bank serves the organisation of its members.
-Community Bank:0 - | Alice and Bob are persons, Acct an account.
 Savings Bank:0 - | A *savings bank* is a community bank that keeps savings.
-Savings Bank:0 - | Alice and Bob are persons, Acct an account.
 Savings Bank:1 ■ | Savings Bank accounts pay interest.
 --- sasx/Second-Score-Auction.txt
 Second-Score Auction (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Second-Score Auction:0 - | Alice, Bob and Carol are persons.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
-Auction:0 - | Alice and Bob are persons.
 Auction:1+Second-Score Auction:1 ■ Bid: bids(Alice,Bob) <- knows(Alice,Bob), knows(Bob,Alice) guarded by Alice.
 Second-Score Auction:0 - | A *second-score auction* awards the second score.
-Second-Score Auction:0 - | Alice and Bob are persons.
 --- sasx/Workers-Cooperative.txt
 Workers' Cooperative (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Workers' Cooperative:0 - | Alice, Bob and Carol are persons, Coop a cooperative.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Cooperative:0 - | A *cooperative* is owned by its members.
-Cooperative:0 - | Alice and Bob are persons, Coop a cooperative.
 Cooperative:1+Workers' Cooperative:1 ■ Join: member(Alice,Coop) <- member(Bob,Coop), knows(Alice,Bob) guarded by Alice, Bob.
 Cooperative:1 ■ | Cooperative members vote.
 Workers' Cooperative:0 - | A *workers' cooperative* is a cooperative whose members work for it.
-Workers' Cooperative:0 - | Alice and Bob are persons, Coop a cooperative.
 Workers' Cooperative:1 ■ | The workers' cooperative pays its workers.
 --- term Auction
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
@@ -238,7 +221,7 @@ reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), at
 Auction
 An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Alice, Bob and Carol are persons. Alice and Bob are persons.
+Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -249,7 +232,7 @@ Bank
 An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank.
-Alice, Bob and Carol are persons. Alice and Bob are persons, Acct an account.
+Alice, Bob and Carol are persons, Acct an account.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -261,7 +244,7 @@ An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank. Here: community bank bylaws.
 A *community bank* is a bank whose members know each other; the bank serves the organisation of its members.
-Alice, Bob and Carol are persons. Alice and Bob are persons, Acct an account.
+Alice, Bob and Carol are persons, Acct an account.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -273,7 +256,7 @@ An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 A *cooperative* is owned by its members.
 A *cooperative DAO* is a cooperative that delegates as a DAO does.
-Alice, Bob and Carol are persons. Alice and Bob are persons, Coop a cooperative. Alice and Bob are persons, Org a networked organisation.
+Alice, Bob and Carol are persons, Coop a cooperative, Org a networked organisation.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -285,7 +268,7 @@ Cooperative
 An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 A *cooperative* is owned by its members.
-Alice, Bob and Carol are persons. Alice and Bob are persons, Coop a cooperative.
+Alice, Bob and Carol are persons, Coop a cooperative.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -295,7 +278,7 @@ Cooperative:1. ■ Join: Alice may join the cooperative Coop, with the consent o
 DAO
 An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Alice, Bob and Carol are persons. Alice and Bob are persons, Org a networked organisation.
+Alice, Bob and Carol are persons, Org a networked organisation.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -316,7 +299,7 @@ An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 A *cooperative* is owned by its members.
 A *cooperative DAO* is a cooperative that delegates as a DAO does.
-Alice, Bob and Carol are persons. Alice and Bob are persons, Coop a cooperative. Alice and Bob are persons, Org a networked organisation. Alice and Bob are persons, Coop a cooperative, Org a networked organisation.
+Alice, Bob and Carol are persons, Coop a cooperative, Org a networked organisation.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -330,7 +313,7 @@ A *party* to a contract is whoever has an identity, and a *person* is a party wh
 A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank. Here: community bank bylaws.
 A *community bank* is a bank whose members know each other; the bank serves the organisation of its members.
 A *savings bank* is a community bank that keeps savings.
-Alice, Bob and Carol are persons. Alice and Bob are persons, Acct an account.
+Alice, Bob and Carol are persons, Acct an account.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -341,7 +324,7 @@ Second-Score Auction
 An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 A *second-score auction* awards the second score.
-Alice, Bob and Carol are persons. Alice and Bob are persons.
+Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -354,42 +337,44 @@ An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 A *cooperative* is owned by its members.
 A *workers' cooperative* is a cooperative whose members work for it.
-Alice, Bob and Carol are persons. Alice and Bob are persons, Coop a cooperative.
+Alice, Bob and Carol are persons, Coop a cooperative.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Cooperative:1, Workers' Cooperative:1. ■ Join: Alice may join the cooperative Coop, with the consent of Bob, provided Bob is a member of Coop, only if Alice knows Bob. Cooperative members vote. The workers' cooperative pays its workers.
 --- gx/Auction.txt
 Auction
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Auction: Alice and Bob are persons.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Auction:1. ■ Bid: Alice may bid to Bob, provided Alice knows Bob.
 --- gx/Bank.txt
 Bank
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Bank: A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank. Alice and Bob are persons, Acct an account.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Bank: A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank.
+Alice, Bob and Carol are persons, Acct an account.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Bank:1. ■ Open: Alice and Bob may jointly open the account Acct, provided Alice and Bob know each other. Bank accounts stay open until both close them.
 --- gx/Community-Bank.txt
 Community Bank
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Bank: A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank. Alice and Bob are persons, Acct an account.
-Of Community Bank: A *community bank* is a bank whose members know each other; the bank serves the organisation of its members. Alice and Bob are persons, Acct an account.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Bank: A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank.
+Of Community Bank: A *community bank* is a bank whose members know each other; the bank serves the organisation of its members.
+Alice, Bob and Carol are persons, Acct an account.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Bank:1, Community Bank:1. ■ Open: Alice and Bob may jointly open the account Acct, provided Alice and Bob know each other and Alice knows Bob. Bank accounts stay open until both close them.
 --- gx/Cooperative-DAO.txt
 Cooperative DAO
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Cooperative: A *cooperative* is owned by its members. Alice and Bob are persons, Coop a cooperative.
-Of DAO: Alice and Bob are persons, Org a networked organisation.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Cooperative: A *cooperative* is owned by its members.
 Of Cooperative DAO: A *cooperative DAO* is a cooperative that delegates as a DAO does.
+Alice, Bob and Carol are persons, Coop a cooperative, Org a networked organisation.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -397,33 +382,34 @@ Cooperative:1. ■ Join: Alice may join the cooperative Coop, with the consent o
 DAO:1. ■ Delegate: Alice may delegate to Bob in Org, provided Alice knows Bob. DAO bylaws name a steward.
 --- gx/Cooperative.txt
 Cooperative
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Cooperative: A *cooperative* is owned by its members. Alice and Bob are persons, Coop a cooperative.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Cooperative: A *cooperative* is owned by its members.
+Alice, Bob and Carol are persons, Coop a cooperative.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Cooperative:1. ■ Join: Alice may join the cooperative Coop, with the consent of Bob, provided Bob is a member of Coop. Cooperative members vote.
 --- gx/DAO.txt
 DAO
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of DAO: Alice and Bob are persons, Org a networked organisation.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Alice, Bob and Carol are persons, Org a networked organisation.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 DAO:1. ■ Delegate: Alice may delegate to Bob in Org, provided Alice knows Bob. DAO bylaws name a steward.
 --- gx/Knowledge.txt
 Knowledge
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 --- gx/Liquid-Cooperative.txt
 Liquid Cooperative
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Cooperative: A *cooperative* is owned by its members. Alice and Bob are persons, Coop a cooperative.
-Of DAO: Alice and Bob are persons, Org a networked organisation.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Cooperative: A *cooperative* is owned by its members.
 Of Cooperative DAO: A *cooperative DAO* is a cooperative that delegates as a DAO does.
-Of Liquid Cooperative: Alice and Bob are persons, Coop a cooperative, Org a networked organisation.
+Alice, Bob and Carol are persons, Coop a cooperative, Org a networked organisation.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -431,10 +417,11 @@ Cooperative:1. ■ Join: Alice may join the cooperative Coop, with the consent o
 DAO:1, Liquid Cooperative:1. ■ Delegate: Alice may delegate to Bob in Org, provided Alice knows Bob and Bob is a member of Coop. DAO bylaws name a steward.
 --- gx/Savings-Bank.txt
 Savings Bank
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Bank: A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank. Alice and Bob are persons, Acct an account.
-Of Community Bank: A *community bank* is a bank whose members know each other; the bank serves the organisation of its members. Alice and Bob are persons, Acct an account.
-Of Savings Bank: A *savings bank* is a community bank that keeps savings. Alice and Bob are persons, Acct an account.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Bank: A *bank* keeps accounts. The *bylaws*, a parameter of Bank, say who may open an account at the bank.
+Of Community Bank: A *community bank* is a bank whose members know each other; the bank serves the organisation of its members.
+Of Savings Bank: A *savings bank* is a community bank that keeps savings.
+Alice, Bob and Carol are persons, Acct an account.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -442,18 +429,19 @@ Bank:1, Community Bank:1, Savings Bank:1. ■ Open: Alice and Bob may jointly op
 Savings Bank:1. ■ Savings Bank accounts pay interest.
 --- gx/Second-Score-Auction.txt
 Second-Score Auction
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Auction: Alice and Bob are persons.
-Of Second-Score Auction: A *second-score auction* awards the second score. Alice and Bob are persons.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Second-Score Auction: A *second-score auction* awards the second score.
+Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Auction:1, Second-Score Auction:1. ■ Bid: Alice may bid to Bob, provided Alice and Bob know each other.
 --- gx/Workers-Cooperative.txt
 Workers' Cooperative
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Cooperative: A *cooperative* is owned by its members. Alice and Bob are persons, Coop a cooperative.
-Of Workers' Cooperative: A *workers' cooperative* is a cooperative whose members work for it. Alice and Bob are persons, Coop a cooperative.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Cooperative: A *cooperative* is owned by its members.
+Of Workers' Cooperative: A *workers' cooperative* is a cooperative whose members work for it.
+Alice, Bob and Carol are persons, Coop a cooperative.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.

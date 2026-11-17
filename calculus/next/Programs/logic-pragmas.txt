@@ -1,10 +1,10 @@
 Programs
 Programs extends Forwarding (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration.
-Alice, Bob, Carol and Dave are persons, Carol and Dave possibly Alice, Bob or one person, Prog a program.
+Alice, Bob, Carol and Erin are persons, Carol and Erin possibly Alice, Bob or one person, Prog a program.
 1. ◆ Publish: Carol may publish Prog by signing it. Carol attests that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
 2. ■ Developer Trust. Trust: Alice may declare trust in Carol as a developer, provided Alice knows Carol. Untrust: Alice may withdraw her declaration of trust in Carol as a developer.
-3. ■ Offer: Carol may offer Prog of Dave to Alice, provided Carol holds Prog of Dave and Carol and Alice are friends. Carol offers it by forwarding it to Alice.
+3. ■ Offer: Carol may offer Prog of Erin to Alice, provided Carol holds Prog of Erin and Carol and Alice are friends. Carol offers it by forwarding it to Alice.
 4. ■ Install own: Alice may install her own Prog, provided Alice holds Prog of Alice. Install: Alice may install Prog of Carol, provided Alice holds Prog of Carol and Alice trusts Carol as a developer.
 5. ■ Invite: Alice may invite Bob to join in Prog of Carol, with the consent of Bob, provided Alice and Bob are friends, Alice has Prog of Carol installed and Bob trusts Carol as a developer. Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
 6. ■ Leave: Alice may leave Prog of Carol.

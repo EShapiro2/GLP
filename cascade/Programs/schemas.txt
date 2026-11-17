@@ -11,13 +11,13 @@ After x installs p of z, which requires x does not have p of z installed: x has 
 After x invites y to join in p of z: y holds p signed by x of z, y has p signed by x of z installed, x is a participant of p of z with y and y is a participant of p of z with x.
 After x leaves p of z: no longer x has p of z installed and x has no participation in p of z.
 Programs:0 - | A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration.
-Programs:0 - | Alice, Bob, Carol and Dave are persons, Carol and Dave possibly Alice, Bob or one person, Prog a program.
+Programs:0 - | Alice, Bob, Carol and Erin are persons, Carol and Erin possibly Alice, Bob or one person, Prog a program.
 Programs:1 ◆ Publish: program(Carol,Prog,Carol) <- ~program(Carol,Prog,Carol) guarded by Carol.
 Programs:1 ◆ | Carol attests that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
 Programs:2 ■ | Developer Trust.
 Programs:2 ■ Trust: trusts_developer(Alice,Carol) <- knows(Alice,Carol), ~trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
 Programs:2 ■ Untrust: ~trusts_developer(Alice,Carol) <- trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
-Programs:3 ■ Offer: program(Alice,Prog@Carol,Dave) <- program(Carol,Prog,Dave), friend(Carol,Alice), friend(Alice,Carol) guarded by Carol possibly Alice=Carol, Alice=Dave, Carol=Dave.
+Programs:3 ■ Offer: program(Alice,Prog@Carol,Erin) <- program(Carol,Prog,Erin), friend(Carol,Alice), friend(Alice,Carol) guarded by Carol possibly Alice=Carol, Alice=Erin, Carol=Erin.
 Programs:3 ■ | Carol offers it by forwarding it to Alice.
 Programs:4 ■ Install own: installed(Alice,Prog,Alice) <- program(Alice,Prog,Alice), ~installed(Alice,Prog,Alice) guarded by Alice.
 Programs:4 ■ Install: installed(Alice,Prog,Carol) <- program(Alice,Prog,Carol), trusts_developer(Alice,Carol), ~installed(Alice,Prog,Carol) guarded by Alice possibly Alice=Carol.

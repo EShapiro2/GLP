@@ -4,18 +4,18 @@ Vocabulary: z is of age = of_age(z).
 Roles: the parents of z = parents(z), listed by z has y as a parent and y is a parent of z.
 every guardianship of z has ended: no one is a parent of z and z has no one as a parent.
 After x declares z of age, which requires z is not of age: z is of age, no longer z is a child and every guardianship of z has ended and z is a person.
-Children:0 - | Alice and Bob are persons, Carol and Dave children; in clause 2 Alice and Bob are possibly one person.
+Children:0 - | Alice and Bob are persons, Wendy and Will children; in clause 2 Alice and Bob are possibly one person.
 Children:1 ◆ Enter: Guardians:1 <-.
-Children:1 ◆ | Alice is a legal parent of the minor who operates Carol.
+Children:1 ◆ | Alice is a legal parent of the minor who operates Wendy.
 Children:2 ■ | A child's acquaintances.
-Children:2 ■ Child acquaint: Guardians:3 Ward acquaint <- knows(Alice,Bob), parent(Alice,Carol) guarded by Alice.
-Children:2 ■ Children acquaint: Guardians:4 Wards acquaint <- knows(Alice,Dave), knows(Bob,Carol), knows(Alice,Bob), knows(Bob,Alice), parent(Alice,Carol), parent(Bob,Dave) guarded by Alice, Bob.
-Children:3 ■ Child create: Warded Groups:2 Ward create <- has_parent(Carol,Alice) guarded by Alice.
+Children:2 ■ Child acquaint: Guardians:3 Ward acquaint <- knows(Alice,Bob), parent(Alice,Wendy) guarded by Alice.
+Children:2 ■ Children acquaint: Guardians:4 Wards acquaint <- knows(Alice,Will), knows(Bob,Wendy), knows(Alice,Bob), knows(Bob,Alice), parent(Alice,Wendy), parent(Bob,Will) guarded by Alice, Bob.
+Children:3 ■ Child create: Warded Groups:2 Ward create <- has_parent(Wendy,Alice) guarded by Alice.
 Children:3 ■ Join: Groups:3 Join <- person(Alice).
 Children:3 ■ Child add: Warded Groups:3 Ward add <- child(Bob).
-Children:3 ■ | Only a child, Dave, may join the group.
-Children:4 ○ Of age: of_age(Carol), ~child(Carol), ~parent(_,Carol), ~has_parent(Carol,_), person(Carol) <- creator(Alice,Carol), has_parent(Carol,Bob), ~of_age(Carol), child(Carol) guarded by Alice.
-Children:4 ○ | Carol is then a person.
-Children:4 ○ | The creator will do so if the minor who operates Carol comes of age, and not before.
+Children:3 ■ | Only a child, Will, may join the group.
+Children:4 ○ Of age: of_age(Wendy), ~child(Wendy), ~parent(_,Wendy), ~has_parent(Wendy,_), person(Wendy) <- creator(Alice,Wendy), has_parent(Wendy,Bob), ~of_age(Wendy), child(Wendy) guarded by Alice.
+Children:4 ○ | Wendy is then a person.
+Children:4 ○ | The creator will do so if the minor who operates Wendy comes of age, and not before.
 Children:5 ○ | A minor who is not a ward.
 Children:5 ○ | Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.
