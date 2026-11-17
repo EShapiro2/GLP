@@ -114,7 +114,9 @@ def parse_rules(text):
     return header, out
 
 
-CALC_LINE = re.compile(r'^([A-Za-z]+(?:-[A-Za-z]+)*):(\d+) (\S) (.*)$')
+# A label is a contract's name, a colon and a clause's number: 'GSG:1',
+# 'Community Bank:1', "Workers' Cooperative:2" (calculus/NAMES.txt).
+CALC_LINE = re.compile(r"^([A-Z][A-Za-z' -]*?):(\d+) (\S) (.*)$")
 
 
 def parse_calculus(text):
@@ -141,7 +143,7 @@ def parse_calculus(text):
             body, g = r.group(3), ''
         heads, needs = split_top(r.group(2)), split_top(body)
         out.append({'name': r.group(1), 'head': f"{r.group(1)}: {r.group(2)}", 'form': 'rule',
-                    'origin': m.group(1), 'clause': int(m.group(2)),
+                    'origin': file_of(m.group(1)), 'clause': int(m.group(2)),
                     'adds': [h for h in heads if not h.startswith('~')],
                     'removes': [h[1:] for h in heads if h.startswith('~')],
                     'body': body.strip(), 'needs': ['not ' + n[1:] if n.startswith('~') else n for n in needs],
@@ -194,6 +196,7 @@ def contract_text(path):
     # A title line is 'NAME: the name in full', or, where the name is the
     # whole title, the name alone: 'Notes' (Calculus #8, 2026-11-16).
     name, title = body[0].split(': ', 1) if ': ' in body[0] else (body[0].strip(), body[0].strip())
+    shown, name = name, file_of(name)
     # The pragmas follow the clauses.  A contract adopted from the Calculus
     # (calculus/MIGRATION.md) has its Logic pragmas after its clauses, under
     # 'Logic pragmas', and its Interface pragmas after them; an earlier text
@@ -217,9 +220,21 @@ def contract_text(path):
             # and the declaration of its names, whichever comes first (style
             # guide, 23 and 36; Udi, 2026-11-09, to GO #2).
             preamble.append(l.strip())
-    return {'id': name, 'title': title, 'preamble': '\n'.join(preamble), 'clauses': clauses,
+    return {'id': name, 'name': shown, 'title': title, 'preamble': '\n'.join(preamble), 'clauses': clauses,
             'pragmas': [l for l in body[end:] if l.strip() != 'Pragmas'], 'meta': meta}
 
+
+# The names of the contracts (calculus/NAMES.txt, Calculus #8, Udi approving
+# the names, 2026-11-16): a contract's name is its title line, one plain word
+# or two, 'Community Bank'; its file name is the name with a hyphen for each
+# space and no apostrophe, 'Community-Bank', which names its files, its
+# record cascade/NAME/ and, here, its page.  A reader knows a name as one of
+# the known names and nothing else, matched longest first.  The site shows
+# the name and writes paths and addresses by the file name; it takes each
+# name from the contract's title line, and reads no table of names.  The keys
+# of web/about.json are file names.
+def file_of(name):
+    return name.replace("'", '').replace(' ', '-')
 
 # Every contract's text, wherever its owner keeps it: programs/**/NAME.txt.
 texts = {}
@@ -228,7 +243,7 @@ for d, _, fs in os.walk(os.path.join(GLP, 'programs')):
         if f.endswith('.txt') and f[:-4] == f[:-4].strip() and re.fullmatch(r'[A-Z][A-Za-z]*(?:-[A-Z][A-Za-z]*)*', f[:-4]):
             p = os.path.join(d, f)
             first = next((l for l in read(p).split('\n') if l.strip() and not l.startswith('%')), '')
-            if first.startswith(f[:-4] + ': ') or first.strip() == f[:-4]:
+            if first.startswith(f[:-4] + ': ') or file_of(first.strip()) == f[:-4]:
                 texts[f[:-4]] = p
 
 # The owners, as cascade.sh's table names them; else the first word of the % Owner line.
@@ -245,12 +260,31 @@ for m in re.finditer(r'^#\s+[a-z]+\s+([A-Z][A-Za-z]*)\s+(\S+)\s+programs/', read
 RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implements', 'instantiates')
 
 
+NAMEID, NAMES_RE = {}, [None]
+
+
+def names_in(text, possessive=False):
+    """The contracts a text names, by their file names, in its order: a name
+    is one of the known names and nothing else, matched longest first
+    (calculus/NAMES.txt), so 'Community Bank restricts Bank and extends
+    Coins' names three; with possessive, a name followed by 's is an owner
+    and not a contract named."""
+    if NAMES_RE[0] is None:
+        NAMES_RE[0] = re.compile(r"(?<![A-Za-z])(" + '|'.join(re.escape(x) for x in sorted(NAMEID, key=len, reverse=True)) + r")(?![A-Za-z])" )
+    out = []
+    for m in NAMES_RE[0].finditer(text):
+        if possessive and text[m.end():m.end() + 2] in ("'s", '\u2019s'):
+            continue
+        out.append(NAMEID[m.group(1)])
+    return out
+
+
 def extends_of(c, lines):
     """The relation a contract states and the contracts it relates to: the box's own first line, 'NAME amends GSN and GFP (cite).' (style guide, 36; GSC, Section 8), wherever it stands among the text's lines, or failing it the same sentence in a % line (DGC's); failing both, the % Extends or % Restricts line, its first sentence, less the contracts named only 'through' another."""
     # The sentence is read to its full stop, each reference in parentheses
     # skipped, wherever it stands: 'GNL extends GNO, GDO (GRH, ...) and REC.'
     # extends REC too (style guide, 36; GO #4, 2026-11-10).
-    rel = re.compile(r'\b' + re.escape(c['id']) + r' (' + '|'.join(RELATIONS + ('composes',)) + r')\b([^.]+)')
+    rel = re.compile(r'(?<![A-Za-z])' + re.escape(c['name']) + r' (' + '|'.join(RELATIONS + ('composes',)) + r')\b([^.]+)')
     for l in [l for l in lines if not l.startswith('%')] + [l for l in lines if l.startswith('%')]:
         m = rel.search(re.sub(r'\([^()]*\)', '', l))
         if m:
@@ -272,7 +306,7 @@ def extends_of(c, lines):
                 if part in RELATIONS + ('composes',):
                     cur = part
                     continue
-                named = [t for t in re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b", part) if t in texts and t != c['id']]
+                named = [t for t in names_in(part) if t != c['id']]
                 # 'GDC extends and restricts GC': the contract named takes the
                 # first of the relations written before it.
                 first = pend[0] if pend and not (inst or comp) else cur
@@ -300,13 +334,14 @@ def extends_of(c, lines):
     named = []
     for part in first.split(';'):   # each part names some contracts, then perhaps 'through it' their own
         # a name followed by 's is an owner (GAI's), not a contract extended
-        named += re.findall(r"\b([A-Z][A-Za-z]+(?:-[A-Z][A-Za-z]*)*)\b(?!['\u2019]s)", re.split(r'\bthrough\b|\bfactored\b', part)[0])
+        named += names_in(re.split(r'\bthrough\b|\bfactored\b', part)[0], possessive=True)
     found = [t for t in dict.fromkeys(named) if t in texts and t != c['id']]
     c['rels'] = {t: c['relation'] for t in found}
     return found
 
 
 cat = {n: contract_text(p) for n, p in texts.items()}
+NAMEID.update({c['name']: n for n, c in cat.items()})
 for c in cat.values():
     c['extends'] = extends_of(c, read(texts[c['id']]).split('\n'))
     own = next((l for l in c['meta'] if l.startswith('% Owner:')), '% Owner: ')
@@ -350,9 +385,10 @@ for n in compiled:
 
 # The Calculus (calculus/MIGRATION.md, the section Website, agreed by
 # Website #2, 2026-11-15): until its owner adopts a contract, the Calculus's
-# text of it is on the branch Calculus of GLP, which deploy/sweep.sh unpacks
-# into CALCULUS_DIR; after its adoption it is on main, and its printed
-# artefacts in cascade/NAME/.  calculus/STATE.txt has a line for each
+# text of it is in CALCULUS_DIR, which until 2026-11-17 deploy/sweep.sh
+# unpacked from the branch Calculus of GLP, now closed; after its adoption it
+# is on main, and its printed artefacts in cascade/NAME/, as every contract is
+# since 2026-11-16.  calculus/STATE.txt, where there is one, has a line for each
 # contract: its name, its owner, and yes or no for certified by GLP's checker,
 # compiled to GLP, and adopted by its owner.
 CALC = os.environ.get('CALCULUS_DIR') or os.path.join(GLP, 'calculus')
@@ -391,7 +427,7 @@ def calculus_of(n):
         # number it is from, 'GKK:1'; a line that opens with % is the tools'.
         pre, cls = [], []
         for l in [l for l in read(fc).split('\n') if l.strip() and not l.startswith('%')][1:]:
-            m = re.match(r'([A-Za-z]+(?:-[A-Za-z]+)*:\d+)\. (\S) (.+?)([.:])\s+(.*)$', l)
+            m = re.match(r"([A-Z][A-Za-z' -]*?:\d+)\. (\S) (.+?)([.:])\s+(.*)$", l)
             if m:
                 cls.append({'n': m.group(1), 'mod': m.group(2), 'name': m.group(3), 'sep': m.group(4), 'text': m.group(5)})
             elif not cls:
@@ -449,7 +485,7 @@ for n in sorted(set(compiled) | set(cat)):
     d = os.path.join(GLP, 'cascade', n)
     # The icon and family the contract's Look line names, where its owner
     # wrote one, and else about.json's, which holds them until then.
-    _a = about.get(n, ['📄', 'other', ''])
+    _a = about.get(n) or ['📄', 'other', '']
     _icon, _family = look_line(c.get('pragmas', [])) or (_a[0], _a[1])
     c['icon'], c['family'], c['about'] = _icon, _family, _a[2] or c['title'] + '.'
     # The shown name starts with the letters, and a contract built on another
@@ -459,7 +495,7 @@ for n in sorted(set(compiled) | set(cat)):
     for p in c['extends']:
         if p in cat:
             t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
-    c['label'] = f"{n}: {t}" if t != n else n 
+    c['label'] = f"{c['name']}: {t}" if t != c['name'] else c['name'] 
     c['cascade'] = n in compiled
     c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''
     c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
