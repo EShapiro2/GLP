@@ -3,19 +3,20 @@ Notes      commute yes; return yes; recover same
 Coins      commute yes; return yes; recover same
 Bonds      commute yes; return yes; recover same
 Joint Accounts commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
 5 contracts, 0 with a fault
 --- sasx/Bonds.txt
 Bonds (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Bonds:0 - | Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Day and Term maturity dates, Today a date.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
-Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: coin(Alice,Alice,*Sum) <- guarded by Alice.
 Notes:1+Bonds:1 ■ Issue bond: bond(Alice,Alice,Day,*Sum) <- today(Alice,Today), gt(Day,Today) guarded by Alice.
 Notes:2 ■ Swap: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~coin(Bob,Dave,*Total), coin(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), coin(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
@@ -33,13 +34,12 @@ Notes:4 ■ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dav
 Notes:4 ■ Return bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Alice,Dave,Day,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
 Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
-Coins:0 - | Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob.
+Coins:0 - | Carol is possibly Alice or Bob.
 Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Coins:2+Bonds:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 Bonds:0 - | A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
-Bonds:0 - | Alice, Bob and Carol are parties, Day and Term maturity dates, Today a date; Carol is possibly Alice or Bob.
 Bonds:0 - | Kind of note: bond, y-bonds due Day for y-notes.
 Bonds:2 ■ Redeem coin against bond: ~coin(Alice,Bob), coin(Bob,Bob), ~bond(Bob,Carol,Day), bond(Alice,Carol,Day), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), bond(Bob,Carol,Day) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Bonds:2 ■ Redeem bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), today(Bob,Today), le(Day,Today), bond(Alice,Bob,Day), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
@@ -48,14 +48,14 @@ Bonds:2 ■ Redeem bond against bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~
 Coins (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Coins:0 - | Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
-Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: coin(Alice,Alice,*Sum) <- guarded by Alice.
 Notes:2 ■ Swap: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~coin(Bob,Dave,*Total), coin(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), coin(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
 Notes:3 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
@@ -66,7 +66,7 @@ Notes:4 ■ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave
 Notes:4 ■ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
 Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
-Coins:0 - | Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob.
+Coins:0 - | Carol is possibly Alice or Bob.
 Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Coins:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Coins:3 ○ | Pricing.
@@ -75,14 +75,14 @@ Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in p
 Joint Accounts (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Joint Accounts:0 - | Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Acct a joint account.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
-Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: coin(Alice,Alice,*Sum) <- guarded by Alice.
 Notes:2 ■ Swap: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~coin(Bob,Dave,*Total), coin(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), coin(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
 Notes:3 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
@@ -93,12 +93,11 @@ Notes:4 ■ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave
 Notes:4 ■ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
 Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
-Coins:0 - | Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob.
+Coins:0 - | Carol is possibly Alice or Bob.
 Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Coins:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
-Joint Accounts:0 - | Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
 Joint Accounts:1 ■ Open account: account(Alice,Acct), joint(Alice,Acct,Bob), joint(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~account(Alice,Acct) guarded by Alice, Bob.
 Joint Accounts:2 ■ Deposit: ~coin(Alice,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Bob,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Alice,Carol,*Sum) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Joint Accounts:2 ■ Partner deposit: ~coin(Bob,Carol,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Alice,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), coin(Bob,Carol,*Sum) guarded by Bob possibly Alice=Carol, Bob=Carol.
@@ -118,14 +117,14 @@ Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice
 Notes (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Notes:0 - | Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
-Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: note(Alice,Alice,*Sum) <- guarded by Alice.
 Notes:2 ■ Swap: ~note(Alice,Carol,*Sum), note(Bob,Carol,*Sum), ~note(Bob,Dave,*Total), note(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), note(Alice,Carol,*Sum), note(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
 Notes:3 ■ Pay: ~note(Alice,Carol,*Sum), note(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), note(Alice,Carol,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
@@ -142,7 +141,7 @@ An *identity* is a unique key pair.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are parties. Alice and Bob are parties.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -160,7 +159,7 @@ Coins
 An *identity* is a unique key pair.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are parties. Alice and Bob are parties.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -177,7 +176,7 @@ Joint Accounts
 An *identity* is a unique key pair.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are parties. Alice and Bob are parties. Alice and Bob are persons.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -204,7 +203,7 @@ Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of
 Notes
 An *identity* is a unique key pair.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are parties.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -214,10 +213,11 @@ Notes:3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his
 Notes:4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
 --- gx/Bonds.txt
 Bonds
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
-Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
-Of Bonds: A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date. Alice, Bob and Carol are parties, Day and Term maturity dates, Today a date; Carol is possibly Alice or Bob. Kind of note: bond, y-bonds due Day for y-notes.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Carol is possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
+Of Bonds: A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date. Kind of note: bond, y-bonds due Day for y-notes.
+Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Day and Term maturity dates, Today a date.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -233,9 +233,10 @@ Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept t
 Bonds:2. ■ Redeem coin against bond: Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob. Redeem bond: Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today. Redeem bond against bond: Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.
 --- gx/Coins.txt
 Coins
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
-Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Carol is possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
+Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -248,10 +249,10 @@ Coins:2. ■ Redeem: Alice may redeem a Bob-coin against a Carol-coin, provided 
 Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 --- gx/Joint-Accounts.txt
 Joint Accounts
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
-Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
-Of Joint Accounts: Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Carol is possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
+Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Acct a joint account.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -267,14 +268,16 @@ Joint Accounts:2. ■ Deposit: Alice may move Sum Carol-coins into the joint acc
 Joint Accounts:3. ■ Withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Alice. Partner withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Bob.
 --- gx/Knowledge.txt
 Knowledge
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 --- gx/Notes.txt
 Notes
-Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are persons. Reflexive: x knows y.
-Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Of Knowledge: An *identity* is a unique key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.

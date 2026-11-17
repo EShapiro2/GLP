@@ -2,6 +2,7 @@ C          commute yes; return yes; recover same
 P          commute yes; return yes; recover same
 Q          commute yes; return yes; recover same
 D          ERROR D: two contracts it is written from put different states for 'x is marked' of C
+names: 0 names of two kinds neither of which is under the other
 4 contracts, 1 with a fault
 --- sasx/C.txt
 C: Base (expanded schemas)
@@ -9,11 +10,9 @@ C:0 - | Alice is a person.
 C:1 ■ Mark: marked(Alice) <- guarded by Alice.
 --- sasx/P.txt
 P: First (expanded schemas)
-C:0 - | Alice is a person.
-C:1 ■ Mark: red(Alice) <- guarded by Alice.
 P:0 - | Alice is a person.
+C:1 ■ Mark: red(Alice) <- guarded by Alice.
 --- sasx/Q.txt
 Q: Second (expanded schemas)
-C:0 - | Alice is a person.
-C:1 ■ Mark: blue(Alice) <- guarded by Alice.
 Q:0 - | Alice is a person.
+C:1 ■ Mark: blue(Alice) <- guarded by Alice.

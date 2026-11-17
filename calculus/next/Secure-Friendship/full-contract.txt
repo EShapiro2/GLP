@@ -1,10 +1,10 @@
 % Written by tools/expand.py from rev/; do not edit.
 Secure Friendship
-An *identity* is a unique key pair.
+An *identity* is a unique cryptographic key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 The *identity record* of Alice is her *identity custodians*, persons she names, and her *threshold*, a share of them greater than half. The *records* of Alice are her friends and, for each friend, the friends of that friend. Alice suffers a *state loss* when her machine loses some or all of its state and she keeps her private key, and an *identity loss* when she loses her private key.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice and Bob are persons. Alice, Bob and Carol are persons, Alicia a new identity of Alice.
-Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Alice, Bob and Carol are persons, Alicia a new identity of Alice. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
@@ -13,5 +13,5 @@ Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she c
 Secure Friendship:1. ■ Identity record: Alice may fix her identity record, once. It then changes only by the replacement of a custodian's lost identity (Secure Friendship:5).
 Secure Friendship:2. ■ Friendship updates. Tell: Alice tells each of her friends when she becomes a friend of Bob (Friendship:1) and when she ends a friendship (Friendship:2), and the friend records it. Send record: Alice sends Bob, when they become friends, her friends and her identity record, and Bob keeps them.
 Secure Friendship:3. ■ Checkpoint: Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.
-Secure Friendship:4. ■ State recovery. Restore: After a state loss of Alice, each friend of Alice sends her the friendship updates and the checkpoints he keeps, and Alice records them again.
+Secure Friendship:4. ■ State recovery. Restore: After a state loss of Alice, each friend of Alice sends her the friendship updates and the checkpoints they keep, and Alice records them again.
 Secure Friendship:5. ◆ Identity replacement. Replace: After an identity loss, Alice may establish a new identity, Alicia (Knowledge:1), and ask her identity custodians to vouch for it. Vouch: Carol, an identity custodian of Alice, may vouch, once, that Alicia is Alice. Accept: Bob, a friend of Alice, accepts Alicia in place of Alice once at least the threshold of the identity custodians he records for Alice have vouched; Alicia is then his friend in place of Alice, and his identity custodian if Alice was. Bob tells Alicia the friends of Alice he records, and tells his friends of the change.

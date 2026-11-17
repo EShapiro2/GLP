@@ -3,7 +3,7 @@ Agents instantiates Guardians with guardians(z) for deciders(z), an AI agent for
 Vocabulary: z holds the attestation t = attestation(z,t); y holds a record of z's attestation t = attestation_record(y,z,t).
 Roles: the guardians of z = guardians(z), listed by z has y as a guardian, y is a guardian of z and y holds a record of z's attestation Proof.
 Agents:0 - | The *developer* of an AI agent is the signer of its code.
-Agents:0 - | Alice and Bob are persons, Alf an AI agent, Proof and Seal attestations, Item an item; in clause 2 Carol and Dave are AI agents.
+Agents:0 - | Alice and Bob are persons, Alf an AI agent, Proof and Seal attestations, Item an item; in clause 2 Will is an AI agent.
 Agents:1 ○ | AI developer and guardian accountability.
 Agents:1 ○ | The developer of Alf will be accountable for Alf's defects.
 Agents:1 ○ | Every guardian of Alf will be accountable for operating it recklessly.
@@ -14,9 +14,9 @@ Agents:2 ■ Make guardian: Guardians:2 Make guardian + attestation_record(Bob,A
 Agents:2 ■ AI agent acquaint: Guardians:3 Ward acquaint + attestation_record(Bob,Alf,Proof) <- attestation(Alf,Proof).
 Agents:2 ■ AI agent befriend: Guardians:3 Ward befriend <- attestation(Alf,Proof).
 Agents:2 ■ AI agent end: Guardians:3 Ward end <- attestation(Alf,Proof).
-Agents:2 ■ AI agents acquaint: Guardians:4 Wards acquaint + attestation_record(Carol,Dave,Seal), attestation_record(Dave,Carol,Proof) <- attestation(Carol,Proof), attestation(Dave,Seal).
-Agents:2 ■ AI agents befriend: Guardians:4 Wards befriend <- attestation(Carol,Proof), attestation(Dave,Seal).
-Agents:2 ■ AI agents of one guardian befriend: Guardians:4 Wards of one guardian befriend <- attestation(Carol,Proof), attestation(Dave,Seal).
+Agents:2 ■ AI agents acquaint: Guardians:4 Wards acquaint + attestation_record(Alf,Will,Seal), attestation_record(Will,Alf,Proof) <- attestation(Alf,Proof), attestation(Will,Seal).
+Agents:2 ■ AI agents befriend: Guardians:4 Wards befriend <- attestation(Alf,Proof), attestation(Will,Seal).
+Agents:2 ■ AI agents of one guardian befriend: Guardians:4 Wards of one guardian befriend <- attestation(Alf,Proof), attestation(Will,Seal).
 Agents:2 ■ Sign: Forwarding:1 <- person(Alice).
 Agents:2 ■ Forward: Forwarding:2 <- person(Alice).
 Agents:2 ■ Agent sign: item(Alf,Item) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), ~item(Alf,Item) guarded by Alf.

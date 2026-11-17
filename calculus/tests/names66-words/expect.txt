@@ -1,19 +1,19 @@
 Knowledge  commute yes; return yes; recover same
 Guardians  commute yes; return yes; recover same
 Organisation commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
 3 contracts, 0 with a fault
 --- sasx/Guardians.txt
 Guardians (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Guardians:0 - | Alice, Bob and Carol are persons.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Guardians:0 - | A *guardian* of a ward decides for it. The *decision rule*, a parameter of Guardians, says who decides for a ward and how.
-Guardians:0 - | Alice and Bob are persons.
 Guardians:1 ■ Appoint: guardian(Bob,Alice) <- knows(Alice,Bob) guarded by Alice.
 Guardians:1 ■ | Guardians are persons.
 --- sasx/Knowledge.txt
@@ -30,17 +30,15 @@ Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice
 Organisation (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Organisation:0 - | Alice, Bob and Carol are persons.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Guardians:0 - | A *officer* of a ward decides for it. The *decision rule*, a parameter of Guardians, says who decides for a ward and how.
-Guardians:0 - | Alice and Bob are persons.
 Guardians:1+Organisation:1 ■ Appoint: officer(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice) guarded by Alice.
 Guardians:1 ■ | Guardians are persons.
-Organisation:0 - | Alice and Bob are persons.
 --- term Guardians
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
@@ -62,7 +60,7 @@ Guardians
 An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 A *guardian* of a ward decides for it. The *decision rule*, a parameter of Guardians, says who decides for a ward and how.
-Alice, Bob and Carol are persons. Alice and Bob are persons.
+Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -82,7 +80,7 @@ Organisation
 An *identity* is a unique key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 An *officer* of a ward decides for it. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. Here: bylaws.
-Alice, Bob and Carol are persons. Alice and Bob are persons.
+Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.

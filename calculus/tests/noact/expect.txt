@@ -3,13 +3,13 @@ W          commute yes; return yes; recover same
 V          untakable W:3 Wave: it requires person(Carol) and ward(Carol), and no agent is both
 V          untakable W:3+V:1 Greet: it requires person(Carol) and ward(Carol), and no agent is both
 V          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
 2 contracts, 0 with a fault
 --- sasx/V.txt
 V: A Restriction that Leaves No One to Take an Act (expanded schemas)
-W:0 - | Alice is a person, Carol a ward.
+V:0 - | Alice is a person, Carol a ward.
 W:1 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 W:2 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol) <- ~identity(Carol) guarded by Alice.
-V:0 - | Alice is a person, Carol a ward.
 --- sasx/W.txt
 W: No act no binding enables (expanded schemas)
 W:0 - | Alice is a person, Carol a ward.

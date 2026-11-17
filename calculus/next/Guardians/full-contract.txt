@@ -1,17 +1,17 @@
 % Written by tools/expand.py from rev/; do not edit.
 Guardians
-An *identity* is a unique key pair.
+An *identity* is a unique cryptographic key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-A *relation* is a friendship or the membership of a group. Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice and Bob are persons. Alice and Bob are persons, Carol and Dave wards.
-Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
+Alice, Bob and Carol are persons, Wendy and Will wards. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
 Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
 Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
-Guardians:1. ■ Enter: Alice may create a ward, Carol, and establish Carol's identity by choosing Carol's key pair. Alice is then the creator, a guardian and a friend of Carol.
-Guardians:2. ■ Guardian decisions. Make guardian: Those who decide for Carol may make Bob, a friend of a guardian of Carol, a guardian and a friend of Carol, with the consent of Bob. Resign: Bob may end his guardianship of Carol. End guardian: Those who decide for Carol, other than Bob, may end Bob's guardianship. Guardian unfriend: Bob may end his friendship with Carol, which ends his guardianship. Carol may not end a friendship with her guardian.
-Guardians:3. ■ Ward and person. Ward acquaint: Carol, a ward of Alice, and Bob may jointly come to know each other. Ward befriend: Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends. Ward end, Unfriend, Ward unfriend: Carol, Bob or Alice may end the relation of Bob and Carol.
-Guardians:4. ■ Wards. Wards acquaint: Carol, a ward of Alice, and Dave, a ward of Bob, may jointly come to know each other. Wards befriend: Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
-Guardians:5. ■ Retire: Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
+Guardians:1. ■ Enter: Alice may create a ward, Wendy, and establish Wendy's identity by choosing Wendy's key pair. Alice is then the creator, a guardian and a friend of Wendy.
+Guardians:2. ■ Guardian decisions. Make guardian: Those who decide for Wendy may make Bob, a friend of a guardian of Wendy, a guardian and a friend of Wendy, with the consent of Bob. Resign: Bob may end his guardianship of Wendy. End guardian: Those who decide for Wendy, other than Bob, may end Bob's guardianship. Guardian unfriend: Bob may end his friendship with Wendy, which ends his guardianship. Wendy may not end a friendship with her guardian.
+Guardians:3. ■ Ward and person. Ward acquaint: Wendy, a ward of Alice, and Bob may jointly come to know each other. Ward befriend: Wendy may enter a relation with Bob with the consent of Bob and Alice, provided Wendy and Bob know each other and Alice and Bob are friends. Ward end, Unfriend, Ward unfriend: Wendy, Bob or Alice may end the relation of Bob and Wendy.
+Guardians:4. ■ Wards. Wards acquaint: Wendy, a ward of Alice, and Will, a ward of Bob, may jointly come to know each other. Wards befriend: Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+Guardians:5. ■ Retire: Those who decide for Wendy may retire Wendy; every guardianship and relation of Wendy then ends and Wendy can take no act.

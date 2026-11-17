@@ -1,10 +1,10 @@
 % Written by tools/expand.py from rev/; do not edit.
 Groups
-An *identity* is a unique key pair.
+An *identity* is a unique cryptographic key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A *message*, a parameter of Groups, is what a person sends.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice and Bob are persons.
-Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.

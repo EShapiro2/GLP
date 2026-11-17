@@ -1,31 +1,29 @@
 Programs (expanded schemas)
-Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Programs:0 - | Alice, Bob, Carol and Erin are persons, Item an item, Prog a program.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
-Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:0 - | Alice and Bob are persons.
 Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 Forwarding:0 - | The *author* of an item is its first signer.
-Forwarding:0 - | Alice and Bob are persons, Item an item.
 Forwarding:1 ■ Sign: item(Alice,Item) <- ~item(Alice,Item) guarded by Alice.
 Forwarding:2 ■ Forward: item(Bob,Item@Alice) <- item(Alice,Item), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
 Programs:0 - | A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration.
-Programs:0 - | Alice, Bob, Carol and Dave are persons, Carol and Dave possibly Alice, Bob or one person, Prog a program.
+Programs:0 - | Carol and Erin are possibly Alice, Bob or one person.
 Programs:1 ◆ Publish: program(Carol,Prog,Carol) <- ~program(Carol,Prog,Carol) guarded by Carol.
 Programs:1 ◆ | Carol attests that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
 Programs:2 ■ | Developer Trust.
 Programs:2 ■ Trust: trusts_developer(Alice,Carol) <- knows(Alice,Carol), ~trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
 Programs:2 ■ Untrust: ~trusts_developer(Alice,Carol) <- trusts_developer(Alice,Carol) guarded by Alice possibly Alice=Carol.
-Programs:3 ■ Offer: program(Alice,Prog@Carol,Dave) <- program(Carol,Prog,Dave), friend(Carol,Alice), friend(Alice,Carol) guarded by Carol possibly Alice=Carol, Alice=Dave, Carol=Dave.
+Programs:3 ■ Offer: program(Alice,Prog@Carol,Erin) <- program(Carol,Prog,Erin), friend(Carol,Alice), friend(Alice,Carol) guarded by Carol possibly Alice=Carol, Alice=Erin, Carol=Erin.
 Programs:3 ■ | Carol offers it by forwarding it to Alice.
 Programs:4 ■ Install own: installed(Alice,Prog,Alice) <- program(Alice,Prog,Alice), ~installed(Alice,Prog,Alice) guarded by Alice.
 Programs:4 ■ Install: installed(Alice,Prog,Carol) <- program(Alice,Prog,Carol), trusts_developer(Alice,Carol), ~installed(Alice,Prog,Carol) guarded by Alice possibly Alice=Carol.

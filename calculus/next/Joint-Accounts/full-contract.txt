@@ -1,10 +1,10 @@
 % Written by tools/expand.py from rev/; do not edit.
 Joint Accounts
-An *identity* is a unique key pair.
+An *identity* is a unique cryptographic key pair.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Alice, Bob and Carol are parties. Alice and Bob are parties. Alice and Bob are persons.
-Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Notes:1. ■ Issue: Alice may issue Alice-notes.

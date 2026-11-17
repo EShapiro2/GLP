@@ -1,45 +1,43 @@
 Directory (flat text)
-Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Directory:0 - | Alice, Bob and Carol are persons, Wendy and Will wards, Dave and Dora services, Link an invitation link, Mail an email address, Name a name.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
-Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2+Guardians:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
 Knowledge:3+Guardians:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:0 - | Alice and Bob are persons.
 Friendship:1+Guardians:3 ■ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend, not Bob counts Alice as a friend, Alice is a person and Bob is a person.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Guardians:0 - | Bob *trusts* Carol, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for it.
-Guardians:0 - | Alice and Bob are persons, Carol and Dave wards; in clause 4 Alice and Bob are possibly one person.
+Guardians:0 - | Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
+Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
 Guardians:0 - | Default: any guardian of z for those who decide for z.
-Guardians:1 ■ Enter: Alice and Carol may jointly Carol has an identity, Carol is a ward, Carol has Alice as a guardian, Alice is the creator of Carol, Alice is a guardian of Carol, Alice knows Carol, Carol knows Alice, Alice counts Carol as a friend and Carol counts Alice as a friend, provided Alice is a person and not Carol has an identity. Must consent: Carol.
-Guardians:1 ■ | Alice chooses Carol's key pair.
+Guardians:1 ■ Enter: Alice and Wendy may jointly Wendy has an identity, Wendy is a ward, Wendy has Alice as a guardian, Alice is the creator of Wendy, Alice is a guardian of Wendy, Alice knows Wendy, Wendy knows Alice, Alice counts Wendy as a friend and Wendy counts Alice as a friend, provided Alice is a person and not Wendy has an identity. Must consent: Wendy.
+Guardians:1 ■ | Alice chooses Wendy's key pair.
 Guardians:2 ■ | Guardian decisions.
-Guardians:2 ■ Make guardian: The guardians of Carol and Bob may jointly Bob is a guardian of Carol, Carol has Bob as a guardian, Bob knows Carol, Carol knows Bob, Bob counts Carol as a friend and Carol counts Bob as a friend, provided Carol is a ward, not Carol is retired, Bob is a person, Carol has Alice as a guardian, Bob counts Alice as a friend, not Bob is a guardian of Carol and not Carol has Bob as a guardian.
-Guardians:2 ■ Resign: Bob may no longer Bob is a guardian of Carol and no longer Carol has Bob as a guardian.
-Guardians:2 ■ End guardian: The guardians of Carol, other than Bob, may no longer Bob is a guardian of Carol and no longer Carol has Bob as a guardian.
-Guardians:2 ■ Guardian unfriend: Bob may no longer Bob counts Carol as a friend, no longer Carol counts Bob as a friend, no longer Bob is a guardian of Carol and no longer Carol has Bob as a guardian.
-Guardians:2 ■ | Carol may not end a friendship with her guardian.
+Guardians:2 ■ Make guardian: The guardians of Wendy and Bob may jointly Bob is a guardian of Wendy, Wendy has Bob as a guardian, Bob knows Wendy, Wendy knows Bob, Bob counts Wendy as a friend and Wendy counts Bob as a friend, provided Wendy is a ward, not Wendy is retired, Bob is a person, Wendy has Alice as a guardian, Bob counts Alice as a friend, not Bob is a guardian of Wendy and not Wendy has Bob as a guardian.
+Guardians:2 ■ Resign: Bob may no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
+Guardians:2 ■ End guardian: The guardians of Wendy, other than Bob, may no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
+Guardians:2 ■ Guardian unfriend: Bob may no longer Bob counts Wendy as a friend, no longer Wendy counts Bob as a friend, no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
+Guardians:2 ■ | Wendy may not end a friendship with her guardian.
 Guardians:3 ■ | Ward and person.
-Guardians:3 ■ Ward acquaint: Carol and Bob may jointly Carol knows Bob and Bob knows Carol, provided Carol is a ward, Carol has Alice as a guardian and Bob is a person.
-Guardians:3 ■ Ward befriend: Carol, Bob and Alice may jointly Carol counts Bob as a friend and Bob counts Carol as a friend, provided Carol is a ward, not Carol is retired, Carol has Alice as a guardian, Bob is a person, Carol knows Bob, Bob knows Carol, Alice counts Bob as a friend, Bob counts Alice as a friend, not Carol counts Bob as a friend and not Bob counts Carol as a friend.
-Guardians:3 ■ Ward end: Carol may no longer Carol counts Bob as a friend and no longer Bob counts Carol as a friend, provided not Carol has Bob as a guardian.
-Guardians:3 ■ Unfriend: Bob may no longer Bob counts Carol as a friend and no longer Carol counts Bob as a friend, provided not Bob is a guardian of Carol.
-Guardians:3 ■ Ward unfriend: Alice may no longer Carol counts Bob as a friend and no longer Bob counts Carol as a friend, provided Carol has Alice as a guardian and not Bob is a guardian of Carol.
+Guardians:3 ■ Ward acquaint: Wendy and Bob may jointly Wendy knows Bob and Bob knows Wendy, provided Wendy is a ward, Wendy has Alice as a guardian and Bob is a person.
+Guardians:3 ■ Ward befriend: Wendy, Bob and Alice may jointly Wendy counts Bob as a friend and Bob counts Wendy as a friend, provided Wendy is a ward, not Wendy is retired, Wendy has Alice as a guardian, Bob is a person, Wendy knows Bob, Bob knows Wendy, Alice counts Bob as a friend, Bob counts Alice as a friend, not Wendy counts Bob as a friend and not Bob counts Wendy as a friend.
+Guardians:3 ■ Ward end: Wendy may no longer Wendy counts Bob as a friend and no longer Bob counts Wendy as a friend, provided not Wendy has Bob as a guardian.
+Guardians:3 ■ Unfriend: Bob may no longer Bob counts Wendy as a friend and no longer Wendy counts Bob as a friend, provided not Bob is a guardian of Wendy.
+Guardians:3 ■ Ward unfriend: Alice may no longer Wendy counts Bob as a friend and no longer Bob counts Wendy as a friend, provided Wendy has Alice as a guardian and not Bob is a guardian of Wendy.
 Guardians:4 ■ | Wards.
-Guardians:4 ■ Wards acquaint: Carol and Dave may jointly Carol knows Dave and Dave knows Carol, provided Carol is a ward, Carol has Alice as a guardian, Dave is a ward and Dave has Bob as a guardian. Possibly one: Alice=Bob.
-Guardians:4 ■ Wards befriend: Carol, Dave, Alice and Bob may jointly Carol counts Dave as a friend and Dave counts Carol as a friend, provided Carol is a ward, not Carol is retired, Carol has Alice as a guardian, Dave is a ward, not Dave is retired, Dave has Bob as a guardian, Carol knows Dave, Dave knows Carol, Alice knows Dave, Alice counts Bob as a friend, Bob counts Alice as a friend, not Carol counts Dave as a friend and not Dave counts Carol as a friend. Possibly one: Alice=Bob.
-Guardians:4 ■ Wards of one guardian befriend: Carol, Dave and Alice may jointly Carol counts Dave as a friend and Dave counts Carol as a friend, provided Carol is a ward, not Carol is retired, Carol has Alice as a guardian, Dave is a ward, not Dave is retired, Dave has Alice as a guardian, Carol knows Dave, Dave knows Carol, not Carol counts Dave as a friend and not Dave counts Carol as a friend.
-Guardians:5 ■ Retire: The guardians of Carol may Carol is retired, no longer anyone is a guardian of Carol, no longer Carol has anyone as a guardian, no longer Carol counts anyone as a friend and no longer anyone counts Carol as a friend, provided not Carol is retired.
-Guardians:5 ■ | Carol can then take no act.
+Guardians:4 ■ Wards acquaint: Wendy and Will may jointly Wendy knows Will and Will knows Wendy, provided Wendy is a ward, Wendy has Alice as a guardian, Will is a ward and Will has Bob as a guardian. Possibly one: Alice=Bob.
+Guardians:4 ■ Wards befriend: Wendy, Will, Alice and Bob may jointly Wendy counts Will as a friend and Will counts Wendy as a friend, provided Wendy is a ward, not Wendy is retired, Wendy has Alice as a guardian, Will is a ward, not Will is retired, Will has Bob as a guardian, Wendy knows Will, Will knows Wendy, Alice knows Will, Alice counts Bob as a friend, Bob counts Alice as a friend, not Wendy counts Will as a friend and not Will counts Wendy as a friend. Possibly one: Alice=Bob.
+Guardians:4 ■ Wards of one guardian befriend: Wendy, Will and Alice may jointly Wendy counts Will as a friend and Will counts Wendy as a friend, provided Wendy is a ward, not Wendy is retired, Wendy has Alice as a guardian, Will is a ward, not Will is retired, Will has Alice as a guardian, Wendy knows Will, Will knows Wendy, not Wendy counts Will as a friend and not Will counts Wendy as a friend.
+Guardians:5 ■ Retire: The guardians of Wendy may Wendy is retired, no longer anyone is a guardian of Wendy, no longer Wendy has anyone as a guardian, no longer Wendy counts anyone as a friend and no longer anyone counts Wendy as a friend, provided not Wendy is retired.
+Guardians:5 ■ | Wendy can then take no act.
 Services:0 - | A *service* is a ward operated by a machine at an address every person can reach.
 Rendezvous:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
-Rendezvous:0 - | Alice, Bob and Carol are persons, Dave a service, Link an invitation link.
 Rendezvous:1 ■ Open server: Carol may Dave is a rendezvous server, provided Carol is a guardian of Dave and not Dave is a rendezvous server.
 Rendezvous:2 ■ | Invite by link.
 Rendezvous:2 ■ Sign link: Alice may Alice has signed Link as an invitation link that names Dave, provided Alice knows Dave and not Alice has signed Link as an invitation link that names Dave.
@@ -51,7 +49,6 @@ Rendezvous:4 ■ | Reconnection.
 Rendezvous:4 ■ Present: Alice may Dave has the signature of Bob over the friendship of Alice and Bob presented, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice knows Dave, Dave is a rendezvous server and not Dave has the signature of Bob over the friendship of Alice and Bob presented.
 Rendezvous:4 ■ Match: No longer Dave has the signature of Bob over the friendship of Alice and Bob presented, no longer Dave has the signature of Alice over the friendship of Bob and Alice presented, Alice has the address of Bob and Bob has the address of Alice.
 Directory:0 - | A *directory* is a service with a page every person can read.
-Directory:0 - | Alice, Bob and Carol are persons, Dora a service, Mail an email address, Name a name.
 Directory:1 ■ Open directory: Carol may Dora is a directory, provided Carol is a guardian of Dora and not Dora is a directory.
 Directory:2 ■ | Listing.
 Directory:2 ■ List me: Alice and Dora may jointly Dora lists Alice by Mail under Name on its page, provided Dora is a directory, Alice knows Dora and not Dora lists Alice by Mail under Name on its page.

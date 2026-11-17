@@ -1,44 +1,42 @@
 Commercial Bank (expanded schemas)
-Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Commercial Bank:0 - | Alice, Bob, Carol, Dave and Erin are persons, Orga a commercial bank, Will and Gov organisations, Motion an act of Orga, Role a role, Votes, Double, Sum, Total and Limit numbers, Cond a condition Alice, Bob and Carol agree, Day, Term and Due maturity dates, Today a date, Dollar a fiat currency.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
-Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2+Guardians:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
 Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:0 - | Alice and Bob are persons.
 Friendship:1+Guardians:3 ■ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice, Bob.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Guardians:0 - | Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for it.
-Guardians:0 - | Alice and Bob are persons, Carol and Dave organisations; in clause 4 Alice and Bob are possibly one person.
+Guardians:0 - | Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
+Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
 Guardians:0 - | Default: any officer of z for those who decide for z.
-Guardians:1 ■ Enter: identity(Carol), organisation(Carol), has_officer(Carol,Alice), creator(Alice,Carol), officer(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
-Guardians:1 ■ | Alice chooses Carol's key pair.
+Guardians:1 ■ Enter: identity(Orga), organisation(Orga), has_officer(Orga,Alice), creator(Alice,Orga), officer(Alice,Orga), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice) <- person(Alice), ~identity(Orga) guarded by Alice, Orga must Orga.
+Guardians:1 ■ | Alice chooses Orga's key pair.
 Guardians:2 ■ | Guardian decisions.
-Guardians:2+Organisation:4 ■ Appoint: officer(Bob,Carol), has_officer(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob), role(Bob,Carol,Role), has_role(Carol,Bob,Role) <- organisation(Carol), ~retired(Carol), person(Bob), has_officer(Carol,Alice), friend(Bob,Alice), ~officer(Bob,Carol), ~has_officer(Carol,Bob), participant(Bob,Carol) guarded by deciders(Carol), Bob.
-Guardians:2+Organisation:4 ■ Resign: ~officer(Bob,Carol), ~has_officer(Carol,Bob), ~role(Bob,Carol,_), ~has_role(Carol,Bob,_) <- officer(Bob,Carol), has_officer(Carol,Bob) guarded by Bob.
-Guardians:2+Organisation:4 ■ End officer: ~officer(Bob,Carol), ~has_officer(Carol,Bob), ~role(Bob,Carol,_), ~has_role(Carol,Bob,_) <- officer(Bob,Carol), has_officer(Carol,Bob) guarded by deciders(Carol,-Bob).
-Guardians:2+Organisation:4 ■ Officer unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob), ~officer(Bob,Carol), ~has_officer(Carol,Bob), ~role(Bob,Carol,_), ~has_role(Carol,Bob,_) <- friend(Bob,Carol), friend(Carol,Bob), officer(Bob,Carol), has_officer(Carol,Bob) guarded by Bob.
-Guardians:2 ■ | Carol may not end a friendship with her officer.
+Guardians:2+Organisation:4 ■ Appoint: officer(Bob,Orga), has_officer(Orga,Bob), knows(Bob,Orga), knows(Orga,Bob), friend(Bob,Orga), friend(Orga,Bob), role(Bob,Orga,Role), has_role(Orga,Bob,Role) <- organisation(Orga), ~retired(Orga), person(Bob), has_officer(Orga,Alice), friend(Bob,Alice), ~officer(Bob,Orga), ~has_officer(Orga,Bob), participant(Bob,Orga) guarded by deciders(Orga), Bob.
+Guardians:2+Organisation:4 ■ Resign: ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- officer(Bob,Orga), has_officer(Orga,Bob) guarded by Bob.
+Guardians:2+Organisation:4 ■ End officer: ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- officer(Bob,Orga), has_officer(Orga,Bob) guarded by deciders(Orga,-Bob).
+Guardians:2+Organisation:4 ■ Officer unfriend: ~friend(Bob,Orga), ~friend(Orga,Bob), ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- friend(Bob,Orga), friend(Orga,Bob), officer(Bob,Orga), has_officer(Orga,Bob) guarded by Bob.
+Guardians:2 ■ | Orga may not end a friendship with her officer.
 Guardians:3 ■ | Ward and person.
-Guardians:3 ■ Organisation acquaint: knows(Carol,Bob), knows(Bob,Carol) <- organisation(Carol), has_officer(Carol,Alice), person(Bob) guarded by Carol, Bob.
-Guardians:3 ■ Organisation befriend: friend(Carol,Bob), friend(Bob,Carol) <- organisation(Carol), ~retired(Carol), has_officer(Carol,Alice), person(Bob), knows(Carol,Bob), knows(Bob,Carol), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Bob), ~friend(Bob,Carol) guarded by Carol, Bob, Alice.
-Guardians:3 ■ Organisation end: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~has_officer(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
-Guardians:3 ■ Unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob) <- ~officer(Bob,Carol), friend(Bob,Carol), friend(Carol,Bob) guarded by Bob.
-Guardians:3 ■ Organisation unfriend: ~friend(Carol,Bob), ~friend(Bob,Carol) <- has_officer(Carol,Alice), ~officer(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Alice.
+Guardians:3 ■ Organisation acquaint: knows(Orga,Bob), knows(Bob,Orga) <- organisation(Orga), has_officer(Orga,Alice), person(Bob) guarded by Orga, Bob.
+Guardians:3 ■ Organisation befriend: friend(Orga,Bob), friend(Bob,Orga) <- organisation(Orga), ~retired(Orga), has_officer(Orga,Alice), person(Bob), knows(Orga,Bob), knows(Bob,Orga), friend(Alice,Bob), friend(Bob,Alice), ~friend(Orga,Bob), ~friend(Bob,Orga) guarded by Orga, Bob, Alice.
+Guardians:3 ■ Organisation end: ~friend(Orga,Bob), ~friend(Bob,Orga) <- ~has_officer(Orga,Bob), friend(Orga,Bob), friend(Bob,Orga) guarded by Orga.
+Guardians:3 ■ Unfriend: ~friend(Bob,Orga), ~friend(Orga,Bob) <- ~officer(Bob,Orga), friend(Bob,Orga), friend(Orga,Bob) guarded by Bob.
+Guardians:3 ■ Organisation unfriend: ~friend(Orga,Bob), ~friend(Bob,Orga) <- has_officer(Orga,Alice), ~officer(Bob,Orga), friend(Orga,Bob), friend(Bob,Orga) guarded by Alice.
 Guardians:4 ■ | Wards.
-Guardians:4 ■ Organisations acquaint: knows(Carol,Dave), knows(Dave,Carol) <- organisation(Carol), has_officer(Carol,Alice), organisation(Dave), has_officer(Dave,Bob) guarded by Carol, Dave possibly Alice=Bob.
-Guardians:4 ■ Organisations befriend: friend(Carol,Dave), friend(Dave,Carol) <- organisation(Carol), ~retired(Carol), has_officer(Carol,Alice), organisation(Dave), ~retired(Dave), has_officer(Dave,Bob), knows(Carol,Dave), knows(Dave,Carol), knows(Alice,Dave), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Dave), ~friend(Dave,Carol) guarded by Carol, Dave, Alice, Bob possibly Alice=Bob.
-Guardians:4 ■ Organisations of one officer befriend: friend(Carol,Dave), friend(Dave,Carol) <- organisation(Carol), ~retired(Carol), has_officer(Carol,Alice), organisation(Dave), ~retired(Dave), has_officer(Dave,Alice), knows(Carol,Dave), knows(Dave,Carol), ~friend(Carol,Dave), ~friend(Dave,Carol) guarded by Carol, Dave, Alice.
-Guardians:5+Organisation:4 ■ Retire: retired(Carol), ~officer(_,Carol), ~has_officer(Carol,_), ~friend(Carol,_), ~friend(_,Carol), ~role(_,Carol,_), ~has_role(Carol,_,_) <- ~retired(Carol) guarded by deciders(Carol).
-Guardians:5 ■ | Carol can then take no act.
+Guardians:4 ■ Organisations acquaint: knows(Orga,Will), knows(Will,Orga) <- organisation(Orga), has_officer(Orga,Alice), organisation(Will), has_officer(Will,Bob) guarded by Orga, Will possibly Alice=Bob.
+Guardians:4 ■ Organisations befriend: friend(Orga,Will), friend(Will,Orga) <- organisation(Orga), ~retired(Orga), has_officer(Orga,Alice), organisation(Will), ~retired(Will), has_officer(Will,Bob), knows(Orga,Will), knows(Will,Orga), knows(Alice,Will), friend(Alice,Bob), friend(Bob,Alice), ~friend(Orga,Will), ~friend(Will,Orga) guarded by Orga, Will, Alice, Bob possibly Alice=Bob.
+Guardians:4 ■ Organisations of one officer befriend: friend(Orga,Will), friend(Will,Orga) <- organisation(Orga), ~retired(Orga), has_officer(Orga,Alice), organisation(Will), ~retired(Will), has_officer(Will,Alice), knows(Orga,Will), knows(Will,Orga), ~friend(Orga,Will), ~friend(Will,Orga) guarded by Orga, Will, Alice.
+Guardians:5+Organisation:4 ■ Retire: retired(Orga), ~officer(_,Orga), ~has_officer(Orga,_), ~friend(Orga,_), ~friend(_,Orga), ~role(_,Orga,_), ~has_role(Orga,_,_) <- ~retired(Orga) guarded by deciders(Orga).
+Guardians:5 ■ | Orga can then take no act.
 Organisation:0 - | An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
-Organisation:0 - | Alice and Bob are persons, Gov and Orga organisations, Motion an act of Orga, Role a role, Votes and Double numbers.
 Organisation:0 - | Parameters: x is entitled to propose m in z; x is entitled to vote on m in z; x is entitled to take m for z; the votes decide m according to the bylaws of z.
 Organisation:0 - | Default: those who decide for z for those who decide the officers of z.
 Organisation:0 - | Default: x is an officer of z for x is entitled to propose m in z.
@@ -63,7 +61,7 @@ Organisation:5 ■ Amend: amended(Orga), taken(Orga,Motion) <- role(Alice,Orga,D
 Organisation:6 ○ | Accountability.
 Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
-Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1+Denominated Coins:1 ■ Issue: coin(Alice,Alice,*Sum) <- issued_in(Alice,Dollar) guarded by Alice.
 Notes:1+Denominated Coins:1 ■ Issue for Alice: coin(Alice,Alice,*Sum), ~vote_issue_alice(Alice,_,Sum) <- issued_in(Alice,Dollar), knows(AliceOfficer,Alice), role(AliceOfficer,Alice,Director), vote_issue_alice(Alice,>=VotesAlice,Sum), product(DoubleAlice,VotesAlice,2), has_role(Alice,<DoubleAlice,Director) guarded by AliceOfficer taken for Alice by AliceOfficer.
 Notes:1+Denominated Coins:1 ■ Vote of Alice for Issue: vote_issue_alice(Alice,Voter,Sum) <- role(Voter,Alice,Director), ~vote_issue_alice(Alice,Voter,Sum) guarded by Voter.
@@ -142,7 +140,7 @@ Notes:4 ■ Vote of Alice for Return bond: vote_return_bond_alice(Alice,Voter,Ca
 Notes:4 ■ Return bond for Carol and Alice: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Alice,Dave,Day,*Sum), knows(Alice,Dave), ~vote_return_bond_carol(Carol,_,Alice,Sum,Dave,Day,Bob,Cond), ~vote_return_bond_alice(Alice,_,Carol,Sum,Dave,Day,Bob,Cond) <- knows(Carol,Alice), knows(Alice,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), knows(CarolOfficer,Carol), knows(CarolOfficer,Dave), knows(CarolOfficer,Alice), knows(CarolOfficer,Bob), knows(AliceOfficer,Carol), knows(AliceOfficer,Dave), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), role(CarolOfficer,Carol,Director), vote_return_bond_carol(Carol,>=VotesCarol,Alice,Sum,Dave,Day,Bob,Cond), product(DoubleCarol,VotesCarol,2), has_role(Carol,<DoubleCarol,Director), role(AliceOfficer,Alice,Director), vote_return_bond_alice(Alice,>=VotesAlice,Carol,Sum,Dave,Day,Bob,Cond), product(DoubleAlice,VotesAlice,2), has_role(Alice,<DoubleAlice,Director) guarded by CarolOfficer, AliceOfficer taken for Carol by CarolOfficer and for Alice by AliceOfficer possibly Alice=Dave, Bob=Dave, Carol=Dave.
 Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
-Coins:0 - | Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob.
+Coins:0 - | Carol is possibly Alice or Bob.
 Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Coins:2+Bonds:2+Denominated Currencies:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol), one_denomination(Alice,Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Coins:2+Bonds:2+Denominated Currencies:2 ■ Redeem for Alice: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol), ~vote_redeem_alice(Alice,_,Bob,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol), one_denomination(Alice,Bob,Carol), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), knows(AliceOfficer,Carol), role(AliceOfficer,Alice,Director), vote_redeem_alice(Alice,>=VotesAlice,Bob,Carol), product(DoubleAlice,VotesAlice,2), has_role(Alice,<DoubleAlice,Director) guarded by AliceOfficer taken for Alice by AliceOfficer possibly Alice=Carol, Bob=Carol.
@@ -150,7 +148,6 @@ Coins:2+Bonds:2+Denominated Currencies:2 ■ Vote of Alice for Redeem: vote_rede
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 Bonds:0 - | A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
-Bonds:0 - | Alice, Bob and Carol are parties, Day and Term maturity dates, Today a date; Carol is possibly Alice or Bob.
 Bonds:0 - | Kind of note: bond, y-bonds due Day for y-notes.
 Bonds:2+Denominated Currencies:2 ■ Redeem coin against bond: ~coin(Alice,Bob), coin(Bob,Bob), ~bond(Bob,Carol,Day), bond(Alice,Carol,Day), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), bond(Bob,Carol,Day), one_denomination(Alice,Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Bonds:2+Denominated Currencies:2 ■ Redeem coin against bond for Alice: ~coin(Alice,Bob), coin(Bob,Bob), ~bond(Bob,Carol,Day), bond(Alice,Carol,Day), knows(Alice,Carol), ~vote_redeem_coin_against_bond_alice(Alice,_,Bob,Carol,Day) <- knows(Alice,Bob), coin(Alice,Bob), bond(Bob,Carol,Day), one_denomination(Alice,Bob,Carol), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), knows(AliceOfficer,Carol), role(AliceOfficer,Alice,Director), vote_redeem_coin_against_bond_alice(Alice,>=VotesAlice,Bob,Carol,Day), product(DoubleAlice,VotesAlice,2), has_role(Alice,<DoubleAlice,Director) guarded by AliceOfficer taken for Alice by AliceOfficer possibly Alice=Carol, Bob=Carol.
@@ -162,7 +159,6 @@ Bonds:2+Denominated Currencies:2 ■ Redeem bond against bond: ~bond(Alice,Bob,D
 Bonds:2+Denominated Currencies:2 ■ Redeem bond against bond for Alice: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~bond(Bob,Carol,Term), bond(Alice,Carol,Term), knows(Alice,Carol), ~vote_redeem_bond_against_bond_alice(Alice,_,Bob,Day,Carol,Term) <- knows(Alice,Bob), today(Bob,Today), le(Day,Today), bond(Alice,Bob,Day), bond(Bob,Carol,Term), one_denomination(Alice,Bob,Carol), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), knows(AliceOfficer,Carol), role(AliceOfficer,Alice,Director), vote_redeem_bond_against_bond_alice(Alice,>=VotesAlice,Bob,Day,Carol,Term), product(DoubleAlice,VotesAlice,2), has_role(Alice,<DoubleAlice,Director) guarded by AliceOfficer taken for Alice by AliceOfficer possibly Alice=Carol, Bob=Carol.
 Bonds:2+Denominated Currencies:2 ■ Vote of Alice for Redeem bond against bond: vote_redeem_bond_against_bond_alice(Alice,Voter,Bob,Day,Carol,Term) <- role(Voter,Alice,Director), knows(Alice,Bob), knows(Alice,Carol), ~vote_redeem_bond_against_bond_alice(Alice,Voter,Bob,Day,Carol,Term) guarded by Voter possibly Alice=Carol, Bob=Carol.
 Denominated Coins:0 - | *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
-Denominated Coins:0 - | Alice and Bob are parties, Dollar a fiat currency, Sum a number.
 Denominated Coins:1 ■ First issue: coin(Alice,Alice,*Sum), issued_in(Alice,Dollar) <- ~issued_in(Alice,_) guarded by Alice.
 Denominated Coins:1 ■ First issue for Alice: coin(Alice,Alice,*Sum), issued_in(Alice,Dollar), ~vote_first_issue_alice(Alice,_,Sum,Dollar) <- ~issued_in(Alice,_), knows(AliceOfficer,Alice), role(AliceOfficer,Alice,Director), vote_first_issue_alice(Alice,>=VotesAlice,Sum,Dollar), product(DoubleAlice,VotesAlice,2), has_role(Alice,<DoubleAlice,Director) guarded by AliceOfficer taken for Alice by AliceOfficer.
 Denominated Coins:1 ■ Vote of Alice for First issue: vote_first_issue_alice(Alice,Voter,Sum,Dollar) <- role(Voter,Alice,Director), ~vote_first_issue_alice(Alice,Voter,Sum,Dollar) guarded by Voter.
@@ -171,7 +167,7 @@ Denominated Coins:2 ○ | A Dollar-denominated Alice-coin is due now; Alice will
 Denominated Coins:3 ○ | Pricing.
 Denominated Coins:3 ○ | Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.
 Denominated Currencies:0 - | A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
-Denominated Currencies:0 - | Alice, Bob, Carol and Dave are parties, Dollar a fiat currency, Day and Due maturity dates, Today a date, Cond a condition Alice, Bob and Carol agree, Sum and Limit numbers; in clause 4 Carol is possibly Alice or Bob.
+Denominated Currencies:0 - | In clause 4 Carol is possibly Alice or Bob.
 Denominated Currencies:0 - | Environment: the coins and bonds of z and w are of one denomination, for x.
 Denominated Currencies:1 ■ Issue denominated bond: bond(Alice,Alice,Day,*Sum), issued_bond_in(Alice,Dollar,Day) <- today(Alice,Today), gt(Day,Today) guarded by Alice.
 Denominated Currencies:1 ■ Issue denominated bond for Alice: bond(Alice,Alice,Day,*Sum), issued_bond_in(Alice,Dollar,Day), ~vote_issue_denominated_bond_alice(Alice,_,Sum,Dollar,Day) <- today(Alice,Today), gt(Day,Today), knows(AliceOfficer,Alice), role(AliceOfficer,Alice,Director), vote_issue_denominated_bond_alice(Alice,>=VotesAlice,Sum,Dollar,Day), product(DoubleAlice,VotesAlice,2), has_role(Alice,<DoubleAlice,Director) guarded by AliceOfficer taken for Alice by AliceOfficer.
@@ -215,7 +211,7 @@ Denominated Currencies:4 ■ Pay accepted coins to the issuer: ~coin(Alice,Bob),
 Denominated Currencies:4 ■ Pay accepted coins to the issuer for Alice: ~coin(Alice,Bob), coin(Bob,Bob), ~accepts(Bob,Bob,Dollar), ~vote_pay_accepted_coins_alice(Alice,_,Bob,Bob,Dollar) <- knows(Alice,Bob), issued_in(Bob,Dollar), coin(Alice,Bob), accepts(Bob,Bob,Dollar), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), role(AliceOfficer,Alice,Director), vote_pay_accepted_coins_alice(Alice,>=VotesAlice,Bob,Bob,Dollar), product(DoubleAlice,VotesAlice,2), has_role(Alice,<DoubleAlice,Director) guarded by AliceOfficer taken for Alice by AliceOfficer.
 Bank:0 - | A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
 Commercial Bank:0 - | A *commercial bank* is a bank that may issue Dollar-denominated coins and bonds, whose bylaws name two roles, *director*, held by its first officer, and *loan officer*; the directors jointly decide the acts of the bank, but a loan officer decides a loan within their *lending limit*, a number of Dollars. A participant who holds no role is a *customer*.
-Commercial Bank:0 - | Alice, Bob, Carol, Dave and Erin are persons, Dave possibly Bob, Orga a commercial bank, Dollar a fiat currency, Day a maturity date, Sum, Total, Limit, Votes and Double numbers.
+Commercial Bank:0 - | Dave is possibly Bob.
 Commercial Bank:2 ■ Bank deposit: ~coin(Bob,Dave,*Sum), coin(Orga,Dave,*Sum), ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum) <- participant(Bob,Orga), ~role(Bob,Orga,_), issued_in(Dave,Dollar), coin(Bob,Dave,*Sum), coin(Orga,Orga,*Sum) guarded by Bob possibly Bob=Dave.
 Commercial Bank:2 ■ Bank deposit own coins: ~coin(Bob,Bob,*Sum), coin(Orga,Bob,*Sum), ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum) <- participant(Bob,Orga), ~role(Bob,Orga,_), issued_in(Bob,Dollar), coin(Bob,Bob,*Sum), coin(Orga,Orga,*Sum) guarded by Bob.
 Commercial Bank:3 ■ Loan: ~coin(Orga,Orga,*Sum), coin(Bob,Orga,*Sum), ~bond(Bob,Bob,Day,*Total), bond(Orga,Bob,Day,*Total), ~vote_lend(Orga,_,Bob,Sum,Day) <- role(Alice,Orga,Lender), has_role(Orga,Alice,Lender), lending_limit(Orga,Alice,Limit), le(Sum,Limit), participant(Bob,Orga), ~role(Bob,Orga,_), coin(Orga,Orga,*Sum), bond(Bob,Bob,Day,*Total) guarded by Alice, Bob.

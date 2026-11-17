@@ -1,44 +1,42 @@
 Shares (expanded schemas)
-Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Shares:0 - | Alice, Bob and Carol are persons, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Votes, Double, Sum and Total numbers, Dave a party, Cond a condition Alice, Bob and Carol agree.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
-Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2+Guardians:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
 Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:0 - | Alice and Bob are persons.
 Friendship:1+Guardians:3 ■ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice, Bob.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Guardians:0 - | Bob *trusts* Carol, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for it.
-Guardians:0 - | Alice and Bob are persons, Carol and Dave organisations; in clause 4 Alice and Bob are possibly one person.
+Guardians:0 - | Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
+Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
 Guardians:0 - | Default: any officer of z for those who decide for z.
-Guardians:1 ■ Enter: identity(Carol), organisation(Carol), has_officer(Carol,Alice), creator(Alice,Carol), officer(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
-Guardians:1 ■ | Alice chooses Carol's key pair.
+Guardians:1 ■ Enter: identity(Orga), organisation(Orga), has_officer(Orga,Alice), creator(Alice,Orga), officer(Alice,Orga), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice) <- person(Alice), ~identity(Orga) guarded by Alice, Orga must Orga.
+Guardians:1 ■ | Alice chooses Orga's key pair.
 Guardians:2 ■ | Guardian decisions.
-Guardians:2+Organisation:4 ■ Appoint: officer(Bob,Carol), has_officer(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob), role(Bob,Carol,Role), has_role(Carol,Bob,Role) <- organisation(Carol), ~retired(Carol), person(Bob), has_officer(Carol,Alice), friend(Bob,Alice), ~officer(Bob,Carol), ~has_officer(Carol,Bob), participant(Bob,Carol) guarded by deciders(Carol), Bob.
-Guardians:2+Organisation:4 ■ Resign: ~officer(Bob,Carol), ~has_officer(Carol,Bob), ~role(Bob,Carol,_), ~has_role(Carol,Bob,_) <- officer(Bob,Carol), has_officer(Carol,Bob) guarded by Bob.
-Guardians:2+Organisation:4 ■ End officer: ~officer(Bob,Carol), ~has_officer(Carol,Bob), ~role(Bob,Carol,_), ~has_role(Carol,Bob,_) <- officer(Bob,Carol), has_officer(Carol,Bob) guarded by deciders(Carol,-Bob).
-Guardians:2+Organisation:4 ■ Officer unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob), ~officer(Bob,Carol), ~has_officer(Carol,Bob), ~role(Bob,Carol,_), ~has_role(Carol,Bob,_) <- friend(Bob,Carol), friend(Carol,Bob), officer(Bob,Carol), has_officer(Carol,Bob) guarded by Bob.
-Guardians:2 ■ | Carol may not end a friendship with her officer.
+Guardians:2+Organisation:4 ■ Appoint: officer(Bob,Orga), has_officer(Orga,Bob), knows(Bob,Orga), knows(Orga,Bob), friend(Bob,Orga), friend(Orga,Bob), role(Bob,Orga,Role), has_role(Orga,Bob,Role) <- organisation(Orga), ~retired(Orga), person(Bob), has_officer(Orga,Alice), friend(Bob,Alice), ~officer(Bob,Orga), ~has_officer(Orga,Bob), participant(Bob,Orga) guarded by deciders(Orga), Bob.
+Guardians:2+Organisation:4 ■ Resign: ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- officer(Bob,Orga), has_officer(Orga,Bob) guarded by Bob.
+Guardians:2+Organisation:4 ■ End officer: ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- officer(Bob,Orga), has_officer(Orga,Bob) guarded by deciders(Orga,-Bob).
+Guardians:2+Organisation:4 ■ Officer unfriend: ~friend(Bob,Orga), ~friend(Orga,Bob), ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- friend(Bob,Orga), friend(Orga,Bob), officer(Bob,Orga), has_officer(Orga,Bob) guarded by Bob.
+Guardians:2 ■ | Orga may not end a friendship with her officer.
 Guardians:3 ■ | Ward and person.
-Guardians:3 ■ Organisation acquaint: knows(Carol,Bob), knows(Bob,Carol) <- organisation(Carol), has_officer(Carol,Alice), person(Bob) guarded by Carol, Bob.
-Guardians:3 ■ Organisation befriend: friend(Carol,Bob), friend(Bob,Carol) <- organisation(Carol), ~retired(Carol), has_officer(Carol,Alice), person(Bob), knows(Carol,Bob), knows(Bob,Carol), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Bob), ~friend(Bob,Carol) guarded by Carol, Bob, Alice.
-Guardians:3 ■ Organisation end: ~friend(Carol,Bob), ~friend(Bob,Carol) <- ~has_officer(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
-Guardians:3 ■ Unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob) <- ~officer(Bob,Carol), friend(Bob,Carol), friend(Carol,Bob) guarded by Bob.
-Guardians:3 ■ Organisation unfriend: ~friend(Carol,Bob), ~friend(Bob,Carol) <- has_officer(Carol,Alice), ~officer(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Alice.
+Guardians:3 ■ Organisation acquaint: knows(Orga,Bob), knows(Bob,Orga) <- organisation(Orga), has_officer(Orga,Alice), person(Bob) guarded by Orga, Bob.
+Guardians:3 ■ Organisation befriend: friend(Orga,Bob), friend(Bob,Orga) <- organisation(Orga), ~retired(Orga), has_officer(Orga,Alice), person(Bob), knows(Orga,Bob), knows(Bob,Orga), friend(Alice,Bob), friend(Bob,Alice), ~friend(Orga,Bob), ~friend(Bob,Orga) guarded by Orga, Bob, Alice.
+Guardians:3 ■ Organisation end: ~friend(Orga,Bob), ~friend(Bob,Orga) <- ~has_officer(Orga,Bob), friend(Orga,Bob), friend(Bob,Orga) guarded by Orga.
+Guardians:3 ■ Unfriend: ~friend(Bob,Orga), ~friend(Orga,Bob) <- ~officer(Bob,Orga), friend(Bob,Orga), friend(Orga,Bob) guarded by Bob.
+Guardians:3 ■ Organisation unfriend: ~friend(Orga,Bob), ~friend(Bob,Orga) <- has_officer(Orga,Alice), ~officer(Bob,Orga), friend(Orga,Bob), friend(Bob,Orga) guarded by Alice.
 Guardians:4 ■ | Wards.
-Guardians:4 ■ Organisations acquaint: knows(Carol,Dave), knows(Dave,Carol) <- organisation(Carol), has_officer(Carol,Alice), organisation(Dave), has_officer(Dave,Bob) guarded by Carol, Dave possibly Alice=Bob.
-Guardians:4 ■ Organisations befriend: friend(Carol,Dave), friend(Dave,Carol) <- organisation(Carol), ~retired(Carol), has_officer(Carol,Alice), organisation(Dave), ~retired(Dave), has_officer(Dave,Bob), knows(Carol,Dave), knows(Dave,Carol), knows(Alice,Dave), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Dave), ~friend(Dave,Carol) guarded by Carol, Dave, Alice, Bob possibly Alice=Bob.
-Guardians:4 ■ Organisations of one officer befriend: friend(Carol,Dave), friend(Dave,Carol) <- organisation(Carol), ~retired(Carol), has_officer(Carol,Alice), organisation(Dave), ~retired(Dave), has_officer(Dave,Alice), knows(Carol,Dave), knows(Dave,Carol), ~friend(Carol,Dave), ~friend(Dave,Carol) guarded by Carol, Dave, Alice.
-Guardians:5+Organisation:4 ■ Retire: retired(Carol), ~officer(_,Carol), ~has_officer(Carol,_), ~friend(Carol,_), ~friend(_,Carol), ~role(_,Carol,_), ~has_role(Carol,_,_) <- ~retired(Carol) guarded by deciders(Carol).
-Guardians:5 ■ | Carol can then take no act.
+Guardians:4 ■ Organisations acquaint: knows(Orga,Will), knows(Will,Orga) <- organisation(Orga), has_officer(Orga,Alice), organisation(Will), has_officer(Will,Bob) guarded by Orga, Will possibly Alice=Bob.
+Guardians:4 ■ Organisations befriend: friend(Orga,Will), friend(Will,Orga) <- organisation(Orga), ~retired(Orga), has_officer(Orga,Alice), organisation(Will), ~retired(Will), has_officer(Will,Bob), knows(Orga,Will), knows(Will,Orga), knows(Alice,Will), friend(Alice,Bob), friend(Bob,Alice), ~friend(Orga,Will), ~friend(Will,Orga) guarded by Orga, Will, Alice, Bob possibly Alice=Bob.
+Guardians:4 ■ Organisations of one officer befriend: friend(Orga,Will), friend(Will,Orga) <- organisation(Orga), ~retired(Orga), has_officer(Orga,Alice), organisation(Will), ~retired(Will), has_officer(Will,Alice), knows(Orga,Will), knows(Will,Orga), ~friend(Orga,Will), ~friend(Will,Orga) guarded by Orga, Will, Alice.
+Guardians:5+Organisation:4 ■ Retire: retired(Orga), ~officer(_,Orga), ~has_officer(Orga,_), ~friend(Orga,_), ~friend(_,Orga), ~role(_,Orga,_), ~has_role(Orga,_,_) <- ~retired(Orga) guarded by deciders(Orga).
+Guardians:5 ■ | Orga can then take no act.
 Organisation:0 - | An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
-Organisation:0 - | Alice and Bob are persons, Gov and Orga organisations, Motion an act of Orga, Role a role, Votes and Double numbers.
 Organisation:0 - | Parameters: x is entitled to propose m in z; x is entitled to vote on m in z; x is entitled to take m for z; the votes decide m according to the bylaws of z.
 Organisation:0 - | Default: those who decide for z for those who decide the officers of z.
 Organisation:0 - | Default: x is an officer of z for x is entitled to propose m in z.
@@ -63,7 +61,7 @@ Organisation:5 ■ Amend: amended(Orga), taken(Orga,Motion) <- officer(Alice,Org
 Organisation:6 ○ | Accountability.
 Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
-Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1+Shares:1 ■ Issue shares for Alice: share(Alice,Alice,*Sum) <- organisation(Alice), officer(AliceOfficer,Alice), knows(AliceOfficer,Alice) guarded by AliceOfficer, deciders(Alice) taken for Alice by AliceOfficer.
 Notes:2 ■ Swap shares: ~share(Alice,Carol,*Sum), share(Bob,Carol,*Sum), ~share(Bob,Dave,*Total), share(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), share(Alice,Carol,*Sum), share(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
 Notes:2 ■ Swap shares for Alice: ~share(Alice,Carol,*Sum), share(Bob,Carol,*Sum), ~share(Bob,Dave,*Total), share(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave), ~vote_swap_shares_alice(Alice,_,Bob,Sum,Carol,Total,Dave) <- knows(Alice,Bob), knows(Bob,Alice), share(Alice,Carol,*Sum), share(Bob,Dave,*Total), knows(AliceOfficer,Alice), knows(AliceOfficer,Carol), knows(AliceOfficer,Bob), knows(AliceOfficer,Dave), officer(AliceOfficer,Alice), vote_swap_shares_alice(Alice,>=VotesAlice,Bob,Sum,Carol,Total,Dave), product(DoubleAlice,VotesAlice,2), has_officer(Alice,<DoubleAlice) guarded by AliceOfficer, Bob taken for Alice by AliceOfficer possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
@@ -98,6 +96,5 @@ Notes:4 ■ Vote of Alice for Return share: vote_return_share_alice(Alice,Voter,
 Notes:4 ■ Return share for Carol and Alice: ~escrow_share(Carol,Dave,Alice,Bob,Cond,*Sum), share(Alice,Dave,*Sum), knows(Alice,Dave), ~vote_return_share_carol(Carol,_,Alice,Sum,Dave,Bob,Cond), ~vote_return_share_alice(Alice,_,Carol,Sum,Dave,Bob,Cond) <- knows(Carol,Alice), knows(Alice,Carol), escrow_share(Carol,Dave,Alice,Bob,Cond,*Sum), knows(CarolOfficer,Carol), knows(CarolOfficer,Dave), knows(CarolOfficer,Alice), knows(CarolOfficer,Bob), knows(AliceOfficer,Carol), knows(AliceOfficer,Dave), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), officer(CarolOfficer,Carol), vote_return_share_carol(Carol,>=VotesCarol,Alice,Sum,Dave,Bob,Cond), product(DoubleCarol,VotesCarol,2), has_officer(Carol,<DoubleCarol), officer(AliceOfficer,Alice), vote_return_share_alice(Alice,>=VotesAlice,Carol,Sum,Dave,Bob,Cond), product(DoubleAlice,VotesAlice,2), has_officer(Alice,<DoubleAlice) guarded by CarolOfficer, AliceOfficer taken for Carol by CarolOfficer and for Alice by AliceOfficer possibly Alice=Dave, Bob=Dave, Carol=Dave.
 Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
 Shares:0 - | A *share* of Orga is an Orga-note that gives its holder a vote in Orga and a part of its dividends.
-Shares:0 - | Alice is a party, Orga an organisation.
 Shares:0 - | Default: those who decide for z for those who decide the issue of shares of z.
 Shares:0 - | Kind of note: share, shares of y for y-notes.
