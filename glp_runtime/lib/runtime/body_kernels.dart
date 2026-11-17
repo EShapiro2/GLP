@@ -1140,7 +1140,7 @@ BodyKernelResult selfKeyKernel(GlpRuntime rt, List<Object?> args) {
   }
   final id = _personIdentity(rt, '_self_key/1');
   if (id == null) return BodyKernelResult.abort;
-  return bindResult(rt, args[0], ConstTerm(id.pub.hex));
+  return bindResult(rt, args[0], ConstTerm(rt.keyName(id.pub.hex)));
 }
 
 /// '_sign'(T?, Key?, SignedTerm) — bind SignedTerm to the signed term of the
@@ -1163,7 +1163,7 @@ BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
     return kernelAbort('[ABORT] _sign/3: second argument (Key) must be a ground key, got '
         '${_deref(rt, args[1])}');
   }
-  if (key != id.pub.hex) {
+  if (rt.keyNamed(key) != id.pub.hex) {
     return kernelAbort('[ABORT] _sign/3: $key is not the agent\'s own key; the '
         'layer holds no other than ${id.pub.hex}, and any other key aborts the '
         'call (the GLP paper f265fec, "Identity and signature")');
@@ -1216,7 +1216,7 @@ BodyKernelResult signatureKernel(GlpRuntime rt, List<Object?> args) {
   if (s == null || s is VarRef) {
     return kernelAbort('[ABORT] _signature/2: first argument is not known');
   }
-  return bindResult(rt, args[1], _signatureOf(s));
+  return bindResult(rt, args[1], _signatureOf(rt, s));
 }
 
 /// The constant `unsigned`: the Signature of what is not a verified signed term.
@@ -1225,7 +1225,7 @@ Term get _unsigned => ConstTerm('unsigned');
 /// The Signature of the known term [s]: `signed(Key, Hash, T)` where [s] is a
 /// signed term whose signature verifies under the key it carries, `unsigned`
 /// otherwise.
-Term _signatureOf(Object s) {
+Term _signatureOf(GlpRuntime rt, Object s) {
   final String hex;
   if (s is ConstTerm && s.value is String) {
     hex = s.value as String;
@@ -1262,7 +1262,7 @@ Term _signatureOf(Object s) {
   }
   if (!PersonIdentity.verify(signer, content, signature)) return _unsigned;
   return StructTerm(
-      'signed', [ConstTerm(signer.hex), ConstTerm(bytesToHex(hSrc)), term]);
+      'signed', [ConstTerm(rt.keyName(signer.hex)), ConstTerm(bytesToHex(hSrc)), term]);
 }
 
 /// '_decompose_module'(Module?, Key, Hash, Hash) — take a module value apart:
@@ -1289,7 +1289,7 @@ BodyKernelResult decomposeModuleKernel(GlpRuntime rt, List<Object?> args) {
     return kernelAbort('[ABORT] _decompose_module/4: module ${module.name} carries no '
         'certificate (it was refused one, or no one compiled it for a person)');
   }
-  final r1 = bindResult(rt, args[1], ConstTerm(bytesToHex(cert.agent)));
+  final r1 = bindResult(rt, args[1], ConstTerm(rt.keyName(bytesToHex(cert.agent))));
   if (r1 != BodyKernelResult.success) return r1;
   final r2 = bindResult(rt, args[2], ConstTerm(bytesToHex(cert.hSrc)));
   if (r2 != BodyKernelResult.success) return r2;
