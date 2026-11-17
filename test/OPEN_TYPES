@@ -186,6 +186,7 @@ programs/self.glp	open-decl	run/3
 programs/self.glp	open-decl	sign/3
 programs/self.glp	open-decl	signature/2
 programs/self.glp	open-decl	term_to_string/2
+programs/self.glp	open-type	Signature
 programs/social/graph/budget/bounded.glp	open-decl	bounded/3
 programs/social/graph/budget/bounded.glp	open-decl	execute/4
 programs/social/graph/budget/bounded.glp	open-decl	reduce/2
