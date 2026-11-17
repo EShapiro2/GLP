@@ -1,9 +1,9 @@
-% GO: Grassroots Organisation --- the contract, the one copy, its owner's (claude.md, "Sessions").
-% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 3, Grassroots Organisations and cites a clause as GO:1.
+% Organisation --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 3, Grassroots Organisations and cites a clause as Organisation:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GnW, Guardians 'n' Wards, GSC's (programs/gsc), and through it GSG and GKK.
+% Extends: Guardians, Guardians 'n' Wards, GSC's (programs/gsc), and through it Friendship and Knowledge.
 % Last changed: 2026-11-16, by GO #8.
-% Schemas: GO.glp beside this file.
+% Schemas: Organisation.glp beside this file.
 Organisation
 Organisation instantiates Guardians with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.

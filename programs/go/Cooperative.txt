@@ -1,9 +1,9 @@
-% GCoop: Grassroots Cooperative --- the contract, the one copy, its owner's (claude.md, "Sessions").
-% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, /Users/udi/Grassroots/GO/main_characterisation_ArXiv.tex, prints it in its box in Section 7, Grassroots Cooperatives and cites a clause as GCoop:1.
+% Cooperative --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 7, Grassroots Cooperatives and cites a clause as Cooperative:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: CDC and DGC, Denominated Grassroots Currencies, SGC's (programs/currencies/sovereign).
+% Extends: Constitution and Denominated Currencies, Denominated Grassroots Currencies, SGC's (programs/currencies/sovereign).
 % Last changed: 2026-11-16, by GO #8.
-% Schemas: GCoop.glp beside this file.
+% Schemas: Cooperative.glp beside this file.
 Cooperative
 Cooperative extends Constitution and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 A *cooperative* is an organisation whose bylaws name one more role, *board member*; the members decide by a majority of the members, one member one vote, but for the acts the bylaws delegate to the board or to another role.

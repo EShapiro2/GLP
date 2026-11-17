@@ -1,7 +1,7 @@
 % Shares --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: GO (Udi, 2026-11-16, to Calculus #7, reported by Calculus #7; named Shares by Udi, 2026-11-16, to Calculus #8, reported by Calculus #8).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 6.3, Shareholding corporation, and cites a clause as Shares:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: GO and Notes, restricting them.
+% Extends: Organisation and Notes, restricting them.
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Shares.glp beside this file.
 Shares
