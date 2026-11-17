@@ -111,6 +111,8 @@ schema_ones(_, []) :- otherwise | true.
 VOne      ::= vone(Var, Var) ; vone_any(Var) ; vone_all.
 VOnes     ::= [] ; [VOne | VOnes].
 procedure schema_vones(Constant?, VOnes).
+schema_vones(deliver, [vone(pvar('Carol'), role(1))])
+.
 schema_vones(_, []) :- otherwise | true.
 
 procedure schema_consents(Constant?, Ints).
@@ -251,7 +253,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("", with([schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(post, ['Alice'], [svar('Text')], [rs(guarded, [atom(item, [svar('Text'), role(1)])], [], [], [atom(item, [svar('Text'), role(1)])])]), schema(deliver, ['Bob', 'Alice'], [svar('Text'), pvar('Carol')], [rs(unguarded, [], [], [atom(item, [svar('Text'), pvar('Carol')]), atom(friend, [role(2)])], []), rs(unguarded, [atom(item, [svar('Text'), pvar('Carol')]), atom(received, [svar('Text'), pvar('Carol'), role(1)])], [], [], [atom(item, [svar('Text'), pvar('Carol')])])])], pragmas([list("Friends", [friend]), list("Feed", [item])], [act(befriend, "Befriend", [], said([[], [person(1), text(" asks.")]]), "Friends", by([1])), act(post, "Post", ["", "text"], none, "Feed", by([1]))], [], nolook, version(1, 1))))
+contract("", with([schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(post, ['Alice'], [svar('Text')], [rs(guarded, [atom(item, [svar('Text'), role(1)])], [], [], [atom(item, [svar('Text'), role(1)])])]), schema(deliver, ['Bob', 'Alice', one('Carol', 'Bob')], [svar('Text'), pvar('Carol')], [rs(unguarded, [], [], [atom(item, [svar('Text'), pvar('Carol')]), atom(friend, [role(2)])], []), rs(unguarded, [atom(item, [svar('Text'), pvar('Carol')]), atom(received, [svar('Text'), pvar('Carol'), role(1)])], [], [], [atom(item, [svar('Text'), pvar('Carol')])])])], pragmas([list("Friends", [friend]), list("Feed", [item])], [act(befriend, "Befriend", [], said([[], [person(1), text(" asks.")]]), "Friends", by([1])), act(post, "Post", ["", "text"], none, "Feed", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).

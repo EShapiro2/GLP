@@ -5041,7 +5041,7 @@ check_not "CVA wild: no person is asked on the retire, the listed role unguarded
 check "CVA wild: the request of unpoint names the pointer removed, unpoint(Peer, Peer, Speech), in Proposal and in Class" "^unpoint(Peer, Peer, Speech)$" "$cva_wild_p"
 check "CVA wild: ... its schema-binding binding the person pointed to and the label" "^binding_of(unpoint(V1, V2, V3), unpoint, \[b(role(1), p(V1?)), b(pvar('Carol'), p(V2?)), b(svar('Label'), s(V3?))\])" "$cva_wild_p"
 check "CVA wild: ... no variable of it local" "^schema_numeric(unpoint, numeric(\[cj(every, true)\], \[\], \[\]))" "$cva_wild_p"
-check "CVA wild: ... and its button with no field, the pointer its proposer holds binding both places, one button for each" "button(\"Unpoint\", \[act(unpoint, 1, \[1\], \[req(pointer, \[at(2), at(3)\])\], \[2, 3\], \[\], \[\], \[\])\])" "$cva_wild_p"
+check "CVA wild: ... and its button with no field, the pointer its proposer holds binding both places, one button for each" "button(\"Unpoint\", \[act(unpoint, 1, \[1, 2\], \[req(pointer, \[at(2), at(3)\])\], \[2, 3\], \[\], \[\], \[\])\])" "$cva_wild_p"
 check "CVA wild: carol holds two pointers, labelled x and y, and requests unpoint(carol, alice, x)" "view(carol, \[pointer(alice, speech(utterance(y), carol)), pointer(alice, speech(utterance(x), carol)), retired, [^]]*\], \[alice, bob\], \[unpoint(carol, alice, speech(utterance(x), carol))\]" "$cva_wild"
 check "CVA wild: ... the pointer she named is removed, and the other stays" "\[unpoint(carol, alice, speech(utterance(x), carol))\], \[[^]]*\]), view(carol, \[pointer(alice, speech(utterance(y), carol)), retired, " "$cva_wild"
 cva_wild_u=$(mktemp -d)
@@ -5474,7 +5474,7 @@ check "CVA next_n: each platform's own list, requests first" "^    requests_firs
 check "CVA approval: Bob's question for a swap shows after the values the coins Alice gives, with their count, held(coin(alice), 2), and the atoms of the other tabs her role requires" 'W1 = \[person(alice), text(.*valued(.amount wanted., 3), held(knows(bob), 1), held(coin(alice), 2)\]' "$cva_text"
 check "CVA approval: ... under the attempt's binding, coins of carol" 'W2 = .*held(coin(carol), 2)\]' "$cva_text"
 check_not "CVA approval: ... and no atom shown to a person the question is not put to" 'W3 = .*held(' "$cva_text"
-check "CVA widget: a role's place in Roles and an agent variable's not, introduce's Carol at place 3 (vGLP e22e2ad, Section 5.4: \"distinct roles bound to distinct persons\"; vGLP #23, Code_inbox.md, 2026-11-06 12:00 UTC, 1)" 'button("Introduce", .act(introduce, 2, .1, 2., ' "$(cat "$CVA/social_graph/platform.vglp")"
+check "CVA widget: a role's place and an agent variable's in the person places, introduce's Carol at place 3 (vGLP, Section 5.4: \"persons of different names to different persons\", roles and agent variables alike; vGLP-distinct 607932d8)" 'button("Introduce", .act(introduce, 2, .1, 2, 3., ' "$(cat "$CVA/social_graph/platform.vglp")"
 cva_poss=$("$REPL_RUN" <<HEREDOC
 $CVA/compiler/
 :limit 100000000
@@ -6195,8 +6195,8 @@ HEREDOC
 check "CVA feeds: the platform and its play load" "Loaded program: .*cva/feeds" "$cva_feeds"
 check "CVA feeds: bob's machine delivers his item to alice, and it commits" "sent(bob, alice, outcome(attempt(bob, 5, 5, deliver(bob, alice, speech(utterance(hi), bob), bob), none), commit(\[\])))" "$cva_feeds"
 check "CVA feeds: alice holds the item, with its author, and whom she received it from" "view(alice, \[item(speech(utterance(hi), bob), bob), received(speech(utterance(hi), bob), bob, bob), friend(bob)\]" "$cva_feeds"
-check "CVA feeds: bob, his state as it was, proposes it once more, and alice, who holds the item, refuses as unable" "sent(alice, bob, vote(attempt(bob, 7, 6, deliver(bob, alice, speech(utterance(hi), bob), bob), none), no(unable(\[\], \[item(speech(utterance(hi), bob), bob)\]))))" "$cva_feeds"
-check "CVA feeds: ... and he proposes it no more, her ready not come: three starts of it in all, and the run rests" "^3$" "$(echo "$cva_feeds" | grep -o "sent(bob, alice, start(attempt(bob, [0-9]*, [0-9]*, deliver(bob, alice, speech(utterance(hi), bob), bob), none)))" | wc -l | tr -d ' ')"
+check "CVA feeds: bob, his state as it was, proposes it once more, and alice, who holds the item, refuses as unable" "sent(alice, bob, vote(attempt(bob, 6, 6, deliver(bob, alice, speech(utterance(hi), bob), bob), none), no(unable(\[\], \[item(speech(utterance(hi), bob), bob)\]))))" "$cva_feeds"
+check "CVA feeds: ... and he proposes it no more, her ready not come: two starts of it in all, and the run rests" "^2$" "$(echo "$cva_feeds" | grep -o "sent(bob, alice, start(attempt(bob, [0-9]*, [0-9]*, deliver(bob, alice, speech(utterance(hi), bob), bob), none)))" | wc -l | tr -d ' ')"
 check "CVA feeds: the run suspends" "→ suspended" "$cva_feeds"
 check_not "CVA feeds: ... within its limit" "reduction limit reached\|stopped after" "$cva_feeds"
 
