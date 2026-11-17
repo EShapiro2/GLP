@@ -174,6 +174,10 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
 #pop h4{margin:0 0 8px;font-size:18px;letter-spacing:-.01em}
 #pop p{margin:7px 0;font-size:15px;color:#3a3a3c}
 #pop code{font-size:12.5px;background:var(--bg);padding:1px 5px;border-radius:5px}
+#pop .card{max-height:calc(100vh - 40px);overflow-y:auto}
+#pop .names{display:flex;flex-direction:column;gap:6px;margin-top:10px;min-width:220px}
+#pop .names a{color:var(--blue);cursor:pointer;font-size:16px;font-weight:600}
+.stat.list{cursor:pointer}.stat.list .v{color:var(--blue)}
 #pop .x{float:right;border:none;background:rgba(118,118,128,.12);width:26px;height:26px;border-radius:50%;cursor:pointer;color:var(--mute)}
 @media (max-width:640px){
   #tip{max-width:none}
@@ -973,6 +977,11 @@ function page(c, hood){
   const kids = D.contracts.filter(k => k.extends.includes(c.id));
   const own = c.acts[1];
   const link = id => `<a data-go="${id}">${esc(NM(id))}</a>`;
+  // Builds on and Used by: the box shows how many contracts, and a click on
+  // it opens a balloon with their names, each a link to its contract (Udi,
+  // 2026-11-17, to Website #3); the names in the box, on a line that does
+  // not break, ran over the next box where they were many.
+  const names = (k, ids, none) => `<div class="stat${ids.length ? ' list' : ''}"${ids.length ? ` data-names="${esc(ids.join(' '))}" data-title="${k}" title="Show the contract${ids.length > 1 ? 's' : ''}"` : ''}><div class="k">${k}</div><div class="v">${ids.length || '–'}</div><div class="s">${ids.length ? 'contract' + (ids.length > 1 ? 's' : '') : none}</div></div>`;
   $('#view').innerHTML = `
     <span class="crumbs" data-go="">‹ All contracts</span>
     <div class="prod">${icon(c)}
@@ -981,8 +990,8 @@ function page(c, hood){
     <div class="stats">
       <div class="stat"><div class="k">Rules</div><div class="v">${c.clauses.length}</div><div class="s">in English</div></div>
       <div class="stat"><div class="k">Speech acts</div><div class="v">${c.acts[0] ? own : '–'}</div><div class="s">${c.acts[0] ? 'of its own' : 'not compiled'}</div></div>
-      <div class="stat"><div class="k">Builds on</div><div class="v">${c.extends.length ? c.extends.map(link).join(', ') : '–'}</div><div class="s">${c.extends.length ? 'contract' + (c.extends.length > 1 ? 's' : '') : 'the base'}</div></div>
-      <div class="stat"><div class="k">Used by</div><div class="v">${kids.length ? kids.map(k => link(k.id)).join(', ') : '–'}</div><div class="s">${kids.length ? 'contract' + (kids.length > 1 ? 's' : '') : 'none yet'}</div></div>
+      ${names('Builds on', c.extends, 'the base')}
+      ${names('Used by', kids.map(k => k.id), 'none yet')}
       <div class="stat"><div class="k">By</div><div class="v">${esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
     </div>
     ${stripHtml(c)}
@@ -999,6 +1008,11 @@ function page(c, hood){
     </div>
     <div id="hood" class="sec"></div>`;
   $('#view').querySelectorAll('[data-go]').forEach(a => a.onclick = () => go(a.dataset.go || null));
+  $('#view').querySelectorAll('[data-names]').forEach(s => s.onclick = () => {
+    $('#popc').innerHTML = `<h4>${esc(NM(c.id))}: ${s.dataset.title.toLowerCase()}</h4><div class="names">${s.dataset.names.split(' ').map(link).join('')}</div>`;
+    $('#popc').querySelectorAll('[data-go]').forEach(a => a.onclick = () => { $('#pop').style.display = 'none'; go(a.dataset.go); });
+    $('#pop').style.display = 'flex';
+  });
   $('#hoodbtn').onclick = () => go(c.id, !hood);
   const tf = $('#tf');
   if (tf) tf.querySelectorAll('button').forEach(bt => bt.onclick = () => {
