@@ -12,7 +12,8 @@ Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Lin
         ; day_only(Line) ; dayless_only(Line) ; env_only(Line) ; envless_only(Line)
         ; wild_only(Line) ; wildless_only(Line)
         ; const_only(Line) ; constless_only(Line)
-        ; found_only(Line) ; foundless_only(Line).
+        ; found_only(Line) ; foundless_only(Line)
+        ; trust_only(Line) ; trustless_only(Line).
 Lines ::= [] ; [Line | Lines].
 
 exported procedure fixed_text(Lines).
@@ -720,9 +721,11 @@ fixed_text([
     standing_only(guarded_only('stand_cond1(nostand, held(_), _, busy).')),
     standing_only(guarded_only('stand_cond1(nostand, unlocked, yes, busy).')),
     standing_only(guarded_only('procedure stand_take(StandCond?, Constant?, Proposal?, RCond?, St?, RCond, St).')),
-    standing_only(guarded_only('stand_take(go, S, _, Cd, St, Cd?, St1?) :- ground(St?) |')),
+    standing_only(guarded_only(trustless_only('stand_take(go, S, _, Cd, St, Cd?, St1?) :- ground(St?) |'))),
+    standing_only(guarded_only(trust_only('stand_take(go, S, _, Cd, St, Cd?, St1?) :- ground(St?), ground(S?) |'))),
     standing_only(guarded_only('    st_app(St?, Ap),')),
     standing_only(guarded_only('    stand_app(S?, Ap?, Ap1),')),
+    standing_only(guarded_only(trust_only('    trust_to(S?, open),'))),
     standing_only(guarded_only('    set_app(St?, Ap1?, St1).')),
     standing_only(guarded_only('stand_take(already, _, _, Cd, St, Cd?, St?).')),
     standing_only(guarded_only('stand_take(busy, _, N, _, St, rhold(N?), St?).')),
@@ -736,9 +739,16 @@ fixed_text([
     standing_only(guarded_only('    lock_of_schema(L?, S?, Ls),')),
     standing_only(guarded_only('    withdraw_app1(Sk?, Ls?, S?, app(Ms?, K?, L?, R?), Ap).')),
     standing_only(guarded_only('procedure withdraw_app1(StandK?, YesNo?, Constant?, App?, App).')),
-    standing_only(guarded_only('withdraw_app1(at(Kw), no, S, app(Ms, K, L, R), app(Ms?, K?, L?, [ended(std(S?), Kw?)|R?])).')),
+    standing_only(guarded_only(trustless_only('withdraw_app1(at(Kw), no, S, app(Ms, K, L, R), app(Ms?, K?, L?, [ended(std(S?), Kw?)|R?])).'))),
+    standing_only(guarded_only(trust_only('withdraw_app1(at(Kw), no, S, app(Ms, K, L, R), app(Ms?, K?, L?, [ended(std(S?), Kw?)|R?])) :- ground(S?) | trust_to(S?, closed).'))),
     standing_only(guarded_only('withdraw_app1(at(_), yes, _, Ap, Ap?).')),
     standing_only(guarded_only('withdraw_app1(nostand, _, _, Ap, Ap?).')),
+    standing_only(guarded_only(trust_only('%% The phone opened to persons it does not know, over Bluetooth and the local network, from the standing request of a schema the implementation pragmas name until it is withdrawn (vGLP, Section 5.4; GLP, appendix-guards, "Networking seam": declare(trust(U, L))), and left as it is for any other (trust_of).'))),
+    standing_only(guarded_only(trust_only('procedure trust_to(Constant?, TrustLevel?).'))),
+    standing_only(guarded_only(trust_only('trust_to(S, T) :- ground(S?) | trust_of(S?, Y), trust_set(Y?, T?).'))),
+    standing_only(guarded_only(trust_only('procedure trust_set(YesNo?, TrustLevel?).'))),
+    standing_only(guarded_only(trust_only('trust_set(yes, T) :- ground(T?) | declare(trust(pan, T?)), declare(trust(lan, T?)).'))),
+    standing_only(guarded_only(trust_only('trust_set(no, _).'))),
     standing_only('%% The standing request std(S) pending in the record, at(K), standing(std(S), K) recorded and not ended, or nostand.'),
     standing_only('StandK    ::= at(Integer) ; nostand.'),
     standing_only(guarded_only('procedure standing_live(Recs?, Constant?, Recs?, StandK).')),
