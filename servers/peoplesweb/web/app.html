@@ -153,7 +153,7 @@ function show(t){
   }
   return PERSONS.includes(t) || isKey(t) ? cap(t) : String(t);
 }
-// '' at the site root, '/gas' under a sub-path; the test site, peoplesweb.org/test,
+// '' at the site root, '/gas' under a sub-path; the test site, peoplesweb.org/next,
 // calls the live server's API, at the root, as the build tells it (DATA.api).
 const BASE = window.DATA && DATA.api != null ? DATA.api : location.pathname.replace(/\/[^/]*$/, '');
 const api = p => `${BASE}/api/${C}/${p}`;
