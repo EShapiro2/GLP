@@ -7,19 +7,19 @@
 % Schemas: Children.glp beside this file, the full schemas, Warded Groups' as Children instantiates, restricts and extends it, printed by calculus/tools/adopt.py Children from the Logic pragmas and never written by hand; adopt.py --check Children holds it and cascade/Children/ to what the tools print.
 Children
 Children instantiates Warded Groups with the guardians deciding jointly, a child for a ward and a parent for a guardian, and restricts and extends it.
-Alice and Bob are persons, Carol and Dave children.
-1. ◆ Enter: Guardians:1, only if Alice is a legal parent of the minor who operates Carol.
-2. ■ A child's acquaintances. Child acquaint: Guardians:3, only if Alice knows Bob, and with the consent of Alice. Children acquaint: Guardians:4, only if Alice knows Dave and Bob knows Carol, and with the consent of Alice and Bob, who know each other, Alice and Bob possibly one person.
-3. ■ Child create: Warded Groups:2, only with the consent of Alice, a parent of Carol. Only a child, Dave, may join the group.
-4. ○ Of age: The creator of Carol may declare Carol of age, which ends every guardianship of Carol, and Carol is then a person. The creator will do so if the minor who operates Carol comes of age, and not before.
+Alice and Bob are persons, Wendy and Will children.
+1. ◆ Enter: Guardians:1, only if Alice is a legal parent of the minor who operates Wendy.
+2. ■ A child's acquaintances. Child acquaint: Guardians:3, only if Alice knows Bob, and with the consent of Alice. Children acquaint: Guardians:4, only if Alice knows Will and Bob knows Wendy, and with the consent of Alice and Bob, who know each other, Alice and Bob possibly one person.
+3. ■ Child create: Warded Groups:2, only with the consent of Alice, a parent of Wendy. Only a child, Will, may join the group.
+4. ○ Of age: The creator of Wendy may declare Wendy of age, which ends every guardianship of Wendy, and Wendy is then a person. The creator will do so if the minor who operates Wendy comes of age, and not before.
 5. ○ A minor who is not a ward. Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.
 Logic pragmas
 Children instantiates Warded Groups with the parents of z for those who decide for z, a child for a ward and a parent for a guardian, and restricts and extends it.
-Alice and Bob are persons, Carol and Dave children; in clause 2 Alice and Bob are possibly one person.
-1. ◆ Enter: Guardians:1. Alice is a legal parent of the minor who operates Carol.
-2. ■ A child's acquaintances. Child acquaint: Guardians:3 Ward acquaint, only if Alice knows Bob and Alice is a parent of Carol, with the consent of Alice. Children acquaint: Guardians:4 Wards acquaint, only if Alice knows Dave, Bob knows Carol, Alice and Bob know each other, Alice is a parent of Carol and Bob is a parent of Dave, with the consent of Alice and Bob.
-3. ■ Child create: Warded Groups:2 Ward create, only if Carol has Alice as a parent, with the consent of Alice. Join: Groups:3 Join, only if Alice is a person. Child add: Warded Groups:3 Ward add, only if Bob is a child. Only a child, Dave, may join the group.
-4. ○ Of age: Alice may declare Carol of age, provided Alice is the creator of Carol and Carol has Bob as a parent. Carol is then a person. The creator will do so if the minor who operates Carol comes of age, and not before.
+Alice and Bob are persons, Wendy and Will children; in clause 2 Alice and Bob are possibly one person.
+1. ◆ Enter: Guardians:1. Alice is a legal parent of the minor who operates Wendy.
+2. ■ A child's acquaintances. Child acquaint: Guardians:3 Ward acquaint, only if Alice knows Bob and Alice is a parent of Wendy, with the consent of Alice. Children acquaint: Guardians:4 Wards acquaint, only if Alice knows Will, Bob knows Wendy, Alice and Bob know each other, Alice is a parent of Wendy and Bob is a parent of Will, with the consent of Alice and Bob.
+3. ■ Child create: Warded Groups:2 Ward create, only if Wendy has Alice as a parent, with the consent of Alice. Join: Groups:3 Join, only if Alice is a person. Child add: Warded Groups:3 Ward add, only if Bob is a child. Only a child, Will, may join the group.
+4. ○ Of age: Alice may declare Wendy of age, provided Alice is the creator of Wendy and Wendy has Bob as a parent. Wendy is then a person. The creator will do so if the minor who operates Wendy comes of age, and not before.
 5. ○ A minor who is not a ward. Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.
 Logic pragmas.
 Vocabulary: z is of age = of_age(z).
@@ -30,54 +30,54 @@ Interface pragmas
 Children: those Alice is a parent of.
 Created: those Alice is the creator of.
 Enter: Alice [Enter] <name>
-  Carol: Alice asks to be your parent.
+  Wendy: Alice asks to be your parent.
 Guardian decisions: Decider [Make parent] <person>
-  Bob: Decider asks you to be a parent of the child Carol.
-  Codecider: Decider asks that Bob be a parent of your child Carol.
+  Bob: Decider asks you to be a parent of the child Wendy.
+  Codecider: Decider asks that Bob be a parent of your child Wendy.
   Decider [End parent] <person>
-  Codecider: Decider asks to end Bob's parenthood of your child Carol.
+  Codecider: Decider asks to end Bob's parenthood of your child Wendy.
   Bob [Parent unfriend]
 A child's acquaintances: Alice [Child acquaint]
-  Carol: Alice wishes that you and Bob know each other.
-  Bob: Alice wishes that you and Carol, Alice's child, know each other.
+  Wendy: Alice wishes that you and Bob know each other.
+  Bob: Alice wishes that you and Wendy, Alice's child, know each other.
   Alice [Children acquaint]
-  Carol: Alice wishes that you and Dave know each other.
-  Dave: Alice wishes that you and Carol know each other.
-  Bob: Alice wishes that Carol and your child Dave know each other.
+  Wendy: Alice wishes that you and Will know each other.
+  Will: Alice wishes that you and Wendy know each other.
+  Bob: Alice wishes that Wendy and your child Will know each other.
 Ward and person: Alice [Child befriend] <child>
-  Carol: Alice asks that you and Bob befriend.
-  Bob: Alice asks that you and Carol, Alice's child, befriend.
+  Wendy: Alice asks that you and Bob befriend.
+  Bob: Alice asks that you and Wendy, Alice's child, befriend.
   Alice [Child unfriend] <child> <person>
-  Carol [Child end]
+  Wendy [Child end]
 Wards: Alice [Children befriend] <child>
-  Carol: Alice asks that you and Dave befriend.
-  Dave: Alice asks that you and Carol befriend.
-  Bob: Alice asks that Carol and your child Dave befriend.
+  Wendy: Alice asks that you and Will befriend.
+  Will: Alice asks that you and Wendy befriend.
+  Bob: Alice asks that Wendy and your child Will befriend.
   Alice [Children of one parent befriend] <child> <other child>
-  Carol: Alice asks that you and Dave befriend.
-  Dave: Alice asks that you and Carol befriend.
+  Wendy: Alice asks that you and Will befriend.
+  Will: Alice asks that you and Wendy befriend.
 Retire: Decider [Retire]
-  Codecider: Decider asks to retire your child Carol.
-A ward's messages: Carol [Child message] <text>
-  Carol [Child post] <text>
-  Carol [Child post own] <text>
-Child create: Carol [Child create] <name>
-  Alice: Carol asks to create a group.
-A ward's group: Carol [Child close]
+  Codecider: Decider asks to retire your child Wendy.
+A ward's messages: Wendy [Child message] <text>
+  Wendy [Child post] <text>
+  Wendy [Child post own] <text>
+Child create: Wendy [Child create] <name>
+  Alice: Wendy asks to create a group.
+A ward's group: Wendy [Child close]
   Alice [Parent close] <group>
 Ward join: Bob [Child join]
-  Carol: Bob asks you to join the group.
-  Alice: Bob asks that your child Carol join the group.
-  Carol [Children join] <parent>
-  Dave: Carol asks you to join the group.
-  Alice: Carol asks that Dave join the group.
-  Bob: Carol asks that your child Dave join the group.
-  Carol [Children of one parent join]
-  Dave: Carol asks you to join the group.
-  Alice: Carol asks that Dave join the group.
+  Wendy: Bob asks you to join the group.
+  Alice: Bob asks that your child Wendy join the group.
+  Wendy [Children join] <parent>
+  Will: Wendy asks you to join the group.
+  Alice: Wendy asks that Will join the group.
+  Bob: Wendy asks that your child Will join the group.
+  Wendy [Children of one parent join]
+  Will: Wendy asks you to join the group.
+  Alice: Wendy asks that Will join the group.
   Alice [Child withdraw] <leader> <group>
-  Carol [Child leave]
-  Carol [Child remove]
+  Wendy [Child leave]
+  Wendy [Child remove]
 Of age: Alice [Of age]
 Implementation pragmas
 Introduction: knows.

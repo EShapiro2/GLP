@@ -60,27 +60,27 @@ Participation: Bob [Join] <organisation> <officer>
   Decider [Officer expel] <person>
   Codecider: Decider asks to end Bob's participation and his office in Orga.
 Officers: Decider [Appoint] <person> <role>
-  Bob: Decider asks you to be an officer of the organisation Carol.
-  Codecider: Decider asks that Bob be an officer of your organisation Carol.
+  Bob: Decider asks you to be an officer of the organisation Orga.
+  Codecider: Decider asks that Bob be an officer of your organisation Orga.
   Decider [End officer] <person>
-  Codecider: Decider asks to end Bob's office in your organisation Carol.
+  Codecider: Decider asks to end Bob's office in your organisation Orga.
   Bob [Resign] [Officer unfriend]
 Amend: Alice [Amend] <act> <votes>
 Ward and person: Bob [Organisation acquaint] <person>
-  Carol: Bob wishes that you know each other.
+  Orga: Bob wishes that you know each other.
   Alice [Organisation befriend] <organisation>
-  Carol: Alice asks that you and Bob befriend.
-  Bob: Alice asks that you and her organisation Carol befriend.
+  Orga: Alice asks that you and Bob befriend.
+  Bob: Alice asks that you and her organisation Orga befriend.
   Alice [Organisation unfriend] <organisation> <person>
-  Carol [Organisation end]
-Wards: Carol [Organisations acquaint] <person>
-  Dave: Carol wishes that you know each other.
+  Orga [Organisation end]
+Wards: Orga [Organisations acquaint] <person>
+  Will: Orga wishes that you know each other.
   Alice [Organisations befriend] <organisation>
-  Carol: Alice asks that you and Dave befriend.
-  Dave: Alice asks that you and Carol befriend.
-  Bob: Alice asks that Carol and your organisation Dave befriend.
+  Orga: Alice asks that you and Will befriend.
+  Will: Alice asks that you and Orga befriend.
+  Bob: Alice asks that Orga and your organisation Will befriend.
   Alice [Organisations of one officer befriend] <organisation> <other organisation>
-  Carol: Alice asks that you and Dave befriend.
-  Dave: Alice asks that you and Carol befriend.
+  Orga: Alice asks that you and Will befriend.
+  Will: Alice asks that you and Orga befriend.
 Retire: Decider [Retire]
-  Codecider: Decider asks to retire your organisation Carol.
+  Codecider: Decider asks to retire your organisation Orga.

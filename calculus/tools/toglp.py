@@ -194,7 +194,7 @@ def binding_holds(e, x, y):
     return x in rs and y in rs and not names(x, y) and not names(y, x)
 
 
-def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset(), acts=()):
+def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset(), acts=(), anyof=frozenset()):
     # A name of the act that holds, in what the act requires, the state that lists a role of those who decide, of the
     # same agent, is the one of them who decides, Decider: "Bob, a friend of a guardian of Carol" (GnW:2) is a friend
     # of the guardian who decides, as CSSN's make_guardian had it (Alice, a guardian, deciding).
@@ -394,13 +394,23 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     # Two roles the contract says are possibly one agent are written one(Name, Other), Name the later of the two
     # (GLP programs/gsc/self.glp: "the schema's head writes the second name as one('Bob', 'Alice')"), where GSC's
     # Definition Binding lets one agent take both: neither adds or deletes an atom naming the other (binding_holds).
-    same = [p.split('=') for p in e.get('same', []) if binding_holds(e, *p.split('='))]
+    # A pair of which one is an agent variable that is no role is marked as the declaration says it, Binding
+    # restricting roles alone; and a name the clause admits as any of the others, one(Name, '_') (GSC's README, GLP
+    # GSC-one 5cf7633b; Udi's approval to vGLP #30, 2026-11-17: two names are two persons unless the clause says
+    # possibly one).
+    order = roles + deciders + [o for o in others if o in agents and o not in roles]
+    rs = set(roles + deciders)
+    same = [p.split('=') for p in e.get('same', []) if all(z in order for z in p.split('='))
+            and (not (p.split('=')[0] in rs and p.split('=')[1] in rs) or binding_holds(e, *p.split('=')))]
+    # one(Name, Others), Name the later of each pair in Names and Others the earlier names it may be, a list, or one
+    # name, or '_' where the clause declares Name possibly any of the others and every other name is so marked
+    # (GSC #19, Calculus_inbox.md, 2026-11-17 11:31 UTC: Swap writes one('Carol', ['Alice', 'Bob'])).
+    anyone = [x for x in order if x in anyof and len(order) > 2 and {y for a, b in same for y in (a, b) if x in (a, b)} == set(order)]
+    same = [(a, b) for a, b in same if a not in anyone and b not in anyone]
     names, plain = [], []
-    for x in roles + deciders + [o for o in others if o in agents and o not in roles]:
-        ys = [b for a, b in same if a == x and b in plain] + [a for a, b in same if b == x and a in plain]
-        if len(ys) > 1:       # one(Name, Other) carries one Other a name (GLP programs/gsc/self.glp, RName): a pair is never dropped
-            raise ValueError('%s: %s is possibly one agent with %s, and the term writes one Other for a name, one(%s, Other)' % (e['name'], x, ' and '.join(ys), x))
-        names.append('one(%s, %s)' % (q(x), q(ys[0])) if ys else q(x))
+    for x in order:
+        ys = [y for y in plain if (x, y) in same or (y, x) in same]
+        names.append('one(%s, %s)' % (q(x), q('_')) if x in anyone else 'one(%s, %s)' % (q(x), q(ys[0]) if len(ys) == 1 else '[%s]' % ', '.join(q(y) for y in ys)) if ys else q(x))
         plain.append(x)
     name = ident(e['name'])
     k = used.get(name, 0)
@@ -449,8 +459,14 @@ def contract_term(n):
         # a party guards the act in its person's form as a person, its ward's form being the act derived 'for' it
         # (gcsas.party_specs); who takes an act for a party, and who votes on it, is a person (GO:2's Act and Vote)
         return pmemo[o] | frozenset((e.get('taken') or {}).values()) | {gcsas.VOTER}
+    amemo = {}
+    def anyof(e):           # the names the clause that wrote the act declares possibly any of the others (gcsas.possibly)
+        o, num = re.split(r'[:+]', e['label'])[0], int(re.split(r'[:+]', e['label'])[1])
+        if (o, num) not in amemo:
+            amemo[(o, num)] = frozenset(a for cl, a, b in gcsas.possibly(w.contract(o)) if b == '*' and (cl is None or num in cl)) if o in w.known else frozenset()
+        return amemo[(o, num)]
     for e in acts:
-        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces, persons_of(e), acts)
+        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces, persons_of(e), acts, anyof(e))
         if t is None:
             roles += 1
         else:

@@ -1,8 +1,9 @@
 N          commute yes; return yes; recover equivalent
+names: 0 names of two kinds neither of which is under the other
 1 contracts, 0 with a fault
 --- sasx/N.txt
 N: Numbers (expanded schemas)
-N:0 - | Alice is a person, Bob a person, Sum, Cap and Line numbers.
+N:0 - | Alice and Bob are persons, Sum, Cap and Line numbers.
 N:1 ■ Small: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- le(Sum,Cap), coin(Alice,Alice,*Sum) guarded by Alice.
 N:2 ■ Large: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- ~le(Sum,Cap), coin(Alice,Alice,*Sum) guarded by Alice.
 N:3 ■ True: ~coin(Alice,Alice,*2), coin(Bob,Alice,*2) <- ge(2,1), coin(Alice,Alice,*2) guarded by Alice.

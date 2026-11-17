@@ -1,8 +1,10 @@
 M          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
 1 contracts, 0 with a fault
 --- sasx/M.txt
 M: Possibly one, marked (expanded schemas)
-M:0 - | Alice and Bob are persons, Club a club, Bob possibly Alice.
+M:0 - | Alice and Bob are persons, Club a club.
+M:0 - | Bob is possibly Alice.
 M:1 ■ Found: founder(Alice,Club), founder(Bob,Club) <- guarded by Alice, Bob possibly Alice=Bob.
 M:1 ■ Greet: greeted(Bob,Alice) <- guarded by Alice possibly Alice=Bob.
 --- term M

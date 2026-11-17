@@ -1,3 +1,0 @@
-Cooperative
-Cooperative extends Constitution and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-Cooperative:0 - | A *cooperative* is an organisation whose bylaws name one more role, *board member*; the members decide by a majority of the members, one member one vote, but for the acts the bylaws delegate to the board or to another role.

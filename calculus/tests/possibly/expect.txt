@@ -1,5 +1,6 @@
 A          commute yes; return yes; recover same
 B          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
 2 contracts, 0 with a fault
 --- sasx/A.txt
 A: Apart (expanded schemas)
@@ -7,5 +8,6 @@ A:0 - | Alice and Bob are persons.
 A:1 ■ Greet: greeted(Bob,Alice) <- guarded by Alice.
 --- sasx/B.txt
 B: Possibly one (expanded schemas)
-B:0 - | Alice and Bob are persons, Alice and Bob possibly one person.
+B:0 - | Alice and Bob are persons.
+B:0 - | Alice and Bob are possibly one person.
 B:1 ■ Greet: greeted(Bob,Alice) <- guarded by Alice possibly Alice=Bob.

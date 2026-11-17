@@ -3,6 +3,7 @@ OB         commute yes; return yes; recover same
 OD         commute yes; return yes; recover same
 OT         commute yes; return yes; recover same
 OU         commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
 5 contracts, 0 with a fault
 --- sasx/O.txt
 O: Organisation (expanded schemas)
@@ -14,40 +15,36 @@ O:1 ■ Vote: vote(Orga,Alice,Motion) <- member(Alice,Orga), ~vote(Orga,Alice,Mo
 O:1 ■ Act: taken(Orga,Motion) <- member(Alice,Orga), vote(Orga,>=Votes,Motion), product(Double,Votes,2), has_member(Orga,<Double), ~taken(Orga,Motion) guarded by Alice.
 --- sasx/OB.txt
 OB: Organisation with a board (expanded schemas)
-O:0 - | Alice is a person, Orga an organisation, Motion a motion.
+OB:0 - | Alice is a person, Orga an organisation, Motion a motion.
 O:0 - | Parameters: x is entitled to vote on m in z; the votes decide m in z.
 O:0 - | Default: x is a member of z for x is entitled to vote on m in z.
 O:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a member for the votes decide m in z.
 O:1 ■ Vote: vote(Orga,Alice,Motion) <- role(Alice,Orga,Director), ~vote(Orga,Alice,Motion) guarded by Alice.
 O:1 ■ Act: taken(Orga,Motion) <- member(Alice,Orga), vote(Orga,>=Votes,Motion), product(Double,Votes,2), has_role(Orga,<Double,Director), ~taken(Orga,Motion) guarded by Alice.
-OB:0 - | Orga is an organisation.
 --- sasx/OD.txt
 OD: Organisation at its defaults (expanded schemas)
-O:0 - | Alice is a person, Orga an organisation, Motion a motion.
+OD:0 - | Alice is a person, Orga an organisation, Motion a motion.
 O:0 - | Parameters: x is entitled to vote on m in z; the votes decide m in z.
 O:0 - | Default: x is a member of z for x is entitled to vote on m in z.
 O:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a member for the votes decide m in z.
 O:1 ■ Vote: vote(Orga,Alice,Motion) <- member(Alice,Orga), ~vote(Orga,Alice,Motion) guarded by Alice.
 O:1 ■ Act: taken(Orga,Motion) <- member(Alice,Orga), vote(Orga,>=Votes,Motion), product(Double,Votes,2), has_member(Orga,<Double), ~taken(Orga,Motion) guarded by Alice.
-OD:0 - | Orga is an organisation.
 --- sasx/OT.txt
 OT: Organisation by plain bylaws (expanded schemas)
-O:0 - | Alice is a person, Orga an organisation, Motion a motion.
+OT:0 - | Alice is a person, Orga an organisation, Motion a motion.
 O:0 - | Parameters: x is entitled to vote on m in z; the votes decide m in z.
 O:0 - | Default: x is a member of z for x is entitled to vote on m in z.
 O:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a member for the votes decide m in z.
 O:1 ■ Vote: vote(Orga,Alice,Motion) <- member(Alice,Orga), ~vote(Orga,Alice,Motion) guarded by Alice.
 O:1 ■ Act: taken(Orga,Motion) <- member(Alice,Orga), vote(Orga,>=Votes,Motion), product(Double,Votes,2), has_member(Orga,<Double), ~taken(Orga,Motion) guarded by Alice.
-OT:0 - | Orga is an organisation.
 --- sasx/OU.txt
 OU: Organisation deciding as one (expanded schemas)
-O:0 - | Alice is a person, Orga an organisation, Motion a motion.
+OU:0 - | Alice is a person, Orga an organisation, Motion a motion, Votes and More numbers.
 O:0 - | Parameters: x is entitled to vote on m in z; the votes decide m in z.
 O:0 - | Default: x is a member of z for x is entitled to vote on m in z.
 O:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a member for the votes decide m in z.
 O:1 ■ Vote: vote(Orga,Alice,Motion) <- member(Alice,Orga), ~vote(Orga,Alice,Motion) guarded by Alice.
 O:1 ■ Act: taken(Orga,Motion) <- member(Alice,Orga), vote(Orga,>=Votes,Motion), sum(More,Votes,1), has_member(Orga,<More), ~taken(Orga,Motion) guarded by Alice.
-OU:0 - | Orga is an organisation, Votes and More numbers.
 --- relations.py
 OB instantiates O: holds
 OB extends it (O): holds

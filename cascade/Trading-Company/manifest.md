@@ -1,10 +1,10 @@
 # A run of the cascade on Trading-Company
 
-- Contract: `Trading-Company` (`trading_company` to the checker), its owner's two files `programs/go/Trading-Company.txt` and `programs/go/Trading-Company.glp`, copied here as they stood at `9d6f2e60`.
+- Contract: `Trading-Company` (`trading_company` to the checker), its owner's two files `programs/go/Trading-Company.txt` and `programs/go/Trading-Company.glp`, copied here as they stood at `d1a6fc86`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/Trading-Company.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Trading-Company.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-17 10:47 UTC by `cascade.sh trading_company`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `9d6f2e60`; each artefact's source and tool:
+- Run on 2026-11-17 14:09 UTC by `cascade.sh trading_company`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `d1a6fc86`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

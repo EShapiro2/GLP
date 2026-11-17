@@ -1,0 +1,40 @@
+Auction (flat text)
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Auction:0 - | Alice is a rider, Bob a driver, Carol a person, Trip a call.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice.
+Knowledge:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice and Alice knows Carol.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2 ■ Unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Overlay:1+Local Overlay:1 ■ Point friend: Alice may Alice points to Bob, provided Alice counts Bob as a friend, Bob counts Alice as a friend, not Alice points to Bob and either Alice points to fewer than D persons and Bob is closest to Alice among all of Alice's unpointed friends, or Bob is closer to Alice by more than E than some person pointed to by Alice.
+Overlay:2+Local Overlay:2 ■ Point transitive: Alice may Alice points to Carol, provided Alice knows Carol, Alice points to Bob, Bob points to Carol, not Alice points to Carol and Carol is closer to Alice by more than E than some person pointed to by Alice.
+Overlay:3+Local Overlay:3 ■ Unpoint: Alice may no longer Alice points to Bob, provided the bound is D for Alice, Alice points to more than D persons and Bob is furthest from Alice among the persons Alice points to.
+Local Overlay:0 - | A person has a *location*. d > 0, an integer, and e > 0 are parameters of Local Overlay.
+Local Overlay:0 - | Environment: the bound is n, for x; either x points to fewer than d persons and y is closest to x among all of x's unpointed friends, or y is closer to x by more than e than some person pointed to by x; y is closer to x by more than e than some person pointed to by x; y is furthest from x among the persons x points to.
+Auction:0 - | A *pickup delay* is measured from the award. The *terms* of a call, a parameter of Auction, state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
+Auction:0 - | A person can be either a rider or a driver but not both.
+Auction:0 - | Environment: x is a rider; x is a driver; the bidding period of x's call c has ended; x is at the pickup point with y; x is at the destination with y; no pickup of x's ride is recorded within the maximum pickup delay.
+Auction:0 - | Parameters: the terms of x's call c select y; the terms of x's call c select no bidder.
+Auction:1 ■ | Call.
+Auction:1 ■ Call: Alice may Alice has the call Trip open, provided Alice is a rider, not Alice has a ride and not Alice has the call anyone open.
+Auction:1 ■ | Alice calls for bids from the persons Alice points to, stating the pickup point, the destination, the bidding period and the terms.
+Auction:1 ■ Send call: Alice has sent Alice's call Trip to Bob, Bob has received Alice's call Trip and Bob has received Alice's call Trip from Alice, provided Alice has the call Trip open, Alice points to Bob and not Bob has received Alice's call Trip.
+Auction:1 ■ Forward call: Bob has forwarded Alice's call Trip to Carol and Carol has received Alice's call Trip, provided Bob has received Alice's call Trip from Alice, Bob points to Carol and not Bob has forwarded Alice's call Trip to Carol.
+Auction:2 ■ Bid: Bob may Bob has a bid on Alice's call Trip, provided Bob is a driver, Bob has received Alice's call Trip and not the bidding period of Alice's call Trip has ended.
+Auction:2 ■ | Alice may not open a bid before then.
+Auction:3 ■ | Award.
+Auction:3 ■ Award: Alice may no longer Alice has the call Trip open, Alice has a ride, Bob has a ride, Alice rides with Bob, Bob rides with Alice, Alice's fare is locked and Bob's deposit is locked, provided the bidding period of Alice's call Trip has ended, Bob has a bid on Alice's call Trip, the terms of Alice's call Trip select Bob and not Bob has a ride.
+Auction:3 ■ | The ride is awarded at the fare the terms set, and Alice's fare and the deposit the terms set for Bob are then locked.
+Auction:3 ■ Close: Alice may no longer Alice has the call Trip open, provided the terms of Alice's call Trip select no bidder.
+Auction:4 ■ Pickup: Alice has a pickup recorded with Bob and Bob has a pickup recorded with Alice, provided Alice has a ride, Bob has a ride, Alice rides with Bob, Bob rides with Alice, Alice is at the pickup point with Bob, Bob is at the pickup point with Alice, not Alice has a pickup recorded with Bob and not Bob has a pickup recorded with Alice.
+Auction:5 ■ Arrive: No longer Alice's fare is locked, no longer Bob's deposit is locked, no longer Alice has a ride, no longer Bob has a ride, no longer Alice rides with Bob, no longer Bob rides with Alice, no longer Alice has a pickup recorded with anyone, no longer Bob has a pickup recorded with anyone, Alice has a release of the ride with Bob and Bob has a release of the ride with Alice, provided Alice is at the destination with Bob and Bob is at the destination with Alice.
+Auction:6 ■ Cancel: Alice may no longer Alice's fare is locked, no longer Bob's deposit is locked, no longer Alice has a ride, no longer Bob has a ride, no longer Alice rides with Bob, no longer Bob rides with Alice, no longer Alice has a pickup recorded with anyone, no longer Bob has a pickup recorded with anyone, Alice has a release of the ride with Bob and Bob has a release of the ride with Alice, provided no pickup of Alice's ride is recorded within the maximum pickup delay.
+Auction:6 ■ | The fare and the deposit are then released to Alice and to Bob as the terms say.
+Auction:7 ■ Withdraw: Alice may no longer Alice has the call Trip open, provided not the bidding period of Alice's call Trip has ended.
