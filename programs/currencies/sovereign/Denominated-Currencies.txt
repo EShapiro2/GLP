@@ -27,34 +27,35 @@ After x pays y a z-coin that y accepts as denominated by f: no longer x holds an
 After x deposits n more f-denominated w-coins with z for y on k: no longer x holds n f-denominated w-coins, z holds n f-denominated w-coins in escrow from x for y on k and z holds the escrow from x for y on k in the denomination f.
 After x deposits n more f-denominated w-bonds due e with z for y on k: no longer x holds n f-denominated w-bonds due e, z holds n f-denominated w-bonds due e in escrow from x for y on k and z holds the escrow from x for y on k in the denomination f.
 Interface pragmas
-Issue denominated bond: Alice [Issue denominated bond] <maturity> <amount> <denomination>
-Swap, Redeem, Escrow: Alice [Swap] <amount given> <amount wanted>
+Issue denominated bond: Alice [Issue denominated bond] <maturity> <denomination> <amount>
+Issue bond: Alice [Issue bond] <maturity> <denomination> <amount>
+Swap, Redeem, Escrow: Alice [Swap] <issuer wanted> <amount given> <amount wanted>
   Bob: Alice asks to swap coins with you.
-  Alice [Redeem]
-  Alice [Swap coin for bond] <amount given> <maturity wanted> <amount wanted>
+  Alice [Redeem] <issuer wanted>
+  Alice [Swap coin for bond] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap coins for bonds with you.
-  Alice [Swap bonds] <amount given> <maturity wanted> <amount wanted>
+  Alice [Swap bonds] <amount given> <issuer wanted> <maturity wanted> <amount wanted>
   Bob: Alice asks to swap bonds with you.
-  Alice [Redeem coin against bond] <maturity wanted> [Redeem bond] [Redeem bond against bond] <maturity wanted>
+  Alice [Redeem coin against bond] <issuer wanted> <maturity wanted> [Redeem bond] <issuer wanted> [Redeem bond against bond] <issuer wanted> <maturity wanted>
   Alice [Deposit] <amount> <condition>
   Carol: Alice asks to deposit coins with you.
   Alice [Deposit bond] <amount> <condition>
   Carol: Alice asks to deposit bonds with you.
   Alice [Deposit own coins] <amount> <condition>
   Carol: Alice asks to deposit her own coins with you.
-  Alice [Deposit with the issuer] <amount> <condition> <denomination>
+  Alice [Deposit with the issuer] <amount> <condition>
   Carol: Alice asks to deposit your coins with you.
-  Alice [Deposit more] <amount> <condition> <denomination>
+  Alice [Deposit more] <amount> <condition>
   Carol: Alice asks to deposit more coins with you.
   Alice [Deposit own bonds] <amount> <condition>
   Carol: Alice asks to deposit her own bonds with you.
-  Alice [Deposit bond with the issuer] <amount> <condition> <denomination>
+  Alice [Deposit bond with the issuer] <amount> <condition>
   Carol: Alice asks to deposit your bonds with you.
-  Alice [Deposit bond more] <amount> <condition> <denomination>
+  Alice [Deposit bond more] <amount> <condition>
   Carol: Alice asks to deposit more bonds with you.
   Carol [Release] <amount> [Release bond] <amount>
   Bob: Carol asks to release coins or bonds to you.
   Carol [Return] <amount> [Return bond] <amount>
   Alice: Carol asks to return coins or bonds to you.
 Accept: Alice [Accept] <limit> [Accept by bond] <limit>
-Pay accepted coins: Alice [Pay accepted coins] <denomination> [Pay own accepted coins] [Pay accepted coins to the issuer]
+Pay accepted coins: Alice [Pay accepted coins] [Pay own accepted coins] [Pay accepted coins to the issuer]
