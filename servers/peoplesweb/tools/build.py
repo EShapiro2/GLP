@@ -350,9 +350,10 @@ for n in compiled:
 
 # The Calculus (calculus/MIGRATION.md, the section Website, agreed by
 # Website #2, 2026-11-15): until its owner adopts a contract, the Calculus's
-# text of it is on the branch Calculus of GLP, which deploy/sweep.sh unpacks
-# into CALCULUS_DIR; after its adoption it is on main, and its printed
-# artefacts in cascade/NAME/.  calculus/STATE.txt has a line for each
+# text of it is in CALCULUS_DIR, which until 2026-11-17 deploy/sweep.sh
+# unpacked from the branch Calculus of GLP, now closed; after its adoption it
+# is on main, and its printed artefacts in cascade/NAME/, as every contract is
+# since 2026-11-16.  calculus/STATE.txt, where there is one, has a line for each
 # contract: its name, its owner, and yes or no for certified by GLP's checker,
 # compiled to GLP, and adopted by its owner.
 CALC = os.environ.get('CALCULUS_DIR') or os.path.join(GLP, 'calculus')
