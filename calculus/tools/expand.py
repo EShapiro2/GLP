@@ -59,6 +59,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import revtex  # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
+import nameslines       # the one names line of a full contract (tools/nameslines.py)
 
 HEADER = '% Written by tools/expand.py from rev/; do not edit.'
 LEAD_IN = ('Each contract with the operations of its first line and of its citing clauses applied: '
@@ -549,6 +550,29 @@ def restrict(name, k, mark, heads, title, refs, rest, exp, sub):
     return targets
 
 
+def own_for(c, e, pairs):
+    """The names c puts for names of the contract e it instantiates, its own: where c puts a kind for a kind ('an
+    organisation for a ward'), the first name e's names lines give the kind replaced (Guardians' Wendy) is the name c's
+    own names line gives the kind put, the last if it gives two, and that e does not name (Children's Wendy and Will are
+    Warded Groups', so Children keeps them) (Udi, 2026-11-17, to Calculus #8)."""
+    theirs, mine = [], []
+    for s in e.names:
+        p = nameslines.parse(s)
+        theirs += p[0] if p else []
+    for line in c.names_lines:
+        for s in split_sentences(line):
+            p = nameslines.parse(s)
+            mine += p[0] if p else []
+    named = {x for x, _ in theirs}
+    out = {}
+    for old, new in pairs:
+        olds = [x for x, k in theirs if k == old and x not in out]
+        ours = [x for x, k in mine if k == new and x not in named]
+        if olds and ours:
+            out[olds[0]] = ours[-1]
+    return out
+
+
 def expand(name, contracts, cache):
     if name in cache:
         return cache[name]
@@ -558,6 +582,19 @@ def expand(name, contracts, cache):
     for dep in c.first.deps:
         e = copy.deepcopy(expand(dep, contracts, cache))
         if dep in c.first.inst:
+            own = own_for(c, e, c.first.pairs)
+            if own:
+                rx = re.compile(r'(?<![A-Za-z])(%s)(?![A-Za-z])' % '|'.join(map(re.escape, own)))
+                ren = lambda s: rx.sub(lambda m: own[m.group(1)], s) if s else s
+                for d in e.defs:
+                    d.text = ren(d.text)
+                    d.here = [ren(h) for h in d.here]
+                e.names = [ren(s) for s in e.names]
+                for cl in e.clauses:
+                    cl.title = ren(cl.title)
+                    for s in cl.sents:
+                        s.text = ren(s.text)
+                        s.rests = [ren(x) for x in s.rests]
             for d in e.defs:
                 d.text = sub(d.text)
                 d.here = [sub(h) for h in d.here]
@@ -664,10 +701,22 @@ def def_paragraphs(exp):
     return out
 
 
+KINDS = {}      # {contract: [(name, its kinds)]}: a name with two kinds neither of which is under the other
+
+
+def names_para(c, exp):
+    """The names lines of the chain, united: one names line, each name once with its most special kind, and what else
+    they said, each once (tools/nameslines.py)."""
+    rest = ' '.join([d.text for d in exp.defs] + [cl.render() for cl in exp.clauses])
+    out, findings, _ = nameslines.unite(exp.names, [d.text for d in exp.defs], rest)
+    KINDS[c.name] = findings
+    return ' '.join(out)
+
+
 def text_of(c, exp):
     lines = [HEADER, c.title_line] + def_paragraphs(exp)
     if exp.names:
-        lines.append(' '.join(exp.names))
+        lines.append(names_para(c, exp))
     return '\n'.join(lines + [cl.render() for cl in exp.clauses]) + '\n'
 
 
@@ -677,7 +726,7 @@ def tex(line):
 
 def box_of(c, raw, exp):
     out = [r'\begin{contractbox}{%s}' % revtex.emit_plain(raw.title).strip()]
-    paras = def_paragraphs(exp) + ([' '.join(exp.names)] if exp.names else [])
+    paras = def_paragraphs(exp) + ([names_para(c, exp)] if exp.names else [])
     out += [tex(p) + r'\par' for p in paras]
     if exp.clauses:
         out.append(r'\begin{description}[style=unboxed,leftmargin=1.2em,labelindent=0pt,labelsep=0.45em,itemsep=1pt,font=\normalfont\bfseries]')
@@ -761,6 +810,10 @@ def main():
     print('checks: %d contracts; %d first lines read, %d not%s; %d citations X:n; cycles: %s; notes: %d; failures: %d'
           % (len(names), sum(1 for n in names if contracts[n].first_line) - len(unparsed), len(unparsed),
              ' (%s)' % ' '.join(unparsed) if unparsed else '', cited, ' '.join(loop) or 'none', len(NOTES), len(FAILURES)))
+    two = [(n, x, ks) for n in names for x, ks in KINDS.get(n, [])]
+    print('names: %d contracts, one names line each; %d names of two kinds neither of which is under the other' % (len(names), len(two)))
+    for n, x, ks in two:
+        print('kinds: %s: %s is %s' % (n, x, ' and '.join("%s ('%s')" % k for k in ks)))
     if args.notes:
         for n in NOTES:
             print('note: %s, %s: %s' % n)

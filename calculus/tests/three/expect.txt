@@ -1,8 +1,10 @@
 T          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
 1 contracts, 0 with a fault
 --- sasx/T.txt
 T: Three possibly one (expanded schemas)
-T:0 - | Alice, Bob and Carol are persons, Club a club, Bob and Carol possibly Alice or one person.
+T:0 - | Alice, Bob and Carol are persons, Club a club.
+T:0 - | Bob and Carol are possibly Alice or one person.
 T:1 ■ Found: founder(Alice,Club), founder(Bob,Club), founder(Carol,Club) <- guarded by Alice, Bob, Carol possibly Alice=Bob, Alice=Carol, Bob=Carol.
 --- term T
-EXCEPTION ValueError: Found: Carol is possibly one agent with Alice and Bob, and the term writes one Other for a name, one(Carol, Other)
+[sas(found, ['Alice', one('Bob', 'Alice'), one('Carol', ['Alice', 'Bob'])], ['Club'], [atom(founder, ['Alice', 'Club']), atom(founder, ['Bob', 'Club']), atom(founder, ['Carol', 'Club'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(identity, ['Carol'])], true, ['Alice', 'Bob', 'Carol'])]

@@ -1,6 +1,7 @@
 B          commute yes; return yes; recover same
 C          removed B:1 Pay, made redundant by B:1+C:1 Pay free
 C          commute yes; return yes; recover equivalent
+names: 0 names of two kinds neither of which is under the other
 2 contracts, 0 with a fault
 --- sasx/B.txt
 B: Base (expanded schemas)
@@ -8,9 +9,8 @@ B:0 - | Alice, Bob and Carol are persons, Sum a number.
 B:1 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob.
 --- sasx/C.txt
 C: Relaxed (expanded schemas)
-B:0 - | Alice, Bob and Carol are persons, Sum a number.
-B:1+C:1 ■ Pay free: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice.
 C:0 - | Alice, Bob and Carol are persons, Sum a number.
+B:1+C:1 ■ Pay free: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice.
 --- term B
 [sas(pay, ['Alice', 'Bob', 'Carol'], ['Carol', 'Sum'], [not(times(num('Sum'), atom(coin, ['Alice', 'Carol']))), times(num('Sum'), atom(coin, ['Bob', 'Carol']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), times(num('Sum'), atom(coin, ['Alice', 'Carol']))], true, ['Alice', 'Bob'])]
 --- term C

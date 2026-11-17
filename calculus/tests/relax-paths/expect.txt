@@ -4,6 +4,7 @@ C          commute yes; return yes; recover equivalent
 R          commute yes; return yes; recover equivalent
 E          removed B:1+R:1 Pay checked, made redundant by B:1+C:1 Pay free
 E          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
 4 contracts, 0 with a fault
 --- sasx/B.txt
 B: Base (expanded schemas)
@@ -11,19 +12,14 @@ B:0 - | Alice, Bob and Carol are persons, Sum a number.
 B:1 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob.
 --- sasx/C.txt
 C: Relaxed (expanded schemas)
-B:0 - | Alice, Bob and Carol are persons, Sum a number.
-B:1+C:1 ■ Pay free: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice.
 C:0 - | Alice, Bob and Carol are persons, Sum a number.
+B:1+C:1 ■ Pay free: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice.
 --- sasx/E.txt
 E: Both paths (expanded schemas)
-B:0 - | Alice, Bob and Carol are persons, Sum a number.
-B:1+C:1 ■ Pay free: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice.
-C:0 - | Alice, Bob and Carol are persons, Sum a number.
-R:0 - | Alice, Bob and Carol are persons, Sum a number.
 E:0 - | Alice, Bob and Carol are persons, Sum a number.
+B:1+C:1 ■ Pay free: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice.
 E:1 ■ Greet: greeted(Alice,Bob) <- guarded by Alice.
 --- sasx/R.txt
 R: Restricted (expanded schemas)
-B:0 - | Alice, Bob and Carol are persons, Sum a number.
-B:1+R:1 ■ Pay checked: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum), knows(Bob,Alice) guarded by Alice, Bob.
 R:0 - | Alice, Bob and Carol are persons, Sum a number.
+B:1+R:1 ■ Pay checked: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum), knows(Bob,Alice) guarded by Alice, Bob.

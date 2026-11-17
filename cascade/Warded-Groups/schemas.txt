@@ -2,30 +2,30 @@ Warded Groups
 Warded Groups extends, restricts and strengthens Groups and Guardians.
 After w withdraws y from x's g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
 After y closes the group g of z: no longer z is the leader of g, z has no one as a member of the group g and no one is a member of the group g of z.
-Warded Groups:0 - | Alice and Bob are persons, Carol and Dave wards, Grupo a group, Text a message; in clause 1 Carol is possibly Alice.
+Warded Groups:0 - | Alice and Bob are persons, Wendy and Will wards, Grupo a group, Text a message; in clause 1 Wendy is possibly Alice.
 Warded Groups:1 ■ | A ward's messages.
 Warded Groups:1 ■ Message: Groups:1 <- person(Alice).
 Warded Groups:1 ■ Post: Groups:4 Post <- person(Bob).
 Warded Groups:1 ■ Post own: Groups:4 Post own <- person(Alice).
-Warded Groups:1 ■ Ward message: message(Bob,Carol,Text) <- ward(Carol), ~retired(Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
-Warded Groups:1 ■ Ward post: posted(Alice,Text,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Alice), ~posted(Alice,Text,Carol,Grupo) guarded by Carol possibly Alice=Carol.
-Warded Groups:1 ■ Ward post own: posted(Carol,Text,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Carol), ~posted(Carol,Text,Carol,Grupo) guarded by Carol.
+Warded Groups:1 ■ Ward message: message(Bob,Wendy,Text) <- ward(Wendy), ~retired(Wendy), friend(Wendy,Bob), friend(Bob,Wendy) guarded by Wendy.
+Warded Groups:1 ■ Ward post: posted(Alice,Text,Wendy,Grupo) <- ward(Wendy), ~retired(Wendy), member(Wendy,Grupo,Alice), ~posted(Alice,Text,Wendy,Grupo) guarded by Wendy possibly Alice=Wendy.
+Warded Groups:1 ■ Ward post own: posted(Wendy,Text,Wendy,Grupo) <- ward(Wendy), ~retired(Wendy), member(Wendy,Grupo,Wendy), ~posted(Wendy,Text,Wendy,Grupo) guarded by Wendy.
 Warded Groups:2 ■ | A ward's group.
 Warded Groups:2 ■ Create: Groups:2 Create <- person(Alice).
 Warded Groups:2 ■ Close: Groups:2 Close <- person(Alice).
-Warded Groups:2 ■ Ward create: leader(Carol,Grupo), member(Carol,Grupo,Carol), listed(Carol,Carol,Grupo) <- ward(Carol), ~retired(Carol), ~leader(Carol,Grupo) guarded by Carol.
-Warded Groups:2 ■ Ward close: ~leader(Carol,Grupo), ~listed(Carol,_,Grupo), ~member(_,Grupo,Carol) <- ward(Carol), ~retired(Carol), leader(Carol,Grupo) guarded by Carol.
-Warded Groups:2 ■ Guardian close: ~leader(Carol,Grupo), ~listed(Carol,_,Grupo), ~member(_,Grupo,Carol) <- guardian(Alice,Carol), leader(Carol,Grupo) guarded by Alice.
+Warded Groups:2 ■ Ward create: leader(Wendy,Grupo), member(Wendy,Grupo,Wendy), listed(Wendy,Wendy,Grupo) <- ward(Wendy), ~retired(Wendy), ~leader(Wendy,Grupo) guarded by Wendy.
+Warded Groups:2 ■ Ward close: ~leader(Wendy,Grupo), ~listed(Wendy,_,Grupo), ~member(_,Grupo,Wendy) <- ward(Wendy), ~retired(Wendy), leader(Wendy,Grupo) guarded by Wendy.
+Warded Groups:2 ■ Guardian close: ~leader(Wendy,Grupo), ~listed(Wendy,_,Grupo), ~member(_,Grupo,Wendy) <- guardian(Alice,Wendy), leader(Wendy,Grupo) guarded by Alice.
 Warded Groups:3 ■ Join: Groups:3 Join <- person(Bob).
-Warded Groups:3 ■ Ward join: member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) <- leader(Bob,Grupo), person(Bob), friend(Bob,Carol), friend(Carol,Bob), has_guardian(Carol,Alice), guardian(Alice,Carol), friend(Alice,Bob), friend(Bob,Alice), ~member(Carol,Grupo,_) guarded by Bob, Carol, Alice.
-Warded Groups:3 ■ Wards join: member(Dave,Grupo,Carol), listed(Carol,Dave,Grupo) <- leader(Carol,Grupo), ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol), friend(Carol,Dave), friend(Dave,Carol), ward(Dave), has_guardian(Dave,Bob), guardian(Bob,Dave), knows(Alice,Dave), friend(Alice,Bob), friend(Bob,Alice), ~member(Dave,Grupo,_) guarded by Carol, Dave, Alice, Bob.
-Warded Groups:3 ■ Wards of one guardian join: member(Dave,Grupo,Carol), listed(Carol,Dave,Grupo) <- leader(Carol,Grupo), ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol), friend(Carol,Dave), friend(Dave,Carol), ward(Dave), has_guardian(Dave,Alice), guardian(Alice,Dave), ~member(Dave,Grupo,_) guarded by Carol, Dave, Alice.
-Warded Groups:3 ■ Ward withdraw: ~member(Carol,Grupo,Bob), ~listed(Bob,Carol,Grupo) <- has_guardian(Carol,Alice), guardian(Alice,Carol), member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) guarded by Alice.
-Warded Groups:3 ■ Ward add: member(Bob,Grupo,Carol), listed(Carol,Bob,Grupo) <- leader(Carol,Grupo), ward(Carol), ~retired(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol), friend(Carol,Bob), friend(Bob,Carol), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_) guarded by Carol, Bob, Alice.
-Warded Groups:3 ■ Ward leave: ~member(Carol,Grupo,Alice), ~listed(Alice,Carol,Grupo) <- ward(Carol), ~retired(Carol), member(Carol,Grupo,Alice), listed(Alice,Carol,Grupo) guarded by Carol.
-Warded Groups:3 ■ Ward remove: ~member(Bob,Grupo,Carol), ~listed(Carol,Bob,Grupo) <- leader(Carol,Grupo), ward(Carol), ~retired(Carol), member(Bob,Grupo,Carol), listed(Carol,Bob,Grupo) guarded by Carol.
-Warded Groups:3 ■ Guardian unfriend: Guardians:2 Guardian unfriend + ~member(Bob,_,Carol), ~member(Carol,_,Bob), ~listed(Bob,Carol,_), ~listed(Carol,Bob,_) <-.
-Warded Groups:3 ■ Ward end: Guardians:3 Ward end + ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <-.
-Warded Groups:3 ■ Unfriend: Guardians:3 Unfriend + ~member(Bob,_,Carol), ~member(Carol,_,Bob), ~listed(Bob,Carol,_), ~listed(Carol,Bob,_) <-.
-Warded Groups:3 ■ Ward unfriend: Guardians:3 Ward unfriend + ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <-.
-Warded Groups:3 ■ Retire: Guardians:5 Retire + ~member(Carol,_,_), ~listed(_,Carol,_) <-.
+Warded Groups:3 ■ Ward join: member(Wendy,Grupo,Bob), listed(Bob,Wendy,Grupo) <- leader(Bob,Grupo), person(Bob), friend(Bob,Wendy), friend(Wendy,Bob), has_guardian(Wendy,Alice), guardian(Alice,Wendy), friend(Alice,Bob), friend(Bob,Alice), ~member(Wendy,Grupo,_) guarded by Bob, Wendy, Alice.
+Warded Groups:3 ■ Wards join: member(Will,Grupo,Wendy), listed(Wendy,Will,Grupo) <- leader(Wendy,Grupo), ward(Wendy), has_guardian(Wendy,Alice), guardian(Alice,Wendy), friend(Wendy,Will), friend(Will,Wendy), ward(Will), has_guardian(Will,Bob), guardian(Bob,Will), knows(Alice,Will), friend(Alice,Bob), friend(Bob,Alice), ~member(Will,Grupo,_) guarded by Wendy, Will, Alice, Bob.
+Warded Groups:3 ■ Wards of one guardian join: member(Will,Grupo,Wendy), listed(Wendy,Will,Grupo) <- leader(Wendy,Grupo), ward(Wendy), has_guardian(Wendy,Alice), guardian(Alice,Wendy), friend(Wendy,Will), friend(Will,Wendy), ward(Will), has_guardian(Will,Alice), guardian(Alice,Will), ~member(Will,Grupo,_) guarded by Wendy, Will, Alice.
+Warded Groups:3 ■ Ward withdraw: ~member(Wendy,Grupo,Bob), ~listed(Bob,Wendy,Grupo) <- has_guardian(Wendy,Alice), guardian(Alice,Wendy), member(Wendy,Grupo,Bob), listed(Bob,Wendy,Grupo) guarded by Alice.
+Warded Groups:3 ■ Ward add: member(Bob,Grupo,Wendy), listed(Wendy,Bob,Grupo) <- leader(Wendy,Grupo), ward(Wendy), ~retired(Wendy), has_guardian(Wendy,Alice), guardian(Alice,Wendy), friend(Wendy,Bob), friend(Bob,Wendy), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_) guarded by Wendy, Bob, Alice.
+Warded Groups:3 ■ Ward leave: ~member(Wendy,Grupo,Alice), ~listed(Alice,Wendy,Grupo) <- ward(Wendy), ~retired(Wendy), member(Wendy,Grupo,Alice), listed(Alice,Wendy,Grupo) guarded by Wendy.
+Warded Groups:3 ■ Ward remove: ~member(Bob,Grupo,Wendy), ~listed(Wendy,Bob,Grupo) <- leader(Wendy,Grupo), ward(Wendy), ~retired(Wendy), member(Bob,Grupo,Wendy), listed(Wendy,Bob,Grupo) guarded by Wendy.
+Warded Groups:3 ■ Guardian unfriend: Guardians:2 Guardian unfriend + ~member(Bob,_,Wendy), ~member(Wendy,_,Bob), ~listed(Bob,Wendy,_), ~listed(Wendy,Bob,_) <-.
+Warded Groups:3 ■ Ward end: Guardians:3 Ward end + ~member(Wendy,_,Bob), ~member(Bob,_,Wendy), ~listed(Wendy,Bob,_), ~listed(Bob,Wendy,_) <-.
+Warded Groups:3 ■ Unfriend: Guardians:3 Unfriend + ~member(Bob,_,Wendy), ~member(Wendy,_,Bob), ~listed(Bob,Wendy,_), ~listed(Wendy,Bob,_) <-.
+Warded Groups:3 ■ Ward unfriend: Guardians:3 Ward unfriend + ~member(Wendy,_,Bob), ~member(Bob,_,Wendy), ~listed(Wendy,Bob,_), ~listed(Bob,Wendy,_) <-.
+Warded Groups:3 ■ Retire: Guardians:5 Retire + ~member(Wendy,_,_), ~listed(_,Wendy,_) <-.

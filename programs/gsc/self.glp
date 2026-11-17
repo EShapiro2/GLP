@@ -5417,13 +5417,32 @@ as_read_s(S, S?) :- otherwise | true.
 
 procedure as_read_n(NSchema?, REnts?, WSchema).
 as_read_n(schema(Nm, Vs, Rs), E, schema(Nm?, Ns?, Vs?, Rs?)) :- ground(Rs?), ground(E?) |
-    as_read_names(Rs?, E?, 1, Ns).
+    as_read_all(Rs?, E?, Ns).
 as_read_n(cschema(Nm, Vs, X, Rs), E, cschema(Nm?, Ns?, Vs?, X?, Rs?)) :- ground(Rs?), ground(E?) |
-    as_read_names(Rs?, E?, 1, Ns).
+    as_read_all(Rs?, E?, Ns).
 as_read_n(nschema(Nm, Vs, Cn, Rs), E, nschema(Nm?, Ns?, Vs?, Cn?, Rs?)) :- ground(Rs?), ground(E?) |
-    as_read_names(Rs?, E?, 1, Ns).
+    as_read_all(Rs?, E?, Ns).
 as_read_n(qschema(Nm, Vs, Bd, Cn, Rs, Cj, Fs), E, qschema(Nm?, Ns?, Vs?, Bd?, Cn?, Rs?, Cj?, Fs?)) :- ground(Rs?), ground(E?) |
-    as_read_names(Rs?, E?, 1, Ns).
+    as_read_all(Rs?, E?, Ns).
+
+% The read names: the name of each role, then the mark one(Name, Other) of
+% each agent variable that is no role and that the clause admits as one
+% person with another (Definition Binding: distinct agent variables to
+% distinct agents but for two the schema marks as possibly one; vGLP #30's
+% question, 2026-11-17), in the order of the schema's names, so that the
+% compiler, counting the roles by the names before the marks, keeps the
+% rest apart.
+procedure as_read_all(NRoleSpecs?, REnts?, Names).
+as_read_all(Rs, E, Ns?) :- ground(Rs?), ground(E?) |
+    as_read_names(Rs?, E?, 1, Ns0),
+    as_read_marks(E?, Ms),
+    sas_names_app(Ns0?, Ms?, Ns).
+
+procedure as_read_marks(REnts?, Names).
+as_read_marks([], []).
+as_read_marks([av(one(N, O))|Es], [one(N?, O?)|R?]) :- ground(N?), ground(O?), ground(Es?) |
+    as_read_marks(Es?, R).
+as_read_marks([_|Es], R?) :- otherwise, ground(Es?) | as_read_marks(Es?, R).
 
 % The name of each role, numbered from I, as its clause names it: an agent
 % role's its own and a listed role's the variable its quantifier binds (GSC

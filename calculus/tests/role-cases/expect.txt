@@ -2,21 +2,20 @@ Knowledge  commute yes; return yes; recover same
 P          commute yes; return yes; recover same
 D          commute yes; return yes; recover same
 Q          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
 4 contracts, 0 with a fault
 --- sasx/D.txt
 D: Greetings decided by friends (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+D:0 - | Alice, Bob and Carol are persons.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
-P:0 - | Alice and Bob are persons.
 P:0 - | Default: the friends of z for those who decide for z.
 P:1+D:1 ■ Greet: greeted(Alice,Bob) <- knows(Alice,Bob) guarded by Alice, friends(Bob).
-D:0 - | Alice and Bob are persons.
 --- sasx/Knowledge.txt
 Knowledge (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
@@ -31,30 +30,27 @@ Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice
 P: Greetings (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+P:0 - | Alice, Bob and Carol are persons.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
-P:0 - | Alice and Bob are persons.
 P:0 - | Default: the friends of z for those who decide for z.
 P:1 ■ Greet: greeted(Alice,Bob) <- knows(Alice,Bob) guarded by Alice, friends(Bob).
 --- sasx/Q.txt
 Q: Greetings of minors (expanded schemas)
 Knowledge:0 - | An *identity* is a unique key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Knowledge:0 - | Alice, Bob and Carol are persons.
+Q:0 - | Alice, Bob and Carol are persons.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
-P:0 - | Alice and Bob are persons.
 P:0 - | Default: the friends of z for those who decide for z.
 P:1 ■ Greet: greeted(Alice,Bob) <- knows(Alice,Bob), minor(Bob) guarded by Alice, parents(Bob).
 P:1 ■ Greet by friends: greeted(Alice,Bob) <- knows(Alice,Bob), ~minor(Bob) guarded by Alice, friends(Bob).
-Q:0 - | Alice and Bob are persons.
 --- relations.py
 D restricts P: holds
 P extends Knowledge: holds
