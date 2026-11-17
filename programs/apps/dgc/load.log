@@ -1,0 +1,15 @@
+╔════════════════════════════════════════╗
+║  GLP REPL - With Type Checking         ║
+╚════════════════════════════════════════╝
+
+Build: d97b070f8
+Working directory: /home/user/GLP-dgc/glp_runtime
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit, :mad, :app, :boot, :deliveries
+
+Loaded root self.glp
+
+GLP> Error loading project ../programs/apps/dgc: Exception: Cross-module calls that resolve to no exported procedure (modules.tex, Compilation, fourth step: a call M # p, whose qualifier is a single child directory or module file relative to the caller's directory, resolves to the procedure p that the qualifier exports --- a directory exports through its self.glp, a module file through its own exported declarations):
+  ../programs/apps/dgc/miniapp.glp:13: platform # agent/5: ../programs/apps/dgc/platform.vglp does not export agent/5
+GLP> Goodbye!
