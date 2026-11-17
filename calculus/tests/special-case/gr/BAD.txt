@@ -1,0 +1,4 @@
+BAD: A restriction for a kind it does not have
+BAD restricts Coins.
+Alice is a party, Day a maturity date, Today a date.
+1. ■ Issue bond: Notes:1, for bonds, only if Day is more than Today.

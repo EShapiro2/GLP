@@ -1,7 +1,0 @@
-K: Base
-Vocabulary: x has a token = token(x); x is trusted by y = trusted(x,y).
-After x gives y a token: y has a token.
-After x takes a token: x has a token.
-K:0 - | Alice, Bob and Carol are persons.
-K:1 ■ Give: token(Bob) <- guarded by Alice, Bob.
-K:1 ■ Take: token(Alice) <- guarded by Alice.

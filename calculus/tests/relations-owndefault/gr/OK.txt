@@ -1,0 +1,4 @@
+OK: Organisation as it is
+OK restricts O.
+Alice is a person, Orga an organisation, Motion a motion.
+1. ■ Act: O:1 Act, only if Alice holds the role Director in Orga.

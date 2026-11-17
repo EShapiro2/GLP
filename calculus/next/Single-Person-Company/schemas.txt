@@ -1,0 +1,4 @@
+Single-Person Company
+Single-Person Company instantiates Corporation with single-person limited-liability company bylaws; officer(x,z) for proposer(x,z,m); officer(x,z) for taker(x,z,m); officer(x,z) for voter(x,z,m).
+Single-Person Company:0 - | A *single-person limited-liability company* is a corporation whose bylaws name one role, the *sole officer*, who decides every act of the company, and admit no participant but the sole officer.
+Single-Person Company:0 - | Orga is a single-person limited-liability company.

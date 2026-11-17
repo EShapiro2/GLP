@@ -47,13 +47,32 @@ def _hash(*paths):
     return h.hexdigest()[:20]
 
 
+# The time one build may spend in the REPL (CERTIFY_BUDGET, seconds; default
+# ten minutes).  A check through glpc can take minutes, and a merge that
+# changes every contract, or programs/gsc, leaves every one to be asked again:
+# on 2026-11-16, after the Calculus migration, the server's sweep ran more than
+# forty minutes in these checks and the site was not rebuilt meanwhile (Mac #1,
+# 2026-11-16 06:52 UTC).  So a run is started only while the budget lasts; what
+# is not asked is shown as not checked, is not kept in the cache, and is asked
+# at the next build, each build keeping what it asked.
+BUDGET = float(os.environ.get('CERTIFY_BUDGET', '600'))
+_spent = 0.0
+
+
 def repl(lines, timeout=900):
+    global _spent
+    if _spent >= BUDGET:
+        return '[certify] not asked: the time of this build for checks is spent'
+    import time
+    t0 = time.time()
     try:
         p = subprocess.run([os.path.join(GLP, 'glp_runtime', 'bin', 'glpc')], input='\n'.join(lines + [':quit']) + '\n',
                            capture_output=True, text=True, errors='replace', cwd=os.path.join(GLP, 'glp_runtime'), timeout=timeout)
         return p.stdout
     except Exception as e:  # no Dart, a timeout: nothing is checked, the site still builds
         return f'[certify] {e}'
+    finally:
+        _spent += time.time() - t0
 
 
 def answer(out, var):
@@ -186,7 +205,9 @@ def terms(contracts):
             o = repl([f'load {os.path.relpath(p, os.path.join(GLP, "glp_runtime"))}', f'contract_named({name}, C).'])
             t = answer(o, 'C')
             r = answer(repl(['../programs/gsc', ':limit 10000000', f'as_read({t}, R).']), 'R') if t else None
-            err = None if t else next((l.split(': ', 1)[-1].strip() for l in o.splitlines() if 'Error' in l), 'no term')
+            # A run not made, the build's time for checks being spent, is not a
+            # contract that does not load (Helper #2, 2026-11-16).
+            err = None if t else 'NOT ASKED' if o.startswith('[certify] not asked') else next((l.split(': ', 1)[-1].strip() for l in o.splitlines() if 'Error' in l), 'no term')
             # Kept only where the REPL loaded the file: a REPL that did not
             # run (a timeout, a rebuild of glpc) is asked again next time.
             cache[c['id']] = {'hash': h if 'Loaded' in o else None, 'term': t, 'read': r, 'error': err}
@@ -304,6 +325,8 @@ def relations(contracts):
     P = {c['id']: c['path'] for c in contracts}
 
     def missing(i):
+        if i in E and E[i] == 'NOT ASKED':
+            return f'{i} is not read yet; it is at a next build of the site'
         if i in E:
             return f'{os.path.basename(P[i])[:-4]}.glp does not load: {E[i][:200]}'
         return f'{i} has no speech-act schemas ({i}.glp)'
@@ -349,6 +372,8 @@ def relations(contracts):
                         cache[key] = v
                         changed = True
                     v = cache[key] or ''
+                    if cache[key] is None:  # no answer (a timeout, the build's time spent): asked again next time
+                        cache.pop(key, None)
                     if v == '<unbound>':  # stopped by the limit: open, and asked again next time
                         cache.pop(key, None)
                         v = ''
@@ -420,6 +445,8 @@ def relations(contracts):
                     cache[key] = v
                     changed = True
                 v = cache[key] or ''
+                if cache[key] is None:  # no answer (a timeout, the build's time spent): asked again next time
+                    cache.pop(key, None)
                 if v == '<unbound>':  # stopped by the limit: open, and asked again next time
                     cache.pop(key, None)
                     v = ''
@@ -462,6 +489,8 @@ def artefacts(dest):
             m = re.search(r'Wrote .*?' + re.escape(a) + r'\.glpw --- certified under ([0-9a-f]+)', o)
             e = {'hash': h, 'file': f'{a}.glpw', 'key': m.group(1)} if m else \
                 {'hash': h, 'why': '\n'.join(l for l in o.splitlines() if l.strip() and not l.startswith(('GLP> Goodbye', '╔', '║', '╚', 'Build', 'Working', 'Input', 'Commands', 'Loaded root')))[-800:]}
+            if o.startswith('[certify]'):  # not run: asked again next time
+                e = {'why': 'not checked yet'}
             cache[a] = e
             changed = True
         if 'file' in e:

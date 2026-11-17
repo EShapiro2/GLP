@@ -1,0 +1,79 @@
+Children (expanded schemas)
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2+Guardians:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:0 - | Alice and Bob are persons.
+Friendship:1+Guardians:3 ■ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2+Groups:3+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice), ~member(Alice,_,Bob), ~member(Bob,_,Alice), ~listed(Alice,Bob,_), ~listed(Bob,Alice,_) <- person(Alice), person(Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Groups:0 - | A *message*, a parameter of Groups, is what a person sends.
+Groups:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
+Groups:1+Warded Groups:1 ■ Message: message(Bob,Alice,Text) <- friend(Alice,Bob), friend(Bob,Alice), person(Alice) guarded by Alice possibly Alice=Bob.
+Groups:2 ■ | Group.
+Groups:2+Warded Groups:2 ■ Create: leader(Alice,Grupo), member(Alice,Grupo,Alice), listed(Alice,Alice,Grupo) <- ~leader(Alice,Grupo), person(Alice) guarded by Alice.
+Groups:2 ■ | Alice is then its leader and first member.
+Groups:2+Warded Groups:2 ■ Close: ~leader(Alice,Grupo), ~listed(Alice,_,Grupo), ~member(_,Grupo,Alice) <- leader(Alice,Grupo), person(Alice) guarded by Alice.
+Groups:3 ■ | Joining and Leaving.
+Groups:3+Warded Groups:3+Children:3 ■ Join: member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_), person(Bob), person(Alice) guarded by Alice, Bob possibly Alice=Bob.
+Groups:3 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Alice possibly Alice=Bob.
+Groups:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+Groups:4 ■ | Group messaging.
+Groups:4+Warded Groups:1 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo), person(Bob) guarded by Bob possibly Alice=Bob.
+Groups:4+Warded Groups:1 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo), person(Alice) guarded by Alice.
+Groups:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+Groups:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.
+Guardians:0 - | Bob *trusts* Carol, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a child and how. A child takes an act of a party by those who decide for the child.
+Guardians:0 - | Alice and Bob are persons, Carol and Dave children; in clause 4 Alice and Bob are possibly one person.
+Guardians:0 - | Default: any parent of z for those who decide for z.
+Guardians:1+Children:1 ◆ Enter: identity(Carol), child(Carol), has_parent(Carol,Alice), creator(Alice,Carol), parent(Alice,Carol), knows(Alice,Carol), knows(Carol,Alice), friend(Alice,Carol), friend(Carol,Alice) <- person(Alice), ~identity(Carol) guarded by Alice, Carol must Carol.
+Guardians:1 ■ | Alice chooses Carol's key pair.
+Guardians:2 ■ | Guardian decisions.
+Guardians:2 ■ Make parent: parent(Bob,Carol), has_parent(Carol,Bob), knows(Bob,Carol), knows(Carol,Bob), friend(Bob,Carol), friend(Carol,Bob) <- child(Carol), ~retired(Carol), person(Bob), has_parent(Carol,Alice), friend(Bob,Alice), ~parent(Bob,Carol), ~has_parent(Carol,Bob) guarded by parents(Carol), Bob.
+Guardians:2 ■ Resign: ~parent(Bob,Carol), ~has_parent(Carol,Bob) <- parent(Bob,Carol), has_parent(Carol,Bob) guarded by Bob.
+Guardians:2 ■ End parent: ~parent(Bob,Carol), ~has_parent(Carol,Bob) <- parent(Bob,Carol), has_parent(Carol,Bob) guarded by parents(Carol,-Bob).
+Guardians:2+Warded Groups:3 ■ Parent unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob), ~parent(Bob,Carol), ~has_parent(Carol,Bob), ~member(Bob,_,Carol), ~member(Carol,_,Bob), ~listed(Bob,Carol,_), ~listed(Carol,Bob,_) <- friend(Bob,Carol), friend(Carol,Bob), parent(Bob,Carol), has_parent(Carol,Bob) guarded by Bob.
+Guardians:2 ■ | Carol may not end a friendship with her parent.
+Guardians:3 ■ | Ward and person.
+Guardians:3+Children:2 ■ Child acquaint: knows(Carol,Bob), knows(Bob,Carol) <- child(Carol), has_parent(Carol,Alice), person(Bob), knows(Alice,Bob), parent(Alice,Carol) guarded by Carol, Bob, Alice.
+Guardians:3 ■ Child befriend: friend(Carol,Bob), friend(Bob,Carol) <- child(Carol), ~retired(Carol), has_parent(Carol,Alice), person(Bob), knows(Carol,Bob), knows(Bob,Carol), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Bob), ~friend(Bob,Carol) guarded by Carol, Bob, Alice.
+Guardians:3+Warded Groups:3 ■ Child end: ~friend(Carol,Bob), ~friend(Bob,Carol), ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <- ~has_parent(Carol,Bob), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+Guardians:3+Warded Groups:3 ■ Unfriend: ~friend(Bob,Carol), ~friend(Carol,Bob), ~member(Bob,_,Carol), ~member(Carol,_,Bob), ~listed(Bob,Carol,_), ~listed(Carol,Bob,_) <- ~parent(Bob,Carol), friend(Bob,Carol), friend(Carol,Bob) guarded by Bob.
+Guardians:3+Warded Groups:3 ■ Child unfriend: ~friend(Carol,Bob), ~friend(Bob,Carol), ~member(Carol,_,Bob), ~member(Bob,_,Carol), ~listed(Carol,Bob,_), ~listed(Bob,Carol,_) <- has_parent(Carol,Alice), ~parent(Bob,Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Alice.
+Guardians:4 ■ | Wards.
+Guardians:4+Children:2 ■ Children acquaint: knows(Carol,Dave), knows(Dave,Carol) <- child(Carol), has_parent(Carol,Alice), child(Dave), has_parent(Dave,Bob), knows(Alice,Dave), knows(Bob,Carol), knows(Alice,Bob), knows(Bob,Alice), parent(Alice,Carol), parent(Bob,Dave) guarded by Carol, Dave, Alice, Bob possibly Alice=Bob.
+Guardians:4 ■ Children befriend: friend(Carol,Dave), friend(Dave,Carol) <- child(Carol), ~retired(Carol), has_parent(Carol,Alice), child(Dave), ~retired(Dave), has_parent(Dave,Bob), knows(Carol,Dave), knows(Dave,Carol), knows(Alice,Dave), friend(Alice,Bob), friend(Bob,Alice), ~friend(Carol,Dave), ~friend(Dave,Carol) guarded by Carol, Dave, Alice, Bob possibly Alice=Bob.
+Guardians:4 ■ Children of one parent befriend: friend(Carol,Dave), friend(Dave,Carol) <- child(Carol), ~retired(Carol), has_parent(Carol,Alice), child(Dave), ~retired(Dave), has_parent(Dave,Alice), knows(Carol,Dave), knows(Dave,Carol), ~friend(Carol,Dave), ~friend(Dave,Carol) guarded by Carol, Dave, Alice.
+Guardians:5+Warded Groups:3 ■ Retire: retired(Carol), ~parent(_,Carol), ~has_parent(Carol,_), ~friend(Carol,_), ~friend(_,Carol), ~member(Carol,_,_), ~listed(_,Carol,_) <- ~retired(Carol) guarded by parents(Carol).
+Guardians:5 ■ | Carol can then take no act.
+Warded Groups:0 - | Alice and Bob are persons, Carol and Dave children, Grupo a group, Text a message; in clause 1 Carol is possibly Alice.
+Warded Groups:1 ■ | A child's messages.
+Warded Groups:1 ■ Child message: message(Bob,Carol,Text) <- child(Carol), ~retired(Carol), friend(Carol,Bob), friend(Bob,Carol) guarded by Carol.
+Warded Groups:1 ■ Child post: posted(Alice,Text,Carol,Grupo) <- child(Carol), ~retired(Carol), member(Carol,Grupo,Alice), ~posted(Alice,Text,Carol,Grupo) guarded by Carol possibly Alice=Carol.
+Warded Groups:1 ■ Child post own: posted(Carol,Text,Carol,Grupo) <- child(Carol), ~retired(Carol), member(Carol,Grupo,Carol), ~posted(Carol,Text,Carol,Grupo) guarded by Carol.
+Warded Groups:2 ■ | A child's group.
+Warded Groups:2+Children:3 ■ Child create: leader(Carol,Grupo), member(Carol,Grupo,Carol), listed(Carol,Carol,Grupo) <- child(Carol), ~retired(Carol), ~leader(Carol,Grupo), has_parent(Carol,Alice) guarded by Carol, Alice.
+Warded Groups:2 ■ Child close: ~leader(Carol,Grupo), ~listed(Carol,_,Grupo), ~member(_,Grupo,Carol) <- child(Carol), ~retired(Carol), leader(Carol,Grupo) guarded by Carol.
+Warded Groups:2 ■ Parent close: ~leader(Carol,Grupo), ~listed(Carol,_,Grupo), ~member(_,Grupo,Carol) <- parent(Alice,Carol), leader(Carol,Grupo) guarded by Alice.
+Warded Groups:3 ■ Child join: member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) <- leader(Bob,Grupo), person(Bob), friend(Bob,Carol), friend(Carol,Bob), has_parent(Carol,Alice), parent(Alice,Carol), friend(Alice,Bob), friend(Bob,Alice), ~member(Carol,Grupo,_) guarded by Bob, Carol, Alice.
+Warded Groups:3 ■ Children join: member(Dave,Grupo,Carol), listed(Carol,Dave,Grupo) <- leader(Carol,Grupo), child(Carol), has_parent(Carol,Alice), parent(Alice,Carol), friend(Carol,Dave), friend(Dave,Carol), child(Dave), has_parent(Dave,Bob), parent(Bob,Dave), knows(Alice,Dave), friend(Alice,Bob), friend(Bob,Alice), ~member(Dave,Grupo,_) guarded by Carol, Dave, Alice, Bob.
+Warded Groups:3 ■ Children of one parent join: member(Dave,Grupo,Carol), listed(Carol,Dave,Grupo) <- leader(Carol,Grupo), child(Carol), has_parent(Carol,Alice), parent(Alice,Carol), friend(Carol,Dave), friend(Dave,Carol), child(Dave), has_parent(Dave,Alice), parent(Alice,Dave), ~member(Dave,Grupo,_) guarded by Carol, Dave, Alice.
+Warded Groups:3 ■ Child withdraw: ~member(Carol,Grupo,Bob), ~listed(Bob,Carol,Grupo) <- has_parent(Carol,Alice), parent(Alice,Carol), member(Carol,Grupo,Bob), listed(Bob,Carol,Grupo) guarded by Alice.
+Warded Groups:3 ■ Child leave: ~member(Carol,Grupo,Alice), ~listed(Alice,Carol,Grupo) <- child(Carol), ~retired(Carol), member(Carol,Grupo,Alice), listed(Alice,Carol,Grupo) guarded by Carol.
+Warded Groups:3 ■ Child remove: ~member(Bob,Grupo,Carol), ~listed(Carol,Bob,Grupo) <- leader(Carol,Grupo), child(Carol), ~retired(Carol), member(Bob,Grupo,Carol), listed(Carol,Bob,Grupo) guarded by Carol.
+Children:0 - | Alice and Bob are persons, Carol and Dave children; in clause 2 Alice and Bob are possibly one person.
+Children:1 ◆ | Alice is a legal parent of the minor who operates Carol.
+Children:2 ■ | A child's acquaintances.
+Children:3 ■ | Only a child, Dave, may join the group.
+Children:4 ○ Of age: of_age(Carol), ~child(Carol), ~parent(_,Carol), ~has_parent(Carol,_), person(Carol) <- creator(Alice,Carol), has_parent(Carol,Bob), ~of_age(Carol), child(Carol) guarded by Alice.
+Children:4 ○ | Carol is then a person.
+Children:4 ○ | The creator will do so if the minor who operates Carol comes of age, and not before.
+Children:5 ○ | A minor who is not a ward.
+Children:5 ○ | Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.

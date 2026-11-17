@@ -37,7 +37,7 @@
 %% each agent presents the introduction to its person; the friendship forms
 %% on mutual consent): one goal per introduction, its card asking the
 %% person in GKK's words, its pragma Introduction, "Bob: Alice asks to
-%% introduce Carol to you." (programs/gsc/GKK.txt), the introducer and the
+%% introduce Carol to you." (programs/gsc/Knowledge.txt), the introducer and the
 %% other party filled in, and decide_intro reads the person's answer with a
 %% clause per answer.  The card is drawn by the widget the compiled platforms
 %% draw their approval question by, approval_sentence, whose words are
@@ -328,10 +328,12 @@ serve([trust(Key) | Reqs], Id, Cd, Outs, Cmds?) :-
     ground(Id?), ground(Key?) |
     trust_act(Key?, Id?, Cd?, Reqs?, Outs?, Cmds).
 
-%% Install a certified mini-app: the artefact beside this program is read, its
-%% creator's certification signed over its source identity, and the mini-app
-%% installed under the name the person gives it, with its end of the person
-%% channel on which it will show its person its own screen.
+%% Install a certified mini-app: the artefact beside this program is read,
+%% published by the person, GPD:1, and installed as their own, GPD:4, under
+%% the name the person gives it, with its end of the person channel on which
+%% it will show its person its own screen.  The compiled home separates
+%% Publish from Install (docs/compiled-home.md in GSA's repository); this
+%% hand-written home has the one request for both.
 serve([install(App, Name) | Reqs], Id, Cd, Outs, Cmds?) :-
     ground(Id?), ground(App?), ground(Name?) |
     load_file(Name?, C),
@@ -402,7 +404,7 @@ place_act(A, Id, Cd, Reqs, Outs, [msg(person, Id?, A?) | Cmds?]) :-
 procedure install_act(Content?, Constant?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
 install_act(M, App, Id, Cd, Reqs, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui?)) | Cmds?]) :-
     module(M?) |
-    creator_certification(M?, CSig),
+    publication(M?, CSig),
     new_channel(Ui, Person),
     hold_person(Person?),
     serve(Reqs?, Id?, Cd?, Outs?, Cmds).
@@ -410,13 +412,17 @@ install_act(S, _, Id, Cd, Reqs, Outs, Cmds?) :-
     string(S?) |
     serve(Reqs?, Id?, Cd?, Outs?, Cmds).
 
-%% The creator's certification, signed here over the mini-app's source identity
-%% and the acts of its contract, as the super-app's plays sign it.
-procedure creator_certification(Module?, String).
-creator_certification(M, CSig?) :-
-    decompose_module(M?, _, Src, _),
+%% The person's publication, GPD:1: publish(Src, Cmp), the program's source
+%% and compiled identities, signed with sign/3 under the person's key, the
+%% developer's warranty the super-app checks before installing (agent.glp,
+%% verify_install/4).  It is made on the person's request, never by the
+%% super-app for a program its person did not publish (udi-shapiro/
+%% Grassroots-Audit, programs/social/graph/core/agent.glp.md, Finding 1).
+procedure publication(Module?, String).
+publication(M, W?) :-
+    decompose_module(M?, _, Src, Cmp),
     self_key(K),
-    sign(creator_cert(Src?, [friendship, ending_a_friendship], syntactically_grassroots), K?, CSig).
+    sign(publish(Src?, Cmp?), K?, W).
 
 %% The person's end of the mini-app's person channel is held by hold_person/1
 %% (self.glp) until there is a screen to show it on, its draws read to their

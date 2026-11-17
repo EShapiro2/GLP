@@ -1,0 +1,6 @@
+B: Base
+Alice, Bob and Carol are persons, Sum a number.
+1. ■ Pay: Alice may pay Bob Sum Carol-coins, with the consent of Bob, provided Alice knows Bob.
+Logic pragmas.
+Vocabulary: x knows y = knows(x,y); x holds n y-coins = coin(x,y,*n).
+After x pays y n z-coins: no longer x holds n z-coins and y holds n z-coins.

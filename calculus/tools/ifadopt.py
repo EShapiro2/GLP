@@ -34,6 +34,8 @@ cascade gets none of them.
 The file is a proposal to the owner, who may change its lines (README-PUBLIC.md).
 """
 import os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import toglp
@@ -46,13 +48,52 @@ def titles(n):
     """{clause number: (title, the rest of the clause)} of the contract's own clauses, rev/NAME.txt, as the reader
     takes them; the reader skips the Logic pragmas of an adopted file, so these are the clauses it reads."""
     out = {}
-    for l in open(os.path.join(ROOT, 'rev', n + '.txt'), encoding='utf-8'):
+    for l in open(os.path.join(ROOT, 'rev', NM.file_of(n) + '.txt'), encoding='utf-8'):
         m = CLAUSE.match(l.rstrip('\n'))
         if m:
             out[int(m.group(1))] = (m.group(2), m.group(3))
     return out
 
 
+
+
+def kind_preds(n):
+    """The predicates of the states of the kinds of note n itself declares ('Kind of note: bond, ...' of its Logic
+    pragmas): bond and escrow_bond for Bonds; empty for a contract that declares none."""
+    import gcsas
+    w = gcsas.World(NM.names_in(os.path.join(ROOT, 'gr')))
+    if n not in w.known:
+        return set()
+    ks = [k for k in gcsas.kinds_of(w, n) if k['decl'] == n]
+    if not ks:
+        return set()
+    lex = w.lexicon(n)
+    return {v[2] for k in ks for v in gcsas.kind_atoms(w, n, lex, k).values()}
+
+
+_PARENT_ACTS = {}
+
+
+def renamed_here(n, e):
+    """Whether the act e, of a contract n is written from, is printed in n under another name than in every contract of
+    n's first line that has it (Joint's "Deposit coin", Notes:4's Deposit of coins named so beside Joint:2's Deposit):
+    the line of that contract's file names its act by the other name, which in n is n's own act, so e's line is n's
+    (Calculus #8, 2026-11-16, on Code #33's "the schema deposit_coin ... is fitted by no line")."""
+    import gcsas
+    w = gcsas.World(NM.names_in(os.path.join(ROOT, 'gr')))
+    if n not in w.known:
+        return False
+    parents, _, _ = gcsas.first_line(w.contract(n), w.known)
+    head = sorted(e['head'])
+    names = set()
+    for p in parents:
+        if p not in _PARENT_ACTS:
+            try:
+                _PARENT_ACTS[p] = [x for x in toglp.schemas(p) if x['kind'] == 'act']
+            except (OSError, gcsas.Err):
+                _PARENT_ACTS[p] = []
+        names |= {x['name'] for x in _PARENT_ACTS[p] if x['label'].split('+')[0] == e['label'].split('+')[0] and sorted(x['head']) == head}
+    return bool(names) and e['name'] not in names
 
 
 def adopted(n, txt):
@@ -75,13 +116,24 @@ def adopted(n, txt):
         else:
             t, rest = l.split(': ', 1)
             lines.append((t, rest, []))
-    tl = titles(n)
-    own = {}           # clause number: [(button line, questions)]
+    tl = {j: v for j, v in titles(n).items()}
+    kp = kind_preds(n)          # the predicates of the kinds of note n declares: a form of an act of notes with one is n's act
+    own = {}           # clause number, or (contract, clause number) of the clause of Notes a form comes from: [(button line, questions)]
     for t, rest, qs in lines:
         e = acts[clauses[t] - 1]
         if t != e['name'] and not re.fullmatch(re.escape(e['name']) + r' \d+', t):
             raise ValueError('%s: the act %s of cascade/%s/%s.txt is not %s of the full schemas' % (n, t, n, n, e['name']))
         mine = [l.rpartition(':')[2] for l in e['label'].split('+') if l.rpartition(':')[0] == n]
+        if not mine and (kp and any(l[1] in kp for l in e['head']) or renamed_here(n, e)):
+            # a form of an act of notes for a kind n declares (Bonds' Swap coin for bond, Pay bond, Deposit bond): n's act,
+            # proposed in n's file under the title of the clause of Notes it comes from, which GLP's reader takes there
+            # (programs/vglp/cva/compiler/pragmas.sh: a pragma line may name a clause of a contract its contract extends)
+            o, _, oj = e['label'].split('+')[0].rpartition(':')
+            ot = titles(o) if os.path.exists(os.path.join(ROOT, 'rev', NM.file_of(o) + '.txt')) else {}
+            if int(oj) in ot:
+                tl[(o, int(oj))] = ot[int(oj)]
+                own.setdefault((o, int(oj)), []).append((rest, [q for q in qs if q.strip().split(':', 1)[0] not in set(e.get('must', ()))]))
+            continue
         if not mine:
             continue          # an act of a contract this one is written from: its line is in that contract's file
         j = mine[-1]          # an act of an inherited clause that a clause of this one changes, as GSG:2+GnW:3, is that clause's
@@ -96,7 +148,7 @@ def adopted(n, txt):
     if not own:
         return None
     out = ['Interface pragmas']
-    for j in sorted(own):
+    for j in sorted(own, key=lambda j: (1, j[0], j[1]) if isinstance(j, tuple) else (0, '', j)):      # n's own clauses, then those of Notes its forms come from
         first = True
         prev = None          # the proposer of the last button line, where it has no question
         for rest, qs in own[j]:
@@ -113,7 +165,7 @@ def adopted(n, txt):
 
 def pragma_lines(n):
     """{act's title: (its button line, its questions)} of the cascade's cascade/NAME/NAME.txt, or None."""
-    p = os.path.join(ROOT, 'cascade', n, n + '.txt')
+    p = os.path.join(ROOT, 'cascade', NM.file_of(n), NM.file_of(n) + '.txt')
     if not os.path.exists(p):
         return None
     ls = open(p, encoding='utf-8').read().split('\n')
@@ -136,7 +188,7 @@ def world():
     """The contracts of gr/, compiled and expanded by gcsas.py, once."""
     if not _world:
         import gcsas
-        names = sorted(f[:-4] for f in os.listdir(os.path.join(ROOT, 'gr')) if f.endswith('.txt') and not f.startswith('NOTES'))
+        names = NM.names_in(os.path.join(ROOT, 'gr'))
         w = gcsas.World(names)
         for m in gcsas.order(names, w):
             sas, own = gcsas.compile_contract(w, m)
@@ -193,8 +245,8 @@ def lines_text(groups):
 
 
 def write(n):
-    d = os.path.join(ROOT, 'cascade', n)
-    p, f = os.path.join(d, n + '.txt'), os.path.join(d, FILE)
+    d = os.path.join(ROOT, 'cascade', NM.file_of(n))
+    p, f = os.path.join(d, NM.file_of(n) + '.txt'), os.path.join(d, FILE)
     txt = adopted(n, open(p, encoding='utf-8').read()) if os.path.exists(p) else None
     der = derived(n)
     if der:             # the lines of the acts derived in n, after its own, grouped by the title of their clause
@@ -213,9 +265,9 @@ def write(n):
 
 
 def main():
-    names = sys.argv[1:] or sorted(n for n in os.listdir(os.path.join(ROOT, 'cascade')) if os.path.isdir(os.path.join(ROOT, 'cascade', n)))
+    names = [NM.name_of(a) for a in sys.argv[1:]] or sorted(NM.name_of(n) for n in os.listdir(os.path.join(ROOT, 'cascade')) if os.path.isdir(os.path.join(ROOT, 'cascade', n)))
     for n in names:
-        print('%-10s %s' % (n, write(n)))
+        print('%-10s %s' % (NM.file_of(n), write(n)))
 
 
 if __name__ == '__main__':

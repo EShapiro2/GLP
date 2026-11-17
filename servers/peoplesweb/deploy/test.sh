@@ -1,5 +1,6 @@
 #!/bin/sh
-# The test site, peoplesweb.org/test (Udi, 2026-11-12, to GSA #5: a change to
+# The test site, peoplesweb.org/next (under /test until 2026-11-17; Udi, to
+# Website #3: "next is good"; Udi, 2026-11-12, to GSA #5: a change to
 # the site is shown first on a test site under /test, and made live on his
 # approval).  It is the site as the branch Website-site of GLP has it: that
 # branch's servers/peoplesweb, its pages and its build, run over the
@@ -22,10 +23,10 @@ set -e
 BRANCH=${TEST_BRANCH:-Website-site}
 GLP=${GLP_ROOT:-/srv/glp}
 WORK=${TEST_WORK:-/var/lib/glp/test}
-WWW=${TEST_WWW:-/var/www/peoplesweb.org/test}
+WWW=${TEST_WWW:-/var/www/peoplesweb.org/next}
 AS=${TEST_AS-sudo -u glp}
 cd "$GLP"
-URL=$(git remote get-url origin)
+URL=${TEST_URL:-$(git remote get-url origin)}
 if $AS git ls-remote --exit-code --heads "$URL" "$BRANCH" >/dev/null 2>&1; then :; else
 	[ $? -eq 2 ] && rm -rf "$WWW"
 	exit 0
@@ -39,9 +40,8 @@ $AS sh -c "git -C '$WORK/repo' archive FETCH_HEAD servers/peoplesweb | tar -x -C
 if [ -d servers/peoplesweb/cache ]; then
 	$AS cp -R servers/peoplesweb/cache/. "$WORK/cache/"
 fi
-$AS env GLP_ROOT="$GLP" BUILD_DIR="$WORK/build" SITE_TEST=1 CERTIFY_CACHE="$WORK/cache" \
+$AS env GLP_ROOT="$GLP" BUILD_DIR="$WORK/build" SITE_TEST=1 CERTIFY_CACHE="$WORK/cache" CERTIFY="${CERTIFY:-1}" \
 	PAPERS_DIR="${PAPERS_DIR:-/var/lib/glp/papers}" \
-	CALCULUS_DIR="${CALCULUS_DIR:-/var/lib/glp/calculus/site/calculus}" \
 	python3 -I "$WORK/site/servers/peoplesweb/tools/build.py"
 mkdir -p "$WWW"
 rsync -a --delete "$WORK/build/www/" "$WWW/"

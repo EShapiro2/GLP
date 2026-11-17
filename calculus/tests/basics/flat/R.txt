@@ -1,5 +1,0 @@
-R: One act, renamed, a consent repeated (flat text)
-K:0 - | Alice, Bob and Carol are persons.
-K:1+R:1 ■ Grant: Alice, Bob and Carol may jointly Bob has a token, provided Bob is trusted by Carol.
-K:1 ■ Take: Alice may Alice has a token.
-R:0 - | Alice, Bob and Carol are persons.

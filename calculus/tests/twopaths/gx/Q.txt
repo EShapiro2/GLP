@@ -1,4 +1,0 @@
-Q: Restricts
-Of C: Alice is a person.
-Of Q: Alice is a person.
-C:1, Q:1. ■ Mark: Alice may mark herself, provided Alice has a pass.

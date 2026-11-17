@@ -1,0 +1,6 @@
+Forwarding
+Forwarding extends Friendship.
+The *author* of an item is its first signer.
+Alice and Bob are persons.
+1. ■ Sign: Alice may create an item by signing it.
+2. ■ Forward: Alice may forward an item she holds to her friend Bob, adding her signature to the signatures the item carries.

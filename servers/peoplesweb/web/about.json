@@ -1,162 +1,177 @@
 {
- "GKK": [
+ "Knowledge": [
   "🔑",
   "identity",
   "Who you are and who you know: a key of your own, meeting people, introducing them."
  ],
- "GSG": [
+ "Friendship": [
   "🤝",
   "social",
   "Friends: become friends by agreeing, and end a friendship."
  ],
- "GSN": [
+ "Groups": [
   "💬",
   "social",
   "Messages and groups among friends."
  ],
- "GnW": [
+ "Guardians": [
   "🛡️",
   "care",
   "Wards: agents a person creates and looks after, who act only through their guardians."
  ],
- "GAI": [
+ "Agents": [
   "🤖",
   "care",
   "AI agents with an accountable developer and an accountable owner."
  ],
- "GSNP": [
+ "Provenance-Groups": [
   "✍️",
   "social",
   "Forwarding with provenance: every forward adds a signature you can see."
  ],
- "CSSN": [
+ "Children": [
   "🧒",
   "care",
   "A social network safe for children: parents, kids-only groups, coming of age."
  ],
- "GC": [
-  "🪙",
-  "money",
-  "Personal currencies: everyone can issue their own coins."
- ],
- "GB": [
-  "📜",
-  "money",
-  "Bonds with maturity dates, and escrow, on top of coins."
- ],
- "GFF": [
+ "Feeds": [
   "📰",
   "social",
   "Feeds and followers, delivered from friend to friend."
  ],
- "AGORA": [
-  "🧺",
-  "money",
-  "Barter: make things, post them on a market wall, trade them."
- ],
- "GDO": [
+ "Overlay": [
   "🧭",
   "social",
   "Pointing: each person points to some of their friends, and to people those friends point to."
  ],
- "DGC": [
+ "Denominated-Currencies": [
   "🪙",
   "money",
   ""
  ],
- "GDC": [
+ "Denominated-Coins": [
   "🪙",
   "money",
   ""
  ],
- "GCC": [
+ "Community-Currency": [
   "🪙",
   "money",
   ""
  ],
- "BCC": [
-  "🪙",
-  "money",
-  ""
- ],
- "GD": [
+ "Distrust": [
   "🗳️",
   "governance",
   ""
  ],
- "GD-S": [
+ "Separating-Distrust": [
   "🗳️",
   "governance",
   ""
  ],
- "GDO-L": [
+ "Labelled-Overlay": [
   "📡",
   "social",
   ""
  ],
- "GDO-LB": [
+ "Local-Overlay": [
   "📡",
   "social",
   ""
  ],
- "GRA": [
+ "Auction": [
   "🚗",
   "mobility",
   ""
  ],
- "GRA-SS": [
+ "Second-Score-Auction": [
   "🚗",
   "mobility",
   ""
  ],
- "GFF-FR": [
+ "Resilient-Feeds": [
   "📰",
   "social",
   ""
  ],
- "GFF-PS": [
+ "Short-Feeds": [
   "📰",
   "social",
   ""
  ],
- "GFF-FR-BC": [
+ "Backchannel-Feeds": [
   "📰",
   "social",
   ""
  ],
- "GFP": [
+ "Forwarding": [
   "✍️",
   "social",
   "Forwarding items with provenance: whoever passes an item on signs it."
  ],
- "GPD": [
+ "Programs": [
   "📦",
   "os",
   "Programs passed from friend to friend: publishing, trusting developers, installing and inviting."
  ],
- "GAS": [
+ "AppStore": [
   "🏪",
   "os",
   "The app store: a developer whose agent runs on a server and offers the programs it holds."
  ],
- "GRV": [
+ "Rendezvous": [
   "🛰️",
   "network",
   "Rendezvous: friends far apart find each other again through a rendezvous server."
  ],
- "GPE": [
+ "Encounters": [
   "📶",
   "network",
   "Meeting in person: phones near each other, over Bluetooth or the local network, become friends."
  ],
- "GDS": [
+ "Directory": [
   "📇",
   "network",
   "A directory: find people by their email address, and get the link to reach them."
  ],
- "GSV": [
+ "Services": [
   "🖥️",
   "network",
   "Services: a ward run by a machine at an address everyone can reach, as a rendezvous server, a directory and a store are."
+ ],
+ "Agora": [
+  "🧺",
+  "money",
+  "Barter: make things, post them on a market wall, trade them."
+ ],
+ "Constitution": [
+  "🏛️",
+  "governance",
+  ""
+ ],
+ "App": [
+  "📱",
+  "os",
+  ""
+ ],
+ "Notes": [
+  "🧾",
+  "money",
+  ""
+ ],
+ "Coins": [
+  "🪙",
+  "money",
+  "Personal currencies: everyone can issue their own coins."
+ ],
+ "Bonds": [
+  "📜",
+  "money",
+  "Bonds with maturity dates, and escrow, on top of coins."
+ ],
+ "Shares": [
+  "📈",
+  "money",
+  ""
  ]
 }

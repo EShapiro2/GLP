@@ -32,6 +32,7 @@
 %% contract as the payment of a fiat coin does (Udi, 2026-09-15).  See
 %% collateral.glp, which carries the same note.
 
+imported procedure village#day_one.
 imported procedure village#villager(Key?, Script?, Stream(Conversation(PeerMsg))?).
 
 %% =============================================================================
@@ -40,11 +41,12 @@ imported procedure village#villager(Key?, Script?, Stream(Conversation(PeerMsg))
 
 exported procedure forward.
 forward :-
+    village # day_one,
     village # villager(alice,
-        [mint(10, 30), swap(bob, alice, 30, 10, bob, 30, 12)],
+        [issue(10, 30), swap(bob, alice, 30, 10, bob, 30, 12)],
         [conversation(bob, ch(AB?, BA))]),
     village # villager(bob,
-        [mint(12, 30), accept(alice)],
+        [issue(12, 30), accept(alice)],
         [conversation(alice, ch(BA?, AB))]).
 
 %% =============================================================================
@@ -53,29 +55,30 @@ forward :-
 
 exported procedure guarantee.
 guarantee :-
+    village # day_one,
     village # villager(alice,
-        [mint(5), swap(bob, alice, now, 5, bob, 20, 6),
+        [issue(5), swap(bob, alice, now, 5, bob, 20, 6),
          await(presented(bob, now, bob, 20)), await(presented(bob, now, bob, 20)),
          await(presented(bob, now, bob, 20)), await(presented(bob, now, bob, 20)),
          await(presented(bob, now, bob, 20)),
-         mint(5), swap(bob, alice, now, 5, bob, 30, 6),
+         issue(5), swap(bob, alice, now, 5, bob, 30, 6),
          accept_transfer(escrow)],
-        [conversation(bob, ch(AB?, BA)), conversation(escrow, ch(AG?, GA))]),
+        [conversation(gary, ch(AGa?, GaA)), conversation(bob, ch(AB?, BA)), conversation(escrow, ch(AG?, GA))]),
     village # villager(bob,
-        [mint(6, 20), accept(alice),
+        [issue(6, 20), accept(alice),
          redeem(alice, now, bob, 20), redeem(alice, now, bob, 20),
          redeem(alice, now, bob, 20), redeem(alice, now, bob, 20),
          redeem(alice, now, bob, 20),
-         mint(6, 30), accept(alice)],
+         issue(6, 30), accept(alice)],
         [conversation(alice, ch(BA?, AB))]),
     village # villager(gary,
-        [mint(6), deposit(escrow, gary, now, 3),
+        [issue(6), deposit(escrow, gary, now, 3, alice, agreed(guarantee)),
          accept_transfer(escrow),
-         deposit(escrow, gary, now, 3)],
-        [conversation(escrow, ch(GaG?, GGa))]),
+         deposit(escrow, gary, now, 3, alice, agreed(guarantee))],
+        [conversation(alice, ch(GaA?, AGa)), conversation(escrow, ch(GaG?, GGa))]),
     village # villager(escrow,
         [accept_transfer(gary),
-         return(gary, gary, now, 3),
+         return(gary, gary, now, 3, alice, agreed(guarantee)),
          accept_transfer(gary),
-         release(alice, gary, now, 3)],
+         release(alice, gary, now, 3, gary, agreed(guarantee))],
         [conversation(alice, ch(GA?, AG)), conversation(gary, ch(GGa?, GaG))]).

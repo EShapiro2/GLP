@@ -1,9 +1,10 @@
-0 GKK
-1 DAO GC GPE GSG LIB REC
-2 LDAO FDAO GB GDC JOINT STAY GD GDO GFP GSN GnW SGSG
-3 AGORA DGC GD-S GDO-L GDO-LB GPD GAI GSNW GO GSV
-4 GSNP GBank GCoop GCorp GFF GRA GAS CSSN GRV
-5 GDAO CB CMB GCC MCS SCB WC SC SPLLC TC GFF-FR GFF-PS GRA-SS GDS
-6 CnC GLDAO GBCC GFF-FR-BC
-7 GNO
-8 GNG GNL GNM GAN ORH
+0 Knowledge
+1 DAO Encounters Friendship Library Notes Recommendations
+2 Liquid-DAO Distrust Forwarding Groups Guardians Overlay Secure-Friendship Coins
+3 Funded-DAO Separating-Distrust Programs Agents Warded-Groups Organisation Services Labelled-Overlay Local-Overlay Bonds Denominated-Coins Joint-Accounts Stays
+4 Shares Provenance-Groups AppStore Children Constitution Rendezvous Feeds Auction Agora Denominated-Currencies
+5 Bank Corporation Cooperative Directory Resilient-Feeds Short-Feeds Second-Score-Auction
+6 Cooperative-DAO App Shareholding-Corporation Central-Bank Commercial-Bank Community-Bank Community-Currency Mutual-Credit Single-Person-Company Trading-Company Workers-Cooperative Backchannel-Feeds
+7 Consumers-Cooperative Liquid-Cooperative Backed-Currency
+8 Networked-Organisation
+9 Gigs Lodging Marketplace Ads Rides

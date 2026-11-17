@@ -1,0 +1,44 @@
+% GRV: Grassroots Rendezvous --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GNA, a paper of the GSA project (Udi, 2026-11-07).  The paper, /Users/udi/Grassroots/GNA/main.tex, Section 6, prints it in its box and cites a clause as GRV:1.
+% Paper: GNA, GLP Networking API and Services, in preparation
+% Extends: GSV, Grassroots Services, GNA's (Services.txt beside this file), which instantiates GnW, GSC's (programs/gsc/Guardians.txt), and through it GSG and GKK: a rendezvous server is a service (Udi, 2026-11-10 13:52 UTC).  GDS, the directory service, is a separate contract (Directory.txt beside this file).
+% Defines: rendezvous server and invitation link, defined in the box after the declaration.  Person, knowing a person, friend, ward and guardian are defined with GKK, GSG and GnW.
+% Last changed: 2026-11-15, the Calculus's text adopted, at the branch Calculus 79ec48f, its Logic pragmas as mended there (first adopted at c475902), by calculus/MIGRATION.md, which Udi confirmed: the contract as the Calculus has it, its Logic pragmas after the clauses, and the Interface and Implementation pragmas keyed to its clauses' titles, their buttons its acts (GSA #6); 2026-11-11 (second), the link given as a web address, https://peoplesweb.org/i#<link>, which opens the Grassroots App (Udi, 2026-11-11, to GSA #4: 'go ahead with peoplesweb.org/i'); 2026-11-11, Registration puts the link on the clipboard, in place of a button to copy it (Udi, 2026-11-11, approving GSA #4, on Phones #1's point 4); 2026-11-10 (second), the environment predicate link, by which Alice's app supplies the serial and the expiry of her next link (Udi, 2026-11-10 21:14 UTC; Code #27, 20:42 UTC); 2026-11-10, on GSV: a rendezvous server is a service, and Carol makes her service Dave a rendezvous server; the schemas rewritten on GSV, Registration's named invite_by_link as its button (Udi, 2026-11-10 13:52 UTC, approving GSA #3); 2026-11-08, the server a ward (Udi, 2026-11-08 07:06 UTC), the directory a contract of its own, GDS (Udi, 07:12 UTC); first written 2026-11-07 (Udi approving the box in GNA's Section 6, GNA 2e5b9b6).
+% Schemas: Rendezvous.glp beside this file, the full schemas, printed from the Logic pragmas by calculus/tools/adopt.py and never written by hand; a check holds it to what the tool prints.
+Rendezvous
+Rendezvous extends Services.
+An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
+Alice, Bob and Carol are persons, Dave a service.
+1. ■ Open server: Carol may make her service Dave a rendezvous server.
+2. ■ Invite by link: Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+3. ■ Use link: Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
+4. ■ Reconnection. Present: Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship. Match: Dave then gives each the address of the other.
+Logic pragmas
+Rendezvous extends Services.
+An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
+Alice, Bob and Carol are persons, Dave a service, Link an invitation link.
+1. ■ Open server: Carol may make Dave a rendezvous server, provided Carol is a guardian of Dave.
+2. ■ Invite by link. Sign link: Alice may sign Link as an invitation link that names Dave, provided Alice knows Dave. Invite by link: Alice may register Link with Dave, provided Alice has signed Link as an invitation link that names Dave, Alice knows Dave, Dave is a rendezvous server and Dave does not hold Link spent for Alice. Link has a new serial.
+3. ■ Use link: Bob may present Link of Alice to Dave, provided Bob knows Dave and Dave does not hold Link expired. The link is then spent.
+4. ■ Reconnection. Present: Alice may present to Dave the signature of Bob over the friendship of Alice and Bob, provided Alice and Bob are friends, Alice knows Dave and Dave is a rendezvous server. Match: Dave matches Alice and Bob.
+Logic pragmas.
+Vocabulary: d is a rendezvous server = rendezvous_server(d); x has signed n as an invitation link that names d = link(x,n,d); d has n registered for x = registered(d,n,x); d holds n expired = expired(d,n); d holds n spent for x = spent(d,n,x); x has the address of y = address(x,y); d has the signature of y over the friendship of x and y presented = presented(d,x,y).
+After x makes d a rendezvous server, which requires d is not a rendezvous server: d is a rendezvous server.
+After x signs n as an invitation link that names d, which requires x has not signed n as an invitation link that names d: x has signed n as an invitation link that names d.
+After x registers n with d, which requires d does not have n registered for x: d has n registered for x.
+After y presents n of x to d: no longer d has n registered for x, d holds n spent for x, x has the address of y and y has the address of x.
+After x presents to d the signature of y over the friendship of x and y, which requires d does not have the signature of y over the friendship of x and y presented: d has the signature of y over the friendship of x and y presented.
+After d matches x and y: no longer d has the signature of y over the friendship of x and y presented, no longer d has the signature of x over the friendship of y and x presented, x has the address of y and y has the address of x.
+Interface pragmas
+Look: 🛰️, network
+Open server: Carol [Open server]
+Invite by link: Alice [Sign link] <link> [Invite by link]
+Use link: Bob [Use link] <alice> <link>
+Reconnection: Alice [Present]
+Implementation pragmas
+Use link, Reconnection: the address of a person is the one at which the server's networking layer observes them, read by peer_address/2; a person given an address punches towards it by punch_udp/1, and the smaller key initiates.
+Invite by link: an invitation link expires an hour after it is made.
+Invite by link: the link is given as a web address, https://peoplesweb.org/i#<link>, which opens the Grassroots App where it is installed.
+Invite by link: Alice's app puts the link on the phone's clipboard, for her to paste into any channel she has.
+Invite by link: Alice's app makes the link with its serial and its expiry, and signs and registers it at one tap of Alice's.
+Use link: an environment predicate, expired(Dave, Link), the links whose expiry has passed, which Dave keeps current.

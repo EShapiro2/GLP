@@ -8,11 +8,11 @@
 // index.html the search opens the contracts that match, on index.html
 // (data-search), which reads what is typed itself.  The addresses are
 // relative, so the bar works at the site's root and on the test site, under
-// /test, which the bar marks as such.
+// /next, which the bar marks as such.
 (function(){
   const TABS = [['home', 'Home', './'], ['contracts', 'Contracts', './#contracts'], ['papers', 'Papers', './#papers'],
                 ['projects', 'Projects', './#projects'], ['how', 'How it works', 'how.html']];
-  const TEST = /\/test\//.test(location.pathname);
+  const TEST = /\/next\//.test(location.pathname);
   document.head.insertAdjacentHTML('beforeend', `<style>
 #bar{position:sticky;top:0;z-index:10;background:rgba(245,245,247,.82);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid rgba(0,0,0,.06);font:15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .bar-in{max-width:1120px;margin:0 auto;padding:8px 24px;display:flex;align-items:center;gap:6px 18px}

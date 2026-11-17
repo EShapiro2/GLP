@@ -93,20 +93,24 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 
 %% The agent's initial goal, every agent's, agent(ch(_?,_),ch(_?,_)) (IGLP,
 %% Implementation Notes, "Boot"): the host's acts are the first channel's
-%% input, and the harness writes to the person itself, by send_to_user/1.
+%% input, and what the harness shows the person is the first channel's
+%% output, its messages the second's, which the runtime renders and sends
+%% (send_to_user/1, send_to_net/1); the harness calls neither, so that its
+%% compilation is certified and can be given to an agent compiled (IGLP,
+%% Implementation Notes, "Boot"; Code Format, the artefact).
 %% The host's first act says which agent this is: me(Person), one person
 %% alone, whose network is the agent's (live_person/3); or world, the four
 %% persons, their networks joined inside it (live_ui/1).
-exported procedure agent(Channel(HostIn, Stream(Constant))?, Channel(Stream(Net), Stream(Net))?).
-agent(ch(Ins, []), ch(N, [])) :- start(Ins?, N?).
+exported procedure agent(Channel(HostIn, Stream(Shown))?, Channel(Stream(Net), Stream(Net))?).
+agent(ch(Ins, S?), ch(N, Net?)) :- start(Ins?, N?, S, Net).
 
-procedure start(HostIn?, Stream(Net)?).
-start([me(P) | Ins], N) :- ground(P?) | live_person(P?, Ins?, N?).
-start([world | Ins], _) :- live_ui(Ins?).
-start([_ | Ins], N) :- otherwise | start(Ins?, N?).
+procedure start(HostIn?, Stream(Net)?, Stream(Shown), Stream(Net)).
+start([me(P) | Ins], N, S?, Net?) :- ground(P?) | live_person(P?, Ins?, N?, S, Net).
+start([world | Ins], _, S?, []) :- live_ui(Ins?, S).
+start([_ | Ins], N, S?, Net?) :- otherwise | start(Ins?, N?, S, Net).
 
-procedure live_ui(HostIn?).
-live_ui(Ins) :-
+procedure live_ui(HostIn?, Stream(Shown)).
+live_ui(Ins, S?) :-
     split4(Ins?, GA, GB, GC, GD{ks}),
 """
 for p, x in zip(P, L):
@@ -123,8 +127,7 @@ body += """    merge(OutA?, OutB?, Net1),
     merge(SA?, SB?, S1),
     merge(SC?, SD?, S2),
     merge(S1?, S2?, S3),
-    merge(S3?, SN?, S),
-    send_to_user(S?).
+    merge(S3?, SN?, S).
 
 """
 if not cal:
@@ -160,21 +163,19 @@ tag_net([], []).
 
 %% One person alone, any person, named as the host names it: live_person(Person,
 %% HostIn, NetIn) runs the person's platform agent and its dispatcher, its
-%% network input the agent's own; the platform's messages go out by
-%% send_to_net, a cold call each to the person it names, and arrive on that
+%% network input the agent's own; the platform's messages are the agent's
+%% network output, a cold call each to the person it names, and arrive on that
 %% person's network input.  The host feeds the person g(Grant)""" + (' and cal(N)' if cal else '') + """.
-procedure live_person(Peer?, HostIn?, Stream(Net)?).
-live_person(P, Ins, NetIn) :- ground(P?) |
+procedure live_person(Peer?, HostIn?, Stream(Net)?, Stream(Shown), Stream(Net)).
+live_person(P, Ins, NetIn, S1?, Net?) :- ground(P?) |
     """ + ('split_person(Ins?, G, K)' if cal else 'split_person(Ins?, G)') + f""",
     platform # agent({agent_args('P?', 'NetIn?', 'Out', 'T', 'K?')}, A),
     platform # dispatch(A?, ch(G?, D), M),
     to_person(M?, T?),
     tee_net(Out?, Net, L),
-    send_to_net(Net?),
     tag(P?, D?, S),
     tag_net(L?, SN),
-    merge(S?, SN?, S1),
-    send_to_user(S1?).
+    merge(S?, SN?, S1).
 """
 if cal:
     body += """

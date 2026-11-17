@@ -1,5 +1,0 @@
-ORG: An Organisation (flat text)
-ORG:0 - | Bob is a person, Orga an organisation, Motion an act of Orga.
-ORG:0 - | Parameters: x is entitled to vote on m in z; the votes decide m according to the bylaws of z; x is entitled to take m for z.
-ORG:1 ■ Vote: Bob may Orga holds Bob's vote on Motion, provided Bob is entitled to vote on Motion in Orga and not Orga holds Bob's vote on Motion.
-ORG:2 ■ Retire: Those who decide for Orga may Orga is retired, provided not Orga is retired.

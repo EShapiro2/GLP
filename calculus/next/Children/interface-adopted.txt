@@ -1,0 +1,41 @@
+Interface pragmas
+Enter: Alice [Enter] <carol>
+A child's acquaintances: Carol [Child acquaint] <bob>
+  Bob: Carol asks for your consent to child acquaint.
+  Alice: Carol asks for your consent to child acquaint.
+  Carol [Children acquaint] <dave> <bob>
+  Dave: Carol asks for your consent to children acquaint.
+  Alice: Carol asks for your consent to children acquaint.
+  Bob: Carol asks for your consent to children acquaint.
+Child create: Alice [Join]
+  Bob: Alice asks for your consent to join.
+  Carol [Child create] <grupo>
+  Alice: Carol asks for your consent to child create.
+Of age: Alice [Of age]
+Ward and person: Carol [Child befriend]
+  Bob: Carol asks for your consent to child befriend.
+  Alice: Carol asks for your consent to child befriend.
+  Carol [Child end]
+  Alice [Child unfriend] <carol> <bob>
+Wards: Carol [Children befriend] <bob>
+  Dave: Carol asks for your consent to children befriend.
+  Alice: Carol asks for your consent to children befriend.
+  Bob: Carol asks for your consent to children befriend.
+  Carol [Children of one parent befriend]
+  Dave: Carol asks for your consent to children of one parent befriend.
+  Alice: Carol asks for your consent to children of one parent befriend.
+A ward's messages: Carol [Child message] <text> [Child post] <text> [Child post own] <text>
+A ward's group: Carol [Child close]
+  Alice [Parent close] <grupo>
+Ward join: Bob [Child join]
+  Carol: Bob asks for your consent to child join.
+  Alice: Bob asks for your consent to child join.
+  Carol [Children join] <bob>
+  Dave: Carol asks for your consent to children join.
+  Alice: Carol asks for your consent to children join.
+  Bob: Carol asks for your consent to children join.
+  Carol [Children of one parent join]
+  Dave: Carol asks for your consent to children of one parent join.
+  Alice: Carol asks for your consent to children of one parent join.
+  Alice [Child withdraw] <bob> <grupo>
+  Carol [Child leave] [Child remove]

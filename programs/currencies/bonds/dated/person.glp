@@ -3,8 +3,8 @@
 %% dispatcher draws and withdraws, and the screen the agent writes --- and
 %% grants its acts on the constructs, which are the person's taps and
 %% submissions, in the order of its script, each step when the one before it
-%% has taken effect on the screen.  It also writes the agent's calendar, which
-%% on a device the clock would.  The screen messages come out on its last
+%% has taken effect on the screen.  It also sets the machine's clock, which
+%% the agent reads the date from.  The screen messages come out on its last
 %% argument, for a play to read or a harness to print.  It calls nothing that
 %% reaches the person or the network, so it stands in the certified program's
 %% own plays (plays.glp) as well as in the village and the credit line
@@ -42,22 +42,21 @@ OpenTransfers ::= [] ; [OpenTransfer | OpenTransfers].
 GrantTail ::= tail(PersonIn(Drawn)?).
 
 %% Whether a step is out: a grant on the request form or on a card, from the
-%% script or from the escrow program's queue, or a date written to the
-%% calendar.
+%% script or from the escrow program's queue.
 Src ::= script ; todo.
-Pending ::= idle ; sent(Src) ; calendar_out.
+Pending ::= idle ; sent(Src).
 
 %% What a step can do now.
-Choice ::= grant(Integer, Path, Drawn) ; calendar(Integer) ; wait.
+Choice ::= grant(Integer, Path, Drawn) ; clock(Integer) ; advance(Integer) ; wait.
 
-%% person(Id, Draws, Grants, Cal, Script, Agreement, Screen): the person's
-%% grants and calendar on the mini-app's channels, and the screen messages as
+%% person(Id, Draws, Grants, Script, Agreement, Screen): the person's
+%% grants on the mini-app's channel, and the screen messages as
 %% they come.
-exported procedure person(Key?, _?, PersonIn(Drawn), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
-person(Id, Ds, Gs?, Cal?, Script, Ag, Screen?) :-
+exported procedure person(Key?, PersonOut(Drawn)?, PersonIn(Drawn), Script?, Agreement?, Stream(ScreenContent)).
+person(Id, Ds, Gs?, Script, Ag, Screen?) :-
     ground(Id?) |
     events(Ds?, Es),
-    person(Id?, Es?, Gs, Cal, Script?, [], no_form, [], [], idle, Ag?, [], Screen).
+    person(Id?, Es?, Gs, Script?, [], no_form, [], [], idle, Ag?, [], Screen).
 
 %% What the person channel carries, as one stream of events: the dispatcher's
 %% draws and withdrawals, the screen among them as the thread of construct 0.
@@ -82,7 +81,7 @@ newest([], Ds, Es?) :- events(Ds?, Es).
 newest([M], Ds, [msg(agent, person, M?)|Es?]) :- events(Ds?, Es).
 newest([_, M1|Ms], Ds, Es?) :- newest([M1?|Ms?], Ds?, Es).
 
-%% person(Id, Events, Grants, Cal, Script, Todo, Form, Swaps, Transfers,
+%% person(Id, Events, Grants, Script, Todo, Form, Swaps, Transfers,
 %% Pending, Agreement, Seen, Screen).  A step is done when the screen shows its
 %% effect.  Todo holds the acts the escrow program wills, performed before the
 %% script's next step; a wait at the head of the script is passive, and is
@@ -96,45 +95,45 @@ procedure path_of(_?, Path).
 path_of([I | Is], P?) :- integer(I?) | P = [I? | P1?], path_of(Is?, P1).
 path_of([], []).
 
-procedure person(Key?, Events?, PersonIn(Drawn), Stream(Integer), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Pending?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
+procedure person(Key?, Events?, PersonIn(Drawn), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Pending?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
 
 %% The request form: its question is the stream of requests, at position P.
-person(Id, [draw(C, _, input(P))|Es], Gs?, Cal?, Script, Todo, _, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
+person(Id, [draw(C, _, input(P))|Es], Gs?, Script, Todo, _, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
     ground(C?), ground(P?) |
     path_of(P?, P1),
-    try_step(Id?, Es?, Gs, Cal, Script?, Todo?, form(C?, P1?), Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).
+    try_step(Id?, Es?, Gs, Script?, Todo?, form(C?, P1?), Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).
 
 %% The card of a proposed swap, kept until the script reaches it.
-person(Id, [draw(C, _, card(offer(From, _, _), input(P)))|Es], Gs?, Cal?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
+person(Id, [draw(C, _, card(offer(From, _, _), input(P)))|Es], Gs?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
     ground(C?), ground(From?), ground(P?) |
     path_of(P?, P1),
-    try_step(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, [open_offer(From?, C?, P1?)|Swaps?], Ts?, Pending?, Ag?, Seen?, Screen).
+    try_step(Id?, Es?, Gs, Script?, Todo?, Form?, [open_offer(From?, C?, P1?)|Swaps?], Ts?, Pending?, Ag?, Seen?, Screen).
 
 %% The card of a proposed transfer: under an agreement the escrow program
 %% answers it when its state allows, now or after a later change of state;
 %% under none it is kept until the script reaches it.
-person(Id, [draw(C, _, card(offer_transfer(Kind, From, Given), input(P)))|Es], Gs?, Cal?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
+person(Id, [draw(C, _, card(offer_transfer(Kind, From, _, Given), input(P)))|Es], Gs?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
     ground(C?), ground(Kind?), ground(From?), ground(Given?), ground(P?) |
     read_transfer(Kind?, From?, Given?, C?, P?, T),
     answer_transfers(Ag?, [T?|Ts?], Gs, Tail, Ts1, Ag1),
-    then_step(Tail?, Id?, Es?, Cal, Script?, Todo?, Form?, Swaps?, Ts1?, Pending?, Ag1?, Seen?, Screen).
+    then_step(Tail?, Id?, Es?, Script?, Todo?, Form?, Swaps?, Ts1?, Pending?, Ag1?, Seen?, Screen).
 
 %% Any other construct is left; the dispatcher draws none, every construct of
 %% the agent being caught above.
-person(Id, [draw(_, _, _)|Es], Gs?, Cal?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
+person(Id, [draw(_, _, _)|Es], Gs?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
     otherwise |
-    person(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).
+    person(Id?, Es?, Gs, Script?, Todo?, Form?, Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).
 
 %% A card withdrawn: the person's answer to it took effect, and it is no
 %% longer on screen.  A step in flight is left alone: it leaves sent(Src) when
 %% the screen shows its effect.
-person(Id, [withdraw(_)|Es], Gs?, Cal?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
-    try_step(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).
+person(Id, [withdraw(_)|Es], Gs?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
+    try_step(Id?, Es?, Gs, Script?, Todo?, Form?, Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).
 
 %% The screen: passed on and noted; the escrow program reacts; the step in
 %% flight is done when the screen shows its effect; and a wait at the head of
 %% the script is over once the screen has shown its message, whenever it did.
-person(Id, [msg(_, _, M)|Es], Gs?, Cal?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, [M?|Screen?]) :-
+person(Id, [msg(_, _, M)|Es], Gs?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, [M?|Screen?]) :-
     ground(M?) |
     escrow # react(Ag?, M?, New, Ag1),
     append_steps(Todo?, New?, Todo1),
@@ -142,7 +141,7 @@ person(Id, [msg(_, _, M)|Es], Gs?, Cal?, Script, Todo, Form, Swaps, Ts, Pending,
     note(M?, Seen?, Seen1),
     settle_pending(Pending?, M?, Script?, Todo1?, Script1, Todo2, Pending1),
     settle_awaits(Script1?, Seen1?, Script2, Seen2),
-    then_step(Tail?, Id?, Es?, Cal, Script2?, Todo2?, Form?, Swaps?, Ts1?, Pending1?, Ag2?, Seen2?, Screen).
+    then_step(Tail?, Id?, Es?, Script2?, Todo2?, Form?, Swaps?, Ts1?, Pending1?, Ag2?, Seen2?, Screen).
 
 %% A transfer card as the escrow program reads it: the kind, the giver and the
 %% lots, read off what the card shows.
@@ -158,6 +157,7 @@ procedure kind_of(_?, Kind).
 kind_of(deposit, deposit).
 kind_of(release, release).
 kind_of(return, return).
+kind_of(pay, pay).
 
 procedure key_of(_?, Key).
 key_of(R, K?) :- string(R?) | K = R?.
@@ -191,9 +191,9 @@ on_offer(_, Kind, From, Lots, C, P, Ts, Gs?, Tail?, [open_transfer(Kind?, From?,
     answer_transfers(Ag?, Ts?, Gs, Tail, Ts1, Ag1).
 
 %% The person continues on the rest of its grant stream.
-procedure then_step(GrantTail?, Key?, Events?, Stream(Integer), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Pending?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
-then_step(tail(Gs?), Id, Es, Cal?, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
-    try_step(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).
+procedure then_step(GrantTail?, Key?, Events?, Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Pending?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
+then_step(tail(Gs?), Id, Es, Script, Todo, Form, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
+    try_step(Id?, Es?, Gs, Script?, Todo?, Form?, Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).
 
 procedure append_steps(Script?, Script?, Script).
 append_steps([S|Ss], New, [S?|Rest?]) :- append_steps(Ss?, New?, Rest).
@@ -234,38 +234,36 @@ settle_pending(sent(todo), M, S, [Step|T], S?, T1?, P?) :-
     ground(Step?) |
     done(Step?, M?, Dn),
     pop(Dn?, Step?, T?, sent(todo), T1, P).
-settle_pending(calendar_out, M, [Step|S], T, S1?, T?, P?) :-
-    ground(Step?) |
-    done(Step?, M?, Dn),
-    pop(Dn?, Step?, S?, calendar_out, S1, P).
-
 procedure pop(Decision?, Step?, Script?, Pending?, Script, Pending).
 pop(yes, _, Rest, _, Rest?, idle).
 pop(no, Step, Rest, P, [Step?|Rest?], P?).
 
 %% Whether the screen shows the step's effect.
 procedure done(Step?, ScreenContent?, Decision).
-done(mint(K), minted(K1, D1), yes) :- K? =:= K1?, D1? =?= now | true.
-done(mint(K, D), minted(K1, D1), yes) :- K? =:= K1?, D? =?= D1? | true.
-done(advance(T), date_advanced(T1), yes) :- T? =:= T1? | true.
+done(issue(K), issued(K1, D1), yes) :- K? =:= K1?, D1? =?= now | true.
+done(issue(K, D), issued(K1, D1), yes) :- K? =:= K1?, D? =?= D1? | true.
+done(issue(_, D), not_later(D1, _), yes) :- D? =:= D1? | true.
 done(swap(Q, _, _, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(swap(Q, _, _, _, _, _, _), swap_declined(Q1), yes) :- Q? =?= Q1? | true.
 done(swap(Q, _, _, _, _, _, _), swap_same(Q1, _, _, _), yes) :- Q? =?= Q1? | true.
-done(pay(Q, K), paid(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
-done(pay(Q, K), not_accepted(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
+done(pay_issuer(Q, K), paid(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
+done(pay_issuer(Q, K), not_accepted(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
+done(pay(Q, _, _, _), transferred(pay, Q1), yes) :- Q? =?= Q1? | true.
+done(pay(Q, _, _, _), transfer_declined(pay, Q1), yes) :- Q? =?= Q1? | true.
 done(redeem(Q, D, R, D1), redeemed(Q1, D2, R1, D3), yes) :- Q? =?= Q1?, D? =?= D2?, R? =?= R1?, D1? =?= D3? | true.
 done(redeem(Q, D, _, _), redeem_same(Q1, D1), yes) :- Q? =?= Q1?, D? =?= D1? | true.
 done(redeem(Q, D, _, _), not_mature(Q1, D1), yes) :- Q? =?= Q1?, D? =?= D1? | true.
 done(redeem(Q, _, _, _), refused(Q1), yes) :- Q? =?= Q1? | true.
 done(redeem(Q, _, _, _), menu(Q1, _), yes) :- Q? =?= Q1? | true.
-done(deposit(E, _, _, _), transferred(deposit, E1), yes) :- E? =?= E1? | true.
-done(deposit(E, _, _, _), transfer_declined(deposit, E1), yes) :- E? =?= E1? | true.
-done(release(Q, _, _, _), transferred(release, Q1), yes) :- Q? =?= Q1? | true.
-done(release(Q, _, _, _), transfer_declined(release, Q1), yes) :- Q? =?= Q1? | true.
-done(return(P, _, _, _), transferred(return, P1), yes) :- P? =?= P1? | true.
-done(return(P, _, _, _), transfer_declined(return, P1), yes) :- P? =?= P1? | true.
+done(deposit(E, _, _, _, _, _), transferred(deposit, E1), yes) :- E? =?= E1? | true.
+done(deposit(E, _, _, _, _, _), transfer_declined(deposit, E1), yes) :- E? =?= E1? | true.
+done(release(Q, _, _, _, _, _), transferred(release, Q1), yes) :- Q? =?= Q1? | true.
+done(release(Q, _, _, _, _, _), transfer_declined(release, Q1), yes) :- Q? =?= Q1? | true.
+done(return(P, _, _, _, _, _), transferred(return, P1), yes) :- P? =?= P1? | true.
+done(return(P, _, _, _, _, _), transfer_declined(return, P1), yes) :- P? =?= P1? | true.
 done(accept(Q), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(accept_transfer(Q), received_transfer(_, Q1, _), yes) :- Q? =?= Q1? | true.
+done(decline_transfer(Q), declined_transfer(_, Q1), yes) :- Q? =?= Q1? | true.
 done(_, lacking(_, _, _), yes).
 done(_, no_conversation(_), yes).
 done(_, _, no) :- otherwise | true.
@@ -273,41 +271,52 @@ done(_, _, no) :- otherwise | true.
 %% Grant the current step, if its construct is on screen and no grant is out:
 %% the escrow program's queue first, then the script; a wait at the head of
 %% the script waits.
-procedure try_step(Key?, Events?, PersonIn(Drawn), Stream(Integer), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Pending?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
-try_step(Id, Es, Gs?, Cal?, Script, Todo, Form, Swaps, Ts, sent(Src), Ag, Seen, Screen?) :-
-    person(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, Swaps?, Ts?, sent(Src?), Ag?, Seen?, Screen).
-try_step(Id, Es, Gs?, Cal?, Script, Todo, Form, Swaps, Ts, calendar_out, Ag, Seen, Screen?) :-
-    person(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, Swaps?, Ts?, calendar_out, Ag?, Seen?, Screen).
-try_step(Id, Es, Gs?, Cal?, Script, [Step|Todo], Form, Swaps, Ts, idle, Ag, Seen, Screen?) :-
+procedure try_step(Key?, Events?, PersonIn(Drawn), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Pending?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
+try_step(Id, Es, Gs?, Script, Todo, Form, Swaps, Ts, sent(Src), Ag, Seen, Screen?) :-
+    person(Id?, Es?, Gs, Script?, Todo?, Form?, Swaps?, Ts?, sent(Src?), Ag?, Seen?, Screen).
+try_step(Id, Es, Gs?, Script, [Step|Todo], Form, Swaps, Ts, idle, Ag, Seen, Screen?) :-
     ground(Step?), ground(Form?), ground(Swaps?), ground(Ts?) |
     pick(Step?, Form?, Swaps?, Ts?, Choice, Swaps1, Ts1),
-    act(Choice?, todo, Id?, Es?, Gs, Cal, Script?, [Step?|Todo?], Form?, Swaps1?, Ts1?, Ag?, Seen?, Screen).
-try_step(Id, Es, Gs?, Cal?, [Step|Script], [], Form, Swaps, Ts, idle, Ag, Seen, Screen?) :-
+    act(Choice?, todo, Id?, Es?, Gs, Script?, [Step?|Todo?], Form?, Swaps1?, Ts1?, Ag?, Seen?, Screen).
+try_step(Id, Es, Gs?, [Step|Script], [], Form, Swaps, Ts, idle, Ag, Seen, Screen?) :-
     ground(Step?), ground(Form?), ground(Swaps?), ground(Ts?) |
     pick(Step?, Form?, Swaps?, Ts?, Choice, Swaps1, Ts1),
-    act(Choice?, script, Id?, Es?, Gs, Cal, [Step?|Script?], [], Form?, Swaps1?, Ts1?, Ag?, Seen?, Screen).
-try_step(Id, Es, Gs?, Cal?, [], [], Form, Swaps, Ts, idle, Ag, Seen, Screen?) :-
-    person(Id?, Es?, Gs, Cal, [], [], Form?, Swaps?, Ts?, idle, Ag?, Seen?, Screen).
+    act(Choice?, script, Id?, Es?, Gs, [Step?|Script?], [], Form?, Swaps1?, Ts1?, Ag?, Seen?, Screen).
+try_step(Id, Es, Gs?, [], [], Form, Swaps, Ts, idle, Ag, Seen, Screen?) :-
+    person(Id?, Es?, Gs, [], [], Form?, Swaps?, Ts?, idle, Ag?, Seen?, Screen).
 
 %% A request is granted on the request form, once it is drawn: the step's
 %% term, the request; an acceptance on the proposer's card.
 procedure pick(Step?, Form?, OpenOffers?, OpenTransfers?, Choice, OpenOffers, OpenTransfers).
-pick(mint(K), form(C, P), Swaps, Ts, grant(C?, P?, mint(K?)), Swaps?, Ts?).
-pick(mint(K, D), form(C, P), Swaps, Ts, grant(C?, P?, mint(K?, D?)), Swaps?, Ts?).
+pick(issue(K), form(C, P), Swaps, Ts, grant(C?, P?, issue(K?)), Swaps?, Ts?).
+pick(issue(K, D), form(C, P), Swaps, Ts, grant(C?, P?, issue(K?, D?)), Swaps?, Ts?).
 pick(swap(Q, U, D, K, V, D1, K1), form(C, P), Swaps, Ts, grant(C?, P?, swap(Q?, U?, D?, K?, V?, D1?, K1?)), Swaps?, Ts?).
-pick(pay(Q, K), form(C, P), Swaps, Ts, grant(C?, P?, pay(Q?, K?)), Swaps?, Ts?).
+pick(pay_issuer(Q, K), form(C, P), Swaps, Ts, grant(C?, P?, pay_issuer(Q?, K?)), Swaps?, Ts?).
+pick(pay(Q, U, D, K), form(C, P), Swaps, Ts, grant(C?, P?, pay(Q?, U?, D?, K?)), Swaps?, Ts?).
 pick(redeem(Q, D, R, D1), form(C, P), Swaps, Ts, grant(C?, P?, redeem(Q?, D?, R?, D1?)), Swaps?, Ts?).
-pick(deposit(E, U, D, K), form(C, P), Swaps, Ts, grant(C?, P?, deposit(E?, U?, D?, K?)), Swaps?, Ts?).
-pick(release(Q, U, D, K), form(C, P), Swaps, Ts, grant(C?, P?, release(Q?, U?, D?, K?)), Swaps?, Ts?).
-pick(return(R, U, D, K), form(C, P), Swaps, Ts, grant(C?, P?, return(R?, U?, D?, K?)), Swaps?, Ts?).
-pick(advance(T), _, Swaps, Ts, calendar(T?), Swaps?, Ts?).
+pick(deposit(E, U, D, K, Q, Cn), form(C, P), Swaps, Ts, grant(C?, P?, deposit(E?, U?, D?, K?, Q?, Cn?)), Swaps?, Ts?).
+pick(release(Q, U, D, K, R, Cn), form(C, P), Swaps, Ts, grant(C?, P?, release(Q?, U?, D?, K?, R?, Cn?)), Swaps?, Ts?).
+pick(return(R, U, D, K, Q, Cn), form(C, P), Swaps, Ts, grant(C?, P?, return(R?, U?, D?, K?, Q?, Cn?)), Swaps?, Ts?).
+pick(clock(T), _, Swaps, Ts, clock(T?), Swaps?, Ts?).
+pick(advance(T), _, Swaps, Ts, advance(T?), Swaps?, Ts?).
 pick(accept(From), _, Swaps, Ts, Choice?, Swaps1?, Ts?) :-
     ground(From?) |
     find_offer(From?, Swaps?, Choice, Swaps1).
 pick(accept_transfer(From), _, Swaps, Ts, Choice?, Swaps?, Ts1?) :-
     ground(From?) |
     find_transfer(From?, Ts?, Choice, Ts1).
+pick(decline_transfer(From), _, Swaps, Ts, Choice?, Swaps?, Ts1?) :-
+    ground(From?) |
+    find_transfer(From?, Ts?, Found, Ts1),
+    refuse(Found?, Choice).
 pick(_, _, Swaps, Ts, wait, Swaps?, Ts?) :- otherwise | true.
+
+%% The grant that refuses the card found: no in place of yes.
+procedure refuse(Choice?, Choice).
+refuse(grant(C, P, _), grant(C?, P?, no)).
+refuse(wait, wait).
+refuse(clock(_), wait).
+refuse(advance(_), wait).
 
 procedure find_offer(Key?, OpenOffers?, Choice, OpenOffers).
 find_offer(From, [open_offer(F, C, P)|Rest], grant(C?, P?, yes), Rest?) :-
@@ -325,12 +334,45 @@ find_transfer(From, [O|Rest], Ch?, [O?|Rest1?]) :-
     find_transfer(From?, Rest?, Ch, Rest1).
 find_transfer(_, [], wait, []).
 
-procedure act(Choice?, Src?, Key?, Events?, PersonIn(Drawn), Stream(Integer), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
+procedure act(Choice?, Src?, Key?, Events?, PersonIn(Drawn), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
 %% A grant, on the request form or on a card.
-act(grant(C, P, X), Src, Id, Es, [input(C?, P?, X?)|Gs?], Cal?, Script, Todo, Form, Swaps, Ts, Ag, Seen, Screen?) :-
-    person(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, Swaps?, Ts?, sent(Src?), Ag?, Seen?, Screen).
-%% A date is written to the calendar.
-act(calendar(T), _, Id, Es, Gs?, [T?|Cal?], Script, Todo, Form, Swaps, Ts, Ag, Seen, Screen?) :-
-    person(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, Swaps?, Ts?, calendar_out, Ag?, Seen?, Screen).
-act(wait, _, Id, Es, Gs?, Cal?, Script, Todo, Form, Swaps, Ts, Ag, Seen, Screen?) :-
-    person(Id?, Es?, Gs, Cal, Script?, Todo?, Form?, Swaps?, Ts?, idle, Ag?, Seen?, Screen).
+act(grant(C, P, X), Src, Id, Es, [input(C?, P?, X?)|Gs?], Script, Todo, Form, Swaps, Ts, Ag, Seen, Screen?) :-
+    person(Id?, Es?, Gs, Script?, Todo?, Form?, Swaps?, Ts?, sent(Src?), Ag?, Seen?, Screen).
+%% clock(T) sets the machine's clock to day T, and advance(T) sets it to day
+%% T where it is before it, by GLP's set_clock/1, in Unix milliseconds: the
+%% clock is the machine's, in a play the one clock of every agent, on a
+%% smartphone the phone's, and the agent reads the current date from it.  The
+%% screen messages then carry date(D), D the day the clock gives, the person's
+%% own, and the escrow program is told it, nothing else telling it that a day
+%% has come.
+act(clock(T), script, Id, Es, Gs?, [_|Script], Todo, Form, Swaps, Ts, Ag, Seen, Screen?) :-
+    integer(T?) |
+    Ms := T? * 86400000,
+    set_clock(Ms?),
+    dated(T?, Id?, Es?, Gs, Script?, Todo?, Form?, Swaps?, Ts?, Ag?, Seen?, Screen).
+act(advance(T), script, Id, Es, Gs?, [_|Script], Todo, Form, Swaps, Ts, Ag, Seen, Screen?) :-
+    integer(T?) |
+    today(Day),
+    forward(Day?, T?, Id?, Es?, Gs, Script?, Todo?, Form?, Swaps?, Ts?, Ag?, Seen?, Screen).
+act(wait, _, Id, Es, Gs?, Script, Todo, Form, Swaps, Ts, Ag, Seen, Screen?) :-
+    person(Id?, Es?, Gs, Script?, Todo?, Form?, Swaps?, Ts?, idle, Ag?, Seen?, Screen).
+
+procedure forward(Integer?, Integer?, Key?, Events?, PersonIn(Drawn), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
+forward(Day, T, Id, Es, Gs?, Script, Todo, Form, Swaps, Ts, Ag, Seen, Screen?) :-
+    Day? < T? |
+    Ms := T? * 86400000,
+    set_clock(Ms?),
+    dated(T?, Id?, Es?, Gs, Script?, Todo?, Form?, Swaps?, Ts?, Ag?, Seen?, Screen).
+forward(Day, T, Id, Es, Gs?, Script, Todo, Form, Swaps, Ts, Ag, Seen, Screen?) :-
+    Day? >= T? |
+    dated(Day?, Id?, Es?, Gs, Script?, Todo?, Form?, Swaps?, Ts?, Ag?, Seen?, Screen).
+
+%% The day is D: the screen messages carry date(D), the escrow program is told
+%% it, and the person goes on.
+procedure dated(Integer?, Key?, Events?, PersonIn(Drawn), Script?, Script?, Form?, OpenOffers?, OpenTransfers?, Agreement?, Stream(ScreenContent)?, Stream(ScreenContent)).
+dated(D, Id, Es, Gs?, Script, Todo, Form, Swaps, Ts, Ag, Seen, [date(D?)|Screen?]) :-
+    integer(D?) |
+    escrow # react(Ag?, date(D?), New, Ag1),
+    append_steps(Todo?, New?, Todo1),
+    settle_awaits(Script?, Seen?, Script1, Seen1),
+    try_step(Id?, Es?, Gs, Script1?, Todo1?, Form?, Swaps?, Ts?, idle, Ag1?, Seen1?, Screen).

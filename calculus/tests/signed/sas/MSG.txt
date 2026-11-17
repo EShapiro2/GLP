@@ -1,6 +1,0 @@
-MSG: Messages
-MSG extends GSG.
-Vocabulary: y has the message t from x = message(y,x,t).
-After x sends t to y: y has the message t from x.
-MSG:0 - | Alice and Bob are persons, Text a message.
-MSG:1 ■ Message: message(Bob,Alice,Text) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.

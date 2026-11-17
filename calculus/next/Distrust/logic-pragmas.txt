@@ -1,0 +1,11 @@
+Distrust
+Distrust extends Friendship.
+Alice, Bob and Carol are persons.
+1. ■ Distrust: Alice may declare distrust of Carol, provided Alice knows Carol and Alice and Carol are not friends. Distrust friend: Alice may declare distrust of her friend Carol, provided Alice knows Carol.
+2. ■ Propagate: Alice may declare distrust of Carol, provided Alice does not know Carol, Alice and Bob are friends and Bob has declared distrust of Carol.
+3. ■ Cease: Alice may withdraw her declaration of distrust of Carol.
+Logic pragmas.
+Vocabulary: x has declared distrust of y = distrusts(x,y).
+After x declares distrust of y, which requires x has not declared distrust of y: x has declared distrust of y.
+After x declares distrust of x's friend y, which requires x has not declared distrust of y: x has declared distrust of y and x and y are no longer friends.
+After x withdraws x's declaration of distrust of y: no longer x has declared distrust of y.

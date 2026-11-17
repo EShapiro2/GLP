@@ -1,0 +1,52 @@
+% GPD: Grassroots Programs Dissemination --- the contract, the one copy, its owner's (Coordination Appendix C; claude.md, "Sessions").
+% Owner: GSA (Udi, 2026-11-07).  The paper, /Users/udi/Grassroots/GSA/main_SGSG.tex, prints it in its box and cites a clause as GPD:1.
+% Paper: GSA, The Grassroots Super-App and App Store, in preparation
+% Extends: GFP, Grassroots Forwarding with Provenance, GSC's, factored out of GSNP with GAI (Udi, 2026-11-07, approving GSA #1's proposal; proposed to GSC and GAI the same day), and through it GSG and GKK.  It cites their clauses whole and restates none.
+% Defines: program and developer, defined in the box after the declaration, a contract being self-contained; a program is an item of GFP's, compiled code signed by its compiler that gives its contract, its developer its author (Udi, 2026-11-07).  Person, knowing a person, friend and item are defined with GKK, GSG and GFP; Alice, Bob and Carol are variables naming distinct persons.
+% Last changed: 2026-11-15, the Calculus's text adopted, at the branch Calculus 79ec48f, its Logic pragmas as mended there (first adopted at c475902), by calculus/MIGRATION.md, which Udi confirmed: the contract as the Calculus has it, its Logic pragmas after the clauses, and the Interface and Implementation pragmas keyed to its clauses' titles, their buttons its acts (GSA #6); 2026-11-10, the tab Offers lists the items offered to Alice, item a predicate of the contract (Udi, 2026-11-10 13:49 UTC, approving GSA #3; Code #27, 12:48 UTC); 2026-11-07, implementation pragmas beside the interface pragmas, the checks of Program Installation, the two kinds and their names proposed to GSC (Udi, 2026-11-07); provenance by GFP: GPD extends GFP, publishing creates a program as an item, offering forwards it, an invitation adds the inviter's signature (Udi, 2026-11-07); the schemas rewritten on GFP the same evening; named GPD, Grassroots Programs Dissemination, by Udi in Overleaf (GSA 83e6201), GSA until then; Offering and Installation two clauses, Installation in Udi's words, and the clause titles made informative (Udi, 2026-11-07); written by GSA #1 Cowork from the GSA paper (Sections 3 and 6), at Udi's word that what the super-app does by hand is specified as a contract where it can be; a draft for Udi's approval and GSC's checker.
+% Schemas: Programs.glp beside this file, the full schemas, printed from the Logic pragmas by calculus/tools/adopt.py and never written by hand; a check holds it to what the tool prints.
+Programs
+Programs extends Forwarding (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration.
+Alice, Bob and Carol are persons.
+1. ◆ Publish: Carol may publish a program by signing it, attesting that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
+2. ■ Developer Trust. Trust: Alice may declare trust in Carol, whom she knows, as a developer. Untrust: Alice may withdraw the declaration.
+3. ■ Offer: Carol may offer a program she holds to her friend Alice by forwarding it to her.
+4. ■ Install: Alice may install a program she published, as well as a program offered to her whose developer she trusts.
+5. ■ Invite: Alice may invite her friend Bob to join her in a program she installed, with the consent of Bob, who trusts its developer; Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
+6. ■ Leave: Alice may leave a program she installed; it is then no longer installed, and her participation in it with every participant ends.
+Logic pragmas
+Programs extends Forwarding (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+A *program* is an item: compiled code, signed by its compiler, that gives the grassroots contract it is compiled from, its clauses and its speech-act schemas; its *developer* is its author. Alice *trusts* Carol *as a developer* when she has declared it and has not withdrawn the declaration.
+Alice, Bob, Carol and Dave are persons, Carol and Dave possibly Alice, Bob or one person, Prog a program.
+1. ◆ Publish: Carol may publish Prog by signing it. Carol attests that its schemas say what its clauses say, that it is the result of compiling the schemas, and that it is expected to behave correctly according to the contract.
+2. ■ Developer Trust. Trust: Alice may declare trust in Carol as a developer, provided Alice knows Carol. Untrust: Alice may withdraw her declaration of trust in Carol as a developer.
+3. ■ Offer: Carol may offer Prog of Dave to Alice, provided Carol holds Prog of Dave and Carol and Alice are friends. Carol offers it by forwarding it to Alice.
+4. ■ Install own: Alice may install her own Prog, provided Alice holds Prog of Alice. Install: Alice may install Prog of Carol, provided Alice holds Prog of Carol and Alice trusts Carol as a developer.
+5. ■ Invite: Alice may invite Bob to join in Prog of Carol, with the consent of Bob, provided Alice and Bob are friends, Alice has Prog of Carol installed and Bob trusts Carol as a developer. Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
+6. ■ Leave: Alice may leave Prog of Carol.
+Logic pragmas.
+Vocabulary: x holds p of y = program(x,p,y); x trusts y as a developer = trusts_developer(x,y); x has p of y installed = installed(x,p,y); x is a participant of p of z with y = participant(x,p,z,y).
+x has no participation in p of z: x is a participant of p of z with no one and no one is a participant of p of z with x.
+After x publishes p by signing it, which requires x does not hold p of x: x holds p of x.
+After x declares trust in y as a developer, which requires x does not trust y as a developer: x trusts y as a developer.
+After x withdraws x's declaration of trust in y as a developer: no longer x trusts y as a developer.
+After x offers p of z to y: y holds p signed by x of z.
+After x installs x's own p, which requires x does not have p of x installed: x has p of x installed.
+After x installs p of z, which requires x does not have p of z installed: x has p of z installed.
+After x invites y to join in p of z: y holds p signed by x of z, y has p signed by x of z installed, x is a participant of p of z with y and y is a participant of p of z with x.
+After x leaves p of z: no longer x has p of z installed and x has no participation in p of z.
+Interface pragmas
+Look: 📦, os
+Programs: those Alice installed.
+Developers: Alice trusts developers of her choice.
+Offers: the programs Alice holds.
+Publish: Carol [Publish] <prog>
+Developer Trust: Alice [Trust] [Untrust]
+Offer: Carol [Offer]
+Install: Alice [Install own] [Install]
+Invite: Alice [Invite]
+  Bob: Alice invites you to join her in a program.
+Leave: Alice [Leave]
+Implementation pragmas
+Install: before installing a program, Alice's app checks that its developer is one she trusts, that its schemas pass the checker, and that its compiler's certificate matches its code; the code is type-checked when activated.

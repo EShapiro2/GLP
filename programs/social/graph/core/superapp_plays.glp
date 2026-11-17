@@ -77,15 +77,16 @@ person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
 %% The certified mini-app: pingapp.glpw beside this program, written by the
 %% REPL's :artefact from ../pingapp and read with load_file/2 --- a Module
 %% where its certificate verifies, its text otherwise.  certified/4 gives the
-%% module, the compiler's key its certificate carries, and the creator's
-%% certification, signed here over its source identity, the contract's two act
-%% schemas and the checker's verdict.
+%% module, the compiler's key its certificate carries, and the developer's
+%% warranty: the person publishes the program, GPD:1, signing publish(Src, Cmp),
+%% its source and compiled identities, under the person's key, and installs it
+%% as their own, GPD:4.
 procedure certified(Content?, String, String).
 certified(M, CK?, CSig?) :-
     module(M?) |
-    decompose_module(M?, CK, Src, _),
+    decompose_module(M?, CK, Src, Cmp),
     self_key(K),
-    sign(creator_cert(Src?, [friendship, ending_a_friendship], syntactically_grassroots), K?, CSig).
+    sign(publish(Src?, Cmp?), K?, CSig).
 
 %% =============================================================================
 %% play_invite(A, B, AliceUi, BobUi): alice, A, installs the mini-app, befriends bob and invites him;
@@ -500,17 +501,20 @@ play_forged_cert(Me, Installed?) :-
 
 %% =============================================================================
 %% play_verdict(Me, Kind, Installed): Me installs pingapp's certified artefact
-%% under a creator's certification, signed over its source identity, whose
-%% verdict is the one Kind names, each as the checker prints it
-%% (programs/gsc/check.glp): with_wards, syntactically_grassroots_with_wards,
-%% cascade/GAI's verdict; wards, grassroots_with_wards, of the same terms;
-%% not_grassroots, the verdict on a contract with no introductory act;
-%% malformed, the verdict on a contract with a schema not formed as a schema
-%% is; and word, the word grassroots, which the checker never prints.  The
-%% super-app installs a program whose verdict certifies its contract (GSA
-%% paper, Section 3, "A grassroots program is compiled from its contract").
-%% Expected: Installed = [ping] for with_wards and wards, [] for
-%% not_grassroots, malformed and word; → succeeds.
+%% under a signed term of the form the super-app took before the audit's
+%% Finding 1, creator_cert(Src, Acts, Verdict), signed by the person over the
+%% source identity, whose verdict is the one Kind names, each as the checker
+%% prints it (programs/gsc/check.glp): with_wards,
+%% syntactically_grassroots_with_wards, cascade/Agents's verdict; wards,
+%% grassroots_with_wards, of the same terms; not_grassroots, the verdict on a
+%% contract with no introductory act; malformed, the verdict on a contract with
+%% a schema not formed as a schema is; and word, the word grassroots, which the
+%% checker never prints.  None is the developer's warranty, publish(Src, Cmp):
+%% a verdict is the app's to compute from the program's schemas by GPD's
+%% Implementation pragma, never a signer's to assert (udi-shapiro/
+%% Grassroots-Audit, programs/social/graph/core/agent.glp.md, Finding 1;
+%% docs/compiled-home.md in GSA's repository, Section 4).
+%% Expected: Installed = [] for each Kind; → succeeds.
 %% =============================================================================
 exported procedure play_verdict(Key?, Constant?, Stream(Constant)).
 play_verdict(Me, Kind, Installed?) :-
@@ -549,6 +553,41 @@ verdict_cert(word, M, CSig?) :-
     decompose_module(M?, _, Src, _),
     self_key(K),
     sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
+
+%% =============================================================================
+%% play_warranty(Me, Kind, Installed): Me installs pingapp's certified artefact
+%% under a developer's warranty signed by Me that does not bind pingapp's two
+%% identities: other, publish(Src, Cmp) of currency's artefact; source,
+%% pingapp's source identity with a compiled identity not its own.  The
+%% warranty binds the exact program, its source and its compiled code (GPD:1;
+%% docs/compiled-home.md in GSA's repository, Section 4.3, check 1).
+%% Expected: Installed = [] for each Kind --- against
+%% play_install(Me, "pingapp.glpw", ping, I), I = [ping]; → succeeds.
+%% =============================================================================
+exported procedure play_warranty(Key?, Constant?, Stream(Constant)).
+play_warranty(Me, Kind, Installed?) :-
+    ground(Me?) |
+    load_file("pingapp.glpw", C),
+    load_file("currency.glpw", O),
+    warranty_of(Kind?, C?, O?, M, W),
+    new_channel(Ui, Person),
+    agent # agent(Me?, [msg(person, Me?, install(ping, M?, W?, Ui?)),
+                        msg(person, Me?, installed(Installed))],
+                  [], [user_output(Out), net_output(NetOut)]),
+    hold_person(Person?), sink(Out?), sink(NetOut?).
+
+procedure warranty_of(Constant?, Content?, Content?, Content, String).
+warranty_of(other, M, O, M?, W?) :-
+    module(M?), module(O?) |
+    decompose_module(O?, _, Src, Cmp),
+    self_key(K),
+    sign(publish(Src?, Cmp?), K?, W).
+warranty_of(source, M, O, M?, W?) :-
+    module(M?), module(O?) |
+    decompose_module(M?, _, Src, _),
+    decompose_module(O?, _, _, Cmp),
+    self_key(K),
+    sign(publish(Src?, Cmp?), K?, W).
 
 %% play_forged_invite(A, B, Out): bob's super-app, B, receives from alice, A, an invitation
 %% that is not a signed term, with one end of a root channel, and then a

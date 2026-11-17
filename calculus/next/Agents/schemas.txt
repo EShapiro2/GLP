@@ -1,0 +1,24 @@
+Agents
+Agents instantiates Guardians with guardians(z) for deciders(z), an AI agent for a ward and a principal for a creator, composes it with Forwarding, and restricts, strengthens and extends the composition (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Vocabulary: z holds the attestation t = attestation(z,t); y holds a record of z's attestation t = attestation_record(y,z,t).
+Roles: the guardians of z = guardians(z), listed by z has y as a guardian, y is a guardian of z and y holds a record of z's attestation Proof.
+Agents:0 - | The *developer* of an AI agent is the signer of its code.
+Agents:0 - | Alice and Bob are persons, Alf an AI agent, Proof and Seal attestations, Item an item; in clause 2 Carol and Dave are AI agents.
+Agents:1 ○ | AI developer and guardian accountability.
+Agents:1 ○ | The developer of Alf will be accountable for Alf's defects.
+Agents:1 ○ | Every guardian of Alf will be accountable for operating it recklessly.
+Agents:2 ■ | AI acts.
+Agents:2 ■ Enter: Guardians:1 + attestation(Alf,Proof), attestation_record(Alice,Alf,Proof) <- item(Alice,Proof), author(Alice,Proof).
+Agents:2 ■ | The principal of Alf attests at its creation, signed over Alf's public key, that Alf runs code signed by its developer.
+Agents:2 ■ Make guardian: Guardians:2 Make guardian + attestation_record(Bob,Alf,Proof) <- attestation(Alf,Proof).
+Agents:2 ■ AI agent acquaint: Guardians:3 Ward acquaint + attestation_record(Bob,Alf,Proof) <- attestation(Alf,Proof).
+Agents:2 ■ AI agent befriend: Guardians:3 Ward befriend <- attestation(Alf,Proof).
+Agents:2 ■ AI agent end: Guardians:3 Ward end <- attestation(Alf,Proof).
+Agents:2 ■ AI agents acquaint: Guardians:4 Wards acquaint + attestation_record(Carol,Dave,Seal), attestation_record(Dave,Carol,Proof) <- attestation(Carol,Proof), attestation(Dave,Seal).
+Agents:2 ■ AI agents befriend: Guardians:4 Wards befriend <- attestation(Carol,Proof), attestation(Dave,Seal).
+Agents:2 ■ AI agents of one guardian befriend: Guardians:4 Wards of one guardian befriend <- attestation(Carol,Proof), attestation(Dave,Seal).
+Agents:2 ■ Sign: Forwarding:1 <- person(Alice).
+Agents:2 ■ Forward: Forwarding:2 <- person(Alice).
+Agents:2 ■ Agent sign: item(Alf,Item) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), ~item(Alf,Item) guarded by Alf.
+Agents:2 ■ Agent forward: item(Bob,Item@Alf) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), item(Alf,Item), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
+Agents:2 ■ | Every act of Alf requires this attestation and names its developer and its principal.

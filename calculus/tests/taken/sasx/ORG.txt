@@ -1,7 +1,0 @@
-ORG: Organisations in a Currency (expanded schemas)
-CUR:0 - | Alice and Bob are persons, Sum and Total numbers.
-CUR:1 ■ Pay: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum) guarded by Alice.
-CUR:1+ORG:1 ■ Pay for an organisation: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum) <- knows(Alice,Bob), coin(Alice,Alice,*Sum), member(Erin,Alice) guarded by Erin taken for Alice by Erin.
-CUR:2 ■ Swap: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total) guarded by Alice, Bob.
-CUR:2+ORG:2 ■ Swap of two organisations: ~coin(Alice,Alice,*Sum), coin(Bob,Alice,*Sum), ~coin(Bob,Bob,*Total), coin(Alice,Bob,*Total) <- coin(Alice,Alice,*Sum), coin(Bob,Bob,*Total), member(Erin,Alice), member(Frank,Bob) guarded by Erin, Frank taken for Alice by Erin and for Bob by Frank.
-ORG:0 - | Erin and Frank are persons, Alice and Bob organisations or persons, Sum and Total numbers.

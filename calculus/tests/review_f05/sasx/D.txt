@@ -1,3 +1,0 @@
-D: Instantiate the role (expanded schemas)
-C:0 - | Alice is a person.
-C:1 ■ Act: ready(Alice) <- guarded by Alice, overseers(Alice) must overseers(Alice).

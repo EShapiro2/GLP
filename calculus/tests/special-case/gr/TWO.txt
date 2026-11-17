@@ -1,0 +1,4 @@
+TWO: A restriction for two kinds
+TWO restricts Bonds.
+Alice and Bob are parties, Today a date.
+1. ■ Pay: Notes:3, for coins and bonds, only if the current date is Today.

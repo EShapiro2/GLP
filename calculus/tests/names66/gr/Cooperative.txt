@@ -1,0 +1,8 @@
+Cooperative
+Cooperative extends Knowledge.
+A *cooperative* is owned by its members.
+Alice and Bob are persons, Coop a cooperative.
+1. ■ Join: Alice may join the cooperative Coop, with the consent of Bob, provided Bob is a member of Coop. Cooperative members vote.
+Logic pragmas.
+Vocabulary: x is a member of c = member(x,c).
+After x joins the cooperative c: x is a member of c.

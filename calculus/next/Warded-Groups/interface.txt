@@ -1,0 +1,107 @@
+Warded Groups
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ■ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Person unfriend.  Alice may end her friendship with Bob.
+6. ■ Message.  Alice may send a message to her friend Bob.
+7. ■ Create.  Alice may create a group, of which she is the leader and first member.
+8. ■ Close.  Alice may close the group by leaving it.
+9. ■ Join.  Alice, the leader of a group, may add her friend Bob to it, with the consent of Bob.
+10. ■ Remove.  Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+11. ■ Leave.  Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+12. ■ Post.  A member of a group may send a message to the group.
+13. ■ Post own.  A member of a group may send a message to the group.
+14. ■ Deliver.  Its leader delivers it to every current member.
+15. ■ Deliver leader.  Its leader delivers it to every current member.
+16. ■ Enter.  Alice may create a ward, Carol, and establish Carol's identity by choosing Carol's key pair, and Carol must consent.
+17. ■ Make guardian.  Those who decide for Carol may make Bob, a friend of a guardian of Carol, a guardian and a friend of Carol, with the consent of Bob.
+18. ■ Resign.  Bob may end his guardianship of Carol.
+19. ■ End guardian.  Those who decide for Carol, other than Bob, may end Bob's guardianship.
+20. ■ Guardian unfriend.  Bob may end his friendship with Carol, which ends his guardianship.
+21. ■ Ward acquaint.  Carol, a ward of Alice, and Bob may jointly come to know each other.
+22. ■ Ward befriend.  Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends.
+23. ■ Ward end.  Carol, Bob or Alice may end the relation of Bob and Carol.
+24. ■ Unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
+25. ■ Ward unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
+26. ■ Wards acquaint.  Carol, a ward of Alice, and Dave, a ward of Bob, may jointly come to know each other.
+27. ■ Wards befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+28. ■ Wards of one guardian befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+29. ■ Retire.  Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
+30. ■ Ward message.  Carol may send a message to a friend (Groups:1).
+31. ■ Ward post.  Carol may send a message to a group (Groups:4).
+32. ■ Ward post own.  Carol may send a message to a group (Groups:4).
+33. ■ Ward create.  Carol may create a group (Groups:2).
+34. ■ Ward close.  Carol may close it (Groups:2).
+35. ■ Guardian close.  Alice, a guardian of Carol, may close it.
+36. ■ Ward join.  Carol may join a group (Groups:3) only with the consent of Alice, a guardian of Carol.
+37. ■ Wards join.  Carol may join a group (Groups:3) only with the consent of Alice, a guardian of Carol.
+38. ■ Wards of one guardian join.  Carol may join a group (Groups:3) only with the consent of Alice, a guardian of Carol.
+39. ■ Ward withdraw.  Carol may join a group (Groups:3) only with the consent of Alice, a guardian of Carol.
+40. ■ Ward add.  Carol may join a group (Groups:3) only with the consent of Alice, a guardian of Carol.
+41. ■ Ward leave.  Carol may join a group (Groups:3) only with the consent of Alice, a guardian of Carol.
+42. ■ Ward remove.  Carol may join a group (Groups:3) only with the consent of Alice, a guardian of Carol.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Person unfriend: Alice [Person unfriend]
+Message: Alice [Message] <text>
+Create: Alice [Create] <grupo>
+Close: Alice [Close]
+Join: Alice [Join]
+  Bob: Alice asks for your consent to join.
+Remove: Alice [Remove]
+Leave: Bob [Leave]
+Post: Bob [Post] <text>
+Post own: Alice [Post own] <text>
+Enter: Alice [Enter] <carol>
+Make guardian: Bob [Make guardian] <carol>
+  Decider: Bob asks for your consent to make guardian.
+Resign: Bob [Resign]
+End guardian: Decider [End guardian] <bob>
+Guardian unfriend: Bob [Guardian unfriend]
+Ward acquaint: Carol [Ward acquaint] <bob>
+  Bob: Carol asks for your consent to ward acquaint.
+Ward befriend: Carol [Ward befriend]
+  Bob: Carol asks for your consent to ward befriend.
+  Alice: Carol asks for your consent to ward befriend.
+Ward end: Carol [Ward end]
+Unfriend: Bob [Unfriend]
+Ward unfriend: Alice [Ward unfriend] <carol> <bob>
+Wards acquaint: Carol [Wards acquaint] <dave>
+  Dave: Carol asks for your consent to wards acquaint.
+Wards befriend: Carol [Wards befriend] <bob>
+  Dave: Carol asks for your consent to wards befriend.
+  Alice: Carol asks for your consent to wards befriend.
+  Bob: Carol asks for your consent to wards befriend.
+Wards of one guardian befriend: Carol [Wards of one guardian befriend]
+  Dave: Carol asks for your consent to wards of one guardian befriend.
+  Alice: Carol asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]
+Ward message: Carol [Ward message] <text>
+Ward post: Carol [Ward post] <text>
+Ward post own: Carol [Ward post own] <text>
+Ward create: Carol [Ward create] <grupo>
+Ward close: Carol [Ward close]
+Guardian close: Alice [Guardian close] <grupo>
+Ward join: Bob [Ward join]
+  Carol: Bob asks for your consent to ward join.
+  Alice: Bob asks for your consent to ward join.
+Wards join: Carol [Wards join] <bob>
+  Dave: Carol asks for your consent to wards join.
+  Alice: Carol asks for your consent to wards join.
+  Bob: Carol asks for your consent to wards join.
+Wards of one guardian join: Carol [Wards of one guardian join]
+  Dave: Carol asks for your consent to wards of one guardian join.
+  Alice: Carol asks for your consent to wards of one guardian join.
+Ward withdraw: Alice [Ward withdraw] <bob> <grupo>
+Ward add: Carol [Ward add]
+  Bob: Carol asks for your consent to ward add.
+  Alice: Carol asks for your consent to ward add.
+Ward leave: Carol [Ward leave]
+Ward remove: Carol [Ward remove]

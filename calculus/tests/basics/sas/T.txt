@@ -1,3 +1,0 @@
-T: Two paths
-T extends U and R.
-T:0 - | Alice is a person.

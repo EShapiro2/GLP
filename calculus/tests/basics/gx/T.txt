@@ -1,8 +1,0 @@
-T: Two paths
-Of K: Alice, Bob and Carol are persons.
-Of U: Alice is a person.
-Of R: Alice, Bob and Carol are persons.
-Of T: Alice is a person.
-K:1, R:1. ■ Grant: Bob may take a token, with the consent of Alice and Carol, provided Bob is trusted by Carol.
-K:1. ■ Take: Alice may take a token.
-U:1. ○ Care. Alice will take care.

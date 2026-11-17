@@ -1,0 +1,3 @@
+Interface pragmas
+Fund: Carol [Fund] <sum>
+Grant: Alice [Grant] <carol> <sum>

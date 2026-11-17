@@ -1,3 +1,0 @@
-D: Instantiate the role
-Of C: Alice is a person.
-C:1. ■ Act: Alice may act, and those who oversee Alice must consent.

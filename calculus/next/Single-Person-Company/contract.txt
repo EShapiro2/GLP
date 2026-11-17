@@ -1,0 +1,3 @@
+Single-Person Company
+Single-Person Company instantiates Corporation with single-person limited-liability company bylaws.
+A *single-person limited-liability company* is a corporation whose bylaws name one role, the *sole officer*, who decides every act of the company, and admit no participant but the sole officer.

@@ -1,2 +1,0 @@
-WCUR: Wards in a Currency
-WCUR extends WARD and CUR.

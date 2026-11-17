@@ -4,7 +4,7 @@
 ///
 /// The agent writes its view, `view(S, K)`, its machine state and the persons it knows, on construct 0 when it starts and whenever either changes (vGLP b7e3517, Section 5.4, "The compilation"), drawn by `last_state`, the widget the platform declares for `Stream(Output)`.  The platform declares `Menu =::= social_menu` and `Approval =::= approval_sentence.` (`programs/apps/<app>/platform.vglp`, as vGLP's compiler prints it; GSNP's, GAI's and GC's apps declare them again in their `self.vglp`): the request question is drawn with the last view on construct 0 (vGLP e924f73, Section 6.2) as the app's tabs, Friends and, where the request type offers `create`, Groups, and, where it offers `mint`, Coins, and each approval question as one sentence and two buttons at the top of the tab it concerns (`lib/ui_runtime/named_widgets.dart`, `tab_screen.dart`), as GAI's task words them (Code_inbox.md, GAI #3 Cowork, 2026-10-19 10:45 UTC, and its sentence for a join at 11:35 UTC).  GKK's, GSG's and GSN's apps are compiled from contracts with pragmas, and their tabs are the lists the view names, each word on them the contract's (vGLP 1126f4f, Sections 5.4, 6.2 and 8).  Every act of a person at a phone is a tap or a keystroke on a control of the tabs, found by its key (`socialKey`, `tabKey`, `listTabKey`, `constructKey`): Join, Add, Befriend, Accept, End friendship, Send, Create, Add member and the rest; a scripted agent's acts are its scripted person's, as in the app's plays.  No term is hand-fed to the bridge or to the program.
 ///
-/// And CSSN's mini-app (`programs/cssn`), in the scenario of CSSN's app (CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app"): Alice, Bob, Carol and Dave, a conversation between each two, as CSSN's plays hand them (`programs/cssn/plays.glp`), one of them at their phone and the other three scripted by CSSN's person (`programs/cssn/person.glp`, the roles `fig_alice` to `fig_dave`), "each run has one live person, whose screen the figure shows" (the same); its screens written to `programs/cssn/figures/cssn-app-<n>.png`, n the figure's number of the screen.  CSSN's app is compiled from its contract and its pragmas, CSSN.txt's and those of the contracts it extends, so every word on its screens is the contract's (claude.md, "Sessions"; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, the buttons of CSSN's acts beside a child's row in Children, Child acquaint, Child befriend and Of age among them, and the questions of CSSN's pragmas, "Alice asks that Carol and your child Dave befriend.".
+/// And CSSN's mini-app (`programs/cssn`), in the scenario of CSSN's app (CSSN, Section 4.6, "In the Grassroots App", Figure "The child-safe mini-app in the grassroots app"): Alice, Bob, Carol and Dave, a conversation between each two, as CSSN's plays hand them (`programs/cssn/plays.glp`), one of them at their phone and the other three scripted by CSSN's person (`programs/cssn/person.glp`, the roles `fig_alice` to `fig_dave`), "each run has one live person, whose screen the figure shows" (the same); its screens written to `programs/cssn/figures/cssn-app-<n>.png`, n the figure's number of the screen.  CSSN's app is compiled from its contract and its pragmas, Children.txt's and those of the contracts it extends, so every word on its screens is the contract's (claude.md, "Sessions"; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, the buttons of CSSN's acts beside a child's row in Children, Child acquaint, Child befriend and Of age among them, and the questions of CSSN's pragmas, "Alice asks that Carol and your child Dave befriend.".
 ///
 /// The screens are set in Roboto, the Material font, with MaterialIcons, both loaded from the Flutter SDK's own copies (`bin/cache/artifacts/material_fonts`), in the light theme.  The scenario runs on two kinds of phone ([Screens]):
 ///
@@ -27,6 +27,7 @@ import 'package:glp_multiagent/isolate_protocol.dart'
     show runtimeTermOf, screenTermOf;
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/look.dart';
+import 'package:glp_multiagent/ui_runtime/typed_before.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
 import 'package:glp_multiagent/ui_runtime/construct_family.dart';
 import 'package:glp_multiagent/ui_runtime/manifest.dart';
@@ -138,6 +139,7 @@ const List<String> _notShown = [
   'issue(',
   'swap(',
   'pay(',
+  'pay_issuer(',
   'bond(',
   'date(',
   'dated',
@@ -341,6 +343,16 @@ class _Run {
     }
     await tester.pumpWidget(run._phones());
     await tester.pumpAndSettle();
+    // The phones are drawn in the colours of the family of the app's contract, never in the grey of the family other, which a contract with no look found takes (look.dart): on main 9f866949, the contracts renamed, no look was found under an app's name and every app was drawn grey, this test passing (Mac #1, 2026-11-17).
+    final drawn = Theme.of(tester.element(find.byType(AgentSurface).first))
+        .colorScheme
+        .primary;
+    final other = Looks.readSync('${screens.programs}/self.glp')
+        .families[Looks.otherFamily]!
+        .to;
+    expect(drawn, isNot(other),
+        reason: '$app: the phones are drawn in the family other\'s grey: '
+            'no look is found for the app\'s contract');
     return run;
   }
 
@@ -883,6 +895,8 @@ void main() => appsScreens(Screens.flat(programsDir()));
 
 /// The scenario, the four apps' screens in their figures' order, on [screens]: here, and on the simulator (`integration_test/apps_screens_test.dart`).
 void appsScreens(Screens screens) {
+  // Each scenario starts with nothing typed before: the store of what a person typed is the app's, kept for its session (lib/ui_runtime/typed_before.dart).
+  setUp(TypedBefore.clear);
   // GKK's, GSG's, GSN's and GC's apps are compiled from their contracts with their pragmas, and every word on their screens is the contract's or one of the platform's four, yes, no, declined and unable (vGLP, Section 5.4, "The contract's words"; Section 6.2, "The words a platform shows"; Section 8): each tab a list the contract's pragmas name, Contacts, Friends, Groups and Coins, each button the label in brackets and each field the name in angle brackets, each question the sentence after them; a field no pragma names drawn by its type's name, as Meet's field for the peer's key, Peer (Section 6.2: "A construct family draws the label it is given, and the name of the type where it is given none").  Where a button is drawn is the request's widget term's (Section 6.2): beside each person or group the view lists, of an act that names one, and on the tab of its contract, of an act that names none, and Meet with a field for the key.
   testWidgets(
       'GKK\'s app on three phones: Alice establishes her identity; Bob asked '
@@ -912,7 +926,7 @@ void appsScreens(Screens screens) {
     run.plain(alice);
     await run.shoot(alice, 'gkk-a-alice-identity.png');
     await run.join(alice);
-    expect(alice.atoms, ['identity']);
+    expect(alice.atoms, ['identity', 'person']);
     // Once her identity is established, Acquaint, GKK's "[Acquaint]", with its field for the peer's key, GKK's "<person>" (Section 5.4, "The contract's words").
     expect(
         find.descendant(
@@ -926,11 +940,19 @@ void appsScreens(Screens screens) {
     await run.join(carol);
 
     // (b) Alice types Bob's key into Acquaint's field and taps Acquaint (GKK:2): her request's hello asks Bob, at the top of his Contacts, GKK's question "Alice wishes that you know each other.", with yes and no; he taps yes, his request of the same acquaintance, and each then knows the other, neither asked again.  Then Alice and Carol meet.
+    // Carol's key as if Alice had typed it into Acquaint's field before, in the field's store (typed_before.dart), before the form is drawn again.
+    TypedBefore.record('menu:${alice.name}:field:acquaint::2', carol.name);
     await run.meetByKey(alice, bob, shot: 'gkk-b-bob-asked-to-meet.png');
+    // Acquaint's field offers a key Alice typed in it before only where she may acquaint that person: "A family may offer in a text field the values its person typed in it before, where the field takes them at the person's state" (vGLP, Section 6.2, Remark "Construct Families").  Bob, whom she now knows, is not offered; Carol, typed before and not yet known, is.
+    await run.list(alice, 'knows');
+    expect(run.control(alice, 'before:field:acquaint::2:${carol.name}'),
+        findsOneWidget);
+    expect(run.control(alice, 'before:field:acquaint::2:${bob.name}'),
+        findsNothing);
     await run.meetByKey(alice, carol);
     expect(alice.atoms,
-        unorderedEquals(['identity', 'knows(bob)', 'knows(carol)']));
-    expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)']));
+        unorderedEquals(['identity', 'person', 'knows(bob)', 'knows(carol)']));
+    expect(bob.atoms, unorderedEquals(['identity', 'person', 'knows(alice)']));
 
     // Alice, who knows Bob and Carol, introduces Carol to Bob (GKK:3): Introduce, GKK's "[Introduce]", in Bob's row of her Contacts, Bob taking the second role of introduce, with its field beside it, GKK's "<person>", Carol, introduce's agent variable c, which Alice's role requires held, knows(c), so it is picked among the persons she knows: "A button is drawn in the row of a tab's entry, a person who takes a role of the act or an item the act names, with the act's fields beside it" (vGLP, Section 6.2); "a variable is picked among the items the viewer holds where the proposer's role requires it held" (vGLP acd3e74, Section 5.4, "The contract's words").  She picks Carol and taps Introduce.
     await run.list(alice, 'knows');
@@ -963,7 +985,7 @@ void appsScreens(Screens screens) {
     expect(bob.questions('approval'), isEmpty);
     expect(carol.questions('approval'), isEmpty);
     expect(bob.atoms,
-        unorderedEquals(['identity', 'knows(alice)', 'knows(carol)']));
+        unorderedEquals(['identity', 'person', 'knows(alice)', 'knows(carol)']));
 
     // (c) Bob's contacts once he has approved: a row for each atom of knows, in the order of his state, the newest first, Carol and then Alice, each with Introduce, its field a key; Acquaint, which requires no atom of knows at his role, in no row: "A button is drawn in the row of a tab's entry, whose person takes a role of the act, ... in a row of the tab whose predicate the act requires or deletes at the proposer's role naming the entry" (vGLP 516a0a2, Section 6.2).
     await run.top(bob);
@@ -1017,8 +1039,8 @@ void appsScreens(Screens screens) {
     await run.list(bob, 'friend');
     await run.tap(bob, run.control(bob, 'act:unfriend:alice'));
     expect(alice.questions('approval'), isEmpty);
-    expect(alice.atoms, unorderedEquals(['identity', 'knows(bob)']));
-    expect(bob.atoms, unorderedEquals(['identity', 'knows(alice)']));
+    expect(alice.atoms, unorderedEquals(['identity', 'person', 'knows(bob)']));
+    expect(bob.atoms, unorderedEquals(['identity', 'person', 'knows(alice)']));
 
     // (c) Alice's tabs after Bob ends the friendship: Friends lists no one, and Contacts lists Bob.
     expect(run.control(alice, 'atom:bob'), findsNothing);
@@ -1044,7 +1066,7 @@ void appsScreens(Screens screens) {
     // The group's row in a member's Groups, the atom member(n, a) of their state, its name and its leader.
     const group = 'member($friends, alice)';
 
-    // Five tabs, the lists of GKK's, GSG's and GSN's pragmas: Contacts, Friends, Groups, Messages, "Messages: the messages Alice received.", and Posts, "Posts: the posts Alice received in her groups." (programs/gsc/GSN.txt at GLP 1aab4307), the predicates received and received_in.
+    // Five tabs, the lists of GKK's, GSG's and GSN's pragmas: Contacts, Friends, Groups, Messages, "Messages: the messages Alice received.", and Posts, "Posts: the posts Alice received in her groups." (programs/gsc/Groups.txt at GLP 1aab4307), the predicates received and received_in.
     expect(run.listNamed(alice, 'knows', 'Contacts'), findsOneWidget);
     expect(run.listNamed(alice, 'friend', 'Friends'), findsOneWidget);
     expect(run.listNamed(alice, 'member', 'Groups'), findsOneWidget);
@@ -1155,6 +1177,9 @@ void appsScreens(Screens screens) {
         if (t.data != null) t.data!,
     ];
     expect(inGroup, containsAll(['friends', 'Alice', 'Leave', 'Post']));
+    // "A row shows each person once" (vGLP, Section 6.2, "The words a platform shows"): Alice signed the group's name and is its leader, the atom's other argument, so the row holds her name once.
+    expect(inGroup.where((t) => t == 'Alice'), hasLength(1),
+        reason: "bob: the group's row shows Alice once");
     run.plain(bob);
     await run.shoot(bob, 'gsn-c-bob-group.png');
 
@@ -1162,6 +1187,14 @@ void appsScreens(Screens screens) {
     await run.list(alice, 'member');
     await run.top(alice);
     expect(run.control(alice, 'atom:$group'), findsOneWidget);
+    expect(
+        run.tester
+            .widgetList<Text>(find.descendant(
+                of: run.control(alice, 'atom:$group'),
+                matching: find.byType(Text)))
+            .where((t) => t.data == 'Alice'),
+        hasLength(1),
+        reason: "alice: the group's row shows Alice once");
     run.plain(alice);
     await run.shoot(alice, 'gsn-d-alice-group.png');
     await run.list(alice, 'friend');
@@ -1229,7 +1262,7 @@ void appsScreens(Screens screens) {
     await run.type(alice, run.control(alice, 'field:issue::2'), '2');
     await run.tap(alice, run.control(alice, 'send:issue:'));
     expect(alice.atoms,
-        unorderedEquals(['identity', 'knows(bob)', 'coin(alice)', 'coin(alice)']));
+        unorderedEquals(['identity', 'person', 'knows(bob)', 'coin(alice)', 'coin(alice)']));
     await run.list(alice, 'coin');
     await run.top(alice);
     expect(run.control(alice, 'atom:alice'), findsOneWidget);
@@ -1278,20 +1311,20 @@ void appsScreens(Screens screens) {
     expect(alice.atoms.where((x) => x == 'coin(bob)'), hasLength(3));
     expect(bob.atoms.where((x) => x == 'coin(alice)'), hasLength(2));
 
-    // (c) Bob's holdings after the swap: the Alice-coins he holds, with Pay, GC's "[Pay]", beside them.
+    // (c) Bob's holdings after the swap: the Alice-coins he holds, with Pay issuer, GC's "[Pay issuer]", beside them.
     await run.list(bob, 'coin');
     await run.top(bob);
     expect(run.control(bob, 'atom:alice'), findsOneWidget);
     expect(run.control(bob, 'atom:bob'), findsNothing);
-    expect(run.control(bob, 'act:pay:alice'), findsOneWidget);
+    expect(run.control(bob, 'act:pay_issuer:alice'), findsOneWidget);
     run.plain(bob);
     await run.shoot(bob, 'gc-c-bob-holdings.png');
 
-    // Alice pays two Bob-coins to Bob (GC:3): Pay beside her Bob-coins, its field amount, 2; which proposes pay(alice, bob, 2); Bob is not asked.
+    // Alice pays two Bob-coins to Bob (GC:3): Pay issuer beside her Bob-coins, its field amount, 2; which proposes pay_issuer(alice, bob, 2); Bob is not asked.
     await run.list(alice, 'coin');
-    await run.tap(alice, run.control(alice, 'act:pay:bob'));
-    await run.type(alice, run.control(alice, 'field:pay:bob:3'), '2');
-    await run.tap(alice, run.control(alice, 'send:pay:bob'));
+    await run.tap(alice, run.control(alice, 'act:pay_issuer:bob'));
+    await run.type(alice, run.control(alice, 'field:pay_issuer:bob:3'), '2');
+    await run.tap(alice, run.control(alice, 'send:pay_issuer:bob'));
     expect(bob.questions('approval'), isEmpty);
     expect(alice.atoms.where((x) => x == 'coin(bob)'), hasLength(1));
 
@@ -1510,13 +1543,13 @@ void appsScreens(Screens screens) {
           reason: '$p swaps $k $u-coins for $k1 $w-coins with $q');
     }
 
-    // [p] pays [k] coins of [q] to [q] (GC:3): Pay, GC's "[Pay]", beside their [q]-coins on their Coins tab, its field amount; nobody is asked.
+    // [p] pays [k] coins of [q] to [q] (GC:3): Pay issuer, GC's "[Pay issuer]", beside their [q]-coins on their Coins tab, its field amount; nobody is asked.
     Future<void> pay(String p, String q, int k) async {
       final (pq, qq) = (held(p, q), held(q, q));
       await run.list(v[p]!, 'coin');
-      await run.tap(v[p]!, run.control(v[p]!, 'act:pay:$q'));
-      await run.type(v[p]!, run.control(v[p]!, 'field:pay:$q:3'), '$k');
-      await run.tap(v[p]!, run.control(v[p]!, 'send:pay:$q'));
+      await run.tap(v[p]!, run.control(v[p]!, 'act:pay_issuer:$q'));
+      await run.type(v[p]!, run.control(v[p]!, 'field:pay_issuer:$q:3'), '$k');
+      await run.tap(v[p]!, run.control(v[p]!, 'send:pay_issuer:$q'));
       expect(v[q]!.questions('approval'), isEmpty);
       expect((held(p, q), held(q, q)), (pq - k, qq + k),
           reason: '$p pays $k $q-coins to $q');
@@ -1614,7 +1647,7 @@ void appsScreens(Screens screens) {
       'item on his Contacts tab and sending it to Eve by Message, Eve, Carol '
       'and Bob forwarding it by Forward from their Friends tabs, and the '
       'screens of Bob\'s Items and Friends tabs and Fay\'s Items tab', (tester) async {
-    // GSNP's app (programs/apps/gsnp), compiled down the cascade from GSNP.glp (programs/gai/GSNP.glp), an instance of GnW, and its pragmas, GSNP.txt with those of GSN, GFP, GAI, GnW, GSG and GKK, which it is written from: six tabs, Contacts, Friends, Groups, Guardianships, Items and Known AI agents (programs/apps/gsnp/platform.vglp, tabs/1), "Known AI agents: the attestation records Alice holds." (GAI.txt)
+    // GSNP's app (programs/apps/gsnp), compiled down the cascade from Provenance-Groups.glp (programs/gai/Provenance-Groups.glp), an instance of GnW, and its pragmas, Provenance-Groups.txt with those of GSN, GFP, GAI, GnW, GSG and GKK, which it is written from: six tabs, Contacts, Friends, Groups, Guardianships, Items and Known AI agents (programs/apps/gsnp/platform.vglp, tabs/1), "Known AI agents: the attestation records Alice holds." (Agents.txt)
     final run = await _Run.start(tester, screens, 'gsnp',
         chain: const ['dan', 'eve', 'carol', 'bob', 'fay']);
     final dan = run.person('dan');
@@ -1807,11 +1840,16 @@ void appsScreens(Screens screens) {
     // Befriend (GSG:1), Bob, once he knows Alf, offering Alice friendship and Alice answering yes.
     await run.befriend(bob, alice);
 
-    // Agent befriend Alf and Bob (GnW:3): (gai-c) Alice proposing that Alf befriend Bob, GAI's "Alice [Agent befriend]", agent_befriend requiring friend(bob) at her, its form open in Bob's row of her Friends tab, the row filling Bob, Alf, the one AI agent she operates, picked, and the button; (gai-d) Bob asked to befriend Alf, an AI agent of Alice, "Alice asks that you and her AI agent Alf befriend." (GAI.txt, "Ward and person"), at the top of his first tab; Alf's program and Bob answer yes.
+    // Agent befriend Alf and Bob (GnW:3): (gai-c) Alice proposing that Alf befriend Bob, GAI's "Alice [Agent befriend]", agent_befriend requiring friend(bob) at her, its form open in Bob's row of her Friends tab, the row filling Bob, Alf, the one AI agent she operates, picked, and the button; (gai-d) Bob asked to befriend Alf, an AI agent of Alice, "Alice asks that you and her AI agent Alf befriend." (Agents.txt, "Ward and person"), at the top of his first tab; Alf's program and Bob answer yes.
     await run.list(alice, 'friend');
     await run.top(alice);
     await run.tap(alice, run.control(alice, 'act:ai_agent_befriend:bob'));
     await run.tap(alice, run.control(alice, 'pick:ai_agent_befriend:bob:1:alf'));
+    // The tap brought the picked chip into view and so scrolled Bob's name half under the tabs: the tab back at its top, Bob's row whole from his name, the form still in view (GAI #15, Code_inbox.md 2026-11-16 17:37 UTC).
+    await run.top(alice);
+    expect(run.control(alice, 'send:ai_agent_befriend:bob').hitTestable(),
+        findsOneWidget,
+        reason: 'AI agent befriend\'s form is not in view at the tab\'s top');
     run.plain(alice, allow: const {'Peer'});
     await run.shoot(alice, 'gai-c-alice-asked.png');
     await run.tap(alice, run.control(alice, 'send:ai_agent_befriend:bob'));
@@ -1874,7 +1912,7 @@ void appsScreens(Screens screens) {
       'GAI\'s paper in its order, Alice creating Alf with her attestation, '
       'Bob proposing Alf\'s acquaintance with him, Alice proposing its '
       'befriending him, and Alice retiring it, Alf\'s program scripted', (tester) async {
-    // GAI's app (programs/apps/gai), compiled from GAI.glp, an instance of GnW composed with GFP, and GAI.txt with the pragmas of GFP, GnW, GSG and GKK (programs/apps/gai/platform.vglp, tabs/1): five tabs, Contacts, Friends, Guardianships, Items and Known AI agents, "Known AI agents: the attestation records Alice holds." (GAI.txt); no screen of it goes in GAI's paper (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC).  The play is the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The atoms the acts of the example add and delete"), in the order of play_agents of programs/apps/gai (programs/apps/gai/person.glp and README.md, at GAI 6008f30; GAI #14, Code_inbox.md, 2026-11-13 00:47 UTC): by GnW:3 Bob proposes that Alf and he know each other and Alice proposes their friendship, and neither sees on their own screen what the other's act did, so each proposes on what their own screen shows.  Establish Alice and Bob; Alice signs the attestation y and enters Alf with it; Alice asks to come to know Bob; Bob, once he knows Alice, proposes Agent acquaint, Alf answering yes; Bob, once he knows Alf, offers Alice friendship, Alice answering yes; Alice, once Bob is her friend, proposes Agent befriend, Alf and Bob answering yes; and Alice, once it has ended, retires Alf, which ends Alf's friendships.  No attempt is refused.  Alf's item, which it signs and sends to Bob, is GSNP's, the full platform, above; there is no unfriend.
+    // GAI's app (programs/apps/gai), compiled from Agents.glp, an instance of GnW composed with GFP, and Agents.txt with the pragmas of GFP, GnW, GSG and GKK (programs/apps/gai/platform.vglp, tabs/1): five tabs, Contacts, Friends, Guardianships, Items and Known AI agents, "Known AI agents: the attestation records Alice holds." (Agents.txt); no screen of it goes in GAI's paper (GAI #8 Cowork, Code_inbox.md, 2026-10-24 10:47 UTC).  The play is the example of GAI's paper (Section 3.2, the example after Example "An AI agent coming to know a person, and befriending them", and Table "The atoms the acts of the example add and delete"), in the order of play_agents of programs/apps/gai (programs/apps/gai/person.glp and README.md, at GAI 6008f30; GAI #14, Code_inbox.md, 2026-11-13 00:47 UTC): by GnW:3 Bob proposes that Alf and he know each other and Alice proposes their friendship, and neither sees on their own screen what the other's act did, so each proposes on what their own screen shows.  Establish Alice and Bob; Alice signs the attestation y and enters Alf with it; Alice asks to come to know Bob; Bob, once he knows Alice, proposes Agent acquaint, Alf answering yes; Bob, once he knows Alf, offers Alice friendship, Alice answering yes; Alice, once Bob is her friend, proposes Agent befriend, Alf and Bob answering yes; and Alice, once it has ended, retires Alf, which ends Alf's friendships.  No attempt is refused.  Alf's item, which it signs and sends to Bob, is GSNP's, the full platform, above; there is no unfriend.
     final run = await _Run.start(tester, screens, 'gai',
         chain: const ['alice', 'alf', 'bob'],
         pairs: const [('alice', 'alf'), ('alf', 'bob'), ('bob', 'alice')],
@@ -1963,11 +2001,11 @@ void appsScreens(Screens screens) {
     run.finish();
   }, timeout: Timeout.none);
 
-  // GFF's app (programs/apps/gff), compiled down the cascade from GFF.glp and its pragmas, GFF.txt, with those of GDO-L, GDO, GSG and GKK, which it is written from (programs/apps/gff/README.md): five tabs, Contacts, Friends, Pointing, Posts and Feeds, and the buttons Point, Unpoint, Labeled point, Labeled unpoint and Post, GFF's "[Post] <item>".  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp and README.md, "Running it", steps 1 to 8), each act a tap or a picked or typed field.
+  // GFF's app (programs/apps/gff), compiled down the cascade from Feeds.glp and its pragmas, Feeds.txt, with those of GDO-L, GDO, GSG and GKK, which it is written from (programs/apps/gff/README.md): five tabs, Contacts, Friends, Pointing, Posts and Feeds, and the buttons Point, Unpoint, Labeled point, Labeled unpoint and Post, GFF's "[Post] <item>".  The scenario is the play of GFF's app, play_feeds (programs/apps/gff/plays.glp and README.md, "Running it", steps 1 to 8), each act a tap or a picked or typed field.
   testWidgets(
       'GFF\'s app on four phones, the play of GFF\'s feeds: the friendships, '
-      'each friend with a pointer to the other; and (1) Alice\'s Posts after '
-      'her two posts', (tester) async {
+      'each friend with a pointer to the other; (1) Alice\'s Posts after '
+      'her two posts; and the play\'s steps 3 to 8 with its screens 2 to 7', (tester) async {
     final run = await _Run.start(tester, screens, 'gff',
         chain: const ['alice', 'bob', 'carol', 'dave'],
         pairs: const [
@@ -2032,13 +2070,126 @@ void appsScreens(Screens screens) {
     expect(bob.atoms,
         containsAll(['item($first, alice)', 'item($second, alice)']));
     expect(bob.atoms, contains('received($first, alice, alice)'));
-    // Steps 3 to 8 of the play (programs/apps/gff/README.md, "Running it"), Carol's and Dave's Labeled point, the introductions, the third and fourth items and Carol's Labeled unpoint, and their screens, are brought once a post comes to rest: at migration 944fb18e Alice's first post does not, within 300 million reductions.
+    final items12 = ['item($first, alice)', 'item($second, alice)'];
     expect(carol.atoms, isNot(contains('item($first, alice)')));
     expect(dave.atoms, isNot(contains('item($first, alice)')));
+
+    // Step 3: Carol follows Alice's feed through Bob, her friend, who has an alice-pointer: Labeled point beside Bob in her Friends, the label alice (GDO-L:1, labeled_point_friend), which adds pointer(bob, alice) at her; both items reach her from Bob (GFF:2).
+    await run.list(carol, 'friend');
+    await run.tap(carol, run.control(carol, 'act:labeled_point:bob'));
+    await run.type(carol, run.control(carol, 'field:labeled_point:bob:1'), 'alice');
+    // Labeled point's form in Bob's row has the ways of two acts, labeled_point_friend, which binds no value beside Bob, and labeled_point_transitive_friend, which binds a friend of hers; the form draws no picker of them, its first way binding none, so none is chosen and the button stays disabled (named_widgets.dart, _offerForm: `chosen` is null where the ways are several, and the picker is drawn only `if (rest.isNotEmpty)`).  Red here until the form lets her choose.
+    expect(
+        tester
+            .widget<ElevatedButton>(run.control(carol, 'send:labeled_point:bob'))
+            .onPressed,
+        isNotNull,
+        reason: 'carol: Labeled point beside Bob cannot be sent');
+    await run.tap(carol, run.control(carol, 'send:labeled_point:bob'));
+    expect(carol.atoms, contains('pointer(bob, alice)'));
+    expect(carol.atoms, containsAll(items12));
+    expect(carol.atoms, contains('received($first, alice, bob)'));
+    // (2) Carol's Pointing: Bob with the labels bob and alice.
+    await run.list(carol, 'pointer');
+    await run.top(carol);
+    expect(run.texts(carol), containsAllInOrder(['Pointing', 'Bob', 'Alice', 'Labeled unpoint', 'Dave', 'Dave', 'Bob', 'Bob']));
+    run.plain(carol);
+    await run.shoot(carol, 'gff-app-2.png');
+    // (3) Carol's Feeds, "Feeds: the items Alice holds, by feed, each once.": Alice's two items.
+    await tab(carol, 'Feeds');
+    await run.top(carol);
+    expect(run.texts(carol), containsAll(['First item', 'Second item']));
+    run.plain(carol);
+    await run.shoot(carol, 'gff-app-3.png');
+
+    // Step 4: Dave follows Alice's feed through Carol likewise, and both items reach him from Carol.
+    await run.list(dave, 'friend');
+    await run.tap(dave, run.control(dave, 'act:labeled_point:carol'));
+    await run.type(dave, run.control(dave, 'field:labeled_point:carol:1'), 'alice');
+    await run.tap(dave, run.control(dave, 'send:labeled_point:carol'));
+    expect(dave.atoms, contains('pointer(carol, alice)'));
+    expect(dave.atoms, containsAll(items12));
+    expect(dave.atoms, contains('received($first, alice, carol)'));
+
+    // Step 5: Carol introduces Dave to Bob (GKK:3, introduce(bob, carol, dave)): Introduce beside Bob in her Contacts, Dave picked; Bob, whose consent it takes, is asked, and comes to know Dave.  Then Bob to Dave, introduce(dave, carol, bob): Dave is asked, and comes to know Bob.
+    await run.list(carol, 'knows');
+    await run.tap(carol, run.control(carol, 'act:introduce:bob'));
+    await run.tap(carol, run.control(carol, 'pick:introduce:bob:dave'));
+    await run.tap(carol, run.control(carol, 'send:introduce:bob'));
+    final i1 = bob.approval;
+    expect(formatTerm(i1.view), contains(', introduce(bob, carol, dave), none), '));
+    await run.list(bob, 'knows');
+    await run.top(bob);
+    await run.answer(bob, 'yes');
+    expect(bob.atoms, contains('knows(dave)'));
+    await run.list(carol, 'knows');
+    await run.tap(carol, run.control(carol, 'act:introduce:dave'));
+    await run.tap(carol, run.control(carol, 'pick:introduce:dave:bob'));
+    await run.tap(carol, run.control(carol, 'send:introduce:dave'));
+    final i2 = dave.approval;
+    expect(formatTerm(i2.view), contains(', introduce(dave, carol, bob), none), '));
+    await run.list(dave, 'knows');
+    await run.top(dave);
+    await run.answer(dave, 'yes');
+    expect(dave.atoms, contains('knows(bob)'));
+    // (4) Dave's Contacts after Carol introduced Bob to him.
+    await run.list(dave, 'knows');
+    await run.top(dave);
+    expect(run.texts(dave), containsAllInOrder(['Contacts', 'Bob', 'Introduce', 'Befriend', 'Labeled point', 'Carol', 'Introduce']));
+    run.plain(dave);
+    await run.shoot(dave, 'gff-app-4.png');
+    // Dave adds an alice-pointer to Bob, Bob having an alice-pointer to Alice and Dave knowing him (GFF:3, labeled_point_transitive): Labeled point beside Bob in his Contacts, his pointer to Carol labeled alice picked.
+    await run.tap(dave, run.control(dave, 'act:labeled_point:bob'));
+    await run.tap(dave, run.control(dave, 'pick:labeled_point:bob:carol,alice'));
+    await run.tap(dave, run.control(dave, 'send:labeled_point:bob'));
+    expect(dave.atoms, contains('pointer(bob, alice)'));
+    // (5) Dave's Pointing: Carol with the labels carol and alice, Bob with alice.
+    await run.list(dave, 'pointer');
+    await run.top(dave);
+    expect(run.texts(dave), containsAllInOrder(['Pointing', 'Bob', 'Alice', 'Labeled unpoint', 'Carol', 'Alice', 'Labeled unpoint', 'Carol', 'Carol']));
+    run.plain(dave);
+    await run.shoot(dave, 'gff-app-5.png');
+
+    // Step 6: Alice posts a third item, which reaches Bob, Carol and Dave, each once.
+    await post(alice, 'Third item');
+    final third = said('Third item', 'alice');
+    for (final p in [bob, carol, dave]) {
+      expect(p.atoms.where((x) => x == 'item($third, alice)'), hasLength(1),
+          reason: p.name);
+    }
+
+    // Step 7: Carol removes her alice-pointer to Bob, Labeled unpoint (GDO-L:3, labeled_unpoint), beside it in her Pointing.
+    await run.list(carol, 'pointer');
+    await run.tap(carol, run.control(carol, 'act:labeled_unpoint:pointer(bob, alice)'));
+    expect(carol.atoms, isNot(contains('pointer(bob, alice)')));
+    // (6) Carol's Pointing: Bob with the label bob.
+    await run.top(carol);
+    expect(run.texts(carol), containsAllInOrder(['Pointing', 'Dave', 'Dave', 'Bob', 'Bob']));
+    expect(run.control(carol, 'atom:pointer(bob, alice)'), findsNothing);
+    run.plain(carol);
+    await run.shoot(carol, 'gff-app-6.png');
+
+    // Step 8: Alice posts a fourth item, which reaches Bob, and from Bob Dave, and not Carol.
+    await post(alice, 'Fourth item');
+    final fourth = said('Fourth item', 'alice');
+    expect(bob.atoms, contains('item($fourth, alice)'));
+    expect(dave.atoms, contains('received($fourth, alice, bob)'));
+    expect(carol.atoms, isNot(contains('item($fourth, alice)')));
+    // (7) Dave's Feeds with the four items; Carol's has three.
+    await tab(dave, 'Feeds');
+    await run.top(dave);
+    expect(run.texts(dave),
+        containsAll(['First item', 'Second item', 'Third item', 'Fourth item']));
+    run.plain(dave);
+    await run.shoot(dave, 'gff-app-7.png');
+    await tab(carol, 'Feeds');
+    expect(run.texts(carol),
+        containsAll(['First item', 'Second item', 'Third item']));
+    expect(run.texts(carol), isNot(contains('Fourth item')));
     run.finish();
   }, timeout: Timeout.none);
 
-  // CSSN's app is compiled from its contract and its pragmas, CSSN.txt and those of the contracts it extends, GKK, GSG, GSN and GnW (programs/cssn/CSSN.txt; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, "Children: the children Alice is parenting."; each button the label in brackets, Enter, Child acquaint, Child befriend, Child adult befriend, Of age, Child join, Child unfriend, Child leave, Child close and Parent unfriend; each question the sentence of the role asked, "Alice asks that Carol and your child Dave befriend."; and the answers yes and no.  Enter is a meeting schema, enter(p?, r?): a parent types the child's key into its field, CSSN's "<child>", and the request's hello asks the child's phone the question of the child's role, "Alice asks to be your parent." (Section 5.4, "The compilation").  The scenario is CSSN's Figure 3's (CSSN, Section 4.6, "In the Grassroots App").
+  // CSSN's app is compiled from its contract and its pragmas, Children.txt and those of the contracts it extends, GKK, GSG, GSN and GnW (programs/cssn/Children.txt; vGLP, Section 5.4, "The contract's words"): four tabs, Contacts, Friends, Groups and Children, "Children: the children Alice is parenting."; each button the label in brackets, Enter, Child acquaint, Child befriend, Child adult befriend, Of age, Child join, Child unfriend, Child leave, Child close and Parent unfriend; each question the sentence of the role asked, "Alice asks that Carol and your child Dave befriend."; and the answers yes and no.  Enter is a meeting schema, enter(p?, r?): a parent types the child's key into its field, CSSN's "<child>", and the request's hello asks the child's phone the question of the child's role, "Alice asks to be your parent." (Section 5.4, "The compilation").  The scenario is CSSN's Figure 3's (CSSN, Section 4.6, "In the Grassroots App").
   testWidgets(
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Alice at her '
       'phone: (1) her Children tab, Carol her child with the buttons of the '
@@ -2103,11 +2254,16 @@ void appsScreens(Screens screens) {
     ]) {
       expect(run.control(alice, 'act:$f:carol'), findsOneWidget, reason: f);
     }
-    // Of age requires that she is Carol's creator (CSSN:4), an atom no tab lists: it is drawn on her Contacts, with a picker of the children she created, and not in Carol's row here.
+    // Of age requires that she is Carol's creator (CSSN:4): it is drawn in Carol's row of her Created tab, CSSN's "Created: those Alice is the creator of.", and not in Carol's row here.
     expect(run.control(alice, 'act:of_age:carol'), findsNothing);
-    await run.list(alice, 'knows');
-    expect(run.control(alice, 'pick:of_age::carol'), findsOneWidget);
-    expect(run.control(alice, 'send:of_age:'), findsOneWidget);
+    expect(run.listNamed(alice, 'creator', 'Created'), findsOneWidget);
+    await run.list(alice, 'creator');
+    expect(run.control(alice, 'atom:carol'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: run.control(alice, 'act:of_age:carol'),
+            matching: find.text('Of age')),
+        findsOneWidget);
     await run.list(alice, 'parent');
     await run.top(alice);
     for (final f in [
@@ -2147,7 +2303,7 @@ void appsScreens(Screens screens) {
     await run.list(alice, 'knows');
     await run.top(alice);
     expect(run.textsOf(alice, ca), [
-      'Bob wishes that you and her child Dave know each other.',
+      'Bob wishes that you and Dave, Bob\'s child, know each other.',
       'Contacts: Alice',
       'Children: Dave',
       'yes',
@@ -2201,7 +2357,7 @@ void appsScreens(Screens screens) {
       'CSSN\'s mini-app, the scenario of CSSN, Section 4.6, Bob at his phone: '
       'asked to come to know Alice and to approve the acquaintance of Carol and Dave; (3) '
       'asked to approve Alice\'s attempt that they befriend, with yes and no; '
-      '(6) his Contacts with Of age, Dave picked, which declares Dave of age',
+      '(6) his Created tab with Dave and Of age, which declares Dave of age',
       (tester) async {
     final run = await _cssn(tester, screens, 'bob');
     final bob = run.person('bob');
@@ -2297,8 +2453,7 @@ void appsScreens(Screens screens) {
     expect(
         tester.getTopLeft(run.on(bob, find.byKey(constructKey(a.id)))).dy,
         lessThan(tester.getTopLeft(run.control(bob, 'atom:dave')).dy));
-    // Of age's picker, on this tab, is labelled by the name of its type, as a field given no label is.
-    run.plain(bob, allow: {'Peer'});
+    run.plain(bob);
     await run.shoot(bob, 'cssn-app-3.png');
     await run.answer(bob, 'yes');
     expect(bob.questions('approval'), isEmpty);
@@ -2307,18 +2462,18 @@ void appsScreens(Screens screens) {
         contains(startsWith('view(dave, [friend(carol), ')));
     expect(run.scriptedAtoms('dave'), isNot(contains('friend(carol)')));
     expect(run.scriptedAtoms('carol'), isNot(contains('friend(dave)')));
-    // (6) Bob's Of age, CSSN's "[Of age]" (CSSN:4; of_age(r, p?)): it requires that he is Dave's creator, an atom no tab lists, so it is drawn on his Contacts, with a picker of the children he created, Dave, and not in Dave's row of his Children; it proposes of_age(dave, bob) when tapped, nobody being asked: its one guarding role is Bob's, and Coming of age's pragma carries no question.
+    // (6) Bob's Created tab, CSSN's "Created: those Alice is the creator of.": Dave's row with Of age, CSSN's "[Of age]" (CSSN:4), which requires that he is Dave's creator; it is not in Dave's row of his Children; it proposes of_age(dave, bob) when tapped, nobody being asked: its one guarding role is Bob's, and Coming of age's pragma carries no question.
     await run.list(bob, 'parent');
     await run.top(bob);
     expect(run.control(bob, 'atom:dave'), findsOneWidget);
     expect(run.control(bob, 'act:of_age:dave'), findsNothing);
-    await run.list(bob, 'knows');
-    await run.tap(bob, run.control(bob, 'pick:of_age::dave'));
-    final ofAge = run.control(bob, 'send:of_age:');
+    await run.list(bob, 'creator');
+    await run.top(bob);
+    expect(run.control(bob, 'atom:dave'), findsOneWidget);
+    final ofAge = run.control(bob, 'act:of_age:dave');
     expect(find.descendant(of: ofAge, matching: find.text('Of age')),
         findsOneWidget);
-    await run.foot(bob, ofAge);
-    run.plain(bob, allow: {'Peer'});
+    run.plain(bob);
     await run.shoot(bob, 'cssn-app-6.png');
     await run.tap(bob, ofAge);
     expect(bob.questions('approval'), isEmpty);
@@ -2425,16 +2580,17 @@ void appsScreens(Screens screens) {
     expect(run.control(carol, 'atom:dave'), findsOneWidget);
     expect(run.control(carol, 'atom:bob'), findsNothing);
     expect(run.control(carol, 'act:child_end:dave'), findsOneWidget);
-    // The rows in the order of her state, the newest first: Dave, then Alice; Child end and Child message beside each, both requiring friend of the other at the child's role and forbidding nothing there (CSSN.txt, the menu of programs/cssn/platform.vglp), so beside Alice, her parent, too.
+    // The rows in the order of her state, the newest first: Dave, then Alice; Child message beside each, and Child end beside Dave alone: a ward is not offered the button to end a friendship with her guardian (Guardians.txt, Ward end; Children.txt, the menu of programs/cssn/platform.vglp), so none beside Alice, her parent.
     expect(run.texts(carol), containsAllInOrder(['Friends', 'Dave', 'Alice']));
     for (final q in ['dave', 'alice']) {
-      expect(run.control(carol, 'act:child_end:$q'), findsOneWidget, reason: q);
       expect(run.control(carol, 'act:child_message:$q'), findsOneWidget,
           reason: q);
     }
+    expect(run.control(carol, 'act:child_end:dave'), findsOneWidget);
+    expect(run.control(carol, 'act:child_end:alice'), findsNothing);
     run.plain(carol);
     await run.shoot(carol, 'cssn-app-5.png');
-    // Carol ends the friendship with Dave, her own act, Child end beside Dave, child_end(carol, dave) (CSSN.txt, "Carol [Child end]"): nobody is asked.
+    // Carol ends the friendship with Dave, her own act, Child end beside Dave, child_end(carol, dave) (Children.txt, "Carol [Child end]"): nobody is asked.
     await run.tap(carol, run.control(carol, 'act:child_end:dave'));
     expect(carol.questions('approval'), isEmpty);
     expect(carol.atoms, unorderedEquals([

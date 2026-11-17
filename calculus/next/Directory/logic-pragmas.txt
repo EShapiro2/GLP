@@ -1,0 +1,16 @@
+Directory
+Directory extends Rendezvous.
+A *directory* is a service with a page every person can read.
+Alice, Bob and Carol are persons, Dora a service, Mail an email address, Name a name.
+1. ■ Open directory: Carol may make Dora a directory, provided Carol is a guardian of Dora.
+2. ■ Listing. List me: Alice may list with Dora by Mail under Name on its page, with the consent of Dora, provided Dora is a directory and Alice knows Dora. List me unshown: Alice may list with Dora by Mail under Name off its page, with the consent of Dora, provided Dora is a directory and Alice knows Dora. Dora consents having verified Mail as an email address of Alice. Alice lists with a name if she chooses, shown on Dora's page or not, and her app then keeps Dora supplied with invitation links of hers. Delist me: Alice may delist from Dora by Mail under Name on its page. Delist me unshown: Alice may delist from Dora by Mail under Name off its page.
+3. ■ Lookup: Bob may look Alice up on Dora's page, provided Bob knows Dora and Dora lists Alice by Mail under Name on its page. Lookup by address: Bob may look Alice up with Dora by address, provided Bob knows Dora and Dora lists Alice by Mail under Name off its page. Bob looks Alice up on Dora's page if she is shown there, and by her email address and name if not.
+Logic pragmas.
+Vocabulary: d is a directory = directory(d); d lists x by e under m on its page = lists_shown(d,x,e,m); d lists x by e under m off its page = lists_unshown(d,x,e,m); y holds an invitation link of x from d = holds_link(y,x,d).
+After x makes d a directory, which requires d is not a directory: d is a directory.
+After x lists with d by e under m on its page, which requires d does not list x by e under m on its page: d lists x by e under m on its page.
+After x lists with d by e under m off its page, which requires d does not list x by e under m off its page: d lists x by e under m off its page.
+After x delists from d by e under m on its page: no longer d lists x by e under m on its page.
+After x delists from d by e under m off its page: no longer d lists x by e under m off its page.
+After y looks x up on d's page: y holds an invitation link of x from d.
+After y looks x up with d by address: y holds an invitation link of x from d.

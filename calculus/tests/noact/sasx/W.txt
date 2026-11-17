@@ -1,6 +1,0 @@
-W: No act no binding enables (expanded schemas)
-W:0 - | Alice is a person, Carol a ward.
-W:1 ■ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
-W:2 ■ Enter: identity(Carol), ward(Carol), has_guardian(Carol,Alice), guardian(Alice,Carol) <- ~identity(Carol) guarded by Alice.
-W:3 ■ Wave: waved(Carol) <- person(Carol), ward(Carol) guarded by Carol.
-W:3 ■ Greet: greeted(Carol) <- guarded by Carol.

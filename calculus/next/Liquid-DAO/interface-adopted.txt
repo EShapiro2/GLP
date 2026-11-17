@@ -1,0 +1,6 @@
+Interface pragmas
+Delegate: Carol [Delegate]
+  Alice [Delegate own]
+  Carol [Delegate to the steward]
+Revoke: Carol [Revoke] <alice>
+  Alice [Revoke own]

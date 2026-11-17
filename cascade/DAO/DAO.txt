@@ -3,8 +3,8 @@
 % Extends: GKK, Grassroots Keys and Knowledge, GSC's (programs/gsc).  It cites GKK:1 to GKK:3 whole and restates none.
 % Defines: DAO, steward, member, proposal, vote.  A DAO is named by its steward, as a group by its leader (GSN).  Clause 6 is enforced: the steward's agent keeps the number of members and a tally of each proposal's votes, and the steward can decide a proposal only on a majority; every vote is delivered to every member.
 % Schemas: DAO.glp beside this file.
-DAO: Grassroots DAO
-DAO extends GKK.
+DAO
+DAO extends Knowledge.
 Alice and Bob are persons.
 1. ■ Found: Alice may found a DAO under a new name of hers; Alice is then its steward and first member.
 2. ■ Join: Alice, the steward of a DAO, may admit Bob, whom she knows and who is not yet a member, with the consent of Bob.
@@ -13,7 +13,7 @@ Alice and Bob are persons.
 5. ■ Deciding. Pass, Reject: The steward may decide a proposal, passed or rejected, once. Deliver decision: The steward delivers the decision to every member but the steward.
 6. ■ Majority. The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.
 Logic pragmas
-DAO extends GKK.
+DAO extends Knowledge.
 Alice, Bob and Carol are persons, Delos a DAO and Prop a proposal, Votes and Double numbers, Carol possibly Alice or Bob.
 1. ■ Found: Alice may found Delos under a new name of hers.
 2. ■ Join: Alice may admit Bob to Delos, with the consent of Bob, provided Alice is the steward of Delos and Alice knows Bob.

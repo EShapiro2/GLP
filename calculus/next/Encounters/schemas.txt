@@ -1,0 +1,12 @@
+Encounters
+Encounters extends Knowledge (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Vocabulary: x is nearby y = nearby(x,y); x has declared the place open = open_place(x).
+x and y are nearby each other: x is nearby y and y is nearby x.
+After x declares x's place open, which requires x has not declared the place open: x has declared the place open.
+After x closes x's place: no longer x has declared the place open.
+Encounters:0 - | A person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is.
+Encounters:0 - | Alice and Bob are persons.
+Encounters:0 - | Environment: x is nearby y.
+Encounters:1 ■ Open place: open_place(Alice) <- ~open_place(Alice) guarded by Alice.
+Encounters:1 ■ Close place: ~open_place(Alice) <- open_place(Alice) guarded by Alice.
+Encounters:2 ■ Encounter: knows(Alice,Bob), knows(Bob,Alice) <- ~knows(Alice,Bob), ~knows(Bob,Alice), nearby(Alice,Bob), nearby(Bob,Alice), open_place(Alice), open_place(Bob) guarded by Alice, Bob must Alice, Bob.

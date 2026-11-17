@@ -1,0 +1,7 @@
+E: Both paths
+E extends C and R.
+Alice, Bob and Carol are persons, Sum a number.
+1. ■ Greet: Alice may greet Bob.
+Logic pragmas.
+Vocabulary: x has greeted y = greeted(x,y).
+After x greets y: x has greeted y.

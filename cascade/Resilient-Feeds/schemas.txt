@@ -1,0 +1,5 @@
+Resilient Feeds
+Resilient Feeds extends Feeds.
+Resilient Feeds:0 - | d > 1, an integer, is a parameter of Resilient Feeds.
+Resilient Feeds:0 - | Alice, Bob, Carol, Dave and Erin are persons, Dave and Erin are possibly any of the others.
+Resilient Feeds:1 ■ Redundant point: pointer(Alice,Bob,Carol) <- pointer(Alice,Dave,Carol), pointer(Alice,<D,Carol), friend(Alice,Bob), friend(Bob,Alice), pointer(Bob,Erin,Carol), ~pointer(Alice,Bob,Carol) possibly Alice=Dave, Alice=Erin, Bob=Dave, Bob=Erin, Carol=Dave, Carol=Erin, Dave=Erin.

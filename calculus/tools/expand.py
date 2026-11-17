@@ -33,6 +33,11 @@ The rules.
    one of C's expanded definitions.
 6. The names lines are united sentence by sentence, the definitions likewise,
    inherited first; a sentence appears once.
+7. A relaxing citation, `X:n, without ...[, if ...]`, adds an act and keeps
+   the act of X:n as it is (tools/SAS-WRITING.txt, RELAXATION): it is no
+   operation, and its clause is kept as an own clause, as written, after the
+   clause X:n it cites (Coins:1, Pay issuer: Notes:3, without the consent of Bob,
+   if the coins are Bob-coins).
 
 It checks and prints: every contract a first line names is in rev/ (after
 revtex's RENAMED and DROPPED); every citation X:n is a clause of the expanded
@@ -52,15 +57,17 @@ import sys
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import revtex  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 
 HEADER = '% Written by tools/expand.py from rev/; do not edit.'
 LEAD_IN = ('Each contract with the operations of its first line and of its citing clauses applied: '
            'the clauses of the contracts it is written from, each labelled by its origin, '
            'with their restrictions and substitutions, and then its own.')
 
-NAME = r'[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*'
-REF = NAME + r':\d+'
-VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes')
+NAME = NM.NAME_RX      # a name of the table, longest first, or one word (tools/names.py)
+REF = NM.REF
+VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes')
 VERB = r'(?:%s)' % '|'.join(VERBS)
 PRONOUNS = ('it', 'them', 'the composition')
 
@@ -69,7 +76,7 @@ PRONOUNS = ('it', 'them', 'the composition')
 # them, before any substitution.  Consulted before the headings are matched.
 # A decision of Calculus #2 of 2026-11-13: GO:4, `Officers. Appoint: GnW:2, only if
 # Bob is a participant; the decision names his role.`, restricts Make guardian alone.
-TARGETS = {('GO', 4): ['Make guardian']}
+TARGETS = {('Organisation', 4): ['Make guardian']}
 
 FAILURES = []     # what --check fails on
 NOTES = []        # (contract, clause, what was done): where the rules did not decide
@@ -288,7 +295,7 @@ def read_all(rev_dir):
     contracts, raw = {}, {}
     for f in sorted(os.listdir(rev_dir)):
         if f.endswith('.txt') and not f.startswith('NOTES-'):
-            name = f[:-4]
+            name = NM.name_of(f[:-4])
             box = revtex.original_box(os.path.join(rev_dir, f))
             raw[name] = revtex.Contract(box, True, f)
             contracts[name] = Contract(name, box)
@@ -310,8 +317,8 @@ def link(contracts):
     unparsed = []
     for name in sorted(contracts):
         c = contracts[name]
-        if not c.title_line.startswith(name + ':'):
-            fail("%s: the title line does not open with '%s:'" % (name, name))
+        if not (c.title_line.startswith(name + ':') or c.title_line == name):      # 'NAME: Title', or the name alone (Notes, Coins, Bonds, Shares, Udi, 2026-11-16)
+            fail("%s: the title line does not open with '%s:' and is not the name alone" % (name, name))
         if c.first_line is None:
             c.first = First()
             continue
@@ -386,7 +393,8 @@ def article(word, capital):
 class Subst(object):
     """W1 -> W2 for each pair, in one pass: singular, plural and capitalised forms,
     whole words; an article before the word follows the new word."""
-    def __init__(self, pairs):
+    def __init__(self, pairs, names=()):
+        self.names = set(names)       # a contract's name where a name stands is no word: 'Guardians:2', 'a parameter of Guardians'
         self.forms = {}
         for w1, w2 in pairs:
             for a, b in ((w1, w2), (plural(w1), plural(w2))):
@@ -400,6 +408,8 @@ class Subst(object):
             return text
 
         def sub(m):
+            if m.group(3) in self.names and (re.match(r':\d', text[m.end():]) or re.search(r'\bparameters? of $', text[:m.start(3)])):
+                return m.group(0)
             new = self.forms[m.group(3)]
             if m.group(1):
                 return '%s %s%s' % (article(new, m.group(1)[0] == 'A'), m.group(2), new)
@@ -544,7 +554,7 @@ def expand(name, contracts, cache):
         return cache[name]
     c = contracts[name]
     exp = Expanded()
-    sub = Subst(c.first.pairs)
+    sub = Subst(c.first.pairs, contracts)
     for dep in c.first.deps:
         e = copy.deepcopy(expand(dep, contracts, cache))
         if dep in c.first.inst:
@@ -595,6 +605,7 @@ def expand(name, contracts, cache):
         cl = parse_clause(name, n, mark, text)
         own = '%s:%d' % (name, n)
         cites = [CITE.match(s.text) for s in cl.sents]
+        cites = [None if m and m.group(2) == ', ' and m.group(3).startswith('without ') else m for m in cites]     # rule 7: a relaxation
         if not any(m and m.group(2) == ', ' for m in cites):
             if any(cites):                    # `X:n and Y:m apply ...`: a citation, but no restriction to append
                 note(name, own, "cites %s with no restriction after a comma; it is kept as an own clause, unchanged: '%s'"
@@ -715,7 +726,7 @@ def main():
     for name in names:
         c = contracts[name]
         exp = expand(name, contracts, cache)
-        files[name + '.txt'] = text_of(c, exp)
+        files[NM.file_of(name) + '.txt'] = text_of(c, exp)
         out += [''] + box_of(c, raw[name], exp)
         row = (exp.inherited, exp.replaced, exp.own, len(exp.clauses))
         total = [a + b for a, b in zip(total, row)]

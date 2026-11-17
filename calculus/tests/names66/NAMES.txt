@@ -1,0 +1,4 @@
+The made-up contracts of this case, after the table of NAMES.txt.
+
+name on main | name | file name | row and atom | row and atom on main
+Savings Bank | Savings Bank | Savings-Bank | savings_bank | savings_bank

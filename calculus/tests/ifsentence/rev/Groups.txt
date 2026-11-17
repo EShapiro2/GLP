@@ -1,0 +1,8 @@
+Groups
+Groups extends and strengthens Friendship.
+A *message*, a parameter of Groups, is what a person sends.
+Alice and Bob are persons.
+1. ■ Message: Alice may send a message to her friend Bob.
+2. ■ Group. Create: Alice may create a group, of which she is the leader and first member. Close: Alice may close the group by leaving it.
+3. ■ Joining and Leaving. Join: Alice, the leader of a group, may add her friend Bob to it, with the consent of Bob. Remove, Leave: Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
+4. ■ Group messaging. Post: A member of a group may send a message to the group. Deliver: Its leader delivers it to every current member.

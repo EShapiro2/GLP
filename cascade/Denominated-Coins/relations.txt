@@ -1,0 +1,2 @@
+Denominated Coins extends Coins: holds
+Denominated Coins restricts Coins: holds
