@@ -30,21 +30,24 @@ Card  ::= card(Peer, YesNo?).
 Note  ::= note(Constant).
 Board ::= board(List(Note), YesNo?).
 
+%% What the person says to the program: a peer or a word.
+Word  ::= peer(Constant) ; word(Constant).
+
 %% ---------------------------------------------------------------------------
 %% The agents
 %% ---------------------------------------------------------------------------
 
 %% A card whose Peer the person's word names.
-exported procedure late(Channel(Stream(_), Stream(Output))?).
+exported procedure late(Channel(Stream(Word), Stream(Output))?).
 late(ch(In, Out?)) :- peer_of(In?, Peer), respond(Peer?, Out).
 
 %% A list of three cards, the second's Peer the person's word.
-exported procedure deal(Channel(Stream(_), Stream(Output))?).
+exported procedure deal(Channel(Stream(Word), Stream(Output))?).
 deal(ch(In, Out?)) :- peer_of(In?, Peer), cards(Peer?, Out).
 
 %% A list of notes beside a question, the second note's argument the
 %% person's word.
-exported procedure board(Channel(Stream(_), Stream(Output))?).
+exported procedure board(Channel(Stream(Word), Stream(Output))?).
 board(ch(In, Out?)) :- word_of(In?, W), notes(W?, Out).
 
 %% ---------------------------------------------------------------------------
@@ -78,14 +81,14 @@ procedure (Board)*notes(Constant?, Stream(Output)).
 %% peer_of(In?, P): P the peer of the first peer(P) the person sends.  The
 %% dispatcher never closes In, the person channel never closing; its type,
 %% the dispatcher's, has [], for which no peer comes: nobody.
-procedure peer_of(Stream(_)?, Peer).
+procedure peer_of(Stream(Word)?, Peer).
 peer_of([peer(P) | _], P1?) :- constant(P?) | P1 = P?.
 peer_of([_ | In], P?) :- otherwise | peer_of(In?, P).
 peer_of([], nobody).
 
 %% word_of(In?, W): W the word of the first word(W) the person sends; none,
 %% where In closes, as peer_of/2.
-procedure word_of(Stream(_)?, Constant).
+procedure word_of(Stream(Word)?, Constant).
 word_of([word(W) | _], W1?) :- constant(W?) | W1 = W?.
 word_of([_ | In], W?) :- otherwise | word_of(In?, W).
 word_of([], none).
