@@ -1,10 +1,10 @@
 # A run of the cascade on Backchannel-Feeds
 
-- Contract: `Backchannel-Feeds` (`backchannel_feeds` to the checker), its owner's two files `programs/gff/Backchannel-Feeds.txt` and `programs/gff/Backchannel-Feeds.glp`, copied here as they stood at `f73c7dd5`.
+- Contract: `Backchannel-Feeds` (`backchannel_feeds` to the checker), its owner's two files `programs/gff/Backchannel-Feeds.txt` and `programs/gff/Backchannel-Feeds.glp`, copied here as they stood at `8b858783`.
 - The paper: `/Users/udi/Grassroots/GFF (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gff/Backchannel-Feeds.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gff/Backchannel-Feeds.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-17 12:23 UTC by `cascade.sh backchannel_feeds`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `f73c7dd5`; each artefact's source and tool:
+- Run on 2026-11-17 13:25 UTC by `cascade.sh backchannel_feeds`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8b858783`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
