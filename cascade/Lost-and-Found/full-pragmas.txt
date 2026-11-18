@@ -1,7 +1,7 @@
 Lost and Found
 Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
 Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Of Matching: *Posts* have a test whether two *match*. A person *holds* any post they made or forwarded to them. Environment: p and q match, for x.
+Of Matching: *Posts* have a *test*, a parameter of Matching, whether two *match*. A person *holds* any post they made or forwarded to them. Environment: p and q match, for x.
 Of Lost and Found: A post is a *loss*, stating a thing its maker lost, or a *find*, stating a thing its maker found. A loss and a find match when they are of the same thing.
 Alice, Bob and Carol are persons, Post and Other posts.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.

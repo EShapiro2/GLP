@@ -1,7 +1,7 @@
 Rehearsals (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Rehearsals:0 - | Alice, Bob and Carol are persons, Post and Other posts, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Votes and Double numbers, Res a room, Slot a slot.
+Rehearsals:0 - | Alice, Bob and Carol are persons, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Votes and Double numbers, Res a room, Slot a slot, Post and Other posts.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
@@ -13,14 +13,6 @@ Friendship:1 ○ | Alice and Bob will become friends only if they trust each oth
 Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- person(Alice), person(Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Matching:0 - | *Posts* have a test whether two *match*. A person *holds* any post they made or forwarded to them.
-Matching:0 - | Environment: p and q match, for x.
-Matching:1 ■ Post: made(Alice,Post), post(Alice,Post) <- ~made(Alice,Post) guarded by Alice.
-Matching:2 ■ Tell: post_from(Bob,Post,Alice), post(Bob,Post) <- post(Alice,Post), friend(Alice,Bob), friend(Bob,Alice), ~post_from(Bob,Post,Alice) guarded by Alice.
-Matching:3 ■ Return: post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob).
-Matching:4 ■ Withdraw: ~made(Alice,Post), ~post(Alice,Post) <- made(Alice,Post), post(Alice,Post) guarded by Alice.
-Matching:5 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other) guarded by Alice, Carol.
-Partners:0 - | A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
 Guardians:0 - | Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
 Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
 Guardians:0 - | Default: any officer of z for those who decide for z.
@@ -72,4 +64,12 @@ Booking:0 - | An organisation has *rooms*, each with *slots*. A slot is *free* w
 Booking:0 - | Environment: z has the slot s of the room r; x has fewer outstanding bookings in z than the bound.
 Booking:1 ■ Book: booking(Alice,Orga,Res,Slot), booked(Orga,Res,Slot,Alice) <- participant(Alice,Orga), has_participant(Orga,Alice), under_bound(Alice,Orga), slot(Orga,Res,Slot), ~booked(Orga,Res,Slot,_) guarded by Alice.
 Booking:2 ■ Cancel: ~booking(Alice,Orga,Res,Slot), ~booked(Orga,Res,Slot,Alice) <- booking(Alice,Orga,Res,Slot), booked(Orga,Res,Slot,Alice) guarded by Alice.
+Matching:0 - | *Posts* have a *test*, a parameter of Matching, whether two *match*. A person *holds* any post they made or forwarded to them.
+Matching:0 - | Environment: p and q match, for x.
+Matching:1 ■ Post: made(Alice,Post), post(Alice,Post) <- ~made(Alice,Post) guarded by Alice.
+Matching:2 ■ Tell: post_from(Bob,Post,Alice), post(Bob,Post) <- post(Alice,Post), friend(Alice,Bob), friend(Bob,Alice), ~post_from(Bob,Post,Alice) guarded by Alice.
+Matching:3 ■ Return: post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob).
+Matching:4 ■ Withdraw: ~made(Alice,Post), ~post(Alice,Post) <- made(Alice,Post), post(Alice,Post) guarded by Alice.
+Matching:5 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other) guarded by Alice, Carol.
+Partners:0 - | A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
 Rehearsals:0 - | The activity is music, the place is a *studio*, an organisation that has rehearsal rooms, and the time is a slot.

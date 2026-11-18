@@ -1,10 +1,10 @@
 % Matching: the contract, the one copy, its owner's.
-% Owner: GM, proposed by its thread, 2026-11-18; Udi's approval pending.
+% Owner: GM (Udi, 2026-11-18, approving the recommendation, reported by the coordinator).
 % Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
-% Last changed: 2026-11-18, written from the paper at GM main 794a6a2; no Logic pragmas and no Interface pragmas yet.
+% Last changed: 2026-11-18, written from the paper at GM main 794a6a2; first line as Udi approved it, 2026-11-18, on the Calculus's recommendation; the Logic pragmas are the Calculus's, in calculus/contracts; no Interface pragmas yet.
 Matching
 Matching extends Friendship.
-*Posts* have a test whether two *match*. A person *holds* any post they made or forwarded to them.
+*Posts* have a *test*, a parameter of Matching, whether two *match*. A person *holds* any post they made or forwarded to them.
 Alice, Bob and Carol are persons.
 1. ■ Post: Alice may make a post.
 2. ■ Tell: Alice who holds a post may forward it to her friend Bob.

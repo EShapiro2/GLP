@@ -1,2 +1,2 @@
 Meeting Rooms
-Meeting Rooms instantiates Booking, a *room* for a resource.
+Meeting Rooms instantiates Booking with a *room* for a resource.

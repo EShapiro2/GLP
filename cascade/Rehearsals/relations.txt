@@ -1,1 +1,2 @@
-Rehearsals instantiates Partners and Booking: holds
+Rehearsals instantiates Booking: holds
+Rehearsals composes it (Booking) with Partners: holds

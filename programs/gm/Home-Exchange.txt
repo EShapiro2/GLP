@@ -1,9 +1,9 @@
 % Home Exchange: the contract, the one copy, its owner's.
-% Owner: GM, proposed by its thread, 2026-11-18; Udi's approval pending.
+% Owner: GM (Udi, 2026-11-18, approving the recommendation, reported by the coordinator).
 % Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
-% Last changed: 2026-11-18, written from the paper at GM main 794a6a2; no Logic pragmas and no Interface pragmas yet.
+% Last changed: 2026-11-18, written from the paper at GM main 794a6a2; first line as Udi approved it, 2026-11-18, on the Calculus's recommendation; the Logic pragmas are the Calculus's, in calculus/contracts; no Interface pragmas yet.
 Home Exchange
-Home Exchange instantiates Matching.
+Home Exchange instantiates Matching with homes.
 A post is a *home*, stating a dwelling, when it is free, and where and when its maker seeks one. Two homes match when each is where and when the other's maker seeks.
 Logic pragmas
 Home Exchange instantiates Matching.
