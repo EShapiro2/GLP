@@ -1,3 +1,0 @@
-Housing
-Housing instantiates Matching.
-A post is a *home*, stating a dwelling and whom or what its maker seeks for it, or a *search*, stating the dwelling its maker seeks. A home and a search match when the home is what the search seeks; two homes match when each is what the other's maker seeks.
