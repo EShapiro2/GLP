@@ -571,7 +571,62 @@ function layout(){
     route.forEach(([t, ph]) => placed.push([RING.indexOf(t), ph]));
     WAY[`${p}>${q}`] = route;
   }
+  // An arrow that would cross the ellipse of a contract it does not join
+  // bends around it (Udi, 2026-11-18, to Website #4: "the arrow that cross
+  // Organisation could bend around it instead of crossing.  do the same for
+  // similar cases"): a waypoint is put beside that ellipse, at its
+  // colatitude, on the side the arrow passes, and the course is drawn again,
+  // until it crosses none or has bent eight times.
+  const ER = id => [(w(id) + 3) / 265, ((LINES(id).length > 1 ? 1.6 : 0.85) * FS0() + 3) / 265];
+  const inside = (t, f, id) => { const [a, b] = ER(id), dt = t - th0(id);
+    let df = (f - PHI[id]) % (2*Math.PI); if (df > Math.PI) df -= 2*Math.PI; if (df < -Math.PI) df += 2*Math.PI;
+    return (df * Math.sin(th0(id)) / a) ** 2 + (dt / b) ** 2 < 1 ? df : null; };
+  const others = [...REAL].filter(id => id !== ROOT);
+  D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
+    const key = `${p}>${c.id}`, t0 = th0(p), t1 = th0(c.id);
+    if (!(t1 > t0)) return;
+    for (let n = 0; n < 8; n++){
+      let hit = null;
+      for (const [t, f] of course(p, c.id)){
+        for (const id of others){ if (id === p || id === c.id) continue;
+          const df = inside(t, f, id); if (df !== null){ hit = [t, id, df]; break; } }
+        if (hit) break; }
+      if (!hit) break;
+      const [t, id, df] = hit, tc = th0(id) > t0 + 1e-3 && th0(id) < t1 - 1e-3 ? th0(id) : t;
+      if (!(tc > t0 + 1e-4 && tc < t1 - 1e-4)) break;
+      const [a] = ER(id), ph = PHI[id] + (df >= 0 ? 1 : -1) * (a + 4 / 265) / Math.sin(th0(id));
+      const way = (WAY[key] || []).filter(x => Math.abs(x[0] - tc) > 1e-3);
+      way.push([tc, ph]); way.sort((x, y) => x[0] - y[0]);
+      WAY[key] = way;
+    }
+  }));
 }
+// The course of the arrow from p to q on the sphere, as [colatitude,
+// longitude] points: through the two contracts and the waypoints between
+// them, its longitude a monotone cubic in its colatitude.
+function course(p, q, way = WAY[`${p}>${q}`] || []){
+  const cs = [[th0(p), PHI[p]], ...way.map(x => x.slice()), [th0(q), PHI[q]]];
+  if (DEPTH[p] === 0) cs[0][1] = cs[1][1];
+  const n = cs.length, h = [], dl = [], m = [];
+  for (let i = 0; i + 1 < n; i++){ h.push(cs[i+1][0] - cs[i][0] || 1e-9); dl.push((cs[i+1][1] - cs[i][1]) / h[i]); }
+  for (let i = 0; i < n; i++)
+    m.push(i === 0 ? dl[0] : i === n - 1 ? dl[n-2] : dl[i-1] * dl[i] <= 0 ? 0 : (dl[i-1] + dl[i]) / 2);
+  for (let i = 0; i + 1 < n; i++){
+    if (dl[i] === 0){ m[i] = 0; m[i+1] = 0; continue; }
+    const a = m[i] / dl[i], b = m[i+1] / dl[i], r = a*a + b*b;
+    if (r > 9){ const t = 3 / Math.sqrt(r); m[i] = t * a * dl[i]; m[i+1] = t * b * dl[i]; }
+  }
+  const pts = [];
+  for (let i = 0; i + 1 < n; i++){
+    const [t0, f0] = cs[i], [t1, f1] = cs[i+1];
+    const k = Math.max(2, Math.ceil(Math.hypot(t1 - t0, (f1 - f0) * Math.sin((t0 + t1) / 2)) / (Math.PI/180)));
+    for (let j = i ? 1 : 0; j <= k; j++){ const u = j / k, u2 = u*u, u3 = u2*u;
+      const f = (2*u3 - 3*u2 + 1)*f0 + (u3 - 2*u2 + u)*h[i]*m[i] + (-2*u3 + 3*u2)*f1 + (u3 - u2)*h[i]*m[i+1];
+      pts.push([t0 + (t1 - t0) * u, f]); }
+  }
+  return pts;
+}
+
 // A contract's colatitude: its ring's, and its row's on a ring of two rows.
 const th0 = id => DEPTH[id] === 0 ? 0 : RING[DEPTH[id]] + (LAT[id] || 0);
 const MAXD = () => Math.max(...Object.values(DEPTH));
@@ -670,27 +725,7 @@ function drawGlobe(){
   // longitude a monotone cubic in its colatitude (Fritsch and Carlson), so it
   // never swings past a point it passes and makes no loop; sampled every
   // degree or so.
-  const curve = (p, q) => {
-    const cs = [[th(p), PHI[p]], ...(WAY[`${p}>${q}`] || []), [th(q), PHI[q]]];
-    if (DEPTH[p] === 0) cs[0][1] = cs[1][1];
-    const n = cs.length, h = [], dl = [], m = [];
-    for (let i = 0; i + 1 < n; i++){ h.push(cs[i+1][0] - cs[i][0] || 1e-9); dl.push((cs[i+1][1] - cs[i][1]) / h[i]); }
-    for (let i = 0; i < n; i++)
-      m.push(i === 0 ? dl[0] : i === n - 1 ? dl[n-2] : dl[i-1] * dl[i] <= 0 ? 0 : (dl[i-1] + dl[i]) / 2);
-    for (let i = 0; i + 1 < n; i++){
-      if (dl[i] === 0){ m[i] = 0; m[i+1] = 0; continue; }
-      const a = m[i] / dl[i], b = m[i+1] / dl[i], r = a*a + b*b;
-      if (r > 9){ const t = 3 / Math.sqrt(r); m[i] = t * a * dl[i]; m[i+1] = t * b * dl[i]; }
-    }
-    const pts = [];
-    for (let i = 0; i + 1 < n; i++){
-      const [t0, f0] = cs[i], [t1, f1] = cs[i+1];
-      const k = Math.max(2, Math.ceil(Math.hypot(t1 - t0, (f1 - f0) * Math.sin((t0 + t1) / 2)) / (Math.PI/180)));
-      for (let j = i ? 1 : 0; j <= k; j++){ const u = j / k, u2 = u*u, u3 = u2*u;
-        const f = (2*u3 - 3*u2 + 1)*f0 + (u3 - 2*u2 + u)*h[i]*m[i] + (-2*u3 + 3*u2)*f1 + (u3 - u2)*h[i]*m[i+1];
-        pts.push(vec(t0 + (t1 - t0) * u, f)); }
-    }
-    return pts; };
+  const curve = (p, q) => course(p, q).map(([t, f]) => vec(t, f));
   const paint = (p, q, rel) => ribbon(curve(p, q), p, q, (Array.isArray(rel) ? rel : [rel]).map(r => RELCOL[r] || RELCOL.extends), true);
   // A ribbon along the points U of the sphere, from the edge of contract p's
   // ellipse, or from U's start where p is null, to q's or U's end, in the
