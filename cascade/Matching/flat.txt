@@ -13,7 +13,7 @@ Friendship:1 ○ | Alice and Bob will become friends only if they trust each oth
 Friendship:2 ■ Unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Matching:0 - | *Posts* have a test whether two *match*. A person *holds* any post they made or forwarded to them.
+Matching:0 - | *Posts* have a *test*, a parameter of Matching, whether two *match*. A person *holds* any post they made or forwarded to them.
 Matching:0 - | Environment: p and q match, for x.
 Matching:1 ■ Post: Alice may Alice has made the post Post and Alice holds the post Post, provided not Alice has made the post Post.
 Matching:2 ■ Tell: Alice may Bob holds the post Post from Alice and Bob holds the post Post, provided Alice holds the post Post, Alice counts Bob as a friend, Bob counts Alice as a friend and not Bob holds the post Post from Alice.

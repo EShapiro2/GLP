@@ -1,7 +1,7 @@
 Appointments (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Appointments:0 - | Alice, Bob and Carol are persons, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Votes and Double numbers, Res a the time of a provider, Slot a slot.
+Appointments:0 - | Alice, Bob and Carol are persons, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Votes and Double numbers, Res a resource, Slot a slot.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
@@ -60,7 +60,7 @@ Organisation:4 ■ | The decision names his role.
 Organisation:5 ■ Amend: amended(Orga), taken(Orga,Motion) <- officer(Alice,Orga), organisation(Orga), proposed(Orga,Motion), vote(Orga,>=Votes,Motion), product(Double,Votes,2), has_officer(Orga,<Double), ~taken(Orga,Motion) guarded by Alice.
 Organisation:6 ○ | Accountability.
 Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
-Booking:0 - | An organisation has *time of a providers*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
-Booking:0 - | Environment: z has the slot s of the time of a provider r; x has fewer outstanding bookings in z than the bound.
+Booking:0 - | An organisation has *resources*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
+Booking:0 - | Environment: z has the slot s of the resource r; x has fewer outstanding bookings in z than the bound.
 Booking:1 ■ Book: booking(Alice,Orga,Res,Slot), booked(Orga,Res,Slot,Alice) <- participant(Alice,Orga), has_participant(Orga,Alice), under_bound(Alice,Orga), slot(Orga,Res,Slot), ~booked(Orga,Res,Slot,_) guarded by Alice.
 Booking:2 ■ Cancel: ~booking(Alice,Orga,Res,Slot), ~booked(Orga,Res,Slot,Alice) <- booking(Alice,Orga,Res,Slot), booked(Orga,Res,Slot,Alice) guarded by Alice.
