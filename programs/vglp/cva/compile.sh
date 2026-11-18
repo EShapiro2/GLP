@@ -15,7 +15,7 @@
 # 3.4), each the one copy in its owner's file (claude.md "Sessions", the
 # cascade rule; Coordination Appendix C), its file and the name its file gives
 # it found by the table of the contracts' names, calculus/NAMES.txt, and nudge, introduce, gnudge,
-# childsafe, link, friends, waves, parts, opens, groups, counter, pokes, merges, coins, wardclose, numbers, bonds, intros, days, linear, forms, counts and shares, vGLP's, which contracts.glp beside the compiler
+# childsafe, link, friends, waves, parts, opens, groups, counter, pokes, merges, coins, wardclose, numbers, bonds, intros, days, linear, forms, counts, shares and roots, vGLP's, which contracts.glp beside the compiler
 # holds, with the introduction predicate each names, introduction_named/2, or
 # none (GSC's three name none).  A contract is checked before it is compiled
 # (GSC, Section 5): for each contract, a REPL session on its owner's file, or
@@ -43,7 +43,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 THEIRS="social_graph social_network currency"
-OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter pokes merges coins wardclose numbers bonds intros days linear forms counts shares published leaves readings backed consts roles wild wards feeds"
+OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter pokes merges coins wardclose numbers bonds intros days linear forms counts shares roots published leaves readings backed consts roles wild wards feeds"
 CONTRACTS="$THEIRS $OURS"
 
 # The contract of each of GSC's and Currencies' rows, by its name in the table
