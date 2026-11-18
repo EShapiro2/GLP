@@ -5270,6 +5270,24 @@ check_not "CVA roots: ... and not at side 4" "view(bob, \[fenced" "$cva_rt"
 check "CVA roots: ... and taken at side 316227, the whole square root of 99999999999, exact on whole numbers" "view(carol, \[fenced, area(99999999999), side(316227)\]" "$cva_rt"
 check "CVA roots: the platform prints root where its contract uses it" "^num_root(num_is(A), R?) :- integer(A?), A? > 0 | root_step(A?, A?, R).$" "$(cat "$CVA/roots/platform.vglp")"
 check_not "CVA roots: ... and a platform whose contract uses none prints none of it" "num_root" "$(cat "$CVA/counts/platform.vglp")"
+# A second function of the library, distance, the Manhattan distance between two points of as many numbers each (#120): vGLP's distances, its agent run with no person and given at deployment home(x, y) and shop(u, v); visit, whose constraint is distance(x, y, u, v) =< 3, is taken with home (1, 1) and shop (3, 2), at distance 3, and not with shop (3, 3), at distance 4.
+cva_ds_dir="$GLP_DIR/programs/tests/vg_distances_$$"
+mkdir -p "$cva_ds_dir" && cp "$CVA/distances/platform.vglp" "$cva_ds_dir/platform.vglp"
+cva_ds_emit=$(printf ':emit %s\n:quit\n' "$cva_ds_dir" | "$REPL_RUN" 2>&1)
+cva_ds=$("$REPL_RUN" <<HEREDOC
+$cva_ds_dir/platform.glp
+:limit 2000000
+agent(alice, [], N, O, [home(1, 1), shop(3, 2)], A).
+agent(bob, [], N, O, [home(1, 1), shop(3, 3)], A).
+:quit
+HEREDOC
+2>&1)
+rm -rf "${cva_ds_dir:?}"
+check "CVA distances: the platform emitted to GLP, the library's distance printed in it" "wrote .*vg_distances_.*platform.glp" "$cva_ds_emit"
+check "CVA distances: visit taken with the shop at distance 3 from home" "view(alice, \[visited, home(1, 1), shop(3, 2)\]" "$cva_ds"
+check "CVA distances: ... and not at distance 4, bob's first view" "view(bob, \[home(1, 1), shop(3, 3)\]" "$cva_ds"
+check_not "CVA distances: ... bob never visits" "view(bob, \[visited" "$cva_ds"
+check_not "CVA distances: a platform prints only the library's functions its contract uses, distances no root" "num_root" "$(cat "$CVA/distances/platform.vglp")"
 # The values the developer gives (vGLP 922ac53, Section 5.4, "Speech-act schemas as local specifications": "A platform is deployed when its developer compiles it, giving the compiler the values; the program carries them, so every participant of one of its instances holds the same values"): counts compiled with counts/values, cap(3), wt(4) and wt(2), prints developer_values and an agent of four arguments that starts the agent of five with them, which a mini-app calls; run with no person, its first view shows them, held from startup (devvalues).
 cva_dv_dir="$GLP_DIR/programs/tests/vg_devvalues_$$"
 mkdir -p "$cva_dv_dir" && cp "$CVA/counts/platform.vglp" "$cva_dv_dir/platform.vglp"

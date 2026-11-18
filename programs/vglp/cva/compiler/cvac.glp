@@ -540,6 +540,7 @@ fn_named(min, no).
 fn_named(floor, no).
 %% A function of the compiler's library, which the shared text prints where the contract uses it (fn_shared; #120, proposed for vGLP Section 5.4: "and the functions of the compiler's library, each a procedure on numbers that every participant computes alike, as root, the whole square root rounded down").
 fn_named(root, no).
+fn_named(distance, no).
 fn_named(_, yes) :- otherwise | true.
 procedure exprl_beyond(Exprs?, YesNo).
 exprl_beyond([], no).
