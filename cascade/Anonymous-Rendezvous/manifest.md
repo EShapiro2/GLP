@@ -1,4 +1,4 @@
 # cascade/Anonymous-Rendezvous: the contract checked, nothing compiled
 
-Printed by `cascade.sh anonymous_rendezvous --schemas` at GLP 098d5029; the verdict: `not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable), untraceable([presented_keys]), volition(match_2, 1, 2)])`.
-No VMAT form, platform or run: the contract is not compiled.
+Anonymous-Rendezvous.glp and the printed files are the Calculus's, calculus/contracts/Anonymous-Rendezvous/ at GLP abfbd292: on this branch, off main, calculus/tools/adopt.py prints value variables bare, without the const batch's const(X), and cannot expand a first line that instantiates with no binding, so the record is the Calculus's printing.
+The verdict, by programs/gsc's check/2 on that term: `syntactically_grassroots_with_wards(acquaint, [ward], [guardianship(ward, guardian, has_guardian)], [relay(ward_acquaint, ward(1, ward, no_guardian), free(2)), relay(wards_acquaint, ward(1, ward, no_guardian), ward(2, ward, no_guardian))], [identity, person])`.  No VMAT form, platform or run: the contract is not compiled.

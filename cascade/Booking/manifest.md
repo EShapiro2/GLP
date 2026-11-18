@@ -1,4 +1,4 @@
 # cascade/Booking: the contract checked, nothing compiled
 
-Printed by `cascade.sh booking --schemas` at GLP 098d5029; the verdict: `not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable), untraceable([booking, booked]), volition(cancel, 1, 2)])`.
-No VMAT form, platform or run: the contract is not compiled.
+Booking.glp and the printed files are the Calculus's, calculus/contracts/Booking/ at GLP abfbd292: on this branch, off main, calculus/tools/adopt.py prints value variables bare, without the const batch's const(X), and cannot expand a first line that instantiates with no binding, so the record is the Calculus's printing.
+The verdict, by programs/gsc's check/2 on that term: `syntactically_grassroots_with_wards(acquaint, [organisation], [guardianship(organisation, officer, has_officer)], [relay(organisation_acquaint, ward(1, organisation, no_guardian), free(2)), relay(organisations_acquaint, ward(1, organisation, no_guardian), ward(2, organisation, no_guardian))], [identity, person])`.  No VMAT form, platform or run: the contract is not compiled.
