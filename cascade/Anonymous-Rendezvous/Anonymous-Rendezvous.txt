@@ -3,7 +3,7 @@
 % Paper: GNA, GLP Networking API and Services, in preparation
 % Extends: Rendezvous, GNA's (Rendezvous.txt beside this file), and through it Services, Guardians, Friendship and Knowledge.  Its one clause has the shape of Rendezvous:4, with one-time keys in place of the friendship; Matching's Meet uses it (GM, reported 2026-11-18).
 % Defines: one-time key, in the box after the declaration.  Person, knowing a person and rendezvous server are defined with Knowledge and Rendezvous.
-% Last changed: first written 2026-11-18 by GSA #8, the clause as Udi approved it; its Logic pragmas, Interface pragmas and schemas are not yet written: the Logic pragmas are the Calculus's, and for now nothing is compiled (Udi, 2026-11-18: "for now no compilation, i want to know what all contracts are comiled to sas and pass checking").
+% Last changed: 2026-11-18 (second), the Calculus's Logic pragmas (Calculus repo, branch proposed-first-lines, 92c79f9e, gr/Anonymous-Rendezvous.txt; its checker's verdict there: syntactically grassroots with wards), the first line unchanged by the first lines Udi approved that day; 2026-11-18, first written by GSA #8, the clause as Udi approved it.  Its Interface pragmas are not yet written, and for now nothing is compiled (Udi, 2026-11-18: "for now no compilation, i want to know what all contracts are comiled to sas and pass checking").
 % Schemas: Anonymous-Rendezvous.glp beside this file, to be printed from the Logic pragmas by calculus/tools/adopt.py, never written by hand.
 Anonymous Rendezvous
 Anonymous Rendezvous extends Rendezvous.
@@ -11,6 +11,7 @@ A *one-time key* is a key pair its maker uses for one meeting.
 Alice and Bob are persons, Dave a rendezvous server.
 1. ■ Meet. Present: Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own. Match: Dave then gives each the address of the other.
 Logic pragmas
+Anonymous Rendezvous
 Anonymous Rendezvous extends Rendezvous.
 A *one-time key* is a key pair its maker uses for one meeting.
 Alice and Bob are persons, Dave a service, Key and Other one-time keys.
