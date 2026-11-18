@@ -82,6 +82,7 @@ GCoop | Cooperative | Cooperative | cooperative | gcoop
 WC | Workers' Cooperative | Workers-Cooperative | workers_cooperative | wc
 CnC | Consumers' Cooperative | Consumers-Cooperative | consumers_cooperative | cnc
 GDAO | Cooperative DAO | Cooperative-DAO | cooperative_dao | gdao
+Charter | Charter | Charter | charter | charter
 GLDAO | Liquid Cooperative | Liquid-Cooperative | liquid_cooperative | gldao
 GAN | Ads | Ads | ads | gan
 GNG | Gigs | Gigs | gigs | gng

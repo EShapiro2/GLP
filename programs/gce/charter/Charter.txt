@@ -15,3 +15,5 @@ A *chartered organisation* is an organisation whose bylaws are its *charter*: it
 Alice is a person, Orga an organisation, Motion an act of Orga, All a number.
 1. ■ Amend: Organisation:5 Amend, only if Orga holds the votes of at least All persons on Motion and Orga has at most All persons as an officer.
 Logic pragmas.
+Interface pragmas
+Amend: Alice [Amend] <act> <votes> <officers>

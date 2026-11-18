@@ -1,5 +1,5 @@
-%% Charter.glp --- printed by calculus/tools/toglp.py from Charter.txt: the contract's full schemas, the Calculus's term.glp.txt,
-%% complete in itself.  Not to be edited: edit Charter.txt and print it again.
+%% Charter.glp --- printed by adopt.py from Charter.txt: the contract's full schemas, the Calculus's term.glp.txt,
+%% complete in itself.  Not to be edited: edit Charter.txt and run adopt.py Charter.
 % contract_named(charter, C): the contract, Charter.
 procedure contract_named(Constant?, SDeclared).
 contract_named(charter, reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
