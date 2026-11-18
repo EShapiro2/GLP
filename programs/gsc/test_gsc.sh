@@ -159,10 +159,10 @@ check "GAI's contract is grassroots with wards, its relay acts agent_acquaint, a
       "V = syntactically_grassroots_with_wards(acquaint, [ai_agent], [guardianship(ai_agent, guardian, has_guardian)], [relay(ai_agent_acquaint, ward(1, ai_agent, no_guardian), free(2)), relay(ai_agents_acquaint, ward(1, ai_agent, no_guardian), ward(2, ai_agent, no_guardian))], [identity, person])" \
       "$(run "check($GAIT, V).")"
 DGCT=$(contract_term "$GLP_DIR/programs/currencies/sovereign" DGC)
-# DGC is adopted from the Calculus by Currencies (2026-11-15): DGC.glp is the full schemas in the clause syntax, an environment declaration over them; as_read gives it in the checker's form, and gives a contract in the checker's form as it is.
-check "DGC's contract is an environment contract, knows reflexive within it" "environment([today, one_denomination], reflexive([knows], [sas(" "$DGCT"
+# DGC is adopted from the Calculus by Currencies (2026-11-15), its environment today alone since the batch const (the coin carries its denomination): DGC.glp is the full schemas in the clause syntax, an environment declaration over them; as_read gives it in the checker's form, and gives a contract in the checker's form as it is.
+check "DGC's contract is an environment contract, knows reflexive within it" "environment([today], reflexive([knows], [sas(" "$DGCT"
 DGCV=$(asread "$DGCT")
-check "as_read gives DGC its wrappers, each schema in the checker's form" "environment([today, one_denomination], reflexive([knows], [schema(" "$DGCV"
+check "as_read gives DGC its wrappers, each schema in the checker's form" "environment([today], reflexive([knows], [schema(" "$DGCV"
 check_eq "as_read gives DGC, an environment contract in the checker's form, as it is" "$DGCV" "$(asread "$DGCV")"
 # as_read keeps the mark one(Name, Other) of an agent variable that is no role, in the read names after the roles' (Definition Binding, GSC 8af7b7c: distinct agent variables to distinct agents but for two the schema marks as possibly one; vGLP #30's question, 2026-11-17)
 out=$(run "as_read([sas(lu, ['Alice', 'Carol', one('Dave', 'Carol')], ['Carol', 'Dave'], [not(atom(pointer, ['Alice', 'Carol', 'Dave']))], [atom(pointer, ['Alice', 'Carol', 'Dave'])], true, ['Alice'])], R).")
