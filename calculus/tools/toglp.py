@@ -355,6 +355,9 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                 if is_local(a):
                     raise ValueError('%s: a place of a count that no state of numbers defines: %s' % (e['name'], a))
                 return arg(a) if not a.isdigit() else 'val(%s)' % a
+            for l in comps:
+                if l[1] not in ARITH:      # a state of numbers whose value is a place of the counted state, or named twice
+                    raise ValueError('%s: a state of numbers in a count that defines no number of its own: %s' % (e['name'], l))
             cs = ['%s(%s, %s)' % (ARITH[l[1]], ex(l[2][0]), ex(l[2][1])) for l in comps]
             parts = cases + cs
             f = parts[-1] if parts else 'true'
