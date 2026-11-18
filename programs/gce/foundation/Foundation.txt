@@ -1,0 +1,25 @@
+% Foundation --- an example contract by Nimrod Talmon with Claude, 2026-11-18: The civil-law foundation (Hansmann and Kraakman 2000, pp. 435-436; Armour, Hansmann and Kraakman 2009, p. 14).
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.
+% Extends: Nonprofit (programs/gce/nonprofit), and through it Corporation and Organisation.
+% Defines: foundation, trustee, purpose.
+% Checked: calculus/tools/gcsas.py (commute, return, recover) and relations.py; not yet through cascade.sh (no Dart SDK where it was written).
+% Schemas: Foundation.glp beside this file.
+Foundation
+Foundation instantiates Nonprofit with foundation bylaws; x is an officer of z for x is entitled to propose m in z; x is an officer of z for x is entitled to take m for z; x is an officer of z for x is entitled to vote on m in z, and restricts it.
+A *foundation* is a nonprofit whose bylaws name one role, *trustee*, held by every officer, and state a *purpose*; the trustees decide by a majority of the trustees, and a person joins only with the consent of every trustee.
+Bob is a person, Orga a foundation, Motion an act of Orga.
+1. ■ Join: Organisation:3 Join, with the consent of the trustees of Orga.
+2. ■ Amend: Organisation:5 Amend, only if Motion keeps the purpose of Orga.
+3. ○ Purpose. The trustees will use the coins of Orga only for its purpose.
+Logic pragmas
+Foundation instantiates Nonprofit with foundation bylaws; x is an officer of z for x is entitled to propose m in z; x is an officer of z for x is entitled to take m for z; x is an officer of z for x is entitled to vote on m in z, and restricts it.
+A *foundation* is a nonprofit whose bylaws name one role, *trustee*, held by every officer, and state a *purpose*; the trustees decide by a majority of the trustees, and a person joins only with the consent of every trustee.
+Bob is a person, Orga a foundation, Motion an act of Orga.
+1. ■ Join: Organisation:3 Join, with the consent of the trustees of Orga.
+2. ■ Amend: Organisation:5 Amend, only if Motion keeps the purpose of Orga.
+3. ○ Purpose. The trustees will use the coins of Orga only for its purpose.
+Logic pragmas.
+x is a trustee of z: x is an officer of z.
+Vocabulary: m keeps the purpose of z = keeps_purpose(z,m).
+Roles: the trustees of z = trustees(z), listed by x is an officer of z.
+Environment: m keeps the purpose of z.
