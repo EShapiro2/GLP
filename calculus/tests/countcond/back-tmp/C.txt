@@ -1,0 +1,7 @@
+C: Club
+Orga is a person, Score, Enough, Status and Val numbers.
+1. ■ Pass: Orga may pass Val, provided Orga has the status quo at the number Status, Orga counts >=Enough as gaining at least Score from Val over Status and Enough is at least 3.
+Logic pragmas.
+Vocabulary: z holds y's ideal value at the number n = ideal(z,y,n); z has the status quo at the number n = status(z,n); z has passed n = passed(z,n).
+z counts y as gaining at least w from n over s: z holds y's ideal value at the number i, f is the difference from i to s, d is the difference from i to n, g is d plus w and f is at least g.
+After z passes n: z has passed n.
