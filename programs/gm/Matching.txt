@@ -1,5 +1,5 @@
 % Matching: the contract, the one copy, its owner's.
-% Owner: GM, proposed by its thread, 2026-11-18; Udi's approval pending.
+% Owner: GM (Udi, 2026-11-18, approving the recommendation, reported by the coordinator).
 % Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
 % Last changed: 2026-11-18, written from the paper at GM main 794a6a2; no Logic pragmas and no Interface pragmas yet.
 Matching
