@@ -1,11 +1,11 @@
 # A run of the cascade on Networked-Organisation
 
-- Contract: `Networked-Organisation` (`networked_organisation` to the checker), its owner's two files `programs/go/Networked-Organisation.txt` and `programs/go/Networked-Organisation.glp`, copied here as they stood at `272ea65d`.
+- Contract: `Networked-Organisation` (`networked_organisation` to the checker), its owner's two files `programs/go/Networked-Organisation.txt` and `programs/go/Networked-Organisation.glp`, copied here as they stood at `b414409c`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
 - Adopted from the Calculus: `programs/go/Networked-Organisation.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Networked-Organisation.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-17 10:55 UTC by `cascade.sh networked_organisation`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `272ea65d`; each artefact's source and tool:
+- Run on 2026-11-18 07:53 UTC by `cascade.sh networked_organisation`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `b414409c`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
