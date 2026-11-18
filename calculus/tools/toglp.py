@@ -215,7 +215,7 @@ def binding_holds(e, x, y):
     return x in rs and y in rs and not names(x, y) and not names(y, x)
 
 
-def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset(), acts=(), anyof=frozenset(), cvals=frozenset(), nvals=frozenset()):
+def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset(), acts=(), anyof=frozenset(), cvals=frozenset(), nvals=frozenset(), pref=None, record=None):
     # A name of the act that holds, in what the act requires, the state that lists a role of those who decide, of the
     # same agent, is the one of them who decides, Decider: "Bob, a friend of a guardian of Carol" (GnW:2) is a friend
     # of the guardian who decides, as CSSN's make_guardian had it (Alice, a guardian, deciding).
@@ -257,6 +257,13 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         if r and r != roles[0]:
             roles.remove(r)
             roles.insert(0, r)
+    # An act keeps the role order of the act it comes from: the order is decided where the act is first written, and a
+    # contract that has it by citation, restriction, strengthening, instantiation or refinement keeps it; a role the
+    # act gains comes after (Calculus #8, 2026-11-18 07:37 UTC: Denominated Currencies' Swap in Notes' order)
+    if pref:
+        roles = [r for r in pref if r in roles] + [r for r in roles if r not in pref]
+    if record is not None:
+        record[e['name']] = list(roles)
     others, bound, listed, lists, deciders, onecons = [], [], [], [], [], []
     for g in e['guards']:           # those who decide: one of them, named, and every other the first agent of the role lists for it
         if '(' in g:
@@ -447,8 +454,29 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         ', '.join([q(g) for g in e['guards'] if '(' not in g] + [q(x) for x in deciders + listed]))
 
 
+ORDERS = {}     # {contract: {act: its roles in their order}}, of every contract whose term was made (origin_order)
+
+
+def origin(e):
+    """The contract that first wrote the act: the first of its label, Notes of 'Notes:2+Denominated Currencies:2'."""
+    return re.split(r'[:+]', e['label'])[0]
+
+
+def origin_order(o):
+    """The role order of each act of contract o, as o's own term has it."""
+    if o not in ORDERS:
+        contract_term(o)
+    return ORDERS[o]
+
+
 def contract_term(n):
     acts = [e for e in schemas(n) if e['kind'] == 'act']
+    known = set(NM.names_in(os.path.join(ROOT, 'gr')))
+    prefs = {}
+    for e in acts:          # the orders of the contracts the acts come from, before this contract's own reading (values_of sets ONE)
+        o = origin(e)
+        if o != n and o in known:
+            prefs[(e['label'], e['name'])] = origin_order(o).get(e['name'])
     declared, envd, pard = set(), set(), set()
     values, rlist, kinds = values_of(n, declared, envd, pard)
     agents, used, out, roles = agents_of(acts, values), {}, [], 0
@@ -489,8 +517,9 @@ def contract_term(n):
         if (o, num) not in amemo:
             amemo[(o, num)] = frozenset(a for cl, a, b in gcsas.possibly(w.contract(o)) if b == '*' and (cl is None or num in cl)) if o in w.known else frozenset()
         return amemo[(o, num)]
+    orders = {}
     for e in acts:
-        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces, persons_of(e), acts, anyof(e), cvals, nvals)
+        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces, persons_of(e), acts, anyof(e), cvals, nvals, prefs.get((e['label'], e['name'])), orders)
         if t is None:
             roles += 1
         else:
@@ -509,6 +538,7 @@ def contract_term(n):
     par = sorted(p for p in pard if p not in added and any(l[1] == p for e in acts for l in e['body']))
     if par:
         body = 'parametric([%s], %s)' % (', '.join(par), body)
+    ORDERS[n] = orders
     return body, len(acts), roles
 
 
