@@ -25,9 +25,24 @@
 %% wrote, and their answer on the one the program showed.
 Output    ::= said(SpeechAct) ; forwarded(YesNo).
 
-imported procedure speech#say(Channel(Stream(_), Stream(Output))?,
+%% What a person reads: the dispatcher's draws, and the program's output to
+%% the person read off construct 0's thread.
+Event     ::= draw(Integer, Widget(Drawn), Drawn) ; withdraw(Integer) ;
+              said(SpeechAct) ; forwarded(YesNo).
+Events    ::= [Event | Events].
+
+%% What a person logs: each question it answers, drawn with the person's
+%% position marked, every other forward card's view, each withdrawal and
+%% each of the program's outputs.
+Logged    ::= drawn(Integer, Widget(Drawn), Marked) ;
+              drawn(Integer, Widget(Drawn), SpeechAct, Marked) ;
+              view(View_forward) ; withdrawn(Integer) ;
+              said(SpeechAct) ; forwarded(YesNo).
+Marked    ::= input(Path).
+
+imported procedure(T) speech#say(Channel(Stream(Input(T)), Stream(Output))?,
     Stream(Ask(Question))).
-imported procedure speech#ask(Channel(Stream(_), Stream(Output))?,
+imported procedure(T) speech#ask(Channel(Stream(Input(T)), Stream(Output))?,
     Stream(Ask(Question))).
 imported procedure speech#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
@@ -37,14 +52,14 @@ imported procedure speech#dispatch(Stream(Ask(Question))?,
 %% ---------------------------------------------------------------------------
 
 %% The person writes a speech act.
-exported procedure say_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
+exported procedure say_init(Constant?, PersonIn(Drawn)?, Stream(NetMsg(Constant))?).
 say_init(_, Gs, _) :-
     speech # say(MCh?, Asks),
     speech # dispatch(Asks?, ch(Gs?, Ds), MCh),
     send_to_user(Ds?).
 
 %% The program shows a speech act, and asks whether to forward it.
-exported procedure ask_init(Constant?, PersonIn(Drawn)?, Stream(_)?).
+exported procedure ask_init(Constant?, PersonIn(Drawn)?, Stream(NetMsg(Constant))?).
 ask_init(_, Gs, _) :-
     speech # ask(MCh?, Asks),
     speech # dispatch(Asks?, ch(Gs?, Ds), MCh),
@@ -57,14 +72,14 @@ ask_init(_, Gs, _) :-
 %% The person writes a speech act signed twice, hi by alice forwarded by
 %% bob, whole, in one grant; the construct process forms it by recursion on
 %% the type's definition, and the program receives it.
-exported procedure play_say(Stream(_)).
+exported procedure play_say(Stream(Logged)).
 play_say(Log?) :-
     speech # say(MCh?, Asks),
     speech # dispatch(Asks?, ch(Gs?, Ds), MCh),
     outputs(Ds?, Es),
     saying_person(Es?, Gs, Log).
 
-procedure saying_person(_?, PersonIn(Drawn), Stream(_)).
+procedure saying_person(Events?, PersonIn(Drawn), Stream(Logged)).
 saying_person([draw(Id, W, speechAct_r(input(Q))) | Ds],
               [input(Id?, Q?, speech(speech(text("hi"), alice), bob)) | Gs?],
               [drawn(Id?, W?, input(Q?)) | Log?]) :-
@@ -76,18 +91,21 @@ saying_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
 saying_person([said(S) | Ds], Gs?, [said(S?) | Log?]) :-
     ground(S?) |
     saying_person(Ds?, Gs, Log).
+saying_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    saying_person(Ds?, Gs, Log).
 
 %% The person's first grant, a term of the person channel's type that forms
 %% no speech act, answers nothing; the second, a speech act, answers the
 %% question.
-exported procedure play_say_refused(Stream(_)).
+exported procedure play_say_refused(Stream(Logged)).
 play_say_refused(Log?) :-
     speech # say(MCh?, Asks),
     speech # dispatch(Asks?, ch(Gs?, Ds), MCh),
     outputs(Ds?, Es),
     retrying_person(Es?, Gs, Log).
 
-procedure retrying_person(_?, PersonIn(Drawn), Stream(_)).
+procedure retrying_person(Events?, PersonIn(Drawn), Stream(Logged)).
 retrying_person([draw(Id, W, speechAct_r(input(Q))) | Ds],
                 [input(Id?, Q?, no),
                  input(Id?, Q?, speech(text("hi"), carol)) | Gs?],
@@ -100,18 +118,21 @@ retrying_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
 retrying_person([said(S) | Ds], Gs?, [said(S?) | Log?]) :-
     ground(S?) |
     retrying_person(Ds?, Gs, Log).
+retrying_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    retrying_person(Ds?, Gs, Log).
 
 %% The program shows a speech act signed twice, drawn whole --- pending until
 %% the asking clause's argument reaches the construct, then whole, never a
 %% part of it --- and the person answers yes beside it.
-exported procedure play_forward(Stream(_)).
+exported procedure play_forward(Stream(Logged)).
 play_forward(Log?) :-
     speech # ask(MCh?, Asks),
     speech # dispatch(Asks?, ch(Gs?, Ds), MCh),
     outputs(Ds?, Es),
     forwarding_person(Es?, Gs, Log).
 
-procedure forwarding_person(_?, PersonIn(Drawn), Stream(_)).
+procedure forwarding_person(Events?, PersonIn(Drawn), Stream(Logged)).
 forwarding_person([draw(Id, W, forward_w(forward(S, input(Q)))) | Ds],
                   [input(Id?, Q?, yes) | Gs?],
                   [drawn(Id?, W?, S?, input(Q?)) | Log?]) :-
@@ -126,6 +147,9 @@ forwarding_person([withdraw(Id) | Ds], Gs?, [withdrawn(Id?) | Log?]) :-
 forwarding_person([forwarded(A) | Ds], Gs?, [forwarded(A?) | Log?]) :-
     ground(A?) |
     forwarding_person(Ds?, Gs, Log).
+forwarding_person([_ | Ds], Gs?, Log?) :-
+    otherwise |
+    forwarding_person(Ds?, Gs, Log).
 
 %% ---------------------------------------------------------------------------
 %% The program's output, read off the thread of construct 0
@@ -137,11 +161,11 @@ forwarding_person([forwarded(A) | Ds], Gs?, [forwarded(A?) | Log?]) :-
 %% newest element is the one that came, and the draw with none is no event
 %% (vGLP 169b008, Definition "Canonical Compilation"; cards/self.glp).  Every
 %% other draw and withdrawal passes as it came.
-procedure outputs(_?, Stream(_)).
+procedure outputs(PersonOut(Drawn)?, Events).
 outputs([draw(0, thread(_), output(Ms)) | Ds], Es?) :- newest(Ms?, Ds?, Es).
 outputs([E | Ds], [E? | Es?]) :- otherwise | outputs(Ds?, Es).
 
-procedure newest(_?, _?, Stream(_)).
+procedure newest(List(Output)?, PersonOut(Drawn)?, Events).
 newest([], Ds, Es?) :- outputs(Ds?, Es).
 newest([M], Ds, [M? | Es?]) :- outputs(Ds?, Es).
 newest([_, M1 | Ms], Ds, Es?) :- newest([M1? | Ms?], Ds?, Es).

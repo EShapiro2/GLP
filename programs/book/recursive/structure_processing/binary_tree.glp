@@ -7,8 +7,3 @@ Tree ::= void ; tree(_, Tree, Tree).
 procedure binary_tree(Tree?).
 binary_tree(void).
 binary_tree(tree(_, Left, Right)) :- binary_tree(Left?), binary_tree(Right?).
-
-%% reduce clauses for metainterpreter
-procedure reduce(_?, _).
-reduce(binary_tree(void), true).
-reduce(binary_tree(tree(_, Left, Right)), (binary_tree(Left?), binary_tree(Right?))).

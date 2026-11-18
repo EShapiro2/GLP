@@ -300,7 +300,7 @@ a1=$("$REPL_RUN" <<HEREDOC
 $TYPED/p.glp
 $BOOK/streams/producers_consumers/merge_simple.glp
 $TYPED/merge_standalone.glp
-$TYPED/run1.glp
+$TYPED/run1
 p(X).
 merge([1,2,3], [a,b], Xs).
 merge2([c,d], Out).
@@ -7839,7 +7839,9 @@ if _section SK; then
 # Secure GLP core.tex §The Seam; IGLP code format §Program Artefact and
 # "Signed content"; SGSG Section 3 "What the super-app grants a mini-app" and
 # Section 6.1 G1.  Keys, hashes and signed terms are hex strings; a key and a
-# hash are 64 characters.  The probe runs in madGLP mode (:mad), as SGSG's
+# hash are 64 characters; in a simulation a key the seam gives is the person's
+# readable name (IGLP, Implementation Notes, Simulation realisation; GLP-names).
+# The probe runs in madGLP mode (:mad), as SGSG's
 # harness will.
 echo "=== Section SK: Identity, signature, certificate ==="
 # A key or an identity is 64 hex digits, shown in single quotes where it begins
@@ -7855,8 +7857,8 @@ roundtrip(hello(world), R).
 HEREDOC
 2>&1)
 check "SK1 madGLP mode enters for a directory load" "madGLP mode on: agent alice" "$sk1"
-check "SK1 self_key assigns the person's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sk1"
-check "SK1 sign then signature round-trips the term as signed(K, H, T) under the signer's key and module identity" "R = signed(\('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\), \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\), hello(world))" "$sk1"
+check "SK1 self_key assigns the person's key, in a simulation the readable name standing for it (IGLP, Implementation Notes, Simulation realisation)" "K = alice$" "$sk1"
+check "SK1 sign then signature round-trips the term as signed(K, H, T) under the signer's key, its readable name in a simulation, and module identity" "R = signed(alice, \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\), hello(world))" "$sk1"
 
 # The key the signed term carries is self_key's answer, and the module identity
 # is this program's source identity, which decompose_module also reports.
@@ -8092,20 +8094,17 @@ check_not "MB5 linkprobe14 what alice sees is bob's greeting, from carol" "\[ali
 
 rm -f "$LP_DIR"/runprobe/*.glpw
 
-# MB6: GKK's app as maGLP (GLP #11 Cowork, 2026-11-01 22:25 UTC; GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot").  alice and bob, each in an isolate of its own, each started from agent(ch(_?,_),ch(_?,_)), each with the person scripted in GLP the boot clause names at it; alice's person names bob, her agent cold-calls bob with a conversation, msg(bob, conv(Ka, Kb, Ch)), and each agent runs programs/apps/gkk's mini-app over it.  Each agent's key pair is made at its spawn (GLP-Spec b4ecfaa, appendix-guards.tex, self_key/1; IGLP 8bec699, Boot) and self_key/1 assigns it; each person establishes their identity by it (GKK:1), alice asks to know bob by the key her agent was told and bob answers yes (GKK:2), and each then knows the other: alice's knows/1 names bob's key, and bob's names alice's.
+# MB6: GKK's app as maGLP (GLP #11 Cowork, 2026-11-01 22:25 UTC; GLP-Spec maglp.tex, Definition "Multiagent GLP"; IGLP, Implementation Notes, "Boot").  alice and bob, each in an isolate of its own, each started from agent(ch(_?,_),ch(_?,_)), each with the person scripted in GLP the boot clause names at it; alice's person names bob, her agent cold-calls bob with a conversation, msg(bob, conv(Ka, Kb, Ch)), and each agent runs programs/apps/gkk's mini-app over it.  Each agent's key pair is made at its spawn (GLP-Spec b4ecfaa, appendix-guards.tex, self_key/1; IGLP 8bec699, Boot) and self_key/1 assigns it; each person establishes their identity by it (GKK:1), alice asks to know bob by the key her agent was told and bob answers yes (GKK:2), and each then knows the other: alice's knows/1 names bob's key, and bob's names alice's; in a simulation each key is the readable name standing for it (IGLP, Implementation Notes, Simulation realisation).
 mb6=$("$REPL_RUN" <<HEREDOC
 :boot $GLP_DIR/programs/tests/multiagent/gkk_maglp_boot.glp $GLP_DIR/programs/apps/gkk
 :quit
 HEREDOC
 2>&1)
-# A key prints bare where it reads as an atom, and quoted where it begins with a digit; the first line an agent prints may follow the prompt.
-mb6_ka=$(echo "$mb6" | sed -n "s/^.*\[alice\] key('\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\})$/\1/p" | head -1)
-mb6_kb=$(echo "$mb6" | sed -n "s/^.*\[bob\] key('\{0,1\}\([0-9a-f]\{64\}\)'\{0,1\})$/\1/p" | head -1)
 check "MB6 GKK as maGLP: the boot settles with two agents" "Boot settled: 2 agents" "$mb6"
-check "MB6 alice establishes her identity by the key made at her spawn" "\[alice\] key('\{0,1\}[0-9a-f]\{64\}'\{0,1\})$" "$mb6"
-check "MB6 bob's key likewise" "\[bob\] key('\{0,1\}[0-9a-f]\{64\}'\{0,1\})$" "$mb6"
-check "MB6 alice knows bob, by his key" "\[alice\] knows('\{0,1\}${mb6_kb:-none}'\{0,1\})$" "$mb6"
-check "MB6 bob knows alice, by her key" "\[bob\] knows('\{0,1\}${mb6_ka:-none}'\{0,1\})$" "$mb6"
+check "MB6 alice establishes her identity by the key made at her spawn, its readable name in a simulation" "\[alice\] key(alice)$" "$mb6"
+check "MB6 bob's key likewise" "\[bob\] key(bob)$" "$mb6"
+check "MB6 alice knows bob, by his key" "\[alice\] knows(bob)$" "$mb6"
+check "MB6 bob knows alice, by her key" "\[bob\] knows(alice)$" "$mb6"
 
 # MB7: peer_app/2 under :boot, the app the harness names (IGLP 4a9ad28, Implementation Notes, "Simulation realisation": "The router reports each connection and disconnection to the agents, and reports every peer attested with the app the harness names, its developer, name and version"; Definition "Seam Predicates").  The REPL's :app names it; alice asks peer_app for bob, connected from the boot, and tells her person.  With no app named a connection is reported unattested.
 mb7=$("$REPL_RUN" <<HEREDOC

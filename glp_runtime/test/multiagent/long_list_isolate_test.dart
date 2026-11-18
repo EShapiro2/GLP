@@ -35,18 +35,19 @@ say(P, ch(_, [P?])).
 
 /// The agents' program, a program directory's self.glp (boot_program.dart).
 const String _program = '''
-exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Stream(Integer))), Stream(NetMsg(Stream(Integer))))?).
 agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
-procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+procedure start(Stream(Constant)?, Stream(NetMsg(Stream(Integer)))?).
 start([alice | _], N) :- alice_init(alice, N?).
 start([bob | _], N) :- bob_init(bob, N?).
 start(_, _) :- otherwise | true.
 
-procedure alice_init(_?, _?).
+procedure alice_init(Constant?, Stream(NetMsg(Stream(Integer)))?).
 alice_init(_, _) :- gen($_n, Xs, D), ship(D?, Xs?).
 
-procedure bob_init(_?, _?).
+procedure bob_init(Constant?, Stream(NetMsg(Stream(Integer)))?).
 bob_init(_, [msg(_, Xs) | _]) :- check(Xs?, $_n, R), report(R?).
+bob_init(_, []).
 
 procedure gen(Integer?, Stream(Integer), Done).
 gen(0, [], done).

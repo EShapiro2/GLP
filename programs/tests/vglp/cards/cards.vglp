@@ -40,15 +40,15 @@ Panel   ::= panel(List(Card)).
 %% ---------------------------------------------------------------------------
 
 %% A panel of two cards.
-exported procedure panel(Channel(Stream(_), Stream(Output))?).
+exported procedure(T) panel(Channel(Stream(Input(T)), Stream(Output))?).
 panel(ch(_, Out?)) :- show(Out).
 
 %% A list of three cards.
-exported procedure deal(Channel(Stream(_), Stream(Output))?).
+exported procedure(T) deal(Channel(Stream(Input(T)), Stream(Output))?).
 deal(ch(_, Out?)) :- cards(Out).
 
 %% A stream of two yes-or-no questions.
-exported procedure votes(Channel(Stream(_), Stream(Output))?).
+exported procedure(T) votes(Channel(Stream(Input(T)), Stream(Output))?).
 votes(ch(_, Out?)) :- ballot(Out).
 
 %% ---------------------------------------------------------------------------

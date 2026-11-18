@@ -50,7 +50,7 @@ Hash ::= String.
 % signature verifies --- the signer's key, the identity of the module under
 % which the signature was made, and the term signed --- and unsigned otherwise.
 % The caller discriminates by matching.
-Signature ::= signed(Key, Hash, _) ; unsigned.
+Signature ::= signed(Key, Hash, Term) ; unsigned.
 
 % What peer_address/2 assigns (GLP-Spec appendix-guards, "Networking seam"):
 % address(S), S the address at which the networking layer observes the peer,

@@ -15,12 +15,3 @@ exported procedure insert(Number?, NumList?, NumList).
 insert(X, [], [X?]).
 insert(X, [Y|Ys], [X?|[Y?|Ys?]]) :- X? < Y? | true.
 insert(X, [Y|Ys], [Y?|Zs?]) :- X? >= Y? | insert(X?, Ys?, Zs).
-
-%% Metainterpreter support
-exported procedure reduce(_?, _).
-reduce(insertion_sort([], []), true).
-reduce(insertion_sort([X|Xs], Sorted?),
-       (insertion_sort(Xs?, SortedTail), insert(X?, SortedTail?, Sorted))).
-reduce(insert(X, [], [X?]), true).
-reduce(insert(X, [Y|Ys], [X?|[Y?|Ys?]]), true) :- X? < Y? | true.
-reduce(insert(X, [Y|Ys], [Y?|Zs?]), insert(X?, Ys?, Zs)) :- X? >= Y? | true.

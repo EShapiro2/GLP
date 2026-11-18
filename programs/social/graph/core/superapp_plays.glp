@@ -214,9 +214,14 @@ play_attest(A, B, S?, K?, H?, T?) :-
 %% alternative of Signature, assign the three the constant unsigned, and the
 %% play's checks never reach them.
 procedure attested(Signature?, String, String, Attestation).
-attested(signed(K, H, attest(I, O)), K?, H?, attest(I?, O?)) :- string(I?), string(O?) | true.
+attested(signed(K, H, attest(I, O)), K?, H?, At?) :- string(I?), string(O?) | attest_of(I?, O?, At).
+
 attested(signed(_, _, _), unsigned, unsigned, unsigned) :- otherwise | true.
 attested(unsigned, unsigned, unsigned, unsigned).
+
+%% attest_of(I, O, At): the attestation of the two keys, which attested/4 read from inside the signed term and typed by their guards, so built in the body (TGLP, Type checking of guards).
+procedure attest_of(Key?, Key?, Attestation).
+attest_of(I, O, attest(I?, O?)).
 
 procedure alice_attest(Key?, Key?, AgentToUserStream?, String, UserInStream).
 alice_attest(Me, Q, Outs, S?, [msg(person, Me?, connect(Q?)) | Cmds?]) :-

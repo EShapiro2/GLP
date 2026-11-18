@@ -2,31 +2,34 @@
 
 %% alice: the anchor.  Sends the writer end of W to bob, waits on W's reader,
 %% and answers every pending_link report on her network input.
-exported procedure alice_init(_?, _?).
+exported procedure alice_init(Keys?, Stream(NetIn)?).
 alice_init(keys(Me, [Bob]), In) :-
     send_to_net([msg(Bob?, w(W))]),
     alice_wait(W?),
     answer_reports(Me?, In?).
+alice_init(_, _) :- otherwise | true.
 
-procedure alice_wait(_?).
+procedure alice_wait(String?).
 alice_wait(V) :- ground(V?) | send_to_user([delivered(V?)]).
 
 %% bob: receives the end from alice and forwards it to carol, re-exporting
 %% alice's name rather than anchoring a new link (Definition Globalize).
-exported procedure bob_init(_?, _?).
+exported procedure bob_init(Keys?, Stream(NetIn)?).
 bob_init(keys(_, [Carol]), [msg(_, w(W?)) | _]) :-
     send_to_net([msg(Carol?, w(W))]).
+bob_init(_, _) :- otherwise | true.
 
 %% carol: the holder.  Binds the forwarded end, then answers the report her
 %% runtime makes when it holds the assignment.
-exported procedure carol_init(_?, _?).
+exported procedure carol_init(Keys?, Stream(NetIn)?).
 carol_init(keys(Me, _), [msg(_, w(W?)) | In]) :-
     W = hello_from_carol,
     answer_reports(Me?, In?).
+carol_init(_, _) :- otherwise | true.
 
 %% answer_reports(Me, In): report each pending_link(Name, Sender) to the person
 %% and authorise the link; ignore anything else on the input stream.
-procedure answer_reports(Constant?, _?).
+procedure answer_reports(Key?, Stream(NetIn)?).
 answer_reports(Me, [pending_link(G, S) | In]) :-
     ground(G?), ground(S?) |
     send_to_user([held(Me?, G?, S?)]),
