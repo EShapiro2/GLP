@@ -240,7 +240,7 @@ def file_of(name):
 texts = {}
 for d, _, fs in os.walk(os.path.join(GLP, 'programs')):
     for f in fs:
-        if f.endswith('.txt') and f[:-4] == f[:-4].strip() and re.fullmatch(r'[A-Z][A-Za-z]*(?:-[A-Z][A-Za-z]*)*', f[:-4]):
+        if f.endswith('.txt') and f[:-4] == f[:-4].strip() and re.fullmatch(r'[A-Z][A-Za-z]*(?:-[A-Za-z]+)*', f[:-4]):
             p = os.path.join(d, f)
             first = next((l for l in read(p).split('\n') if l.strip() and not l.startswith('%')), '')
             if first.startswith(f[:-4] + ': ') or file_of(first.strip()) == f[:-4]:
