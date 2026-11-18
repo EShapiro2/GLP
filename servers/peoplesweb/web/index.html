@@ -455,14 +455,19 @@ function layout(){
     return crossings(); };
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   let best = null, bestN = Infinity;
-  for (let t = 0; t < 10; t++){
+  // Since 2026-11-18 (Udi, to Website #4: "the tree structure of contracts
+  // must be clearer, with as little overlap and crossings as possible") each
+  // ring keeps the tree's order, every contract's subtree together under it,
+  // so no arrow from a contract's first parent crosses another; of many orders
+  // of the children, the one whose other arrows cross least is kept.
+  for (let t = 0; t < 80; t++){
     if (t){ const ord = {}; D.contracts.forEach(c => ord[c.id] = rnd());
       const pos = {}; (function walk(id, lo, hi){ pos[id] = (lo + hi) / 2;
         const ks = (KIDS[id] || []).slice().sort((a, b) => ord[a] - ord[b]), tot = ks.reduce((n, k) => n + leaves(k), 0);
         let x = lo; for (const k of ks){ const w2 = (hi - lo) * leaves(k) / tot; walk(k, x, x + w2); x += w2; } })(ROOT, -1, 1);
       start.forEach((r, d) => Lr[d] = r.slice().sort((a, b) => pos[a] - pos[b]));
     } else start.forEach((r, d) => Lr[d] = r.slice());
-    const n = sweep();
+    const n = crossings();
     if (n < bestN){ bestN = n; best = Lr.map(r => r.slice()); }
   }
   best.forEach((r, d) => Lr[d] = r);
@@ -475,7 +480,7 @@ function layout(){
   // less (GKK, at the pole, has no longitude), the drawing centred, and the
   // gaps restored in the ring's order.  A ring too full even for that sets
   // alternate names on a second row, toward the wider gap beside it.
-  const lim = 170 * Math.PI/180, w = id => 0.33*FS0()*WID(id) + 0.8*FS0();
+  const lim = 170 * Math.PI/180, w = id => 0.31*FS0()*WID(id) + 0.5*FS0();
   const pairs = [];
   for (let d = 1; d <= maxd; d++){
     const ring = Lr[d], R = 265 * Math.sin(RING[d]);
@@ -504,7 +509,7 @@ function layout(){
     const nx = {};
     for (let d = 1; d <= maxd; d++) Lr[d].forEach(v => {
       let s = 0, t = 0;
-      [...UP[v], ...DN[v]].forEach(u => { if (u !== ROOT){ const g = 1 / span(u, v); s += g * X[u]; t += g; } });
+      [...UP[v].slice(0, 1), ...(KIDS[v] || [])].forEach(u => { if (u !== ROOT){ const g = 1 / span(u, v); s += g * X[u]; t += g; } });
       nx[v] = t ? (X[v] + s / t) / 2 : X[v]; });
     let lo = Infinity, hi = -Infinity;
     for (const v in nx){ X[v] = nx[v]; lo = Math.min(lo, X[v]); hi = Math.max(hi, X[v]); }
@@ -576,7 +581,8 @@ const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
 // set below the globe (Udi, 2026-11-09).
 const NARROW = () => (($('#mapcard') && $('#mapcard').clientWidth) || innerWidth) < 640;
 // Smaller names and thinner arrows since the 66 contracts (Udi, 2026-11-16).
-const FS0 = () => NARROW() ? 11 : 7.5;
+// Smaller again, and thinner, at Udi's word of 2026-11-18 (to Website #4).
+const FS0 = () => NARROW() ? 8.5 : 5.2;
 // The globe fills the card's width, a sliver to each side (Udi, 2026-11-09):
 // on a wide card a radius of 548 in a view 1120 wide, on a phone 290 in a
 // view 600 wide; a zoom is relative to that.
@@ -596,9 +602,9 @@ function drawGlobe(){
     for (let i = -180; i <= 180; i++){
       const [X, Y, Z] = proj(t, i*Math.PI/180);
       if (Z > 0 && X > -80 && X < GW+80 && Y > -80 && Y < GH+80) run.push(`${X.toFixed(1)},${Y.toFixed(1)}`);
-      else if (run.length){ s += `<polyline points="${run.join(' ')}" fill="none" stroke="#ccd8e2"/>`; run = []; }
+      else if (run.length){ s += `<polyline points="${run.join(' ')}" fill="none" stroke="#ccd8e2" stroke-width="0.6"/>`; run = []; }
     }
-    if (run.length) s += `<polyline points="${run.join(' ')}" fill="none" stroke="#ccd8e2"/>`;
+    if (run.length) s += `<polyline points="${run.join(' ')}" fill="none" stroke="#ccd8e2" stroke-width="0.6"/>`;
   }
   const k = S/265;
   // The solid arrows' outlines, in units of the globe's scale: the shaft's
@@ -635,7 +641,7 @@ function drawGlobe(){
   const stroked = (p, q, dash, fill, pad0, pad1, kz = k) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*kz, hw = 6.5*kz, cx = bx-ux*hl, cy = by-uy*hl;
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`
       + `<polygon points="${[[bx, by], [cx-uy*hw, cy+ux*hw], [cx+uy*hw, cy-ux*hw]].map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
-  const fs = Math.max(NARROW() ? 10 : 7, FS0()*k), rx = id => 0.33*fs*WID(id) + 0.8*fs, ry0 = 1.1*fs, RY = id => LINES(id).length > 1 ? 1.75*fs : ry0, ry = ry0;
+  const fs = Math.max(NARROW() ? 8 : 4.8, FS0()*k), rx = id => 0.31*fs*WID(id) + 0.5*fs, ry0 = 0.85*fs, RY = id => LINES(id).length > 1 ? 1.6*fs : ry0, ry = ry0;
   // Each arrow painted on the sphere: a smooth curve on the surface from the
   // contract to the one built on it, through the waypoints the layout keeps
   // for it on the rings it passes, so it goes between the names there; its
@@ -704,7 +710,7 @@ function drawGlobe(){
     // an arrow of two relations is coloured half and half along its length,
     // one of three a third each, the head in the last (Udi, 2026-11-15, to
     // Website #2).
-    const u = 1/265, rs = cols, hl = 6.5*u, hw = 3.4*u, w = 0.85*u;
+    const u = 1/265, rs = cols, hl = 4.2*u, hw = 2.1*u, w = 0.45*u;
     const aB = head ? a1 - hl : a1;
     if (aB <= a0) return '';
     const front = a => projv(at(a))[2] > 0.02;
@@ -776,7 +782,7 @@ function drawGlobe(){
       : [ex, ey, nx2, ny2].map(x => x.toFixed(2)).join(' ');
     const col = FAM[famOf(c)];
     s += `<g class="node" data-id="${c.id}">
-      <ellipse rx="1" ry="1" fill="color-mix(in srgb, ${col[0]} 26%, white)" stroke="${col[1]}" stroke-width="1" transform="matrix(${m} ${X.toFixed(1)} ${Y.toFixed(1)})" vector-effect="non-scaling-stroke"/>
+      <ellipse rx="1" ry="1" fill="color-mix(in srgb, ${col[0]} 26%, white)" stroke="${col[1]}" stroke-width="0.6" transform="matrix(${m} ${X.toFixed(1)} ${Y.toFixed(1)})" vector-effect="non-scaling-stroke"/>
       ${LINES(c.id).map((ln, i, a) => `<text x="${X.toFixed(1)}" y="${(Y + 0.36*fs + (i - (a.length - 1)/2) * 1.12*fs).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}">${esc(ln)}</text>`).join('')}</g>`;
   });
   // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
