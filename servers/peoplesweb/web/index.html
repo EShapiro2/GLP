@@ -593,7 +593,9 @@ function layout(){
         if (hit) break; }
       if (!hit) break;
       const [t, id, df] = hit, tc = th0(id) > t0 + 1e-3 && th0(id) < t1 - 1e-3 ? th0(id) : t;
-      if (!(tc > t0 + 1e-4 && tc < t1 - 1e-4)) break;
+      // Not right beside either end, where a bend would hook.
+      const gap = 0.2 * (t1 - t0);
+      if (!(tc > t0 + gap && tc < t1 - gap)) break;
       const [a] = ER(id), ph = PHI[id] + (df >= 0 ? 1 : -1) * (a + 4 / 265) / Math.sin(th0(id));
       const way = (WAY[key] || []).filter(x => Math.abs(x[0] - tc) > 1e-3);
       way.push([tc, ph]); way.sort((x, y) => x[0] - y[0]);
