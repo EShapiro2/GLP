@@ -6,7 +6,7 @@ Alice *trusts* Bob when she knows Bob personally and believes him to keep the un
 A *relation* is a friendship or the membership of a group. Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. Here: bylaws for the decision rule. An organisation takes an act of a party by those who decide for the organisation.
 An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included. Here: a court for a resource.
 An organisation has *resources*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
-*Posts* have a *test*, a parameter of Matching, whether two *match*. Here: plans. A person *holds* any post they made or forwarded to them.
+*Posts* have a *test*, a parameter of Matching, whether two *match*. Here: a test of the match of plans. A person *holds* any post they made or forwarded to them.
 A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
 The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
 Alice, Bob and Carol are persons, Orga and Will organisations, Club a club.
