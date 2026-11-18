@@ -1,0 +1,12 @@
+Booking
+Booking extends Organisation.
+An organisation has *resources*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
+Alice is a person, Orga an organisation, Res a resource, Slot a slot.
+1. ■ Book: Alice may book Slot of Res in Orga, provided Alice is a participant of Orga, Orga has Alice as a participant, Alice has fewer outstanding bookings in Orga than the bound, Orga has the slot Slot of the resource Res and Slot of Res is free in Orga.
+2. ■ Cancel: Alice may cancel her booking of Slot of Res in Orga.
+Logic pragmas.
+Vocabulary: x has a booking of s of r in z = booking(x,z,r,s); z has s of r booked by x = booked(z,r,s,x); z has the slot s of the resource r = slot(z,r,s); x has fewer outstanding bookings in z than the bound = under_bound(x,z).
+s of r is free in z: z has s of r booked by no one.
+After x books s of r in z: x has a booking of s of r in z and z has s of r booked by x.
+After x cancels x's booking of s of r in z: no longer x has a booking of s of r in z and no longer z has s of r booked by x.
+Environment: z has the slot s of the resource r; x has fewer outstanding bookings in z than the bound.

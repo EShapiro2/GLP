@@ -1,0 +1,4 @@
+% Written by tools/expand.py from rev/; do not edit.
+Tennis Courts
+The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
+

@@ -1,0 +1,3 @@
+Rehearsals
+Rehearsals instantiates Partners and Booking with a room for a resource.
+The activity is music, the place is a *studio*, an organisation that has rehearsal rooms, and the time is a slot.

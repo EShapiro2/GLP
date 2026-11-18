@@ -1,0 +1,2 @@
+Appointments
+Appointments instantiates Booking with the time of a provider for a resource.

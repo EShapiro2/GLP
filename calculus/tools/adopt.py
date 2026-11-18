@@ -178,10 +178,11 @@ def compose(pct, rev, gr, iface):
 
 def calculus_text(name):
     """The Calculus's contract.txt and logic-pragmas.txt of NAME: from rev/ and gr/ beside the tools, on the branch
-    code; from calculus/NAME/ in the checkout of GLP; or else from calculus/NAME/ of GLP's branch Calculus, by git."""
+    code; from calculus/NAME/ or calculus/contracts/NAME/ in the checkout of GLP; or else from calculus/NAME/ of GLP's branch Calculus, by git."""
     for c, g in ((os.path.join(ROOT, 'rev', NM.file_of(name) + '.txt'), os.path.join(ROOT, 'gr', NM.file_of(name) + '.txt')),
                  (os.path.join(ROOT, NM.file_of(name), 'contract.txt'), os.path.join(ROOT, NM.file_of(name), 'logic-pragmas.txt')),
                  (os.path.join(GLP, 'calculus', NM.file_of(name), 'contract.txt'), os.path.join(GLP, 'calculus', NM.file_of(name), 'logic-pragmas.txt')),
+                 (os.path.join(GLP, 'calculus', 'contracts', NM.file_of(name), 'contract.txt'), os.path.join(GLP, 'calculus', 'contracts', NM.file_of(name), 'logic-pragmas.txt')),
                  (os.path.join(GLP, 'calculus', GLP_NAME(name), 'contract.txt'), os.path.join(GLP, 'calculus', GLP_NAME(name), 'logic-pragmas.txt'))):
         if os.path.exists(c) and os.path.exists(g):
             return read(c), read(g)
@@ -215,7 +216,7 @@ def all_names():
     ref = calc_ref()
     if ref:
         names |= calc_names(ref)
-    for base in (os.path.join(ROOT, 'rev'), ROOT, os.path.join(GLP, 'calculus')):
+    for base in (os.path.join(ROOT, 'rev'), ROOT, os.path.join(GLP, 'calculus'), os.path.join(GLP, 'calculus', 'contracts')):
         if os.path.isdir(base):
             for f in os.listdir(base):
                 if base.endswith('rev'):
