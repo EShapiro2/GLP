@@ -67,6 +67,7 @@ LDAO | Liquid DAO | Liquid-DAO | liquid_dao | ldao
 GO | Organisation | Organisation | organisation | go
 CDC | Constitution | Constitution | constitution | cdc
 GNO | Networked Organisation | Networked-Organisation | networked_organisation | gno
+Warnings | Warnings | Warnings | warnings | warnings
 GBank | Bank | Bank | bank | gbank
 CB | Community Bank | Community-Bank | community_bank | cb
 CMB | Commercial Bank | Commercial-Bank | commercial_bank | cmb

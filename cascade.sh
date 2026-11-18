@@ -93,6 +93,7 @@
 #   fdao        FDAO  GCE         programs/gce/fdao         ---
 #   rec         Rec   GCE         programs/gce/rec          ---
 #   stay        Stay  GCE         programs/gce/stay         ---
+#   warnings    Warnings GCE         programs/gce/warnings        ---
 #   lib         Lib   GCE         programs/gce/lib          ---
 #   joint       Joint GCE         programs/gce/joint        ---
 #
@@ -233,6 +234,7 @@ case "$1" in
     stays) FILE=Stays; OWNER="programs/gce/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     library) FILE=Library;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     joint_accounts) FILE=Joint-Accounts; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
+    warnings) FILE=Warnings; OWNER="programs/gce/warnings"; PAPER=""; PLAYDIR="" ;;   # Nimrod Talmon's example contract (GCE, Grassroots Contract Examples, Nimrod Talmon's)
     community_bank) FILE=Community-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's twenty-three, each its % Owner line's (Udi, 2026-11-09, to GO #3); rows added 2026-11-12, the contracts having been checked and never recorded (Udi, 2026-11-12, to Code #28)
     commercial_bank) FILE=Commercial-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     consumers_cooperative) FILE=Consumers-Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
