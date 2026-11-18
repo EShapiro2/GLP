@@ -511,6 +511,11 @@ for n in sorted(set(compiled) | set(cat)):
     # cascade.sh writes them into platform.vglp in place of a platform; a
     # contract with no record has not been through the cascade.
     c['record'] = os.path.isdir(d)
+    # A parametric contract has no realisation, so no platform, by design
+    # (GSC, Definition Parametric contract); its manifest says so on its
+    # 'Parametric:' line (GCE's audit proposal, Grassroots-Audit PR 28).
+    mf = os.path.join(d, 'manifest.md')
+    c['parametric'] = os.path.exists(mf) and any(l.startswith('- Parametric:') for l in read(mf).split('\n'))
     pv = os.path.join(d, 'platform.vglp')
     # Asked only of a record that has no platform: on a test site with no
     # world nothing is live, and a whole platform read as its reasons made
@@ -609,7 +614,7 @@ for f in os.listdir(os.path.join(HERE, 'web')):
 # The page an invitation link opens, peoplesweb.org/i (GNA, Section 6,
 # Invitation links), and the file that names the Grassroots App to iOS as the
 # app that opens such a link.
-for d in ('i', '.well-known'):
+for d in ('i', '.well-known', 'katex'):
     shutil.copytree(os.path.join(HERE, 'web', d), os.path.join(WWW, d), dirs_exist_ok=True)
 if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)

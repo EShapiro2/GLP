@@ -1,0 +1,8 @@
+F          commute yes; return yes; recover equivalent
+names: 0 names of two kinds neither of which is under the other
+1 contracts, 0 with a fault
+--- sasx/F.txt
+F: Field (expanded schemas)
+F:0 - | Orga is a person, Area, Root and Side numbers.
+F:0 - | Functions: n is the root of m.
+F:1 ■ Fence: fenced(Orga,Side) <- field(Orga,Area), root(Root,Area), le(Side,Root) guarded by Orga.

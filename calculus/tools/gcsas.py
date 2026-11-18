@@ -65,6 +65,7 @@ NOUNS = set()     # 'the role r' in a basic state: 'no role' and 'some role' are
 MARK = "*#"   # the last argument of an atom: *n, n copies; #n, exactly n copies and no more
 DFLL = "Default: "   # 'Default: x is an officer of z for x is entitled to vote on m in z.': the state a parameter takes where no first line binds it (Udi, 2026-11-16, to Calculus #6)
 PARL = "Parameters: "   # 'Parameters: x is entitled to propose m in z.': a state a later contract, the bylaws or the terms fill; a parameter of the term
+FUNL = "Functions: "   # 'Functions: n is the root of m.': a state that is a function of its places but the first, its value; no act adds or ends it, and the checker reads it as fn(root, [m]) (GSC def:numbers: "the relations and functions the types of the values provide")
 ENVL = "Environment: "   # 'Environment: x is nearby y.': a state the platform gives, an environment predicate of the term; no act adds or ends it
 KNDL = "Kind of note: "   # 'Kind of note: bond, y-bonds due Day for y-notes.': a kind of Notes's notes (Udi, 2026-11-16: special cases, not instances); see kind_forms
 KINDL = re.compile(r"^Kind of note: ([a-z]+), (.+?) for ([b-z])-notes(; its acts keep their names)?\.$")
@@ -291,6 +292,7 @@ class Lex:
         self.rlist = {}   # role predicate -> the states that list its agents: 'those who decide for z = deciders(z), listed by z has y as a guardian and y is a guardian of z'
         self.short = {}   # basic state -> (the state as a sentence writes it, its holder's place): 'e is late, for x = late(x,e)'
         self.refl = []    # basic states of two places declared reflexive: 'Reflexive: x knows y.', every agent holding x knows x
+        self.fn = []      # basic states declared functions: 'Functions: n is the root of m.', the first place the value
         self.env = []     # basic states declared environment predicates: 'Environment: x is nearby y.', given by the platform
         self.par = []     # basic states declared parameters: 'Parameters: x is entitled to propose m in z.'
         self.one = set()  # role predicates any one of whom decides: 'any guardian of z = any_guardian(z), any one listed by z has y as a guardian ...'
@@ -304,6 +306,7 @@ class Lex:
         l.rlist = dict(self.rlist)
         l.refl = list(self.refl)
         l.env = list(self.env)
+        l.fn = list(self.fn)
         l.par = list(self.par)
         l.dflt = dict(self.dflt)
         l.one = set(self.one)
@@ -328,7 +331,7 @@ class Lex:
         for t in getattr(self, attr):
             b = [p for tt, p, a in self.basic if norm(tt) == norm(t)]
             if not b:
-                raise Err("'%s%s.' names no basic state" % (ENVL if attr == "env" else PARL, t))
+                raise Err("'%s%s.' names no basic state" % ({"env": ENVL, "par": PARL, "fn": FUNL}[attr], t))
             out.add(b[0])
         return out
 
@@ -345,6 +348,7 @@ class Lex:
             self.rlist.setdefault(k, v)
         self.refl.extend(t for t in other.refl if t not in self.refl)
         self.env.extend(t for t in other.env if t not in self.env)
+        self.fn.extend(t for t in other.fn if t not in self.fn)
         self.par.extend(t for t in other.par if t not in self.par)
         for k, v in other.dflt.items():
             self.dflt.setdefault(k, v)
@@ -551,6 +555,9 @@ def read_gr(name, d="gr"):
             c.header.append(("prose", l))      # a kept declaration, as 'Reflexive:'
         elif l.startswith(REFL):
             c.own.refl.extend(t for t in l[len(REFL):].rstrip(".").split("; ") if t not in c.own.refl)
+            c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
+        elif l.startswith(FUNL):
+            c.own.fn.extend(t for t in params_in(l[len(FUNL):], c.params).rstrip(".").split("; ") if t not in c.own.fn)
             c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
         elif l.startswith(ENVL):
             c.own.env.extend(t for t in params_in(l[len(ENVL):], c.params).rstrip(".").split("; ") if t not in c.own.env)
@@ -879,6 +886,7 @@ class World:
                     pl.rlist = {fp(k): ft(v) for k, v in pl.rlist.items()}
                     pl.refl = [ft(t) for t in pl.refl]
                     pl.env = [ft(t) for t in pl.env]
+                    pl.fn = [ft(t) for t in pl.fn]
                     pl.par = [ft(t) for t in pl.par]
                     pl.dflt = {ft(k): ft(v) for k, v in pl.dflt.items()}
                     pl.one = {fp(r) for r in pl.one}
