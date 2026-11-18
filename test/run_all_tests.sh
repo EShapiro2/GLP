@@ -4065,6 +4065,7 @@ check "CVA compiler: vGLP's forms, a safe formula in a schema's body local to it
 check "CVA compiler: vGLP's shares, a quantified conjunct whose instances the attempt names, certified by GSC's check/2, compiled to the platform it prints (vGLP 9ee6f87)" "shares/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's roots, a constraint with root, a function of the compiler's library, certified by GSC's check/2, compiled to the platform it prints (#120)" "roots/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's distances, a constraint with distance, a function of the compiler's library, certified by GSC's check/2, compiled to the platform it prints (#120)" "distances/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's nearer, a count whose condition holds distance, certified by GSC's check/2, compiled to the platform it prints (#120)" "nearer/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's published, a program condition in a constraint, program(item_of(x)), certified by GSC's check/2, compiled to the platform it prints (vGLP b413fe1)" "published/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's leaves, a listed role at the third argument of its anchor, certified by GSC's check/2, compiled to the platform it prints (vGLP b413fe1)" "leaves/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's readings, variables read at a role and a condition across roles, certified by GSC's check/2, compiled to the platform it prints (vGLP 566c186, 6abbed9, 7892aeb)" "readings/platform.vglp: as printed" "$cva_print"
@@ -5290,6 +5291,23 @@ check "CVA distances: visit taken with the shop at distance 3 from home" "view(a
 check "CVA distances: ... and not at distance 4, bob's first view" "view(bob, \[home(1, 1), shop(3, 3)\]" "$cva_ds"
 check_not "CVA distances: ... bob never visits" "view(bob, \[visited" "$cva_ds"
 check_not "CVA distances: a platform prints only the library's functions its contract uses, distances no root" "num_root" "$(cat "$CVA/distances/platform.vglp")"
+# A count whose condition holds a library function, as a governance contract counts the members nearer to a proposal than to the status quo (#120): vGLP's nearer, its agent run with no person and given at deployment the ideal points (1, 1), (2, 2) and (5, 5), the status quo (0, 0), the proposal (2, 2) and need(k); pass counts the ideal points strictly nearer to the proposal than to the status quo in the Manhattan distance, (2, 2) and (5, 5), two, and is taken where k is 2 and not where k is 3.
+cva_nr_dir="$GLP_DIR/programs/tests/vg_nearer_$$"
+mkdir -p "$cva_nr_dir" && cp "$CVA/nearer/platform.vglp" "$cva_nr_dir/platform.vglp"
+cva_nr_emit=$(printf ':emit %s\n:quit\n' "$cva_nr_dir" | "$REPL_RUN" 2>&1)
+cva_nr=$("$REPL_RUN" <<HEREDOC
+$cva_nr_dir/platform.glp
+:limit 5000000
+agent(alice, [], N, O, [ideal(1, 1), ideal(2, 2), ideal(5, 5), status(0, 0), prop(2, 2), need(2)], A).
+agent(bob, [], N, O, [ideal(1, 1), ideal(2, 2), ideal(5, 5), status(0, 0), prop(2, 2), need(3)], A).
+:quit
+HEREDOC
+2>&1)
+rm -rf "${cva_nr_dir:?}"
+check "CVA nearer: the platform emitted to GLP" "wrote .*vg_nearer_.*platform.glp" "$cva_nr_emit"
+check "CVA nearer: pass taken, two ideal points nearer to the proposal than to the status quo and two needed" "view(alice, \[passed, ideal(1, 1), ideal(2, 2), ideal(5, 5), status(0, 0), prop(2, 2), need(2)\]" "$cva_nr"
+check "CVA nearer: ... bob's first view, three needed" "view(bob, \[ideal(1, 1), ideal(2, 2), ideal(5, 5), status(0, 0), prop(2, 2), need(3)\]" "$cva_nr"
+check_not "CVA nearer: ... and not taken where three are needed" "view(bob, \[passed" "$cva_nr"
 # The values the developer gives (vGLP 922ac53, Section 5.4, "Speech-act schemas as local specifications": "A platform is deployed when its developer compiles it, giving the compiler the values; the program carries them, so every participant of one of its instances holds the same values"): counts compiled with counts/values, cap(3), wt(4) and wt(2), prints developer_values and an agent of four arguments that starts the agent of five with them, which a mini-app calls; run with no person, its first view shows them, held from startup (devvalues).
 cva_dv_dir="$GLP_DIR/programs/tests/vg_devvalues_$$"
 mkdir -p "$cva_dv_dir" && cp "$CVA/counts/platform.vglp" "$cva_dv_dir/platform.vglp"
