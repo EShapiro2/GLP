@@ -71,7 +71,6 @@ Carpool    syntactically_grassroots
 Dating     syntactically_grassroots
 Help       syntactically_grassroots
 Home-Exchange syntactically_grassroots
-Housing    syntactically_grassroots
 Jobs       syntactically_grassroots
 Lending    syntactically_grassroots
 Lost-and-Found syntactically_grassroots
