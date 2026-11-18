@@ -122,7 +122,9 @@ main{max-width:1120px;margin:0 auto;padding:28px 24px 80px}
 .stat:last-child{border-right:none}
 .stat .k{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--faint);text-transform:uppercase}
 .stat .v{font-size:19px;font-weight:700;color:#3a3a3c;margin-top:2px;white-space:nowrap}
-.stat .v a{color:var(--blue);cursor:pointer}
+.stat .v a{color:var(--blue);cursor:pointer;white-space:nowrap}
+.stat .v:has(a+a){white-space:normal;font-size:15px;line-height:1.35}
+@media (max-width:640px){.stat .v:has(a){white-space:normal;font-size:15px;line-height:1.35}.stats .stat:has(.v a+a){grid-column:1/-1;border-right:none}}
 .stat .s{font-size:12px;color:var(--mute)}
 .sec{margin-top:30px}
 .sec .sh{margin:0 0 10px}
