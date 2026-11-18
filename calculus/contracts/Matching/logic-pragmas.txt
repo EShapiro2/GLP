@@ -1,6 +1,6 @@
 Matching
 Matching extends Friendship.
-*Posts* have a test whether two *match*. A person *holds* any post they made or forwarded to them.
+*Posts* have a *test*, a parameter of Matching, whether two *match*. A person *holds* any post they made or forwarded to them.
 Alice, Bob and Carol are persons, Post and Other posts.
 1. ■ Post: Alice may make Post.
 2. ■ Tell: Alice may forward Post to Bob, provided Alice holds the post Post and Alice and Bob are friends.

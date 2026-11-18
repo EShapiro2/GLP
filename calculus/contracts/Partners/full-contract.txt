@@ -1,3 +1,19 @@
 % Written by tools/expand.py from rev/; do not edit.
 Partners
+An *identity* is a unique cryptographic key pair.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+*Posts* have a *test*, a parameter of Matching, whether two *match*. Here: plans. A person *holds* any post they made or forwarded to them.
 A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
+Alice, Bob and Carol are persons.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Matching:1. ■ Post: Alice may make a post.
+Matching:2. ■ Tell: Alice who holds a post may forward it to her friend Bob.
+Matching:3. ■ Return: Bob, who holds two matching posts, one from Alice, forwards to Alice the second post.
+Matching:4. ■ Withdraw: Alice may withdraw a post she made.
+Matching:5. ■ Meet: Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other.
