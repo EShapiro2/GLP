@@ -110,12 +110,16 @@ latex_args([A, B|As], T, R?) :- ground(A?), ground(B?), ground(As?), ground(T?) 
 % The papers write the currencies' predicates, GC's coin and GB's cent, as
 % the cent sign, wherever they appear (Udi's ruling, reported by GSC,
 % Code_inbox.md, 2026-10-24 07:32 UTC); every other predicate is set in
-% \mathit.  A predicate of arity zero carries no parentheses.
+% \mathit.  A predicate of arity zero carries no parentheses.  A name may
+% hold '_', as has_officer, which LaTeX reads as a subscript; GLP cannot split
+% an atom to write '\_', so the name is set as \mathit{\detokenize{P}}, which
+% typesets as \mathit{has\_officer} does (Website #3, reported by Code #33,
+% 2026-11-18).
 
 procedure latex_pred(Constant?, Chunks?, Chunks).
 latex_pred(P, T, ['\\text{\\textcent}'|T?]) :- P? =?= coin | true.
 latex_pred(P, T, ['\\text{\\textcent}'|T?]) :- P? =?= cent | true.
-latex_pred(P, T, ['\\mathit{', P?, '}'|T?]) :- otherwise, ground(P?) | true.
+latex_pred(P, T, ['\\mathit{\\detokenize{', P?, '}}'|T?]) :- otherwise, ground(P?) | true.
 
 procedure latex_atom(Atom?, Chunks?, Chunks).
 latex_atom(atom(P, []), T, R?) :- ground(P?), ground(T?) | latex_pred(P?, T?, R).
