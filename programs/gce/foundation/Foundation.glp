@@ -1,5 +1,5 @@
-%% Foundation.glp --- printed by calculus/tools/toglp.py from Foundation.txt: the contract's full schemas, the Calculus's term.glp.txt,
-%% complete in itself.  Not to be edited: edit Foundation.txt and print it again.
+%% Foundation.glp --- printed by adopt.py from Foundation.txt: the contract's full schemas, the Calculus's term.glp.txt,
+%% complete in itself.  Not to be edited: edit Foundation.txt and run adopt.py Foundation.
 % contract_named(foundation, C): the contract, Foundation.
 procedure contract_named(Constant?, SDeclared).
 contract_named(foundation, environment([today, keeps_purpose, one_denomination], reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),

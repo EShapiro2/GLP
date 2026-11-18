@@ -1,5 +1,5 @@
-%% Nonprofit.glp --- printed by calculus/tools/toglp.py from Nonprofit.txt: the contract's full schemas, the Calculus's term.glp.txt,
-%% complete in itself.  Not to be edited: edit Nonprofit.txt and print it again.
+%% Nonprofit.glp --- printed by adopt.py from Nonprofit.txt: the contract's full schemas, the Calculus's term.glp.txt,
+%% complete in itself.  Not to be edited: edit Nonprofit.txt and run adopt.py Nonprofit.
 % contract_named(nonprofit, C): the contract, Nonprofit.
 procedure contract_named(Constant?, SDeclared).
 contract_named(nonprofit, environment([today, one_denomination], reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),

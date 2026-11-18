@@ -63,6 +63,7 @@ Stay | Stays | Stays | stays | stay
 Lib | Library | Library | library | lib
 Rec | Recommendations | Recommendations | recommendations | rec
 FDAO | Funded DAO | Funded-DAO | funded_dao | fdao
+Foundation | Foundation | Foundation | foundation | foundation
 LDAO | Liquid DAO | Liquid-DAO | liquid_dao | ldao
 GO | Organisation | Organisation | organisation | go
 CDC | Constitution | Constitution | constitution | cdc
@@ -75,6 +76,7 @@ MCS | Mutual Credit | Mutual-Credit | mutual_credit | mcs
 GCC | Community Currency | Community-Currency | community_currency | gcc
 GBCC | Backed Currency | Backed-Currency | backed_currency | gbcc
 GCorp | Corporation | Corporation | corporation | gcorp
+Nonprofit | Nonprofit | Nonprofit | nonprofit | nonprofit
 SC | Shareholding Corporation | Shareholding-Corporation | shareholding_corporation | sc
 SPLLC | Single-Person Company | Single-Person-Company | single_person_company | spllc
 TC | Trading Company | Trading-Company | trading_company | tc
