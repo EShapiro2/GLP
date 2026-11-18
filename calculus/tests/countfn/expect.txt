@@ -1,0 +1,8 @@
+G          commute yes; return yes; recover equivalent
+names: 0 names of two kinds neither of which is under the other
+1 contracts, 0 with a fault
+--- sasx/G.txt
+G: Grid (expanded schemas)
+G:0 - | Orga is a person, Score, Enough, Sx, Sy, Vx and Vy numbers.
+G:0 - | Functions: n is the distance from i by j to k by m.
+G:1 ■ Pass: passed(Orga,Vx,Vy) <- status(Orga,Sx,Sy), ideal(Orga,>=Enough,EnoughI,EnoughJ), distance(EnoughF,EnoughI,EnoughJ,Sx,Sy), distance(EnoughD,EnoughI,EnoughJ,Vx,Vy), sum(EnoughG,EnoughD,Score), ge(EnoughF,EnoughG), ge(Enough,3) guarded by Orga.
