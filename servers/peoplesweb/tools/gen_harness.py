@@ -46,9 +46,13 @@ def split_top(s):
 # input and output, the calendar where the platform reads one, and the thread.
 args = split_top(sig)
 cal = 'Stream(Integer)?' in args
+# A platform with a standing trust schema writes its trust requests on a
+# stream out, Stream(TrustLevel), served by its host (vGLP-trust, vGLP #31):
+# the server serves none, so the harness reads and drops them.
+trust = 'Stream(TrustLevel)' in args
 
 
-def agent_args(p, net_in, net_out, thread, k):
+def agent_args(p, net_in, net_out, thread, k, tr=''):
     got = []
     for a in args:
         if a == 'Peer?': got.append(p)
@@ -59,6 +63,9 @@ def agent_args(p, net_in, net_out, thread, k):
         # The environment atoms a deployment gives (vGLP, Section 5.4, "Speech-act
         # schemas as local specifications"): the demo deploys with none.
         elif a == 'List(Atom)?': got.append('[]')
+        # The presences the phone sees (vGLP-trust): the server sees none.
+        elif a == 'Stream(Presence)?': got.append('[]')
+        elif a == 'Stream(TrustLevel)': got.append(tr)
         else: raise SystemExit(f'{name}: agent takes {a}, which this harness does not know')
     return ', '.join(got)
 
@@ -114,7 +121,8 @@ live_ui(Ins, S?) :-
     split4(Ins?, GA, GB, GC, GD{ks}),
 """
 for p, x in zip(P, L):
-    body += f"""    platform # agent({agent_args(p, f'In{x}?', f'Out{x}', f'T{x}', f'K{x}?')}, A{x}),
+    body += f"""    platform # agent({agent_args(p, f'In{x}?', f'Out{x}', f'T{x}', f'K{x}?', f'Tr{x}')}, A{x}),
+""" + (f"    drop_trust(Tr{x}?),\n" if trust else '') + f"""
     platform # dispatch(A{x}?, ch(G{x}?, D{x}), M{x}),
     to_person(M{x}?, T{x}?),
     tag({p}, D{x}?, S{x}),
@@ -169,7 +177,8 @@ tag_net([], []).
 procedure live_person(Peer?, HostIn?, Stream(Net)?, Stream(Shown), Stream(Net)).
 live_person(P, Ins, NetIn, S1?, Net?) :- ground(P?) |
     """ + ('split_person(Ins?, G, K)' if cal else 'split_person(Ins?, G)') + f""",
-    platform # agent({agent_args('P?', 'NetIn?', 'Out', 'T', 'K?')}, A),
+    platform # agent({agent_args('P?', 'NetIn?', 'Out', 'T', 'K?', 'Tr')}, A),
+""" + ('    drop_trust(Tr?),\n' if trust else '') + f"""
     platform # dispatch(A?, ch(G?, D), M),
     to_person(M?, T?),
     tee_net(Out?, Net, L),
@@ -198,6 +207,13 @@ tee_net([msg(To, M)|Ms], [msg(To?, M?)|Os?], Log?) :-
     note(M?, To?, Log, Log1?),
     tee_net(Ms?, Os, Log1).
 tee_net([], [], []).
+"""
+if trust:
+    body += """
+%% The agent's trust requests, which the server does not serve.
+procedure drop_trust(Stream(TrustLevel)?).
+drop_trust([_|Ts]) :- drop_trust(Ts?).
+drop_trust([]).
 """
 
 os.makedirs(out, exist_ok=True)
