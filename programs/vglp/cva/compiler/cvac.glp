@@ -1825,7 +1825,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     request_name_lines(Ci?, Ps?, Lq0),
     request_name_decl(Lq0?, Lq),
     word_lines(W?, Ci?, Nt?, Lp),
-    meeting_lines(C?, Ps?, Lmt),
+    worded_phone(W?, Phm),
+    phone_found(Phm?, Fdm),
+    worded_stands(W?, Ssm),
+    meeting_lines(C?, Ps?, Fdm?, Ssm?, Lmt),
     lapp(Lq?, Lp?, Lqp0),
     lapp(Lqp0?, Lmt?, Lqp),
     lapp(Ln1?, Lqp?, Ln),
@@ -1996,19 +1999,30 @@ shared_lines([L|Ls], G, D, E, S, [L?|Ls1?]) :- otherwise | shared_lines(Ls?, G?,
 %% A line found_only(L) is printed as L where the phone finds an environment predicate of the contract, and a line foundless_only(L) where it finds none, so that every other platform prints what it printed before (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the compiled agent reads it from its phone afresh whenever it computes a condition that requires it"); the wrappers of the other kinds are looked through.
 procedure found_lines(Lines?, YesNo?, Lines).
 found_lines([], _, []).
-found_lines([found_only(L)|Ls], yes, [L?|R?]) :- found_lines(Ls?, yes, R).
-found_lines([found_only(_)|Ls], no, R?) :- found_lines(Ls?, no, R).
-found_lines([foundless_only(_)|Ls], yes, R?) :- found_lines(Ls?, yes, R).
-found_lines([foundless_only(L)|Ls], no, [L?|R?]) :- found_lines(Ls?, no, R).
-found_lines([guarded_only(found_only(L))|Ls], yes, [guarded_only(L?)|R?]) :- found_lines(Ls?, yes, R).
-found_lines([guarded_only(found_only(_))|Ls], no, R?) :- found_lines(Ls?, no, R).
-found_lines([guarded_only(foundless_only(_))|Ls], yes, R?) :- found_lines(Ls?, yes, R).
-found_lines([guarded_only(foundless_only(L))|Ls], no, [guarded_only(L?)|R?]) :- found_lines(Ls?, no, R).
-found_lines([unguarded_only(found_only(L))|Ls], yes, [unguarded_only(L?)|R?]) :- found_lines(Ls?, yes, R).
-found_lines([unguarded_only(found_only(_))|Ls], no, R?) :- found_lines(Ls?, no, R).
-found_lines([unguarded_only(foundless_only(_))|Ls], yes, R?) :- found_lines(Ls?, yes, R).
-found_lines([unguarded_only(foundless_only(L))|Ls], no, [unguarded_only(L?)|R?]) :- found_lines(Ls?, no, R).
-found_lines([L|Ls], F, [L?|R?]) :- otherwise | found_lines(Ls?, F?, R).
+found_lines([L|Ls], F, R?) :- ground(F?) |
+    found_line(L?, F?, K),
+    found_lines(Ls?, F?, R1),
+    kept(K?, R1?, R).
+Kept ::= keep(Line) ; drop.
+procedure kept(Kept?, Lines?, Lines).
+kept(keep(L), R, [L?|R?]).
+kept(drop, R, R?).
+procedure found_line(Line?, YesNo?, Kept).
+found_line(found_only(L), yes, K?) :- found_line(L?, yes, K).
+found_line(found_only(_), no, drop).
+found_line(foundless_only(_), yes, drop).
+found_line(foundless_only(L), no, K?) :- found_line(L?, no, K).
+found_line(guarded_only(L), F, K?) :- found_line(L?, F?, K0), wrap_kept(K0?, guarded, K).
+found_line(unguarded_only(L), F, K?) :- found_line(L?, F?, K0), wrap_kept(K0?, unguarded, K).
+found_line(standing_only(L), F, K?) :- found_line(L?, F?, K0), wrap_kept(K0?, standing, K).
+found_line(standless_only(L), F, K?) :- found_line(L?, F?, K0), wrap_kept(K0?, standless, K).
+found_line(L, _, keep(L?)) :- otherwise | true.
+procedure wrap_kept(Kept?, Constant?, Kept).
+wrap_kept(drop, _, drop).
+wrap_kept(keep(L), guarded, keep(guarded_only(L?))).
+wrap_kept(keep(L), unguarded, keep(unguarded_only(L?))).
+wrap_kept(keep(L), standing, keep(standing_only(L?))).
+wrap_kept(keep(L), standless, keep(standless_only(L?))).
 %% A line trust_only(L) is printed as L where a standing request of the contract opens the phone to persons it does not know, and trustless_only(L) where none does (trust_lines; vGLP, Section 5.4); the wrappers of the other kinds are looked through, as found_lines does.
 procedure trust_lines_in(Lines?, YesNo?, Lines).
 trust_lines_in([], _, []).
@@ -2812,16 +2826,12 @@ procedure phone_trust(PhoneFacts?, Preds).
 phone_trust([], []).
 phone_trust([trust(S)|Ps], [S?|Ts?]) :- phone_trust(Ps?, Ts).
 phone_trust([found(_)|Ps], Ts?) :- phone_trust(Ps?, Ts).
-%% trust_of(S, yes) for each standing schema S whose standing request opens the phone (vGLP, Section 5.4: "An implementation pragma may open a person's phone to persons it does not know, over Bluetooth and the local network, from their standing request until they withdraw it"), and trust_of(_, no) for every other: printed where there is one (trust_only lines of the text).
+%% trust_schemas(Ss), the standing schemas whose standing request opens the phone to persons it does not know (vGLP, Section 5.4: "An implementation pragma may open a person's phone to persons it does not know, over Bluetooth and the local network, from their standing request until they withdraw it"), printed where there is one (trust_only lines of the text).
 procedure trust_lines(Preds?, Lines).
 trust_lines([], []).
-trust_lines([S|Ss], ['', 'procedure trust_of(Constant?, YesNo).'|L?]) :- ground(S?), ground(Ss?) | trust_of_lines([S?|Ss?], L).
-procedure trust_of_lines(Preds?, Lines).
-trust_of_lines([], ['trust_of(_, no) :- otherwise | true.']).
-trust_of_lines([S|Ss], [L?|Ls?]) :- ground(S?) |
-    term_to_string(S?, T),
-    string_concat(['trust_of(', T?, ', yes).'], L),
-    trust_of_lines(Ss?, Ls).
+trust_lines([S|Ss], ['', 'procedure trust_schemas(Preds).', L?]) :- ground(S?), ground(Ss?) |
+    term_to_string([S?|Ss?], T),
+    string_concat(['trust_schemas(', T?, ').'], L).
 %% The standing tables of the platform (vGLP 7c631b1, Section 5.4, "The contract's words"): schema_standing(S, on(A)) for each standing schema S, A the act whose request makes the standing request, and none for every other; stand_act(M, makes(S)) for the act M whose request makes it, stand_act(M, withdraws(S)) for the act whose request withdraws it, and plain for every other.
 %% The roles of each schema whose persons must consent to its act and are not asked (vGLP, Section 5.4, "The contract's words": "A clause may say that a person, or a ward, must consent to its act: they are a guard of the act, so it is never taken against them, and they are not asked"): schema_consents(S, Is) for each act of the pragmas that carries consents(I) with the types of its fields (self.glp, FType), and [] for every other.
 procedure consent_lines(TActs?, Lines).
@@ -4435,25 +4445,85 @@ said_words([person(K)|Ws], Pp, [X?|Xs?]) :- ground(Pp?) |
 
 %% --- Acquaintance --------------------------------------------------------------
 %% The acquaintance schemas, whose parts are the acquaintance parts of the compilation (vGLP, Section 5.4, "The compilation": "The compilation is given, with the specification, its acquaintance parts: guarded parts with two guards and no opener by which two agents come to know each other, for a contract the parts of an acquaintance schema, one with two roles, both guarding, that requires at neither role an atom naming the other, as GKK's meet"): a schema of two party roles, each guarding, whose atoms required or deleted at each role name neither the other role nor a name term built on it.  meeting_peer(N, Me, P), printed where the request type proposes a schema: P the peer a request name N of an acquaintance part names beside the agent Me, peer(Q), the person in its other role, where Me is in one of its two roles and another person in the other; nopeer otherwise, and for every other request name.
-procedure meeting_lines(Contract?, Preds?, Lines).
-meeting_lines(_, [], []).
-meeting_lines(C, [P|Ps], L?) :- ground(C?), ground(P?), ground(Ps?) |
-    meeting_clauses(C?, [P?|Ps?], Lc),
+procedure meeting_lines(Contract?, Preds?, Preds?, PStands?, Lines).
+meeting_lines(_, [], _, _, []).
+meeting_lines(C, [P|Ps], Fd, Ss, L?) :- ground(C?), ground(P?), ground(Ps?), ground(Fd?), ground(Ss?) |
+    stand_meet_lines(C?, [P?|Ps?], Fd?, Ss?, Lsm),
+    meeting_clauses(C?, [P?|Ps?], Fd?, Lc0),
+    lapp(Lc0?, [], Lc),
     lapp(Lc?, ['meeting_peer(_, _, nopeer) :- otherwise | true.'], Lc1),
-    lapp(['',
+    lapp(Lsm?, ['',
         '%% The peer a request name N of an acquaintance part names beside the agent Me, peer(Q), or none, nopeer: the acquaintance schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").',
-        'procedure meeting_peer(Proposal?, Peer?, MeetPeer).'|Lc1?], [], L).
-procedure meeting_clauses(Contract?, Preds?, Lines).
-meeting_clauses([], _, []).
-meeting_clauses([schema(S, Hd, Rs)|Ss], Ps, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Ps?) |
+        'procedure meeting_peer(Proposal?, Peer?, MeetPeer).'|Lc1?], L).
+procedure meeting_clauses(Contract?, Preds?, Preds?, Lines).
+meeting_clauses([], _, _, []).
+meeting_clauses([schema(S, Hd, Rs)|Ss], Ps, Fd, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Ps?), ground(Fd?) |
     mem(S?, Ps?, In),
-    meeting_schema(Rs?, M),
+    meeting_schema_f(Rs?, Fd?, M),
     and(In?, M?, B),
     meeting_clause(B?, S?, Hd?, Rs?, L1),
-    meeting_clauses(Ss?, Ps?, L2),
+    meeting_clauses(Ss?, Ps?, Fd?, L2),
     lapp(L1?, L2?, L).
-meeting_clauses([cschema(_, _, _, _)|Ss], Ps, L?) :- meeting_clauses(Ss?, Ps?, L).
-meeting_clauses([nschema(_, _, _, _)|Ss], Ps, L?) :- meeting_clauses(Ss?, Ps?, L).
+meeting_clauses([cschema(_, _, _, _)|Ss], Ps, Fd, L?) :- meeting_clauses(Ss?, Ps?, Fd?, L).
+meeting_clauses([nschema(_, _, _, _)|Ss], Ps, Fd, L?) :- meeting_clauses(Ss?, Ps?, Fd?, L).
+%% A standing acquaintance act (vGLP, Section 5.4: "Under a standing request of an acquaintance act, the machine sends the hello to each person it is about to propose the act with, and answers a hello that arrives by its standing request, without asking its person"): for each standing schema that is an acquaintance schema, stand_meet_name(S, A, B, N), N its request name with A and B in its two roles, and meet_standing(N, S); printed where the phone finds a fact, the person met being one the phone finds.
+procedure stand_meet_lines(Contract?, Preds?, Preds?, PStands?, Lines).
+stand_meet_lines(_, _, [], _, []).
+stand_meet_lines(C, Ps, [F|Fs], Ss, L?) :- ground(C?), ground(Ps?), ground(F?), ground(Fs?), ground(Ss?) |
+    stand_meets(Ss?, C?, Ps?, [F?|Fs?], Sm),
+    stand_meet_text(Sm?, L).
+procedure stand_meets(PStands?, Contract?, Preds?, Preds?, Preds).
+stand_meets([], _, _, _, []).
+stand_meets([standing(S, _, _)|Ss], C, Ps, Fd, R?) :- ground(S?), ground(C?), ground(Ps?), ground(Fd?) |
+    find_schema(S?, C?, Fs),
+    stand_meet1(Fs?, Fd?, M0),
+    mem(S?, Ps?, In),
+    and(In?, M0?, M),
+    stand_meets(Ss?, C?, Ps?, Fd?, R1),
+    keep_name(M?, S?, R1?, R).
+procedure stand_meet1(SFound?, Preds?, YesNo).
+stand_meet1(sfound(_, Rs), Fd, M?) :- meeting_schema_f(Rs?, Fd?, M).
+stand_meet1(nosfound, _, no).
+procedure keep_name(YesNo?, Constant?, Preds?, Preds).
+keep_name(yes, S, R, [S?|R?]).
+keep_name(no, _, R, R?).
+procedure stand_meet_text(Preds?, Lines).
+stand_meet_text(Sm, ['', 'procedure stand_meets(Preds).', L0?, 'procedure stand_meet_name(Constant?, Peer?, Peer?, MeetName).'|L1?]) :- ground(Sm?) |
+    term_to_string(Sm?, T0),
+    string_concat(['stand_meets(', T0?, ').'], L0),
+    stand_meet_names(Sm?, Ln),
+    lapp(Ln?, ['stand_meet_name(_, _, _, nomeetname) :- otherwise | true.', 'procedure meet_standing(Proposal?, StandOf).'|Lm?], L1),
+    meet_standings(Sm?, Lm0),
+    lapp(Lm0?, ['meet_standing(_, notstanding) :- otherwise | true.'], Lm).
+procedure stand_meet_names(Preds?, Lines).
+stand_meet_names([], []).
+stand_meet_names([S|Ss], [L?|Ls?]) :- ground(S?) |
+    term_to_string(S?, T),
+    string_concat(['stand_meet_name(', T?, ', A, B, meetname(', T?, '(A?, B?))).'], L),
+    stand_meet_names(Ss?, Ls).
+procedure meet_standings(Preds?, Lines).
+meet_standings([], []).
+meet_standings([S|Ss], [L?|Ls?]) :- ground(S?) |
+    term_to_string(S?, T),
+    string_concat(['meet_standing(', T?, '(_, _), standing_of(', T?, ')).'], L),
+    meet_standings(Ss?, Ls).
+%% Whether a schema is an acquaintance schema, an atom the phone finds left out of what each role requires (vGLP, Section 5.4: "requires at neither role an atom naming the other, but for an atom the phone finds").
+procedure meeting_schema_f(RoleSpecs?, Preds?, YesNo).
+meeting_schema_f([rs(G1, A1, D1, K1, F1), rs(G2, A2, D2, K2, F2)], Fd, B?) :- ground(K1?), ground(K2?), ground(Fd?) |
+    drop_found(K1?, Fd?, K1f),
+    drop_found(K2?, Fd?, K2f),
+    meeting_schema([rs(G1?, A1?, D1?, K1f?, F1?), rs(G2?, A2?, D2?, K2f?, F2?)], B).
+meeting_schema_f(_, _, no) :- otherwise | true.
+procedure drop_found(Atoms?, Preds?, Atoms).
+drop_found([], _, []).
+drop_found([atom(P, As)|Xs], Fd, R?) :- ground(P?), ground(As?), ground(Fd?) |
+    mem(P?, Fd?, In),
+    drop_found(Xs?, Fd?, R1),
+    keep_atom(In?, atom(P?, As?), R1?, R).
+drop_found([X|Xs], Fd, [X?|R?]) :- otherwise | drop_found(Xs?, Fd?, R).
+procedure keep_atom(YesNo?, Atom?, Atoms?, Atoms).
+keep_atom(yes, _, R, R?).
+keep_atom(no, A, R, [A?|R?]).
 %% Whether a schema is an acquaintance schema: two party roles, both guarding, and the atoms each requires or deletes naming not the other.
 procedure meeting_schema(RoleSpecs?, YesNo).
 meeting_schema([rs(G1, _, D1, K1, _), rs(G2, _, D2, K2, _)], B?) :-

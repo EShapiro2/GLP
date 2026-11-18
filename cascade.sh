@@ -308,6 +308,8 @@ repl() {   # repl <input file> <output file>; the REPL's lines, prompts stripped
     (cd "$RT" && bin/glpc < "$1" 2>&1) | sed -e 's/^\(GLP> \)*//' > "$2"
 }
 say() { echo "$NAME: $*"; }
+# prerr: pragmas.sh's refusal from $WORK/pr.err, its first line that names pragmas.sh, else its first line; under PRAGMAS_LINES the trace of every button line comes before it there, so the whole file goes to the standard error as well.
+prerr() { [ -n "${PRAGMAS_LINES:-}" ] && cat "$WORK/pr.err" >&2; grep -m1 '^pragmas.sh:' "$WORK/pr.err" || head -1 "$WORK/pr.err"; }
 STATUS=0
 NOTE=()
 
@@ -461,7 +463,7 @@ else
         [ -f "$TD/$TF.glp" ] || { say "the third contract the contracts amend, $TF, has no $TF.glp beside its $TF.txt"; exit 1; }
         read_contract "$Tn" "$TD" "$TF"
         if ! P=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$PRAG" "${THIRD[0]}" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
-            say "the pragmas of $TF, the third contract the contracts amend, were not read: $(head -1 "$WORK/pr.err")"
+            say "the pragmas of $TF, the third contract the contracts amend, were not read: $(prerr)"
             exit 1
         fi
         BASEARGS=(--base "$TF" "$RD" "$P")
@@ -474,7 +476,7 @@ else
         read_contract "${NAMES[i]}" "${SRCS[i]}" "${FILES[i]}"
         P=no_pragmas
         if [ "${CTXTS[i]}" = "${FILES[i]}.txt" ] && ! P=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "${SRCS[i]}/${CTXTS[i]}" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
-            say "the pragmas of ${FILES[i]} were not read: $(head -1 "$WORK/pr.err")"
+            say "the pragmas of ${FILES[i]} were not read: $(prerr)"
             exit 1
         fi
         COMP+=("${FILES[i]}" "$RD" "$P" "$INTRO")
@@ -559,7 +561,7 @@ fi
 if [ "$PARAMETRIC" = 0 ] && [ ${#NAMES[@]} -eq 1 ]; then
     PR=no_pragmas
     if [ "$CTXT" = "$FILE.txt" ] && ! PR=$(printf '%s\n' "$RD" > "$WORK/pr.rd" && bash "$GLP_DIR/programs/vglp/cva/compiler/pragmas.sh" "$SRC/$CTXT" "@$WORK/pr.rd" 2> "$WORK/pr.err"); then
-        say "its pragmas were not read: $(head -1 "$WORK/pr.err")"
+        say "its pragmas were not read: $(prerr)"
         exit 1
     fi
 fi
