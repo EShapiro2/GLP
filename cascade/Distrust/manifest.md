@@ -1,10 +1,10 @@
 # A run of the cascade on Distrust
 
-- Contract: `Distrust` (`distrust` to the checker), its owner's two files `programs/ggga/Distrust.txt` and `programs/ggga/Distrust.glp`, copied here as they stood at `c130c1be`.
+- Contract: `Distrust` (`distrust` to the checker), its owner's two files `programs/ggga/Distrust.txt` and `programs/ggga/Distrust.glp`, copied here as they stood at `f4a1b5b9`.
 - The paper: `/Users/udi/Grassroots/SRC (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/ggga/Distrust.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/ggga/Distrust.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-17 15:12 UTC by `cascade.sh distrust`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `c130c1be`; each artefact's source and tool:
+- Run on 2026-11-18 09:07 UTC by `cascade.sh distrust`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `f4a1b5b9`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
