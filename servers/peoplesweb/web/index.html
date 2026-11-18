@@ -152,6 +152,10 @@ ol.cl b{font-weight:600}
 .layer summary{cursor:pointer;font-size:14px;color:var(--blue);font-weight:500;list-style:none}
 .layer summary::-webkit-details-marker{display:none}
 .rules.txt{white-space:pre-wrap;font-size:14px;line-height:1.55}.fullc{margin-top:10px}.fullc summary{list-style:none}.fullc summary::-webkit-details-marker{display:none}.fullc .txt{white-space:pre-wrap;font-size:14px;line-height:1.55;margin-top:10px;max-height:70vh;overflow:auto}
+.tex{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 16px;max-height:560px;overflow:auto;margin-top:10px}
+.tex .tx{padding:8px 0;border-bottom:1px solid var(--line)}.tex .tx:last-child{border-bottom:none}
+.tex .tx b{font-size:13px;color:var(--mute);font-weight:600}
+.tex .katex-display{margin:4px 0;overflow-x:auto;overflow-y:hidden;text-align:left}.tex .katex-display>.katex{text-align:left}
 .code{font:12px/1.55 var(--mono);background:#1d1d1f;color:#e5e5ea;border-radius:12px;padding:14px 16px;max-height:460px;overflow:auto;white-space:pre;margin-top:10px}
 .code a{color:#64b5ff}
 .verdict{font:13px var(--mono);background:#e8f8ee;color:#1c7c3f;border-radius:8px;padding:5px 10px;display:inline-block;word-break:break-word;margin-top:8px}
@@ -1007,7 +1011,7 @@ function page(c, hood){
       <div class="stat"><div class="k">By</div><div class="v">${projOf(c.owner) ? `<a href="#projects" data-proj="${esc(projOf(c.owner))}" title="Under Projects">${esc(c.owner)}</a>` : esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
     </div>
     ${stripHtml(c)}
-    <div class="sec"><div class="sh"><h2>The contract</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
+    <div class="sec"><div class="sh"><h2>The Grassroots Contract</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
       ${c.clauses.length || c.preamble ? `<div class="card rules" id="cbox">${boxHtml(c, false)}</div>` : `<p class="small">No text in force.</p>`}
       ${calcHtml(c)}
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
@@ -1105,7 +1109,7 @@ function hoodHtml(c, schemas){
   const L = c.layers, col = FAM[famOf(c)][1];
   const n = i => `<span class="num" style="background:${col}">${i}</span>`;
   const codeLayer = (key, title, sum) => L[key] ? `<div class="sub2"><h4>${title}${Q(key)}</h4>
-      <p class="sum">${sum}</p><details data-file="${L[key].file}"><summary>Show the code · ${L[key].lines.toLocaleString()} lines</summary><div class="code">Loading…</div></details></div>` : '';
+      <p class="sum">${sum}</p><details data-file="${L[key].file}"${key === 'vmat' ? ' data-tex="1"' : ''}><summary>${key === 'vmat' ? 'Show the transactions' : `Show the code · ${L[key].lines.toLocaleString()} lines`}</summary><div class="${key === 'vmat' ? 'tex' : 'code'}">Loading…</div></details></div>` : '';
   $('#hood').innerHTML = `
     <div class="sh"><h2>Under the hood${Q('hood')}</h2><span>from the English text to the running app</span></div>
     <div class="stack">
@@ -1131,9 +1135,47 @@ function hoodHtml(c, schemas){
     d.querySelector('summary').textContent = (d.open ? 'Hide' : 'Show') + d.querySelector('summary').textContent.slice(4);
     if (!d.open || d.dataset.done) return; d.dataset.done = 1;
     const gh = `https://github.com/EShapiro2/GLP/blob/${D.glpCommit[0]}/${d.dataset.file.replace(/^stack\//, 'cascade/')}`;
-    try { const r = await fetch(d.dataset.file); if (!r.ok) throw 0; d.querySelector('.code').textContent = await r.text(); }
-    catch (e){ d.querySelector('.code').innerHTML = `Not available here: <a href="${gh}" target="_blank" rel="noopener">open it on GitHub ↗</a>`; }
+    const box = d.querySelector('.code, .tex');
+    try { const r = await fetch(d.dataset.file); if (!r.ok) throw 0; const src = await r.text();
+      if (d.dataset.tex) await texShow(box, src, gh); else box.textContent = src; }
+    catch (e){ box.innerHTML = `Not available here: <a href="${gh}" target="_blank" rel="noopener">open it on GitHub ↗</a>`; }
   }));
+}
+// The transactions, vmat.tex, typeset as the PDF shows them (Udi,
+// 2026-11-17, to Website #3: "instead of latex source of the transactions,
+// can we show formatted text?"), by KaTeX, served by the site and loaded on the first opening.  The
+// file is one align* block for each act, its name in an \iffalse ... \fi
+// before it; \Alice, \Bob and \Carol are GSC's macros (main.tex), and the
+// cent sign is the coin's.  A long file is typeset a few acts at a time.
+let KATEX = null;
+const loadKatex = () => KATEX || (KATEX = new Promise((ok, no) => {
+  const base = 'katex/';  // KaTeX 0.16.11, MIT, served by the site (web/katex)
+  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = base + 'katex.min.css'; document.head.appendChild(l);
+  const s = document.createElement('script'); s.src = base + 'katex.min.js'; s.onload = () => ok(window.katex); s.onerror = no; document.head.appendChild(s);
+}));
+const TEXMACROS = {'\\Alice': '\\mathit{Alice}', '\\Bob': '\\mathit{Bob}', '\\Carol': '\\mathit{Carol}', '\\Dave': '\\mathit{Dave}', '\\textcent': '¢'};
+async function texShow(box, src, gh){
+  const k = await loadKatex();
+  const acts = [...src.matchAll(/\\iffalse\s*([^\n]*?)\s*\\fi\s*(\\begin\{align\*\}[\s\S]*?\\end\{align\*\})/g)];
+  box.innerHTML = `<p class="small">${acts.length} transactions. <a href="${gh}" target="_blank" rel="noopener">The source on GitHub ↗</a></p>`;
+  for (let i = 0; i < acts.length; i += 20){
+    const frag = document.createDocumentFragment();
+    for (const [, name, body] of acts.slice(i, i + 20)){
+      const div = document.createElement('div'); div.className = 'tx';
+      const h = document.createElement('b'); h.textContent = name.replace(/_/g, ' '); div.appendChild(h);
+      const m = document.createElement('div');
+      // A name with an underscore, \mathit{has_officer}, is written as it is
+      // named: GSC's printer (programs/gsc/compile.glp, latex_pred/3) does
+      // not escape it, which LaTeX would read as a subscript (reported to
+      // Code, 2026-11-18).
+      const tex = body.replace(/\s*\n\s*/g, ' ').replace(/\\mathit\{\s*([A-Za-z0-9_]+)\s*\}/g, (_, w) => `\\mathit{${w.replace(/_/g, '\\_')}}`);
+      try { k.render(tex, m, {displayMode: true, throwOnError: false, maxExpand: 100000, macros: {...TEXMACROS}}); }
+      catch (e){ m.textContent = body; }
+      div.appendChild(m); frag.appendChild(div);
+    }
+    box.appendChild(frag);
+    await new Promise(r => setTimeout(r, 0));
+  }
 }
 // How far the contract got down the cascade, from cascade/<NAME>/ (GSA,
 // 2026-11-09, after Nimrod Talmon): its speech-act schemas, the grassroots
