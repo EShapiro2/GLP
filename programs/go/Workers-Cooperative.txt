@@ -25,7 +25,7 @@ After x distributes a w-coin of z to y: no longer z holds a w-coin, y holds a w-
 Environment: z has distributed no more coins to y than to any other member.
 Interface pragmas
 Look: 🛠️, sharing
-Pay for work: Alice [Pay for work] <member> <issuer> <amount> <votes>
+Pay for work: Alice [Pay for work] <member> <issuer> <denomination> <amount> <votes>
   Carol [Vote to pay] <member> <issuer> <amount>
-Distribute: Alice [Distribute] <member> <issuer> <votes>
+Distribute: Alice [Distribute] <member> <issuer> <denomination> <votes>
   Carol [Vote to distribute] <member> <issuer>
