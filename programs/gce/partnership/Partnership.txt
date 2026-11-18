@@ -19,3 +19,4 @@ Bob is a person, Orga a partnership.
 Logic pragmas.
 x is a partner of z: x is a participant of z.
 Roles: the partners of z = partners(z), listed by z has y as a participant and y is a participant of z.
+Interface pragmas

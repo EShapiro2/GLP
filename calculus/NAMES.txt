@@ -60,6 +60,7 @@ GDC | Denominated Coins | Denominated-Coins | denominated_coins | gdc
 DGC | Denominated Currencies | Denominated-Currencies | denominated_currencies | dgc
 Joint | Joint Accounts | Joint-Accounts | joint_accounts | joint
 Stay | Stays | Stays | stays | stay
+Partnership | Partnership | Partnership | partnership | partnership
 Lib | Library | Library | library | lib
 Rec | Recommendations | Recommendations | recommendations | rec
 FDAO | Funded DAO | Funded-DAO | funded_dao | fdao

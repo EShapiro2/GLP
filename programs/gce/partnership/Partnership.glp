@@ -1,5 +1,5 @@
-%% Partnership.glp --- printed by calculus/tools/toglp.py from Partnership.txt: the contract's full schemas, the Calculus's term.glp.txt,
-%% complete in itself.  Not to be edited: edit Partnership.txt and print it again.
+%% Partnership.glp --- printed by adopt.py from Partnership.txt: the contract's full schemas, the Calculus's term.glp.txt,
+%% complete in itself.  Not to be edited: edit Partnership.txt and run adopt.py Partnership.
 % contract_named(partnership, C): the contract, Partnership.
 procedure contract_named(Constant?, SDeclared).
 contract_named(partnership, environment([today, one_denomination], reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),

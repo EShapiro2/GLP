@@ -87,6 +87,7 @@
 #   gff_fr_bc   GFF-FR-BC GFF     programs/gff              ---
 #   gd          GD    GGGA        programs/ggga             ---
 #   gd_s        GD-S  GGGA        programs/ggga             ---
+#   partnership Partnership GCE         programs/gce/partnership     ---
 #   gdo_l       GDO-L GFF         programs/gff              ---
 #   dao         DAO   GCE         programs/gce/dao          ---
 #   ldao        LDAO  GCE         programs/gce/ldao         ---
@@ -227,6 +228,7 @@ case "$1" in
     separating_distrust) FILE=Separating-Distrust; OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;
     labelled_overlay) FILE=Labelled-Overlay; OWNER="programs/gff";            PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GDO (Udi, 2026-11-05; GFF #3)
     dao) FILE=DAO;  OWNER="programs/gce/dao";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GKK (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
+    partnership) FILE=Partnership; OWNER="programs/gce/partnership"; PAPER=""; PLAYDIR="" ;;   # Nimrod Talmon's example contract (GCE, Grassroots Contract Examples, Nimrod Talmon's)
     liquid_dao) FILE=Liquid-DAO; OWNER="programs/gce/ldao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     funded_dao) FILE=Funded-DAO; OWNER="programs/gce/fdao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO and GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     recommendations) FILE=Recommendations;  OWNER="programs/gce/rec";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GKK (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
