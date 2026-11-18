@@ -1,5 +1,5 @@
 Dating
-Dating instantiates Matching.
+Dating instantiates Matching with profiles, and restricts it.
 A post is a *profile*, stating who its maker is and whom they seek. Two profiles match when each states whom the other seeks.
 Alice is a person.
 1. ■ Post: Matching:1, only if Alice has no profile she has not withdrawn.
