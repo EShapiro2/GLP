@@ -1,0 +1,22 @@
+% Anonymous Rendezvous --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GNA, a paper of the GSA project (Udi, 2026-11-18, in the Matching thread, "yes, go ahead" to "Do you approve this clause, with Anonymous Rendezvous a contract of GNA's?").  GNA's paper, Section 6, is to print it in its box, on Udi's consent to that revision.
+% Paper: GNA, GLP Networking API and Services, in preparation
+% Extends: Rendezvous, GNA's (Rendezvous.txt beside this file), and through it Services, Guardians, Friendship and Knowledge.  Its one clause has the shape of Rendezvous:4, with one-time keys in place of the friendship; Matching's Meet uses it (GM, reported 2026-11-18).
+% Defines: one-time key, in the box after the declaration.  Person, knowing a person and rendezvous server are defined with Knowledge and Rendezvous.
+% Last changed: first written 2026-11-18 by GSA #8, the clause as Udi approved it; its Logic pragmas, Interface pragmas and schemas are not yet written: the Logic pragmas are the Calculus's, and for now nothing is compiled (Udi, 2026-11-18: "for now no compilation, i want to know what all contracts are comiled to sas and pass checking").
+% Schemas: Anonymous-Rendezvous.glp beside this file, to be printed from the Logic pragmas by calculus/tools/adopt.py, never written by hand.
+Anonymous Rendezvous
+Anonymous Rendezvous extends Rendezvous.
+A *one-time key* is a key pair its maker uses for one meeting.
+Alice and Bob are persons, Dave a rendezvous server.
+1. ■ Meet. Present: Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own. Match: Dave then gives each the address of the other.
+Logic pragmas
+Anonymous Rendezvous extends Rendezvous.
+A *one-time key* is a key pair its maker uses for one meeting.
+Alice and Bob are persons, Dave a service, Key and Other one-time keys.
+1. ■ Meet. Present: Alice may present to Dave the keys Key and Other signed with Key, provided Alice holds the one-time key Key, Alice knows the public key of Other, Alice knows Dave and Dave is a rendezvous server. Match: Dave matches Alice and Bob on Key and Other.
+Logic pragmas.
+Vocabulary: x holds the one-time key k = one_time_key(x,k); x knows the public key of k = knows_key(x,k); d has the keys k and l presented by x = presented_keys(d,k,l,x).
+After x presents to d the keys k and l signed with k, which requires d does not have the keys k and l presented by x: d has the keys k and l presented by x.
+After d matches x and y on k and l: no longer d has the keys k and l presented by x, no longer d has the keys l and k presented by y, x has the address of y and y has the address of x.
+Environment: x holds the one-time key k; x knows the public key of k.

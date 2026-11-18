@@ -5,3 +5,6 @@
 Lost and Found
 Lost and Found instantiates Matching.
 A post is a *loss*, stating a thing its maker lost, or a *find*, stating a thing its maker found. A loss and a find match when they are of the same thing.
+Logic pragmas
+Lost and Found instantiates Matching.
+A post is a *loss*, stating a thing its maker lost, or a *find*, stating a thing its maker found. A loss and a find match when they are of the same thing.

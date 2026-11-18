@@ -1,0 +1,4 @@
+% Written by tools/expand.py from rev/; do not edit.
+Dating
+A post is a *profile*, stating who its maker is and whom they seek. Two profiles match when each states whom the other seeks.
+

@@ -1,0 +1,10 @@
+% Rehearsals: the contract, the one copy, its owner's.
+% Owner: GM, proposed by its thread, 2026-11-18; Udi's ruling pending.
+% Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
+% Last changed: 2026-11-18, written from the paper at GM main 794a6a2; no Logic pragmas and no Interface pragmas yet.
+Rehearsals
+Rehearsals instantiates Partners, and instantiates Booking, a *room* for a resource.
+The activity is music, the place is a *studio*, an organisation that has rehearsal rooms, and the time is a slot.
+Logic pragmas
+Rehearsals instantiates Partners and Booking with a room for a resource.
+The activity is music, the place is a *studio*, an organisation that has rehearsal rooms, and the time is a slot.

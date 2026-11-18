@@ -1,0 +1,9 @@
+% Appointments --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-18, in the Matching thread: Booking, Meeting Rooms and Appointments are GO's).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 3.1, Booking.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Last changed: 2026-11-18, by GO #10.  Logic pragmas and schemas: the Calculus's to write.
+% Extends: Booking, instantiating it.
+Appointments
+Appointments instantiates Booking, the time of a *provider*, an officer of the organisation, for a resource.
+Logic pragmas
+Appointments instantiates Booking with the time of a provider for a resource.

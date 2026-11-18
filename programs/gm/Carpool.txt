@@ -5,3 +5,6 @@
 Carpool
 Carpool instantiates Matching.
 A post is a *commute*, stating a route, its times, and whether its maker drives, rides or either. Two commutes match when their routes and times agree and one maker drives and the other rides.
+Logic pragmas
+Carpool instantiates Matching.
+A post is a *commute*, stating a route, its times, and whether its maker drives, rides or either. Two commutes match when their routes and times agree and one maker drives and the other rides.

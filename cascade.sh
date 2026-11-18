@@ -176,10 +176,10 @@ set -u
 GLP_DIR="$(cd "$(dirname "$0")" && pwd)"
 RT="$GLP_DIR/glp_runtime"
 
-usage() { echo "usage: cascade.sh <contract> [<contract> ...] [--check | --record]" >&2; exit 2; }
+usage() { echo "usage: cascade.sh <contract> [<contract> ...] [--check | --record | --schemas]" >&2; exit 2; }
 [ $# -ge 1 ] || usage
 MODE=write
-case "${!#}" in --check|--record) MODE="${!#}"; set -- "${@:1:$#-1}" ;; esac
+case "${!#}" in --check|--record|--schemas) MODE="${!#}"; set -- "${@:1:$#-1}" ;; esac
 [ $# -ge 1 ] || usage
 NAMES=("$@")
 # A row's key is the contract's row and atom of calculus/NAMES.txt, its file name in lower case, a hyphen an underscore; FILE is its file name (the renaming of 2026-11-16, Udi).
@@ -262,7 +262,14 @@ case "$1" in
     local_overlay) FILE=Local-Overlay; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
     second_score_auction) FILE=Second-Score-Auction; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
     secure_friendship) FILE=Secure-Friendship; OWNER="programs/social/spm"; PAPER="/Users/udi/Grassroots/SPM"; PLAYDIR="" ;;   # SPM's, adopted from the Calculus (SPM #1, 2026-11-15)
-    *) echo "cascade.sh: no contract named $1; the names are forwarding programs appstore rendezvous services directory encounters knowledge friendship groups guardians provenance_groups coins bonds warded_groups children gfwc agents feeds agora overlay denominated_currencies community_currency denominated_coins auction short_feeds resilient_feeds backchannel_feeds distrust separating_distrust labelled_overlay dao liquid_dao funded_dao recommendations stays library joint_accounts community_bank commercial_bank consumers_cooperative ads backed_currency bank cooperative corporation cooperative_dao liquid_cooperative gigs lodging marketplace networked_organisation organisation mutual_credit rides notes app constitution shares shareholding_corporation central_bank single_person_company trading_company workers_cooperative local_overlay second_score_auction secure_friendship" >&2; exit 2 ;;
+    *) # A contract with no row yet: its file name from the key, each word capitalised and joined by a hyphen, found once under programs/ (Code, 2026-11-18, for the contracts not yet given a row).
+       FILE=$(echo "$1" | awk -F_ '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2); print}' OFS=-)
+       FOUND=$(cd "$GLP_DIR" && find programs -name "$FILE.txt" -not -path '*/cascade_emit/*' | head -2)
+       if [ -n "$FOUND" ] && [ "$(echo "$FOUND" | wc -l)" -eq 1 ]; then
+           OWNER=$(dirname "$FOUND"); PAPER=""; PLAYDIR=""
+           return
+       fi
+       echo "cascade.sh: no contract named $1; the names are forwarding programs appstore rendezvous services directory encounters knowledge friendship groups guardians provenance_groups coins bonds warded_groups children gfwc agents feeds agora overlay denominated_currencies community_currency denominated_coins auction short_feeds resilient_feeds backchannel_feeds distrust separating_distrust labelled_overlay dao liquid_dao funded_dao recommendations stays library joint_accounts community_bank commercial_bank consumers_cooperative ads backed_currency bank cooperative corporation cooperative_dao liquid_cooperative gigs lodging marketplace networked_organisation organisation mutual_credit rides notes app constitution shares shareholding_corporation central_bank single_person_company trading_company workers_cooperative local_overlay second_score_auction secure_friendship" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not
@@ -527,6 +534,24 @@ if [ -z "$VT" ]; then
 fi
 printf '%s\n' "$VT" > "$OUT/verdict.txt"
 say "verdict: $VT"
+
+# --schemas: the contract checked and its schemas printed, and nothing compiled
+# (Udi, 2026-11-18, to the project: "for now no compilation, i want to know what
+# all contracts are comiled to sas and pass checking"): the record holds the
+# contract, its schemas, their notation and the verdict, with a manifest naming
+# the run, and no VMAT form, platform or run.
+if [ "$MODE" = "--schemas" ]; then
+    {
+        echo "# cascade/$FILE: the contract checked, nothing compiled"
+        echo ""
+        echo "Printed by \`cascade.sh $NAME --schemas\` at GLP $(git -C "$GLP_DIR" rev-parse --short=8 HEAD 2>/dev/null || echo unknown); the verdict: \`$VT\`."
+        echo "No VMAT form, platform or run: the contract is not compiled."
+    } > "$OUT/manifest.md"
+    [ -f "$REC/relations.txt" ] && cp "$REC/relations.txt" "$OUT/relations.txt"
+    rm -rf "$REC" && mkdir -p "$REC" && cp "$OUT"/* "$REC"/ || { say "the record could not be written"; exit 1; }
+    say "written to cascade/$FILE: the schemas and the verdict, nothing compiled"
+    exit 0
+fi
 
 printf '%s\n:limit 1000000000\ncompile_contract(%s, %s).\n:quit\n' "$GLP_DIR/programs/gsc/" "$NAME" "$CT" > "$WORK/m.in"
 repl "$WORK/m.in" "$WORK/m.out"

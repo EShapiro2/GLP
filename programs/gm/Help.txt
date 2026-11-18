@@ -5,3 +5,6 @@
 Help
 Help instantiates Matching.
 A post is a *service*, stating work its maker does, or a *need*, stating work its maker seeks done. A service and a need match when the service is the work the need seeks.
+Logic pragmas
+Help instantiates Matching.
+A post is a *service*, stating work its maker does, or a *need*, stating work its maker seeks done. A service and a need match when the service is the work the need seeks.

@@ -1,0 +1,6 @@
+Dating
+Dating instantiates Matching and restricts it.
+x has no profile: x has made the post no one.
+Dating:0 - | A post is a *profile*, stating who its maker is and whom they seek. Two profiles match when each states whom the other seeks.
+Dating:0 - | Alice is a person.
+Dating:1 ■ Post: Matching:1 <- ~made(Alice,_).
