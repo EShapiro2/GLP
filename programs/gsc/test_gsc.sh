@@ -390,8 +390,8 @@ check "cs18's predicates of traceable provenance" \
 # Appendix B.3.
 send_cs18=$(cat <<'EOF' | squash
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{sent}(x,\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{item}(x,a,\Alice)\},\\
-& \text{provided } \mathit{item}(x,a,f) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob},\\
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{\detokenize{sent}}(x,\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{\detokenize{item}}(x,a,\Alice)\},\\
+& \text{provided } \mathit{\detokenize{item}}(x,a,f) \in c_{\Alice} \text{ and } \mathit{\detokenize{friend}}(\Alice) \in c_{\Bob},\\
 & \text{guarded by } \{\Alice\}
 \end{align*}
 EOF
@@ -405,8 +405,8 @@ check "cs18 declares friend reflexive" \
       "C = reflexive([friend], [schema(parent_child," "$out"
 parent_child_cs18=$(cat <<'EOF' | squash
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{parenting}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{parent}(\Alice),\mathit{child}\},\\
-& \text{provided } \mathit{parent}(\Bob) \notin c_{\Alice} \text{ and } \mathit{parent}(\Alice) \notin c_{\Bob},\\
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{\detokenize{parenting}}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{\detokenize{parent}}(\Alice),\mathit{\detokenize{child}}\},\\
+& \text{provided } \mathit{\detokenize{parent}}(\Bob) \notin c_{\Alice} \text{ and } \mathit{\detokenize{parent}}(\Alice) \notin c_{\Bob},\\
 & \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
@@ -428,32 +428,32 @@ check_eq "and deliver's is the one guarded by the empty set" "1" \
 
 IFS= read -r -d '' unfriend_body <<'EOF'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\},\\
-& \text{provided } \mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{friend}(\Alice) \in c_{\Bob},\\
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{\detokenize{friend}}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{\detokenize{friend}}(\Alice)\},\\
+& \text{provided } \mathit{\detokenize{friend}}(\Bob) \in c_{\Alice} \text{ and } \mathit{\detokenize{friend}}(\Alice) \in c_{\Bob},\\
 & \text{guarded by }
 EOF
 IFS= read -r -d '' child_unfriend_body <<'EOF'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{friend}(\Alice)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
-& \text{provided } \mathit{parent}(\mathit{Carol}),\mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{parent}(\mathit{Dave}),\mathit{friend}(\Alice) \in c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}},\\
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{\detokenize{friend}}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{\detokenize{friend}}(\Alice)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{\detokenize{withdrawal}}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{\detokenize{withdrawal}}\},\\
+& \text{provided } \mathit{\detokenize{parent}}(\mathit{Carol}),\mathit{\detokenize{friend}}(\Bob) \in c_{\Alice} \text{ and } \mathit{\detokenize{parent}}(\mathit{Dave}),\mathit{\detokenize{friend}}(\Alice) \in c_{\Bob} \text{ and } \mathit{\detokenize{parenting}}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{\detokenize{parenting}}(\Bob) \in c_{\mathit{Dave}},\\
 & \text{guarded by }
 EOF
 IFS= read -r -d '' leave_body <<'EOF'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\},\\
-& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob},\\
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{\detokenize{listed}}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{\detokenize{member}}(\Alice,n)\},\\
+& \text{provided } \mathit{\detokenize{listed}}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{\detokenize{member}}(\Alice,n) \in c_{\Bob},\\
 & \text{guarded by }
 EOF
 IFS= read -r -d '' child_leave_body <<'EOF'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\},\\
-& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Carol}},\\
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{\detokenize{listed}}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{\detokenize{member}}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{\detokenize{withdrawal}}\},\\
+& \text{provided } \mathit{\detokenize{listed}}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{\detokenize{member}}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{\detokenize{parenting}}(\Bob) \in c_{\mathit{Carol}},\\
 & \text{guarded by }
 EOF
 IFS= read -r -d '' child_leave_2_body <<'EOF'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{listed}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{member}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{withdrawal}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{withdrawal}\},\\
-& \text{provided } \mathit{listed}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{member}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{parenting}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{parenting}(\Bob) \in c_{\mathit{Dave}},\\
+& c'_{\Alice} := c_{\Alice} \setminus \{\mathit{\detokenize{listed}}(\Bob,n)\}, \qquad c'_{\Bob} := c_{\Bob} \setminus \{\mathit{\detokenize{member}}(\Alice,n)\}, \qquad c'_{\mathit{Carol}} := c_{\mathit{Carol}} \uplus \{\mathit{\detokenize{withdrawal}}\}, \qquad c'_{\mathit{Dave}} := c_{\mathit{Dave}} \uplus \{\mathit{\detokenize{withdrawal}}\},\\
+& \text{provided } \mathit{\detokenize{listed}}(\Bob,n) \in c_{\Alice} \text{ and } \mathit{\detokenize{member}}(\Alice,n) \in c_{\Bob} \text{ and } \mathit{\detokenize{parenting}}(\Alice) \in c_{\mathit{Carol}} \text{ and } \mathit{\detokenize{parenting}}(\Bob) \in c_{\mathit{Dave}},\\
 & \text{guarded by }
 EOF
 
@@ -552,8 +552,8 @@ check "a reading role the guarding role records, Alice pointing to Carol through
       "V = syntactically_grassroots" "$out"
 read -r -d '' point_tex <<'EOF'
 \begin{align*}
-&c'_{\Alice} := c_{\Alice} \uplus \{\mathit{points}(c)\}, \qquad c'_{\Bob} := c_{\Bob},\\
-&\text{provided } \mathit{identity},\mathit{points}(\Bob) \in c_{\Alice} \text{ and } \mathit{identity},\mathit{points}(c) \in c_{\Bob},\\
+&c'_{\Alice} := c_{\Alice} \uplus \{\mathit{\detokenize{points}}(c)\}, \qquad c'_{\Bob} := c_{\Bob},\\
+&\text{provided } \mathit{\detokenize{identity}},\mathit{\detokenize{points}}(\Bob) \in c_{\Alice} \text{ and } \mathit{\detokenize{identity}},\mathit{\detokenize{points}}(c) \in c_{\Bob},\\
 &\text{guarded by } \{\Alice\}
 \end{align*}
 EOF
@@ -643,9 +643,9 @@ check_not "and neither is one adding and deleting an atom at one role refused" \
 # \in).
 befriend_paper=$(cat <<'EOF' | squash
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{friend}(\Alice)\},\\
-& \text{provided } \mathit{identity}, \mathit{knows}(\Bob) \in c_{\Alice} \text{ and } \mathit{identity}, \mathit{knows}(\Alice) \in c_{\Bob},\\
-& \text{provided } \mathit{friend}(\Bob) \notin c_{\Alice} \text{ and } \mathit{friend}(\Alice) \notin c_{\Bob},\\
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{\detokenize{friend}}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{\detokenize{friend}}(\Alice)\},\\
+& \text{provided } \mathit{\detokenize{identity}}, \mathit{\detokenize{knows}}(\Bob) \in c_{\Alice} \text{ and } \mathit{\detokenize{identity}}, \mathit{\detokenize{knows}}(\Alice) \in c_{\Bob},\\
+& \text{provided } \mathit{\detokenize{friend}}(\Bob) \notin c_{\Alice} \text{ and } \mathit{\detokenize{friend}}(\Alice) \notin c_{\Bob},\\
 & \text{guarded by } \{\Alice,\Bob\}
 \end{align*}
 EOF
@@ -766,9 +766,9 @@ check_not "and no display is printed for it" "begin{align" "$out"
 # quote to the shell's scan of the substitution)
 IFS= read -r -d '' create_tex <<'TEX'
 \begin{align*}
-& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{member}(\langle\Alice\rangle\cdot n),\mathit{listed}(\Alice,n)\},\\
-& \text{provided } \mathit{identity} \in c_{\Alice},\\
-& \text{provided } \{\mathit{member}(\langle\Alice\rangle\cdot n),\mathit{closed}(n)\} \cap c_{\Alice} = \emptyset,\\
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n),\mathit{\detokenize{listed}}(\Alice,n)\},\\
+& \text{provided } \mathit{\detokenize{identity}} \in c_{\Alice},\\
+& \text{provided } \{\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n),\mathit{\detokenize{closed}}(n)\} \cap c_{\Alice} = \emptyset,\\
 & \text{provided } \langle\Alice\rangle\cdot n \text{ is an argument of no atom of } c,\\
 & \text{guarded by } \{\Alice\}
 \end{align*}
@@ -792,9 +792,9 @@ check_not "join, requiring member(<a>.n), asks no freshness of it" \
 # required; and the guard, the leader.
 close_gsn=$(cat <<'TEX' | squash
 \begin{align*}
-& c'_{\Alice} := (c_{\Alice} \setminus \{\mathit{listed}(\Alice,n),\mathit{member}(\langle\Alice\rangle\cdot n)\}) \uplus \{\mathit{closed}(n)\},\\
-& c'_q := c_q \setminus \{\mathit{member}(\langle\Alice\rangle\cdot n)\} \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)]),\ q \neq \Alice),\\
-& \text{provided } \mathit{identity},\mathit{listed}(\Alice,n),\mathit{member}(\langle\Alice\rangle\cdot n) \in c_{\Alice} \text{ and } \mathit{identity},\mathit{member}(\langle\Alice\rangle\cdot n) \in c_q \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)])),\\
+& c'_{\Alice} := (c_{\Alice} \setminus \{\mathit{\detokenize{listed}}(\Alice,n),\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n)\}) \uplus \{\mathit{\detokenize{closed}}(n)\},\\
+& c'_q := c_q \setminus \{\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n)\} \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{\detokenize{listed}}(\ast,n)]),\ q \neq \Alice),\\
+& \text{provided } \mathit{\detokenize{identity}},\mathit{\detokenize{listed}}(\Alice,n),\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n) \in c_{\Alice} \text{ and } \mathit{\detokenize{identity}},\mathit{\detokenize{member}}(\langle\Alice\rangle\cdot n) \in c_q \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{\detokenize{listed}}(\ast,n)])),\\
 & \text{guarded by } \{\Alice\}
 \end{align*}
 TEX
@@ -1206,7 +1206,7 @@ out=$(run "check_variant(sn_listed_unguarded, $GSNV, V).")
 check "a listed reading role in a schema with no guarding role is refused, though idled(n) is a signature atom (def:volition)" \
       "V = not_grassroots([listed_reading(idle, 2)])" "$out"
 read -r -d '' idle_tex <<'EOF'
-&c'_q := c_q \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{listed}(\ast,n)]),\ q \neq \Alice),\\
+&c'_q := c_q \qquad (q \in \mathrm{ext}_c(\Alice[\mathit{\detokenize{listed}}(\ast,n)]),\ q \neq \Alice),\\
 EOF
 check "and each member's line of its compiled form leaves the member's state unchanged (def:compile)" \
       "$(printf '%s' "$idle_tex" | squash)" \
@@ -1368,7 +1368,7 @@ check_eq "a multiplicity written as 0 is refused" \
          "V = malformed([multiplicity_not_whole(mint, 1, atom(coin, [role(1)]))])" "$(mmv 3)"
 check "and the message names the fault" \
       "mint at role 1 carries a multiplicity that is not a positive whole number;" "$(printf '%s\n' "$out" | tr '\n' ' ')"
-nm_mint_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{k\cdot\mathit{bond}(\Alice,d)\},\\&\text{provided}\mathit{identity},\mathit{date}(t)\inc_{\Alice},\\&\text{provided}d>t\landd\let+30,\\&\text{guardedby}\{\Alice\}\end{align*}'
+nm_mint_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{k\cdot\mathit{\detokenize{bond}}(\Alice,d)\},\\&\text{provided}\mathit{\detokenize{identity}},\mathit{\detokenize{date}}(t)\inc_{\Alice},\\&\text{provided}d>t\landd\let+30,\\&\text{guardedby}\{\Alice\}\end{align*}'
 check_eq "nm_bonds's mint compiles its constraint, a conjunction, and as \\land and a sum as +" \
          "$nm_mint_display" "$(compiled nm_bonds mint)"
 nm_mint_notation=$(cat <<'EOF'
@@ -1472,11 +1472,11 @@ check_eq "GSN's unfriend prints its cleared atoms negated in its head, the wildc
 # form, a line per agent.
 read -r -d '' unfriend_tex <<'EOF'
 \begin{align*}
-&c'_{\Alice} := (c_{\Alice} \setminus \{\mathit{friend}(\Bob)\}) \setminus K_{\Alice},\\
-&\text{where } K_{\Alice} \text{ holds every atom of } c_{\Alice} \text{, with its multiplicity, that matches } \mathit{listed}(\Bob,\ast) \text{ or } \mathit{member}(\langle\Bob\rangle\cdot\ast),\\
-&c'_{\Bob} := (c_{\Bob} \setminus \{\mathit{friend}(\Alice)\}) \setminus K_{\Bob},\\
-&\text{where } K_{\Bob} \text{ holds every atom of } c_{\Bob} \text{, with its multiplicity, that matches } \mathit{listed}(\Alice,\ast) \text{ or } \mathit{member}(\langle\Alice\rangle\cdot\ast),\\
-&\text{provided } \mathit{identity},\mathit{friend}(\Bob) \in c_{\Alice} \text{ and } \mathit{identity},\mathit{friend}(\Alice) \in c_{\Bob},\\
+&c'_{\Alice} := (c_{\Alice} \setminus \{\mathit{\detokenize{friend}}(\Bob)\}) \setminus K_{\Alice},\\
+&\text{where } K_{\Alice} \text{ holds every atom of } c_{\Alice} \text{, with its multiplicity, that matches } \mathit{\detokenize{listed}}(\Bob,\ast) \text{ or } \mathit{\detokenize{member}}(\langle\Bob\rangle\cdot\ast),\\
+&c'_{\Bob} := (c_{\Bob} \setminus \{\mathit{\detokenize{friend}}(\Alice)\}) \setminus K_{\Bob},\\
+&\text{where } K_{\Bob} \text{ holds every atom of } c_{\Bob} \text{, with its multiplicity, that matches } \mathit{\detokenize{listed}}(\Alice,\ast) \text{ or } \mathit{\detokenize{member}}(\langle\Alice\rangle\cdot\ast),\\
+&\text{provided } \mathit{\detokenize{identity}},\mathit{\detokenize{friend}}(\Bob) \in c_{\Alice} \text{ and } \mathit{\detokenize{identity}},\mathit{\detokenize{friend}}(\Alice) \in c_{\Bob},\\
 &\text{guarded by } \{\Alice\}
 \end{align*}
 EOF
@@ -1557,7 +1557,7 @@ EOF
 )
 check_eq "deliver prints its signing conditions after its body, as def:numbers writes them" \
          "$sig_notation" "$(notation "$SIGC" | one_schema deliver)"
-sig_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{\mathit{sent}(x,\Bob)\},\qquadc'"'"'_{\Bob}:=c_{\Bob}\uplus\{\mathit{item}(x,\Alice)\},\\&\text{provided}\mathit{identity},\mathit{knows}(\Bob)\inc_{\Alice}\text{and}\mathit{identity},\mathit{knows}(\Alice)\inc_{\Bob},\\&\text{provided}\mathrm{unsigned}(\Bob,x)\land\mathrm{signed}(\Alice,x),\\&\text{guardedby}\{\Alice\}\end{align*}'
+sig_display='\begin{align*}&c'"'"'_{\Alice}:=c_{\Alice}\uplus\{\mathit{\detokenize{sent}}(x,\Bob)\},\qquadc'"'"'_{\Bob}:=c_{\Bob}\uplus\{\mathit{\detokenize{item}}(x,\Alice)\},\\&\text{provided}\mathit{\detokenize{identity}},\mathit{\detokenize{knows}}(\Bob)\inc_{\Alice}\text{and}\mathit{\detokenize{identity}},\mathit{\detokenize{knows}}(\Alice)\inc_{\Bob},\\&\text{provided}\mathrm{unsigned}(\Bob,x)\land\mathrm{signed}(\Alice,x),\\&\text{guardedby}\{\Alice\}\end{align*}'
 check_eq "deliver compiles its signing conditions into its proviso (def:compile)" \
          "$sig_display" "$(compiled sig_conds deliver)"
 # A signing condition not formed as def:numbers says is refused: u that is
@@ -1652,7 +1652,7 @@ check "spend as read: coin deleted, the copies of k.coin beyond it kept" \
 read -r -d '' spend_tex <<'EOF2'
 \begin{align*}
 &c'_{\Alice} := c_{\Alice} \setminus \{\text{\textcent}(\Alice)\},\\
-&\text{provided } \{\mathit{identity},k\cdot\text{\textcent}(\Alice)\} \subseteq c_{\Alice},\\
+&\text{provided } \{\mathit{\detokenize{identity}},k\cdot\text{\textcent}(\Alice)\} \subseteq c_{\Alice},\\
 &\text{guarded by } \{\Alice\}
 \end{align*}
 EOF2
@@ -1713,7 +1713,7 @@ check "spend as read, j.coin deleted of 3.coin: the copies beyond the j kept" \
 read -r -d '' spendj_tex <<'EOF2'
 \begin{align*}
 &c'_{\Alice} := c_{\Alice} \setminus \{j\cdot\text{\textcent}(\Alice)\},\\
-&\text{provided } \{\mathit{identity},k\cdot\text{\textcent}(\Alice)\} \subseteq c_{\Alice},\\
+&\text{provided } \{\mathit{\detokenize{identity}},k\cdot\text{\textcent}(\Alice)\} \subseteq c_{\Alice},\\
 &\text{provided } j \le k,\\
 &\text{guarded by } \{\Alice\}
 \end{align*}
@@ -1951,7 +1951,7 @@ EOF2
 check_eq "the notation prints a sum binding no variable with no comma" \
          "$n_sum_copies" "$(notation "$SUM_COPIES" | one_schema room)"
 check "the compiler prints a cardinality binding no variable with no comma" \
-      "\\mathrm{cardinality}(\\mathit{listed}" "$(compiled_in card_copies_c "$CARD_COPIES" room)"
+      "\\mathrm{cardinality}(\\mathit{\\detokenize{listed}}" "$(compiled_in card_copies_c "$CARD_COPIES" room)"
 # "A numeric term" (def:numbers): an agent is not a value, so a term with an
 # agent in it is not numeric, and no more is a speech-act variable's (GSC #12,
 # 2026-11-06 17:23 UTC, 1).  The same fault as in any constraint expression.
@@ -2610,8 +2610,8 @@ check "as_read gives kept(Alice, item(x)) as atom(kept, [item_of(svar(x))])" \
       "schema(keep, ['Alice'], [svar(x)], [rs(guarded, [atom(kept, [item_of(svar(x))])], [], [atom(identity, []), atom(item, [svar(x)])], [])])" "$(asread "$AU_ARG")"
 check "the notation prints installed(Alice, item(y))" "installed(Alice, item(y))" "$(notation "$AU_INST")"
 out=$(run "compile_schema_in(t, $AU_ARG, keep)." "compile_contract(t, $AU_UNREQ).")
-check "the compiled form writes \\mathit{kept}(\\mathrm{item}(x))" \
-      '\uplus\{\mathit{kept}(\mathrm{item}(x))\}' "$(printf '%s' "$out" | squash)"
+check "the compiled form writes \\mathit{\\detokenize{kept}}(\\mathrm{item}(x))" \
+      '\uplus\{\mathit{\detokenize{kept}}(\mathrm{item}(x))\}' "$(printf '%s' "$out" | squash)"
 check "a contract with an item no agent role requires is not compiled, the fault named" \
       "as an argument of an atom, and no agent role requires" "$out"
 
@@ -2722,7 +2722,7 @@ check "the notation prints the variable over constants by its name" \
 check "and the inequality of two" \
       "identity(Bob),role(Bob,Alice,Role),Role!=NewguardedbyAlice,Bob" "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
 check "the compilation prints the variable over constants by its name" \
-      'c'"'"'_{\Bob}:=(c_{\Bob}\setminus\{\mathit{role}(\Alice,Role)\})\uplus\{\mathit{role}(\Alice,New)\}' "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
+      'c'"'"'_{\Bob}:=(c_{\Bob}\setminus\{\mathit{\detokenize{role}}(\Alice,Role)\})\uplus\{\mathit{\detokenize{role}}(\Alice,New)\}' "$(printf '%s' "$out" | sed 's/GLP>//' | squash)"
 C_EST="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
 c_supply() { # c_supply <type> ; acquaint requires tag(Alice, val(member)), which tag, of arity one, adds with a variable of the type
   printf '%s' "[$C_EST, sas(tag, ['Alice'], ['T'], [atom(tag, ['Alice', $1('T')])], [], true, ['Alice']), sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(tag, ['Alice', val(member)])], true, ['Alice', 'Bob'])]"
