@@ -605,6 +605,13 @@ function layout(){
           add(tc - b - m, fc); add(tc + b + m, fc);
           add(t, fc - (a + m) / st); add(t, fc + (a + m) / st); }
       }
+      // A bow beyond the two ends: drop a waypoint, or hold the farthest
+      // point of the bow at the end's longitude.
+      if (cur.sw > 0.05){
+        cur.way.forEach((_, i) => opts.push(cur.way.filter((_, j) => j !== i)));
+        const pts = course(p, c.id, cur.way), f0 = DEPTH[p] === 0 ? pts[1][1] : PHI[p], lo = Math.min(f0, PHI[c.id]), hi = Math.max(f0, PHI[c.id]);
+        let k = 0, w = -1; pts.forEach(([t, f], i) => { const e = Math.max(lo - f, f - hi) * Math.sin(t); if (e > w){ w = e; k = i; } });
+        add(pts[k][0], Math.max(lo, Math.min(hi, pts[k][1]))); }
       return opts.map(way => cand(p, c.id, way)).sort((x, y) => x.cost - y.cost); };
     for (let n = 0; n < 24 && (best.n || best.cost > 1e3 || best.sw > 0.05); n++){
       const rs = around(best);
