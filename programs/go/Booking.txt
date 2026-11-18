@@ -1,0 +1,11 @@
+% Booking --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-18, in the Matching thread: Booking, Meeting Rooms and Appointments are GO's).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 3.1, Booking.
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Last changed: 2026-11-18, by GO #10.  Logic pragmas and schemas: the Calculus's to write.
+% Extends: Organisation.
+Booking
+Booking extends Organisation.
+An organisation has *resources*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
+Alice is a person, Orga an organisation.
+1. ■ Book: Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a resource of Orga.
+2. ■ Cancel: Alice may cancel her booking.
