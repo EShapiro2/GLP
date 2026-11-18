@@ -3,7 +3,7 @@
 % Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
 % Last changed: 2026-11-18, written from the paper at GM main 794a6a2; first line as Udi approved it, 2026-11-18, on the Calculus's recommendation; the Logic pragmas are the Calculus's, in calculus/contracts; no Interface pragmas yet.
 Home Exchange
-Home Exchange instantiates Matching with homes.
+Home Exchange instantiates Matching with a test of the match of homes.
 A post is a *home*, stating a dwelling, when it is free, and where and when its maker seeks one. Two homes match when each is where and when the other's maker seeks.
 Logic pragmas
 Home Exchange instantiates Matching.
