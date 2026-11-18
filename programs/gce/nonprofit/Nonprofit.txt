@@ -2,7 +2,7 @@
 % Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.
 % Extends: Corporation, GO's (programs/go), and through it Organisation.
 % Defines: nonprofit.
-% Checked: calculus/tools/gcsas.py (commute, return, recover) and relations.py; not yet through cascade.sh (no Dart SDK where it was written).
+% Checked: calculus/tools/gcsas.py (commute, return, recover), relations.py, and toglp.py --check (Dart 3.14.1): syntactically_grassroots_with_wards.
 % Schemas: Nonprofit.glp beside this file.
 Nonprofit
 Nonprofit restricts Corporation.
