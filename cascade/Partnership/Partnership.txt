@@ -1,0 +1,27 @@
+% Partnership --- an example contract by Nimrod Talmon with Claude, 2026-11-18: The general partnership, a standard legal form (Hansmann and Kraakman 2000, p. 390; Armour, Hansmann and Kraakman 2009, pp. 10-13).
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.
+% Extends: Corporation, GO's (programs/go), and through it Organisation.
+% Defines: partnership, partner.
+% Checked: calculus/tools/gcsas.py (commute, return, recover), relations.py, and toglp.py --check (Dart 3.14.1): syntactically_grassroots_with_wards.
+% Schemas: Partnership.glp beside this file.
+Partnership
+Partnership instantiates Corporation with partnership bylaws; x is a participant of z for x is entitled to propose m in z; x is a participant of z for x is entitled to take m for z; x is a participant of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z, and restricts it.
+A *partnership* is a corporation whose bylaws name one role, *partner*, held by every participant; the partners decide by a majority of the partners, but a person joins only with the consent of every partner.
+Bob is a person, Orga a partnership.
+1. ■ Join: Organisation:3 Join, with the consent of the partners of Orga.
+2. ○ Partners' liability. Every partner will be accountable at law for the undertakings of Orga, with Orga.
+Logic pragmas
+Partnership instantiates Corporation with partnership bylaws; x is a participant of z for x is entitled to propose m in z; x is a participant of z for x is entitled to take m for z; x is a participant of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z, and restricts it.
+A *partnership* is a corporation whose bylaws name one role, *partner*, held by every participant; the partners decide by a majority of the partners, but a person joins only with the consent of every partner.
+Bob is a person, Orga a partnership.
+1. ■ Join: Organisation:3 Join, with the consent of the partners of Orga.
+2. ○ Partners' liability. Every partner will be accountable at law for the undertakings of Orga, with Orga.
+Logic pragmas.
+x is a partner of z: x is a participant of z.
+Roles: the partners of z = partners(z), listed by z has y as a participant and y is a participant of z.
+Interface pragmas
+Join: Bob [Join] <organisation> <officer> <partner>
+  Decider: Bob asks to become a participant of Orga.
+  Codecider: Bob asks to become a participant of Orga.
+  DeciderB: Bob asks to become a partner of Orga.
+  CodeciderB: Bob asks to become a partner of Orga.

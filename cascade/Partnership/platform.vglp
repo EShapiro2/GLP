@@ -1,0 +1,5 @@
+%% not compiled(partnership)
+%% it is not a local specification (vGLP, Section 5.4, the paragraph on act schemas): a guarded
+%% part with an opener, of a schema with a listed role whose base is not a guarding role, has a guard
+%% who guards another guarded part of its class not determined likewise, with the same opener:
+%% the schema and the other(join, join)
