@@ -1,10 +1,10 @@
 # A run of the cascade on Liquid-Cooperative
 
-- Contract: `Liquid-Cooperative` (`liquid_cooperative` to the checker), its owner's two files `programs/go/Liquid-Cooperative.txt` and `programs/go/Liquid-Cooperative.glp`, copied here as they stood at `b324645d`.
+- Contract: `Liquid-Cooperative` (`liquid_cooperative` to the checker), its owner's two files `programs/go/Liquid-Cooperative.txt` and `programs/go/Liquid-Cooperative.glp`, copied here as they stood at `758c3693`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/Liquid-Cooperative.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Liquid-Cooperative.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-17 14:59 UTC by `cascade.sh liquid_cooperative`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `b324645d`; each artefact's source and tool:
+- Run on 2026-11-18 08:53 UTC by `cascade.sh liquid_cooperative`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `758c3693`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
