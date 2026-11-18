@@ -5,3 +5,5 @@
 % Extends: Booking, instantiating it.
 Appointments
 Appointments instantiates Booking, the time of a *provider*, an officer of the organisation, for a resource.
+Logic pragmas
+Appointments instantiates Booking with the time of a provider for a resource.

@@ -11,3 +11,18 @@ Alice, Bob and Carol are persons.
 3. ■ Return: Bob, who holds two matching posts, one from Alice, forwards to Alice the second post.
 4. ■ Withdraw: Alice may withdraw a post she made.
 5. ■ Meet: Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other.
+Logic pragmas
+Matching extends Friendship.
+*Posts* have a test whether two *match*. A person *holds* any post they made or forwarded to them.
+Alice, Bob and Carol are persons, Post and Other posts.
+1. ■ Post: Alice may make Post.
+2. ■ Tell: Alice may forward Post to Bob, provided Alice holds the post Post and Alice and Bob are friends.
+3. ■ Return: Bob forwards Other to Alice, provided Bob holds the post Post from Alice, Bob holds the post Other and Post and Other match.
+4. ■ Withdraw: Alice may withdraw Post.
+5. ■ Meet: Alice and Carol may jointly come to know each other, provided Alice has made the post Post, Carol has made the post Other, Alice holds the post Other, Carol holds the post Post and Post and Other match.
+Logic pragmas.
+Vocabulary: x holds the post p = post(x,p); y holds the post p from x = post_from(y,p,x); x has made the post p = made(x,p); p and q match, for x = match(x,p,q).
+After x makes p, which requires x has not made the post p: x has made the post p and x holds the post p.
+After x forwards p to y, which requires y does not hold the post p from x: y holds the post p from x and y holds the post p.
+After x withdraws p: no longer x has made the post p and no longer x holds the post p.
+Environment: p and q match, for x.
