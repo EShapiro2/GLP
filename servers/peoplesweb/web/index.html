@@ -305,6 +305,10 @@ const HELP = {
   acts: ['Speech-act schemas', `<p>Each rule becomes one or more <b>speech acts</b>: who takes part, what each must already have, and what each gains or loses.</p>
     <p><b>?</b> after a role: the act happens only if that person wants it. A role without it is affected without being asked.</p>
     <p>Small letters (x, n, k, …) are values chosen when acting. <code>&lt;Alice&gt;.n</code> is a name n in Alice's own namespace, such as her group; <code>Alice[listed(*, n)]</code> is everyone Alice lists for n; <code>k.coin(u)</code> is k coins of u.</p>`],
+  // Udi's text, 2026-11-18, to Website #4.
+  contract: ['Legal modalities', `<p>Each clause opens with its legal modality:</p>
+    <p>■ Enforced: no act of the contract can breach it.<br>◆ Attested: an agent may breach it, and the contract records the breach.<br>○ Undertaken: its performance is the person’s and not the machine’s.</p>
+    <p><a href="https://arxiv.org/abs/2609.06231" target="_blank" rel="noopener">From Grassroots Contract to Grassroots App</a></p>`],
   check: ['The grassroots check', `<p>A program checks that the contract can grow from the bottom up: some act can start everything from nothing; every fact a person holds traces back to an act that created it; and every act is joined to a person who wants it.</p>`],
   vmat: ['Transactions', `<p>Each speech act becomes an atomic transaction among its parties: it happens at all of them or at none, and only with the will of those who must agree.</p>`],
   platform: ['The platform', `<p>What each person's agent runs: the transactions, carried out by a two-phase commit that the proposing person's agent coordinates, written in vGLP.</p>`],
@@ -1011,7 +1015,7 @@ function page(c, hood){
       <div class="stat"><div class="k">By</div><div class="v">${projOf(c.owner) ? `<a href="#projects" data-proj="${esc(projOf(c.owner))}" title="Under Projects">${esc(c.owner)}</a>` : esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
     </div>
     ${stripHtml(c)}
-    <div class="sec"><div class="sh"><h2>The Grassroots Contract</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
+    <div class="sec"><div class="sh"><h2>The Grassroots Contract${Q('contract')}</h2>${c.calculus && c.calculus.hasFull ? `<span class="seg" id="tf"><button class="on" data-f="">Terse</button><button data-f="1">Full</button></span>` : ''}</div>
       ${c.clauses.length || c.preamble ? `<div class="card rules" id="cbox">${boxHtml(c, false)}</div>` : `<p class="small">No text in force.</p>`}
       ${calcHtml(c)}
       ${c.source === 'example' ? '<p class="small">An example contract, written for GAS.</p>' : ''}
