@@ -2,19 +2,19 @@
 % Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.
 % Extends: Organisation, GO's (programs/go).
 % Defines: warning.
-% Checked: calculus/tools/gcsas.py (commute, return, recover) and relations.py; not yet through cascade.sh (no Dart SDK where it was written).
+% Checked: calculus/tools/gcsas.py (commute, return, recover), relations.py, and toglp.py --check (Dart 3.14.1): syntactically_grassroots_with_wards.
 % Schemas: Warnings.glp beside this file.
 Warnings
 Warnings extends and restricts Organisation.
 A *warning* is a record in an organisation that a participant broke its bylaws or an undertaking.
 Bob is a person, Orga an organisation, Limit a number.
-1. ■ Warn: Those who decide for Orga may warn Bob in Orga, provided Bob is a participant of Orga.
+1. ■ Warn: Those who decide for Orga may warn Bob in Orga, provided Orga has Bob as a participant.
 2. ■ Expel: Organisation:3 Expel, only if Orga holds Limit warnings to Bob. Officer expel: Organisation:3 Officer expel, only if Orga holds Limit warnings to Bob.
 Logic pragmas
 Warnings extends and restricts Organisation.
 A *warning* is a record in an organisation that a participant broke its bylaws or an undertaking.
 Bob is a person, Orga an organisation, Limit a number.
-1. ■ Warn: Those who decide for Orga may warn Bob in Orga, provided Bob is a participant of Orga.
+1. ■ Warn: Those who decide for Orga may warn Bob in Orga, provided Orga has Bob as a participant.
 2. ■ Expel: Organisation:3 Expel, only if Orga holds Limit warnings to Bob. Officer expel: Organisation:3 Officer expel, only if Orga holds Limit warnings to Bob.
 Logic pragmas.
 Vocabulary: z holds a warning to y = warning(z,y); z holds n warnings to y = warning(z,y,*n).
