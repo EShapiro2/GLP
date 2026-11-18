@@ -609,7 +609,7 @@ for f in os.listdir(os.path.join(HERE, 'web')):
 # The page an invitation link opens, peoplesweb.org/i (GNA, Section 6,
 # Invitation links), and the file that names the Grassroots App to iOS as the
 # app that opens such a link.
-for d in ('i', '.well-known'):
+for d in ('i', '.well-known', 'katex'):
     shutil.copytree(os.path.join(HERE, 'web', d), os.path.join(WWW, d), dirs_exist_ok=True)
 if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
