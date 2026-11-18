@@ -1,0 +1,9 @@
+% Tennis Courts: the contract, the one copy, its owner's.
+% Owner: GM, proposed by its thread, 2026-11-18; Udi's ruling pending.
+% Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
+% Last changed: 2026-11-18, written from the paper at GM main 794a6a2; no Logic pragmas and no Interface pragmas yet.
+Tennis Courts
+Tennis Courts instantiates Partners, and instantiates and restricts Booking, a *court* for a resource.
+The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
+Alice and Carol are persons, Club a club.
+1. ■ Book: Booking:1, by Alice and Carol jointly, each a participant of the Club with fewer outstanding bookings than the bound.

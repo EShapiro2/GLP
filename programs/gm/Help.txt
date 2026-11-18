@@ -1,0 +1,7 @@
+% Help: the contract, the one copy, its owner's.
+% Owner: GM, proposed by its thread, 2026-11-18; Udi's ruling pending.
+% Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
+% Last changed: 2026-11-18, written from the paper at GM main 794a6a2; no Logic pragmas and no Interface pragmas yet.
+Help
+Help instantiates Matching.
+A post is a *service*, stating work its maker does, or a *need*, stating work its maker seeks done. A service and a need match when the service is the work the need seeks.
