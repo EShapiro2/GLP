@@ -85,6 +85,7 @@
 #   gff_ps      GFF-PS GFF        programs/gff              ---
 #   gff_fr      GFF-FR GFF        programs/gff              ---
 #   gff_fr_bc   GFF-FR-BC GFF     programs/gff              ---
+#   nonprofit   Nonprofit GCE         programs/gce/nonprofit       ---
 #   gd          GD    GGGA        programs/ggga             ---
 #   gd_s        GD-S  GGGA        programs/ggga             ---
 #   gdo_l       GDO-L GFF         programs/gff              ---
@@ -225,6 +226,7 @@ case "$1" in
     backchannel_feeds) FILE=Backchannel-Feeds; OWNER="programs/gff";       PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GFF-FR (Udi, 2026-11-07; GFF #3)
     distrust) FILE=Distrust;   OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;   # SRC, a paper of the GGGA project, prints GD (Udi, 2026-11-05; GGGA #3)
     separating_distrust) FILE=Separating-Distrust; OWNER="programs/ggga";             PAPER="/Users/udi/Grassroots/SRC";  PLAYDIR="" ;;
+    nonprofit) FILE=Nonprofit; OWNER="programs/gce/nonprofit"; PAPER=""; PLAYDIR="" ;;   # Nimrod Talmon's example contract (GCE, Grassroots Contract Examples, Nimrod Talmon's)
     labelled_overlay) FILE=Labelled-Overlay; OWNER="programs/gff";            PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;   # GFF's, extends GDO (Udi, 2026-11-05; GFF #3)
     dao) FILE=DAO;  OWNER="programs/gce/dao";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GKK (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     liquid_dao) FILE=Liquid-DAO; OWNER="programs/gce/ldao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
