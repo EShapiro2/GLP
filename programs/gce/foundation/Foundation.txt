@@ -24,3 +24,8 @@ Vocabulary: m keeps the purpose of z = keeps_purpose(z,m).
 Roles: the trustees of z = trustees(z), listed by z has y as an officer and y is an officer of z.
 Environment: m keeps the purpose of z.
 Interface pragmas
+Join: Bob [Join] <organisation> <officer> <trustee>
+  Decider: Bob asks to become a participant of Orga.
+  Codecider: Bob asks to become a participant of Orga.
+  DeciderB: Bob asks to become a trustee of Orga.
+  CodeciderB: Bob asks to become a trustee of Orga.
