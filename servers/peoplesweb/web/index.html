@@ -284,10 +284,11 @@ const appUrl = c => `${LIVE}app.html?c=${c.id.toLowerCase()}`;
 const icon = (c, cls = '') => `<div class="icon ${cls}" style="background:${grad(c)}">${c.icon}</div>`;
 const openBtn = (c, cls = 'pill') => c.live
   ? `<a class="${cls}" href="${appUrl(c)}" target="_blank" rel="noopener" data-stop="1">Open</a>`
-  : `<span class="${cls} off" title="${esc(notWhy(c))}">Not compiled</span>`;
+  : `<span class="${cls} off" title="${esc(notWhy(c))}">${c.parametric ? 'Parametric' : 'Not compiled'}</span>`;
 // Why a contract has no app, in a sentence: the compiler's reasons where the
 // cascade ran on it, else that it has not.
-const notWhy = c => c.notCompiled && c.notCompiled.length ? 'The compiler refused it: ' + c.notCompiled.join('; ')
+const notWhy = c => c.parametric ? 'A parametric contract: a template with no app of its own; the contracts that fill it in have one (GSC, Definition Parametric contract).'
+  : c.notCompiled && c.notCompiled.length ? 'The compiler refused it: ' + c.notCompiled.join('; ')
   : c.record ? 'The compiler printed no platform for it.' : 'Not yet run through the cascade.';
 
 // The stages of the cascade a contract may have reached, in order, each
@@ -1125,7 +1126,7 @@ function hoodHtml(c, schemas){
     </div>
     <div class="card layer">${n(3)}<h3>Grassroots Check${Q('check')}</h3><p class="sum">The checker's verdict on the speech-act schemas:</p><span class="verdict">${esc(c.verdict || 'not checked')}</span></div>
     <div class="card layer">${n(4)}<h3>The App${Q('app')}</h3>
-      <p class="sum">${c.live ? 'Four people, each with an agent running the platform compiled from the contract, live.' : 'No app yet. ' + esc(notWhy(c))}</p>
+      <p class="sum">${c.live ? 'Four people, each with an agent running the platform compiled from the contract, live.' : c.parametric ? esc(notWhy(c)) + ((ks => ks.length ? ' Used by: ' + ks.map(k => `<a data-go="${k.id}">${esc(NM(k.id))}</a>`).join(', ') + '.' : '')(D.contracts.filter(k => k.extends.includes(c.id)))) : 'No app yet. ' + esc(notWhy(c))}</p>
       ${c.live ? `<div style="margin:10px 0"><a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a></div>` : ''}
       ${artHtml(c)}
       ${codeLayer('vmat', 'The transactions', 'Each act as an atomic, volition-guarded transaction among its parties.')}
