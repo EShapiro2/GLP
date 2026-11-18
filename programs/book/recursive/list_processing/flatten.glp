@@ -17,13 +17,3 @@ flatten_dl([X|Xs], Front?, Back) :-
 flatten_dl([X|Xs], [X?|Front?], Back) :-
     otherwise |
     flatten_dl(Xs?, Front, Back?).
-
-%% Metainterpreter support
-procedure reduce(_?, _).
-reduce(flatten(Xs, Ys?), flatten_dl(Xs?, Ys, [])).
-reduce(flatten_dl([], Front?, Front), true).
-reduce(flatten_dl([X|Xs], Front?, Back),
-    (flatten_dl(X?, Front, Mid?), flatten_dl(Xs?, Mid, Back?))) :-
-    ground(X?), list(X?) | true.
-reduce(flatten_dl([X|Xs], [X?|Front?], Back), flatten_dl(Xs?, Front, Back?)) :-
-    otherwise | true.

@@ -14,12 +14,16 @@
 
 Offer    ::= offer(Peer).
 
+%% What the person logs: each card and confirmation it answers, and every
+%% other draw and withdrawal as it came.
+Logged   ::= card(Peer) ; ok(Peer) ; drawn(Drawn) ; withdrawn(Integer).
+
 imported procedure home#befriend(Peer?, Peer?, Stream(Fact),
     Stream(Ask(Question))).
 imported procedure home#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Draw(Drawn)))).
 
-exported procedure play_befriend(Stream(Fact), Stream(_)).
+exported procedure play_befriend(Stream(Fact), Stream(Logged)).
 play_befriend(F?, Log?) :-
     home # befriend(bob, carol, F, Asks),
     home # dispatch(Asks?, ch(Gs?, Ds), _),
@@ -28,7 +32,7 @@ play_befriend(F?, Log?) :-
 %% person(Ds?, Gs, Log): at the draw of each question with the person's
 %% position marked input(Q), grant its answer at Q; log every draw and
 %% withdrawal.
-procedure person(_?, PersonIn(Drawn), Stream(_)).
+procedure person(PersonOut(Drawn)?, PersonIn(Drawn), Stream(Logged)).
 person([draw(Id, _, card_w(card(P, input(Q)))) | Ds],
        [input(Id?, Q?, R?) | Gs?], [card(P?) | Log?]) :-
     ground(Id?), ground(P?), ground(Q?) |

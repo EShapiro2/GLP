@@ -5,21 +5,23 @@
 %% AGENT1: Producer - sends [1,2,3] to agent2
 %% =============================================================================
 
-exported procedure producer_init(_?, _?).
+exported procedure producer_init(Keys?, Stream(NetMsg(Msg))?).
 producer_init(keys(_, [Agent2]), _) :-
     send_to_net([msg(Agent2?, data([1,2,3]))]).
+producer_init(_, _) :- otherwise | true.
 
 %% =============================================================================
 %% AGENT2: Transformer - receives data, transforms, sends to agent3
 %% =============================================================================
 
-exported procedure transformer_init(_?, _?).
+exported procedure transformer_init(Keys?, Stream(NetMsg(Msg))?).
 transformer_init(keys(_, [Agent3]), [msg(_, data(Xs))|_]) :-
     ground(Xs?) |
     transform(Xs?, Ys),
     send_to_net([msg(Agent3?, data(Ys?))]).
+transformer_init(_, _) :- otherwise | true.
 
-procedure transform(_?, _).
+procedure transform(List(Item)?, List(Item)).
 transform([X|Xs], [got(X?)|Ys?]) :- transform(Xs?, Ys).
 transform([], []).
 
@@ -27,14 +29,15 @@ transform([], []).
 %% AGENT3: Consumer - receives transformed data, wraps as done(List)
 %% =============================================================================
 
-exported procedure consumer_init(_?, _?).
+exported procedure consumer_init(Keys?, Stream(NetMsg(Msg))?).
 consumer_init(_, [msg(_, data(Ys))|_]) :-
     ground(Ys?) |
     wrap(Ys?, Result),
     consume(Result?).
+consumer_init(_, _) :- otherwise | true.
 
-procedure wrap(_?, _).
+procedure wrap(List(Item)?, Wrapped).
 wrap(List, done(List?)) :- ground(List?) | true.
 
-procedure consume(_?).
+procedure consume(Wrapped?).
 consume(_) :- true.

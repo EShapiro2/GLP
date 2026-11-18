@@ -286,21 +286,10 @@ TransferCard ::= card(TransferOffer, YesNo?).
 %% module's own definitions shadow these within it, and the two must agree.
 %% =============================================================================
 
-
 %% =============================================================================
 %% The plays' vocabulary: what a person sees, and the agreements the escrow
 %% programs run.
 %% =============================================================================
-
-%% What a person sees on the mini-app's person channel: the constructs the
-%% dispatcher draws and withdraws, draw(Id, W, V) and withdraw(Id), each a
-%% term of any type the bridge would render, and the screen the agent writes,
-%% which the dispatcher draws as the thread of construct 0.  The person
-%% channel never ends, and neither do the events.
-Event ::= draw(Integer, _, _)
-        ; withdraw(_)
-        ; msg(Constant, Constant, ScreenContent).
-Events ::= [Event | Events].
 
 %% A script: the person's acts, in order.  A step is a request, granted on
 %% the agent's request form --- mint(F, K) for coins and mint(F, K, D) for

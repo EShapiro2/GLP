@@ -10,8 +10,3 @@ map_inc([], []).
 map_inc([X|Xs], [Y?|Ys?]) :-
     Y := X? + 1,
     map_inc(Xs?, Ys).
-
-%% Metainterpreter support
-procedure reduce(_?, _).
-reduce(map_inc([], []), true).
-reduce(map_inc([X|Xs], [Y?|Ys?]), (Y := X? + 1, map_inc(Xs?, Ys))).

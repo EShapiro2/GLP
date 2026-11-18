@@ -177,17 +177,6 @@ Approval ::= approval(Offer, YesNo?).
 %% definitions shadow these within it, and the two must agree.
 %% =============================================================================
 
-
-%% What the person sees on the mini-app's person channel: the constructs the
-%% dispatcher draws and withdraws, draw(Id, W, V) and withdraw(Id), each a
-%% term of any type the bridge would render, and the screen the agent writes,
-%% which the dispatcher draws as the thread of construct 0.  The person
-%% channel never ends, and neither do the events.
-Event ::= draw(Integer, _, _)
-        ; withdraw(_)
-        ; msg(Constant, Constant, ScreenContent).
-Events ::= [Event | Events].
-
 %% A person's script (currency/person.glp): its acts, in order.  A step is a
 %% request, granted on the agent's request form; an acceptance of a swap the
 %% named party proposes, granted on its approval question; or a wait for a screen message.

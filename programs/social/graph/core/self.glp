@@ -169,14 +169,14 @@ scripted_home(Id, Out, Notices?, ScriptCmds, In?) :-
     merge(ScriptCmds?, Home?, In).
 
 %% The program's output to the person: the notices go to the script instead.
-procedure hold_output(Channel(Stream(_), Stream(Output))?).
+procedure hold_output(Channel(Stream(Input(Drawn)), Stream(Output))?).
 hold_output(ch(_, [])).
 
 %% The person: yes on each card, a friend's request to connect or an
 %% introduction, at the path of its decision, once the card is drawn with it.
 %% The person channel never closes, so the person holds its grant writer for
 %% good.
-procedure yes_person(_?, PersonIn(Drawn)).
+procedure yes_person(PersonOut(Drawn)?, PersonIn(Drawn)).
 yes_person([draw(N, _, friendRequest_w(from(_, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
     ground(N?), ground(Q?) | yes_person(Ds?, Gs).
 yes_person([draw(N, _, introRequest_w(approval(_, _, input(Q)))) | Ds], [input(N?, Q?, yes) | Gs?]) :-
@@ -227,14 +227,18 @@ picking_person(P, [_ | Ds], Gs?) :- otherwise | picking_person(P?, Ds?, Gs).
 %% The person grants only on a card drawn: the dispatcher takes the asks, the
 %% grants and the draws in turn (programs/vglp/dispatcher.glp, fair/5), and a
 %% grant for a construct not yet asked reaches none.
-exported procedure play_home(Key?, Drawn?, AgentToUserStream?, Stream(UserInMsg), Stream(_)).
+exported procedure play_home(Key?, Drawn?, AgentToUserStream?, Stream(UserInMsg), Stream(Answered)).
 play_home(Id, Ans, Notices, Cmds?, Log?) :-
     ground(Id?) |
     home # home(Id?, Notices?, Cmds, Asks),
     home # dispatch(Asks?, ch(Grants?, Draws), _),
     answering(Ans?, Draws?, Grants, Log).
 
-procedure answering(Drawn?, _?, PersonIn(Drawn), Stream(_)).
+%% What the person of play_home/5 answered, in the order answered: a friend's
+%% request by the friend, an introduction by its introducer and the other party,
+%% a person nearby, and two friends introduced.
+Answered ::= card(Key) ; card(Key, Key) ; nearby(Key) ; introduction(Key, Key).
+procedure answering(Drawn?, PersonOut(Drawn)?, PersonIn(Drawn), Stream(Answered)).
 answering(A, [draw(N, _, friendRequest_w(from(F, input(Q)))) | Ds], [input(N?, Q?, A?) | Gs?], [card(F?) | Log?]) :-
     ground(A?), ground(N?), ground(F?), ground(Q?) | answering(A?, Ds?, Gs, Log).
 answering(A, [draw(N, _, introRequest_w(approval(intro(I, F), _, input(Q)))) | Ds], [input(N?, Q?, A?) | Gs?], [card(I?, F?) | Log?]) :-
@@ -273,7 +277,7 @@ Output ::= Notice.
 
 %% The notices, onto the program's output to the person; the person's input
 %% other than grants is not read.  superapp_ui/4 reaches it by scope.
-procedure show_notices(Channel(Stream(_), Stream(Output))?, Stream(Output)?).
+procedure show_notices(Channel(Stream(Input(Drawn)), Stream(Output))?, Stream(Output)?).
 show_notices(ch(_, Out?), Shown) :- relay(Shown?, Out).
 
 %% Each notice as it comes.

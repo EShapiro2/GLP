@@ -2,10 +2,11 @@
 
 %% alice reads the certified mini-app beside her program, the artefact
 %% :artefact wrote of ../mad_ship_hello, and ships its module value to bob.
-exported procedure alice_init(_?, _?).
+exported procedure alice_init(Keys?, Stream(NetMsg(Msg))?).
 alice_init(keys(_, [Bob]), _) :-
     load_file("mad_ship_hello.glpw", C),
     ship(Bob?, C?).
+alice_init(_, _) :- otherwise | true.
 
 procedure ship(Key?, Content?).
 ship(B, M) :- module(M?) | send_to_net([msg(B?, ship(M?))]).
@@ -13,12 +14,13 @@ ship(_, S) :- string(S?) | send_to_user([not_a_module]).
 
 %% bob activates the shipped module under the type identity of hello/1 as
 %% declared in his own scope, and reports what the activated goal produced.
-exported procedure bob_init(_?, _?).
+exported procedure bob_init(Keys?, Stream(NetMsg(Msg))?).
 bob_init(_, [msg(_, ship(M)) | _]) :-
     module(M?) |
     find_type(hello/1, T),
     run(hello(Z), T?, M?),
     report(Z?).
+bob_init(_, _) :- otherwise | true.
 
 procedure report(Stream(Constant)?).
 report(Z) :- ground(Z?) | send_to_user([ran(Z?)]).

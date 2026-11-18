@@ -30,12 +30,12 @@ Forward   ::= forward(SpeechAct, YesNo?).
 %% ---------------------------------------------------------------------------
 
 %% The person writes a speech act.
-exported procedure say(Channel(Stream(_), Stream(Output))?).
+exported procedure(T) say(Channel(Stream(Input(T)), Stream(Output))?).
 say(ch(_, Out?)) :- said(Out).
 
 %% The program writes a speech act signed twice, and asks whether to forward
 %% it.
-exported procedure ask(Channel(Stream(_), Stream(Output))?).
+exported procedure(T) ask(Channel(Stream(Input(T)), Stream(Output))?).
 ask(ch(_, Out?)) :- forward(speech(speech(text("hi"), alice), bob), Out).
 
 %% ---------------------------------------------------------------------------

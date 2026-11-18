@@ -47,13 +47,13 @@ say(P, ch(_, [P?])).
 
 /// _oneAgent's agents' program, a program directory's self.glp (boot_program.dart).
 final String _oneAgentProgram = '''
-exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(F)), Stream(NetMsg(F)))?).
 agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
-procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+procedure start(Stream(Constant)?, Stream(NetMsg(F))?).
 start([alice | _], N) :- alice_init(alice, N?).
 start(_, _) :- otherwise | true.
 
-procedure alice_init(_?, _?).
+procedure alice_init(Constant?, Stream(NetMsg(F))?).
 alice_init(_, _) :- p(a, Y), r(Y?).
 $_procs''';
 
@@ -68,18 +68,19 @@ say(P, ch(_, [P?])).
 
 /// _twoAgents's agents' program, a program directory's self.glp (boot_program.dart).
 final String _twoAgentsProgram = '''
-exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(F)), Stream(NetMsg(F)))?).
 agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
-procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+procedure start(Stream(Constant)?, Stream(NetMsg(F))?).
 start([alice | _], N) :- alice_init(alice, N?).
 start([bob | _], N) :- bob_init(bob, N?).
 start(_, _) :- otherwise | true.
 
-procedure alice_init(_?, _?).
+procedure alice_init(Constant?, Stream(NetMsg(F))?).
 alice_init(_, _) :- send_to_net([msg(bob, Y?)]), p(a, Y).
 
-procedure bob_init(_?, _?).
+procedure bob_init(Constant?, Stream(NetMsg(F))?).
 bob_init(_, [msg(_, Y) | _]) :- r(Y?).
+bob_init(_, []).
 $_procs''';
 
 /// As [_twoAgents], with a itself communicated to alice: bob sends alice the
@@ -95,24 +96,30 @@ say(P, ch(_, [P?])).
 
 /// _fromBob's agents' program, a program directory's self.glp (boot_program.dart).
 final String _fromBobProgram = '''
-exported procedure(X) agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(X)), Stream(NetMsg(X)))?).
+exported procedure agent(Channel(Stream(Constant), Stream(Constant))?, Channel(Stream(NetMsg(Msg)), Stream(NetMsg(Msg)))?).
 agent(ch(In, []), ch(N, [])) :- declare(trust(pan, open)), start(In?, N?).
-procedure(X) start(Stream(Constant)?, Stream(NetMsg(X))?).
+%% What the two agents send each other: bob the constant alice's p reads, alice
+%% the term p assigns.
+Msg ::= to_alice(Constant) ; to_bob(F).
+
+procedure start(Stream(Constant)?, Stream(NetMsg(Msg))?).
 start([alice | _], N) :- alice_init(alice, N?).
 start([bob | _], N) :- bob_init(bob, N?).
 start(_, _) :- otherwise | true.
 
-procedure alice_init(_?, _?).
-alice_init(_, [msg(_, A) | _]) :- send_to_net([msg(bob, Y?)]), p(A?, Y).
+procedure alice_init(Constant?, Stream(NetMsg(Msg))?).
+alice_init(_, [msg(_, to_alice(A)) | _]) :- send_to_net([msg(bob, to_bob(Y?))]), p(A?, Y).
+alice_init(_, _) :- otherwise | true.
 
-procedure bob_init(_?, _?).
-bob_init(_, In) :- send_to_net([msg(alice, A?)]), give(A), take(In?).
+procedure bob_init(Constant?, Stream(NetMsg(Msg))?).
+bob_init(_, In) :- send_to_net([msg(alice, to_alice(A?))]), give(A), take(In?).
 
 procedure give(Constant).
 give(a).
 
-procedure take(_?).
-take([msg(_, Y) | _]) :- r(Y?).
+procedure take(Stream(NetMsg(Msg))?).
+take([msg(_, to_bob(Y)) | _]) :- r(Y?).
+take(_) :- otherwise | true.
 $_procs''';
 
 /// alice's half of [_twoAgents], run in one engine over madGLP: she sends bob the reader Y?, and p assigns Y its value.

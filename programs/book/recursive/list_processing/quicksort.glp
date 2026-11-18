@@ -22,17 +22,3 @@ partition([X|Xs], A, Smaller?, [X?|Larger?]) :-
 partition([X|Xs], A, [X?|Smaller?], Larger?) :-
     A? >= X? | partition(Xs?, A?, Smaller, Larger).
 partition([], A, [], []) :- number(A?) | true.
-
-%% Metainterpreter support
-exported procedure reduce(_?, _).
-reduce(quicksort(Unsorted, Sorted?), qsort(Unsorted?, Sorted, [])).
-reduce(qsort([X|Unsorted], Sorted?, Rest),
-       (partition(Unsorted?, X?, Smaller, Larger),
-        qsort(Smaller?, Sorted, [X?|Sorted1?]),
-        qsort(Larger?, Sorted1, Rest?))) :- number(X?) | true.
-reduce(qsort([], Rest?, Rest), true).
-reduce(partition([X|Xs], A, Smaller?, [X?|Larger?]),
-       partition(Xs?, A?, Smaller, Larger)) :- A? < X? | true.
-reduce(partition([X|Xs], A, [X?|Smaller?], Larger?),
-       partition(Xs?, A?, Smaller, Larger)) :- A? >= X? | true.
-reduce(partition([], A, [], []), true) :- number(A?) | true.

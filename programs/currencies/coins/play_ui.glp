@@ -25,7 +25,7 @@
 %% program is currency/, which this directory is not (see self.glp).
 
 imported procedure currency#coins(Key?, PersonChannel(currency#Drawn)?, Stream(Conversation(PeerMsg))?).
-imported procedure currency#person(Key?, _?, PersonIn(currency#Drawn), Script?, Stream(ScreenContent)).
+imported procedure currency#person(Key?, PersonOut(currency#Drawn)?, PersonIn(currency#Drawn), Script?, Stream(ScreenContent)).
 
 exported procedure coins_ui(Key?, CoinsPeers?, PersonIn(currency#Drawn)?, CoinsNet?).
 coins_ui(Me, [Bob], Grants, _) :-
