@@ -1,0 +1,7 @@
+P: Plaza
+Orga is a person, Score, Enough, Sx, Sy, Vx and Vy numbers.
+1. ■ Pass: Orga may pass Vx by Vy, provided Orga has the status quo at Sx by Sy, Orga counts at least Enough persons as gaining at least Score from Vx by Vy over Sx by Sy and Enough is at least 3.
+Logic pragmas.
+Vocabulary: z holds y's ideal value at n by m = ideal(z,y,n,m); z has the status quo at n by m = status(z,n,m); z has passed n by m = passed(z,n,m).
+z counts y as gaining at least w from n by m over s by t: z holds y's ideal value at i by j, f is the difference from i to s, h is the difference from j to t, d is the difference from i to n, k is the difference from j to m, u is f plus h, b is d plus k, g is b plus w and u is at least g.
+After z passes n by m: z has passed n by m.
