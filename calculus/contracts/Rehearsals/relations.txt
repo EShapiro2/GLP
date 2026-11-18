@@ -1,0 +1,1 @@
+Rehearsals instantiates Partners and Booking: holds

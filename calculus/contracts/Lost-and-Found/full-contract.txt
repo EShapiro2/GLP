@@ -1,0 +1,3 @@
+% Written by tools/expand.py from rev/; do not edit.
+Lost and Found
+A post is a *loss*, stating a thing its maker lost, or a *find*, stating a thing its maker found. A loss and a find match when they are of the same thing.
