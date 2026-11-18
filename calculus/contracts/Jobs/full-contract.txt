@@ -1,0 +1,3 @@
+% Written by tools/expand.py from rev/; do not edit.
+Jobs
+A post is a *vacancy*, stating the work and whom it seeks, or a *candidacy*, stating who its maker is and the work they seek. A vacancy and a candidacy match when each states what the other seeks.

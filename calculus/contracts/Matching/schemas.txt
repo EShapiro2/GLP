@@ -1,0 +1,14 @@
+Matching
+Matching extends Friendship.
+Vocabulary: x holds the post p = post(x,p); y holds the post p from x = post_from(y,p,x); x has made the post p = made(x,p); p and q match, for x = match(x,p,q).
+After x makes p, which requires x has not made the post p: x has made the post p and x holds the post p.
+After x forwards p to y, which requires y does not hold the post p from x: y holds the post p from x and y holds the post p.
+After x withdraws p: no longer x has made the post p and no longer x holds the post p.
+Matching:0 - | *Posts* have a test whether two *match*. A person *holds* any post they made or forwarded to them.
+Matching:0 - | Alice, Bob and Carol are persons, Post and Other posts.
+Matching:0 - | Environment: p and q match, for x.
+Matching:1 ■ Post: made(Alice,Post), post(Alice,Post) <- ~made(Alice,Post) guarded by Alice.
+Matching:2 ■ Tell: post_from(Bob,Post,Alice), post(Bob,Post) <- post(Alice,Post), friend(Alice,Bob), friend(Bob,Alice), ~post_from(Bob,Post,Alice) guarded by Alice.
+Matching:3 ■ Return: post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob).
+Matching:4 ■ Withdraw: ~made(Alice,Post), ~post(Alice,Post) <- made(Alice,Post), post(Alice,Post) guarded by Alice.
+Matching:5 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other) guarded by Alice, Carol.

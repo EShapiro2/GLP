@@ -93,3 +93,20 @@ Bonds | Bonds | Bonds | bonds | bonds
 Shares | Shares | Shares | shares | shares
 Agora | Agora | Agora | agora | agora
 DAO | DAO | DAO | dao | dao
+Matching | Matching | Matching | matching | matching
+Market | Market | Market | market | market
+Dating | Dating | Dating | dating | dating
+Jobs | Jobs | Jobs | jobs | jobs
+Housing | Housing | Housing | housing | housing
+Help | Help | Help | help | help
+Lending | Lending | Lending | lending | lending
+Partners | Partners | Partners | partners | partners
+Lost and Found | Lost and Found | Lost-and-Found | lost_and_found | lost_and_found
+Carpool | Carpool | Carpool | carpool | carpool
+Home Exchange | Home Exchange | Home-Exchange | home_exchange | home_exchange
+Tennis Courts | Tennis Courts | Tennis-Courts | tennis_courts | tennis_courts
+Rehearsals | Rehearsals | Rehearsals | rehearsals | rehearsals
+Booking | Booking | Booking | booking | booking
+Meeting Rooms | Meeting Rooms | Meeting-Rooms | meeting_rooms | meeting_rooms
+Appointments | Appointments | Appointments | appointments | appointments
+Anonymous Rendezvous | Anonymous Rendezvous | Anonymous-Rendezvous | anonymous_rendezvous | anonymous_rendezvous
