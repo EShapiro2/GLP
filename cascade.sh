@@ -91,6 +91,7 @@
 #   dao         DAO   GCE         programs/gce/dao          ---
 #   ldao        LDAO  GCE         programs/gce/ldao         ---
 #   fdao        FDAO  GCE         programs/gce/fdao         ---
+#   disputes    Disputes GCE         programs/gce/disputes        ---
 #   rec         Rec   GCE         programs/gce/rec          ---
 #   stay        Stay  GCE         programs/gce/stay         ---
 #   lib         Lib   GCE         programs/gce/lib          ---
@@ -231,6 +232,7 @@ case "$1" in
     funded_dao) FILE=Funded-DAO; OWNER="programs/gce/fdao";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends DAO and GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     recommendations) FILE=Recommendations;  OWNER="programs/gce/rec";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GKK (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     stays) FILE=Stays; OWNER="programs/gce/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
+    disputes) FILE=Disputes; OWNER="programs/gce/disputes"; PAPER=""; PLAYDIR="" ;;   # Nimrod Talmon's example contract (GCE, Grassroots Contract Examples, Nimrod Talmon's)
     library) FILE=Library;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     joint_accounts) FILE=Joint-Accounts; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     community_bank) FILE=Community-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's twenty-three, each its % Owner line's (Udi, 2026-11-09, to GO #3); rows added 2026-11-12, the contracts having been checked and never recorded (Udi, 2026-11-12, to Code #28)

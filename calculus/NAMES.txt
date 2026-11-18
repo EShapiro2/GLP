@@ -65,6 +65,7 @@ Rec | Recommendations | Recommendations | recommendations | rec
 FDAO | Funded DAO | Funded-DAO | funded_dao | fdao
 LDAO | Liquid DAO | Liquid-DAO | liquid_dao | ldao
 GO | Organisation | Organisation | organisation | go
+Disputes | Disputes | Disputes | disputes | disputes
 CDC | Constitution | Constitution | constitution | cdc
 GNO | Networked Organisation | Networked-Organisation | networked_organisation | gno
 GBank | Bank | Bank | bank | gbank
