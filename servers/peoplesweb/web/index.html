@@ -358,7 +358,7 @@ function citeHtml(P){
 // The contract at the pole, the one written from no other: GKK, Knowledge
 // by the names of calculus/NAMES.txt.
 const ROOT = (D.contracts.find(c => !c.extends.some(p => C[p])) || D.contracts[0]).id;
-const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {}, RING = [], WAY = {};
+const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {}, RING = [], WAY = {}, TAIL = {};
 function depthOf(id){
   if (DEPTH[id] !== undefined) return DEPTH[id];
   const ps = C[id].extends.filter(p => C[p]);
@@ -571,7 +571,125 @@ function layout(){
     route.forEach(([t, ph]) => placed.push([RING.indexOf(t), ph]));
     WAY[`${p}>${q}`] = route;
   }
+  // An arrow that would cross the ellipse of a contract it does not join
+  // goes around it (Udi, 2026-11-18, to Website #4: "the arrow that cross
+  // Organisation could bend around it instead of crossing.  do the same for
+  // similar cases", and "check all and fix"): each arrow in turn, while it
+  // crosses an ellipse, is given a waypoint beside that ellipse, to its left
+  // or right at its colatitude, or above or below it at its longitude,
+  // whichever leaves the arrow crossing fewest ellipses, then swinging least
+  // beyond its two ends, then shortest; the router's waypoints are dropped
+  // too where that is better.  globeFaults() checks the result.
+  const cand = (p, q, way) => { const pts = course(p, q, way), h = hitsOf(p, q, pts), sw = swing(p, q, pts);
+    let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i-1][0], (pts[i][1] - pts[i-1][1]) * Math.sin(pts[i][0]));
+    return {way, n: h.length, h, sw, cost: h.length * 1000 + Math.max(0, sw - 0.05) * 300 + L}; };
+  // The lines of a composition meet at one point on the composing
+  // contract's meridian, a third of the way up from it, and go on to it as
+  // one trunk; each line is routed around the ellipses as an arrow is.
+  D.contracts.forEach(c => { const cm = composed(c); if (!cm) return;
+    const t1 = th0(c.id), tp = Math.max(...cm.ps.map(th0)), tM = t1 - 0.35 * (t1 - tp);
+    cm.ps.forEach(p => TAIL[`${p}>${c.id}`] = [[tM, PHI[c.id]]]); });
+  D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
+    const key = `${p}>${c.id}`, t0 = th0(p), eps = 0.01, t1 = TAIL[key] ? TAIL[key][0][0] : th0(c.id);
+    if (!(t1 > t0 + 2*eps)) return;
+    let best = cand(p, c.id, WAY[key] || []);
+    const bare = cand(p, c.id, []);
+    if (bare.cost < best.cost) best = bare;
+    const around = cur => { const opts = [];
+      const add = (tt, ff) => { if (tt > t0 + eps && tt < t1 - eps){
+        const way = cur.way.filter(x => Math.abs(x[0] - tt) > eps); way.push([tt, ff]); way.sort((x, y) => x[0] - y[0]); opts.push(way); } };
+      for (const [id, t] of cur.h){
+        const [a, b] = ER(id), tc = th0(id), fc = PHI[id], st = Math.sin(tc);
+        for (const m of [4 / 265, 12 / 265]){
+          add(tc, fc - (a + m) / st); add(tc, fc + (a + m) / st);
+          add(tc - b - m, fc); add(tc + b + m, fc);
+          add(t, fc - (a + m) / st); add(t, fc + (a + m) / st); }
+      }
+      // A bow beyond the two ends: drop a waypoint, or hold the farthest
+      // point of the bow at the end's longitude.
+      if (cur.sw > 0.05){
+        cur.way.forEach((_, i) => opts.push(cur.way.filter((_, j) => j !== i)));
+        const pts = course(p, c.id, cur.way), f0 = DEPTH[p] === 0 ? pts[1][1] : PHI[p], lo = Math.min(f0, PHI[c.id]), hi = Math.max(f0, PHI[c.id]);
+        let k = 0, w = -1; pts.forEach(([t, f], i) => { const e = Math.max(lo - f, f - hi) * Math.sin(t); if (e > w){ w = e; k = i; } });
+        add(pts[k][0], Math.max(lo, Math.min(hi, pts[k][1]))); }
+      return opts.map(way => cand(p, c.id, way)).sort((x, y) => x.cost - y.cost); };
+    for (let n = 0; n < 24 && (best.n || best.cost > 1e3 || best.sw > 0.05); n++){
+      const rs = around(best);
+      let next = rs[0];
+      // Stuck: two waypoints at once, from the best few of one.
+      if (!next || next.cost >= best.cost)
+        for (const r of rs.slice(0, 12)){ const r2 = around(r)[0]; if (r2 && (!next || r2.cost < next.cost)) next = r2; }
+      if (!next || next.cost >= best.cost) break;
+      best = next;
+    }
+    WAY[key] = best.way;
+  }));
 }
+// The size of a contract's ellipse on the sphere, in radians east and north,
+// with a margin.
+const ER = id => [(0.31*FS0()*WID(id) + 0.5*FS0() + 3) / 265, ((LINES(id).length > 1 ? 1.6 : 0.85) * FS0() + 3) / 265];
+// The ellipses, other than its own two, that the course pts of the arrow from
+// p to q passes through, each with the colatitude where it enters.
+function hitsOf(p, q, pts){
+  const out = [], seen = new Set();
+  for (const [t, f] of pts) for (const c of D.contracts){ const id = c.id;
+    if (id === p || id === q || DEPTH[id] === 0 || seen.has(id)) continue;
+    const [a, b] = ER(id), dt = t - th0(id);
+    if (Math.abs(dt) > b) continue;
+    let df = (f - PHI[id]) % (2*Math.PI); if (df > Math.PI) df -= 2*Math.PI; if (df < -Math.PI) df += 2*Math.PI;
+    if ((df * Math.sin(th0(id)) / a) ** 2 + (dt / b) ** 2 < 1){ seen.add(id); out.push([id, t]); } }
+  return out;
+}
+// How far, in radians along the sphere, the course swings beyond the
+// longitudes of its two ends: a hook or a loop.
+function swing(p, q, pts){
+  const f0 = DEPTH[p] === 0 ? pts[1][1] : PHI[p], lo = Math.min(f0, PHI[q]), hi = Math.max(f0, PHI[q]);
+  let w = 0; for (const [t, f] of pts) w = Math.max(w, (lo - f) * Math.sin(t), (f - hi) * Math.sin(t));
+  return w;
+}
+// Every arrow that crosses an ellipse it does not join, or swings beyond its
+// ends by more than lim: the check of the globe.
+function globeFaults(lim = 0.05){
+  const out = [];
+  D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
+    const pts = course(p, c.id), h = hitsOf(p, c.id, pts), sw = swing(p, c.id, pts);
+    if (h.length) out.push(`${p} > ${c.id} crosses ${h.map(x => x[0]).join(', ')}`);
+    if (sw > lim) out.push(`${p} > ${c.id} swings ${sw.toFixed(2)}`); }));
+  return out;
+}
+// The course of the arrow from p to q on the sphere, as [colatitude,
+// longitude] points: through the two contracts and the waypoints between
+// them, its longitude a monotone cubic in its colatitude.
+function course(p, q, way = WAY[`${p}>${q}`] || []){
+  const tail = TAIL[`${p}>${q}`] || [];
+  if (tail.length) way = way.filter(x => x[0] < tail[0][0] - 0.005);
+  const cs = [[th0(p), PHI[p]], ...way.map(x => x.slice()), ...tail.map(x => x.slice()), [th0(q), PHI[q]]];
+  if (DEPTH[p] === 0) cs[0][1] = cs[1][1];
+  const n = cs.length, h = [], dl = [], m = [];
+  for (let i = 0; i + 1 < n; i++){ h.push(cs[i+1][0] - cs[i][0] || 1e-9); dl.push((cs[i+1][1] - cs[i][1]) / h[i]); }
+  for (let i = 0; i < n; i++)
+    m.push(i === 0 ? dl[0] : i === n - 1 ? dl[n-2] : dl[i-1] * dl[i] <= 0 ? 0 : (dl[i-1] + dl[i]) / 2);
+  for (let i = 0; i + 1 < n; i++){
+    if (dl[i] === 0){ m[i] = 0; m[i+1] = 0; continue; }
+    const a = m[i] / dl[i], b = m[i+1] / dl[i], r = a*a + b*b;
+    if (r > 9){ const t = 3 / Math.sqrt(r); m[i] = t * a * dl[i]; m[i+1] = t * b * dl[i]; }
+  }
+  const pts = [];
+  for (let i = 0; i + 1 < n; i++){
+    const [t0, f0] = cs[i], [t1, f1] = cs[i+1];
+    const k = Math.max(2, Math.ceil(Math.hypot(t1 - t0, (f1 - f0) * Math.sin((t0 + t1) / 2)) / (Math.PI/180)));
+    for (let j = i ? 1 : 0; j <= k; j++){ const u = j / k, u2 = u*u, u3 = u2*u;
+      const f = (2*u3 - 3*u2 + 1)*f0 + (u3 - 2*u2 + u)*h[i]*m[i] + (-2*u3 + 3*u2)*f1 + (u3 - u2)*h[i]*m[i+1];
+      pts.push([t0 + (t1 - t0) * u, f]); }
+  }
+  return pts;
+}
+
+// The contracts a composition composes, and what the contract does to it.
+function composed(c){
+  const ps = c.extends.filter(p => C[p] && c.rels && c.rels[p] === 'composes'), of = (c.rels_of || []).filter(x => x.of === 'composition');
+  if (ps.length === 1 && of.length && C[of[0].base] && !ps.includes(of[0].base)) ps.unshift(of[0].base);
+  return ps.length >= 2 ? {ps, trunk: of.map(x => x.rel)} : null; }
 // A contract's colatitude: its ring's, and its row's on a ring of two rows.
 const th0 = id => DEPTH[id] === 0 ? 0 : RING[DEPTH[id]] + (LAT[id] || 0);
 const MAXD = () => Math.max(...Object.values(DEPTH));
@@ -582,7 +700,10 @@ const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
 const NARROW = () => (($('#mapcard') && $('#mapcard').clientWidth) || innerWidth) < 640;
 // Smaller names and thinner arrows since the 66 contracts (Udi, 2026-11-16).
 // Smaller again, and thinner, at Udi's word of 2026-11-18 (to Website #4).
-const FS0 = () => NARROW() ? 8.5 : 5.2;
+// One size in the globe's units, on a phone too, and every size scaled with
+// the globe, so that names shrink as it does (Udi, 2026-11-18, to Website #4:
+// "when the globe shrinks fonts remain large, can they shrink with it?").
+const FS0 = () => 5.2;
 // The globe fills the card's width, a sliver to each side (Udi, 2026-11-09):
 // on a wide card a radius of 548 in a view 1120 wide, on a phone 290 in a
 // view 600 wide; a zoom is relative to that.
@@ -641,7 +762,7 @@ function drawGlobe(){
   const stroked = (p, q, dash, fill, pad0, pad1, kz = k) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*kz, hw = 6.5*kz, cx = bx-ux*hl, cy = by-uy*hl;
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`
       + `<polygon points="${[[bx, by], [cx-uy*hw, cy+ux*hw], [cx+uy*hw, cy-ux*hw]].map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
-  const fs = Math.max(NARROW() ? 8 : 4.8, FS0()*k), rx = id => 0.31*fs*WID(id) + 0.5*fs, ry0 = 0.85*fs, RY = id => LINES(id).length > 1 ? 1.6*fs : ry0, ry = ry0;
+  const fs = FS0()*k, rx = id => 0.31*fs*WID(id) + 0.5*fs, ry0 = 0.85*fs, RY = id => LINES(id).length > 1 ? 1.6*fs : ry0, ry = ry0;
   // Each arrow painted on the sphere: a smooth curve on the surface from the
   // contract to the one built on it, through the waypoints the layout keeps
   // for it on the rings it passes, so it goes between the names there; its
@@ -670,27 +791,7 @@ function drawGlobe(){
   // longitude a monotone cubic in its colatitude (Fritsch and Carlson), so it
   // never swings past a point it passes and makes no loop; sampled every
   // degree or so.
-  const curve = (p, q) => {
-    const cs = [[th(p), PHI[p]], ...(WAY[`${p}>${q}`] || []), [th(q), PHI[q]]];
-    if (DEPTH[p] === 0) cs[0][1] = cs[1][1];
-    const n = cs.length, h = [], dl = [], m = [];
-    for (let i = 0; i + 1 < n; i++){ h.push(cs[i+1][0] - cs[i][0] || 1e-9); dl.push((cs[i+1][1] - cs[i][1]) / h[i]); }
-    for (let i = 0; i < n; i++)
-      m.push(i === 0 ? dl[0] : i === n - 1 ? dl[n-2] : dl[i-1] * dl[i] <= 0 ? 0 : (dl[i-1] + dl[i]) / 2);
-    for (let i = 0; i + 1 < n; i++){
-      if (dl[i] === 0){ m[i] = 0; m[i+1] = 0; continue; }
-      const a = m[i] / dl[i], b = m[i+1] / dl[i], r = a*a + b*b;
-      if (r > 9){ const t = 3 / Math.sqrt(r); m[i] = t * a * dl[i]; m[i+1] = t * b * dl[i]; }
-    }
-    const pts = [];
-    for (let i = 0; i + 1 < n; i++){
-      const [t0, f0] = cs[i], [t1, f1] = cs[i+1];
-      const k = Math.max(2, Math.ceil(Math.hypot(t1 - t0, (f1 - f0) * Math.sin((t0 + t1) / 2)) / (Math.PI/180)));
-      for (let j = i ? 1 : 0; j <= k; j++){ const u = j / k, u2 = u*u, u3 = u2*u;
-        const f = (2*u3 - 3*u2 + 1)*f0 + (u3 - 2*u2 + u)*h[i]*m[i] + (-2*u3 + 3*u2)*f1 + (u3 - u2)*h[i]*m[i+1];
-        pts.push(vec(t0 + (t1 - t0) * u, f)); }
-    }
-    return pts; };
+  const curve = (p, q) => course(p, q).map(([t, f]) => vec(t, f));
   const paint = (p, q, rel) => ribbon(curve(p, q), p, q, (Array.isArray(rel) ? rel : [rel]).map(r => RELCOL[r] || RELCOL.extends), true);
   // A ribbon along the points U of the sphere, from the edge of contract p's
   // ellipse, or from U's start where p is null, to q's or U's end, in the
@@ -745,10 +846,6 @@ function drawGlobe(){
   // composes it with GFP': GnW's is instantiates'), and the trunk the colours
   // of what the contract does to the composition, a part each, or composes'
   // where it says nothing (Udi, 2026-11-15, to Website #2).
-  const composed = c => {
-    const ps = c.extends.filter(p => C[p] && c.rels && c.rels[p] === 'composes'), of = (c.rels_of || []).filter(x => x.of === 'composition');
-    if (ps.length === 1 && of.length && C[of[0].base] && !ps.includes(of[0].base)) ps.unshift(of[0].base);
-    return ps.length >= 2 ? {ps, trunk: of.map(x => x.rel)} : null; };
   const unit = id => vec(th(id), PHI[id]);
   D.contracts.forEach(c => {
     const cm = composed(c);
@@ -760,10 +857,10 @@ function drawGlobe(){
     // The lines meet at one point, between the composed contracts and the
     // composing one, however many are composed ('GA composes GPE with GAS
     // and GDS' three).
-    const Ps = cm.ps.map(unit), Cv = unit(c.id), M = nrm(Ps.reduce((a, P) => add3(a, P, 0.5/Ps.length), Cv.map(x => x*0.5))), K = nrm(add3(M.map(x => x*1.5), Cv, -0.5));
-    const leg = P => { const o = []; for (let i = 0; i <= 40; i++){ const t = i/40; o.push(nrm(add3(add3(P.map(x => x*(1-t)*(1-t)), K, 2*t*(1-t)), M, t*t))); } return o; };
-    const trunk = []; for (let i = 0; i <= 30; i++) trunk.push(nrm(add3(M.map(x => x*(1 - i/30)), Cv, i/30)));
-    cm.ps.forEach((p, i) => { s += ribbon(leg(Ps[i]), p, null, [RELCOL[(c.rels && c.rels[p]) || 'composes']], false); });
+    let trunk = [];
+    cm.ps.forEach(p => { const pts = course(p, c.id), tM = TAIL[`${p}>${c.id}`][0][0], k = pts.findIndex(x => x[0] >= tM - 1e-9);
+      s += ribbon(pts.slice(0, k + 1).map(([t, f]) => vec(t, f)), p, null, [RELCOL[(c.rels && c.rels[p]) || 'composes']], false);
+      if (!trunk.length) trunk = pts.slice(k).map(([t, f]) => vec(t, f)); });
     s += ribbon(trunk, null, c.id, (cm.trunk.length ? cm.trunk : ['composes']).map(r => RELCOL[r] || RELCOL.composes), true);
   });
   D.contracts.forEach(c => {
