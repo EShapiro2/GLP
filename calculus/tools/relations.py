@@ -13,6 +13,11 @@ them.  One line a relation:
     NAME extends Bonds: holds
     NAME restricts Bonds: FAILS: <act>: <what breaks it>
 and, with --json, a list of {"contract", "relation", "base", "holds", "failures"} for the site.  Exit 1 if any fails.
+With --conservative, each 'extends' of a line that neither instantiates nor composes is followed by a line saying
+whether the extension is conservative, that is whether no act of NAME that is not of the base writes a predicate the
+base reads or writes (new acquaintances aside), and if not, which acts write which predicates (#101):
+    NAME extends B: holds
+        base changed by: Book (coin)
 
 The paper is the Calculus (branch main, sections/01-contracts-schemas.tex): Definition def:relations, its items
 1 to 5; a first line with several relations "applies each to the result of the one before"; an act of a strengthened
@@ -633,6 +638,12 @@ def verdicts(n):
             fail('instantiates' if inst else ('restricts' if rel_res else ('extends' if rel_ext else 'composes')),
                  '%s %s: %s %s with fewer conditions or consents, and the line does not relax: %s' % (mine[j]['label'], mine[j]['name'], base[i]['label'], base[i]['name'], ', '.join(lost)))
     own = [a for j, a in enumerate(mine) if j not in m.values() and a['first'].split(':')[0] not in {x['first'].split(':')[0] for x in base}]
+    if rel_ext and not inst and 'composes' not in stated:
+        # Whether the extension is conservative (#101): an act of NAME not of the base writes a predicate the base
+        # reads or writes, new acquaintances (knows, added) aside.  Recorded for --conservative; the verdicts are as before.
+        writes = [(a['name'], sorted({pred(h) for h in a['head'] if pred(h) in bpreds and not (pred(h) == 'knows' and not h.startswith('~'))}))
+                  for a in own if not DERIVED.match(a['name'])]
+        CONSERVATIVE[n] = [(x, ps) for x, ps in writes if ps]
     if own and not rel_ext:
         rel = 'restricts' if rel_res else ('strengthens' if rel_str else ('instantiates' if inst else 'composes'))
         for a in own:
@@ -648,6 +659,9 @@ def verdicts(n):
     for v, f in fails.items():
         out[0] = (out[0][0], out[0][1], out[0][2], out[0][3] + ['(%s) %s' % (v, x) for x in f])
     return out
+
+
+CONSERVATIVE = {}        # NAME: [(act, [predicates of the base it writes])], for a first line that extends without instantiating or composing
 
 
 def merge_all(bs):
@@ -699,12 +713,17 @@ def main():
     for n in names:
         for label, v, bs, f in verdicts(n):
             rows.append({'contract': n, 'relation': v, 'base': bs, 'line': label, 'holds': not f, 'failures': f})
+            if v == 'extends' and n in CONSERVATIVE:
+                rows[-1]['base_changed_by'] = [{'act': x, 'predicates': ps} for x, ps in CONSERVATIVE[n]]
             bad += bool(f)
     if '--json' in sys.argv:
         print(json.dumps(rows, ensure_ascii=False, indent=1))
     else:
         for r in rows:
             print('%s: %s' % (r['line'], 'holds' if r['holds'] else 'FAILS: ' + '; '.join(r['failures'])))
+            if '--conservative' in sys.argv and r['relation'] == 'extends' and r['contract'] in CONSERVATIVE:
+                w = CONSERVATIVE[r['contract']]
+                print('    conservative' if not w else '    base changed by: ' + '; '.join('%s (%s)' % (x, ', '.join(ps)) for x, ps in w))
         print('%d relations, %d hold, %d fail' % (len(rows), len(rows) - bad, bad))
     return 1 if bad else 0
 
