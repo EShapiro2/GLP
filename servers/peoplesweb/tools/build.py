@@ -427,7 +427,10 @@ def calculus_of(n):
         # number it is from, 'GKK:1'; a line that opens with % is the tools'.
         pre, cls = [], []
         for l in [l for l in read(fc).split('\n') if l.strip() and not l.startswith('%')][1:]:
-            m = re.match(r"([A-Z][A-Za-z' -]*?:\d+)\. (\S) (.+?)([.:])\s+(.*)$", l)
+            # A clause may be labelled with several, 'Booking:1, Tennis
+            # Courts:1.' (Udi, 2026-11-19, to Website #4: the Booking clauses
+            # were missing from Tennis Courts' full contract).
+            m = re.match(r"([A-Z][A-Za-z' -]*?:\d+(?:, [A-Z][A-Za-z' -]*?:\d+)*)\. (\S) (.+?)([.:])\s+(.*)$", l)
             if m:
                 cls.append({'n': m.group(1), 'mod': m.group(2), 'name': m.group(3), 'sep': m.group(4), 'text': m.group(5)})
             elif not cls:
