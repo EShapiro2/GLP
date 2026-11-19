@@ -26,3 +26,5 @@ dart run flutter_launcher_icons
 ```
 
 `rsvg-convert` is librsvg's (Homebrew `librsvg`).
+
+`flutter_launcher_icons` 0.14.4 also rewrites `ios/Runner.xcodeproj/project.pbxproj`, setting `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` to `AppIcon` in place of `YES`.  That is not an icon setting (the project already names its icon set `AppIcon`), so discard that change: `git checkout -- ios/Runner.xcodeproj/project.pbxproj`.
