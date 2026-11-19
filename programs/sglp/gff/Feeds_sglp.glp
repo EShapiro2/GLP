@@ -1,0 +1,131 @@
+%% Feeds_sglp.glp --- a run of Feeds (cascade/Feeds; programs/gff/Feeds.txt) on
+%% a social graph of one's choosing, in the term form the transformation reads
+%% (programs/sglp/README.md, "The term form"), over the canonical platform of
+%% Feeds, its persons building the graph with programs/sglp/graphs's library
+%% (programs/sglp/graphs/README.md) and then posting and following one feed.
+%% The ring scenario of programs/gff/paths/sglp/gen_ring2.py (branch
+%% yuval/feeds-sglp) ported onto that library, so that it runs on any graph:
+%%
+%%   python3 -I programs/sglp/graphs/gen.py ws --n 32 --k 2 --beta 0.1 --seed 3 > ws32.graph
+%%   bash programs/sglp/graphs/run.sh Feeds ws32.graph '4 days' 1 ws32.log programs/sglp/gff/Feeds_sglp.glp
+%%   python3 -I programs/sglp/gff/sim/spread.py ws32.graph ws32.log
+%%
+%% What the persons do.  Each wakes an hour on average and proposes the next
+%% step of the graph (graph_next/3): establish, acquaint and befriend each
+%% friend of a higher number.  With its steps done:
+%%   - the author, agent 1 (graph_agents/1), posts item1, item2 and item3 to
+%%     its feed, a day on average before each (Feeds:1, Post), by the library's
+%%     rules (graph_run/3: each post once, done when the view shows the item);
+%%   - every other person, with no pointer labelled by the author, proposes
+%%     labeled_point_friend(Me, J, Author) through a friend J drawn uniformly
+%%     (Labelled Overlay:1: refused unless J has a pointer labelled by the
+%%     author); a friend of the author has one from befriending it (Labelled
+%%     Overlay:4, Friend pointers).  With one, it looks again a day later.
+%% Everyone approves everything, within an hour on average.  The platform
+%% delivers the author's items along the author-labelled pointers itself
+%% (Feeds:2, Deliver), an act no person wills, at once.
+%%
+%% Its surface form, the procedures as the clauses below have them:
+%%
+%%   person feeder.
+%%   Request =::= feeds_request.
+%%   Approval =::= feeds_approval.
+%%   feeds_request(R?, person(Me, _, _), S) :- feeds_wake(Me?, S?, slot(R)) @ 1/hour.
+%%   feeds_wake(Me, S, slot(W?)) :- seen(L), graph_next(Me?, L?, N), feeds_go(N?, Me?, S?, slot(W)).
+%%   feeds_go(pick(P), _, _, slot(propose(P?))).
+%%   feeds_go(wait, Me, S, slot(W?)) :- feeds_wake(Me?, S?, slot(W)) @ 1/hour.
+%%   feeds_go(done, Me, S, slot(W?)) :- graph_agents(Ks), feeds_author(Ks?, A), feeds_role(Me?, A?, S?, slot(W)).
+%%   feeds_approval(approval(_, _, A?), _, _) :- feeds_say(slot(A)) @ 1/hour.
+%%
+%%   run graph agents [pace ~ (feeder : 1.0)] until 4 days seed 1.
+%%
+%% The run's agents are the graph's (compose.py, run(graph, ...)).  Every name
+%% here starts with feeds, apart from the profile's and the library's.
+
+exported procedure source(SglpTerms).
+source([
+   person(feeder),
+   binds('Request', feeds_request),
+   binds('Approval', feeds_approval),
+   decl(feeds_request('Request', dual('Person'), dual('Integer'))),
+   clause(feeds_request(var('R?'), person(var('Me'), var('_'), var('_')), var('S')), [],
+          [rated(feeds_wake(var('Me?'), var('S?'), slot(var('R'))), rate(1, hour))]),
+   decl(feeds_wake(dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(feeds_wake(var('Me'), var('S'), slot(var('W?'))), [ground(var('Me?'))],
+          [seen(var('L')), graph_next(var('Me?'), var('L?'), var('N')), feeds_go(var('N?'), var('Me?'), var('S?'), slot(var('W')))]),
+   decl(feeds_go(dual('GraphNext'), dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(feeds_go(pick(var('P')), var('_'), var('_'), slot(propose(var('P?')))), [], []),
+   clause(feeds_go(wait, var('Me'), var('S'), slot(var('W?'))), [], [rated(feeds_wake(var('Me?'), var('S?'), slot(var('W'))), rate(1, hour))]),
+   clause(feeds_go(done, var('Me'), var('S'), slot(var('W?'))), [],
+          [graph_agents(var('Ks')), feeds_author(var('Ks?'), var('A')), feeds_role(var('Me?'), var('A?'), var('S?'), slot(var('W')))]),
+   decl(feeds_author(dual('GraphKeys'), 'Key')),
+   clause(feeds_author([var('A') | var('_')], var('A?')), [], []),
+   decl(feeds_role(dual('Key'), dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(feeds_role(var('Me'), var('A'), var('S'), slot(var('W?'))), [ground(var('Me?')), ground(var('A?')), '=?='(var('Me?'), var('A?'))],
+          [rated(feeds_post(var('Me?'), var('S?'), slot(var('W'))), rate(1, day))]),
+   clause(feeds_role(var('Me'), var('A'), var('S'), slot(var('W?'))), [otherwise],
+          [feeds_follow(var('Me?'), var('A?'), var('S?'), slot(var('W')))]),
+
+   %% The author: its posts, a script run by the library's rules.
+   decl(feeds_post(dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(feeds_post(var('Me'), var('S'), slot(var('W?'))), [ground(var('Me?'))],
+          [seen(var('L')), feeds_utterances(var('Us')), feeds_posts(var('Me?'), var('Us?'), var('Ss')),
+           graph_run(var('Ss?'), var('L?'), var('N')), feeds_posting(var('N?'), var('Me?'), var('S?'), slot(var('W')))]),
+   decl(feeds_posting(dual('GraphNext'), dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(feeds_posting(pick(var('P')), var('_'), var('_'), slot(propose(var('P?')))), [], []),
+   clause(feeds_posting(wait, var('Me'), var('S'), slot(var('W?'))), [], [rated(feeds_post(var('Me?'), var('S?'), slot(var('W'))), rate(1, hour))]),
+   clause(feeds_posting(done, var('Me'), var('S'), slot(var('W?'))), [], [rated(feeds_wake(var('Me?'), var('S?'), slot(var('W'))), rate(1, day))]),
+   decl(feeds_utterances('List'('String'))),
+   clause(feeds_utterances(["item1", "item2", "item3"]), [], []),
+   decl(feeds_posts(dual('Key'), dual('List'('String')), 'List'('GraphStep'))),
+   clause(feeds_posts(var('_'), [], []), [], []),
+   clause(feeds_posts(var('Me'), [var('U') | var('Us')],
+                      [step(post(var('Me?'), speech(utterance(var('U?')), var('Me?'))), item(speech(utterance(var('U?')), var('Me?')), var('Me?')), []) | var('Ss?')]),
+          [ground(var('Me?')), ground(var('U?'))], [feeds_posts(var('Me?'), var('Us?'), var('Ss'))]),
+
+   %% Everyone else: follow the author's feed through a friend.
+   decl(feeds_follow(dual('Key'), dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(feeds_follow(var('Me'), var('A'), var('S'), slot(var('W?'))), [],
+          [seen(var('L')), graph_last_view(var('L?'), var('As'), var('Ap')), feeds_follow1(var('As?'), var('Ap?'), var('Me?'), var('A?'), var('S?'), slot(var('W')))]),
+   decl(feeds_follow1(dual('List'('Atom')), dual('List'('Approved')), dual('Key'), dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(feeds_follow1(var('As'), var('Ap'), var('Me'), var('A'), var('S'), slot(var('W?'))), [ground(var('As?')), ground(var('A?'))],
+          [feeds_labelled(var('A?'), var('As?'), var('F')), feeds_friends(var('As?'), var('Fs')),
+           feeds_follow2(var('F?'), var('Fs?'), var('Ap?'), var('Me?'), var('A?'), var('S?'), slot(var('W')))]),
+   decl(feeds_follow2(dual('YesNo'), dual('List'('Key')), dual('List'('Approved')), dual('Key'), dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   %% following: look again a day later
+   clause(feeds_follow2(yes, var('_'), var('_'), var('Me'), var('_'), var('S'), slot(var('W?'))), [],
+          [rated(feeds_wake(var('Me?'), var('S?'), slot(var('W'))), rate(1, day))]),
+   %% no friend yet, or a proposal in flight: look again an hour later
+   clause(feeds_follow2(no, [], var('_'), var('Me'), var('_'), var('S'), slot(var('W?'))), [],
+          [rated(feeds_wake(var('Me?'), var('S?'), slot(var('W'))), rate(1, hour))]),
+   clause(feeds_follow2(no, [var('_') | var('_')], [var('_') | var('_')], var('Me'), var('_'), var('S'), slot(var('W?'))), [],
+          [rated(feeds_wake(var('Me?'), var('S?'), slot(var('W'))), rate(1, hour))]),
+   %% a friend drawn uniformly, through whom to point with the author's label
+   clause(feeds_follow2(no, [var('J') | var('Js')], [], var('Me'), var('A'), var('S'), slot(propose(labeled_point_friend(var('Me?'), var('B?'), var('A?'))))),
+          [ground(var('J?')), ground(var('Js?'))],
+          [feeds_len([var('J?') | var('Js?')], var('N')), random(var('S?'), var('N?'), var('K'), var('_')),
+           feeds_nth(var('K?'), [var('J?') | var('Js?')], var('B'))]),
+   decl(feeds_labelled(dual('Key'), dual('List'('Atom')), 'YesNo')),
+   clause(feeds_labelled(var('_'), [], no), [], []),
+   clause(feeds_labelled(var('A'), [pointer(var('_'), var('D')) | var('_')], yes), ['=?='(var('A?'), var('D?'))], [true]),
+   clause(feeds_labelled(var('A'), [var('_') | var('As')], var('Y?')), [otherwise], [feeds_labelled(var('A?'), var('As?'), var('Y'))]),
+   decl(feeds_friends(dual('List'('Atom')), 'List'('Key'))),
+   clause(feeds_friends([], []), [], []),
+   clause(feeds_friends([friend(var('K')) | var('As')], [var('K?') | var('Ks?')]), [], [feeds_friends(var('As?'), var('Ks'))]),
+   clause(feeds_friends([var('_') | var('As')], var('Ks?')), [otherwise], [feeds_friends(var('As?'), var('Ks'))]),
+   decl(feeds_len(dual('GraphKeys'), 'Integer')),
+   clause(feeds_len([var('_')], 1), [], []),
+   clause(feeds_len([var('_'), var('Y') | var('Xs')], var('N?')), [], [feeds_len([var('Y?') | var('Xs?')], var('N1')), ':='(var('N'), '+'(var('N1?'), 1))]),
+   decl(feeds_nth(dual('Integer'), dual('GraphKeys'), 'Key')),
+   clause(feeds_nth(var('_'), [var('X')], var('X?')), [], []),
+   clause(feeds_nth(1, [var('X'), var('_') | var('_')], var('X?')), [], []),
+   clause(feeds_nth(var('K'), [var('_'), var('Y') | var('Xs')], var('X?')), ['>'(var('K?'), 1)],
+          [':='(var('K1'), '-'(var('K?'), 1)), feeds_nth(var('K1?'), [var('Y?') | var('Xs?')], var('X'))]),
+
+   %% Everyone approves everything.
+   decl(feeds_approval(dual('Approval'), dual('Person'), dual('Integer'))),
+   clause(feeds_approval(approval(var('_'), var('_'), var('A?')), var('_'), var('_')), [], [rated(feeds_say(slot(var('A'))), rate(1, hour))]),
+   decl(feeds_say(dual('Slot'('YesNo')))),
+   clause(feeds_say(slot(yes)), [], []),
+
+   run(graph, [mix(pace, [share(feeder, 1.0)])], 4, day, 1)]).
