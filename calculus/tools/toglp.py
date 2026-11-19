@@ -301,6 +301,65 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             return q(a)
         return 'val(%s)' % q(a)      # a constant, as now
 
+    # A count over a state defined by one state and states of numbers (GLP #84): the places the definition adds are
+    # named after the count's bound, 'EnoughI' (gcsas.py, unfold), and the count is cardinality(Xs, atom, Phi), Xs the
+    # counted person and the places of the atom the definition adds, Phi its states of numbers.  The checker admits in
+    # Phi no variable that is not in Xs (quantified_condition), so a place defined by a state of numbers, a sum, a
+    # product or a difference, is put in its place as an expression, a difference by its two cases joined by or.
+    cnt_bound = {re.sub(r'^[<>=]+', '', a) for l in e['body'] for a in l[2] if re.fullmatch(r'(<=|>=|<|>|=)[A-Z]\w*', a)}
+    is_local = lambda a: any(re.fullmatch(re.escape(b) + '[A-Z]+', a) for b in cnt_bound)
+    cond_lits = [l for l in e['body'] if l[1] in ('le', 'ge', 'gt', 'lt', 'sum', 'product', 'difference') and any(is_local(a) for a in l[2])]
+
+    def count_phi(atom_locals, b):
+        mine = lambda a: re.fullmatch(re.escape(b) + '[A-Z]+', a)
+        defs, comps = {}, []
+        for l in [l for l in cond_lits if any(mine(a) for a in l[2])]:
+            if l[0]:
+                raise ValueError('%s: a count whose condition has "not": %s' % (e['name'], l))
+            if l[1] in ('sum', 'product', 'difference') and is_local(l[2][0]) and l[2][0] not in atom_locals:
+                defs[l[2][0]] = l
+            else:
+                comps.append(l)
+        import itertools
+        order = list(defs)
+        alts = [2 if defs[d][1] == 'difference' else 1 for d in order]
+        out = []
+        for pick in itertools.product(*[range(k) for k in alts]):
+            ch, env = dict(zip(order, pick)), {}
+            cases = []
+
+            def ex(a, seen=()):
+                if a in atom_locals:
+                    return 'num(%s)' % q(a)
+                if a in defs:
+                    if a in seen:
+                        raise ValueError('%s: a place of a count defined by itself: %s' % (e['name'], a))
+                    if a not in env:
+                        d = defs[a]
+                        m, k = ex(d[2][1], seen + (a,)), ex(d[2][2], seen + (a,))
+                        if d[1] == 'sum':
+                            env[a] = 'plus(%s, %s)' % (m, k)
+                        elif d[1] == 'product':
+                            env[a] = 'mul(%s, %s)' % (m, k)
+                        else:
+                            hi, lo = (m, k) if ch[a] == 0 else (k, m)
+                            cases.append('ge(%s, %s)' % (hi, lo))
+                            env[a] = 'minus(%s, %s)' % (hi, lo)
+                    return env[a]
+                if is_local(a):
+                    raise ValueError('%s: a place of a count that no state of numbers defines: %s' % (e['name'], a))
+                return arg(a) if not a.isdigit() else 'val(%s)' % a
+            cs = ['%s(%s, %s)' % (ARITH[l[1]], ex(l[2][0]), ex(l[2][1])) for l in comps]
+            parts = cases + cs
+            f = parts[-1] if parts else 'true'
+            for c in reversed(parts[:-1]):
+                f = 'and(%s, %s)' % (c, f)
+            out.append(f)
+        f = out[-1]
+        for c in reversed(out[:-1]):
+            f = 'or(%s, %s)' % (c, f)
+        return f
+
     def atom(l):
         """An atom, and the constraints its counts and exact amounts add; under 'not' a count or an exact amount is
         the complement of its comparison (F07), and the atom itself is then not written."""
@@ -312,18 +371,24 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         if args and args[-1][:1] == '#':
             exact, args = args[-1][1:], args[:-1]
         out = []
+        cb = next((re.sub(r'^[<>=]+', '', a) for a in args if re.fullmatch(r'(<=|>=|<|>|=)[A-Z]\w*', a)), None)
+        locs = [a for a in args if cb and re.fullmatch(re.escape(cb) + '[A-Z]+', a)]
         for a in args:
             m = re.fullmatch(r'(<=|>=|<|>|=)(\w+)', a)
             if m:
                 x = 'X%d' % (len(bound) + 1)
                 bound.append(x)
                 out.append((q(x), m))
+            elif a in locs:
+                out.append(('num(%s)' % q(a), None))
             else:
                 out.append((arg(a), None))
         at = 'atom(%s, [%s])' % (l[1], ', '.join(o for o, _ in out))
         for o, m in out:
             if m:
-                cons.append('%s(cardinality([%s], %s, true), %s)' % (cmp(CMP[m.group(1)]), o, at, arg(m.group(2)) if not m.group(2).isdigit() else 'val(%s)' % m.group(2)))
+                xs = ', '.join([o] + [q(a) for a in locs])
+                phi = count_phi(set(locs), cb) if locs else 'true'
+                cons.append('%s(cardinality([%s], %s, %s), %s)' % (cmp(CMP[m.group(1)]), xs, at, phi, arg(m.group(2)) if not m.group(2).isdigit() else 'val(%s)' % m.group(2)))
                 return None, cons
         if exact is not None:
             return None, ['%s(cardinality([], %s, true), %s)' % (cmp('eq'), at, arg(exact))]
@@ -359,6 +424,8 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                 # what a listed person loses, they hold; but an atom cleared with the wildcard is not required, a required
                 # atom having no wildcard (vGLP, Section 5.4: the wildcard only in a negated atom)
                 lists.append('forall([%s], %s, true, [atom(identity, [%s])%s])' % (vs, anchor, q(x), '' if "'_'" in at else ', ' + at))
+                continue
+            if l in cond_lits:        # a state of numbers of a count's condition is in the count (GLP #84)
                 continue
             if l[1] == 'author':      # x is the author of t: the first signer of t, GSC's eq(author_of(t), x) (Section 3.2; GFP's author)
                 cons.append('%s(author_of(%s), %s)' % ('ne' if l[0] else 'eq', arg(l[2][1]), arg(l[2][0])))
