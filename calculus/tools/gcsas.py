@@ -69,7 +69,7 @@ ENVL = "Environment: "   # 'Environment: x is nearby y.': a state the platform g
 KNDL = "Kind of note: "   # 'Kind of note: bond, y-bonds due Day for y-notes.': a kind of Notes's notes (Udi, 2026-11-16: special cases, not instances); see kind_forms
 KINDL = re.compile(r"^Kind of note: ([a-z]+), (.+?) for ([b-z])-notes(; its acts keep their names)?\.$")
 REFL = "Reflexive: "   # 'Reflexive: x knows y.': every agent holding the state's atoms holds x knows x; no act adds or ends it
-ARITH = "Vocabulary: n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k); x is the author of t = author(x,t)."   # of every contract; the author of an item is its first signer (GFP), read by toglp.py as eq(author_of(t), x)
+ARITH = "Vocabulary: n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k); n is the difference from m to k = difference(n,m,k); x is the author of t = author(x,t)."   # of every contract; the author of an item is its first signer (GFP), read by toglp.py as eq(author_of(t), x)
 ACTOR = "Actor"   # in a citation: the first of those who take the act cited
 IRREG = {"is": "be", "has": "have", "does": "do", "goes": "go"}
 TAKEN = r", taken for %s by %s(?: and for %s by %s)*" % (NAME, NAME, NAME, NAME)   # a citation taking the act cited for a party: its guard NAME1 is NAME2
@@ -442,6 +442,9 @@ def parse_list(text, tpls, what="states"):
     return r
 
 
+NUMBER_PREDS = {'le', 'ge', 'gt', 'lt', 'sum', 'product', 'difference'}     # the states of numbers, ARITH's
+
+
 def unfold(text, lex, neg=False, actor=None):
     """A list of states, or of effects, as basic states: [(neg, template, binding, pred, args)].
     A state whose holder the sentence does not name is held by actor, the first of those who act."""
@@ -462,8 +465,17 @@ def unfold(text, lex, neg=False, actor=None):
                     raise Err("'not' or 'no longer' on a phrase that has one: " + text)
                 out.extend((True,) + i[1:] for i in inner)
             else:
-                inner = unfold(unwild(fill(pay[2], {k: count_words(v) for k, v in b.items()}), "anyone"), lex, actor=actor)
-                if any(v[:1] in '<>=' for v in b.values()) and len(inner) > 1:
+                counts = [v for v in b.values() if v[:1] in '<>=']
+                bb = {k: count_words(v) for k, v in b.items()}
+                if counts:      # a count over a state defined by one state and states of numbers (GLP #84): the
+                    # places the definition adds are numbers of the counted person, named after the count's bound
+                    # and the place, 'EnoughI', and the count is the checker's cardinality with a condition (toglp.py)
+                    bound = re.sub(r"^[<>=]+", "", counts[0])
+                    for v in tvars(pay[2]):
+                        if v not in bb:
+                            bb[v] = cap(bound) + v.upper()
+                inner = unfold(unwild(fill(pay[2], bb), "anyone"), lex, actor=actor)
+                if counts and len([i for i in inner if i[3] not in NUMBER_PREDS]) > 1:
                     raise Err("a count in a state defined by several states, which would not count one person: " + text)
                 if WILD in b.values() and len(inner) > 1:
                     raise Err("'someone' in a state defined by several states, which would not be one person: " + text)
@@ -3014,7 +3026,8 @@ def fold_states(lits, lex, actor=None):
                 keep = []
                 for i, it in enumerate(items):
                     if i == firsti:
-                        keep.append([None, not_text(t, b) if neg else fill(t, b)])
+                        bw = {k: count_words(v) for k, v in b.items()}      # a count folded back is written in words (GLP #84)
+                        keep.append([None, not_text(t, bw) if neg else fill(t, bw)])
                         todo.remove(it[0])
                     elif it[1] is None and it[0] in todo:
                         todo.remove(it[0])

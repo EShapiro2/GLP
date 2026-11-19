@@ -13,7 +13,7 @@ import toglp
 PARAMS = set()
 names = NM.names_in('sasx')
 w = gcsas.World(NM.names_in('gr'))
-NUM = {'le', 'ge', 'gt', 'lt', 'sum', 'product', 'today', 'author'}      # author(x,t): eq(author_of(t), x), a constraint too (toglp.py)
+NUM = {'le', 'ge', 'gt', 'lt', 'sum', 'product', 'difference', 'today', 'author'}      # author(x,t): eq(author_of(t), x), a constraint too (toglp.py)
 bad = 0
 for n in names:
     lex = w.lexicon(n)
