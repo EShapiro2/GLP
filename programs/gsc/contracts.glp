@@ -1582,10 +1582,10 @@ nm_joint([schema(establish, [],
     nschema(set_date, [num(t)], ge(num(t), num(5)),
        [rs(unguarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])]).
 
-% --- negative: a disjunction -----------------------------------------------
+% --- a disjunction -----------------------------------------------------------
 % mint(Alice?; d, k, t) | d > t or d <= 0 : identity, date(t), +k.bond(Alice, d)
-% A constraint is a conjunction (def:numbers):
-% constraint_not_conjunction(mint, or(gt(num(d), num(t)), le(num(d), num(0)))).
+% A constraint is a decidable condition combined by the connectives
+% (def:numbers), so the disjunction is admitted: syntactically grassroots.
 procedure nm_or(NContract).
 nm_or(C?) :-
     nm_base(B),
@@ -1596,10 +1596,11 @@ nm_or(C?) :-
        % clock(Alice?; t) : identity, +date(t), which adds the date mint requires (GSC, Section 3.2).
        schema(clock, [num(t)], [rs(guarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).
 
-% --- negative: a product of two value variables ----------------------------
+% --- a product of two value variables -----------------------------------------
 % mint(Alice?; d, k, t) | d * k <= t : identity, date(t), +k.bond(Alice, d)
-% A constraint is linear (def:numbers):
-% constraint_not_linear(mint, mul(num(d), num(k))).
+% A constraint is a decidable condition in the arithmetic of the numbers
+% (def:numbers), so the product is admitted: syntactically grassroots; no
+% implication rests on it, cons_cd reading it with its flag W no (linear.glp).
 procedure nm_nonlinear(NContract).
 nm_nonlinear(C?) :-
     nm_base(B),
