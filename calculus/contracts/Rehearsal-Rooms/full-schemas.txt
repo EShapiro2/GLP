@@ -1,7 +1,7 @@
-Rehearsals (expanded schemas)
+Rehearsal Rooms (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Rehearsals:0 - | Alice, Bob and Carol are persons, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Votes and Double numbers, Res a room, Slot a slot, Post and Other posts.
+Rehearsal Rooms:0 - | Alice, Bob and Carol are persons, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Votes and Double numbers, Res a room, Slot a slot, Post and Other posts.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
@@ -72,4 +72,4 @@ Matching:3 ■ Return: post_from(Alice,Other,Bob), post(Alice,Other) <- post_fro
 Matching:4 ■ Withdraw: ~made(Alice,Post), ~post(Alice,Post) <- made(Alice,Post), post(Alice,Post) guarded by Alice.
 Matching:5 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other) guarded by Alice, Carol.
 Partners:0 - | A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
-Rehearsals:0 - | The activity is music, the place is a *studio*, an organisation that has rehearsal rooms, and the time is a slot.
+Rehearsal Rooms:0 - | The activity is music, the place is a *studio*, an organisation that has rehearsal rooms, and the time is a slot.

@@ -104,7 +104,7 @@ Lost and Found | Lost and Found | Lost-and-Found | lost_and_found | lost_and_fou
 Carpool | Carpool | Carpool | carpool | carpool
 Home Exchange | Home Exchange | Home-Exchange | home_exchange | home_exchange
 Tennis Courts | Tennis Courts | Tennis-Courts | tennis_courts | tennis_courts
-Rehearsals | Rehearsals | Rehearsals | rehearsals | rehearsals
+Rehearsal Rooms | Rehearsal Rooms | Rehearsal-Rooms | rehearsal_rooms | rehearsal_rooms
 Booking | Booking | Booking | booking | booking
 Meeting Rooms | Meeting Rooms | Meeting-Rooms | meeting_rooms | meeting_rooms
 Appointments | Appointments | Appointments | appointments | appointments
