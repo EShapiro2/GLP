@@ -1,0 +1,7 @@
+% Rehearsal Rooms: the contract, the one copy, its owner's.
+% Owner: GM (Udi, 2026-11-18, approving the recommendation, reported by the coordinator).
+% Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
+% Last changed: 2026-11-18, written from the paper at GM main 794a6a2; first line as Udi approved it, 2026-11-18, on the Calculus's recommendation; the Logic pragmas are the Calculus's, in calculus/contracts; no Interface pragmas yet. Renamed from Rehearsals, 2026-11-19 (Udi, 2026-11-19, reported by the coordinator: "change rehearsals to rehearsal rooms").
+Rehearsal Rooms
+Rehearsal Rooms instantiates Booking with a room for a resource, and composes it with Partners.
+The activity is music, the place is a *studio*, an organisation that has rehearsal rooms, and the time is a slot.
