@@ -1,0 +1,9 @@
+% Friends Market: the contract, the one copy, its owner's.
+% Owner: GM (Udi, 2026-11-19, "yes" to the contract's text and name and to its revision, relayed by the coordinator).  It takes the place of Market, GM's until 2026-11-19.
+% Paper: GM, Anonymous Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
+% Last changed: 2026-11-19, first written, the text as Udi approved it, an offer being a listing of Marketplace on GO #10's finding; no Logic pragmas yet, the Calculus's to write; no Interface pragmas yet.
+Friends Market
+Friends Market composes Promoted Matching with Marketplace, with a test of the match of offers and requests and a budget of Orga-coins.
+A post is an *offer* or a *request*. An *offer* is a listing of Marketplace, and a *request* names a good and a price in Orga-coins. An offer and a request match when the offer is of what the request seeks and the price of the request is at least the price of the offer.
+Alice is a person, Orga a networked organisation.
+1. ■ Post: Matching:1, a request only if Alice is a buyer of Orga and an offer only if she is a seller.
