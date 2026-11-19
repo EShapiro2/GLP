@@ -69,7 +69,7 @@ ENVL = "Environment: "   # 'Environment: x is nearby y.': a state the platform g
 KNDL = "Kind of note: "   # 'Kind of note: bond, y-bonds due Day for y-notes.': a kind of Notes's notes (Udi, 2026-11-16: special cases, not instances); see kind_forms
 KINDL = re.compile(r"^Kind of note: ([a-z]+), (.+?) for ([b-z])-notes(; its acts keep their names)?\.$")
 REFL = "Reflexive: "   # 'Reflexive: x knows y.': every agent holding the state's atoms holds x knows x; no act adds or ends it
-ARITH = "Vocabulary: n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k); x is the author of t = author(x,t)."   # of every contract; the author of an item is its first signer (GFP), read by toglp.py as eq(author_of(t), x)
+ARITH = "Vocabulary: n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k); n is the difference from m to k = difference(n,m,k); x is the author of t = author(x,t)."   # of every contract; the author of an item is its first signer (GFP), read by toglp.py as eq(author_of(t), x)
 ACTOR = "Actor"   # in a citation: the first of those who take the act cited
 IRREG = {"is": "be", "has": "have", "does": "do", "goes": "go"}
 TAKEN = r", taken for %s by %s(?: and for %s by %s)*" % (NAME, NAME, NAME, NAME)   # a citation taking the act cited for a party: its guard NAME1 is NAME2

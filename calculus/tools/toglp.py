@@ -84,7 +84,7 @@ def agents_of(acts, values=()):
     out = set()
     for e in acts:
         for l in e['head'] + e['body']:
-            if l[1] not in values and l[1] not in ARITH and l[1] not in ('sum', 'product') and l[2] and re.fullmatch(gcsas.NAME, l[2][0]):
+            if l[1] not in values and l[1] not in ARITH and l[1] not in ('sum', 'product', 'difference') and l[2] and re.fullmatch(gcsas.NAME, l[2][0]):
                 out.add(l[2][0])
         out.update(g for g in e['guards'] if '(' not in g)
     return out
@@ -98,7 +98,7 @@ def schema_nums(lits, values, places=frozenset()):
     predicate, (predicate, arity, position), that holds a number in some schema of the contract (num_places)."""
     nums = set()
     for l in lits:
-        if l[1] in values or l[1] in ARITH or l[1] in ('sum', 'product'):
+        if l[1] in values or l[1] in ARITH or l[1] in ('sum', 'product', 'difference'):
             nums.update(a for a in l[2] if re.fullmatch(gcsas.NAME, a))
         for i, a in enumerate(l[2]):
             if a[:1] in '*#':
@@ -222,7 +222,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     nums = schema_nums(lits, values, places)
     cvars = {a for l in lits for i, a in enumerate(l[2]) if (l[1], len(l[2]), i) in cplaces and re.fullmatch(gcsas.NAME, a)
              and a not in consts and a not in nums and a not in agents}
-    holderless = lambda l: l[1] in values or l[1] in ARITH or l[1] in ('sum', 'product', 'author') or not l[2] or l[2][0] not in agents
+    holderless = lambda l: l[1] in values or l[1] in ARITH or l[1] in ('sum', 'product', 'difference', 'author') or not l[2] or l[2][0] not in agents
     roles = []
     for l in lits:
         if not holderless(l) and l[2][0] not in roles:
@@ -364,6 +364,10 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                 cons.append('%s(author_of(%s), %s)' % ('ne' if l[0] else 'eq', arg(l[2][1]), arg(l[2][0])))
             elif l[1] in ARITH:
                 cons.append('%s(%s, %s)' % (NOT[ARITH[l[1]]] if l[0] else ARITH[l[1]], arg(l[2][0]), arg(l[2][1])))
+            elif l[1] == 'difference':     # n is the difference from m to k, |m - k|: two linear cases, joined by or (def:numbers' connectives; linear.glp decides or)
+                n, m, k = (arg(a) for a in l[2])
+                c = 'or(and(eq(%s, plus(%s, %s)), ge(%s, %s)), and(eq(%s, plus(%s, %s)), ge(%s, %s)))' % (m, n, k, m, k, k, n, m, k, m)
+                cons.append('not(%s)' % c if l[0] else c)
             elif l[1] in ('sum', 'product'):
                 cons.append('%s(%s, %s(%s, %s))' % ('ne' if l[0] else 'eq', arg(l[2][0]), 'plus' if l[1] == 'sum' else 'mul', arg(l[2][1]), arg(l[2][2])))
             elif holderless(l) and not re.fullmatch(r'(<=|>=|<|>|=)\w+', l[2][0] if l[2] else ''):      # a counted holder is a count, cardinality(...) (SC's 'fewer than 1 persons holds a share of z')
