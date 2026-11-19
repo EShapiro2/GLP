@@ -1,0 +1,19 @@
+% Suspension --- a proposed contract under a working name, by Nimrod Talmon with Claude, 2026-11-19: the first instance of Sanctions, a sanction with an effect, the loss of the vote.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's, until Udi rules on the name and the owner.
+% Paper: GCE, Grassroots Contract Examples, in preparation
+% Extends: Sanctions (programs/gce/sanctions), instantiating it, and restricts Organisation, GO's (programs/go).
+% Last changed: 2026-11-19.
+% Schemas: printed by the Calculus's tools from the Logic pragmas; checked with calculus/tools/gcsas.py (commute yes; return yes; recover same) and relations.py (Suspension instantiates Sanctions: holds; Suspension restricts Organisation: holds) at GLP 912c76b.
+Suspension
+Suspension instantiates Sanctions with a suspension for a sanction, and restricts Organisation.
+A participant under a suspension keeps their place in the organisation but may not vote on its acts.
+Bob is a person, Orga an organisation.
+1. ■ Vote: Organisation:2 Vote, only if Bob is not under a suspension in Orga.
+Logic pragmas
+Suspension instantiates Sanctions with a suspension for a sanction, and restricts Organisation.
+A participant under a suspension keeps their place in the organisation but may not vote on its acts.
+Bob is a person, Orga an organisation, Motion an act of Orga.
+1. ■ Vote: Organisation:2 Vote, only if Bob is not under a suspension in Orga.
+Interface pragmas
+Look: ⏸️, governance
+Vote: Bob [Vote] <act>
