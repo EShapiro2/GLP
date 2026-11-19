@@ -1,0 +1,9 @@
+% Promoted Matching: the contract, the one copy, its owner's.
+% Owner: GM (Udi, 2026-11-19, "yes" to the contract's text and "ok" to its name, relayed by the coordinator).
+% Paper: GM, Anonymous Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
+% Last changed: 2026-11-19, first written, the text as Udi approved it; no Logic pragmas yet, the Calculus's to write; no Interface pragmas yet.
+Promoted Matching
+Promoted Matching composes Anonymous Matching with Coins, with a budget of coins.
+The budget of a post is coins of one issuer, the *community*, a parameter of Promoted Matching, and the cost of a forward is a number of them.
+Alice and Bob are persons.
+1. ■ Tell: Matching:2, where Alice pays Bob the rest of the budget by Notes:3.
