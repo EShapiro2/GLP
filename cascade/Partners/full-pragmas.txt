@@ -2,16 +2,34 @@ Partners
 Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
 Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 Of Matching: *Posts* have a *test*, a parameter of Matching, whether two *match*. A person *holds* any post they made or forwarded to them. Environment: p and q match, for x.
+Of Guardians: Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward. In clause 4 Alice and Bob are possibly one person. Default: any guardian of z for those who decide for z.
+Of Services: A *service* is a ward operated by a machine at an address every person can reach.
+Of Rendezvous: An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
+Of Anonymous Rendezvous: A *one-time key* is a key pair its maker uses for one meeting. Environment: x holds the one-time key k; x knows the public key of k.
+Of Anonymous Matching: Each post carries the public key of a one-time key of its maker, and names a rendezvous server. Environment: p carries the public key of k, for x; d is named by the one of p and q whose public key has the smaller hash, for x.
 Of Partners: A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
-Alice, Bob and Carol are persons, Post and Other posts.
+Alice, Bob and Carol are persons, Post and Reply posts, Other and Key one-time keys, Wendy and Will wards, Dave a service, Link an invitation link.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-Friendship:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
-Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+Friendship:1, Guardians:3. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
+Friendship:2, Guardians:3. ■ Person unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
 Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 Matching:1. ■ Post: Alice may make Post.
 Matching:2. ■ Tell: Alice may forward Post to Bob, provided Alice holds the post Post and Alice and Bob are friends.
 Matching:3. ■ Return: Bob forwards Other to Alice, provided Bob holds the post Post from Alice, Bob holds the post Other and Post and Other match.
 Matching:4. ■ Withdraw: Alice may withdraw Post.
-Matching:5. ■ Meet: Alice and Carol may jointly come to know each other, provided Alice has made the post Post, Carol has made the post Other, Alice holds the post Other, Carol holds the post Post and Post and Other match.
+Matching:5, Anonymous Matching:1. ■ Meet: Alice and Carol may jointly come to know each other, provided Alice has made the post Post, Carol has made the post Other, Alice holds the post Other, Carol holds the post Post, Post and Other match, Alice has the address of Carol and Carol has the address of Alice.
+Guardians:1. ■ Enter: Alice may create Wendy, and Wendy must consent, provided Alice is a person. Alice chooses Wendy's key pair.
+Guardians:2. ■ Guardian decisions. Make guardian: The guardians of Wendy may make Bob a guardian of Wendy, with the consent of Bob, provided Wendy is a ward, Wendy is not retired, Bob is a person, Wendy has Alice as a guardian and Bob counts Alice as a friend. Resign: Bob may end his guardianship of Wendy. End guardian: The guardians of Wendy, other than Bob, may end Bob's guardianship of Wendy. Guardian unfriend: Bob may end his friendship with his ward Wendy. Wendy may not end a friendship with her guardian.
+Guardians:3. ■ Ward and person. Ward acquaint: Wendy and Bob may jointly come to know each other, provided Wendy is a ward, Wendy has Alice as a guardian and Bob is a person. Ward befriend: Wendy and Bob may jointly become friends, with the consent of Alice, provided Wendy is a ward, Wendy is not retired, Wendy has Alice as a guardian, Bob is a person, Wendy and Bob know each other and Alice and Bob are friends. Ward end: Wendy may end her friendship with Bob, provided Wendy does not have Bob as a guardian. Unfriend: Bob may end his friendship with Wendy, provided Bob is not a guardian of Wendy. Ward unfriend: Alice may end the friendship of Wendy and Bob, provided Wendy has Alice as a guardian and Bob is not a guardian of Wendy.
+Guardians:4. ■ Wards. Wards acquaint: Wendy and Will may jointly come to know each other, provided Wendy is a ward, Wendy has Alice as a guardian, Will is a ward and Will has Bob as a guardian. Wards befriend: Wendy and Will may jointly become friends, with the consent of Alice and Bob, provided Wendy is a ward, Wendy is not retired, Wendy has Alice as a guardian, Will is a ward, Will is not retired, Will has Bob as a guardian, Wendy and Will know each other, Alice knows Will and Alice and Bob are friends. Wards of one guardian befriend: Wendy and Will may jointly become friends, with the consent of Alice, provided Wendy is a ward, Wendy is not retired, Wendy has Alice as a guardian, Will is a ward, Will is not retired, Will has Alice as a guardian and Wendy and Will know each other.
+Guardians:5. ■ Retire: The guardians of Wendy may retire Wendy. Wendy can then take no act.
+Rendezvous:1. ■ Open server: Carol may make Dave a rendezvous server, provided Carol is a guardian of Dave.
+Rendezvous:2. ■ Invite by link. Sign link: Alice may sign Link as an invitation link that names Dave, provided Alice knows Dave. Invite by link: Alice may register Link with Dave, provided Alice has signed Link as an invitation link that names Dave, Alice knows Dave, Dave is a rendezvous server and Dave does not hold Link spent for Alice. Link has a new serial.
+Rendezvous:3. ■ Use link: Bob may present Link of Alice to Dave, provided Bob knows Dave and Dave does not hold Link expired. The link is then spent.
+Rendezvous:4. ■ Reconnection. Present: Alice may present to Dave the signature of Bob over the friendship of Alice and Bob, provided Alice and Bob are friends, Alice knows Dave and Dave is a rendezvous server. Match: Dave matches Alice and Bob.
+Anonymous Rendezvous:1. ■ Meet.
+Anonymous Rendezvous:1, Anonymous Matching:1. ■ Present: Alice may present to Dave the keys Key and Other signed with Key, provided Alice holds the one-time key Key, Alice knows the public key of Other, Alice knows Dave, Dave is a rendezvous server, Alice has made the post Post, Alice holds the post Reply, Post carries the public key of Key, Reply carries the public key of Other and Dave is named by the one of Post and Reply whose public key has the smaller hash.
+Anonymous Rendezvous:1. ■ Match: Dave matches Alice and Bob on Key and Other.
+Anonymous Matching:1. ■ Meet.
