@@ -1,9 +1,9 @@
 Matching
 Matching extends Friendship.
-*Posts* have a *test*, a parameter of Matching, whether two *match*. A person *holds* any post they made or forwarded to them.
+*Posts* have a *test*, a parameter of Matching, whether two *match*. Posts have a *budget*, a parameter of Matching: what a post has when made, and the *cost* of a forward. A person *holds* any post they made or forwarded to them.
 Alice, Bob and Carol are persons.
 1. ■ Post: Alice may make a post.
-2. ■ Tell: Alice who holds a post may forward it to her friend Bob.
+2. ■ Tell: Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with the rest of the budget.
 3. ■ Return: Bob, who holds two matching posts, one from Alice, forwards to Alice the second post.
 4. ■ Withdraw: Alice may withdraw a post she made.
 5. ■ Meet: Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other.

@@ -1,3 +1,3 @@
 Partners
-Partners instantiates Matching with a test of the match of plans.
+Partners instantiates Anonymous Matching with a test of the match of plans and a budget of a count set by the maker, a forward costing one.
 A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
