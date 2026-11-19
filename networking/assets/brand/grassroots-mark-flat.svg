@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="15 15 70 70" role="img" aria-label="The Grassroots mark, flat form for small sizes">
+<defs><clipPath id="gm-clip-flat"><path d="M50 16 C69.5 15.6 84.4 30.5 84 50.5 C83.6 69.5 68.5 84.4 49.4 84 C30.5 83.5 15.8 68.5 16.2 49.6 C16.6 30.9 31.5 16.4 50 16 Z"/></clipPath></defs>
+<g clip-path="url(#gm-clip-flat)" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round">
+<polygon points="0,0 48,0 42,30 24,38 0,34" fill="#2D6BE4"/>
+<polygon points="48,0 100,0 100,22 64,26 42,30" fill="#8B5CD6"/>
+<polygon points="100,22 100,60 80,64 76,46 64,26" fill="#5B8DEF"/>
+<polygon points="42,30 64,26 76,46 58,52 36,50 24,38" fill="#E8A33C"/>
+<polygon points="0,34 24,38 36,50 44,70 30,100 0,100" fill="#1F9AA0"/>
+<polygon points="36,50 58,52 66,72 44,70" fill="#E57A4E"/>
+<polygon points="58,52 76,46 80,64 66,72" fill="#A98BE3"/>
+<polygon points="100,60 100,100 30,100 44,70 66,72 80,64" fill="#2E9E6B"/>
+</g>
+</svg>
