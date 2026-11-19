@@ -1,0 +1,3 @@
+Tennis Courts instantiates Booking: holds
+Tennis Courts composes it (Booking) with Partners: holds
+Tennis Courts restricts it (Booking and Partners): holds

@@ -1,0 +1,3 @@
+Help
+Help instantiates Matching with a test of the match of services and needs.
+Help:0 - | A post is a *service*, stating work its maker does, or a *need*, stating work its maker seeks done. A service and a need match when the service is the work the need seeks.

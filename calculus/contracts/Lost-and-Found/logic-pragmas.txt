@@ -1,0 +1,3 @@
+Lost and Found
+Lost and Found instantiates Matching with a test of the match of losses and finds.
+A post is a *loss*, stating a thing its maker lost, or a *find*, stating a thing its maker found. A loss and a find match when they are of the same thing.

@@ -1,0 +1,5 @@
+Anonymous Rendezvous
+Anonymous Rendezvous extends Rendezvous.
+A *one-time key* is a key pair its maker uses for one meeting.
+Alice and Bob are persons, Dave a rendezvous server.
+1. ■ Meet. Present: Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own. Match: Dave then gives each the address of the other.

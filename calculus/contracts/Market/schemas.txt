@@ -1,0 +1,3 @@
+Market
+Market instantiates Matching with a test of the match of offers and requests.
+Market:0 - | A post is an *offer* or a *request* of a thing. An offer and a request match when the offer is of what the request seeks.

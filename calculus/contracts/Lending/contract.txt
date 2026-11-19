@@ -1,0 +1,3 @@
+Lending
+Lending instantiates Matching with a test of the match of loans, gifts and wishes.
+A post is a *loan* or a *gift*, stating a thing its maker lends or gives away, or a *wish*, stating a thing its maker seeks to borrow or receive. A loan or a gift matches a wish when it is of the thing the wish seeks.

@@ -1,0 +1,5 @@
+Tennis Courts
+Tennis Courts instantiates Booking with a court for a resource, composes it with Partners, and restricts the composition.
+The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
+Alice and Carol are persons, Club a club.
+1. ■ Book: Booking:1, by Alice and Carol jointly, each a participant of the Club with fewer outstanding bookings than the bound.

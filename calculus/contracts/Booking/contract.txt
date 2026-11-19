@@ -1,0 +1,6 @@
+Booking
+Booking extends Organisation.
+An organisation has *resources*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
+Alice is a person, Orga an organisation.
+1. ■ Book: Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a resource of Orga.
+2. ■ Cancel: Alice may cancel her booking.
