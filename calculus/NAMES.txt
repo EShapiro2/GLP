@@ -109,3 +109,8 @@ Booking | Booking | Booking | booking | booking
 Meeting Rooms | Meeting Rooms | Meeting-Rooms | meeting_rooms | meeting_rooms
 Appointments | Appointments | Appointments | appointments | appointments
 Anonymous Rendezvous | Anonymous Rendezvous | Anonymous-Rendezvous | anonymous_rendezvous | anonymous_rendezvous
+Nonprofit | Nonprofit | Nonprofit | nonprofit | nonprofit
+Partnership | Partnership | Partnership | partnership | partnership
+Foundation | Foundation | Foundation | foundation | foundation
+Disputes | Disputes | Disputes | disputes | disputes
+Warnings | Warnings | Warnings | warnings | warnings
