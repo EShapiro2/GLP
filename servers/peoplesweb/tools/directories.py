@@ -60,7 +60,7 @@ DIRECTORIES = [
     ('programs/apps/look.json', 'GSA', ['GSA'], "the families' names and colours"),
     ('cascade', 'Code', [], 'the recorded runs of the cascade'),
     ('cascade.sh', 'Code', [], 'the cascade'),
-    ('CONTRIBUTING.md', 'Code', [], 'how a collaborator contributes, the one document for it (Udi, 2026-11-19)'),
+    ('CONTRIBUTING.md', 'Code', [], 'how a collaborator contributes (Udi, 2026-11-19)'),
     ('simulation', 'Code', [], 'the recorded simulations'),
     ('test', 'Code', [], "the suite's harness; the Dart test trees are IGLP's"),
     ('tools', 'Code', [], ''),
