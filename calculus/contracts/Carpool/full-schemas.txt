@@ -1,16 +1,16 @@
 Carpool (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Carpool:0 - | Alice, Bob and Carol are persons, Post and Other posts.
+Carpool:0 - | Alice, Bob and Carol are persons, Post and Reply posts, Other and Key one-time keys, Wendy and Will wards, Dave a service, Link an invitation link.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
-Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Knowledge:2+Guardians:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1+Guardians:3 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice, Bob.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
-Friendship:2 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- person(Alice), person(Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 Matching:0 - | *Posts* have a *test*, a parameter of Matching, whether two *match*. A person *holds* any post they made or forwarded to them.
@@ -19,5 +19,48 @@ Matching:1 ■ Post: made(Alice,Post), post(Alice,Post) <- ~made(Alice,Post) gua
 Matching:2 ■ Tell: post_from(Bob,Post,Alice), post(Bob,Post) <- post(Alice,Post), friend(Alice,Bob), friend(Bob,Alice), ~post_from(Bob,Post,Alice) guarded by Alice.
 Matching:3 ■ Return: post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob).
 Matching:4 ■ Withdraw: ~made(Alice,Post), ~post(Alice,Post) <- made(Alice,Post), post(Alice,Post) guarded by Alice.
-Matching:5 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other) guarded by Alice, Carol.
+Matching:5+Anonymous Matching:1 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other), address(Alice,Carol), address(Carol,Alice) guarded by Alice, Carol.
+Guardians:0 - | Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
+Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
+Guardians:0 - | Default: any guardian of z for those who decide for z.
+Guardians:1 ■ Enter: identity(Wendy), ward(Wendy), has_guardian(Wendy,Alice), creator(Alice,Wendy), guardian(Alice,Wendy), knows(Alice,Wendy), knows(Wendy,Alice), friend(Alice,Wendy), friend(Wendy,Alice) <- person(Alice), ~identity(Wendy) guarded by Alice, Wendy must Wendy.
+Guardians:1 ■ | Alice chooses Wendy's key pair.
+Guardians:2 ■ | Guardian decisions.
+Guardians:2 ■ Make guardian: guardian(Bob,Wendy), has_guardian(Wendy,Bob), knows(Bob,Wendy), knows(Wendy,Bob), friend(Bob,Wendy), friend(Wendy,Bob) <- ward(Wendy), ~retired(Wendy), person(Bob), has_guardian(Wendy,Alice), friend(Bob,Alice), ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) guarded by guardians(Wendy), Bob.
+Guardians:2 ■ Resign: ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) <- guardian(Bob,Wendy), has_guardian(Wendy,Bob) guarded by Bob.
+Guardians:2 ■ End guardian: ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) <- guardian(Bob,Wendy), has_guardian(Wendy,Bob) guarded by guardians(Wendy,-Bob).
+Guardians:2 ■ Guardian unfriend: ~friend(Bob,Wendy), ~friend(Wendy,Bob), ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) <- friend(Bob,Wendy), friend(Wendy,Bob), guardian(Bob,Wendy), has_guardian(Wendy,Bob) guarded by Bob.
+Guardians:2 ■ | Wendy may not end a friendship with her guardian.
+Guardians:3 ■ | Ward and person.
+Guardians:3 ■ Ward acquaint: knows(Wendy,Bob), knows(Bob,Wendy) <- ward(Wendy), has_guardian(Wendy,Alice), person(Bob) guarded by Wendy, Bob.
+Guardians:3 ■ Ward befriend: friend(Wendy,Bob), friend(Bob,Wendy) <- ward(Wendy), ~retired(Wendy), has_guardian(Wendy,Alice), person(Bob), knows(Wendy,Bob), knows(Bob,Wendy), friend(Alice,Bob), friend(Bob,Alice), ~friend(Wendy,Bob), ~friend(Bob,Wendy) guarded by Wendy, Bob, Alice.
+Guardians:3 ■ Ward end: ~friend(Wendy,Bob), ~friend(Bob,Wendy) <- ~has_guardian(Wendy,Bob), friend(Wendy,Bob), friend(Bob,Wendy) guarded by Wendy.
+Guardians:3 ■ Unfriend: ~friend(Bob,Wendy), ~friend(Wendy,Bob) <- ~guardian(Bob,Wendy), friend(Bob,Wendy), friend(Wendy,Bob) guarded by Bob.
+Guardians:3 ■ Ward unfriend: ~friend(Wendy,Bob), ~friend(Bob,Wendy) <- has_guardian(Wendy,Alice), ~guardian(Bob,Wendy), friend(Wendy,Bob), friend(Bob,Wendy) guarded by Alice.
+Guardians:4 ■ | Wards.
+Guardians:4 ■ Wards acquaint: knows(Wendy,Will), knows(Will,Wendy) <- ward(Wendy), has_guardian(Wendy,Alice), ward(Will), has_guardian(Will,Bob) guarded by Wendy, Will possibly Alice=Bob.
+Guardians:4 ■ Wards befriend: friend(Wendy,Will), friend(Will,Wendy) <- ward(Wendy), ~retired(Wendy), has_guardian(Wendy,Alice), ward(Will), ~retired(Will), has_guardian(Will,Bob), knows(Wendy,Will), knows(Will,Wendy), knows(Alice,Will), friend(Alice,Bob), friend(Bob,Alice), ~friend(Wendy,Will), ~friend(Will,Wendy) guarded by Wendy, Will, Alice, Bob possibly Alice=Bob.
+Guardians:4 ■ Wards of one guardian befriend: friend(Wendy,Will), friend(Will,Wendy) <- ward(Wendy), ~retired(Wendy), has_guardian(Wendy,Alice), ward(Will), ~retired(Will), has_guardian(Will,Alice), knows(Wendy,Will), knows(Will,Wendy), ~friend(Wendy,Will), ~friend(Will,Wendy) guarded by Wendy, Will, Alice.
+Guardians:5 ■ Retire: retired(Wendy), ~guardian(_,Wendy), ~has_guardian(Wendy,_), ~friend(Wendy,_), ~friend(_,Wendy) <- ~retired(Wendy) guarded by guardians(Wendy).
+Guardians:5 ■ | Wendy can then take no act.
+Services:0 - | A *service* is a ward operated by a machine at an address every person can reach.
+Rendezvous:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
+Rendezvous:1 ■ Open server: rendezvous_server(Dave) <- guardian(Carol,Dave), ~rendezvous_server(Dave) guarded by Carol.
+Rendezvous:2 ■ | Invite by link.
+Rendezvous:2 ■ Sign link: link(Alice,Link,Dave) <- knows(Alice,Dave), ~link(Alice,Link,Dave) guarded by Alice.
+Rendezvous:2 ■ Invite by link: registered(Dave,Link,Alice) <- link(Alice,Link,Dave), knows(Alice,Dave), rendezvous_server(Dave), ~spent(Dave,Link,Alice), ~registered(Dave,Link,Alice) guarded by Alice.
+Rendezvous:2 ■ | Link has a new serial.
+Rendezvous:3 ■ Use link: ~registered(Dave,Link,Alice), spent(Dave,Link,Alice), address(Alice,Bob), address(Bob,Alice) <- knows(Bob,Dave), ~expired(Dave,Link), registered(Dave,Link,Alice) guarded by Bob.
+Rendezvous:3 ■ | The link is then spent.
+Rendezvous:4 ■ | Reconnection.
+Rendezvous:4 ■ Present: presented(Dave,Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), knows(Alice,Dave), rendezvous_server(Dave), ~presented(Dave,Alice,Bob) guarded by Alice.
+Rendezvous:4 ■ Match: ~presented(Dave,Alice,Bob), ~presented(Dave,Bob,Alice), address(Alice,Bob), address(Bob,Alice) <- presented(Dave,Alice,Bob), presented(Dave,Bob,Alice).
+Anonymous Rendezvous:0 - | A *one-time key* is a key pair its maker uses for one meeting.
+Anonymous Rendezvous:0 - | Environment: x holds the one-time key k; x knows the public key of k.
+Anonymous Rendezvous:1 ■ | Meet.
+Anonymous Rendezvous:1+Anonymous Matching:1 ■ Present: presented_keys(Dave,Key,Other,Alice) <- one_time_key(Alice,Key), knows_key(Alice,Other), knows(Alice,Dave), rendezvous_server(Dave), ~presented_keys(Dave,Key,Other,Alice), made(Alice,Post), post(Alice,Reply), post_key(Alice,Post,Key), post_key(Alice,Reply,Other), pair_server(Alice,Post,Reply,Dave) guarded by Alice.
+Anonymous Rendezvous:1 ■ Match: ~presented_keys(Dave,Key,Other,Alice), ~presented_keys(Dave,Other,Key,Bob), address(Alice,Bob), address(Bob,Alice) <- presented_keys(Dave,Key,Other,Alice), presented_keys(Dave,Other,Key,Bob).
+Anonymous Matching:0 - | Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
+Anonymous Matching:0 - | Environment: p carries the public key of k, for x; d is named by the one of p and q whose public key has the smaller hash, for x.
+Anonymous Matching:1 ■ | Meet.
 Carpool:0 - | A post is a *commute*, stating a route, its times, and whether its maker drives, rides or either. Two commutes match when their routes and times agree and one maker drives and the other rides.

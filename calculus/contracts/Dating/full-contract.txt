@@ -4,8 +4,13 @@ An *identity* is a unique cryptographic key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 *Posts* have a *test*, a parameter of Matching, whether two *match*. Here: a test of the match of profiles. A person *holds* any post they made or forwarded to them.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. Here: the guardians deciding jointly for the decision rule. A ward takes an act of a party by those who decide for the ward.
+A *service* is a ward operated by a machine at an address every person can reach.
+An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
+A *one-time key* is a key pair its maker uses for one meeting.
+Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
 A post is a *profile*, stating who its maker is and whom they seek. Two profiles match when each states whom the other seeks.
-Alice, Bob and Carol are persons.
+Alice, Bob and Carol are persons, Wendy and Will wards, Dave a rendezvous server.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -16,4 +21,14 @@ Matching:1, Dating:1. ■ Post: Alice may make a post, only if Alice has no prof
 Matching:2. ■ Tell: Alice who holds a post may forward it to her friend Bob.
 Matching:3. ■ Return: Bob, who holds two matching posts, one from Alice, forwards to Alice the second post.
 Matching:4. ■ Withdraw: Alice may withdraw a post she made.
-Matching:5. ■ Meet: Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other.
+Matching:5, Anonymous Matching:1. ■ Meet: Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other, only by Anonymous Rendezvous:1 with the one-time keys of the two posts, at the rendezvous server named by the post whose public key has the smaller hash.
+Guardians:1. ■ Enter: Alice may create a ward, Wendy, and establish Wendy's identity by choosing Wendy's key pair. Alice is then the creator, a guardian and a friend of Wendy.
+Guardians:2. ■ Guardian decisions. Make guardian: Those who decide for Wendy may make Bob, a friend of a guardian of Wendy, a guardian and a friend of Wendy, with the consent of Bob. Resign: Bob may end his guardianship of Wendy. End guardian: Those who decide for Wendy, other than Bob, may end Bob's guardianship. Guardian unfriend: Bob may end his friendship with Wendy, which ends his guardianship. Wendy may not end a friendship with her guardian.
+Guardians:3. ■ Ward and person. Ward acquaint: Wendy, a ward of Alice, and Bob may jointly come to know each other. Ward befriend: Wendy may enter a relation with Bob with the consent of Bob and Alice, provided Wendy and Bob know each other and Alice and Bob are friends. Ward end, Unfriend, Ward unfriend: Wendy, Bob or Alice may end the relation of Bob and Wendy.
+Guardians:4. ■ Wards. Wards acquaint: Wendy, a ward of Alice, and Will, a ward of Bob, may jointly come to know each other. Wards befriend: Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+Guardians:5. ■ Retire: Those who decide for Wendy may retire Wendy; every guardianship and relation of Wendy then ends and Wendy can take no act.
+Rendezvous:1. ■ Open server: Carol may make her service Dave a rendezvous server.
+Rendezvous:2. ■ Invite by link: Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+Rendezvous:3. ■ Use link: Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
+Rendezvous:4. ■ Reconnection. Present: Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship. Match: Dave then gives each the address of the other.
+Anonymous Rendezvous:1. ■ Meet. Present: Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own. Match: Dave then gives each the address of the other.

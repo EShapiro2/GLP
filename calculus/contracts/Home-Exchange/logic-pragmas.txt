@@ -1,3 +1,3 @@
 Home Exchange
-Home Exchange instantiates Matching with a test of the match of homes.
+Home Exchange instantiates Anonymous Matching with a test of the match of homes.
 A post is a *home*, stating a dwelling, when it is free, and where and when its maker seeks one. Two homes match when each is where and when the other's maker seeks.
