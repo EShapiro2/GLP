@@ -1,3 +1,0 @@
-Market
-Market instantiates Anonymous Matching with a test of the match of offers and requests.
-A post is an *offer* or a *request* of a thing. An offer and a request match when the offer is of what the request seeks.

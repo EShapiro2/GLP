@@ -1,7 +1,7 @@
 Anonymous Matching (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Anonymous Matching:0 - | Alice, Bob and Carol are persons, Post and Reply posts, Other and Key one-time keys, Wendy and Will wards, Dave a service, Link an invitation link.
+Anonymous Matching:0 - | Alice, Bob and Carol are persons, Post and Reply posts, Other and Key one-time keys, Budget and Rest numbers, Wendy and Will wards, Dave a service, Link an invitation link.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
@@ -13,10 +13,10 @@ Friendship:1 ○ | Alice and Bob will become friends only if they trust each oth
 Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- person(Alice), person(Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Matching:0 - | *Posts* have a *test*, a parameter of Matching, whether two *match*. A person *holds* any post they made or forwarded to them.
-Matching:0 - | Environment: p and q match, for x.
-Matching:1 ■ Post: made(Alice,Post), post(Alice,Post) <- ~made(Alice,Post) guarded by Alice.
-Matching:2 ■ Tell: post_from(Bob,Post,Alice), post(Bob,Post) <- post(Alice,Post), friend(Alice,Bob), friend(Bob,Alice), ~post_from(Bob,Post,Alice) guarded by Alice.
+Matching:0 - | *Posts* have a *test*, a parameter of Matching, whether two *match*. Posts have a *budget*, a parameter of Matching: what a post has when made, and the *cost* of a forward. A person *holds* any post they made or forwarded to them.
+Matching:0 - | Environment: p and q match, for x; n is a budget of a new post, for x; n covers the cost of a forward leaving m, for x.
+Matching:1 ■ Post: made(Alice,Post), post(Alice,Post), budget(Alice,Post,Budget) <- new_budget(Alice,Budget), ~made(Alice,Post) guarded by Alice.
+Matching:2 ■ Tell: post_from(Bob,Post,Alice), post(Bob,Post), budget(Bob,Post,Rest) <- post(Alice,Post), budget(Alice,Post,Budget), covers(Alice,Budget,Rest), friend(Alice,Bob), friend(Bob,Alice), ~post_from(Bob,Post,Alice) guarded by Alice.
 Matching:3 ■ Return: post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob).
 Matching:4 ■ Withdraw: ~made(Alice,Post), ~post(Alice,Post) <- made(Alice,Post), post(Alice,Post) guarded by Alice.
 Matching:5+Anonymous Matching:1 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other), address(Alice,Carol), address(Carol,Alice) guarded by Alice, Carol.
