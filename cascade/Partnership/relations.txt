@@ -1,0 +1,2 @@
+Partnership instantiates Corporation: holds
+Partnership restricts it (Corporation): holds
