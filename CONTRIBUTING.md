@@ -1,6 +1,11 @@
 # Contributing to GLP
 
-How a collaborator changes this repo: by a pull request, which Code takes or declines with the reason (Udi, 2026-11-19).  It extends to every directory the procedure for phones in `phones/docs/contributors.md`, "Sending a fix", which still holds for phones.
+A collaborator opens a pull request in one of two places (Udi, 2026-11-19):
+
+1. **To this repo**, for the project they work on.  Code takes it or declines it with the reason, as below.
+2. **To the Audit repo**, `udi-shapiro/Grassroots-Audit`, for the project as a whole or for an area they do not work on.  The Audit repo's own `README.md` and `CONTRIBUTING.md` say how.
+
+This file extends the phones procedure in `phones/docs/contributors.md`, "Sending a fix", to every directory.  That procedure still holds for phones.
 
 ## What you read first
 
