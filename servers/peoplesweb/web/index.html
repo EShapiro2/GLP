@@ -642,8 +642,8 @@ function hitsOf(p, q, pts){
 }
 // How far, in radians along the sphere, the course swings beyond the
 // longitudes of its two ends: a hook or a loop.
-function swing(p, q, pts){
-  const f0 = DEPTH[p] === 0 ? pts[1][1] : PHI[p], lo = Math.min(f0, PHI[q]), hi = Math.max(f0, PHI[q]);
+function swing(p, q, pts, way = []){
+  const f0 = DEPTH[p] === 0 ? pts[1][1] : PHI[p], fs = [f0, PHI[q], ...way.map(x => x[1])], lo = Math.min(...fs), hi = Math.max(...fs);
   let w = 0; for (const [t, f] of pts) w = Math.max(w, (lo - f) * Math.sin(t), (f - hi) * Math.sin(t));
   return w;
 }
@@ -652,7 +652,9 @@ function swing(p, q, pts){
 function globeFaults(lim = 0.05){
   const out = [];
   D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
-    const pts = course(p, c.id), h = hitsOf(p, c.id, pts), sw = swing(p, c.id, pts);
+    // A bend around an ellipse between two contracts on one meridian goes
+    // out to its waypoint; only a bow beyond the waypoints is a fault.
+    const pts = course(p, c.id), h = hitsOf(p, c.id, pts), sw = swing(p, c.id, pts, WAY[`${p}>${c.id}`] || []);
     if (h.length) out.push(`${p} > ${c.id} crosses ${h.map(x => x[0]).join(', ')}`);
     if (sw > lim) out.push(`${p} > ${c.id} swings ${sw.toFixed(2)}`); }));
   return out;
