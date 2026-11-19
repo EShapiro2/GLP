@@ -37,6 +37,8 @@ DIRECTORIES = [
     ('programs/ggga', 'GGGA', ['SRC'], 'its contracts, which the paper SRC prints'),
     ('programs/go', 'GO', ['GO'], ''),
     ('programs/gm', 'GM', ['GM'], ''),
+    ('programs/lwg', 'LWG', [], "Nimrod Talmon's: the contracts LWG writes from governing documents; its paper, LWG: From Laws and Whitepapers to GrassApps, in preparation (Udi, 2026-11-19)"),
+    ('tools/lwg', 'LWG', [], "Nimrod Talmon's: the prototype from a governing document to a grassroots contract (Udi, 2026-11-19)"),
     ('programs/gce', 'GCE', [], "Grassroots Contract Examples, Nimrod Talmon's; the paper responsible for each is named in its NAME.txt's % Owner line"),
     ('programs/lbm', 'GRH', ['GRH'], ''),
     ('programs/currencies', 'Currencies', ['GC', 'GB', 'SGC', 'GCC'], ''),
@@ -58,6 +60,7 @@ DIRECTORIES = [
     ('programs/apps/look.json', 'GSA', ['GSA'], "the families' names and colours"),
     ('cascade', 'Code', [], 'the recorded runs of the cascade'),
     ('cascade.sh', 'Code', [], 'the cascade'),
+    ('CONTRIBUTING.md', 'Code', [], 'how a collaborator contributes, the one document for it (Udi, 2026-11-19)'),
     ('simulation', 'Code', [], 'the recorded simulations'),
     ('test', 'Code', [], "the suite's harness; the Dart test trees are IGLP's"),
     ('tools', 'Code', [], ''),
@@ -139,6 +142,7 @@ NO_PAPER = [
     ('Audit', 'Our side of the audit by GPT auditors', 'udi-shapiro/Grassroots-Audit'),
     ('Phones', 'Phone testing', ''),
     ('GCE', 'Grassroots Contract Examples', ''),
+    ('LWG', 'From Laws and Whitepapers to GrassApps, Nimrod Talmon\'s, its paper in preparation', ''),
 ]
 
 # The directories whose every entry the site must account for, besides the

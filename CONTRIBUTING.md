@@ -11,6 +11,15 @@ A collaborator opens a pull request in one of two places (Udi, 2026-11-19):
 
 A fault you find is reported as an issue, not as a pull request (see "Faults" below).
 
+## Owning a project
+
+A collaborator may own a project and its paper as Udi does, under the same rules (Udi, 2026-11-19):
+
+1. The project has its paper's repo, its directories in this repo (recorded in `directories.py`), its contracts under the Calculus's names (`calculus/NAMES.txt`), and its place on peoplesweb.org.
+2. The collaborator approves the revisions of their own paper and contracts, as Udi approves his.
+3. The collaborator's own Claude reads the same rules, in `organisation/` of this repo, and sends the work as pull requests.  Code tests them and merges them, as it merges a thread's branch.
+4. Udi's approval is still needed for a change to the language, to the Calculus, or to a contract of another project.
+
 ## What you read first
 
 1. `CLAUDE.md`, the rules every change to this repo follows.
@@ -50,7 +59,7 @@ The full suite runs every night on `main`.  You need not run it.
 
 ## What happens to your pull request
 
-1. Code tells Udi of every new or updated pull request.
+1. Code checks this repo every hour for new and updated pull requests, and answers each on GitHub.  Udi hears of one only if it changes a paper or a contract, since that needs his approval.
 2. Code sends it to the owner of each directory it touches, by `directories.py`, for its content:
    - A change that brings the code to its paper needs no further approval.
    - A change that goes beyond the paper, changes a contract's words, or changes the language or its engine waits until the owner's paper says it, with Udi's approval.
