@@ -1,0 +1,7 @@
+P          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
+1 contracts, 0 with a fault
+--- sasx/P.txt
+P: Plaza (expanded schemas)
+P:0 - | Orga is a person, Score, Enough, Sx, Sy, Vx and Vy numbers.
+P:1 ■ Pass: passed(Orga,Vx,Vy) <- status(Orga,Sx,Sy), ideal(Orga,>=Enough,EnoughI,EnoughJ), difference(EnoughF,EnoughI,Sx), difference(EnoughH,EnoughJ,Sy), difference(EnoughD,EnoughI,Vx), difference(EnoughK,EnoughJ,Vy), sum(EnoughU,EnoughF,EnoughH), sum(EnoughB,EnoughD,EnoughK), sum(EnoughG,EnoughB,Score), ge(EnoughU,EnoughG), ge(Enough,3) guarded by Orga.

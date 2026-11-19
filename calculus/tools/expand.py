@@ -474,11 +474,17 @@ def bind(name, target, defs, binding, sub):
         d.here.append(here)
 
 
+WEAK = '■◆○'    # the legal modalities, strongest first: enforced, attested, undertaken; an act had by two paths whose
+                # texts differ only in the modality is one act, with the weaker of the two (Calculus #8, 2026-11-17)
+
+
 def merge(a, b):
     """A clause that comes by two paths (rule 1): where the two are one clause, sentence by sentence, with restrictions
-    appended, A takes every restriction of B it lacks, after its own, and B's labels; the expanded text then carries
+    appended, A takes every restriction of B it lacks, after its own, and B's labels, and the weaker of the two marks; the expanded text then carries
     every inherited restriction, as the merged schema has every condition (tools/gcsas.py).  False where they are not."""
-    if len(a.sents) != len(b.sents) or a.mark != b.mark or a.title != b.title:
+    if len(a.sents) != len(b.sents) or a.title != b.title:
+        return False
+    if a.mark != b.mark and not (a.mark in WEAK and b.mark in WEAK):
         return False
     for x, y in zip(a.sents, b.sents):
         if x.heads != y.heads or x.base() is None or x.base() != y.base():
@@ -491,6 +497,8 @@ def merge(a, b):
     for l in b.labels:
         if l not in a.labels:
             a.labels.append(l)
+    if a.mark != b.mark:                      # texts that differ only in the modality: one act, with the weaker
+        a.mark = max(a.mark, b.mark, key=WEAK.index)
     return True
 
 
