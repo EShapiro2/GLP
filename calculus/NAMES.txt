@@ -95,7 +95,6 @@ Agora | Agora | Agora | agora | agora
 DAO | DAO | DAO | dao | dao
 Matching | Matching | Matching | matching | matching
 Anonymous Matching | Anonymous Matching | Anonymous-Matching | anonymous_matching | anonymous_matching
-Market | Market | Market | market | market
 Dating | Dating | Dating | dating | dating
 Jobs | Jobs | Jobs | jobs | jobs
 Help | Help | Help | help | help

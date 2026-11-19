@@ -1,7 +1,7 @@
 Carpool (flat text)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Carpool:0 - | Alice, Bob and Carol are persons, Post and Reply posts, Other and Key one-time keys, Wendy and Will wards, Dave a service, Link an invitation link.
+Carpool:0 - | Alice, Bob and Carol are persons, Post and Reply posts, Other and Key one-time keys, Budget and Rest numbers, Wendy and Will wards, Dave a service, Link an invitation link.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
@@ -13,10 +13,10 @@ Friendship:1 ○ | Alice and Bob will become friends only if they trust each oth
 Friendship:2+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Matching:0 - | *Posts* have a *test*, a parameter of Matching, whether two *match*. A person *holds* any post they made or forwarded to them.
-Matching:0 - | Environment: p and q match, for x.
-Matching:1 ■ Post: Alice may Alice has made the post Post and Alice holds the post Post, provided not Alice has made the post Post.
-Matching:2 ■ Tell: Alice may Bob holds the post Post from Alice and Bob holds the post Post, provided Alice holds the post Post, Alice counts Bob as a friend, Bob counts Alice as a friend and not Bob holds the post Post from Alice.
+Matching:0 - | *Posts* have a *test*, a parameter of Matching, whether two *match*. Posts have a *budget*, a parameter of Matching: what a post has when made, and the *cost* of a forward. A person *holds* any post they made or forwarded to them.
+Matching:0 - | Environment: p and q match, for x; n is a budget of a new post, for x; n covers the cost of a forward leaving m, for x.
+Matching:1 ■ Post: Alice may Alice has made the post Post, Alice holds the post Post and Alice has the budget Budget for Post, provided Budget is a budget of a new post for Alice and not Alice has made the post Post.
+Matching:2 ■ Tell: Alice may Bob holds the post Post from Alice, Bob holds the post Post and Bob has the budget Rest for Post, provided Alice holds the post Post, Alice has the budget Budget for Post, Budget covers the cost of a forward leaving Rest for Alice, Alice counts Bob as a friend, Bob counts Alice as a friend and not Bob holds the post Post from Alice.
 Matching:3 ■ Return: Alice holds the post Other from Bob and Alice holds the post Other, provided Bob holds the post Post from Alice, Bob holds the post Other, Post and Other match for Bob and not Alice holds the post Other from Bob.
 Matching:4 ■ Withdraw: Alice may no longer Alice has made the post Post and no longer Alice holds the post Post.
 Matching:5+Anonymous Matching:1 ■ Meet: Alice and Carol may jointly Alice knows Carol and Carol knows Alice, provided Alice has made the post Post, Carol has made the post Other, Alice holds the post Other, Carol holds the post Post, Post and Other match for Alice, Alice has the address of Carol and Carol has the address of Alice.
