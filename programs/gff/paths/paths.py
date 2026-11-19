@@ -264,6 +264,14 @@ def graph_label(g):
     return "q{}".format(g["q"]) if r == 2 else "r{:g}-q{}".format(r, g["q"])
 
 
+def graph_title(g):
+    """The tables' title: q (and r, if not 2) for Kleinberg's grid, d for the regular graph."""
+    if g["kind"] == "regular":
+        return "random {}-regular graph".format(g["d"])
+    r = g.get("r", 2)
+    return "q = {}".format(g["q"]) if r == 2 else "q = {}, r = {:g}".format(g["q"], r)
+
+
 def graph_text(g, n):
     if g["kind"] == "regular":
         return "a random {}-regular graph on {} persons (an expander)".format(g["d"], n * n)
@@ -516,7 +524,9 @@ def shorten(friend_sets, b, par0, p, rng, log=None):
         shortens += 1
         if log is not None:
             log(("s", a, carol, took, int(carol in friend_sets[a])))
-        for x in [a] + list(children.get(a, ())):
+        # sorted: a set's order depends on the Python version, and with 0 < p < 1 the order
+        # decides who draws which introduction, so iterating the set made the tables differ
+        for x in [a] + sorted(children.get(a, ())):
             if x not in queued:
                 work.append(x)
                 queued.add(x)
@@ -661,10 +671,10 @@ def write_q(spec, runs, outdir, strategies, ps):
     def label(bi):
         return "all" if bi is None else BIN_LABELS[bi]
 
-    L = ["# GFF-I and GFF-PS path lengths, {}".format(graph_label(spec)), ""]
+    L = ["# GFF path lengths, first following and Short Feeds' shortening, {}".format(graph_title(spec)), ""]
     L.append("{}; seeds {}, pooled; "
-             "produced by programs/gff/paths/paths.py on the contracts of programs/gff at d37f58f7 "
-             "(see the docstring and README.md).".format(graph_text(spec, N_SIDE), ", ".join(map(str, seeds))))
+             "produced by programs/gff/paths/paths.py, which reprints this file unchanged run after run, "
+             "on Labelled Overlay:1 and Short Feeds:1 (programs/gff; see the docstring and README.md).".format(graph_text(spec, N_SIDE), ", ".join(map(str, seeds))))
     L.append("Path and ratio are over the deciders who follow; ratio is path length over graph distance "
              "in the friendship graph; waiting is the fraction of deciders still waiting at the end; holders "
              "per decided follower is all who follow the feed (the author's friends included) over the "
@@ -745,8 +755,8 @@ def write_q(spec, runs, outdir, strategies, ps):
     L.append("## Per seed, all bins")
     L.append("")
     L += ["| seed | measure | following | waiting | path mean / max | ratio mean / max | fan-in max "
-          "| shortenings | introductions | refused | run time (s) |",
-          "|---:|---|---:|---:|---|---|---:|---:|---:|---:|---:|"]
+          "| shortenings | introductions | refused |",
+          "|---:|---|---:|---:|---|---|---:|---:|---:|---:|"]
     for r in runs:
         fo = sum(r["glob"]["following"])
         wa = frac(sum(r["glob"]["waits"]), sum(r["glob"]["deciders"]))
@@ -759,13 +769,13 @@ def write_q(spec, runs, outdir, strategies, ps):
             sh = sum(r["cnt"][k]["shortens"]) if k.startswith("ps/") else "-"
             it = sum(r["cnt"][k]["intros"]) if k.startswith("ps/") else "-"
             rf = sum(r["cnt"][k]["refusals"]) if k.startswith("ps/") else "-"
-            L.append("| {} | {} | {} | {} | {} / {} | {} / {} | {} | {} | {} | {} | {:.1f} |".format(
+            L.append("| {} | {} | {} | {} | {} / {} | {} / {} | {} | {} | {} | {} |".format(
                 r["seed"], describe(k), fo, wa, pm, px, rm, rx, max(fi) if fi else "-",
-                sh, it, rf, r["times"][k]))
+                sh, it, rf))
     L.append("")
-    L += ["| seed | author-decider pairs | mean friends per person | run time (s) |", "|---:|---:|---:|---:|"]
+    L += ["| seed | author-decider pairs | mean friends per person |", "|---:|---:|---:|"]
     for r in runs:
-        L.append("| {} | {} | {:.3f} | {:.0f} |".format(r["seed"], r["pairs"], r["mean_degree"], r["seconds"]))
+        L.append("| {} | {} | {:.3f} |".format(r["seed"], r["pairs"], r["mean_degree"]))
     L.append("")
     os.makedirs(outdir, exist_ok=True)
     with open(os.path.join(outdir, "gff-ps-{}.md".format(graph_label(spec))), "w") as fh:

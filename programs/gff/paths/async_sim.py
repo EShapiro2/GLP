@@ -101,6 +101,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULTS = {"period": 10.0, "decide": 200.0, "end": 800.0, "jitter": 1.0,
             "shorten_rate": 0.0, "p": 0.0, "strategy": "random",
             "redundancy": 1, "back_channel": False, "down_frac": 0.0, "down_mean": 5.0}
+# Every loop over a set that draws from rng walks it sorted: a set's order depends on the
+# Python version, so walking it unsorted made the runs differ between versions.
 ON_TIME = 5.0   # an item is on time if it arrives within this many periods of posting
 
 
@@ -155,7 +157,7 @@ def simulate(adj, friend_sets, b, deciders, rng, period=10.0, decide=200.0, end=
         # deliver (GFF-I:2): a, pointing to x, receives every item x holds that a lacks
         if x in down:
             return
-        for item in held.get(x, ()):
+        for item in sorted(held.get(x, ())):
             if item not in held.get(a, ()):
                 c["messages"] += 1
                 push(t + hop(), "arrive", a, item, x)
@@ -210,7 +212,7 @@ def simulate(adj, friend_sets, b, deciders, rng, period=10.0, decide=200.0, end=
     def send(x, item, t):
         if x in down:
             return
-        for a in children.get(x, ()):   # a copy to everyone pointing to x; x can't know who holds it already
+        for a in sorted(children.get(x, ())):   # a copy to everyone pointing to x; x can't know who holds it already
             c["messages"] += 1
             push(t + hop(), "arrive", a, item, x)
 
@@ -220,7 +222,7 @@ def simulate(adj, friend_sets, b, deciders, rng, period=10.0, decide=200.0, end=
         dq = deque([b])
         while dq:
             x = dq.popleft()
-            for a in children.get(x, ()):
+            for a in sorted(children.get(x, ())):
                 if a not in dist:
                     dist[a] = dist[x] + 1
                     dq.append(a)
@@ -233,15 +235,15 @@ def simulate(adj, friend_sets, b, deciders, rng, period=10.0, decide=200.0, end=
             "cut_off": len(fol) - len(reach), "fanin": len(children.get(b, ())), "load": load,
             "down": len(down), **c})
 
-    for a in dec:
+    for a in sorted(dec):
         if a not in afriends:
             push(rng.uniform(0, decide), "decide", a)
     if redundancy > 1:
-        for f in afriends:
+        for f in sorted(afriends):
             push(hop(), "redund", f)
     up_mean = down_mean * period * (1 - down_frac) / down_frac if down_frac > 0 else None
     if down_frac > 0:   # crash faults: each agent but the author is down a fraction down_frac of the time
-        for a in afriends | dec:
+        for a in sorted(afriends | dec):
             if rng.random() < down_frac:
                 down.add(a)
                 emit(("D", a))
@@ -310,7 +312,7 @@ def simulate(adj, friend_sets, b, deciders, rng, period=10.0, decide=200.0, end=
             for x in ptr.get(a, ()):             # what a missed, from everyone it points to
                 catch_up(a, x, t)
                 back_catch_up(a, x, t)           # and back-forwards a owed while down
-            for ch in children.get(a, ()):       # and what its followers missed from it
+            for ch in sorted(children.get(a, ())):       # and what its followers missed from it
                 if ch not in down:
                     catch_up(ch, a, t)
                     back_catch_up(ch, a, t)      # and back-forwards it missed while down
