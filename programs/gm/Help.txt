@@ -6,5 +6,5 @@ Help
 Help instantiates Anonymous Matching with a test of the match of services and needs and a budget of a count set by the maker, a forward costing one.
 A post is a *service*, stating work its maker does, or a *need*, stating work its maker seeks done. A service and a need match when the service is the work the need seeks.
 Logic pragmas
-Help instantiates Anonymous Matching with a test of the match of services and needs.
+Help instantiates Anonymous Matching with a test of the match of services and needs and a budget of a count set by the maker, a forward costing one.
 A post is a *service*, stating work its maker does, or a *need*, stating work its maker seeks done. A service and a need match when the service is the work the need seeks.
