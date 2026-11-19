@@ -7,4 +7,4 @@ T:0 - | Alice, Bob and Carol are persons, Club a club.
 T:0 - | Bob and Carol are possibly Alice or one person.
 T:1 ■ Found: founder(Alice,Club), founder(Bob,Club), founder(Carol,Club) <- guarded by Alice, Bob, Carol possibly Alice=Bob, Alice=Carol, Bob=Carol.
 --- term T
-[sas(found, ['Alice', one('Bob', 'Alice'), one('Carol', ['Alice', 'Bob'])], ['Club'], [atom(founder, ['Alice', 'Club']), atom(founder, ['Bob', 'Club']), atom(founder, ['Carol', 'Club'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(identity, ['Carol'])], true, ['Alice', 'Bob', 'Carol'])]
+[sas(found, ['Alice', one('Bob', 'Alice'), one('Carol', ['Alice', 'Bob'])], ['Club'], [atom(founder, ['Alice', const('Club')]), atom(founder, ['Bob', const('Club')]), atom(founder, ['Carol', const('Club')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(identity, ['Carol'])], true, ['Alice', 'Bob', 'Carol'])]
