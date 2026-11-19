@@ -1,0 +1,8 @@
+Anonymous Matching
+Anonymous Matching composes Matching with Anonymous Rendezvous, and restricts the composition.
+Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
+Alice and Carol are persons, Dave a service, Post and Reply posts, Key and Pair one-time keys.
+1. ■ Meet. Present: Anonymous Rendezvous:1 Present, only if Alice has made the post Post, Alice holds the post Reply, Post carries the public key of Key, Reply carries the public key of Pair and Dave is named by the one of Post and Reply whose public key has the smaller hash. Meet: Matching:5, only if Alice has the address of Carol and Carol has the address of Alice.
+Logic pragmas.
+Vocabulary: p carries the public key of k, for x = post_key(x,p,k); d is named by the one of p and q whose public key has the smaller hash, for x = pair_server(x,p,q,d).
+Environment: p carries the public key of k, for x; d is named by the one of p and q whose public key has the smaller hash, for x.
