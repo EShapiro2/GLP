@@ -33,7 +33,7 @@ BY_DIR = {
            'authors': 'Ehud Shapiro', 'pdf': 'GO'},
     # GM's contracts (programs/gm), in preparation, no PDF served yet;
     # title and author as the GM thread reports them (2026-11-18).
-    'GM': {'title': 'Grassroots Matching: Dating, Exchanging, Booking', 'authors': 'Ehud Shapiro'},
+    'GM': {'title': 'Anonymous Grassroots Matching: Dating, Exchanging, Booking', 'authors': 'Ehud Shapiro'},
 }
 
 # Where each paper's source is, this file being the one record of it: its repository under EShapiro2 on GitHub, the one Overleaf syncs with, and its main file.  tools/papers_sync.py builds each from there; a paper on arXiv gets a PDF too, served as Updated while its repository is ahead of its latest arXiv version.
