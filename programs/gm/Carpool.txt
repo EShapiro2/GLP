@@ -1,9 +1,9 @@
 % Carpool: the contract, the one copy, its owner's.
 % Owner: GM (Udi, 2026-11-18, approving the recommendation, reported by the coordinator).
 % Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
-% Last changed: 2026-11-18, written from the paper at GM main 794a6a2; first line as Udi approved it, 2026-11-18, on the Calculus's recommendation; the Logic pragmas are the Calculus's, in calculus/contracts; no Interface pragmas yet. First line: instantiates Anonymous Matching, 2026-11-19 (Udi, 2026-11-19, "yes", relayed by the coordinator); the Logic pragmas below are the Calculus's and are to be printed again.
+% Last changed: 2026-11-18, written from the paper at GM main 794a6a2; first line as Udi approved it, 2026-11-18, on the Calculus's recommendation; the Logic pragmas are the Calculus's, in calculus/contracts; no Interface pragmas yet. First line: instantiates Anonymous Matching, 2026-11-19 (Udi, 2026-11-19, "yes", relayed by the coordinator); the Logic pragmas below are the Calculus's and are to be printed again. Budget in the first line, 2026-11-19 (Udi, 2026-11-19, "yes", relayed by the coordinator); the Logic pragmas below are the Calculus's, to be printed again.
 Carpool
-Carpool instantiates Anonymous Matching with a test of the match of commutes.
+Carpool instantiates Anonymous Matching with a test of the match of commutes and a budget of a fixed count, a forward costing one.
 A post is a *commute*, stating a route, its times, and whether its maker drives, rides or either. Two commutes match when their routes and times agree and one maker drives and the other rides.
 Logic pragmas
 Carpool instantiates Matching.
