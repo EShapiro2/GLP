@@ -1,0 +1,143 @@
+{
+ "title": "Worker cooperative under the Unicorn Grocery rules (excerpt)",
+ "source": "Rules of Unicorn Grocery Limited, rules 14-22, 32, 37, 47, 49, 53-55",
+ "base": "GCoop",
+ "roles": {
+  "1": "member",
+  "2": "director"
+ },
+ "rules": {
+  "ordinary": {
+   "body": 1,
+   "base": "cast",
+   "threshold": [
+    1,
+    2,
+    true
+   ],
+   "quorum": [
+    33,
+    50
+   ],
+   "open_days": 14
+  },
+  "extraordinary": {
+   "body": 1,
+   "base": "cast",
+   "threshold": [
+    3,
+    4,
+    false
+   ],
+   "quorum": [
+    33,
+    50
+   ],
+   "open_days": 14
+  },
+  "directors": {
+   "body": 2,
+   "base": "all",
+   "threshold": [
+    1,
+    2,
+    true
+   ],
+   "quorum": null,
+   "open_days": null
+  }
+ },
+ "acts": {
+  "*": "ordinary",
+  "coop_join": "directors",
+  "expel": "extraordinary",
+  "amend": "extraordinary"
+ },
+ "name": "LWGU",
+ "undertakings": [
+  "Voluntary membership.  Orga does not make membership a condition of employment.",
+  "Education.  Orga tells those who may join what a member's role is, and trains its members in it."
+ ],
+ "rows": {
+  "14": {
+   "mapped_to": "admission is an act of the applicant and the directors; that the applicant is an employee is not checked",
+   "status": "not built",
+   "question": "The app does not know who is an employee. Default: the directors judge it when they admit. Should someone attest employment?"
+  },
+  "15": {
+   "mapped_to": "undertaking of the organization; joining is always the applicant's own act",
+   "status": "built",
+   "question": ""
+  },
+  "16": {
+   "mapped_to": "act: admit a member; decided by the directors rule",
+   "status": "built",
+   "question": "How the directors decide is in a part of the rules not given here. Used: more than half of all directors. Age and the one share are not checked. Agreed?"
+  },
+  "17": {
+   "mapped_to": "a member's promise",
+   "status": "not built",
+   "question": "Should joining record these duties as the member's own promise? Default: not recorded."
+  },
+  "18": {
+   "mapped_to": "undertaking of the organization",
+   "status": "built",
+   "question": ""
+  },
+  "19": {
+   "mapped_to": "carried by the same undertaking as rule 18",
+   "status": "built",
+   "question": ""
+  },
+  "20": {
+   "mapped_to": "resigning is the member's own act (leave); expulsion is the act expel; the other three are not recorded",
+   "status": "absorbed",
+   "question": "Who records that employment ended, that the share is no longer held, or a death? Default: nobody; the members may expel."
+  },
+  "21": {
+   "mapped_to": "act: expel; decided by the extraordinary rule",
+   "status": "built",
+   "question": "The member must be heard before the vote. Default: the 14 days between the motion and the decision serve for it, and nothing checks that the member answered. Should the app require a recorded response?"
+  },
+  "22": {
+   "mapped_to": "payment for shares; re-admission by the members",
+   "status": "not built",
+   "question": "Shares and their repayment are not built. Re-admission of an expelled member would need the app to remember the expulsion. Default: re-admission goes as any admission."
+  },
+  "32": {
+   "mapped_to": "a motion can be decided only 14 days or more after it was moved",
+   "status": "built",
+   "question": "Shorter notice with the written agreement of 90% of the members is not built. Needed?"
+  },
+  "37": {
+   "mapped_to": "quorum on the votes: at least 33/50 of the members voted",
+   "status": "built",
+   "question": "The floor of 3 members is not built; it matters only below five members. Agreed to leave it out?"
+  },
+  "47": {
+   "mapped_to": "one vote each",
+   "status": "built",
+   "question": ""
+  },
+  "49": {
+   "mapped_to": "a tie does not decide: the threshold is more than half",
+   "status": "built",
+   "question": ""
+  },
+  "53": {
+   "mapped_to": "the table of acts: expel and amend by the extraordinary rule, every other act by the ordinary rule",
+   "status": "built",
+   "question": "Disposing of a third of the assets and winding up have no act of their own here, so they go by the ordinary rule. Default kept; should they wait until such acts exist?"
+  },
+  "54": {
+   "mapped_to": "the extraordinary rule (at least three quarters of the votes cast) and the ordinary rule (more than half of the votes cast)",
+   "status": "built",
+   "question": "\"Simple majority (51%)\" is read as more than half. Agreed?"
+  },
+  "55": {
+   "mapped_to": "every vote in the app is a signed vote on a written motion",
+   "status": "absorbed",
+   "question": ""
+  }
+ }
+}

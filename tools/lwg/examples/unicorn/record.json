@@ -1,0 +1,172 @@
+[
+ {
+  "id": "14",
+  "text": "All Employees of the Co-operative may be admitted to membership of the Co-operative, except that the Co-operative in a general meeting may by a majority vote decide to exclude from membership: (a) Newly appointed Employees during such reasonable probationary period ...",
+  "kind": "boundary",
+  "note": "who may be a member: employees",
+  "mapped_to": "admission is an act of the applicant and the directors; that the applicant is an employee is not checked",
+  "status": "not built",
+  "question": "The app does not know who is an employee. Default: the directors judge it when they admit. Should someone attest employment?",
+  "answer": "",
+  "clause": ""
+ },
+ {
+  "id": "15",
+  "text": "In accordance with the Co-operative Principle of voluntary and open membership, whilst the Co-operative shall undertake to encourage its Employees to become Members, membership must be voluntary and as a result cannot be a condition of employment.",
+  "kind": "scope",
+  "note": "",
+  "mapped_to": "undertaking of the organization; joining is always the applicant's own act",
+  "status": "built",
+  "question": "",
+  "clause": "LWGU"
+ },
+ {
+  "id": "16",
+  "text": "No person shall be admitted into membership of the Co-operative unless that person has attained the age of 18, supports the aims of the Co-operative and has completed an application for membership which includes an application for at least one share in the Co-operative. Such an application form must ...",
+  "kind": "boundary",
+  "note": "the directors approve each application",
+  "mapped_to": "act: admit a member; decided by the directors rule",
+  "status": "built",
+  "question": "How the directors decide is in a part of the rules not given here. Used: more than half of all directors. Age and the one share are not checked. Agreed?",
+  "answer": "",
+  "clause": "LWGU"
+ },
+ {
+  "id": "17",
+  "text": "All Members agree to attend general meetings and take an active interest in the operation and development of the Co-operative and its business. Members have a duty to respect the confidential nature of the business decisions of the Co-operative.",
+  "kind": "choice",
+  "note": "duties of a member",
+  "mapped_to": "a member's promise",
+  "status": "not built",
+  "question": "Should joining record these duties as the member's own promise? Default: not recorded.",
+  "answer": "",
+  "clause": ""
+ },
+ {
+  "id": "18",
+  "text": "In accordance with the Co-operative Principle of education, training and information, the Co-operative shall provide potential Members with information about what the role of a Member is within the Co-operative and will provide training in the skills required to be a Member ...",
+  "kind": "information",
+  "note": "",
+  "mapped_to": "undertaking of the organization",
+  "status": "built",
+  "question": "",
+  "clause": "LWGU"
+ },
+ {
+  "id": "19",
+  "text": "The Co-operative shall provide ongoing education and training in co-operative values and principles and associated topics. The Co-operative shall support its Members by ensuring that general meetings are accessible and encourage participation.",
+  "kind": "information",
+  "note": "",
+  "mapped_to": "carried by the same undertaking as rule 18",
+  "status": "built",
+  "question": "",
+  "clause": "LWGU"
+ },
+ {
+  "id": "20",
+  "text": "A Member shall cease to be a Member of the Co-operative immediately that s/he: (a) Ceases to be in the employment of the Co-operative; or (b) Fails to hold the minimum shareholding; or (c) Resigns in Writing to the Secretary; or (d) Is expelled from membership in accordance with these Rules; or (e) Dies.",
+  "kind": "boundary",
+  "note": "five ways membership ends",
+  "mapped_to": "resigning is the member's own act (leave); expulsion is the act expel; the other three are not recorded",
+  "status": "absorbed",
+  "question": "Who records that employment ended, that the share is no longer held, or a death? Default: nobody; the members may expel.",
+  "answer": "",
+  "clause": ""
+ },
+ {
+  "id": "21",
+  "text": "A Member may be expelled for conduct prejudicial to the Co-operative by an Extraordinary Resolution, provided that the grounds for expulsion have been specified in the notices calling the meeting and that the Member whose expulsion is to be considered shall be given the opportunity to make representations ...",
+  "kind": "aggregation",
+  "note": "also a hearing before the vote",
+  "mapped_to": "act: expel; decided by the extraordinary rule",
+  "status": "built",
+  "question": "The member must be heard before the vote. Default: the 14 days between the motion and the decision serve for it, and nothing checks that the member answered. Should the app require a recorded response?",
+  "answer": "",
+  "clause": "LWGU"
+ },
+ {
+  "id": "22",
+  "text": "If on due notice having been served the Member fails to attend the meeting the meeting may proceed in the Member's absence. (a) An expelled Member shall be paid the nominal value of shares held by them at the time of expulsion; (b) No Member expelled from membership shall be re-admitted except by an Extraordinary Resolution.",
+  "kind": "payoff",
+  "note": "also a boundary rule: re-admission",
+  "mapped_to": "payment for shares; re-admission by the members",
+  "status": "not built",
+  "question": "Shares and their repayment are not built. Re-admission of an expelled member would need the app to remember the expulsion. Default: re-admission goes as any admission.",
+  "answer": "",
+  "clause": ""
+ },
+ {
+  "id": "32",
+  "text": "The Directors shall call the annual general meeting giving 14 Clear Days' notice to all Members. All other general meetings shall be convened with at least 14 Clear Days' notice but may be held at shorter notice if so agreed in Writing by 90% of the Members.",
+  "kind": "information",
+  "note": "notice before a meeting",
+  "mapped_to": "a motion can be decided only 14 days or more after it was moved",
+  "status": "built",
+  "question": "Shorter notice with the written agreement of 90% of the members is not built. Needed?",
+  "answer": "",
+  "clause": "LWGU"
+ },
+ {
+  "id": "37",
+  "text": "No business shall be transacted at a general meeting unless a quorum of Members is present which shall include those Members not present in person. Unless amended by Extraordinary Resolution, a quorum shall be 3 Members or 66% of the membership, whichever is the greater.",
+  "kind": "aggregation",
+  "note": "quorum",
+  "mapped_to": "quorum on the votes: at least 33/50 of the members voted",
+  "status": "built",
+  "question": "The floor of 3 members is not built; it matters only below five members. Agreed to leave it out?",
+  "answer": "",
+  "clause": "LWGU"
+ },
+ {
+  "id": "47",
+  "text": "In accordance with the Co-operative Principle of democratic member control, each Member shall have one vote on any question to be decided in general meeting.",
+  "kind": "aggregation",
+  "note": "weight",
+  "mapped_to": "one vote each",
+  "status": "built",
+  "question": "",
+  "clause": "LWGU"
+ },
+ {
+  "id": "49",
+  "text": "In the case of an equality of votes, whether on a show of hands or a poll, the chairperson shall not have a second or casting vote and the resolution shall be deemed to have been lost.",
+  "kind": "aggregation",
+  "note": "ties",
+  "mapped_to": "a tie does not decide: the threshold is more than half",
+  "status": "built",
+  "question": "",
+  "clause": "LWGU"
+ },
+ {
+  "id": "53",
+  "text": "Decisions at general meetings shall be made by passing resolutions: (a) The following decisions must be made by Extraordinary Resolution: (i) Decisions to expel Members; (ii) Decisions to dispose of assets of the Co-operative equivalent in value to one-third of the Co-operative's last published balance sheet ...",
+  "kind": "aggregation",
+  "note": "which rule for which act",
+  "mapped_to": "the table of acts: expel and amend by the extraordinary rule, every other act by the ordinary rule",
+  "status": "built",
+  "question": "Disposing of a third of the assets and winding up have no act of their own here, so they go by the ordinary rule. Default kept; should they wait until such acts exist?",
+  "answer": "",
+  "clause": "LWGU"
+ },
+ {
+  "id": "54",
+  "text": "An Extraordinary Resolution is one passed by a majority of not less than 75% of votes cast at a general meeting and an ordinary resolution is one passed by a simple majority (51%) of votes cast.",
+  "kind": "aggregation",
+  "note": "the two thresholds",
+  "mapped_to": "the extraordinary rule (at least three quarters of the votes cast) and the ordinary rule (more than half of the votes cast)",
+  "status": "built",
+  "question": "\"Simple majority (51%)\" is read as more than half. Agreed?",
+  "answer": "",
+  "clause": "LWGU"
+ },
+ {
+  "id": "55",
+  "text": "Resolutions may be passed at general meetings or by written resolution. A written resolution may consist of several identical Documents signed by one or more Members.",
+  "kind": "aggregation",
+  "note": "",
+  "mapped_to": "every vote in the app is a signed vote on a written motion",
+  "status": "absorbed",
+  "question": "",
+  "clause": ""
+ }
+]

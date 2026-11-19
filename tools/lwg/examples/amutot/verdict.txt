@@ -1,0 +1,1 @@
+lwga: verdict: syntactically_grassroots_with_wards(acquaint, [org], [guardianship(org, created, creator)], [], [identity, person])

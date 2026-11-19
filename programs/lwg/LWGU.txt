@@ -1,0 +1,74 @@
+% LWGU --- written by tools/lwg; a trial contract, not registered.
+% Owner: LWG (not yet ruled).
+% Extends: GCoop, instantiating its bylaws and restricting it.
+% Schemas: LWGU.glp beside this file.
+LWGU: Worker cooperative under the Unicorn Grocery rules (excerpt)
+LWGU instantiates GCoop and restricts it.
+Orga is a cooperative; the directors decide to admit a member when more than half of the directors are for; the members decide to expel a member when at least three quarters of the votes cast are for, and at least 33/50 of the members voted, and the motion was moved at least 14 days before; the members decide to amend the bylaws when at least three quarters of the votes cast are for, and at least 33/50 of the members voted, and the motion was moved at least 14 days before; the members decide every other act of the organization when more than half of the votes cast are for, and at least 33/50 of the members voted, and the motion was moved at least 14 days before.
+Alice and Bob are persons, Orga a cooperative.
+1. ○ Voluntary membership.  Orga does not make membership a condition of employment.
+2. ○ Education.  Orga tells those who may join what a member's role is, and trains its members in it.
+3. ■ Voting against.  A holder of a role may vote against a proposed act of Orga, once, in place of voting for it.
+Pragmas
+Look: 🏛️, governance
+Organisations: the organisations Alice participates in, and her roles in each.
+Coins: the coins Alice holds.
+Bonds: the bonds Alice holds.
+Identity: Alice [Establish]
+Acquaintance: Alice [Acquaint] <person Bob>
+  Bob: Alice asks you to approve this: acquaint.
+Introduction: Alice [Introduce]
+  Bob: Alice asks you to approve this: introduce.
+Friendship: Alice [Befriend]
+  Bob: Alice asks you to approve this: befriend.
+Ending a friendship: Alice [Unfriend]
+Acts of the organisation: Alice [Sign] <act>
+  Bob [Propose]
+  Bob [Vote] <act>
+  Otto [Move org acquaint] <motion> <mda>
+  Otto [Move orgs acquaint] <motion> <mda>
+  Bruno [Moveb orgs acquaint] <mda> <tda> <motion of the other organisation>
+  Otto [Move retire] <motion>
+  Otto [Move join] <motion> <mda>
+  Otto [Move expel] <motion> <mda>
+  Otto [Move appoint] <role> <motion> <mda>
+  Otto [Move dismiss] <role> <motion> <mda>
+  Otto [Move amend] <bylaws> <new bylaws> <motion> <mda>
+  Otto [Move coop board] <motion> <mda>
+  Otto [Move coop join] <motion>
+  Bob [Vote against] <act>
+Creation: Alice [Found] <organisation>
+  Orga: Alice asks you to approve this: found.
+Ward and person: Otto [Org acquaint] <person Bob> <motion> <mda>
+  Bob: Otto asks you to approve this: org acquaint.
+Ward and ward: Otto [Orgs acquaint] <other organisation> <person Bruno> <motion> <mda> <tda> <motion of the other organisation>
+  Bruno: Otto asks you to approve this: orgs acquaint.
+Retiring: Otto [Retire] <motion>
+Participation: Bob [Join] <person Otto> <motion> <mda>
+  Otto: Bob asks you to approve this: join.
+Membership: Bob [Leave]
+  Otto [Expel] <person Bob> <motion> <mda>
+  Bob [Coop join] <person Otto> <motion>
+  Otto: Bob asks you to approve this: coop join.
+Joint guardianship: Otto [Appoint] <person Bob> <role> <motion> <mda>
+  Bob: Otto asks you to approve this: appoint.
+  Otto [Dismiss] <person Bob> <role> <motion> <mda>
+  Bob [Resign role]
+Amendment: Otto [Amend] <bylaws> <new bylaws> <motion> <mda>
+Minting: Alice [Mint coin] <denomination> <amount>
+  Alice [Mint bond] <denomination> <maturity> <amount>
+Swap: Alice [Swap] <amount> <issuer wanted> <amount wanted> <maturity wanted>
+  Bob: Alice asks you to approve this: swap.
+Acceptance: Alice [Accept] <limit>
+Payment: Alice [Pay] <amount>
+  Alice [Payout] <amount>
+  Alice [Spend] <person Bob> <amount>
+Redemption: Alice [Redeem] <issuer wanted> <maturity wanted>
+Escrow: Alice [Deposit] <amount>
+  Carol: Alice asks you to approve this: deposit.
+  Carol [Release] <amount>
+  Bob: Carol asks you to approve this: release.
+  Carol [Return] <amount>
+  Alice: Carol asks you to approve this: return.
+Board: Otto [Coop board] <person Bob> <motion> <mda>
+  Bob: Otto asks you to approve this: coop board.
