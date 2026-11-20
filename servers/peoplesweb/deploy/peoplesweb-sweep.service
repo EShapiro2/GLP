@@ -7,4 +7,5 @@ Description=peoplesweb.org hourly sweep
 [Service]
 Type=oneshot
 User=root
-ExecStart=/srv/glp/servers/peoplesweb/deploy/sweep.sh
+# The lock keeps deploy/next.sh from building /next while the sweep runs.
+ExecStart=/usr/bin/flock /run/peoplesweb-sweep.lock /srv/glp/servers/peoplesweb/deploy/sweep.sh
