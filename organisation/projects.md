@@ -12,7 +12,7 @@ Each entry gives the thread's name, then each paper: its repo, main file and cit
 6. **GSA**: GSA `EShapiro2/GSG-Grassroots-Social-Graph`, `main_SGSG.tex`, `shapiro2026gsg`, record `docs/design-decisions.md`; GNA `EShapiro2/GLP-Networking-API`, `main.tex`, `bachar2026networking`, record `docs/decisions.md`.
 7. **CSSN**: `EShapiro2/SGLP`, `main_CSSN.tex`, `shapiro2026cssn`; record `docs/design-decisions.md`.
 8. **GLP**: the GLP paper `EShapiro2/GLP-ICLP-2026`, `main-GLP-ICLP-2026.tex`, `shapiro2025glp`; TGLP `EShapiro2/Moded-Types`, `main_tglp.tex`, `shapiro2026types`; IGLP `EShapiro2/CGLP`, `main_iglp.tex`, `shapiro2026implementing`; `EShapiro2/GLP-arXiv`, `main_GLP_arxiv.tex`; record `docs/decisions.md` of each.
-9. **vGLP**: `EShapiro2/VEUI-Volition-Elicitation-Rationalizing-the-GLP-Smartphone-User-Interface`, `main_UIVE.tex`, `shapiro2026volition`; record `docs/decisions.md`.
+9. **vGLP**: the vGLP paper `EShapiro2/vGLP-Compiling-it-to-sGLP-dGLP-and-fGLP`, `main_svGLP.tex`, record `docs/decisions.md`; OSPM, the old vGLP paper, `EShapiro2/VEUI-Volition-Elicitation-Rationalizing-the-GLP-Smartphone-User-Interface`, `main_UIVE.tex`, `shapiro2026volition`, record `docs/decisions.md`.
 10. **sGLP**: `EShapiro2/svGLP-Stochastic-Volitional-GLP`, `main_svGLP.tex`, `shapiro2026sglp`; record `docs/decisions.md`.
 11. **VMAT**: `EShapiro2/Grassroots-atomic-transactions`, `main VMAT.tex`, `lewis2026volitional`; record `docs/decisions.md`.
 12. **IVMAT**: `EShapiro2/IVMAT`, `main_UIVE.tex`, `keidar2026ivmat`; record `docs/decisions.md`.
@@ -33,5 +33,7 @@ Each entry gives the thread's name, then each paper: its repo, main file and cit
 27. **P99**: `EShapiro2/P99`, `main.tex`, `shapiro2026p99`; record `docs/decisions.md`.
 28. **Meta_Coop**: `EShapiro2/Meta_Coop`, `main_meta_coop.tex`, `caselli2025metacoop`; record `docs/decisions.md`.
 29. **EIC**: `EShapiro2/EIC-Proposal--Grassroots-Cooperatives`, `main.tex`; `EShapiro2/LSE-EIC-Pathfinder-Open`, `main.tex`; record `docs/decisions.md` of each.
+30. **GM**: `EShapiro2/GM-Grassroots-Matching`, `main_characterisation_ArXiv.tex`; record `docs/decisions.md`.
+31. **Audit**: `udi-shapiro/Grassroots-Audit`, branch `Claude`; record `CLAUDE.md` and `docs/handover-2026-11-20.md` there, which Audit keeps.
 
 `danbachar/grassroots-networking` is Dan Bachar's, and its `CLAUDE.md` is his.
