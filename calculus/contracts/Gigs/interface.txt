@@ -440,7 +440,7 @@ Withdraw: Alice [Withdraw] <bob> <skill>
 Post: Alice [Post] <job>
 Pass: Bob [Pass]
 Withdraw job: Alice [Withdraw job]
-Engage: Alice [Engage] <gov>
+Engage: Alice [Engage]
   Bob: Alice asks for your consent to engage.
 Deliver: Bob [Deliver]
 Accept work: Alice [Accept work]

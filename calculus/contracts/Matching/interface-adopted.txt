@@ -1,0 +1,6 @@
+Interface pragmas
+Post: Alice [Post] <post>
+Tell: Alice [Tell]
+Withdraw: Alice [Withdraw]
+Meet: Alice [Meet] <carol>
+  Carol: Alice asks for your consent to meet.
