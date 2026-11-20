@@ -5250,6 +5250,26 @@ check "CVA counts: fill taken until the count of tok reaches cap's 3, each copy 
 check_not "CVA counts: ... and no fourth tok" "view(alice, \[tok, tok, tok, tok\|view(alice, \[tok, tok, heavy, tok, tok" "$cva_cnt"
 check "CVA counts: with the weights 4 and 1, three tok and no heavy" "view(bob, \[tok, tok, tok, cap(3), wt(4), wt(1)\]" "$cva_cnt"
 check_not "CVA counts: ... heavy not taken, the sum 5 below 6" "view(bob, \[[a-z(), 0-9]*heavy" "$cva_cnt"
+# A function of the compiler's library, root, the whole square root rounded down (#120, proposed for vGLP Section 5.4): vGLP's roots, its agent run with no person and given at deployment area(a) and side(s); fence, whose constraint is s =< root(a), is taken where the side is at most the whole square root of the area: with area 10, root 3, at side 3 and not at side 4; and with area 99999999999, root 316227, at side 316227.  A platform whose contract uses no library function prints none of it (compile.sh --check).
+cva_rt_dir="$GLP_DIR/programs/tests/vg_roots_$$"
+mkdir -p "$cva_rt_dir" && cp "$CVA/roots/platform.vglp" "$cva_rt_dir/platform.vglp"
+cva_rt_emit=$(printf ':emit %s\n:quit\n' "$cva_rt_dir" | "$REPL_RUN" 2>&1)
+cva_rt=$("$REPL_RUN" <<HEREDOC
+$cva_rt_dir/platform.glp
+:limit 2000000
+agent(alice, [], N, O, [area(10), side(3)], A).
+agent(bob, [], N, O, [area(10), side(4)], A).
+agent(carol, [], N, O, [area(99999999999), side(316227)], A).
+:quit
+HEREDOC
+2>&1)
+rm -rf "${cva_rt_dir:?}"
+check "CVA roots: the platform emitted to GLP, the library's root printed in it" "wrote .*vg_roots_.*platform.glp" "$cva_rt_emit"
+check "CVA roots: fence taken at side 3, the whole square root of 10 being 3" "view(alice, \[fenced, area(10), side(3)\]" "$cva_rt"
+check_not "CVA roots: ... and not at side 4" "view(bob, \[fenced" "$cva_rt"
+check "CVA roots: ... and taken at side 316227, the whole square root of 99999999999, exact on whole numbers" "view(carol, \[fenced, area(99999999999), side(316227)\]" "$cva_rt"
+check "CVA roots: the platform prints root where its contract uses it" "^num_root(num_is(A), R?) :- integer(A?), A? > 0 | root_step(A?, A?, R).$" "$(cat "$CVA/roots/platform.vglp")"
+check_not "CVA roots: ... and a platform whose contract uses none prints none of it" "num_root" "$(cat "$CVA/counts/platform.vglp")"
 # The values the developer gives (vGLP 922ac53, Section 5.4, "Speech-act schemas as local specifications": "A platform is deployed when its developer compiles it, giving the compiler the values; the program carries them, so every participant of one of its instances holds the same values"): counts compiled with counts/values, cap(3), wt(4) and wt(2), prints developer_values and an agent of four arguments that starts the agent of five with them, which a mini-app calls; run with no person, its first view shows them, held from startup (devvalues).
 cva_dv_dir="$GLP_DIR/programs/tests/vg_devvalues_$$"
 mkdir -p "$cva_dv_dir" && cp "$CVA/counts/platform.vglp" "$cva_dv_dir/platform.vglp"
