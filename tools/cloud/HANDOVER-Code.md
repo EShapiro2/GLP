@@ -16,8 +16,7 @@ Code #36 compacted once and stays, by Udi's rule of 2026-11-20 14:32 UTC.  After
 
 ## Next
 
-- The branch lacks main's GCE five (ba7dc9279) and 9c8958b05: merge origin/main into it.
-- cascade/Democratic-Community has no verdict.txt, manifest.md or platform: give it what Community's record has, check, push, and send Website the commit.
+- Done at d25d3de46: main merged into the branch; Democratic Community's record whole by cascade.sh (no platform: no Interface pragmas, GO's); the five GCE records printed again.  Website has d25d3de46 for /next.
 - Main and the live site for the new structure: only on Udi's separate yes.
 - vGLP: platform.glp of Community, Democratic Community, Backed Community and five Cooperatives does not load; Rides, Lodging, Marketplace and Gigs print no platform.
 
