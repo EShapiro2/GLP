@@ -16,8 +16,7 @@
 %% queues the next one it is asked for and its view shows nothing of it until
 %% it starts, so a step proposed then would be proposed again.  So no act is
 %% proposed twice, but one refused (acquaint, before the other has
-%% established), and no state grows with repeated acts (the ring scenarios of
-%% programs/gff/paths/sglp, on yuval/feeds-sglp, gen_ring2.py).
+%% established), and no state grows with repeated acts.
 %%
 %% It needs the platform's types Key, Request, propose(Proposal), Proposal with
 %% establish/1, acquaint/2 and befriend/2, Atom with identity, knows/1 and
