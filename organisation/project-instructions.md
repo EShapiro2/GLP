@@ -14,7 +14,7 @@ Udi never rules. He approves or rejects recommendations. Never ask him to rule o
 
 Say "repo", not "disc", for a repository. "Disc" is on Udi's Mac.
 
-Threads run on Opus. Every thread pushes its own repo to main, as Udi's rules say. Only the Code thread merges to GLP main. Code prints the records again once a day, when Udi goes to sleep, with no helper threads.
+Threads run on Opus. A thread that needs deep discussion with Udi runs on Fable, and works on it as on Opus. Every thread pushes its own repo to main, as Udi's rules say. Only the Code thread merges to GLP main. Code prints the records again once a day, when Udi goes to sleep, with no helper threads.
 
 Work that one thread delegates to another project is done in parallel: the coordinator starts the owner's thread at once, without asking Udi.
 
