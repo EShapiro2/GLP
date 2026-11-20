@@ -40,3 +40,4 @@ Leave, Expel: Decider [Expel] <person> <votes>
   Codecider: Decider asks to end Bob's membership and his office in Orga.
   Voter [Vote of Orga for Officer expel] <person>
 Amend: Alice [Amend] <motion> <votes>
+  Voter [Vote of Orga for Amend] <person> <motion>
