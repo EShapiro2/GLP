@@ -1416,6 +1416,14 @@ Delos
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+consensus
+}
+(
+Delos
+)
+,
 \mathit{
 decided
 }
@@ -1424,10 +1432,12 @@ Prop
 ,
 Delos
 )
- \notin c_
+\}
+ \cap c_
 {
 \Alice
 }
+ = \emptyset
 ,\\
 &
 \text{provided } 
@@ -1541,6 +1551,14 @@ Delos
 ,\\
 &
 \text{provided } 
+\{
+\mathit{
+consensus
+}
+(
+Delos
+)
+,
 \mathit{
 decided
 }
@@ -1549,10 +1567,12 @@ Prop
 ,
 Delos
 )
- \notin c_
+\}
+ \cap c_
 {
 \Alice
 }
+ = \emptyset
 ,\\
 &
 \text{provided } 
@@ -1826,4 +1846,387 @@ Delos
 ,\\
 &
 \text{guarded by } \emptyset
+\end{align*}
+\iffalse
+pass_by_consensus
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+decided
+}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{
+passed
+}
+(
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+steward
+}
+(
+Delos
+)
+,
+\mathit{
+proposal
+}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{
+consensus
+}
+(
+Delos
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+decided
+}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{cardinality}(
+X1
+,
+\mathit{
+vote_for
+}
+(
+\Alice
+,
+X1
+,
+Prop
+,
+Delos
+)
+)
+\ge
+Votes
+\land
+\mathrm{cardinality}(
+X2
+,
+\mathit{
+listed
+}
+(
+\Alice
+,
+X2
+,
+Delos
+)
+)
+\le
+Votes
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+reject_by_consensus
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+decided
+}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{
+rejected
+}
+(
+Prop
+,
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+steward
+}
+(
+Delos
+)
+,
+\mathit{
+proposal
+}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{
+consensus
+}
+(
+Delos
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+decided
+}
+(
+Prop
+,
+Delos
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathrm{cardinality}(
+X1
+,
+\mathit{
+vote_against
+}
+(
+\Alice
+,
+X1
+,
+Prop
+,
+Delos
+)
+)
+>
+0
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+decide_by_consensus
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{
+consensus
+}
+(
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+steward
+}
+(
+Delos
+)
+,
+\mathit{
+passed
+}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{
+asks_consensus
+}
+(
+Prop
+,
+Delos
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+\mathit{
+consensus
+}
+(
+Delos
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+decide_by_a_majority
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{
+consensus
+}
+(
+Delos
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{
+identity
+}
+,
+\mathit{
+steward
+}
+(
+Delos
+)
+,
+\mathit{
+passed
+}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{
+asks_majority
+}
+(
+Prop
+,
+Delos
+)
+,
+\mathit{
+consensus
+}
+(
+Delos
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
 \end{align*}

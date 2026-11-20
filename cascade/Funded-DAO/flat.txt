@@ -8,6 +8,7 @@ Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts
 Knowledge:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice.
 Knowledge:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice and Alice knows Carol.
 DAO:0 - | Carol is possibly Alice or Bob.
+DAO:0 - | Environment: p asks x's d to decide by consensus; p asks x's d to decide by a majority.
 DAO:1 ■ Found: Alice may Alice is the steward of Delos, Alice is a member of Alice's Delos and Alice has Alice as a member of Delos, provided not Alice is the steward of Delos.
 DAO:2 ■ Join: Alice and Bob may jointly Bob is a member of Alice's Delos and Alice has Bob as a member of Delos, provided Alice is the steward of Delos, Alice knows Bob and not Bob is a member of Alice's Delos.
 DAO:3 ■ | Proposing.
@@ -22,12 +23,18 @@ DAO:4 ■ Vote own against: Alice may Alice has voted on Prop of Delos and Alice
 DAO:4 ■ Deliver vote for: Alice has delivered Carol's vote on Prop of Delos to Bob and Bob holds Carol's vote for Prop of Delos, provided Alice is the steward of Delos, Alice holds Carol's vote for Prop of Delos, Alice has Bob as a member of Delos and not Alice has delivered Carol's vote on Prop of Delos to Bob. Possibly one: Alice=Carol, Bob=Carol.
 DAO:4 ■ Deliver vote against: Alice has delivered Carol's vote on Prop of Delos to Bob and Bob holds Carol's vote against Prop of Delos, provided Alice is the steward of Delos, Alice holds Carol's vote against Prop of Delos, Alice has Bob as a member of Delos and not Alice has delivered Carol's vote on Prop of Delos to Bob. Possibly one: Alice=Carol, Bob=Carol.
 DAO:5 ■ | Deciding.
-DAO:5 ■ Pass: Alice may Alice has decided Prop of Delos and Alice holds Prop of Delos as passed, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds the votes of at least Votes persons for Prop of Delos, Double is Votes times 2, Alice has fewer than Double persons as a member of Delos and not Alice has decided Prop of Delos.
-DAO:5 ■ Reject: Alice may Alice has decided Prop of Delos and Alice holds Prop of Delos as rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds the votes of at least Votes persons against Prop of Delos, Double is Votes times 2, Alice has fewer than Double persons as a member of Delos and not Alice has decided Prop of Delos.
+DAO:5 ■ Pass: Alice may Alice has decided Prop of Delos and Alice holds Prop of Delos as passed, provided Alice is the steward of Delos, Alice holds Prop of Delos, not Alice holds Delos as deciding by consensus, Alice holds the votes of at least Votes persons for Prop of Delos, Double is Votes times 2, Alice has fewer than Double persons as a member of Delos and not Alice has decided Prop of Delos.
+DAO:5 ■ Reject: Alice may Alice has decided Prop of Delos and Alice holds Prop of Delos as rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos, not Alice holds Delos as deciding by consensus, Alice holds the votes of at least Votes persons against Prop of Delos, Double is Votes times 2, Alice has fewer than Double persons as a member of Delos and not Alice has decided Prop of Delos.
 DAO:5 ■ Deliver pass: Alice has delivered the decision on Prop of Delos to Bob and Bob holds Prop of Delos as passed, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed, Alice has Bob as a member of Delos and not Alice has delivered the decision on Prop of Delos to Bob.
 DAO:5 ■ Deliver reject: Alice has delivered the decision on Prop of Delos to Bob and Bob holds Prop of Delos as rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected, Alice has Bob as a member of Delos and not Alice has delivered the decision on Prop of Delos to Bob.
 DAO:6 ■ | Majority.
-DAO:6 ■ | The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.
+DAO:6 ■ | The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it; while the DAO decides by consensus, clause 7 applies instead.
+DAO:7 ■ | Consensus.
+DAO:7 ■ Pass by consensus: Alice may Alice has decided Prop of Delos and Alice holds Prop of Delos as passed, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds Delos as deciding by consensus, Alice holds the votes of at least Votes persons for Prop of Delos, Alice has at most Votes persons as a member of Delos and not Alice has decided Prop of Delos.
+DAO:7 ■ Reject by consensus: Alice may Alice has decided Prop of Delos and Alice holds Prop of Delos as rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos, Alice holds Delos as deciding by consensus, Alice holds the votes of more than 0 persons against Prop of Delos and not Alice has decided Prop of Delos.
+DAO:8 ■ | Amending.
+DAO:8 ■ Decide by consensus: Alice may Alice holds Delos as deciding by consensus, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed, Prop asks Alice's Delos to decide by consensus and not Alice holds Delos as deciding by consensus.
+DAO:8 ■ Decide by a majority: Alice may no longer Alice holds Delos as deciding by consensus, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Prop asks Alice's Delos to decide by a majority.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: Alice may Alice holds Sum Alice-coins.
