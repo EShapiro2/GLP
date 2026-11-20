@@ -4496,6 +4496,7 @@ check "CVA pragmas: a variable over the constants is named by a field (constvar)
 check "CVA pragmas: ... and pragmas.sh exits 0 (constvar)" "^exit 0$" "$cva_cv_out"
 cva_cv_mult="[schema(appoint, [const(r)], [rs(guarded, [], [], [], []), rs(unguarded, [times(const(r), atom(role, [role(1)]))], [], [], [])])]"
 cva_cv_con="[nschema(appoint, [const(r)], eq(const(r), val(arbiter)), [rs(guarded, [], [], [], []), rs(unguarded, [atom(role, [const(r)])], [], [], [])])]"
+cva_cv_ord="[nschema(appoint, [const(r)], le(const(r), val(arbiter)), [rs(guarded, [], [], [], []), rs(unguarded, [atom(role, [const(r)])], [], [], [])])]"
 cva_cv_num="[schema(appoint, [const(r)], [rs(guarded, [], [], [], []), rs(unguarded, [atom(role, [num(r)])], [], [], [])])]"
 cva_cv_pr1="pragmas([list('\"Roles\"', [role])], [act(appoint, '\"Appoint\"', ['\"\"', '\"bob\"', '\"role\"'], none, '\"Roles\"', by([1]))])"
 cva_cv_c=$("$REPL_RUN" <<HEREDOC 2>&1 | sed -e 's/^\(GLP> \)*//'
@@ -4504,6 +4505,7 @@ $CVA/compiler/
 compile(xr, $cva_cv_read, syntactically_grassroots, no_introduction, $cva_cv_pr).
 compile(xr_mult, $cva_cv_mult, syntactically_grassroots, no_introduction, $cva_cv_pr1).
 compile(xr_con, $cva_cv_con, syntactically_grassroots, no_introduction, $cva_cv_pr1).
+compile(xr_ord, $cva_cv_ord, syntactically_grassroots, no_introduction, $cva_cv_pr1).
 compile(xr_num, $cva_cv_num, syntactically_grassroots, no_introduction, $cva_cv_pr1).
 :quit
 HEREDOC
@@ -4514,10 +4516,11 @@ check "CVA compiler: ... its field a text (constvar)" 'field(3, "role", text)' "
 check_not "CVA compiler: ... and the contract is compiled (constvar)" "not compiled(xr)" "$cva_cv_c"
 check "CVA compiler: a variable over the constants as a multiplicity is refused, a multiplicity being a whole number (constvar)" "^%% not compiled(xr_mult)$" "$cva_cv_c"
 check "CVA compiler: ... with the reason (constvar)" "^%% it has a variable over the constants as a multiplicity" "$cva_cv_c"
-check "CVA compiler: a variable over the constants in a constraint is refused (constvar)" "^%% not compiled(xr_con)$" "$cva_cv_c"
+check_not "CVA compiler: a variable over the constants compared for equality in a constraint, eq(r, arbiter), is compiled, equality the comparison of constants (vGLP, Section 5.4: \"comparison and arithmetic\") (constvar)" "not compiled(xr_con)" "$cva_cv_c"
+check "CVA compiler: a variable over the constants under an order in a constraint is refused (constvar)" "^%% not compiled(xr_ord)$" "$cva_cv_c"
 check "CVA compiler: ... with the reason (constvar)" "^%% it has a variable over the constants in a constraint" "$cva_cv_c"
 check_not "CVA compiler: a variable over the constants written num(X) where it occurs, as a real one is, is compiled the same (constvar)" "not compiled(xr_num)" "$cva_cv_c"
-check "CVA compiler: ... its place of the type Constant in each of the two compiled (constvar)" "^2$" "$(printf '%s\n' "$cva_cv_c" | grep -c '^role(Constant)$')"
+check "CVA compiler: ... its place of the type Constant in each of the three compiled, xr, xr_con and xr_num (constvar)" "^3$" "$(printf '%s\n' "$cva_cv_c" | grep -c '^role(Constant)$')"
 # A parametric contract, parametric(Params, Body), is certified and has no platform until it is instantiated (vGLP, Section 5.4; compiler/self.glp, WOffered; Calculus #6, vGLP_inbox.md, 2026-11-15 14:49 UTC, of GO, GBank, GCoop, GCorp and GRA): the compiler says so, with no type error (parametric).
 cva_pp=$("$REPL_RUN" <<HEREDOC 2>&1 | sed -e 's/^\(GLP> \)*//'
 $CVA/compiler/
@@ -4988,6 +4991,28 @@ HEREDOC
 2>&1)
 check "CVA roles: alice typing clerk, bob's state holds role(alice, clerk)" "view(bob, \[role(alice, clerk), knows(alice)\]" "$cva_roles_other"
 check "CVA roles: ... which is not the atom arbitrate requires: his arbitrate is refused, unable" "refused(arbitrate(bob), bob, unable)" "$cva_roles_other"
+# One constant at two roles, a variable over the constants for each, required equal (vGLP, Section 5.4: "a constraint, and a safe formula, is over the relations and functions the value types provide --- comparison and arithmetic"; "a conjunct that names variables local to two roles or more is of the part's condition"), as Rides's award and Gigs's pass: roles' concur(a?, b ; r, s) requires role(b, r) at a and role(a, s) at b, eq(r, s).
+check "CVA roles: concur reads r at its first role and s at its second, eq(r, s) of the part's condition" "^schema_numeric(concur, numeric(\[cj(cond, eq(num(r), num(s)))\], \[num(r), num(s)\], \[read(1, \[num(r)\], \[\]), read(2, \[num(s)\], \[\])\]))$" "$(cat "$CVA/roles/platform.vglp")"
+check "CVA roles: the printed text compares two constants for equality, in a platform with a variable over the constants" "^expr_term1(num(X), B, F?) :- ground(B?) | lookup(num(X?), B?, F0), const_term(F0?, F).$" "$(cat "$CVA/roles/platform.vglp")"
+cva_concur=$("$REPL_RUN" <<HEREDOC
+$CVA/roles/
+:limit 40000000
+play_concur(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA roles: alice and bob appoint each other arbiter, and alice's concur commits, one constant at both roles: her state holds concurs(bob)" "view(alice, \[concurs(bob), role(bob, arbiter), knows(bob)\]" "$cva_concur"
+check "CVA roles: ... and his concurred(alice)" "view(bob, \[concurred(alice), role(alice, arbiter), knows(alice)\]" "$cva_concur"
+check_not "CVA roles: ... nothing refused (concur)" "refused(" "$cva_concur"
+cva_concur_other=$("$REPL_RUN" <<HEREDOC
+$CVA/roles/
+:limit 40000000
+play_concur_other(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA roles: bob appointing alice clerk, the readings give arbiter and clerk, and alice, the initiator, refuses concur, unable" "refused(concur(alice, bob), alice, unable)" "$cva_concur_other"
+check_not "CVA roles: ... and neither state records it" "concur\(s\|red\)(" "$(printf '%s\n' "$cva_concur_other" | grep 'view(')"
 check_not "CVA roles: ... and his state never holds done" "view(bob, \[done" "$cva_roles_other"
 # A wildcard in an unnegated atom (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in an unnegated atom of B, or in the anchor of a quantifier, is a variable of its own, standing for some value: the machine of the person who holds the atom finds one in its state, and the act neither names nor records it, as an act that requires a bond of some maturity"): vGLP's wild, accept requiring bond(c, _) at Alice, boast an exists and report a conjunct with the wildcard in the anchor, and retire a listed role by has_role(c, e, _), each listed person required to hold role(c, _) and losing every role(c, _).
 cva_wild_load=$("$REPL_RUN" <<HEREDOC

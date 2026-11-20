@@ -610,7 +610,8 @@ pragmas_named(roles, pragmas([list('"Roles"', [role]), list('"Contacts"', [knows
     [act(acquaint, '"Acquaint"', ['""', '"Person"'], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
      act(appoint, '"Appoint"', ['""', '""', '"Role"'], none, '"Contacts"', by([1])),
      act(arbitrate, '"Arbitrate"', [], none, '"Roles"', by([1])),
-     act(resign, '"Resign"', [], none, '"Roles"', by([1]))])).
+     act(resign, '"Resign"', [], none, '"Roles"', by([1])),
+     act(concur, '"Concur"', [], none, '"Contacts"', by([1]))])).
 
 procedure nudge(Contract).
 nudge([schema(befriend, [],
@@ -1169,7 +1170,7 @@ wild([sas(issue, ['Carol', 'Alice'], ['D'],
           [atom(retired, ['Carol']), forall(['E'], atom(has_role, ['Carol', 'E', '_']), true, [not(atom(role, ['E', 'Carol', '_']))]), not(atom(has_role, ['Carol', '_', '_']))],
           [not(atom(retired, ['Carol'])), forall(['E'], atom(has_role, ['Carol', 'E', '_']), true, [atom(role, ['E', 'Carol', '_'])])],
           true, ['Carol'])]).
-%% roles: a value variable over the constants, const(X) (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, ..., and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"), as GO's appoint and the acts of GBCC and GNO that require a role by its name: acquaint(a?, b?) adds knows at both; appoint(a?, b ; r), a knowing b, adds role(a, r) at b, r the name a types; arbitrate(b? ; o) requires role(o, arbiter) at b, o local to b's role, arbiter a constant the contract names, and adds done, which it forbids; and resign(b? ; o, r) deletes role(o, r) at b, its base, so o and r are bound by the schema-binding and its request names them, resign(Peer, Peer, Constant), b choosing which role he resigns (vGLP, Section 5.4: "but for a variable of an atom the schema deletes at the base of the schema").  The place of role's second argument is of the type Constant in appoint, in arbitrate and in resign, and the constant alice types in appoint is the one arbitrate requires.
+%% roles: a value variable over the constants, const(X) (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, ..., and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"), as GO's appoint and the acts of GBCC and GNO that require a role by its name: acquaint(a?, b?) adds knows at both; appoint(a?, b ; r), a knowing b, adds role(a, r) at b, r the name a types; arbitrate(b? ; o) requires role(o, arbiter) at b, o local to b's role, arbiter a constant the contract names, and adds done, which it forbids; and resign(b? ; o, r) deletes role(o, r) at b, its base, so o and r are bound by the schema-binding and its request names them, resign(Peer, Peer, Constant), b choosing which role he resigns (vGLP, Section 5.4: "but for a variable of an atom the schema deletes at the base of the schema").  The place of role's second argument is of the type Constant in appoint, in arbitrate and in resign, and the constant alice types in appoint is the one arbitrate requires.  concur(a?, b ; r, s) requires one constant at two roles, as Rides's award and Gigs's pass require one currency of the fare and of the deposit: role(b, r) at a and role(a, s) at b, r and s each local to its role, and eq(r, s) of the part's condition, which the initiator checks on the readings (vGLP, Section 5.4: "a constraint, and a safe formula, is over the relations and functions the value types provide --- comparison and arithmetic"; "a conjunct that names variables local to two roles or more is of the part's condition"); it adds concurs(b) at a and concurred(a) at b.
 procedure roles(Contract).
 roles([schema(acquaint, [],
          [rs(guarded, [atom(knows, [role(2)])], [], [], [atom(knows, [role(2)])]),
@@ -1180,4 +1181,7 @@ roles([schema(acquaint, [],
        schema(arbitrate, [pvar(o)],
          [rs(guarded, [atom(done, [])], [], [atom(role, [pvar(o), val(arbiter)])], [atom(done, [])])]),
        schema(resign, [pvar(o), const(r)],
-         [rs(guarded, [], [atom(role, [pvar(o), num(r)])], [], [])])]).
+         [rs(guarded, [], [atom(role, [pvar(o), num(r)])], [], [])]),
+       nschema(concur, [const(r), const(s)], eq(num(r), num(s)),
+         [rs(guarded, [atom(concurs, [role(2)])], [], [atom(knows, [role(2)]), atom(role, [role(2), num(r)])], [atom(concurs, [role(2)])]),
+          rs(unguarded, [atom(concurred, [role(1)])], [], [atom(knows, [role(1)]), atom(role, [role(1), num(s)])], [])])]).
