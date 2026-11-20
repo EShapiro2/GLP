@@ -15,6 +15,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'package:crypto/crypto.dart' as crypto;
 
 import 'runtime.dart';
 import 'terms.dart';
@@ -113,6 +114,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // Text (GLP-Spec appendix-guards, "Text")
   registry.register('_string_concat', 2, stringConcatKernel);
   registry.register('_term_to_string', 2, termToStringKernel);
+  registry.register('_hash', 2, hashKernel);
 
   // Time operations
   registry.register('_now', 1, nowKernel);
@@ -2067,6 +2069,25 @@ BodyKernelResult termToStringKernel(GlpRuntime rt, List<Object?> args) {
     return kernelAbort("[ABORT] '_term_to_string'/2: ${e.message}");
   }
   return bindResult(rt, args[1], text, kernel: "'_term_to_string'/2");
+}
+
+/// '_hash'(S?, H) — H is the SHA-256 of the UTF-8 bytes of the string S, as
+/// lowercase hex, the catalogue's Hash (the root self.glp, `Hash ::= String`):
+/// the same at every participant, so that a sealed value, the hash of a text
+/// naming it and a secret, shows nothing of either, and a value and a secret
+/// later stated can be checked against it (proposed for GLP-Spec
+/// appendix-guards, "Text").  The clause of hash/2 guards S ground; a first
+/// argument that is no string is out of the kernel's domain, and it aborts.
+BodyKernelResult hashKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort("[ABORT] '_hash'/2: expected 2 arguments, got ${args.length}");
+  }
+  final s = _deref(rt, args[0]);
+  if (s is! ConstTerm || s.value is! String) {
+    return kernelAbort("[ABORT] '_hash'/2: the first argument is not a string: $s");
+  }
+  final h = crypto.sha256.convert(utf8.encode(s.value as String)).bytes;
+  return bindResult(rt, args[1], bytesToHex(h), kernel: "'_hash'/2");
 }
 
 /// [value] as the reader reads it back: an integer as its digits, and a real
