@@ -12,7 +12,7 @@ Alice, Bob and Carol are parties.
 1. ■ Issue: Alice may issue Alice-notes.
 2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
 3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
-4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
+4. ○ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
 Logic pragmas
 Notes extends Knowledge.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
@@ -20,7 +20,7 @@ Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol ag
 1. ■ Issue: Alice may issue Sum Alice-notes.
 2. ■ Swap: Alice and Bob may jointly swap Sum Carol-notes for Total Dave-notes, provided Alice and Bob know each other.
 3. ■ Pay: Alice may pay Bob Sum Carol-notes, with the consent of Bob, provided Alice knows Bob.
-4. ■ Escrow. Deposit: Alice may deposit Sum Dave-notes with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-notes that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-notes deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
+4. ○ Escrow. Deposit: Alice may deposit Sum Dave-notes with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-notes that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-notes deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
 Logic pragmas.
 Vocabulary: x holds n y-notes = note(x,y,*n); z holds n w-notes in escrow from x for y on k = escrow_note(z,w,x,y,k,*n).
 After x issues n x-notes: x holds n x-notes.

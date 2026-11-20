@@ -1,0 +1,9 @@
+Warnings
+Warnings extends and restricts Organisation.
+Vocabulary: z holds x's warning to y = warning(z,x,y).
+After x warns y in z, which requires z does not hold x's warning to y: z holds x's warning to y.
+Warnings:0 - | A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking.
+Warnings:0 - | Alice and Bob are persons, Orga an organisation.
+Warnings:1 ■ Warn: warning(Orga,Alice,Bob) <- officer(Alice,Orga), has_participant(Orga,Bob), ~warning(Orga,Alice,Bob) guarded by Alice.
+Warnings:2 ■ Expel: Organisation:3 Expel <- warning(Orga,>=2,Bob).
+Warnings:2 ■ Officer expel: Organisation:3 Officer expel <- warning(Orga,>=2,Bob).

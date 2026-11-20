@@ -29,5 +29,5 @@ Fee: Bob [Join] <organisation> <officer> <votes>
   Decider [Set fee] <fee>
   Codecider: Decider asks to set the fee of Orga.
   Bob [Pay fee] <fee>
-Sell: Carol [Sell] <issuer> <good>
+Sell: Carol [Sell] <issuer> <denomination> <good>
   Erin: Carol asks that you pay Orga the cost of a good it holds.

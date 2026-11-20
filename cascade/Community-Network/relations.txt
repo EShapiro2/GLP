@@ -1,1 +1,3 @@
 Community Network extends Organisation and Denominated Currencies: holds
+Community Network restricts Organisation: holds
+Community Network strengthens Organisation: holds

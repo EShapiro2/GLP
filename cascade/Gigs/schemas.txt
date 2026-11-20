@@ -14,16 +14,16 @@ After x accepts j of y in z: x has accepted j of y, no longer x and y have an en
 After x rejects j of y raising to w the dispute in z, which requires x has not rejected j of y and w does not hold the dispute of x and y in z: x has rejected j of y and w holds the dispute of x and y in z.
 After x cancels x's engagement of y for j in z: no longer x and y have an engagement for j and no longer coins are locked in z between the provider y and the customer x.
 After y cancels y's engagement by x for j in z: no longer x and y have an engagement for j and no longer coins are locked in z between the provider y and the customer x.
-Gigs:0 - | A *worker* is a provider and a *client* a customer. A *job* names the work, its price in Cur-coins and its deadline; its terms say what is released to whom on cancellation.
-Gigs:0 - | Alice, Bob and Carol are persons, Orga a community network, Cur an organisation, Kept a number, Job a job, Skill a skill or a service; in clause 1 Carol is a worker, in clause 4 an arbiter, and in clause 6 Skill is the job.
+Gigs:0 - | A *worker* is a provider and a *client* a customer. A *job* names the work, its price in community coins and its deadline; its terms say what is released to whom on cancellation.
+Gigs:0 - | Alice, Bob and Carol are persons, Orga a community network, Gov an organisation, Kept a number, Job a job, Skill a skill or a service; in clause 1 Carol is a worker, in clause 4 an arbiter, and in clause 6 Skill is the job.
 Gigs:0 - | Environment: no delivery of j is attested by the deadline, for x.
 Gigs:1 ■ | Job.
-Gigs:1 ■ Post: posted(Alice,Job,Orga) <- community(Orga,Cur), accepts(Alice,Cur,Dollar), ~posted(Alice,Job,Orga) guarded by Alice.
+Gigs:1 ■ Post: posted(Alice,Job,Orga) <- knows(Alice,Orga), community(Orga,Gov), participant(Alice,Gov), accepts(Alice,Gov,Dollar), ~posted(Alice,Job,Orga) guarded by Alice.
 Gigs:1 ■ | Alice posts the job to the workers she points to.
-Gigs:1 ■ Send job: received(Bob,Job,Alice,Orga) <- posted(Alice,Job,Orga), points_to(Alice,Bob), community(Orga,Cur), stake(Orga,S), coin(Bob,Cur,*Held), ge(Held,S), ~received(Bob,Job,Alice,Orga).
-Gigs:1 ■ Pass: received(Carol,Job,Alice,Orga) <- community(Orga,Cur), stake(Orga,S), coin(Bob,Cur,*Held), ge(Held,S), received(Bob,Job,Alice,Orga), points_to(Bob,Carol), stake(Orga,S), coin(Carol,Cur,*Kept), ge(Kept,S), ~received(Carol,Job,Alice,Orga) guarded by Bob.
+Gigs:1 ■ Send job: received(Bob,Job,Alice,Orga) <- posted(Alice,Job,Orga), points_to(Alice,Bob), knows(Bob,Orga), community(Orga,Gov), participant(Bob,Gov), stake(Orga,S), coin(Bob,Gov,*Held), ge(Held,S), ~received(Bob,Job,Alice,Orga).
+Gigs:1 ■ Pass: received(Carol,Job,Alice,Orga) <- knows(Bob,Orga), community(Orga,Gov), participant(Bob,Gov), stake(Orga,S), coin(Bob,Gov,*Held), ge(Held,S), received(Bob,Job,Alice,Orga), points_to(Bob,Carol), participant(Carol,Gov), stake(Orga,S), coin(Carol,Gov,*Kept), ge(Kept,S), ~received(Carol,Job,Alice,Orga) guarded by Bob.
 Gigs:1 ■ Withdraw job: ~posted(Alice,Job,Orga) <- posted(Alice,Job,Orga) guarded by Alice.
-Gigs:2 ■ Engage: engaged(Alice,Bob,Job), engaged_by(Bob,Alice,Job), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- community(Orga,Cur), stake(Orga,S), coin(Bob,Cur,*Held), ge(Held,S), posted(Alice,Job,Orga), knows(Alice,Bob), knows(Bob,Alice), ~engaged(Alice,Bob,Job), ~engaged_by(Bob,Alice,Job) guarded by Alice, Bob.
+Gigs:2 ■ Engage: engaged(Alice,Bob,Job), engaged_by(Bob,Alice,Job), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- knows(Bob,Orga), community(Orga,Gov), participant(Bob,Gov), stake(Orga,S), coin(Bob,Gov,*Held), ge(Held,S), posted(Alice,Job,Orga), knows(Alice,Bob), knows(Bob,Alice), ~engaged(Alice,Bob,Job), ~engaged_by(Bob,Alice,Job) guarded by Alice, Bob.
 Gigs:2 ■ | Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 Gigs:3 ◆ Deliver: delivered(Bob,Job,Alice) <- engaged(Alice,Bob,Job), engaged_by(Bob,Alice,Job), ~delivered(Bob,Job,Alice) guarded by Bob.
 Gigs:4 ■ | Acceptance.

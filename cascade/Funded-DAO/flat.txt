@@ -34,11 +34,11 @@ Notes:1 ■ Issue: Alice may Alice holds Sum Alice-coins.
 Notes:2 ■ Swap: Alice and Bob may jointly no longer Alice holds Sum Carol-coins, Bob holds Sum Carol-coins, no longer Bob holds Total Dave-coins, Alice holds Total Dave-coins, Bob knows Carol and Alice knows Dave, provided Alice knows Bob and Bob knows Alice. Possibly one: Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
 Notes:3 ■ Pay: Alice and Bob may jointly no longer Alice holds Sum Carol-coins, Bob holds Sum Carol-coins and Bob knows Carol, provided Alice knows Bob. Possibly one: Alice=Carol, Bob=Carol.
 Notes:3+Coins:1 ■ Pay issuer: Alice may no longer Alice holds Sum Bob-coins and Bob holds Sum Bob-coins, provided Alice knows Bob.
-Notes:4 ■ | Escrow.
-Notes:4 ■ Deposit: Alice and Carol may jointly no longer Alice holds Sum Dave-coins and Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, provided Alice knows Carol, Carol knows Alice and Alice knows Bob. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Release: Carol and Bob may jointly no longer Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, Bob holds Sum Dave-coins and Bob knows Dave, provided Carol knows Bob and Bob knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Return: Carol and Alice may jointly no longer Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, Alice holds Sum Dave-coins and Alice knows Dave, provided Carol knows Alice and Alice knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
+Notes:4 ○ | Escrow.
+Notes:4 ○ Deposit: Alice and Carol may jointly no longer Alice holds Sum Dave-coins and Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, provided Alice knows Carol, Carol knows Alice and Alice knows Bob. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Release: Carol and Bob may jointly no longer Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, Bob holds Sum Dave-coins and Bob knows Dave, provided Carol knows Bob and Bob knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Return: Carol and Alice may jointly no longer Carol holds Sum Dave-coins in escrow from Alice for Bob on Cond, Alice holds Sum Dave-coins and Alice knows Dave, provided Carol knows Alice and Alice knows Carol. Possibly one: Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ | Carol will release them only if Cond is met, and return them only if it fails.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Coins:2 ■ Redeem: Alice may no longer Alice holds a Bob-coin, Bob holds a Bob-coin, no longer Bob holds a Carol-coin, Alice holds a Carol-coin and Alice knows Carol, provided Alice knows Bob. Possibly one: Alice=Carol, Bob=Carol.

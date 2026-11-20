@@ -9,7 +9,7 @@ Alice, Bob and Carol are persons, Grupo a group, Text a message, Alf and Will AI
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
 Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
-Friendship:1, Guardians:3. ■ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
+Friendship:1, Guardians:3. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
 Friendship:2, Groups:3, Guardians:3. ■ Person unfriend: Alice may end Bob's membership in _, provided Alice is a person and Bob is a person, and then no longer Alice counts Bob as a friend, no longer Bob counts Alice as a friend, Alice is a member of no group of Bob and Bob has Alice as a member of no group.
 Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 Groups:1, Provenance Groups:1. ■ Message: Alice may send Text to Bob, provided Alice and Bob are friends, Alice is a person, Alice holds the item Text and Alice is the author of Text.
