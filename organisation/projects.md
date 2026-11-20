@@ -35,5 +35,6 @@ Each entry gives the thread's name, then each paper: its repo, main file and cit
 29. **EIC**: `EShapiro2/EIC-Proposal--Grassroots-Cooperatives`, `main.tex`; `EShapiro2/LSE-EIC-Pathfinder-Open`, `main.tex`; record `docs/decisions.md` of each.
 30. **GM**: `EShapiro2/GM-Grassroots-Matching`, `main_characterisation_ArXiv.tex`; record `docs/decisions.md`.
 31. **Audit**: `udi-shapiro/Grassroots-Audit`, branch `Claude`; record `CLAUDE.md` and `docs/handover-2026-11-20.md` there, which Audit keeps.
+32. **Optimiser**: no repo; record `/mnt/project-files/optimiser/`, the project files folder, with its handover there.
 
 `danbachar/grassroots-networking` is Dan Bachar's, and its `CLAUDE.md` is his.
