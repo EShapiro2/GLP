@@ -5,7 +5,7 @@ A full contract (exp/, flat/, gx/) inherits the names line of each contract of i
 one names line: each name once, with its most special kind (Udi, 2026-11-17, to Calculus #8: "if same name used for
 the same role, should be stated once, and if different roles, a different name should be used").
 
-A kind is more special than another by BASE and by the definitions of the full contract, "A *networked organisation*
+A kind is more special than another by BASE and by the definitions of the full contract, "A *community network*
 is a backed community currency ...": the kind defined is under the first kind its defining phrase opens with, an
 adjective or two skipped.  A name with two kinds neither of which is under the other is a finding.
 

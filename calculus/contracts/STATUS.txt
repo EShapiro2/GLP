@@ -42,7 +42,7 @@ Local-Overlay certified; VMAT 8 displays; platform.vglp 7212 lines; platform.glp
 Lodging    certified; VMAT 180 displays; platform.vglp 15255 lines; platform.glp 8405 lines
 Marketplace certified; VMAT 178 displays; platform.vglp 15165 lines; platform.glp 8365 lines
 Mutual-Credit certified; VMAT 159 displays; platform.vglp 14449 lines; platform.glp 8043 lines
-Networked-Organisation certified; VMAT 164 displays; no platform: a parametric contract has none until it is instantiated
+Community-Network certified; VMAT 164 displays; no platform: a parametric contract has none until it is instantiated
 Notes      certified; VMAT 9 displays; platform.vglp 7293 lines; platform.glp 5034 lines
 Organisation certified; VMAT 29 displays; platform.vglp 8103 lines; platform.glp 5357 lines
 Overlay    certified; VMAT 8 displays; platform.vglp 7177 lines; platform.glp 4963 lines

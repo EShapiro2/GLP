@@ -1,2 +1,0 @@
-Networked Organisation extends Backed Community: holds
-Networked Organisation restricts it (Backed Community): holds

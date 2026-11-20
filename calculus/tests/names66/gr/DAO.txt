@@ -1,6 +1,6 @@
 DAO
 DAO extends Knowledge.
-Alice and Bob are persons, Org a networked organisation.
+Alice and Bob are persons, Org a community network.
 1. ■ Delegate: Alice may delegate to Bob in Org, provided Alice knows Bob. DAO bylaws name a steward.
 Logic pragmas.
 Vocabulary: x delegates to y in o = delegates(x,y,o).

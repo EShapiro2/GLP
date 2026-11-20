@@ -1,5 +1,5 @@
 % Written by tools/expand.py from rev/; do not edit.
-Networked Organisation
+Community Network
 An *identity* is a unique cryptographic key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A *relation* is a friendship or the membership of a group. Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. Here: bylaws. An organisation takes an act of a party by those who decide for the organisation.
@@ -12,8 +12,8 @@ A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one
 A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
 A *community currency* is a bank whose coins are Dollar-denominated and whose bylaws name one role, *treasurer*; the treasurers jointly decide its acts.
 *f*, a fraction 0 ≤ f < 1, is a parameter of Backed Community. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
-A *networked organisation* is a backed community currency whose bylaws also name the role *arbiter*. A *provider* is a person whose *stake*, the Orga-coins they hold, is at least *S*, a number of Orga-coins, and a *customer* is a person who accepts Orga-coins. A treasurer is a provider. A *dispute* is over Orga-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
-Alice, Bob and Carol are persons, Orga a networked organisation, Will an organisation. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+A *community network* is a backed community currency whose bylaws also name the role *arbiter*. A *provider* is a person whose *stake*, the Orga-coins they hold, is at least *S*, a number of Orga-coins, and a *customer* is a person who accepts Orga-coins. A treasurer is a provider. A *dispute* is over Orga-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+Alice, Bob and Carol are persons, Orga a community network, Will an organisation. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -47,5 +47,5 @@ Denominated Currencies:4, Backed Community:1. ■ Pay accepted coins: Alice may 
 Community:1, Backed Community:2. ■ Draw: Alice, a treasurer, may swap Alice-coins for Orga-coins, only if Alice stays backed.
 Community:2, Backed Community:4. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar, from the account while it holds Dollars, and from a treasurer if it holds none.
 Backed Community:3. ◆ Record: Alice, a treasurer, may pay Dollars into the account, and the treasurers may then jointly record them as paid in by Alice.
-Networked Organisation:1. ■ Set stake: The treasurers may set S.
-Networked Organisation:2. ■ Arbitration. Raise: Either Alice or Bob, the parties to a dispute, may raise it to an arbiter, Carol. Arbitrate: Carol may then decide the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.
+Community Network:1. ■ Set stake: The treasurers may set S.
+Community Network:2. ■ Arbitration. Raise: Either Alice or Bob, the parties to a dispute, may raise it to an arbiter, Carol. Arbitrate: Carol may then decide the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.

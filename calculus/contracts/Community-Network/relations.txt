@@ -1,0 +1,2 @@
+Community Network extends Backed Community: holds
+Community Network restricts it (Backed Community): holds

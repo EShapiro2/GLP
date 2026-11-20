@@ -1,8 +1,8 @@
-%% Networked-Organisation.glp --- printed by adopt.py from Networked-Organisation.txt: the contract's full schemas, the Calculus's term.glp.txt,
-%% complete in itself.  Not to be edited: edit Networked-Organisation.txt and run adopt.py 'Networked Organisation'.
-% contract_named(networked_organisation, C): the contract, Networked Organisation.
+%% Community-Network.glp --- printed by adopt.py from Community-Network.txt: the contract's full schemas, the Calculus's term.glp.txt,
+%% complete in itself.  Not to be edited: edit Community-Network.txt and run adopt.py 'Community Network'.
+% contract_named(community_network, C): the contract, Community Network.
 procedure contract_named(Constant?, SDeclared).
-contract_named(networked_organisation, parametric([customer_lock, provider_lock], environment([today, one_denomination], reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
+contract_named(community_network, parametric([customer_lock, provider_lock], environment([today, one_denomination], reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(person, ['Alice']), atom(person, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], [], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(identity, ['Carol']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol']), atom(person, ['Alice']), atom(person, ['Bob']), atom(person, ['Carol'])], true, ['Alice', 'Bob']),
  sas(befriend, ['Alice', 'Bob'], [], [atom(friend, ['Alice', 'Bob']), atom(friend, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), not(atom(friend, ['Alice', 'Bob'])), not(atom(friend, ['Bob', 'Alice'])), atom(person, ['Alice']), atom(person, ['Bob'])], true, ['Alice', 'Bob']),

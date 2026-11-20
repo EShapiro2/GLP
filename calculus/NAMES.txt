@@ -66,7 +66,7 @@ FDAO | Funded DAO | Funded-DAO | funded_dao | fdao
 LDAO | Liquid DAO | Liquid-DAO | liquid_dao | ldao
 GO | Organisation | Organisation | organisation | go
 CDC | Constitution | Constitution | constitution | cdc
-GNO | Networked Organisation | Networked-Organisation | networked_organisation | gno
+GNO | Community Network | Community-Network | community_network | gno
 GBank | Bank | Bank | bank | gbank
 CB | Community Bank | Community-Bank | community_bank | cb
 CMB | Commercial Bank | Commercial-Bank | commercial_bank | cmb

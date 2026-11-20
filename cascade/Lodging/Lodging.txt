@@ -1,29 +1,29 @@
 % Lodging --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 5.3 and cites a clause as Lodging:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: Networked Organisation, Overlay, Grassroots Directed Overlay, GRH's (programs/lbm), and Recommendations (programs/gce).
+% Extends: Community Network, Overlay, Grassroots Directed Overlay, GRH's (programs/lbm), and Recommendations (programs/gce).
 % Changed 2026-11-20 by GO #11: Cur-coins for Orga-coins (Udi, 2026-11-20).
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Lodging.glp beside this file.
 Lodging
-Lodging extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Networked Organisation and Recommendations.
+Lodging extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Community Network and Recommendations.
 A *host* is a provider and a *traveller* a customer. A *listing* names a place, the nights offered and the price a night in Cur-coins; its terms say what is released to whom on cancellation.
-Alice and Bob are persons, Orga a networked organisation.
+Alice and Bob are persons, Orga a community network.
 1. ■ Listing. Post: Bob, a host, may post a listing to the travellers he points to. Pass: A traveller may pass it to the travellers they point to. Withdraw listing: Bob may withdraw it.
 2. ■ Book: Alice, a traveller, may book nights of Bob's listing with the consent of Bob, provided Alice and Bob know each other; Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
 3. ■ Check-in and checkout. Check in: Alice may record her check-in when she is at the place on the first night. Check out: Alice may record her checkout when she leaves it after the last night; the payment and the deposit are then released to Bob.
 4. ■ Cancelling. Cancel: Alice or Bob may cancel a booking before the first night, and the payment and the deposit are then released to Alice and to Bob as the terms say. No-show: If no check-in is recorded on the first night while Alice is at the place, she may cancel and both are then released to her.
-5. ■ Raise: Networked Organisation:2, only before checkout, and by Alice only if she is checked in.
+5. ■ Raise: Community Network:2, only before checkout, and by Alice only if she is checked in.
 6. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the stay after checkout.
 Logic pragmas
-Lodging extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Networked Organisation and Recommendations.
+Lodging extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Community Network and Recommendations.
 A *host* is a provider and a *traveller* a customer. A *listing* names a place, the nights offered and the price a night in Cur-coins; its terms say what is released to whom on cancellation.
-Alice, Bob and Carol are persons, Orga a networked organisation, Cur an organisation, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a traveller, in clause 5 an arbiter, and in clause 6 Skill is the listing.
+Alice, Bob and Carol are persons, Orga a community network, Cur an organisation, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a traveller, in clause 5 an arbiter, and in clause 6 Skill is the listing.
 1. ■ Listing. Post: Bob may post Listing in Orga, provided Bob is a host of Orga. Bob posts the listing to the travellers he points to. Send listing: Listing of Bob goes to Alice in Orga, provided Bob has Listing posted in Orga, Bob points to Alice and Alice is a traveller of Orga. Pass: Alice may pass Listing of Bob to Carol in Orga, provided Alice is a traveller of Orga, Alice has received Listing of Bob in Orga, Alice points to Carol and Carol accepts a Mark-denominated Cur-coin in payment. Withdraw listing: Bob may withdraw Listing from Orga.
 2. ■ Book: Alice may book nights of Listing of Bob in Orga, with the consent of Bob, provided Alice is a traveller of Orga, Bob has Listing posted in Orga and Alice and Bob know each other. Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
 3. ■ Check-in and checkout. Check in: Alice may record her check-in at Listing of Bob, provided Alice and Bob have a booking of Listing and Alice is at the place of Listing on the first night. Check out: Alice may record her checkout from Listing of Bob in Orga, provided Alice leaves the place of Listing after the last night. The payment and the deposit are then released to Bob.
 4. ■ Cancelling. Cancel: Alice may cancel her booking of Listing of Bob in Orga, provided it is before the first night of Listing. Host cancel: Bob may cancel his booking of Listing by Alice in Orga, provided it is before the first night of Listing. The payment and the deposit are then released to Alice and to Bob as the terms say. No-show: Alice may cancel her booking of Listing of Bob in Orga, provided no check-in at Listing is recorded on the first night while Alice is at the place. The payment and the deposit are then both released to Alice.
-5. ■ Raise: Networked Organisation:2 Raise, only if Alice is checked in at Listing of Bob. Provider raise: Networked Organisation:2 Provider raise, only if Bob has nights of Listing booked by Alice.
+5. ■ Raise: Community Network:2 Raise, only if Alice is checked in at Listing of Bob. Provider raise: Community Network:2 Provider raise, only if Bob has nights of Listing booked by Alice.
 6. ◆ Recommend: Recommendations:1, only if Alice has checked out of Skill of Bob.
 Logic pragmas.
 Vocabulary: y has l posted in z = posted(y,l,z); x has received l of y in z = received(x,l,y,z); x has nights of l booked with y = booked(x,l,y); y has nights of l booked by x = booked_by(y,l,x); x is at the place of l on the first night = at_place(x,l); x is checked in at l of y = checked_in(x,l,y); x leaves the place of l after the last night = leaves(x,l); x has checked out of l of y = checked_out(x,l,y); it is before the first night of l, for x = before_first_night(x,l); no check-in at l is recorded on the first night while x is at the place = no_show(x,l).

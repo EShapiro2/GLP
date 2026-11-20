@@ -1,7 +1,7 @@
-Networked Organisation
-Networked Organisation extends Backed Community and restricts it.
-A *networked organisation* is a backed community currency whose bylaws also name the role *arbiter*. A *provider* is a person whose *stake*, the Orga-coins they hold, is at least *S*, a number of Orga-coins, and a *customer* is a person who accepts Orga-coins. A treasurer is a provider. A *dispute* is over Orga-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
-Alice, Bob and Carol are persons, Orga a networked organisation, S and Held numbers; in clause 2 Alice is the customer and Bob the provider.
+Community Network
+Community Network extends Backed Community and restricts it.
+A *community network* is a backed community currency whose bylaws also name the role *arbiter*. A *provider* is a person whose *stake*, the Orga-coins they hold, is at least *S*, a number of Orga-coins, and a *customer* is a person who accepts Orga-coins. A treasurer is a provider. A *dispute* is over Orga-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+Alice, Bob and Carol are persons, Orga a community network, S and Held numbers; in clause 2 Alice is the customer and Bob the provider.
 1. ■ Set stake: The treasurers of Orga may set the stake of Orga at S, provided Orga is an organisation.
 2. ■ Arbitration. Raise: Alice may raise to Carol her dispute with the provider Bob over Orga-coins, provided Orga-coins are locked between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Provider raise: Bob may raise to Carol his dispute with the customer Alice over Orga-coins, provided Orga-coins are locked between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Arbitrate: Carol may decide the release to Alice and to Bob of the Orga-coins locked between them. The coins are released less the fee the terms set, which is released to Carol.
 Logic pragmas.

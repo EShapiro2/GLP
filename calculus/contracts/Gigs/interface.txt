@@ -176,7 +176,7 @@ Gigs
 175. ■ Engage.  Alice may engage Bob, a worker, for the job with the consent of Bob, provided Alice and Bob know each other; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 176. ◆ Deliver.  Bob may attest that he delivered the work to Alice.
 177. ■ Accept work.  Alice may accept delivered work, and the payment and the deposit are then released to Bob.
-178. ■ Reject.  Alice may reject it, raising a dispute (Networked Organisation:2).
+178. ■ Reject.  Alice may reject it, raising a dispute (Community Network:2).
 179. ■ Cancel.  Alice or Bob may cancel the engagement before delivery, and the payment and the deposit are then released to Alice and to Bob as the terms say.
 180. ■ Worker cancel.  Alice or Bob may cancel the engagement before delivery, and the payment and the deposit are then released to Alice and to Bob as the terms say.
 181. ■ Lapse.  If no delivery is attested by the deadline, Alice may cancel and both are then released to her.

@@ -1,5 +1,5 @@
 Marketplace
-Marketplace extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+Marketplace extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
 Vocabulary: y has l posted in z = posted(y,l,z); x has received l of y in z = received(x,l,y,z); x has ordered the good of l from y = ordered(x,l,y); y has an order of the good of l from x = ordered_from(y,l,x); x has attested the delivery of the good of l by y = delivered(x,l,y).
 y is a seller of z: y is a provider of z.
 x is a buyer of z: x is a customer of z.
@@ -13,7 +13,7 @@ After x attests the delivery of the good of l by y in z: x has attested the deli
 After x cancels x's order of l from y in z: no longer x and y have an order of l and no longer z-coins are locked between the provider y and the customer x.
 After y cancels y's order of l by x in z: no longer x and y have an order of l and no longer z-coins are locked between the provider y and the customer x.
 Marketplace:0 - | A *seller* is a provider and a *buyer* a customer. A *listing* names a good, its price in Orga-coins and how it is delivered; its terms say what is released to whom on cancellation.
-Marketplace:0 - | Alice, Bob and Carol are persons, Orga a networked organisation, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a buyer, and in clause 5 Skill is the listing.
+Marketplace:0 - | Alice, Bob and Carol are persons, Orga a community network, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a buyer, and in clause 5 Skill is the listing.
 Marketplace:1 ■ | Listing.
 Marketplace:1 ■ Post: posted(Bob,Listing,Orga) <- stake(Orga,S), coin(Bob,Orga,*Held), ge(Held,S), ~posted(Bob,Listing,Orga) guarded by Bob.
 Marketplace:1 ■ | Bob posts the listing to the buyers he points to.

@@ -50,7 +50,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 | Lodging | GO | `programs/go/GNL.txt` | 8 lines differ (owner 4, ours 4) | 8 |
 | Marketplace | GO | `programs/go/GNM.txt` | 6 lines differ (owner 3, ours 3) | 6 |
 | Mutual Credit | GO | `programs/go/MCS.txt` | 8 lines differ (owner 4, ours 4) | 8 |
-| Networked Organisation | GO | `programs/go/GNO.txt` | 4 lines differ (owner 2, ours 2) | 4 |
+| Community Network | GO | `programs/go/GNO.txt` | 4 lines differ (owner 2, ours 2) | 4 |
 | Notes | GSC | `programs/gsc/Notes.txt` | 2 lines differ (owner 1, ours 1) | 2 |
 | Organisation | GO | `programs/go/GO.txt` | 10 lines differ (owner 5, ours 5) | 10 |
 | Overlay | GRH | `programs/lbm/GDO.txt` | 4 lines differ (owner 2, ours 2) | 4 |
@@ -80,7 +80,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: GAN: Grassroots Ad Network
 - owner: GAN extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation).
 - ours: Ads
-- ours: Ads extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
+- ours: Ads extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
 
 ### Agents
 
@@ -332,10 +332,10 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: GNG: Network Gig Work
 - owner: GNG extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation) and restricts Rec.
 - ours: Gigs
-- ours: Gigs extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+- ours: Gigs extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
 
 - owner: 4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (GNO:2).
-- ours: 4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (Networked Organisation:2).
+- ours: 4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (Community Network:2).
 
 - owner: 6. ◆ Recommend: Rec:1, where Alice recommends Bob for the work after acceptance.
 - ours: 6. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the work after acceptance.
@@ -419,11 +419,11 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: GNL: Network Lodging
 - owner: GNL extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation), and restricts GNO and Rec.
 - ours: Lodging
-- ours: Lodging extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Networked Organisation and Recommendations.
+- ours: Lodging extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Community Network and Recommendations.
 
 - owner: 5. ■ Raise: GNO:2, only before checkout, and by Alice only if she is checked in.
 - owner: 6. ◆ Recommend: Rec:1, where Alice recommends Bob for the stay after checkout.
-- ours: 5. ■ Raise: Networked Organisation:2, only before checkout, and by Alice only if she is checked in.
+- ours: 5. ■ Raise: Community Network:2, only before checkout, and by Alice only if she is checked in.
 - ours: 6. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the stay after checkout.
 
 ### Marketplace
@@ -431,7 +431,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: GNM: Network Marketplace
 - owner: GNM extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation) and restricts Rec.
 - ours: Marketplace
-- ours: Marketplace extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+- ours: Marketplace extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
 
 - owner: 5. ◆ Recommend: Rec:1, where Alice recommends Bob for the good after delivery.
 - ours: 5. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the good after delivery.
@@ -449,12 +449,12 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: 3. ■ Credit limit. DGC:2, Notes:3, Coins:1 and DGC:4, only if every member is then in the red by at most 1000 coins.
 - ours: 3. ■ Credit limit. Denominated Currencies:2, Notes:3, Coins:1 and Denominated Currencies:4, only if every member is then in the red by at most 1000 coins.
 
-### Networked Organisation
+### Community Network
 
-- owner: GNO: Grassroots Networked Organisation
+- owner: GNO: Grassroots Community Network
 - owner: GNO extends GBCC and restricts it.
-- ours: Networked Organisation
-- ours: Networked Organisation extends Backed Community and restricts it.
+- ours: Community Network
+- ours: Community Network extends Backed Community and restricts it.
 
 ### Notes
 
@@ -527,10 +527,10 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: ORH: Ride-Hailing Organisation
 - owner: ORH extends GNO and restricts and strengthens GRA-SS (GRH, Grassroots Ride-Hailing, in preparation).
 - ours: Rides
-- ours: Rides extends Networked Organisation and restricts and strengthens Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
+- ours: Rides extends Community Network and restricts and strengthens Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
 
 - owner: 1. ■ Award: GRA-SS:2, only if the fare and the deposit are in Orga-coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (GNO:2).
-- ours: 1. ■ Award: Second-Score Auction:2, only if the fare and the deposit are in Orga-coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (Networked Organisation:2).
+- ours: 1. ■ Award: Second-Score Auction:2, only if the fare and the deposit are in Orga-coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (Community Network:2).
 
 ### Second-Score Auction
 

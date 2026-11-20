@@ -1,5 +1,5 @@
 % Written by tools/expand.py from rev/; do not edit.
-Networked Organisation
+Community Network
 An *identity* is a unique cryptographic key pair.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A *relation* is a friendship or the membership of a group. Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. Here: bylaws. An organisation takes an act of a party by those who decide for the organisation.
@@ -9,8 +9,8 @@ A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coi
 A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
 *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
 A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
-A *networked organisation* is an organisation whose bylaws name its *community*, a backed community currency, Cur, and the role *arbiter*. A *provider* is a person whose *stake*, the Cur-coins they hold, is at least *S*, a number of Cur-coins, and a *customer* is a person who accepts Cur-coins. A *dispute* is over Cur-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
-Alice, Bob and Carol are persons, Orga a networked organisation, Will an organisation, Cur its community. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+A *community network* is an organisation whose bylaws name its *community*, a backed community currency, Cur, and the role *arbiter*. A *provider* is a person whose *stake*, the Cur-coins they hold, is at least *S*, a number of Cur-coins, and a *customer* is a person who accepts Cur-coins. A *dispute* is over Cur-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+Alice, Bob and Carol are persons, Orga a community network, Will an organisation, Cur its community. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -41,5 +41,5 @@ Denominated Coins:3. ○ Pricing. Alice will accept Dollar-denominated Alice-coi
 Denominated Currencies:1. ■ Issue denominated bond: Alice may issue Alice-bonds denominated by a fiat currency, of a maturity later than the current date.
 Denominated Currencies:3. ■ Accept: Alice may accept Dollar-denominated Carol-coins in payment up to a limit of her choosing, if she holds a Dollar-denominated Carol-coin or Carol-bond; each such coin paid to Alice counts against the limit, and Alice may accept again.
 Denominated Currencies:4. ■ Pay accepted coins: Alice may pay Bob, whom she knows, coins she holds that Bob accepts.
-Networked Organisation:1. ■ Set stake: Those who decide for Orga may set S.
-Networked Organisation:2. ■ Arbitration. Raise: Either Alice or Bob, the parties to a dispute, may raise it to an arbiter, Carol. Arbitrate: Carol may then decide the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.
+Community Network:1. ■ Set stake: Those who decide for Orga may set S.
+Community Network:2. ■ Arbitration. Raise: Either Alice or Bob, the parties to a dispute, may raise it to an arbiter, Carol. Arbitrate: Carol may then decide the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.

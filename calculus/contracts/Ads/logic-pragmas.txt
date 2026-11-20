@@ -1,7 +1,7 @@
 Ads
-Ads extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
+Ads extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
 An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the Orga-coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
-Alice, Bob and Carol are persons, Orga a networked organisation, Mark a fiat currency, Ad an ad; in clause 1 Carol is a member.
+Alice, Bob and Carol are persons, Orga a community network, Mark a fiat currency, Ad an ad; in clause 1 Carol is a member.
 1. ■ Posting. Post: Bob may post Ad in Orga, provided Bob is an advertiser of Orga. Bob posts the ad to the members he points to, and its budget is then locked on top of his stake. Send ad: Ad of Bob goes to Alice in Orga, provided Bob has Ad posted in Orga, Bob points to Alice and Alice is a member of Orga. Pass: Alice may pass Ad of Bob to Carol in Orga, provided Alice is a member of Orga, Alice has received Ad of Bob in Orga, Alice points to Carol and Carol accepts a Mark-denominated Orga-coin in payment.
 2. ■ Show: Alice is shown Ad of Bob, provided Alice is a member of Orga, Alice has received Ad of Bob in Orga and Ad is for the profile of Alice.
 3. ◆ Viewing and clicking. View: Alice may attest a view of Ad of Bob, provided Alice has been shown Ad of Bob. Click: Alice may attest a click of Ad of Bob, provided Alice has been shown Ad of Bob. The ad's budget then pays Alice its coins for the view or the click, up to the most one member may earn from it.

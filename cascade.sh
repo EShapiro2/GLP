@@ -246,7 +246,7 @@ case "$1" in
     gigs) FILE=Gigs; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     lodging) FILE=Lodging; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     marketplace) FILE=Marketplace; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
-    networked_organisation) FILE=Networked-Organisation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    community_network) FILE=Community-Network; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     organisation) FILE=Organisation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     mutual_credit) FILE=Mutual-Credit; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     rides) FILE=Rides; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
@@ -269,7 +269,7 @@ case "$1" in
            OWNER=$(dirname "$FOUND"); PAPER=""; PLAYDIR=""
            return
        fi
-       echo "cascade.sh: no contract named $1; the names are forwarding programs appstore rendezvous services directory encounters knowledge friendship groups guardians provenance_groups coins bonds warded_groups children gfwc agents feeds agora overlay denominated_currencies community denominated_coins auction short_feeds resilient_feeds backchannel_feeds distrust separating_distrust labelled_overlay dao liquid_dao funded_dao recommendations stays library joint_accounts community_bank commercial_bank consumers_cooperative ads backed_community bank cooperative corporation cooperative_dao liquid_cooperative gigs lodging marketplace networked_organisation organisation mutual_credit rides notes app constitution shares shareholding_corporation central_bank single_person_company trading_company workers_cooperative local_overlay second_score_auction secure_friendship" >&2; exit 2 ;;
+       echo "cascade.sh: no contract named $1; the names are forwarding programs appstore rendezvous services directory encounters knowledge friendship groups guardians provenance_groups coins bonds warded_groups children gfwc agents feeds agora overlay denominated_currencies community denominated_coins auction short_feeds resilient_feeds backchannel_feeds distrust separating_distrust labelled_overlay dao liquid_dao funded_dao recommendations stays library joint_accounts community_bank commercial_bank consumers_cooperative ads backed_community bank cooperative corporation cooperative_dao liquid_cooperative gigs lodging marketplace community_network organisation mutual_credit rides notes app constitution shares shareholding_corporation central_bank single_person_company trading_company workers_cooperative local_overlay second_score_auction secure_friendship" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not

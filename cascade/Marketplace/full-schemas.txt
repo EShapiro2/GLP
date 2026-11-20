@@ -1,7 +1,7 @@
 Marketplace (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Marketplace:0 - | Alice, Bob and Carol are persons, Orga a networked organisation, Will, Gov and Cur organisations, Motion an act of Orga, Role a role, Votes, Double, Sum, Total, Limit, S and Held numbers, Dave a party, Cond a condition Alice, Bob and Carol agree, Day, Term and Due maturity dates, Today a date, Dollar and Mark fiat currencies, Skill a skill or a service, Listing a listing.
+Marketplace:0 - | Alice, Bob and Carol are persons, Orga a community network, Will, Gov and Cur organisations, Motion an act of Orga, Role a role, Votes, Double, Sum, Total, Limit, S and Held numbers, Dave a party, Cond a condition Alice, Bob and Carol agree, Day, Term and Due maturity dates, Today a date, Dollar and Mark fiat currencies, Skill a skill or a service, Listing a listing.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
@@ -209,15 +209,15 @@ Denominated Currencies:4 ■ Pay own accepted coins: ~coin(Alice,Alice), coin(Bo
 Denominated Currencies:4 ■ Pay own accepted coins for Alice: ~coin(Alice,Alice), coin(Bob,Alice), ~accepts(Bob,Alice,Dollar), ~vote_pay_accepted_coins_alice(Alice,_,Bob,Alice,Dollar) <- knows(Alice,Bob), issued_in(Alice,Dollar), coin(Alice,Alice), accepts(Bob,Alice,Dollar), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), officer(AliceOfficer,Alice), vote_pay_accepted_coins_alice(Alice,>=VotesAlice,Bob,Alice,Dollar), product(DoubleAlice,VotesAlice,2), has_officer(Alice,<DoubleAlice) guarded by AliceOfficer taken for Alice by AliceOfficer.
 Denominated Currencies:4 ■ Pay accepted coins to the issuer: ~coin(Alice,Bob), coin(Bob,Bob), ~accepts(Bob,Bob,Dollar) <- knows(Alice,Bob), issued_in(Bob,Dollar), coin(Alice,Bob), accepts(Bob,Bob,Dollar) guarded by Alice.
 Denominated Currencies:4 ■ Pay accepted coins to the issuer for Alice: ~coin(Alice,Bob), coin(Bob,Bob), ~accepts(Bob,Bob,Dollar), ~vote_pay_accepted_coins_alice(Alice,_,Bob,Bob,Dollar) <- knows(Alice,Bob), issued_in(Bob,Dollar), coin(Alice,Bob), accepts(Bob,Bob,Dollar), knows(AliceOfficer,Alice), knows(AliceOfficer,Bob), officer(AliceOfficer,Alice), vote_pay_accepted_coins_alice(Alice,>=VotesAlice,Bob,Bob,Dollar), product(DoubleAlice,VotesAlice,2), has_officer(Alice,<DoubleAlice) guarded by AliceOfficer taken for Alice by AliceOfficer.
-Networked Organisation:0 - | A *networked organisation* is an organisation whose bylaws name its *community*, a backed community currency, Cur, and the role *arbiter*. A *provider* is a person whose *stake*, the Cur-coins they hold, is at least *S*, a number of Cur-coins, and a *customer* is a person who accepts Cur-coins. A *dispute* is over Cur-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
-Networked Organisation:0 - | In clause 2 Alice is the customer and Bob the provider.
-Networked Organisation:0 - | Parameters: z has c as its community; x has coins locked in z as the customer of y; y has coins locked in z as the provider of x.
-Networked Organisation:1 ■ Set stake: ~stake(Orga,_), stake(Orga,S) <- organisation(Orga) guarded by deciders(Orga).
-Networked Organisation:2 ■ | Arbitration.
-Networked Organisation:2 ■ Raise: dispute(Carol,Alice,Bob,Orga) <- provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga), role(Carol,Orga,Arbiter), has_role(Orga,Carol,Arbiter), ~dispute(Carol,Alice,Bob,Orga) guarded by Alice.
-Networked Organisation:2 ■ Provider raise: dispute(Carol,Alice,Bob,Orga) <- provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga), role(Carol,Orga,Arbiter), has_role(Orga,Carol,Arbiter), ~dispute(Carol,Alice,Bob,Orga) guarded by Bob.
-Networked Organisation:2 ■ Arbitrate: ~dispute(Carol,Alice,Bob,Orga), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- dispute(Carol,Alice,Bob,Orga), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Carol.
-Networked Organisation:2 ■ | The coins are released less the fee the terms set, which is released to Carol.
+Community Network:0 - | A *community network* is an organisation whose bylaws name its *community*, a backed community currency, Cur, and the role *arbiter*. A *provider* is a person whose *stake*, the Cur-coins they hold, is at least *S*, a number of Cur-coins, and a *customer* is a person who accepts Cur-coins. A *dispute* is over Cur-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+Community Network:0 - | In clause 2 Alice is the customer and Bob the provider.
+Community Network:0 - | Parameters: z has c as its community; x has coins locked in z as the customer of y; y has coins locked in z as the provider of x.
+Community Network:1 ■ Set stake: ~stake(Orga,_), stake(Orga,S) <- organisation(Orga) guarded by deciders(Orga).
+Community Network:2 ■ | Arbitration.
+Community Network:2 ■ Raise: dispute(Carol,Alice,Bob,Orga) <- provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga), role(Carol,Orga,Arbiter), has_role(Orga,Carol,Arbiter), ~dispute(Carol,Alice,Bob,Orga) guarded by Alice.
+Community Network:2 ■ Provider raise: dispute(Carol,Alice,Bob,Orga) <- provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga), role(Carol,Orga,Arbiter), has_role(Orga,Carol,Arbiter), ~dispute(Carol,Alice,Bob,Orga) guarded by Bob.
+Community Network:2 ■ Arbitrate: ~dispute(Carol,Alice,Bob,Orga), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- dispute(Carol,Alice,Bob,Orga), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Carol.
+Community Network:2 ■ | The coins are released less the fee the terms set, which is released to Carol.
 Overlay:1 ■ Point friend: points_to(Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), ~points_to(Alice,Bob) guarded by Alice.
 Overlay:2 ■ Point transitive: points_to(Alice,Carol) <- knows(Alice,Carol), points_to(Alice,Bob), points_to(Bob,Carol), ~points_to(Alice,Carol) guarded by Alice.
 Overlay:3 ■ Unpoint: ~points_to(Alice,Bob) <- points_to(Alice,Bob) guarded by Alice.

@@ -9,9 +9,9 @@ A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coi
 A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
 *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
 A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
-A *networked organisation* is an organisation whose bylaws name its *community*, a backed community currency, Cur, and the role *arbiter*. A *provider* is a person whose *stake*, the Cur-coins they hold, is at least *S*, a number of Cur-coins, and a *customer* is a person who accepts Cur-coins. A *dispute* is over Cur-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+A *community network* is an organisation whose bylaws name its *community*, a backed community currency, Cur, and the role *arbiter*. A *provider* is a person whose *stake*, the Cur-coins they hold, is at least *S*, a number of Cur-coins, and a *customer* is a person who accepts Cur-coins. A *dispute* is over Cur-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
 A *worker* is a provider and a *client* a customer. A *job* names the work, its price in Cur-coins and its deadline; its terms say what is released to whom on cancellation.
-Alice, Bob and Carol are persons, Orga a networked organisation, Will an organisation, Cur its community. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Alice, Bob and Carol are persons, Orga a community network, Will an organisation, Cur its community. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -42,8 +42,8 @@ Denominated Coins:3. ○ Pricing. Alice will accept Dollar-denominated Alice-coi
 Denominated Currencies:1. ■ Issue denominated bond: Alice may issue Alice-bonds denominated by a fiat currency, of a maturity later than the current date.
 Denominated Currencies:3. ■ Accept: Alice may accept Dollar-denominated Carol-coins in payment up to a limit of her choosing, if she holds a Dollar-denominated Carol-coin or Carol-bond; each such coin paid to Alice counts against the limit, and Alice may accept again.
 Denominated Currencies:4. ■ Pay accepted coins: Alice may pay Bob, whom she knows, coins she holds that Bob accepts.
-Networked Organisation:1. ■ Set stake: Those who decide for Orga may set S.
-Networked Organisation:2. ■ Arbitration. Raise: Either Alice or Bob, the parties to a dispute, may raise it to an arbiter, Carol. Arbitrate: Carol may then decide the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.
+Community Network:1. ■ Set stake: Those who decide for Orga may set S.
+Community Network:2. ■ Arbitration. Raise: Either Alice or Bob, the parties to a dispute, may raise it to an arbiter, Carol. Arbitrate: Carol may then decide the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.
 Overlay:1. ■ Point friend: Alice, who does not point to her friend Bob, may point to Bob.
 Overlay:2. ■ Point transitive: Alice, who knows Carol and points to Bob who points to Carol, may point to Carol.
 Overlay:3. ■ Unpoint: Alice, who points to Bob, may cease pointing to Bob.
@@ -53,5 +53,5 @@ Recommendations:3. ■ Withdraw: Alice may withdraw a recommendation; it is then
 Gigs:1. ■ Job. Post: Alice, a client, may post a job to the workers she points to. Pass: A worker may pass it to the workers they point to. Withdraw job: Alice may withdraw it.
 Gigs:2. ■ Engage: Alice may engage Bob, a worker, for the job with the consent of Bob, provided Alice and Bob know each other; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 Gigs:3. ◆ Deliver: Bob may attest that he delivered the work to Alice.
-Gigs:4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (Networked Organisation:2).
+Gigs:4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (Community Network:2).
 Gigs:5. ■ Cancelling. Cancel: Alice or Bob may cancel the engagement before delivery, and the payment and the deposit are then released to Alice and to Bob as the terms say. Lapse: If no delivery is attested by the deadline, Alice may cancel and both are then released to her.

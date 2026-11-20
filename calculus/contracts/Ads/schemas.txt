@@ -1,5 +1,5 @@
 Ads
-Ads extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
+Ads extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
 Vocabulary: y has d posted in z = posted(y,d,z); y has the budget of d locked in z = budget_locked(y,d,z); x has received d of y in z = received(x,d,y,z); d is for the profile of x = for_profile(x,d); x has been shown d of y = ad_shown(x,d,y); x has attested a view of d of y = viewed(x,d,y); x has attested a click of d of y = clicked(x,d,y).
 y is an advertiser of z: y is a provider of z.
 x is a member of z: x is a customer of z.
@@ -10,7 +10,7 @@ After x is shown d of y, which requires x has not been shown d of y: x has been 
 After x attests a view of d of y: x has attested a view of d of y.
 After x attests a click of d of y: x has attested a click of d of y.
 Ads:0 - | An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the Orga-coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
-Ads:0 - | Alice, Bob and Carol are persons, Orga a networked organisation, Mark a fiat currency, Ad an ad; in clause 1 Carol is a member.
+Ads:0 - | Alice, Bob and Carol are persons, Orga a community network, Mark a fiat currency, Ad an ad; in clause 1 Carol is a member.
 Ads:0 - | Environment: d is for the profile of x.
 Ads:1 ■ | Posting.
 Ads:1 ■ Post: posted(Bob,Ad,Orga), budget_locked(Bob,Ad,Orga) <- stake(Orga,S), coin(Bob,Orga,*Held), ge(Held,S), ~posted(Bob,Ad,Orga) guarded by Bob.
