@@ -19,3 +19,5 @@ Threads run on Opus. Every thread pushes its own repo to main, as Udi's rules sa
 Work that one thread delegates to another project is done in parallel: the coordinator starts the owner's thread at once, without asking Udi.
 
 A thread that compacts writes its handover, pushes, and tells the coordinator. The coordinator starts its successor and closes the old thread. The successor reads in full the rules, its project's CLAUDE.md and its latest handover before any work. A thread reads a paper in full before it discusses or revises that paper or a contract that belongs to it; it reads no paper it does not need.
+
+A thread does long checks and searches through its own helpers and keeps only their results, so that its memory fills slowly.
