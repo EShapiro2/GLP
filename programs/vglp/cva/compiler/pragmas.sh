@@ -301,6 +301,8 @@ for my $n (keys %cons) {
 }
 # The schemas a button realises: those bearing its name, the button in lower case, or its name with a suffix after an underscore (GSC #7, GSC docs/design-decisions.md, 2026-10-24: "the schemas realising it are those bearing its name or its name with a suffix after an underscore"), as [Enter] realises enter and enter_2 and [Swap] swap_cc, but for a schema another button of the contract names by its own name, as [Post own] names post_own and [Post] does not; the button alone where the term is not given or none is found.
 my %seen; my @order; my %extends;
+# The words of each instantiation, by the contract that writes it and the contract it instantiates ("an organisation for a ward"), and the name the line gives each contract a file extends, by file (relation_names and visit, below), from which an inherited line\x27s names are put in the instance\x27s own (own_names, below).
+my (%inst_words, %parent_name);
 my %named_by_button;
 # The schema a button names (README.md, 2): its text in lower case, each run of spaces an underscore, and every character that is no letter, digit, underscore or hyphen left out, as the apostrophe of [Redeem member\x27s coin], the schema redeem_members_coin (Calculus #6, vGLP_inbox.md, 2026-11-15 16:04 UTC).
 sub act_name { my ($b) = @_; (my $a = lc $b) =~ s/ +/_/g; $a =~ s/[^a-z0-9_-]//g; return $a }
@@ -378,6 +380,80 @@ sub read_base_names {
     return $base_names{$f} = \%bn;
 }
 # A name is renamed only where the instance renames that role, and a role both share keeps its name (GSC #19, vGLP_inbox.md, 2026-11-17 12:33 UTC): a name of the base\x27s schema maps to the name at its place in the instance\x27s schema only where the base\x27s schema bears no role or variable of the instance\x27s name and the instance\x27s bears none of the base\x27s, so that Commercial Bank\x27s expel, adding DeciderB at the place of Organisation\x27s Codecider, renames nothing.  A button the contract replaces with a line of its own is not read from the base\x27s line (vGLP, Section 5.4, "The contract\x27s words": "its button ... replaces the inherited one"), so that Joint Accounts\x27 own [Deposit] maps no name of Coins\x27 Escrow line.  The names of a button line, and of the question lines after it, which belong to it, are renamed by the schemas of that line\x27s buttons.
+# The kinds the names declaration of a contract gives its names, in their order: "Alice and Bob are persons, Orga an organisation." gives Alice and Bob the kind person and Orga organisation (the Calculus, Section 1, "The names line of a contract declares the names of its own clauses"; calculus/tools/gcsas.py, kinds_line).
+my %decl_kinds;
+sub decl_kinds {
+    my ($f) = @_;
+    return $decl_kinds{$f} if exists $decl_kinds{$f};
+    my @out;
+    my $N = qr/[A-Z][A-Za-z]*/;
+    for my $x (read_txt($f)) {
+        next if $x =~ /^%/;
+        last if $x =~ /^\d+\./ || contract_end($x);
+        for my $l (split /\.\s{2,}/, $x) {
+            next if $l =~ /\*/ or $l !~ /^$N(?:, $N)*(?: and $N)? (?:is|are) /;
+            my $seg = (split /; |\. /, $l)[0]; $seg =~ s/\.\s*$//;
+            while ($seg =~ /((?:$N, )*$N(?: and $N)?) (?:(?:is|are) )?((?:an? )?[a-z][A-Za-z\x27 -]*?)(?=, | and [A-Z]|$)/g) {
+                my ($ns, $k) = ($1, $2); $k =~ s/^an? //;
+                next if $k =~ /^possibly/;
+                my @ns = ($ns =~ /($N)/g);
+                $k = $k eq "children" ? "child" : $k =~ /ies$/ ? $k =~ s/ies$/y/r : $k =~ /s$/ ? $k =~ s/s$//r : $k if @ns > 1;
+                push @out, [ $_, $k ] for @ns;
+            }
+        }
+        last if @out;
+    }
+    return $decl_kinds{$f} = \@out;
+}
+# The kinds of the names of a contract and of every contract it is written from, its own first, in order.
+sub kinds_from {
+    my ($f, $seen) = @_;
+    $seen //= {};
+    return () if $seen->{$f}++;
+    return (@{ decl_kinds($f) }, map { kinds_from($_, $seen) } @{ $extends{$f} // [] });
+}
+# The names a contract puts for the names of a contract it instantiates, its own: where it instantiates it with a kind for a kind, "an organisation for a ward", the first name the instantiated contract and those it is written from give the kind replaced, Guardians\x27 Wendy, is the last name the contract\x27s own declaration gives the kind put that they do not give, Organisation\x27s Orga: "Its conditions, persons and effects are written with the names of its own contract: Organisation:4 writes Orga, the organisation, where Guardians:2 writes Wendy, the ward" (the Calculus, Section 1, citations; calculus/tools/gcsas.py, own_for; Udi, 2026-11-17, to Calculus #8).
+sub own_for {
+    my ($c, $p) = @_;
+    my %mp;
+    my $pn = $parent_name{$c}{$p} // return \%mp;
+    my @items = map { split /\s*,\s*(?:and\s+)?|\s+and\s+/ } @{ $inst_words{$c}{$pn} // [] };
+    my @pk = kinds_from($p);
+    my %inp = map { $_->[0] => 1 } @pk;
+    for my $it (@items) {
+        next unless $it =~ /^\s*(?:(?:an?|the)\s+)?(.+?)\s+for\s+(?:(?:an?|the)\s+)?(.+?)\s*$/;
+        my ($new, $old) = ($1, $2);
+        my ($o) = grep { !exists $mp{$_} } map { $_->[1] eq $old ? $_->[0] : () } @pk;
+        my @mine = map { $_->[1] eq $new && !$inp{ $_->[0] } ? $_->[0] : () } @{ decl_kinds($c) };
+        $mp{$o} = $mine[-1] if defined $o && @mine;
+    }
+    return \%mp;
+}
+# The names the contract read, $top, puts for the names of a contract $f it is written from, through every instantiation between them: the map of each step from $f up to $top applied in turn.
+my %own_names;
+sub own_names {
+    my ($f) = @_;
+    return $own_names{$f} if exists $own_names{$f};
+    my @path;
+    my %vis;
+    my $find; $find = sub {
+        my ($g) = @_;
+        return 1 if $g eq $f;
+        return 0 if $vis{$g}++;
+        for my $h (@{ $extends{$g} // [] }) { if ($find->($h)) { unshift @path, [ $g, $h ]; return 1 } }
+        return 0;
+    };
+    my %mp;
+    if ($find->($top)) {
+        for my $st (reverse @path) {
+            my $m = own_for(@$st);
+            $mp{$_} = $m->{ $mp{$_} } // $mp{$_} for keys %mp;
+            for my $k (keys %$m) { $mp{$k} //= $m->{$k} unless grep { $_ eq $k } values %mp }
+        }
+    }
+    delete $mp{$_} for grep { $mp{$_} eq $_ } keys %mp;
+    return $own_names{$f} = \%mp;
+}
 sub inst_renamed {
     my ($f, $ln, $rest) = @_;
     my $bn = read_base_names($f);
@@ -403,6 +479,9 @@ sub inst_renamed {
                 my @bv = @{ $bn->{$sb}{vars} };
                 my %inb = map { $_ => 1 } (@br, @bv);
                 my %ini = map { $_ => 1 } (grep { defined } @ir, @iv);
+                # A name the instance puts for a name of its base by the instantiation\x27s words is renamed so first, wherever the base\x27s schema bears it and the instance\x27s bears the instance\x27s name and not the base\x27s, whatever the places of the two in the schemas (own_names, above): Guardians\x27 enter, of Wendy and Alice, is Organisation\x27s, of Alice and Orga.
+                my $own = own_names($f);
+                for my $o (keys %$own) { $map{$o} //= $own->{$o} if $inb{$o} && !$ini{$o} && $ini{ $own->{$o} } }
                 for my $i (0 .. $#br) { next unless defined $ir[$i]; $map{ $br[$i] } //= $ir[$i] if $br[$i] ne $ir[$i] && !$ini{ $br[$i] } && !$inb{ $ir[$i] } }
                 for my $j (0 .. $#bv) { next unless defined $iv[$j]; $map{ $bv[$j] } //= $iv[$j] if $bv[$j] ne $iv[$j] && !$ini{ $bv[$j] } && !$inb{ $iv[$j] } }
             }
@@ -487,9 +566,10 @@ sub relation_names {
         }
         # An instantiation\x27s words, between commas after the contract\x27s name, up to the next relation or the end of the line, which it may omit.
         # The Calculus writes an instantiation\x27s words after "with", up to the next relation or the end of the line, as "instantiates GnW with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it" (calculus/README.md, "The relations").
-        if (grep { $_ eq "instantiates" } @rels and !grep { $_ eq "composes" } @rels and $s =~ s/^\s+with\s+(?:(?!\s*,?\s*(?:and\s+)?$rel).)*//) { }
+        if (grep { $_ eq "instantiates" } @rels and !grep { $_ eq "composes" } @rels and $s =~ s/^\s+with\s+((?:(?!\s*,?\s*(?:and\s+)?$rel).)*)//) { push @{ $inst_words{$f}{ $names[-1] } }, $1 }
         elsif (grep { $_ eq "instantiates" } @rels and $s =~ s/^\s*,(?!\s*(?:and\s+)?$rel)\s*((?:(?!,\s*(?:and\s+)?$rel).)*?)\s*(?=,\s*(?:and\s+)?$rel|$)//) {
             my $w = $1;
+            push @{ $inst_words{$f}{ $names[-1] } }, $w;
             $w =~ /\bfor\b/ or die "pragmas.sh: $f: the line saying what the contract is written from, \"$line\", says between commas after the contract instantiated what it writes for what, and \"$w\" does not\n";
         }
         last if $s =~ /^\s*$/;
@@ -512,6 +592,7 @@ sub visit {
             defined $g or die "pragmas.sh: $f: the contract $n, which its line saying what it is written from names, has no " . ($file_of{$n} // $n) . ".txt\n";
             visit($g);
             push @{ $extends{$f} }, $g;
+            $parent_name{$f}{$g} //= $n;
         }
     } elsif (defined $ext) {
         my $dir = $f =~ m{/} ? $f =~ s{/[^/]*$}{}r : ".";   # a file named with no directory is in the current one
