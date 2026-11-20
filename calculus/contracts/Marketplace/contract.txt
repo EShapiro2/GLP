@@ -1,6 +1,6 @@
 Marketplace
 Marketplace extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
-A *seller* is a provider and a *buyer* a customer. A *listing* names a good, its price in Orga-coins and how it is delivered; its terms say what is released to whom on cancellation.
+A *seller* is a provider and a *buyer* a customer. A *listing* names a good, its price in community coins and how it is delivered; its terms say what is released to whom on cancellation.
 Alice and Bob are persons, Orga a community network.
 1. ■ Listing. Post: Bob, a seller, may post a listing to the buyers he points to. Pass: A buyer may pass it to the buyers they point to. Withdraw listing: Bob may withdraw it.
 2. ■ Order: Alice, a buyer, may order the good from Bob with the consent of Bob, provided Alice and Bob know each other; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.

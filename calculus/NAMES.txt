@@ -74,6 +74,7 @@ SCB | Central Bank | Central-Bank | central_bank | scb
 MCS | Mutual Credit | Mutual-Credit | mutual_credit | mcs
 GCC | Community | Community | community | gcc
 GBCC | Backed Community | Backed-Community | backed_community | gbcc
+Democratic Community | Democratic Community | Democratic-Community | democratic_community | democratic_community
 GCorp | Corporation | Corporation | corporation | gcorp
 SC | Shareholding Corporation | Shareholding-Corporation | shareholding_corporation | sc
 SPLLC | Single-Person Company | Single-Person-Company | single_person_company | spllc
@@ -109,3 +110,8 @@ Booking | Booking | Booking | booking | booking
 Meeting Rooms | Meeting Rooms | Meeting-Rooms | meeting_rooms | meeting_rooms
 Appointments | Appointments | Appointments | appointments | appointments
 Anonymous Rendezvous | Anonymous Rendezvous | Anonymous-Rendezvous | anonymous_rendezvous | anonymous_rendezvous
+Nonprofit | Nonprofit | Nonprofit | nonprofit | nonprofit
+Partnership | Partnership | Partnership | partnership | partnership
+Foundation | Foundation | Foundation | foundation | foundation
+Disputes | Disputes | Disputes | disputes | disputes
+Warnings | Warnings | Warnings | warnings | warnings

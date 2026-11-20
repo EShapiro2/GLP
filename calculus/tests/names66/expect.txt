@@ -168,28 +168,28 @@ reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), at
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
- sas(open, ['Alice', 'Bob'], ['Acct'], [atom(account, ['Alice', 'Acct', 'Bob']), atom(account, ['Bob', 'Acct', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])])
+ sas(open, ['Alice', 'Bob'], ['Acct'], [atom(account, ['Alice', const('Acct'), 'Bob']), atom(account, ['Bob', const('Acct'), 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])])
 --- term Community-Bank
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
- sas(open, ['Alice', 'Bob'], ['Acct'], [atom(account, ['Alice', 'Acct', 'Bob']), atom(account, ['Bob', 'Acct', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])])
+ sas(open, ['Alice', 'Bob'], ['Acct'], [atom(account, ['Alice', const('Acct'), 'Bob']), atom(account, ['Bob', const('Acct'), 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])])
 --- term Cooperative-DAO
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
- sas(join, ['Alice', 'Bob'], ['Coop'], [atom(member, ['Alice', 'Coop'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(member, ['Bob', 'Coop'])], true, ['Alice', 'Bob']),
- sas(delegate, ['Alice', 'Bob'], ['Bob', 'Org'], [atom(delegates, ['Alice', 'Bob', 'Org'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob'])], true, ['Alice'])])
+ sas(join, ['Alice', 'Bob'], ['Coop'], [atom(member, ['Alice', const('Coop')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(member, ['Bob', const('Coop')])], true, ['Alice', 'Bob']),
+ sas(delegate, ['Alice', 'Bob'], ['Bob', 'Org'], [atom(delegates, ['Alice', 'Bob', const('Org')])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob'])], true, ['Alice'])])
 --- term Cooperative
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
- sas(join, ['Alice', 'Bob'], ['Coop'], [atom(member, ['Alice', 'Coop'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(member, ['Bob', 'Coop'])], true, ['Alice', 'Bob'])])
+ sas(join, ['Alice', 'Bob'], ['Coop'], [atom(member, ['Alice', const('Coop')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(member, ['Bob', const('Coop')])], true, ['Alice', 'Bob'])])
 --- term DAO
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
- sas(delegate, ['Alice', 'Bob'], ['Bob', 'Org'], [atom(delegates, ['Alice', 'Bob', 'Org'])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob'])], true, ['Alice'])])
+ sas(delegate, ['Alice', 'Bob'], ['Bob', 'Org'], [atom(delegates, ['Alice', 'Bob', const('Org')])], [atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob'])], true, ['Alice'])])
 --- term Knowledge
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
@@ -198,13 +198,13 @@ reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), at
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
- sas(join, ['Alice', 'Bob'], ['Coop'], [atom(member, ['Alice', 'Coop'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(member, ['Bob', 'Coop'])], true, ['Alice', 'Bob']),
- sas(delegate, ['Alice', 'Bob'], ['Org', 'Coop'], [atom(delegates, ['Alice', 'Bob', 'Org'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(member, ['Bob', 'Coop'])], true, ['Alice'])])
+ sas(join, ['Alice', 'Bob'], ['Coop'], [atom(member, ['Alice', const('Coop')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(member, ['Bob', const('Coop')])], true, ['Alice', 'Bob']),
+ sas(delegate, ['Alice', 'Bob'], ['Org', 'Coop'], [atom(delegates, ['Alice', 'Bob', const('Org')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(member, ['Bob', const('Coop')])], true, ['Alice'])])
 --- term Savings-Bank
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
- sas(open, ['Alice', 'Bob'], ['Acct'], [atom(account, ['Alice', 'Acct', 'Bob']), atom(account, ['Bob', 'Acct', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])])
+ sas(open, ['Alice', 'Bob'], ['Acct'], [atom(account, ['Alice', const('Acct'), 'Bob']), atom(account, ['Bob', const('Acct'), 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], true, ['Alice', 'Bob'])])
 --- term Second-Score-Auction
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
@@ -214,7 +214,7 @@ reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), at
 reflexive([knows], [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob']),
- sas(join, ['Alice', 'Bob'], ['Coop'], [atom(member, ['Alice', 'Coop'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(member, ['Bob', 'Coop']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])])
+ sas(join, ['Alice', 'Bob'], ['Coop'], [atom(member, ['Alice', const('Coop')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(member, ['Bob', const('Coop')]), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])])
 --- expand.py: exit 0; --check: exit 0
 --- exp/Auction.txt
 % Written by tools/expand.py from rev/; do not edit.

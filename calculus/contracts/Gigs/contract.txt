@@ -1,6 +1,6 @@
 Gigs
 Gigs extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
-A *worker* is a provider and a *client* a customer. A *job* names the work, its price in Orga-coins and its deadline; its terms say what is released to whom on cancellation.
+A *worker* is a provider and a *client* a customer. A *job* names the work, its price in community coins and its deadline; its terms say what is released to whom on cancellation.
 Alice and Bob are persons, Orga a community network.
 1. ■ Job. Post: Alice, a client, may post a job to the workers she points to. Pass: A worker may pass it to the workers they point to. Withdraw job: Alice may withdraw it.
 2. ■ Engage: Alice may engage Bob, a worker, for the job with the consent of Bob, provided Alice and Bob know each other; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.

@@ -2,18 +2,18 @@ Denominated Coins
 Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
 Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Carol is possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
-Of Denominated Coins: *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
+Of Denominated Coins: *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar. Kind of note: coin, Dollar-denominated y-coins for y-coins.
 Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Dollar a fiat currency.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-Notes:1, Denominated Coins:1. ■ Issue: Alice may issue Sum Alice-coins, provided Alice has issued coins of the denomination Dollar.
-Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
-Notes:3. ■ Pay: Alice may pay Bob Sum Carol-coins, with the consent of Bob, provided Alice knows Bob.
-Notes:3, Coins:1. ■ Pay issuer: Alice may pay the issuer Bob Sum Bob-coins, provided Alice knows Bob.
-Notes:4. ■ Escrow. Deposit: Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
-Coins:2. ■ Redeem: Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
+Notes:1, Denominated Coins:1. ■ Issue: Alice may issue Sum Dollar-denominated Alice-coins, provided Alice has issued coins of the denomination Dollar.
+Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Dollar-denominated Carol-coins for Total Dollar-denominated Dave-coins, provided Alice and Bob know each other.
+Notes:3. ■ Pay: Alice may pay Bob Sum Dollar-denominated Carol-coins, with the consent of Bob, provided Alice knows Bob.
+Notes:3, Coins:1. ■ Pay issuer: Alice may pay the issuer Bob Sum Dollar-denominated Bob-coins, provided Alice knows Bob.
+Notes:4. ○ Escrow. Deposit: Alice may deposit Sum Dollar-denominated Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dollar-denominated Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dollar-denominated Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
+Coins:2. ■ Redeem: Alice may redeem a Dollar-denominated Bob-coin against a Dollar-denominated Carol-coin, provided Alice knows Bob.
 Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
-Denominated Coins:1. ■ First issue: Alice may issue Sum Dollar-denominated Alice-coins, provided Alice has issued coins of no denomination.
+Denominated Coins:1. ■ First issue: Alice may issue Sum Dollar-denominated Alice-coins for the first time, provided Alice has issued coins of no denomination.
 Denominated Coins:2. ○ Denomination. A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
 Denominated Coins:3. ○ Pricing. Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.

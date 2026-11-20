@@ -18,7 +18,7 @@ bad = 0
 for n in names:
     lex = w.lexicon(n)
     phrase = {p: t for t, p, a in lex.basic}
-    env, refl = lex.env_preds(), lex.refl_preds()
+    env, refl = lex.env_preds() | lex.env_preds('fn'), lex.refl_preds()      # a function is computed, not supplied
     PARS = PARAMS | lex.env_preds('par')
     acts = [e for e in toglp.schemas(n) if e['kind'] == 'act']      # an act no binding enables is no act (toglp.unenabled)
     added = {l[1] for e in acts for l in e['head'] if not l[0]}
