@@ -5604,6 +5604,24 @@ compile_read([], Nm, D) :- ground(D?) |
     compile # compile_contract(Nm?, D0?, Ev?, Pm?).
 compile_read([F|Fs], Nm, _) :- compile # compile_malformed(Nm?, [F?|Fs?]).
 
+% A contract checked once and compiled on its verdict, which is given back, as
+% cascade.sh and cascade.py take it: the verdict and the displays are of the
+% one term given, the verdict check/2 gives it.
+imported procedure compile#compile_contract(Constant?, NDeclared?, Preds?, SParams?, Verdict).
+exported procedure compile_contract(Constant?, WDeclared?, Verdict).
+compile_contract(Nm, D, V?) :- ground(D?) |
+    read_faults(D?, F),
+    compile_read(F?, Nm?, D?, V).
+
+procedure compile_read(Faults?, Constant?, WDeclared?, Verdict).
+compile_read([], Nm, D, V?) :- ground(D?) |
+    unnamed(D?, D0),
+    env_preds(D?, Ev),
+    param_list(D?, Pm),
+    compile # compile_contract(Nm?, D0?, Ev?, Pm?, V).
+compile_read([F|Fs], Nm, _, malformed([F?|Fs?])) :- ground(F?), ground(Fs?) |
+    compile # compile_malformed(Nm?, [F?|Fs?]).
+
 imported procedure compile#compile_variant(Constant?, WContract?).
 exported procedure compile_variant(Constant?, WContract?).
 compile_variant(Nm, B) :- compile # compile_variant(Nm?, B?).
