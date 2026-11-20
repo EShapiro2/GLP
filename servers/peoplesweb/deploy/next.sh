@@ -7,7 +7,12 @@ WORK=${TEST_WORK:-/var/lib/glp/test}
 AS=${TEST_AS-sudo -u glp}
 cd "$GLP"
 URL=${TEST_URL:-$(git remote get-url origin)}
-head=$($AS git ls-remote --heads "$URL" "$BRANCH" | cut -f1)
+# A failed ask of GitHub is reported and the run ends; the next minute asks again.
+if ! out=$($AS git ls-remote --heads "$URL" "$BRANCH"); then
+	echo "next: asking GitHub for $BRANCH failed" >&2
+	exit 0
+fi
+head=$(printf '%s\n' "$out" | cut -f1)
 [ -n "$head" ] || exit 0
 [ "$head" = "$(cat "$WORK/built" 2>/dev/null)" ] && exit 0
 sh servers/peoplesweb/deploy/test.sh
