@@ -2121,7 +2121,7 @@ Sigs  ::= [] ; [Sig | Sigs].
 procedure atom_parts(Contract?, NumInfos?, Lxs?, Lines).
 atom_parts(C, Nt, Lx, ['', '%% The atoms of the contract at their argument types: a machine state is a list of them, in the view the agent writes, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)), and the agent writes each atom it holds, g(Name, Vals), as atom_of gives it (vGLP, Section 5.4, "The compilation"); the day, today(d), is no atom of the machine state the view shows (Section 5.4, "Act schemas as local specifications").', 'Atom ::='|L?]) :- ground(C?), ground(Nt?), ground(Lx?) |
     contract_ratoms(C?, Lx?, As0),
-    nt_atoms(Nt?, As1),
+    nt_ratoms(Nt?, Lx?, As1),
     lx_atoms(Lx?, As2),
     app(As1?, As2?, As12),
     app(As0?, As12?, As),
@@ -2171,6 +2171,19 @@ atom_parts1(Gs, L?) :- ground(Gs?) |
 procedure nt_atoms(NumInfos?, Atoms).
 nt_atoms([], []).
 nt_atoms([num_info(_, C, _, _, Fi, _)|Ns], As?) :- c_atoms(C?, A1), fi_atoms(Fi?, A2), nt_atoms(Ns?, A3), app(A2?, A3?, A23), app(A1?, A23?, As).
+%% The same, each argument of a value variable written with its type, real(X) or const(X), as contract_ratoms writes the schemas' atoms: a value variable's type is the one the schema writes with it (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it"), in the anchor of a count or a sum as in an atom a role holds, so that a predicate has one type at each argument and Atom one alternative of it.
+procedure nt_ratoms(NumInfos?, Lxs?, Atoms).
+nt_ratoms([], _, []).
+nt_ratoms([num_info(S, C, _, _, Fi, _)|Ns], Lx, As?) :- ground(S?), ground(Lx?) |
+    c_atoms(C?, A1),
+    fi_atoms(Fi?, A2),
+    app(A1?, A2?, A0),
+    reals_of(Lx?, S?, Xs),
+    real_atoms(A0?, Xs?, A10),
+    consts_of(Lx?, S?, Ys),
+    const_atoms(A10?, Ys?, A3),
+    nt_ratoms(Ns?, Lx?, A4),
+    app(A3?, A4?, As).
 procedure fi_atoms(FInfos?, Atoms).
 fi_atoms([], []).
 fi_atoms([fi(_, F)|Fs], As?) :- f_atoms(F?, A1), fi_atoms(Fs?, A2), app(A1?, A2?, As).
