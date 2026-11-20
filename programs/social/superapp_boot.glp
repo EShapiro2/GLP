@@ -1,17 +1,23 @@
 %% superapp_boot.glp --- the super-app on two smartphones (SGSG paper, Section 3):
 %% under the boot harness, one isolate per person, each with its own key pair,
 %% running the social graph of core/ as its super-app.  Each reads the
-%% certified mini-app's artefact, pingapp.glpw, from core/ with load_file/2
-%% and installs it under the compiler's key its person trusts; alice
-%% cold-calls bob, they befriend across the isolates, alice invites bob to the
-%% mini-app, bob consents, the handshake runs over their friend channel, and
-%% the two executions greet each other over the root channel.  The program is
+%% certified artefact of GSN's app, gsn.glpw, the program compiled from GSN's
+%% contract (programs/apps/gsn), from core/ with load_file/2 and installs it
+%% under the compiler's key its person trusts; alice cold-calls bob, they
+%% befriend across the isolates, alice invites bob to the app, bob consents,
+%% the handshake runs over their friend channel, and the two executions
+%% converse over the root channel, each person's scripted person under its
+%% role, alice or bob (programs/apps/gsn/person.glp).  The program is
 %% graph/core, named as :boot's second argument (this file stands outside
 %% graph/, which is a program and would compile it as a module):
-%%   :artefact programs/social/graph/pingapp programs/social/graph/core
+%%   :artefact programs/apps/gsn programs/social/graph/core
 %%   :boot programs/social/superapp_boot.glp programs/social/graph/core
-%% Expected on the persons' screens: [alice] opened(bob), [alice] greeted(bob),
-%% [bob] opened(alice), [bob] greeted(alice).
+%% Expected on the persons' screens: each execution's first view, written on
+%% its activation, [alice] view(alice, [], [], [], _) and [bob] view(bob, [],
+%% [], [], _), and the views once the two have befriended in the app over the
+%% conversation, [alice] view(alice, [friend(bob), knows(bob), identity,
+%% person], [bob], [], _) and [bob] view(bob, [friend(alice), knows(alice),
+%% identity, person], [alice], [], _).
 
 procedure boot.
 boot :-
