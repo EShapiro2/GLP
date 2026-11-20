@@ -1,0 +1,40 @@
+What each relation of the Calculus carries from its base to the contract written from it (EShapiro2/GLP#100).
+
+A property here is a safety property, a set of runs, each a sequence of the participants' states: a contract has it
+when every run of the contract is in the set (Alpern and Schneider, "Defining Liveness", Information Processing
+Letters 21:181-185, 1985).  A property proved of a base once carries along every relation marked "carries", with no
+new proof; along the others it is proved again.
+
+restricts      carries.  Each act of the contract is an act of the base with conditions or guards added, so every
+               run of the contract is a run of the base, and every safety property of the base holds of it.  In the
+               theory of organisational forms it is a subform, a sharper code, every member of which is a member of
+               the form (Polos, Hannan and Carroll, "Foundations of a Theory of Social Forms", ERIM Report
+               ERS-2000-29-ORG, 2000, Definition 15 and Theorem 3; later Industrial and Corporate Change 11(1), 2002).  It is no behavioural subtype of Liskov and
+               Wing, whose rules never let a subtype strengthen a precondition ("A Behavioral Notion of Subtyping",
+               TOPLAS 16(6):1811-1841, 1994, Definitions 1 and 2).
+
+strengthens    carries, on the states of the base.  The acts' added effects are of states the base does not have,
+               and the conditions added are on those states, so the runs of the contract, its own states left out,
+               are runs of the base.
+
+extends        carries, on the states of the base, where no new act writes a state of the base: the contract is a
+  conservative extension subtype of Liskov and Wing (Section 6.1, the new methods with empty explanations), and a
+               conservative extension in CASL's sense (CoFI, CASL Summary v1.0.1, 2001, Section 6.1.4).
+               tools/relations.py --conservative prints which extensions are so.
+
+extends        does not carry until checked: a new act changes a state of the base, so a run of the contract need
+  base-changing not be a run of the base.  Liskov and Wing's extension rule is the check: each new act's effect on
+               the states of the base is that of a sequence of acts of the base (Definition 2), as Stays' Book moves
+               coins as Coins' Pay issuer does.
+
+relaxes        does not carry: an act loses a condition or a guard, so the base's runs are runs of the contract and
+               not the other way; a safety property of the contract holds of the base.
+
+instantiates   does not carry until checked: CASL's instantiation of a generic specification through a fitting
+               morphism (Section 6.2), the parameter's words put for the parameter; a property that names the
+               parameter is a different property after the map.
+
+composes       does not carry until checked: CASL's union of specifications (Section 6.1); an act both contracts
+               have from one contract they are written from is one act, with the conditions of both.
+
+CASL's models are algebras and not runs; reading a model as a run of a contract is an analogy, stated as one.
