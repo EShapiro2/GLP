@@ -41,3 +41,10 @@ Code #36 compacted twice and stays, by Udi's rule of 2026-11-20 14:32 UTC.  Afte
 ## Environment
 
 - Dart 3.13.7 at /home/claude/dart-sdk.  Worktrees in /home/claude: GLP (main), wt-ren (this branch), wt-gce, wt-go, wt-rel, wt-127, wt-main127.
+
+## Reading after a compaction (Udi's yes to Coordination, 2026-11-20 22:52 UTC)
+
+- The three rules files; then Code's entry in `organisation/projects.md` (main ff6a61541), the record it names, GLP/CLAUDE.md, and this handover.  Project CLAUDE.md files are gone from their repos, their text in each repo's docs record; Code's two files stay.
+- Main since: 07c42f955 (cascade checks once, GSC's compile_contract/3), 8ba6563bb (next.sh), 733305e72 (hash comments), b09438fae, 9e06c5770, ff6a61541 (Coordination's rules).
+- Branch: 2d0f7a1ab Matching and ten more recorded; f1b88d4fd and GO's 4ec044b2 (Community Network pragmas) for Rides and Gigs, being printed in /home/claude/wt-rg; the twelve with constant variables (vGLP's list: Backed-Community, Central-Bank, Commercial-Bank, Community-Bank, Community, Consumers-Cooperative, Gigs, Lodging, Marketplace, Rides, Shareholding-Corporation, Trading-Company) being printed in wt-ren.
+- Audit PR 27 (udi-shapiro/Grassroots-Audit), accepted by Coordination, not yet merged at 23:22 UTC: once merged, Code opens a PR there moving the report of every GLP file it renames or moves (git mv, a "Moved:" line), and moves the 8 reports `python3 -I bin/stale.py <GLP main>` lists.
