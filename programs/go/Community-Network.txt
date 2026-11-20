@@ -1,11 +1,11 @@
 % Community Network --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 5, Grassroots Network Organisations and cites a clause as Community Network:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: Organisation and Denominated Currencies.
+% Extends: Organisation and Denominated Currencies, restricting and strengthening Organisation (Udi, 2026-11-20, to GO #14).
 % Last changed: 2026-11-20, by GO #14 (Udi, 2026-11-20, to GO #13: created by a backed community, community coins, clauses 3 Members and 4 Loss of membership; the name Community Network).
 % Schemas: Community-Network.glp beside this file.
 Community Network
-Community Network extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Community Network extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727), and restricts and strengthens Organisation.
 A *community network* is created by a backed community, and uses its community coins. Its bylaws name the role *arbiter*. A *provider* is a member of the community whose *stake*, the community coins they hold, is at least *S*, a number of community coins, and a *customer* is a member of the community who accepts community coins. A *dispute* is over community coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
 Alice, Bob and Carol are persons, Orga a community network.
 1. ■ Set stake: Those who decide for Orga may set S.
@@ -13,7 +13,7 @@ Alice, Bob and Carol are persons, Orga a community network.
 3. ■ Members. Found: Organisation:1, only if Alice is a member of the community. Join: Organisation:3, only if Bob is a member of the community.
 4. ○ Loss of membership. Those who decide for Orga will end Bob's participation in Orga if he ceases to be a member of the community.
 Logic pragmas
-Community Network extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Community Network extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727), and restricts and strengthens Organisation.
 A *community network* is created by a backed community, and uses its community coins. Its bylaws name the role *arbiter*. A *provider* is a member of the community whose *stake*, the community coins they hold, is at least *S*, a number of community coins, and a *customer* is a member of the community who accepts community coins. A *dispute* is over community coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
 Alice, Bob and Carol are persons, Orga a community network, Gov an organisation, S and Held numbers; in clause 2 Alice is the customer and Bob the provider.
 1. ■ Set stake: Those who decide for Orga may set the stake of Orga at S, provided Orga is an organisation.
