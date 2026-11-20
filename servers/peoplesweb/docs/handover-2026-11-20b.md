@@ -1,23 +1,27 @@
-# Website handover, 2026-11-20 (b), Website #5, after its first compaction
+# Website handover, 2026-11-20 (b), Website #5
 
-Supersedes nothing in handover-2026-11-20.md; adds the afternoon's state.
+Written after Website #5's first compaction, updated 2026-11-20 23:05 UTC.  It replaces handover-2026-11-20.md and handover-2026-11-17.md, which git holds.
+
+## What a thread reads (Coordination, 2026-11-20 22:59 UTC, on Udi's yes at 22:52)
+At its start and after a compaction: the three rules files of GLP `organisation/`, then its project's entry in `organisation/projects.md`, the record it names, and its latest handover.  Website has no entry in projects.md at main ff6a61541, and `servers/peoplesweb/CLAUDE.md` is still on main; the coordinator is told.  Until that is settled, read `servers/peoplesweb/CLAUDE.md`, `README.md` here and this handover.
 
 ## Live (GLP main)
-- Nimrod's five GCE contracts (Nonprofit, Partnership, Foundation, Disputes, Warnings) are live since the 13:11 UTC sweep (main ba7dc9279; Udi's "yes").
-- GO's community structure is NOT live: it waits for Udi's separate yes after he reviews /next.
+- Nimrod's five GCE contracts are live since the 13:11 UTC sweep (Udi's yes).
+- GO's community structure is NOT live: it waits for Udi's yes after his review of /next.
+- Live still shows stale platforms for the contracts Code #36 reprinted on its branch; main is Code's.
+- Not approved for live: LWG's listing; step two of Matching.
 
-## /next (GLP branch Website-site, head ea0ef60ca)
-- Shows GO's structure since the 16:11 UTC sweep, at Udi's "bring this to completion up to contract checking and then upload to /next".
-- Local build at ea0ef60ca: 88 contracts.  Community and Backed Community checked, platform compiled, stop at Running.  Democratic Community checked (d25d3de46), no Interface pragmas, stops at Platform.  Community Network parametric, stops at Platform.  Rides, Ads, Lodging, Marketplace, Gigs checked, stop at Platform (their old platforms removed on purpose: "up to contract checking").
-- To check after the 17:11 sweep: peoplesweb.org/next/stack/Democratic-Community/verdict.txt.
-- Udi was notified with the links at about 16:25 UTC; GO #14 and the coordinator too.
+## /next (GLP branch Website-site)
+- Built within a minute of each push to Website-site, since 2026-11-20 21:11 UTC (Udi's yes at 20:26 UTC to the Optimiser's proposal): `deploy/next.sh`, `peoplesweb-next.{timer,service}`, installed by `sweep.sh`, one flock with the sweep (main b2dc3c8b3, 0d18b4347).  Confirmed: push 22:03:49, served by 22:10.  `systemctl start peoplesweb-next.service` builds it at once.
+- GO's structure: Community, Democratic Community, Backed Community, Community Network, and Rides, Ads, Lodging, Marketplace, Gigs in community coins.
+- Records are taken from Code #36's branch claude/project-thread-llohtv as it sends commits (last 2d0f7a1ab, merged as bb17d0fe2).  A platform is shown only when it carries the current contract text.  Still off: Rides' and Gigs' platforms, waiting on GO's mend of a pragma of Community Network.
 
 ## Rules in force
-- When Udi waits for /next, run the sweep at once and tell him (Udi: "when I am waiting for next, you do sweep immediately").  This container cannot reach the server; the sweep is `ssh root@162.35.126.126 systemctl start peoplesweb-sweep.service`, Udi's Terminal or a Remote Control session on his Mac (a card waits for his Allow since 11:41 UTC).  Otherwise the hourly :11 sweep carries the change.
-- Every message to Udi passes `python3 -I tools/myenglish/check.py --udi`.
-- A visible change to the live site needs Udi's yes.  Only Code merges to main; only Website pushes Website-site.
-- Copied verdicts can be stale: show a contract checked only when its cascade verdict at that commit says so.
-- Check /next through the small full-contract.txt files, not the detail JSON (truncated by the fetcher).
+- When Udi waits for /next, push and tell him once it is built.
+- Every message to Udi passes `python3 -I tools/myenglish/check.py --udi`; post to Udi only when his response is needed.
+- A visible change to the live site needs Udi's yes; only Code merges to main; only Website pushes Website-site.
+- Show a contract checked, or a platform, only from a record printed from its current text.
+- To read /next, fetch small files (stack/<Name>/verdict.txt, full-contract.txt); the fetcher truncates data.js.
 
 ## Threads
 - Code #36: cmsg_0189yZceJmej5oE7scfYctePPPVYvCNSFDGXJypvR76sJe
@@ -25,5 +29,6 @@ Supersedes nothing in handover-2026-11-20.md; adds the afternoon's state.
 - GO #14: cmsg_0189yZceJmej5oE7scfYctePBB9fXVNpv6jTqz95ZumkZt
 
 ## Next
-1. After 17:11 UTC, confirm Democratic Community shows checked on /next.
-2. Await Udi's review; on his yes, ask Code to bring the structure to main for the live site.
+1. Merge each record commit Code sends into Website-site and push; Rides and Gigs when GO mends Community Network's pragma.
+2. On Udi's yes to GO's structure, ask Code to merge it into main, quoting his words.
+3. Step two of Matching and LWG: merge into Website-site when Code's commits come; LWG goes live only on Udi's yes.
