@@ -1,0 +1,65 @@
+% Plane Governance --- an example contract by Nimrod Talmon with Claude, 2026-11-19: constitutional governance of a setting by the generalized median rule of Constitutional Governance in Metric Spaces (Shapiro and Talmon, ADT 2026), in the Manhattan distance.  A proposer claims a score, checked exactly by two counts of the members' ideal values.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.
+% Paper: CGMS, Constitutional Governance in Metric Spaces, https://arxiv.org/abs/2605.13362
+% Extends: Constitution, GO's (programs/go).
+% Defines: setting, status quo, distance, epoch, ideal value, gain, required share, step, score, leader.
+% Checked: calculus/tools/gcsas.py (commute, return, recover), toglp.py --check (Dart 3.14.1): syntactically_grassroots_with_wards; cascade.sh, the platform compiled.  Needs #88, #93, #118 and the count with a function, and vGLP's library with distance (#120).
+% Schemas: Plane-Governance.glp beside this file.
+Plane Governance
+Plane Governance extends Constitution (GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation).
+A *setting* of a constitutional democratic community is a pair of numbers it decides together, such as a fee and a quota; its current value is the *status quo*. The *difference* between two numbers is the larger less the smaller, and the *distance* between two pairs is the sum of the differences of their first numbers and of their second numbers.
+A setting is decided in *epochs*. In each, a member may state an *ideal value* for it, the pair they most prefer, and then propose pairs. A member's *gain* from a pair is the distance between their ideal value and the status quo less that between their ideal value and the pair; a member who stated none is taken to have the status quo as their ideal value.
+The *required share* of the members, a parameter of Plane Governance, is at least one half and less than all; by default, more than half. Each setting has a *step*, a number more than zero.
+The *score* of a pair is the largest gain that at least the required share of the members have from it.
+The *leader* of an epoch is its proposal whose score has been shown to be the highest so far; when there is none, the leader's score is zero.
+Alice and Bob are persons, Orga a constitutional democratic community, Fee a setting of Orga.
+1. ■ Create: Alice may create a setting Fee of Orga, stating its status quo and its step, provided Alice is a member of Orga, on the votes of Orga for it.
+2. ■ Open: Alice may open an epoch on Fee, stating its voting period and its proposal period, provided Alice is a member of Orga and no epoch on Fee is open.
+3. ■ Voting. State ideal: Alice may state her ideal value for Fee once in an epoch, before its voting period ends, provided Alice is a member of Orga. Abstain: When the voting period of an epoch on Fee ends, the status quo is taken as the ideal value of each member of Orga who stated none.
+4. ■ Proposing. Propose value: After the voting period of an epoch on Fee ends, Alice may propose a pair for Fee with a claimed score, provided Alice is a member of Orga, Alice has no proposal in the epoch, and the claimed score is at least the leader's score plus the step of Fee.
+5. ■ Lead: Before the proposal period of an epoch on Fee ends, a proposal of the epoch becomes its leader, provided at least the required share of the members gain at least its claimed score from it, and fewer than the required share gain more than it.
+6. ■ Close. Close with a leader, Close without a leader: After the proposal period of an epoch on Fee ends, the epoch closes, and its leader, if it has one, becomes the status quo of Fee.
+Logic pragmas
+Plane Governance extends Constitution.
+A *setting* of a constitutional democratic community is a pair of numbers it decides together, such as a fee and a quota; its current value is the *status quo*. The *difference* between two numbers is the larger less the smaller, and the *distance* between two pairs is the sum of the differences of their first numbers and of their second numbers.
+A setting is decided in *epochs*. In each, a member may state an *ideal value* for it, the pair they most prefer, and then propose pairs. A member's *gain* from a pair is the distance between their ideal value and the status quo less that between their ideal value and the pair; a member who stated none is taken to have the status quo as their ideal value.
+The *required share* of the members, a parameter of Plane Governance, is at least one half and less than all. Each setting has a *step*, a number more than zero.
+The *score* of a pair is the largest gain that at least the required share of the members have from it.
+The *leader* of an epoch is its proposal whose score has been shown to be the highest so far; when there is none, the leader's score is zero.
+Alice and Bob are persons, Orga a constitutional democratic community, Fee a setting, Ep an epoch, Sx, Sy, Step, Ix, Iy, Vx, Vy, Score, Lead, Need, Enough, Count, Rest and Total numbers.
+1. ■ Create: Alice may create the setting Fee of Orga at Sx by Sy with the step Step, provided Alice is a member of Orga and Orga does not have the setting Fee, on the votes of Orga for it.
+2. ■ Open: Alice may open the epoch Ep on Fee of Orga, provided Alice is a member of Orga and Orga has the setting Fee. Alice states its voting period and its proposal period.
+3. ■ Voting. State ideal: Alice may state the ideal value Ix by Iy in Orga's epoch Ep, provided Alice is a member of Orga, Orga has the epoch Ep on Fee open and the voting period of Orga's epoch Ep has not ended. Abstain: Orga takes Sx by Sy as Bob's ideal value in Orga's epoch Ep, provided Orga has Bob as a participant, Orga has the epoch Ep on Fee open, the voting period of Orga's epoch Ep has ended, Orga has the setting Fee at Sx by Sy and Bob has not voted in Orga's epoch Ep.
+4. ■ Proposing. Propose value: Alice may propose Vx by Vy with the score Score in Orga's epoch Ep, provided Alice is a member of Orga, Orga has the epoch Ep on Fee open, the voting period of Orga's epoch Ep has ended, Orga has the leading score of Ep at the number Lead, Orga has the step of Fee at the number Step, Need is Lead plus Step and Score is at least Need.
+5. ■ Lead: Alice's proposal leads Orga's epoch Ep with Vx by Vy at Score, provided Alice has proposed Vx by Vy with the score Score in Orga's epoch Ep, the proposal period of Orga's epoch Ep has not ended, Orga has the leading score of Ep at the number Lead, Score is more than Lead, Orga has the epoch Ep on Fee open, Orga has the setting Fee at Sx by Sy, Orga counts at least Enough persons in Ep as gaining at least Score from Vx by Vy over Sx by Sy, Enough members suffice in Orga, Orga has at least Count persons as a participant, Orga has at most Count persons as a participant, Total is Rest plus Enough, Total is Count plus 1 and Orga counts at least Rest persons in Ep as gaining at most Score from Vx by Vy over Sx by Sy.
+6. ■ Close. Close with a leader: Orga's epoch Ep on Fee closes with Vx by Vy, provided the proposal period of Orga's epoch Ep has ended and Orga has the leading value of Ep at Vx by Vy. Close without a leader: Orga's epoch Ep on Fee closes unchanged, provided the proposal period of Orga's epoch Ep has ended and Orga has the leading score of Ep at the number 0.
+Logic pragmas.
+Vocabulary: z has the setting c = setting(z,c); z has the setting c at n by m = status(z,c,n,m); z has the step of c at the number n = step(z,c,n); z is deciding c = busy(z,c); z has the epoch e on c open = epoch(z,c,e); the voting period of z's epoch e has ended = voting_ended(z,e); the proposal period of z's epoch e has ended = proposal_ended(z,e); z holds x's ideal value in e at n by m = ideal(z,x,e,n,m); x has voted in z's epoch e = voted(x,z,e); x has proposed n by m with the score w in z's epoch e = proposal(x,z,e,n,m,w); x has a proposal in z's epoch e = proposed_in(x,z,e); z has the leading score of e at the number n = lead_score(z,e,n); z has the leading value of e at n by m = lead_value(z,e,n,m); x's proposal has led z's epoch e = has_led(x,z,e); k members suffice in z = enough(z,k).
+After x creates the setting c of z at n by m with the step s, which requires z does not have the setting c: z has the setting c, z has the setting c at n by m and z has the step of c at the number s.
+After x opens the epoch e on c of z, which requires z is not deciding c: z is deciding c, z has the epoch e on c open and z has the leading score of e at the number 0.
+After x states the ideal value n by m in z's epoch e, which requires x has not voted in z's epoch e: x has voted in z's epoch e and z holds x's ideal value in e at n by m.
+After z takes n by m as y's ideal value in z's epoch e, which requires y has not voted in z's epoch e: y has voted in z's epoch e and z holds y's ideal value in e at n by m.
+After x proposes n by m with the score w in z's epoch e, which requires x does not have a proposal in z's epoch e: x has a proposal in z's epoch e and x has proposed n by m with the score w in z's epoch e.
+the earlier lead of e in z has ended: z has the leading score of e at no number and z has the leading value of e at no one by anyone.
+After x's proposal leads z's epoch e with n by m at w: the earlier lead of e in z has ended, z has the leading score of e at the number w, z has the leading value of e at n by m and x's proposal has led z's epoch e.
+the earlier status quo of c in z has ended: z has the setting c at no one by anyone.
+After z's epoch e on c closes with n by m: the earlier status quo of c in z has ended, z has the setting c at n by m, no longer z is deciding c and no longer z has the epoch e on c open.
+After z's epoch e on c closes unchanged: no longer z is deciding c and no longer z has the epoch e on c open.
+z counts y in e as gaining at least w from n by m over s by t: z holds y's ideal value in e at i by j, f is the difference from i to s, h is the difference from j to t, d is the difference from i to n, k is the difference from j to m, u is f plus h, b is d plus k, g is b plus w and u is at least g.
+z counts y in e as gaining at most w from n by m over s by t: z holds y's ideal value in e at i by j, f is the difference from i to s, h is the difference from j to t, d is the difference from i to n, k is the difference from j to m, u is f plus h, b is d plus k, g is b plus w and u is at most g.
+Environment: the voting period of z's epoch e has ended; the proposal period of z's epoch e has ended.
+Parameters: k members suffice in z.
+Default: Double is k times 2 and z has fewer than Double persons as a participant for k members suffice in z.
+Interface pragmas
+Look: 🎚️, governance
+Settings: the settings Orga has.
+Status quo: the settings Orga has at a number.
+Epochs: the epochs Orga has open.
+Ideal values: the ideal values Orga holds.
+Proposals: what each member has proposed in an epoch, with its score.
+Leaders: the leading value of each epoch.
+Create: Alice [Create] <setting> <first> <second> <step> <votes>
+  Voter [Vote of Orga for Create] <person> <setting> <first> <second> <step>
+Open: Alice [Open] <setting> <epoch>
+Voting: Alice [State ideal] <epoch> <first> <second>
+Proposing: Alice [Propose value] <epoch> <first> <second> <score> <need>

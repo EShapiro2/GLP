@@ -1,0 +1,65 @@
+% Dial Governance --- an example contract by Nimrod Talmon with Claude, 2026-11-19: constitutional governance of one number by the generalized median rule of Constitutional Governance in Metric Spaces (Shapiro and Talmon, ADT 2026), on a line.  A proposer claims a score, checked exactly by two counts of the members' ideal values.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.
+% Paper: CGMS, Constitutional Governance in Metric Spaces, https://arxiv.org/abs/2605.13362
+% Extends: Constitution, GO's (programs/go).
+% Defines: dial, status quo, difference, epoch, ideal value, gain, required share, step, score, leader.
+% Checked: calculus/tools/gcsas.py (commute, return, recover), toglp.py --check (Dart 3.14.1): syntactically_grassroots_with_wards; vGLP's compiler.  Needs #88 (the difference), #93 (counts with a condition) and #118 (functions).
+% Schemas: Dial-Governance.glp beside this file.
+Dial Governance
+Dial Governance extends Constitution (GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation).
+A *dial* of a constitutional democratic community is a number it decides, such as a fee; its current value is the *status quo*. The *difference* between two numbers is the larger less the smaller.
+A dial is decided in *epochs*. In each, a member may state an *ideal value* for it, the value they most prefer, and then propose values. A member's *gain* from a value is the difference between their ideal value and the status quo less that between their ideal value and the value; a member who stated none is taken to have the status quo as their ideal value.
+The *required share* of the members, a parameter of Dial Governance, is at least one half and less than all; by default, more than half. Each dial has a *step*, a number more than zero.
+The *score* of a value is the largest gain that at least the required share of the members have from it.
+The *leader* of an epoch is its proposal whose score has been shown to be the highest so far; when there is none, the leader's score is zero.
+Alice and Bob are persons, Orga a constitutional democratic community, Fee a dial of Orga.
+1. ■ Create: Alice may create a dial Fee of Orga, stating its status quo and its step, provided Alice is a member of Orga, on the votes of Orga for it.
+2. ■ Open: Alice may open an epoch on Fee, stating its voting period and its proposal period, provided Alice is a member of Orga and no epoch on Fee is open.
+3. ■ Voting. State ideal: Alice may state her ideal value for Fee once in an epoch, before its voting period ends, provided Alice is a member of Orga. Abstain: When the voting period of an epoch on Fee ends, the status quo is taken as the ideal value of each member of Orga who stated none.
+4. ■ Proposing. Propose value: After the voting period of an epoch on Fee ends, Alice may propose a value for Fee with a claimed score, provided Alice is a member of Orga, Alice has no proposal in the epoch, and the claimed score is at least the leader's score plus the step of Fee.
+5. ■ Lead: Before the proposal period of an epoch on Fee ends, a proposal of the epoch becomes its leader, provided at least the required share of the members gain at least its claimed score from it, and fewer than the required share gain more than it.
+6. ■ Close. Close with a leader, Close without a leader: After the proposal period of an epoch on Fee ends, the epoch closes, and its leader, if it has one, becomes the status quo of Fee.
+Logic pragmas
+Dial Governance extends Constitution.
+A *dial* of a constitutional democratic community is a number it decides, such as a fee; its current value is the *status quo*. The *difference* between two numbers is the larger less the smaller.
+A dial is decided in *epochs*. In each, a member may state an *ideal value* for it, the value they most prefer, and then propose values. A member's *gain* from a value is the difference between their ideal value and the status quo less that between their ideal value and the value; a member who stated none is taken to have the status quo as their ideal value.
+The *required share* of the members, a parameter of Dial Governance, is at least one half and less than all. Each dial has a *step*, a number more than zero.
+The *score* of a value is the largest gain that at least the required share of the members have from it.
+The *leader* of an epoch is its proposal whose score has been shown to be the highest so far; when there is none, the leader's score is zero.
+Alice and Bob are persons, Orga a constitutional democratic community, Fee a dial, Ep an epoch, Status, Step, Ideal, Val, Score, Lead, Need, Far, Near, Enough, Count, Rest and Total numbers.
+1. ■ Create: Alice may create the dial Fee of Orga at Status with the step Step, provided Alice is a member of Orga and Orga does not have the dial Fee, on the votes of Orga for it.
+2. ■ Open: Alice may open the epoch Ep on Fee of Orga, provided Alice is a member of Orga and Orga has the dial Fee. Alice states its voting period and its proposal period.
+3. ■ Voting. State ideal: Alice may state the ideal value Ideal in Orga's epoch Ep, provided Alice is a member of Orga, Orga has the epoch Ep on Fee open and the voting period of Orga's epoch Ep has not ended. Abstain: Orga takes Status as Bob's ideal value in Orga's epoch Ep, provided Orga has Bob as a participant, Orga has the epoch Ep on Fee open, the voting period of Orga's epoch Ep has ended, Orga has the dial Fee at the number Status and Bob has not voted in Orga's epoch Ep.
+4. ■ Proposing. Propose value: Alice may propose Val with the score Score in Orga's epoch Ep, provided Alice is a member of Orga, Orga has the epoch Ep on Fee open, the voting period of Orga's epoch Ep has ended, Orga has the leading score of Ep at the number Lead, Orga has the step of Fee at the number Step, Need is Lead plus Step and Score is at least Need.
+5. ■ Lead: Alice's proposal leads Orga's epoch Ep with Val at Score, provided Alice has proposed Val with the score Score in Orga's epoch Ep, the proposal period of Orga's epoch Ep has not ended, Orga has the leading score of Ep at the number Lead, Score is more than Lead, Orga has the epoch Ep on Fee open, Orga has the dial Fee at the number Status, Orga counts at least Enough persons in Ep as gaining at least Score from Val over Status, Enough members suffice in Orga, Orga has at least Count persons as a participant, Orga has at most Count persons as a participant, Total is Rest plus Enough, Total is Count plus 1 and Orga counts at least Rest persons in Ep as gaining at most Score from Val over Status.
+6. ■ Close. Close with a leader: Orga's epoch Ep on Fee closes with Val, provided the proposal period of Orga's epoch Ep has ended and Orga has the leading value of Ep at the number Val. Close without a leader: Orga's epoch Ep on Fee closes unchanged, provided the proposal period of Orga's epoch Ep has ended and Orga has the leading score of Ep at the number 0.
+Logic pragmas.
+Vocabulary: z has the dial c = dial(z,c); z has the dial c at the number n = status(z,c,n); z has the step of c at the number n = step(z,c,n); z is deciding c = busy(z,c); z has the epoch e on c open = epoch(z,c,e); the voting period of z's epoch e has ended = voting_ended(z,e); the proposal period of z's epoch e has ended = proposal_ended(z,e); z holds x's ideal value in e at the number n = ideal(z,x,e,n); x has voted in z's epoch e = voted(x,z,e); x has proposed n with the score w in z's epoch e = proposal(x,z,e,n,w); x has a proposal in z's epoch e = proposed_in(x,z,e); z has the leading score of e at the number n = lead_score(z,e,n); z has the leading value of e at the number n = lead_value(z,e,n); x's proposal has led z's epoch e = has_led(x,z,e); k members suffice in z = enough(z,k).
+After x creates the dial c of z at n with the step s, which requires z does not have the dial c: z has the dial c, z has the dial c at the number n and z has the step of c at the number s.
+After x opens the epoch e on c of z, which requires z is not deciding c: z is deciding c, z has the epoch e on c open and z has the leading score of e at the number 0.
+After x states the ideal value n in z's epoch e, which requires x has not voted in z's epoch e: x has voted in z's epoch e and z holds x's ideal value in e at the number n.
+After z takes n as y's ideal value in z's epoch e, which requires y has not voted in z's epoch e: y has voted in z's epoch e and z holds y's ideal value in e at the number n.
+After x proposes n with the score w in z's epoch e, which requires x does not have a proposal in z's epoch e: x has a proposal in z's epoch e and x has proposed n with the score w in z's epoch e.
+the earlier lead of e in z has ended: z has the leading score of e at no number and z has the leading value of e at no number.
+After x's proposal leads z's epoch e with n at w: the earlier lead of e in z has ended, z has the leading score of e at the number w, z has the leading value of e at the number n and x's proposal has led z's epoch e.
+the earlier status quo of c in z has ended: z has the dial c at no number.
+After z's epoch e on c closes with n: the earlier status quo of c in z has ended, z has the dial c at the number n, no longer z is deciding c and no longer z has the epoch e on c open.
+After z's epoch e on c closes unchanged: no longer z is deciding c and no longer z has the epoch e on c open.
+z counts y in e as gaining at least w from n over s: z holds y's ideal value in e at the number i, f is the difference from i to s, d is the difference from i to n, g is d plus w and f is at least g.
+z counts y in e as gaining at most w from n over s: z holds y's ideal value in e at the number i, f is the difference from i to s, d is the difference from i to n, g is d plus w and f is at most g.
+Environment: the voting period of z's epoch e has ended; the proposal period of z's epoch e has ended.
+Parameters: k members suffice in z.
+Default: Double is k times 2 and z has fewer than Double persons as a participant for k members suffice in z.
+Interface pragmas
+Look: 🎚️, governance
+Dials: the dials Orga has.
+Status quo: the dials Orga has at a number.
+Epochs: the epochs Orga has open.
+Ideal values: the ideal values Orga holds.
+Proposals: what each member has proposed in an epoch, with its score.
+Leaders: the leading value and score of each epoch.
+Create: Alice [Create] <dial> <status quo> <step> <votes>
+  Voter [Vote of Orga for Create] <person> <dial> <status quo> <step>
+Open: Alice [Open] <dial> <epoch>
+Voting: Alice [State ideal] <epoch> <ideal value>
+Proposing: Alice [Propose value] <epoch> <value> <score> <need>
