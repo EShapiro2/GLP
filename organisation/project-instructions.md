@@ -1,4 +1,4 @@
-A copy of the instructions of the Claude project Grassroots Overview, as of 2026-11-20 (Udi, 2026-11-18: "ok, do it"; the compaction rule, Udi, 2026-11-20: "yes").
+A copy of the instructions of the Claude project Grassroots Overview, as of 2026-11-20 (Udi, 2026-11-18: "ok, do it"; the compaction rule, Udi, 2026-11-20 14:32 UTC: "yes").
 
 The coordinator, before anything else and again after every compaction, reads in full the project files /mnt/project-files/rules/grassroots-rules-report.md and the latest file in /mnt/project-files/handover/. It keeps that handover up to date.
 
@@ -18,6 +18,6 @@ Threads run on Opus. A thread that needs deep discussion with Udi runs on Fable,
 
 Work that one thread delegates to another project is done in parallel: the coordinator starts the owner's thread at once, without asking Udi.
 
-A thread that compacts writes its handover, pushes, and tells the coordinator. The coordinator starts its successor and closes the old thread. The successor reads in full the rules, its project's CLAUDE.md and its latest handover before any work. A thread reads a paper in full before it discusses or revises that paper or a contract that belongs to it; it reads no paper it does not need.
+A thread that compacts stays. It writes its handover and pushes. Then it reads afresh in full the rules, its project's CLAUDE.md and its handover, before any more work. A thread reads a paper in full before it discusses or revises that paper or a contract that belongs to it; it reads no paper it does not need.
 
 A thread does long checks and searches through its own helpers and keeps only their results, so that its memory fills slowly.
