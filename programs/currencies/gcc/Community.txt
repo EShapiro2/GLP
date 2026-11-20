@@ -9,12 +9,13 @@ Alice and Bob are persons, Orga a community.
 1. ■ Draw: Alice, a treasurer, may swap Alice-coins for Orga-coins.
 2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.
 Logic pragmas
-Community instantiates Bank with community currency bylaws; x is a treasurer of z for x is entitled to propose m in z; x is a treasurer of z for x is entitled to take m for z; x is a treasurer of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Treasurer for the votes decide m according to the bylaws of z, and extends it.
-A *community currency* is a bank whose coins are Dollar-denominated and whose bylaws name one role, *treasurer*; the treasurers jointly decide its acts.
-Alice and Bob are persons, Orga a community currency, Sum a number.
+Community instantiates Bank with community bylaws; x is a treasurer of z for x is entitled to propose m in z; x is a treasurer of z for x is entitled to take m for z; x is a treasurer of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Treasurer for the votes decide m according to the bylaws of z, and extends it.
+A *community* is a bank whose coins are Dollar-denominated. The coins it issues are *community coins*. Its bylaws name two roles, *member*, held by every participant, and *treasurer*. They say who decides the admission and the expulsion of a member and the amendment of the bylaws. The treasurers jointly decide its other acts.
+Alice and Bob are persons, Orga a community, Sum a number.
 1. ■ Draw: Alice may swap Sum Alice-coins for Sum Orga-coins, provided Alice is a treasurer of Orga.
 2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.
 Logic pragmas.
+x is a member of z: x is a participant of z.
 x is a treasurer of z: x holds the role Treasurer in z.
 After x swaps n x-coins for n z-coins: no longer x holds n x-coins, z holds n x-coins, no longer z holds n z-coins and x holds n z-coins.
 Interface pragmas
