@@ -37,12 +37,16 @@ Guardians:4 ■ Organisations of one officer befriend: Orga, Will and Alice may 
 Guardians:5+Organisation:4 ■ Retire: Those who decide for Orga may Orga is retired, no longer anyone is an officer of Orga, no longer Orga has anyone as an officer, no longer Orga counts anyone as a friend, no longer anyone counts Orga as a friend, no longer anyone holds the role anyone in Orga and no longer Orga has anyone in the role anyone, provided not Orga is retired.
 Guardians:5 ■ | Orga can then take no act.
 Organisation:0 - | An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
-Organisation:0 - | Parameters: x is entitled to propose m in z; x is entitled to vote on m in z; x is entitled to take m for z; the votes decide m according to the bylaws of z.
+Organisation:0 - | Parameters: x is entitled to propose m in z; x is entitled to vote on m in z; x is entitled to take m for z; the votes decide m according to the bylaws of z; x is entitled to amend the bylaws of z as m says; the amendment m is decided according to the bylaws of z.
 Organisation:0 - | Default: those who decide for z for those who decide the officers of z.
+Organisation:0 - | Default: those who decide for z for those who admit participants of z.
+Organisation:0 - | Default: those who decide for z for those who expel participants of z.
 Organisation:0 - | Default: x is an officer of z for x is entitled to propose m in z.
 Organisation:0 - | Default: x is an officer of z for x is entitled to vote on m in z.
 Organisation:0 - | Default: x is an officer of z for x is entitled to take m for z.
 Organisation:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as an officer for the votes decide m according to the bylaws of z.
+Organisation:0 - | Default: x is entitled to take m for z for x is entitled to amend the bylaws of z as m says.
+Organisation:0 - | Default: z is an organisation, z has m proposed and the votes decide m according to the bylaws of z for the amendment m is decided according to the bylaws of z.
 Organisation:1 ■ Found: Gov, Alice and Orga may jointly Orga has an identity, Orga is an organisation, Gov is the creator of Orga, Orga has Alice as its first officer, Alice is an officer of Orga, Orga has Alice as an officer, Alice holds the role Role in Orga, Orga has Alice in the role Role, Alice is a participant of Orga, Orga has Alice as a participant, Alice knows Orga, Orga knows Alice, Alice counts Orga as a friend and Orga counts Alice as a friend, provided Alice is a person and not Orga has an identity. Must consent: Orga.
 Organisation:2 ■ | Acts of the organisation.
 Organisation:2 ■ Propose: Bob may Orga has Motion proposed, provided Bob is an officer of Orga and not Orga has Motion proposed.
