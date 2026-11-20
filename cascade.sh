@@ -95,6 +95,7 @@
 #   stay        Stay  GCE         programs/gce/stay         ---
 #   lib         Lib   GCE         programs/gce/lib          ---
 #   joint       Joint GCE         programs/gce/joint        ---
+#   charter     Charter GCE         programs/gce/charter         ---
 #
 # The steps, and the artefacts written to cascade/<NAME>/ at the repository
 # root --- outside programs/, since every .glp and .vglp under a program's
@@ -235,6 +236,7 @@ case "$1" in
     joint_accounts) FILE=Joint-Accounts; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     community_bank) FILE=Community-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's twenty-three, each its % Owner line's (Udi, 2026-11-09, to GO #3); rows added 2026-11-12, the contracts having been checked and never recorded (Udi, 2026-11-12, to Code #28)
     commercial_bank) FILE=Commercial-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    charter) FILE=Charter; OWNER="programs/gce/charter"; PAPER=""; PLAYDIR="" ;;   # Nimrod Talmon's example contract (GCE, Grassroots Contract Examples, Nimrod Talmon's)
     consumers_cooperative) FILE=Consumers-Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     ads) FILE=Ads; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     backed_currency) FILE=Backed-Currency; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
