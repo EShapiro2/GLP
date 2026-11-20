@@ -3,7 +3,7 @@
 Written after Website #5's first compaction, updated 2026-11-20 23:05 UTC.  It replaces handover-2026-11-20.md and handover-2026-11-17.md, which git holds.
 
 ## What a thread reads (Coordination, 2026-11-20 22:59 UTC, on Udi's yes at 22:52)
-At its start and after a compaction: the three rules files of GLP `organisation/`, then its project's entry in `organisation/projects.md`, the record it names, and its latest handover.  Website has no entry in projects.md at main ff6a61541, and `servers/peoplesweb/CLAUDE.md` is still on main; the coordinator is told.  Until that is settled, read `servers/peoplesweb/CLAUDE.md`, `README.md` here and this handover.
+At its start and after a compaction: the three rules files of GLP `organisation/`, then its project's entry in `organisation/projects.md`, the record it names, and its latest handover.  Website's record is `docs/decisions.md` here, named in projects.md (GLP 27b0c4447, Coordination #17); it replaces `CLAUDE.md`, removed on Website-site.  Read it, `README.md` here and this handover.
 
 ## Live (GLP main)
 - Nimrod's five GCE contracts are live since the 13:11 UTC sweep (Udi's yes).
