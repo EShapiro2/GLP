@@ -1,4 +1,4 @@
-% Sanctions --- a proposed contract under a working name, by Nimrod Talmon with Claude, 2026-11-19: Ostrom's graduated sanctions (Governing the Commons, 1990, design principle 5) as an abstract contract that contracts of particular sanctions instantiate.
+% Sanctions --- a proposed contract under a working name, by Nimrod Talmon with Claude, 2026-11-19: Ostrom's graduated sanctions (design principle 5) as an abstract contract that contracts of particular sanctions instantiate; an appeal is a dispute, for Disputes (#98).
 % Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's, until Udi rules on the name and the owner.
 % Paper: GCE, Grassroots Contract Examples, in preparation
 % Extends: Organisation, GO's (programs/go), and through it Guardians, Friendship and Knowledge.
@@ -6,26 +6,20 @@
 % Schemas: printed by the Calculus's tools from the Logic pragmas; checked with calculus/tools/gcsas.py (commute yes; return yes; recover same) and relations.py (Sanctions extends Organisation: holds) at GLP 912c76b.
 Sanctions
 Sanctions extends Organisation.
-A *sanction* is a measure an organisation imposes on one of its participants; it lasts until it is lifted or annulled. What a sanction does, a parameter of Sanctions, is said by a contract written from it. The bylaws name the role *arbiter*.
-Alice, Bob and Carol are persons, Orga an organisation.
+A *sanction* is a measure an organisation imposes on one of its participants; it lasts until it is lifted. What a sanction does, a parameter of Sanctions, is said by a contract written from it.
+Bob is a person, Orga an organisation.
 1. ■ Impose: Those who decide for Orga may impose a sanction on Bob, a participant of Orga.
 2. ■ Lift: Those who decide for Orga may lift it.
-3. ■ Appeal. Appeal: Bob may appeal his sanction to Carol, an arbiter of Orga. Uphold, Annul: Carol may then uphold the sanction or annul it.
 Logic pragmas
 Sanctions extends Organisation.
-A *sanction* is a measure an organisation imposes on one of its participants; it lasts until it is lifted or annulled. What a sanction does, a parameter of Sanctions, is said by a contract written from it. The bylaws name the role *arbiter*.
-Alice, Bob and Carol are persons, Orga an organisation.
+A *sanction* is a measure an organisation imposes on one of its participants; it lasts until it is lifted. What a sanction does, a parameter of Sanctions, is said by a contract written from it.
+Bob is a person, Orga an organisation.
 1. ■ Impose: Those who decide for Orga may impose a sanction on Bob in Orga, provided Bob is a participant of Orga.
 2. ■ Lift: Those who decide for Orga may lift the sanction on Bob in Orga.
-3. ■ Appeal. Appeal: Bob may appeal his sanction in Orga to Carol, provided Bob is under a sanction in Orga and Carol is an arbiter of Orga. Uphold: Carol may uphold the sanction on Bob in Orga. Annul: Carol may annul the sanction on Bob in Orga.
 Logic pragmas.
-Vocabulary: z has imposed a sanction on y = sanction(z,y); y is under a sanction in z = under_sanction(y,z); w holds y's appeal in z = appeal(w,y,z).
-x is an arbiter of z: x holds the role Arbiter in z and z has x in the role Arbiter.
+Vocabulary: z has imposed a sanction on y = sanction(z,y); y is under a sanction in z = under_sanction(y,z).
 After g imposes a sanction on y in z, which requires z has not imposed a sanction on y: z has imposed a sanction on y and y is under a sanction in z.
 After g lifts the sanction on y in z: no longer z has imposed a sanction on y and no longer y is under a sanction in z.
-After y appeals y's sanction in z to w, which requires w does not hold y's appeal in z: w holds y's appeal in z.
-After w upholds the sanction on y in z: no longer w holds y's appeal in z.
-After w annuls the sanction on y in z: no longer w holds y's appeal in z, no longer z has imposed a sanction on y and no longer y is under a sanction in z.
 Interface pragmas
 Look: ⚖️, governance
 Sanctions: the sanctions Alice is under, in each organisation.
@@ -33,5 +27,3 @@ Impose: Decider [Impose] <person>
   Codecider: Decider asks to impose a sanction on Bob in Orga.
 Lift: Decider [Lift] <person>
   Codecider: Decider asks to lift the sanction on Bob in Orga.
-Appeal: Bob [Appeal] <arbiter>
-  Carol [Uphold] [Annul]
