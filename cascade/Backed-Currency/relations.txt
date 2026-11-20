@@ -1,2 +1,0 @@
-Backed Currency extends Community Currency: holds
-Backed Currency restricts it (Community Currency): holds

@@ -1,5 +1,5 @@
 Networked Organisation
-Networked Organisation extends Backed Currency and restricts it.
+Networked Organisation extends Backed Community and restricts it.
 A *networked organisation* is a backed community currency whose bylaws also name the role *arbiter*. A *provider* is a person whose *stake*, the Orga-coins they hold, is at least *S*, a number of Orga-coins, and a *customer* is a person who accepts Orga-coins. A treasurer is a provider. A *dispute* is over Orga-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
 Alice, Bob and Carol are persons, Orga a networked organisation.
 1. ■ Set stake: The treasurers may set S.

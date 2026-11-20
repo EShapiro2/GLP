@@ -1,2 +1,0 @@
-Community Currency instantiates Bank: holds
-Community Currency extends it (Bank): holds
