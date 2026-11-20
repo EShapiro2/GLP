@@ -1,0 +1,7 @@
+Disputes
+Disputes extends Organisation.
+The bylaws of an organisation name the role *arbiter*. A *dispute* is a disagreement between two participants of an organisation about an act of the organisation or an undertaking.
+Alice, Bob and Carol are persons, Orga an organisation, Issue a dispute.
+1. ■ Raise: Alice may raise Issue with Bob in Orga to Carol, provided Orga has Alice as a participant, Orga has Bob as a participant and Orga has Carol in the role Arbiter.
+2. ■ Decide: Carol may decide Issue between Alice and Bob in Orga.
+3. ○ Abide. Alice and Bob will abide by the decision of Carol.
