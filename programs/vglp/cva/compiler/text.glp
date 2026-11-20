@@ -13,7 +13,8 @@ Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Lin
         ; wild_only(Line) ; wildless_only(Line)
         ; const_only(Line) ; constless_only(Line)
         ; found_only(Line) ; foundless_only(Line)
-        ; trust_only(Line) ; trustless_only(Line).
+        ; trust_only(Line) ; trustless_only(Line)
+        ; fn_only(Constant, Line).
 Lines ::= [] ; [Line | Lines].
 
 exported procedure fixed_text(Lines).
@@ -6762,6 +6763,10 @@ fixed_text([
     '%% min and floor, the functions of the value types the paper names (vGLP 9ee6f87, Section 5.4); a count or a sum not taken in a state, which con_counted replaces by its value, has none.',
     'expr_val(fn(min, [X, Y]), B, R?) :- ground(B?) | expr_val(X?, B?, A), expr_val(Y?, B?, C), num_op(min, A?, C?, R).',
     'expr_val(fn(floor, [X]), B, R?) :- expr_val(X?, B?, A), num_floor(A?, R).',
+    fn_only(root, '%% The functions of the library, each printed where the contract uses it (cvac.glp, fn_shared): root, the whole square root of a whole number at least 0, rounded down, by Newton\'s method on whole numbers, exact and the same at every participant; no value of any other (#120, proposed for vGLP Section 5.4).'),
+    fn_only(root, 'expr_val(fn(root, [X]), B, R?) :- expr_val(X?, B?, A), num_root(A?, R).'),
+    fn_only(distance, '%% distance, the Manhattan distance between two points of as many numbers each, the first half of its arguments one point and the second half the other: the sum of the differences of their numbers, each the larger less the smaller, exact; no value where the arguments are odd in number or one has none (#120).'),
+    fn_only(distance, 'expr_val(fn(distance, Xs), B, R?) :- ground(B?) | vals_of(Xs?, B?, As), num_distance(As?, R).'),
     'expr_val(fn(_, _), _, no_num) :- otherwise | true.',
     'expr_val(cardinality(_, _, _, _), _, no_num).',
     'expr_val(sum(_, _, _, _, _), _, no_num).',
@@ -6787,6 +6792,36 @@ fixed_text([
     'num_floor(num_is(A), num_is(A?)) :- integer(A?) | true.',
     'num_floor(num_is(A), num_is(K?)) :- real(A?) | K := floor(A?).',
     'num_floor(_, no_num) :- otherwise | true.',
+    fn_only(distance, 'NumRess   ::= [] ; [NumRes | NumRess].'),
+    fn_only(distance, 'procedure vals_of(Exprs?, Binding?, NumRess).'),
+    fn_only(distance, 'vals_of([], _, []).'),
+    fn_only(distance, 'vals_of([X|Xs], B, [A?|As?]) :- ground(B?) | expr_val(X?, B?, A), vals_of(Xs?, B?, As).'),
+    fn_only(distance, 'procedure num_distance(NumRess?, NumRes).'),
+    fn_only(distance, 'num_distance(As, R?) :- ground(As?) | nr_len(As?, N), H := N? // 2, nr_take(H?, As?, Ps, Qs), nr_dist(Ps?, Qs?, num_is(0), R).'),
+    fn_only(distance, 'procedure nr_len(NumRess?, Integer).'),
+    fn_only(distance, 'nr_len([], 0).'),
+    fn_only(distance, 'nr_len([_|As], N?) :- nr_len(As?, M), N := M? + 1.'),
+    fn_only(distance, 'procedure nr_take(Integer?, NumRess?, NumRess, NumRess).'),
+    fn_only(distance, 'nr_take(H, As, [], As?) :- integer(H?), H? =:= 0 | true.'),
+    fn_only(distance, 'nr_take(H, [A|As], [A?|Ps?], Qs?) :- integer(H?), H? > 0 | H1 := H? - 1, nr_take(H1?, As?, Ps, Qs).'),
+    fn_only(distance, 'nr_take(_, _, [], []) :- otherwise | true.'),
+    fn_only(distance, 'procedure nr_dist(NumRess?, NumRess?, NumRes?, NumRes).'),
+    fn_only(distance, 'nr_dist([], [], S, S?).'),
+    fn_only(distance, 'nr_dist([P|Ps], [Q|Qs], S, R?) :- num_absdiff(P?, Q?, D), num_op(plus, S?, D?, S1), nr_dist(Ps?, Qs?, S1?, R).'),
+    fn_only(distance, 'nr_dist(_, _, _, no_num) :- otherwise | true.'),
+    fn_only(distance, 'procedure num_absdiff(NumRes?, NumRes?, NumRes).'),
+    fn_only(distance, 'num_absdiff(num_is(A), num_is(C), num_is(K?)) :- number(A?), number(C?), A? >= C? | K := A? - C?.'),
+    fn_only(distance, 'num_absdiff(num_is(A), num_is(C), num_is(K?)) :- number(A?), number(C?), A? < C? | K := C? - A?.'),
+    fn_only(distance, 'num_absdiff(_, _, no_num) :- otherwise | true.'),
+    fn_only(root, 'procedure num_root(NumRes?, NumRes).'),
+    fn_only(root, 'num_root(num_is(A), num_is(0)) :- integer(A?), A? =:= 0 | true.'),
+    fn_only(root, 'num_root(num_is(A), R?) :- integer(A?), A? > 0 | root_step(A?, A?, R).'),
+    fn_only(root, 'num_root(_, no_num) :- otherwise | true.'),
+    fn_only(root, 'procedure root_step(Integer?, Integer?, NumRes).'),
+    fn_only(root, 'root_step(N, X, R?) :- integer(N?), integer(X?), X? > 0 | Y := (X? + N? // X?) // 2, root_next(N?, X?, Y?, R).'),
+    fn_only(root, 'procedure root_next(Integer?, Integer?, Integer?, NumRes).'),
+    fn_only(root, 'root_next(N, X, Y, R?) :- integer(N?), integer(Y?), Y? < X? | root_step(N?, Y?, R).'),
+    fn_only(root, 'root_next(_, X, Y, num_is(X?)) :- integer(Y?), Y? >= X? | true.'),
     'procedure num_eq(NumRes?, NumRes?, YesNo).',
     'num_eq(num_is(A), num_is(C), yes) :- A? =:= C? | true.',
     'num_eq(_, _, no) :- otherwise | true.',

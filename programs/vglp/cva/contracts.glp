@@ -267,6 +267,30 @@
 %%
 %% start is its introductory act; fill and heavy are unguarded, opened by p, d local to p's role and bound by the cap(d) p's state holds from startup; the count of tok counts each copy, so p's machine takes fill until it holds d copies, and the sum of the weights given at deployment decides heavy.  Section VG runs its agent with no person.
 %%
+%% roots is a contract with a function of the compiler's library in a constraint, root, the whole square root rounded down, and environment predicates, area and side, given when the platform is deployed and held from startup (#120, proposed for vGLP Section 5.4: "and the functions of the compiler's library, each a procedure on numbers that every participant computes alike, as root, the whole square root rounded down"):
+%%
+%%   start(p?)             :  at p  not started, +started
+%%   fence(p)              :  at p  area(a), side(s), not fenced, +fenced
+%%                            | s =< root(a)
+%%
+%% start is its introductory act; fence is unguarded, opened by p, a and s local to p's role and bound by the area(a) and side(s) p's state holds from startup, so p's machine takes fence where the side is at most the whole square root of the area.  Section VG runs its agent with no person.
+%%
+%% distances is a contract with the function distance of the compiler's library, the Manhattan distance between two points of as many numbers each, and environment predicates, home and shop, given when the platform is deployed (#120):
+%%
+%%   start(p?)             :  at p  not started, +started
+%%   visit(p)              :  at p  home(x, y), shop(u, v), not visited, +visited
+%%                            | distance(x, y, u, v) =< 3
+%%
+%% start is its introductory act; visit is unguarded, opened by p, its variables local to p's role, so p's machine takes visit where the shop is at most 3 from home.  Section VG runs its agent with no person.
+%%
+%% nearer is a contract with a count whose condition holds the function distance of the compiler's library (#120), as a governance contract counts the members nearer to a proposal than to the status quo, and environment predicates, ideal, status, prop and need, given when the platform is deployed:
+%%
+%%   start(p?)             :  at p  not started, +started
+%%   pass(p)               :  at p  status(s, t), prop(u, v), need(k), not passed, +passed
+%%                            | #{ideal(i, j) at p : distance(i, j, u, v) < distance(i, j, s, t)} >= k
+%%
+%% start is its introductory act; pass is unguarded, opened by p, the count local to p's role, so p's machine takes pass where at least k of the ideal points it holds are nearer to the proposal than to the status quo.  Section VG runs its agent with no person.
+%%
 %% shares is a contract with a quantified conjunct whose instances the attempt names, binding no listed role and with a conditional literal at a role other than the one holding its anchor, as GCC's appoint's "every person Alice lists as appointed, Bob lists too" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them, and every participant takes them as arguments of the transaction"):
 %%
 %%   start(p?)             :  at p  not started, +started
@@ -372,6 +396,9 @@ contract_named(linear, C?) :- linear(C).
 contract_named(forms, C?) :- forms(C).
 contract_named(counts, environment([cap, wt], C?)) :- counts(C).
 contract_named(shares, C?) :- shares(C).
+contract_named(roots, environment([area, side], C?)) :- roots(C).
+contract_named(distances, environment([home, shop], C?)) :- distances(C).
+contract_named(nearer, environment([ideal, status, prop, need], C?)) :- nearer(C).
 contract_named(published, C?) :- published(C).
 contract_named(leaves, C?) :- leaves(C).
 contract_named(consts, C?) :- consts(C).
@@ -410,6 +437,9 @@ introduction_named(linear, no_introduction).
 introduction_named(forms, no_introduction).
 introduction_named(counts, no_introduction).
 introduction_named(shares, no_introduction).
+introduction_named(roots, no_introduction).
+introduction_named(distances, no_introduction).
+introduction_named(nearer, no_introduction).
 introduction_named(published, no_introduction).
 introduction_named(leaves, no_introduction).
 introduction_named(consts, no_introduction).
@@ -546,6 +576,12 @@ pragmas_named(forms, pragmas([list('"Blocks"', [blocked])],
      act(arm, '"Arm"', [], none, '"Blocks"', by([1]))])).
 pragmas_named(counts, pragmas([list('"Tokens"', [tok]), list('"Weights"', [wt])],
     [act(start, '"Start"', [], none, '"Tokens"', by([1]))])).
+pragmas_named(roots, pragmas([list('"Fences"', [fenced]), list('"Field"', [area])],
+    [act(start, '"Start"', [], none, '"Fences"', by([1]))])).
+pragmas_named(distances, pragmas([list('"Visits"', [visited]), list('"Home"', [home])],
+    [act(start, '"Start"', [], none, '"Visits"', by([1]))])).
+pragmas_named(nearer, pragmas([list('"Passed"', [passed]), list('"Ideals"', [ideal])],
+    [act(start, '"Start"', [], none, '"Passed"', by([1]))])).
 pragmas_named(shares, pragmas([list('"Notes"', [noted]), list('"Seen"', [seen])],
     [act(start, '"Start"', [], none, '"Notes"', by([1])),
      act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Notes"', by([1])),
@@ -935,6 +971,28 @@ counts([schema(start, [],
         qschema(heavy, [num(d)], [num(w)],
           ge(sum([num(w)], role(1), atom(wt, [num(w)]), fcons(true), num(w)), fn(min, [mul(fn(floor, [num(d)]), num(2)), num(100)])),
           [rs(unguarded, [atom(heavy, [])], [], [atom(cap, [num(d)])], [atom(heavy, [])])],
+          [], [])]).
+
+procedure roots(Contract).
+roots([schema(start, [],
+          [rs(guarded, [atom(started, [])], [], [], [atom(started, [])])]),
+        nschema(fence, [num(a), num(s)], le(num(s), fn(root, [num(a)])),
+          [rs(unguarded, [atom(fenced, [])], [], [atom(area, [num(a)]), atom(side, [num(s)])], [atom(fenced, [])])])]).
+
+procedure distances(Contract).
+distances([schema(start, [],
+          [rs(guarded, [atom(started, [])], [], [], [atom(started, [])])]),
+        nschema(visit, [num(x), num(y), num(u), num(v)], le(fn(distance, [num(x), num(y), num(u), num(v)]), num(3)),
+          [rs(unguarded, [atom(visited, [])], [], [atom(home, [num(x), num(y)]), atom(shop, [num(u), num(v)])], [atom(visited, [])])])]).
+
+procedure nearer(Contract).
+nearer([schema(start, [],
+          [rs(guarded, [atom(started, [])], [], [], [atom(started, [])])]),
+        qschema(pass, [num(s), num(t), num(u), num(v), num(k)], [num(i), num(j)],
+          ge(cardinality([num(i), num(j)], role(1), atom(ideal, [num(i), num(j)]),
+                         fcons(lt(fn(distance, [num(i), num(j), num(u), num(v)]), fn(distance, [num(i), num(j), num(s), num(t)])))),
+             num(k)),
+          [rs(unguarded, [atom(passed, [])], [], [atom(status, [num(s), num(t)]), atom(prop, [num(u), num(v)]), atom(need, [num(k)])], [atom(passed, [])])],
           [], [])]).
 
 procedure shares(Contract).

@@ -17,7 +17,8 @@ Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Lin
         ; wild_only(Line) ; wildless_only(Line)
         ; const_only(Line) ; constless_only(Line)
         ; found_only(Line) ; foundless_only(Line)
-        ; trust_only(Line) ; trustless_only(Line).
+        ; trust_only(Line) ; trustless_only(Line)
+        ; fn_only(Constant, Line).
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
 imported procedure local#faults(Contract?, Preds?, NumInfos?, Ones?, Strings).
@@ -487,9 +488,9 @@ conjunct_lines(yes, S, ['%% it has a quantified conjunct the compiler does not c
     ground(S?) | said('%% the schema', S?, T).
 procedure beyond_lines(YesNo?, Constant?, Lines).
 beyond_lines(no, _, []).
-beyond_lines(yes, S, ['%% it has a relation or a function other than min and floor in a constraint or a safe formula, a program condition of a speech act among them, which vGLP Section 5.4 does not name, a constraint being over comparison, arithmetic, min, floor, the signing conditions, the author and the item of a speech act, counts and sums:', T?]) :-
+beyond_lines(yes, S, ['%% it has a relation or a function other than min, floor and those of the compiler\'s library in a constraint or a safe formula, a program condition of a speech act among them, which vGLP Section 5.4 does not name, a constraint being over comparison, arithmetic, min, floor, the library\'s functions (#120), the signing conditions, the author and the item of a speech act, counts and sums:', T?]) :-
     ground(S?) | said('%% the schema', S?, T).
-%% Whether a constraint, an expression or a safe formula holds a relation, or a function other than min and floor.
+%% Whether a constraint, an expression or a safe formula holds a relation, or a function other than min, floor and those of the compiler's library (fn_named).
 procedure con_beyond(Constraint?, YesNo).
 con_beyond(true, no).
 con_beyond(and(C1, C2), B?) :- con_beyond(C1?, B1), con_beyond(C2?, B2), or(B1?, B2?, B).
@@ -537,6 +538,9 @@ expr_beyond(ilist(_, _), no).
 procedure fn_named(Constant?, YesNo).
 fn_named(min, no).
 fn_named(floor, no).
+%% A function of the compiler's library, which the shared text prints where the contract uses it (fn_shared; #120, proposed for vGLP Section 5.4: "and the functions of the compiler's library, each a procedure on numbers that every participant computes alike, as root, the whole square root rounded down").
+fn_named(root, no).
+fn_named(distance, no).
 fn_named(_, yes) :- otherwise | true.
 procedure exprl_beyond(Exprs?, YesNo).
 exprl_beyond([], no).
@@ -1510,6 +1514,65 @@ wild_shared([wild_only(_)|Ls], no, R?) :- wild_shared(Ls?, no, R).
 wild_shared([wildless_only(_)|Ls], yes, R?) :- wild_shared(Ls?, yes, R).
 wild_shared([wildless_only(L)|Ls], no, [L?|R?]) :- wild_shared(Ls?, no, R).
 wild_shared([L|Ls], W, [L?|R?]) :- otherwise | wild_shared(Ls?, W?, R).
+%% A line fn_only(F, L) is printed as L where a constraint of the contract uses the function F of the compiler's library, and left out where none does, so that a platform using no such function prints what it printed before (#120).  The marks of the other kinds are looked through, as found_lines does.
+procedure fn_shared(Lines?, Preds?, Lines).
+fn_shared([], _, []).
+fn_shared([L|Ls], Fu, R?) :- ground(Fu?) |
+    fn_line(L?, Fu?, K),
+    fn_shared(Ls?, Fu?, R1),
+    kept(K?, R1?, R).
+procedure fn_line(Line?, Preds?, Kept).
+fn_line(fn_only(F, L), Fu, K?) :- ground(F?), ground(Fu?) | mem(F?, Fu?, U), fn_kept(U?, L?, K).
+fn_line(L, _, keep(L?)) :- otherwise | true.
+procedure fn_kept(YesNo?, Line?, Kept).
+fn_kept(yes, L, keep(L?)).
+fn_kept(no, _, drop).
+%% The functions the constraints and the safe formulas of a contract use, fn(F, Es), F among them for each, read from the table of its numbers, Nt (local.glp, num_info_of), which holds each schema's constraint whole and the safe formulas of its body.
+procedure nt_fns(NumInfos?, Preds).
+nt_fns([], []).
+nt_fns([num_info(_, C, _, _, Fi, _)|Ns], R?) :- con_fns(C?, R1), finfos_fns(Fi?, R2), nt_fns(Ns?, R3), app(R1?, R2?, R12), app(R12?, R3?, R).
+procedure finfos_fns(FInfos?, Preds).
+finfos_fns([], []).
+finfos_fns([fi(_, F)|Fs], R?) :- form_fns(F?, R1), finfos_fns(Fs?, R2), app(R1?, R2?, R).
+procedure con_fns(Constraint?, Preds).
+con_fns(true, []).
+con_fns(and(C1, C2), R?) :- con_fns(C1?, R1), con_fns(C2?, R2), app(R1?, R2?, R).
+con_fns(or(C1, C2), R?) :- con_fns(C1?, R1), con_fns(C2?, R2), app(R1?, R2?, R).
+con_fns(implies(C1, C2), R?) :- con_fns(C1?, R1), con_fns(C2?, R2), app(R1?, R2?, R).
+con_fns(not(C), R?) :- con_fns(C?, R).
+con_fns(eq(X, Y), R?) :- expr_fns(X?, R1), expr_fns(Y?, R2), app(R1?, R2?, R).
+con_fns(ne(X, Y), R?) :- expr_fns(X?, R1), expr_fns(Y?, R2), app(R1?, R2?, R).
+con_fns(le(X, Y), R?) :- expr_fns(X?, R1), expr_fns(Y?, R2), app(R1?, R2?, R).
+con_fns(lt(X, Y), R?) :- expr_fns(X?, R1), expr_fns(Y?, R2), app(R1?, R2?, R).
+con_fns(ge(X, Y), R?) :- expr_fns(X?, R1), expr_fns(Y?, R2), app(R1?, R2?, R).
+con_fns(gt(X, Y), R?) :- expr_fns(X?, R1), expr_fns(Y?, R2), app(R1?, R2?, R).
+con_fns(succ(_, _), []).
+con_fns(signed(_, _), []).
+con_fns(unsigned(_, _), []).
+con_fns(rel(_, Es), R?) :- exprl_fns(Es?, R).
+con_fns(program(E), R?) :- expr_fns(E?, R).
+procedure expr_fns(Expr?, Preds).
+expr_fns(plus(X, Y), R?) :- expr_fns(X?, R1), expr_fns(Y?, R2), app(R1?, R2?, R).
+expr_fns(minus(X, Y), R?) :- expr_fns(X?, R1), expr_fns(Y?, R2), app(R1?, R2?, R).
+expr_fns(mul(X, Y), R?) :- expr_fns(X?, R1), expr_fns(Y?, R2), app(R1?, R2?, R).
+expr_fns(fn(F, Es), [F?|R?]) :- exprl_fns(Es?, R).
+expr_fns(cardinality(_, _, _, F), R?) :- form_fns(F?, R).
+expr_fns(sum(_, _, _, F, U), R?) :- form_fns(F?, R1), expr_fns(U?, R2), app(R1?, R2?, R).
+expr_fns(_, []) :- otherwise | true.
+procedure exprl_fns(Exprs?, Preds).
+exprl_fns([], []).
+exprl_fns([E|Es], R?) :- expr_fns(E?, R1), exprl_fns(Es?, R2), app(R1?, R2?, R).
+procedure form_fns(Form?, Preds).
+form_fns(fa(_, _), []).
+form_fns(fnot(F), R?) :- form_fns(F?, R).
+form_fns(fand(F, G), R?) :- form_fns(F?, R1), form_fns(G?, R2), app(R1?, R2?, R).
+form_fns(for(F, G), R?) :- form_fns(F?, R1), form_fns(G?, R2), app(R1?, R2?, R).
+form_fns(fexists(_, _, _, F), R?) :- form_fns(F?, R).
+form_fns(fforall(_, _, _, F, Gs), R?) :- form_fns(F?, R1), forms_fns(Gs?, R2), app(R1?, R2?, R).
+form_fns(fcons(C), R?) :- con_fns(C?, R).
+procedure forms_fns(Forms?, Preds).
+forms_fns([], []).
+forms_fns([F|Fs], R?) :- form_fns(F?, R1), forms_fns(Fs?, R2), app(R1?, R2?, R).
 procedure decl_reflexive(Declared?, Preds).
 decl_reflexive([], []).
 decl_reflexive([_|_], []).
@@ -1766,7 +1829,9 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     worded_stands(W?, Wsd),
     stands_any(Wsd?, Sd),
     listed_wild(C?, Wl),
-    wild_shared(Fx?, Wl?, Fx00),
+    wild_shared(Fx?, Wl?, Fx0w),
+    nt_fns(Nt?, Fu),
+    fn_shared(Fx0w?, Fu?, Fx00),
     worded_lx(W?, Lx9),
     lx_consts(Lx9?, Kn),
     const_lines(Fx00?, Kn?, Fx01),

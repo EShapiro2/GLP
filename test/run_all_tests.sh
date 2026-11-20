@@ -4063,6 +4063,9 @@ check "CVA compiler: vGLP's days, an advance that requires the day, today(d), co
 check "CVA compiler: vGLP's linear, constraints of a linear equality and an inequality in GSC's form, compiled to the platform it prints (GSC bcc1891)" "linear/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's forms, a safe formula in a schema's body local to its role, in GSC's term form qschema, compiled to the platform it prints (vGLP bcb2726)" "forms/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's shares, a quantified conjunct whose instances the attempt names, certified by GSC's check/2, compiled to the platform it prints (vGLP 9ee6f87)" "shares/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's roots, a constraint with root, a function of the compiler's library, certified by GSC's check/2, compiled to the platform it prints (#120)" "roots/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's distances, a constraint with distance, a function of the compiler's library, certified by GSC's check/2, compiled to the platform it prints (#120)" "distances/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's nearer, a count whose condition holds distance, certified by GSC's check/2, compiled to the platform it prints (#120)" "nearer/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's published, a program condition in a constraint, program(item_of(x)), certified by GSC's check/2, compiled to the platform it prints (vGLP b413fe1)" "published/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's leaves, a listed role at the third argument of its anchor, certified by GSC's check/2, compiled to the platform it prints (vGLP b413fe1)" "leaves/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's readings, variables read at a role and a condition across roles, certified by GSC's check/2, compiled to the platform it prints (vGLP 566c186, 6abbed9, 7892aeb)" "readings/platform.vglp: as printed" "$cva_print"
@@ -5250,6 +5253,61 @@ check "CVA counts: fill taken until the count of tok reaches cap's 3, each copy 
 check_not "CVA counts: ... and no fourth tok" "view(alice, \[tok, tok, tok, tok\|view(alice, \[tok, tok, heavy, tok, tok" "$cva_cnt"
 check "CVA counts: with the weights 4 and 1, three tok and no heavy" "view(bob, \[tok, tok, tok, cap(3), wt(4), wt(1)\]" "$cva_cnt"
 check_not "CVA counts: ... heavy not taken, the sum 5 below 6" "view(bob, \[[a-z(), 0-9]*heavy" "$cva_cnt"
+# A function of the compiler's library, root, the whole square root rounded down (#120, proposed for vGLP Section 5.4): vGLP's roots, its agent run with no person and given at deployment area(a) and side(s); fence, whose constraint is s =< root(a), is taken where the side is at most the whole square root of the area: with area 10, root 3, at side 3 and not at side 4; and with area 99999999999, root 316227, at side 316227.  A platform whose contract uses no library function prints none of it (compile.sh --check).
+cva_rt_dir="$GLP_DIR/programs/tests/vg_roots_$$"
+mkdir -p "$cva_rt_dir" && cp "$CVA/roots/platform.vglp" "$cva_rt_dir/platform.vglp"
+cva_rt_emit=$(printf ':emit %s\n:quit\n' "$cva_rt_dir" | "$REPL_RUN" 2>&1)
+cva_rt=$("$REPL_RUN" <<HEREDOC
+$cva_rt_dir/platform.glp
+:limit 2000000
+agent(alice, [], N, O, [area(10), side(3)], A).
+agent(bob, [], N, O, [area(10), side(4)], A).
+agent(carol, [], N, O, [area(99999999999), side(316227)], A).
+:quit
+HEREDOC
+2>&1)
+rm -rf "${cva_rt_dir:?}"
+check "CVA roots: the platform emitted to GLP, the library's root printed in it" "wrote .*vg_roots_.*platform.glp" "$cva_rt_emit"
+check "CVA roots: fence taken at side 3, the whole square root of 10 being 3" "view(alice, \[fenced, area(10), side(3)\]" "$cva_rt"
+check_not "CVA roots: ... and not at side 4" "view(bob, \[fenced" "$cva_rt"
+check "CVA roots: ... and taken at side 316227, the whole square root of 99999999999, exact on whole numbers" "view(carol, \[fenced, area(99999999999), side(316227)\]" "$cva_rt"
+check "CVA roots: the platform prints root where its contract uses it" "^num_root(num_is(A), R?) :- integer(A?), A? > 0 | root_step(A?, A?, R).$" "$(cat "$CVA/roots/platform.vglp")"
+check_not "CVA roots: ... and a platform whose contract uses none prints none of it" "num_root" "$(cat "$CVA/counts/platform.vglp")"
+# A second function of the library, distance, the Manhattan distance between two points of as many numbers each (#120): vGLP's distances, its agent run with no person and given at deployment home(x, y) and shop(u, v); visit, whose constraint is distance(x, y, u, v) =< 3, is taken with home (1, 1) and shop (3, 2), at distance 3, and not with shop (3, 3), at distance 4.
+cva_ds_dir="$GLP_DIR/programs/tests/vg_distances_$$"
+mkdir -p "$cva_ds_dir" && cp "$CVA/distances/platform.vglp" "$cva_ds_dir/platform.vglp"
+cva_ds_emit=$(printf ':emit %s\n:quit\n' "$cva_ds_dir" | "$REPL_RUN" 2>&1)
+cva_ds=$("$REPL_RUN" <<HEREDOC
+$cva_ds_dir/platform.glp
+:limit 2000000
+agent(alice, [], N, O, [home(1, 1), shop(3, 2)], A).
+agent(bob, [], N, O, [home(1, 1), shop(3, 3)], A).
+:quit
+HEREDOC
+2>&1)
+rm -rf "${cva_ds_dir:?}"
+check "CVA distances: the platform emitted to GLP, the library's distance printed in it" "wrote .*vg_distances_.*platform.glp" "$cva_ds_emit"
+check "CVA distances: visit taken with the shop at distance 3 from home" "view(alice, \[visited, home(1, 1), shop(3, 2)\]" "$cva_ds"
+check "CVA distances: ... and not at distance 4, bob's first view" "view(bob, \[home(1, 1), shop(3, 3)\]" "$cva_ds"
+check_not "CVA distances: ... bob never visits" "view(bob, \[visited" "$cva_ds"
+check_not "CVA distances: a platform prints only the library's functions its contract uses, distances no root" "num_root" "$(cat "$CVA/distances/platform.vglp")"
+# A count whose condition holds a library function, as a governance contract counts the members nearer to a proposal than to the status quo (#120): vGLP's nearer, its agent run with no person and given at deployment the ideal points (1, 1), (2, 2) and (5, 5), the status quo (0, 0), the proposal (2, 2) and need(k); pass counts the ideal points strictly nearer to the proposal than to the status quo in the Manhattan distance, (2, 2) and (5, 5), two, and is taken where k is 2 and not where k is 3.
+cva_nr_dir="$GLP_DIR/programs/tests/vg_nearer_$$"
+mkdir -p "$cva_nr_dir" && cp "$CVA/nearer/platform.vglp" "$cva_nr_dir/platform.vglp"
+cva_nr_emit=$(printf ':emit %s\n:quit\n' "$cva_nr_dir" | "$REPL_RUN" 2>&1)
+cva_nr=$("$REPL_RUN" <<HEREDOC
+$cva_nr_dir/platform.glp
+:limit 5000000
+agent(alice, [], N, O, [ideal(1, 1), ideal(2, 2), ideal(5, 5), status(0, 0), prop(2, 2), need(2)], A).
+agent(bob, [], N, O, [ideal(1, 1), ideal(2, 2), ideal(5, 5), status(0, 0), prop(2, 2), need(3)], A).
+:quit
+HEREDOC
+2>&1)
+rm -rf "${cva_nr_dir:?}"
+check "CVA nearer: the platform emitted to GLP" "wrote .*vg_nearer_.*platform.glp" "$cva_nr_emit"
+check "CVA nearer: pass taken, two ideal points nearer to the proposal than to the status quo and two needed" "view(alice, \[passed, ideal(1, 1), ideal(2, 2), ideal(5, 5), status(0, 0), prop(2, 2), need(2)\]" "$cva_nr"
+check "CVA nearer: ... bob's first view, three needed" "view(bob, \[ideal(1, 1), ideal(2, 2), ideal(5, 5), status(0, 0), prop(2, 2), need(3)\]" "$cva_nr"
+check_not "CVA nearer: ... and not taken where three are needed" "view(bob, \[passed" "$cva_nr"
 # The values the developer gives (vGLP 922ac53, Section 5.4, "Speech-act schemas as local specifications": "A platform is deployed when its developer compiles it, giving the compiler the values; the program carries them, so every participant of one of its instances holds the same values"): counts compiled with counts/values, cap(3), wt(4) and wt(2), prints developer_values and an agent of four arguments that starts the agent of five with them, which a mini-app calls; run with no person, its first view shows them, held from startup (devvalues).
 cva_dv_dir="$GLP_DIR/programs/tests/vg_devvalues_$$"
 mkdir -p "$cva_dv_dir" && cp "$CVA/counts/platform.vglp" "$cva_dv_dir/platform.vglp"
