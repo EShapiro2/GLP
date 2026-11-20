@@ -8,6 +8,8 @@ Talking to Udi: update him tersely, and only when his response is needed. Ask on
 
 A question for Udi is put to him at once, by the thread that owns it, in its own thread, so that it shows in his waiting list. The coordinator holds no question.
 
+Before a thread posts a message to Udi or shows him a contract clause, it runs the text check on it, in a clone of EShapiro2/GLP on main: python3 -I tools/myenglish/check.py --udi < message.txt (--clause for contract clauses, --paper FILE for a paper), and rewrites what fails.
+
 Udi never rules. He approves or rejects recommendations. Never ask him to rule or decide: state one recommendation and ask "Q: Do you approve?".
 
 Say "repo", not "disc", for a repository. "Disc" is on Udi's Mac.
