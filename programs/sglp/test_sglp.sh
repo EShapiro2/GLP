@@ -262,6 +262,13 @@
 #       draw each agent's stochastic person of its role; and the run refused
 #       for a census drawing nobody and one drawing a person of a role of no
 #       dimension.
+# (xxi) runs on a social graph of one's choosing (graphs/; graphs/README.md):
+#       graphs/test_graphs.sh, each of its checks one of this script's: its
+#       graphs of each family (gen.py), the scripts and refusals of
+#       compose.py, the library and the example loading, and runs on the
+#       canonical platforms of the cascade's records Friendship and Overlay,
+#       each graph built, no step proposed twice but after a refusal, the
+#       runs reproducible, and an owner's source acting once its steps are done.
 # And, unnumbered: the printer (each line one string, by GLP's string_concat/2
 # and term_to_string/2) and the seeds (tests/seeds, Appendix B, "Seeds").
 #
@@ -1368,6 +1375,18 @@ grep -q '^Ok = no$' "$WORK/census_refused.lines" && [ "$(grep -c '^Ok = no$' "$W
     [ "$(grep -c '^refused$' "$WORK/census_refused.lines")" -eq 2 ] &&
     ! grep -q '^entry(\|^clock(' "$WORK/census_refused.lines"
 check "a census drawing no person, and one drawing a person of a role of no dimension, are refused by the run, which takes no goal but the line refused (Section 3, after Definition \"Well-Formed\")" $?
+
+echo "--- (xxi) runs on a social graph of one's choosing (graphs/test_graphs.sh)"
+bash "$HERE/graphs/test_graphs.sh" > "$WORK/graphs.out" 2>&1
+grep -q '^=== [0-9]* passed, [0-9]* failed ===$' "$WORK/graphs.out"
+check "graphs/test_graphs.sh ran to its summary" $?
+while IFS= read -r line; do
+    case "$line" in
+        "  PASS  "*) check "graphs: ${line#  PASS  }" 0 ;;
+        "  FAIL  "*) check "graphs: ${line#  FAIL  }" 1 ;;
+        "        "*) echo "$line" ;;
+    esac
+done < "$WORK/graphs.out"
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="
