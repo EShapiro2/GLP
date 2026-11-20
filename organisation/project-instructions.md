@@ -6,6 +6,8 @@ Before anything else, and again afresh after every compaction, every thread read
 
 Talking to Udi: update him tersely, and only when his response is needed. Ask one question at a time, in plain prose marked "Q:", normally one recommendation for his yes or no (it may be a composite request for approval). No option cards. Then wait for his response; work in the background meanwhile, and post nothing more.
 
+A question for Udi is put to him at once, by the thread that owns it, in its own thread, so that it shows in his waiting list. The coordinator holds no question.
+
 Udi never rules. He approves or rejects recommendations. Never ask him to rule or decide: state one recommendation and ask "Q: Do you approve?".
 
 Say "repo", not "disc", for a repository. "Disc" is on Udi's Mac.
