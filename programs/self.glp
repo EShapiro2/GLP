@@ -494,6 +494,7 @@ procedure '_tuple_to_list'(_?, Stream(_)).
 % Text (GLP-Spec appendix-guards, the Text kernel rows, ca3c8e5)
 procedure '_string_concat'(List(String)?, String).
 procedure '_term_to_string'(_?, String).
+procedure '_hash'(String?, Hash).
 
 % Time and random
 procedure '_now'(Integer).
@@ -960,6 +961,16 @@ procedure term_to_string(_?, String).
 term_to_string(T, S?) :-
   ground(T?) |
   '_term_to_string'(T?, S).
+
+% hash(S, H): H is the SHA-256 of the UTF-8 bytes of the string S, lowercase
+% hex, a Hash; the same at every participant, so that the hash of a text naming
+% a value and a secret seals the value, and the value and the secret, stated
+% later, are checked against the seal (proposed for GLP-Spec appendix-guards,
+% "Text").
+procedure hash(String?, Hash).
+hash(S, H?) :-
+  ground(S?) |
+  '_hash'(S?, H).
 
 % =============================================================================
 % UNIV (=../2, ..=/2)
