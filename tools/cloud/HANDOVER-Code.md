@@ -1,6 +1,6 @@
 # Handover of Code #36, 2026-11-20
 
-Code #36 compacted once and stays, by Udi's rule of 2026-11-20 14:32 UTC.  After a compaction it reads afresh organisation/claude.md, writing-style-guide.md, claudese.md, GLP/CLAUDE.md and this file, then goes on.
+Code #36 compacted twice and stays, by Udi's rule of 2026-11-20 14:32 UTC.  After a compaction it reads afresh organisation/claude.md, writing-style-guide.md, claudese.md, GLP/CLAUDE.md and this file, then goes on.
 
 ## Done
 
@@ -19,6 +19,14 @@ Code #36 compacted once and stays, by Udi's rule of 2026-11-20 14:32 UTC.  After
 - Done at d25d3de46: main merged into the branch; Democratic Community's record whole by cascade.sh (no platform: no Interface pragmas, GO's); the five GCE records printed again.  Website has d25d3de46 for /next.
 - Main and the live site for the new structure: only on Udi's separate yes.
 - vGLP: platform.glp of Community, Democratic Community, Backed Community and five Cooperatives does not load; Rides, Lodging, Marketplace and Gigs print no platform.
+
+## After the second compaction (2026-11-20, evening)
+
+- Branch head 2ff6600f5: merged vGLP feccc12a5, 00b59c5ea and 9d0e1a041, CSSN 7835de25b, GO d7664230d, Calculus c5e75e1af (Workers' Cooperative); records printed again whole by cascade.sh: Knowledge, Notes, Agents, Agora, Denominated-Currencies, Provenance-Groups, Services, Organisation, Community, Backed-Community (840100840), Children (2b846b470), Constitution, Cooperative, Workers' Cooperative (2ff6600f5).
+- Main b2dc3c8b3: the short rules (d45ef180e) and Website's sweep (e792294bf, Udi's yes 20:26 UTC).
+- Website has 840100840 and 2b846b470 on /next; to be given 2ff6600f5.
+- Waiting on the Calculus: d2432e5d (per-role values) on code, certified, over 8f4ff1d24; then print Rides, Gigs, Matching, the 13 contracts from Matching and the 12 records with constant variables.
+- Open Q to Udi (19:05 UTC): the ten records on main and the live site.  No answer yet.
 
 ## Waiting and standing
 
