@@ -223,7 +223,7 @@ def unite(sentences, defs=(), text=None):
     for i, (k, xs) in enumerate(groups):
         who = xs[0] if len(xs) == 1 else ', '.join(xs[:-1]) + ' and ' + xs[-1]
         if len(xs) == 1:
-            kind = k if re.match(r'^(?:something|a number of)\b', k) else '%s %s' % (article(k), k)
+            kind = k if re.match(r'^(?:something|a number of|its|her|his|their|the)\b', k) else '%s %s' % (article(k), k)
         else:
             kind = ' or '.join(plural(x) for x in k.split(' or '))
         out.append(('%s %s %s' % (who, 'is' if len(xs) == 1 else 'are', kind)) if i == 0 else '%s %s' % (who, kind))

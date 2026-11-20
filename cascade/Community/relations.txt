@@ -1,0 +1,2 @@
+Community instantiates Bank: holds
+Community extends it (Bank): holds

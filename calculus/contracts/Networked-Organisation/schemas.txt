@@ -1,5 +1,5 @@
 Networked Organisation
-Networked Organisation extends Backed Currency and restricts it.
+Networked Organisation extends Backed Community and restricts it.
 Vocabulary: z has the stake at the number n = stake(z,n); x has z-coins locked as the customer of y = customer_lock(x,y,z); y has z-coins locked as the provider of x = provider_lock(y,x,z); w holds the dispute of x and y over z-coins = dispute(w,x,y,z).
 z-coins are locked between the provider y and the customer x: y has z-coins locked as the provider of x and x has z-coins locked as the customer of y.
 x is an arbiter of z: x holds the role Arbiter in z and z has x in the role Arbiter.

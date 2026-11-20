@@ -32,7 +32,7 @@ import names as NM      # the names of the contracts and their files (tools/name
 MARKS = {'■': r'\enf', '◆': r'\att', '○': r'\und'}
 END_BOX = ('Interface pragmas', 'Implementation pragmas', 'Pragmas', 'Logic pragmas')
 # A contract renamed in the revision: its revised name -> its original's name.
-RENAMED = {'Community Currency': 'CC'}      # its original in GLP is CC.txt (the name on main GCC, NAMES.txt)
+RENAMED = {'Community': 'CC'}      # its original in GLP is CC.txt (the name on main GCC, NAMES.txt)
 # Dropped in the revision (Udi, 2026-11-13), said once under the lead-in.
 DROPPED = ('Three contracts are dropped.  GCC (Grassroots Community Coins) and BCC, whose communities '
            'have no ward, give way to CC, renamed GCC, and to GBCC.  GFF-I\'s two conditions are now GFF:2 and GFF:3.')

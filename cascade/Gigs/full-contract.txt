@@ -11,7 +11,7 @@ A *bond* is a note that is a unit of its issuer's debt, due at its maturity date
 A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
 A *networked organisation* is an organisation whose bylaws name its *community*, a backed community currency, Cur, and the role *arbiter*. A *provider* is a person whose *stake*, the Cur-coins they hold, is at least *S*, a number of Cur-coins, and a *customer* is a person who accepts Cur-coins. A *dispute* is over Cur-coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
 A *worker* is a provider and a *client* a customer. A *job* names the work, its price in Cur-coins and its deadline; its terms say what is released to whom on cancellation.
-Alice, Bob and Carol are persons, Orga a networked organisation, Will an organisation, Cur an its community. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Alice, Bob and Carol are persons, Orga a networked organisation, Will an organisation, Cur its community. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
