@@ -70,14 +70,14 @@ Officers: Decider [Appoint] <person> <role>
   Codecider: Decider asks to end Bob's office in your organisation Orga.
   Bob [Resign] [Officer unfriend]
 Amend: Alice [Amend] <act> <votes>
-Ward and person: Bob [Organisation acquaint] <person>
+Ward and person: Bob [Organisation acquaint] <organisation>
   Orga: Bob wishes that you know each other.
   Alice [Organisation befriend] <organisation>
   Orga: Alice asks that you and Bob befriend.
   Bob: Alice asks that you and her organisation Orga befriend.
   Alice [Organisation unfriend] <organisation> <person>
   Orga [Organisation end]
-Wards: Orga [Organisations acquaint] <person>
+Wards: Orga [Organisations acquaint] <organisation>
   Will: Orga wishes that you know each other.
   Alice [Organisations befriend] <organisation>
   Orga: Alice asks that you and Will befriend.
