@@ -3,8 +3,7 @@
 %% (programs/sglp/README.md, "The term form"), over the canonical platform of
 %% Feeds, its persons building the graph with programs/sglp/graphs's library
 %% (programs/sglp/graphs/README.md) and then posting and following one feed.
-%% The ring scenario of programs/gff/paths/sglp/gen_ring2.py (branch
-%% yuval/feeds-sglp) ported onto that library, so that it runs on any graph:
+%% It runs on any graph:
 %%
 %%   python3 -I programs/sglp/graphs/gen.py ws --n 32 --k 2 --beta 0.1 --seed 3 > ws32.graph
 %%   bash programs/sglp/graphs/run.sh Feeds ws32.graph '4 days' 1 ws32.log programs/sglp/gff/Feeds_sglp.glp

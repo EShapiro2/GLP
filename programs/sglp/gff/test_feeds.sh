@@ -1,7 +1,6 @@
 #!/bin/bash
 # Test of Feeds_sglp.glp (programs/sglp/gff/README.md): Feeds on a ring of 8
-# agents, each with the 2 nearest on each side, for four simulated days, seed 1,
-# as programs/gff/paths/sglp/gen_ring2.py's 8-agent ring (branch yuval/feeds-sglp):
+# agents, each with the 2 nearest on each side, for four simulated days, seed 1:
 #
 # 1. the run ends with no error and the graph is built, each of its steps
 #    proposed once (programs/sglp/graphs/run.sh exits 0);

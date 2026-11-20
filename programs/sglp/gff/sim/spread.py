@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """A Feeds run's summary from its graph and its log (programs/sglp/gff/Feeds_sglp.glp),
-after programs/gff/paths/sglp/spread.py (branch yuval/feeds-sglp), with the
-graph's distances.
+with the graph's distances.
 
 usage: spread.py <graph> <log>
 
