@@ -1,0 +1,12 @@
+Disputes
+Disputes extends Organisation.
+The bylaws of an organisation name the role *arbiter*. A *dispute* is a disagreement between two participants of an organisation about an act of the organisation or an undertaking.
+Alice, Bob and Carol are persons, Orga an organisation, Issue a dispute.
+1. ■ Raise: Alice may raise Issue with Bob in Orga to Carol, provided Orga has Alice as a participant, Orga has Bob as a participant and Orga has Carol in the role Arbiter.
+2. ■ Decide: Carol may decide Issue between Alice and Bob in Orga.
+3. ○ Abide. Alice and Bob will abide by the decision of Carol.
+Logic pragmas.
+Vocabulary: z has d between x and y raised to w = raised(z,d,x,y,w); z has w's decision on d between x and y = decision(z,w,d,x,y); w has d between x and y to arbitrate in z = case(w,z,d,x,y).
+x is an arbiter of z: x holds the role Arbiter in z.
+After x raises d with y in z to w, which requires z does not have d between x and y raised to w: z has d between x and y raised to w and w has d between x and y to arbitrate in z.
+After w decides d between x and y in z: no longer z has d between x and y raised to w, no longer w has d between x and y to arbitrate in z and z has w's decision on d between x and y.
