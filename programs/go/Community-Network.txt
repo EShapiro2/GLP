@@ -34,7 +34,7 @@ After w decides the release to x and to y of the coins locked between them in z:
 Parameters: x has coins locked in z as the customer of y; y has coins locked in z as the provider of x.
 Interface pragmas
 Look: 🕸️, network
-Set stake: Decider [Set stake] <organisation> <stake>
+Set stake: Decider [Set stake] <stake>
   Codecider: Decider asks to set the stake of Orga.
 Arbitration: Alice [Raise] <arbiter>
   Bob [Provider raise] <arbiter>
