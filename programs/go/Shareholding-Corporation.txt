@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 6.3 and cites a clause as Shareholding Corporation:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Corporation, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-16, by GO #8.
+% Last changed: 2026-11-20, by GO #14: the Calculus's Logic pragmas at its 96d0ad2d; no clause changed.
 % Schemas: Shareholding-Corporation.glp beside this file.
 Shareholding Corporation
 Shareholding Corporation instantiates Corporation with shareholding corporation bylaws, composes it with Shares, and extends the composition.
@@ -21,7 +21,7 @@ Roles: the directors of z = directors(z); the first officer of z = first_officer
 x is a director of z: x holds the role Director in z.
 After w votes to set u as a dividend of z, which requires z does not hold w's vote to set u as a dividend: z holds w's vote to set u as a dividend.
 After x sets v as a dividend of z, which requires z does not have v as a dividend: z has v as a dividend and z holds no one's vote to set v as a dividend.
-After y claims n f-denominated w-coins from z as the dividend v, which requires z has not paid y the dividend v in the denomination f: no longer z holds n w-coins, y holds n w-coins and z has paid y the dividend v in the denomination f.
+After y claims n f-denominated w-coins from z as the dividend v, which requires z has not paid y the dividend v in the denomination f: no longer z holds n f-denominated w-coins, y holds n f-denominated w-coins and z has paid y the dividend v in the denomination f.
 Environment: z has issued shares; the shareholders of z decided the issue of shares by a majority of the shares they hold; the shareholders of z decided the officers by a majority of the shares they hold.
 Interface pragmas
 Look: 📈, money
