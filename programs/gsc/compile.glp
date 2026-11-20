@@ -1422,6 +1422,20 @@ exported procedure compile_contract(Constant?, NDeclared?, Preds?, SParams?).
 compile_contract(Nm, D, Ev, Pm) :- ground(Nm?), ground(D?), ground(Ev?), ground(Pm?) |
     compile_checked(Nm?, D?, Ev?, Pm?).
 
+% A contract given as a term, checked once and compiled on that verdict, which
+% is given back: the verdict and the displays are both of this one term, so a
+% caller that needs both checks nothing twice (Section 5: a contract is
+% checked before it is compiled).
+exported procedure compile_contract(Constant?, NDeclared?, Preds?, SParams?, Verdict).
+compile_contract(Nm, D, Ev, Pm, V?) :- ground(Nm?), ground(D?), ground(Ev?), ground(Pm?) |
+    check # check_env_params(D?, Ev?, Pm?, V0),
+    ndecl_schemas(D?, C),
+    compile_given(V0?, Nm?, C?, V).
+
+procedure compile_given(Verdict?, Constant?, NContract?, Verdict).
+compile_given(V0, Nm, C, V0?) :- ground(V0?), ground(Nm?), ground(C?) |
+    compile_on(V0?, Nm?, C?).
+
 % A fixture that changes a contract in one place, by name and the contract it
 % changes (contracts.glp, variant/3).
 exported procedure compile_variant(Constant?, WContract?).
