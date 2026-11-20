@@ -9,7 +9,8 @@ Constitution:0 - | Default: x is a member of z for x is entitled to propose m in
 Constitution:0 - | Default: x is a member of z for x is entitled to vote on m in z.
 Constitution:0 - | Default: x is a member of z for x is entitled to take m for z.
 Constitution:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z.
+Constitution:0 - | Default: z is an organisation and z has m proposed for the amendment m is decided according to the bylaws of z.
 Constitution:1 ■ Join: Organisation:3 Join, on the votes of Orga <-.
 Constitution:2 ■ Expel: Organisation:3 Expel, on the votes of Orga <-.
 Constitution:2 ■ Officer expel: Organisation:3 Officer expel, on the votes of Orga <-.
-Constitution:3 ■ Amend: Organisation:5 Amend <- egalitarian(Orga,Motion).
+Constitution:3 ■ Amend: Organisation:5 Amend, on the votes of Orga <- egalitarian(Orga,Motion).

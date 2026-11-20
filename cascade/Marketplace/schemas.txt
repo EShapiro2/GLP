@@ -12,15 +12,15 @@ After x orders the good of l from y in z, which requires x and y do not have an 
 After x attests the delivery of the good of l by y in z: x has attested the delivery of the good of l by y, no longer x and y have an order of l and no longer coins are locked in z between the provider y and the customer x.
 After x cancels x's order of l from y in z: no longer x and y have an order of l and no longer coins are locked in z between the provider y and the customer x.
 After y cancels y's order of l by x in z: no longer x and y have an order of l and no longer coins are locked in z between the provider y and the customer x.
-Marketplace:0 - | A *seller* is a provider and a *buyer* a customer. A *listing* names a good, its price in Cur-coins and how it is delivered; its terms say what is released to whom on cancellation.
-Marketplace:0 - | Alice, Bob and Carol are persons, Orga a community network, Cur an organisation, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a buyer, and in clause 5 Skill is the listing.
+Marketplace:0 - | A *seller* is a provider and a *buyer* a customer. A *listing* names a good, its price in community coins and how it is delivered; its terms say what is released to whom on cancellation.
+Marketplace:0 - | Alice, Bob and Carol are persons, Orga a community network, Gov an organisation, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a buyer, and in clause 5 Skill is the listing.
 Marketplace:1 ■ | Listing.
-Marketplace:1 ■ Post: posted(Bob,Listing,Orga) <- community(Orga,Cur), stake(Orga,S), coin(Bob,Cur,*Held), ge(Held,S), ~posted(Bob,Listing,Orga) guarded by Bob.
+Marketplace:1 ■ Post: posted(Bob,Listing,Orga) <- knows(Bob,Orga), community(Orga,Gov), participant(Bob,Gov), stake(Orga,S), coin(Bob,Gov,*Held), ge(Held,S), ~posted(Bob,Listing,Orga) guarded by Bob.
 Marketplace:1 ■ | Bob posts the listing to the buyers he points to.
-Marketplace:1 ■ Send listing: received(Alice,Listing,Bob,Orga) <- posted(Bob,Listing,Orga), points_to(Bob,Alice), community(Orga,Cur), accepts(Alice,Cur,Dollar), ~received(Alice,Listing,Bob,Orga).
-Marketplace:1 ■ Pass: received(Carol,Listing,Bob,Orga) <- community(Orga,Cur), accepts(Alice,Cur,Dollar), received(Alice,Listing,Bob,Orga), points_to(Alice,Carol), accepts(Carol,Cur,Mark), ~received(Carol,Listing,Bob,Orga) guarded by Alice.
+Marketplace:1 ■ Send listing: received(Alice,Listing,Bob,Orga) <- posted(Bob,Listing,Orga), points_to(Bob,Alice), knows(Alice,Orga), community(Orga,Gov), participant(Alice,Gov), accepts(Alice,Gov,Dollar), ~received(Alice,Listing,Bob,Orga).
+Marketplace:1 ■ Pass: received(Carol,Listing,Bob,Orga) <- knows(Alice,Orga), community(Orga,Gov), participant(Alice,Gov), accepts(Alice,Gov,Dollar), received(Alice,Listing,Bob,Orga), points_to(Alice,Carol), participant(Carol,Gov), accepts(Carol,Gov,Mark), ~received(Carol,Listing,Bob,Orga) guarded by Alice.
 Marketplace:1 ■ Withdraw listing: ~posted(Bob,Listing,Orga) <- posted(Bob,Listing,Orga) guarded by Bob.
-Marketplace:2 ■ Order: ordered(Alice,Listing,Bob), ordered_from(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- community(Orga,Cur), accepts(Alice,Cur,Dollar), posted(Bob,Listing,Orga), knows(Alice,Bob), knows(Bob,Alice), ~ordered(Alice,Listing,Bob), ~ordered_from(Bob,Listing,Alice) guarded by Alice, Bob.
+Marketplace:2 ■ Order: ordered(Alice,Listing,Bob), ordered_from(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- knows(Alice,Orga), community(Orga,Gov), participant(Alice,Gov), accepts(Alice,Gov,Dollar), posted(Bob,Listing,Orga), knows(Alice,Bob), knows(Bob,Alice), ~ordered(Alice,Listing,Bob), ~ordered_from(Bob,Listing,Alice) guarded by Alice, Bob.
 Marketplace:2 ■ | Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 Marketplace:3 ◆ Deliver: delivered(Alice,Listing,Bob), ~ordered(Alice,Listing,Bob), ~ordered_from(Bob,Listing,Alice), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- ordered(Alice,Listing,Bob), ordered_from(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Alice.
 Marketplace:3 ◆ | The payment and the deposit are then released to Bob.

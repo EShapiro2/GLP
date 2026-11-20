@@ -30,9 +30,9 @@ Agora:4 ■ Deliver to poster: delivered_post(Alice,Carol,Item,Mart,Carol), post
 Agora:5 ■ Withdraw: ~post(Alice,Carol,Item,Mart), ~post(_,Carol,Item,Mart), ~delivered_post(Alice,Carol,Item,Mart,_) <- post(Alice,Carol,Item,Mart) guarded by Carol possibly Alice=Carol.
 Agora:5 ■ Withdraw own: ~post(Alice,Alice,Item,Mart), ~post(_,Alice,Item,Mart), ~delivered_post(Alice,Alice,Item,Mart,_) <- post(Alice,Alice,Item,Mart) guarded by Alice.
 Agora:5 ■ | Carol may not post Item to Mart again.
-Agora:6 ■ Swap item for coin: ~item(Alice,Item), item(Bob,Item), ~coin(Bob,Dave,*Sum), coin(Alice,Dave,*Sum) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), coin(Bob,Dave,*Sum) guarded by Alice, Bob possibly Alice=Dave, Bob=Dave.
-Agora:6 ■ Swap item for bond: ~item(Alice,Item), item(Bob,Item), ~bond(Bob,Dave,Day,*Sum), bond(Alice,Dave,Day,*Sum) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), bond(Bob,Dave,Day,*Sum) guarded by Alice, Bob possibly Alice=Dave, Bob=Dave.
-Agora:6 ■ Swap items: ~item(Alice,Item), item(Bob,Item), ~item(Bob,Thing), item(Alice,Thing) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), item(Bob,Thing) guarded by Alice, Bob.
-Agora:6 ■ Deposit item: ~item(Alice,Item), escrow_item(Carol,Item,Alice,Bob,Cond) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), item(Alice,Item) guarded by Alice, Carol.
-Agora:6 ■ Release item: ~escrow_item(Carol,Item,Alice,Bob,Cond), item(Bob,Item) <- knows(Carol,Bob), knows(Bob,Carol), escrow_item(Carol,Item,Alice,Bob,Cond) guarded by Carol, Bob.
-Agora:6 ■ Return item: ~escrow_item(Carol,Item,Alice,Bob,Cond), item(Alice,Item) <- knows(Carol,Alice), knows(Alice,Carol), escrow_item(Carol,Item,Alice,Bob,Cond) guarded by Carol, Alice.
+Agora:6 ○ Swap item for coin: ~item(Alice,Item), item(Bob,Item), ~coin(Bob,Dave,*Sum), coin(Alice,Dave,*Sum) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), coin(Bob,Dave,*Sum) guarded by Alice, Bob possibly Alice=Dave, Bob=Dave.
+Agora:6 ○ Swap item for bond: ~item(Alice,Item), item(Bob,Item), ~bond(Bob,Dave,Day,*Sum), bond(Alice,Dave,Day,*Sum) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), bond(Bob,Dave,Day,*Sum) guarded by Alice, Bob possibly Alice=Dave, Bob=Dave.
+Agora:6 ○ Swap items: ~item(Alice,Item), item(Bob,Item), ~item(Bob,Thing), item(Alice,Thing) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), item(Bob,Thing) guarded by Alice, Bob.
+Agora:6 ○ Deposit item: ~item(Alice,Item), escrow_item(Carol,Item,Alice,Bob,Cond) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), item(Alice,Item) guarded by Alice, Carol.
+Agora:6 ○ Release item: ~escrow_item(Carol,Item,Alice,Bob,Cond), item(Bob,Item) <- knows(Carol,Bob), knows(Bob,Carol), escrow_item(Carol,Item,Alice,Bob,Cond) guarded by Carol, Bob.
+Agora:6 ○ Return item: ~escrow_item(Carol,Item,Alice,Bob,Cond), item(Alice,Item) <- knows(Carol,Alice), knows(Alice,Carol), escrow_item(Carol,Item,Alice,Bob,Cond) guarded by Carol, Alice.
