@@ -45,3 +45,5 @@ $AS env GLP_ROOT="$WORK/tree" BUILD_DIR="$WORK/build" SITE_TEST=1 CERTIFY=0 \
 	python3 -I "$WORK/tree/servers/peoplesweb/tools/build.py"
 mkdir -p "$WWW"
 rsync -a --delete "$WORK/build/www/" "$WWW/"
+# The commit /next is now built from, which deploy/next.sh compares with the branch's head.
+$AS git -C "$WORK/tree" rev-parse HEAD | $AS tee "$WORK/built" >/dev/null
