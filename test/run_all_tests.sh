@@ -5101,8 +5101,8 @@ term_spec(close(alice, [alice, bob], speech(utterance(club), alice)), Nm, Rs, Bn
 HEREDOC
 2>&1)
 rm -rf "$cva_wild_dir"
-check "CVA wild: GSN's member has one alternative in Atom, member(Speech, Peer)" "^member(Speech, Peer)$" "$(cat "$CVA/social_network/platform.vglp")"
-check_not "CVA wild: ... and none with the wildcard's place dropped, member(Speech)" "^member(Speech)$" "$(cat "$CVA/social_network/platform.vglp")"
+check "CVA wild: GSN's member has one alternative in Atom, member(Constant, Peer), the group's name a constant (GSC #17's const(X))" "^member(Constant, Peer)$" "$(cat "$CVA/social_network/platform.vglp")"
+check_not "CVA wild: ... and none with the wildcard's place dropped, member(Constant)" "^member(Constant)$" "$(cat "$CVA/social_network/platform.vglp")"
 check "CVA wild: GSN's close holds at a listed member who is a member of the leader's group, member(g, alice)" "B1 = \[\[b(role(1), p(alice)), " "$cva_wild_n"
 check "CVA wild: ... and under no binding at a listed person who is no member" "B2 = \[\]$" "$cva_wild_n"
 # A wildcard in the anchor of a quantifier that binds a listed role, with a condition across roles (GSNW's and CSSN's Retire, member(Carol, _, E); Calculus #6 and Helper #4, 2026-11-15): wild's leave.
@@ -6547,7 +6547,7 @@ play_network(A, B, C, D, N).
 :quit
 HEREDOC
 2>&1)
-CVA_NET_N="speech(utterance(club), alice)"
+CVA_NET_N="club"
 CVA_NET_X="speech(utterance(hi), bob)"
 check "CVA social network: alice creates the group, its first member, listing herself (GSN:2)" "A = \[.*view(alice, \[leader($CVA_NET_N), member($CVA_NET_N, alice), listed(alice, $CVA_NET_N), friend(dave), friend(carol), friend(bob), knows(dave), knows(carol), knows(bob), identity, person\], \[bob, carol, dave\], \[\], \[tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('Messages', message), tab('Posts', group_message)\])" "$cva_network"
 check "CVA social network: alice adds bob, who is asked on his approval question and answers yes (GSN:3)" "B = \[.*gave(join(bob, alice, $CVA_NET_N), yes), view(bob, \[friend(alice), knows(alice), identity, person\], \[alice\], \[join(bob, alice, $CVA_NET_N)\], \[tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('Messages', message), tab('Posts', group_message)\]), view(bob, \[member($CVA_NET_N, alice), friend(alice), knows(alice), identity, person\], \[alice\], \[\], \[tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('Messages', message), tab('Posts', group_message)\])" "$cva_network"
@@ -6563,7 +6563,7 @@ check "CVA social network: ... and dave" "D = \[.*view(dave, \[group_message(bob
 # The network log interleaves the messages of different agents in the order the scheduler runs them, which the paper leaves open (the runs of maGLP and vmaGLP interleave the agents' reductions, vGLP, Sections 4.2 and 5.2): the check holds the order of each agent's messages and not their interleaving with another agent's, which changes with what each reduction costs (Code #12, 2026-10-20, change 2 of the five).
 check "CVA social network: carol leaves, alice's machine voting yes (GSN:3)" "sent(carol, alice, start(attempt(carol, 30, 30, leave(carol, alice, $CVA_NET_N), none))), .*sent(alice, carol, vote(attempt(carol, 30, 30, leave(carol, alice, $CVA_NET_N), none), yes(\[\[\]\]))), .*sent(carol, alice, outcome(attempt(carol, 30, 30, leave(carol, alice, $CVA_NET_N), none), commit(\[\])))" "$cva_network"
 check "CVA social network: ... and is a member no more" "C = \[.*view(carol, \[group_message(bob, $CVA_NET_X, $CVA_NET_N, alice), friend(alice), knows(alice), identity, person\], \[alice, bob\], \[\], \[tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('Messages', message), tab('Posts', group_message)\]) |" "$cva_network"
-CVA_NET_M="speech(utterance(den), bob)"
+CVA_NET_M="den"
 CVA_NET_T="\[tab('Contacts', knows), tab('Friends', friend), tab('Groups', member), tab('Messages', message), tab('Posts', group_message)\]"
 check "CVA social network: bob creates a group of his own, m, and adds alice, who is asked and answers yes (GSN:2, GSN:3)" "A = \[.*gave(join(alice, bob, $CVA_NET_M), yes), .*view(alice, \[member($CVA_NET_M, bob), " "$cva_network"
 check "CVA social network: bob ends his friendship with alice, alice's machine voting yes, his request his will (GSN:3, Unfriend)" "sent(bob, alice, start(attempt(bob, 35, 35, unfriend(bob, alice), none))), .*sent(alice, bob, vote(attempt(bob, 35, 35, unfriend(bob, alice), none), yes(\[\[\]\]))), .*sent(bob, alice, outcome(attempt(bob, 35, 35, unfriend(bob, alice), none), commit(\[\])))" "$cva_network"

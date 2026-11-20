@@ -4,7 +4,7 @@ A *constitutional democratic community* is an organisation whose bylaws name one
 Alice and Bob are persons, Orga a constitutional democratic community, Motion an act of Orga.
 1. ■ Join: Organisation:3 Join, on the votes of Orga for it.
 2. ■ Expel: Organisation:3 Expel, on the votes of Orga for it. Officer expel: Organisation:3 Officer expel, on the votes of Orga for it.
-3. ■ Amend: Organisation:5 Amend, only if Motion keeps the bylaws of Orga egalitarian.
+3. ■ Amend: Organisation:5 Amend, only if Motion keeps the bylaws of Orga egalitarian, on the votes of Orga for it.
 Logic pragmas.
 x is a member of z: x is a participant of z.
 Vocabulary: m keeps the bylaws of z egalitarian = egalitarian(z,m).
@@ -13,3 +13,4 @@ Default: x is a member of z for x is entitled to propose m in z.
 Default: x is a member of z for x is entitled to vote on m in z.
 Default: x is a member of z for x is entitled to take m for z.
 Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z.
+Default: z is an organisation and z has m proposed for the amendment m is decided according to the bylaws of z.

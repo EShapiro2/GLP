@@ -11,7 +11,7 @@ Notes:1. ■ Issue: Alice may issue Sum Alice-coins.
 Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
 Notes:3. ■ Pay: Alice may pay Bob Sum Carol-coins, with the consent of Bob, provided Alice knows Bob.
 Notes:3, Coins:1. ■ Pay issuer: Alice may pay the issuer Bob Sum Bob-coins, provided Alice knows Bob.
-Notes:4. ■ Escrow. Deposit: Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
+Notes:4. ○ Escrow. Deposit: Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
 Coins:2. ■ Redeem: Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
 Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 Stays:1. ◆ List place: Alice may list Place under a new name of hers, provided Alice can host guests.

@@ -1,5 +1,5 @@
 Lodging
-Lodging extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Networked Organisation and Recommendations.
+Lodging extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Community Network and Recommendations.
 Vocabulary: y has l posted in z = posted(y,l,z); x has received l of y in z = received(x,l,y,z); x has nights of l booked with y = booked(x,l,y); y has nights of l booked by x = booked_by(y,l,x); x is at the place of l on the first night = at_place(x,l); x is checked in at l of y = checked_in(x,l,y); x leaves the place of l after the last night = leaves(x,l); x has checked out of l of y = checked_out(x,l,y); it is before the first night of l, for x = before_first_night(x,l); no check-in at l is recorded on the first night while x is at the place = no_show(x,l).
 y is a host of z: y is a provider of z.
 x is a traveller of z: x is a customer of z.
@@ -13,16 +13,16 @@ After x records x's check-in at l of y, which requires x is not checked in at l 
 After x records x's checkout from l of y in z: no longer x is checked in at l of y, x has checked out of l of y, no longer x and y have a booking of l and no longer coins are locked in z between the provider y and the customer x.
 After x cancels x's booking of l of y in z: no longer x and y have a booking of l and no longer coins are locked in z between the provider y and the customer x.
 After y cancels y's booking of l by x in z: no longer x and y have a booking of l and no longer coins are locked in z between the provider y and the customer x.
-Lodging:0 - | A *host* is a provider and a *traveller* a customer. A *listing* names a place, the nights offered and the price a night in Cur-coins; its terms say what is released to whom on cancellation.
-Lodging:0 - | Alice, Bob and Carol are persons, Orga a networked organisation, Cur an organisation, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a traveller, in clause 5 an arbiter, and in clause 6 Skill is the listing.
+Lodging:0 - | A *host* is a provider and a *traveller* a customer. A *listing* names a place, the nights offered and the price a night in community coins; its terms say what is released to whom on cancellation.
+Lodging:0 - | Alice, Bob and Carol are persons, Orga a community network, Gov an organisation, Mark a fiat currency, Listing a listing, Skill a skill or a service; in clause 1 Carol is a traveller, in clause 5 an arbiter, and in clause 6 Skill is the listing.
 Lodging:0 - | Environment: x is at the place of l on the first night; x leaves the place of l after the last night; it is before the first night of l, for x; no check-in at l is recorded on the first night while x is at the place.
 Lodging:1 ■ | Listing.
-Lodging:1 ■ Post: posted(Bob,Listing,Orga) <- community(Orga,Cur), stake(Orga,S), coin(Bob,Cur,*Held), ge(Held,S), ~posted(Bob,Listing,Orga) guarded by Bob.
+Lodging:1 ■ Post: posted(Bob,Listing,Orga) <- knows(Bob,Orga), community(Orga,Gov), participant(Bob,Gov), stake(Orga,S), coin(Bob,Gov,*Held), ge(Held,S), ~posted(Bob,Listing,Orga) guarded by Bob.
 Lodging:1 ■ | Bob posts the listing to the travellers he points to.
-Lodging:1 ■ Send listing: received(Alice,Listing,Bob,Orga) <- posted(Bob,Listing,Orga), points_to(Bob,Alice), community(Orga,Cur), accepts(Alice,Cur,Dollar), ~received(Alice,Listing,Bob,Orga).
-Lodging:1 ■ Pass: received(Carol,Listing,Bob,Orga) <- community(Orga,Cur), accepts(Alice,Cur,Dollar), received(Alice,Listing,Bob,Orga), points_to(Alice,Carol), accepts(Carol,Cur,Mark), ~received(Carol,Listing,Bob,Orga) guarded by Alice.
+Lodging:1 ■ Send listing: received(Alice,Listing,Bob,Orga) <- posted(Bob,Listing,Orga), points_to(Bob,Alice), knows(Alice,Orga), community(Orga,Gov), participant(Alice,Gov), accepts(Alice,Gov,Dollar), ~received(Alice,Listing,Bob,Orga).
+Lodging:1 ■ Pass: received(Carol,Listing,Bob,Orga) <- knows(Alice,Orga), community(Orga,Gov), participant(Alice,Gov), accepts(Alice,Gov,Dollar), received(Alice,Listing,Bob,Orga), points_to(Alice,Carol), participant(Carol,Gov), accepts(Carol,Gov,Mark), ~received(Carol,Listing,Bob,Orga) guarded by Alice.
 Lodging:1 ■ Withdraw listing: ~posted(Bob,Listing,Orga) <- posted(Bob,Listing,Orga) guarded by Bob.
-Lodging:2 ■ Book: booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- community(Orga,Cur), accepts(Alice,Cur,Dollar), posted(Bob,Listing,Orga), knows(Alice,Bob), knows(Bob,Alice), ~booked(Alice,Listing,Bob), ~booked_by(Bob,Listing,Alice) guarded by Alice, Bob.
+Lodging:2 ■ Book: booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- knows(Alice,Orga), community(Orga,Gov), participant(Alice,Gov), accepts(Alice,Gov,Dollar), posted(Bob,Listing,Orga), knows(Alice,Bob), knows(Bob,Alice), ~booked(Alice,Listing,Bob), ~booked_by(Bob,Listing,Alice) guarded by Alice, Bob.
 Lodging:2 ■ | Alice's payment for them and the deposit the terms set for Bob, on top of his stake, are then locked.
 Lodging:3 ■ | Check-in and checkout.
 Lodging:3 ■ Check in: checked_in(Alice,Listing,Bob) <- booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), at_place(Alice,Listing), ~checked_in(Alice,Listing,Bob) guarded by Alice.
@@ -34,6 +34,6 @@ Lodging:4 ■ Host cancel: ~booked(Alice,Listing,Bob), ~booked_by(Bob,Listing,Al
 Lodging:4 ■ | The payment and the deposit are then released to Alice and to Bob as the terms say.
 Lodging:4 ■ No-show: ~booked(Alice,Listing,Bob), ~booked_by(Bob,Listing,Alice), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- no_show(Alice,Listing), booked(Alice,Listing,Bob), booked_by(Bob,Listing,Alice), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Alice.
 Lodging:4 ■ | The payment and the deposit are then both released to Alice.
-Lodging:5 ■ Raise: Networked Organisation:2 Raise <- checked_in(Alice,Listing,Bob).
-Lodging:5 ■ Provider raise: Networked Organisation:2 Provider raise <- booked_by(Bob,Listing,Alice).
+Lodging:5 ■ Raise: Community Network:2 Raise <- checked_in(Alice,Listing,Bob).
+Lodging:5 ■ Provider raise: Community Network:2 Provider raise <- booked_by(Bob,Listing,Alice).
 Lodging:6 ◆ Recommend: Recommendations:1 <- checked_out(Alice,Skill,Bob).

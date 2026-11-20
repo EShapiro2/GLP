@@ -42,7 +42,7 @@ Local-Overlay GRH yes yes no
 Lodging GO yes yes no
 Marketplace GO yes yes no
 Mutual-Credit GO yes yes no
-Networked-Organisation GO yes parametric no
+Community-Network GO yes parametric no
 Notes GSC yes yes no
 Organisation GO yes yes no
 Overlay GRH yes yes no

@@ -1,8 +1,8 @@
 Backed Community
 Backed Community extends Community and restricts it.
 *f*, a fraction 0 ≤ f < 1, is a parameter of Backed Community. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
-Alice is a person, Orga a community currency.
-1. ■ Treasurers. Organisation:4 and Guardians:2, only if every treasurer stays backed. Leave, Expel: Organisation:3, only if every treasurer stays backed. Swap, Pay, Redeem, Escrow: Notes:2, Notes:3, Notes:4, Coins:1, Coins:2, Bonds:2 and Denominated Currencies:4, only if every treasurer stays backed.
+Alice is a person, Orga a community.
+1. ○ Treasurers. Organisation:4 and Guardians:2, only if every treasurer stays backed. Leave, Expel: Organisation:3, only if every treasurer stays backed. Swap, Pay, Redeem, Escrow: Notes:2, Notes:3, Notes:4, Coins:1, Coins:2, Bonds:2 and Denominated Currencies:4, only if every treasurer stays backed.
 2. ■ Draw: Community:1, only if Alice stays backed.
 3. ◆ Record: Alice, a treasurer, may pay Dollars into the account, and the treasurers may then jointly record them as paid in by Alice.
 4. ○ Fiat redemption. Community:2, from the account while it holds Dollars, and from a treasurer if it holds none.

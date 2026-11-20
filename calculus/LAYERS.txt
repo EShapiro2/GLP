@@ -4,7 +4,7 @@
 3 Funded-DAO Separating-Distrust Programs Agents Warded-Groups Organisation Services Labelled-Overlay Local-Overlay Bonds Denominated-Coins Joint-Accounts Stays
 4 Shares Provenance-Groups AppStore Children Constitution Rendezvous Feeds Auction Agora Denominated-Currencies
 5 Bank Corporation Cooperative Directory Resilient-Feeds Short-Feeds Second-Score-Auction
-6 Cooperative-DAO App Shareholding-Corporation Central-Bank Commercial-Bank Community-Bank Community Mutual-Credit Single-Person-Company Trading-Company Workers-Cooperative Backchannel-Feeds
-7 Consumers-Cooperative Liquid-Cooperative Backed-Community
-8 Networked-Organisation
+6 Cooperative-DAO App Shareholding-Corporation Central-Bank Commercial-Bank Community-Bank Community-Currency Mutual-Credit Single-Person-Company Trading-Company Workers-Cooperative Backchannel-Feeds
+7 Consumers-Cooperative Liquid-Cooperative Backed-Currency
+8 Community-Network
 9 Gigs Lodging Marketplace Ads Rides

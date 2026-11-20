@@ -1,11 +1,11 @@
 Rides
-Rides extends Networked Organisation and restricts and strengthens Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
+Rides extends Community Network and restricts and strengthens Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
 Vocabulary: the fare and the deposit of x's call c are in z-coins = in_coins(x,z,c); x holds the fare of x's call c = holds_fare(x,c); y holds the deposit of x's call c = holds_deposit(y,x,c).
 x holds the fare of x's call c in z-coins: x holds the fare of x's call c and x holds a z-coin.
 y holds the deposit of x's call c on top of y's stake in z: y holds the deposit of x's call c and y is a provider of z.
 Rides:0 - | A *driver* is a provider and a *rider* a customer.
-Rides:0 - | Alice and Bob are persons, Orga a networked organisation, Cur an organisation.
+Rides:0 - | Alice and Bob are persons, Orga a community network, Gov an organisation.
 Rides:0 - | Environment: the fare and the deposit of x's call c are in z-coins; x holds the fare of x's call c; y holds the deposit of x's call c.
-Rides:1 ■ Award: Second-Score Auction:2 Award + provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- in_coins(Alice,Cur,Trip), holds_fare(Alice,Trip), coin(Alice,Cur), holds_deposit(Bob,Alice,Trip), community(Orga,Cur), stake(Orga,S), coin(Bob,Cur,*Held), ge(Held,S).
+Rides:1 ■ Award: Second-Score Auction:2 Award + provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) <- knows(Alice,Orga), community(Orga,Gov), participant(Alice,Gov), accepts(Alice,Gov,Dollar), in_coins(Alice,Gov,Trip), holds_fare(Alice,Trip), coin(Alice,Gov), holds_deposit(Bob,Alice,Trip), knows(Bob,Orga), community(Orga,Gov), participant(Bob,Gov), stake(Orga,S), coin(Bob,Gov,*Held), ge(Held,S).
 Rides:1 ■ Arrive: Auction:5 + ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <-.
 Rides:1 ■ Cancel: Auction:6 + ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <-.

@@ -31,8 +31,8 @@ After x and y decide that y pays z n w-coins for v: no longer y holds n w-coins,
 Interface pragmas
 Look: 📦, money
 Goods: the goods sold to Alice.
-Buy: Alice [Buy] <issuer> <amount> <good>
+Buy: Alice [Buy] <issuer> <denomination> <amount> <good>
   Dave: Alice asks that Orga pay you coins for a good you deliver to it.
 Receive: Bob [Receive] <good>
-Sell: Carol [Sell] <issuer> <amount> <good>
+Sell: Carol [Sell] <issuer> <denomination> <amount> <good>
   Erin: Carol asks that you pay Orga coins for a good it holds.

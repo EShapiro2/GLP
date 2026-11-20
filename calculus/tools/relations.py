@@ -421,6 +421,40 @@ def own_names(acts, n, b):
                  guards={f(g) for g in a['guards']}) for a in acts]
 
 
+def refine(base, n):
+    """The base with each atom of a kind n's chain gives the denomination put with it (gcsas.py's refine_map: the coin
+    carries its denomination, coin(x,y,f), in Denominated Coins and below), as n's own acts have it."""
+    import gcsas
+    try:
+        w, root = gworld(n)
+    except Exception:
+        return base
+    saved = gcsas.ROOT
+    gcsas.ROOT = root
+    try:
+        rmap = gcsas.refine_map(w, n, w.lexicon(n)) if n in w.known else {}
+    except gcsas.Err:
+        rmap = {}
+    finally:
+        gcsas.ROOT = saved
+    if not rmap:
+        return base
+    def f(l):
+        neg = l.startswith('~')
+        _, p, a = gcsas.parse_atom(l[1:] if neg else l)
+        r = gcsas.refine_lit((neg, p, tuple(a)), rmap)
+        return ('~' if neg else '') + '%s(%s)' % (r[1], ','.join(r[2]))
+    out = []
+    for a in base:
+        h, b = Counter(), Counter()
+        for l, c in a['head'].items():
+            h[f(l)] = max(h[f(l)], c)
+        for l, c in a['body'].items():
+            b[f(l)] = max(b[f(l)], c)
+        out.append(dict(a, head=h, body=b))
+    return out
+
+
 def kind_forms(base, n):
     """The base with each act of notes (Notes's Issue, Swap, Pay, Escrow, whose atoms are of notes) put as its forms for
     the kinds of note n has (gcsas.py's kind_forms, 'Kind of note: ...' of the Logic pragmas): a coin, a bond and a share
@@ -545,7 +579,7 @@ def verdicts(n):
             if add:
                 base = add if base is None else merge(base, add)
                 names = names + [x for x in bs if x not in names]
-    base = kind_forms(base or [], n)
+    base = refine(kind_forms(base or [], n), n)
     owndef = overridden(names, n, both=True) if names and not inst else (set(), set())
     bpreds = preds(base)
     m = match(base, mine)
