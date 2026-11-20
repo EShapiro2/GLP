@@ -2722,8 +2722,8 @@ k_lacks() {   # k_lacks <name> <agent's variable> <atom an earlier view held and
 k_never() {   # k_never <name> <agent's variable> <text no line of the screen shows>
     if [ -n "$(k_screen "$2")" ] && ! k_screen "$2" | grep -qF -- "$3"; then _check_pass "$1"; else _check_fail "$1" "$2's screen shows: $3"; fi
 }
-K_K="speech(utterance(kids_chat), carol)"
-K_S="speech(utterance(study), frank)"
+K_K="kids_chat"
+K_S="study"
 check_not "CSSN village: no failed goal" "→ failed\|ERROR\|Error" "$k_v"
 check "CSSN village: the run suspends, no agent left with an own transaction or a trigger" "→ suspended" "$k_v"
 check_not "CSSN village: ... and is not stopped at the limit" "capped" "$k_v"
