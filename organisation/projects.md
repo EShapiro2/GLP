@@ -36,5 +36,6 @@ Each entry gives the thread's name, then each paper: its repo, main file and cit
 30. **GM**: `EShapiro2/GM-Grassroots-Matching`, `main_characterisation_ArXiv.tex`; record `docs/decisions.md`.
 31. **Audit**: `udi-shapiro/Grassroots-Audit`, branch `Claude`; record `CLAUDE.md` and `docs/handover-2026-11-20.md` there, which Audit keeps.
 32. **Optimiser**: no repo; record `/mnt/project-files/optimiser/`, the project files folder, with its handover there.
+33. **Website**: the site, `EShapiro2/GLP` `servers/peoplesweb`, live from main and `/next` from the branch `Website-site`; record `servers/peoplesweb/docs/decisions.md`, its handover beside it.
 
 `danbachar/grassroots-networking` is Dan Bachar's, and its `CLAUDE.md` is his.
