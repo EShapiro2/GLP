@@ -506,3 +506,13 @@ What the short version leaves to the full: material moved to an appendix within 
 5. The undertaking formula of an undertaken clause (GSC, Definition Undertaking formula) is under its number in the same layout: the condition and the leads-to arrow on the head line, the response on the body line, ending with "undertaken by" and the obligor.
 
 The macros are two, at the head of that file: `\sashead` for a head that starts a line and `\sasbody` for the indented body.
+
+## 41. Wrong and Right
+
+Each text Udi could not read, or had to ask to have in his English, is entered here as the wrong text and the right text (Udi, 2026-11-20, "yes" to the coordinator's proposal: a tool of Code's tests every text against this section, `claudese.md` and the rest of this guide before Udi sees it; every thread runs it on each message to Udi and each contract clause, and rewrites what fails; Coordination adds each failure Udi points out here).  The form is fixed so that the tool can read it: one entry per block, its lines beginning `Wrong:`, `Right:`, `Why:` and `Source:`, in that order, each on one line, a blank line between entries; an entry is made only with a right text that is Udi's own or one he accepted.
+
+Wrong: when Orga presented a Carol-coin to her and she redeemed it neither by a coin nor by a Dollar
+Right: if she fails to redeem a Carol-coin Orga holds
+Why: a story of events where a condition is meant; say the condition, in the fewest words.
+Source: Udi, 2026-11-20, Currencies' clause 5.
+
