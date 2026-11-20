@@ -662,6 +662,19 @@ out=$(run "compile_contract(gsn, $GSNT).")
 check_eq "GSN compiles to fifteen displays" "15" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
+# compile_contract/3 checks the contract once, compiles it on that verdict and
+# gives the verdict back, as cascade.sh takes it: the same displays as
+# compile_contract/2 and the same verdict as check/2, of the one term.
+out3=$(run "compile_contract(gsn, $GSNT, V).")
+check_eq "compile_contract/3 prints the displays compile_contract/2 prints" \
+         "$(printf '%s' "$out" | grep -c 'begin{align')" "$(printf '%s' "$out3" | grep -c 'begin{align')"
+check_eq "and prints them the same" \
+         "$(printf '%s' "$out" | sed -e 's/^\(GLP> \)*//' | grep -v '^V = ')" \
+         "$(printf '%s' "$out3" | sed -e 's/^\(GLP> \)*//' | grep -v '^V = ')"
+check_eq "compile_contract/3 gives the verdict check/2 gives" \
+         "$(run "check($GSNT, V)." | sed -e 's/^\(GLP> \)*//' | grep '^V = ')" \
+         "$(printf '%s' "$out3" | sed -e 's/^\(GLP> \)*//' | grep '^V = ')"
+
 # sg_chain_cut on GSG, which fails volition (above): sg_gossip certifies on
 # GSG and on GSN, both extending GKK, whose acquaint stays unobstructed.
 out=$(run "compile_variant(sg_chain_cut, $GSGV).")
