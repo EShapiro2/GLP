@@ -1,2 +1,1 @@
-Networked Organisation extends Backed Currency: holds
-Networked Organisation restricts it (Backed Currency): holds
+Networked Organisation extends Organisation and Denominated Currencies: holds

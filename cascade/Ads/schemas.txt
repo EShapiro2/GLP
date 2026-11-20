@@ -9,15 +9,15 @@ After x passes d of y to w in z, which requires w has not received d of y in z: 
 After x is shown d of y, which requires x has not been shown d of y: x has been shown d of y.
 After x attests a view of d of y: x has attested a view of d of y.
 After x attests a click of d of y: x has attested a click of d of y.
-Ads:0 - | An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the Orga-coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
-Ads:0 - | Alice, Bob and Carol are persons, Orga a networked organisation, Mark a fiat currency, Ad an ad; in clause 1 Carol is a member.
+Ads:0 - | An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the Cur-coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
+Ads:0 - | Alice, Bob and Carol are persons, Orga a networked organisation, Cur an organisation, Mark a fiat currency, Ad an ad; in clause 1 Carol is a member.
 Ads:0 - | Environment: d is for the profile of x.
 Ads:1 ■ | Posting.
-Ads:1 ■ Post: posted(Bob,Ad,Orga), budget_locked(Bob,Ad,Orga) <- stake(Orga,S), coin(Bob,Orga,*Held), ge(Held,S), ~posted(Bob,Ad,Orga) guarded by Bob.
+Ads:1 ■ Post: posted(Bob,Ad,Orga), budget_locked(Bob,Ad,Orga) <- community(Orga,Cur), stake(Orga,S), coin(Bob,Cur,*Held), ge(Held,S), ~posted(Bob,Ad,Orga) guarded by Bob.
 Ads:1 ■ | Bob posts the ad to the members he points to, and its budget is then locked on top of his stake.
-Ads:1 ■ Send ad: received(Alice,Ad,Bob,Orga) <- posted(Bob,Ad,Orga), points_to(Bob,Alice), accepts(Alice,Orga,Dollar), ~received(Alice,Ad,Bob,Orga).
-Ads:1 ■ Pass: received(Carol,Ad,Bob,Orga) <- accepts(Alice,Orga,Dollar), received(Alice,Ad,Bob,Orga), points_to(Alice,Carol), accepts(Carol,Orga,Mark), ~received(Carol,Ad,Bob,Orga) guarded by Alice.
-Ads:2 ■ Show: ad_shown(Alice,Ad,Bob) <- accepts(Alice,Orga,Dollar), received(Alice,Ad,Bob,Orga), for_profile(Alice,Ad), ~ad_shown(Alice,Ad,Bob).
+Ads:1 ■ Send ad: received(Alice,Ad,Bob,Orga) <- posted(Bob,Ad,Orga), points_to(Bob,Alice), community(Orga,Cur), accepts(Alice,Cur,Dollar), ~received(Alice,Ad,Bob,Orga).
+Ads:1 ■ Pass: received(Carol,Ad,Bob,Orga) <- community(Orga,Cur), accepts(Alice,Cur,Dollar), received(Alice,Ad,Bob,Orga), points_to(Alice,Carol), accepts(Carol,Cur,Mark), ~received(Carol,Ad,Bob,Orga) guarded by Alice.
+Ads:2 ■ Show: ad_shown(Alice,Ad,Bob) <- community(Orga,Cur), accepts(Alice,Cur,Dollar), received(Alice,Ad,Bob,Orga), for_profile(Alice,Ad), ~ad_shown(Alice,Ad,Bob).
 Ads:3 ◆ | Viewing and clicking.
 Ads:3 ◆ View: viewed(Alice,Ad,Bob) <- ad_shown(Alice,Ad,Bob) guarded by Alice.
 Ads:3 ◆ Click: clicked(Alice,Ad,Bob) <- ad_shown(Alice,Ad,Bob) guarded by Alice.
