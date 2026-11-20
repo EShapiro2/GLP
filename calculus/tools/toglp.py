@@ -242,6 +242,24 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                         sub = lambda ls: [(l[0], l[1], tuple(d if x == n else x for x in l[2])) for l in ls]
                         e = dict(e, head=sub(e['head']), body=[l for l in sub(e['body']) if l != (False, pp, tuple(d if x == n else x for x in hit[2]))])
                     break
+    # A name that two roles each read in a state they hold, and that no effect of the act names, is written as a
+    # variable for each role, required equal: each is then local to its role, as vGLP's compilation asks (OSPM,
+    # sections/parts/act-schemas-local.tex; vGLP by Code #36, 2026-11-20 16:50 UTC: community(Orga, G1) at Orga,
+    # participant(Bob, G2) at Bob, and G1 = G2).  The schema is the same; no atom is added.
+    spliteq = []
+    held = lambda l: bool(l[2]) and l[2][0] in agents and l[1] not in values and l[1] not in ARITH and l[1] not in FN and l[1] not in ('sum', 'product', 'difference', 'author')
+    inhead = {a for l in e['head'] for a in l[2]}
+    firsts = {l[2][0] for l in e['head'] + e['body'] if held(l)} | set(e['guards'])
+    for v in sorted({a for l in e['body'] if held(l) for a in l[2][1:] if a in agents and a not in inhead and a not in firsts}):
+        hs = []
+        for l in e['body']:
+            if held(l) and v in l[2][1:] and l[2][0] not in hs:
+                hs.append(l[2][0])
+        for k, h in enumerate(hs[1:]):
+            w = v + ('Two', 'Three', 'Four', 'Five', 'Six')[k]
+            e = dict(e, body=[(l[0], l[1], tuple(w if x == v and i else x for i, x in enumerate(l[2]))) if held(l) and l[2][0] == h else l for l in e['body']])
+            spliteq.append('eq(%s, %s)' % (q(v), q(w)))
+            agents = set(agents) | {w}
     lits = e['head'] + e['body']
     nums = schema_nums(lits, values, places) | {a for l in lits for a in l[2] if a in nvals}
     cvars = {a for l in lits for i, a in enumerate(l[2]) if (l[1], len(l[2]), i) in cplaces and re.fullmatch(gcsas.NAME, a)
@@ -268,6 +286,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     if record is not None:
         record[e['name']] = list(roles)
     others, bound, listed, lists, deciders, onecons = [], [], [], [], [], []
+    onecons.extend(spliteq)
     for g in e['guards']:           # those who decide: one of them, named, and every other the first agent of the role lists for it
         if '(' in g:
             _, p, a = gcsas.parse_atom(g)
