@@ -2,18 +2,19 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 5.1 and cites a clause as Rides:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Networked Organisation and Second-Score Auction, Grassroots Ride Auction, Second-Score Restriction, GRH's (programs/lbm).
+% Changed 2026-11-20 by GO #11: Cur-coins for Orga-coins (Udi, 2026-11-20).
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Rides.glp beside this file.
 Rides
 Rides extends Networked Organisation and restricts and strengthens Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
 A *driver* is a provider and a *rider* a customer.
 Alice and Bob are persons, Orga a networked organisation.
-1. ■ Award: Second-Score Auction:2, only if the fare and the deposit are in Orga-coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (Networked Organisation:2).
+1. ■ Award: Second-Score Auction:2, only if the fare and the deposit are in Cur-coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (Networked Organisation:2).
 Logic pragmas
 Rides extends Networked Organisation and restricts and strengthens Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
 A *driver* is a provider and a *rider* a customer.
-Alice and Bob are persons, Orga a networked organisation.
-1. ■ Award: Second-Score Auction:2 Award, only if the fare and the deposit of Alice's call Trip are in Orga-coins, Alice holds the fare of Alice's call Trip in Orga-coins and Bob holds the deposit of Alice's call Trip on top of Bob's stake in Orga, and then Bob has Orga-coins locked as the provider of Alice and Alice has Orga-coins locked as the customer of Bob. Arrive: Auction:5, and then no longer Bob has Orga-coins locked as the provider of Alice and no longer Alice has Orga-coins locked as the customer of Bob. Cancel: Auction:6, and then no longer Bob has Orga-coins locked as the provider of Alice and no longer Alice has Orga-coins locked as the customer of Bob.
+Alice and Bob are persons, Orga a networked organisation, Cur an organisation.
+1. ■ Award: Second-Score Auction:2 Award, only if the fare and the deposit of Alice's call Trip are in Cur-coins, Alice holds the fare of Alice's call Trip in Cur-coins and Bob holds the deposit of Alice's call Trip on top of Bob's stake in Orga, and then Bob has coins locked in Orga as the provider of Alice and Alice has coins locked in Orga as the customer of Bob. Arrive: Auction:5, and then no longer Bob has coins locked in Orga as the provider of Alice and no longer Alice has coins locked in Orga as the customer of Bob. Cancel: Auction:6, and then no longer Bob has coins locked in Orga as the provider of Alice and no longer Alice has coins locked in Orga as the customer of Bob.
 Logic pragmas.
 Vocabulary: the fare and the deposit of x's call c are in z-coins = in_coins(x,z,c); x holds the fare of x's call c = holds_fare(x,c); y holds the deposit of x's call c = holds_deposit(y,x,c).
 x holds the fare of x's call c in z-coins: x holds the fare of x's call c and x holds a z-coin.
