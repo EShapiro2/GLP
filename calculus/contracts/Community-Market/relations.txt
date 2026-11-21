@@ -1,0 +1,2 @@
+Community Market extends Community Network and Overlay: holds
+Community Market restricts Recommendations: holds
