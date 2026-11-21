@@ -21,9 +21,9 @@ Funded DAO
 20. ■ Swap.  Alice and Bob, who know each other, may jointly swap notes they hold.
 21. ■ Pay.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
 22. ■ Pay issuer.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
-23. ■ Deposit.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol.
-24. ■ Release.  Carol and Bob may jointly release them to Bob.
-25. ■ Return.  Carol and Alice may jointly return them to Alice.
+23. ○ Deposit.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol.
+24. ○ Release.  Carol and Bob may jointly release them to Bob.
+25. ○ Return.  Carol and Alice may jointly return them to Alice.
 26. ■ Redeem.  Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
 27. ■ Fund.  A member of a DAO may give it coins they hold; its steward keeps them apart as the DAO's.
 28. ■ Grant.  The steward may grant the proposer of a passed proposal, once per proposal, any amount of the DAO's coins of one issuer.
