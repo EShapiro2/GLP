@@ -1252,10 +1252,142 @@ state_loss
 &
 \text{provided } 
 \mathit{\detokenize{
+records_replacement
+}}
+(
+\Bob
+,
+Carol
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
 friend
 }}
 (
 Carol
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+restore_replaced_friend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+Dave
+)
+,
+\mathit{\detokenize{
+recovered_replaced
+}}
+(
+\Alice
+,
+Dave
+,
+Carol
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+checkpoint
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+records_friend
+}}
+(
+\Bob
+,
+Carol
+)
+,
+\mathit{\detokenize{
+records_replacement
+}}
+(
+\Bob
+,
+Carol
+,
+Dave
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+state_loss
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+friend
+}}
+(
+Dave
 )
  \notin c_
 {
