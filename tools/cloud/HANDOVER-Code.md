@@ -70,5 +70,4 @@ Code #36 compacted twice and stays, by Udi's rule of 2026-11-20 14:32 UTC.  Afte
 ## After the fourth compaction (2026-11-21)
 
 - Branch head after aef905575: the last 22 records of the full recording (num(N), cvac mend, GSC val-number check), Secure Friendship recorded again, and its platform copied into programs/vglp/cva/secure_friendship/.
-- Secure Friendship's play does not run: cascade.sh step 7 reads `exported procedure play_...(...)` on one line, and SPM's self.glp line 36 wraps it.  Asked SPM #2, through the coordinator, to put it on one line.  Then set PLAYDIR="secure_friendship" in cascade.sh (patch in the scratchpad, cascade-playdir.patch) and record it again.
-- Then fast tier `bash test/run_fast.sh TY VG` on the head, ff-merge llohtv to main, and give the main commit to SPM #2, Audit (through the coordinator) and Website (Audit PR 76).
+- 2026-11-21 19:00 UTC: main a56485a68: every record printed again, and Secure Friendship recorded with SPM #2's four plays (PLAYLIMIT 60000000).  Fast tier at ff122013f: 4205 passed, 0 failed.  Sent to SPM #2, Website and, through the coordinator, Audit.  Next: Section CAS and #118 at the nightly; the Finding 1 set.
