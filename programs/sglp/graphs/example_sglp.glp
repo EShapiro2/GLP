@@ -1,0 +1,96 @@
+%% An owner's sGLP source on a social graph of one's choosing
+%% (programs/sglp/graphs/README.md), in the term form the transformation reads:
+%% persons whose own profiles first build the graph, by the setup library's
+%% graph_next/3 and graph_asked/3, and then act as the owner wants.  Over any
+%% canonical platform extending Friendship, whose Proposal has introduce/3;
+%% compose.py adds the library and the graph's scripts:
+%%
+%%   compose.py --graph g.graph --interface cascade/Friendship/interface.glp \
+%%       --source programs/sglp/graphs/example_sglp.glp > run_sglp.glp
+%%
+%% Its surface form:
+%%
+%%   person introducer.
+%%   Request =::= intro_request.
+%%   Approval =::= intro_approval.
+%%
+%%   intro_request(R?, person(Me, _, _), S) :- intro_wake(Me?, S?, slot(R)) @ 1/hour.
+%%   intro_wake(Me, S, slot(W?)) :- ground(Me?) |
+%%       seen(L), graph_next(Me?, L?, N), intro_go(N?, Me?, S?, slot(W)).
+%%   intro_go(pick(P), _, _, slot(propose(P?))).
+%%   intro_go(wait, Me, S, slot(W?)) :- intro_wake(Me?, S?, slot(W)) @ 1/hour.
+%%   intro_go(done, Me, S, slot(W?)) :- intro_act(Me?, S?, slot(W)) @ 1/day.
+%%
+%% Once its own steps of the graph are done, a person introduces two of its
+%% friends to each other, a day on average apart: the I-th friend its last
+%% view lists and the one after it, I drawn uniformly.  It approves what
+%% graph_asked says is the graph's within an hour on average, and anything
+%% else, an introduction among them, within a day.
+%%
+%%   run 6 agents [behaviour ~ (introducer : 1.0)] until 3 days seed 1.
+%%
+%% The run declaration's 6 agents are the graph's; compose.py refuses another
+%% number.  Every name here starts with intro, apart from the profile's.
+
+exported procedure source(SglpTerms).
+source([
+   person(introducer),
+   binds('Request', intro_request),
+   binds('Approval', intro_approval),
+   decl(intro_request('Request', dual('Person'), dual('Integer'))),
+   clause(intro_request(var('R?'), person(var('Me'), var('_'), var('_')), var('S')), [],
+          [rated(intro_wake(var('Me?'), var('S?'), slot(var('R'))), rate(1, hour))]),
+   decl(intro_wake(dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(intro_wake(var('Me'), var('S'), slot(var('W?'))), [ground(var('Me?'))],
+          [seen(var('L')), graph_next(var('Me?'), var('L?'), var('N')), intro_go(var('N?'), var('Me?'), var('S?'), slot(var('W')))]),
+   decl(intro_go(dual('GraphNext'), dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(intro_go(pick(var('P')), var('_'), var('_'), slot(propose(var('P?')))), [], []),
+   clause(intro_go(wait, var('Me'), var('S'), slot(var('W?'))), [], [rated(intro_wake(var('Me?'), var('S?'), slot(var('W'))), rate(1, hour))]),
+   clause(intro_go(done, var('Me'), var('S'), slot(var('W?'))), [], [rated(intro_act(var('Me?'), var('S?'), slot(var('W'))), rate(1, day))]),
+
+   %% intro_act(Me?, S?, slot(W)): introduce two friends of the last view, or,
+   %% with fewer than two, look again a day later.
+   decl(intro_act(dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(intro_act(var('Me'), var('S'), slot(var('W?'))), [],
+          [seen(var('L')), graph_last_view(var('L?'), var('As'), var('_')), intro_friends(var('As?'), var('Fs')),
+           intro_pick(var('Fs?'), var('Me?'), var('S?'), slot(var('W')))]),
+   decl(intro_friends(dual('List'('Atom')), 'List'('Key'))),
+   clause(intro_friends([], []), [], []),
+   clause(intro_friends([friend(var('K')) | var('As')], [var('K?') | var('Ks?')]), [], [intro_friends(var('As?'), var('Ks'))]),
+   clause(intro_friends([var('_') | var('As')], var('Ks?')), [otherwise], [intro_friends(var('As?'), var('Ks'))]),
+   decl(intro_pick(dual('List'('Key')), dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(intro_pick(var('Fs'), var('Me'), var('S'), slot(var('W?'))), [ground(var('Fs?'))],
+          [intro_len(var('Fs?'), var('N')), intro_pick1(var('N?'), var('Fs?'), var('Me?'), var('S?'), slot(var('W')))]),
+   decl(intro_pick1(dual('Integer'), dual('List'('Key')), dual('Key'), dual('Integer'), dual('Slot'('Request')))),
+   clause(intro_pick1(var('N'), var('_'), var('Me'), var('S'), slot(var('W?'))), ['<'(var('N?'), 2)],
+          [rated(intro_act(var('Me?'), var('S?'), slot(var('W'))), rate(1, day))]),
+   clause(intro_pick1(var('N'), [var('F') | var('Fs')], var('Me'), var('S'), slot(var('W?'))), [ground(var('N?')), '>='(var('N?'), 2)],
+          [random(var('S?'), var('N?'), var('I'), var('_')), intro_pick2(var('I?'), var('N?'), [var('F?') | var('Fs?')], var('Me?'), slot(var('W')))]),
+   %% IntroKeys, a list of at least one key, so that intro_nth has a clause
+   %% for every list of its type (TGLP, Definition "Instantiation"), as the
+   %% examples' nth over NonEmpty (programs/sglp/examples/self.glp).
+   type('IntroKeys', [['Key' | 'List'('Key')]]),
+   decl(intro_pick2(dual('Integer'), dual('Integer'), dual('IntroKeys'), dual('Key'), dual('Slot'('Request')))),
+   clause(intro_pick2(var('I'), var('N'), var('Fs'), var('Me'), slot(propose(introduce(var('Me?'), var('B?'), var('C?'))))),
+          [ground(var('I?')), ground(var('N?')), ground(var('Fs?'))],
+          [':='(var('J'), '+'(mod(var('I?'), var('N?')), 1)), intro_nth(var('I?'), var('Fs?'), var('B')), intro_nth(var('J?'), var('Fs?'), var('C'))]),
+   decl(intro_nth(dual('Integer'), dual('IntroKeys'), 'Key')),
+   clause(intro_nth(var('_'), [var('X')], var('X?')), [], []),
+   clause(intro_nth(1, [var('X'), var('_') | var('_')], var('X?')), [], []),
+   clause(intro_nth(var('K'), [var('_'), var('Y') | var('Xs')], var('X?')), ['>'(var('K?'), 1)],
+          [':='(var('K1'), '-'(var('K?'), 1)), intro_nth(var('K1?'), [var('Y?') | var('Xs?')], var('X'))]),
+   decl(intro_len(dual('List'('Key')), 'Integer')),
+   clause(intro_len([], 0), [], []),
+   clause(intro_len([var('_') | var('Xs')], var('N?')), [], [intro_len(var('Xs?'), var('N1')), ':='(var('N'), '+'(var('N1?'), 1))]),
+
+   %% The approvals: the graph's within an hour, anything else within a day.
+   decl(intro_approval(dual('Approval'), dual('Person'), dual('Integer'))),
+   clause(intro_approval(approval(var('Q'), var('_'), var('A?')), person(var('Me'), var('_'), var('_')), var('_')), [],
+          [graph_asked(var('Q?'), var('Me?'), var('Y')), intro_answer(var('Y?'), slot(var('A')))]),
+   decl(intro_answer(dual('YesNo'), dual('Slot'('YesNo')))),
+   clause(intro_answer(yes, slot(var('A?'))), [], [rated(intro_say(slot(var('A'))), rate(1, hour))]),
+   clause(intro_answer(no, slot(var('A?'))), [], [rated(intro_say(slot(var('A'))), rate(1, day))]),
+   decl(intro_say(dual('Slot'('YesNo')))),
+   clause(intro_say(slot(yes)), [], []),
+
+   run(6, [mix(behaviour, [share(introducer, 1.0)])], 3, day, 1)]).
