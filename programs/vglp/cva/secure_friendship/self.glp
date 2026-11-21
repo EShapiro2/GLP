@@ -42,6 +42,14 @@
 %%   friendship with carol, is refused by alice as unable on that friendship
 %%   alone, the state loss being present.
 %%
+%% play_custodian_change: alice, bob, carol and alicia.  carol is a friend of
+%%   alice and of bob, and alice's one custodian, of the threshold 1; bob names
+%%   alice his identity custodian.  alicia asks carol to vouch and presents
+%%   carol's statement to bob; bob accepts alicia in place of alice (Secure
+%%   Friendship:5, Accept), and alicia in place of alice as his custodian
+%%   (Accept custodian), Bob and Alicia taking each, and tells carol, a friend
+%%   of both, of the change (Tell change).
+%%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
@@ -166,6 +174,47 @@ play_restore_friend(LA?, LB?, LC?, N?) :-
                 approval(befriend(alice, carol), yes),
                 wait(holds(checkpoint(alice)))],
                LA, LB, LC, N).
+
+exported procedure play_custodian_change(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_custodian_change(LA?, LB?, LC?, LD?, N?) :-
+    quartet([own([A1], propose(establish(A1?))), wait(holds(identity)),
+             own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+             own([A3], propose(acquaint(A3?, carol))), wait(holds(knows(carol))),
+             own([A4], propose(befriend(A4?, bob))), wait(holds(friend(bob))),
+             own([A5], propose(befriend(A5?, carol))), wait(holds(friend(carol))),
+             own([A6], propose(name_custodian(A6?, carol))), wait(holds(custodian(carol))),
+             own([A7], propose(identity_record(A7?, 1, 2))), wait(holds(fixed))],
+            [own([B1], propose(establish(B1?))), wait(holds(identity)),
+             approval(acquaint(alice, bob), yes),
+             approval(befriend(alice, bob), yes),
+             own([B2], propose(acquaint(B2?, carol))), wait(holds(knows(carol))),
+             own([B3], propose(befriend(B3?, carol))), wait(holds(friend(carol))),
+             own([B4], propose(name_custodian(B4?, alice))), wait(holds(custodian(alice))),
+             wait(holds(records_threshold(alice, 1))),
+             wait(holds(records_custodian(alice, carol))),
+             approval(acquaint(alicia, bob), yes),
+             wait(holds(holds_statement(carol, alicia, alice))),
+             wait(holds(friend(alicia))),
+             wait(holds(custodian(alicia)))],
+            [own([C1], propose(establish(C1?))), wait(holds(identity)),
+             approval(acquaint(alice, carol), yes),
+             approval(befriend(alice, carol), yes),
+             approval(acquaint(bob, carol), yes),
+             approval(befriend(bob, carol), yes),
+             wait(holds(custodian_of(alice))),
+             approval(acquaint(alicia, carol), yes),
+             wait(holds(asked(alicia, alice))),
+             own([C2], propose(vouch(C2?, alicia, alice))),
+             wait(holds(records_replacement(bob, alice, alicia)))],
+            [own([D1], propose(establish(D1?))), wait(holds(identity)),
+             own([D2], propose(acquaint(D2?, carol))), wait(holds(knows(carol))),
+             own([D3], propose(replace(carol, D3?, alice))),
+             wait(holds(received_vouch(carol, alice))),
+             own([D4], propose(acquaint(D4?, bob))), wait(holds(knows(bob))),
+             own([D5], propose(present(bob, D5?, carol, alice))),
+             wait(holds(friend(bob))),
+             wait(holds(custodian_of(bob)))],
+            LA, LB, LC, LD, N).
 
 %% alice, whose machine holds state_loss, bob and carol, each with its
 %% dispatcher and scripted person, their networks joined.
