@@ -1,0 +1,94 @@
+%% ---------------------------------------------------------------------------
+%% The plays of the canonical CVA platform of SPM's contract Secure Friendship
+%% (programs/social/spm/Secure-Friendship.glp), platform.vglp, which
+%% cascade.sh prints from it into cascade/Secure-Friendship/.  Each runs four
+%% agents, alice, bob, carol and alicia, their persons scripted and paced on
+%% their screens (../self.glp), and gives each person's log and the network's
+%% log of the cargoes it carries.
+%%
+%% play_replace: alice establishes her identity, comes to know bob and carol,
+%%   befriends both, names carol her identity custodian (Secure Friendship:1,
+%%   Name custodian) and fixes her identity record with the threshold 1, of
+%%   one custodian (Identity record).  Bob records carol as her custodian and
+%%   her threshold, by Send record and Send threshold, taken with nobody
+%%   deciding (Secure Friendship:2).  alicia, a new identity of alice, comes to
+%%   know carol and asks her to vouch that alicia is alice (Secure
+%%   Friendship:5, Replace); carol vouches (Vouch), and alicia receives the
+%%   vouch.  alicia comes to know bob and presents to him carol's statement
+%%   (Present); bob, holding the statements of the threshold of the custodians
+%%   he records, accepts alicia in place of alice (Accept), with nobody
+%%   deciding, and passes alicia the friendship of alice and carol he records
+%%   (Tell friends).
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+%% The scripted person's steps and log on this platform (../self.glp).
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), List(Atom)?, Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_replace(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
+    Stream(Sent(Cargo))).
+play_replace(LA?, LB?, LC?, LD?, N?) :-
+    quartet([own([A1], propose(establish(A1?))), wait(holds(identity)),
+             own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+             own([A3], propose(acquaint(A3?, carol))), wait(holds(knows(carol))),
+             own([A4], propose(befriend(A4?, bob))), wait(holds(friend(bob))),
+             own([A5], propose(befriend(A5?, carol))), wait(holds(friend(carol))),
+             own([A6], propose(name_custodian(A6?, carol))), wait(holds(custodian(carol))),
+             own([A7], propose(identity_record(A7?, 1, 2))), wait(holds(fixed))],
+            [own([B1], propose(establish(B1?))), wait(holds(identity)),
+             approval(acquaint(alice, bob), yes),
+             approval(befriend(alice, bob), yes),
+             wait(holds(records_custodian(alice, carol))),
+             wait(holds(records_threshold(alice, 1))),
+             approval(acquaint(alicia, bob), yes),
+             wait(holds(friend(alicia)))],
+            [own([C1], propose(establish(C1?))), wait(holds(identity)),
+             approval(acquaint(alice, carol), yes),
+             approval(befriend(alice, carol), yes),
+             wait(holds(custodian_of(alice))),
+             approval(acquaint(alicia, carol), yes),
+             wait(holds(asked(alicia, alice))),
+             own([C2], propose(vouch(C2?, alicia, alice)))],
+            [own([D1], propose(establish(D1?))), wait(holds(identity)),
+             own([D2], propose(acquaint(D2?, carol))), wait(holds(knows(carol))),
+             own([D3], propose(replace(carol, D3?, alice))),
+             wait(holds(received_vouch(carol, alice))),
+             own([D4], propose(acquaint(D4?, bob))), wait(holds(knows(bob))),
+             own([D5], propose(present(bob, D5?, carol, alice))),
+             wait(holds(friend(bob))),
+             wait(holds(learned_friend(bob, alice, carol)))],
+            LA, LB, LC, LD, N).
+
+%% alice, bob, carol and alicia, each with its dispatcher and scripted person,
+%% their networks joined, and no environment atom, so no state loss.
+procedure quartet(ScriptSteps?, ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog),
+    Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+quartet(SA, SB, SC, SD, LA?, LB?, LC?, LD?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, [], AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, [], AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, [], AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    platform # agent(alicia, InD?, OutD, TD, [], AsD),
+    platform # dispatch(AsD?, ch(GD?, DD), MD),
+    to_person(MD?, TD?),
+    person(DD?, GD, ps(nosess, [], [], SD?), LD),
+    merge(OutA?, OutB?, Net1),
+    merge(OutC?, OutD?, Net2),
+    merge(Net1?, Net2?, Net),
+    route4(Net?, alice, InA, bob, InB, carol, InC, alicia, InD, N).
