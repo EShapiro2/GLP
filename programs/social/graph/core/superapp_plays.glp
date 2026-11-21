@@ -6,9 +6,7 @@
 %% programs the plays install, distribute and activate are compiled apps of
 %% programs/apps, GKK's and GSN's, and CSSN's programs/cssn, each compiled
 %% from its contract (GPD's definition of a program, ../Programs.txt); the
-%% other certified mini-apps are GSA's ../pingapp, which only the held link on
-%% three smartphones still installs, and ../endapp, and Currencies' currency
-%% and denominated; the super-app reads their artefacts with load_file/2.  The
+%% other certified mini-apps are Currencies' currency and denominated; the super-app reads their artefacts with load_file/2.  The
 %% persons are scripted on the agents' person streams.
 %%
 %% The super-app holds no declaration of a mini-app's types.  A play mints a
@@ -668,17 +666,11 @@ procedure root_end(RootChannel(Opaque)).
 root_end(E?) :- new_channel(E, _) | true.
 
 %% =============================================================================
-%% A held link on three smartphones (../../superapp3_boot.glp): alice, bob
-%% and carol, carol a friend of both, alice and bob not friends.  alice
-%% invites carol to the mini-app and carol invites bob; alice's execution,
-%% greeted by carol, sends her probe(W), the end of a fresh variable, which
-%% carol's execution forwards to bob's; bob's execution assigns it, bob's
-%% runtime holds the assignment --- the end reached bob under alice's name from
-%% carol --- and reports the held link, which bob's mini-app reports to bob;
-%% the link stays held, nothing sent on it, for bob to be asked whether to know
-%% alice (GSA paper, Section 5.4, "Whom the Grassroots App knows"), which the
-%% rebuilt core asks.  Every volition is the person's, given here in advance.
-%% Nothing closes: the harness settles.
+%% sg_init(Id, Mode, Peers, NetIn): the person's part, by Mode, in a boot of
+%% programs/social (../../*_boot.glp), toward the peers Peers whose keys the
+%% person told the agent: the clauses below, each with its boot.  Every
+%% volition is the person's, given here in advance.  Nothing closes: the
+%% harness settles.
 %% =============================================================================
 exported procedure sg_init(Key?, Constant?, List(Key)?, NetInStream?).
 sg_init(Me, invite, [Q], NetIn) :-
@@ -791,44 +783,42 @@ sg_init(Me, both_consent, [Q], NetIn) :-
     miniapp_person_run(CS?, Me?, bob, [Q?], CssnPerson?, Seen),
     send_to_user(Seen?).
 
-%% The held link: each person's screen is the mini-app's scripted person's,
-%% under its role watch, every item to the person.  The anchor's peers are
-%% the friend she invites and the holder; the holder's, the friend he connects
-%% to and the anchor; the friend's, the anchor who invites her and the holder
-%% she invites.
-sg_init(Me, warm_anchor, [F, H], NetIn) :-
-    ground(Me?), ground(F?), ground(H?) |
-    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+%% The held end of an introduction on three smartphones (GSA paper, Appendix
+%% "The Operating System", "Whom the Grassroots App knows"; G3;
+%% ../../intro_held_boot.glp and ../../intro_refused_boot.glp), with no
+%% program installed: the social graph's agent with the operating system
+%% around it, os_phone/8 (place.glp), which declares to the layer every person
+%% its person knows, with no rendezvous server and no directory.  The
+%% introducer, Me, friends with P and Q, who each connect to Me, introduces
+%% them once friends with both (Knowledge:3); P, the smaller key, proposes, and
+%% Q accepts.  An introduction's consent variables are the introducer's, so
+%% P's consent, which carries the end of the variable P conveys the friend
+%% channel on, reaches Q from the introducer, an end of a variable from an
+%% agent Q does not know: Q's runtime holds it and reports it to Q's operating
+%% system.  Every notice goes to the person, printed by the harness as
+%% [agent] term.
+sg_init(Me, intro_friend, [P, Q], NetIn) :-
+    ground(Me?), ground(P?), ground(Q?) |
+    place # os_phone(Me?, [P?, Q?], [], none, In?, NetIn?, Out, NetOut),
     send_to_net(NetOut?),
-    load_file("pingapp.glpw", C),
-    certified(C?, CK, CSig),
-    new_channel(App, Person),
-    miniapp_person_run(C?, Me?, watch, [F?, H?], Person?, Screen),
-    send_to_user(Screen?),
-    scripted_home(Me?, Out?, Script, ScriptCmds?, In),
-    alice_warm(Me?, F?, H?, C?, CK?, CSig?, App?, Script?, ScriptCmds).
-sg_init(Me, warm_holder, [F, A], NetIn) :-
-    ground(Me?), ground(F?), ground(A?) |
-    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    scripted_home(Me?, Out?, Notices, Cmds?, In),
+    tee(Notices?, Shown, Seen),
+    send_to_user(Shown?),
+    introducer(Me?, P?, Q?, 0, Seen?, Cmds).
+%% P: connect to the introducer, and answer yes on each card.
+sg_init(Me, intro_proposer, [F], NetIn) :-
+    ground(Me?), ground(F?) |
+    place # os_phone(Me?, [F?], [], none, In?, NetIn?, Out, NetOut),
     send_to_net(NetOut?),
-    load_file("pingapp.glpw", C),
-    certified(C?, CK, CSig),
-    new_channel(App, Person),
-    miniapp_person_run(C?, Me?, watch, [F?, A?], Person?, Screen),
-    send_to_user(Screen?),
-    scripted_home(Me?, Out?, Script, ScriptCmds?, In),
-    bob_warm(Me?, F?, A?, C?, CK?, CSig?, App?, Script?, ScriptCmds).
-sg_init(Me, warm_friend, [A, H], NetIn) :-
-    ground(Me?), ground(A?), ground(H?) |
-    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
-    send_to_net(NetOut?),
-    load_file("pingapp.glpw", C),
-    certified(C?, CK, CSig),
-    new_channel(App, Person),
-    miniapp_person_run(C?, Me?, watch, [A?, H?], Person?, Screen),
-    send_to_user(Screen?),
-    scripted_home(Me?, Out?, Script, ScriptCmds?, In),
-    carol_warm(Me?, A?, H?, C?, CK?, CSig?, App?, Script?, ScriptCmds).
+    scripted_home(Me?, Out?, Notices, [msg(person, Me?, connect(F?)) | Cmds?], In),
+    tee(Notices?, Shown, Seen),
+    send_to_user(Shown?),
+    idle_person(Seen?, Cmds).
+%% Q: connect to the introducer, and answer the introduction's card only
+%% once the proposer's consent, which carries the held end, has arrived
+%% (late_phone/4): yes under intro_late_yes, no under intro_late_no.
+sg_init(Me, intro_late_yes, [F], NetIn) :- late_phone(Me?, F?, yes, NetIn?).
+sg_init(Me, intro_late_no, [F], NetIn) :- late_phone(Me?, F?, no, NetIn?).
 %% Physical encounters (GSA paper, Section 4, the box GPE; Appendix "The
 %% Operating System", "Nearby"; ../../nearby_boot.glp, ../../nearby3_boot.glp):
 %% the social graph's agent with the operating system's Nearby around it,
@@ -901,83 +891,49 @@ procedure idle_person(Stream(Output)?, UserInStream).
 idle_person([_ | Ns], Cs?) :- idle_person(Ns?, Cs).
 idle_person([], []).
 
-%% The anchor's person, Me: install; cold-call the friend F, invite F once
-%% connected.
-procedure alice_warm(Key?, Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
-alice_warm(Me, F, H, C, CK, CSig, Ui, Outs,
-           [msg(person, Me?, trust(CK?)),
-            msg(person, Me?, install(ping, C?, CSig?, Ui?)),
-            msg(person, Me?, connect(F?)) | Cmds?]) :-
-    ground(Me?), ground(F?), ground(H?) |
-    alice_warm_run(Me?, F?, H?, Outs?, Cmds).
+%% The introducer's person: once friends with both, the second connected(_)
+%% notice, introduce P and Q (Knowledge:3), and nothing more.
+procedure introducer(Key?, Key?, Key?, Integer?, Stream(Output)?, UserInStream).
+introducer(Me, P, Q, 2, Ns, [msg(person, Me?, introduce(P?, Q?)) | Cs?]) :-
+    ground(Me?), ground(P?), ground(Q?) | idle_person(Ns?, Cs).
+introducer(Me, P, Q, N, [msg(agent, person, connected(_)) | Ns], Cs?) :-
+    N? < 2 | N1 := N? + 1, introducer(Me?, P?, Q?, N1?, Ns?, Cs).
+introducer(Me, P, Q, N, [_ | Ns], Cs?) :-
+    otherwise | introducer(Me?, P?, Q?, N?, Ns?, Cs).
+introducer(_, _, _, _, [], []).
 
-procedure alice_warm_run(Key?, Key?, Key?, Stream(Output)?, UserInStream).
-alice_warm_run(Me, F, H, [msg(agent, person, connected(X)) | Outs],
-               [msg(person, Me?, invite(ping, F?)) | Cmds?]) :-
-    X? =?= F? |
-    send_to_user([sg(connected(X?))]),
-    alice_warm_run(Me?, F?, H?, Outs?, Cmds).
-alice_warm_run(Me, F, H, [msg(agent, person, connected(X)) | Outs], Cmds?) :-
-    X? =?= H? |
-    send_to_user([sg(connected(X?))]),
-    alice_warm_run(Me?, F?, H?, Outs?, Cmds).
-alice_warm_run(Me, F, H, [msg(agent, person, befriend_intro(I, O)) | Outs], Cmds?) :-
-    I? =?= F?, O? =?= H? |
-    send_to_user([sg(intro_from(I?, O?))]),
-    alice_warm_run(Me?, F?, H?, Outs?, Cmds).
-alice_warm_run(Me, F, H, [_ | Outs], Cmds?) :- otherwise | alice_warm_run(Me?, F?, H?, Outs?, Cmds).
-alice_warm_run(_, _, _, [], []).
+%% late_phone(Me, F, A, NetIn): the acceptor's smartphone: the agent with the
+%% operating system around it, its person connecting to F, and home on the agent's messages, each whole to
+%% home after late_intro/2, which passes an introduction on only once the
+%% proposer's consent has arrived, so that the person is asked after the
+%% held end is reported; the person answers A on the introduction's card
+%% (answering/4, core/self.glp), and what the person answered goes to the
+%% person, beside the notices.
+procedure late_phone(Key?, Key?, Drawn?, NetInStream?).
+late_phone(Me, F, A, NetIn) :-
+    ground(Me?), ground(F?) |
+    place # os_phone(Me?, [F?], [], none, In?, NetIn?, Out, NetOut),
+    send_to_net(NetOut?),
+    split_out(Out?, Notices, Seen),
+    late_intro(Seen?, Late),
+    home # home(Me?, Late?, Home, Asks),
+    home # dispatch(Asks?, ch(Grants?, Draws), MCh),
+    hold_output(MCh?),
+    answering(A?, Draws?, Grants, Log),
+    merge([msg(person, Me?, connect(F?))], Home?, In),
+    send_to_user(Notices?),
+    send_to_user(Log?).
 
-%% The holder's person, Me: install; consent in advance to the friend F's
-%% invitation; cold-call F.
-procedure bob_warm(Key?, Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
-bob_warm(Me, F, A, C, CK, CSig, Ui, Outs,
-         [msg(person, Me?, trust(CK?)),
-          msg(person, Me?, install(ping, C?, CSig?, Ui?)),
-          msg(person, Me?, accept_invite(ping, F?)),
-          msg(person, Me?, connect(F?)) | Cmds?]) :-
-    ground(Me?), ground(F?), ground(A?) |
-    bob_warm_run(F?, A?, Outs?, Cmds).
-
-procedure bob_warm_run(Key?, Key?, Stream(Output)?, UserInStream).
-bob_warm_run(F, A, [msg(agent, person, befriend_intro(I, O)) | Outs], Cmds?) :-
-    I? =?= F?, O? =?= A? |
-    send_to_user([sg(intro_from(I?, O?))]),
-    bob_warm_run(F?, A?, Outs?, Cmds).
-bob_warm_run(F, A, [msg(agent, person, connected(Who)) | Outs], Cmds?) :-
-    ground(Who?) |
-    send_to_user([sg(connected(Who?))]),
-    bob_warm_run(F?, A?, Outs?, Cmds).
-bob_warm_run(F, A, [_ | Outs], Cmds?) :- otherwise | bob_warm_run(F?, A?, Outs?, Cmds).
-bob_warm_run(_, _, [], []).
-
-%% The friend's person, Me: install; consent in advance to the anchor A's
-%% invitation; consent on their cards to both cold calls; invite H once
-%% connected.
-procedure carol_warm(Key?, Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
-carol_warm(Me, A, H, C, CK, CSig, Ui, Outs,
-           [msg(person, Me?, trust(CK?)),
-            msg(person, Me?, install(ping, C?, CSig?, Ui?)),
-            msg(person, Me?, accept_invite(ping, A?)) | Cmds?]) :-
-    ground(Me?), ground(A?), ground(H?) |
-    carol_warm_run(Me?, A?, H?, Outs?, Cmds).
-
-procedure carol_warm_run(Key?, Key?, Key?, Stream(Output)?, UserInStream).
-carol_warm_run(Me, A, H, [msg(agent, person, befriend(Who)) | Outs], Cmds?) :-
-    ground(Who?) |
-    send_to_user([sg(cold_call(Who?))]),
-    carol_warm_run(Me?, A?, H?, Outs?, Cmds).
-carol_warm_run(Me, A, H, [msg(agent, person, connected(X)) | Outs],
-               [msg(person, Me?, invite(ping, H?)) | Cmds?]) :-
-    X? =?= H? |
-    send_to_user([sg(connected(X?))]),
-    carol_warm_run(Me?, A?, H?, Outs?, Cmds).
-carol_warm_run(Me, A, H, [msg(agent, person, connected(X)) | Outs], Cmds?) :-
-    X? =?= A? |
-    send_to_user([sg(connected(X?))]),
-    carol_warm_run(Me?, A?, H?, Outs?, Cmds).
-carol_warm_run(Me, A, H, [_ | Outs], Cmds?) :- otherwise | carol_warm_run(Me?, A?, H?, Outs?, Cmds).
-carol_warm_run(_, _, _, [], []).
+%% late_intro(Ms, Ms1): the agent's messages to home, each as it comes, but
+%% an introduction this agent accepts only once the proposer's consent, the
+%% pending value's second end, is yes, which carries the held end; a consent
+%% of no passes at once.
+procedure late_intro(AgentToUserStream?, AgentToUserStream).
+late_intro([msg(A, P, befriend_intro(F, O, accept(M?, yes(C)))) | Ms],
+           [msg(A?, P?, befriend_intro(F?, O?, accept(M, yes(C?)))) | Ms1?]) :-
+    late_intro(Ms?, Ms1).
+late_intro([M | Ms], [M? | Ms1?]) :- otherwise | late_intro(Ms?, Ms1).
+late_intro([], []).
 
 %% =============================================================================
 %% play_coins(A, B, ScreenA, ScreenB): the currency mini-app (Currencies'
@@ -1302,119 +1258,101 @@ bob_both_run(Me, Q, [_ | Outs], Cmds?) :- otherwise | bob_both_run(Me?, Q?, Outs
 bob_both_run(_, _, [], []).
 
 %% =============================================================================
-%% play_reinvite(A, B, AliceUi, BobUi): the registry's return from running to idle (Section 3,
-%% "Activation and joining").  alice installs the self-ending mini-app
-%% (../endapp, its artefact endapp.glpw beside this program), befriends bob and
-%% invites him; the two executions greet each other and ALICE'S ENDS of its own
-%% accord.  Her stream up to the social graph closes with it, her super-app
-%% returns her entry to idle, and she invites bob a second time: the mini-app
-%% is activated afresh by run/3, and the new conversation reaches bob's
-%% execution, which never ended.  Her person stream closes after the play's
-%% last observation, bob's second opened(alice), greeted(alice), and her
-%% super-app ends with it (GSG Section 5.1); his closes when his agent's
-%% stream to him closes.
-%%
-%% What the second pair of entries on bob's stream fences: without the return
-%% alice's entry would still say running, and the root channel of the second
-%% conversation would go to the execution that is gone.  Bob would still see it
-%% open --- his own entry is running and his execution is live --- but nothing
-%% would greet him, so the discriminating check is his SECOND greeted(alice).
-%%
-%% Expected: A = [opened(bob), greeted(bob)], closed, her execution having
-%% ended; B = [opened(alice), greeted(alice), opened(alice), greeted(alice) | _],
-%% → suspended (bob's execution and his person stand).
+%% play_leave(A, B, AliceUi, Names, AliceUi2, BobUi): Programs:6, Leave (GSA
+%% paper, Appendix "The Operating System", "Leaving").  alice, A, installs
+%% GSN's app, befriends bob, B, and invites him; bob installs it and consents
+%% to two invitations before either offer arrives, the two consents stacking
+%% as at play_invite's one; the handshake opens the root channel and both
+%% executions run, alice's screen AliceUi.  Once her execution has shown its
+%% first view she leaves the app, and reads back the names installed, Names;
+%% then installs it again, Programs:4, with a fresh person channel, its
+%% screen AliceUi2, and invites bob again, Programs:5: her second execution is
+%% activated afresh by run/3, the program not being installed when she left,
+%% and the new conversation goes to bob's running execution.  The screens
+%% are the app's scripted persons', counted, never inspected.
+%% Expected: Names = [], AliceUi2 = [view(alice, [], [], [], _) | _],
+%% → suspended.
 %% =============================================================================
-exported procedure play_reinvite(Key?, Key?, Stream(Opaque), Stream(Opaque)).
-play_reinvite(A, B, AliceUi?, BobUi?) :-
+exported procedure play_leave(Key?, Key?, Stream(Opaque), Stream(Constant), Stream(Opaque), Stream(Opaque)).
+play_leave(A, B, AliceUi?, Names?, AliceUi2?, BobUi?) :-
     ground(A?), ground(B?) |
     crossbar2(A?, B?, AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
-    load_file("endapp.glpw", C),
+    load_file("gsn.glpw", C),
     certified(C?, _, CSig),
     agent # agent(A?, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     new_channel(AliceApp, AlicePerson),
-    miniapp_person_run(C?, A?, greet, [B?], AlicePerson?, AliceScreen),
+    miniapp_person_run(C?, A?, alice, [B?], AlicePerson?, AliceScreen),
     tee(AliceScreen?, AliceUi, AliceSeen),
-    alice_reinvite(A?, B?, C?, CSig?, AliceApp?, AliceOut?, AliceSeen?, BobSeen?, AliceIn),
+    new_channel(AliceApp2, AlicePerson2),
+    miniapp_person_run(C?, A?, alice, [B?], AlicePerson2?, AliceUi2),
+    alice_leave(A?, B?, C?, CSig?, AliceApp?, AliceApp2?, AliceOut?, AliceSeen?, Names, AliceIn),
     agent # agent(B?, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     new_channel(BobApp, BobPerson),
-    miniapp_person_run(C?, B?, watch, [A?], BobPerson?, BobScreen),
-    tee(BobScreen?, BobUi, BobSeen),
-    bob_reinvite(B?, A?, C?, CSig?, BobApp?, BobOut?, BobIn).
+    miniapp_person_run(C?, B?, bob, [A?], BobPerson?, BobUi),
+    bob_twice(B?, A?, C?, CSig?, BobApp?, BobOut?, BobIn).
 
-%% Alice's person, Me: install the mini-app and cold-call bob, Q.
-procedure alice_reinvite(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, Stream(Opaque)?, UserInStream).
-alice_reinvite(Me, Q, M, CSig, Ui, Outs, Seen, BobSeen,
-               [msg(person, Me?, install(ping, M?, CSig?, Ui?)),
-                msg(person, Me?, connect(Q?)) | Cmds?]) :-
+%% Alice's person, Me: install the app and cold-call Q; once connected invite
+%% Q (alice_leave_wait/9).
+procedure alice_leave(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, Stream(Constant), UserInStream).
+alice_leave(Me, Q, M, CSig, Ui, Ui2, Outs, Seen, Names?,
+            [msg(person, Me?, install(gsn, M?, CSig?, Ui?)),
+             msg(person, Me?, connect(Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
-    alice_reinvite_wait(Me?, Q?, Outs?, Seen?, BobSeen?, Cmds).
+    alice_leave_wait(Me?, Q?, M?, CSig?, Ui2?, Outs?, Seen?, Names, Cmds).
 
-%% Once connected, invite Q.
-procedure alice_reinvite_wait(Key?, Key?, AgentToUserStream?, Stream(Opaque)?, Stream(Opaque)?, UserInStream).
-alice_reinvite_wait(Me, Q, [msg(agent, person, connected(F)) | _], Seen, BobSeen,
-                    [msg(person, Me?, invite(ping, Q?)) | Cmds?]) :-
+procedure alice_leave_wait(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, Stream(Constant), UserInStream).
+alice_leave_wait(Me, Q, M, CSig, Ui2, [msg(agent, person, connected(F)) | Outs], Seen, Names?,
+                 [msg(person, Me?, invite(gsn, Q?)) | Cmds?]) :-
     F? =?= Q? |
-    alice_after_end(Me?, Q?, Seen?, BobSeen?, Cmds).
-alice_reinvite_wait(Me, Q, [_ | Outs], Seen, BobSeen, Cmds?) :-
-    otherwise | alice_reinvite_wait(Me?, Q?, Outs?, Seen?, BobSeen?, Cmds).
-alice_reinvite_wait(_, _, [], _, _, []).
+    alice_left(Me?, Q?, M?, CSig?, Ui2?, Outs?, Seen?, Names, Cmds).
+alice_leave_wait(Me, Q, M, CSig, Ui2, [_ | Outs], Seen, Names?, Cmds?) :-
+    otherwise | alice_leave_wait(Me?, Q?, M?, CSig?, Ui2?, Outs?, Seen?, Names, Cmds).
+alice_leave_wait(Me, _, _, _, Ui2, [], _, Names?, [msg(person, Me?, installed(Names))]) :-
+    ground(Me?) | hold_person_end(Ui2?).
 
-%% Her mini-app's screen has closed: her scripted person, under its role
-%% greet, stops reporting at the greeting, with which her execution ends of its
-%% own accord, so her entry has returned to idle.  Invite Q again, and keep her own
-%% stream open until the play's last observation.
-procedure alice_after_end(Key?, Key?, Stream(Opaque)?, Stream(Opaque)?, UserInStream).
-alice_after_end(Me, Q, [], BobSeen, [msg(person, Me?, invite(ping, Q?)) | Cmds?]) :-
-    alice_after_last(BobSeen?, Cmds).
-alice_after_end(Me, Q, [_ | Seen], BobSeen, Cmds?) :-
-    otherwise | alice_after_end(Me?, Q?, Seen?, BobSeen?, Cmds).
-
-%% The play's last observation, bob's fourth item, his second greeted(alice)
-%% after his second opened(alice) (../endapp/miniapp.glp): the second root
-%% channel has reached bob.  The play counts his screen's items and inspects
-%% none.  Her stream then closes and her super-app ends (GSG Section 5.1), her
-%% agent closing its friend channels and the channels of every mini-app it
-%% hosts, whose peers see a crash (agent.glp's termination clause,
-%% close_outputs/1, close_host/1); where his screen closes first, the
-%% observation cannot come, and her stream closes all the same.
-procedure alice_after_last(Stream(Opaque)?, UserInStream).
-alice_after_last(Seen, Cmds?) :- after_items(4, Seen?, Cmds).
-
-%% after_items(N, Seen, Cmds): Cmds closed once N items of Seen have come, or
-%% Seen has closed first.
-procedure after_items(Integer?, Stream(Opaque)?, UserInStream).
-after_items(0, _, []).
-after_items(N, [_ | Seen], Cmds?) :- N? > 0 | N1 := N? - 1, after_items(N1?, Seen?, Cmds).
-after_items(N, [], []) :- N? > 0 | true.
-
-%% Bob's person: install the mini-app and consent to BOTH invitations before
-%% either offer arrives, as bob_person consents once --- the two consents
-%% stack in the pending list and each offer takes one.
-procedure bob_reinvite(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
-bob_reinvite(Me, Q, M, CSig, Ui, Outs,
-             [msg(person, Me?, install(ping, M?, CSig?, Ui?)),
-              msg(person, Me?, accept_invite(ping, Q?)),
-              msg(person, Me?, accept_invite(ping, Q?)) | Cmds?]) :-
+%% Her execution's first view shown: leave the app, read back the names
+%% installed, install it again with the fresh person channel and invite Q
+%% again; then keep her person stream open while the agent writes to her.
+procedure alice_left(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, Stream(Constant), UserInStream).
+alice_left(Me, Q, M, CSig, Ui2, Outs, [_ | Seen], Names?,
+           [msg(person, Me?, leave(gsn)),
+            msg(person, Me?, installed(Names)),
+            msg(person, Me?, install(gsn, M?, CSig?, Ui2?)),
+            msg(person, Me?, invite(gsn, Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
-    bob_reinvite_wait(Me?, Q?, Outs?, Cmds).
+    sink(Seen?),
+    outs_done(Outs?, Cmds).
+alice_left(Me, _, _, _, Ui2, _, [], Names?, [msg(person, Me?, installed(Names))]) :-
+    ground(Me?) | hold_person_end(Ui2?).
 
-%% Answer alice's cold call, and then leave his stream open: his execution is
-%% the one that must still be there when her second invitation arrives, and
-%% closing the stream would close his super-app and the execution with it.
-procedure bob_reinvite_wait(Key?, Key?, AgentToUserStream?, UserInStream).
-bob_reinvite_wait(Me, Q, [msg(agent, person, befriend(F, P)) | Outs],
-                  [msg(person, Me?, decision(yes, F?, P?)) | Cmds?]) :-
+%% A person channel's app end that no installation takes, read for good.
+procedure hold_person_end(PersonChannel(Opaque)?).
+hold_person_end(ch([_ | Gs], Ds?)) :- hold_person_end(ch(Gs?, Ds)).
+
+%% The person stream closes when the agent's stream to the person closes.
+procedure outs_done(AgentToUserStream?, UserInStream).
+outs_done([_ | Outs], Cmds?) :- outs_done(Outs?, Cmds).
+outs_done([], []).
+
+%% Bob's person: install the app and consent to two invitations of Q before
+%% either offer arrives; answer Q's cold call on his card; then keep his
+%% person stream open while his agent writes to him.
+procedure bob_twice(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
+bob_twice(Me, Q, M, CSig, Ui, Outs,
+          [msg(person, Me?, install(gsn, M?, CSig?, Ui?)),
+           msg(person, Me?, accept_invite(gsn, Q?)),
+           msg(person, Me?, accept_invite(gsn, Q?)) | Cmds?]) :-
+    ground(Me?), ground(Q?) |
+    bob_twice_wait(Me?, Q?, Outs?, Cmds).
+
+procedure bob_twice_wait(Key?, Key?, AgentToUserStream?, UserInStream).
+bob_twice_wait(Me, Q, [msg(agent, person, befriend(F, P)) | Outs],
+               [msg(person, Me?, decision(yes, F?, P?)) | Cmds?]) :-
     F? =?= Q? |
-    bob_until_closed(Outs?, Cmds).
-bob_reinvite_wait(Me, Q, [_ | Outs], Cmds?) :-
-    otherwise | bob_reinvite_wait(Me?, Q?, Outs?, Cmds).
-bob_reinvite_wait(_, _, [], []).
-
-%% His person stream closes when his agent's stream to him closes, his agent
-%% having ended.
-procedure bob_until_closed(AgentToUserStream?, UserInStream).
-bob_until_closed([_ | Outs], Cmds?) :- bob_until_closed(Outs?, Cmds).
-bob_until_closed([], []).
+    outs_done(Outs?, Cmds).
+bob_twice_wait(Me, Q, [_ | Outs], Cmds?) :-
+    otherwise | bob_twice_wait(Me?, Q?, Outs?, Cmds).
+bob_twice_wait(_, _, [], []).
 
 %% =============================================================================
 %% play_sovereign(A, B, ScreenA, ScreenB): the denominated currencies mini-app (Currencies'

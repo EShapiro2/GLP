@@ -3,7 +3,7 @@
 %% The directory holds the agent (agent.glp) and the super-app plays
 %% (superapp_plays.glp); the types are the parent's (../self.glp, an ancestor
 %% scope).  The certified mini-apps it hosts are programs of their own
-%% (../pingapp, ../endapp; programs/currencies/coins/currency, ...), whose
+%% (programs/apps/gsn, programs/currencies/coins/currency, ...), whose
 %% artefacts the REPL's :artefact writes here, the one place the agent's
 %% load_file/2 resolves a name.  The super-app holds no declaration of a
 %% mini-app's types: each mini-app's entry is the instance of the entry
@@ -319,12 +319,11 @@ notice(msg(A, P, listed(E)), msg(A?, P?, listed(E?)), msg(A?, P?, listed(E?))) :
     ground(A?), ground(P?), ground(E?) | true.
 
 %% The person's end of a mini-app's person channel that no screen shows ---
-%% a re-idled mini-app's fresh one (agent.glp, app_idle/3), or one a play
-%% installs a mini-app with and does not watch.  The person channel never
+%% one a play installs a mini-app with and does not watch.  The person channel never
 %% ends in either direction (vGLP, Section 6.3; vGLP 2026-10-14 21:48 UTC):
 %% the draws are read for good, the grant writer passed on, no person
-%% granting on it, and the goal suspends when no draw comes.  agent.glp and
-%% superapp_plays.glp reach it by scope.
+%% granting on it, and the goal suspends when no draw comes.
+%% superapp_plays.glp reaches it by scope.
 procedure hold_person(Channel(PersonOut(Opaque), PersonIn(Opaque))?).
 hold_person(ch([_ | Ds], Gs?)) :- hold_person(ch(Ds?, Gs)).
 
@@ -496,9 +495,9 @@ imported procedure superapp_plays#play_both(Key?, Key?, Stream(Opaque), Stream(O
 exported procedure play_both(Key?, Key?, Stream(Opaque), Stream(Opaque), Stream(Opaque), Stream(Opaque)).
 play_both(P, Q, A?, B?, C?, D?) :- superapp_plays # play_both(P?, Q?, A, B, C, D).
 
-imported procedure superapp_plays#play_reinvite(Key?, Key?, Stream(Opaque), Stream(Opaque)).
-exported procedure play_reinvite(Key?, Key?, Stream(Opaque), Stream(Opaque)).
-play_reinvite(P, Q, A?, B?) :- superapp_plays # play_reinvite(P?, Q?, A, B).
+imported procedure superapp_plays#play_leave(Key?, Key?, Stream(Opaque), Stream(Constant), Stream(Opaque), Stream(Opaque)).
+exported procedure play_leave(Key?, Key?, Stream(Opaque), Stream(Constant), Stream(Opaque), Stream(Opaque)).
+play_leave(P, Q, A?, N?, A2?, B?) :- superapp_plays # play_leave(P?, Q?, A, N, A2, B).
 
 imported procedure superapp_plays#play_sovereign(Key?, Key?, Stream(Opaque), Stream(Opaque)).
 exported procedure play_sovereign(Key?, Key?, Stream(Opaque), Stream(Opaque)).
