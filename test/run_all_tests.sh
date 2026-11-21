@@ -8826,8 +8826,8 @@ check "SG super-app: invitation, handshake, activation of GSN's app: bob's execu
 check "SG super-app: a declined invitation opens nothing at alice" "A2 = <unbound>" "$sg_core"
 check "SG super-app: a declined invitation opens nothing at bob" "B2 = <unbound>" "$sg_core"
 check "SG super-app: the handshake is timed" "Ms = [0-9]*" "$sg_core"
-check "SG super-app hosts the currency: alice's swap done" "C1 = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\]) | " "$sg_core"
-check "SG super-app hosts the currency: bob's swap done" "C2 = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | " "$sg_core"
+check "SG super-app hosts GC's app: alice's execution activated, swaps for bob's three coins and pays two of them to bob" "C1 = \[view(alice, \[\], \[\], \[\], .*view(alice, \[coin(bob), knows(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_core"
+check "SG super-app hosts GC's app: bob's execution activated, answers yes to alice's swap and holds her two coins and his own two" "C2 = \[view(bob, \[\], \[\], \[\], .*gave(swap(alice, bob, alice, 2, bob, 3), yes).*view(bob, \[coin(bob), coin(bob), coin(alice), coin(alice), knows(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_core"
 check_not "SG super-app no failed play" "→ failed" "$sg_core"
 
 # A message the person addresses to someone who is not their friend is not
@@ -8978,40 +8978,45 @@ check "SG super-app hosts CSSN's app: invitation, handshake, activation: bob's e
 check_not "SG super-app hosts CSSN's app: no failed play" "→ failed" "$sg_cs"
 
 # BOTH mini-apps under one super-app, in one heap (paper Section 7, Theorem
-# 6.5): each person installs the currency and CSSN's app, each
-# with its own user-interface grant; the friend is invited to both, both
-# handshakes open, both entries are activated by run/3 with their own
-# conversations, and the two protocols proceed over the one friendship.
+# 6.5): each person installs GC's app and CSSN's app, each compiled from its
+# contract, each with its own person channel; the friend is invited to both,
+# both handshakes open, both entries are activated by run/3 with their own
+# conversations, and the two platforms proceed over the one friendship: GC's
+# issue, swap and payment of play_coins of programs/apps/gc, and CSSN's
+# befriending.  The two installations each run GSC's checker on the
+# program's contract at both persons, so the play takes more than the
+# 5000000 reductions of the single-app plays: under that limit it stops
+# before GC's handshake.
 sg_two=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
-:artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
+:artefact $GLP_DIR/programs/apps/gc $SG_CORE
 :artefact $GLP_DIR/programs/cssn $SG_CORE
 $SG_CORE
-:limit 5000000
+:limit 50000000
 play_both(alice, bob, A, B, C, D).
 :quit
 HEREDOC
 2>&1)
-check "SG two mini-apps at once: alice's swap settles" "A = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\]) | " "$sg_two"
-check "SG two mini-apps at once: bob's swap settles" "B = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | " "$sg_two"
+check "SG two mini-apps at once: alice swaps for bob's three coins and pays two of them to bob under GC's app" "A = \[view(alice, \[\], \[\], \[\], .*view(alice, \[coin(bob), knows(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_two"
+check "SG two mini-apps at once: bob answers yes to alice's swap and holds her two coins and his own two under GC's app" "B = \[view(bob, \[\], \[\], \[\], .*gave(swap(alice, bob, alice, 2, bob, 3), yes).*view(bob, \[coin(bob), coin(bob), coin(alice), coin(alice), knows(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_two"
 check "SG two mini-apps at once: alice befriends bob under CSSN's app" "C = \[view(alice, \[\], \[\], \[\], .*view(alice, \[friend(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_two"
 check "SG two mini-apps at once: bob befriends alice under CSSN's app" "D = \[view(bob, \[\], \[\], \[\], .*view(bob, \[friend(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_two"
 check_not "SG two mini-apps at once: no failed play" "→ failed" "$sg_two"
 
 # The same on two smartphones: one isolate per person, both mini-apps hosted by
-# each super-app, both protocols over the one friendship.
+# each super-app, both platforms over the one friendship.
 sg_two_boot=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
-:artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
+:artefact $GLP_DIR/programs/apps/gc $SG_CORE
 :artefact $GLP_DIR/programs/cssn $SG_CORE
 :boot $GLP_DIR/programs/social/both_boot.glp $SG_CORE
 :quit
 HEREDOC
 2>&1)
 check "SG two mini-apps on two smartphones: the boot settles" "Boot settled: 2 agents" "$sg_two_boot"
-check "SG two mini-apps on two smartphones: the currency's conversation opens" "\[alice\] opened(bob)" "$sg_two_boot"
-check "SG two mini-apps on two smartphones: alice's swap settles" "\[alice\] swap_done(bob)" "$sg_two_boot"
-check "SG two mini-apps on two smartphones: bob's swap settles" "\[bob\] swap_done(alice)" "$sg_two_boot"
+check "SG two mini-apps on two smartphones: bob answers yes to alice's swap under GC's app" "\[bob\] gave(swap(alice, bob, alice, 2, bob, 3), yes)" "$sg_two_boot"
+check "SG two mini-apps on two smartphones: alice pays two Bob-coins to bob and holds one under GC's app" "\[alice\] view(alice, \[coin(bob), knows(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_two_boot"
+check "SG two mini-apps on two smartphones: bob holds alice's two coins and his own two under GC's app" "\[bob\] view(bob, \[coin(bob), coin(bob), coin(alice), coin(alice), knows(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_two_boot"
 check "SG two mini-apps on two smartphones: alice befriends bob under CSSN's app" "\[alice\] view(alice, \[friend(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_two_boot"
 check "SG two mini-apps on two smartphones: bob befriends alice under CSSN's app" "\[bob\] view(bob, \[friend(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_two_boot"
 
@@ -9165,23 +9170,26 @@ check "SG currency on two smartphones: alice pays two Bob-coins to bob and holds
 # program instance": "An instance begins with one person, who installs the
 # certified program and activates it; others join it on invitation"), and a
 # later invitation to the running execution ("Activation and joining"):
-# alice installs the currency and activates it with no peer, her scripted
-# person mints 3 and her screen shows it before she knows anyone; she then
+# alice installs GC's app and activates it with no peer, her scripted
+# person, under GC's role bob, establishes her identity and issues three
+# Alice-coins, and her screen shows them before she knows anyone; she then
 # connects to bob and invites him, and the conversation opens on the
-# execution she activated alone, its screen showing it after her holdings
-# (play_activate/4; agent.glp, activate_app/6 and deliver/9).  Its own
-# session, as the mini-app plays above are.
+# execution she activated alone: bob, under GC's role alice, asks over it
+# that they come to know each other, her execution answers yes after her
+# coins, and bob swaps with her and pays her (play_activate/4; agent.glp,
+# activate_app/6 and deliver/9).  Its own session, as the mini-app plays
+# above are.
 sg_activate=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
-:artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
+:artefact $GLP_DIR/programs/apps/gc $SG_CORE
 $SG_CORE
 :limit 5000000
 play_activate(alice, bob, A, B).
 :quit
 HEREDOC
 2>&1)
-check "SG activation alone: alice's execution, activated with no invitation and no peer, mints, then the later invitation's conversation opens on it" "A = \[minted(3), holdings(\[lot(alice, 3)\]), opened(bob) | " "$sg_activate"
-check "SG activation alone: bob, invited, joins alice's running execution" "B = \[opened(alice) | " "$sg_activate"
+check "SG activation alone: alice's execution of GC's app, activated with no invitation and no peer, issues three Alice-coins, then answers bob over the later invitation's conversation" "A = \[view(alice, \[\], \[\], \[\], .*view(alice, \[coin(alice), coin(alice), coin(alice), identity, person\], \[\], \[\], \[tab('Contacts', knows), tab('Coins', coin, counted)\]), gave(acquaint(bob, alice), yes)" "$sg_activate"
+check "SG activation alone: bob, invited, joins alice's running execution, swaps with it and pays her" "B = \[view(bob, \[\], \[\], \[\], .*view(bob, \[coin(alice), knows(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_activate"
 check_not "SG activation alone: no failed play" "→ failed" "$sg_activate"
 
 # Currencies' play_mint on one smartphone, one boot per program
