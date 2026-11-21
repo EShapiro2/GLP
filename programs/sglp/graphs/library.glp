@@ -1,0 +1,176 @@
+%% programs/sglp/graphs/library.glp: the setup library of an sGLP run on a
+%% social graph of one's choosing (programs/sglp/graphs/README.md), in the term
+%% form the transformation reads (programs/sglp/README.md, "The term form").
+%% compose.py adds these items to an sGLP source over a canonical CVA platform,
+%% with graph_script/2, which it prints from the graph: each person's steps,
+%% each step(Proposal, Done, Needs), the act, the atom of the person's view
+%% that shows it done, and the atoms the act needs first.  A person's steps
+%% are: establish; acquaint, then befriend, each friend of a higher number
+%% (the lower of a pair proposes, so that no pair proposes twice); and
+%% point_friend each agent it points to, once a friend.
+%%
+%% A person decides when its answer is due, not when it is asked, from the
+%% last view its screen showed (seen/1): the first step not done, not pending
+%% (the view's list of proposals in flight) and whose needs the view shows,
+%% and only while that list is empty: an agent with an attempt in flight
+%% queues the next one it is asked for and its view shows nothing of it until
+%% it starts, so a step proposed then would be proposed again.  So no act is
+%% proposed twice, but one refused (acquaint, before the other has
+%% established), and no state grows with repeated acts.
+%%
+%% It needs the platform's types Key, Request, propose(Proposal), Proposal with
+%% establish/1, acquaint/2 and befriend/2, Atom with identity, knows/1 and
+%% friend/1, Approved, Output with view/5, Approval, Asking with hello/2 and
+%% the Attempt attempt/5, and Class with acquaint/2 and befriend/2, which every
+%% cascade platform extending Friendship has; compose.py checks them.
+%%
+%% Its procedures for an owner's profiles:
+%%   graph_next(Me?, L?, Next): what Me does next, L what its screen has shown
+%%     (seen(L)), Next pick(Proposal), wait (every step left is pending or
+%%     waits on another's) or done;
+%%   graph_run(Steps?, L?, Next): the same for steps an owner gives, its own
+%%     script of step(Proposal, Done, Needs);
+%%   graph_agents(Keys): the agents' keys, agent 1's first, printed by compose.py;
+%%   graph_asked(Asking?, Me?, YesNo): whether an approval question asks of a
+%%     step of the graph (an acquaintance or a friendship between a pair of it)
+%%     or of Me's own attempt;
+%% and, in graph_profiles below, two profiles, for a run whose persons only
+%% build the graph:
+%%   graph_builder (Request): wakes an hour on average and proposes graph_next's
+%%     pick, wakes again an hour later on wait and a day later on done;
+%%   graph_approver (Approval): an hour on average, yes to what graph_asked says
+%%     yes to, and no to anything else.
+
+exported procedure graph_library(SglpTerms).
+graph_library([
+   type('GraphStep', [step('Proposal', 'Atom', 'List'('Atom')), await('Atom')]),
+   type('GraphNext', [pick('Proposal'), wait, done]),
+   %% The agents' keys in their order, graph_agents/1, which compose.py prints.
+   type('GraphKeys', [['Key' | 'List'('Key')]]),
+
+   %% graph_next(Me?, L?, Next): the first step of Me's script not done, not
+   %% pending and ready, by the last view L shows.
+   decl(graph_next(dual('Key'), dual('List'('Output')), 'GraphNext')),
+   clause(graph_next(var('Me'), var('L'), var('N?')), [],
+          [graph_script(var('Me?'), var('Ss')), graph_run(var('Ss?'), var('L?'), var('N'))]),
+
+   %% graph_run(Steps?, L?, Next): the same for steps given, an owner's own script.
+   decl(graph_run(dual('List'('GraphStep')), dual('List'('Output')), 'GraphNext')),
+   clause(graph_run(var('Ss'), var('L'), var('N?')), [],
+          [graph_last_view(var('L?'), var('As'), var('Ap')),
+           graph_first(var('Ss?'), var('As?'), var('Ap?'), no, var('N'))]),
+
+   %% graph_last_view(L?, Atoms, Approved): the atoms and the proposals in
+   %% flight of the last view of L, the last element first; [] and [] before any.
+   decl(graph_last_view(dual('List'('Output')), 'List'('Atom'), 'List'('Approved'))),
+   clause(graph_last_view([], [], []), [], []),
+   clause(graph_last_view([view(var('_'), var('As'), var('_'), var('Ap'), var('_')) | var('_')], var('As?'), var('Ap?')), [], []),
+   clause(graph_last_view([var('_') | var('L')], var('As?'), var('Ap?')), [otherwise],
+          [graph_last_view(var('L?'), var('As'), var('Ap'))]),
+
+   %% graph_first(Steps?, Atoms?, Approved?, Blocked?, Next): Blocked is yes once
+   %% a step not done was passed over, pending or not ready.
+   decl(graph_first(dual('List'('GraphStep')), dual('List'('Atom')), dual('List'('Approved')), dual('YesNo'), 'GraphNext')),
+   clause(graph_first([], var('_'), var('_'), no, done), [], []),
+   clause(graph_first([], var('_'), var('_'), yes, wait), [], []),
+   clause(graph_first([step(var('P'), var('D'), var('Ns')) | var('Ss')], var('As'), var('Ap'), var('B'), var('N?')),
+          [ground(var('As?')), ground(var('Ap?')), ground(var('P?')), ground(var('D?')), ground(var('Ns?'))],
+          [graph_has(var('D?'), var('As?'), var('Done')),
+           graph_pending(var('P?'), var('Ap?'), var('Pend')),
+           graph_all(var('Ns?'), var('As?'), var('Ready')),
+           graph_first1(var('Done?'), var('Pend?'), var('Ready?'), var('P?'), var('Ss?'), var('As?'), var('Ap?'), var('B?'), var('N'))]),
+   %% await(Atom): a step another agent takes, never proposed, which holds
+   %% done back until the view shows it.
+   clause(graph_first([await(var('D')) | var('Ss')], var('As'), var('Ap'), var('B'), var('N?')),
+          [ground(var('As?')), ground(var('D?'))],
+          [graph_has(var('D?'), var('As?'), var('Done')), graph_await(var('Done?'), var('Ss?'), var('As?'), var('Ap?'), var('B?'), var('N'))]),
+   decl(graph_await(dual('YesNo'), dual('List'('GraphStep')), dual('List'('Atom')), dual('List'('Approved')), dual('YesNo'), 'GraphNext')),
+   clause(graph_await(yes, var('Ss'), var('As'), var('Ap'), var('B'), var('N?')), [], [graph_first(var('Ss?'), var('As?'), var('Ap?'), var('B?'), var('N'))]),
+   clause(graph_await(no, var('Ss'), var('As'), var('Ap'), var('_'), var('N?')), [], [graph_first(var('Ss?'), var('As?'), var('Ap?'), yes, var('N'))]),
+   decl(graph_first1(dual('YesNo'), dual('YesNo'), dual('YesNo'), dual('Proposal'), dual('List'('GraphStep')), dual('List'('Atom')), dual('List'('Approved')), dual('YesNo'), 'GraphNext')),
+   clause(graph_first1(yes, var('_'), var('_'), var('_'), var('Ss'), var('As'), var('Ap'), var('B'), var('N?')), [],
+          [graph_first(var('Ss?'), var('As?'), var('Ap?'), var('B?'), var('N'))]),
+   clause(graph_first1(no, no, yes, var('P'), var('_'), var('_'), [], var('_'), pick(var('P?'))), [], []),
+   clause(graph_first1(no, no, yes, var('_'), var('_'), var('_'), [var('_') | var('_')], var('_'), wait), [], []),
+   clause(graph_first1(no, yes, var('_'), var('_'), var('Ss'), var('As'), var('Ap'), var('_'), var('N?')), [],
+          [graph_first(var('Ss?'), var('As?'), var('Ap?'), yes, var('N'))]),
+   clause(graph_first1(no, no, no, var('_'), var('Ss'), var('As'), var('Ap'), var('_'), var('N?')), [],
+          [graph_first(var('Ss?'), var('As?'), var('Ap?'), yes, var('N'))]),
+
+   %% graph_has(Atom?, Atoms?, YesNo), graph_pending(Proposal?, Approved?, YesNo)
+   %% and graph_all(Needs?, Atoms?, YesNo): membership, by =?=.
+   decl(graph_has(dual('Atom'), dual('List'('Atom')), 'YesNo')),
+   clause(graph_has(var('_'), [], no), [], []),
+   clause(graph_has(var('X'), [var('Y') | var('_')], yes), ['=?='(var('X?'), var('Y?'))], [true]),
+   clause(graph_has(var('X'), [var('_') | var('Ys')], var('R?')), [otherwise], [graph_has(var('X?'), var('Ys?'), var('R'))]),
+   decl(graph_pending(dual('Proposal'), dual('List'('Approved')), 'YesNo')),
+   clause(graph_pending(var('_'), [], no), [], []),
+   clause(graph_pending(var('X'), [var('Y') | var('_')], yes), ['=?='(var('X?'), var('Y?'))], [true]),
+   clause(graph_pending(var('X'), [var('_') | var('Ys')], var('R?')), [otherwise], [graph_pending(var('X?'), var('Ys?'), var('R'))]),
+   decl(graph_all(dual('List'('Atom')), dual('List'('Atom')), 'YesNo')),
+   clause(graph_all([], var('_'), yes), [], []),
+   clause(graph_all([var('X') | var('Xs')], var('As'), var('R?')), [ground(var('As?'))],
+          [graph_has(var('X?'), var('As?'), var('H')), graph_all1(var('H?'), var('Xs?'), var('As?'), var('R'))]),
+   decl(graph_all1(dual('YesNo'), dual('List'('Atom')), dual('List'('Atom')), 'YesNo')),
+   clause(graph_all1(no, var('_'), var('_'), no), [], []),
+   clause(graph_all1(yes, var('Xs'), var('As'), var('R?')), [], [graph_all(var('Xs?'), var('As?'), var('R'))]),
+
+   %% graph_asked(Asking?, Me?, YesNo): yes for Me's own attempt, and for an
+   %% acquaintance or a friendship of a pair of the graph, which the lower of
+   %% the pair proposes: a hello carries its proposal, hello(Sender, Proposal),
+   %% and an attempt its proposer and class, attempt(Proposer, _, _, Class, _).
+   decl(graph_asked(dual('Asking'), dual('Key'), 'YesNo')),
+   clause(graph_asked(hello(var('_'), var('P')), var('_'), var('Y?')), [], [graph_proposed(var('P?'), var('Y'))]),
+   clause(graph_asked(attempt(var('A'), var('_'), var('_'), var('C'), var('_')), var('Me'), var('Y?')), [],
+          [graph_attempt(var('A?'), var('Me?'), var('C?'), var('Y'))]),
+   decl(graph_attempt(dual('Key'), dual('Key'), dual('Class'), 'YesNo')),
+   clause(graph_attempt(var('A'), var('Me'), var('_'), yes), ['=?='(var('A?'), var('Me?'))], [true]),
+   clause(graph_attempt(var('_'), var('_'), var('C'), var('Y?')), [otherwise], [graph_class(var('C?'), var('Y'))]),
+   decl(graph_class(dual('Class'), 'YesNo')),
+   clause(graph_class(acquaint(var('A'), var('B')), var('Y?')), [], [graph_party(var('A?'), var('B?'), var('Y'))]),
+   clause(graph_class(befriend(var('A'), var('B')), var('Y?')), [], [graph_party(var('A?'), var('B?'), var('Y'))]),
+   clause(graph_class(var('_'), no), [otherwise], [true]),
+   decl(graph_proposed(dual('Proposal'), 'YesNo')),
+   clause(graph_proposed(acquaint(var('A'), var('B')), var('Y?')), [], [graph_party(var('A?'), var('B?'), var('Y'))]),
+   clause(graph_proposed(befriend(var('A'), var('B')), var('Y?')), [], [graph_party(var('A?'), var('B?'), var('Y'))]),
+   clause(graph_proposed(var('_'), no), [otherwise], [true]),
+   %% graph_party(A?, B?, YesNo): whether A's script acquaints or befriends B.
+   decl(graph_party(dual('Key'), dual('Key'), 'YesNo')),
+   clause(graph_party(var('A'), var('B'), var('Y?')), [ground(var('A?')), ground(var('B?'))],
+          [graph_script(var('A?'), var('Ss')), graph_pair(var('Ss?'), var('A?'), var('B?'), var('Y'))]),
+   decl(graph_pair(dual('List'('GraphStep')), dual('Key'), dual('Key'), 'YesNo')),
+   clause(graph_pair([], var('_'), var('_'), no), [], []),
+   clause(graph_pair([step(acquaint(var('X'), var('Z')), var('_'), var('_')) | var('_')], var('A'), var('B'), yes),
+          ['=?='(var('X?'), var('A?')), '=?='(var('Z?'), var('B?'))], [true]),
+   clause(graph_pair([step(befriend(var('X'), var('Z')), var('_'), var('_')) | var('_')], var('A'), var('B'), yes),
+          ['=?='(var('X?'), var('A?')), '=?='(var('Z?'), var('B?'))], [true]),
+   clause(graph_pair([var('_') | var('Ss')], var('A'), var('B'), var('Y?')), [otherwise],
+          [graph_pair(var('Ss?'), var('A?'), var('B?'), var('Y'))])]).
+
+%% The profiles of a run whose persons only build the graph, which compose.py
+%% adds to graph_library's items for a run with no owner's source, its run
+%% declaration a dimension of each.
+exported procedure graph_profiles(SglpTerms).
+graph_profiles([
+   person(graph_builder),
+   binds('Request', graph_request),
+   decl(graph_request('Request', dual('Person'), dual('Integer'))),
+   clause(graph_request(var('R?'), person(var('Me'), var('_'), var('_')), var('_')), [],
+          [rated(graph_wake(var('Me?'), slot(var('R'))), rate(1, hour))]),
+   decl(graph_wake(dual('Key'), dual('Slot'('Request')))),
+   clause(graph_wake(var('Me'), slot(var('W?'))), [ground(var('Me?'))],
+          [seen(var('L')), graph_next(var('Me?'), var('L?'), var('N')), graph_go(var('N?'), var('Me?'), slot(var('W')))]),
+   decl(graph_go(dual('GraphNext'), dual('Key'), dual('Slot'('Request')))),
+   clause(graph_go(pick(var('P')), var('_'), slot(var('W?'))), [], [graph_answer(slot(var('W')), propose(var('P?')))]),
+   clause(graph_go(wait, var('Me'), slot(var('W?'))), [], [rated(graph_wake(var('Me?'), slot(var('W'))), rate(1, hour))]),
+   clause(graph_go(done, var('Me'), slot(var('W?'))), [], [rated(graph_wake(var('Me?'), slot(var('W'))), rate(1, day))]),
+   decl(graph_answer(dual('Slot'('Request')), dual('Request'))),
+   clause(graph_answer(slot(var('V?')), var('V')), [], []),
+
+   person(graph_approver),
+   binds('Approval', graph_approval),
+   decl(graph_approval(dual('Approval'), dual('Person'), dual('Integer'))),
+   clause(graph_approval(approval(var('Q'), var('_'), var('A?')), person(var('Me'), var('_'), var('_')), var('_')), [],
+          [graph_asked(var('Q?'), var('Me?'), var('Y')), rated(graph_say(var('Y?'), slot(var('A'))), rate(1, hour))]),
+   decl(graph_say(dual('YesNo'), dual('Slot'('YesNo')))),
+   clause(graph_say(var('Y'), slot(var('Y?'))), [], [])]).
