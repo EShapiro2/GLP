@@ -18,7 +18,7 @@ interface([
   type('MenuField', [field('Integer', 'String', 'MenuFieldType')]),
   type('MenuFieldType', [person, key, agent, text, number]),
   type('MenuWord', [say('String'), at('Integer')]),
-  type('Atom', [identity, person, knows('Peer'), friend('Peer'), ai_agent, has_guardian('Peer'), attestation('Speech'), principal('Peer'), guardian('Peer'), attestation_record('Peer', 'Speech'), item('Speech'), retired]),
+  type('Atom', [identity, person, knows('Peer'), friend('Peer'), principal('Peer'), guardian('Peer'), attestation_record('Peer', 'Speech'), item('Speech'), ai_agent, has_guardian('Peer'), attestation('Speech'), retired]),
   type('MayOne', [may_one('Integer', 'Integer')]),
   type('MayOnes', [[], ['MayOne' | 'MayOnes']]),
   type('VOne', [vone('Var', 'Var'), vone_any('Var'), vone_all]),

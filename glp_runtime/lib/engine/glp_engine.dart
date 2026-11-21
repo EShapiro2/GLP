@@ -1467,8 +1467,14 @@ class GlpEngine {
     // types join the interface's.  The source identity, over the program's
     // own definitions, is as it was.
     final qualified = qualifiedEntryInterfaces(modules, linked, entryTemplates);
-    final interfaceTypeDefs = <String, TypeDef>{
-      ...typeDefs,
+    // Each definition with its references as the scope of its own module
+    // resolves them ([interfaceTypeDefs]).
+    final interfaceTypes = directory == null
+        ? typeDefs
+        : interfaceTypeDefs(modules,
+            rootDir: directory, singleModulePath: singleModulePath);
+    final interfaceTypeDefsMap = <String, TypeDef>{
+      ...interfaceTypes,
       for (final q in qualified.values) ...q.typeDefs,
     };
     final exports = <ArtefactExport>[];
@@ -1519,7 +1525,7 @@ class GlpEngine {
       moduleName: moduleName,
       isaVersion: glpIsaVersion,
       typeDefsText: interfaceTypeDefsText(
-          exportDecls: exportDecls, typeDefs: interfaceTypeDefs),
+          exportDecls: exportDecls, typeDefs: interfaceTypeDefsMap),
       exports: exports,
       signer: offending.isEmpty ? identity : null,
     );

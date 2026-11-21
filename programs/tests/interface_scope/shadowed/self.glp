@@ -1,0 +1,17 @@
+%% A root type whose part this scope shadows (TGLP modules.tex, Compilation,
+%% fourth step: "every type reference is resolved ... to the renamed type of
+%% the nearest scope defining it", from the module where it is written).  The
+%% root's Args is built of the root's Arg; this scope defines an Arg of its
+%% own, which given/1's Args does not reach and own/1's Arg is.
+%% ../plain is the same program with no Arg of its own.
+
+Arg ::= other(Integer).
+
+exported procedure given(Args).
+given([]).
+
+exported procedure own(Arg).
+own(other(0)).
+
+procedure host(Args).
+host([]).

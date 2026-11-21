@@ -1,0 +1,11 @@
+%% ../shadowed with no Arg of its own: given/1 and host/1 at the root's Args,
+%% built of the root's Arg; root_arg/1 at the root's Arg.
+
+exported procedure given(Args).
+given([]).
+
+exported procedure root_arg(Arg).
+root_arg(svar(a)).
+
+procedure host(Args).
+host([]).
