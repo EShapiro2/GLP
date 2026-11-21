@@ -8938,6 +8938,7 @@ check_not "SG directory: no failed goal" "→ failed" "$sg_dir"
 # opens nothing --- play_invite after play_coins returns [] as well --- so the
 # plays are not run one after another in one REPL (SGSG Code, 2026-09-08).
 sg_cs=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 $SG_CORE
 :limit 5000000
@@ -8956,6 +8957,7 @@ check_not "SG super-app hosts the child-safe platform: no failed play" "→ fail
 # handshakes open, both entries are activated by run/3 with their own
 # conversations, and the two protocols proceed over the one friendship.
 sg_two=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 $SG_CORE
@@ -8973,6 +8975,7 @@ check_not "SG two mini-apps at once: no failed play" "→ failed" "$sg_two"
 # The same on two smartphones: one isolate per person, both mini-apps hosted by
 # each super-app, both protocols over the one friendship.
 sg_two_boot=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 :boot $GLP_DIR/programs/social/both_boot.glp $SG_CORE
@@ -8993,6 +8996,7 @@ check "SG two mini-apps on two smartphones: and its message arrives" "\[bob\] re
 # isolates, the root channel opens across them, and the two executions
 # befriend in the app over it.
 sg_boot=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/apps/gsn $SG_CORE
 :boot $GLP_DIR/programs/social/superapp_boot.glp $SG_CORE
 :quit
@@ -9015,6 +9019,7 @@ check "SG super-app on two smartphones: alice befriends bob over the conversatio
 # 22:08 UTC).  programs/tests/linkprobes/linkprobes.md holds the two-agent
 # programs that fence the runtime behaviour in.
 sg_warm=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
 :boot $GLP_DIR/programs/social/superapp3_boot.glp $SG_CORE
 :quit
@@ -9045,6 +9050,7 @@ check_not "SG held link: the held value does not reach alice's execution" "\[ali
 # a play that has run another mini-app leaving the session such that the next
 # play's invitation opens nothing (see the child-safe platform below).
 sg_reinvite=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/social/graph/endapp $SG_CORE
 $SG_CORE
 :limit 5000000
@@ -9069,6 +9075,7 @@ check_not "SG registry no failed play" "→ failed" "$sg_reinvite"
 # scripted persons, under the role watch.  Its own session, as the mini-app
 # plays above are.
 sg_sovereign=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/currencies/sovereign/denominated $SG_CORE
 $SG_CORE
 :limit 5000000
@@ -9086,6 +9093,7 @@ check_not "SG denominated no failed play" "→ failed" "$sg_sovereign"
 # artefact; the invitation and handshake cross the isolates and the swap of the
 # currency's own contract runs over the conversation the social graph delivered.
 sg_coins=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
 :boot $GLP_DIR/programs/social/coins_boot.glp $SG_CORE
 :quit
@@ -9112,6 +9120,7 @@ check "SG currency on two smartphones: bob holds alice's coin" "\[bob\] holdings
 # (play_activate/4; agent.glp, activate_app/6 and deliver/9).  Its own
 # session, as the mini-app plays above are.
 sg_activate=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
 $SG_CORE
 :limit 5000000
@@ -9133,6 +9142,7 @@ for sg_mint in "coins coins/currency [minted(3), holdings([lot(alice, 3)])]" \
                "sovereign sovereign/denominated [minted(3, now), holdings([lot(alice, usd, now, 3)])]"; do
     sg_mint_name=${sg_mint%% *}; sg_mint_rest=${sg_mint#* }; sg_mint_dir=${sg_mint_rest%% *}; sg_mint_lines=${sg_mint_rest#* }
     sg_mint_out=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/currencies/$sg_mint_dir $SG_CORE
 :boot $GLP_DIR/programs/currencies/${sg_mint_name}_mint_boot.glp $SG_CORE
 :quit
@@ -9149,6 +9159,7 @@ done
 # conversation the handshake opens is the friendship under that platform's
 # contract, and one message of it crosses between the isolates.
 sg_cssn=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 :boot $GLP_DIR/programs/social/cssn_boot.glp $SG_CORE
 :quit
