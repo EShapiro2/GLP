@@ -20,6 +20,7 @@ Secure Friendship
 19. ◆ Accept custodian.  Bob, a friend of Alice, accepts Alicia in place of Alice once at least the threshold of the identity custodians he records for Alice have vouched; Alicia is then his friend in place of Alice, and his identity custodian if Alice was.
 20. ◆ Replace custodian.  After an identity loss, Alice may establish a new identity, Alicia (Knowledge:1), and ask her identity custodians to vouch for it.
 21. ◆ Tell friends.  Bob passes Alicia the friendship of Alice and Dave, provided Bob has accepted Alicia in place of Alice and Bob records the friendship of Alice and Dave.
+22. ◆ Tell change.  Bob tells Carol of the replacement of Alice by Alicia, provided Bob has accepted Alicia in place of Alice and Bob and Carol are friends.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
