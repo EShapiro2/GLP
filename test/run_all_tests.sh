@@ -8694,8 +8694,10 @@ check_not "SG spm no failed play" "→ failed" "$sg_spm"
 
 # The social graph as the super-app (SGSG paper, Sections 3, 5.5 and 6.4):
 # programs/social/graph/core is the agent and the plays; the certified
-# mini-apps are programs of their own --- graph/pingapp, coins/currency ---
-# whose artefacts :artefact writes into core, where the agent's load_file/2
+# mini-apps are programs of their own --- the compiled apps of programs/apps,
+# gkk and gsn, the programs the plays install by GPD's definition of a program
+# (graph/Programs.txt), and coins/currency --- whose artefacts :artefact
+# writes into core, where the agent's load_file/2
 # reads them; cssn's artefact carries no certificate (its boot glue reaches the
 # person) and loads as text, which the super-app does not install.  Each
 # mini-app is the instance of the root's entry template miniapp/3 at its own
@@ -8711,17 +8713,26 @@ check_not "SG spm no failed play" "→ failed" "$sg_spm"
 SG_CORE="$GLP_DIR/programs/social/graph/core"
 rm -f "$SG_CORE"/*.glpw
 sg_core=$("$REPL_RUN" <<HEREDOC
-:artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
+:artefact $GLP_DIR/programs/apps/gkk $SG_CORE
+:artefact $GLP_DIR/programs/apps/gsn $SG_CORE
 :artefact $GLP_DIR/programs/cssn $SG_CORE
 :artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
+:artefact $GLP_DIR/programs/gsc $SG_CORE
+:artefact $GLP_DIR/programs/social/graph/checked/grassroots $SG_CORE
+:artefact $GLP_DIR/programs/social/graph/checked/not_grassroots $SG_CORE
+:artefact $GLP_DIR/programs/social/graph/checked/malformed $SG_CORE
 $SG_CORE
 :limit 5000000
+play_load("gsc.glpw", K0, Key0).
+play_install(alice, "grassroots.glpw", grassroots, G1).
+play_install(alice, "not_grassroots.glpw", not_grassroots, G2).
+play_install(alice, "malformed.glpw", malformed, G3).
 play_load("cssn.glpw", K1, Key1).
 play_load("currency.glpw", K2, Key2).
 play_install(alice, "cssn.glpw", cssn, I1).
 play_install(alice, "currency.glpw", currency, I2).
-play_install(alice, "pingapp.glpw", ping, I3).
+play_install(alice, "gkk.glpw", gkk, I3).
 play_forged_cert(alice, I4).
 play_verdict(alice, with_wards, V1).
 play_verdict(alice, wards, V2).
@@ -8741,15 +8752,28 @@ play_coins(alice, bob, C1, C2).
 :quit
 HEREDOC
 2>&1)
-check "SG super-app: pingapp's artefact is certified" "pingapp.glpw --- certified under" "$sg_core"
+check "SG super-app: GKK's app's artefact is certified" "gkk.glpw --- certified under" "$sg_core"
+check "SG super-app: GSN's app's artefact is certified" "gsn.glpw --- certified under" "$sg_core"
 check "SG super-app: cssn's artefact is refused a certificate" "cssn.glpw --- no certificate: refused" "$sg_core"
 check "SG super-app: currency's artefact is certified" "currency.glpw --- certified under" "$sg_core"
 check "SG super-app core loads" "Loaded program" "$sg_core"
+# The third check of GPD's Implementation pragma (graph/Programs.txt): "that
+# its schemas pass the checker".  The Grassroots App reads GSC's checker,
+# programs/gsc, by load_file/2 as a Module, reads the program's contract by its
+# exported contract/2 under run/3, and hands it to the checker's check/2 under
+# run/3 (agent.glp, schemas_check/3); a program is installed only on a verdict
+# GSC's paper calls grassroots.  The three programs of graph/checked give a
+# contract each, at the agreed type of contract/2, with(WDeclared, RPragmas).
+check "SG super-app: GSC's checker's artefact is certified" "gsc.glpw --- certified under" "$sg_core"
+check "SG super-app: load_file gives GSC's checker's artefact as a Module" "K0 = module" "$sg_core"
+check "SG super-app: the super-app installs a program whose checker verdict is syntactically_grassroots" "G1 = \[grassroots\]" "$sg_core"
+check "SG super-app: a program whose checker verdict is not_grassroots installs nothing" "G2 = \[\]" "$sg_core"
+check "SG super-app: a program whose checker verdict is malformed installs nothing" "G3 = \[\]" "$sg_core"
 check "SG super-app: load_file gives cssn's artefact as text" "K1 = text" "$sg_core"
 check "SG super-app: load_file gives currency's artefact as a Module" "K2 = module" "$sg_core"
 check "SG super-app: the super-app installs no text" "I1 = \[\]" "$sg_core"
 check "SG super-app: the super-app installs the certified currency" "I2 = \[currency\]" "$sg_core"
-check "SG super-app: the super-app installs the certified pingapp" "I3 = \[ping\]" "$sg_core"
+check "SG super-app: the super-app installs the certified app compiled from GKK's contract" "I3 = \[gkk\]" "$sg_core"
 check "SG super-app refuses a forgery: a certification that is not a signed term installs nothing" "I4 = \[\]" "$sg_core"
 # The developer's warranty is publish(Src, Cmp), signed by the developer, GPD:1;
 # a signed term carrying a verdict of the checker is not one, whatever the
@@ -8771,8 +8795,8 @@ check "SG super-app refuses a forgery: an undertaking that is not a signed term 
 check "SG super-app refuses a forgery: a root channel under an undertaking that is not a signed term is not accepted, and the next message arrives" "F3 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"
 check "SG super-app: the attestation minted on consent" "T = attest(alice, bob)" "$sg_core"
 check "SG super-app: signed under the person's key" "K = \('[0-9][0-9a-f]\{63\}'\|[a-f][0-9a-f]\{63\}\)$" "$sg_core"
-check "SG super-app: invitation, handshake, activation: alice greeted" "A = \[opened(bob), greeted(bob)\]" "$sg_core"
-check "SG super-app: invitation, handshake, activation: bob greeted" "B = \[opened(alice), greeted(alice)\]" "$sg_core"
+check "SG super-app: invitation, handshake, activation of GSN's app: alice's execution activated, and befriends bob over the conversation" "A = \[view(alice, \[\], \[\], \[\], .*view(alice, \[friend(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_core"
+check "SG super-app: invitation, handshake, activation of GSN's app: bob's execution activated, and befriends alice over the conversation" "B = \[view(bob, \[\], \[\], \[\], .*view(bob, \[friend(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_core"
 check "SG super-app: a declined invitation opens nothing at alice" "A2 = <unbound>" "$sg_core"
 check "SG super-app: a declined invitation opens nothing at bob" "B2 = <unbound>" "$sg_core"
 check "SG super-app: the handshake is timed" "Ms = [0-9]*" "$sg_core"
@@ -8963,20 +8987,22 @@ check "SG two mini-apps on two smartphones: the child-safe friendship holds" "\[
 check "SG two mini-apps on two smartphones: and its message arrives" "\[bob\] received(alice, hello)" "$sg_two_boot"
 
 # Under the boot harness: two isolates, each its own person with its own key,
-# running the super-app of core/; each reads pingapp's artefact beside it and
-# trusts the bundled compiler's key; the invitation crosses the friend channel
-# between the isolates and the root channel opens across them.
+# running the super-app of core/; each reads the artefact of GSN's app, the
+# program compiled from GSN's contract, beside it and trusts the bundled
+# compiler's key; the invitation crosses the friend channel between the
+# isolates, the root channel opens across them, and the two executions
+# befriend in the app over it.
 sg_boot=$("$REPL_RUN" <<HEREDOC
-:artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
+:artefact $GLP_DIR/programs/apps/gsn $SG_CORE
 :boot $GLP_DIR/programs/social/superapp_boot.glp $SG_CORE
 :quit
 HEREDOC
 2>&1)
 check "SG super-app on two smartphones: the boot settles" "Boot settled: 2 agents" "$sg_boot"
-check "SG super-app on two smartphones: bob's execution opened" "\[bob\] opened(alice)" "$sg_boot"
-check "SG super-app on two smartphones: alice's execution opened" "\[alice\] opened(bob)" "$sg_boot"
-check "SG super-app on two smartphones: bob greeted" "\[bob\] greeted(alice)" "$sg_boot"
-check "SG super-app on two smartphones: alice greeted" "\[alice\] greeted(bob)" "$sg_boot"
+check "SG super-app on two smartphones: bob's execution of GSN's app activated" "\[bob\] view(bob, \[\], \[\], \[\], " "$sg_boot"
+check "SG super-app on two smartphones: alice's execution of GSN's app activated" "\[alice\] view(alice, \[\], \[\], \[\], " "$sg_boot"
+check "SG super-app on two smartphones: bob befriends alice over the conversation" "\[bob\] view(bob, \[friend(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_boot"
+check "SG super-app on two smartphones: alice befriends bob over the conversation" "\[alice\] view(alice, \[friend(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_boot"
 
 # A held link on three smartphones (GSA paper, Section 5.4, "Whom the
 # Grassroots App knows"): the three conversations open, alice's execution sends

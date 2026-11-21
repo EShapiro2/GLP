@@ -40,8 +40,6 @@
 % (def:schema, def:binding, def:compile's K_p).  The term form writes it
 % among a role's deleted atoms; rs_del below gives -(i), the deleted atoms
 % with no wildcard, and rs_clear *(i).
-NameTerm  ::= own(Integer) ; own_var(Constant)
-            ; ext(NameTerm, Constant) ; ext_any(NameTerm).
 NameTerms ::= [] ; [NameTerm | NameTerms].
 
 % An argument is a role, named by its index in the schema, a party variable, a
@@ -81,12 +79,6 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 % none, and it matches val(C) alone.  A constant parameter of a parametric
 % contract is one (Definition Parametric contract), val(p) listed in
 % parametric(Params, D).
-Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
-        ; sgn(Constant, Integer) ; num(Constant) ; real(Constant)
-        ; const(Constant) ; any
-        ; item_of(Arg) ; val(Constant).
-Args  ::= [] ; [Arg | Args].
-Atom  ::= atom(Constant, Args).
 Atoms ::= [] ; [Atom | Atoms].
 
 % --- The values speech-act schemas allow (GSC, def:numbers) -----------------------
@@ -118,8 +110,6 @@ Atoms ::= [] ; [Atom | Atoms].
 % occurs only among a role's Keep, beside the copies of A among its Del; the
 % role requires k.A (nrs_req), deletes j copies, and its plain form keeps
 % the copies deleted (plain_mults).
-Mult       ::= Atom ; times(Arg, Atom) ; rest(Expr, Expr, Atom).
-Mults      ::= [] ; [Mult | Mults].
 % A constraint is "a decidable condition on the values assigned to its value
 % variables, written in the relations and functions the types of the values
 % provide ... combined by the connectives" (def:numbers, GSC c8c5ead): true,
@@ -165,20 +155,7 @@ Mults      ::= [] ; [Mult | Mults].
 % is signing_not_speech_act(Schema, Y), and Y in no atom an agent role
 % requires item_argument(Schema, Y) (check.glp, item_schemas).
 % signed(U, Y) and unsigned(U, Y) are the signing conditions signed(u, y) and unsigned(u, y), u an agent role or agent variable and y a speech-act variable of the schema (def:numbers, GSC 10fcc92): U is role(I), I an agent role of the schema, or pvar(X), and Y is svar(Y), each variable listed in the head; any other U is a fault signing_not_agent(Schema, U) and any other Y a fault signing_not_speech_act(Schema, Y) (check.glp).  The conditions of def:syntactically-grassroots read no signing condition (the appendix, after def:binding-numbers), so the checker takes each as true.
-Constraint ::= true ; and(Constraint, Constraint)
-             ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
-             ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Arg, Arg)
-             ; or(Constraint, Constraint) ; not(Constraint)
-             ; implies(Constraint, Constraint)
-             ; ne(Expr, Expr) ; rel(Constant, Exprs)
-             ; signed(Arg, Arg) ; unsigned(Arg, Arg)
-             ; program(Expr).
 Constraints ::= [] ; [Constraint | Constraints].
-Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
-             ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
-             ; sum(Args, Arg, Atom, Form, Expr)
-             ; author_of(Arg).
-Exprs      ::= [] ; [Expr | Exprs].
 % A safe formula (def:role, GSC c8c5ead), built from atoms and constraints by
 % the connectives and the anchored quantifiers: fa(H, M) the atom or
 % multiplicity M held by H, fnot, fand and for; fexists(Xs, H, A, Phi) the
@@ -188,11 +165,6 @@ Exprs      ::= [] ; [Expr | Exprs].
 % "conditions on the agents' states, which the denotation reads and the
 % three conditions read only as stated"); the notation and the compiler
 % print it.
-Form       ::= fa(Arg, Mult) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form)
-             ; fexists(Args, Arg, Atom, Form)
-             ; fforall(Args, Arg, Atom, Form, Forms)
-             ; fcons(Constraint).
-Forms      ::= [] ; [Form | Forms].
 % A schema's constraint, and the value variables it uses as multiplicities,
 % which a binding sends to positive whole numbers (def:binding-numbers).
 NumCtx     ::= nc(Constraint, Args).
@@ -218,9 +190,6 @@ Bases ::= [] ; [Base | Bases].
 % any other is qlisted(I, Rho, Args, Xs), the listed role bound by Xs in its
 % anchor rho(pi_I, Args), written pi_I[A] with the bound variables replaced
 % by _ in A (def:role).
-Guard     ::= guarded ; unguarded.
-RoleKind  ::= listed(Integer, Constant, Args)
-            ; qlisted(Integer, Constant, Args, Args).
 RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
             ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
@@ -241,11 +210,6 @@ RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
 % Roles, Conjuncts, Forms), which the reader of the clause syntax alone
 % writes, Bound the variables its quantifiers bind and Forms the safe
 % formulas of its body, a body conjunct among them.
-HMult     ::= hm(Integer, Mult).
-HMults    ::= [] ; [HMult | HMults].
-Conjunct  ::= conjunct(Args, Integer, Atom, Form, HMults, HMults, Forms).
-Conjuncts ::= [] ; [Conjunct | Conjuncts].
-Nil       ::= [].
 Schema    ::= schema(Constant, Args, RoleSpecs)
             ; cschema(Constant, Args, Nil, RoleSpecs)
             ; qschema(Constant, Args, Args, Constraint, RoleSpecs, Conjuncts, Forms).
@@ -263,9 +227,6 @@ Declared  ::= Contract ; reflexive(Preds, Contract).
 % many copies where the atom is negated in the body, and a schema may be
 % written nschema, with a constraint.  A contract with no number is of these
 % types as it is of the plain ones.
-NRoleSpec  ::= rs(Guard, Mults, Mults, Mults, Mults)
-             ; crs(RoleKind, Guard, Mults, Mults, Mults, Mults).
-NRoleSpecs ::= [] ; [NRoleSpec | NRoleSpecs].
 NSchema    ::= schema(Constant, Args, NRoleSpecs)
              ; cschema(Constant, Args, Nil, NRoleSpecs)
              ; nschema(Constant, Args, Constraint, NRoleSpecs)
@@ -326,24 +287,12 @@ RChunks     ::= [] ; [RName | RChunks].
 % constant value (Arg, above) --- and a signed term sgn(Y, Name).  A
 % constant is read by =?= against Names and Vars, and its constant taken
 % from there (sas_bare below).
-WSchema    ::= schema(Constant, Args, NRoleSpecs)
-             ; cschema(Constant, Args, Nil, NRoleSpecs)
-             ; nschema(Constant, Args, Constraint, NRoleSpecs)
-             ; schema(Constant, Names, Args, NRoleSpecs)
-             ; cschema(Constant, Names, Args, Nil, NRoleSpecs)
-             ; nschema(Constant, Names, Args, Constraint, NRoleSpecs)
-             ; qschema(Constant, Args, Args, Constraint, NRoleSpecs, Conjuncts, Forms)
-             ; qschema(Constant, Names, Args, Args, Constraint, NRoleSpecs, Conjuncts, Forms)
-             ; SSchema.
-WContract  ::= [] ; [WSchema | WContract].
 % The clause syntax's own types, SSchema, SContract and SDeclared and the
 % types they are built of, are the root programs/self.glp's since 2026-11-10,
 % by TGLP's rule that common protocol types are defined once at the lowest
 % common ancestor of the modules that use them (GLP #14, Code_inbox
 % 2026-11-10 12:03 UTC, item 2, Udi's ruling): every contract's NAME.glp
 % declares its term by them and declares no copy.
-WBody      ::= WContract ; reflexive(Preds, WContract).
-WDeclared  ::= WBody ; environment(Preds, WBody) ; parametric(SParams, WDeclared).
 
 % The contract as the checker reads it, its names and environment predicates
 % dropped.
@@ -2265,13 +2214,10 @@ Ints  ::= [] ; [Integer | Ints].
 % listed_role(Schema, Role, Atom) is the first part of clause 2 of
 % def:unobstructed: the listed role Role of Schema adds Atom, of the
 % predicate of an atom the introductory act forbids at a role.
-Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive ; environment
-        ; listed_role(Constant, Integer, Atom).
 % What GAI's Definition Speech-act schema requires of a signed term, and the atom
 % carrying one violates: it occurs in an atom not marked + (not_added), its
 % speech-act variable occurs in no atom its role requires (not_required), or
 % its role is not an agent role (not_agent_role).
-SgnCause ::= not_added ; not_required ; not_agent_role.
 % What def:schema requires of the form of a schema, and a schema formed
 % otherwise violates: no role adding or deleting an atom (no_role_changes).
 % What def:volition requires of a reading role (GSC 0380a8a, 5e014fd), a role
@@ -2312,41 +2258,6 @@ SgnCause ::= not_added ; not_required ; not_agent_role.
 % variable, so any other y is a fault signing_not_speech_act(Schema, Y); a
 % variable among them that the head does not list is a fault
 % not_in_head(Schema, Var).
-Fault ::= no_introductory_act
-        ; obstructed(Constant, Integer, Atom, Cause)
-        ; untraceable(Preds)
-        ; volition(Constant, Integer, Integer)
-        ; reflexive(Constant, Integer, Atom)
-        ; signed(Constant, Integer, Atom, SgnCause)
-        ; changes_nothing(Constant, Integer)
-        ; listed_reading(Constant, Integer)
-        ; no_signature_atom(Constant)
-        ; no_role_changes(Constant)
-        ; head_not_variable(Constant, Arg)
-        ; head_repeated(Constant, Arg)
-        ; not_in_head(Constant, Arg)
-        ; name_term_base(Constant, NameTerm)
-        ; listed_base(Constant, Integer)
-        ; listed_signed(Constant, Integer)
-        ; multiplicity_not_numeric(Constant, Integer, Atom)
-        ; multiplicity_not_whole(Constant, Integer, Atom)
-        ; multiplicity_wildcard(Constant, Integer, Atom)
-        ; constraint_not_numeric(Constant, Arg)
-        ; signing_not_agent(Constant, Arg)
-        ; signing_not_speech_act(Constant, Arg)
-        ; obstructed_jointly(Constant)
-        ; not_holder(Constant, Constant)
-        ; not_in_vars(Constant, Constant)
-        ; deleted_not_required(Constant, Integer, Atom)
-        ; condition_holder(Constant, Constant)
-        ; head_formula(Constant)
-        ; quantified_condition(Constant, Constant)
-        ; listed_agent_role(Constant, Constant)
-        ; guard_not_role(Constant, Constant)
-        ; value_type(Constant, Constant)
-        ; item_argument(Constant, Constant)
-        ; unsupplied(Constant, Constant).
-Faults  ::= [] ; [Fault | Faults].
 % What def:signature is decided against (volition.glp): sig(Is, Cj, OA, OD,
 % TA, TD), the indices of a schema's agent roles, its conjuncts, the
 % predicates of the atoms it adds and of those it deletes or clears, and the
@@ -2371,13 +2282,7 @@ SigBases ::= sb(Ans, Bases).
 % pair of them, in the order of the set, one with a ward role of each; and
 % [iota, f] of the kinds (iota, f, M) of the contract (def:kinds), in the
 % place the leaving marks held until GSC 7e00aba removed them.
-Guardianship  ::= guardianship(Constant, Constant, Constant).
-Guardianships ::= [] ; [Guardianship | Guardianships].
-Guardian ::= guardian(Integer) ; no_guardian.
-Party  ::= ward(Integer, Constant, Guardian) ; free(Integer).
 Parties ::= [] ; [Party | Parties].
-Relay  ::= relay(Constant, Party, Party).
-Relays ::= [] ; [Relay | Relays].
 Wards  ::= introduction_with_wards(Constant, Preds, Guardianships, Relays, Preds)
          ; no_introduction_with_wards.
 % h(Schema, Role, H): the relay act Schema requires at its ward role Role an atom of the predicate H that clause 2 of def:relay admits as an atom of h and as nothing else (GSC 410a440).
@@ -2429,10 +2334,6 @@ GuardParts ::= gp(Constant, Constant, Guardianships, Preds).
 % appendix "Contracts with Wards", and syntactically_grassroots_with_wards
 % the verdict on one with them that is syntactically grassroots with wards by
 % def:sg-wards of CSSN's paper, naming what grassroots_with_wards names.
-Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
-          ; syntactically_grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
-          ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
-          ; malformed(Faults).
 
 % The introductory acts of a contract, for inspection (def:introduction,
 % def:unobstructed): intro_act(Schema, Status), each schema that is an
@@ -5603,6 +5504,24 @@ compile_read([], Nm, D) :- ground(D?) |
     param_list(D?, Pm),
     compile # compile_contract(Nm?, D0?, Ev?, Pm?).
 compile_read([F|Fs], Nm, _) :- compile # compile_malformed(Nm?, [F?|Fs?]).
+
+% A contract checked once and compiled on its verdict, which is given back, as
+% cascade.sh and cascade.py take it: the verdict and the displays are of the
+% one term given, the verdict check/2 gives it.
+imported procedure compile#compile_contract(Constant?, NDeclared?, Preds?, SParams?, Verdict).
+exported procedure compile_contract(Constant?, WDeclared?, Verdict).
+compile_contract(Nm, D, V?) :- ground(D?) |
+    read_faults(D?, F),
+    compile_read(F?, Nm?, D?, V).
+
+procedure compile_read(Faults?, Constant?, WDeclared?, Verdict).
+compile_read([], Nm, D, V?) :- ground(D?) |
+    unnamed(D?, D0),
+    env_preds(D?, Ev),
+    param_list(D?, Pm),
+    compile # compile_contract(Nm?, D0?, Ev?, Pm?, V).
+compile_read([F|Fs], Nm, _, malformed([F?|Fs?])) :- ground(F?), ground(Fs?) |
+    compile # compile_malformed(Nm?, [F?|Fs?]).
 
 imported procedure compile#compile_variant(Constant?, WContract?).
 exported procedure compile_variant(Constant?, WContract?).

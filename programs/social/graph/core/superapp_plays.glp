@@ -3,10 +3,13 @@
 %% Sections 3, 4, 5.5 and 6), played by two social-graph agents in one heap,
 %% the network a two-way crossbar for cold calls, and under :boot
 %% (../../superapp_boot.glp) by two isolates with their own keys.  The
-%% certified mini-apps are GSG's ../pingapp and ../endapp, Currencies'
-%% currency and denominated, and CSSN's childsafe; the super-app reads their
-%% artefacts with load_file/2.  The persons are scripted on the agents'
-%% person streams.
+%% programs the plays install, distribute and activate are compiled apps of
+%% programs/apps, GKK's and GSN's, each compiled from its contract (GPD's
+%% definition of a program, ../Programs.txt); the other certified mini-apps
+%% are GSA's ../pingapp, which only the held link on three smartphones still
+%% installs, and ../endapp, Currencies' currency and denominated, and CSSN's
+%% childsafe; the super-app reads their artefacts with load_file/2.  The
+%% persons are scripted on the agents' person streams.
 %%
 %% The super-app holds no declaration of a mini-app's types.  A play mints a
 %% mini-app's person channel at Opaque, installs the mini-app with one end and
@@ -74,8 +77,8 @@ person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
     run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
 person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
 
-%% The certified mini-app: pingapp.glpw beside this program, written by the
-%% REPL's :artefact from ../pingapp and read with load_file/2 --- a Module
+%% A certified mini-app: its artefact beside this program, written by the
+%% REPL's :artefact from its directory and read with load_file/2 --- a Module
 %% where its certificate verifies, its text otherwise.  certified/4 gives the
 %% module, the compiler's key its certificate carries, and the developer's
 %% warranty: the person publishes the program, GPD:1, signing publish(Src, Cmp),
@@ -89,27 +92,33 @@ certified(M, CK?, CSig?) :-
     sign(publish(Src?, Cmp?), K?, CSig).
 
 %% =============================================================================
-%% play_invite(A, B, AliceUi, BobUi): alice, A, installs the mini-app, befriends bob and invites him;
-%% bob installs it and consents; the handshake opens the root channel and the
-%% two executions greet each other.  Each person's screen is the mini-app's
-%% scripted person's, under its role greet, which stops at the greeting.
-%% Expected: AliceUi = [opened(bob), greeted(bob)], BobUi = [opened(alice),
-%% greeted(alice)], → succeeds.
+%% play_invite(A, B, AliceUi, BobUi): alice, A, installs GSN's app, the
+%% program compiled from GSN's contract (programs/apps/gsn), befriends bob and
+%% invites him; bob installs it and consents; the handshake opens the root
+%% channel and the two executions converse over it.  Each person's screen is
+%% the app's scripted person's, under its roles alice and bob (../../../apps/gsn/person.glp),
+%% the views its agent writes: the first written when the execution is
+%% activated, and the later ones as the two agents come to know each other and
+%% befriend in the app, which only the conversation carries.  The screens do
+%% not close, the app's execution never ending.
+%% Expected: AliceUi = [view(alice, [], [], [], _), ... view(alice, [friend(bob),
+%% knows(bob), identity, person], [bob], [], _) ... | _], BobUi likewise,
+%% → suspended.
 %% =============================================================================
 exported procedure play_invite(Key?, Key?, Stream(Opaque), Stream(Opaque)).
 play_invite(A, B, AliceUi?, BobUi?) :-
     ground(A?), ground(B?) |
     crossbar2(A?, B?, AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
-    load_file("pingapp.glpw", C),
+    load_file("gsn.glpw", C),
     certified(C?, _, CSig),
     agent # agent(A?, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     new_channel(AliceApp, AlicePerson),
-    miniapp_person_run(C?, A?, greet, [B?], AlicePerson?, AliceScreen),
+    miniapp_person_run(C?, A?, alice, [B?], AlicePerson?, AliceScreen),
     tee(AliceScreen?, AliceUi, AliceSeen),
     alice_person(A?, B?, C?, CSig?, yes, AliceApp?, AliceOut?, AliceSeen?, AliceIn),
     agent # agent(B?, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     new_channel(BobApp, BobPerson),
-    miniapp_person_run(C?, B?, greet, [A?], BobPerson?, BobScreen),
+    miniapp_person_run(C?, B?, bob, [A?], BobPerson?, BobScreen),
     tee(BobScreen?, BobUi, BobSeen),
     bob_person(B?, A?, C?, CSig?, yes, BobApp?, BobOut?, BobSeen?, BobIn).
 
@@ -124,44 +133,43 @@ exported procedure play_invite_declined(Key?, Key?, Stream(Opaque), Stream(Opaqu
 play_invite_declined(A, B, AliceUi?, BobUi?) :-
     ground(A?), ground(B?) |
     crossbar2(A?, B?, AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
-    load_file("pingapp.glpw", C),
+    load_file("gsn.glpw", C),
     certified(C?, _, CSig),
     agent # agent(A?, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     new_channel(AliceApp, AlicePerson),
-    miniapp_person_run(C?, A?, greet, [B?], AlicePerson?, AliceScreen),
+    miniapp_person_run(C?, A?, alice, [B?], AlicePerson?, AliceScreen),
     tee(AliceScreen?, AliceUi, AliceSeen),
     alice_person(A?, B?, C?, CSig?, no, AliceApp?, AliceOut?, AliceSeen?, AliceIn),
     agent # agent(B?, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     new_channel(BobApp, BobPerson),
-    miniapp_person_run(C?, B?, greet, [A?], BobPerson?, BobScreen),
+    miniapp_person_run(C?, B?, bob, [A?], BobPerson?, BobScreen),
     tee(BobScreen?, BobUi, BobSeen),
     bob_person(B?, A?, C?, CSig?, no, BobApp?, BobOut?, BobSeen?, BobIn).
 
 %% Alice's person, Me, inviting Q: install the mini-app, with its end of the
 %% person channel, cold-call Q, and once connected invite Q.  Wait = yes:
-%% keep the person stream open until the mini-app's person has seen her
-%% execution greeted, its screen closing; no: close it after inviting.
+%% keep the person stream open until the mini-app's screen closes, which GSN's
+%% app's never does; no: close it after inviting.
 procedure alice_person(Key?, Key?, Content?, String?, Decision?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
 alice_person(Me, Q, M, CSig, Wait, Ui, Outs, Seen,
-             [msg(person, Me?, install(ping, M?, CSig?, Ui?)),
+             [msg(person, Me?, install(gsn, M?, CSig?, Ui?)),
               msg(person, Me?, connect(Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     alice_wait(Me?, Q?, Wait?, Outs?, Seen?, Cmds).
 
 procedure alice_wait(Key?, Key?, Decision?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
 alice_wait(Me, Q, yes, [msg(agent, person, connected(F)) | _], Seen,
-           [msg(person, Me?, invite(ping, Q?)) | Cmds?]) :-
+           [msg(person, Me?, invite(gsn, Q?)) | Cmds?]) :-
     F? =?= Q? | person_done(Seen?, Cmds).
 alice_wait(Me, Q, no, [msg(agent, person, connected(F)) | _], _,
-           [msg(person, Me?, invite(ping, Q?))]) :-
+           [msg(person, Me?, invite(gsn, Q?))]) :-
     F? =?= Q? | true.
 alice_wait(Me, Q, W, [_ | Outs], Seen, Cmds?) :- otherwise | alice_wait(Me?, Q?, W?, Outs?, Seen?, Cmds).
 alice_wait(_, _, _, [], _, []).
 
-%% Close the person stream once the mini-app's screen has closed: under the
-%% role greet its person stops at the greeting (../pingapp/person.glp), and
-%% the screen closes too where the mini-app ends.  The screen's items are
-%% passed over, never inspected.
+%% Close the person stream once the mini-app's screen has closed, which it
+%% does where the mini-app's person stops or the mini-app ends.  The screen's
+%% items are passed over, never inspected.
 procedure person_done(Stream(Opaque)?, UserInStream).
 person_done([_ | Seen], Cmds?) :- person_done(Seen?, Cmds).
 person_done([], []).
@@ -171,13 +179,13 @@ person_done([], []).
 %% mini-app's screen to close, or close.
 procedure bob_person(Key?, Key?, Content?, String?, Decision?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
 bob_person(Me, Q, M, CSig, yes, Ui, Outs, Seen,
-           [msg(person, Me?, install(ping, M?, CSig?, Ui?)),
-            msg(person, Me?, accept_invite(ping, Q?)) | Cmds?]) :-
+           [msg(person, Me?, install(gsn, M?, CSig?, Ui?)),
+            msg(person, Me?, accept_invite(gsn, Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     bob_wait(Me?, Q?, yes, Outs?, Seen?, Cmds).
 bob_person(Me, Q, M, CSig, no, Ui, Outs, Seen,
-           [msg(person, Me?, install(ping, M?, CSig?, Ui?)),
-            msg(person, Me?, decline_invite(ping, Q?)) | Cmds?]) :-
+           [msg(person, Me?, install(gsn, M?, CSig?, Ui?)),
+            msg(person, Me?, decline_invite(gsn, Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     bob_wait(Me?, Q?, no, Outs?, Seen?, Cmds).
 
@@ -365,22 +373,23 @@ naf_record([], [], []).
 %% play_invite_timed(A, B, Ms): play_invite, timed --- the milliseconds from the
 %% moment alice's person sends the invitation to the moment the root
 %% channel's end reaches bob's execution of the mini-app: the first item on
-%% its screen, its opened/1 (../pingapp/miniapp.glp), read as an item come and
-%% not inspected; the clock is now/1, in milliseconds.
+%% its screen, the first view its agent writes when it is activated
+%% (../../../apps/gsn/person.glp), read as an item come and not inspected; the clock is
+%% now/1, in milliseconds.
 %% =============================================================================
 exported procedure play_invite_timed(Key?, Key?, Integer).
 play_invite_timed(A, B, Ms?) :-
     ground(A?), ground(B?) |
     crossbar2(A?, B?, AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
-    load_file("pingapp.glpw", C),
+    load_file("gsn.glpw", C),
     certified(C?, _, CSig),
     agent # agent(A?, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     new_channel(AliceApp, AlicePerson),
-    miniapp_person_run(C?, A?, greet, [B?], AlicePerson?, AliceSeen),
+    miniapp_person_run(C?, A?, alice, [B?], AlicePerson?, AliceSeen),
     alice_person_timed(A?, B?, C?, CSig?, AliceApp?, AliceOut?, AliceSeen?, T0, AliceIn),
     agent # agent(B?, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     new_channel(BobApp, BobPerson),
-    miniapp_person_run(C?, B?, greet, [A?], BobPerson?, BobScreen),
+    miniapp_person_run(C?, B?, bob, [A?], BobPerson?, BobScreen),
     tee(BobScreen?, BobUi, BobSeen),
     bob_person(B?, A?, C?, CSig?, yes, BobApp?, BobOut?, BobSeen?, BobIn),
     opened_at(BobUi?, T0?, Ms).
@@ -393,30 +402,30 @@ sink([]).
 %% invitation.
 procedure alice_person_timed(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, Integer, UserInStream).
 alice_person_timed(Me, Q, M, CSig, Ui, Outs, Seen, T0?,
-                   [msg(person, Me?, install(ping, M?, CSig?, Ui?)),
+                   [msg(person, Me?, install(gsn, M?, CSig?, Ui?)),
                     msg(person, Me?, connect(Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     alice_wait_timed(Me?, Q?, Outs?, Seen?, T0, Cmds).
 
 procedure alice_wait_timed(Key?, Key?, AgentToUserStream?, Stream(Opaque)?, Integer, UserInStream).
 alice_wait_timed(Me, Q, [msg(agent, person, connected(F)) | _], Seen, T0?,
-                 [msg(person, Me?, invite(ping, Q?)) | Cmds?]) :-
+                 [msg(person, Me?, invite(gsn, Q?)) | Cmds?]) :-
     F? =?= Q? |
     now(T0),
     person_done(Seen?, Cmds).
 alice_wait_timed(Me, Q, [_ | Outs], Seen, T0?, Cmds?) :- otherwise | alice_wait_timed(Me?, Q?, Outs?, Seen?, T0, Cmds).
 alice_wait_timed(_, _, [], _, 0, []).
 
-%% opened_at(Ui, T0, Ms): the clock at the first item on bob's screen, his
-%% opened/1, less T0.
+%% opened_at(Ui, T0, Ms): the clock at the first item on bob's screen, the
+%% first view of his execution, less T0.
 procedure opened_at(Stream(Opaque)?, Integer?, Integer).
 opened_at([_ | _], T0, Ms?) :- now(T1), Ms := T1? - T0?.
 opened_at([], _, 0).
 
 %% =============================================================================
 %% sg_init(Id, Mode, Peers, NetIn): one super-app per isolate under :boot
-%% (../../superapp_boot.glp): the social graph's agent on the isolate's network, the
-%% mini-app read from the artefact beside this program and installed under the
+%% (../../superapp_boot.glp): the social graph's agent on the isolate's network, GSN's
+%% app read from its artefact beside this program and installed under the
 %% compiler's key the person trusts, and the person's script by Mode, toward
 %% the peers Peers whose keys the person told the agent --- under invite the
 %% person invites the one peer, under consent the person consents to the one
@@ -426,7 +435,7 @@ opened_at([], _, 0).
 procedure alice_person_boot(Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
 alice_person_boot(Me, Q, M, CK, CSig, Ui, Outs, Seen,
                   [msg(person, Me?, trust(CK?)),
-                   msg(person, Me?, install(ping, M?, CSig?, Ui?)),
+                   msg(person, Me?, install(gsn, M?, CSig?, Ui?)),
                    msg(person, Me?, connect(Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     alice_wait(Me?, Q?, yes, Outs?, Seen?, Cmds).
@@ -434,8 +443,8 @@ alice_person_boot(Me, Q, M, CK, CSig, Ui, Outs, Seen,
 procedure bob_person_boot(Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
 bob_person_boot(Me, Q, M, CK, CSig, Ui, Outs, Seen,
                 [msg(person, Me?, trust(CK?)),
-                 msg(person, Me?, install(ping, M?, CSig?, Ui?)),
-                 msg(person, Me?, accept_invite(ping, Q?)) | Cmds?]) :-
+                 msg(person, Me?, install(gsn, M?, CSig?, Ui?)),
+                 msg(person, Me?, accept_invite(gsn, Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     bob_wait(Me?, Q?, yes, Outs?, Seen?, Cmds).
 
@@ -488,24 +497,25 @@ certified_or_not(S, none) :- string(S?) | true.
 %% the term would have crossed; a forgery is refused before the friend or the
 %% mini-app is looked up, so no friendship and no installation is set up.
 %%
-%% play_forged_cert(Me, Installed): Me installs pingapp's certified artefact
-%% under a creator's certification that is not a signed term.
-%% Expected: Installed = [] --- against play_install(Me, "pingapp.glpw", ping, I),
-%% I = [ping], the same artefact under the play's own certification;
+%% play_forged_cert(Me, Installed): Me installs the certified artefact of GKK's
+%% app, the program compiled from GKK's contract (programs/apps/gkk), under a
+%% developer's warranty that is not a signed term.
+%% Expected: Installed = [] --- against play_install(Me, "gkk.glpw", gkk, I),
+%% I = [gkk], the same artefact under the play's own warranty;
 %% → succeeds.
 %% =============================================================================
 exported procedure play_forged_cert(Key?, Stream(Constant)).
 play_forged_cert(Me, Installed?) :-
     ground(Me?) |
-    load_file("pingapp.glpw", C),
+    load_file("gkk.glpw", C),
     new_channel(Ui, Person),
-    agent # agent(Me?, [msg(person, Me?, install(ping, C?, forged, Ui?)),
+    agent # agent(Me?, [msg(person, Me?, install(gkk, C?, forged, Ui?)),
                         msg(person, Me?, installed(Installed))],
                   [], [user_output(Out), net_output(NetOut)]),
     hold_person(Person?), sink(Out?), sink(NetOut?).
 
 %% =============================================================================
-%% play_verdict(Me, Kind, Installed): Me installs pingapp's certified artefact
+%% play_verdict(Me, Kind, Installed): Me installs GKK's app's certified artefact
 %% under a signed term of the form the super-app took before the audit's
 %% Finding 1, creator_cert(Src, Acts, Verdict), signed by the person over the
 %% source identity, whose verdict is the one Kind names, each as the checker
@@ -524,10 +534,10 @@ play_forged_cert(Me, Installed?) :-
 exported procedure play_verdict(Key?, Constant?, Stream(Constant)).
 play_verdict(Me, Kind, Installed?) :-
     ground(Me?) |
-    load_file("pingapp.glpw", C),
+    load_file("gkk.glpw", C),
     verdict_cert(Kind?, C?, CSig),
     new_channel(Ui, Person),
-    agent # agent(Me?, [msg(person, Me?, install(ping, C?, CSig?, Ui?)),
+    agent # agent(Me?, [msg(person, Me?, install(gkk, C?, CSig?, Ui?)),
                         msg(person, Me?, installed(Installed))],
                   [], [user_output(Out), net_output(NetOut)]),
     hold_person(Person?), sink(Out?), sink(NetOut?).
@@ -560,23 +570,23 @@ verdict_cert(word, M, CSig?) :-
     sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
 
 %% =============================================================================
-%% play_warranty(Me, Kind, Installed): Me installs pingapp's certified artefact
-%% under a developer's warranty signed by Me that does not bind pingapp's two
-%% identities: other, publish(Src, Cmp) of currency's artefact; source,
-%% pingapp's source identity with a compiled identity not its own.  The
+%% play_warranty(Me, Kind, Installed): Me installs GKK's app's certified
+%% artefact under a developer's warranty signed by Me that does not bind its
+%% two identities: other, publish(Src, Cmp) of GSN's app's artefact; source,
+%% GKK's app's source identity with a compiled identity not its own.  The
 %% warranty binds the exact program, its source and its compiled code (GPD:1;
 %% docs/compiled-home.md in GSA's repository, Section 4.3, check 1).
 %% Expected: Installed = [] for each Kind --- against
-%% play_install(Me, "pingapp.glpw", ping, I), I = [ping]; → succeeds.
+%% play_install(Me, "gkk.glpw", gkk, I), I = [gkk]; → succeeds.
 %% =============================================================================
 exported procedure play_warranty(Key?, Constant?, Stream(Constant)).
 play_warranty(Me, Kind, Installed?) :-
     ground(Me?) |
-    load_file("pingapp.glpw", C),
-    load_file("currency.glpw", O),
+    load_file("gkk.glpw", C),
+    load_file("gsn.glpw", O),
     warranty_of(Kind?, C?, O?, M, W),
     new_channel(Ui, Person),
-    agent # agent(Me?, [msg(person, Me?, install(ping, M?, W?, Ui?)),
+    agent # agent(Me?, [msg(person, Me?, install(gkk, M?, W?, Ui?)),
                         msg(person, Me?, installed(Installed))],
                   [], [user_output(Out), net_output(NetOut)]),
     hold_person(Person?), sink(Out?), sink(NetOut?).
@@ -675,10 +685,10 @@ sg_init(Me, invite, [Q], NetIn) :-
     ground(Me?), ground(Q?) |
     agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
-    load_file("pingapp.glpw", C),
+    load_file("gsn.glpw", C),
     certified(C?, CK, CSig),
     new_channel(App, Person),
-    miniapp_person_run(C?, Me?, greet, [Q?], Person?, Screen),
+    miniapp_person_run(C?, Me?, alice, [Q?], Person?, Screen),
     tee(Screen?, Show, Seen),
     send_to_user(Show?),
     alice_person_boot(Me?, Q?, C?, CK?, CSig?, App?, Out?, Seen?, In).
@@ -686,10 +696,10 @@ sg_init(Me, consent, [Q], NetIn) :-
     ground(Me?), ground(Q?) |
     agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
-    load_file("pingapp.glpw", C),
+    load_file("gsn.glpw", C),
     certified(C?, CK, CSig),
     new_channel(App, Person),
-    miniapp_person_run(C?, Me?, greet, [Q?], Person?, Screen),
+    miniapp_person_run(C?, Me?, bob, [Q?], Person?, Screen),
     tee(Screen?, Show, Seen),
     send_to_user(Show?),
     bob_person_boot(Me?, Q?, C?, CK?, CSig?, App?, Out?, Seen?, In).

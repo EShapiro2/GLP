@@ -173,21 +173,22 @@ def run(n):
     rd = answer(repl('%s\n:limit 10000000\nas_read(%s, R).\n:quit\n' % (gsc, ct)), 'R')
     if not rd:
         return 'no reading by as_read/2'
-    vt = answer(repl('%s\n:limit 1000000000\ncheck(%s, V).\n:quit\n' % (gsc, ct)), 'V')
+    # checked once: compile_contract/3 compiles on its verdict and gives it back (GSC, programs/gsc/self.glp)
+    lines = repl('%s\n:limit 1000000000\ncompile_contract(%s, %s, V).\n:quit\n' % (gsc, name, ct))
+    vt = answer(lines, 'V')
     if not vt:
         return 'no verdict'
     put('verdict.txt', vt)
     put(toglp.STAMP, toglp.term_hash(term))      # the term the verdict is of, by its hash: adopt.py refuses another
     if not vt.startswith('syntactically_grassroots') and not vt.startswith('grassroots_with_wards'):
         return 'not certified'
-    lines = repl('%s\n:limit 1000000000\ncompile_contract(%s, %s).\n:quit\n' % (gsc, name, ct))
     vm, on = [], False
     for l in lines:
         if l.startswith('Goal reduction limit set to'):
             on = True
         elif l.startswith('→ '):
             on = False
-        elif on and l:
+        elif on and l and not l.startswith('V = '):
             vm.append(l)
     if not vm:
         return 'certified; no VMAT form printed'

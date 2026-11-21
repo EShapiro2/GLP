@@ -524,7 +524,14 @@ say "schemas.txt: $(grep -cE '^[a-z_0-9]*: .* <-$' "$OUT/schemas.txt") schemas"
 fi
 
 # 3. The verdict, and 4. the VMAT form, from programs/gsc.
-printf '%s\n:limit 1000000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
+# Checked once: with --schemas by check/2; otherwise by compile_contract/3, which
+# compiles the contract on that verdict and gives it back, the verdict and the
+# displays being of one term (GSC, programs/gsc/self.glp).
+if [ "$MODE" = "--schemas" ]; then
+    printf '%s\n:limit 1000000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
+else
+    printf '%s\n:limit 1000000000\ncompile_contract(%s, %s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$NAME" "$CT" > "$WORK/v.in"
+fi
 repl "$WORK/v.in" "$WORK/v.out"
 VT=$(grep -E '^V = ' "$WORK/v.out" | head -1 | sed -e 's/^V = //')
 if [ -z "$VT" ]; then
@@ -553,11 +560,10 @@ if [ "$MODE" = "--schemas" ]; then
     exit 0
 fi
 
-printf '%s\n:limit 1000000000\ncompile_contract(%s, %s).\n:quit\n' "$GLP_DIR/programs/gsc/" "$NAME" "$CT" > "$WORK/m.in"
-repl "$WORK/m.in" "$WORK/m.out"
+cp "$WORK/v.out" "$WORK/m.out"
 # What the compiler prints between the goal and its status line: the displays,
 # a token to a line, or the lines of its refusal.
-awk '/^Goal reduction limit set to/ { on = 1; next } /^→ / { on = 0 } /^$/ { next } on' "$WORK/m.out" > "$OUT/vmat.tex"
+awk '/^Goal reduction limit set to/ { on = 1; next } /^→ / { on = 0 } /^$/ { next } /^V = / { next } on' "$WORK/m.out" > "$OUT/vmat.tex"
 if [ ! -s "$OUT/vmat.tex" ]; then
     say "the compiler to VMAT printed nothing"
     grep -E '(Error|error|✗)' "$WORK/m.out" | head -10

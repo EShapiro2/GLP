@@ -965,7 +965,7 @@ term_to_string(T, S?) :-
 % hash(S, H): H is the SHA-256 of the UTF-8 bytes of the string S, lowercase
 % hex, a Hash; the same at every participant, so that the hash of a text naming
 % a value and a secret seals the value, and the value and the secret, stated
-% later, are checked against the seal (proposed for GLP-Spec appendix-guards,
+% later, are checked against the seal (GLP-Spec appendix-guards,
 % "Text").
 procedure hash(String?, Hash).
 hash(S, H?) :-
@@ -1205,3 +1205,112 @@ close_mutual_reference(Ref) :-
 % '_allocate_mutual_reference' kernel.
 procedure(X) allocate_mutual_reference(MutualRef, Stream(X)).
 allocate_mutual_reference(Ref?, Out?) :- '_allocate_mutual_reference'(Ref, Out).
+
+% The checker's types (programs/gsc): the contract as GSC's reader reads it,
+% WDeclared, which as_read/2 gives and check/2 takes, and the checker's
+% verdict, Verdict, with the types each is built of.  They are here, the
+% lowest common ancestor of programs/gsc, the platforms vGLP prints, whose
+% contract/2 gives the contract read (OSPM, act-schemas-local), and the
+% Grassroots App, which calls check/2 by dynamic activation (TGLP, "Common
+% protocol types are defined once at the lowest common ancestor of all
+% modules that use them").  programs/gsc defines none of them again; what
+% each means is in programs/gsc's comments and in GSC's paper.
+NameTerm  ::= own(Integer) ; own_var(Constant)
+            ; ext(NameTerm, Constant) ; ext_any(NameTerm).
+Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
+        ; sgn(Constant, Integer) ; num(Constant) ; real(Constant)
+        ; const(Constant) ; any
+        ; item_of(Arg) ; val(Constant).
+Args  ::= [] ; [Arg | Args].
+Atom  ::= atom(Constant, Args).
+Mult       ::= Atom ; times(Arg, Atom) ; rest(Expr, Expr, Atom).
+Mults      ::= [] ; [Mult | Mults].
+Constraint ::= true ; and(Constraint, Constraint)
+             ; eq(Expr, Expr) ; le(Expr, Expr) ; lt(Expr, Expr)
+             ; ge(Expr, Expr) ; gt(Expr, Expr) ; succ(Arg, Arg)
+             ; or(Constraint, Constraint) ; not(Constraint)
+             ; implies(Constraint, Constraint)
+             ; ne(Expr, Expr) ; rel(Constant, Exprs)
+             ; signed(Arg, Arg) ; unsigned(Arg, Arg)
+             ; program(Expr).
+Expr       ::= Arg ; plus(Expr, Expr) ; minus(Expr, Expr) ; mul(Expr, Expr)
+             ; fn(Constant, Exprs) ; cardinality(Args, Arg, Atom, Form)
+             ; sum(Args, Arg, Atom, Form, Expr)
+             ; author_of(Arg).
+Exprs      ::= [] ; [Expr | Exprs].
+Form       ::= fa(Arg, Mult) ; fnot(Form) ; fand(Form, Form) ; for(Form, Form)
+             ; fexists(Args, Arg, Atom, Form)
+             ; fforall(Args, Arg, Atom, Form, Forms)
+             ; fcons(Constraint).
+Forms      ::= [] ; [Form | Forms].
+Guard     ::= guarded ; unguarded.
+RoleKind  ::= listed(Integer, Constant, Args)
+            ; qlisted(Integer, Constant, Args, Args).
+HMult     ::= hm(Integer, Mult).
+HMults    ::= [] ; [HMult | HMults].
+Conjunct  ::= conjunct(Args, Integer, Atom, Form, HMults, HMults, Forms).
+Conjuncts ::= [] ; [Conjunct | Conjuncts].
+Nil       ::= [].
+NRoleSpec  ::= rs(Guard, Mults, Mults, Mults, Mults)
+             ; crs(RoleKind, Guard, Mults, Mults, Mults, Mults).
+NRoleSpecs ::= [] ; [NRoleSpec | NRoleSpecs].
+WSchema    ::= schema(Constant, Args, NRoleSpecs)
+             ; cschema(Constant, Args, Nil, NRoleSpecs)
+             ; nschema(Constant, Args, Constraint, NRoleSpecs)
+             ; schema(Constant, Names, Args, NRoleSpecs)
+             ; cschema(Constant, Names, Args, Nil, NRoleSpecs)
+             ; nschema(Constant, Names, Args, Constraint, NRoleSpecs)
+             ; qschema(Constant, Args, Args, Constraint, NRoleSpecs, Conjuncts, Forms)
+             ; qschema(Constant, Names, Args, Args, Constraint, NRoleSpecs, Conjuncts, Forms)
+             ; SSchema.
+WContract  ::= [] ; [WSchema | WContract].
+WBody      ::= WContract ; reflexive(Preds, WContract).
+WDeclared  ::= WBody ; environment(Preds, WBody) ; parametric(SParams, WDeclared).
+Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive ; environment
+        ; listed_role(Constant, Integer, Atom).
+SgnCause ::= not_added ; not_required ; not_agent_role.
+Fault ::= no_introductory_act
+        ; obstructed(Constant, Integer, Atom, Cause)
+        ; untraceable(Preds)
+        ; volition(Constant, Integer, Integer)
+        ; reflexive(Constant, Integer, Atom)
+        ; signed(Constant, Integer, Atom, SgnCause)
+        ; changes_nothing(Constant, Integer)
+        ; listed_reading(Constant, Integer)
+        ; no_signature_atom(Constant)
+        ; no_role_changes(Constant)
+        ; head_not_variable(Constant, Arg)
+        ; head_repeated(Constant, Arg)
+        ; not_in_head(Constant, Arg)
+        ; name_term_base(Constant, NameTerm)
+        ; listed_base(Constant, Integer)
+        ; listed_signed(Constant, Integer)
+        ; multiplicity_not_numeric(Constant, Integer, Atom)
+        ; multiplicity_not_whole(Constant, Integer, Atom)
+        ; multiplicity_wildcard(Constant, Integer, Atom)
+        ; constraint_not_numeric(Constant, Arg)
+        ; signing_not_agent(Constant, Arg)
+        ; signing_not_speech_act(Constant, Arg)
+        ; obstructed_jointly(Constant)
+        ; not_holder(Constant, Constant)
+        ; not_in_vars(Constant, Constant)
+        ; deleted_not_required(Constant, Integer, Atom)
+        ; condition_holder(Constant, Constant)
+        ; head_formula(Constant)
+        ; quantified_condition(Constant, Constant)
+        ; listed_agent_role(Constant, Constant)
+        ; guard_not_role(Constant, Constant)
+        ; value_type(Constant, Constant)
+        ; item_argument(Constant, Constant)
+        ; unsupplied(Constant, Constant).
+Faults  ::= [] ; [Fault | Faults].
+Guardianship  ::= guardianship(Constant, Constant, Constant).
+Guardianships ::= [] ; [Guardianship | Guardianships].
+Guardian ::= guardian(Integer) ; no_guardian.
+Party  ::= ward(Integer, Constant, Guardian) ; free(Integer).
+Relay  ::= relay(Constant, Party, Party).
+Relays ::= [] ; [Relay | Relays].
+Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
+          ; syntactically_grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
+          ; grassroots_with_wards(Constant, Preds, Guardianships, Relays, Preds)
+          ; malformed(Faults).
