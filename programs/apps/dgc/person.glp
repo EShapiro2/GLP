@@ -1,0 +1,577 @@
+%% person.glp --- the DGC mini-app's scripted person: the instance of the root's second template miniapp_person/5 (programs/self.glp) at Drawn, what the mini-app's dispatcher draws, and at Seen, the screen the person reports (self.glp).  The plays of this directory call it beside the entry (plays.glp).  It is GB's app's person (../gb/person.glp), the clock and lacks(A, N) with it, with DGC's scripts and the matching of DGC's classes, whose denomination, a constant, is matched by match_const/5.
+%%
+%% The person reads what the dispatcher draws on the person channel (vGLP, "The construct process": draw(Id, W, V) and withdraw(Id); a grant input(Id, P, R)): the agent's request questions, each bare, of the request type Request?, taking one request (vGLP 12f629d, Section 5.4, "The compilation"); the program's output, construct 0, drawn whole as it grows, on which the agent writes its view, view(Id, S, K, A, Ts), its own key Id, the machine state S, the persons K it knows, the approvals A its person made that are pending and the tabs Ts, when it starts and whenever any changes (vGLP 12f629d, Section 5.4, "The compilation"), and the notices it writes there when an approval its person made, by a request or by an answer yes, ends by a refusal, refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable (vGLP e286276, Section 5.4, "The compilation"); and the approval questions Start raises.  The person's screen shows the last view written and the notices written after it (vGLP f5f1644, Section 5.4, "The compilation").  Its script is a list of steps: req(R) grants the request R on the request question open, once one is drawn; own(Ks, R) grants R likewise, once the person has written into each of the holes Ks the agent's own key, which the last view drawn shows, R reading the holes wherever it names the agent, so that a person proposing a class that names their agent names it by the key they read off the view, as the request form does (vGLP 12f629d, Section 5.4, "The compilation"; Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"); look reports menu(K, Ks), K the agent's own key and Ks the persons it knows, as the last view drawn shows them, once a request question is drawn; wait(C) waits until the screen shows C; approval(K, A) answers A, yes or no, the approval question of the attempt K, or of an attempt of the class K, once it is drawn.  The screen shows known(Q) where the last view shows Q among the persons the agent knows; holds(A) where its machine state holds the atom A, lacks(A) where it does not, and has(A, N) where it holds A at least N times; refused(P, Q, D) where that notice is written after the last view; refused_by(P, Q) where a notice refused(P, Q, D) has been written, of any reason D; asked(K) where the approval question of the attempt K, or of an attempt of the class K, is drawn and not answered; and asking where a request question is drawn and not answered.  It reports each view and each notice once, with gave(K, A) where it answers an approval question. It is the scripted person of the plays of programs/vglp/cva (self.glp there), at the platform's own types.
+%%
+%% The roles, by which the plays choose a script, each with the keys of those its person has a conversation with (alice: bob; bob: alice), its own key the first argument; the denomination is usd:
+%%   alice  sets the clock to day 1; looks at her request question; establishes
+%%          her identity (GKK:1); asks to come to know bob (GKK:2); issues two
+%%          usd-denominated Alice-coins, her first issue in usd (Denominated
+%%          Coins), and three usd-denominated Alice-bonds due day 10, later
+%%          than day 1, the current date (DGC:1, Issue denominated bond); asks
+%%          bob to swap her two Alice-coins for his two Bob-coins, of the one
+%%          denomination (DGC:2, Swap); once bob has paid her back one
+%%          Alice-coin, pays it to bob, who accepts it (DGC:4, Pay own accepted
+%%          coins); looks again.
+%%   bob    sets the clock to day 1; establishes his identity; issues two
+%%          usd-denominated Bob-coins, his first issue in usd; answers yes to
+%%          alice asking that they come to know each other and yes to her
+%%          swap; once he holds her two Alice-coins, accepts one more
+%%          usd-denominated Alice-coin in payment (DGC:3, Accept); pays alice
+%%          one of her own Alice-coins (Coins:1, Pay issuer); and waits until
+%%          her payment has brought his Alice-coins back to two.
+%%   mint   the person alone of dgc_mint_boot.glp and of play_mint: sets the clock
+%%          to day 1; establishes her identity (GKK:1); issues three
+%%          usd-denominated coins of her own (First issue); looks.
+%% Any other role has no script: its person reports the views and acts on nothing.
+
+Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo)
+        ; approval(Fills, Class, YesNo) ; clock(Integer).
+Cond  ::= known(Key) ; holds(Atom) ; lacks(Atom) ; lacks(Atom, Integer) ; has(Atom, Integer)
+        ; refused(Proposal, Key, Reason) ; refused_by(Proposal, Key) ; asked(Asked) ; asking.
+Last  ::= last(Key, List(Atom), List(Key)) ; nolast.
+Steps ::= [] ; [Step | Steps].
+Holes ::= [] ; [Key? | Holes].
+Sess  ::= nosess ; sess(Integer, Path).
+Shown ::= shown(Integer, Path, Asking).
+Shows ::= [] ; [Shown | Shows].
+PSt   ::= ps(Sess, List(Output), Shows, Steps).
+ApprovalAt ::= approval_at(Integer, Path, Shows) ; noapproval.
+YN    ::= y ; n.
+Fills ::= [] ; [Holes | Fills].
+Found ::= found(List(Key)) ; nomatch.
+Matched ::= matched(Integer, Path, Shows, List(Key)) ; unmatched.
+
+exported procedure miniapp_person(Key?, Constant?, List(Key)?, Channel(PersonOut(Drawn), PersonIn(Drawn))?, Stream(Seen)).
+miniapp_person(Me, Role, Ps, ch(Ds, Gs?), S?) :-
+    script(Role?, Me?, Ps?, Ss),
+    person(Ds?, Gs, ps(nosess, [], [], Ss?), S).
+
+%% script(Role, Me, Ps, Ss): the script Ss of the role, Me the person's own key and Ps the keys the person knows, each peer named by its key in Ps, by its position there.
+procedure script(Constant?, Key?, List(Key)?, Steps).
+script(alice, Me, [Bob], [clock(86400000), look, own([A1], propose(establish(A1?))), wait(holds(identity)),
+               own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
+               own([A2], propose(first_issue(A2?, usd, 2))), wait(has(coin(Me?, usd), 2)),
+               own([A3], propose(issue_denominated_bond(A3?, 10, usd, 3))), wait(has(bond(Me?, 10, usd), 3)),
+               own([A4, A5], propose(swap(A4?, Bob?, A5?, Bob?, usd, 2, 2))), wait(has(coin(Bob?, usd), 2)),
+               wait(holds(coin(Me?, usd))),
+               own([A6], propose(pay_own_accepted_coins(A6?, Bob?, usd))), wait(lacks(coin(Me?, usd))), look]) :-
+    ground(Me?), ground(Bob?) | true.
+script(bob, Me, [Alice], [clock(86400000), own([B1], propose(establish(B1?))), wait(holds(identity)),
+             own([B2], propose(first_issue(B2?, usd, 2))), wait(has(coin(Me?, usd), 2)),
+             approval(acquaint(Alice?, Me?), yes),
+             approval(swap(Alice?, Me?, Alice?, Me?, usd, 2, 2), yes), wait(has(coin(Alice?, usd), 2)),
+             own([B3], propose(accept(B3?, Alice?, usd, 1))), wait(holds(accepts(Alice?, usd))),
+             own([B4], propose(pay_issuer(B4?, Alice?, usd, 1))), wait(lacks(coin(Alice?, usd), 2)),
+             wait(has(coin(Alice?, usd), 2)), look]) :-
+    ground(Me?), ground(Alice?) | true.
+script(mint, Me, [], [clock(86400000), own([A1], propose(establish(A1?))), wait(holds(identity)),
+                         own([A2], propose(first_issue(A2?, usd, 3))), wait(has(coin(Me?, usd), 3)), look]) :-
+    ground(Me?) | true.
+script(_, _, _, []) :- otherwise | true.
+
+%% The person.
+procedure person(PersonOut(Drawn)?, PersonIn(Drawn), PSt?, Stream(Seen)).
+person([draw(0, _, output(T)) | Ds], Gs?, ps(Se, Old, Cs, Ss), Log?) :-
+    ground(T?) |
+    log_new(Old?, T?, Log, Log1?),
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log1, Log2?),
+    person(Ds?, Gs1, St1?, Log2).
+%% The request question, bare, of the request type Request? (vGLP 12f629d, Section 5.4, "The compilation"): the person reads the agent's own key and the persons it knows off the last view drawn on construct 0, as the request form does (Section 6.2).
+person([draw(Id, _, request_r(input(P))) | Ds], Gs?, ps(_, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?) |
+    advance(ps(sess(Id?, P?), T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?),
+    person(Ds?, Gs1, St1?, Log1).
+person([draw(Id, _, approval_w(approval(At, _, input(P)))) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+    ground(Id?), ground(P?), ground(At?) |
+    advance(ps(Se?, T?, [shown(Id?, P?, At?) | Cs?], Ss?), Gs, Gs1?, St1, Log, Log1?),
+    person(Ds?, Gs1, St1?, Log1).
+person([withdraw(Id) | Ds], Gs?, ps(Se, T, Cs, Ss), Log?) :-
+    ground(Id?) |
+    drop_shown(Id?, Cs?, Cs1),
+    person(Ds?, Gs, ps(Se?, T?, Cs1?, Ss?), Log).
+person([_ | Ds], Gs?, St, Log?) :-
+    otherwise | person(Ds?, Gs, St?, Log).
+
+%% advance(St, Gs, Gs1, St1, Log, Log1): the script's steps taken as far as they can be, the grants written on Gs, continuing at Gs1.
+procedure advance(PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+advance(ps(sess(Id, P), T, Cs, [req(R) | Ss]), [input(Id?, P?, R?) | Gs?], Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?) |
+    advance(ps(nosess, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [req(R) | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [req(R?) | Ss?]), Log1?, Log1).
+advance(ps(sess(Id, P), T, Cs, [own(Ks, R) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?), ground(T?) |
+    last_of(T?, L),
+    owned(L?, ps(sess(Id?, P?), T?, Cs?, [own(Ks?, R?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [own(Ks, R) | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [own(Ks?, R?) | Ss?]), Log1?, Log1).
+advance(ps(sess(Id, P), T, Cs, [look | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Id?), ground(P?), ground(T?) |
+    last_of(T?, L),
+    looked(L?, ps(sess(Id?, P?), T?, Cs?, [look | Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(nosess, T, Cs, [look | Ss]), Gs1?, Gs1, ps(nosess, T?, Cs?, [look | Ss?]), Log1?, Log1).
+advance(ps(Se, T, Cs, [wait(X) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Se?), ground(T?), ground(Cs?), ground(X?) |
+    shows(X?, Se?, T?, Cs?, B),
+    waited(B?, ps(Se?, T?, Cs?, [wait(X?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(Se, T, Cs, [approval(K, A) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Cs?), ground(K?) |
+    find_approval(K?, Cs?, F),
+    approved(F?, ps(Se?, T?, Cs?, [approval(K?, A?) | Ss?]), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(Se, T, Cs, [approval(Fs, K, A) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Cs?) |
+    rev_shown(Cs?, [], Rs),
+    match_approval(K?, Rs?, [], M, K1),
+    matched(M?, Fs?, K1?, A?, ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+%% clock(T) sets the machine's clock to T, Unix milliseconds, by GLP's set_clock/1, as vGLP's scripted person does (programs/vglp/cva/self.glp): the compiled agent of DGC reads the date by now/1, in whole days, floor(T / 86400000), UTC, whenever it reads a trigger (vGLP, Section 5.4), and nothing triggers it when the day changes.  The clock is the machine's: in a play it is the one clock of every agent, on a smartphone the phone's.
+advance(ps(Se, T, Cs, [clock(Ms) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    integer(Ms?) |
+    set_clock(Ms?),
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+advance(ps(Se, T, Cs, []), Gs1?, Gs1, ps(Se?, T?, Cs?, []), Log1?, Log1).
+
+%% owned(L, St, ...): the step own(Ks, R), the agent's own key read off the last view drawn, L, written into each hole of Ks, and R granted; with no view drawn yet, the step waits (vGLP 12f629d, Section 5.4, "The compilation": the view carries "its own key k"; Section 6.2).
+procedure owned(Last?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+owned(last(Me, _, _), ps(sess(Id, P), T, Cs, [own(Ks, R) | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    ground(Me?), ground(Id?), ground(P?) |
+    fill(Me?, Ks?),
+    grant(Id?, P?, R?, Gs, Gs2?),
+    advance(ps(nosess, T?, Cs?, Ss?), Gs2, Gs1?, St1, Log, Log1?).
+owned(nolast, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+%% looked(L, St, ...): the step look, which reports menu(K, Ks), the agent's own key and the persons it knows as the last view drawn, L, shows them; with no view drawn yet, the step waits.
+procedure looked(Last?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+looked(last(Me, _, Ks), ps(Se, T, Cs, [look | Ss]), Gs?, Gs1, St1?, [menu(Me?, Ks?) | Log?], Log1) :-
+    ground(Me?), ground(Ks?) |
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+looked(nolast, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+%% fill(Me, Ks): the agent's own key Me written into each hole of Ks.
+procedure fill(Key?, Holes?).
+fill(Me, [Me? | Ks]) :- ground(Me?) | fill(Me?, Ks?).
+fill(_, []).
+
+%% The step approval(Fs, K, A): the answer A to the earliest approval question drawn whose attempt's class, or whose hello's proposal, the class K matches, K holding holes where the script does not know the key the question carries --- the issuer of a coin offered by one the person knows, say.  The question's keys at the holes fill them, the holes of K in order, the first hole's key into each hole of the first list of Fs, and so on, so that the steps after it name that key by the holes they read (GLP #11 Cowork, Code_inbox.md, 2026-11-03 17:23 UTC, item 2: "a form of wait or approval with holes filled by matching is a construct of the owners' scripted-person interpreter, written in GLP").  A hole is a key still unknown where the class is matched; the class names every other key.
+procedure matched(Matched?, Fills?, Class?, YesNo?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+matched(matched(Id, P, Cs1, Vs), Fs, K, A, ps(Se, T, _, Ss), [input(Id?, P?, A?) | Gs?], Gs1, St1?, [gave(K?, A?) | Log?], Log1) :-
+    ground(Vs?), ground(A?) |
+    rev_keys(Vs?, [], Ws),
+    fill_each(Ws?, Fs?),
+    advance(ps(Se?, T?, Cs1?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+matched(unmatched, Fs, K, A, ps(Se, T, Cs, Ss), Gs1?, Gs1, ps(Se?, T?, Cs?, [approval(Fs?, K?, A?) | Ss?]), Log1?, Log1).
+
+%% fill_each(Ws, Fs): each key of Ws written into each hole of the list of Fs at its place.
+procedure fill_each(List(Key)?, Fills?).
+fill_each([W | Ws], [Hs | Fs]) :- ground(W?) | fill(W?, Hs?), fill_each(Ws?, Fs?).
+fill_each([], []).
+
+procedure rev_keys(List(Key)?, List(Key)?, List(Key)).
+rev_keys([], Acc, Acc?).
+rev_keys([K | Ks], Acc, R?) :- rev_keys(Ks?, [K? | Acc?], R).
+
+%% match_approval(K, Cs, Done, M, K1): M matched(Id, P, Rest, Vs), the earliest question of Cs whose asking K matches, Vs the keys at K's holes, the last first, Rest the questions left; unmatched where none does.  K1 is K, passed back.
+procedure match_approval(Class?, Shows?, Shows?, Matched, Class).
+match_approval(K, [], _, unmatched, K?).
+match_approval(K, [shown(Id, P, At) | Cs], Done, M?, K2?) :-
+    ground(Id?), ground(P?), ground(At?) |
+    match_asking(K?, At?, F, K1),
+    match_next(F?, K1?, shown(Id?, P?, At?), Cs?, Done?, M, K2).
+
+procedure match_next(Found?, Class?, Shown?, Shows?, Shows?, Matched, Class).
+match_next(found(Vs), K, shown(Id, P, _), Cs, Done, matched(Id?, P?, Rest?, Vs?), K?) :-
+    rev_shown(Done?, Cs?, Rest).
+match_next(nomatch, K, S, Cs, Done, M?, K1?) :-
+    match_approval(K?, Cs?, [S? | Done?], M, K1).
+
+%% An attempt is matched by its class, a hello by its proposal.
+procedure match_asking(Class?, Asking?, Found, Class).
+match_asking(K, attempt(_, _, _, C, _), F?, K1?) :- match_class(K?, C?, [], F, K1).
+match_asking(K, hello(_, N), F?, K1?) :- match_class(K?, N?, [], F, K1).
+
+%% match_class(K, X, Vs, F, K1): F found(Vs1) where the class K, with holes, matches X, Vs1 the keys of X at K's holes, the last first, before Vs; nomatch where it does not.  K1 is K, passed back.
+procedure match_class(Class?, Class?, List(Key)?, Found, Class).
+match_class(establish(K1), establish(XK1), Vs, F?, establish(BK1?)) :-
+    match_key(K1?, XK1?, found(Vs?), F, BK1).
+match_class(acquaint(K1, K2), acquaint(XK1, XK2), Vs, F?, acquaint(BK1?, BK2?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, F, BK2).
+match_class(introduce(K1, K2, K3), introduce(XK1, XK2, XK3), Vs, F?, introduce(BK1?, BK2?, BK3?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, F, BK3).
+match_class(issue(K1, K2, K3), issue(XK1, XK2, XK3), Vs, F?, issue(BK1?, BK2?, BK3?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_const(K2?, XK2?, R1?, R2, BK2),
+    match_int(K3?, XK3?, R2?, F, BK3).
+match_class(issue_bond(K1, K2, K3, K4), issue_bond(XK1, XK2, XK3, XK4), Vs, F?, issue_bond(BK1?, BK2?, BK3?, BK4?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_int(K2?, XK2?, R1?, R2, BK2),
+    match_const(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, F, BK4).
+match_class(swap(K1, K2, K3, K4, K5, K6, K7), swap(XK1, XK2, XK3, XK4, XK5, XK6, XK7), Vs, F?, swap(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_key(K4?, XK4?, R3?, R4, BK4),
+    match_const(K5?, XK5?, R4?, R5, BK5),
+    match_int(K6?, XK6?, R5?, R6, BK6),
+    match_int(K7?, XK7?, R6?, F, BK7).
+match_class(swap_coin_for_bond(K1, K2, K3, K4, K5, K6, K7, K8), swap_coin_for_bond(XK1, XK2, XK3, XK4, XK5, XK6, XK7, XK8), Vs, F?, swap_coin_for_bond(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?, BK8?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_int(K5?, XK5?, R4?, R5, BK5),
+    match_key(K6?, XK6?, R5?, R6, BK6),
+    match_int(K7?, XK7?, R6?, R7, BK7),
+    match_int(K8?, XK8?, R7?, F, BK8).
+match_class(swap_bonds(K1, K2, K3, K4, K5, K6, K7, K8, K9), swap_bonds(XK1, XK2, XK3, XK4, XK5, XK6, XK7, XK8, XK9), Vs, F?, swap_bonds(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?, BK8?, BK9?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, R4, BK4),
+    match_const(K5?, XK5?, R4?, R5, BK5),
+    match_int(K6?, XK6?, R5?, R6, BK6),
+    match_key(K7?, XK7?, R6?, R7, BK7),
+    match_int(K8?, XK8?, R7?, R8, BK8),
+    match_int(K9?, XK9?, R8?, F, BK9).
+match_class(pay(K1, K2, K3, K4, K5), pay(XK1, XK2, XK3, XK4, XK5), Vs, F?, pay(BK1?, BK2?, BK3?, BK4?, BK5?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_int(K5?, XK5?, R4?, F, BK5).
+match_class(pay_issuer(K1, K2, K3, K4), pay_issuer(XK1, XK2, XK3, XK4), Vs, F?, pay_issuer(BK1?, BK2?, BK3?, BK4?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_const(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, F, BK4).
+match_class(pay_bond(K1, K2, K3, K4, K5, K6), pay_bond(XK1, XK2, XK3, XK4, XK5, XK6), Vs, F?, pay_bond(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, R4, BK4),
+    match_const(K5?, XK5?, R4?, R5, BK5),
+    match_int(K6?, XK6?, R5?, F, BK6).
+match_class(deposit(K1, K2, K3, K4, K5, K6, K7), deposit(XK1, XK2, XK3, XK4, XK5, XK6, XK7), Vs, F?, deposit(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_int(K5?, XK5?, R4?, R5, BK5),
+    match_key(K6?, XK6?, R5?, R6, BK6),
+    match_speech(K7?, XK7?, R6?, F, BK7).
+match_class(deposit_bond(K1, K2, K3, K4, K5, K6, K7, K8), deposit_bond(XK1, XK2, XK3, XK4, XK5, XK6, XK7, XK8), Vs, F?, deposit_bond(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?, BK8?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, R4, BK4),
+    match_const(K5?, XK5?, R4?, R5, BK5),
+    match_int(K6?, XK6?, R5?, R6, BK6),
+    match_key(K7?, XK7?, R6?, R7, BK7),
+    match_speech(K8?, XK8?, R7?, F, BK8).
+match_class(release(K1, K2, K3, K4, K5, K6, K7), release(XK1, XK2, XK3, XK4, XK5, XK6, XK7), Vs, F?, release(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_key(K5?, XK5?, R4?, R5, BK5),
+    match_speech(K6?, XK6?, R5?, R6, BK6),
+    match_int(K7?, XK7?, R6?, F, BK7).
+match_class(release_bond(K1, K2, K3, K4, K5, K6, K7, K8), release_bond(XK1, XK2, XK3, XK4, XK5, XK6, XK7, XK8), Vs, F?, release_bond(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?, BK8?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, R4, BK4),
+    match_const(K5?, XK5?, R4?, R5, BK5),
+    match_key(K6?, XK6?, R5?, R6, BK6),
+    match_speech(K7?, XK7?, R6?, R7, BK7),
+    match_int(K8?, XK8?, R7?, F, BK8).
+match_class(return(K1, K2, K3, K4, K5, K6, K7), return(XK1, XK2, XK3, XK4, XK5, XK6, XK7), Vs, F?, return(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_key(K5?, XK5?, R4?, R5, BK5),
+    match_speech(K6?, XK6?, R5?, R6, BK6),
+    match_int(K7?, XK7?, R6?, F, BK7).
+match_class(return_bond(K1, K2, K3, K4, K5, K6, K7, K8), return_bond(XK1, XK2, XK3, XK4, XK5, XK6, XK7, XK8), Vs, F?, return_bond(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?, BK8?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, R4, BK4),
+    match_const(K5?, XK5?, R4?, R5, BK5),
+    match_key(K6?, XK6?, R5?, R6, BK6),
+    match_speech(K7?, XK7?, R6?, R7, BK7),
+    match_int(K8?, XK8?, R7?, F, BK8).
+match_class(redeem(K1, K2, K3, K4), redeem(XK1, XK2, XK3, XK4), Vs, F?, redeem(BK1?, BK2?, BK3?, BK4?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, F, BK4).
+match_class(redeem_coin_against_bond(K1, K2, K3, K4, K5), redeem_coin_against_bond(XK1, XK2, XK3, XK4, XK5), Vs, F?, redeem_coin_against_bond(BK1?, BK2?, BK3?, BK4?, BK5?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_const(K3?, XK3?, R2?, R3, BK3),
+    match_key(K4?, XK4?, R3?, R4, BK4),
+    match_int(K5?, XK5?, R4?, F, BK5).
+match_class(redeem_bond(K1, K2, K3, K4, K5), redeem_bond(XK1, XK2, XK3, XK4, XK5), Vs, F?, redeem_bond(BK1?, BK2?, BK3?, BK4?, BK5?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_int(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_key(K5?, XK5?, R4?, F, BK5).
+match_class(redeem_bond_against_bond(K1, K2, K3, K4, K5, K6), redeem_bond_against_bond(XK1, XK2, XK3, XK4, XK5, XK6), Vs, F?, redeem_bond_against_bond(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_int(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_key(K5?, XK5?, R4?, R5, BK5),
+    match_int(K6?, XK6?, R5?, F, BK6).
+match_class(first_issue(K1, K2, K3), first_issue(XK1, XK2, XK3), Vs, F?, first_issue(BK1?, BK2?, BK3?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_const(K2?, XK2?, R1?, R2, BK2),
+    match_int(K3?, XK3?, R2?, F, BK3).
+match_class(issue_denominated_bond(K1, K2, K3, K4), issue_denominated_bond(XK1, XK2, XK3, XK4), Vs, F?, issue_denominated_bond(BK1?, BK2?, BK3?, BK4?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_int(K2?, XK2?, R1?, R2, BK2),
+    match_const(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, F, BK4).
+match_class(deposit_own_coins(K1, K2, K3, K4, K5, K6), deposit_own_coins(XK1, XK2, XK3, XK4, XK5, XK6), Vs, F?, deposit_own_coins(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_const(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, R4, BK4),
+    match_key(K5?, XK5?, R4?, R5, BK5),
+    match_speech(K6?, XK6?, R5?, F, BK6).
+match_class(deposit_with_the_issuer(K1, K2, K3, K4, K5, K6), deposit_with_the_issuer(XK1, XK2, XK3, XK4, XK5, XK6), Vs, F?, deposit_with_the_issuer(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_const(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, R4, BK4),
+    match_key(K5?, XK5?, R4?, R5, BK5),
+    match_speech(K6?, XK6?, R5?, F, BK6).
+match_class(deposit_more(K1, K2, K3, K4, K5, K6, K7), deposit_more(XK1, XK2, XK3, XK4, XK5, XK6, XK7), Vs, F?, deposit_more(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_int(K5?, XK5?, R4?, R5, BK5),
+    match_key(K6?, XK6?, R5?, R6, BK6),
+    match_speech(K7?, XK7?, R6?, F, BK7).
+match_class(deposit_own_bonds(K1, K2, K3, K4, K5, K6, K7), deposit_own_bonds(XK1, XK2, XK3, XK4, XK5, XK6, XK7), Vs, F?, deposit_own_bonds(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_int(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_int(K5?, XK5?, R4?, R5, BK5),
+    match_key(K6?, XK6?, R5?, R6, BK6),
+    match_speech(K7?, XK7?, R6?, F, BK7).
+match_class(deposit_bond_with_the_issuer(K1, K2, K3, K4, K5, K6, K7), deposit_bond_with_the_issuer(XK1, XK2, XK3, XK4, XK5, XK6, XK7), Vs, F?, deposit_bond_with_the_issuer(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_int(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, R4, BK4),
+    match_int(K5?, XK5?, R4?, R5, BK5),
+    match_key(K6?, XK6?, R5?, R6, BK6),
+    match_speech(K7?, XK7?, R6?, F, BK7).
+match_class(deposit_bond_more(K1, K2, K3, K4, K5, K6, K7, K8), deposit_bond_more(XK1, XK2, XK3, XK4, XK5, XK6, XK7, XK8), Vs, F?, deposit_bond_more(BK1?, BK2?, BK3?, BK4?, BK5?, BK6?, BK7?, BK8?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, R4, BK4),
+    match_const(K5?, XK5?, R4?, R5, BK5),
+    match_int(K6?, XK6?, R5?, R6, BK6),
+    match_key(K7?, XK7?, R6?, R7, BK7),
+    match_speech(K8?, XK8?, R7?, F, BK8).
+match_class(accept(K1, K2, K3, K4), accept(XK1, XK2, XK3, XK4), Vs, F?, accept(BK1?, BK2?, BK3?, BK4?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_const(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, F, BK4).
+match_class(accept_by_bond(K1, K2, K3, K4), accept_by_bond(XK1, XK2, XK3, XK4), Vs, F?, accept_by_bond(BK1?, BK2?, BK3?, BK4?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_const(K3?, XK3?, R2?, R3, BK3),
+    match_int(K4?, XK4?, R3?, F, BK4).
+match_class(pay_accepted_coins(K1, K2, K3, K4), pay_accepted_coins(XK1, XK2, XK3, XK4), Vs, F?, pay_accepted_coins(BK1?, BK2?, BK3?, BK4?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_key(K3?, XK3?, R2?, R3, BK3),
+    match_const(K4?, XK4?, R3?, F, BK4).
+match_class(pay_own_accepted_coins(K1, K2, K3), pay_own_accepted_coins(XK1, XK2, XK3), Vs, F?, pay_own_accepted_coins(BK1?, BK2?, BK3?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_const(K3?, XK3?, R2?, F, BK3).
+match_class(pay_accepted_coins_to_the_issuer(K1, K2, K3), pay_accepted_coins_to_the_issuer(XK1, XK2, XK3), Vs, F?, pay_accepted_coins_to_the_issuer(BK1?, BK2?, BK3?)) :-
+    match_key(K1?, XK1?, found(Vs?), R1, BK1),
+    match_key(K2?, XK2?, R1?, R2, BK2),
+    match_const(K3?, XK3?, R2?, F, BK3).
+match_class(K, _, _, nomatch, K?) :- otherwise | true.
+
+%% match_key(K, X, F0, F, K1): a hole K, unknown, takes the key X; a key K matches X where the two are equal.
+procedure match_key(Key?, Key?, Found?, Found, Key).
+match_key(K, _, nomatch, nomatch, K?).
+match_key(K, X, found(Vs), found([X? | Vs?]), K?) :- unknown(K?) | true.
+match_key(K, X, found(Vs), found(Vs?), K?) :- K? =?= X? | true.
+match_key(K, _, found(_), nomatch, K?) :- otherwise | true.
+
+procedure match_int(Integer?, Integer?, Found?, Found, Integer).
+match_int(I, _, nomatch, nomatch, I?).
+match_int(I, X, found(Vs), found(Vs?), I?) :- I? =:= X? | true.
+match_int(I, _, found(_), nomatch, I?) :- otherwise | true.
+
+%% match_const(C, X, F0, F, C1): a denomination C, which the script names, matches X where the two are equal.
+procedure match_const(Constant?, Constant?, Found?, Found, Constant).
+match_const(C, _, nomatch, nomatch, C?).
+match_const(C, X, found(Vs), found(Vs?), C?) :- C? =?= X? | true.
+match_const(C, _, found(_), nomatch, C?) :- otherwise | true.
+
+%% match_speech(S, X, F0, F, S1): a speech act S, which the script names whole, matches X where the two are equal; a speech act whose speaker is a hole, its utterance named, matches X where the utterances are equal, the hole taking X's speaker.
+procedure match_speech(Speech?, Speech?, Found?, Found, Speech).
+match_speech(S, _, nomatch, nomatch, S?).
+match_speech(S, X, found(Vs), found(Vs?), S?) :- ground(S?), ground(X?), S? =?= X? | true.
+match_speech(speech(U, K), speech(XU, XK), found(Vs), found([XK? | Vs?]), speech(U?, K?)) :- ground(U?), unknown(K?), ground(XU?), ground(XK?), U? =?= XU? | true.
+match_speech(S, _, found(_), nomatch, S?) :- otherwise | true.
+
+%% grant(Id, P, R, Gs, Gs1): the grant of R on the question Id at P, once R, its holes filled, is ground.
+procedure grant(Integer?, Path?, Request?, PersonIn(Drawn), PersonIn(Drawn)?).
+grant(Id, P, R, [input(Id?, P?, R?) | Gs1?], Gs1) :- ground(R?) | true.
+
+procedure waited(YN?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+waited(y, ps(Se, T, Cs, [_ | Ss]), Gs?, Gs1, St1?, Log?, Log1) :-
+    advance(ps(Se?, T?, Cs?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+waited(n, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+%% What the person's screen shows (the step wait(C)): the last view written and the notices written after it, the approval questions drawn and not answered, and whether a request question is drawn and not answered.
+procedure shows(Cond?, Sess?, List(Output)?, Shows?, YN).
+shows(known(Q), _, T, _, B?) :- ground(T?) |
+    last_of(T?, L),
+    known_in(Q?, L?, B).
+shows(holds(A), _, T, _, B?) :- ground(T?) |
+    last_of(T?, L),
+    count_in(A?, L?, N),
+    at_least(N?, 1, B).
+shows(lacks(A), _, T, _, B?) :- ground(T?) |
+    last_of(T?, L),
+    count_in(A?, L?, N),
+    at_least(N?, 1, B1),
+    flip(B1?, B).
+shows(lacks(A, K), _, T, _, B?) :- ground(T?) |
+    last_of(T?, L),
+    count_in(A?, L?, N),
+    at_least(N?, K?, B1),
+    flip(B1?, B).
+shows(has(A, K), _, T, _, B?) :- ground(T?) |
+    last_of(T?, L),
+    count_in(A?, L?, N),
+    at_least(N?, K?, B).
+shows(refused(P, Q, D), _, T, _, B?) :- ground(P?), ground(Q?), ground(D?), ground(T?) |
+    notices_of(T?, Ns),
+    among_output(refused(P?, Q?, D?), Ns?, B).
+shows(refused_by(P, Q), _, T, _, B?) :- ground(P?), ground(Q?), ground(T?) |
+    ever_refused(P?, Q?, T?, B).
+shows(asked(K), _, _, Cs, B?) :- ground(K?), ground(Cs?) |
+    find_approval(K?, Cs?, F),
+    found_yn(F?, B).
+shows(asking, sess(_, _), _, _, y).
+shows(asking, nosess, _, _, n).
+
+%% The last view written, or none: the output holds the views and the notices.
+procedure last_of(List(Output)?, Last).
+last_of(T, L?) :- last_view(T?, nolast, L).
+procedure last_view(List(Output)?, Last?, Last).
+last_view([], L, L?).
+%% The view, view(Id, S, K, A, Ts): the agent's own key, the machine state, the persons it knows, the approvals pending and the tabs (vGLP 12f629d, Section 5.4, "The compilation"), the script looking at the first three.
+last_view([view(Me, S, K, _, _) | Xs], _, L?) :- last_view(Xs?, last(Me?, S?, K?), L).
+last_view([_ | Xs], L0, L?) :- otherwise | last_view(Xs?, L0?, L).
+
+%% The notices written after the last view, which the screen shows until the next view is written (vGLP f5f1644, Section 5.4, "The compilation": the widget "draws the last view written and the notices written after it").
+procedure notices_of(List(Output)?, List(Output)).
+notices_of(T, Ns?) :- notices_after(T?, [], Ns).
+procedure notices_after(List(Output)?, List(Output)?, List(Output)).
+notices_after([], Ns, Ns?).
+notices_after([view(_, _, _, _, _) | Xs], _, Ns?) :- notices_after(Xs?, [], Ns).
+notices_after([X | Xs], Ns0, Ns?) :- otherwise | notices_after(Xs?, [X? | Ns0?], Ns).
+procedure among_output(Output?, List(Output)?, YN).
+among_output(_, [], n).
+among_output(X, [Y | _], y) :- X? =?= Y? | true.
+among_output(X, [_ | Ys], B?) :- otherwise | among_output(X?, Ys?, B).
+
+%% Whether a notice refused(P, Q, D) has been written, whatever its reason and whatever was written after it.
+procedure ever_refused(Proposal?, Key?, List(Output)?, YN).
+ever_refused(_, _, [], n).
+ever_refused(P, Q, [refused(P1, Q1, _) | _], y) :- P? =?= P1?, Q? =?= Q1? | true.
+ever_refused(P, Q, [_ | Xs], B?) :- otherwise | ever_refused(P?, Q?, Xs?, B).
+
+procedure known_in(Key?, Last?, YN).
+known_in(Q, last(_, _, Ks), B?) :- among_key(Q?, Ks?, B).
+known_in(_, nolast, n).
+
+procedure among_key(Key?, List(Key)?, YN).
+among_key(_, [], n).
+among_key(X, [Y | _], y) :- X? =?= Y? | true.
+among_key(X, [_ | Ys], B?) :- otherwise | among_key(X?, Ys?, B).
+
+procedure count_in(Atom?, Last?, Integer).
+count_in(A, last(_, S, _), N?) :- count(A?, S?, N).
+count_in(_, nolast, 0).
+
+procedure count(Atom?, List(Atom)?, Integer).
+count(_, [], 0).
+count(X, [Y | Ys], N?) :- X? =?= Y? | count(X?, Ys?, M), N := M? + 1.
+count(X, [_ | Ys], N?) :- otherwise | count(X?, Ys?, N).
+
+procedure at_least(Integer?, Integer?, YN).
+at_least(N, K, y) :- N? >= K? | true.
+at_least(N, K, n) :- N? < K? | true.
+
+procedure flip(YN?, YN).
+flip(y, n).
+flip(n, y).
+
+procedure found_yn(ApprovalAt?, YN).
+found_yn(approval_at(_, _, _), y).
+found_yn(noapproval, n).
+
+procedure approved(ApprovalAt?, PSt?, PersonIn(Drawn), PersonIn(Drawn)?, PSt, Stream(Seen), Stream(Seen)?).
+approved(approval_at(Id, P, Cs1), ps(Se, T, _, [approval(K, A) | Ss]),
+         [input(Id?, P?, A?) | Gs?], Gs1, St1?, [gave(K?, A?) | Log?], Log1) :-
+    ground(K?), ground(A?) |
+    advance(ps(Se?, T?, Cs1?, Ss?), Gs, Gs1?, St1, Log, Log1?).
+approved(noapproval, St, Gs1?, Gs1, St?, Log1?, Log1).
+
+%% The approval question of the attempt K, or of an attempt of the class K, the earliest drawn first.
+procedure find_approval(Asked?, Shows?, ApprovalAt).
+find_approval(K, Cs, F?) :- ground(Cs?) | rev_shown(Cs?, [], Rs), find_approval1(K?, Rs?, [], F).
+
+procedure find_approval1(Asked?, Shows?, Shows?, ApprovalAt).
+find_approval1(_, [], _, noapproval).
+find_approval1(K, [shown(Id, P, At) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(At?), ground(K?), K? =?= At? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [shown(Id, P, attempt(_, _, _, C, _)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(C?), ground(K?), K? =?= C? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [shown(Id, P, hello(_, N)) | Cs], Done, approval_at(Id?, P?, Rest?)) :-
+    ground(N?), ground(K?), K? =?= N? |
+    rev_shown(Done?, Cs?, Rest).
+find_approval1(K, [S | Cs], Done, F?) :-
+    otherwise | find_approval1(K?, Cs?, [S? | Done?], F).
+
+procedure rev_shown(Shows?, Shows?, Shows).
+rev_shown([], Acc, Acc?).
+rev_shown([S | Ss], Acc, R?) :- rev_shown(Ss?, [S? | Acc?], R).
+
+procedure drop_shown(Integer?, Shows?, Shows).
+drop_shown(_, [], []).
+drop_shown(Id, [shown(J, _, _) | Cs], Cs?) :- Id? =:= J? | true.
+drop_shown(Id, [S | Cs], [S? | Cs1?]) :- otherwise | drop_shown(Id?, Cs?, Cs1).
+
+%% The views and the notices not reported before: the output is drawn whole each time it grows, so those past the old one's length are new.
+procedure log_new(List(Output)?, List(Output)?, Stream(Seen), Stream(Seen)?).
+log_new([_ | Os], [_ | Ns], Log?, Log1) :- log_new(Os?, Ns?, Log, Log1?).
+log_new([], Ns, Log?, Log1) :- put(Ns?, Log, Log1?).
+log_new([_ | _], [], Log1?, Log1).
+
+procedure put(List(Output)?, Stream(Seen), Stream(Seen)?).
+put([X | Xs], [X? | Log?], Log1) :- put(Xs?, Log, Log1?).
+put([], Log1?, Log1).

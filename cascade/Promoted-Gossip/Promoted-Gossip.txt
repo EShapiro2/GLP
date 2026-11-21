@@ -1,0 +1,22 @@
+% Promoted Gossip: the contract, the one copy, its owner's.
+% Owner: GM (Udi, 2026-11-20, "ok" to the text and "yes" to writing it, in the thread Grassroots Matching).
+% Paper: GM, Anonymous Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
+% Last changed: 2026-11-20, first written, the text as Udi approved it; the Logic pragmas are the Calculus's, written by adopt.py on 2026-11-21; no Interface pragmas yet.
+Promoted Gossip
+Promoted Gossip composes Gossip with Community, and strengthens and extends it.
+The budget of a post is Orga-coins, and the cost of a forward is a number of them. The gossip protocol also says what part of the budget is the holder's.
+Alice and Bob are persons, Orga a community.
+1. ■ Post: Gossip:1, and then the budget of the post comes from the Orga-coins Alice holds.
+2. ■ Tell: Gossip:2, and then Bob's part of the budget goes to Bob with the post.
+3. ■ Keep: Alice may take her part of the budget of a post she holds, according to the gossip protocol.
+Logic pragmas
+Promoted Gossip composes Gossip with Community, and strengthens and extends it.
+The budget of a post is Orga-coins, and the cost of a forward is a number of them. The gossip protocol also says what part of the budget is the holder's.
+Alice and Bob are persons, Orga a community, Kept a number.
+1. ■ Post: Gossip:1, and then no longer Alice holds Budget Orga-coins, Alice holds Budget Orga-coins for Post and Alice has a part of Post to take.
+2. ■ Tell: Gossip:2, and then no longer Alice holds Part Orga-coins for Post, Bob holds Part Orga-coins for Post and Bob has a part of Post to take.
+3. ■ Keep: Alice may take Kept Orga-coins of Post, provided Alice holds the post Post and the gossip protocol leaves Alice Kept of Post.
+Logic pragmas.
+Vocabulary: x holds n z-coins for p = post_coins(x,p,z,*n); x has a part of p to take = part_due(x,p); the gossip protocol leaves x n of p = leaves(x,p,n).
+After x takes n z-coins of p: no longer x has a part of p to take, no longer x holds n z-coins for p and x holds n z-coins.
+Environment: the gossip protocol leaves x n of p.

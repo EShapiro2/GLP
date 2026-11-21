@@ -33,3 +33,11 @@ play_village(A?, B?, C?, D?, E?, F?, G?) :-
     person # miniapp_person(frank, market_frank, [diana, eve, escrow, alice], ch(DF1?, GF), F),
     run(miniapp(escrow, ch(GX?, DX), ch([conversation(charlie, ch(CX?, XC)), conversation(frank, ch(FX?, XF))], _)), T?, M?),
     person # miniapp_person(escrow, market_escrow, [charlie, frank], ch(DX?, GX), G).
+
+%% play_mint(A): alice alone, under the role mint (person.glp), with no conversation: the mini-app activated by run/3 with an empty stream of conversations, as the super-app activates it with no invitation (GSG paper, Section 2, "Activation and joining"; ../gb_mint_boot.glp).  She sets the clock to day 1, establishes her identity (GKK:1) and issues three coins of her own (Issue).
+exported procedure play_mint(Stream(Seen)).
+play_mint(A?) :-
+    self_module(M),
+    find_type(miniapp/3, T),
+    run(miniapp(alice, ch(GA?, DA), ch([], _)), T?, M?),
+    person # miniapp_person(alice, mint, [], ch(DA?, GA), A).

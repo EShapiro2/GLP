@@ -263,7 +263,8 @@ case "$1" in
     second_score_auction) FILE=Second-Score-Auction; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
     secure_friendship) FILE=Secure-Friendship; OWNER="programs/social/spm"; PAPER="/Users/udi/Grassroots/SPM"; PLAYDIR="" ;;   # SPM's, adopted from the Calculus (SPM #1, 2026-11-15)
     *) # A contract with no row yet: its file name from the key, each word capitalised and joined by a hyphen, found once under programs/ (Code, 2026-11-18, for the contracts not yet given a row).
-       FILE=$(echo "$1" | awk -F_ '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2); print}' OFS=-)
+       FILE=$(awk -F' [|] ' -v k="$1" '$4 == k { print $3; exit }' "$GLP_DIR/calculus/NAMES.txt" 2>/dev/null)   # the file name of NAMES.txt's row, "Lost-and-Found" for lost_and_found
+       [ -n "$FILE" ] || FILE=$(echo "$1" | awk -F_ '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2); print}' OFS=-)
        FOUND=$(cd "$GLP_DIR" && find programs -name "$FILE.txt" -not -path '*/cascade_emit/*' | head -2)
        if [ -n "$FOUND" ] && [ "$(echo "$FOUND" | wc -l)" -eq 1 ]; then
            OWNER=$(dirname "$FOUND"); PAPER=""; PLAYDIR=""

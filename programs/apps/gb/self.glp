@@ -142,3 +142,6 @@ play_bonds(A?, B?, C?) :- plays # play_bonds(A, B, C).
 imported procedure plays#play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 exported procedure play_village(Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen), Stream(Seen)).
 play_village(A?, B?, C?, D?, E?, F?, G?) :- plays # play_village(A, B, C, D, E, F, G).
+imported procedure plays#play_mint(Stream(Seen)).
+exported procedure play_mint(Stream(Seen)).
+play_mint(A?) :- plays # play_mint(A).

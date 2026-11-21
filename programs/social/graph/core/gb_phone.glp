@@ -25,6 +25,8 @@ gb_phone(market_frank, Me, [Diana, Eve, Escrow, Alice], NetIn) :-
 gb_phone(market_escrow, Me, [Charlie, Frank], NetIn) :-
     person_gb(Me?, market_escrow, [Charlie?, Frank?], [], [Charlie?, Frank?], NetIn?).
 %% A person who knows other peers than the plays give has no smartphone here.
+gb_phone(mint, Me, [], NetIn) :-
+    person_alone_gb(Me?, NetIn?).
 gb_phone(_, _, _, _) :- otherwise | true.
 
 %% person_gb(Me, Role, Ps, Calls, Accepts, NetIn): one person's smartphone: the super-app's agent on the isolate's network under the person's own key, its home answering the requests to connect (scripted_home/5), the mini-app installed from its artefact, and the person's acts toward the peers Ps they know, Calls those they connect to and invite and Accepts those whose invitation they consent to in advance; the mini-app's scripted person runs under the role with the peers' keys, by which the script names them.
@@ -101,3 +103,22 @@ person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
     find_type(miniapp_person/5, [D?, S?], T),
     run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
 person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
+
+%% person_alone_gb(Me, NetIn): one person's smartphone, with no peer: the super-app's agent on the isolate's network under the person's own key, its home answering requests to connect (scripted_home/5), the mini-app installed from its artefact and activated with no invitation (GSA paper, Section 3, "A grassroots program instance": "An instance begins with one person, who installs the certified program and activates it"), and the mini-app's scripted person under its role mint, which knows nobody; as sovereign_phone.glp's person_alone/2.
+procedure person_alone_gb(Key?, NetInStream?).
+person_alone_gb(Me, NetIn) :-
+    agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    scripted_home(Me?, Out?, Notices, Cmds?, In),
+    load_file("gb.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    alone_acts(Me?, gb, C?, CK?, CSig?, AppEnd?, Notices?, Cmds),
+    miniapp_person_run(C?, Me?, mint, [], PersonEnd?, Screen),
+    send_to_user(Screen?).
+
+%% alone_acts(Me, App, C, CK, CSig, AppEnd, Notices, Cmds): trust the compiler's key, install the mini-app with the person's end of its person channel and activate it with no invitation; the notices of the super-app are read as acts/10 reads them, with nobody called.
+procedure alone_acts(Key?, Constant?, Content?, String?, String?, PersonChannel(Opaque)?, Stream(Output)?, UserInStream).
+alone_acts(Me, App, C, CK, CSig, AppEnd, Notices,
+           [msg(person, Me?, trust(CK?)), msg(person, Me?, install(App?, C?, CSig?, AppEnd?)), msg(person, Me?, activate(App?)) | Cmds?]) :-
+    calls_run(Me?, App?, [], Notices?, Cmds).

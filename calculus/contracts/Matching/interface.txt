@@ -1,0 +1,23 @@
+Matching
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+6. ■ Post.  Alice may make Post with the budget Budget, provided Budget is a budget of a new post.
+7. ■ Tell.  Alice may forward Post to Bob with the budget Part, provided Alice holds the post Post, Alice has the budget Budget for Post, Budget covers the cost of a forward leaving Rest, Alice and Bob are friends and the gossip protocol forwards Post to Bob with Part of Rest.
+8. ■ Return.  Alice may make a post.
+9. ■ Meet.  Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with the rest of the budget.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+Post: Alice [Post] <post>
+Tell: Alice [Tell]
+Meet: Alice [Meet] <carol>
+  Carol: Alice asks for your consent to meet.

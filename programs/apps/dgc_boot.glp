@@ -1,0 +1,22 @@
+%% dgc_boot.glp --- the app of DGC, Denominated Grassroots Currencies, on two smartphones (GSG paper, Sections 2 and 6, "The Grassroots Super-App" and "Mini-Apps on the Prototype"), as gc_boot.glp runs GC's app: under the boot harness, one isolate per person, each with its own key pair, running the social graph of programs/social/graph/core as its super-app and hosting DGC's mini-app (programs/apps/dgc).  The program is graph/core, named as :boot's second argument, and this file is loaded on top of it, with the boot clause and the persons; the smartphone, dgc_phone/4, is graph/core's (core/dgc_phone.glp), started by core's agent/2 on the person's first act (IGLP 0e1c9e0, Implementation Notes, "Boot"):
+%%   :artefact programs/gsc/checker programs/social/graph/core
+%%   :artefact programs/apps/dgc programs/social/graph/core
+%%   :boot programs/apps/dgc_boot.glp programs/social/graph/core
+%%
+%% Each person trusts the compiler's key, reads the certified artefact dgc.glpw from graph/core with load_file/2 and installs it, with one end of a person channel; alice connects to bob, they befriend in the super-app's social graph across the isolates, alice invites bob to the mini-app, bob consents, and the handshake opens a root channel between their two executions.  Over that conversation the mini-app runs DGC's contract, as play_denominated of programs/apps/dgc runs it (programs/apps/dgc/plays.glp), each person under their role of programs/apps/dgc/person.glp, each phone's clock its own.  Each person's screen goes to the person, one line each, as in gc_boot.glp, with what the super-app told the person of the friendship in its own social graph, sg(...); Section APPS of the suite runs this file and holds each person's lines to play_denominated's.
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, alice, [bob], ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, bob, [alice], ch(_?, _))@bob.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), which the program, graph/core, answers: a boot defines no agent/2, and the person goal's first act names the entry the program starts (IGLP 0e1c9e0, Implementation Notes, "Boot").  The person scripted at each agent, say/4, run on its person channel in the person's place, tells the agent the entry, dgc_phone/4 (graph/core/dgc_phone.glp), with the person's part in the script, their own key and the keys of the peers they know, its ground arguments, the readable names being the atoms that stand for the keys in a simulation ("An agent learns the keys of its peers from its person"; Remark "Agent Names"), and reads nothing.
+Role ::= alice ; bob.
+SayAct ::= dgc_phone(Role, Key, List(Key)).
+SayIn  ::= [SayAct | SayEnd].
+SayEnd ::= [].
+
+exported procedure say(Role?, Key?, List(Key)?, Channel(Stream(Constant), SayIn)?).
+say(R, Me, Ps, ch(_, [dgc_phone(R?, Me?, Ps?)])).

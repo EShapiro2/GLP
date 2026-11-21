@@ -19,6 +19,8 @@
 %%          otherwise race his issue.
 %%   market_alice to market_frank  the six villagers of the village market
 %%          of GC's paper (play_village, plays.glp), their scripts below.
+%%   mint   the person alone of gc_mint_boot.glp and of play_mint: establishes her
+%%          identity (GKK:1); issues three coins of her own (GC:1, Issue); looks.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo)
@@ -115,6 +117,9 @@ script(market_frank, Me, [Diana, Eve, Alice], [own([F1], propose(establish(F1?))
          own([F10, F11], propose(redeem(F10?, Diana?, F11?))), wait(lacks(coin(Diana?), 9)),
          own([F12, F13], propose(redeem(F12?, Diana?, F13?))), wait(lacks(coin(Diana?), 8)), look]) :-
     ground(Me?), ground(Diana?), ground(Eve?), ground(Alice?) | true.
+script(mint, Me, [], [own([A1], propose(establish(A1?))), wait(holds(identity)),
+                         own([A2], propose(issue(A2?, 3))), wait(has(coin(Me?), 3)), look]) :-
+    ground(Me?) | true.
 script(_, _, _, []) :- otherwise | true.
 
 %% The person.

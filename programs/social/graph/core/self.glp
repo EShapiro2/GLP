@@ -539,6 +539,7 @@ CoreAct ::= superapp(Key, List(Key), List(Service))
           ; gai_phone(Constant, Key, List(Key))
           ; gc_phone(Constant, Key, List(Key))
           ; gb_phone(Constant, Key, List(Key))
+          ; dgc_phone(Constant, Key, List(Key))
           ; coins_phone(Constant, Key, List(Key))
           ; dated_phone(Constant, Key, List(Key))
           ; sovereign_phone(Constant, Key, List(Key)).
@@ -555,6 +556,7 @@ imported procedure gsnp_phone#gsnp_phone(Constant?, Key?, List(Key)?, NetInStrea
 imported procedure gai_phone#gai_phone(Constant?, Key?, List(Key)?, NetInStream?).
 imported procedure gc_phone#gc_phone(Constant?, Key?, List(Key)?, NetInStream?).
 imported procedure gb_phone#gb_phone(Constant?, Key?, List(Key)?, NetInStream?).
+imported procedure dgc_phone#dgc_phone(Constant?, Key?, List(Key)?, NetInStream?).
 imported procedure coins_phone#coins_phone(Constant?, Key?, List(Key)?, NetInStream?).
 imported procedure dated_phone#dated_phone(Constant?, Key?, List(Key)?, NetInStream?).
 imported procedure sovereign_phone#sovereign_phone(Constant?, Key?, List(Key)?, NetInStream?).
@@ -586,6 +588,8 @@ core_start([gc_phone(R, P, Qs) | _], N) :-
     ground(Qs?) | known_peers(Qs?), gc_phone # gc_phone(R?, P?, Qs?, N?).
 core_start([gb_phone(R, P, Qs) | _], N) :-
     ground(Qs?) | known_peers(Qs?), gb_phone # gb_phone(R?, P?, Qs?, N?).
+core_start([dgc_phone(R, P, Qs) | _], N) :-
+    ground(Qs?) | known_peers(Qs?), dgc_phone # dgc_phone(R?, P?, Qs?, N?).
 core_start([coins_phone(R, P, Qs) | _], N) :-
     ground(Qs?) | known_peers(Qs?), coins_phone # coins_phone(R?, P?, Qs?, N?).
 core_start([dated_phone(R, P, Qs) | _], N) :-

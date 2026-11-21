@@ -16,7 +16,7 @@ Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust
 Guardians:0 - | Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
 Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
 Guardians:0 - | Default: any officer of z for those who decide for z.
-Guardians:1 ■ Enter: identity(Orga), organisation(Orga), has_officer(Orga,Alice), creator(Alice,Orga), officer(Alice,Orga), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice) <- person(Alice), ~identity(Orga) guarded by Alice, Orga must Orga.
+Guardians:1+Organisation:1 ■ Found: identity(Orga), organisation(Orga), has_officer(Orga,Alice), creator(Alice,Orga), officer(Alice,Orga), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice), first_officer(Orga,Alice), role(Alice,Orga,Role), has_role(Orga,Alice,Role), participant(Alice,Orga), has_participant(Orga,Alice), founder(Gov,Orga) <- person(Alice), ~identity(Orga) guarded by Alice, Orga, Gov must Orga.
 Guardians:1 ■ | Alice chooses Orga's key pair.
 Guardians:2 ■ | Guardian decisions.
 Guardians:2+Organisation:4+Backed Community:1 ○ Appoint: officer(Bob,Orga), has_officer(Orga,Bob), knows(Bob,Orga), knows(Orga,Bob), friend(Bob,Orga), friend(Orga,Bob), role(Bob,Orga,Role), has_role(Orga,Bob,Role) <- organisation(Orga), ~retired(Orga), person(Bob), has_officer(Orga,Alice), friend(Bob,Alice), ~officer(Bob,Orga), ~has_officer(Orga,Bob), participant(Bob,Orga), all_stay_backed(Orga,Orga) guarded by deciders(Orga), Bob.
@@ -47,7 +47,6 @@ Organisation:0 - | Default: x is an officer of z for x is entitled to take m for
 Organisation:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as an officer for the votes decide m according to the bylaws of z.
 Organisation:0 - | Default: x is entitled to take m for z for x is entitled to amend the bylaws of z as m says.
 Organisation:0 - | Default: z is an organisation, z has m proposed and the votes decide m according to the bylaws of z for the amendment m is decided according to the bylaws of z.
-Organisation:1 ■ Found: identity(Orga), organisation(Orga), creator(Gov,Orga), first_officer(Orga,Alice), officer(Alice,Orga), has_officer(Orga,Alice), role(Alice,Orga,Role), has_role(Orga,Alice,Role), participant(Alice,Orga), has_participant(Orga,Alice), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice) <- person(Alice), ~identity(Orga) guarded by Gov, Alice, Orga must Orga.
 Organisation:2 ■ | Acts of the organisation.
 Organisation:2 ■ Propose: proposed(Orga,Motion) <- role(Bob,Orga,Treasurer), ~proposed(Orga,Motion) guarded by Bob.
 Organisation:2 ■ Vote: vote(Orga,Bob,Motion) <- role(Bob,Orga,Treasurer), organisation(Orga), proposed(Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.

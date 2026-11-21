@@ -28,6 +28,9 @@
 %%          with her for bob, whose key she reads off the question.
 %%   market_alice to market_escrow  the villagers and the escrow agent of
 %%          the village market (play_village), their scripts below.
+%%   mint   the person alone of gb_mint_boot.glp and of play_mint: sets the clock to
+%%          day 1; establishes her identity (GKK:1); issues three coins of her
+%%          own (Notes:1, Issue); looks.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo)
@@ -149,6 +152,9 @@ script(market_escrow, Me, [Charlie, Frank], [clock(86400000), own([G1], propose(
         own([G2], propose(release(G2?, Frank?, Frank?, Charlie?, speech(utterance('day 30'), Charlie?), 5))),
         wait(lacks(escrow_coin(Frank?, Charlie?, Frank?, speech(utterance('day 30'), Charlie?)))), clock(2592000000), look]) :-
     ground(Me?), ground(Charlie?), ground(Frank?) | true.
+script(mint, Me, [], [clock(86400000), own([A1], propose(establish(A1?))), wait(holds(identity)),
+                         own([A2], propose(issue(A2?, 3))), wait(has(coin(Me?), 3)), look]) :-
+    ground(Me?) | true.
 script(_, _, _, []) :- otherwise | true.
 
 %% The person.
