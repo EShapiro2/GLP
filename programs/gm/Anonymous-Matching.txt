@@ -1,12 +1,12 @@
 % Anonymous Matching: the contract, the one copy, its owner's.
 % Owner: GM (Udi, 2026-11-19, "yes" to the contract's text and name, relayed by the coordinator).
 % Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
-% Last changed: 2026-11-19, first written, the text as Udi approved it; no Logic pragmas yet, the Calculus's to write; no Interface pragmas yet.
+% Last changed: 2026-11-19, first written, the text as Udi approved it; no Logic pragmas yet, the Calculus's to write; no Interface pragmas yet. The text of 2026-11-20 (Udi, 2026-11-20, "yes" to each item and to writing it, in the thread Grassroots Matching); the Logic pragmas below are the Calculus's, of the earlier text, to be printed again.
 Anonymous Matching
 Anonymous Matching composes Matching with Anonymous Rendezvous, and restricts the composition.
 Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
 Alice and Carol are persons.
-1. ■ Meet: Matching:5, only by Anonymous Rendezvous:1 with the one-time keys of the two posts, at the rendezvous server named by the post whose public key has the smaller hash.
+1. ■ Meet: Matching:2, only by Anonymous Rendezvous:1 with the one-time keys of the two posts, at the rendezvous server named by the post whose public key has the smaller hash.
 Logic pragmas
 Anonymous Matching composes Matching with Anonymous Rendezvous, and restricts the composition.
 Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
