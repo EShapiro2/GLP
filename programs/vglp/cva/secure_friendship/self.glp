@@ -59,9 +59,10 @@
 %%   friendship with alice from carol, requires that carol records no
 %%   replacement of alice (Secure Friendship:4), and Restore replaced friend,
 %%   restoring his friendship with alicia, that bob does not count alicia as
-%%   a friend, and neither is taken.  Restore at bob from alice is taken:
-%%   alice's machine still runs and counts bob as a friend, so bob counts
-%%   alice as a friend again.
+%%   a friend.  Restore at bob from alice, whose machine still runs, and
+%%   Restore friend at bob from carol, each require that bob has accepted no
+%%   one in place of alice.  None is taken, and bob does not count alice as a
+%%   friend again.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
