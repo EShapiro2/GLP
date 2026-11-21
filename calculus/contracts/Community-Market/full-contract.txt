@@ -1,5 +1,5 @@
 % Written by tools/expand.py from rev/; do not edit.
-Marketplace
+Community Market
 An *identity* is a unique cryptographic key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
@@ -49,10 +49,10 @@ Community Network:4. ○ Loss of membership. Those who decide for Orga will end 
 Overlay:1. ■ Point friend: Alice, who does not point to her friend Bob, may point to Bob.
 Overlay:2. ■ Point transitive: Alice, who knows Carol and points to Bob who points to Carol, may point to Carol.
 Overlay:3. ■ Unpoint: Alice, who points to Bob, may cease pointing to Bob.
-Recommendations:1, Marketplace:5. ◆ Recommend: Alice may recommend Bob, whom she knows, for something, a skill or a service, once for each thing; Bob keeps the recommendation, where Alice recommends Bob for the good after delivery.
+Recommendations:1, Community Market:5. ◆ Recommend: Alice may recommend Bob, whom she knows, for something, a skill or a service, once for each thing; Bob keeps the recommendation, where Alice recommends Bob for the good after delivery.
 Recommendations:2. ■ Show: Bob may show a recommendation he holds to Carol, whom he knows, once; Carol then sees who recommended Bob and for what.
 Recommendations:3. ■ Withdraw: Alice may withdraw a recommendation; it is then gone from Bob and from everyone Bob showed it to, and Alice may not make it again.
-Marketplace:1. ■ Listing. Post: Bob, a seller, may post a listing to the buyers he points to. Pass: A buyer may pass it to the buyers they point to. Withdraw listing: Bob may withdraw it.
-Marketplace:2. ■ Order: Alice, a buyer, may order the good from Bob with the consent of Bob, provided Alice and Bob know each other; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
-Marketplace:3. ◆ Deliver: Alice may attest that the good was delivered to her, and the payment and the deposit are then released to Bob.
-Marketplace:4. ■ Cancel: Alice or Bob may cancel the order before delivery, and the payment and the deposit are then released to Alice and to Bob as the terms say.
+Community Market:1. ■ Listing. Post: Bob, a seller, may post a listing to the buyers he points to. Pass: A buyer may pass it to the buyers they point to. Withdraw listing: Bob may withdraw it.
+Community Market:2. ■ Order: Alice, a buyer, may order the good from Bob with the consent of Bob, provided Alice and Bob know each other; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
+Community Market:3. ◆ Deliver: Alice may attest that the good was delivered to her, and the payment and the deposit are then released to Bob.
+Community Market:4. ■ Cancel: Alice or Bob may cancel the order before delivery, and the payment and the deposit are then released to Alice and to Bob as the terms say.

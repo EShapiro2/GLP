@@ -2,12 +2,12 @@ Interface pragmas
 Listing: Bob [Post] <listing>
   Alice [Pass]
   Bob [Withdraw listing]
-Book: Alice [Book] <listing>
+Book: Alice [Book] <top>
   Bob: Alice asks for your consent to book.
-Check-in and checkout: Alice [Check in] [Check out]
-Cancelling: Alice [Cancel]
-  Bob [Host cancel]
-  Alice [No-show]
+Check-in and checkout: Alice [Check in] [Check out] <total>
+Cancelling: Alice [Cancel] [Cancel for the traveller] [Cancel for the host]
+  Bob [Host cancel] [Host cancel for the traveller] [Host cancel for the host]
+  Alice [No-show] <total>
 Raise: Alice [Raise] <carol>
   Bob [Provider raise] <carol>
 Recommend: Alice [Recommend]

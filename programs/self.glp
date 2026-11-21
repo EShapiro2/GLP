@@ -965,7 +965,7 @@ term_to_string(T, S?) :-
 % hash(S, H): H is the SHA-256 of the UTF-8 bytes of the string S, lowercase
 % hex, a Hash; the same at every participant, so that the hash of a text naming
 % a value and a secret seals the value, and the value and the secret, stated
-% later, are checked against the seal (proposed for GLP-Spec appendix-guards,
+% later, are checked against the seal (GLP-Spec appendix-guards,
 % "Text").
 procedure hash(String?, Hash).
 hash(S, H?) :-

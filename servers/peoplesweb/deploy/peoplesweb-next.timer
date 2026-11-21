@@ -1,0 +1,10 @@
+# The test site on each push to Website-site (Udi, 2026-11-20 20:26 UTC, "yes" to the Optimiser's proposal: the sweep runs after each push to Website-site, not once an hour).  Each minute it runs peoplesweb-next.service, which builds /next only if the branch has moved.  Installed and enabled by deploy/sweep.sh.
+[Unit]
+Description=peoplesweb.org/next on each push to Website-site
+
+[Timer]
+OnCalendar=*-*-* *:*:30
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target
