@@ -19,6 +19,10 @@
     python3 adopt.py --split-check      writes every contract's adopted file into a temporary directory and checks
                                         that it splits back into its contract and its Logic pragmas, byte for byte;
                                         prints the count and the contracts that do not, and exits 1 if there is one
+    python3 adopt.py --adopted-check    splits every adopted file found in GLP, programs/<dir>/NAME.txt, and compares its
+                                        contract and its Logic pragmas with the Calculus's two texts of NAME; prints the
+                                        count and, for each file that differs, its path and the first line of each text
+                                        that differs, and exits 1 if there is one
 
 THE ADOPTED FILE, programs/<dir>/NAME.txt, line by line:
 1. the owner's lines that begin with %, as they are;
@@ -321,6 +325,29 @@ def compile_tree(name, texts):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def verdict_stamp(name):
+    """The hash of the term the Calculus's verdict on NAME was made on, verdict-term.sha256 beside its verdict.txt
+    (tools/cascade.py; tools/publish.py copies it): from cascade/NAME/ beside the tools, on the branch code; or from
+    NAME/ of a publication directory or calculus/NAME/ or calculus/contracts/NAME/ in the checkout of GLP, where
+    calculus_text looks.  None where the verdict has no stamp, a record made before the stamp was."""
+    for d in (os.path.join(ROOT, 'cascade', NM.file_of(name)), os.path.join(ROOT, NM.file_of(name)),
+              os.path.join(GLP, 'calculus', NM.file_of(name)), os.path.join(GLP, 'calculus', 'contracts', NM.file_of(name)),
+              os.path.join(GLP, 'calculus', GLP_NAME(name))):
+        p = os.path.join(d, 'verdict-term.sha256')
+        if os.path.exists(p):
+            return read(p).strip()
+    return None
+
+
+def check_stamp(name, term):
+    """A verdict is of the term it was made on: where the Calculus's verdict on NAME has its stamp and the term printed
+    here has another hash, nothing is written, and --check fails."""
+    import hashlib
+    stamp = verdict_stamp(name)
+    if stamp is not None and hashlib.sha256((term.rstrip('\n') + '\n').encode('utf-8')).hexdigest() != stamp:
+        die('verdict is of another text: run the checker on %s' % name)
+
+
 def targets(name, root=None):
     """What adopt.py NAME writes: NAME.glp beside the adopted file; and into cascade/NAME/, under the owner's names,
     NAME.txt, a copy of the adopted file as it stands, NAME.glp, and the five files of the Calculus's compilers.  The
@@ -328,6 +355,7 @@ def targets(name, root=None):
     manifest.md) is cascade.sh's.  A contract not yet adopted has no NAME.txt and no NAME.glp beside it."""
     root = root or GLP
     out, path = compiled(name)
+    check_stamp(name, out['term.glp.txt'])
     intro = introduction(name, read(os.path.join(GLP, path))) if path.endswith('.txt') else None
     glp = module(name, out.pop('term.glp.txt'), intro)      # the term goes into NAME.glp, and term.glp.txt is not written
     rec = os.path.join(root, 'cascade', NM.file_of(name))
@@ -415,6 +443,25 @@ def main():
                 bad.append(n)
         print('%d contracts, %d that do not split back%s' % (len(names), len(bad), (': ' + ' '.join(bad)) if bad else ''))
         sys.exit(1 if bad else 0)
+    elif a == ['--adopted-check']:
+        def first(x, y):
+            xs, ys = x.split('\n'), y.split('\n')
+            return next((i + 1 for i in range(max(len(xs), len(ys))) if i >= len(xs) or i >= len(ys) or xs[i] != ys[i]), 0)
+        bad, k = [], 0
+        for n, path in sorted(computed_paths().items()):
+            f = os.path.join(GLP, path.strip())
+            if not f.endswith('.txt'):
+                continue
+            k += 1
+            rev, gr = calculus_text(n)
+            _, arev, agr, _ = split(read(f))
+            d = [(w, first(x, y)) for w, x, y in (('contract', arev, rev), ('Logic pragmas', agr, gr)) if x != y]
+            if d:
+                bad.append('%s: %s' % (path.strip(), '; '.join('%s, line %d' % x for x in d)))
+        print('%d adopted files, %d that differ from the Calculus\'s texts' % (k, len(bad)))
+        for b in bad:
+            print(b)
+        sys.exit(1 if bad else 0)
     elif a[:1] == ['--check'] and len(a) == 2:
         bad = [p for p, t in targets(a[1], root).items() if not os.path.exists(p) or read(p) != t]
         for p in bad:
@@ -426,7 +473,7 @@ def main():
             with open(p, 'w', encoding='utf-8', newline='') as f:
                 f.write(t)
     else:
-        die('usage: adopt.py --write NAME DIR | --paths | NAME [--out DIR] | --check NAME [--out DIR] | --split-check')
+        die('usage: adopt.py --write NAME DIR | --paths | NAME [--out DIR] | --check NAME [--out DIR] | --split-check | --adopted-check')
 
 
 if __name__ == '__main__':

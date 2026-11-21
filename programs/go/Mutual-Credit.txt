@@ -25,5 +25,5 @@ After y redeems with z an x-coin against a z-coin: no longer y holds an x-coin, 
 Environment: every member of z is then in the red by at most 1000 coins, for x.
 Interface pragmas
 Look: 🤝, money
-Leave: Bob [Leave owed nothing] [Officer leave owed nothing]
+Leave: Bob [Leave owed nothing] <denomination> [Officer leave owed nothing] <denomination>
 Redeem member's coin: Bob [Redeem member's coin]

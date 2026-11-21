@@ -4,7 +4,8 @@ of the abstraction cascade in the GLP repository, as its cascade.sh runs them on
 
     python3 tools/cascade.py [NAME ...]     the contracts named, or all
 
-For each it writes cascade/NAME/: verdict.txt, the verdict of GLP's checker (programs/gsc, check/2); vmat.tex, the
+For each it writes cascade/NAME/: verdict.txt, the verdict of GLP's checker (programs/gsc, check/2), and beside it
+verdict-term.sha256, the SHA-256 of the term the verdict was made on (glp/NAME.glp.txt, as toglp.py writes it); vmat.tex, the
 VMAT form (programs/gsc, compile_contract/2); platform.vglp, the canonical platform (programs/vglp/cva/compiler,
 compile/5, with no introduction named and no Interface pragmas); platform.glp, the platform compiled to GLP (the
 REPL's :emit), counted compiled only if it then loads in GLP, the load's lines in run.log; interface-adopted.txt, the Interface pragmas of NAME.txt keyed by the titles of the contract's own clauses, as an owner's adopted file has them (tools/ifadopt.py), where they are read; and prints a line.  A
@@ -150,7 +151,7 @@ def contract_txt(n):
 
 
 # The files run() writes into cascade/NAME/ (and adopt.py the others there, which it keeps).
-RUN_FILES = ('verdict.txt', 'vmat.tex', 'platform.vglp', 'platform.glp', 'run.log', 'interface-adopted.txt')
+RUN_FILES = ('verdict.txt', toglp.STAMP, 'vmat.tex', 'platform.vglp', 'platform.glp', 'run.log', 'interface-adopted.txt')
 
 
 def ok(line):
@@ -166,7 +167,8 @@ def run(n):
         if os.path.exists(os.path.join(out, f)):
             os.remove(os.path.join(out, f))
     put = lambda f, s: open(os.path.join(out, f), 'w', encoding='utf-8').write(s if s.endswith('\n') else s + '\n')
-    ct = toglp.contract_term(n)[0].replace('\n', '')
+    term = toglp.contract_term(n)[0]
+    ct = term.replace('\n', '')
     gsc = GLP + '/programs/gsc/'
     rd = answer(repl('%s\n:limit 10000000\nas_read(%s, R).\n:quit\n' % (gsc, ct)), 'R')
     if not rd:
@@ -177,6 +179,7 @@ def run(n):
     if not vt:
         return 'no verdict'
     put('verdict.txt', vt)
+    put(toglp.STAMP, toglp.term_hash(term))      # the term the verdict is of, by its hash: adopt.py refuses another
     if not vt.startswith('syntactically_grassroots') and not vt.startswith('grassroots_with_wards'):
         return 'not certified'
     vm, on = [], False

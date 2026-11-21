@@ -1,5 +1,5 @@
 Children
-Children instantiates Warded Groups with the guardians deciding jointly, a child for a ward and a parent for a guardian, and restricts and extends it.
+Children instantiates Warded Groups with the guardians deciding jointly for the decision rule, a child for a ward and a parent for a guardian, and restricts and extends it.
 Alice and Bob are persons, Wendy and Will children.
 1. ◆ Enter: Guardians:1, only if Alice is a legal parent of the minor who operates Wendy.
 2. ■ A child's acquaintances. Child acquaint: Guardians:3, only if Alice knows Bob, and with the consent of Alice. Children acquaint: Guardians:4, only if Alice knows Will and Bob knows Wendy, and with the consent of Alice and Bob, who know each other, Alice and Bob possibly one person.

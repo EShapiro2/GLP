@@ -65,9 +65,11 @@ NOUNS = set()     # 'the role r' in a basic state: 'no role' and 'some role' are
 MARK = "*#"   # the last argument of an atom: *n, n copies; #n, exactly n copies and no more
 DFLL = "Default: "   # 'Default: x is an officer of z for x is entitled to vote on m in z.': the state a parameter takes where no first line binds it (Udi, 2026-11-16, to Calculus #6)
 PARL = "Parameters: "   # 'Parameters: x is entitled to propose m in z.': a state a later contract, the bylaws or the terms fill; a parameter of the term
+FUNL = "Functions: "   # 'Functions: n is the root of m.': a state that is a function of its places but the first, its value; no act adds or ends it, and the checker reads it as fn(root, [m]) (GSC def:numbers: "the relations and functions the types of the values provide")
 ENVL = "Environment: "   # 'Environment: x is nearby y.': a state the platform gives, an environment predicate of the term; no act adds or ends it
 KNDL = "Kind of note: "   # 'Kind of note: bond, y-bonds due Day for y-notes.': a kind of Notes's notes (Udi, 2026-11-16: special cases, not instances); see kind_forms
 KINDL = re.compile(r"^Kind of note: ([a-z]+), (.+?) for ([b-z])-notes(; its acts keep their names)?\.$")
+KINDR = re.compile(r"^Kind of note: ([a-z]+), ([A-Z][a-z]*)-denominated ([b-z])-([a-z]+)s(.*?) for ([b-z])-\4s\5\.$")      # 'Kind of note: coin, Dollar-denominated y-coins for y-coins.': the kind with one more place, its denomination
 REFL = "Reflexive: "   # 'Reflexive: x knows y.': every agent holding the state's atoms holds x knows x; no act adds or ends it
 ARITH = "Vocabulary: n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k); n is the difference from m to k = difference(n,m,k); x is the author of t = author(x,t)."   # of every contract; the author of an item is its first signer (GFP), read by toglp.py as eq(author_of(t), x)
 ACTOR = "Actor"   # in a citation: the first of those who take the act cited
@@ -291,6 +293,7 @@ class Lex:
         self.rlist = {}   # role predicate -> the states that list its agents: 'those who decide for z = deciders(z), listed by z has y as a guardian and y is a guardian of z'
         self.short = {}   # basic state -> (the state as a sentence writes it, its holder's place): 'e is late, for x = late(x,e)'
         self.refl = []    # basic states of two places declared reflexive: 'Reflexive: x knows y.', every agent holding x knows x
+        self.fn = []      # basic states declared functions: 'Functions: n is the root of m.', the first place the value
         self.env = []     # basic states declared environment predicates: 'Environment: x is nearby y.', given by the platform
         self.par = []     # basic states declared parameters: 'Parameters: x is entitled to propose m in z.'
         self.one = set()  # role predicates any one of whom decides: 'any guardian of z = any_guardian(z), any one listed by z has y as a guardian ...'
@@ -304,11 +307,13 @@ class Lex:
         l.rlist = dict(self.rlist)
         l.refl = list(self.refl)
         l.env = list(self.env)
+        l.fn = list(self.fn)
         l.par = list(self.par)
         l.dflt = dict(self.dflt)
         l.one = set(self.one)
         l.votes = [dict(f) for f in self.votes]
         l.voted = dict(self.voted)
+        l.twins = list(self.__dict__.get("twins", []))
         return l
 
     def refl_preds(self):
@@ -328,7 +333,7 @@ class Lex:
         for t in getattr(self, attr):
             b = [p for tt, p, a in self.basic if norm(tt) == norm(t)]
             if not b:
-                raise Err("'%s%s.' names no basic state" % (ENVL if attr == "env" else PARL, t))
+                raise Err("'%s%s.' names no basic state" % ({"env": ENVL, "par": PARL, "fn": FUNL}[attr], t))
             out.add(b[0])
         return out
 
@@ -337,6 +342,11 @@ class Lex:
             mine = getattr(self, attr)
             have = {e[0] for e in mine}
             mine.extend(e for e in getattr(other, attr) if e[0] not in have)
+        # Two contracts of a first line that instantiate differently a contract they are both written from have each
+        # its act phrase of one wording (Definition Operations, Composition): the second is kept for writing its acts.
+        mine = {e[0]: e for e in self.defs}
+        twin = self.__dict__.setdefault("twins", [])
+        twin.extend(e for e in other.defs + other.__dict__.get("twins", []) if e[2] and e[0] in mine and mine[e[0]] != e and e not in twin)
         for k, v in other.req.items():
             self.req.setdefault(k, v)
         for k, v in other.short.items():
@@ -345,6 +355,7 @@ class Lex:
             self.rlist.setdefault(k, v)
         self.refl.extend(t for t in other.refl if t not in self.refl)
         self.env.extend(t for t in other.env if t not in self.env)
+        self.fn.extend(t for t in other.fn if t not in self.fn)
         self.par.extend(t for t in other.par if t not in self.par)
         for k, v in other.dflt.items():
             self.dflt.setdefault(k, v)
@@ -536,6 +547,7 @@ def read_gr(name, d="gr"):
     c.header = []      # (kind, line): vocabulary, roles, definitions, prose and names, in order
     c.clauses = []     # (number, mark, text)
     c.kinds = []       # the kinds of note it declares: (word, noun, slot place, whether its acts keep their names)
+    c.refines = []     # the kinds it gives one more place, their denomination: (word, the name of the denomination)
     dfl = []           # the 'Default: ' lines, read once every 'Parameters: ' line is
     for i, l in enumerate(lines[1:]):
         m = CLAUSE.match(l)
@@ -545,12 +557,21 @@ def read_gr(name, d="gr"):
             continue
         elif i == 0 and re.match(re.escape(name) + r" (extends|restricts|strengthens|instantiates|composes|relaxes)\b", l):
             c.first = l
+        elif KINDR.match(l):
+            m = KINDR.match(l)
+            if m.group(1) != m.group(4):
+                raise Err("%s: '%s' gives the kind %s a place, and its nouns are of %s" % (name, l, m.group(1), m.group(4)))
+            c.refines.append((m.group(1), m.group(2)))
+            c.header.append(("prose", l))      # a kept declaration, as 'Kind of note:'
         elif KINDL.match(l):
             m = KINDL.match(l)
             c.kinds.append((m.group(1), m.group(2), m.group(3), bool(m.group(4))))
             c.header.append(("prose", l))      # a kept declaration, as 'Reflexive:'
         elif l.startswith(REFL):
             c.own.refl.extend(t for t in l[len(REFL):].rstrip(".").split("; ") if t not in c.own.refl)
+            c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
+        elif l.startswith(FUNL):
+            c.own.fn.extend(t for t in params_in(l[len(FUNL):], c.params).rstrip(".").split("; ") if t not in c.own.fn)
             c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
         elif l.startswith(ENVL):
             c.own.env.extend(t for t in params_in(l[len(ENVL):], c.params).rstrip(".").split("; ") if t not in c.own.env)
@@ -879,6 +900,7 @@ class World:
                     pl.rlist = {fp(k): ft(v) for k, v in pl.rlist.items()}
                     pl.refl = [ft(t) for t in pl.refl]
                     pl.env = [ft(t) for t in pl.env]
+                    pl.fn = [ft(t) for t in pl.fn]
                     pl.par = [ft(t) for t in pl.par]
                     pl.dflt = {ft(k): ft(v) for k, v in pl.dflt.items()}
                     pl.one = {fp(r) for r in pl.one}
@@ -895,10 +917,13 @@ class World:
         kind_phrases(self, n, lex)
         for name, fams in self.vote_families(n, lex, parents, subs):
             lex.voted[name] = [add_family(lex, f) for f in fams]
+        refine_phrases(self, n, lex)      # after the votes: an act on votes is voted on in its phrase without the denomination
         self.lex[n] = lex
         self.binds(n)          # refuses two different states put for one state
         del self.lex[n]
         for p in parents:      # a parameter that one contract of the first line binds is bound in all of n
+            if own_for(self, n, p):       # but for a contract instantiated with a name of n's own: a copy of its own (binds)
+                continue
             for item, q in self.binds(p):
                 self.bind_lex(lex, item, q)
         self.lex[n] = lex
@@ -925,7 +950,8 @@ class World:
                 sf = split_for(item, self.lexicon(p))
                 if sf and sf[0] == "state":
                     out.append((item, p))
-            out += [b for b in self.binds(p) if b not in out]
+            if not own_for(self, n, p):        # p instantiated with a name of n's own is a copy of its own: what its chain binds is bound in its acts, as p has them, and in no other contract of the first line (Definition Operations, Composition: instantiated alike)
+                out += [b for b in self.binds(p) if b not in out]
         seen = {}
         for item, q in out:
             sf = split_for(item, self.lexicon(q))
@@ -957,7 +983,10 @@ class World:
                         e = entries[hit[0]]
                         actname = e["name"]
                         _, ir = inv_basic(lex)
-                        best = best_phrase(e, lex, act_phrases(lex), [guard_text(g, ir) for g in e["guards"]])
+                        plain = [a for a in act_phrases(lex) if a[0] not in REFINED]      # voted on in a phrase of the text, the denomination taken out where its phrase has none (refine_phrases)
+                        best = min([b for b in (best_phrase(e, lex, plain, [guard_text(g, ir) for g in e["guards"]]),
+                                                best_phrase(unrefine_entry(self, p, e), lex, plain, [guard_text(g, ir) for g in e["guards"]])) if b],
+                                   key=lambda b: b[0], default=None)
                         if not best:
                             raise Err("no act phrase has the effects of the act cited")
                         t, b = best[1], best[2]
@@ -978,7 +1007,10 @@ class World:
         for sp in self.party[n]:
             if not sp["votes"]:
                 continue
-            best = best_phrase(sp["act"], lex, act_phrases(lex), [guard_text(g, ir) for g in sp["act"]["guards"]])
+            plain = [a for a in act_phrases(lex) if a[0] not in REFINED]
+            gts = [guard_text(g, ir) for g in sp["act"]["guards"]]
+            best = min([b for b in (best_phrase(sp["act"], lex, plain, gts), best_phrase(unrefine_entry(self, n, sp["act"], lex), lex, plain, gts)) if b],
+                       key=lambda b: b[0], default=None)
             if not best:
                 raise Err("%s %s: no act phrase has the effects of the act" % (n, sp["name"]))
             t, b = best[1], best[2]
@@ -1598,6 +1630,70 @@ def own_for(w, n, p):
 KEEP_KEYS = ("label", "name", "oname", "names", "tname", "target", "of", "kind", "mark", "kindof")
 
 
+def renamed_entries(w, n, p, entries, text=False):
+    """The entries of p, a contract n is written from, with n's own names put for its names (own_for): a copy of p.
+    Two contracts of a first line that instantiate alike a contract they are both written from have each of its acts
+    as one act, and else as two (Definition Operations, Composition).  So an act of the copy is marked with the names
+    put, 'via', and is another act than the act of its clause and name that another path brings, if the names put or
+    the states p's chain binds change the act as the contract of its first clause has it (Organisation:2 Propose, for
+    Orga and, through Backed Community, for its community Cur); it is unmarked, and one act with it, if they do not
+    (Notes:3 Pay).  An act that contract does not have, as a ward's form, is marked 'viau' until the union shows
+    whether another path brings the same act (settle_copies)."""
+    mp = own_for(w, n, p)
+    if not mp:
+        return entries
+    via = tuple(sorted(v for k, v in mp.items() if k != v))
+    memo = {}
+    def changed(e):
+        first = e["label"].split("+")[0]
+        c0 = first.split(":")[0]
+        k = (first, key(e)[1])
+        if k not in memo:
+            try:
+                src = (w.flat[c0] if text else expand_schemas(w, c0)) if c0 in w.known and c0 != n else []
+            except KeyError:
+                src = []
+            b = next((x for x in src if isinstance(x, dict) and x.get("kind") == "act" and not x.get("party") and x["label"] == first and key(x)[1] == k[1]), None)
+            if b is None:
+                # the act is of a contract written from c0 that names it there (Bonds' Pay bond of Notes:3, Coins' Pay
+                # issuer): the first contract of p's chain that has it, with the fewest clauses in its label
+                cands = []
+                for c in order([p], w):
+                    if c in (p, n, c0):
+                        continue
+                    try:
+                        src = w.flat[c] if text else expand_schemas(w, c)
+                    except KeyError:
+                        continue
+                    cands += [x for x in src if isinstance(x, dict) and x.get("kind") == "act" and not x.get("party")
+                              and not x.get("via") and not x.get("viau") and x["label"].split("+")[0] == first and key(x)[1] == k[1]]
+                if cands:
+                    b = min(cands, key=lambda x: x["label"].count("+"))
+            if b is None:
+                memo[k] = None
+            else:
+                b = {x: v for x, v in b.items() if x not in ("via", "viau", "pid", "of")}
+                bs = [b]
+                if text:
+                    for item, q in w.binds(p):
+                        bs = instantiate_text(w, bs, [item], q, p)
+                else:
+                    bs = instantiate_schemas(bs, derive_atoms(binds_sas(w, p), w.lexicon(p).votes))
+                memo[k] = bs != [b] or rename_names(b, mp) != b
+        return memo[k]
+    out = []
+    for e in entries:
+        r = rename_names(e, mp)
+        if isinstance(r, dict) and r.get("kind") == "act":
+            c = None if r.get("party") else changed(e)
+            if c:
+                r = dict(r, via=via)
+            elif c is None:
+                r = dict(r, viau=via)
+        out.append(r)
+    return out
+
+
 def rename_names(x, mp, key=None):
     """x with each name of mp put for, whole words; the labels and the names of acts as they are."""
     if not mp or key in KEEP_KEYS:
@@ -1730,6 +1826,7 @@ def read_sas(w, n):
 
 def sub_atoms(lits, rules, head=False):
     out = []
+    made = []
     for l in lits:
         for (pred, args), new in rules:
             copies = l[2][-1:] if l[2] and l[2][-1][:1] in MARK else ()
@@ -1740,7 +1837,11 @@ def sub_atoms(lits, rules, head=False):
                     if l[0] and nl[0]:
                         raise Err("a negated atom instantiated by a negated atom")
                     sub = lambda a: "@".join(b[x] if x in b else x for x in a.split("@")) if "@" in a else b[a] if a in b else WILD if more_any else a
-                    out.append((l[0] or nl[0], nl[1], tuple(sub(a) for a in nl[2]) + copies))
+                    r = (l[0] or nl[0], nl[1], tuple(sub(a) for a in nl[2]) + copies)
+                    if not head and not copies and (r in lits or r in made):
+                        continue        # a condition the act already has, or that a state put has made: once (an act by two paths, one bound and one at its parameter: Democratic Community's Propose, a treasurer by Community's binding on both)
+                    made.append(r)
+                    out.append(r)
                 break
         else:
             out.append(l)
@@ -1834,7 +1935,11 @@ def instantiate_schemas(entries, items):
 
 
 def key(e):
-    return (e["label"].split("+")[0], e.get("oname", e.get("name")), e.get("text"), e.get("kinds"))
+    """An act by the clause it comes from and its name there: two paths to one act, each renaming it at a citation of
+    its own (Community Currency's Appoint, Make officer of Organisation:4 by instantiation, Appoint again of Backed
+    Currency:1), are one act (Calculus #9, 2026-11-19)."""
+    first = e["label"].split("+")[0]
+    return (first, e.get("names", {}).get(first) or e.get("oname", e.get("name")), e.get("text"), e.get("kinds"), e.get("via") or e.get("viau"))
 
 
 def more(a, b):
@@ -1847,7 +1952,7 @@ def more(a, b):
 
 
 def both(a, b, fields):
-    """An act that a contract has by two paths: it has the restrictions of both."""
+    """An act that a contract has by two paths: it has the restrictions of both, and the weaker of the two marks."""
     o = dict(a)
     for f in fields:
         o[f] = more(a[f], b[f])
@@ -1859,6 +1964,8 @@ def both(a, b, fields):
     o["names"] = dict(a.get("names", {}), **b.get("names", {}))
     if "oname" in b and "oname" not in a:
         o["oname"], o["name"], o["mark"] = b["oname"], b["name"], b["mark"]
+    if a["mark"] in MARKS and b["mark"] in MARKS:     # by two paths in two modalities: the weaker (Calculus #8, 2026-11-17)
+        o["mark"] = max(a["mark"], b["mark"], key=MARKS.index)
     return o
 
 
@@ -1886,6 +1993,60 @@ def unclash(entries):
             e["name"] = base[e["party"]] + e["sfx"]
 
 
+COPIES = set()      # the names put, of each copy the first line of the contract being expanded makes (own_for): what 'via' has on the copy's acts
+
+
+def settle_copies(w, n, entries):
+    """After the union of the first line: an act of a copy marked 'viau' (renamed_entries) is one act with an act of
+    its clause and name that another path brings, if the two are the same; is an act of the copy, 'via', if the union
+    has another such act that differs; and else is the one act, unmarked.  The keys other entries name an act by are
+    brought to this.  Sets COPIES for n."""
+    COPIES.clear()
+    COPIES.update(tuple(sorted(v for k, v in own_for(w, n, p).items() if k != v)) for p in first_line(w.contract(n), w.known)[0] if own_for(w, n, p))
+    isact = lambda e: isinstance(e, dict) and "label" in e
+    if not any(isact(e) and e.get("viau") for e in entries):
+        return entries
+    REF = ("pid", "party", "of")
+    bare = lambda e: {x: v for x, v in e.items() if x not in REF + ("via", "viau")}
+    mp, out, groups = {}, [], {}
+    for e in entries:
+        if isact(e):
+            groups.setdefault(key(e)[:-1], []).append(e)
+    drop = set()
+    for e in entries:
+        if not (isact(e) and e.get("viau")):
+            continue
+        others = [f for f in groups[key(e)[:-1]] if f is not e and id(f) not in drop]
+        twin = next((f for f in others if not f.get("viau") and bare(f) == bare(e)), None) or next((f for f in others if bare(f) == bare(e)), None)
+        if twin is not None:
+            drop.add(id(e))
+            mp[id(e)] = twin
+        elif others:
+            mp[id(e)] = "via"
+    final = {}
+    def settled(e):
+        if id(e) not in final:
+            o = {x: v for x, v in e.items() if x != "viau"}
+            if e.get("viau") and mp.get(id(e)) == "via":
+                o["via"] = e["viau"]
+            final[id(e)] = o
+        return final[id(e)]
+    newkey = {}
+    for e in entries:
+        if isact(e) and e.get("viau"):
+            newkey[key(e)] = key(settled(mp[id(e)])) if id(e) in drop else key(settled(e))
+    for e in entries:
+        if id(e) in drop:
+            continue
+        o = settled(e) if isact(e) else e
+        if isinstance(o, dict):
+            for f in REF:
+                if o.get(f) in newkey:
+                    o[f] = newkey[o[f]]
+        out.append(o)
+    return out
+
+
 def inherit(entries, have, new, fields):
     for e in new:
         k = key(e)
@@ -1901,6 +2062,9 @@ def cited(entries, target, tname, where):
         at = e.get("names", {}).get(target)
         return at == tname if at is not None else e["name"] == tname or e.get("oname") == tname
     hit = [i for i, e in enumerate(entries) if e["kind"] == "act" and not e.get("voteact") and target in e["label"].split("+") and (tname is None or named(e) and not e.get("generic"))]
+    copy = lambda i: entries[i].get('via') in COPIES
+    if any(copy(i) for i in hit) and any(not copy(i) for i in hit):       # of two copies of the act, a citation names the act of the contract cited, not of the copy the first line makes of a contract written from it
+        hit = [i for i in hit if not copy(i)]
     if not hit:
         gone = [v for (c, l, nm), v in REMOVED.items() if target in l.split("+") and (tname is None or nm == tname)]
         if gone:
@@ -2003,9 +2167,24 @@ def binds_sas(w, n, memo={}):
         out = []
         for p in parents:
             out += [i for i in subs.get(p, []) if "(" in i.rsplit(" for ", 1)[1] and re.match(r"[a-z_0-9]+\(", i) and i not in out]
-            out += [i for i in binds_sas(w, p) if i not in out]
+            if not own_for(w, n, p):       # as World.binds
+                out += [i for i in binds_sas(w, p) if i not in out and not given_apart(w, n, p, i)]
         memo[n] = out
     return memo[n]
+
+
+def given_apart(w, n, p, item):
+    """Whether another contract of n's first line than p gives differently the role that p's chain gives by item
+    ('guardians(z) for deciders(z)', Services' in Partners' chain, where Booking's chain has Organisation give it by
+    its bylaws).  The two contracts then instantiate differently the contract that declares the role, whose acts are
+    one act for each (Definition Operations, Composition): the role is given in p's acts, as p has them, and in no
+    other contract of the first line."""
+    pred = item.rsplit(" for ", 1)[1].split("(")[0]
+    texts = [t for t, pr, _ in w.lexicon(p).roles if pr == pred]
+    if not texts:
+        return False
+    _, _, parents, _, _ = read_sas(w, n)
+    return any(q != p and item not in binds_sas(w, q) and any(role_given(w, q, t) for t in texts) for q in parents)
 
 
 def relax_hit(entries, e):
@@ -2126,9 +2305,12 @@ def expand_schemas(w, n):
     lex = w.lexicon(n)
     entries, have = [], {}
     for p in parents:
-        inherit(entries, have, rename_names(instantiate_schemas(expand_schemas(w, p), derive_atoms(subs.get(p, []), lex.votes)), own_for(w, n, p)), ("head", "body", "guards"))
+        inherit(entries, have, renamed_entries(w, n, p, instantiate_schemas(expand_schemas(w, p), derive_atoms(subs.get(p, []), lex.votes))), ("head", "body", "guards"))
+    entries = settle_copies(w, n, entries)
     for p in parents:
-        entries = instantiate_schemas(entries, derive_atoms(binds_sas(w, p), lex.votes))
+        if own_for(w, n, p):       # a copy of its own: its chain's bindings are its own (World.binds)
+            continue
+        entries = instantiate_schemas(entries, derive_atoms([i for i in binds_sas(w, p) if not given_apart(w, n, p, i)], w.lexicon(p).votes))      # for the motions of p's own chain, as expand_text has it (w.binds(p)): the acts another contract of the first line brings on votes keep its rule, or take n's Default (Democratic Community: Community's treasurers do not decide Constitution's Join and Expel)
     entries = kind_forms(w, n, entries)
     for e in own:
         if e["kind"] == "cite" and e.get("relax"):
@@ -2183,7 +2365,7 @@ def expand_schemas(w, n):
                 entries += [e] + (new_votes(entries, gen[2]) if gen else [])
             else:
                 entries.append(e)
-    entries = kind_forms(w, n, entries)
+    entries = refine_entries(w, n, kind_forms(w, n, entries))
     derive_party(w, n, lex, entries)
     unclash(entries)
     if REMOVE:
@@ -2212,6 +2394,218 @@ def kinds_of(w, n):
             raise Err("%s: two kinds of note keep the names of the acts" % n)
         memo[n] = out
     return memo[n]
+
+
+def refines_of(w, n):
+    """The kinds of note n's chain gives one more place, their denomination (Udi's and Calculus #8's, 2026-11-17: the
+    coin carries its denomination as it carries its issuer's key): {word: the name of the denomination}."""
+    memo = w.__dict__.setdefault("_refines", {})
+    if n not in memo:
+        c = w.contract(n)
+        parents, _, _ = first_line(c, w.known)
+        out = {}
+        for p in parents:
+            for k, v in refines_of(w, p).items():
+                out.setdefault(k, v)
+        for word, name in getattr(c, "refines", []):
+            out.setdefault(word, name)
+        memo[n] = out
+    return memo[n]
+
+
+def refine_map(w, n, lex):
+    """{(predicate, places, mark): (its predicate with the denomination, [('v', index, mark) | ('x', name, mark)])}: each
+    state of a kind refines_of gives a place, 'x holds n y-coins' = coin(x,y,*n), and the state its noun with the
+    denomination makes of it, 'x holds n f-denominated y-coins' = coin(x,y,f,*n), read in the lexicon."""
+    memo = w.__dict__.setdefault("_refmap", {})
+    rs = refines_of(w, n)
+    if not rs:
+        return {}
+    if n in memo:
+        return memo[n]
+    out = {}
+    strip = lambda a: a.lstrip(MARK)
+    for word, dname in rs.items():
+        preds = {word, "escrow_" + word}
+        for t, p, args in lex.basic:
+            if p not in preds or "-denominated" in t:
+                continue
+            used = set(tvars(t))
+            f = [v for v in "fghijklmnopqrstuvw" if v not in used][0]
+            t2 = re.sub(r"\ba ([b-z])-%s\b" % word, r"an %s-denominated \1-%s" % (f, word), t)
+            t2 = re.sub(r"(?<!denominated )\b(n |exactly n )?([b-z])-%ss\b" % word, r"\1%s-denominated \2-%ss" % (f, word), t2)
+            found = None
+            for tb, pb, ab in lex.basic:
+                mp = same_phrase(tb, t2)
+                if mp is not None and tb != t:
+                    found = (pb, ab, {v: u for u, v in mp.items()})
+                    break
+            if not found:
+                raise Err("%s: the kind %s with its denomination has no state for '%s' ('%s')" % (n, word, t, t2))
+            pb, ab, inv = found
+            gpl = [strip(a) for a in args]
+            spec = []
+            for a in ab:
+                mark = a[:len(a) - len(strip(a))]
+                pl = inv.get(strip(a), strip(a))
+                spec.append(("x", dname, mark) if pl == f else ("v", gpl.index(pl), mark))
+            out[(p, len(args), (args[-1][:1] if args and args[-1][:1] in MARK else ""))] = (pb, spec)
+    memo[n] = out
+    return out
+
+
+def refine_lit(l, rmap, name=None):
+    """A literal of a kind with its denomination: coin(Alice,Carol) is coin(Alice,Carol,Dollar); with name, that name
+    for the denomination (a place of a phrase)."""
+    neg, p, a = l[0], l[1], tuple(l[2])
+    k = (p, len(a), (a[-1][:1] if a and a[-1][:1] in MARK else ""))
+    if k not in rmap:
+        return l
+    pb, spec = rmap[k]
+    vals = [x.lstrip(MARK) for x in a]
+    return (neg, pb, tuple(m + (vals[i] if t_ == "v" else (name or i)) for t_, i, m in spec))
+
+
+def refine_entries(w, n, entries, text=False):
+    """The acts of n with each atom of a kind its chain gives the denomination put with it (refine_map): in the schemas
+    the literals, in the flat text the phrases, read and written in the lexicon."""
+    lex = w.lexicon(n)
+    rmap = refine_map(w, n, lex)
+    if not rmap:
+        return entries
+    out = []
+    if text:
+        ib, _ = inv_basic(lex)
+        def ph(x, s):
+            ls = lits_of(s, lex)
+            if len(ls) != 1:
+                return (x, s)
+            l = ls[0]
+            r = refine_lit(l, rmap)
+            if r == l:
+                return (x, s)
+            return (x, phrase_of((False,) + tuple(r[1:]), ib))
+        for e in entries:
+            if e["kind"] == "act":
+                def once(xs):
+                    res, made = [], set()
+                    for x in xs:
+                        r = ph(*x)
+                        if r != x or r in made:
+                            if r in made or (r != x and r in xs):
+                                continue
+                            made.add(r)
+                        res.append(r)
+                    return res
+                e = dict(e, effects=once(e["effects"]), conds=once(e["conds"]))
+            out.append(e)
+        return out
+    def once(ls):
+        """The literals refined, a literal the refinement makes twice once (an act inherited by two paths, one with the
+        denomination and one not, is one act); a literal the act had twice before stays twice."""
+        res, made = [], set()
+        for l in ls:
+            r = refine_lit(l, rmap)
+            if r != l or r in made:
+                if r in made or (r != l and r in ls):
+                    continue
+                made.add(r)
+            res.append(r)
+        return res
+    for e in entries:
+        if e["kind"] == "act":
+            e = dict(e, head=once(e["head"]), body=once(e["body"]))
+        out.append(e)
+    return out
+
+
+def refine_noun(s, word, f):
+    """The nouns of a kind in a phrase with the denomination f: 'a y-coin' is 'an f-denominated y-coin', 'n y-coins'
+    'n f-denominated y-coins'."""
+    s = re.sub(r"\ba ([b-z]|%s)-%s\b" % (NAME, word), r"an %s-denominated \1-%s" % (f, word), s)
+    return re.sub(r"(?<!denominated )(?<![A-Za-z-])([b-z]|%s)-%ss\b" % (NAME, word), r"%s-denominated \1-%ss" % (f, word), s)
+
+
+REFINED = set()      # the act phrases refine_phrases made, with the denomination
+
+
+def unrefine_lits(ls, lex):
+    """Literals with the denomination taken out, by the map refine_phrases keeps on the lexicon."""
+    inv = lex.__dict__.get("rinv")
+    if not inv:
+        return ls
+    out = []
+    for l in ls:
+        spec = inv.get((l[1], len(l[2])))
+        if spec is None:
+            out.append(l)
+            continue
+        old = sorted((i, j) for j, (t_, i, m) in enumerate(spec) if t_ == "v")
+        out.append((l[0], l[1], tuple(l[2][j] for _, j in old)))
+    return out
+
+
+def unrefine_entry(w, n, e, lex=None):
+    """An act of n with the denomination taken out of its atoms, as its phrase without it reads it."""
+    try:
+        rmap = refine_map(w, n, lex or w.lexicon(n))
+    except Err:
+        return e
+    if not rmap:
+        return e
+    inv = {(pb, len(spec)): spec for pb, spec in rmap.values()}
+    def un(l):
+        spec = inv.get((l[1], len(l[2])))
+        if spec is None:
+            return l
+        old = sorted((i, j) for j, (t_, i, m) in enumerate(spec) if t_ == "v")
+        return (l[0], l[1], tuple(l[2][j] for _, j in old))
+    return dict(e, head=[un(l) for l in e["head"]], body=[un(l) for l in e["body"]])
+
+
+def refine_phrases(w, n, lex):
+    """The act phrases of n's acts of a kind its chain gives the denomination, with it: 'x issues n y-coins' gives 'x
+    issues n f-denominated y-coins', its effects the states with the denomination (refine_map)."""
+    rs = refines_of(w, n)
+    if not rs:
+        return
+    have = {t for t, _, _ in lex.defs}
+    lex.rdefs = []
+    try:
+        lex.rinv = {(pb, len(spec)): spec for pb, spec in refine_map(w, n, lex).values()}
+    except Err:
+        lex.rinv = {}
+    try:
+        rmap = refine_map(w, n, lex)
+    except Err:
+        return
+    for t, r, act in list(lex.defs):
+        if not act or "-denominated" in t:
+            continue
+        used = set(tvars(t)) | set(tvars(r))
+        f = [v for v in "fghijklmnopqrstuvw" if v not in used][0]
+        try:
+            lits = pattern(r, lex)
+        except Err:
+            continue
+        ref = [refine_lit(l, rmap, f) for l in lits]
+        if ref == lits:
+            continue
+        t2 = t
+        for word in rs:
+            t2 = refine_noun(t2, word, f)
+        r2 = fold_states(ref, lex)      # each state of the kind with the denomination, and the others as they are (a vote's)
+        if t2 == t or t2 in have:
+            continue
+        try:
+            pattern(r2, lex)      # an act phrase whose effects, with the denomination, are states of the lexicon (not a vote's)
+        except Err:
+            continue
+        have.add(t2)
+        REFINED.add(t2)
+        lex.__dict__.setdefault("rdefs", []).append((t2, r2, True))      # for writing the acts only, not for reading the text
+        if t in lex.req:
+            lex.req[t2] = refine_noun(lex.req[t], list(rs)[0], f) if len(rs) == 1 else lex.req[t]
 
 
 def kind_alts(w, k):
@@ -2642,10 +3036,13 @@ def gen_vote(lex, o, org, k, name, label, mark, taker=None, agents=None):
     _, ir = inv_basic(lex)
     sv, _ = subject(f["t"])
     full = None
-    for b, _ in match_some(pattern(r, lex), o["head"]):
-        for fb in subject_bindings(sv, b, [guard_text(g, ir) for g in o["guards"]]):
-            if all(v in fb for v in tvars(f["t"])) and fb[f["zp"]] == org:
-                full = fb
+    for head in (o["head"], unrefine_lits(o["head"], lex)):      # the act's phrase without the denomination (refine_phrases)
+        for b, _ in match_some(pattern(r, lex), head):
+            for fb in subject_bindings(sv, b, [guard_text(g, ir) for g in o["guards"]]):
+                if all(v in fb for v in tvars(f["t"])) and fb[f["zp"]] == org:
+                    full = fb
+                    break
+            if full:
                 break
         if full:
             break
@@ -2689,6 +3086,7 @@ def flat_line(e):
 def sub_phrases(items, rules, lex, head=False):
     """Each basic state of the contract instantiated, replaced by the states put for it."""
     out = []
+    made = []
     for n, p in items:
         for rx, new in rules:
             m = rx.fullmatch(p)
@@ -2700,7 +3098,11 @@ def sub_phrases(items, rules, lex, head=False):
                 for nn, np in phrases_of(ph, lex):
                     if n and nn:
                         raise Err("a negated state instantiated by a negated state")
-                    out.append((n or nn, np.replace("someone", "anyone") if n else np))
+                    r = (n or nn, np.replace("someone", "anyone") if n else np)
+                    if not head and (r in items or r in made):
+                        continue        # as sub_atoms: a condition the act already has, once
+                    made.append(r)
+                    out.append(r)
                 break
         else:
             out.append((n, p))
@@ -2776,8 +3178,11 @@ def expand_text(w, n, own):
     parents, subs, _ = first_line(c, w.known)
     entries, have = [], {}
     for p in parents:
-        inherit(entries, have, rename_names(instantiate_text(w, w.flat[p], derive_items(subs.get(p, []), w.lexicon(p)), p, n), own_for(w, n, p)), ("effects", "conds", "persons"))
+        inherit(entries, have, renamed_entries(w, n, p, instantiate_text(w, w.flat[p], derive_items(subs.get(p, []), w.lexicon(p)), p, n), True), ("effects", "conds", "persons"))
+    entries = settle_copies(w, n, entries)
     for p in parents:
+        if own_for(w, n, p):
+            continue
         for item, q in w.binds(p):
             entries = instantiate_text(w, entries, [item], q, n)
     entries = kind_forms(w, n, entries, True)
@@ -2830,7 +3235,7 @@ def expand_text(w, n, own):
                 entries += [e] + (new_votes(entries, gen[2]) if gen else [])
             else:
                 entries.append(e)
-    entries = kind_forms(w, n, entries, True)
+    entries = refine_entries(w, n, kind_forms(w, n, entries, True), True)
     derive_party(w, n, lex, entries, True)
     unclash(entries)
     if REMOVE:          # the acts expand_schemas removes, removed from the text too, so that the two commute
@@ -2890,12 +3295,18 @@ def phi(lines, lex):
 
 def inv_basic(lex):
     """Predicates to phrases; a predicate with a number of copies has its own phrase, under 'pred*'."""
-    return {p + (a[-1][0] if a and a[-1][:1] in MARK else ""): (t, a) for t, p, a in lex.basic}, {p: (t, a) for t, p, a in lex.roles}
+    ib = {}
+    for t, p, a in lex.basic:
+        k = p + (a[-1][0] if a and a[-1][:1] in MARK else "")
+        ib[k] = (t, a)
+        ib["%s/%d" % (k, len(a))] = (t, a)      # by its number of places too: a coin's state with its denomination, coin(x,y,f), beside coin(x,y)
+    return ib, {p: (t, a) for t, p, a in lex.roles}
 
 
 def tb_of(l, ib):
     """The phrase of a literal and its binding."""
-    t, args = ib[l[1] + (l[2][-1][0] if l[2] and l[2][-1][:1] in MARK else "")]
+    k = l[1] + (l[2][-1][0] if l[2] and l[2][-1][:1] in MARK else "")
+    t, args = ib.get("%s/%d" % (k, len(l[2]))) or ib[k]
     return t, {a.lstrip(MARK): v.lstrip(MARK) if a[:1] in MARK else v for a, v in zip(args, l[2])}
 
 
@@ -3085,7 +3496,7 @@ def subject_bindings(sv, b, gts):
 
 
 def act_phrases(lex):
-    return [(t, pattern(r, lex)) for t, r, isact in lex.defs if isact]
+    return [(t, pattern(r, lex)) for t, r, isact in lex.defs + lex.__dict__.get("rdefs", []) + lex.__dict__.get("twins", []) if isact]
 
 
 def best_phrase(e, lex, acts, gts, prefer=None):

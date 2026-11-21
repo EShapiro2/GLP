@@ -66,14 +66,15 @@ FDAO | Funded DAO | Funded-DAO | funded_dao | fdao
 LDAO | Liquid DAO | Liquid-DAO | liquid_dao | ldao
 GO | Organisation | Organisation | organisation | go
 CDC | Constitution | Constitution | constitution | cdc
-GNO | Networked Organisation | Networked-Organisation | networked_organisation | gno
+GNO | Community Network | Community-Network | community_network | gno
 GBank | Bank | Bank | bank | gbank
 CB | Community Bank | Community-Bank | community_bank | cb
 CMB | Commercial Bank | Commercial-Bank | commercial_bank | cmb
 SCB | Central Bank | Central-Bank | central_bank | scb
 MCS | Mutual Credit | Mutual-Credit | mutual_credit | mcs
-GCC | Community Currency | Community-Currency | community_currency | gcc
-GBCC | Backed Currency | Backed-Currency | backed_currency | gbcc
+GCC | Community | Community | community | gcc
+GBCC | Backed Community | Backed-Community | backed_community | gbcc
+Democratic Community | Democratic Community | Democratic-Community | democratic_community | democratic_community
 GCorp | Corporation | Corporation | corporation | gcorp
 SC | Shareholding Corporation | Shareholding-Corporation | shareholding_corporation | sc
 SPLLC | Single-Person Company | Single-Person-Company | single_person_company | spllc
@@ -86,15 +87,19 @@ GLDAO | Liquid Cooperative | Liquid-Cooperative | liquid_cooperative | gldao
 GAN | Ads | Ads | ads | gan
 GNG | Gigs | Gigs | gigs | gng
 GNL | Lodging | Lodging | lodging | gnl
-GNM | Marketplace | Marketplace | marketplace | gnm
+GNM | Community Market | Community-Market | community_market | gnm
 Notes | Notes | Notes | notes | notes
 Coins | Coins | Coins | coins | coins
 Bonds | Bonds | Bonds | bonds | bonds
 Shares | Shares | Shares | shares | shares
 Agora | Agora | Agora | agora | agora
 DAO | DAO | DAO | dao | dao
+Gossip | Gossip | Gossip | gossip | gossip
+Promoted Gossip | Promoted Gossip | Promoted-Gossip | promoted_gossip | promoted_gossip
 Matching | Matching | Matching | matching | matching
 Anonymous Matching | Anonymous Matching | Anonymous-Matching | anonymous_matching | anonymous_matching
+Free Matching | Free Matching | Free-Matching | free_matching | free_matching
+Promoted Matching | Promoted Matching | Promoted-Matching | promoted_matching | promoted_matching
 Dating | Dating | Dating | dating | dating
 Jobs | Jobs | Jobs | jobs | jobs
 Help | Help | Help | help | help

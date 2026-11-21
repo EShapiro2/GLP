@@ -1,0 +1,6 @@
+Community
+Community instantiates Bank with community bylaws and extends it.
+A *community* is a bank whose coins are Dollar-denominated. The coins it issues are *community coins*. Its bylaws name two roles, *member*, held by every participant, and *treasurer*. They say who decides the admission and the expulsion of a member and the amendment of the bylaws. The treasurers jointly decide its other acts.
+Alice and Bob are persons, Orga a community.
+1. ■ Draw: Alice, a treasurer, may swap Alice-coins for Orga-coins.
+2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.

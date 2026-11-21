@@ -1,0 +1,23 @@
+% GCC: Grassroots Community Currency --- the contract, the one copy, its owner's (organisation/claude.md, "Sessions").
+% Owner: Currencies (GCC).
+% Paper: GCC, Grassroots Community Currencies, in preparation
+% Adopted from the Calculus, branch Calculus of GLP, 3b5fd5d, by calculus/MIGRATION.md (Udi, 2026-11-15): the contract and its Logic pragmas are the Calculus's text, which Udi approved; Community.glp and cascade/Community/ are printed by calculus/tools/adopt.py, never written by hand; the Interface pragmas are the owner's, a line for each clause with acts of its own, the fields those of calculus/NAME/interface.txt (Currencies #19, 2026-11-15).
+Community
+Community instantiates Bank with community bylaws and extends it.
+A *community* is a bank whose coins are Dollar-denominated. The coins it issues are *community coins*. Its bylaws name two roles, *member*, held by every participant, and *treasurer*. They say who decides the admission and the expulsion of a member and the amendment of the bylaws. The treasurers jointly decide its other acts.
+Alice and Bob are persons, Orga a community.
+1. ■ Draw: Alice, a treasurer, may swap Alice-coins for Orga-coins.
+2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.
+Logic pragmas
+Community instantiates Bank with community bylaws; x is a treasurer of z for x is entitled to propose m in z; x is a treasurer of z for x is entitled to take m for z; x is a treasurer of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Treasurer for the votes decide m according to the bylaws of z, and extends it.
+A *community* is a bank whose coins are Dollar-denominated. The coins it issues are *community coins*. Its bylaws name two roles, *member*, held by every participant, and *treasurer*. They say who decides the admission and the expulsion of a member and the amendment of the bylaws. The treasurers jointly decide its other acts.
+Alice and Bob are persons, Orga a community, Sum a number.
+1. ■ Draw: Alice may swap Sum Alice-coins for Sum Orga-coins, provided Alice is a treasurer of Orga.
+2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.
+Logic pragmas.
+x is a member of z: x is a participant of z.
+x is a treasurer of z: x holds the role Treasurer in z.
+After x swaps n x-coins for n z-coins: no longer x holds n x-coins, z holds n x-coins, no longer z holds n z-coins and x holds n z-coins.
+Interface pragmas
+Draw: Alice [Draw] <amount>
+Issue bond: Alice [Issue bond] <maturity> <denomination> <amount>

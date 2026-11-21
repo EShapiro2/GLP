@@ -1,2 +1,2 @@
-Marketplace extends Networked Organisation and Overlay: holds
+Marketplace extends Community Network and Overlay: holds
 Marketplace restricts Recommendations: holds

@@ -9,4 +9,5 @@ Leave, Expel: Decider [Expel] <bob> <votesorga>
   Decider [Officer expel] <bob> <votesorga>
   Codecider: Decider asks for your consent to officer expel.
   Voter [Vote of Orga for Officer expel] <bob>
-Amend: Alice [Amend] <motion> <votes>
+Amend: Alice [Amend] <motion> <votesorga>
+  Voter [Vote of Orga for Amend] <alice> <motion>

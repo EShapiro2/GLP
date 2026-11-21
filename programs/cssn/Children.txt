@@ -6,7 +6,7 @@
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 2c4ab86; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas CSSN's, a line for each clause of Children, Warded Groups and Guardians whose acts the instance names anew, with a button for each such act, the tab Children, and each question in CSSN's words, and its Implementation pragma, the introduction predicate knows.  Git holds what the file said before.
 % Schemas: Children.glp beside this file, the full schemas, Warded Groups' as Children instantiates, restricts and extends it, printed by calculus/tools/adopt.py Children from the Logic pragmas and never written by hand; adopt.py --check Children holds it and cascade/Children/ to what the tools print.
 Children
-Children instantiates Warded Groups with the guardians deciding jointly, a child for a ward and a parent for a guardian, and restricts and extends it.
+Children instantiates Warded Groups with the guardians deciding jointly for the decision rule, a child for a ward and a parent for a guardian, and restricts and extends it.
 Alice and Bob are persons, Wendy and Will children.
 1. ◆ Enter: Guardians:1, only if Alice is a legal parent of the minor who operates Wendy.
 2. ■ A child's acquaintances. Child acquaint: Guardians:3, only if Alice knows Bob, and with the consent of Alice. Children acquaint: Guardians:4, only if Alice knows Will and Bob knows Wendy, and with the consent of Alice and Bob, who know each other, Alice and Bob possibly one person.
