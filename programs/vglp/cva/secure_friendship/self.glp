@@ -20,6 +20,16 @@
 %%   deciding, and passes alicia the friendship of alice and carol he records
 %%   (Tell friends).
 %%
+%% play_restore_loss: alice's machine holds the environment atom state_loss
+%%   from the start, and bob's none.  alice and bob come to know each other
+%%   and befriend, and each keeps a checkpoint of the other (Secure
+%%   Friendship:3).  Restore and Restore friend at bob are then refused by
+%%   alice as unable on her friendship with bob alone (Secure Friendship:4),
+%%   the state loss being present: in GSC's model no transition erases
+%%   friend(alice, bob) at alice, which the paper's state-loss fault does
+%%   (SPM paper, Definition State-Loss Fault), so the run isolates that
+%%   precondition and no run of the model can satisfy it.
+%%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
@@ -65,6 +75,33 @@ play_replace(LA?, LB?, LC?, LD?, N?) :-
              wait(holds(friend(bob))),
              wait(holds(learned_friend(bob, alice, carol)))],
             LA, LB, LC, LD, N).
+
+exported procedure play_restore_loss(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_restore_loss(LA?, LB?, N?) :-
+    lossy_pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
+                own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+                own([A3], propose(befriend(A3?, bob))), wait(holds(friend(bob))),
+                wait(holds(checkpoint(bob)))],
+               [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                approval(acquaint(alice, bob), yes),
+                approval(befriend(alice, bob), yes),
+                wait(holds(checkpoint(alice)))],
+               LA, LB, N).
+
+%% alice, whose machine holds state_loss, and bob, each with its dispatcher
+%% and scripted person, their networks joined.
+procedure lossy_pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+lossy_pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, [state_loss], AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, [], AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).
 
 %% alice, bob, carol and alicia, each with its dispatcher and scripted person,
 %% their networks joined, and no environment atom, so no state loss.
