@@ -8723,8 +8723,8 @@ check_not "SG spm no failed play" "→ failed" "$sg_spm"
 # gkk and gsn, the programs the plays install by GPD's definition of a program
 # (graph/Programs.txt), and coins/currency --- whose artefacts :artefact
 # writes into core, where the agent's load_file/2
-# reads them; cssn's artefact carries no certificate (its boot glue reaches the
-# person) and loads as text, which the super-app does not install.  Each
+# reads them; cssn, the app compiled from CSSN's contract, is certified and
+# installed as gsn is.  Each
 # mini-app is the instance of the root's entry template miniapp/3 at its own
 # type, activated at the template's opaque instance, and each person of a
 # mini-app is its own scripted person, the second template miniapp_person/5's
@@ -8742,7 +8742,6 @@ sg_core=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/apps/gsn $SG_CORE
 :artefact $GLP_DIR/programs/cssn $SG_CORE
 :artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
-:artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/social/graph/checked/grassroots $SG_CORE
 :artefact $GLP_DIR/programs/social/graph/checked/not_grassroots $SG_CORE
@@ -8779,7 +8778,7 @@ HEREDOC
 2>&1)
 check "SG super-app: GKK's app's artefact is certified" "gkk.glpw --- certified under" "$sg_core"
 check "SG super-app: GSN's app's artefact is certified" "gsn.glpw --- certified under" "$sg_core"
-check "SG super-app: cssn's artefact is refused a certificate" "cssn.glpw --- no certificate: refused" "$sg_core"
+check "SG super-app: cssn's artefact is certified" "cssn.glpw --- certified under" "$sg_core"
 check "SG super-app: currency's artefact is certified" "currency.glpw --- certified under" "$sg_core"
 check "SG super-app core loads" "Loaded program" "$sg_core"
 # The third check of GPD's Implementation pragma (graph/Programs.txt): "that
@@ -8794,9 +8793,9 @@ check "SG super-app: load_file gives GSC's checker's artefact as a Module" "K0 =
 check "SG super-app: the super-app installs a program whose checker verdict is syntactically_grassroots" "G1 = \[grassroots\]" "$sg_core"
 check "SG super-app: a program whose checker verdict is not_grassroots installs nothing" "G2 = \[\]" "$sg_core"
 check "SG super-app: a program whose checker verdict is malformed installs nothing" "G3 = \[\]" "$sg_core"
-check "SG super-app: load_file gives cssn's artefact as text" "K1 = text" "$sg_core"
+check "SG super-app: load_file gives cssn's artefact as a Module" "K1 = module" "$sg_core"
 check "SG super-app: load_file gives currency's artefact as a Module" "K2 = module" "$sg_core"
-check "SG super-app: the super-app installs no text" "I1 = \[\]" "$sg_core"
+check "SG super-app: the super-app installs the certified app compiled from CSSN's contract" "I1 = \[cssn\]" "$sg_core"
 check "SG super-app: the super-app installs the certified currency" "I2 = \[currency\]" "$sg_core"
 check "SG super-app: the super-app installs the certified app compiled from GKK's contract" "I3 = \[gkk\]" "$sg_core"
 check "SG super-app refuses a forgery: a certification that is not a signed term installs nothing" "I4 = \[\]" "$sg_core"
@@ -8958,33 +8957,33 @@ check "SG directory: Unlist sends the signed unlisting to the directory" "^N4 = 
 check "SG directory: Unlist with no directory is refused and told the reason" "O5 = \[msg(agent, person, rejected(no_directory))\]$" "$sg_dir"
 check_not "SG directory: no failed goal" "→ failed" "$sg_dir"
 
-# The child-safe platform hosted, in its own session: a play that has run the
+# CSSN's app hosted, in its own session: a play that has run the
 # currency's mini-app leaves the session such that the next play's invitation
 # opens nothing --- play_invite after play_coins returns [] as well --- so the
 # plays are not run one after another in one REPL (SGSG Code, 2026-09-08).
 sg_cs=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
-:artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
+:artefact $GLP_DIR/programs/cssn $SG_CORE
 $SG_CORE
 :limit 5000000
-play_cssn(alice, bob, N1, N2).
+play_cssn(alice, bob, A, B).
 :quit
 HEREDOC
 2>&1)
-check "SG super-app: the child-safe platform's artefact is certified" "childsafe.glpw --- certified under" "$sg_cs"
-check "SG super-app hosts the child-safe platform: alice connected to bob" "N1 = \[connected(bob) | " "$sg_cs"
-check "SG super-app hosts the child-safe platform: bob connected and greeted" "N2 = \[connected(alice), received(alice, hello) | " "$sg_cs"
-check_not "SG super-app hosts the child-safe platform: no failed play" "→ failed" "$sg_cs"
+check "SG super-app hosts CSSN's app: its artefact is certified" "cssn.glpw --- certified under" "$sg_cs"
+check "SG super-app hosts CSSN's app: invitation, handshake, activation: alice's execution activated, and befriends bob over the conversation" "A = \[view(alice, \[\], \[\], \[\], .*view(alice, \[friend(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_cs"
+check "SG super-app hosts CSSN's app: invitation, handshake, activation: bob's execution activated, and befriends alice over the conversation" "B = \[view(bob, \[\], \[\], \[\], .*view(bob, \[friend(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_cs"
+check_not "SG super-app hosts CSSN's app: no failed play" "→ failed" "$sg_cs"
 
 # BOTH mini-apps under one super-app, in one heap (paper Section 7, Theorem
-# 6.5): each person installs the currency and the child-safe platform, each
+# 6.5): each person installs the currency and CSSN's app, each
 # with its own user-interface grant; the friend is invited to both, both
 # handshakes open, both entries are activated by run/3 with their own
 # conversations, and the two protocols proceed over the one friendship.
 sg_two=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
-:artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
+:artefact $GLP_DIR/programs/cssn $SG_CORE
 $SG_CORE
 :limit 5000000
 play_both(alice, bob, A, B, C, D).
@@ -8993,8 +8992,8 @@ HEREDOC
 2>&1)
 check "SG two mini-apps at once: alice's swap settles" "A = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\]) | " "$sg_two"
 check "SG two mini-apps at once: bob's swap settles" "B = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | " "$sg_two"
-check "SG two mini-apps at once: alice connected under the child-safe platform" "C = \[connected(bob) | " "$sg_two"
-check "SG two mini-apps at once: bob connected and greeted under it" "D = \[connected(alice), received(alice, hello) | " "$sg_two"
+check "SG two mini-apps at once: alice befriends bob under CSSN's app" "C = \[view(alice, \[\], \[\], \[\], .*view(alice, \[friend(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_two"
+check "SG two mini-apps at once: bob befriends alice under CSSN's app" "D = \[view(bob, \[\], \[\], \[\], .*view(bob, \[friend(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_two"
 check_not "SG two mini-apps at once: no failed play" "→ failed" "$sg_two"
 
 # The same on two smartphones: one isolate per person, both mini-apps hosted by
@@ -9002,7 +9001,7 @@ check_not "SG two mini-apps at once: no failed play" "→ failed" "$sg_two"
 sg_two_boot=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
-:artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
+:artefact $GLP_DIR/programs/cssn $SG_CORE
 :boot $GLP_DIR/programs/social/both_boot.glp $SG_CORE
 :quit
 HEREDOC
@@ -9011,8 +9010,8 @@ check "SG two mini-apps on two smartphones: the boot settles" "Boot settled: 2 a
 check "SG two mini-apps on two smartphones: the currency's conversation opens" "\[alice\] opened(bob)" "$sg_two_boot"
 check "SG two mini-apps on two smartphones: alice's swap settles" "\[alice\] swap_done(bob)" "$sg_two_boot"
 check "SG two mini-apps on two smartphones: bob's swap settles" "\[bob\] swap_done(alice)" "$sg_two_boot"
-check "SG two mini-apps on two smartphones: the child-safe friendship holds" "\[alice\] connected(bob)" "$sg_two_boot"
-check "SG two mini-apps on two smartphones: and its message arrives" "\[bob\] received(alice, hello)" "$sg_two_boot"
+check "SG two mini-apps on two smartphones: alice befriends bob under CSSN's app" "\[alice\] view(alice, \[friend(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_two_boot"
+check "SG two mini-apps on two smartphones: bob befriends alice under CSSN's app" "\[bob\] view(bob, \[friend(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_two_boot"
 
 # Under the boot harness: two isolates, each its own person with its own key,
 # running the super-app of core/; each reads the artefact of GSN's app, the
@@ -9179,21 +9178,22 @@ HEREDOC
     boot_same "SG activation alone on a smartphone, $sg_mint_name play_mint: alice's lines are play_mint's screen" "$sg_mint_lines" "$(boot_person alice "$sg_mint_out")"
 done
 
-# The child-safe platform on two smartphones (paper Section 7): the same
-# super-app hosting CSSN's mini-app from its certified artefact; adopting the
-# conversation the handshake opens is the friendship under that platform's
-# contract, and one message of it crosses between the isolates.
+# CSSN's app on two smartphones (paper Section 7): the same super-app hosting
+# CSSN's mini-app from its certified artefact, as superapp_boot.glp hosts
+# GSN's; the two executions befriend in the app over the conversation the
+# handshake opens between the isolates.
 sg_cssn=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
-:artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
+:artefact $GLP_DIR/programs/cssn $SG_CORE
 :boot $GLP_DIR/programs/social/cssn_boot.glp $SG_CORE
 :quit
 HEREDOC
 2>&1)
-check "SG child-safe platform on two smartphones: the boot settles" "Boot settled: 2 agents" "$sg_cssn"
-check "SG child-safe platform on two smartphones: alice is connected to bob" "\[alice\] connected(bob)" "$sg_cssn"
-check "SG child-safe platform on two smartphones: bob is connected to alice" "\[bob\] connected(alice)" "$sg_cssn"
-check "SG child-safe platform on two smartphones: alice's message reaches bob" "\[bob\] received(alice, hello)" "$sg_cssn"
+check "SG CSSN's app on two smartphones: the boot settles" "Boot settled: 2 agents" "$sg_cssn"
+check "SG CSSN's app on two smartphones: alice's execution activated" "\[alice\] view(alice, \[\], \[\], \[\], " "$sg_cssn"
+check "SG CSSN's app on two smartphones: bob's execution activated" "\[bob\] view(bob, \[\], \[\], \[\], " "$sg_cssn"
+check "SG CSSN's app on two smartphones: alice befriends bob over the conversation" "\[alice\] view(alice, \[friend(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_cssn"
+check "SG CSSN's app on two smartphones: bob befriends alice over the conversation" "\[bob\] view(bob, \[friend(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_cssn"
 rm -f "$SG_CORE"/*.glpw
 
 # Physical encounters (GSA paper, Section 4, the box GPE; Appendix "The

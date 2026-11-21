@@ -4,11 +4,11 @@
 %% the network a two-way crossbar for cold calls, and under :boot
 %% (../../superapp_boot.glp) by two isolates with their own keys.  The
 %% programs the plays install, distribute and activate are compiled apps of
-%% programs/apps, GKK's and GSN's, each compiled from its contract (GPD's
-%% definition of a program, ../Programs.txt); the other certified mini-apps
-%% are GSA's ../pingapp, which only the held link on three smartphones still
-%% installs, and ../endapp, Currencies' currency and denominated, and CSSN's
-%% childsafe; the super-app reads their artefacts with load_file/2.  The
+%% programs/apps, GKK's and GSN's, and CSSN's programs/cssn, each compiled
+%% from its contract (GPD's definition of a program, ../Programs.txt); the
+%% other certified mini-apps are GSA's ../pingapp, which only the held link on
+%% three smartphones still installs, and ../endapp, and Currencies' currency
+%% and denominated; the super-app reads their artefacts with load_file/2.  The
 %% persons are scripted on the agents' person streams.
 %%
 %% The super-app holds no declaration of a mini-app's types.  A play mints a
@@ -731,30 +731,30 @@ sg_init(Me, coins_consent, [Q], NetIn) :-
     miniapp_person_run(C?, Me?, bob, [Q?], PersonEnd?, Screen),
     send_to_user(Screen?).
 
-%% The child-safe platform on two smartphones (../../cssn_boot.glp), as the
-%% currency's clauses above: each person trusts the compiler's key, installs
-%% the certified platform with its own end of a person channel, and its
-%% scripted person, CSSN's own, greets the peer under the role greeter once
-%% the conversation is adopted, or watches under the role onlooker.
+%% CSSN's app on two smartphones (../../cssn_boot.glp), as the currency's
+%% clauses above: each person trusts the compiler's key, installs the
+%% certified app with its own end of a person channel, and its scripted
+%% person, CSSN's own, plays under its role alice for the inviter and bob for
+%% the invitee, as GSN's app's in play_invite; its screen goes to the person.
 sg_init(Me, cssn_invite, [Q], NetIn) :-
     ground(Me?), ground(Q?) |
     agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
-    load_file("childsafe.glpw", C),
+    load_file("cssn.glpw", C),
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     alice_cssn_boot(Me?, Q?, C?, CK?, CSig?, AppEnd?, Out?, In),
-    miniapp_person_run(C?, Me?, greeter, [Q?], PersonEnd?, Seen),
+    miniapp_person_run(C?, Me?, alice, [Q?], PersonEnd?, Seen),
     send_to_user(Seen?).
 sg_init(Me, cssn_consent, [Q], NetIn) :-
     ground(Me?), ground(Q?) |
     agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
-    load_file("childsafe.glpw", C),
+    load_file("cssn.glpw", C),
     certified(C?, CK, CSig),
     new_channel(AppEnd, PersonEnd),
     bob_cssn_boot(Me?, Q?, C?, CK?, CSig?, AppEnd?, Out?, In),
-    miniapp_person_run(C?, Me?, onlooker, [Q?], PersonEnd?, Seen),
+    miniapp_person_run(C?, Me?, bob, [Q?], PersonEnd?, Seen),
     send_to_user(Seen?).
 
 %% Both mini-apps on two smartphones (../../both_boot.glp): each person trusts
@@ -766,14 +766,14 @@ sg_init(Me, both_invite, [Q], NetIn) :-
     send_to_net(NetOut?),
     load_file("currency.glpw", CC),
     certified(CC?, CK, CCSig),
-    load_file("childsafe.glpw", CS),
+    load_file("cssn.glpw", CS),
     certified(CS?, _, CSSig),
     new_channel(CoinsEnd, CoinsPerson),
     new_channel(CssnEnd, CssnPerson),
     alice_both_boot(Me?, Q?, CK?, CC?, CCSig?, CoinsEnd?, CS?, CSSig?, CssnEnd?, Out?, In),
     miniapp_person_run(CC?, Me?, alice, [Q?], CoinsPerson?, Screen),
     send_to_user(Screen?),
-    miniapp_person_run(CS?, Me?, greeter, [Q?], CssnPerson?, Seen),
+    miniapp_person_run(CS?, Me?, alice, [Q?], CssnPerson?, Seen),
     send_to_user(Seen?).
 sg_init(Me, both_consent, [Q], NetIn) :-
     ground(Me?), ground(Q?) |
@@ -781,14 +781,14 @@ sg_init(Me, both_consent, [Q], NetIn) :-
     send_to_net(NetOut?),
     load_file("currency.glpw", CC),
     certified(CC?, CK, CCSig),
-    load_file("childsafe.glpw", CS),
+    load_file("cssn.glpw", CS),
     certified(CS?, _, CSSig),
     new_channel(CoinsEnd, CoinsPerson),
     new_channel(CssnEnd, CssnPerson),
     bob_both_boot(Me?, Q?, CK?, CC?, CCSig?, CoinsEnd?, CS?, CSSig?, CssnEnd?, Out?, In),
     miniapp_person_run(CC?, Me?, bob, [Q?], CoinsPerson?, Screen),
     send_to_user(Screen?),
-    miniapp_person_run(CS?, Me?, onlooker, [Q?], CssnPerson?, Seen),
+    miniapp_person_run(CS?, Me?, bob, [Q?], CssnPerson?, Seen),
     send_to_user(Seen?).
 
 %% The held link: each person's screen is the mini-app's scripted person's,
@@ -1103,7 +1103,7 @@ procedure alice_both_boot(Key?, Key?, String?, Content?, String?, PersonChannel(
 alice_both_boot(Me, Q, CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
                 [msg(person, Me?, trust(CK?)),
                  msg(person, Me?, install(currency, CC?, CCSig?, CoinsEnd?)),
-                 msg(person, Me?, install(childsafe, CS?, CSSig?, CssnEnd?)),
+                 msg(person, Me?, install(cssn, CS?, CSSig?, CssnEnd?)),
                  msg(person, Me?, connect(Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     alice_both_run(Me?, Q?, Outs?, Cmds).
@@ -1112,17 +1112,17 @@ procedure bob_both_boot(Key?, Key?, String?, Content?, String?, PersonChannel(Op
 bob_both_boot(Me, Q, CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
               [msg(person, Me?, trust(CK?)),
                msg(person, Me?, install(currency, CC?, CCSig?, CoinsEnd?)),
-               msg(person, Me?, install(childsafe, CS?, CSSig?, CssnEnd?)),
+               msg(person, Me?, install(cssn, CS?, CSSig?, CssnEnd?)),
                msg(person, Me?, accept_invite(currency, Q?)),
-               msg(person, Me?, accept_invite(childsafe, Q?)) | Cmds?]) :-
+               msg(person, Me?, accept_invite(cssn, Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     bob_both_run(Me?, Q?, Outs?, Cmds).
 
-%% The child-safe platform's two persons under :boot.
+%% CSSN's app's two persons under :boot.
 procedure alice_cssn_boot(Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_cssn_boot(Me, Q, C, CK, CSig, AppEnd, Outs,
                 [msg(person, Me?, trust(CK?)),
-                 msg(person, Me?, install(childsafe, C?, CSig?, AppEnd?)),
+                 msg(person, Me?, install(cssn, C?, CSig?, AppEnd?)),
                  msg(person, Me?, connect(Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     alice_cssn_run(Me?, Q?, Outs?, Cmds).
@@ -1130,8 +1130,8 @@ alice_cssn_boot(Me, Q, C, CK, CSig, AppEnd, Outs,
 procedure bob_cssn_boot(Key?, Key?, Content?, String?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_cssn_boot(Me, Q, C, CK, CSig, AppEnd, Outs,
               [msg(person, Me?, trust(CK?)),
-               msg(person, Me?, install(childsafe, C?, CSig?, AppEnd?)),
-               msg(person, Me?, accept_invite(childsafe, Q?)) | Cmds?]) :-
+               msg(person, Me?, install(cssn, C?, CSig?, AppEnd?)),
+               msg(person, Me?, accept_invite(cssn, Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     bob_cssn_run(Me?, Q?, Outs?, Cmds).
 
@@ -1153,57 +1153,73 @@ bob_coins_boot(Me, Q, C, CK, CSig, AppEnd, Outs,
     bob_coins_run(Me?, Q?, Outs?, Cmds).
 
 %% =============================================================================
-%% play_cssn(A, B, SeenA, SeenB): the child-safe platform (CSSN's
-%% programs/cssn/childsafe, its artefact childsafe.glpw beside this program)
-%% hosted by the super-app, as play_coins hosts the currency.  alice and bob
-%% install it with its two certifications, alice befriends bob and invites
-%% him, and the handshake opens a root channel of that platform's protocol
-%% between their two executions, each activated by run/3 with its three
-%% grants.  Adopting a conversation IS befriending under that contract, so
-%% each execution tells its person it is connected; alice's person, CSSN's
-%% scripted person under the role greeter, then sends bob one message of the
-%% platform, and bob's, under the role onlooker, shows it.
-%% Expected: SeenA = [connected(bob) | _], SeenB = [connected(alice),
-%% received(alice, hello) | _], → suspended (the executions pend on their
-%% persons and their friends).  ../../cssn_boot.glp runs the same on two
-%% smartphones.
+%% play_cssn(A, B, AliceUi, BobUi): play_invite for CSSN's app, the program
+%% compiled from CSSN's contract (programs/cssn), its artefact cssn.glpw
+%% beside this program.  alice, A, installs it, befriends bob and invites
+%% him; bob installs it and consents; the handshake opens the root channel
+%% and the two executions converse over it.  Each person's screen is the
+%% app's scripted person's, under its roles alice and bob
+%% (../../../cssn/person.glp), the views its agent writes, as GSN's app's in
+%% play_invite.  ../../cssn_boot.glp runs the same on two smartphones.
+%% Expected: AliceUi = [view(alice, [], [], [], _), ... view(alice, [friend(bob),
+%% knows(bob), identity, person], [bob], [], _) ... | _], BobUi likewise,
+%% → suspended.
 %% =============================================================================
 exported procedure play_cssn(Key?, Key?, Stream(Opaque), Stream(Opaque)).
-play_cssn(A, B, SeenA?, SeenB?) :-
+play_cssn(A, B, AliceUi?, BobUi?) :-
     ground(A?), ground(B?) |
     crossbar2(A?, B?, AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
-    load_file("childsafe.glpw", C),
+    load_file("cssn.glpw", C),
     certified(C?, _, CSig),
-    new_channel(AppEndA, PersonEndA),
-    new_channel(AppEndB, PersonEndB),
     agent # agent(A?, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
-    alice_cssn_person(A?, B?, C?, CSig?, AppEndA?, AliceOut?, AliceIn),
-    miniapp_person_run(C?, A?, greeter, [B?], PersonEndA?, SeenA),
+    new_channel(AliceApp, AlicePerson),
+    miniapp_person_run(C?, A?, alice, [B?], AlicePerson?, AliceScreen),
+    tee(AliceScreen?, AliceUi, AliceSeen),
+    alice_cssn_person(A?, B?, C?, CSig?, AliceApp?, AliceOut?, AliceSeen?, AliceIn),
     agent # agent(B?, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
-    bob_cssn_person(B?, A?, C?, CSig?, AppEndB?, BobOut?, BobIn),
-    miniapp_person_run(C?, B?, onlooker, [A?], PersonEndB?, SeenB).
+    new_channel(BobApp, BobPerson),
+    miniapp_person_run(C?, B?, bob, [A?], BobPerson?, BobScreen),
+    tee(BobScreen?, BobUi, BobSeen),
+    bob_cssn_person(B?, A?, C?, CSig?, BobApp?, BobOut?, BobSeen?, BobIn).
 
-procedure alice_cssn_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
-alice_cssn_person(Me, Q, C, CSig, AppEnd, Outs,
-                  [msg(person, Me?, install(childsafe, C?, CSig?, AppEnd?)),
+%% alice_person and alice_wait of play_invite, for CSSN's app, keeping the
+%% person stream open until the mini-app's screen closes.
+procedure alice_cssn_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+alice_cssn_person(Me, Q, M, CSig, Ui, Outs, Seen,
+                  [msg(person, Me?, install(cssn, M?, CSig?, Ui?)),
                    msg(person, Me?, connect(Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
-    alice_cssn_run(Me?, Q?, Outs?, Cmds).
+    alice_cssn_wait(Me?, Q?, Outs?, Seen?, Cmds).
+
+procedure alice_cssn_wait(Key?, Key?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+alice_cssn_wait(Me, Q, [msg(agent, person, connected(F)) | _], Seen,
+                [msg(person, Me?, invite(cssn, Q?)) | Cmds?]) :-
+    F? =?= Q? | person_done(Seen?, Cmds).
+alice_cssn_wait(Me, Q, [_ | Outs], Seen, Cmds?) :- otherwise | alice_cssn_wait(Me?, Q?, Outs?, Seen?, Cmds).
+alice_cssn_wait(_, _, [], _, []).
+
+%% bob_person and bob_wait of play_invite, for CSSN's app, consenting.
+procedure bob_cssn_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+bob_cssn_person(Me, Q, M, CSig, Ui, Outs, Seen,
+                [msg(person, Me?, install(cssn, M?, CSig?, Ui?)),
+                 msg(person, Me?, accept_invite(cssn, Q?)) | Cmds?]) :-
+    ground(Me?), ground(Q?) |
+    bob_cssn_wait(Me?, Q?, Outs?, Seen?, Cmds).
+
+procedure bob_cssn_wait(Key?, Key?, AgentToUserStream?, Stream(Opaque)?, UserInStream).
+bob_cssn_wait(Me, Q, [msg(agent, person, befriend(F, P)) | _], Seen,
+              [msg(person, Me?, decision(yes, F?, P?)) | Cmds?]) :-
+    F? =?= Q? | person_done(Seen?, Cmds).
+bob_cssn_wait(Me, Q, [_ | Outs], Seen, Cmds?) :- otherwise | bob_cssn_wait(Me?, Q?, Outs?, Seen?, Cmds).
+bob_cssn_wait(_, _, [], _, []).
 
 procedure alice_cssn_run(Key?, Key?, AgentToUserStream?, UserInStream).
 alice_cssn_run(Me, Q, [msg(agent, person, connected(F)) | Outs],
-               [msg(person, Me?, invite(childsafe, Q?)) | Cmds?]) :-
+               [msg(person, Me?, invite(cssn, Q?)) | Cmds?]) :-
     F? =?= Q? |
     alice_cssn_run(Me?, Q?, Outs?, Cmds).
 alice_cssn_run(Me, Q, [_ | Outs], Cmds?) :- otherwise | alice_cssn_run(Me?, Q?, Outs?, Cmds).
 alice_cssn_run(_, _, [], []).
-
-procedure bob_cssn_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
-bob_cssn_person(Me, Q, C, CSig, AppEnd, Outs,
-                [msg(person, Me?, install(childsafe, C?, CSig?, AppEnd?)),
-                 msg(person, Me?, accept_invite(childsafe, Q?)) | Cmds?]) :-
-    ground(Me?), ground(Q?) |
-    bob_cssn_run(Me?, Q?, Outs?, Cmds).
 
 procedure bob_cssn_run(Key?, Key?, AgentToUserStream?, UserInStream).
 bob_cssn_run(Me, Q, [msg(agent, person, befriend(F, P)) | Outs],
@@ -1216,15 +1232,15 @@ bob_cssn_run(_, _, [], []).
 %% =============================================================================
 %% play_both(A, B, ScreenA, ScreenB, SeenA, SeenB): ONE super-app hosting BOTH
 %% mini-apps at once (GSG paper, Section 7).  alice and bob each install the
-%% currency and the child-safe platform, each with its own person channel;
+%% currency and CSSN's app, each with its own person channel;
 %% alice invites bob to both; the two handshakes open a root channel of each
 %% platform's own protocol, and each super-app activates both entries by
 %% run/3, each at its own opaque instance and with its own conversations.
 %% Then both platforms run at once over the one friendship: alice and bob
-%% mint and swap under the currency's contract, and alice greets bob under
-%% the child-safe platform's, each person the mini-app's own.  Expected:
-%% ScreenA and ScreenB as in play_coins, SeenA = [connected(bob) | _], SeenB =
-%% [connected(alice), received(alice, hello) | _], → suspended.
+%% mint and swap under the currency's contract, and alice and bob befriend
+%% under CSSN's, each person the mini-app's own.  Expected: ScreenA and
+%% ScreenB as in play_coins, SeenA and SeenB as AliceUi and BobUi of
+%% play_cssn, → suspended.
 %% =============================================================================
 exported procedure play_both(Key?, Key?, Stream(Opaque), Stream(Opaque), Stream(Opaque), Stream(Opaque)).
 play_both(A, B, ScreenA?, ScreenB?, SeenA?, SeenB?) :-
@@ -1232,7 +1248,7 @@ play_both(A, B, ScreenA?, ScreenB?, SeenA?, SeenB?) :-
     crossbar2(A?, B?, AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
     load_file("currency.glpw", CC),
     certified(CC?, _, CCSig),
-    load_file("childsafe.glpw", CS),
+    load_file("cssn.glpw", CS),
     certified(CS?, _, CSSig),
     new_channel(CoinsEndA, CoinsPersonA),
     new_channel(CssnEndA, CssnPersonA),
@@ -1241,18 +1257,18 @@ play_both(A, B, ScreenA?, ScreenB?, SeenA?, SeenB?) :-
     agent # agent(A?, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     alice_both_person(A?, B?, CC?, CCSig?, CoinsEndA?, CS?, CSSig?, CssnEndA?, AliceOut?, AliceIn),
     miniapp_person_run(CC?, A?, alice, [B?], CoinsPersonA?, ScreenA),
-    miniapp_person_run(CS?, A?, greeter, [B?], CssnPersonA?, SeenA),
+    miniapp_person_run(CS?, A?, alice, [B?], CssnPersonA?, SeenA),
     agent # agent(B?, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_both_person(B?, A?, CC?, CCSig?, CoinsEndB?, CS?, CSSig?, CssnEndB?, BobOut?, BobIn),
     miniapp_person_run(CC?, B?, bob, [A?], CoinsPersonB?, ScreenB),
-    miniapp_person_run(CS?, B?, onlooker, [A?], CssnPersonB?, SeenB).
+    miniapp_person_run(CS?, B?, bob, [A?], CssnPersonB?, SeenB).
 
 %% alice's person: install both, cold-call bob, and invite him to both once
 %% they are friends.
 procedure alice_both_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_both_person(Me, Q, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
                   [msg(person, Me?, install(currency, CC?, CCSig?, CoinsEnd?)),
-                   msg(person, Me?, install(childsafe, CS?, CSSig?, CssnEnd?)),
+                   msg(person, Me?, install(cssn, CS?, CSSig?, CssnEnd?)),
                    msg(person, Me?, connect(Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     alice_both_run(Me?, Q?, Outs?, Cmds).
@@ -1260,7 +1276,7 @@ alice_both_person(Me, Q, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
 procedure alice_both_run(Key?, Key?, AgentToUserStream?, UserInStream).
 alice_both_run(Me, Q, [msg(agent, person, connected(F)) | Outs],
                [msg(person, Me?, invite(currency, Q?)),
-                msg(person, Me?, invite(childsafe, Q?)) | Cmds?]) :-
+                msg(person, Me?, invite(cssn, Q?)) | Cmds?]) :-
     F? =?= Q? |
     alice_both_run(Me?, Q?, Outs?, Cmds).
 alice_both_run(Me, Q, [_ | Outs], Cmds?) :- otherwise | alice_both_run(Me?, Q?, Outs?, Cmds).
@@ -1271,9 +1287,9 @@ alice_both_run(_, _, [], []).
 procedure bob_both_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_both_person(Me, Q, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
                 [msg(person, Me?, install(currency, CC?, CCSig?, CoinsEnd?)),
-                 msg(person, Me?, install(childsafe, CS?, CSSig?, CssnEnd?)),
+                 msg(person, Me?, install(cssn, CS?, CSSig?, CssnEnd?)),
                  msg(person, Me?, accept_invite(currency, Q?)),
-                 msg(person, Me?, accept_invite(childsafe, Q?)) | Cmds?]) :-
+                 msg(person, Me?, accept_invite(cssn, Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     bob_both_run(Me?, Q?, Outs?, Cmds).
 
