@@ -1023,6 +1023,8 @@ interface([
   compiled(dels_of, 2),
   compiled(mates_check, 5),
   compiled(mates_check1, 5),
+  compiled(mates_extend, 3),
+  compiled(mates_check2, 5),
   compiled(local_norm, 3),
   compiled(local_norm1, 4),
   compiled(norm_or_bad, 3),

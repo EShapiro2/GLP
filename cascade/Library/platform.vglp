@@ -18,11 +18,11 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-shelve(Peer, Speech)
+shelve(Peer, Constant)
 ;
-lend(Peer, Peer, Speech, Integer)
+lend(Peer, Peer, Constant, Integer)
 ;
-return(Peer, Peer, Speech, Integer)
+return(Peer, Peer, Constant, Integer)
 .
 
 Proposal ::=
@@ -32,11 +32,11 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-shelve(Peer, Speech)
+shelve(Peer, Constant)
 ;
-lend(Peer, Peer, Speech, Integer)
+lend(Peer, Peer, Constant, Integer)
 ;
-return(Peer, Peer, Speech, Integer)
+return(Peer, Peer, Constant, Integer)
 .
 
 Request ::= propose(Proposal).
@@ -64,11 +64,11 @@ person
 ;
 knows(Peer)
 ;
-shelved(Speech)
+shelved(Constant)
 ;
-shelf(Speech)
+shelf(Constant)
 ;
-borrowed(Speech, Peer, Integer)
+borrowed(Constant, Peer, Integer)
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -78,16 +78,16 @@ atom_of(g(person, []), shown(person))
 .
 atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
 .
-atom_of(g(shelved, [s(V1)]), shown(shelved(V1?)))
+atom_of(g(shelved, [v(V1)]), shown(shelved(V1?)))
 .
-atom_of(g(shelf, [s(V1)]), shown(shelf(V1?)))
+atom_of(g(shelf, [v(V1)]), shown(shelf(V1?)))
 .
-atom_of(g(borrowed, [s(V1), p(V2), n(V3)]), shown(borrowed(V1?, V2?, V3?)))
+atom_of(g(borrowed, [v(V1), p(V2), n(V3)]), shown(borrowed(V1?, V2?, V3?)))
 .
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(shelve, [svar('Tome')], [rs(guarded, [atom(shelved, [svar('Tome')]), atom(shelf, [svar('Tome')])], [], [atom(identity, [])], [atom(shelved, [svar('Tome')])])]), schema(lend, [svar('Tome'), num('Day')], [rs(guarded, [], [atom(shelf, [svar('Tome')])], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(borrowed, [svar('Tome'), role(1), num('Day')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, [svar('Tome'), num('Day')], [rs(guarded, [], [atom(borrowed, [svar('Tome'), role(2), num('Day')])], [atom(identity, [])], []), rs(unguarded, [atom(shelf, [svar('Tome')])], [], [atom(identity, [])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(shelve, [num('Tome')], [rs(guarded, [atom(shelved, [num('Tome')]), atom(shelf, [num('Tome')])], [], [atom(identity, [])], [atom(shelved, [num('Tome')])])]), schema(lend, [num('Tome'), num('Day')], [rs(guarded, [], [atom(shelf, [num('Tome')])], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(borrowed, [num('Tome'), role(1), num('Day')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, [num('Tome'), num('Day')], [rs(guarded, [], [atom(borrowed, [num('Tome'), role(2), num('Day')])], [atom(identity, [])], []), rs(unguarded, [atom(shelf, [num('Tome')])], [], [atom(identity, [])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -97,11 +97,11 @@ schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])
 .
 schema_entry(introduce, schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]))
 .
-schema_entry(shelve, schema(shelve, [svar('Tome')], [rs(guarded, [atom(shelved, [svar('Tome')]), atom(shelf, [svar('Tome')])], [], [atom(identity, [])], [atom(shelved, [svar('Tome')])])]))
+schema_entry(shelve, schema(shelve, [num('Tome')], [rs(guarded, [atom(shelved, [num('Tome')]), atom(shelf, [num('Tome')])], [], [atom(identity, [])], [atom(shelved, [num('Tome')])])]))
 .
-schema_entry(lend, schema(lend, [svar('Tome'), num('Day')], [rs(guarded, [], [atom(shelf, [svar('Tome')])], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(borrowed, [svar('Tome'), role(1), num('Day')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(lend, schema(lend, [num('Tome'), num('Day')], [rs(guarded, [], [atom(shelf, [num('Tome')])], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(borrowed, [num('Tome'), role(1), num('Day')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(return, schema(return, [svar('Tome'), num('Day')], [rs(guarded, [], [atom(borrowed, [svar('Tome'), role(2), num('Day')])], [atom(identity, [])], []), rs(unguarded, [atom(shelf, [svar('Tome')])], [], [atom(identity, [])], [])]))
+schema_entry(return, schema(return, [num('Tome'), num('Day')], [rs(guarded, [], [atom(borrowed, [num('Tome'), role(2), num('Day')])], [atom(identity, [])], []), rs(unguarded, [atom(shelf, [num('Tome')])], [], [atom(identity, [])], [])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -184,11 +184,11 @@ binding_of(acquaint(V1, V2), acquaint, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(introduce(V1, V2, V3), introduce, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?))])
 .
-binding_of(shelve(V1, V2), shelve, [b(role(1), p(V1?)), b(svar('Tome'), s(V2?))])
+binding_of(shelve(V1, V2), shelve, [b(role(1), p(V1?)), b(num('Tome'), v(V2?))])
 .
-binding_of(lend(V1, V2, V3, V4), lend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Tome'), s(V3?)), b(num('Day'), n(V4?)), b(num('Today'), lv(lend, 'Today'))])
+binding_of(lend(V1, V2, V3, V4), lend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Tome'), v(V3?)), b(num('Day'), n(V4?)), b(num('Today'), lv(lend, 'Today'))])
 .
-binding_of(return(V1, V2, V3, V4), return, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Tome'), s(V3?)), b(num('Day'), n(V4?))])
+binding_of(return(V1, V2, V3, V4), return, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Tome'), v(V3?)), b(num('Day'), n(V4?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -230,7 +230,7 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 ,
-val_speech(svar('Tome'), B?, D?, V2)
+val_const(num('Tome'), B?, V2)
 .
 class_of(lend, B, D, lend(V1?, V2?, V3?, V4?))
 :-
@@ -242,7 +242,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_speech(svar('Tome'), B?, D?, V3)
+val_const(num('Tome'), B?, V3)
 ,
 val_num(num('Day'), B?, V4)
 .
@@ -256,7 +256,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_speech(svar('Tome'), B?, D?, V3)
+val_const(num('Tome'), B?, V3)
 ,
 val_num(num('Day'), B?, V4)
 .
@@ -335,7 +335,7 @@ sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 % The contract the platform is compiled from (vGLP, Section 5.4, "The contract's words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC's reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC's reader's and the pragmas', named with an R before them.
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
-RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
+RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant) ; const(Constant).
 RArgs     ::= [] ; [RArg | RArgs].
 RAtom     ::= atom(Constant, RArgs) ; times(RArg, RAtom) ; rest(RArg, RArg, RAtom).
 RAtoms    ::= [] ; [RAtom | RAtoms].
@@ -381,7 +381,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("Library\nLibrary extends Knowledge.\nAlice and Bob are persons.\n1. ◆ Shelve: Alice may put a thing of her own on her shelf, under a new name of hers.\n2. ■ Lend: Alice may lend Bob a thing from her shelf until a day later than the current date, with the consent of Bob, provided Alice and Bob know each other; it then leaves the shelf, and Bob holds it.\n3. ■ Return: Bob may return a borrowed thing; it then goes back on Alice's shelf.\n4. ○ On time. Bob will return a borrowed thing by the agreed day.", with(environment([today], reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(shelve, ['Alice'], [svar('Tome')], [rs(guarded, [atom(shelved, [svar('Tome')]), atom(shelf, [svar('Tome')])], [], [atom(identity, [])], [atom(shelved, [svar('Tome')])])]), nschema(lend, ['Alice', 'Bob'], [svar('Tome'), num('Day'), num('Today')], gt(num('Day'), num('Today')), [rs(guarded, [], [atom(shelf, [svar('Tome')])], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(borrowed, [svar('Tome'), role(1), num('Day')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, ['Bob', 'Alice'], [svar('Tome'), num('Day')], [rs(guarded, [], [atom(borrowed, [svar('Tome'), role(2), num('Day')])], [atom(identity, [])], []), rs(unguarded, [atom(shelf, [svar('Tome')])], [], [atom(identity, [])], [])])])), pragmas([list("Contacts", [knows]), list("Shelf", [shelf]), list("Lent", [borrowed]), list("Borrowed", [borrowed])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(shelve, "Shelve", ["", "tome"], none, "Shelf", by([1])), act(lend, "Lend", ["", "", "", "day"], said([[], [person(1), text(" offers to lend you a thing.")]]), "Shelf", by([1])), act(return, "Return", [], none, "Shelf", by([1]))], [], nolook, version(1, 1))))
+contract("Library\nLibrary extends Knowledge.\nAlice and Bob are persons.\n1. ◆ Shelve: Alice may put a thing of her own on her shelf, under a new name of hers.\n2. ■ Lend: Alice may lend Bob a thing from her shelf until a day later than the current date, with the consent of Bob, provided Alice and Bob know each other; it then leaves the shelf, and Bob holds it.\n3. ■ Return: Bob may return a borrowed thing; it then goes back on Alice's shelf.\n4. ○ On time. Bob will return a borrowed thing by the agreed day.", with(environment([today], reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(shelve, ['Alice'], [const('Tome')], [rs(guarded, [atom(shelved, [num('Tome')]), atom(shelf, [num('Tome')])], [], [atom(identity, [])], [atom(shelved, [num('Tome')])])]), nschema(lend, ['Alice', 'Bob'], [const('Tome'), num('Day'), num('Today')], gt(num('Day'), num('Today')), [rs(guarded, [], [atom(shelf, [num('Tome')])], [atom(identity, []), atom(knows, [role(2)]), atom(today, [num('Today')])], []), rs(guarded, [atom(borrowed, [num('Tome'), role(1), num('Day')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, ['Bob', 'Alice'], [const('Tome'), num('Day')], [rs(guarded, [], [atom(borrowed, [num('Tome'), role(2), num('Day')])], [atom(identity, [])], []), rs(unguarded, [atom(shelf, [num('Tome')])], [], [atom(identity, [])], [])])])), pragmas([list("Contacts", [knows]), list("Shelf", [shelf]), list("Lent", [borrowed]), list("Borrowed", [borrowed])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(shelve, "Shelve", ["", "tome"], none, "Shelf", by([1])), act(lend, "Lend", ["", "", "", "day"], said([[], [person(1), text(" offers to lend you a thing.")]]), "Shelf", by([1])), act(return, "Return", [], none, "Shelf", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -5371,12 +5371,23 @@ mates_check([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), gro
     app(M1?, M2?, M).
 procedure mates_check1(LNorm?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_check1(badnorm, _, _, _, []).
+%% A numeric variable that no deleted or added atom names, and that is not local to a role, is given its values by the constraint once those the atoms bind are bound, by the conjuncts local to every role (con_extend), as at a Propose (num_extend): "or the constraint gives the variable finitely many values once those are bound" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"); so identity_record of Secure Friendship, whose Double only its constraint names, has the schema-binding of its class term among those of its class.
 mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
+    schema_numeric(Nm?, N),
+    mates_extend(N?, B?, Bs),
+    mates_check2(Bs?, Nm?, Rs?, Ps?, M).
+procedure mates_extend(Numeric?, Binding?, Bindings).
+mates_extend(numeric(Cj, _, _), B, Bs?) :- ground(Cj?), ground(B?) | conjs_every(Cj?, C), con_extend(C?, B?, Bs).
+procedure mates_check2(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
+mates_check2([], _, _, _, []).
+mates_check2([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
     sig_of(Rs?, B?, Ps1),
     deltas_eq(Ps?, Ps1?, E1),
     admissible(Rs?, B?, E2),
     and(E1?, E2?, E),
-    mate_of(E?, B?, Nm?, Rs?, M).
+    mate_of(E?, B?, Nm?, Rs?, M1),
+    mates_check2(Bs?, Nm?, Rs?, Ps?, M2),
+    app(M1?, M2?, M).
 %% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role, agent, speech-act or numeric, are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
 procedure local_norm(Constant?, Binding?, LNorm).
 local_norm(Nm, B, R?) :- ground(Nm?), ground(B?) |
@@ -6564,6 +6575,8 @@ kind_ok(svar(_), c(_), no).
 kind_ok(num(_), n(_), yes).
 kind_ok(num(_), r(_), yes).
 kind_ok(num(_), lv(_, _), yes).
+%% A variable over the constants is a value variable, num(X) in the schemas the text carries, its value a constant, v(C), as the image of a constant the contract names is (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it"); the place of an atom is of one type, so no variable over the numbers is matched with a constant.
+kind_ok(num(_), v(_), yes).
 kind_ok(num(_), p(_), no).
 kind_ok(num(_), s(_), no).
 kind_ok(num(_), c(_), no).
@@ -6648,6 +6661,12 @@ val_real(V, B, K?) :- ground(B?) | lookup(V?, B?, F), real_found(F?, K).
 procedure real_found(Found?, Real).
 real_found(found(r(K)), K?).
 real_found(_, 0.0) :- otherwise | true.
+%% The constant of a variable over the constants of a class term, written in the term (class_of); none where none is bound, which a schema-binding of a class never leaves.
+procedure val_const(Var?, Binding?, Constant).
+val_const(V, B, C?) :- ground(B?) | lookup(V?, B?, F), const_found(F?, C).
+procedure const_found(Found?, Constant).
+const_found(found(v(C)), C?).
+const_found(_, none) :- otherwise | true.
 %% Whether the constraint holds under the binding, every number it names bound: and(C1, C2), C1 and C2; eq(X, Y), X = Y; le(X, Y), X =< Y; lt(X, Y), X < Y; ge(X, Y), X >= Y; gt(X, Y), X > Y; succ(X, Y), Y = X + 1; or(C1, C2), C1 or C2, X and Y the values of the expressions under the binding.  A number not bound makes a comparison false.
 procedure con_holds(Constraint?, Binding?, YesNo).
 con_holds(true, _, yes).
@@ -6691,7 +6710,12 @@ expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
 expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
 %% A constant the contract names is its own value, v(C).
 expr_term1(val(C), _, found(v(C?))).
+%% A variable over the constants is the constant the binding, or a reading, gives it, v(C), so that eq and ne compare two such variables, or one and a constant the contract names, for equality, the comparison of constants (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a constraint ... is over the relations and functions the value types provide --- comparison and arithmetic").
+expr_term1(num(X), B, F?) :- ground(B?) | lookup(num(X?), B?, F0), const_term(F0?, F).
 expr_term1(_, _, free) :- otherwise | true.
+procedure const_term(Found?, Found).
+const_term(found(v(C)), found(v(C?))).
+const_term(_, free) :- otherwise | true.
 procedure author_found(Found?, Found).
 author_found(found(s(S)), found(p(P?))) :- ground(S?) | first_signer(S?, P).
 author_found(_, free) :- otherwise | true.
@@ -6986,11 +7010,17 @@ schema_head(lschema(_, Hd, _, _), Hd?).
 procedure hd_nums_bound(Vars?, Binding?, YesNo).
 hd_nums_bound([], _, yes).
 hd_nums_bound([num(X)|Vs], B, Ok?) :- ground(X?), ground(B?) |
-    num_of(num(X?), B?, K),
-    is_num(K?, O1),
+    lookup(num(X?), B?, F),
+    is_value(F?, O1),
     hd_nums_bound(Vs?, B?, O2),
     and(O1?, O2?, Ok).
 hd_nums_bound([_|Vs], B, Ok?) :- otherwise | hd_nums_bound(Vs?, B?, Ok).
+%% A value variable of the head is bound to a value: a number, or, a variable over the constants, a constant.
+procedure is_value(Found?, YesNo).
+is_value(found(n(_)), yes).
+is_value(found(r(_)), yes).
+is_value(found(v(_)), yes).
+is_value(_, no) :- otherwise | true.
 procedure is_num(NumRes?, YesNo).
 is_num(num_is(_), yes).
 is_num(no_num, no).

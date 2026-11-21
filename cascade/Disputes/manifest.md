@@ -1,10 +1,10 @@
 # A run of the cascade on Disputes
 
-- Contract: `Disputes` (`disputes` to the checker), its owner's two files `programs/gce/disputes/Disputes.txt` and `programs/gce/disputes/Disputes.glp`, copied here as they stood at `12db33d5`.
+- Contract: `Disputes` (`disputes` to the checker), its owner's two files `programs/gce/disputes/Disputes.txt` and `programs/gce/disputes/Disputes.glp`, copied here as they stood at `a6fc2475`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gce/disputes/Disputes.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gce/disputes/Disputes.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-21 06:19 UTC by `cascade.sh disputes`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `12db33d5`; each artefact's source and tool:
+- Run on 2026-11-21 15:25 UTC by `cascade.sh disputes`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `a6fc2475`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

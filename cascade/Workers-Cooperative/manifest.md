@@ -1,10 +1,10 @@
 # A run of the cascade on Workers-Cooperative
 
-- Contract: `Workers-Cooperative` (`workers_cooperative` to the checker), its owner's two files `programs/go/Workers-Cooperative.txt` and `programs/go/Workers-Cooperative.glp`, copied here as they stood at `4377f969`.
+- Contract: `Workers-Cooperative` (`workers_cooperative` to the checker), its owner's two files `programs/go/Workers-Cooperative.txt` and `programs/go/Workers-Cooperative.glp`, copied here as they stood at `a6fc2475`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/Workers-Cooperative.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Workers-Cooperative.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-21 03:36 UTC by `cascade.sh workers_cooperative`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `4377f969`; each artefact's source and tool:
+- Run on 2026-11-21 16:00 UTC by `cascade.sh workers_cooperative`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `a6fc2475`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

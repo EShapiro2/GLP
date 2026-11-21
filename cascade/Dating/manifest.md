@@ -1,10 +1,10 @@
 # A run of the cascade on Dating
 
-- Contract: `Dating` (`dating` to the checker), its owner's two files `programs/gm/Dating.txt` and `programs/gm/Dating.glp`, copied here as they stood at `d0e167f5`.
+- Contract: `Dating` (`dating` to the checker), its owner's two files `programs/gm/Dating.txt` and `programs/gm/Dating.glp`, copied here as they stood at `a6fc2475`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gm/Dating.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gm/Dating.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-21 03:42 UTC by `cascade.sh dating`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `d0e167f5`; each artefact's source and tool:
+- Run on 2026-11-21 14:57 UTC by `cascade.sh dating`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `a6fc2475`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

@@ -1,10 +1,10 @@
 # A run of the cascade on Organisation
 
-- Contract: `Organisation` (`organisation` to the checker), its owner's two files `programs/go/Organisation.txt` and `programs/go/Organisation.glp`, copied here as they stood at `d0e167f5`.
+- Contract: `Organisation` (`organisation` to the checker), its owner's two files `programs/go/Organisation.txt` and `programs/go/Organisation.glp`, copied here as they stood at `a6fc2475`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/Organisation.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Organisation.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-21 02:30 UTC by `cascade.sh organisation`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `d0e167f5`; each artefact's source and tool:
+- Run on 2026-11-21 15:05 UTC by `cascade.sh organisation`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `a6fc2475`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
