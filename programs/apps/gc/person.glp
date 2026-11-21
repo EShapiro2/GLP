@@ -21,6 +21,12 @@
 %%          of GC's paper (play_village, plays.glp), their scripts below.
 %%   mint   the person alone of gc_mint_boot.glp and of play_mint: establishes her
 %%          identity (GKK:1); issues three coins of her own (GC:1, Issue); looks.
+%%   unheld_alice  the payer of play_unheld: establishes her identity; asks to come
+%%          to know bob and, once she knows him, asks to pay him two Bob-coins,
+%%          pay_issuer(alice, bob, 2) (Coins:1, Pay issuer), holding none, so
+%%          that the act's schema is not enabled and the act is not taken; looks.
+%%   unheld_bob  establishes his identity; answers yes to alice asking that they
+%%          come to know each other.
 %% Any other role has no script: its person reports the views and acts on nothing.
 
 Step  ::= req(Request) ; own(Holes, Request) ; look ; wait(Cond) ; approval(Asked, YesNo)
@@ -120,6 +126,13 @@ script(market_frank, Me, [Diana, Eve, Alice], [own([F1], propose(establish(F1?))
 script(mint, Me, [], [own([A1], propose(establish(A1?))), wait(holds(identity)),
                          own([A2], propose(issue(A2?, 3))), wait(has(coin(Me?), 3)), look]) :-
     ground(Me?) | true.
+script(unheld_alice, Me, [Bob], [own([A1], propose(establish(A1?))), wait(holds(identity)),
+                          own([M1], propose(acquaint(M1?, Bob?))), wait(holds(knows(Bob?))),
+                          own([A2], propose(pay_issuer(A2?, Bob?, 2))), look]) :-
+    ground(Me?), ground(Bob?) | true.
+script(unheld_bob, Me, [Alice], [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                          approval(acquaint(Alice?, Me?), yes)]) :-
+    ground(Me?), ground(Alice?) | true.
 script(_, _, _, []) :- otherwise | true.
 
 %% The person.

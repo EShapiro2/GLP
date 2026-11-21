@@ -145,3 +145,6 @@ play_village(A?, B?, C?, D?, E?, F?, G?) :- plays # play_village(A, B, C, D, E, 
 imported procedure plays#play_mint(Stream(Seen)).
 exported procedure play_mint(Stream(Seen)).
 play_mint(A?) :- plays # play_mint(A).
+imported procedure plays#play_unheld(Stream(Seen), Stream(Seen)).
+exported procedure play_unheld(Stream(Seen), Stream(Seen)).
+play_unheld(A?, B?) :- plays # play_unheld(A, B).

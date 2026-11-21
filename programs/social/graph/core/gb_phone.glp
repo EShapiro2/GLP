@@ -104,7 +104,7 @@ person_at([D0, _], [D, S], M, Id, Role, Ps, PEnd, Screen?) :-
     run(miniapp_person(Id?, Role?, Ps?, PEnd?, Screen), T?, M?).
 person_at(_, _, _, _, _, _, PEnd, []) :- otherwise | hold_person(PEnd?).
 
-%% person_alone_gb(Me, NetIn): one person's smartphone, with no peer: the super-app's agent on the isolate's network under the person's own key, its home answering requests to connect (scripted_home/5), the mini-app installed from its artefact and activated with no invitation (GSA paper, Section 3, "A grassroots program instance": "An instance begins with one person, who installs the certified program and activates it"), and the mini-app's scripted person under its role mint, which knows nobody; as sovereign_phone.glp's person_alone/2.
+%% person_alone_gb(Me, NetIn): one person's smartphone, with no peer: the super-app's agent on the isolate's network under the person's own key, its home answering requests to connect (scripted_home/5), the mini-app installed from its artefact and activated with no invitation (GSA paper, Section 3, "A grassroots program instance": "An instance begins with one person, who installs the certified program and activates it"), and the mini-app's scripted person under its role mint, which knows nobody.
 procedure person_alone_gb(Key?, NetInStream?).
 person_alone_gb(Me, NetIn) :-
     agent # agent(Me?, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
