@@ -8983,16 +8983,13 @@ check_not "SG super-app hosts CSSN's app: no failed play" "→ failed" "$sg_cs"
 # both handshakes open, both entries are activated by run/3 with their own
 # conversations, and the two platforms proceed over the one friendship: GC's
 # issue, swap and payment of play_coins of programs/apps/gc, and CSSN's
-# befriending.  The two installations each run GSC's checker on the
-# program's contract at both persons, so the play takes more than the
-# 5000000 reductions of the single-app plays: under that limit it stops
-# before GC's handshake.
+# befriending.
 sg_two=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/apps/gc $SG_CORE
 :artefact $GLP_DIR/programs/cssn $SG_CORE
 $SG_CORE
-:limit 50000000
+:limit 5000000
 play_both(alice, bob, A, B, C, D).
 :quit
 HEREDOC
