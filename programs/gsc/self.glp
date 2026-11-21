@@ -25,6 +25,21 @@
 
 -expose(unobstructed).
 
+% The checker as a certified program is the child directory checker/, which
+% exports only check/2 and as_read/2 (checker/self.glp, the header).  Its
+% clauses call this file's procedures, which call check.glp and linear.glp,
+% and check.glp calls prov.glp, volition.glp and wards/wards.glp; a program
+% holds its tree, the self.glp of each directory above it and every
+% module a self.glp among them exposes (TGLP, Section "Module System",
+% "Compilation", first step), so this file exposes them, and checker/'s
+% program holds them.  Each procedure this file defines shadows one of the
+% same name and arity it exposes ("The -expose directive").
+-expose(check).
+-expose(linear).
+-expose(prov).
+-expose(volition).
+-expose(wards#wards).
+
 % --- The syntax of a schema (def:role, def:schema) -------------------------
 % A name term (def:role, GSC f5b3f06: "<pi> for an agent variable pi of it"):
 % own(I) is <pi_I>, for pi_I a role of its schema, own_var(X) is <x> for an
@@ -4334,10 +4349,13 @@ sparams_app([P|Ps], T, [P?|R?]) :- sparams_app(Ps?, T?, R).
 % variants of a contract, by name and the contract's term.
 
 imported procedure check#check_env_params(NDeclared?, Preds?, SParams?, Verdict).
+% check/2 and as_read/2 are defined in the child directory checker/, the
+% checker as a separate program, which exports them and nothing that
+% reaches the person, so that it is certified (checker/self.glp, the header);
+% this directory forwards them there (TGLP, "External access").
+imported procedure checker#check(WDeclared?, Verdict).
 exported procedure check(WDeclared?, Verdict).
-check(C, V?) :- ground(C?) |
-    read_faults(C?, F),
-    check_read(F?, C?, V).
+check(C, V?) :- checker # check(C?, V).
 
 % A contract whose reading has faults is malformed, with them; one whose
 % reading has none is decided on what it reads to.
@@ -4362,12 +4380,9 @@ check_read([F|Fs], _, malformed([F?|Fs?])).
 % inside as read, descending as unnamed/2 does.  The variants of
 % contracts.glp change a contract in the checker's form (contracts.glp, the
 % header), and test_gsc.sh makes them on an owner's contract as it reads it.
+imported procedure checker#as_read(WDeclared?, WDeclared).
 exported procedure as_read(WDeclared?, WDeclared).
-as_read([], []).
-as_read([S|Ss], C?) :- ground(S?), ground(Ss?) | as_read_c([S?|Ss?], C).
-as_read(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Rf?), ground(Ss?) | as_read_c(Ss?, C).
-as_read(environment(Ev, B), environment(Ev?, D?)) :- ground(Ev?), ground(B?) | as_read_b(B?, D).
-as_read(parametric(Ps, D), parametric(Ps?, R?)) :- ground(Ps?), ground(D?) | as_read(D?, R).
+as_read(C, D?) :- checker # as_read(C?, D).
 
 % --- parametric contracts and their instances (GSC, Definition Parametric
 % contract; GSC #14, Code_inbox 2026-11-10 18:02 UTC, GSC df5e454) ----------

@@ -1,0 +1,35 @@
+% ---------------------------------------------------------------------------
+% The checker as a certified program: the decision of
+% def:syntactically-grassroots (GSC, Section 3) on a contract given as a term,
+% check/2, and the contract as the checker reads it, as_read/2, for a host
+% that loads the checker as a compiled module and calls it by dynamic
+% activation (TGLP, Section "Module System", "Dynamic Activation"), as the
+% Grassroots App does.
+%
+% A program's entry points are the procedures its self.glp exports, and a
+% certificate is refused a program that reaches the person from any of them
+% (TGLP, "Compilation", fifth step; IGLP, Program Artefact).  programs/gsc
+% exports the printing entries too, compile.glp's and notation.glp's, which
+% print to the person; this child directory exports only these two and is
+% certified.  Its code is programs/gsc's: these clauses call the checker's
+% procedures of programs/gsc/self.glp, its ancestor scope (TGLP, "Implicit
+% ancestor scoping"), and programs/gsc forwards its check/2 and
+% as_read/2 here, so that each procedure has one copy.
+% ---------------------------------------------------------------------------
+
+% A contract whose reading has faults is malformed, with them; one whose
+% reading has none is decided on what it reads to (check_read/3,
+% programs/gsc/self.glp).
+exported procedure check(WDeclared?, Verdict).
+check(C, V?) :- ground(C?) |
+    read_faults(C?, F),
+    check_read(F?, C?, V).
+
+% A contract as the checker reads it (programs/gsc/self.glp, the comment
+% before as_read_c/2).
+exported procedure as_read(WDeclared?, WDeclared).
+as_read([], []).
+as_read([S|Ss], C?) :- ground(S?), ground(Ss?) | as_read_c([S?|Ss?], C).
+as_read(reflexive(Rf, Ss), reflexive(Rf?, C?)) :- ground(Rf?), ground(Ss?) | as_read_c(Ss?, C).
+as_read(environment(Ev, B), environment(Ev?, D?)) :- ground(Ev?), ground(B?) | as_read_b(B?, D).
+as_read(parametric(Ps, D), parametric(Ps?, R?)) :- ground(Ps?), ground(D?) | as_read(D?, R).
