@@ -280,7 +280,7 @@ const_check(Xs, Bs, C, Rs, Cj, Fs, S, L?) :- otherwise, ground(Xs?), ground(Bs?)
     mult_args(As?, Ms),
     names_in(Ms?, Ys?, M),
     co_con(C?, C1),
-    con_args(C1?, Ca),
+    con_ord(C1?, Ca),
     co_forms(Fs?, Fs1),
     co_conjs(Cj?, Cj1),
     conj_phis(Cj1?, Ps),
@@ -290,7 +290,7 @@ const_check(Xs, Bs, C, Rs, Cj, Fs, S, L?) :- otherwise, ground(Xs?), ground(Bs?)
     names_in(Cf?, Ys1?, K),
     any_name(Bs?, Q),
     const_fault(M?, S?, '%% it has a variable over the constants as a multiplicity, and a multiplicity is a whole number (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a multiplicity and a count being whole numbers"):', L1),
-    const_fault(K?, S?, '%% it has a variable over the constants in a constraint, or in the constraint of a safe formula, which the compiler does not carry: the printed text compares numbers, persons, speech acts and community names, and no value a variable over the constants takes:', L2),
+    const_fault(K?, S?, '%% it has a variable over the constants in a constraint, or in the constraint of a safe formula, other than as a side of an equality or an inequality, eq or ne, which the compiler does not carry: comparison of constants is their equality, and the printed text orders and adds numbers, no value a variable over the constants takes:', L2),
     const_fault(Q?, S?, '%% it has a variable over the constants that a quantifier binds, which the compiler does not carry yet: the instances of a conjunct are printed of the types Peer, Speech and Integer:', L3),
     lapp(L2?, L3?, L23),
     lapp(L1?, L23?, L).
@@ -323,7 +323,20 @@ form_cons(fand(F, G), A?) :- form_cons(F?, A1), form_cons(G?, A2), app(A1?, A2?,
 form_cons(for(F, G), A?) :- form_cons(F?, A1), form_cons(G?, A2), app(A1?, A2?, A).
 form_cons(fexists(_, _, _, F), A?) :- form_cons(F?, A).
 form_cons(fforall(_, _, _, F, Gs), A?) :- form_cons(F?, A1), forms_cons(Gs?, A2), app(A1?, A2?, A).
-form_cons(fcons(C), A?) :- con_args(C?, A).
+form_cons(fcons(C), A?) :- con_ord(C?, A).
+%% The arguments of a constraint other than a side of eq or ne that is one argument: a variable over the constants is compared there for equality, the comparison its type provides (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a constraint, and a safe formula, is over the relations and functions the value types provide --- comparison and arithmetic"), as Rides's award and Gigs's pass require one constant at two roles, eq(const(Dollar), const(DollarTwo)); anywhere else, under an order, in arithmetic, in succ or in a relation, it is refused (const_check).
+procedure con_ord(Constraint?, Args).
+con_ord(true, []).
+con_ord(and(C1, C2), A?) :- con_ord(C1?, A1), con_ord(C2?, A2), app(A1?, A2?, A).
+con_ord(or(C1, C2), A?) :- con_ord(C1?, A1), con_ord(C2?, A2), app(A1?, A2?, A).
+con_ord(implies(C1, C2), A?) :- con_ord(C1?, A1), con_ord(C2?, A2), app(A1?, A2?, A).
+con_ord(not(C), A?) :- con_ord(C?, A).
+con_ord(eq(X, Y), A?) :- side_args(X?, A1), side_args(Y?, A2), app(A1?, A2?, A).
+con_ord(ne(X, Y), A?) :- side_args(X?, A1), side_args(Y?, A2), app(A1?, A2?, A).
+con_ord(C, A?) :- otherwise | con_args(C?, A).
+procedure side_args(Expr?, Args).
+side_args(num(_), []).
+side_args(E, A?) :- otherwise | expr_args(E?, A).
 procedure q_schema(QSchema?, Lines).
 q_schema(schema(_, _, _), []).
 q_schema(cschema(_, _, _, _), []).
@@ -1791,7 +1804,8 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     worded_lx(W?, Lx3),
     atom_parts(C?, Nt?, Lx3?, La0),
     worded_env(W?, Ev1),
-    env_lines(Ev1?, C?, Nt?, Lv),
+    worded_lx(W?, Lxe),
+    env_lines(Ev1?, C?, Nt?, Lxe?, Lv),
     lapp(La0?, Lv?, La),
     worded_lx(W?, Lx),
     text_schemas(C?, Lx?, Ct),
@@ -2052,12 +2066,12 @@ drop_pred(P, [Q|Qs], [Q?|R?]) :- otherwise | drop_pred(P?, Qs?, R).
 procedure env_any(Preds?, YesNo).
 env_any([], no).
 env_any([_|_], yes).
-%% env_atom(f(V1, ..., Vn), [g(f, [p(V1?), ..., n(Vn?)])]), one clause for each alternative of Atom of an environment predicate, and a last clause giving no atom for any other: the atoms the agent takes when the platform is deployed, written as the contract writes them, held as the agent holds an atom (env_atoms in the shared text).
-procedure env_lines(Preds?, Contract?, NumInfos?, Lines).
-env_lines([], _, _, []).
-env_lines([P|Ps], C, Nt, ['', '%% The atoms of the environment predicates the contract declares, given when the platform is deployed and held from startup (vGLP, Section 5.4, "Speech-act schemas as local specifications").', 'procedure env_atom(Atom?, GAtoms).'|L?]) :- ground(C?), ground(Nt?), ground(P?), ground(Ps?) |
-    contract_atoms(C?, As0),
-    nt_atoms(Nt?, As1),
+%% env_atom(f(V1, ..., Vn), [g(f, [p(V1?), ..., n(Vn?)])]), one clause for each alternative of Atom of an environment predicate, and a last clause giving no atom for any other: the atoms the agent takes when the platform is deployed, written as the contract writes them, held as the agent holds an atom (env_atoms in the shared text).  Each place is of the kind the type Atom gives it, a variable over the constants const and a real variable real by the table Lx (contract_ratoms, nt_ratoms), as atom_parts types it, so that env_atom(period_ended(V1), ...) holds V1 as v(V1?) where Atom has period_ended(Constant).
+procedure env_lines(Preds?, Contract?, NumInfos?, Lxs?, Lines).
+env_lines([], _, _, _, []).
+env_lines([P|Ps], C, Nt, Lx, ['', '%% The atoms of the environment predicates the contract declares, given when the platform is deployed and held from startup (vGLP, Section 5.4, "Speech-act schemas as local specifications").', 'procedure env_atom(Atom?, GAtoms).'|L?]) :- ground(C?), ground(Nt?), ground(Lx?), ground(P?), ground(Ps?) |
+    contract_ratoms(C?, Lx?, As0),
+    nt_ratoms(Nt?, Lx?, As1),
     app(As0?, As1?, As),
     atom_sigs(As?, Gs0),
     wild_sigs(Gs0?, Gs00),
@@ -4041,9 +4055,7 @@ nth_arg(_, [], role(0)).
 %% The lists and the sentences, printed for a contract with pragmas: tabs(Ts), the lists its app shows, tab(Name, P), P the predicate whose atoms the list holds; and sentence_of(C, Me, Ws), the sentence the contract puts to the agent Me on an attempt of the part C, its roles and variables filled in from the binding C names, or [] where it puts none: where the pragma of C's clause has no sentence, or where the sentence names Me, the sentence being put to the guarding roles whose persons it does not name (README.md beside this file, "The pragmas").
 procedure word_lines(Worded?, Contract?, NumInfos?, Lines).
 word_lines(words(pragmas(Ls, As, Ss, Lk, Vn, Tx, _), Ev, Lx, Dn, Vl), C, Nt, L?) :- ground(Ls?), ground(As?), ground(C?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Dn?), ground(Lx?) |
-    export_lines(Dn?, pragmas(Ls?, As?, Ss?, Lk?, Vn?), Tx?, Vn?, Lex0),
-    lx_consts(Lx?, Kn),
-    rarg_lines(Lex0?, Kn?, Lex),
+    export_lines(Dn?, pragmas(Ls?, As?, Ss?, Lk?, Vn?), Tx?, Vn?, Lex),
     contract_preds_lx(C?, Nt?, Lx?, Pr),
     mult_preds(C?, Mp),
     tab_terms(Ls?, Pr?, Mp?, Ts),
@@ -4083,41 +4095,9 @@ export_lines(Dn, Pr, Tx, Vn, L?) :- ground(Pr?) |
     export_tail(Dn?, Pr?, Tx?, Vn?, Tl),
     lapp(Hd?, Ma?, L1),
     lapp(L1?, Tl?, L).
-%% The type of an argument of the contract as read has the alternative const(Constant) only where the contract has a variable over the constants (lx_consts), so that a platform with none prints as before.
-procedure rarg_lines(Lines?, YesNo?, Lines).
-rarg_lines(Ls, no, Ls?).
-rarg_lines([], yes, []).
-rarg_lines([L|Ls], yes, ['RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant) ; const(Constant).'|Ls?]) :- L? =?= 'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).' | true.
-rarg_lines([L|Ls], yes, [L?|Ls1?]) :- otherwise | rarg_lines(Ls?, yes, Ls1).
 procedure export_head(Lines).
 export_head(['',
-        '% The contract the platform is compiled from (vGLP, Section 5.4, "The contract\'s words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC\'s reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC\'s reader\'s and the pragmas\', named with an R before them.',
-        'RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).',
-        'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).',
-        'RArgs     ::= [] ; [RArg | RArgs].',
-        'RAtom     ::= atom(Constant, RArgs) ; times(RArg, RAtom) ; rest(RArg, RArg, RAtom).',
-        'RAtoms    ::= [] ; [RAtom | RAtoms].',
-        'RGuard    ::= guarded ; unguarded ; guarded_at(Constant).',
-        'RRoleKind ::= seated(RNameTerm, Constant) ; constituent(RNameTerm, Constant) ; listed(Integer, Constant, RArgs) ; qlisted(Integer, Constant, RArgs, RArgs).',
-        'RRoleSpec ::= rs(RGuard, RAtoms, RAtoms, RAtoms, RAtoms) ; crs(RRoleKind, RGuard, RAtoms, RAtoms, RAtoms, RAtoms).',
-        'RRoleSpecs ::= [] ; [RRoleSpec | RRoleSpecs].',
-        'RReach    ::= reach(RNameTerm, Constant, RNameTerm).',
-        'RReaches  ::= [] ; [RReach | RReaches].',
-        'RConstraint ::= true ; and(RConstraint, RConstraint) ; eq(RExpr, RExpr) ; le(RExpr, RExpr) ; lt(RExpr, RExpr) ; ge(RExpr, RExpr) ; gt(RExpr, RExpr) ; succ(RArg, RArg) ; or(RConstraint, RConstraint) ; signed(RArg, RArg) ; unsigned(RArg, RArg) ; not(RConstraint) ; implies(RConstraint, RConstraint) ; ne(RExpr, RExpr) ; rel(Constant, RExprs) ; program(RExpr).',
-        'RExpr     ::= RArg ; plus(RExpr, RExpr) ; minus(RExpr, RExpr) ; mul(RExpr, RExpr) ; fn(Constant, RExprs) ; cardinality(RArgs, RArg, RAtom, RForm) ; sum(RArgs, RArg, RAtom, RForm, RExpr) ; author_of(RArg).',
-        'RExprs    ::= [] ; [RExpr | RExprs].',
-        'RForm     ::= fa(RArg, RAtom) ; fnot(RForm) ; fand(RForm, RForm) ; for(RForm, RForm) ; fexists(RArgs, RArg, RAtom, RForm) ; fforall(RArgs, RArg, RAtom, RForm, RForms) ; fcons(RConstraint).',
-        'RForms    ::= [] ; [RForm | RForms].',
-        'RHMult    ::= hm(Integer, RAtom).',
-        'RHMults   ::= [] ; [RHMult | RHMults].',
-        'RConjunct ::= conjunct(RArgs, Integer, RAtom, RForm, RHMults, RHMults, RForms).',
-        'RConjuncts ::= [] ; [RConjunct | RConjuncts].',
-        'RName     ::= Constant ; one(Constant, OneOf).',
-        'RNames    ::= [] ; [RName | RNames].',
-        'RSchema   ::= schema(Constant, RArgs, RRoleSpecs) ; cschema(Constant, RArgs, RReaches, RRoleSpecs) ; nschema(Constant, RArgs, RConstraint, RRoleSpecs) ; schema(Constant, RNames, RArgs, RRoleSpecs) ; cschema(Constant, RNames, RArgs, RReaches, RRoleSpecs) ; nschema(Constant, RNames, RArgs, RConstraint, RRoleSpecs) ; qschema(Constant, RArgs, RArgs, RConstraint, RRoleSpecs, RConjuncts, RForms) ; qschema(Constant, RNames, RArgs, RArgs, RConstraint, RRoleSpecs, RConjuncts, RForms).',
-        'RContract ::= [] ; [RSchema | RContract].',
-        'RBody     ::= RContract ; reflexive(Preds, RContract).',
-        'RDeclared ::= RBody ; environment(Preds, RBody).',
+        '% The contract the platform is compiled from (vGLP, Section 5.4, "The contract\'s words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC\'s reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The type of the contract as read is GSC\'s reader\'s, WDeclared of the root programs/self.glp, the type of the checker\'s input; the types of the pragmas are named with a P or an R before them.',
         '%% The pragmas (programs/vglp/cva/compiler/README.md, 1): the lists, the acts, the standing declarations, the look and the version.',
         'PWord     ::= text(String) ; person(Integer).',
         'PWords    ::= [] ; [PWord | PWords].',
@@ -4148,7 +4128,7 @@ export_tail(Dn, Pr, Tx, Vn, ['PProposer ::= any ; by(Ints) ; by(Ints, PSames).',
         'PLook     ::= nolook ; look(String, String).',
         'PVersion  ::= version(Integer, Integer).',
         'RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).',
-        'Exported  ::= with(RDeclared, RPragmas).',
+        'Exported  ::= with(WDeclared, RPragmas).',
         '',
         'exported procedure contract(String, Exported).',
         Ct?,
