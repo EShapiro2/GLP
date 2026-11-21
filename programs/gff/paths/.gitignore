@@ -1,0 +1,6 @@
+live-data.js
+# results written by sweep.py and async_sim.py, rebuilt by running them
+tables/*.json
+__pycache__/
+# the paper's LaTeX tables, written by paper_tables.py
+tables/paper/
