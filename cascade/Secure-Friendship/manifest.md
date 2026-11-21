@@ -1,10 +1,10 @@
 # A run of the cascade on Secure-Friendship
 
-- Contract: `Secure-Friendship` (`secure_friendship` to the checker), its owner's two files `programs/social/spm/Secure-Friendship.txt` and `programs/social/spm/Secure-Friendship.glp`, copied here as they stood at `bf0e0198`.
+- Contract: `Secure-Friendship` (`secure_friendship` to the checker), its owner's two files `programs/social/spm/Secure-Friendship.txt` and `programs/social/spm/Secure-Friendship.glp`, copied here as they stood at `686f502b`.
 - The paper: `/Users/udi/Grassroots/SPM (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/social/spm/Secure-Friendship.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/social/spm/Secure-Friendship.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-21 09:29 UTC by `cascade.sh secure_friendship`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `bf0e0198`; each artefact's source and tool:
+- Run on 2026-11-21 12:10 UTC by `cascade.sh secure_friendship`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `686f502b`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

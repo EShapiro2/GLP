@@ -23,7 +23,7 @@ Secure Friendship:2 ■ Tell: Carol records the friendship of Alice and Bob, pro
 Secure Friendship:2 ■ Tell end: No longer Carol records the friendship of Alice and Bob, provided Alice counts Carol as a friend, Carol counts Alice as a friend, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
 Secure Friendship:2 ■ Send record: Bob records Carol as an identity custodian of Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has a fixed identity record, Alice has Carol as an identity custodian and not Bob records Carol as an identity custodian of Alice.
 Secure Friendship:2 ■ Send threshold: Bob records the threshold Share of Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has the threshold Share and not Bob records the threshold Share of Alice.
-Secure Friendship:3 ■ Checkpoint: Bob keeps a checkpoint of Alice, provided Alice counts Bob as a friend and Bob counts Alice as a friend.
+Secure Friendship:3 ■ Checkpoint: Bob keeps a checkpoint of Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend and not Bob keeps a checkpoint of Alice.
 Secure Friendship:3 ■ | Bob keeps it.
 Secure Friendship:4 ■ | State recovery.
 Secure Friendship:4 ■ Restore: Alice counts Bob as a friend and Alice has recovered records from Bob, provided Alice has suffered a state loss, Bob counts Alice as a friend, Bob keeps a checkpoint of Alice and not Alice counts Bob as a friend.

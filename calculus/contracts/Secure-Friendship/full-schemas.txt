@@ -23,7 +23,7 @@ Secure Friendship:2 ■ Tell: records_friend(Carol,Alice,Bob) <- friend(Alice,Ca
 Secure Friendship:2 ■ Tell end: ~records_friend(Carol,Alice,Bob) <- friend(Alice,Carol), friend(Carol,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), records_friend(Carol,Alice,Bob).
 Secure Friendship:2 ■ Send record: records_custodian(Bob,Alice,Carol) <- friend(Alice,Bob), friend(Bob,Alice), fixed(Alice), custodian(Alice,Carol), ~records_custodian(Bob,Alice,Carol).
 Secure Friendship:2 ■ Send threshold: records_threshold(Bob,Alice,Share) <- friend(Alice,Bob), friend(Bob,Alice), threshold(Alice,Share), ~records_threshold(Bob,Alice,Share).
-Secure Friendship:3 ■ Checkpoint: checkpoint(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice).
+Secure Friendship:3 ■ Checkpoint: checkpoint(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice), ~checkpoint(Bob,Alice).
 Secure Friendship:3 ■ | Bob keeps it.
 Secure Friendship:4 ■ | State recovery.
 Secure Friendship:4 ■ Restore: friend(Alice,Bob), recovered(Alice,Bob) <- state_loss(Alice), friend(Bob,Alice), checkpoint(Bob,Alice), ~friend(Alice,Bob).
