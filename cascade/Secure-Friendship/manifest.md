@@ -1,10 +1,10 @@
 # A run of the cascade on Secure-Friendship
 
-- Contract: `Secure-Friendship` (`secure_friendship` to the checker), its owner's two files `programs/social/spm/Secure-Friendship.txt` and `programs/social/spm/Secure-Friendship.glp`, copied here as they stood at `c1b4f680`.
+- Contract: `Secure-Friendship` (`secure_friendship` to the checker), its owner's two files `programs/social/spm/Secure-Friendship.txt` and `programs/social/spm/Secure-Friendship.glp`, copied here as they stood at `c5c4b502`.
 - The paper: `/Users/udi/Grassroots/SPM (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/social/spm/Secure-Friendship.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/social/spm/Secure-Friendship.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-21 17:28 UTC by `cascade.sh secure_friendship`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `c1b4f680`; each artefact's source and tool:
+- Run on 2026-11-21 18:34 UTC by `cascade.sh secure_friendship`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `c5c4b502`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
@@ -20,4 +20,4 @@
 | `platform.vglp` | `Secure-Friendship.glp` read by programs/gsc's as_read/2, and `Secure-Friendship.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
 | `platform.glp` | `platform.vglp` | glp_runtime's :emit | the platform compiled to GLP, as emitted |
 | `interface.glp` | `platform.vglp` and `platform.glp` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |
-| `run.log` | `platform.vglp` | programs/vglp/cva/secure_friendship, the plays with scripted persons, in the REPL | the plays' logs: play_replace play_restore_loss |
+| `run.log` | `platform.vglp` | programs/vglp/cva/secure_friendship, the plays with scripted persons, in the REPL | the plays' logs: play_replace play_restore_loss play_threshold_two play_restore_friend |
