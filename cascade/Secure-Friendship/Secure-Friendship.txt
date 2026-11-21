@@ -47,5 +47,5 @@ Identity custodians: the custodians Alice named.
 Custodian of: those Alice is a custodian of.
 Vouch requests: those who asked Alice to vouch.
 Identity record: Alice [Name custodian] [Identity record] <threshold>
-Identity replacement: Alicia [Replace] <lost identity>
+Identity replacement: Alicia [Replace] <lost identity> [Present]
   Carol [Vouch]
