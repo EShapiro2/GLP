@@ -1301,6 +1301,7 @@ Fault ::= no_introductory_act
         ; listed_agent_role(Constant, Constant)
         ; guard_not_role(Constant, Constant)
         ; value_type(Constant, Constant)
+        ; value_number(Constant, Number)
         ; item_argument(Constant, Constant)
         ; unsupplied(Constant, Constant).
 Faults  ::= [] ; [Fault | Faults].

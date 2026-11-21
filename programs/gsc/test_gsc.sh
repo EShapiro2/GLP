@@ -2281,6 +2281,17 @@ check "a whole t blocks every whole x: meet obstructed" "intro_act(meet, obstruc
 check "a whole t blocks no real x but a whole one: meet unobstructed" "intro_act(meet, unobstructed)" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 2p)"
 check "a real t blocks every real x: meet obstructed" "intro_act(meet, obstructed(" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 3p)"
 
+# A number is written num(N), and val(C) is a value of any other type
+# (programs/gsc/self.glp, Arg): val(N) of a number N, in an atom or in a
+# constraint, is refused, value_number (Audit PR 76, Finding 5).
+RE_VALN=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', num(k)])], [atom(identity, ['Alice'])], gt(num(k), val(0)), ['Alice'])")
+RE_VALA=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', num(k)]), atom(tag, ['Alice', val(2)])], [atom(identity, ['Alice'])], gt(num(k), num(0)), ['Alice'])")
+RE_VALC=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', num(k)]), atom(tag, ['Alice', val(blue)])], [atom(identity, ['Alice'])], gt(num(k), num(0)), ['Alice'])")
+out=$(run "check($RE_VALN, V)." "check($RE_VALA, V)." "check($RE_VALC, V).")
+check_eq "a number written val(0) in a constraint is refused" "V = malformed([value_number(mint, 0)])" "$(sf 1)"
+check_eq "a number written val(2) in an atom is refused" "V = malformed([value_number(mint, 2)])" "$(sf 2)"
+check_eq "a constant written val(blue) is read" "V = syntactically_grassroots" "$(sf 3)"
+
 # Restriction by its syntactic approximations (GSC, Section 9: def:stronger,
 # prop:syntactic; restrict.glp, README "Restriction"), over GSG written in the
 # clause syntax: befriend strengthened by an atom of its body, by (a); unfriend
