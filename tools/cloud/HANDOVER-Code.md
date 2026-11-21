@@ -52,3 +52,11 @@ Code #36 compacted twice and stays, by Udi's rule of 2026-11-20 14:32 UTC.  Afte
 - Finding 1 set, to merge together after GLP-Spec passes cd192a35: GSC's checker 8c39268b7 (claude/project-thread-qgc92q), vGLP's d95a611cf (claude/project-thread-gxjvnp), GSA's 757e138c6.
   Also CSSN's claude/project-thread-s9ompe 66fa03f75 (rests on all of them); after merging, print cascade/Children again. App installation aborts on a type identity mismatch for contract/2 (vGLP and GLP's, via the coordinator).
   GSA's part is now xztgmf f049fe9c2: with its merge, add `:artefact $GLP_DIR/programs/gsc/checker <the core dir>` before every install through the super-app in run_all_tests.sh: Section APPS's super-app boots (~9725, ~9739, the GSG, GSN, GKK, GSNP and GAI boots) and Currencies' N2, N3, N4. Waits on the type identity fix (code/type-identity-scope, a subagent) and GLP-Spec's exports guard (Udi).
+
+## After the third compaction (2026-11-21)
+
+- Branch head e8688eafb: merged the Calculus's f90a52794 (4813aca8b), GM's 16c0f74b9 and 680da6db7, GO's e8688eafb (Marketplace renamed Community Market); earlier be5f2eb1e, 2d0f7a1ab, f882432f8 (TY mend, branch only), ee35cbdc5, b694da2d0, 2c4f37f38, 2bc373651 (GSC's GSN app patch).  Website has up to 2c4f37f38 for /next.
+- In flight in wt-ren: adopt.py printing every contract whose `--check` fails (scratchpad names.txt); Secure Friendship fails (waits on the Calculus's third commit).  Next: commit those outputs path-limited, record by cascade.sh each changed contract (Community Market, Organisation, Community Network, Rides, Lodging, Gigs, Liquid Cooperative, Constitution, Gossip, Promoted Gossip, Free Matching, Matching and its instances, Dating, the banks), and give the commit to Website, GO, GM and the Calculus.
+- code/type-identity-scope 805198f58 (wt-tid), off CSSN s9ompe 66fa03f75: interface text spells types as their defining scope resolves them (TGLP Compilation, step four); dart test 2947 passed, 1 failed, encounters_nearby_test, failing alike at the base.  Its lines go to GLP-Spec; GSA #9 is finding the cause.  GSA #9 wants the checker line in Section K's install script too.
+- Held: Promoted Matching, Rehearsal Rooms, Tennis Courts (not grassroots); Promoted Community Market is not in the Calculus.
+- Open Q to Udi: /next on main and the live site tonight.
