@@ -18,7 +18,7 @@ interface([
   type('MenuField', [field('Integer', 'String', 'MenuFieldType')]),
   type('MenuFieldType', [person, key, agent, text, number]),
   type('MenuWord', [say('String'), at('Integer')]),
-  type('Atom', [identity, person, knows('Peer'), friend('Peer'), custodian('Peer'), fixed, custodian_of('Peer'), threshold('Integer'), records_friend('Peer', 'Peer'), records_custodian('Peer', 'Peer'), records_threshold('Peer', 'Integer'), checkpoint('Peer'), recovered('Peer'), state_loss, records_replacement('Peer', 'Peer', 'Peer'), recovered_friend('Peer', 'Peer'), recovered_replaced('Peer', 'Peer', 'Peer'), asked('Peer', 'Peer'), vouched('Peer', 'Peer'), received_vouch('Peer', 'Peer'), holds_statement('Peer', 'Peer', 'Peer'), accepted('Peer', 'Peer'), learned_friend('Peer', 'Peer', 'Peer')]),
+  type('Atom', [identity, person, knows('Peer'), friend('Peer'), custodian('Peer'), fixed, custodian_of('Peer'), threshold('Integer'), records_friend('Peer', 'Peer'), records_custodian('Peer', 'Peer'), records_threshold('Peer', 'Integer'), checkpoint('Peer'), recovered('Peer'), state_loss, accepted('Peer', 'Peer'), records_replacement('Peer', 'Peer', 'Peer'), recovered_friend('Peer', 'Peer'), recovered_replaced('Peer', 'Peer', 'Peer'), asked('Peer', 'Peer'), vouched('Peer', 'Peer'), received_vouch('Peer', 'Peer'), holds_statement('Peer', 'Peer', 'Peer'), learned_friend('Peer', 'Peer', 'Peer')]),
   type('MayOne', [may_one('Integer', 'Integer')]),
   type('MayOnes', [[], ['MayOne' | 'MayOnes']]),
   type('VOne', [vone('Var', 'Var'), vone_any('Var'), vone_all]),
