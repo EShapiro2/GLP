@@ -5095,6 +5095,26 @@ check "CVA wild: carol's dissolve lists the people she has in some office, alice
 check "CVA wild: ... and bob loses both his offices in carol in the one act" "view(bob, \[serving(carol), office(carol, treasurer), office(carol, clerk), officer\], \[alice, carol\], \[\], \[[^]]*\]), view(bob, \[serving(carol), officer\], \[alice, carol\], \[\]" "$cva_wild"
 check_not "CVA wild: ... carol holding no has_office after it" "view(carol, \[dissolved[^]]*has_office" "$cva_wild"
 check "CVA wild: ... and dissolved" "view(carol, \[dissolved, " "$cva_wild"
+# A wildcard in an atom a role forbids (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches"; GSC, Definition "Speech-act schema"; Secure Friendship's Restore, not accepted(Alice, _, Bob), SPM #2, 2026-11-21): greet(a?, c?) forbids member(_, a) at c, and idle(c?) forbids member(_, _) at c.  Before, the printed text took the wildcard for a variable the binding leaves free, and the atom forbade nothing: carol gained idle while a member of a group, and was asked alice's greet.
+cva_forbid=$("$REPL_RUN" <<HEREDOC
+$CVA/wild/
+:limit 40000000
+play_forbid(A, B, C, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA wild: a forbidden atom keeps its wildcard, greet's member(_, a) at the one greeted, atom(member, [any, role(1)])" "^schema_entry(greet, schema(greet, \[\], \[rs(guarded, \[atom(greeting, \[role(2)\])\], \[\], \[\], \[atom(greeting, \[role(2)\])\]), rs(guarded, \[atom(greeted, \[role(1)\])\], \[\], \[\], \[atom(greeted, \[role(1)\]), atom(member, \[any, role(1)\])\])\]))$" "$cva_wild_p"
+check "CVA wild: ... and idle's member(_, _), atom(member, [any, any])" "^schema_entry(idle, schema(idle, \[\], \[rs(guarded, \[atom(idle, \[\])\], \[\], \[\], \[atom(idle, \[\]), atom(member, \[any, any\])\])\]))$" "$cva_wild_p"
+check "CVA wild: the printed text takes the wildcard for no variable, vars_bound([any|Vs], ...)" "^vars_bound(\[any|Vs\], B, R?) :- vars_bound(Vs?, B?, R)\.$" "$cva_wild_p"
+check "CVA wild: ... and has a forbidden atom with a wildcard forbid every atom of the state its image matches, forb_held" "^forb_held1(yes, K, Sh, In?) :- g_matched(K?, Sh?, Ms), nonempty(Ms?, In)\.$" "$cva_wild_p"
+check "CVA wild: carol, a member of a group of alice, votes no on greet(alice, carol), which forbids member(_, alice) at her, unable, the reason naming the membership her state has" "sent(carol, alice, vote(attempt(alice, [0-9]*, [0-9]*, greet(alice, carol), none), no(unable(\[\], \[member(speech(utterance(g1), carol), alice)\]))))" "$cva_forbid"
+check "CVA wild: ... and alice is told it is refused by carol" "refused(greet(alice, carol), carol, unable(\[\], \[member(speech(utterance(g1), carol), alice)\]))" "$cva_forbid"
+check_not "CVA wild: ... carol is not asked it, and neither gains by it" "gave(greet(alice, carol)\|view(alice, \[[^]]*greeting\|greeted(alice)" "$cva_forbid"
+check "CVA wild: carol, a member of no group of bob, answers yes to greet(bob, carol), and it commits, her membership kept" "view(carol, \[greeted(bob), member(speech(utterance(g1), carol), alice)\]" "$cva_forbid"
+check "CVA wild: ... bob gaining greeting(carol)" "view(bob, \[greeting(carol)\]" "$cva_forbid"
+check "CVA wild: carol, a member of a group, requests idle(carol), which forbids member(_, _), and it is refused as unable" "view(carol, \[member(speech(utterance(g1), carol), alice)\], \[alice\], \[\], \[[^]]*\]), refused(idle(carol), carol, unable)" "$cva_forbid"
+check_not "CVA wild: ... and carol never holds idle" "view(carol, \[[^]]*idle" "$cva_forbid"
+check "CVA wild: bob, a member of no group, requests idle(bob), and gains idle" "view(bob, \[idle, greeting(carol)\]" "$cva_forbid"
 # The platform emitted by the canonical compilation into a scratch directory and its procedures called on states, as for forms: a person listed in retire(carol, [alice, bob]) who holds no role in carol has no binding under which the act's precondition holds at them, the role(c, _) a listed role requires; one who holds a role has one, the wildcard's variable bound to it; and the people carol lists by has_role(c, e, _) are each taken once.
 cva_wild_dir="$GLP_DIR/programs/tests/vg_wild_$$"
 mkdir -p "$cva_wild_dir" && cp "$CVA/wild/platform.vglp" "$cva_wild_dir/"
@@ -5122,6 +5142,8 @@ load $cva_wild_dir/platform.glp
 :limit 10000000
 term_spec(close(alice, [alice, bob], club), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(identity, []), g(member, [v(club), p(alice)])], B1).
 term_spec(close(alice, [alice, bob], club), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(identity, [])], B2).
+term_spec(join(bob, alice, club), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(identity, []), g(friend, [p(alice)]), g(member, [v(club), p(carol)])], B3).
+term_spec(join(bob, alice, club), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(identity, []), g(friend, [p(alice)]), g(member, [v(chess), p(carol)])], B4).
 :quit
 HEREDOC
 2>&1)
@@ -5130,6 +5152,10 @@ check "CVA wild: GSN's member has one alternative in Atom, member(Constant, Peer
 check_not "CVA wild: ... and none with the wildcard's place dropped, member(Constant)" "^member(Constant)$" "$(cat "$CVA/social_network/platform.vglp")"
 check "CVA wild: GSN's close holds at a listed member who is a member of the leader's group, member(g, alice)" "B1 = \[\[b(role(1), p(alice)), " "$cva_wild_n"
 check "CVA wild: ... and under no binding at a listed person who is no member" "B2 = \[\]$" "$cva_wild_n"
+# Groups's join forbids member(g, _) at the one who joins, a wildcard in an atom a role forbids (vGLP, Section 5.4: "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, ... every atom of the state that it matches"): its precondition holds at bob under no binding where he is a member of a group of that name, whoever leads it, and holds where he is a member only of a group of another name.
+check "CVA wild: GSN's join keeps the wildcard of the atom it forbids, atom(member, [num('Grupo'), any])" "^schema_entry(join, schema(join, \[num('Grupo')\], \[rs(guarded, \[atom(member, \[num('Grupo'), role(2)\])\], \[\], \[atom(identity, \[\]), atom(friend, \[role(2)\])\], \[atom(member, \[num('Grupo'), any\])\])" "$(cat "$CVA/social_network/platform.vglp")"
+check "CVA wild: GSN's join(bob, alice, club) holds under no binding at bob, a member of carol's group club, member(club, _) forbidden" "B3 = \[\]$" "$cva_wild_n"
+check "CVA wild: ... and holds at bob, a member only of carol's group chess" "B4 = \[\[b(role(1), p(bob)), " "$cva_wild_n"
 # A wildcard in the anchor of a quantifier that binds a listed role, with a condition across roles (GSNW's and CSSN's Retire, member(Carol, _, E); Calculus #6 and Helper #4, 2026-11-15): wild's leave.
 cva_wild_leave=$("$REPL_RUN" <<HEREDOC
 $CVA/wild/
