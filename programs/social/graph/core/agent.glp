@@ -478,10 +478,10 @@ agent(_, _, [], Outs, Host) :- close_outputs(Outs?), close_host(Host?).
 %% Cmp), the program's two identities, signed by its developer (GPD:1): it must
 %% verify by signature/2, bind this program's source and compiled identities,
 %% and be signed by the person's own key, a program they published (GPD:4,
-%% Install own), or by a developer they trust (GPD:2, GPD:4).  The check that
-%% the schemas pass the checker waits on reading a module's contract from GLP
-%% (docs/compiled-home.md, Section 5, blocker 3).
-procedure verify_install(Content?, String?, Trust?, Verdict).
+%% Install own), or by a developer they trust (GPD:2, GPD:4).  With those two
+%% passed, the third: the program's schemas pass the checker
+%% (schemas_check/3).
+procedure verify_install(Content?, String?, Trust?, HostVerdict).
 verify_install(M, W, trust(Cs, Ds), V?) :-
     module(M?) |
     decompose_module(M?, CK, Src, Cmp),
@@ -500,7 +500,7 @@ key_trusted(_, [], false).
 %% the warranty signed over publish(Src, Cmp) of this very program; anything
 %% else --- a term that is not a signed term, signed over another term or over
 %% another program's identities --- is refused.
-procedure warranty_check(Constant?, Signature?, String?, String?, Key?, List(Key)?, Module?, Verdict).
+procedure warranty_check(Constant?, Signature?, String?, String?, Key?, List(Key)?, Module?, HostVerdict).
 warranty_check(true, signed(K, _, publish(Src1, Cmp1)), Src, Cmp, Me, Ds, M, V?) :-
     Src? =?= Src1?, Cmp? =?= Cmp1? |
     developer_trusted(K?, Me?, Ds?, D),
@@ -518,14 +518,71 @@ key_member(K, [K1 | _], true) :- K? =?= K1? | true.
 key_member(K, [_ | Ks], T?) :- otherwise | key_member(K?, Ks?, T).
 key_member(_, [], false).
 
-procedure installable(Constant?, Module?, Verdict).
-installable(true, M, ok(M?)).
+procedure installable(Constant?, Module?, HostVerdict).
+installable(true, M, V?) :-
+    load_file("gsc.glpw", G),
+    schemas_check(G?, M?, V).
 installable(false, _, refused).
+
+%% schemas_check(G, M, V): the third check of GPD's Implementation pragma,
+%% "that its schemas pass the checker".  G is what load_file/2 gave for the
+%% checker's artefact, programs/gsc compiled, beside this program; it must be
+%% a Module.  The program M gives its contract by its exported contract/2
+%% (GPD's definition of a program, ../Programs.txt), contract(Text, with(Read,
+%% Pragmas)), activated by run/3 at the type identity of this scope's
+%% declaration of contract/2; Read goes to GSC's check/2, activated in G by
+%% run/3 at the type identity of this scope's declaration of check/2 (GLP-Spec
+%% appendix-guards, "Dynamic activation" and "Compilation and file reading";
+%% TGLP, Section "Dynamic Activation").  M is installed where the verdict is
+%% one GSC's paper calls grassroots (grassroots_verdict/3), and refused for
+%% every other verdict.
+procedure schemas_check(Content?, Module?, HostVerdict).
+schemas_check(G, M, V?) :-
+    module(G?) |
+    find_type(contract/2, Tc),
+    run(contract(_, P), Tc?, M?),
+    checked(P?, G?, M?, V).
+schemas_check(_, _, refused) :- otherwise | true.
+
+%% checked(P, G, M, V): the contract M gave, as GSC's reader reads it, handed
+%% to the checker G.
+procedure checked(GivenContract?, Module?, Module?, HostVerdict).
+checked(with(D, _), G, M, V?) :-
+    find_type(check/2, Tk),
+    run(check(D?, C), Tk?, G?),
+    grassroots_verdict(C?, M?, V).
+
+%% grassroots_verdict(C, M, V): the verdicts GSC's paper calls grassroots, as
+%% the checker prints them (programs/gsc/check.glp; the root self.glp, Verdict):
+%% syntactically_grassroots (def:syntactically-grassroots), and the two
+%% verdicts of a contract with wards, grassroots_with_wards (GSC, Section
+%% "Contracts with Wards", thm:grassroots-wards) and
+%% syntactically_grassroots_with_wards (def:sg-wards of CSSN's paper).
+%% not_grassroots and malformed are refused.
+procedure grassroots_verdict(Verdict?, Module?, HostVerdict).
+grassroots_verdict(syntactically_grassroots, M, ok(M?)).
+grassroots_verdict(syntactically_grassroots_with_wards(_, _, _, _, _), M, ok(M?)).
+grassroots_verdict(grassroots_with_wards(_, _, _, _, _), M, ok(M?)).
+grassroots_verdict(not_grassroots(_), _, refused).
+grassroots_verdict(malformed(_), _, refused).
+
+%% The declarations at which the Grassroots App activates the two procedures
+%% it calls by run/3, in its own scope, where find_type/2 reads them: an
+%% imported declaration is not in its table.  As the root self.glp does for
+%% the entry templates, each has a clause that is never run; the App calls
+%% neither, only find_type/2 reads them.  check/2 is GSC's (programs/gsc,
+%% check(WDeclared?, Verdict), at the root's types); contract/2 is a program's,
+%% at GivenContract (../self.glp), as the owners agreed on 2026-11-20.
+procedure check(WDeclared?, Verdict).
+check(_, malformed([])).
+
+procedure contract(String, GivenContract).
+contract("", with([], pragmas([], [], [], nolook, version(1, 1)))).
 
 %% install_step(V, App, CSig, Ui, Apps, Apps1): a mini-app installed is held
 %% idle with its end of its person channel; one refused has its person
 %% channel read for good, the channel never ending (idle_channel/1).
-procedure install_step(Verdict?, Constant?, String?, PersonChannel(Opaque)?, AppList?, AppList).
+procedure install_step(HostVerdict?, Constant?, String?, PersonChannel(Opaque)?, AppList?, AppList).
 install_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle(Ui?)) | Apps?]).
 install_step(refused, _, _, Ui, Apps, Apps?) :- idle_channel(Ui?).
 
@@ -755,20 +812,20 @@ undertaking_check(_, _, false) :- otherwise | true.
 %% checked, an end kept for the conversation, the mini-app it was kept for
 %% installed here, and its two identities equal to the peer's; the kept end
 %% handed on as I1, a reader of a type that is not constant being read once.
-procedure handshake(Constant?, Kept?, AppList?, AppList, String?, Constant?, Verdict, Kept).
+procedure handshake(Constant?, Kept?, AppList?, AppList, String?, Constant?, HostVerdict, Kept).
 handshake(true, kept(App, End), Apps, Apps1?, Src, T, Ok?, kept(App?, End?)) :-
     ground(App?) |
     app_module(App?, Apps?, Apps1, L),
     identity_check(L?, Src?, T?, Ok).
 handshake(_, I, Apps, Apps?, _, _, refused, I?) :- otherwise | true.
 
-procedure identity_check(AppLookup?, String?, Constant?, Verdict).
+procedure identity_check(AppLookup?, String?, Constant?, HostVerdict).
 identity_check(found(M), Src, T, Ok?) :-
     identities(M?, Src1, T1),
     identity_match(Src?, Src1?, T?, T1?, M?, Ok).
 identity_check(missing, _, _, refused).
 
-procedure identity_match(String?, String?, Constant?, Constant?, Module?, Verdict).
+procedure identity_match(String?, String?, Constant?, Constant?, Module?, HostVerdict).
 identity_match(Src, Src1, T, T1, M, ok(M?)) :- Src? =?= Src1?, T? =?= T1? | true.
 identity_match(_, _, _, _, _, refused) :- otherwise | true.
 
@@ -787,7 +844,7 @@ join_signed(Sg, Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted
     root_step(Ok?, I1?, Id?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
               Apps1?, Atts?, Pend1?, Trusted?).
 
-procedure root_step(Verdict?, Kept?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Trust?).
+procedure root_step(HostVerdict?, Kept?, Key?, Key?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Trust?).
 root_step(ok(M), kept(App, Mine), Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     self_key(K),
     sign(undertaking(Src?), K?, Up),
@@ -815,7 +872,7 @@ root_signed(Sg, Id, From, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted
     accept_root_step(Ok?, I1?, Id?, From?, UserIn?, NetIn?, Outs?,
                      Apps1?, Atts?, Pend1?, Trusted?).
 
-procedure accept_root_step(Verdict?, Kept?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Trust?).
+procedure accept_root_step(HostVerdict?, Kept?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Trust?).
 accept_root_step(ok(M), kept(App, End), Id, From, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     ground(App?) |
     deliver(App?, From?, End?, Id?, M?, Apps?, Apps1, UserIn?, UserIn1),

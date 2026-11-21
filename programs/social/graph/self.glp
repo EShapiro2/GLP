@@ -203,7 +203,7 @@ AnchorFriend ::= none ; found(Key).
 %% given before the offer, with the name the mini-app is installed under; and
 %% an end kept for a conversation until its handshake, with that name.
 AppLookup ::= found(Module) ; missing.
-Verdict   ::= ok(Module) ; refused.
+HostVerdict ::= ok(Module) ; refused.
 Joined    ::= ok(Constant) ; refused.
 Offer     ::= none ; offer(RootChannel(Opaque)).
 Consent   ::= none ; app(Constant).
@@ -250,6 +250,37 @@ Pending      ::= invited(Constant, Key, String, RootChannel(Opaque))
 PendingInv   ::= [] ; [Pending | PendingInv].
 Trust ::= trust(Stream(String), List(Key)).
 Host ::= host(AppList, AttestList, PendingInv, Trust).
+
+%% The contract a program gives (GPD's definition of a program, Programs.txt:
+%% "compiled code, signed by its compiler, that gives the grassroots contract
+%% it is compiled from, its clauses and its speech-act schemas"), as its
+%% exported contract/2 gives it: contract(Text, with(Read, Pragmas)), Text its
+%% clauses, Read the contract as GSC's reader reads it, of the checker's type
+%% WDeclared (root self.glp), and Pragmas its pragmas, at the type the
+%% platforms vGLP prints declare (programs/apps/*/platform.vglp, RPragmas,
+%% one definition in each), agreed by the owners on 2026-11-20 as the type of
+%% contract/2 once vGLP's compiler declares it so.  The Grassroots App reads
+%% it by run/3 at installation, and hands Read to GSC's check/2 (core/agent.glp,
+%% schemas_check/3).
+PWord      ::= text(String) ; person(Integer).
+PWords     ::= [] ; [PWord | PWords].
+PSentences ::= [] ; [PWords | PSentences].
+PSaid      ::= none ; said(PSentences).
+PStrings   ::= [] ; [String | PStrings].
+PList      ::= list(String, PStrings).
+PLists     ::= [] ; [PList | PLists].
+PAct       ::= act(Constant, String, PStrings, PSaid, String, PProposer).
+Ints       ::= [] ; [Integer | Ints].
+PProposer  ::= any ; by(Ints) ; by(Ints, PSames).
+PSame      ::= same(Integer, Integer).
+PSames     ::= [] ; [PSame | PSames].
+PActs      ::= [] ; [PAct | PActs].
+PStand     ::= standing(Constant, Constant, Constant).
+PStands    ::= [] ; [PStand | PStands].
+PLook      ::= nolook ; look(String, String).
+PVersion   ::= version(Integer, Integer).
+RPragmas   ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
+GivenContract ::= with(WDeclared, RPragmas).
 
 %% The vocabulary of the super-app's own person interface (core/home.vglp, its
 %% compilation home.glp): an ask on its ask stream, and the person's grants on
