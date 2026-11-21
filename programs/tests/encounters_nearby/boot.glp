@@ -7,10 +7,11 @@
 EnStart ::= encounters(Key).
 EnPIns  ::= [EnStart | PersonIn(Drawn)].
 EnSess  ::= nosess ; sess(Integer, Path).
-EnView  ::= noview ; pview(Key, YesNo, List(Atom)).
+EnView  ::= noview ; pview(Key, YesNo, List(EnAtom)).
 EnStep  ::= establish ; open ; await ; done.
 EnState ::= pst(EnSess, EnView, EnStep).
 EnFound ::= found(Key) ; none.
+EnAtom  ::= identity ; person ; knows(Key) ; open_place ; nearby(Key).
 
 procedure boot.
 boot :-
@@ -67,13 +68,13 @@ last_view([view(Me, S, _, _, _) | Xs], _, V?) :-
     last_view(Xs?, pview(Me?, I?, S?), V).
 last_view([_ | Xs], V0, V?) :- otherwise | last_view(Xs?, V0?, V).
 
-procedure has_atom(Atom?, List(Atom)?, YesNo).
+procedure has_atom(EnAtom?, List(EnAtom)?, YesNo).
 has_atom(_, [], no).
 has_atom(A, [B | _], yes) :- A? =?= B? | true.
 has_atom(A, [_ | Bs], R?) :- otherwise | has_atom(A?, Bs?, R).
 
 %% A person other than the agent's own whom the state knows, knows being reflexive in Encounters (it extends GKK, whose adopted contract declares knows reflexive).
-procedure known_peer(Key?, List(Atom)?, EnFound).
+procedure known_peer(Key?, List(EnAtom)?, EnFound).
 known_peer(_, [], none).
 known_peer(Me, [knows(Q) | _], found(Q?)) :- ground(Q?), Me? =?\= Q? | true.
 known_peer(Me, [_ | As], F?) :- otherwise | known_peer(Me?, As?, F).
