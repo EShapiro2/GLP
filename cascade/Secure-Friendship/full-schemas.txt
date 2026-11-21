@@ -27,7 +27,8 @@ Secure Friendship:3 ■ Checkpoint: checkpoint(Bob,Alice) <- friend(Alice,Bob), 
 Secure Friendship:3 ■ | Bob keeps it.
 Secure Friendship:4 ■ | State recovery.
 Secure Friendship:4 ■ Restore: friend(Alice,Bob), recovered(Alice,Bob) <- state_loss(Alice), friend(Bob,Alice), checkpoint(Bob,Alice), ~friend(Alice,Bob).
-Secure Friendship:4 ■ Restore friend: friend(Alice,Carol), recovered_friend(Alice,Carol,Bob) <- state_loss(Alice), friend(Bob,Alice), checkpoint(Bob,Alice), records_friend(Bob,Alice,Carol), ~friend(Alice,Carol).
+Secure Friendship:4 ■ Restore friend: friend(Alice,Carol), recovered_friend(Alice,Carol,Bob) <- state_loss(Alice), friend(Bob,Alice), checkpoint(Bob,Alice), records_friend(Bob,Alice,Carol), ~records_replacement(Bob,Alice,Carol,_), ~friend(Alice,Carol).
+Secure Friendship:4 ■ Restore replaced friend: friend(Alice,Dave), recovered_replaced(Alice,Bob,Dave,Carol) <- state_loss(Alice), friend(Bob,Alice), checkpoint(Bob,Alice), records_friend(Bob,Alice,Carol), records_replacement(Bob,Alice,Carol,Dave), ~friend(Alice,Dave).
 Secure Friendship:5 ◆ | Identity replacement.
 Secure Friendship:5 ◆ Replace: asked(Carol,Alicia,Alice) <- knows(Alicia,Carol), custodian_of(Carol,Alice), ~asked(Carol,Alicia,Alice) guarded by Alicia.
 Secure Friendship:5 ◆ | Alicia asks only after an identity loss of Alice.
