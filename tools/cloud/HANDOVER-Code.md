@@ -1,6 +1,6 @@
 # Handover of Code #36, 2026-11-20
 
-Code #36 compacted once and stays, by Udi's rule of 2026-11-20 14:32 UTC.  After a compaction it reads afresh organisation/claude.md, writing-style-guide.md, claudese.md, GLP/CLAUDE.md and this file, then goes on.
+Code #36 compacted twice and stays, by Udi's rule of 2026-11-20 14:32 UTC.  After a compaction it reads afresh organisation/claude.md, writing-style-guide.md, claudese.md, GLP/CLAUDE.md and this file, then goes on.
 
 ## Done
 
@@ -20,6 +20,14 @@ Code #36 compacted once and stays, by Udi's rule of 2026-11-20 14:32 UTC.  After
 - Main and the live site for the new structure: only on Udi's separate yes.
 - vGLP: platform.glp of Community, Democratic Community, Backed Community and five Cooperatives does not load; Rides, Lodging, Marketplace and Gigs print no platform.
 
+## After the second compaction (2026-11-20, evening)
+
+- Branch head 2ff6600f5: merged vGLP feccc12a5, 00b59c5ea and 9d0e1a041, CSSN 7835de25b, GO d7664230d, Calculus c5e75e1af (Workers' Cooperative); records printed again whole by cascade.sh: Knowledge, Notes, Agents, Agora, Denominated-Currencies, Provenance-Groups, Services, Organisation, Community, Backed-Community (840100840), Children (2b846b470), Constitution, Cooperative, Workers' Cooperative (2ff6600f5).
+- Main b2dc3c8b3: the short rules (d45ef180e) and Website's sweep (e792294bf, Udi's yes 20:26 UTC).
+- Website has 840100840 and 2b846b470 on /next; to be given 2ff6600f5.
+- Waiting on the Calculus: d2432e5d (per-role values) on code, certified, over 8f4ff1d24; then print Rides, Gigs, Matching, the 13 contracts from Matching and the 12 records with constant variables.
+- Open Q to Udi (19:05 UTC): the ten records on main and the live site.  No answer yet.
+
 ## Waiting and standing
 
 - PRs: #123 and #124 on Nimrod; #61, #125, #128 to #133 on the Calculus; #94 on Yuval; #118 closes after the nightly.
@@ -33,3 +41,26 @@ Code #36 compacted once and stays, by Udi's rule of 2026-11-20 14:32 UTC.  After
 ## Environment
 
 - Dart 3.13.7 at /home/claude/dart-sdk.  Worktrees in /home/claude: GLP (main), wt-ren (this branch), wt-gce, wt-go, wt-rel, wt-127, wt-main127.
+
+## Reading after a compaction (Udi's yes to Coordination, 2026-11-20 22:52 UTC)
+
+- The three rules files; then Code's entry in `organisation/projects.md` (main ff6a61541), the record it names, GLP/CLAUDE.md, and this handover.  Project CLAUDE.md files are gone from their repos, their text in each repo's docs record; Code's two files stay.
+- Main since: 07c42f955 (cascade checks once, GSC's compile_contract/3), 8ba6563bb (next.sh), 733305e72 (hash comments), b09438fae, 9e06c5770, ff6a61541 (Coordination's rules).
+- Branch: 2d0f7a1ab Matching and ten more recorded; f1b88d4fd and GO's 4ec044b2 (Community Network pragmas) for Rides and Gigs, being printed in /home/claude/wt-rg; the twelve with constant variables (vGLP's list: Backed-Community, Central-Bank, Commercial-Bank, Community-Bank, Community, Consumers-Cooperative, Gigs, Lodging, Marketplace, Rides, Shareholding-Corporation, Trading-Company) being printed in wt-ren.
+- Audit PR 27 (udi-shapiro/Grassroots-Audit), accepted by Coordination, not yet merged at 23:22 UTC: once merged, Code opens a PR there moving the report of every GLP file it renames or moves (git mv, a "Moved:" line), and moves the 8 reports `python3 -I bin/stale.py <GLP main>` lists.
+- GSC #20: merge claude/project-thread-qgc92q 8c39268b7 (programs/gsc/checker, for Audit Finding 1) only once GLP-Spec passes cd192a35 under it (the checker's types to the root, waiting on GLP-Spec and Udi).
+- Finding 1 set, to merge together after GLP-Spec passes cd192a35: GSC's checker 8c39268b7 (claude/project-thread-qgc92q), vGLP's d95a611cf (claude/project-thread-gxjvnp), GSA's 757e138c6.
+  Also CSSN's claude/project-thread-s9ompe 66fa03f75 (rests on all of them); after merging, print cascade/Children again. App installation aborts on a type identity mismatch for contract/2 (vGLP and GLP's, via the coordinator).
+  GSA's part is now xztgmf f049fe9c2: with its merge, add `:artefact $GLP_DIR/programs/gsc/checker <the core dir>` before every install through the super-app in run_all_tests.sh: Section APPS's super-app boots (~9725, ~9739, the GSG, GSN, GKK, GSNP and GAI boots) and Currencies' N2, N3, N4. Waits on the type identity fix (code/type-identity-scope, a subagent) and GLP-Spec's exports guard (Udi).
+
+## After the third compaction (2026-11-21)
+
+- Branch head e8688eafb: merged the Calculus's f90a52794 (4813aca8b), GM's 16c0f74b9 and 680da6db7, GO's e8688eafb (Marketplace renamed Community Market); earlier be5f2eb1e, 2d0f7a1ab, f882432f8 (TY mend, branch only), ee35cbdc5, b694da2d0, 2c4f37f38, 2bc373651 (GSC's GSN app patch).  Website has up to 2c4f37f38 for /next.
+- In flight in wt-ren: adopt.py printing every contract whose `--check` fails (scratchpad names.txt); Secure Friendship fails (waits on the Calculus's third commit).  Next: commit those outputs path-limited, record by cascade.sh each changed contract (Community Market, Organisation, Community Network, Rides, Lodging, Gigs, Liquid Cooperative, Constitution, Gossip, Promoted Gossip, Free Matching, Matching and its instances, Dating, the banks), and give the commit to Website, GO, GM and the Calculus.
+- code/type-identity-scope 805198f58 (wt-tid), off CSSN s9ompe 66fa03f75: interface text spells types as their defining scope resolves them (TGLP Compilation, step four); dart test 2947 passed, 1 failed, encounters_nearby_test, failing alike at the base.  Its lines go to GLP-Spec; GSA #9 is finding the cause.  GSA #9 wants the checker line in Section K's install script too.
+- Held: Promoted Matching, Rehearsal Rooms, Tennis Courts (not grassroots); Promoted Community Market is not in the Calculus.
+- Open Q to Udi: /next on main and the live site tonight.
+- Finding 1 merge: GSA's xztgmf is now 7bf2bb2fd (merges 805198f58, d95a611cf, 8c39268b7, 429bf5c0d); Currencies' d567ul acce035ef (dgc app, N2-N4 on compiled apps, refusal checks kept); GLP-Spec's 97txt2 277d1a4e2 (encounters fixture). Remove at the merge the 20 KNOWN_RED_CHECKS in tools/cloud/finding1-krc-remove.txt.  Still waits on GLP-Spec's exports guard (Udi) and Currencies' six SG reds.
+- Calculus's second commit podf7o 1d9a33248 and 07e15a062 (Corporation): merge after the 47 records running in wt-ren, wt-rg, wt-q3 (scratchpad runq.sh, logs log_0..2); then record its 17 and Secure Friendship.  GO's fdc26d088 (Community Network's Found) merged after the queues started: rerun Lodging, Gigs, Rides, Community Market and every Community Network service.
+- Udi's yes, 2026-11-21 04:39 UTC: put /next (llohtv) on main and the live site tonight, once its checks pass.  Then: records done, fast tier + TY (running in wt-q3 on 5a39c70b1), VG and CAS, ff-merge to main, Website deploys, close #118.
+- GAI thread: cmsg_0189yZceJmej5oE7scfYctePWoPZBNb8M27MpMGNNZUPQq (gai/gsnp plays to the adopted contracts, off c48d926dd).

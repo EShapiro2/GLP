@@ -2,11 +2,11 @@ Interface pragmas
 Job: Alice [Post] <job>
   Bob [Pass]
   Alice [Withdraw job]
-Engage: Alice [Engage] <gov>
+Engage: Alice [Engage] <top>
   Bob: Alice asks for your consent to engage.
 Deliver: Bob [Deliver]
-Acceptance: Alice [Accept work] [Reject] <carol> <job>
-Cancelling: Alice [Cancel]
-  Bob [Worker cancel]
-  Alice [Lapse]
+Acceptance: Alice [Accept work] <total> [Reject] <carol>
+Cancelling: Alice [Cancel] [Cancel for the client] [Cancel for the worker]
+  Bob [Worker cancel] [Worker cancel for the client] [Worker cancel for the worker]
+  Alice [Lapse] <total>
 Recommend: Alice [Recommend]

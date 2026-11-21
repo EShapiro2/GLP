@@ -1,0 +1,10 @@
+Gossip
+Gossip extends Friendship.
+Vocabulary: x holds the post p = post(x,p); y holds the post p from x = post_from(y,p,x); x has made the post p = made(x,p); x has the budget n for p = budget(x,p,n); n is a budget of a new post, for x = new_budget(x,n); n covers the cost of a forward leaving m, for x = covers(x,n,m); the gossip protocol forwards p to y with m of n, for x = protocol(x,p,y,m,n).
+After x makes p with the budget n, which requires x has not made the post p: x has made the post p, x holds the post p and x has the budget n for p.
+After x forwards p to y with the budget n: y holds the post p from x, y holds the post p and y has the budget n for p.
+Gossip:0 - | *Posts* have a *budget*, a parameter of Gossip: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*, a parameter: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them.
+Gossip:0 - | Alice and Bob are persons, Post a post, Budget, Rest and Part numbers.
+Gossip:0 - | Environment: n is a budget of a new post, for x; n covers the cost of a forward leaving m, for x; the gossip protocol forwards p to y with m of n, for x.
+Gossip:1 ■ Post: made(Alice,Post), post(Alice,Post), budget(Alice,Post,Budget) <- new_budget(Alice,Budget), ~made(Alice,Post) guarded by Alice.
+Gossip:2 ■ Tell: post_from(Bob,Post,Alice), post(Bob,Post), budget(Bob,Post,Part) <- post(Alice,Post), budget(Alice,Post,Budget), covers(Alice,Budget,Rest), friend(Alice,Bob), friend(Bob,Alice), protocol(Alice,Post,Bob,Part,Rest) guarded by Alice.

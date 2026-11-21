@@ -205,6 +205,16 @@ def unite(sentences, defs=(), text=None):
                 other.append(r)
     best = {}
     for x in first:
+        of = {}         # 'an act of Orga' and 'an act of Cur', of two copies of one contract instantiated differently: 'an act of Cur or Orga'
+        for k in kinds[x]:
+            m = re.fullmatch(r'(.+ of) ([A-Z][A-Za-z]*)', k)
+            if m:
+                of.setdefault(m.group(1), []).append(k)
+        for pre, ks in of.items():
+            if len(ks) > 1:
+                k = '%s %s' % (pre, ' or '.join(j.rsplit(' ', 1)[1] for j in ks))
+                src[(x, k)] = src[(x, ks[-1])]
+                kinds[x] = [j for j in kinds[x] if j not in ks] + [k]
         ks = kinds[x]
         low = [k for k in ks if all(under(k, j, up) for j in ks)]
         if low:

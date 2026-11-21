@@ -1,7 +1,7 @@
 Workers' Cooperative (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Workers' Cooperative:0 - | Alice, Bob and Carol are persons, Orga a workers' cooperative, Will and Gov organisations, Motion an act of Orga, Role a role, Votes, Double, Sum, Total and Limit numbers, Dave a party, Cond a condition Alice, Bob and Carol agree, Day, Term and Due maturity dates, Today a date, Dollar a fiat currency, Iris an issuer.
+Workers' Cooperative:0 - | Alice, Bob and Carol are persons, Orga a workers' cooperative, Will and Gov organisations, Motion an act of Orga, Role a role, Votes, Double, Sum, Total and Limit numbers, Dave and Iris parties, Cond a condition Alice, Bob and Carol agree, Day, Term and Due maturity dates, Today a date, Dollar a fiat currency.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
@@ -16,7 +16,7 @@ Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust
 Guardians:0 - | Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
 Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
 Guardians:0 - | Default: any officer of z for those who decide for z.
-Guardians:1 ■ Enter: identity(Orga), organisation(Orga), has_officer(Orga,Alice), creator(Alice,Orga), officer(Alice,Orga), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice) <- person(Alice), ~identity(Orga) guarded by Alice, Orga must Orga.
+Guardians:1+Organisation:1 ■ Found: identity(Orga), organisation(Orga), has_officer(Orga,Alice), creator(Alice,Orga), officer(Alice,Orga), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice), first_officer(Orga,Alice), role(Alice,Orga,Role), has_role(Orga,Alice,Role), participant(Alice,Orga), has_participant(Orga,Alice), founder(Gov,Orga) <- person(Alice), ~identity(Orga) guarded by Alice, Orga, Gov must Orga.
 Guardians:1 ■ | Alice chooses Orga's key pair.
 Guardians:2 ■ | Guardian decisions.
 Guardians:2+Organisation:4 ■ Appoint: officer(Bob,Orga), has_officer(Orga,Bob), knows(Bob,Orga), knows(Orga,Bob), friend(Bob,Orga), friend(Orga,Bob), role(Bob,Orga,Role), has_role(Orga,Bob,Role) <- organisation(Orga), ~retired(Orga), person(Bob), has_officer(Orga,Alice), friend(Bob,Alice), ~officer(Bob,Orga), ~has_officer(Orga,Bob), participant(Bob,Orga) guarded by deciders(Orga), Bob.
@@ -47,7 +47,6 @@ Organisation:0 - | Default: x is an officer of z for x is entitled to take m for
 Organisation:0 - | Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as an officer for the votes decide m according to the bylaws of z.
 Organisation:0 - | Default: x is entitled to take m for z for x is entitled to amend the bylaws of z as m says.
 Organisation:0 - | Default: z is an organisation, z has m proposed and the votes decide m according to the bylaws of z for the amendment m is decided according to the bylaws of z.
-Organisation:1 ■ Found: identity(Orga), organisation(Orga), creator(Gov,Orga), first_officer(Orga,Alice), officer(Alice,Orga), has_officer(Orga,Alice), role(Alice,Orga,Role), has_role(Orga,Alice,Role), participant(Alice,Orga), has_participant(Orga,Alice), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice) <- person(Alice), ~identity(Orga) guarded by Gov, Alice, Orga must Orga.
 Organisation:2 ■ | Acts of the organisation.
 Organisation:2 ■ Propose: proposed(Orga,Motion) <- participant(Bob,Orga), ~proposed(Orga,Motion) guarded by Bob.
 Organisation:2 ■ Vote: vote(Orga,Bob,Motion) <- participant(Bob,Orga), organisation(Orga), proposed(Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.
@@ -229,6 +228,6 @@ Cooperative:0 - | A *cooperative* is a constitutional democratic community whose
 Workers' Cooperative:0 - | A *workers' cooperative* is a cooperative whose members work for it.
 Workers' Cooperative:0 - | Environment: z has distributed no more coins to y than to any other member.
 Workers' Cooperative:1 ■ Pay for work: ~coin(Orga,Iris,Dollar,*Sum), coin(Bob,Iris,Dollar,*Sum), ~vote_pay(Orga,_,Bob,Iris,Sum) <- participant(Alice,Orga), vote_pay(Orga,>=Votes,Bob,Iris,Sum), product(Double,Votes,2), has_participant(Orga,<Double), participant(Bob,Orga), accepts(Bob,Iris,Dollar,*Sum), coin(Orga,Iris,Dollar,*Sum) guarded by Alice.
-Workers' Cooperative:1 ■ Vote to pay: vote_pay(Orga,Carol,Bob,Iris,Sum) <- participant(Carol,Orga), has_participant(Orga,Bob), ~vote_pay(Orga,Carol,Bob,Iris,Sum) guarded by Carol.
+Workers' Cooperative:1 ■ Vote to pay: vote_pay(Orga,Carol,Bob,Iris,Sum) <- participant(Carol,Orga), has_participant(Orga,Bob), coin(Orga,Iris,Dollar), ~vote_pay(Orga,Carol,Bob,Iris,Sum) guarded by Carol.
 Workers' Cooperative:2 ■ Distribute: ~coin(Orga,Iris,Dollar), coin(Bob,Iris,Dollar), distributed(Orga,Bob), ~vote_distribute(Orga,_,Bob,Iris) <- participant(Alice,Orga), vote_distribute(Orga,>=Votes,Bob,Iris), product(Double,Votes,2), has_participant(Orga,<Double), participant(Bob,Orga), accepts(Bob,Iris,Dollar), least_share(Orga,Bob), coin(Orga,Iris,Dollar) guarded by Alice.
-Workers' Cooperative:2 ■ Vote to distribute: vote_distribute(Orga,Carol,Bob,Iris) <- participant(Carol,Orga), has_participant(Orga,Bob), ~vote_distribute(Orga,Carol,Bob,Iris) guarded by Carol.
+Workers' Cooperative:2 ■ Vote to distribute: vote_distribute(Orga,Carol,Bob,Iris) <- participant(Carol,Orga), has_participant(Orga,Bob), coin(Orga,Iris,Dollar), ~vote_distribute(Orga,Carol,Bob,Iris) guarded by Carol.
