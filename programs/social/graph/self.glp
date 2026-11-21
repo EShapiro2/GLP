@@ -60,6 +60,10 @@ UserContent ::= connect(Key)
               %% with no invitation and no peer, beginning an instance of one
               %% (GSA paper, Section 3, "A grassroots program instance").
               ; activate(Constant)
+              %% leave: the person leaves a program installed here,
+              %% Programs:6 (GSA paper, Appendix "The Operating System",
+              %% "Leaving").
+              ; leave(Constant)
               ; invite(Constant, Key)
               ; accept_invite(Constant, Key)
               ; decline_invite(Constant, Key)
@@ -239,14 +243,17 @@ Pending      ::= invited(Constant, Key, String, RootChannel(Opaque))
                ; offered(Key, String, String, RootChannel(Opaque))
                ; consented(String, Key, Constant)
                ; joining(Constant, Key, String, RootChannel(Opaque))
-               %% The release of held links (Section 5.2): an introduction the
-               %% person accepted, kept, which releases the links it brings;
-               %% who introduced an agent; and a held link reported, kept until
-               %% a volition releases it.  A name is never taken apart into an
-               %% agent: its anchor is only ever compared with an agent at hand.
+               %% Held ends (GSA paper, Appendix "The Operating System", "Whom
+               %% the Grassroots App knows"): the person's consent to knowing
+               %% an agent, kept, which releases the ends held from it; the
+               %% person's refusal, kept, which refuses them; and a held end
+               %% reported, by its global name and the agent it came from,
+               %% kept until the person answers.  A name is never taken apart
+               %% into an agent: its anchor is only ever compared with an
+               %% agent at hand.
                ; intro_ok(Key)
-               ; intro_via(Key, Key)
-               ; held(GlobalName, Constant).
+               ; intro_no(Key)
+               ; held(GlobalName, Key).
 PendingInv   ::= [] ; [Pending | PendingInv].
 Trust ::= trust(Stream(String), List(Key)).
 Host ::= host(AppList, AttestList, PendingInv, Trust).
@@ -344,11 +351,7 @@ UserInMsg    ::= msg(Constant, Key, UserContent)
                ; adopt(Key, FriendChannel)
                ; declined(Key)
                %% A running mini-app's request up its social-graph channel.
-               ; app_request(Constant, AppToSg)
-               %% A mini-app's execution has ended: the stream it writes up to
-               %% the social graph closed with it, which is the one signal of
-               %% its end the super-app holds a reader of.
-               ; app_ended(Constant).
+               ; app_request(Constant, AppToSg).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
 NetInMsg     ::= msg(Key, NetColdCall)

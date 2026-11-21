@@ -9032,60 +9032,81 @@ check "SG super-app on two smartphones: alice's execution of GSN's app activated
 check "SG super-app on two smartphones: bob befriends alice over the conversation" "\[bob\] view(bob, \[friend(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_boot"
 check "SG super-app on two smartphones: alice befriends bob over the conversation" "\[alice\] view(alice, \[friend(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_boot"
 
-# A held link on three smartphones (GSA paper, Section 5.4, "Whom the
-# Grassroots App knows"): the three conversations open, alice's execution sends
-# carol the end of a fresh variable, carol's forwards it to bob's, bob's
-# assigns it, bob's runtime holds the assignment and reports the held link,
-# and bob's mini-app reports it to bob.  The link stays held, nothing sent on
-# it, for bob to be asked whether to know alice, which the rebuilt core asks;
-# so the value does not reach alice's execution.  The warm call that released
-# it is gone (GLP #13, Code_inbox.md 2026-11-07 22:09 UTC, Udi approving
-# 22:08 UTC).  programs/tests/linkprobes/linkprobes.md holds the two-agent
-# programs that fence the runtime behaviour in.
-sg_warm=$("$REPL_RUN" <<HEREDOC
-:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
-:artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
-:boot $GLP_DIR/programs/social/superapp3_boot.glp $SG_CORE
+# The held end of an introduction on three smartphones (GSA paper, Appendix
+# "The Operating System", "Whom the Grassroots App knows"; G3), with no
+# program installed (programs/social/intro_held_boot.glp and
+# intro_refused_boot.glp; core/superapp_plays.glp, sg_init/4 under the modes
+# intro_friend, intro_proposer, intro_late_yes and intro_late_no): alice and
+# carol each befriend bob, who introduces them (Knowledge:3); alice proposes,
+# and her consent, carrying the end of the variable she conveys the friend
+# channel on, reaches carol from bob, an end from an agent carol does not
+# know, which carol's runtime holds and reports; carol is asked on the
+# introduction's card only after the report.  On her yes the end is released
+# (authorise_link(Name, authorise)), her request for it reaches alice and
+# alice's conveyance reaches her: they are friends.  On her no the end is
+# refused (authorise_link(Name, refuse)): nothing of carol's reaches alice,
+# alice is told carol declined, and neither is connected to the other.  The
+# held end goes to no program: the question is the person's (until
+# 2026-11-21 it went to every running mini-app, pingapp's warm plays of
+# superapp3_boot.glp, and the person was not asked).  Each person's lines as
+# a set where the isolates order them otherwise from run to run.
+sg_intro_yes=$("$REPL_RUN" <<HEREDOC
+:deliveries
+:boot $GLP_DIR/programs/social/intro_held_boot.glp $SG_CORE
 :quit
 HEREDOC
 2>&1)
-check "SG held link on three smartphones: the boot settles" "Boot settled: 3 agents" "$sg_warm"
-check "SG held link: alice and carol converse" "\[carol\] greeted(alice)" "$sg_warm"
-check "SG held link: carol and bob converse" "\[bob\] greeted(carol)" "$sg_warm"
-check "SG held link: alice's execution sends carol the probe's end" "\[alice\] probed(carol)" "$sg_warm"
-check "SG held link: carol's execution forwards it to bob" "\[carol\] forwarded(bob)" "$sg_warm"
-check "SG held link: bob's execution assigns it" "\[bob\] answered" "$sg_warm"
-check "SG held link: bob's runtime holds the link and reports it" "\[bob\] held_link(carol)" "$sg_warm"
-check_not "SG held link: the held value does not reach alice's execution" "\[alice\] got(" "$sg_warm"
+sg_intro_no=$("$REPL_RUN" <<HEREDOC
+:deliveries
+:boot $GLP_DIR/programs/social/intro_refused_boot.glp $SG_CORE
+:quit
+HEREDOC
+2>&1)
+check "SG held end of an introduction on three smartphones, consent: the boot settles" "Boot settled: 3 agents (alice, bob, carol)" "$sg_intro_yes"
+check_not "SG held end, consent: no event stopped at the cap" "did not quiesce" "$sg_intro_yes"
+check_not "SG held end, consent: no failed play" "→ failed" "$sg_intro_yes"
+check "SG held end of an introduction on three smartphones, refusal: the boot settles" "Boot settled: 3 agents (alice, bob, carol)" "$sg_intro_no"
+check_not "SG held end, refusal: no event stopped at the cap" "did not quiesce" "$sg_intro_no"
+check_not "SG held end, refusal: no failed play" "→ failed" "$sg_intro_no"
+check "SG held end, consent: carol is asked on the introduction's card once alice's consent, carrying the held end, has arrived" "\[carol\] card(bob, alice)" "$sg_intro_yes"
+check "SG held end, consent: on her yes the end is released and her request reaches alice" "^Delivered: carol > alice [1-9]" "$sg_intro_yes"
+check "SG held end, consent: alice's conveyance reaches carol on the released end" "^Delivered: alice > carol [1-9]" "$sg_intro_yes"
+boot_same "SG held end, consent: alice befriends bob and is introduced to carol, and the two are friends" "[msg(agent, person, befriend_intro(bob, carol)), msg(agent, person, connected(bob)), msg(agent, person, connected(carol)), msg(agent, person, nearby([bob, carol])), msg(agent, person, nearby([bob]))]" "$(boot_person_sorted alice "$sg_intro_yes")"
+boot_same "SG held end, consent: carol befriends bob, is asked, answers yes, and the two are friends" "[card(bob, alice), msg(agent, person, befriend_intro(bob, alice)), msg(agent, person, connected(alice)), msg(agent, person, connected(bob)), msg(agent, person, nearby([alice, bob])), msg(agent, person, nearby([bob]))]" "$(boot_person_sorted carol "$sg_intro_yes")"
+check "SG held end, refusal: carol is asked on the introduction's card once alice's consent, carrying the held end, has arrived" "\[carol\] card(bob, alice)" "$sg_intro_no"
+check_not "SG held end, refusal: the end refused, nothing of carol's reaches alice" "^Delivered: carol > alice" "$sg_intro_no"
+check_not "SG held end, refusal: nothing of alice's reaches carol" "^Delivered: alice > carol" "$sg_intro_no"
+check "SG held end, refusal: alice is told carol declined" "\[alice\] msg(agent, person, rejected(carol))" "$sg_intro_no"
+check_not "SG held end, refusal: alice is not connected to carol" "\[alice\] msg(agent, person, connected(carol))" "$sg_intro_no"
+check_not "SG held end, refusal: carol is not connected to alice" "\[carol\] msg(agent, person, connected(alice))" "$sg_intro_no"
 
-# The registry's return from running to idle (paper Section 3, "Activation and
-# joining"): the super-app records whether a mini-app is running, and an
-# invitation is looked up in that record.  Until 2026-09-15 nothing ever put an
-# entry back --- install wrote idle, the first invitation wrote running, and no
-# clause wrote idle again --- so a mini-app that had ended was still recorded as
-# running and the next invitation's root channel went to the execution that was
-# gone.  social/graph/endapp is the mini-app that makes the case reachable:
-# pingapp cannot, its loop ending only when the super-app closes the stream it
-# reads, which the super-app does only as it closes itself.  endapp's execution
-# AT ALICE ends once it has been greeted and at bob it does not, so alice's
-# second invitation must reach bob's live execution, and the discriminating
-# check is bob's SECOND greeted(alice): with the entry left at running it does
-# not come, and his stream stops at the second opened(alice).  Its own session,
-# a play that has run another mini-app leaving the session such that the next
-# play's invitation opens nothing (see the child-safe platform below).
-sg_reinvite=$("$REPL_RUN" <<HEREDOC
+# Leaving a program, Programs:6 (GSA paper, Appendix "The Operating System",
+# "Leaving"; core/superapp_plays.glp, play_leave/6): alice installs GSN's app,
+# befriends bob and invites him, bob consenting to two invitations in
+# advance, and both executions run; once her execution has shown its first
+# view alice leaves the app, and it is no longer installed; she installs it
+# again (Programs:4) and invites bob again (Programs:5), and her second
+# execution is activated afresh by the second invitation's handshake, the
+# conversation going to bob's running execution.  Until 2026-11-21 the
+# registry's return from running to idle on an execution's own end was
+# fenced here by social/graph/endapp's play_reinvite; the paper gives the
+# registry no such return, and Leave none was implemented.  Its own session,
+# as the mini-app plays above are.
+sg_leave=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
-:artefact $GLP_DIR/programs/social/graph/endapp $SG_CORE
+:artefact $GLP_DIR/programs/apps/gsn $SG_CORE
 $SG_CORE
 :limit 5000000
-play_reinvite(alice, bob, A, B).
+play_leave(alice, bob, A, N, A2, B).
 :quit
 HEREDOC
 2>&1)
-check "SG registry: the self-ending mini-app's artefact is certified" "endapp.glpw --- certified under" "$sg_reinvite"
-check "SG registry: alice's execution ends of its own accord" "A = \[opened(bob), greeted(bob)\]" "$sg_reinvite"
-check "SG registry: the entry returns to idle and the second invitation is activated afresh" "B = \[opened(alice), greeted(alice), opened(alice), greeted(alice) | " "$sg_reinvite"
-check_not "SG registry no failed play" "→ failed" "$sg_reinvite"
+check "SG leave: GSN's app's artefact is certified" "gsn.glpw --- certified under" "$sg_leave"
+check "SG leave: alice's execution activated" "A = \[view(alice, \[\], \[\], \[\], " "$sg_leave"
+check "SG leave: bob's execution activated" "B = \[view(bob, \[\], \[\], \[\], " "$sg_leave"
+check "SG leave: once alice leaves the app it is no longer installed" "^N = \[\]$" "$sg_leave"
+check "SG leave: installed and invited again, her second execution is activated afresh" "A2 = \[view(alice, \[\], \[\], \[\], " "$sg_leave"
+check_not "SG leave no failed play" "→ failed" "$sg_leave"
 
 # The denominated currencies mini-app (programs/currencies/sovereign/denominated, Currencies'
 # own) hosted by the super-app.  The super-app holds no declaration of a

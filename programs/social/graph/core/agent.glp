@@ -171,39 +171,49 @@ agent(Id, [msg(person, Id1, introduce(P, Q))|UserIn],
                    Outs2?, Host?).
 
 %% The person accepts an introduction, by this agent's role, as it answers a
-%% cold call.  The consent is kept: the consent variables are the
-%% introducer's, so the links of the befriending reach this agent through the
-%% introducer and are held at both ends until each end's own person's volition
-%% is found (IGLP, madglp-spec, Held Links), and this is that volition.
+%% cold call.  Accepting is the person's consent to knowing the agent
+%% introduced (GSA paper, Appendix "The Operating System", "Whom the Grassroots
+%% App knows": "the operating system asks its person whether to know that
+%% agent, by its key, and on yes makes the channel to it as above, attested,
+%% and releases the end by authorise_link(Name, authorise)"): the friend
+%% channel is made as at a cold call, the attestation minted at its commit,
+%% every end held from that agent is released, and the consent is kept, so
+%% that an end reported later is released in its turn (answer_held/4,
+%% link_answer/5).
 agent(Id, [msg(person, Id1, accept_intro(Other, propose(yes(C?), Theirs)))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(Other?) |
     await_consent(Other?, Theirs?, C, UserIn?, UserIn1),
-    take_intro_via(Other?, Pend?, Pend1, Via),
-    release_by_sender(Via?, Pend1?, Pend2, Via1),
-    accepted_intro(Via1?, Other?, Pend2?, Pend3),
+    answer_held(Other?, authorise, Pend?, Pend1),
     agent(Id?, UserIn1?, NetIn?, Outs?,
-          host(Apps?, Atts?, Pend3?, Trusted?)).
+          host(Apps?, Atts?, [intro_ok(Other?) | Pend1?], Trusted?)).
 agent(Id, [msg(person, Id1, accept_intro(Other, accept(yes, Theirs)))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(Other?) |
     await_conveyance(Other?, Theirs?, UserIn?, UserIn1),
-    take_intro_via(Other?, Pend?, Pend1, Via),
-    release_by_sender(Via?, Pend1?, Pend2, Via1),
-    accepted_intro(Via1?, Other?, Pend2?, Pend3),
+    answer_held(Other?, authorise, Pend?, Pend1),
     agent(Id?, UserIn1?, NetIn?, Outs?,
-          host(Apps?, Atts?, Pend3?, Trusted?)).
+          host(Apps?, Atts?, [intro_ok(Other?) | Pend1?], Trusted?)).
 
 %% The person declines an introduction: the consent bound to no, by role, and
-%% the person told, as for a cold call.
-agent(Id, [msg(person, Id1, reject_intro(_, propose(no, _)))|UserIn], NetIn, Outs, Host) :-
-    Id? =?= Id1? |
+%% the person told, as for a cold call; and every end held from the agent
+%% introduced refused, "on no, authorise_link(Name, refuse)" (Appendix "The
+%% Operating System", "Whom the Grassroots App knows"), the refusal kept, so
+%% that an end reported later is refused in its turn.
+agent(Id, [msg(person, Id1, reject_intro(Other, propose(no, _)))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(Other?) |
     send_user(msg(agent, person, rejected), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
-agent(Id, [msg(person, Id1, reject_intro(_, accept(no, _)))|UserIn], NetIn, Outs, Host) :-
-    Id? =?= Id1? |
+    answer_held(Other?, refuse, Pend?, Pend1),
+    agent(Id?, UserIn?, NetIn?, Outs1?,
+          host(Apps?, Atts?, [intro_no(Other?) | Pend1?], Trusted?)).
+agent(Id, [msg(person, Id1, reject_intro(Other, accept(no, _)))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(Other?) |
     send_user(msg(agent, person, rejected), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+    answer_held(Other?, refuse, Pend?, Pend1),
+    agent(Id?, UserIn?, NetIn?, Outs1?,
+          host(Apps?, Atts?, [intro_no(Other?) | Pend1?], Trusted?)).
 
 %% The other consented (injected by await_consent), at the proposer: test
 %% already_friend and convey (consented_step/12), the pending list passed
@@ -259,6 +269,24 @@ agent(Id, [msg(person, Id1, activate(App))|UserIn], NetIn, Outs,
     Id? =?= Id1?, ground(App?) |
     activate_app(App?, Id?, Apps?, Apps1, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
+%% The person leaves a program installed here, Programs:6 ("Alice may leave a
+%% program she installed; it is then no longer installed, and her
+%% participation in it with every participant ends"; GSA paper, Appendix "The
+%% Operating System", "Leaving": "the operating system closes every
+%% conversation of the program at the person who leaves, whose peers see a
+%% crash, and ends the execution").  Its entry leaves the registry: a running
+%% execution's social-graph channel is closed, so that no conversation reaches
+%% it again, and an idle one's person channel is held for good, as at a
+%% refused installation; and every invitation of it not yet past its
+%% handshake is ended, the end kept for it closed (leave_app/3,
+%% leave_pending/3).  A program not installed is left as it is.
+agent(Id, [msg(person, Id1, leave(App))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(App?) |
+    leave_app(App?, Apps?, Apps1),
+    leave_pending(App?, Pend?, Pend1),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend1?, Trusted?)).
 
 %% Invite a friend to the instance of a mini-app (Section 3, "Distribution
 %% with an invitation"): over the friend channel, two things and nothing else,
@@ -325,17 +353,6 @@ agent(Id, [msg(person, Id1, attestation(Friend, S?))|UserIn], NetIn, Outs,
     lookup_att(Friend?, Atts?, Atts1, S),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts1?, Pend?, Trusted?)).
 
-%% A mini-app's execution has ended.  Its entry in the registry returns from
-%% running to idle, so that the next invitation activates the mini-app afresh
-%% by run/3 instead of handing the new conversation's root channel to an
-%% execution that is gone (SGSG paper, Section 3, "Activation and joining":
-%% the registry records whether the mini-app is running, and an invitation is
-%% looked up in it).
-agent(Id, [app_ended(App)|UserIn], NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    ground(Id?), ground(App?) |
-    app_idle(App?, Apps?, Apps1),
-    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
-
 %% User catch-all
 agent(Id, [_|UserIn], NetIn, Outs, Host) :-
     ground(Id?), otherwise |
@@ -373,22 +390,18 @@ agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, Host) :-
     agent(Id?, UserIn?, NetIn?, Outs2?, Host?).
 
 %% Introduction from a friend --- the two consents go to the person by this
-%% agent's role, and who introduced whom is remembered: the consent variables
-%% are the introducer's, so the links they bring are anchored at the
-%% introducer, and it is the introducer that the person's consent must be
-%% matched against when they are released.
-agent(Id, UserIn, [msg(From, Id1, introduce_propose(Other, Mine?, Theirs))|NetIn], Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
+%% agent's role.  The card that asks the person is the question of Appendix
+%% "The Operating System", "Whom the Grassroots App knows", for every end that
+%% reaches this agent from the agent introduced: the person's answer releases
+%% or refuses them (accept_intro, reject_intro).
+agent(Id, UserIn, [msg(From, Id1, introduce_propose(Other, Mine?, Theirs))|NetIn], Outs, Host) :-
     Id? =?= Id1?, ground(Other?), ground(From?) |
     send_user(msg(agent, person, befriend_intro(From?, Other?, propose(Mine, Theirs?))), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?,
-          host(Apps?, Atts?, [intro_via(Other?, From?) | Pend?], Trusted?)).
-agent(Id, UserIn, [msg(From, Id1, introduce_accept(Other, Mine?, Theirs))|NetIn], Outs,
-      host(Apps, Atts, Pend, Trusted)) :-
+    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+agent(Id, UserIn, [msg(From, Id1, introduce_accept(Other, Mine?, Theirs))|NetIn], Outs, Host) :-
     Id? =?= Id1?, ground(Other?), ground(From?) |
     send_user(msg(agent, person, befriend_intro(From?, Other?, accept(Mine, Theirs?))), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?,
-          host(Apps?, Atts?, [intro_via(Other?, From?) | Pend?], Trusted?)).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
 
 %% --- The invitation and the handshake over the friend channel (Section 3,
 %% "Distribution with an invitation" and "Activation and joining"; Section 6,
@@ -440,16 +453,18 @@ agent(Id, UserIn, [msg(From, Id1, root(Src, T, Up))|NetIn], Outs,
     root_signed(Sg?, Id?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
                 Apps?, Atts?, Pend?, Trusted?).
 
-%% The runtime reports a held link: an end that reached this agent under an
-%% anchor other than the sender.  Where the person has accepted the
-%% introduction it came with it is released; otherwise it is reported to every
-%% running mini-app and stays held, for the person to be asked (GSA paper,
-%% Section 5.4, "Whom the Grassroots App knows").
+%% The runtime reports a held end: an end of a variable that reached this
+%% agent from an agent it does not know (GSA paper, Appendix "The Operating
+%% System", "Whom the Grassroots App knows"; G3).  Where the person has
+%% consented to knowing that agent it is released, where the person has
+%% declined it is refused, and otherwise it is kept, held, for the person's
+%% answer (link_answer/5, pending_step/11).  It goes to no program: the
+%% question is the person's.
 agent(Id, UserIn, [pending_link(Name, S)|NetIn], Outs, host(Apps, Atts, Pend, Trusted)) :-
     ground(Id?), ground(S?), ground(Name?) |
     Parts ..= Name?,
-    may_release(Parts?, S?, Pend?, Pend1, Found),
-    pending_step(Found?, Name?, S?, Id?, UserIn?, NetIn?, Outs?, Apps?, Atts?, Pend1?, Trusted?).
+    link_answer(Parts?, S?, Pend?, Pend1, A),
+    pending_step(A?, Name?, S?, Id?, UserIn?, NetIn?, Outs?, Apps?, Atts?, Pend1?, Trusted?).
 
 %% Network catch-all
 agent(Id, UserIn, [_|NetIn], Outs, Host) :-
@@ -586,21 +601,35 @@ procedure install_step(HostVerdict?, Constant?, String?, PersonChannel(Opaque)?,
 install_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle(Ui?)) | Apps?]).
 install_step(refused, _, _, Ui, Apps, Apps?) :- idle_channel(Ui?).
 
-%% app_idle(App, Apps, Apps1): the mini-app's entry returns from running to
-%% idle.  The end of the person channel the entry held at installation went
-%% to the execution that has now ended, so the entry takes a fresh one, as it
-%% did at installation; the next activation posts it with the entry goal.  An entry that is not
-%% running is left as it is, so a report that arrives twice, or for a mini-app
-%% never activated, changes nothing.
-procedure app_idle(Constant?, AppList?, AppList).
-app_idle(App, [app(A, M, C, running([])) | Rest], [app(A?, M?, C?, idle(Ui?)) | Rest?]) :-
-    App? =?= A? |
-    new_channel(Ui, Person),
-    hold_person(Person?).
-app_idle(App, [E | Rest], [E? | Rest1?]) :-
-    otherwise | app_idle(App?, Rest?, Rest1).
-app_idle(_, [], []).
+%% leave_app(App, Apps, Apps1): the entry of App removed from the registry,
+%% its channel closed: a running execution's social-graph stream ends, and an
+%% idle entry's person channel is read for good, the channel never ending
+%% (idle_channel/1).
+procedure leave_app(Constant?, AppList?, AppList).
+leave_app(App, [app(A, _, _, St) | Rest], Rest?) :-
+    App? =?= A? | close_status(St?).
+leave_app(App, [E | Rest], [E? | Rest1?]) :-
+    otherwise | leave_app(App?, Rest?, Rest1).
+leave_app(_, [], []).
 
+procedure close_status(AppStatus?).
+close_status(idle(Ui)) :- idle_channel(Ui?).
+close_status(running([])).
+
+%% leave_pending(App, Pend, Pend1): every invitation of App not yet past its
+%% handshake ended --- at the inviter the end kept for it closed, at the
+%% invitee the end the invitation carried closed and the consent given before
+%% the offer dropped --- the other entries kept.
+procedure leave_pending(Constant?, PendingInv?, PendingInv).
+leave_pending(App, [invited(A, _, _, ch(_, [])) | Rest], Pend1?) :-
+    App? =?= A? | leave_pending(App?, Rest?, Pend1).
+leave_pending(App, [joining(A, _, _, ch(_, [])) | Rest], Pend1?) :-
+    App? =?= A? | leave_pending(App?, Rest?, Pend1).
+leave_pending(App, [consented(_, _, A) | Rest], Pend1?) :-
+    App? =?= A? | leave_pending(App?, Rest?, Pend1).
+leave_pending(App, [P | Rest], [P? | Rest1?]) :-
+    otherwise | leave_pending(App?, Rest?, Rest1).
+leave_pending(_, [], []).
 
 %% app_module(App, Apps, Apps1, L): the installed mini-app's module value, the
 %% list passed through.
@@ -951,10 +980,9 @@ inject_requests(App, [invite(_) | Up], Ys, Ys1?) :-
 inject_requests(App, Up, [Y | Ys], [Y? | Ys1?]) :-
     inject_requests(App?, Up?, Ys?, Ys1).
 inject_requests(_, _, [], []).
-%% The mini-app's stream up to the social graph closed: its execution has
-%% ended.  Report it on the agent's own person stream, ahead of the rest of
-%% that stream, and stop --- this goal has nothing further to splice.
-inject_requests(App, [], Ys, [app_ended(App?) | Ys?]) :- ground(App?) | true.
+%% The mini-app's stream up to the social graph closed, as it does when the
+%% social graph closes the stream down to it: the person stream passes on.
+inject_requests(_, [], Ys, Ys?).
 
 %% open_conv(Friend, End, Sg, Sg1): Sg := [conversation(Friend, End) | Sg1].
 procedure open_conv(Key?, RootChannel(Opaque)?, Stream(SgToApp(Opaque)), Stream(SgToApp(Opaque))?).
@@ -1000,119 +1028,79 @@ app_names([app(A, M, C, St) | Rest], [app(A?, M?, C?, St?) | Rest1?], [A? | Name
 app_names([], [], []).
 
 %% =============================================================================
-%% THE RELEASE OF HELD LINKS (Section 5.2)
+%% HELD ENDS (Appendix "The Operating System", "Whom the Grassroots App
+%% knows")
 %% =============================================================================
 
-%% anchor_is(Parts, X, B, Parts1): whether the anchor a global name carries ---
-%% the name taken apart into a list, '_w'(Anchor, E, I) or '_r'(Anchor, E, I) --- is
-%% X, the parts handed on as Parts1 to a caller that reads them again: a reader
-%% of a type that is not constant is read once.  A name's parts are untyped,
-%% so the anchor is only ever compared, never produced as an agent.
-procedure anchor_is(Stream(Term)?, Constant?, Constant, Stream(Term)).
-anchor_is([F, A | R], X, true, [F?, A? | R?]) :- A? =?= X? | true.
-anchor_is(Parts, _, false, Parts?) :- otherwise | true.
+%% of_key(Parts, S, K, B): whether a held end is from the agent of key K: the
+%% agent it came from, S, or the agent its global name is anchored at --- the
+%% name taken apart into a list, '_w'(Anchor, E, I) or '_r'(Anchor, E, I).  An
+%% introduction's consent variables are the introducer's, so the end of the
+%% agent introduced reaches this agent from the introducer, anchored at the
+%% agent introduced, and that agent's request for an end this agent anchors
+%% comes from it (IGLP, madglp-spec, Held Links).  A name's parts are
+%% untyped, so the anchor is only ever compared, never produced as an agent.
+procedure of_key(Stream(Term)?, Key?, Key?, Constant).
+of_key(_, S, K, true) :- S? =?= K? | true.
+of_key([_, A | _], S, K, true) :- S? =?\= K?, A? =?= K? | true.
+of_key(_, _, _, false) :- otherwise | true.
 
-%% --- at the holder ---
+%% link_answer(Parts, S, Pend, Pend1, A): the person's answer for a held end
+%% just reported, the latest first: authorise where the person consented to
+%% knowing the agent it is from, refuse where the person declined, and ask
+%% where the person has not answered.  The answers are kept: one consent
+%% releases every end and every round the knowing brings, and one refusal
+%% refuses them.
+procedure link_answer(Stream(Term)?, Key?, PendingInv?, PendingInv, Constant).
+link_answer(Parts, S, [intro_ok(W) | Rest], [intro_ok(W?) | Rest1?], A?) :-
+    ground(Parts?), ground(S?), ground(W?) |
+    of_key(Parts?, S?, W?, B),
+    on_answer(B?, authorise, Parts?, S?, Rest?, Rest1, A).
+link_answer(Parts, S, [intro_no(W) | Rest], [intro_no(W?) | Rest1?], A?) :-
+    ground(Parts?), ground(S?), ground(W?) |
+    of_key(Parts?, S?, W?, B),
+    on_answer(B?, refuse, Parts?, S?, Rest?, Rest1, A).
+link_answer(Parts, S, [P | Rest], [P? | Rest1?], A?) :-
+    otherwise | link_answer(Parts?, S?, Rest?, Rest1, A).
+link_answer(_, _, [], [], ask).
 
-%% --- at the anchor ---
+procedure on_answer(Constant?, Constant?, Stream(Term)?, Key?, PendingInv?, PendingInv, Constant).
+on_answer(true, V, _, _, Rest, Rest?, V?).
+on_answer(false, _, Parts, S, Rest, Rest1?, A?) :- link_answer(Parts?, S?, Rest?, Rest1, A).
 
-%% may_release(Parts, S, Pend, Pend1, B): whether this end authorises the link
-%% the runtime is asking about --- the person's volition for it.  A held link is
-%% authorised at both of its ends and each end decides for itself (IGLP,
-%% madglp-spec, Held Links); the traffic one authorisation lets through is
-%% itself held at the other end, so the reports come in rounds and every one of
-%% them must be answered (IGLP, 2026-09-09).  The volition is an introduction
-%% accepted with or from the friend the traffic comes from --- an
-%% introduction's consent variables are the introducer's, so the links they
-%% bring are anchored at the introducer, while what the other party writes into
-%% them is anchored at that party.  The entries are kept: one volition releases
-%% every link and every round it brings.
-procedure may_release(Stream(Term)?, Constant?, PendingInv?, PendingInv, Constant).
-may_release(Parts, S, [intro_ok(W) | Rest], [intro_ok(W?) | Rest1?], B?) :-
-    ground(Parts?), ground(S?) |
-    mr_intro(Parts?, S?, W?, Rest?, Rest1, B).
-may_release(Parts, S, [P | Rest], [P? | Rest1?], B?) :-
-    otherwise | may_release(Parts?, S?, Rest?, Rest1, B).
-may_release(_, _, [], [], false).
-
-procedure mr_intro(Stream(Term)?, Constant?, Constant?, PendingInv?, PendingInv, Constant).
-mr_intro(_, S, W, Rest, Rest?, true) :- S? =?= W? | true.
-mr_intro(Parts, S, W, Rest, Rest1?, B?) :-
-    S? =?\= W? |
-    anchor_is(Parts?, W?, Hit, Parts1),
-    mr_anchor(Hit?, Parts1?, S?, Rest?, Rest1, B).
-
-procedure mr_anchor(Constant?, Stream(Term)?, Constant?, PendingInv?, PendingInv, Constant).
-mr_anchor(true, _, _, Rest, Rest?, true).
-mr_anchor(false, Parts, S, Rest, Rest1?, B?) :- may_release(Parts?, S?, Rest?, Rest1, B).
-
-%% take_intro_via(Other, Pend, Pend1, Via): who introduced Other, removed.
-procedure take_intro_via(Constant?, PendingInv?, PendingInv, AnchorFriend).
-take_intro_via(Other, [intro_via(O, V) | Rest], Rest?, found(V?)) :-
-    Other? =?= O? | true.
-take_intro_via(Other, [P | Rest], [P? | Rest1?], V?) :-
-    otherwise | take_intro_via(Other?, Rest?, Rest1, V).
-take_intro_via(_, [], [], none).
-
-%% accepted_intro(Via, Other, Pend, Pend1): the consent kept, so that a link of
-%% this introduction reported later is released in its turn.
-procedure accepted_intro(AnchorFriend?, Key?, PendingInv?, PendingInv).
-accepted_intro(found(Via), Other, Pend, [intro_ok(Via?), intro_ok(Other?) | Pend?]).
-accepted_intro(none, Other, Pend, [intro_ok(Other?) | Pend?]).
-
-%% release_by_sender(Via, Pend, Pend1, Via1): every link already reported and
-%% held that came FROM Via, authorised now that the person has consented to the
-%% introduction Via made.  The introducer's consent variables are the
-%% introducer's own, so these links are anchored at the introducer and not at
-%% the friend being introduced.  Via is read here and handed on, as Via1, to
-%% accepted_intro: a reader of a type that is not constant is read once.
-procedure release_by_sender(AnchorFriend?, PendingInv?, PendingInv, AnchorFriend).
-release_by_sender(found(Via), Pend, Pend1?, found(Via?)) :- rbs(Via?, Pend?, Pend1).
-release_by_sender(none, Pend, Pend?, none).
-
-procedure rbs(Constant?, PendingInv?, PendingInv).
-rbs(Via, [held(Name, S) | Rest], Pend1?) :-
-    ground(Name?), Via? =?= S? |
-    authorise_link(Name?, authorise),
-    rbs(Via?, Rest?, Pend1).
-rbs(Via, [P | Rest], [P? | Rest1?]) :- otherwise | rbs(Via?, Rest?, Rest1).
-rbs(_, [], []).
-
-%% intro_ok_for(Parts, Pend, Pend1, B): whether the person has accepted an
-%% introduction with the anchor of this held name.  The introducer mints the
-%% consent variables and each of the two it introduces receives them FROM the
-%% introducer, so both ends are held; the consent to the introduction is what
-%% releases them, and it is kept, since one introduction holds several links.
+%% pending_step(A, Name, S, ...): the held end released, refused, or kept
+%% for the person's answer.
 procedure pending_step(Constant?, GlobalName?, Key?, Key?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Trust?).
-pending_step(true, Name, _, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+pending_step(authorise, Name, _, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     authorise_link(Name?, authorise),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
-%% No volition for it yet: the report goes to the mini-apps, which know their
-%% conversations, AND the link is remembered, so that a consent given after the
-%% report --- the person accepting the introduction the link came with ---
-%% releases it in its turn.  A link reported before its volition and then
-%% forgotten is a link nothing can ever release.
-pending_step(false, Name, S, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
-    forward_pending(Name?, S?, Apps?, Apps1, Name1),
+pending_step(refuse, Name, _, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    authorise_link(Name?, refuse),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
+pending_step(ask, Name, S, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     agent(Id?, UserIn?, NetIn?, Outs?,
-          host(Apps1?, Atts?, [held(Name1?, S?) | Pend?], Trusted?)).
+          host(Apps?, Atts?, [held(Name?, S?) | Pend?], Trusted?)).
 
-%% forward_pending(Name, S, Apps, Apps1, Name1): the report to every running
-%% mini-app, the name handed on as Name1 to be remembered: a reader of a type
-%% that is not constant is read once.
-procedure forward_pending(GlobalName?, Key?, AppList?, AppList, GlobalName).
-forward_pending(Name, S, [app(A, M, C, running(Sg?)) | Rest], [app(A?, M?, C?, running(Sg1)) | Rest1?], Name1?) :-
-    ground(Name?) |
-    push_down(held(Name?, S?), Sg, Sg1?),
-    forward_pending(Name?, S?, Rest?, Rest1, Name1).
-forward_pending(Name, S, [E | Rest], [E? | Rest1?], Name1?) :-
-    otherwise | forward_pending(Name?, S?, Rest?, Rest1, Name1).
-forward_pending(Name, _, [], [], Name?).
+%% answer_held(K, A, Pend, Pend1): the person's answer A, authorise or refuse,
+%% given to every end held from the agent of key K, by authorise_link/2; the
+%% other ends stay held.
+procedure answer_held(Key?, Answer?, PendingInv?, PendingInv).
+answer_held(K, A, [held(Name, S) | Rest], Pend1?) :-
+    ground(K?), ground(A?), ground(Name?), ground(S?) |
+    Parts ..= Name?,
+    of_key(Parts?, S?, K?, B),
+    answer_one(B?, K?, A?, Name?, S?, Rest?, Pend1).
+answer_held(K, A, [P | Rest], [P? | Rest1?]) :-
+    otherwise | answer_held(K?, A?, Rest?, Rest1).
+answer_held(_, _, [], []).
 
-procedure push_down(SgToApp(Opaque)?, Stream(SgToApp(Opaque)), Stream(SgToApp(Opaque))?).
-push_down(Msg, [Msg? | Sg1?], Sg1).
-
-%% --- at the forwarding friend ---
+procedure answer_one(Constant?, Key?, Answer?, GlobalName?, Key?, PendingInv?, PendingInv).
+answer_one(true, K, A, Name, _, Rest, Pend1?) :-
+    ground(A?) |
+    authorise_link(Name?, A?),
+    answer_held(K?, A?, Rest?, Pend1).
+answer_one(false, K, A, Name, S, Rest, [held(Name?, S?) | Pend1?]) :-
+    answer_held(K?, A?, Rest?, Pend1).
 
 %% anchor_friend(Parts, Outs, Outs1, F): the friend whose identity the name's
 %% anchor is, the outputs passed through.

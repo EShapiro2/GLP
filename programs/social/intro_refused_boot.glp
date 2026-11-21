@@ -1,0 +1,20 @@
+%% intro_refused_boot.glp --- the held end of an introduction on three smartphones, refused on the person's refusal (GSA paper, Appendix "The Operating System", "Whom the Grassroots App knows": "An end of a variable that reaches it from an agent it does not know is held by the runtime and reported to the operating system; the operating system asks its person whether to know that agent, by its key, and on yes makes the channel to it as above, attested, and releases the end by authorise_link(Name, authorise); on no, authorise_link(Name, refuse)"; G3): under the boot harness, one isolate per person, each running the social graph of graph/core with the operating system around it (graph/core/place.glp, os_phone/8), no program installed, which declares to the layer every person its person knows.  alice and carol each connect to bob, who answers yes on both cards and, friends with both, introduces carol to alice (Knowledge:3).  alice, the smaller key, proposes, answering yes on her card at once; her consent carries the end of the variable she conveys the friend channel on, and reaches carol from bob, an end of a variable from an agent carol does not know: carol's runtime holds it and reports it.  Only then is carol asked, on the introduction's card, and she answers no: the end is refused, nothing of carol's reaches alice on it, alice is told carol declined, and the two are not friends.  The persons' scripts are in core/superapp_plays.glp (sg_init/4, modes intro_proposer, intro_friend and intro_late_no).  The program is graph/core, named as :boot's second argument:
+%%   :boot programs/social/intro_refused_boot.glp programs/social/graph/core
+%% Expected, each person's lines as a set: [alice] nearby([bob]), connected(bob), befriend_intro(bob, carol), nearby([bob, carol]), rejected(carol); [bob] nearby([alice]), befriend(alice), befriend(carol), nearby([alice, carol]), connected(alice), connected(carol); [carol] nearby([bob]), connected(bob), befriend_intro(bob, alice), card(bob, alice), rejected; with :deliveries, neither carol > alice nor alice > carol.
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(alice, intro_proposer, [bob], ch(_?, _))@alice,
+    agent(ch(_?, _), ch(_?, _))@bob,
+    say(bob, intro_friend, [alice, carol], ch(_?, _))@bob,
+    agent(ch(_?, _), ch(_?, _))@carol,
+    say(carol, intro_late_no, [bob], ch(_?, _))@carol.
+
+%% The person scripted at each agent tells it the entry, sg_init/4, with its own key, its mode and the keys of the persons it knows (IGLP, Implementation Notes, "Boot"; Remark "Agent Names"), and reads nothing.
+SayAct ::= sg_init(Key, Constant, List(Key)).
+SayIn  ::= [SayAct | SayEnd].
+SayEnd ::= [].
+
+exported procedure say(Key?, Constant?, List(Key)?, Channel(Stream(Constant), SayIn)?).
+say(P, M, Qs, ch(_, [sg_init(P?, M?, Qs?)])).
