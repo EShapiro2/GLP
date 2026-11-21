@@ -1,0 +1,26 @@
+Community Network
+Community Network extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727), and restricts and strengthens Organisation.
+Vocabulary: z has the stake at the number n = stake(z,n); z has c as its community = community(z,c); x has coins locked in z as the customer of y = customer_lock(x,y,z); y has coins locked in z as the provider of x = provider_lock(y,x,z); w holds the dispute of x and y in z = dispute(w,x,y,z).
+coins are locked in z between the provider y and the customer x: y has coins locked in z as the provider of x and x has coins locked in z as the customer of y.
+x is an arbiter of z: x holds the role Arbiter in z and z has x in the role Arbiter.
+the earlier stake of z has ended: z has the stake at no number.
+x is a customer of z: x knows z, z has Gov as its community, x is a participant of Gov and x accepts a Dollar-denominated Gov-coin in payment.
+y is a provider of z: y knows z, z has Gov as its community, y is a participant of Gov, z has the stake at the number S, y holds Held Gov-coins and Held is at least S.
+After g sets the stake of z at n: the earlier stake of z has ended and z has the stake at the number n.
+After x raises to w x's dispute with the provider y in z, which requires w does not hold the dispute of x and y in z: w holds the dispute of x and y in z.
+After y raises to w y's dispute with the customer x in z, which requires w does not hold the dispute of x and y in z: w holds the dispute of x and y in z.
+After w decides the release to x and to y of the coins locked between them in z: no longer w holds the dispute of x and y in z and no longer coins are locked in z between the provider y and the customer x.
+Community Network:0 - | A *community network* is created by a backed community, and uses its community coins. Its bylaws name the role *arbiter*. A *provider* is a member of the community whose *stake*, the community coins they hold, is at least *S*, a number of community coins, and a *customer* is a member of the community who accepts community coins. A *dispute* is over community coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+Community Network:0 - | Alice, Bob and Carol are persons, Orga a community network, Gov an organisation, S and Held numbers; in clause 2 Alice is the customer and Bob the provider.
+Community Network:0 - | Parameters: x has coins locked in z as the customer of y; y has coins locked in z as the provider of x.
+Community Network:1 ■ Set stake: ~stake(Orga,_), stake(Orga,S) <- organisation(Orga) guarded by deciders(Orga).
+Community Network:2 ■ | Arbitration.
+Community Network:2 ■ Raise: dispute(Carol,Alice,Bob,Orga) <- provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga), role(Carol,Orga,Arbiter), has_role(Orga,Carol,Arbiter), ~dispute(Carol,Alice,Bob,Orga) guarded by Alice.
+Community Network:2 ■ Provider raise: dispute(Carol,Alice,Bob,Orga) <- provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga), role(Carol,Orga,Arbiter), has_role(Orga,Carol,Arbiter), ~dispute(Carol,Alice,Bob,Orga) guarded by Bob.
+Community Network:2 ■ Arbitrate: ~dispute(Carol,Alice,Bob,Orga), ~provider_lock(Bob,Alice,Orga), ~customer_lock(Alice,Bob,Orga) <- dispute(Carol,Alice,Bob,Orga), provider_lock(Bob,Alice,Orga), customer_lock(Alice,Bob,Orga) guarded by Carol.
+Community Network:2 ■ | The coins are released less the fee the terms set, which is released to Carol.
+Community Network:3 ■ | Members.
+Community Network:3 ■ Found: Organisation:1 Found + community(Orga,Gov) <- participant(Alice,Gov).
+Community Network:3 ■ Join: Organisation:3 Join <- community(Orga,Gov), participant(Bob,Gov).
+Community Network:4 ○ | Loss of membership.
+Community Network:4 ○ | Those who decide for Orga will end Bob's participation in Orga if he ceases to be a member of the community.

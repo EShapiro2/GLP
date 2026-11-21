@@ -1,27 +1,28 @@
 % Gigs --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 5.5 and cites a clause as Gigs:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: Networked Organisation, Overlay, Grassroots Directed Overlay, GRH's (programs/lbm), and Recommendations (programs/gce).
-% Last changed: 2026-11-16, by GO #8.
+% Extends: Community Network, Overlay, Grassroots Directed Overlay, GRH's (programs/lbm), and Recommendations (programs/gce).
+% Changed 2026-11-20 by GO #11: Cur-coins for Orga-coins (Udi, 2026-11-20).
+% Last changed: 2026-11-20, by GO #14 (Udi, 2026-11-20, to GO #13: community coins; Orga a community network).
 % Schemas: Gigs.glp beside this file.
 Gigs
-Gigs extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
-A *worker* is a provider and a *client* a customer. A *job* names the work, its price in Orga-coins and its deadline; its terms say what is released to whom on cancellation.
-Alice and Bob are persons, Orga a networked organisation.
+Gigs extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+A *worker* is a provider and a *client* a customer. A *job* names the work, its price in community coins and its deadline; its terms say what is released to whom on cancellation.
+Alice and Bob are persons, Orga a community network.
 1. ■ Job. Post: Alice, a client, may post a job to the workers she points to. Pass: A worker may pass it to the workers they point to. Withdraw job: Alice may withdraw it.
 2. ■ Engage: Alice may engage Bob, a worker, for the job with the consent of Bob, provided Alice and Bob know each other; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 3. ◆ Deliver: Bob may attest that he delivered the work to Alice.
-4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (Networked Organisation:2).
+4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (Community Network:2).
 5. ■ Cancelling. Cancel: Alice or Bob may cancel the engagement before delivery, and the payment and the deposit are then released to Alice and to Bob as the terms say. Lapse: If no delivery is attested by the deadline, Alice may cancel and both are then released to her.
 6. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the work after acceptance.
 Logic pragmas
-Gigs extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
-A *worker* is a provider and a *client* a customer. A *job* names the work, its price in Orga-coins and its deadline; its terms say what is released to whom on cancellation.
-Alice, Bob and Carol are persons, Orga a networked organisation, Kept a number, Job a job, Skill a skill or a service; in clause 1 Carol is a worker, in clause 4 an arbiter, and in clause 6 Skill is the job.
-1. ■ Job. Post: Alice may post Job in Orga, provided Alice is a client of Orga. Alice posts the job to the workers she points to. Send job: Job of Alice goes to Bob in Orga, provided Alice has Job posted in Orga, Alice points to Bob and Bob is a worker of Orga. Pass: Bob may pass Job of Alice to Carol in Orga, provided Bob is a worker of Orga, Bob has received Job of Alice in Orga, Bob points to Carol, Orga has the stake at the number S, Carol holds Kept Orga-coins and Kept is at least S. Withdraw job: Alice may withdraw Job from Orga.
+Gigs extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+A *worker* is a provider and a *client* a customer. A *job* names the work, its price in community coins and its deadline; its terms say what is released to whom on cancellation.
+Alice, Bob and Carol are persons, Orga a community network, Gov an organisation, Kept a number, Job a job, Skill a skill or a service; in clause 1 Carol is a worker, in clause 4 an arbiter, and in clause 6 Skill is the job.
+1. ■ Job. Post: Alice may post Job in Orga, provided Alice is a client of Orga. Alice posts the job to the workers she points to. Send job: Job of Alice goes to Bob in Orga, provided Alice has Job posted in Orga, Alice points to Bob and Bob is a worker of Orga. Pass: Bob may pass Job of Alice to Carol in Orga, provided Bob is a worker of Orga, Bob has received Job of Alice in Orga, Bob points to Carol, Carol is a participant of Gov, Orga has the stake at the number S, Carol holds Kept Gov-coins and Kept is at least S. Withdraw job: Alice may withdraw Job from Orga.
 2. ■ Engage: Alice may engage Bob for Job in Orga, with the consent of Bob, provided Bob is a worker of Orga, Alice has Job posted in Orga and Alice and Bob know each other. Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 3. ◆ Deliver: Bob may attest the delivery of Job to Alice, provided Alice and Bob have an engagement for Job.
-4. ■ Acceptance. Accept work: Alice may accept Job of Bob in Orga, provided Bob has attested the delivery of Job to Alice. The payment and the deposit are then released to Bob. Reject: Alice may reject Job of Bob raising to Carol the dispute over Orga-coins, provided Bob has attested the delivery of Job to Alice, Orga-coins are locked between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Alice raises the dispute by Networked Organisation:2.
+4. ■ Acceptance. Accept work: Alice may accept Job of Bob in Orga, provided Bob has attested the delivery of Job to Alice. The payment and the deposit are then released to Bob. Reject: Alice may reject Job of Bob raising to Carol the dispute in Orga, provided Bob has attested the delivery of Job to Alice, coins are locked in Orga between the provider Bob and the customer Alice and Carol is an arbiter of Orga. Alice raises the dispute by Community Network:2.
 5. ■ Cancelling. Cancel: Alice may cancel her engagement of Bob for Job in Orga, provided Bob has not attested the delivery of Job to Alice. Worker cancel: Bob may cancel his engagement by Alice for Job in Orga, provided Bob has not attested the delivery of Job to Alice. The payment and the deposit are then released to Alice and to Bob as the terms say. Lapse: Alice may cancel her engagement of Bob for Job in Orga, provided no delivery of Job is attested by the deadline. The payment and the deposit are then both released to Alice.
 6. ◆ Recommend: Recommendations:1, only if Alice has accepted Skill of Bob.
 Logic pragmas.
@@ -33,12 +34,12 @@ After x posts j in z, which requires x does not have j posted in z: x has j post
 After j of x goes to y in z, which requires y has not received j of x in z: y has received j of x in z.
 After y passes j of x to w in z, which requires w has not received j of x in z: w has received j of x in z.
 After x withdraws j from z: no longer x has j posted in z.
-After x engages y for j in z, which requires x and y do not have an engagement for j: x and y have an engagement for j and z-coins are locked between the provider y and the customer x.
+After x engages y for j in z, which requires x and y do not have an engagement for j: x and y have an engagement for j and coins are locked in z between the provider y and the customer x.
 After y attests the delivery of j to x, which requires y has not attested the delivery of j to x: y has attested the delivery of j to x.
-After x accepts j of y in z: x has accepted j of y, no longer x and y have an engagement for j and no longer z-coins are locked between the provider y and the customer x.
-After x rejects j of y raising to w the dispute over z-coins, which requires x has not rejected j of y and w does not hold the dispute of x and y over z-coins: x has rejected j of y and w holds the dispute of x and y over z-coins.
-After x cancels x's engagement of y for j in z: no longer x and y have an engagement for j and no longer z-coins are locked between the provider y and the customer x.
-After y cancels y's engagement by x for j in z: no longer x and y have an engagement for j and no longer z-coins are locked between the provider y and the customer x.
+After x accepts j of y in z: x has accepted j of y, no longer x and y have an engagement for j and no longer coins are locked in z between the provider y and the customer x.
+After x rejects j of y raising to w the dispute in z, which requires x has not rejected j of y and w does not hold the dispute of x and y in z: x has rejected j of y and w holds the dispute of x and y in z.
+After x cancels x's engagement of y for j in z: no longer x and y have an engagement for j and no longer coins are locked in z between the provider y and the customer x.
+After y cancels y's engagement by x for j in z: no longer x and y have an engagement for j and no longer coins are locked in z between the provider y and the customer x.
 Environment: no delivery of j is attested by the deadline, for x.
 Interface pragmas
 Look: 🧰, network

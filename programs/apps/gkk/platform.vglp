@@ -217,33 +217,7 @@ ask_of([q(V1?, 2, [person(V2?), text(" asks to introduce "), person(V3?), text("
 .
 sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
-% The contract the platform is compiled from (vGLP, Section 5.4, "The contract's words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC's reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC's reader's and the pragmas', named with an R before them.
-RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
-RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
-RArgs     ::= [] ; [RArg | RArgs].
-RAtom     ::= atom(Constant, RArgs) ; times(RArg, RAtom) ; rest(RArg, RArg, RAtom).
-RAtoms    ::= [] ; [RAtom | RAtoms].
-RGuard    ::= guarded ; unguarded ; guarded_at(Constant).
-RRoleKind ::= seated(RNameTerm, Constant) ; constituent(RNameTerm, Constant) ; listed(Integer, Constant, RArgs) ; qlisted(Integer, Constant, RArgs, RArgs).
-RRoleSpec ::= rs(RGuard, RAtoms, RAtoms, RAtoms, RAtoms) ; crs(RRoleKind, RGuard, RAtoms, RAtoms, RAtoms, RAtoms).
-RRoleSpecs ::= [] ; [RRoleSpec | RRoleSpecs].
-RReach    ::= reach(RNameTerm, Constant, RNameTerm).
-RReaches  ::= [] ; [RReach | RReaches].
-RConstraint ::= true ; and(RConstraint, RConstraint) ; eq(RExpr, RExpr) ; le(RExpr, RExpr) ; lt(RExpr, RExpr) ; ge(RExpr, RExpr) ; gt(RExpr, RExpr) ; succ(RArg, RArg) ; or(RConstraint, RConstraint) ; signed(RArg, RArg) ; unsigned(RArg, RArg) ; not(RConstraint) ; implies(RConstraint, RConstraint) ; ne(RExpr, RExpr) ; rel(Constant, RExprs) ; program(RExpr).
-RExpr     ::= RArg ; plus(RExpr, RExpr) ; minus(RExpr, RExpr) ; mul(RExpr, RExpr) ; fn(Constant, RExprs) ; cardinality(RArgs, RArg, RAtom, RForm) ; sum(RArgs, RArg, RAtom, RForm, RExpr) ; author_of(RArg).
-RExprs    ::= [] ; [RExpr | RExprs].
-RForm     ::= fa(RArg, RAtom) ; fnot(RForm) ; fand(RForm, RForm) ; for(RForm, RForm) ; fexists(RArgs, RArg, RAtom, RForm) ; fforall(RArgs, RArg, RAtom, RForm, RForms) ; fcons(RConstraint).
-RForms    ::= [] ; [RForm | RForms].
-RHMult    ::= hm(Integer, RAtom).
-RHMults   ::= [] ; [RHMult | RHMults].
-RConjunct ::= conjunct(RArgs, Integer, RAtom, RForm, RHMults, RHMults, RForms).
-RConjuncts ::= [] ; [RConjunct | RConjuncts].
-RName     ::= Constant ; one(Constant, OneOf).
-RNames    ::= [] ; [RName | RNames].
-RSchema   ::= schema(Constant, RArgs, RRoleSpecs) ; cschema(Constant, RArgs, RReaches, RRoleSpecs) ; nschema(Constant, RArgs, RConstraint, RRoleSpecs) ; schema(Constant, RNames, RArgs, RRoleSpecs) ; cschema(Constant, RNames, RArgs, RReaches, RRoleSpecs) ; nschema(Constant, RNames, RArgs, RConstraint, RRoleSpecs) ; qschema(Constant, RArgs, RArgs, RConstraint, RRoleSpecs, RConjuncts, RForms) ; qschema(Constant, RNames, RArgs, RArgs, RConstraint, RRoleSpecs, RConjuncts, RForms).
-RContract ::= [] ; [RSchema | RContract].
-RBody     ::= RContract ; reflexive(Preds, RContract).
-RDeclared ::= RBody ; environment(Preds, RBody).
+% The contract the platform is compiled from (vGLP, Section 5.4, "The contract's words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC's reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The type of the contract as read is GSC's reader's, WDeclared of the root programs/self.glp, the type of the checker's input; the types of the pragmas are named with a P or an R before them.
 %% The pragmas (programs/vglp/cva/compiler/README.md, 1): the lists, the acts, the standing declarations, the look and the version.
 PWord     ::= text(String) ; person(Integer).
 PWords    ::= [] ; [PWord | PWords].
@@ -262,10 +236,10 @@ PStands   ::= [] ; [PStand | PStands].
 PLook     ::= nolook ; look(String, String).
 PVersion  ::= version(Integer, Integer).
 RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
-Exported  ::= with(RDeclared, RPragmas).
+Exported  ::= with(WDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("Knowledge\nAn *identity* is a unique cryptographic key pair.\nAlice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.\n1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.\n2. ■ Acquaint: Alice and Bob may jointly come to know each other.\n3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])])]), pragmas([list("Contacts", [knows])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2]))], [], nolook, version(1, 1))))
+contract("Knowledge\nAn *identity* is a unique cryptographic key pair.\nA *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.\nAlice, Bob and Carol are persons.\n1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.\n2. ■ Acquaint: Alice and Bob may jointly come to know each other.\n3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])])]), pragmas([list("Contacts", [knows])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).

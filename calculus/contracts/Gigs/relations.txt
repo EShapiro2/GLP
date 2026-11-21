@@ -1,2 +1,2 @@
-Gigs extends Networked Organisation and Overlay: holds
+Gigs extends Community Network and Overlay: holds
 Gigs restricts Recommendations: holds

@@ -13,7 +13,7 @@ Encounters:1 ■ Open place: Alice may Alice has declared the place open, provid
 Encounters:1 ■ Close place: Alice may no longer Alice has declared the place open.
 Encounters:2 ■ Encounter: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided not Alice knows Bob, not Bob knows Alice, Alice is nearby Bob, Bob is nearby Alice, Alice has declared the place open and Bob has declared the place open. Must consent: Alice, Bob.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:1+Guardians:3 ■ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend, not Bob counts Alice as a friend, Alice is a person and Bob is a person.
+Friendship:1+Guardians:3 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend, not Bob counts Alice as a friend, Alice is a person and Bob is a person.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
 Friendship:3 ○ | Loss of Trust.

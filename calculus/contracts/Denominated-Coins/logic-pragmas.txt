@@ -2,9 +2,10 @@ Denominated Coins
 Denominated Coins extends and restricts Coins.
 *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
 Alice and Bob are parties, Dollar a fiat currency, Sum a number.
-1. ■ First issue: Alice may issue Sum Dollar-denominated Alice-coins, provided Alice has issued coins of no denomination. Issue: Notes:1 Issue, only if Alice has issued coins of the denomination Dollar.
+1. ■ First issue: Alice may issue Sum Dollar-denominated Alice-coins for the first time, provided Alice has issued coins of no denomination. Issue: Notes:1 Issue, only if Alice has issued coins of the denomination Dollar.
 2. ○ Denomination. A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
 3. ○ Pricing. Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.
 Logic pragmas.
-Vocabulary: x has issued coins of the denomination f = issued_in(x,f).
-After x issues n f-denominated x-coins: x holds n x-coins and x has issued coins of the denomination f.
+Vocabulary: x has issued coins of the denomination f = issued_in(x,f); x holds an f-denominated y-coin = coin(x,y,f); x holds n f-denominated y-coins = coin(x,y,f,*n); x holds exactly n f-denominated y-coins = coin(x,y,f,#n); z holds n f-denominated w-coins in escrow from x for y on k = escrow_coin(z,w,f,x,y,k,*n).
+Kind of note: coin, Dollar-denominated y-coins for y-coins.
+After x issues n f-denominated x-coins for the first time: x holds n f-denominated x-coins and x has issued coins of the denomination f.

@@ -21,19 +21,3 @@ Officers: Bob [Appoint] <role>
   Decider [Retire]
   Codecider: Decider asks for your consent to retire.
 Amend: Alice [Amend] <motion> <votes>
-Ward and person: Carol [Organisation acquaint] <bob>
-  Bob: Carol asks for your consent to organisation acquaint.
-  Carol [Organisation befriend]
-  Bob: Carol asks for your consent to organisation befriend.
-  Alice: Carol asks for your consent to organisation befriend.
-  Carol [Organisation end]
-  Alice [Organisation unfriend] <carol> <bob>
-Wards: Carol [Organisations acquaint] <dave>
-  Dave: Carol asks for your consent to organisations acquaint.
-  Carol [Organisations befriend] <bob>
-  Dave: Carol asks for your consent to organisations befriend.
-  Alice: Carol asks for your consent to organisations befriend.
-  Bob: Carol asks for your consent to organisations befriend.
-  Carol [Organisations of one officer befriend]
-  Dave: Carol asks for your consent to organisations of one officer befriend.
-  Alice: Carol asks for your consent to organisations of one officer befriend.

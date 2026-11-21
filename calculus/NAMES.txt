@@ -66,14 +66,15 @@ FDAO | Funded DAO | Funded-DAO | funded_dao | fdao
 LDAO | Liquid DAO | Liquid-DAO | liquid_dao | ldao
 GO | Organisation | Organisation | organisation | go
 CDC | Constitution | Constitution | constitution | cdc
-GNO | Networked Organisation | Networked-Organisation | networked_organisation | gno
+GNO | Community Network | Community-Network | community_network | gno
 GBank | Bank | Bank | bank | gbank
 CB | Community Bank | Community-Bank | community_bank | cb
 CMB | Commercial Bank | Commercial-Bank | commercial_bank | cmb
 SCB | Central Bank | Central-Bank | central_bank | scb
 MCS | Mutual Credit | Mutual-Credit | mutual_credit | mcs
-GCC | Community Currency | Community-Currency | community_currency | gcc
-GBCC | Backed Currency | Backed-Currency | backed_currency | gbcc
+GCC | Community | Community | community | gcc
+GBCC | Backed Community | Backed-Community | backed_community | gbcc
+Democratic Community | Democratic Community | Democratic-Community | democratic_community | democratic_community
 GCorp | Corporation | Corporation | corporation | gcorp
 SC | Shareholding Corporation | Shareholding-Corporation | shareholding_corporation | sc
 SPLLC | Single-Person Company | Single-Person-Company | single_person_company | spllc

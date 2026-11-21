@@ -13,7 +13,7 @@
 %% quantifiers bind matching any value, and the initiator evaluates the
 %% formula on the readings, each atom, anchor, count and sum taken in the
 %% reading of the person who holds it"), as GBCC:1's cc_join
-%% (programs/go/Backed-Currency.glp).  Written as GSC writes a contract, k a numeric
+%% (programs/go/Backed-Community.glp).  Written as GSC writes a contract, k a numeric
 %% variable:
 %%
 %%   acquaint(o?, b?)     :  at o  not knows(b), +knows(b)

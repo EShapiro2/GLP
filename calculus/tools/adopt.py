@@ -321,6 +321,29 @@ def compile_tree(name, texts):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def verdict_stamp(name):
+    """The hash of the term the Calculus's verdict on NAME was made on, verdict-term.sha256 beside its verdict.txt
+    (tools/cascade.py; tools/publish.py copies it): from cascade/NAME/ beside the tools, on the branch code; or from
+    NAME/ of a publication directory or calculus/NAME/ or calculus/contracts/NAME/ in the checkout of GLP, where
+    calculus_text looks.  None where the verdict has no stamp, a record made before the stamp was."""
+    for d in (os.path.join(ROOT, 'cascade', NM.file_of(name)), os.path.join(ROOT, NM.file_of(name)),
+              os.path.join(GLP, 'calculus', NM.file_of(name)), os.path.join(GLP, 'calculus', 'contracts', NM.file_of(name)),
+              os.path.join(GLP, 'calculus', GLP_NAME(name))):
+        p = os.path.join(d, 'verdict-term.sha256')
+        if os.path.exists(p):
+            return read(p).strip()
+    return None
+
+
+def check_stamp(name, term):
+    """A verdict is of the term it was made on: where the Calculus's verdict on NAME has its stamp and the term printed
+    here has another hash, nothing is written, and --check fails."""
+    import hashlib
+    stamp = verdict_stamp(name)
+    if stamp is not None and hashlib.sha256((term.rstrip('\n') + '\n').encode('utf-8')).hexdigest() != stamp:
+        die('verdict is of another text: run the checker on %s' % name)
+
+
 def targets(name, root=None):
     """What adopt.py NAME writes: NAME.glp beside the adopted file; and into cascade/NAME/, under the owner's names,
     NAME.txt, a copy of the adopted file as it stands, NAME.glp, and the five files of the Calculus's compilers.  The
@@ -328,6 +351,7 @@ def targets(name, root=None):
     manifest.md) is cascade.sh's.  A contract not yet adopted has no NAME.txt and no NAME.glp beside it."""
     root = root or GLP
     out, path = compiled(name)
+    check_stamp(name, out['term.glp.txt'])
     intro = introduction(name, read(os.path.join(GLP, path))) if path.endswith('.txt') else None
     glp = module(name, out.pop('term.glp.txt'), intro)      # the term goes into NAME.glp, and term.glp.txt is not written
     rec = os.path.join(root, 'cascade', NM.file_of(name))

@@ -5,7 +5,7 @@ App GSA yes yes no
 AppStore GSA yes yes no
 Auction GRH yes parametric no
 Backchannel-Feeds GFF yes yes no
-Backed-Currency GO yes yes no
+Backed-Community GO yes yes no
 Bank GO yes yes no
 Bonds Currencies yes yes yes
 Central-Bank GO yes yes no
@@ -13,7 +13,7 @@ Children CSSN yes yes no
 Coins Currencies yes yes yes
 Commercial-Bank GO yes yes no
 Community-Bank GO yes yes no
-Community-Currency Currencies yes yes no
+Community Currencies yes yes no
 Constitution GO yes yes no
 Consumers-Cooperative GO yes yes no
 Cooperative GO yes yes no
@@ -42,7 +42,7 @@ Local-Overlay GRH yes yes no
 Lodging GO yes yes no
 Marketplace GO yes yes no
 Mutual-Credit GO yes yes no
-Networked-Organisation GO yes parametric no
+Community-Network GO yes parametric no
 Notes GSC yes yes no
 Organisation GO yes yes no
 Overlay GRH yes yes no
