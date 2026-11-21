@@ -1,0 +1,8 @@
+# The texts Udi called Claudese, each "wrong", and the text he approved in its place, "right".
+# check.py --test fails a wrong text that passes and a right text that fails.  One text a line:
+# wrong|right <TAB> text <TAB> source.
+wrong	If they instantiate it differently, an act of C₀ of two of a kind is also an act of one of each kind.	Udi, 2026-11-21 20:01 UTC, Calculus: "this is Claudese", "kind is Claudese"
+wrong	Community Network instantiates Backed Community with its community for a community, composes it with Organisation and Denominated Currencies, and restricts, strengthens and extends the composition.	Udi, 2026-11-20 22:29 UTC, GO: "with its community for a community - are you sick?"
+right	Community Network extends Backed Community and Organisation, and restricts and strengthens them.	Udi, 2026-11-20 23:15 UTC, GO, approved
+wrong	The two differ in kind.	claudese.md, "differs in kind", inflected
+wrong	The central bank's bylaws for the bylaws.	Udi, "with central bank bylaws for the bylaws - no way, this is broken English"

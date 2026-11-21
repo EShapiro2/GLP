@@ -1,10 +1,10 @@
 # A run of the cascade on Democratic-Community
 
-- Contract: `Democratic-Community` (`democratic_community` to the checker), its owner's two files `programs/go/Democratic-Community.txt` and `programs/go/Democratic-Community.glp`, copied here as they stood at `4377f969`.
+- Contract: `Democratic-Community` (`democratic_community` to the checker), its owner's two files `programs/go/Democratic-Community.txt` and `programs/go/Democratic-Community.glp`, copied here as they stood at `a6fc2475`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/Democratic-Community.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Democratic-Community.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-21 03:17 UTC by `cascade.sh democratic_community`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `4377f969`; each artefact's source and tool:
+- Run on 2026-11-21 15:24 UTC by `cascade.sh democratic_community`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `a6fc2475`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

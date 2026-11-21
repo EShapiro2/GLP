@@ -20,6 +20,49 @@
 %%   deciding, and passes alicia the friendship of alice and carol he records
 %%   (Tell friends).
 %%
+%% play_restore_loss: alice's machine holds the environment atom state_loss
+%%   from the start, and bob's none.  alice and bob come to know each other
+%%   and befriend, and each keeps a checkpoint of the other (Secure
+%%   Friendship:3).  Restore and Restore friend at bob are then refused by
+%%   alice as unable on her friendship with bob alone (Secure Friendship:4),
+%%   the state loss being present: in GSC's model no transition erases
+%%   friend(alice, bob) at alice, which the paper's state-loss fault does
+%%   (SPM paper, Definition State-Loss Fault), so the run isolates that
+%%   precondition and no run of the model can satisfy it.
+%%
+%% play_threshold_two: five agents.  alice names carol and dave her identity
+%%   custodians and fixes the threshold 2.  alicia asks carol to vouch, and
+%%   presents carol's statement to bob, who then holds one statement, below
+%%   the threshold he records, and Accept is not taken.  alicia then asks
+%%   dave, presents dave's statement to bob, and bob, holding the statements
+%%   of two custodians he records, accepts alicia in place of alice (Secure
+%%   Friendship:5, Accept).
+%% play_restore_friend: as play_restore_loss with carol, a friend of alice
+%%   whom bob records as her friend: Restore friend at bob, restoring alice's
+%%   friendship with carol, is refused by alice as unable on that friendship
+%%   alone, the state loss being present.
+%%
+%% play_custodian_change: alice, bob, carol and alicia.  carol is a friend of
+%%   alice and of bob, and alice's one custodian, of the threshold 1; bob names
+%%   alice his identity custodian.  alicia asks carol to vouch and presents
+%%   carol's statement to bob; bob accepts alicia in place of alice (Secure
+%%   Friendship:5, Accept), and alicia in place of alice as his custodian
+%%   (Accept custodian), Bob and Alicia taking each, and tells carol, a friend
+%%   of both, of the change (Tell change).
+%%
+%% play_restore_after_replace: alice, bob, carol and alicia, bob's machine
+%%   holding state_loss from the start.  carol is a friend of alice and of
+%%   bob, and alice's one custodian.  bob accepts alicia in place of alice
+%%   (Secure Friendship:5, Accept) and tells carol of the change (Tell
+%%   change); carol then records both the friendship of bob and alice and the
+%%   replacement of alice by alicia.  Restore friend at bob, restoring his
+%%   friendship with alice from carol, requires that carol records no
+%%   replacement of alice (Secure Friendship:4), and Restore replaced friend,
+%%   restoring his friendship with alicia, that bob does not count alicia as
+%%   a friend, and neither is taken.  Restore at bob from alice is taken:
+%%   alice's machine still runs and counts bob as a friend, so bob counts
+%%   alice as a friend again.
+%%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
 %% ---------------------------------------------------------------------------
@@ -33,8 +76,7 @@ imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
-exported procedure play_replace(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
-    Stream(Sent(Cargo))).
+exported procedure play_replace(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_replace(LA?, LB?, LC?, LD?, N?) :-
     quartet([own([A1], propose(establish(A1?))), wait(holds(identity)),
              own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
@@ -67,6 +109,224 @@ play_replace(LA?, LB?, LC?, LD?, N?) :-
              wait(holds(learned_friend(bob, alice, carol)))],
             LA, LB, LC, LD, N).
 
+exported procedure play_restore_loss(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_restore_loss(LA?, LB?, N?) :-
+    lossy_pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
+                own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+                own([A3], propose(befriend(A3?, bob))), wait(holds(friend(bob))),
+                wait(holds(checkpoint(bob)))],
+               [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                approval(acquaint(alice, bob), yes),
+                approval(befriend(alice, bob), yes),
+                wait(holds(checkpoint(alice)))],
+               LA, LB, N).
+
+exported procedure play_threshold_two(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_threshold_two(LA?, LB?, LC?, LD?, LE?, N?) :-
+    quintet([own([A1], propose(establish(A1?))), wait(holds(identity)),
+             own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+             own([A3], propose(acquaint(A3?, carol))), wait(holds(knows(carol))),
+             own([A4], propose(acquaint(A4?, dave))), wait(holds(knows(dave))),
+             own([A5], propose(befriend(A5?, bob))), wait(holds(friend(bob))),
+             own([A6], propose(befriend(A6?, carol))), wait(holds(friend(carol))),
+             own([A7], propose(befriend(A7?, dave))), wait(holds(friend(dave))),
+             own([A8], propose(name_custodian(A8?, carol))), wait(holds(custodian(carol))),
+             own([A9], propose(name_custodian(A9?, dave))), wait(holds(custodian(dave))),
+             own([A10], propose(identity_record(A10?, 2, 4))), wait(holds(fixed))],
+            [own([B1], propose(establish(B1?))), wait(holds(identity)),
+             approval(acquaint(alice, bob), yes),
+             approval(befriend(alice, bob), yes),
+             wait(holds(records_custodian(alice, carol))),
+             wait(holds(records_custodian(alice, dave))),
+             wait(holds(records_threshold(alice, 2))),
+             approval(acquaint(alicia, bob), yes),
+             wait(holds(holds_statement(carol, alicia, alice))),
+             wait(holds(friend(alicia)))],
+            [own([C1], propose(establish(C1?))), wait(holds(identity)),
+             approval(acquaint(alice, carol), yes),
+             approval(befriend(alice, carol), yes),
+             wait(holds(custodian_of(alice))),
+             approval(acquaint(alicia, carol), yes),
+             wait(holds(asked(alicia, alice))),
+             own([C2], propose(vouch(C2?, alicia, alice)))],
+            [own([E1], propose(establish(E1?))), wait(holds(identity)),
+             approval(acquaint(alice, dave), yes),
+             approval(befriend(alice, dave), yes),
+             wait(holds(custodian_of(alice))),
+             approval(acquaint(alicia, dave), yes),
+             wait(holds(asked(alicia, alice))),
+             own([E2], propose(vouch(E2?, alicia, alice)))],
+            [own([D1], propose(establish(D1?))), wait(holds(identity)),
+             own([D2], propose(acquaint(D2?, carol))), wait(holds(knows(carol))),
+             own([D3], propose(replace(carol, D3?, alice))),
+             wait(holds(received_vouch(carol, alice))),
+             own([D4], propose(acquaint(D4?, bob))), wait(holds(knows(bob))),
+             own([D5], propose(present(bob, D5?, carol, alice))),
+             own([D6], propose(acquaint(D6?, dave))), wait(holds(knows(dave))),
+             own([D7], propose(replace(dave, D7?, alice))),
+             wait(holds(received_vouch(dave, alice))),
+             own([D8], propose(present(bob, D8?, dave, alice))),
+             wait(holds(friend(bob)))],
+            LA, LB, LC, LE, LD, N).
+
+exported procedure play_restore_friend(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_restore_friend(LA?, LB?, LC?, N?) :-
+    lossy_trio([own([A1], propose(establish(A1?))), wait(holds(identity)),
+                own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+                own([A3], propose(acquaint(A3?, carol))), wait(holds(knows(carol))),
+                own([A4], propose(befriend(A4?, bob))), wait(holds(friend(bob))),
+                own([A5], propose(befriend(A5?, carol))), wait(holds(friend(carol))),
+                wait(holds(checkpoint(bob)))],
+               [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                approval(acquaint(alice, bob), yes),
+                approval(befriend(alice, bob), yes),
+                wait(holds(records_friend(alice, carol))),
+                wait(holds(checkpoint(alice)))],
+               [own([C1], propose(establish(C1?))), wait(holds(identity)),
+                approval(acquaint(alice, carol), yes),
+                approval(befriend(alice, carol), yes),
+                wait(holds(checkpoint(alice)))],
+               LA, LB, LC, N).
+
+exported procedure play_custodian_change(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_custodian_change(LA?, LB?, LC?, LD?, N?) :-
+    quartet([own([A1], propose(establish(A1?))), wait(holds(identity)),
+             own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+             own([A3], propose(acquaint(A3?, carol))), wait(holds(knows(carol))),
+             own([A4], propose(befriend(A4?, bob))), wait(holds(friend(bob))),
+             own([A5], propose(befriend(A5?, carol))), wait(holds(friend(carol))),
+             own([A6], propose(name_custodian(A6?, carol))), wait(holds(custodian(carol))),
+             own([A7], propose(identity_record(A7?, 1, 2))), wait(holds(fixed))],
+            [own([B1], propose(establish(B1?))), wait(holds(identity)),
+             approval(acquaint(alice, bob), yes),
+             approval(befriend(alice, bob), yes),
+             own([B2], propose(acquaint(B2?, carol))), wait(holds(knows(carol))),
+             own([B3], propose(befriend(B3?, carol))), wait(holds(friend(carol))),
+             own([B4], propose(name_custodian(B4?, alice))), wait(holds(custodian(alice))),
+             wait(holds(records_threshold(alice, 1))),
+             wait(holds(records_custodian(alice, carol))),
+             approval(acquaint(alicia, bob), yes),
+             wait(holds(holds_statement(carol, alicia, alice))),
+             wait(holds(friend(alicia))),
+             wait(holds(custodian(alicia)))],
+            [own([C1], propose(establish(C1?))), wait(holds(identity)),
+             approval(acquaint(alice, carol), yes),
+             approval(befriend(alice, carol), yes),
+             approval(acquaint(bob, carol), yes),
+             approval(befriend(bob, carol), yes),
+             wait(holds(custodian_of(alice))),
+             approval(acquaint(alicia, carol), yes),
+             wait(holds(asked(alicia, alice))),
+             own([C2], propose(vouch(C2?, alicia, alice))),
+             wait(holds(records_replacement(bob, alice, alicia)))],
+            [own([D1], propose(establish(D1?))), wait(holds(identity)),
+             own([D2], propose(acquaint(D2?, carol))), wait(holds(knows(carol))),
+             own([D3], propose(replace(carol, D3?, alice))),
+             wait(holds(received_vouch(carol, alice))),
+             own([D4], propose(acquaint(D4?, bob))), wait(holds(knows(bob))),
+             own([D5], propose(present(bob, D5?, carol, alice))),
+             wait(holds(friend(bob))),
+             wait(holds(custodian_of(bob)))],
+            LA, LB, LC, LD, N).
+
+exported procedure play_restore_after_replace(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_restore_after_replace(LA?, LB?, LC?, LD?, N?) :-
+    lossy_quartet([own([A1], propose(establish(A1?))), wait(holds(identity)),
+                   own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+                   own([A3], propose(acquaint(A3?, carol))), wait(holds(knows(carol))),
+                   own([A4], propose(befriend(A4?, bob))), wait(holds(friend(bob))),
+                   own([A5], propose(befriend(A5?, carol))), wait(holds(friend(carol))),
+                   own([A6], propose(name_custodian(A6?, carol))), wait(holds(custodian(carol))),
+                   own([A7], propose(identity_record(A7?, 1, 2))), wait(holds(fixed))],
+                  [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                   approval(acquaint(alice, bob), yes),
+                   approval(befriend(alice, bob), yes),
+                   own([B2], propose(acquaint(B2?, carol))), wait(holds(knows(carol))),
+                   own([B3], propose(befriend(B3?, carol))), wait(holds(friend(carol))),
+                   wait(holds(records_threshold(alice, 1))),
+                   wait(holds(records_custodian(alice, carol))),
+                   approval(acquaint(alicia, bob), yes),
+                   wait(holds(friend(alicia)))],
+                  [own([C1], propose(establish(C1?))), wait(holds(identity)),
+                   approval(acquaint(alice, carol), yes),
+                   approval(befriend(alice, carol), yes),
+                   approval(acquaint(bob, carol), yes),
+                   approval(befriend(bob, carol), yes),
+                   wait(holds(custodian_of(alice))),
+                   approval(acquaint(alicia, carol), yes),
+                   wait(holds(asked(alicia, alice))),
+                   own([C2], propose(vouch(C2?, alicia, alice))),
+                   wait(holds(records_replacement(bob, alice, alicia)))],
+                  [own([D1], propose(establish(D1?))), wait(holds(identity)),
+                   own([D2], propose(acquaint(D2?, carol))), wait(holds(knows(carol))),
+                   own([D3], propose(replace(carol, D3?, alice))),
+                   wait(holds(received_vouch(carol, alice))),
+                   own([D4], propose(acquaint(D4?, bob))), wait(holds(knows(bob))),
+                   own([D5], propose(present(bob, D5?, carol, alice))),
+                   wait(holds(friend(bob)))],
+                  LA, LB, LC, LD, N).
+
+%% alice, whose machine holds state_loss, bob and carol, each with its
+%% dispatcher and scripted person, their networks joined.
+procedure lossy_trio(ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+lossy_trio(SA, SB, SC, LA?, LB?, LC?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, [state_loss], AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, [], AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, [], AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    merge(OutA?, OutB?, Net1),
+    merge(Net1?, OutC?, Net),
+    route3(Net?, alice, InA, bob, InB, carol, InC, N).
+
+%% alice, whose machine holds state_loss, and bob, each with its dispatcher
+%% and scripted person, their networks joined.
+procedure lossy_pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+lossy_pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, [state_loss], AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, [], AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).
+
+%% alice, bob, whose machine holds state_loss, carol and alicia, each with its
+%% dispatcher and scripted person, their networks joined.
+procedure lossy_quartet(ScriptSteps?, ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog),
+    Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+lossy_quartet(SA, SB, SC, SD, LA?, LB?, LC?, LD?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, [], AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, [state_loss], AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, [], AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    platform # agent(alicia, InD?, OutD, TD, [], AsD),
+    platform # dispatch(AsD?, ch(GD?, DD), MD),
+    to_person(MD?, TD?),
+    person(DD?, GD, ps(nosess, [], [], SD?), LD),
+    merge(OutA?, OutB?, Net1),
+    merge(OutC?, OutD?, Net2),
+    merge(Net1?, Net2?, Net),
+    route4(Net?, alice, InA, bob, InB, carol, InC, alicia, InD, N).
+
 %% alice, bob, carol and alicia, each with its dispatcher and scripted person,
 %% their networks joined, and no environment atom, so no state loss.
 procedure quartet(ScriptSteps?, ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog),
@@ -92,3 +352,61 @@ quartet(SA, SB, SC, SD, LA?, LB?, LC?, LD?, N?) :-
     merge(OutC?, OutD?, Net2),
     merge(Net1?, Net2?, Net),
     route4(Net?, alice, InA, bob, InB, carol, InC, alicia, InD, N).
+
+%% alice, bob, carol, dave and alicia, each with its dispatcher and scripted
+%% person, their networks joined.
+procedure quintet(ScriptSteps?, ScriptSteps?, ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog),
+    Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+quintet(SA, SB, SC, SE, SD, LA?, LB?, LC?, LE?, LD?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, [], AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, [], AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(carol, InC?, OutC, TC, [], AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    platform # agent(dave, InE?, OutE, TE, [], AsE),
+    platform # dispatch(AsE?, ch(GE?, DE), ME),
+    to_person(ME?, TE?),
+    person(DE?, GE, ps(nosess, [], [], SE?), LE),
+    platform # agent(alicia, InD?, OutD, TD, [], AsD),
+    platform # dispatch(AsD?, ch(GD?, DD), MD),
+    to_person(MD?, TD?),
+    person(DD?, GD, ps(nosess, [], [], SD?), LD),
+    merge(OutA?, OutB?, Net1),
+    merge(OutC?, OutD?, Net2),
+    merge(Net1?, Net2?, Net3),
+    merge(Net3?, OutE?, Net),
+    route5(Net?, alice, InA, bob, InB, carol, InC, alicia, InD, dave, InE, N).
+
+%% The network of five agents, as ../self.glp's route4 is of four.
+procedure(X, R) route5(Stream(Msg(X, R))?, Peer?, Stream(Msg(X, R)), Peer?, Stream(Msg(X, R)),
+    Peer?, Stream(Msg(X, R)), Peer?, Stream(Msg(X, R)), Peer?, Stream(Msg(X, R)), Stream(Sent(X))).
+route5([msg(To, M)|Ms], A, [msg(To?, M?)|OA?], B, OB?, C, OC?, D, OD?, E, OE?, Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), ground(D?), ground(E?), To? =?= A? |
+    note(M?, To?, Log, Log1?),
+    route5(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, E?, OE, Log1).
+route5([msg(To, M)|Ms], A, OA?, B, [msg(To?, M?)|OB?], C, OC?, D, OD?, E, OE?, Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), ground(D?), ground(E?), To? =?= B? |
+    note(M?, To?, Log, Log1?),
+    route5(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, E?, OE, Log1).
+route5([msg(To, M)|Ms], A, OA?, B, OB?, C, [msg(To?, M?)|OC?], D, OD?, E, OE?, Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), ground(D?), ground(E?), To? =?= C? |
+    note(M?, To?, Log, Log1?),
+    route5(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, E?, OE, Log1).
+route5([msg(To, M)|Ms], A, OA?, B, OB?, C, OC?, D, [msg(To?, M?)|OD?], E, OE?, Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), ground(D?), ground(E?), To? =?= D? |
+    note(M?, To?, Log, Log1?),
+    route5(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, E?, OE, Log1).
+route5([msg(To, M)|Ms], A, OA?, B, OB?, C, OC?, D, OD?, E, [msg(To?, M?)|OE?], Log?) :-
+    ground(To?), ground(M?), ground(A?), ground(B?), ground(C?), ground(D?), ground(E?), To? =?= E? |
+    note(M?, To?, Log, Log1?),
+    route5(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, E?, OE, Log1).
+route5([msg(_, _)|Ms], A, OA?, B, OB?, C, OC?, D, OD?, E, OE?, Log?) :- otherwise |
+    route5(Ms?, A?, OA, B?, OB, C?, OC, D?, OD, E?, OE, Log).
+route5([], _, [], _, [], _, [], _, [], _, [], []).

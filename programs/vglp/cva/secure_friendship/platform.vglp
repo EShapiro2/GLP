@@ -40,6 +40,8 @@ restore(Peer, Peer)
 ;
 restore_friend(Peer, Peer, Peer)
 ;
+restore_replaced_friend(Peer, Peer, Peer, Peer)
+;
 replace(Peer, Peer, Peer)
 ;
 vouch(Peer, Peer, Peer)
@@ -53,6 +55,8 @@ accept_custodian(Peer, Peer, Peer)
 replace_custodian(Peer, Peer, Peer)
 ;
 tell_friends(Peer, Peer, Peer, Peer)
+;
+tell_change(Peer, Peer, Peer, Peer)
 .
 
 Proposal ::=
@@ -124,7 +128,13 @@ recovered(Peer)
 ;
 state_loss
 ;
+accepted(Peer, Peer)
+;
+records_replacement(Peer, Peer, Peer)
+;
 recovered_friend(Peer, Peer)
+;
+recovered_replaced(Peer, Peer, Peer)
 ;
 asked(Peer, Peer)
 ;
@@ -133,8 +143,6 @@ vouched(Peer, Peer)
 received_vouch(Peer, Peer)
 ;
 holds_statement(Peer, Peer, Peer)
-;
-accepted(Peer, Peer)
 ;
 learned_friend(Peer, Peer, Peer)
 .
@@ -168,7 +176,13 @@ atom_of(g(recovered, [p(V1)]), shown(recovered(V1?)))
 .
 atom_of(g(state_loss, []), shown(state_loss))
 .
+atom_of(g(accepted, [p(V1), p(V2)]), shown(accepted(V1?, V2?)))
+.
+atom_of(g(records_replacement, [p(V1), p(V2), p(V3)]), shown(records_replacement(V1?, V2?, V3?)))
+.
 atom_of(g(recovered_friend, [p(V1), p(V2)]), shown(recovered_friend(V1?, V2?)))
+.
+atom_of(g(recovered_replaced, [p(V1), p(V2), p(V3)]), shown(recovered_replaced(V1?, V2?, V3?)))
 .
 atom_of(g(asked, [p(V1), p(V2)]), shown(asked(V1?, V2?)))
 .
@@ -177,8 +191,6 @@ atom_of(g(vouched, [p(V1), p(V2)]), shown(vouched(V1?, V2?)))
 atom_of(g(received_vouch, [p(V1), p(V2)]), shown(received_vouch(V1?, V2?)))
 .
 atom_of(g(holds_statement, [p(V1), p(V2), p(V3)]), shown(holds_statement(V1?, V2?, V3?)))
-.
-atom_of(g(accepted, [p(V1), p(V2)]), shown(accepted(V1?, V2?)))
 .
 atom_of(g(learned_friend, [p(V1), p(V2), p(V3)]), shown(learned_friend(V1?, V2?, V3?)))
 .
@@ -191,7 +203,7 @@ env_atom(state_loss, [g(state_loss, [])])
 env_atom(_, []) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(name_custodian, [], [rs(guarded, [atom(custodian, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(fixed, []), atom(custodian, [role(2)])]), rs(unguarded, [atom(custodian_of, [role(1)])], [], [atom(identity, [])], [])]), schema(identity_record, [num('Share'), num('Double')], [rs(guarded, [atom(fixed, []), atom(threshold, [num('Share')])], [], [atom(identity, [])], [atom(fixed, [])])]), schema(tell, [], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(friend, [role(3)])], []), rs(unguarded, [atom(records_friend, [role(1), role(3)])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_friend, [role(1), role(3)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(tell_end, [], [rs(unguarded, [], [atom(records_friend, [role(2), role(3)])], [atom(identity, []), atom(friend, [role(2)])], []), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [atom(friend, [role(3)])]), rs(unguarded, [], [], [atom(identity, [])], [atom(friend, [role(2)])])]), schema(send_record, [pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(fixed, []), atom(custodian, [pvar('Carol')])], []), rs(unguarded, [atom(records_custodian, [role(1), pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_custodian, [role(1), pvar('Carol')])])]), schema(send_threshold, [num('Share')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(threshold, [num('Share')])], []), rs(unguarded, [atom(records_threshold, [role(1), num('Share')])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_threshold, [role(1), num('Share')])])]), schema(checkpoint, [], [rs(unguarded, [atom(checkpoint, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(checkpoint, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(restore, [], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)])], []), rs(unguarded, [atom(friend, [role(1)]), atom(recovered, [role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [role(1)])])]), schema(restore_friend, [pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)]), atom(records_friend, [role(2), pvar('Carol')])], []), rs(unguarded, [atom(friend, [pvar('Carol')]), atom(recovered_friend, [pvar('Carol'), role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [pvar('Carol')])])]), schema(replace, [pvar('Alice')], [rs(unguarded, [atom(asked, [role(2), pvar('Alice')])], [], [atom(identity, []), atom(custodian_of, [pvar('Alice')])], [atom(asked, [role(2), pvar('Alice')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(vouch, [pvar('Alice')], [rs(guarded, [atom(vouched, [role(2), pvar('Alice')])], [], [atom(identity, []), atom(asked, [role(2), pvar('Alice')]), atom(custodian_of, [pvar('Alice')])], [atom(vouched, [role(2), pvar('Alice')])]), rs(unguarded, [atom(received_vouch, [role(1), pvar('Alice')])], [], [atom(identity, [])], [])]), schema(present, [pvar('Carol'), pvar('Alice')], [rs(unguarded, [atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')])], [], [atom(identity, []), atom(friend, [pvar('Alice')]), atom(records_custodian, [pvar('Alice'), pvar('Carol')])], [atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(received_vouch, [pvar('Carol'), pvar('Alice')])], [])]), schema(accept, [], [rs(unguarded, [atom(friend, [role(3)]), atom(accepted, [role(3), role(2)])], [atom(friend, [role(2)])], [atom(identity, []), atom(holds_statement, [pvar('Carol'), role(3), role(2)]), atom(records_threshold, [role(2), num('Share')])], [atom(accepted, [role(3), role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), rs(unguarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [])]), schema(accept_custodian, [], [rs(unguarded, [atom(custodian, [role(3)])], [atom(custodian, [role(2)])], [atom(identity, []), atom(accepted, [role(3), role(2)])], []), rs(unguarded, [], [atom(custodian_of, [role(1)])], [atom(identity, [])], []), rs(unguarded, [atom(custodian_of, [role(1)])], [], [atom(identity, [])], [])]), schema(replace_custodian, [pvar('Dave'), pvar('Alice')], [rs(unguarded, [], [atom(records_custodian, [pvar('Dave'), pvar('Alice')])], [atom(identity, []), atom(accepted, [pvar('Alicia'), pvar('Alice')])], [])]), schema(tell_friends, [pvar('Alice'), pvar('Dave')], [rs(unguarded, [], [], [atom(identity, []), atom(accepted, [role(2), pvar('Alice')]), atom(records_friend, [pvar('Alice'), pvar('Dave')])], []), rs(unguarded, [atom(learned_friend, [role(1), pvar('Alice'), pvar('Dave')])], [], [atom(identity, [])], [atom(learned_friend, [role(1), pvar('Alice'), pvar('Dave')])])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(name_custodian, [], [rs(guarded, [atom(custodian, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(fixed, []), atom(custodian, [role(2)])]), rs(unguarded, [atom(custodian_of, [role(1)])], [], [atom(identity, [])], [])]), schema(identity_record, [num('Share'), num('Double')], [rs(guarded, [atom(fixed, []), atom(threshold, [num('Share')])], [], [atom(identity, [])], [atom(fixed, [])])]), schema(tell, [], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(friend, [role(3)])], []), rs(unguarded, [atom(records_friend, [role(1), role(3)])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_friend, [role(1), role(3)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(tell_end, [], [rs(unguarded, [], [atom(records_friend, [role(2), role(3)])], [atom(identity, []), atom(friend, [role(2)])], []), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [atom(friend, [role(3)])]), rs(unguarded, [], [], [atom(identity, [])], [atom(friend, [role(2)])])]), schema(send_record, [pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(fixed, []), atom(custodian, [pvar('Carol')])], []), rs(unguarded, [atom(records_custodian, [role(1), pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_custodian, [role(1), pvar('Carol')])])]), schema(send_threshold, [num('Share')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(threshold, [num('Share')])], []), rs(unguarded, [atom(records_threshold, [role(1), num('Share')])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_threshold, [role(1), num('Share')])])]), schema(checkpoint, [], [rs(unguarded, [atom(checkpoint, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(checkpoint, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(restore, [], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)])], []), rs(unguarded, [atom(friend, [role(1)]), atom(recovered, [role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(accepted, [any, role(1)]), atom(friend, [role(1)])])]), schema(restore_friend, [pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)]), atom(records_friend, [role(2), pvar('Carol')])], [atom(records_replacement, [role(2), pvar('Carol'), any])]), rs(unguarded, [atom(friend, [pvar('Carol')]), atom(recovered_friend, [pvar('Carol'), role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [pvar('Carol')])])]), schema(restore_replaced_friend, [pvar('Dave'), pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)]), atom(records_friend, [role(2), pvar('Carol')]), atom(records_replacement, [role(2), pvar('Carol'), pvar('Dave')])], []), rs(unguarded, [atom(friend, [pvar('Dave')]), atom(recovered_replaced, [role(1), pvar('Dave'), pvar('Carol')])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [pvar('Dave')])])]), schema(replace, [pvar('Alice')], [rs(unguarded, [atom(asked, [role(2), pvar('Alice')])], [], [atom(identity, []), atom(custodian_of, [pvar('Alice')])], [atom(asked, [role(2), pvar('Alice')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(vouch, [pvar('Alice')], [rs(guarded, [atom(vouched, [role(2), pvar('Alice')])], [], [atom(identity, []), atom(asked, [role(2), pvar('Alice')]), atom(custodian_of, [pvar('Alice')])], [atom(vouched, [role(2), pvar('Alice')])]), rs(unguarded, [atom(received_vouch, [role(1), pvar('Alice')])], [], [atom(identity, [])], [])]), schema(present, [pvar('Carol'), pvar('Alice')], [rs(unguarded, [atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')])], [], [atom(identity, []), atom(friend, [pvar('Alice')]), atom(records_custodian, [pvar('Alice'), pvar('Carol')])], [atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(received_vouch, [pvar('Carol'), pvar('Alice')])], [])]), schema(accept, [pvar('Alice')], [rs(unguarded, [atom(friend, [role(2)]), atom(accepted, [role(2), pvar('Alice')])], [atom(friend, [pvar('Alice')])], [atom(identity, []), atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')]), atom(records_threshold, [pvar('Alice'), num('Share')])], [atom(accepted, [role(2), pvar('Alice')])]), rs(unguarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [])]), schema(accept_custodian, [pvar('Alice')], [rs(unguarded, [atom(custodian, [role(2)])], [atom(custodian, [pvar('Alice')])], [atom(identity, []), atom(accepted, [role(2), pvar('Alice')])], []), rs(unguarded, [atom(custodian_of, [role(1)])], [], [atom(identity, [])], [])]), schema(replace_custodian, [pvar('Dave'), pvar('Alice')], [rs(unguarded, [], [atom(records_custodian, [pvar('Dave'), pvar('Alice')])], [atom(identity, []), atom(accepted, [pvar('Alicia'), pvar('Alice')])], [])]), schema(tell_friends, [pvar('Alice'), pvar('Dave')], [rs(unguarded, [], [], [atom(identity, []), atom(accepted, [role(2), pvar('Alice')]), atom(records_friend, [pvar('Alice'), pvar('Dave')])], []), rs(unguarded, [atom(learned_friend, [role(1), pvar('Alice'), pvar('Dave')])], [], [atom(identity, [])], [atom(learned_friend, [role(1), pvar('Alice'), pvar('Dave')])])]), schema(tell_change, [pvar('Alice'), pvar('Alicia')], [rs(unguarded, [], [], [atom(identity, []), atom(accepted, [pvar('Alicia'), pvar('Alice')]), atom(friend, [role(2)])], []), rs(unguarded, [atom(records_replacement, [role(1), pvar('Alice'), pvar('Alicia')])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_replacement, [role(1), pvar('Alice'), pvar('Alicia')])])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -219,9 +231,11 @@ schema_entry(send_threshold, schema(send_threshold, [num('Share')], [rs(unguarde
 .
 schema_entry(checkpoint, schema(checkpoint, [], [rs(unguarded, [atom(checkpoint, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(checkpoint, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]))
 .
-schema_entry(restore, schema(restore, [], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)])], []), rs(unguarded, [atom(friend, [role(1)]), atom(recovered, [role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [role(1)])])]))
+schema_entry(restore, schema(restore, [], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)])], []), rs(unguarded, [atom(friend, [role(1)]), atom(recovered, [role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(accepted, [any, role(1)]), atom(friend, [role(1)])])]))
 .
-schema_entry(restore_friend, schema(restore_friend, [pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)]), atom(records_friend, [role(2), pvar('Carol')])], []), rs(unguarded, [atom(friend, [pvar('Carol')]), atom(recovered_friend, [pvar('Carol'), role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [pvar('Carol')])])]))
+schema_entry(restore_friend, schema(restore_friend, [pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)]), atom(records_friend, [role(2), pvar('Carol')])], [atom(records_replacement, [role(2), pvar('Carol'), any])]), rs(unguarded, [atom(friend, [pvar('Carol')]), atom(recovered_friend, [pvar('Carol'), role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [pvar('Carol')])])]))
+.
+schema_entry(restore_replaced_friend, schema(restore_replaced_friend, [pvar('Dave'), pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)]), atom(records_friend, [role(2), pvar('Carol')]), atom(records_replacement, [role(2), pvar('Carol'), pvar('Dave')])], []), rs(unguarded, [atom(friend, [pvar('Dave')]), atom(recovered_replaced, [role(1), pvar('Dave'), pvar('Carol')])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [pvar('Dave')])])]))
 .
 schema_entry(replace, schema(replace, [pvar('Alice')], [rs(unguarded, [atom(asked, [role(2), pvar('Alice')])], [], [atom(identity, []), atom(custodian_of, [pvar('Alice')])], [atom(asked, [role(2), pvar('Alice')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
@@ -229,13 +243,15 @@ schema_entry(vouch, schema(vouch, [pvar('Alice')], [rs(guarded, [atom(vouched, [
 .
 schema_entry(present, schema(present, [pvar('Carol'), pvar('Alice')], [rs(unguarded, [atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')])], [], [atom(identity, []), atom(friend, [pvar('Alice')]), atom(records_custodian, [pvar('Alice'), pvar('Carol')])], [atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(received_vouch, [pvar('Carol'), pvar('Alice')])], [])]))
 .
-schema_entry(accept, schema(accept, [], [rs(unguarded, [atom(friend, [role(3)]), atom(accepted, [role(3), role(2)])], [atom(friend, [role(2)])], [atom(identity, []), atom(holds_statement, [pvar('Carol'), role(3), role(2)]), atom(records_threshold, [role(2), num('Share')])], [atom(accepted, [role(3), role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), rs(unguarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [])]))
+schema_entry(accept, schema(accept, [pvar('Alice')], [rs(unguarded, [atom(friend, [role(2)]), atom(accepted, [role(2), pvar('Alice')])], [atom(friend, [pvar('Alice')])], [atom(identity, []), atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')]), atom(records_threshold, [pvar('Alice'), num('Share')])], [atom(accepted, [role(2), pvar('Alice')])]), rs(unguarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [])]))
 .
-schema_entry(accept_custodian, schema(accept_custodian, [], [rs(unguarded, [atom(custodian, [role(3)])], [atom(custodian, [role(2)])], [atom(identity, []), atom(accepted, [role(3), role(2)])], []), rs(unguarded, [], [atom(custodian_of, [role(1)])], [atom(identity, [])], []), rs(unguarded, [atom(custodian_of, [role(1)])], [], [atom(identity, [])], [])]))
+schema_entry(accept_custodian, schema(accept_custodian, [pvar('Alice')], [rs(unguarded, [atom(custodian, [role(2)])], [atom(custodian, [pvar('Alice')])], [atom(identity, []), atom(accepted, [role(2), pvar('Alice')])], []), rs(unguarded, [atom(custodian_of, [role(1)])], [], [atom(identity, [])], [])]))
 .
 schema_entry(replace_custodian, schema(replace_custodian, [pvar('Dave'), pvar('Alice')], [rs(unguarded, [], [atom(records_custodian, [pvar('Dave'), pvar('Alice')])], [atom(identity, []), atom(accepted, [pvar('Alicia'), pvar('Alice')])], [])]))
 .
 schema_entry(tell_friends, schema(tell_friends, [pvar('Alice'), pvar('Dave')], [rs(unguarded, [], [], [atom(identity, []), atom(accepted, [role(2), pvar('Alice')]), atom(records_friend, [pvar('Alice'), pvar('Dave')])], []), rs(unguarded, [atom(learned_friend, [role(1), pvar('Alice'), pvar('Dave')])], [], [atom(identity, [])], [atom(learned_friend, [role(1), pvar('Alice'), pvar('Dave')])])]))
+.
+schema_entry(tell_change, schema(tell_change, [pvar('Alice'), pvar('Alicia')], [rs(unguarded, [], [], [atom(identity, []), atom(accepted, [pvar('Alicia'), pvar('Alice')]), atom(friend, [role(2)])], []), rs(unguarded, [atom(records_replacement, [role(1), pvar('Alice'), pvar('Alicia')])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_replacement, [role(1), pvar('Alice'), pvar('Alicia')])])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -252,7 +268,7 @@ schema_numeric(unfriend, numeric([cj(every, true)], [], []))
 .
 schema_numeric(name_custodian, numeric([cj(every, true)], [], []))
 .
-schema_numeric(identity_record, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(custodian, [pvar('X1')]), fcons(true)), num('Share'))), cj(every, eq(num('Double'), mul(num('Share'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(custodian, [pvar('X2')]), fcons(true)), num('Double')))], [], []))
+schema_numeric(identity_record, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(custodian, [pvar('X1')]), fcons(true)), num('Share'))), cj(every, eq(num('Double'), mul(num('Share'), num(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(custodian, [pvar('X2')]), fcons(true)), num('Double')))], [], []))
 .
 schema_numeric(tell, numeric([cj(every, true)], [], []))
 .
@@ -268,19 +284,23 @@ schema_numeric(restore, numeric([cj(every, true)], [], []))
 .
 schema_numeric(restore_friend, numeric([cj(every, true)], [], []))
 .
+schema_numeric(restore_replaced_friend, numeric([cj(every, true)], [], []))
+.
 schema_numeric(replace, numeric([cj(every, true)], [], []))
 .
 schema_numeric(vouch, numeric([cj(every, true)], [], []))
 .
 schema_numeric(present, numeric([cj(every, true)], [], []))
 .
-schema_numeric(accept, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(holds_statement, [pvar('X1'), role(3), role(2)]), fcons(true)), num('Share')))], [pvar('Carol'), num('Share')], []))
+schema_numeric(accept, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(holds_statement, [pvar('X1'), role(2), pvar('Alice')]), fcons(true)), num('Share')))], [pvar('Carol'), num('Share')], []))
 .
 schema_numeric(accept_custodian, numeric([cj(every, true)], [], []))
 .
 schema_numeric(replace_custodian, numeric([cj(every, true)], [pvar('Alicia')], []))
 .
 schema_numeric(tell_friends, numeric([cj(every, true)], [], []))
+.
+schema_numeric(tell_change, numeric([cj(every, true)], [], []))
 .
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
@@ -319,6 +339,8 @@ schema_base(restore, 1)
 .
 schema_base(restore_friend, 1)
 .
+schema_base(restore_replaced_friend, 1)
+.
 schema_base(replace, 2)
 .
 schema_base(vouch, 1)
@@ -332,6 +354,8 @@ schema_base(accept_custodian, 1)
 schema_base(replace_custodian, 1)
 .
 schema_base(tell_friends, 1)
+.
+schema_base(tell_change, 1)
 .
 schema_base(_, 1) :- otherwise | true.
 
@@ -366,6 +390,8 @@ schema_ones(restore, [])
 .
 schema_ones(restore_friend, [])
 .
+schema_ones(restore_replaced_friend, [])
+.
 schema_ones(replace, [])
 .
 schema_ones(vouch, [])
@@ -379,6 +405,8 @@ schema_ones(accept_custodian, [])
 schema_ones(replace_custodian, [])
 .
 schema_ones(tell_friends, [])
+.
+schema_ones(tell_change, [])
 .
 schema_ones(_, []) :- otherwise | true.
 
@@ -430,19 +458,23 @@ binding_of(restore(V1, V2), restore, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(restore_friend(V1, V2, V3), restore_friend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?))])
 .
+binding_of(restore_replaced_friend(V1, V2, V3, V4), restore_replaced_friend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(pvar('Carol'), p(V4?))])
+.
 binding_of(replace(V1, V2, V3), replace, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Alice'), p(V3?))])
 .
 binding_of(vouch(V1, V2, V3), vouch, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Alice'), p(V3?))])
 .
 binding_of(present(V1, V2, V3, V4), present, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(pvar('Alice'), p(V4?))])
 .
-binding_of(accept(V1, V2, V3), accept, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(pvar('Carol'), lv(accept, 'Carol')), b(num('Share'), lv(accept, 'Share'))])
+binding_of(accept(V1, V2, V3), accept, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Alice'), p(V3?)), b(pvar('Carol'), lv(accept, 'Carol')), b(num('Share'), lv(accept, 'Share'))])
 .
-binding_of(accept_custodian(V1, V2, V3), accept_custodian, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
+binding_of(accept_custodian(V1, V2, V3), accept_custodian, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Alice'), p(V3?))])
 .
 binding_of(replace_custodian(V1, V2, V3), replace_custodian, [b(role(1), p(V1?)), b(pvar('Dave'), p(V2?)), b(pvar('Alice'), p(V3?)), b(pvar('Alicia'), lv(replace_custodian, 'Alicia'))])
 .
 binding_of(tell_friends(V1, V2, V3, V4), tell_friends, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Alice'), p(V3?)), b(pvar('Dave'), p(V4?))])
+.
+binding_of(tell_change(V1, V2, V3, V4), tell_change, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Alice'), p(V3?)), b(pvar('Alicia'), p(V4?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -598,6 +630,20 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(pvar('Carol'), B?, D?, V3)
 .
+class_of(restore_replaced_friend, B, D, restore_replaced_friend(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(pvar('Dave'), B?, D?, V3)
+,
+val_peer(pvar('Carol'), B?, D?, V4)
+.
 class_of(replace, B, D, replace(V1?, V2?, V3?))
 :-
 ground(B?)
@@ -646,7 +692,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_peer(role(3), B?, D?, V3)
+val_peer(pvar('Alice'), B?, D?, V3)
 .
 class_of(accept_custodian, B, D, accept_custodian(V1?, V2?, V3?))
 :-
@@ -658,7 +704,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_peer(role(3), B?, D?, V3)
+val_peer(pvar('Alice'), B?, D?, V3)
 .
 class_of(replace_custodian, B, D, replace_custodian(V1?, V2?, V3?))
 :-
@@ -685,6 +731,20 @@ val_peer(role(2), B?, D?, V2)
 val_peer(pvar('Alice'), B?, D?, V3)
 ,
 val_peer(pvar('Dave'), B?, D?, V4)
+.
+class_of(tell_change, B, D, tell_change(V1?, V2?, V3?, V4?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(pvar('Alice'), B?, D?, V3)
+,
+val_peer(pvar('Alicia'), B?, D?, V4)
 .
 
 procedure name_class(Proposal?, GAtoms?, Class).
@@ -821,7 +881,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("Secure Friendship\nSecure Friendship extends Friendship.\nThe *identity record* of Alice is her *identity custodians*, persons she names, and her *threshold*, a share of them greater than half. The *records* of Alice are her friends and, for each friend, the friends of that friend. Alice suffers a *state loss* when her machine loses some or all of its state and she keeps her private key, and an *identity loss* when she loses her private key.\nAlice, Bob and Carol are persons, Alicia a new identity of Alice.\n1. ■ Identity record: Alice may fix her identity record, once. It then changes only by the replacement of a custodian's lost identity (Secure Friendship:5).\n2. ■ Friendship updates. Tell: Alice tells each of her friends when she becomes a friend of Bob (Friendship:1) and when she ends a friendship (Friendship:2), and the friend records it. Send record: Alice sends Bob, when they become friends, her friends and her identity record, and Bob keeps them.\n3. ■ Checkpoint: Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.\n4. ■ State recovery. Restore: After a state loss of Alice, each friend of Alice sends her the friendship updates and the checkpoints they keep, and Alice records them again.\n5. ◆ Identity replacement. Replace: After an identity loss, Alice may establish a new identity, Alicia (Knowledge:1), and ask her identity custodians to vouch for it. Vouch: Carol, an identity custodian of Alice, may vouch, once, that Alicia is Alice. Accept: Bob, a friend of Alice, accepts Alicia in place of Alice once at least the threshold of the identity custodians he records for Alice have vouched; Alicia is then his friend in place of Alice, and his identity custodian if Alice was. Bob tells Alicia the friends of Alice he records, and tells his friends of the change.", with(environment([state_loss], reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(name_custodian, ['Alice', 'Carol'], [], [rs(guarded, [atom(custodian, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(fixed, []), atom(custodian, [role(2)])]), rs(unguarded, [atom(custodian_of, [role(1)])], [], [atom(identity, [])], [])]), qschema(identity_record, ['Alice'], [num('Share'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(custodian, [svar('X1')]), fcons(true)), num('Share')), and(eq(num('Double'), mul(num('Share'), val(2))), lt(cardinality([svar('X2')], role(1), atom(custodian, [svar('X2')]), fcons(true)), num('Double')))), [rs(guarded, [atom(fixed, []), atom(threshold, [num('Share')])], [], [atom(identity, [])], [atom(fixed, [])])], [], []), schema(tell, ['Alice', 'Carol', 'Bob'], [], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(friend, [role(3)])], []), rs(unguarded, [atom(records_friend, [role(1), role(3)])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_friend, [role(1), role(3)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(tell_end, ['Carol', 'Alice', 'Bob'], [], [rs(unguarded, [], [atom(records_friend, [role(2), role(3)])], [atom(identity, []), atom(friend, [role(2)])], []), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [atom(friend, [role(3)])]), rs(unguarded, [], [], [atom(identity, [])], [atom(friend, [role(2)])])]), schema(send_record, ['Alice', 'Bob'], [pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(fixed, []), atom(custodian, [pvar('Carol')])], []), rs(unguarded, [atom(records_custodian, [role(1), pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_custodian, [role(1), pvar('Carol')])])]), schema(send_threshold, ['Alice', 'Bob'], [num('Share')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(threshold, [num('Share')])], []), rs(unguarded, [atom(records_threshold, [role(1), num('Share')])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_threshold, [role(1), num('Share')])])]), schema(checkpoint, ['Bob', 'Alice'], [], [rs(unguarded, [atom(checkpoint, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(checkpoint, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(restore, ['Bob', 'Alice'], [], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)])], []), rs(unguarded, [atom(friend, [role(1)]), atom(recovered, [role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [role(1)])])]), schema(restore_friend, ['Bob', 'Alice'], [pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)]), atom(records_friend, [role(2), pvar('Carol')])], []), rs(unguarded, [atom(friend, [pvar('Carol')]), atom(recovered_friend, [pvar('Carol'), role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [pvar('Carol')])])]), schema(replace, ['Carol', 'Alicia'], [pvar('Alice')], [rs(unguarded, [atom(asked, [role(2), pvar('Alice')])], [], [atom(identity, []), atom(custodian_of, [pvar('Alice')])], [atom(asked, [role(2), pvar('Alice')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(vouch, ['Carol', 'Alicia'], [pvar('Alice')], [rs(guarded, [atom(vouched, [role(2), pvar('Alice')])], [], [atom(identity, []), atom(asked, [role(2), pvar('Alice')]), atom(custodian_of, [pvar('Alice')])], [atom(vouched, [role(2), pvar('Alice')])]), rs(unguarded, [atom(received_vouch, [role(1), pvar('Alice')])], [], [atom(identity, [])], [])]), schema(present, ['Bob', 'Alicia'], [pvar('Carol'), pvar('Alice')], [rs(unguarded, [atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')])], [], [atom(identity, []), atom(friend, [pvar('Alice')]), atom(records_custodian, [pvar('Alice'), pvar('Carol')])], [atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(received_vouch, [pvar('Carol'), pvar('Alice')])], [])]), qschema(accept, ['Bob', 'Alice', 'Alicia'], [pvar('Carol'), num('Share')], [pvar('X1'), svar('X1'), num('X1')], ge(cardinality([svar('X1')], role(1), atom(holds_statement, [svar('X1'), role(3), role(2)]), fcons(true)), num('Share')), [rs(unguarded, [atom(friend, [role(3)]), atom(accepted, [role(3), role(2)])], [atom(friend, [role(2)])], [atom(identity, []), atom(holds_statement, [pvar('Carol'), role(3), role(2)]), atom(records_threshold, [role(2), num('Share')])], [atom(accepted, [role(3), role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), rs(unguarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [])], [], []), schema(accept_custodian, ['Bob', 'Alice', 'Alicia'], [], [rs(unguarded, [atom(custodian, [role(3)])], [atom(custodian, [role(2)])], [atom(identity, []), atom(accepted, [role(3), role(2)])], []), rs(unguarded, [], [atom(custodian_of, [role(1)])], [atom(identity, [])], []), rs(unguarded, [atom(custodian_of, [role(1)])], [], [atom(identity, [])], [])]), schema(replace_custodian, ['Bob'], [pvar('Dave'), pvar('Alice'), pvar('Alicia')], [rs(unguarded, [], [atom(records_custodian, [pvar('Dave'), pvar('Alice')])], [atom(identity, []), atom(accepted, [pvar('Alicia'), pvar('Alice')])], [])]), schema(tell_friends, ['Bob', 'Alicia'], [pvar('Alice'), pvar('Dave')], [rs(unguarded, [], [], [atom(identity, []), atom(accepted, [role(2), pvar('Alice')]), atom(records_friend, [pvar('Alice'), pvar('Dave')])], []), rs(unguarded, [atom(learned_friend, [role(1), pvar('Alice'), pvar('Dave')])], [], [atom(identity, [])], [atom(learned_friend, [role(1), pvar('Alice'), pvar('Dave')])])])])), pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Identity custodians", [custodian]), list("Custodian of", [custodian_of]), list("Vouch requests", [asked])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(unfriend, "Unfriend", [], none, "Friends", by([1])), act(name_custodian, "Name custodian", [], none, "Identity custodians", by([1])), act(identity_record, "Identity record", ["", "threshold"], none, "Identity custodians", by([1])), act(replace, "Replace", ["", "", "lost identity"], none, "Identity custodians", by([2])), act(present, "Present", [], none, "Identity custodians", by([2])), act(vouch, "Vouch", [], none, "Identity custodians", by([1]))], [], nolook, version(1, 1))))
+contract("Secure Friendship\nSecure Friendship extends Friendship.\nThe *identity record* of Alice is her *identity custodians*, persons she names, and her *threshold*, a share of them greater than half. The *records* of Alice are her friends and, for each friend, the friends of that friend. Alice suffers a *state loss* when her machine loses some or all of its state and she keeps her private key, and an *identity loss* when she loses her private key.\nAlice, Bob and Carol are persons, Alicia a new identity of Alice.\n1. ■ Identity record: Alice may fix her identity record, once. It then changes only by the replacement of a custodian's lost identity (Secure Friendship:5).\n2. ■ Friendship updates. Tell: Alice tells each of her friends when she becomes a friend of Bob (Friendship:1) and when she ends a friendship (Friendship:2), and the friend records it. Send record: Alice sends Bob, when they become friends, her friends and her identity record, and Bob keeps them.\n3. ■ Checkpoint: Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.\n4. ■ State recovery. Restore: After a state loss of Alice, each friend of Alice sends her the friendship updates and the checkpoints they keep, and Alice records them again.\n5. ◆ Identity replacement. Replace: After an identity loss, Alice may establish a new identity, Alicia (Knowledge:1), and ask her identity custodians to vouch for it. Vouch: Carol, an identity custodian of Alice, may vouch, once, that Alicia is Alice. Accept: Bob, a friend of Alice, accepts Alicia in place of Alice once at least the threshold of the identity custodians he records for Alice have vouched; Alicia is then his friend in place of Alice, and his identity custodian if Alice was. Bob tells Alicia the friends of Alice he records, and tells his friends of the change.", with(environment([state_loss], reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)])], [atom(friend, [role(1)])])]), schema(unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(name_custodian, ['Alice', 'Carol'], [], [rs(guarded, [atom(custodian, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)])], [atom(fixed, []), atom(custodian, [role(2)])]), rs(unguarded, [atom(custodian_of, [role(1)])], [], [atom(identity, [])], [])]), qschema(identity_record, ['Alice'], [num('Share'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(custodian, [svar('X1')]), fcons(true)), num('Share')), and(eq(num('Double'), mul(num('Share'), num(2))), lt(cardinality([svar('X2')], role(1), atom(custodian, [svar('X2')]), fcons(true)), num('Double')))), [rs(guarded, [atom(fixed, []), atom(threshold, [num('Share')])], [], [atom(identity, [])], [atom(fixed, [])])], [], []), schema(tell, ['Alice', 'Carol', 'Bob'], [], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(friend, [role(3)])], []), rs(unguarded, [atom(records_friend, [role(1), role(3)])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_friend, [role(1), role(3)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(tell_end, ['Carol', 'Alice', 'Bob'], [], [rs(unguarded, [], [atom(records_friend, [role(2), role(3)])], [atom(identity, []), atom(friend, [role(2)])], []), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [atom(friend, [role(3)])]), rs(unguarded, [], [], [atom(identity, [])], [atom(friend, [role(2)])])]), schema(send_record, ['Alice', 'Bob'], [pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(fixed, []), atom(custodian, [pvar('Carol')])], []), rs(unguarded, [atom(records_custodian, [role(1), pvar('Carol')])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_custodian, [role(1), pvar('Carol')])])]), schema(send_threshold, ['Alice', 'Bob'], [num('Share')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(threshold, [num('Share')])], []), rs(unguarded, [atom(records_threshold, [role(1), num('Share')])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_threshold, [role(1), num('Share')])])]), schema(checkpoint, ['Bob', 'Alice'], [], [rs(unguarded, [atom(checkpoint, [role(2)])], [], [atom(identity, []), atom(friend, [role(2)])], [atom(checkpoint, [role(2)])]), rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(1)])], [])]), schema(restore, ['Bob', 'Alice'], [], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)])], []), rs(unguarded, [atom(friend, [role(1)]), atom(recovered, [role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(accepted, [any, role(1)]), atom(friend, [role(1)])])]), schema(restore_friend, ['Bob', 'Alice'], [pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)]), atom(records_friend, [role(2), pvar('Carol')])], [atom(records_replacement, [role(2), pvar('Carol'), any])]), rs(unguarded, [atom(friend, [pvar('Carol')]), atom(recovered_friend, [pvar('Carol'), role(1)])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [pvar('Carol')])])]), schema(restore_replaced_friend, ['Bob', 'Alice'], [pvar('Dave'), pvar('Carol')], [rs(unguarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(checkpoint, [role(2)]), atom(records_friend, [role(2), pvar('Carol')]), atom(records_replacement, [role(2), pvar('Carol'), pvar('Dave')])], []), rs(unguarded, [atom(friend, [pvar('Dave')]), atom(recovered_replaced, [role(1), pvar('Dave'), pvar('Carol')])], [], [atom(identity, []), atom(state_loss, [])], [atom(friend, [pvar('Dave')])])]), schema(replace, ['Carol', 'Alicia'], [pvar('Alice')], [rs(unguarded, [atom(asked, [role(2), pvar('Alice')])], [], [atom(identity, []), atom(custodian_of, [pvar('Alice')])], [atom(asked, [role(2), pvar('Alice')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(vouch, ['Carol', 'Alicia'], [pvar('Alice')], [rs(guarded, [atom(vouched, [role(2), pvar('Alice')])], [], [atom(identity, []), atom(asked, [role(2), pvar('Alice')]), atom(custodian_of, [pvar('Alice')])], [atom(vouched, [role(2), pvar('Alice')])]), rs(unguarded, [atom(received_vouch, [role(1), pvar('Alice')])], [], [atom(identity, [])], [])]), schema(present, ['Bob', 'Alicia'], [pvar('Carol'), pvar('Alice')], [rs(unguarded, [atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')])], [], [atom(identity, []), atom(friend, [pvar('Alice')]), atom(records_custodian, [pvar('Alice'), pvar('Carol')])], [atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(received_vouch, [pvar('Carol'), pvar('Alice')])], [])]), qschema(accept, ['Bob', 'Alicia'], [pvar('Alice'), pvar('Carol'), num('Share')], [pvar('X1'), svar('X1'), num('X1')], ge(cardinality([svar('X1')], role(1), atom(holds_statement, [svar('X1'), role(2), pvar('Alice')]), fcons(true)), num('Share')), [rs(unguarded, [atom(friend, [role(2)]), atom(accepted, [role(2), pvar('Alice')])], [atom(friend, [pvar('Alice')])], [atom(identity, []), atom(holds_statement, [pvar('Carol'), role(2), pvar('Alice')]), atom(records_threshold, [pvar('Alice'), num('Share')])], [atom(accepted, [role(2), pvar('Alice')])]), rs(unguarded, [atom(friend, [role(1)])], [], [atom(identity, [])], [])], [], []), schema(accept_custodian, ['Bob', 'Alicia'], [pvar('Alice')], [rs(unguarded, [atom(custodian, [role(2)])], [atom(custodian, [pvar('Alice')])], [atom(identity, []), atom(accepted, [role(2), pvar('Alice')])], []), rs(unguarded, [atom(custodian_of, [role(1)])], [], [atom(identity, [])], [])]), schema(replace_custodian, ['Bob'], [pvar('Dave'), pvar('Alice'), pvar('Alicia')], [rs(unguarded, [], [atom(records_custodian, [pvar('Dave'), pvar('Alice')])], [atom(identity, []), atom(accepted, [pvar('Alicia'), pvar('Alice')])], [])]), schema(tell_friends, ['Bob', 'Alicia'], [pvar('Alice'), pvar('Dave')], [rs(unguarded, [], [], [atom(identity, []), atom(accepted, [role(2), pvar('Alice')]), atom(records_friend, [pvar('Alice'), pvar('Dave')])], []), rs(unguarded, [atom(learned_friend, [role(1), pvar('Alice'), pvar('Dave')])], [], [atom(identity, [])], [atom(learned_friend, [role(1), pvar('Alice'), pvar('Dave')])])]), schema(tell_change, ['Bob', 'Carol'], [pvar('Alice'), pvar('Alicia')], [rs(unguarded, [], [], [atom(identity, []), atom(accepted, [pvar('Alicia'), pvar('Alice')]), atom(friend, [role(2)])], []), rs(unguarded, [atom(records_replacement, [role(1), pvar('Alice'), pvar('Alicia')])], [], [atom(identity, []), atom(friend, [role(1)])], [atom(records_replacement, [role(1), pvar('Alice'), pvar('Alicia')])])])])), pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Identity custodians", [custodian]), list("Custodian of", [custodian_of]), list("Vouch requests", [asked])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(unfriend, "Unfriend", [], none, "Friends", by([1])), act(name_custodian, "Name custodian", [], none, "Identity custodians", by([1])), act(identity_record, "Identity record", ["", "threshold"], none, "Identity custodians", by([1])), act(replace, "Replace", ["", "", "lost identity"], none, "Identity custodians", by([2])), act(present, "Present", [], none, "Identity custodians", by([2])), act(vouch, "Vouch", [], none, "Identity custodians", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).

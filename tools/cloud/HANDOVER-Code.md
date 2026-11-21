@@ -64,3 +64,10 @@ Code #36 compacted twice and stays, by Udi's rule of 2026-11-20 14:32 UTC.  Afte
 - Calculus's second commit podf7o 1d9a33248 and 07e15a062 (Corporation): merge after the 47 records running in wt-ren, wt-rg, wt-q3 (scratchpad runq.sh, logs log_0..2); then record its 17 and Secure Friendship.  GO's fdc26d088 (Community Network's Found) merged after the queues started: rerun Lodging, Gigs, Rides, Community Market and every Community Network service.
 - Udi's yes, 2026-11-21 04:39 UTC: put /next (llohtv) on main and the live site tonight, once its checks pass.  Then: records done, fast tier + TY (running in wt-q3 on 5a39c70b1), VG and CAS, ff-merge to main, Website deploys, close #118.
 - GAI thread: cmsg_0189yZceJmej5oE7scfYctePWoPZBNb8M27MpMGNNZUPQq (gai/gsnp plays to the adopted contracts, off c48d926dd).
+- 2026-11-21 08:20 UTC: llohtv on main, e8ebce875 (fast tier + TY + VG on 7595edcf0: 4198 passed, 0 failed).  Website asked to deploy.  Left: Section CAS and #118 at the next nightly; the Finding 1 set (waits on GLP-Spec's exports guard and Udi), then reprint dgc by compile.sh, remove the 20 KNOWN_RED_CHECKS in finding1-krc-remove.txt.
+- Main since: ee7162e0c, 6c14d3381, ec20d0da9 (Secure Friendship, Audit PR 76).  llohtv 1246d8c85: SPM's play (c60g4u 4a7e0e2a) and vGLP's cvac mend 950cc0267, which reprints every platform: every cascade record to be recorded again at the nightly, after the Calculus mends toglp.py's val(N) for numbers (asked 13:10 UTC); GSC asked whether its checker should refuse val of a number.  Then llohtv to main.
+
+## After the fourth compaction (2026-11-21)
+
+- Branch head after aef905575: the last 22 records of the full recording (num(N), cvac mend, GSC val-number check), Secure Friendship recorded again, and its platform copied into programs/vglp/cva/secure_friendship/.
+- 2026-11-21 19:00 UTC: main a56485a68: every record printed again, and Secure Friendship recorded with SPM #2's four plays (PLAYLIMIT 60000000).  Fast tier at ff122013f: 4205 passed, 0 failed.  Sent to SPM #2, Website and, through the coordinator, Audit.  Next: Section CAS and #118 at the nightly; the Finding 1 set.
