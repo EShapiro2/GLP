@@ -15,7 +15,7 @@ After x tells z of the friendship of x and y, which requires z does not record t
 After x tells z of the end of the friendship of x and y: no longer z records the friendship of x and y.
 After x sends y the identity custodian z, which requires y does not record z as an identity custodian of x: y records z as an identity custodian of x.
 After x sends y the threshold n, which requires y does not record the threshold n of x: y records the threshold n of x.
-After x sends y a checkpoint of x's friends and x's identity record: y keeps a checkpoint of x.
+After x sends y a checkpoint of x's friends and x's identity record, which requires y does not keep a checkpoint of x: y keeps a checkpoint of x.
 After y restores the records of x, which requires x does not count y as a friend: x counts y as a friend and x has recovered records from y.
 After y restores the friendship of x with z, which requires x does not count z as a friend: x counts z as a friend and x has recovered the friendship with z from y.
 After w asks z to vouch that w is x, which requires z has not been asked to vouch that w is x: z has been asked to vouch that w is x.
