@@ -1,0 +1,2 @@
+Free Matching
+Free Matching instantiates Anonymous Matching with an integer budget, a forward costing one, and a gossip protocol of forwarding to any friend with the budget less one.
