@@ -87,15 +87,19 @@ GLDAO | Liquid Cooperative | Liquid-Cooperative | liquid_cooperative | gldao
 GAN | Ads | Ads | ads | gan
 GNG | Gigs | Gigs | gigs | gng
 GNL | Lodging | Lodging | lodging | gnl
-GNM | Marketplace | Marketplace | marketplace | gnm
+GNM | Community Market | Community-Market | community_market | gnm
 Notes | Notes | Notes | notes | notes
 Coins | Coins | Coins | coins | coins
 Bonds | Bonds | Bonds | bonds | bonds
 Shares | Shares | Shares | shares | shares
 Agora | Agora | Agora | agora | agora
 DAO | DAO | DAO | dao | dao
+Gossip | Gossip | Gossip | gossip | gossip
+Promoted Gossip | Promoted Gossip | Promoted-Gossip | promoted_gossip | promoted_gossip
 Matching | Matching | Matching | matching | matching
 Anonymous Matching | Anonymous Matching | Anonymous-Matching | anonymous_matching | anonymous_matching
+Free Matching | Free Matching | Free-Matching | free_matching | free_matching
+Promoted Matching | Promoted Matching | Promoted-Matching | promoted_matching | promoted_matching
 Dating | Dating | Dating | dating | dating
 Jobs | Jobs | Jobs | jobs | jobs
 Help | Help | Help | help | help

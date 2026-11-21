@@ -1,0 +1,21 @@
+% Gossip: the contract, the one copy, its owner's.
+% Owner: GM (Udi, 2026-11-19, approving the text, reported by the coordinator; Udi, 2026-11-20, "yes" to writing it, in the thread Grassroots Matching).
+% Paper: GM, Anonymous Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
+% Last changed: 2026-11-20, first written, the text as Udi approved it; the Logic pragmas are the Calculus's, written by adopt.py on 2026-11-21; no Interface pragmas yet.
+Gossip
+Gossip extends Friendship.
+*Posts* have a *budget*, a parameter of Gossip: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*, a parameter: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them.
+Alice and Bob are persons.
+1. ■ Post: Alice may make a post.
+2. ■ Tell: Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with a part of the rest of the budget, both according to the gossip protocol.
+Logic pragmas
+Gossip extends Friendship.
+*Posts* have a *budget*, a parameter of Gossip: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*, a parameter: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them.
+Alice and Bob are persons, Post a post, Budget, Rest and Part numbers.
+1. ■ Post: Alice may make Post with the budget Budget, provided Budget is a budget of a new post.
+2. ■ Tell: Alice may forward Post to Bob with the budget Part, provided Alice holds the post Post, Alice has the budget Budget for Post, Budget covers the cost of a forward leaving Rest, Alice and Bob are friends and the gossip protocol forwards Post to Bob with Part of Rest.
+Logic pragmas.
+Vocabulary: x holds the post p = post(x,p); y holds the post p from x = post_from(y,p,x); x has made the post p = made(x,p); x has the budget n for p = budget(x,p,n); n is a budget of a new post, for x = new_budget(x,n); n covers the cost of a forward leaving m, for x = covers(x,n,m); the gossip protocol forwards p to y with m of n, for x = protocol(x,p,y,m,n).
+After x makes p with the budget n, which requires x has not made the post p: x has made the post p, x holds the post p and x has the budget n for p.
+After x forwards p to y with the budget n: y holds the post p from x, y holds the post p and y has the budget n for p.
+Environment: n is a budget of a new post, for x; n covers the cost of a forward leaving m, for x; the gossip protocol forwards p to y with m of n, for x.

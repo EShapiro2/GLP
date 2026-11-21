@@ -1,0 +1,78 @@
+Anonymous Matching
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Person unfriend.  Alice may end her friendship with Bob.
+6. ■ Post.  Alice may make Post with the budget Budget, provided Budget is a budget of a new post.
+7. ■ Tell.  Alice may forward Post to Bob with the budget Part, provided Alice holds the post Post, Alice has the budget Budget for Post, Budget covers the cost of a forward leaving Rest, Alice and Bob are friends and the gossip protocol forwards Post to Bob with Part of Rest.
+8. ■ Return.  Alice may make a post.
+9. ■ Meet.  Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with the rest of the budget.
+10. ■ Enter.  Alice may create a ward, Wendy, and establish Wendy's identity by choosing Wendy's key pair, and Wendy must consent.
+11. ■ Make guardian.  Those who decide for Wendy may make Bob, a friend of a guardian of Wendy, a guardian and a friend of Wendy, with the consent of Bob.
+12. ■ Resign.  Bob may end his guardianship of Wendy.
+13. ■ End guardian.  Those who decide for Wendy, other than Bob, may end Bob's guardianship.
+14. ■ Guardian unfriend.  Bob may end his friendship with Wendy, which ends his guardianship.
+15. ■ Ward acquaint.  Wendy, a ward of Alice, and Bob may jointly come to know each other.
+16. ■ Ward befriend.  Wendy may enter a relation with Bob with the consent of Bob and Alice, provided Wendy and Bob know each other and Alice and Bob are friends.
+17. ■ Ward end.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+18. ■ Unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+19. ■ Ward unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+20. ■ Wards acquaint.  Wendy, a ward of Alice, and Will, a ward of Bob, may jointly come to know each other.
+21. ■ Wards befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+22. ■ Wards of one guardian befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+23. ■ Retire.  Those who decide for Wendy may retire Wendy; every guardianship and relation of Wendy then ends and Wendy can take no act.
+24. ■ Open server.  Carol may make her service Dave a rendezvous server.
+25. ■ Sign link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+26. ■ Invite by link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+27. ■ Use link.  Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
+28. ■ Present.  Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship.
+29. ■ Match.  Dave then gives each the address of the other.
+30. ■ Present 2.  Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own.
+31. ■ Match 2.  Dave then gives each the address of the other.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Person unfriend: Alice [Person unfriend]
+Post: Alice [Post] <post>
+Tell: Alice [Tell]
+Meet: Alice [Meet]
+  Carol: Alice asks for your consent to meet.
+Enter: Alice [Enter] <wendy>
+Make guardian: Bob [Make guardian] <wendy>
+  Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
+Resign: Bob [Resign]
+End guardian: Decider [End guardian] <bob>
+  Codecider: Decider asks for your consent to end guardian.
+Guardian unfriend: Bob [Guardian unfriend]
+Ward acquaint: Wendy [Ward acquaint] <bob>
+  Bob: Wendy asks for your consent to ward acquaint.
+Ward befriend: Wendy [Ward befriend]
+  Bob: Wendy asks for your consent to ward befriend.
+  Alice: Wendy asks for your consent to ward befriend.
+Ward end: Wendy [Ward end]
+Unfriend: Bob [Unfriend]
+Ward unfriend: Alice [Ward unfriend] <wendy> <bob>
+Wards acquaint: Wendy [Wards acquaint] <will>
+  Will: Wendy asks for your consent to wards acquaint.
+Wards befriend: Wendy [Wards befriend] <bob>
+  Will: Wendy asks for your consent to wards befriend.
+  Alice: Wendy asks for your consent to wards befriend.
+  Bob: Wendy asks for your consent to wards befriend.
+Wards of one guardian befriend: Wendy [Wards of one guardian befriend]
+  Will: Wendy asks for your consent to wards of one guardian befriend.
+  Alice: Wendy asks for your consent to wards of one guardian befriend.
+Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.
+Open server: Carol [Open server]
+Sign link: Alice [Sign link] <link>
+Invite by link: Alice [Invite by link]
+Use link: Bob [Use link] <alice> <link>
+Present: Alice [Present]
+Present 2: Alice [Present 2]
