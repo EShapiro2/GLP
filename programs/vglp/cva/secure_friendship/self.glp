@@ -33,8 +33,7 @@ imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
 imported procedure platform#dispatch(Stream(Ask(Question))?,
     PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 
-exported procedure play_replace(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
-    Stream(Sent(Cargo))).
+exported procedure play_replace(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_replace(LA?, LB?, LC?, LD?, N?) :-
     quartet([own([A1], propose(establish(A1?))), wait(holds(identity)),
              own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
