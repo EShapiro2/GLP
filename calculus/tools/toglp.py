@@ -342,8 +342,8 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     def arg(a):
         if a == '_':
             return "'_'"
-        if a.isdigit():
-            return 'val(%s)' % a
+        if a.isdigit():              # a number written in the contract: num(2), as GSC's term form has it (GLP programs/gsc/self.glp, Arg: val(C) is a constant of any type but a number)
+            return 'num(%s)' % a
         if '@' in a:                 # a thing with its signatures, Item@Alice@Bob: sgn(sgn(Item, Alice), Bob) (GSC, Section 3.2, signed terms)
             *t, s = a.split('@')
             return 'sgn(%s, %s)' % (arg('@'.join(t)), arg(s))
@@ -410,7 +410,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                     return env[a]
                 if is_local(a):
                     raise ValueError('%s: a place of a count that no state of numbers defines: %s' % (e['name'], a))
-                return arg(a) if not a.isdigit() else 'val(%s)' % a
+                return arg(a)
             cs = ['%s(%s, %s)' % (ARITH[l[1]], ex(l[2][0]), ex(l[2][1])) for l in comps]
             parts = cases + cs
             f = parts[-1] if parts else 'true'
@@ -450,7 +450,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             if m:
                 xs = ', '.join([o] + [q(a) for a in locs])
                 phi = count_phi(set(locs), cb) if locs else 'true'
-                cons.append('%s(cardinality([%s], %s, %s), %s)' % (cmp(CMP[m.group(1)]), xs, at, phi, arg(m.group(2)) if not m.group(2).isdigit() else 'val(%s)' % m.group(2)))
+                cons.append('%s(cardinality([%s], %s, %s), %s)' % (cmp(CMP[m.group(1)]), xs, at, phi, arg(m.group(2))))
                 return None, cons
         if exact is not None:
             return None, ['%s(cardinality([], %s, true), %s)' % (cmp('eq'), at, arg(exact))]
