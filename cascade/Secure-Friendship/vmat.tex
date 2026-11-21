@@ -1584,7 +1584,7 @@ c'_
 friend
 }}
 (
-\Bob
+Alice
 )
 \}
 ) \uplus 
@@ -1593,16 +1593,16 @@ friend
 friend
 }}
 (
-\mathit{Carol}
+\Bob
 )
 ,
 \mathit{\detokenize{
 accepted
 }}
 (
-\mathit{Carol}
+\Bob
 ,
-\Bob
+Alice
 )
 \}
 ,\\
@@ -1615,26 +1615,6 @@ c'_
 c_
 {
 \Bob
-}
- \setminus 
-\{
-\mathit{\detokenize{
-friend
-}}
-(
-\Alice
-)
-\}
-,\\
-&
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
 }
  \uplus 
 \{
@@ -1658,16 +1638,16 @@ holds_statement
 (
 Carol
 ,
-\mathit{Carol}
-,
 \Bob
+,
+Alice
 )
 ,
 \mathit{\detokenize{
 records_threshold
 }}
 (
-\Bob
+Alice
 ,
 Share
 )
@@ -1676,7 +1656,7 @@ Share
 friend
 }}
 (
-\Bob
+Alice
 )
  \in c_
 {
@@ -1686,24 +1666,9 @@ friend
 \mathit{\detokenize{
 identity
 }}
-,
-\mathit{\detokenize{
-friend
-}}
-(
-\Alice
-)
  \in c_
 {
 \Bob
-}
- \text{ and } 
-\mathit{\detokenize{
-identity
-}}
- \in c_
-{
-\mathit{Carol}
 }
 ,\\
 &
@@ -1712,9 +1677,9 @@ identity
 accepted
 }}
 (
-\mathit{Carol}
-,
 \Bob
+,
+Alice
 )
  \notin c_
 {
@@ -1734,9 +1699,9 @@ holds_statement
 ,
 X1
 ,
-\mathit{Carol}
-,
 \Bob
+,
+Alice
 )
 )
 \ge
@@ -1765,7 +1730,7 @@ c'_
 custodian
 }}
 (
-\Bob
+Alice
 )
 \}
 ) \uplus 
@@ -1774,7 +1739,7 @@ custodian
 custodian
 }}
 (
-\mathit{Carol}
+\Bob
 )
 \}
 , \qquad 
@@ -1786,25 +1751,6 @@ c'_
 c_
 {
 \Bob
-}
- \setminus 
-\{
-\mathit{\detokenize{
-custodian_of
-}}
-(
-\Alice
-)
-\}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
 }
  \uplus 
 \{
@@ -1826,16 +1772,16 @@ identity
 accepted
 }}
 (
-\mathit{Carol}
-,
 \Bob
+,
+Alice
 )
 ,
 \mathit{\detokenize{
 custodian
 }}
 (
-\Bob
+Alice
 )
  \in c_
 {
@@ -1845,24 +1791,9 @@ custodian
 \mathit{\detokenize{
 identity
 }}
-,
-\mathit{\detokenize{
-custodian_of
-}}
-(
-\Alice
-)
  \in c_
 {
 \Bob
-}
- \text{ and } 
-\mathit{\detokenize{
-identity
-}}
- \in c_
-{
-\mathit{Carol}
 }
 ,\\
 &
@@ -2010,6 +1941,105 @@ learned_friend
 Alice
 ,
 Dave
+)
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \emptyset
+\end{align*}
+\iffalse
+tell_change
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{\detokenize{
+records_replacement
+}}
+(
+\Alice
+,
+Alice
+,
+Alicia
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+accepted
+}}
+(
+Alicia
+,
+Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+records_replacement
+}}
+(
+\Alice
+,
+Alice
+,
+Alicia
 )
  \notin c_
 {
