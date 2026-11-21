@@ -26,7 +26,7 @@ Constitution certified; VMAT 32 displays; platform.vglp 8304 lines; platform.glp
 Consumers-Cooperative certified; VMAT 166 displays; platform.vglp 15119 lines; platform.glp 8387 lines
 Cooperative certified; VMAT 161 displays; platform.vglp 14877 lines; platform.glp 8291 lines
 Cooperative-DAO certified; VMAT 161 displays; platform.vglp 14877 lines; platform.glp 8291 lines
-Corporation certified; VMAT 157 displays; no interface-adopted.txt: the lines of its derived acts differ between Consumers' Cooperative and Shareholding Corporation: Issue for
+Corporation certified; VMAT 157 displays; platform.vglp 14692 lines; platform.glp 8205 lines; platform.glp loads
 DAO        certified; VMAT 18 displays; platform.vglp 7529 lines; platform.glp 5126 lines
 Dating     certified; VMAT 31 displays; platform.vglp 8202 lines; platform.glp 5409 lines
 Democratic-Community certified; VMAT 162 displays; platform.vglp 14909 lines; platform.glp 8307 lines

@@ -25,7 +25,7 @@ Constitution GO yes yes no
 Consumers-Cooperative GO yes yes no
 Cooperative GO yes yes no
 Cooperative-DAO GO yes yes no
-Corporation GO yes no no
+Corporation GO yes yes no
 DAO GCE yes yes no
 Dating none yes yes no
 Democratic-Community none no yes no
