@@ -16,22 +16,28 @@ start(Peer)
 ;
 refuel(Peer, Integer)
 ;
+split(Peer, Integer)
+;
 climb(Peer)
 ;
 mark(Peer)
+;
+double(Peer, Integer, Integer)
 .
 
 Proposal ::=
 start(Peer)
 ;
 refuel(Peer, Integer)
+;
+split(Peer, Integer)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Start", [act(start, 1, [1], [forb(started, [])], [], [], [], [])]), button("Refuel", [act(refuel, 1, [1], [req(started, [])], [], [], [], [])])])
+Request? =::= social_menu([button("Start", [act(start, 1, [1], [forb(started, [])], [], [], [], [])]), button("Refuel", [act(refuel, 1, [1], [req(started, [])], [], [], [], [])]), button("Split", [act(split, 1, [1], [req(started, [])], [], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -52,7 +58,11 @@ level(Integer)
 ;
 fuel
 ;
+halve(Integer)
+;
 marked(Integer)
+;
+doubled(Integer)
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -62,12 +72,16 @@ atom_of(g(level, [n(V1)]), shown(level(V1?)))
 .
 atom_of(g(fuel, []), shown(fuel))
 .
+atom_of(g(halve, [n(V1)]), shown(halve(V1?)))
+.
 atom_of(g(marked, [n(V1)]), shown(marked(V1?)))
+.
+atom_of(g(doubled, [n(V1)]), shown(doubled(V1?)))
 .
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), schema(refuel, [num(k)], [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]), schema(climb, [], [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]), schema(mark, [], [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])])])
+contract_schemas([schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), schema(refuel, [num(k)], [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]), schema(split, [num(s)], [rs(guarded, [atom(halve, [num(s)])], [], [atom(started, [])], [])]), schema(climb, [], [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]), schema(mark, [], [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])]), schema(double, [num(s), num(d)], [rs(unguarded, [atom(doubled, [num(s)])], [], [atom(halve, [num(s)])], [atom(doubled, [num(s)])])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -75,9 +89,13 @@ schema_entry(start, schema(start, [], [rs(guarded, [atom(started, []), atom(leve
 .
 schema_entry(refuel, schema(refuel, [num(k)], [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]))
 .
+schema_entry(split, schema(split, [num(s)], [rs(guarded, [atom(halve, [num(s)])], [], [atom(started, [])], [])]))
+.
 schema_entry(climb, schema(climb, [], [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]))
 .
 schema_entry(mark, schema(mark, [], [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])]))
+.
+schema_entry(double, schema(double, [num(s), num(d)], [rs(unguarded, [atom(doubled, [num(s)])], [], [atom(halve, [num(s)])], [atom(doubled, [num(s)])])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -86,9 +104,13 @@ schema_numeric(start, numeric([cj(every, true)], [], []))
 .
 schema_numeric(refuel, numeric([cj(every, true)], [], []))
 .
+schema_numeric(split, numeric([cj(every, true)], [], []))
+.
 schema_numeric(climb, numeric([cj(at(1), eq(num(t1), plus(num(t), num(2)))), cj(at(1), lt(num(t), num(6)))], [num(t1), num(t)], []))
 .
 schema_numeric(mark, numeric([cj(at(1), eq(mul(num(3), num(m)), plus(num(t), num(3))))], [num(m), num(t)], []))
+.
+schema_numeric(double, numeric([cj(every, eq(num(d), mul(num(s), num(2))))], [], []))
 .
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
@@ -103,9 +125,13 @@ schema_base(start, 1)
 .
 schema_base(refuel, 1)
 .
+schema_base(split, 1)
+.
 schema_base(climb, 1)
 .
 schema_base(mark, 1)
+.
+schema_base(double, 1)
 .
 schema_base(_, 1) :- otherwise | true.
 
@@ -116,9 +142,13 @@ schema_ones(start, [])
 .
 schema_ones(refuel, [])
 .
+schema_ones(split, [])
+.
 schema_ones(climb, [])
 .
 schema_ones(mark, [])
+.
+schema_ones(double, [])
 .
 schema_ones(_, []) :- otherwise | true.
 
@@ -129,9 +159,13 @@ schema_vones(start, [vone_all])
 .
 schema_vones(refuel, [vone_all])
 .
+schema_vones(split, [vone_all])
+.
 schema_vones(climb, [vone_all])
 .
 schema_vones(mark, [vone_all])
+.
+schema_vones(double, [vone_all])
 .
 schema_vones(_, []) :- otherwise | true.
 
@@ -154,9 +188,13 @@ binding_of(start(V1), start, [b(role(1), p(V1?))])
 .
 binding_of(refuel(V1, V2), refuel, [b(role(1), p(V1?)), b(num(k), n(V2?))])
 .
+binding_of(split(V1, V2), split, [b(role(1), p(V1?)), b(num(s), n(V2?))])
+.
 binding_of(climb(V1), climb, [b(role(1), p(V1?)), b(num(t1), lv(climb, t1)), b(num(t), lv(climb, t))])
 .
 binding_of(mark(V1), mark, [b(role(1), p(V1?)), b(num(m), lv(mark, m)), b(num(t), lv(mark, t))])
+.
+binding_of(double(V1, V2, V3), double, [b(role(1), p(V1?)), b(num(s), n(V2?)), b(num(d), n(V3?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -178,6 +216,16 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_num(num(k), B?, V2)
 .
+class_of(split, B, D, split(V1?, V2?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_num(num(s), B?, V2)
+.
 class_of(climb, B, D, climb(V1?))
 :-
 ground(B?)
@@ -194,17 +242,33 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 .
+class_of(double, B, D, double(V1?, V2?, V3?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_num(num(s), B?, V2)
+,
+val_num(num(d), B?, V3)
+.
 
 procedure name_class(Proposal?, GAtoms?, Class).
 name_class(start(V1), _, start(V1?))
 .
 name_class(refuel(V1, V2), _, refuel(V1?, V2?))
 .
+name_class(split(V1, V2), _, split(V1?, V2?))
+.
 
 procedure request_name(Class?, PName).
 request_name(start(V1), pname(start(V1?)))
 .
 request_name(refuel(V1, V2), pname(refuel(V1?, V2?)))
+.
+request_name(split(V1, V2), pname(split(V1?, V2?)))
 .
 request_name(_, nopname) :- otherwise | true.
 
@@ -265,7 +329,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("", with([schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), schema(refuel, [num(k)], [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]), nschema(climb, [num(t), num(t1)], and(eq(num(t1), plus(num(t), num(2))), lt(num(t), num(6))), [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]), nschema(mark, [num(t), num(m)], eq(mul(num(3), num(m)), plus(num(t), num(3))), [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])])], pragmas([list("Levels", [level])], [act(start, "Start", [], none, "Levels", by([1])), act(refuel, "Refuel", [], none, "Levels", by([1]))], [], nolook, version(1, 1))))
+contract("", with([schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), schema(refuel, [num(k)], [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]), schema(split, [num(s)], [rs(guarded, [atom(halve, [num(s)])], [], [atom(started, [])], [])]), nschema(climb, [num(t), num(t1)], and(eq(num(t1), plus(num(t), num(2))), lt(num(t), num(6))), [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]), nschema(mark, [num(t), num(m)], eq(mul(num(3), num(m)), plus(num(t), num(3))), [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])]), nschema(double, [num(s), num(d)], eq(num(d), mul(num(s), num(2))), [rs(unguarded, [atom(doubled, [num(s)])], [], [atom(halve, [num(s)])], [atom(doubled, [num(s)])])])], pragmas([list("Levels", [level])], [act(start, "Start", [], none, "Levels", by([1])), act(refuel, "Refuel", [], none, "Levels", by([1])), act(split, "Split", [], none, "Levels", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -5230,12 +5294,23 @@ mates_check([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), gro
     app(M1?, M2?, M).
 procedure mates_check1(LNorm?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_check1(badnorm, _, _, _, []).
+%% A numeric variable that no deleted or added atom names, and that is not local to a role, is given its values by the constraint once those the atoms bind are bound, by the conjuncts local to every role (con_extend), as at a Propose (num_extend): "or the constraint gives the variable finitely many values once those are bound" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"); so identity_record of Secure Friendship, whose Double only its constraint names, has the schema-binding of its class term among those of its class.
 mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
+    schema_numeric(Nm?, N),
+    mates_extend(N?, B?, Bs),
+    mates_check2(Bs?, Nm?, Rs?, Ps?, M).
+procedure mates_extend(Numeric?, Binding?, Bindings).
+mates_extend(numeric(Cj, _, _), B, Bs?) :- ground(Cj?), ground(B?) | conjs_every(Cj?, C), con_extend(C?, B?, Bs).
+procedure mates_check2(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
+mates_check2([], _, _, _, []).
+mates_check2([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
     sig_of(Rs?, B?, Ps1),
     deltas_eq(Ps?, Ps1?, E1),
     admissible(Rs?, B?, E2),
     and(E1?, E2?, E),
-    mate_of(E?, B?, Nm?, Rs?, M).
+    mate_of(E?, B?, Nm?, Rs?, M1),
+    mates_check2(Bs?, Nm?, Rs?, Ps?, M2),
+    app(M1?, M2?, M).
 %% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role, agent, speech-act or numeric, are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
 procedure local_norm(Constant?, Binding?, LNorm).
 local_norm(Nm, B, R?) :- ground(Nm?), ground(B?) |

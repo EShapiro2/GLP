@@ -5658,12 +5658,23 @@ mates_check([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), gro
     app(M1?, M2?, M).
 procedure mates_check1(LNorm?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_check1(badnorm, _, _, _, []).
+%% A numeric variable that no deleted or added atom names, and that is not local to a role, is given its values by the constraint once those the atoms bind are bound, by the conjuncts local to every role (con_extend), as at a Propose (num_extend): "or the constraint gives the variable finitely many values once those are bound" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"); so identity_record of Secure Friendship, whose Double only its constraint names, has the schema-binding of its class term among those of its class.
 mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
+    schema_numeric(Nm?, N),
+    mates_extend(N?, B?, Bs),
+    mates_check2(Bs?, Nm?, Rs?, Ps?, M).
+procedure mates_extend(Numeric?, Binding?, Bindings).
+mates_extend(numeric(Cj, _, _), B, Bs?) :- ground(Cj?), ground(B?) | conjs_every(Cj?, C), con_extend(C?, B?, Bs).
+procedure mates_check2(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
+mates_check2([], _, _, _, []).
+mates_check2([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
     sig_of(Rs?, B?, Ps1),
     deltas_eq(Ps?, Ps1?, E1),
     admissible(Rs?, B?, E2),
     and(E1?, E2?, E),
-    mate_of(E?, B?, Nm?, Rs?, M).
+    mate_of(E?, B?, Nm?, Rs?, M1),
+    mates_check2(Bs?, Nm?, Rs?, Ps?, M2),
+    app(M1?, M2?, M).
 %% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role, agent, speech-act or numeric, are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
 procedure local_norm(Constant?, Binding?, LNorm).
 local_norm(Nm, B, R?) :- ground(Nm?), ground(B?) |

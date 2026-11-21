@@ -6528,6 +6528,23 @@ HEREDOC
 check "CVA linear: alice starts at level 0 and refuels 5; her machine marks level 0, 3m = 0 + 3 giving m = 1, and climbs from 0 to 2, 4 and 6, t1 = t + 2, each climb deleting a fuel, and not from 6, where t < 6 fails, two fuel left; and it marks level 6, m = 3" "A = \[view(alice, \[\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[\], \[\], \[start(alice)\], \[tab('Levels', level)\]), view(alice, \[started, level(0)\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[marked(1), started, level(0)\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[marked(1), started, level(0)\], \[\], \[refuel(alice, 5)\], \[tab('Levels', level)\]), view(alice, \[fuel, fuel, fuel, fuel, fuel, marked(1), started, level(0)\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[level(2), fuel, fuel, fuel, fuel, marked(1), started\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[level(4), fuel, fuel, fuel, marked(1), started\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[level(6), fuel, fuel, marked(1), started\], \[\], \[\], \[tab('Levels', level)\]), view(alice, \[marked(3), level(6), fuel, fuel, marked(1), started\], \[\], \[\], \[tab('Levels', level)\]) | " "$cva_linear"
 check_not "CVA linear: ... no mark at the levels 2 and 4, where 3m = t + 3 has no whole number m, and no level above 6" "marked(2)\|marked(4)\|level(8)" "$cva_linear"
 check "CVA linear: ... and the run suspends, none of alice's own transactions holding" "→ suspended" "$cva_linear"
+# A numeric variable named by the constraint alone, local to no role, is given its value by the constraint once the atoms bind the others, in the schema-bindings of a class as at a Propose (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications": "or the constraint gives the variable finitely many values once those are bound"; cvac's mates_check1, mates_extend): linear's double(p ; s, d), d = s * 2, d in no atom, as identity_record(Alice ; Share, Double) of SPM's Secure Friendship, whose request identity_record(alice, 1, 2) alice's machine refused as unable, its class having no part (SPM #2, through Code #36, 2026-11-21).  The platform emitted into a scratch directory and its procedures called.
+check "CVA linear: double's constraint printed local to every role, d local to none" "^schema_numeric(double, numeric(\[cj(every, eq(num(d), mul(num(s), num(2))))\], \[\], \[\]))\$" "$(cat "$CVA/linear/platform.vglp")"
+cva_double_dir="$GLP_DIR/programs/tests/vg_double_$$"
+mkdir -p "$cva_double_dir" && cp "$CVA/linear/platform.vglp" "$cva_double_dir/"
+cva_double=$("$REPL_RUN" <<HEREDOC
+:emit $cva_double_dir
+load $cva_double_dir/platform.glp
+:limit 10000000
+binding_of(double(alice, 1, 2), N1, B1), binding_of(double(alice, 1, 2), N2, B2), bound_spec(N1?, B1?, Rs1), sig_of(Rs1?, B2?, Ps1), new_info(double(alice, 1, 2), Ps1?, alice, I1), info_parts(I1?, P1).
+part_dom(double(alice, 1, 2), alice, [g(halve, [n(1)]), g(started, [])], D2).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_double_dir"
+check "CVA linear: the platform emitted and loaded, its types checked (double)" "Loaded: .*vg_double_.*platform.glp" "$cva_double"
+check "CVA linear: ... the class of double(alice, 1, 2) holds its own schema-binding, d bound to 2 by the equality, and has its part, opened by alice" "^P1 = \[pt(double(alice, 1, 2), \[\], opener(alice))\]$" "$cva_double"
+check "CVA linear: ... and alice's state, halve(1) and started, is in the part's domain" "D2 = yes$" "$cva_double"
 
 # A safe formula of a schema's body, local to a role, "the machine of the person in that role evaluates it in its own state" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"): vGLP's forms (programs/vglp/cva/contracts.glp), tick(p) with not exists b (blocked(b) at p and b > 2), its platform emitted by the canonical compilation into a scratch directory and its procedures called on states; and eq comparing two persons, as GFF-I's not(and(friend(Alice, Carol), eq(Carol, Dave))) does ("eq and ne also compare two agent variables", GSC c8c5ead, def:numbers).  The play harness, programs/vglp/cva/self.glp, is on test/OPEN_TYPES, and a play over it would be new GLP with an open type, so the procedures are called directly (qschema_forms).
 check "CVA forms: the safe formula printed with the role it is local to, role 1 (qschema_forms)" "^schema_forms(tick, \[sform(at(1), fnot(fexists(\[num(b)\], role(1), atom(blocked, \[num(b)\]), fcons(gt(num(b), num(2))))))\])$" "$(cat "$CVA/forms/platform.vglp")"

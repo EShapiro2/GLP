@@ -244,8 +244,10 @@
 %%   refuel(p? ; k)        :  at p  started, +k fuel
 %%   climb(p ; t, t1)      :  at p  -fuel, -level(t), +level(t1)         t1 = t + 2 and t < 6
 %%   mark(p ; t, m)        :  at p  level(t), not marked(m), +marked(m)  3m = t + 3
+%%   split(p? ; s)         :  at p  started, +halve(s)
+%%   double(p ; s, d)      :  at p  halve(s), not doubled(s), +doubled(s)  d = s * 2
 %%
-%% climb and mark are unguarded, opened by p; t is local to p's role in each, bound by the level p holds; climb's t1 is the one value its equality gives, and its inequality holds below 6; mark's m is the whole number its equality gives, where there is one, at the levels 0 and 6 and at no level between.  linear/self.glp plays it.
+%% climb and mark are unguarded, opened by p; t is local to p's role in each, bound by the level p holds; climb's t1 is the one value its equality gives, and its inequality holds below 6; mark's m is the whole number its equality gives, where there is one, at the levels 0 and 6 and at no level between.  linear/self.glp plays it.  double's d is named by its constraint alone, not by any atom, and is local to no role, so a schema-binding of its class gets it from the equality once the atoms bind s, as identity_record's Double in SPM's Secure Friendship (programs/social/spm/Secure-Friendship.glp); the play never requests split, so its machine never takes double, and Section VG calls the platform's procedures on it.
 %%
 %% forms is a contract with a safe formula in a schema's body, local to the role holding its atoms, which "the machine of the person in that role evaluates in its own state" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"), in GSC's term form, qschema(Name, Vars, Bound, Constraint, Roles, Conjuncts, Forms) (programs/gsc/self.glp):
 %%
@@ -539,7 +541,8 @@ pragmas_named(days, pragmas([list('"Dates"', [date])],
      act(advance, '"Advance"', ['""', '"Day"'], none, '"Dates"', by([1]))])).
 pragmas_named(linear, pragmas([list('"Levels"', [level])],
     [act(start, '"Start"', [], none, '"Levels"', by([1])),
-     act(refuel, '"Refuel"', [], none, '"Levels"', by([1]))])).
+     act(refuel, '"Refuel"', [], none, '"Levels"', by([1])),
+     act(split, '"Split"', [], none, '"Levels"', by([1]))])).
 pragmas_named(forms, pragmas([list('"Blocks"', [blocked])],
     [act(start, '"Start"', [], none, '"Blocks"', by([1])),
      act(block, '"Block"', ['""', '"level"'], none, '"Blocks"', by([1])),
@@ -922,10 +925,14 @@ linear([schema(start, [],
           [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]),
         schema(refuel, [num(k)],
           [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]),
+        schema(split, [num(s)],
+          [rs(guarded, [atom(halve, [num(s)])], [], [atom(started, [])], [])]),
         nschema(climb, [num(t), num(t1)], and(eq(num(t1), plus(num(t), num(2))), lt(num(t), num(6))),
           [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]),
         nschema(mark, [num(t), num(m)], eq(mul(num(3), num(m)), plus(num(t), num(3))),
-          [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])])]).
+          [rs(unguarded, [atom(marked, [num(m)])], [], [atom(level, [num(t)])], [atom(marked, [num(m)])])]),
+        nschema(double, [num(s), num(d)], eq(num(d), mul(num(s), num(2))),
+          [rs(unguarded, [atom(doubled, [num(s)])], [], [atom(halve, [num(s)])], [atom(doubled, [num(s)])])])]).
 
 procedure counts(Contract).
 counts([schema(start, [],
