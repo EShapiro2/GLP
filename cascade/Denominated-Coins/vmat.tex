@@ -14,20 +14,20 @@ c_
 }
  \uplus 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \notin c_
 {
 \Alice
@@ -54,9 +54,9 @@ c_
 }
  \uplus 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -73,9 +73,9 @@ c_
 }
  \uplus 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -83,17 +83,17 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -122,9 +122,9 @@ c_
 }
  \uplus 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -142,13 +142,13 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -157,20 +157,20 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -207,18 +207,20 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 issued_in
-}
+}}
 (
 Dollar
 )
@@ -253,6 +255,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -262,11 +266,13 @@ Total
 \text{\textcent}
 (
 Dave
+,
+Dollar
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Dave
 )
@@ -288,6 +294,8 @@ Total
 \text{\textcent}
 (
 Dave
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -297,11 +305,13 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -310,13 +320,13 @@ Carol
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -326,6 +336,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -334,13 +346,13 @@ Carol
 }
  \text{ and } 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -350,6 +362,8 @@ Total
 \text{\textcent}
 (
 Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -385,6 +399,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 , \qquad 
@@ -404,11 +420,13 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -417,13 +435,13 @@ Carol
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -433,6 +451,8 @@ Sum
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -440,9 +460,9 @@ Carol
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -476,6 +496,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 , \qquad 
@@ -495,19 +517,21 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ,\\
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -517,6 +541,8 @@ Sum
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -524,9 +550,9 @@ Sum
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -558,6 +584,8 @@ Sum
 \text{\textcent}
 (
 Dave
+,
+Dollar
 )
 \}
 , \qquad 
@@ -574,11 +602,13 @@ c_
 \{
 Sum
 \cdot
-\mathit{
+\mathit{\detokenize{
 escrow_coin
-}
+}}
 (
 Dave
+,
+Dollar
 ,
 \Alice
 ,
@@ -591,20 +621,20 @@ Cond
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Bob
 )
@@ -614,6 +644,8 @@ Sum
 \text{\textcent}
 (
 Dave
+,
+Dollar
 )
 \}
  \subseteq c_
@@ -621,13 +653,13 @@ Dave
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -661,11 +693,13 @@ c_
 \{
 Sum
 \cdot
-\mathit{
+\mathit{\detokenize{
 escrow_coin
-}
+}}
 (
 Dave
+,
+Dollar
 ,
 Alice
 ,
@@ -691,11 +725,13 @@ Sum
 \text{\textcent}
 (
 Dave
+,
+Dollar
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Dave
 )
@@ -704,24 +740,26 @@ Dave
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
 Sum
 \cdot
-\mathit{
+\mathit{\detokenize{
 escrow_coin
-}
+}}
 (
 Dave
+,
+Dollar
 ,
 Alice
 ,
@@ -735,13 +773,13 @@ Cond
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -775,11 +813,13 @@ c_
 \{
 Sum
 \cdot
-\mathit{
+\mathit{\detokenize{
 escrow_coin
-}
+}}
 (
 Dave
+,
+Dollar
 ,
 \Bob
 ,
@@ -805,11 +845,13 @@ Sum
 \text{\textcent}
 (
 Dave
+,
+Dollar
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Dave
 )
@@ -818,24 +860,26 @@ Dave
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
 Sum
 \cdot
-\mathit{
+\mathit{\detokenize{
 escrow_coin
-}
+}}
 (
 Dave
+,
+Dollar
 ,
 \Bob
 ,
@@ -849,13 +893,13 @@ Cond
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -890,6 +934,8 @@ c'_
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -897,11 +943,13 @@ c'_
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -921,6 +969,8 @@ c'_
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
 \}
 ) \uplus 
@@ -928,18 +978,20 @@ Carol
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -947,19 +999,23 @@ knows
 \text{\textcent}
 (
 \Bob
+,
+Dollar
 )
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
 \text{\textcent}
 (
 Carol
+,
+Dollar
 )
  \in c_
 {
@@ -992,11 +1048,13 @@ Sum
 \text{\textcent}
 (
 \Alice
+,
+Dollar
 )
 ,
-\mathit{
+\mathit{\detokenize{
 issued_in
-}
+}}
 (
 Dollar
 )
@@ -1004,9 +1062,9 @@ Dollar
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Alice
@@ -1014,9 +1072,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 issued_in
-}
+}}
 (
 \ast
 )

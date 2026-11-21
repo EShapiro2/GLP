@@ -3454,7 +3454,14 @@ mates_check([B | Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), g
 
 procedure mates_check1(LNorm?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_check1(badnorm, _, _, _, []).
-mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) | sig_of(Rs?, B?, Ps1), deltas_eq(Ps?, Ps1?, E1), admissible(Rs?, B?, E2), and(E1?, E2?, E), mate_of(E?, B?, Nm?, Rs?, M).
+mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) | schema_numeric(Nm?, N), mates_extend(N?, B?, Bs), mates_check2(Bs?, Nm?, Rs?, Ps?, M).
+
+procedure mates_extend(Numeric?, Binding?, Bindings).
+mates_extend(numeric(Cj, _, _), B, Bs?) :- ground(Cj?), ground(B?) | conjs_every(Cj?, C), con_extend(C?, B?, Bs).
+
+procedure mates_check2(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
+mates_check2([], _, _, _, []).
+mates_check2([B | Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) | sig_of(Rs?, B?, Ps1), deltas_eq(Ps?, Ps1?, E1), admissible(Rs?, B?, E2), and(E1?, E2?, E), mate_of(E?, B?, Nm?, Rs?, M1), mates_check2(Bs?, Nm?, Rs?, Ps?, M2), app(M1?, M2?, M).
 
 procedure local_norm(Constant?, Binding?, LNorm).
 local_norm(Nm, B, R?) :- ground(Nm?), ground(B?) | schema_numeric(Nm?, N), local_norm1(N?, Nm?, B?, R).
@@ -4500,7 +4507,12 @@ expr_term1(svar(X), B, F?) :- lookup(svar(X?), B?, F).
 expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
 expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
 expr_term1(val(C), _, found(v(C?))).
+expr_term1(num(X), B, F?) :- ground(B?) | lookup(num(X?), B?, F0), const_term(F0?, F).
 expr_term1(_, _, free) :- otherwise | true.
+
+procedure const_term(Found?, Found).
+const_term(found(v(C)), found(v(C?))).
+const_term(_, free) :- otherwise | true.
 
 procedure author_found(Found?, Found).
 author_found(found(s(S)), found(p(P?))) :- ground(S?) | first_signer(S?, P).

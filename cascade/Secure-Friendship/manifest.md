@@ -1,10 +1,10 @@
 # A run of the cascade on Secure-Friendship
 
-- Contract: `Secure-Friendship` (`secure_friendship` to the checker), its owner's two files `programs/social/spm/Secure-Friendship.txt` and `programs/social/spm/Secure-Friendship.glp`, copied here as they stood at `a6fc2475`.
+- Contract: `Secure-Friendship` (`secure_friendship` to the checker), its owner's two files `programs/social/spm/Secure-Friendship.txt` and `programs/social/spm/Secure-Friendship.glp`, copied here as they stood at `aef90557`.
 - The paper: `/Users/udi/Grassroots/SPM (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/social/spm/Secure-Friendship.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/social/spm/Secure-Friendship.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-21 15:06 UTC by `cascade.sh secure_friendship`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `a6fc2475`; each artefact's source and tool:
+- Run on 2026-11-21 17:06 UTC by `cascade.sh secure_friendship`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `aef90557`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
@@ -20,7 +20,7 @@
 | `platform.vglp` | `Secure-Friendship.glp` read by programs/gsc's as_read/2, and `Secure-Friendship.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
 | `platform.glp` | `platform.vglp` | glp_runtime's :emit | the platform compiled to GLP, as emitted |
 | `interface.glp` | `platform.vglp` and `platform.glp` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |
-| (no run) | | | vGLP keeps no plays for secure_friendship |
+| (no run) | | | /home/claude/wt-ren/programs/vglp/cva/secure_friendship/self.glp exports no play |
 
 What the tools refused or lacked:
-- run: vGLP keeps no plays for secure_friendship
+- run: /home/claude/wt-ren/programs/vglp/cva/secure_friendship/self.glp exports no play

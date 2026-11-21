@@ -66,3 +66,9 @@ Code #36 compacted twice and stays, by Udi's rule of 2026-11-20 14:32 UTC.  Afte
 - GAI thread: cmsg_0189yZceJmej5oE7scfYctePWoPZBNb8M27MpMGNNZUPQq (gai/gsnp plays to the adopted contracts, off c48d926dd).
 - 2026-11-21 08:20 UTC: llohtv on main, e8ebce875 (fast tier + TY + VG on 7595edcf0: 4198 passed, 0 failed).  Website asked to deploy.  Left: Section CAS and #118 at the next nightly; the Finding 1 set (waits on GLP-Spec's exports guard and Udi), then reprint dgc by compile.sh, remove the 20 KNOWN_RED_CHECKS in finding1-krc-remove.txt.
 - Main since: ee7162e0c, 6c14d3381, ec20d0da9 (Secure Friendship, Audit PR 76).  llohtv 1246d8c85: SPM's play (c60g4u 4a7e0e2a) and vGLP's cvac mend 950cc0267, which reprints every platform: every cascade record to be recorded again at the nightly, after the Calculus mends toglp.py's val(N) for numbers (asked 13:10 UTC); GSC asked whether its checker should refuse val of a number.  Then llohtv to main.
+
+## After the fourth compaction (2026-11-21)
+
+- Branch head after aef905575: the last 22 records of the full recording (num(N), cvac mend, GSC val-number check), Secure Friendship recorded again, and its platform copied into programs/vglp/cva/secure_friendship/.
+- Secure Friendship's play does not run: cascade.sh step 7 reads `exported procedure play_...(...)` on one line, and SPM's self.glp line 36 wraps it.  Asked SPM #2, through the coordinator, to put it on one line.  Then set PLAYDIR="secure_friendship" in cascade.sh (patch in the scratchpad, cascade-playdir.patch) and record it again.
+- Then fast tier `bash test/run_fast.sh TY VG` on the head, ff-merge llohtv to main, and give the main commit to SPM #2, Audit (through the coordinator) and Website (Audit PR 76).
