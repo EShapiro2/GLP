@@ -41,6 +41,9 @@ Environment: the terms of k set the arbiter's fee at n, for w.
 Parameters: x has n f-denominated c-coins locked in z on k as the customer of y; y has n f-denominated c-coins locked in z on k as the provider of x.
 Interface pragmas
 Look: 🕸️, network
+Found: Alice [Found] <organisation> <role>
+  Gov: Alice asks for your consent to found the community network Orga.
+  Orga: Alice asks to found you.
 Set stake: Decider [Set stake] <stake>
   Codecider: Decider asks to set the stake of Orga.
 Arbitration: Alice [Raise] <arbiter>
