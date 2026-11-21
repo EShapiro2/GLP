@@ -24,7 +24,7 @@ What it reads from the files:
      reason printed beside it.  This is the form in which Coordination adds a failure Udi points out.
 
 What it tests besides (writing-style-guide.md, the section named):
-  hedges and apologies (8, 17); "users", hyperbole, "the author", "final" (1, 8, Talking to Udi);
+  section 17's quoted hedges and insistences, from the file; hedges and apologies (8, 17); "users", hyperbole, "the author", "final" (1, 8, Talking to Udi);
   long sentences (2); in --paper and --clause, "I", "me", "my" (1, 5); in --udi, more than one
   sentence on a line, a dash or an arrow chain, more than one "Q:" (Talking to Udi; the project's
   instructions).
@@ -67,13 +67,40 @@ def norm(s):
     return re.sub(r'\s+', ' ', s.strip().lower())
 
 
-def phrase_regex(p):
-    """A banned phrase as a regex: words at word boundaries, X and Y for any word."""
+def forms(w):
+    """A word in its inflections, from whichever form the ban lists: differ, differs, differed, differing."""
+    bases = {w}
+    if w.endswith('ing') and len(w) > 5:
+        bases |= {w[:-3], w[:-3] + 'e'}
+    if w.endswith('ed') and len(w) > 4:
+        bases |= {w[:-2], w[:-1]}
+    if w.endswith('ies') and len(w) > 4:
+        bases.add(w[:-3] + 'y')
+    elif w.endswith('es') and len(w) > 4:
+        bases |= {w[:-2], w[:-1]}
+    elif w.endswith('s') and not w.endswith('ss') and len(w) > 4:
+        bases.add(w[:-1])
+    out = set()
+    for b in bases:
+        out |= {b, b + 's', b + 'es', b + 'ed', b + 'd', b + 'ing'}
+        if b.endswith('e'):
+            out |= {b[:-1] + 'ing', b[:-1] + 'ed'}
+        if b.endswith('y'):
+            out |= {b[:-1] + 'ies', b[:-1] + 'ied'}
+    return '(?:' + '|'.join(re.escape(f) for f in sorted(out, key=len, reverse=True)) + ')'
+
+
+def phrase_regex(p, every_word=False):
+    """A banned phrase as a regex: words at word boundaries, X and Y for any word.  The last word is
+    matched in its inflections; with every_word, every word of four letters or more is (a ban of
+    claudese.md: "differs in kind" catches "differ in kind")."""
     words = norm(p).split(' ')
     parts = []
     for k, w in enumerate(words):
         if w in ('x', 'y'):
             parts.append(r"[\w'-]+")
+        elif every_word and re.fullmatch(r'[a-z]{4,}', w):
+            parts.append(forms(w))
         elif k == len(words) - 1 and re.fullmatch(r'[a-z]{4,}', w):
             # the last word in its inflections: leverage, leverages, leveraged, leveraging
             stem = w[:-1] if w.endswith('e') else w
@@ -130,7 +157,7 @@ def read_claudese(path):
         for n in names:
             if len(n) < 3 and n.lower() not in ('i',):
                 continue
-            entry = ('Claudese', n, phrase_regex(n), exempt, alt or 'no alternative is listed: say plainly what is meant')
+            entry = ('Claudese', n, phrase_regex(n, every_word=True), exempt, alt or 'no alternative is listed: say plainly what is meant')
             if rest and (CONDITION.match(rest) or rest == 'condition' or rest.startswith('(')):
                 checks.append(entry + (rest[:120],))
             else:
@@ -156,6 +183,32 @@ def read_guide(path):
                 entries.append(block)
             block = {}
     return entries
+
+
+def read_insistence(path):
+    """Section 17's bans: the quoted texts of the first sentence of its "No hedge:" and "No insistence:"
+    lines, each failed wherever it occurs."""
+    text = open(path, encoding='utf-8').read()
+    m = re.search(r'^## 17\..*?(?=^## )', text, re.M | re.S)
+    out = []
+    if not m:
+        return out
+    for l in m.group(0).split('\n'):
+        h = re.match(r'\s*-\s*No (hedge|insistence):\s*(.*)', l)
+        if not h:
+            continue
+        first = re.split(r'(?<=[.!?"”])\s{2,}|(?<=[.!?])\s+(?=[A-Z])', h.group(2))[0]
+        for q in QUOTE.finditer(first):
+            t = (q.group(1) or q.group(2)).strip().rstrip('.,')
+            if t:
+                out.append(('style guide 17, ' + h.group(1), t, phrase_regex_literal_words(t), None,
+                            'state it directly (style guide, 17)'))
+    return out
+
+
+def phrase_regex_literal_words(q):
+    words = [re.escape(w) for w in norm(q).split(' ')]
+    return re.compile(r'(?<![\w-])' + r'\s+'.join(words) + r'(?![\w-])', re.I)
 
 
 def words_of(text):
@@ -270,6 +323,7 @@ def main(argv):
         else:
             files.append(a)
     fails, checks = read_claudese(CLAUDESE)
+    fails += read_insistence(GUIDE)
     wrongs = read_guide(GUIDE)
     texts = [(f, open(f, encoding='utf-8').read()) for f in files] or [('-', sys.stdin.read())]
     failed = 0
