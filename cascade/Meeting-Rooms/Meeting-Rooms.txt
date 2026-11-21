@@ -5,3 +5,5 @@
 % Extends: Booking, instantiating it.
 Meeting Rooms
 Meeting Rooms instantiates Booking with a *room* for a resource.
+Logic pragmas
+Meeting Rooms instantiates Booking with a *room* for a resource.

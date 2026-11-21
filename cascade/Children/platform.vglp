@@ -8062,7 +8062,12 @@ expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
 expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
 %% A constant the contract names is its own value, v(C).
 expr_term1(val(C), _, found(v(C?))).
+%% A variable over the constants is the constant the binding, or a reading, gives it, v(C), so that eq and ne compare two such variables, or one and a constant the contract names, for equality, the comparison of constants (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a constraint ... is over the relations and functions the value types provide --- comparison and arithmetic").
+expr_term1(num(X), B, F?) :- ground(B?) | lookup(num(X?), B?, F0), const_term(F0?, F).
 expr_term1(_, _, free) :- otherwise | true.
+procedure const_term(Found?, Found).
+const_term(found(v(C)), found(v(C?))).
+const_term(_, free) :- otherwise | true.
 procedure author_found(Found?, Found).
 author_found(found(s(S)), found(p(P?))) :- ground(S?) | first_signer(S?, P).
 author_found(_, free) :- otherwise | true.

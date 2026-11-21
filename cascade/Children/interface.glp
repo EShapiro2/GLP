@@ -1179,6 +1179,7 @@ interface([
   compiled(ne_vals, 5),
   compiled(expr_term, 3),
   compiled(expr_term1, 3),
+  compiled(const_term, 2),
   compiled(author_found, 2),
   compiled(first_signer, 2),
   compiled(item_found, 2),
