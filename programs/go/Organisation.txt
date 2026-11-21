@@ -51,6 +51,7 @@ Look: 🏛️, governance
 Organisations: those Alice is a participant of.
 Found: Alice [Found] <organisation> <founder> <role>
   Gov: Alice asks for your consent to found the organisation Orga.
+  Orga: Alice asks to found you.
 Acts of the organisation: Bob [Propose] <act> [Vote] <act>
   Alice [Act] <act> <votes>
 Participation: Bob [Join] <organisation> <officer>
