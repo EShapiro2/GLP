@@ -1355,50 +1355,50 @@ bob_twice_wait(Me, Q, [_ | Outs], Cmds?) :-
 bob_twice_wait(_, _, [], []).
 
 %% =============================================================================
-%% play_sovereign(A, B, ScreenA, ScreenB): the denominated currencies mini-app (Currencies'
-%% programs/currencies/sovereign/denominated, its artefact denominated.glpw
-%% beside this program) hosted by the super-app.  alice and bob install it
-%% with its two certifications, alice befriends bob and invites him, the
-%% handshake opens a root channel of the denominated protocol between their
-%% two executions, and each is activated by run/3 with its three grants.
-%%
-%% What this play is for is the ACTIVATION, not the acts: run/3 admits the
-%% mini-app only if the type identity of the entry template's opaque instance
-%% at the type its exports record is the one find_type/3 gives at it, and the
-%% super-app holds no copy of the denominated currencies' types.  The acts
-%% over the conversation are the mini-app's own and are exercised in its
-%% Section N4, so nothing is granted here: each person is the mini-app's own
-%% scripted person under its role watch, which reads the screen off what its
-%% dispatcher draws (GSG, 2026-10-13 20:22 UTC, G).
-%% Expected: ScreenA = [opened(bob) | _], ScreenB = [opened(alice) | _],
-%% → suspended (the agents' request forms stay open and the person channels
-%% never close).
+%% play_sovereign(A, B, ScreenA, ScreenB): DGC's app, the program compiled
+%% from Currencies' contract Denominated Currencies (programs/apps/dgc, its
+%% artefact dgc.glpw beside this program), hosted by the super-app.  alice and
+%% bob install it with its certification, alice befriends bob and invites him,
+%% the handshake opens a root channel between their two executions, and each
+%% is activated by run/3 with its grants.  run/3 admits the mini-app only if
+%% the type identity of the entry template's opaque instance at the type its
+%% exports record is the one find_type/3 gives at it, and the super-app holds
+%% no copy of DGC's types.  Each person is the app's own scripted person,
+%% under its roles alice and bob (../../../apps/dgc/person.glp), whose steps
+%% are those of play_denominated (../../../apps/dgc/plays.glp): each
+%% establishes their identity and issues two usd-denominated coins of their
+%% own, they come to know each other, alice issues three usd-denominated
+%% Alice-bonds due day 10, alice swaps her two Alice-coins for bob's two
+%% Bob-coins, bob accepts an Alice-coin in payment and pays alice one of her
+%% own, and alice pays it to bob.
+%% Expected: ScreenA and ScreenB the screens of play_denominated, → suspended
+%% (the agents' request forms stay open and the person channels never close).
 %% =============================================================================
 exported procedure play_sovereign(Key?, Key?, Stream(Opaque), Stream(Opaque)).
 play_sovereign(A, B, ScreenA?, ScreenB?) :-
     ground(A?), ground(B?) |
     crossbar2(A?, B?, AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
-    load_file("denominated.glpw", C),
+    load_file("dgc.glpw", C),
     certified(C?, _, CSig),
     new_channel(AppEndA, PersonEndA),
     new_channel(AppEndB, PersonEndB),
     agent # agent(A?, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     alice_sv_person(A?, B?, C?, CSig?, AppEndA?, AliceOut?, AliceIn),
-    miniapp_person_run(C?, A?, watch, [B?], PersonEndA?, ScreenA),
+    miniapp_person_run(C?, A?, alice, [B?], PersonEndA?, ScreenA),
     agent # agent(B?, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_sv_person(B?, A?, C?, CSig?, AppEndB?, BobOut?, BobIn),
-    miniapp_person_run(C?, B?, watch, [A?], PersonEndB?, ScreenB).
+    miniapp_person_run(C?, B?, bob, [A?], PersonEndB?, ScreenB).
 
 procedure alice_sv_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 alice_sv_person(Me, Q, C, CSig, AppEnd, Outs,
-                [msg(person, Me?, install(denominated, C?, CSig?, AppEnd?)),
+                [msg(person, Me?, install(dgc, C?, CSig?, AppEnd?)),
                  msg(person, Me?, connect(Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     alice_sv_run(Me?, Q?, Outs?, Cmds).
 
 procedure alice_sv_run(Key?, Key?, AgentToUserStream?, UserInStream).
 alice_sv_run(Me, Q, [msg(agent, person, connected(F)) | Outs],
-             [msg(person, Me?, invite(denominated, Q?)) | Cmds?]) :-
+             [msg(person, Me?, invite(dgc, Q?)) | Cmds?]) :-
     F? =?= Q? |
     alice_sv_run(Me?, Q?, Outs?, Cmds).
 alice_sv_run(Me, Q, [_ | Outs], Cmds?) :- otherwise | alice_sv_run(Me?, Q?, Outs?, Cmds).
@@ -1406,8 +1406,8 @@ alice_sv_run(_, _, [], []).
 
 procedure bob_sv_person(Key?, Key?, Content?, String?, PersonChannel(Opaque)?, AgentToUserStream?, UserInStream).
 bob_sv_person(Me, Q, C, CSig, AppEnd, Outs,
-              [msg(person, Me?, install(denominated, C?, CSig?, AppEnd?)),
-               msg(person, Me?, accept_invite(denominated, Q?)) | Cmds?]) :-
+              [msg(person, Me?, install(dgc, C?, CSig?, AppEnd?)),
+               msg(person, Me?, accept_invite(dgc, Q?)) | Cmds?]) :-
     ground(Me?), ground(Q?) |
     bob_sv_run(Me?, Q?, Outs?, Cmds).
 

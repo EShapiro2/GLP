@@ -1,0 +1,19 @@
+%% gb_mint_boot.glp --- activation alone on a smartphone (GSA paper, Section 3, "A grassroots program instance"): the app of GB (programs/apps/gb) on one smartphone, under the boot harness, one isolate, alice, running the social graph of programs/social/graph/core as its super-app; she knows no peer, trusts the compiler's key, installs the certified artefact gb.glpw and activates it, with no invitation, and the mini-app's scripted person runs under the role mint (programs/apps/gb/person.glp), as play_mint of programs/apps/gb runs it (plays.glp).  The smartphone, gb_phone/4 at the role mint, is graph/core's (core/gb_phone.glp):
+%%   :artefact programs/gsc/checker programs/social/graph/core
+%%   :artefact programs/apps/gb programs/social/graph/core
+%%   :boot programs/apps/gb_mint_boot.glp programs/social/graph/core
+%% Section SG of the suite runs this file and holds alice's lines to play_mint's screen.
+
+procedure boot.
+boot :-
+    agent(ch(_?, _), ch(_?, _))@alice,
+    say(mint, alice, [], ch(_?, _))@alice.
+
+%% Every agent's initial goal is agent(ch(_?,_),ch(_?,_)), the person channel first and the network channel second (GLP-Spec maglp.tex, Definition "Multiagent GLP"), which the program, graph/core, answers: a boot defines no agent/2, and the person goal's first act names the entry the program starts (IGLP 0e1c9e0, Implementation Notes, "Boot").  The person scripted at each agent, say/4, run on its person channel in the person's place, tells the agent the entry, gb_phone/4 (graph/core/gb_phone.glp), with the person's part in the script, their own key and the keys of the peers they know, its ground arguments, the readable names being the atoms that stand for the keys in a simulation ("An agent learns the keys of its peers from its person"; Remark "Agent Names"), and reads nothing.
+Role ::= mint.
+SayAct ::= gb_phone(Role, Key, List(Key)).
+SayIn  ::= [SayAct | SayEnd].
+SayEnd ::= [].
+
+exported procedure say(Role?, Key?, List(Key)?, Channel(Stream(Constant), SayIn)?).
+say(R, Me, Ps, ch(_, [gb_phone(R?, Me?, Ps?)])).

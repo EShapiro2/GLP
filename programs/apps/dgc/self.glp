@@ -191,3 +191,6 @@ miniapp_person(Id, Role, Ps, PEnd, Screen?) :- person # miniapp_person(Id?, Role
 imported procedure plays#play_denominated(Stream(Seen), Stream(Seen)).
 exported procedure play_denominated(Stream(Seen), Stream(Seen)).
 play_denominated(A?, B?) :- plays # play_denominated(A, B).
+imported procedure plays#play_mint(Stream(Seen)).
+exported procedure play_mint(Stream(Seen)).
+play_mint(A?) :- plays # play_mint(A).
