@@ -635,33 +635,7 @@ ask_of([q(V2?, 1, [person(V1?), text(" clears what you saw of their notes.")])],
 .
 sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
-% The contract the platform is compiled from (vGLP, Section 5.4, "The contract's words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC's reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC's reader's and the pragmas', named with an R before them.
-RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
-RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
-RArgs     ::= [] ; [RArg | RArgs].
-RAtom     ::= atom(Constant, RArgs) ; times(RArg, RAtom) ; rest(RArg, RArg, RAtom).
-RAtoms    ::= [] ; [RAtom | RAtoms].
-RGuard    ::= guarded ; unguarded ; guarded_at(Constant).
-RRoleKind ::= seated(RNameTerm, Constant) ; constituent(RNameTerm, Constant) ; listed(Integer, Constant, RArgs) ; qlisted(Integer, Constant, RArgs, RArgs).
-RRoleSpec ::= rs(RGuard, RAtoms, RAtoms, RAtoms, RAtoms) ; crs(RRoleKind, RGuard, RAtoms, RAtoms, RAtoms, RAtoms).
-RRoleSpecs ::= [] ; [RRoleSpec | RRoleSpecs].
-RReach    ::= reach(RNameTerm, Constant, RNameTerm).
-RReaches  ::= [] ; [RReach | RReaches].
-RConstraint ::= true ; and(RConstraint, RConstraint) ; eq(RExpr, RExpr) ; le(RExpr, RExpr) ; lt(RExpr, RExpr) ; ge(RExpr, RExpr) ; gt(RExpr, RExpr) ; succ(RArg, RArg) ; or(RConstraint, RConstraint) ; signed(RArg, RArg) ; unsigned(RArg, RArg) ; not(RConstraint) ; implies(RConstraint, RConstraint) ; ne(RExpr, RExpr) ; rel(Constant, RExprs) ; program(RExpr).
-RExpr     ::= RArg ; plus(RExpr, RExpr) ; minus(RExpr, RExpr) ; mul(RExpr, RExpr) ; fn(Constant, RExprs) ; cardinality(RArgs, RArg, RAtom, RForm) ; sum(RArgs, RArg, RAtom, RForm, RExpr) ; author_of(RArg).
-RExprs    ::= [] ; [RExpr | RExprs].
-RForm     ::= fa(RArg, RAtom) ; fnot(RForm) ; fand(RForm, RForm) ; for(RForm, RForm) ; fexists(RArgs, RArg, RAtom, RForm) ; fforall(RArgs, RArg, RAtom, RForm, RForms) ; fcons(RConstraint).
-RForms    ::= [] ; [RForm | RForms].
-RHMult    ::= hm(Integer, RAtom).
-RHMults   ::= [] ; [RHMult | RHMults].
-RConjunct ::= conjunct(RArgs, Integer, RAtom, RForm, RHMults, RHMults, RForms).
-RConjuncts ::= [] ; [RConjunct | RConjuncts].
-RName     ::= Constant ; one(Constant, OneOf).
-RNames    ::= [] ; [RName | RNames].
-RSchema   ::= schema(Constant, RArgs, RRoleSpecs) ; cschema(Constant, RArgs, RReaches, RRoleSpecs) ; nschema(Constant, RArgs, RConstraint, RRoleSpecs) ; schema(Constant, RNames, RArgs, RRoleSpecs) ; cschema(Constant, RNames, RArgs, RReaches, RRoleSpecs) ; nschema(Constant, RNames, RArgs, RConstraint, RRoleSpecs) ; qschema(Constant, RArgs, RArgs, RConstraint, RRoleSpecs, RConjuncts, RForms) ; qschema(Constant, RNames, RArgs, RArgs, RConstraint, RRoleSpecs, RConjuncts, RForms).
-RContract ::= [] ; [RSchema | RContract].
-RBody     ::= RContract ; reflexive(Preds, RContract).
-RDeclared ::= RBody ; environment(Preds, RBody).
+% The contract the platform is compiled from (vGLP, Section 5.4, "The contract's words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC's reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The type of the contract as read is GSC's reader's, WDeclared of the root programs/self.glp, the type of the checker's input; the types of the pragmas are named with a P or an R before them.
 %% The pragmas (programs/vglp/cva/compiler/README.md, 1): the lists, the acts, the standing declarations, the look and the version.
 PWord     ::= text(String) ; person(Integer).
 PWords    ::= [] ; [PWord | PWords].
@@ -680,7 +654,7 @@ PStands   ::= [] ; [PStand | PStands].
 PLook     ::= nolook ; look(String, String).
 PVersion  ::= version(Integer, Integer).
 RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
-Exported  ::= with(RDeclared, RPragmas).
+Exported  ::= with(WDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
 contract("", with([schema(start, [], [rs(guarded, [atom(started, [])], [], [], [atom(started, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(started, [])], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)])], [], [atom(started, [])], [atom(knows, [role(1)])])]), schema(note, [pvar(x)], [rs(guarded, [atom(noted, [pvar(x)])], [], [atom(started, []), atom(knows, [pvar(x)])], [atom(noted, [pvar(x)])])]), qschema(share, [], [pvar(x)], true, [rs(guarded, [], [], [atom(started, []), atom(knows, [role(2)])], []), rs(guarded, [atom(shared, [role(1)])], [], [atom(started, []), atom(knows, [role(1)])], [atom(shared, [role(1)])])], [conjunct([pvar(x)], 1, atom(noted, [pvar(x)]), fcons(true), [hm(2, atom(seen, [pvar(x)]))], [], [fa(role(2), atom(seen, [pvar(x)]))])], []), schema(owe, [pvar(x), num(k)], [rs(guarded, [atom(owes, [pvar(x), num(k)])], [], [atom(started, []), atom(knows, [pvar(x)])], [atom(owes, [pvar(x), num(k)])])]), qschema(pass, [], [pvar(x), num(k)], true, [rs(guarded, [], [], [atom(started, []), atom(knows, [role(2)])], []), rs(guarded, [atom(passed, [role(1)])], [], [atom(started, []), atom(knows, [role(1)])], [atom(passed, [role(1)])])], [conjunct([pvar(x), num(k)], 1, atom(owes, [pvar(x), num(k)]), fcons(true), [hm(2, atom(owed, [pvar(x), num(k)]))], [], [fa(role(2), atom(owed, [pvar(x), num(k)]))])], []), qschema(tally, [], [pvar(x), num(k)], true, [rs(guarded, [], [], [atom(started, []), atom(knows, [role(2)])], []), rs(guarded, [atom(tallied, [role(1)])], [], [atom(started, []), atom(knows, [role(1)])], [atom(tallied, [role(1)])])], [conjunct([pvar(x), num(k)], 1, atom(owes, [pvar(x), num(k)]), fcons(true), [hm(2, atom(owed_by, [pvar(x)]))], [], [fa(role(2), atom(owed_by, [pvar(x)]))])], []), qschema(clear, [], [pvar(x)], true, [rs(guarded, [], [], [atom(started, []), atom(knows, [role(2)])], []), rs(guarded, [atom(cleared, [role(1)])], [], [atom(started, []), atom(knows, [role(1)])], [atom(cleared, [role(1)])])], [conjunct([pvar(x)], 1, atom(noted, [pvar(x)]), fcons(true), [], [hm(2, atom(seen, [pvar(x)]))], [fnot(fa(role(2), atom(seen, [pvar(x)])))])], []), qschema(settle, [], [pvar(x)], true, [rs(guarded, [atom(settled, [])], [], [atom(started, [])], [atom(settled, [])])], [conjunct([pvar(x)], 1, atom(noted, [pvar(x)]), fcons(true), [hm(1, atom(done, [pvar(x)]))], [], [fa(role(1), atom(done, [pvar(x)]))])], []), qschema(wipe, [], [pvar(x)], true, [rs(guarded, [atom(wiped, [])], [], [atom(started, []), atom(settled, [])], [atom(wiped, [])])], [conjunct([pvar(x)], 1, atom(noted, [pvar(x)]), fcons(true), [], [hm(1, atom(noted, [pvar(x)]))], [fnot(fa(role(1), atom(noted, [pvar(x)])))])], []), nschema(pour, [real(v)], gt(num(v), num(0)), [rs(guarded, [atom(poured, [num(v)])], [], [atom(started, [])], [])]), schema(drain, [real(v)], [rs(guarded, [atom(drained, [num(v)])], [atom(poured, [num(v)])], [atom(started, [])], [])])], pragmas([list("Notes", [noted]), list("Seen", [seen])], [act(start, "Start", [], none, "Notes", by([1])), act(acquaint, "Acquaint", [], said([[], [person(1), text(" asks.")]]), "Notes", by([1])), act(note, "Note", [], none, "Notes", by([1])), act(share, "Share", [], said([[], [person(1), text(" shares the persons they noted.")]]), "Notes", by([1])), act(owe, "Owe", ["amount"], none, "Notes", by([1])), act(pass, "Pass", [], said([[], [person(1), text(" passes on what they owe.")]]), "Notes", by([1])), act(tally, "Tally", [], said([[], [person(1), text(" tallies whom they owe.")]]), "Notes", by([1])), act(clear, "Clear", [], said([[], [person(1), text(" clears what you saw of their notes.")]]), "Notes", by([1])), act(settle, "Settle", [], none, "Notes", by([1])), act(wipe, "Wipe", [], none, "Notes", by([1])), act(pour, "Pour", ["amount"], none, "Notes", by([1])), act(drain, "Drain", [], none, "Notes", by([1]))], [], nolook, version(1, 1))))
