@@ -250,6 +250,16 @@ script(res_bob, Me, [Alice, Carol], [own([B1], propose(establish(B1?))), wait(ho
     ground(Me?), ground(Alice?), ground(Carol?) | true.
 script(res_carol, Me, [Alice, _], [approval(enter(Me?, Alice?), yes)]) :-
     ground(Me?), ground(Alice?) | true.
+%% Hosting in the Grassroots App, two persons, under the role names GSN's app gives its own (programs/apps/gsn/person.glp), so the super-app's plays host both the same way: alice, knowing bob, establishes her identity, comes to know bob and befriends him; bob establishes his and consents to both.
+script(alice, _, [Bob], [own([A1], propose(establish(A1?))), wait(holds(identity)),
+                         own([A2], propose(acquaint(A2?, Bob?))), wait(holds(knows(Bob?))),
+                         own([A3], propose(befriend(A3?, Bob?))), wait(holds(friend(Bob?)))]) :-
+    ground(Bob?) | true.
+script(bob, Me, [Alice], [own([B1], propose(establish(B1?))), wait(holds(identity)),
+                          approval(acquaint(Alice?, Me?), yes),
+                          approval(befriend(Alice?, Me?), yes),
+                          wait(holds(friend(Alice?)))]) :-
+    ground(Me?), ground(Alice?) | true.
 script(_, _, _, []) :- otherwise | true.
 
 %% The person.
