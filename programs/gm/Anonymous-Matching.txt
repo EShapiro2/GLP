@@ -1,7 +1,7 @@
 % Anonymous Matching: the contract, the one copy, its owner's.
 % Owner: GM (Udi, 2026-11-19, "yes" to the contract's text and name, relayed by the coordinator).
 % Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
-% Last changed: 2026-11-19, first written, the text as Udi approved it; no Logic pragmas yet, the Calculus's to write; no Interface pragmas yet. The text of 2026-11-20 (Udi, 2026-11-20, "yes" to each item and to writing it, in the thread Grassroots Matching); the Logic pragmas below are the Calculus's, of the earlier text, to be printed again.
+% Last changed: 2026-11-19, first written, the text as Udi approved it; the Logic pragmas are the Calculus's, written by adopt.py on 2026-11-21; no Interface pragmas yet. The text of 2026-11-20 (Udi, 2026-11-20, "yes" to each item and to writing it, in the thread Grassroots Matching); the Logic pragmas below are the Calculus's, printed again by adopt.py on 2026-11-21.
 Anonymous Matching
 Anonymous Matching composes Matching with Anonymous Rendezvous, and restricts the composition.
 Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
@@ -11,7 +11,7 @@ Logic pragmas
 Anonymous Matching composes Matching with Anonymous Rendezvous, and restricts the composition.
 Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
 Alice and Carol are persons, Dave a service, Post and Reply posts, Key and Pair one-time keys.
-1. ■ Meet. Present: Anonymous Rendezvous:1 Present, only if Alice has made the post Post, Alice holds the post Reply, Post carries the public key of Key, Reply carries the public key of Pair and Dave is named by the one of Post and Reply whose public key has the smaller hash. Meet: Matching:5, only if Alice has the address of Carol and Carol has the address of Alice.
+1. ■ Meet. Present: Anonymous Rendezvous:1 Present, only if Alice has made the post Post, Alice holds the post Reply, Post carries the public key of Key, Reply carries the public key of Pair and Dave is named by the one of Post and Reply whose public key has the smaller hash. Meet: Matching:2, only if Alice has the address of Carol and Carol has the address of Alice.
 Logic pragmas.
 Vocabulary: p carries the public key of k, for x = post_key(x,p,k); d is named by the one of p and q whose public key has the smaller hash, for x = pair_server(x,p,q,d).
 Environment: p carries the public key of k, for x; d is named by the one of p and q whose public key has the smaller hash, for x.
