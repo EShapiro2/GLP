@@ -8718,13 +8718,13 @@ sg_core=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/cssn $SG_CORE
 :artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
-:artefact $GLP_DIR/programs/gsc $SG_CORE
+:artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/social/graph/checked/grassroots $SG_CORE
 :artefact $GLP_DIR/programs/social/graph/checked/not_grassroots $SG_CORE
 :artefact $GLP_DIR/programs/social/graph/checked/malformed $SG_CORE
 $SG_CORE
 :limit 5000000
-play_load("gsc.glpw", K0, Key0).
+play_load("checker.glpw", K0, Key0).
 play_install(alice, "grassroots.glpw", grassroots, G1).
 play_install(alice, "not_grassroots.glpw", not_grassroots, G2).
 play_install(alice, "malformed.glpw", malformed, G3).
@@ -8759,12 +8759,12 @@ check "SG super-app: currency's artefact is certified" "currency.glpw --- certif
 check "SG super-app core loads" "Loaded program" "$sg_core"
 # The third check of GPD's Implementation pragma (graph/Programs.txt): "that
 # its schemas pass the checker".  The Grassroots App reads GSC's checker,
-# programs/gsc, by load_file/2 as a Module, reads the program's contract by its
+# programs/gsc/checker, by load_file/2 as a Module, reads the program's contract by its
 # exported contract/2 under run/3, and hands it to the checker's check/2 under
 # run/3 (agent.glp, schemas_check/3); a program is installed only on a verdict
 # GSC's paper calls grassroots.  The three programs of graph/checked give a
 # contract each, at the agreed type of contract/2, with(WDeclared, RPragmas).
-check "SG super-app: GSC's checker's artefact is certified" "gsc.glpw --- certified under" "$sg_core"
+check "SG super-app: GSC's checker's artefact is certified" "checker.glpw --- certified under" "$sg_core"
 check "SG super-app: load_file gives GSC's checker's artefact as a Module" "K0 = module" "$sg_core"
 check "SG super-app: the super-app installs a program whose checker verdict is syntactically_grassroots" "G1 = \[grassroots\]" "$sg_core"
 check "SG super-app: a program whose checker verdict is not_grassroots installs nothing" "G2 = \[\]" "$sg_core"

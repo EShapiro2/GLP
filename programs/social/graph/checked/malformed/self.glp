@@ -1,7 +1,7 @@
 %% checked/malformed --- a test program of GSA's that gives a contract and does
 %% nothing else: its exported contract/2, at the type the owners agreed on
 %% 2026-11-20 (../../self.glp, GivenContract), gives the contract below, whose
-%% verdict by GSC's checker (programs/gsc, check/2) is malformed([not_in_head(s, svar(x))]).  The
+%% verdict by GSC's checker (programs/gsc/checker, check/2) is malformed([not_in_head(s, svar(x))]).  The
 %% super-app's plays install it to show the third check of GPD's
 %% Implementation pragma, "that its schemas pass the checker" (../../Programs.txt;
 %% core/agent.glp, schemas_check/3; core/superapp_plays.glp, play_install/4).

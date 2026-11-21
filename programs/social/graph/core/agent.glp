@@ -520,13 +520,13 @@ key_member(_, [], false).
 
 procedure installable(Constant?, Module?, HostVerdict).
 installable(true, M, V?) :-
-    load_file("gsc.glpw", G),
+    load_file("checker.glpw", G),
     schemas_check(G?, M?, V).
 installable(false, _, refused).
 
 %% schemas_check(G, M, V): the third check of GPD's Implementation pragma,
 %% "that its schemas pass the checker".  G is what load_file/2 gave for the
-%% checker's artefact, programs/gsc compiled, beside this program; it must be
+%% checker's artefact, programs/gsc/checker compiled, beside this program; it must be
 %% a Module.  The program M gives its contract by its exported contract/2
 %% (GPD's definition of a program, ../Programs.txt), contract(Text, with(Read,
 %% Pragmas)), activated by run/3 at the type identity of this scope's
@@ -570,7 +570,7 @@ grassroots_verdict(malformed(_), _, refused).
 %% it calls by run/3, in its own scope, where find_type/2 reads them: an
 %% imported declaration is not in its table.  As the root self.glp does for
 %% the entry templates, each has a clause that is never run; the App calls
-%% neither, only find_type/2 reads them.  check/2 is GSC's (programs/gsc,
+%% neither, only find_type/2 reads them.  check/2 is GSC's (programs/gsc/checker,
 %% check(WDeclared?, Verdict), at the root's types); contract/2 is a program's,
 %% at GivenContract (../self.glp), as the owners agreed on 2026-11-20.
 procedure check(WDeclared?, Verdict).
