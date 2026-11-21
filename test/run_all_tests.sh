@@ -8742,6 +8742,7 @@ sg_core=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/apps/gsn $SG_CORE
 :artefact $GLP_DIR/programs/cssn $SG_CORE
 :artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
+:artefact $GLP_DIR/programs/apps/gc $SG_CORE
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
 :artefact $GLP_DIR/programs/social/graph/checked/grassroots $SG_CORE
 :artefact $GLP_DIR/programs/social/graph/checked/not_grassroots $SG_CORE
@@ -8753,9 +8754,9 @@ play_install(alice, "grassroots.glpw", grassroots, G1).
 play_install(alice, "not_grassroots.glpw", not_grassroots, G2).
 play_install(alice, "malformed.glpw", malformed, G3).
 play_load("cssn.glpw", K1, Key1).
-play_load("currency.glpw", K2, Key2).
+play_load("gc.glpw", K2, Key2).
 play_install(alice, "cssn.glpw", cssn, I1).
-play_install(alice, "currency.glpw", currency, I2).
+play_install(alice, "gc.glpw", gc, I2).
 play_install(alice, "gkk.glpw", gkk, I3).
 play_forged_cert(alice, I4).
 play_verdict(alice, with_wards, V1).
@@ -8780,6 +8781,7 @@ check "SG super-app: GKK's app's artefact is certified" "gkk.glpw --- certified 
 check "SG super-app: GSN's app's artefact is certified" "gsn.glpw --- certified under" "$sg_core"
 check "SG super-app: cssn's artefact is certified" "cssn.glpw --- certified under" "$sg_core"
 check "SG super-app: currency's artefact is certified" "currency.glpw --- certified under" "$sg_core"
+check "SG super-app: GC's app's artefact is certified" "gc.glpw --- certified under" "$sg_core"
 check "SG super-app core loads" "Loaded program" "$sg_core"
 # The third check of GPD's Implementation pragma (graph/Programs.txt): "that
 # its schemas pass the checker".  The Grassroots App reads GSC's checker,
@@ -8794,9 +8796,9 @@ check "SG super-app: the super-app installs a program whose checker verdict is s
 check "SG super-app: a program whose checker verdict is not_grassroots installs nothing" "G2 = \[\]" "$sg_core"
 check "SG super-app: a program whose checker verdict is malformed installs nothing" "G3 = \[\]" "$sg_core"
 check "SG super-app: load_file gives cssn's artefact as a Module" "K1 = module" "$sg_core"
-check "SG super-app: load_file gives currency's artefact as a Module" "K2 = module" "$sg_core"
+check "SG super-app: load_file gives GC's app's artefact as a Module" "K2 = module" "$sg_core"
 check "SG super-app: the super-app installs the certified app compiled from CSSN's contract" "I1 = \[cssn\]" "$sg_core"
-check "SG super-app: the super-app installs the certified currency" "I2 = \[currency\]" "$sg_core"
+check "SG super-app: the super-app installs the certified app compiled from GC's contract, in place of the hand-written currency" "I2 = \[gc\]" "$sg_core"
 check "SG super-app: the super-app installs the certified app compiled from GKK's contract" "I3 = \[gkk\]" "$sg_core"
 check "SG super-app refuses a forgery: a certification that is not a signed term installs nothing" "I4 = \[\]" "$sg_core"
 # The developer's warranty is publish(Src, Cmp), signed by the developer, GPD:1;
@@ -9134,25 +9136,30 @@ check "SG denominated: and at bob" "B = \[opened(alice) | " "$sg_sovereign"
 check_not "SG denominated no failed play" "→ failed" "$sg_sovereign"
 
 # The currency on two smartphones (paper Section 7): the same super-app, two
-# isolates with their own keys, hosting Currencies' mini-app from its certified
-# artefact; the invitation and handshake cross the isolates and the swap of the
-# currency's own contract runs over the conversation the social graph delivered.
+# isolates with their own keys, hosting Currencies' mini-app compiled from GC's
+# contract (programs/apps/gc, as Section APPS's gc_boot installs it) from its
+# certified artefact; the invitation and handshake cross the isolates and GC's
+# acts run over the conversation the social graph delivered: each issues their
+# own coins, alice swaps two Alice-coins for three Bob-coins, bob answering yes,
+# and pays two Bob-coins to bob (play_coins of programs/apps/gc).
 sg_coins=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/gsc/checker $SG_CORE
-:artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
-:boot $GLP_DIR/programs/social/coins_boot.glp $SG_CORE
+:artefact $GLP_DIR/programs/apps/gc $SG_CORE
+:boot $GLP_DIR/programs/apps/gc_boot.glp $SG_CORE
 :quit
 HEREDOC
 2>&1)
+check "SG currency on two smartphones: GC's app's artefact is certified" "gc.glpw --- certified under" "$sg_coins"
 check "SG currency on two smartphones: the boot settles" "Boot settled: 2 agents" "$sg_coins"
-check "SG currency on two smartphones: alice's execution opened" "\[alice\] opened(bob)" "$sg_coins"
-check "SG currency on two smartphones: bob's execution opened" "\[bob\] opened(alice)" "$sg_coins"
-check "SG currency on two smartphones: alice minted her own 2" "\[alice\] minted(2)" "$sg_coins"
-check "SG currency on two smartphones: bob minted his own 2" "\[bob\] minted(2)" "$sg_coins"
-check "SG currency on two smartphones: alice's swap with bob done" "\[alice\] swap_done(bob)" "$sg_coins"
-check "SG currency on two smartphones: bob's swap with alice done" "\[bob\] swap_done(alice)" "$sg_coins"
-check "SG currency on two smartphones: alice holds bob's coin" "\[alice\] holdings(\[lot(bob, 2)\])" "$sg_coins"
-check "SG currency on two smartphones: bob holds alice's coin" "\[bob\] holdings(\[lot(alice, 2)\])" "$sg_coins"
+check_not "SG currency on two smartphones: no abort" "ABORT" "$sg_coins"
+check "SG currency on two smartphones: alice connected to bob" "\[alice\] sg(connected(bob))" "$sg_coins"
+check "SG currency on two smartphones: bob connected to alice" "\[bob\] sg(connected(alice))" "$sg_coins"
+check "SG currency on two smartphones: alice issued her own 2" "\[alice\] view(alice, \[coin(alice), coin(alice), knows(bob), identity, person\], \[bob\], \[\], " "$sg_coins"
+check "SG currency on two smartphones: bob issued his own 3" "\[bob\] view(bob, \[coin(bob), coin(bob), coin(bob), identity, person\], \[\], \[\], " "$sg_coins"
+check "SG currency on two smartphones: bob answers yes to alice's swap" "\[bob\] gave(swap(alice, bob, alice, 2, bob, 3), yes)" "$sg_coins"
+check "SG currency on two smartphones: alice holds bob's three coins after the swap" "\[alice\] view(alice, \[coin(bob), coin(bob), coin(bob), knows(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_coins"
+check "SG currency on two smartphones: bob holds alice's two coins after the swap" "\[bob\] view(bob, \[coin(alice), coin(alice), knows(alice), knows(alice), identity, person\], \[alice\], \[\], " "$sg_coins"
+check "SG currency on two smartphones: alice pays two Bob-coins to bob and holds one" "\[alice\] view(alice, \[coin(bob), knows(bob), knows(bob), identity, person\], \[bob\], \[\], " "$sg_coins"
 
 # Activation without an invitation (GSA paper, Section 3, "A grassroots
 # program instance": "An instance begins with one person, who installs the
