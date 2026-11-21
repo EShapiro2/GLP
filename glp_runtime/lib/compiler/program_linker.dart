@@ -2812,18 +2812,10 @@ Map<String, QualifiedEntryInterface> qualifiedEntryInterfaces(
     entry.argTypes.forEach(reach);
     template.argTypes.forEach(reach);
   }
-  final spelt = <String, String>{};
-  final used = <String>{...bareNames};
-  for (final q in reached.values.toSet().toList()..sort()) {
-    final colon = q.lastIndexOf(':');
-    final scope = q.substring(0, colon).replaceAll(RegExp(r'[^A-Za-z0-9]'), '_');
-    var name = '${q.substring(colon + 1)}__$scope';
-    while (used.contains(name)) {
-      name = '${name}_';
-    }
-    used.add(name);
-    spelt[q] = name;
-  }
+  // One spelling for every qualified name of the program, which the rest of
+  // the interface text shares ([interfaceTypeDefs]).
+  final spelt = _qualifiedSpellings(
+      {...reached.values, for (final td in renamed.values) td.name}, bareNames);
   TypeExpr spell(TypeExpr t) {
     if (t is TypeRef) {
       return TypeRef(spelt[t.name] ?? t.name, t.line, t.column,
@@ -2860,6 +2852,150 @@ Map<String, QualifiedEntryInterface> qualifiedEntryInterfaces(
       e.key: QualifiedEntryInterface(
           spellDecl(e.value.$1), spellDecl(e.value.$2), defs),
   };
+}
+
+/// The spelling in GLP source of each qualified type name `M:T` of [names]
+/// ([qualifiedEntryInterfaces]): `T__M`, every character of M that is not a
+/// letter or a digit a `_`, and `_` appended where that is one of
+/// [bareNames] or an earlier spelling, the names taken in sorted order.
+Map<String, String> _qualifiedSpellings(
+    Iterable<String> names, Set<String> bareNames) {
+  final spelt = <String, String>{};
+  final used = <String>{...bareNames};
+  for (final q in (names.where((n) => n.contains(':')).toSet().toList()
+    ..sort())) {
+    final colon = q.lastIndexOf(':');
+    final scope =
+        q.substring(0, colon).replaceAll(RegExp(r'[^A-Za-z0-9]'), '_');
+    var name = '${q.substring(colon + 1)}__$scope';
+    while (used.contains(name)) {
+      name = '${name}_';
+    }
+    used.add(name);
+    spelt[q] = name;
+  }
+  return spelt;
+}
+
+/// The type definitions an artefact's interface text is printed from
+/// ([interfaceTypeDefsText] in wire/flattening.dart), by the name the text
+/// spells each with and its number of parameters ([typeKey]).
+///
+/// The exports' declarations are written in the entry module's scope, so a
+/// bare name in the text is the type that scope resolves it to.  A type a
+/// definition references is the one the scope of the module defining it
+/// resolves (TGLP modules.tex, Compilation, fourth step: "every type
+/// reference is resolved the same way, to the renamed type of the nearest
+/// scope defining it"), which need not be the entry module's: the root's
+/// `WDeclared` is built of the root's `Atom` in every program, cssn's
+/// `self.glp` defining an `Atom` of its own.  So each renamed definition
+/// `M:T` ([_renamedTypeDefs]) is spelt `T` where the entry module's scope
+/// resolves `T` to it, and qualified ([_qualifiedSpellings]) otherwise, and
+/// each reference in it is spelt the same way; the type identity, of
+/// automata, is then the one the compiled program's tables give
+/// ([linkedTypeIdentityTables]).  Until 2026-11-21 every name was read in the
+/// entry module's scope, cssn's `Atom` entered the root's `WDeclared`, and
+/// `run(contract(_, P), Tc, M)` was refused on cssn, gsn and gkk for a type
+/// identity mismatch.
+///
+/// A name no renamed definition spells bare is taken as [programTypeDefs]
+/// takes it, then from the first module to define it, as before.
+Map<String, TypeDef> interfaceTypeDefs(List<DiscoveredModule> modules,
+    {required String rootDir, String? singleModulePath}) {
+  final fallback = programTypeDefs(modules,
+      rootDir: rootDir, singleModulePath: singleModulePath);
+  for (final mod in modules) {
+    for (final td in mod.ast.typeDefs) {
+      fallback.putIfAbsent(typeKey(td.name, td.typeParams.length), () => td);
+    }
+  }
+  final singleNorm =
+      singleModulePath == null ? null : _normPath(singleModulePath);
+  final rootNorm = _normPath(rootDir);
+  DiscoveredModule? entry;
+  for (final m in modules) {
+    final isEntry = singleNorm != null
+        ? _normPath(m.filePath) == singleNorm
+        : _isRootSelfGlp(m, rootNorm);
+    if (isEntry) {
+      entry = m;
+      break;
+    }
+  }
+  if (entry == null) return fallback;
+  final owners = typeOwnersByModule(modules);
+  final entryOwners = owners[entry.filePath]!;
+  final renamed = <TypeDef>[
+    for (final mod in modules)
+      if (owners[mod.filePath] case final o?) ..._renamedTypeDefs(mod, o),
+  ];
+  final bareNames = <String>{
+    ...TypeRef.builtins,
+    for (final mod in modules)
+      for (final td in mod.ast.typeDefs) td.name,
+  };
+  final names = <String>{};
+  void collect(TypeExpr t) {
+    if (t is TypeRef) {
+      names.add(t.name);
+      t.typeArgs.forEach(collect);
+    } else if (t is StructAlt) {
+      t.args.forEach(collect);
+    } else if (t is ListConsAlt) {
+      collect(t.head);
+      collect(t.tail);
+    } else if (t is DiffListAlt) {
+      collect(t.content);
+      collect(t.hole);
+    }
+  }
+
+  for (final td in renamed) {
+    names.add(td.name);
+    td.alternatives.forEach(collect);
+  }
+  final qualified = _qualifiedSpellings(names, bareNames);
+  String spellName(String name, int parameters) {
+    final colon = name.lastIndexOf(':');
+    if (colon < 0) return name;
+    final bare = name.substring(colon + 1);
+    if (entryOwners[typeKey(bare, parameters)] == name.substring(0, colon)) {
+      return bare;
+    }
+    return qualified[name] ?? name;
+  }
+
+  TypeExpr spell(TypeExpr t) {
+    if (t is TypeRef) {
+      return TypeRef(spellName(t.name, t.typeArgs.length), t.line, t.column,
+          isInput: t.isInput, typeArgs: [for (final a in t.typeArgs) spell(a)]);
+    }
+    if (t is StructAlt) {
+      return StructAlt(
+          t.functor, [for (final a in t.args) spell(a)], t.line, t.column);
+    }
+    if (t is ListConsAlt) {
+      return ListConsAlt(spell(t.head), spell(t.tail), t.line, t.column);
+    }
+    if (t is DiffListAlt) {
+      return DiffListAlt(spell(t.content), spell(t.hole), t.line, t.column);
+    }
+    return t;
+  }
+
+  final out = <String, TypeDef>{};
+  for (final td in renamed) {
+    final name = spellName(td.name, td.typeParams.length);
+    out.putIfAbsent(
+        typeKey(name, td.typeParams.length),
+        () => TypeDef(name, [for (final a in td.alternatives) spell(a)],
+            td.line, td.column,
+            typeParams: td.typeParams));
+  }
+  for (final e in fallback.entries) {
+    out.putIfAbsent(e.key, () => e.value);
+  }
+  return out;
 }
 
 /// Whole-program type-check gate (paper: modules §Static Linking — "the unit of
