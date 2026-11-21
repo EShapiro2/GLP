@@ -33,8 +33,9 @@ Secure Friendship:5 ◆ Replace: asked(Carol,Alicia,Alice) <- knows(Alicia,Carol
 Secure Friendship:5 ◆ | Alicia asks only after an identity loss of Alice.
 Secure Friendship:5 ◆ Vouch: vouched(Carol,Alicia,Alice), received_vouch(Alicia,Carol,Alice) <- asked(Carol,Alicia,Alice), custodian_of(Carol,Alice), ~vouched(Carol,Alicia,Alice) guarded by Carol.
 Secure Friendship:5 ◆ Present: holds_statement(Bob,Carol,Alicia,Alice) <- knows(Alicia,Bob), received_vouch(Alicia,Carol,Alice), friend(Bob,Alice), records_custodian(Bob,Alice,Carol), ~holds_statement(Bob,Carol,Alicia,Alice) guarded by Alicia.
-Secure Friendship:5 ◆ Accept: ~friend(Bob,Alice), ~friend(Alice,Bob), friend(Bob,Alicia), friend(Alicia,Bob), accepted(Bob,Alicia,Alice) <- holds_statement(Bob,Carol,Alicia,Alice), records_threshold(Bob,Alice,Share), holds_statement(Bob,>=Share,Alicia,Alice), ~accepted(Bob,Alicia,Alice), friend(Bob,Alice), friend(Alice,Bob).
-Secure Friendship:5 ◆ Accept custodian: ~custodian(Bob,Alice), ~custodian_of(Alice,Bob), custodian(Bob,Alicia), custodian_of(Alicia,Bob) <- accepted(Bob,Alicia,Alice), custodian(Bob,Alice), custodian_of(Alice,Bob).
+Secure Friendship:5 ◆ Accept: ~friend(Bob,Alice), friend(Bob,Alicia), friend(Alicia,Bob), accepted(Bob,Alicia,Alice) <- holds_statement(Bob,Carol,Alicia,Alice), records_threshold(Bob,Alice,Share), holds_statement(Bob,>=Share,Alicia,Alice), ~accepted(Bob,Alicia,Alice), friend(Bob,Alice).
+Secure Friendship:5 ◆ Accept custodian: ~custodian(Bob,Alice), custodian(Bob,Alicia), custodian_of(Alicia,Bob) <- accepted(Bob,Alicia,Alice), custodian(Bob,Alice).
 Secure Friendship:5 ◆ Replace custodian: ~records_custodian(Bob,Dave,Alice) <- accepted(Bob,Alicia,Alice), records_custodian(Bob,Dave,Alice).
 Secure Friendship:5 ◆ Tell friends: learned_friend(Alicia,Bob,Alice,Dave) <- accepted(Bob,Alicia,Alice), records_friend(Bob,Alice,Dave), ~learned_friend(Alicia,Bob,Alice,Dave).
+Secure Friendship:5 ◆ Tell change: records_replacement(Carol,Bob,Alice,Alicia) <- accepted(Bob,Alicia,Alice), friend(Bob,Carol), friend(Carol,Bob), ~records_replacement(Carol,Bob,Alice,Alicia).
 Secure Friendship:5 ◆ | Bob tells Alicia the friends of Alice he records, and tells his friends of the change.
