@@ -1881,7 +1881,10 @@ sas_arg_vf(const(_), _, _, _, _, T, T?).
 sas_arg_vf(sgn(_, _), _, _, _, _, T, T?).
 sas_arg_vf(item_of(Y), E, V, Nm, P, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, P?, T?, R).
 sas_arg_vf(typed(_, Y), E, V, Nm, P, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, P?, T?, R).
-sas_arg_vf(val(_), _, _, _, _, T, T?).
+% A number is written num(N), and val(C) is a value of any other type (Arg,
+% above), so val(N) of a number N is a fault value_number(Schema, N).
+sas_arg_vf(val(C), _, _, Nm, _, T, [value_number(Nm?, C?)|T?]) :- ground(C?), number(C?) | true.
+sas_arg_vf(val(_), _, _, _, _, T, T?) :- otherwise | true.
 sas_arg_vf(C, E, V, Nm, P, T, R?) :- otherwise | sas_bare_vf(C?, E?, V?, Nm?, P?, T?, R).
 
 procedure(X) sas_bare_vf(X?, REnts?, PNames?, Constant?, Constant?, Faults?, Faults).
@@ -1988,7 +1991,8 @@ sas_expr_vf(const(_), _, _, _, T, T?).
 sas_expr_vf(sgn(_, _), _, _, _, T, T?).
 sas_expr_vf(author_of(Y), E, V, Nm, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, constraint, T?, R).
 sas_expr_vf(item_of(Y), E, V, Nm, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, constraint, T?, R).
-sas_expr_vf(val(_), _, _, _, T, T?).
+sas_expr_vf(val(C), _, _, Nm, T, [value_number(Nm?, C?)|T?]) :- ground(C?), number(C?) | true.
+sas_expr_vf(val(_), _, _, _, T, T?) :- otherwise | true.
 sas_expr_vf(C, E, V, Nm, T, R?) :- otherwise | sas_bare_vf(C?, E?, V?, Nm?, constraint, T?, R).
 
 procedure sas_exprs_vf(SExprs?, REnts?, PNames?, Constant?, Faults?, Faults).
@@ -2344,6 +2348,7 @@ Fault ::= no_introductory_act
         ; listed_agent_role(Constant, Constant)
         ; guard_not_role(Constant, Constant)
         ; value_type(Constant, Constant)
+        ; value_number(Constant, Number)
         ; item_argument(Constant, Constant)
         ; unsupplied(Constant, Constant).
 Faults  ::= [] ; [Fault | Faults].
