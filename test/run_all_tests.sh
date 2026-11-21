@@ -5113,15 +5113,15 @@ check "CVA wild: the platform emitted and loaded, its types checked" "Loaded: .*
 check "CVA wild: a listed person holding no role in carol: the precondition of retire holds at them under no binding" "B1 = \[\]$" "$cva_wild_d"
 check "CVA wild: ... holding one: it holds, the wildcard's variable bound to the role found" "B2 = \[\[b(svar('_1'), s(speech(utterance(chair), carol))), " "$cva_wild_d"
 check "CVA wild: the people of a listed role whose anchor has a wildcard, has_role(c, e, _): those carol has in some role, each once" "L3 = \[alice, bob\]$" "$cva_wild_d"
-# GSN's close (programs/gsc/GSN.glp, the Calculus's): as adopted until 2026-11-15 it required member(e, g, _) of every member e its leader lists, the wildcard's variable bound to the leader; as adopted since, it deletes member(e, g, a) at each, a the leader, with no wildcard.  On the social network's platform, emitted likewise, the precondition of close holds at a listed member who is a member of the leader's group, and under no binding at one who is not; and member, which join forbids with a wildcard, member(b, g, _), has one alternative in Atom.
+# GSN's close (programs/gsc/GSN.glp, the Calculus's): as adopted until 2026-11-15 it required member(e, g, _) of every member e its leader lists, the wildcard's variable bound to the leader; as adopted since, it deletes member(e, g, a) at each, a the leader, with no wildcard.  On the social network's platform, emitted likewise, the precondition of close holds at a listed member who is a member of the leader's group, and under no binding at one who is not; and member, which join forbids with a wildcard, member(b, g, _), has one alternative in Atom.  The group's name is a constant, const('Grupo') in programs/gsc/Groups.glp, so close's request names it as one, club, and the member atom holds it as v(club).
 cva_wild_dir="$GLP_DIR/programs/tests/vg_wildn_$$"
 mkdir -p "$cva_wild_dir" && cp "$CVA/social_network/platform.vglp" "$cva_wild_dir/"
 cva_wild_n=$("$REPL_RUN" <<HEREDOC
 :emit $cva_wild_dir
 load $cva_wild_dir/platform.glp
 :limit 10000000
-term_spec(close(alice, [alice, bob], speech(utterance(club), alice)), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(identity, []), g(member, [s(speech(utterance(club), alice)), p(alice)])], B1).
-term_spec(close(alice, [alice, bob], speech(utterance(club), alice)), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(identity, [])], B2).
+term_spec(close(alice, [alice, bob], club), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(identity, []), g(member, [v(club), p(alice)])], B1).
+term_spec(close(alice, [alice, bob], club), Nm, Rs, Bn), dom_bindings(Nm?, Rs?, Bn?, bob, [g(identity, [])], B2).
 :quit
 HEREDOC
 2>&1)
@@ -5945,9 +5945,9 @@ cva_atom() { # cva_atom <platform.vglp>: the alternatives of Atom, one line
 check "CVA machine states: the social graph's atoms, identity, person, knows(Peer) and friend(Peer)" "^identity person knows(Peer) friend(Peer) $" "$(cva_atom "$CVA/social_graph/platform.vglp")"
 check "CVA machine states: ... friend(bob) written as the contract writes it" "^atom_of(g(friend, \[p(V1)\]), shown(friend(V1?)))$" "$cva_sg_text"
 check "CVA machine states: the currency's atoms, GKK's identity, person and knows(Peer), and coin(Peer) and escrow_coin(Peer, Peer, Peer, Speech), the coins held and those deposited in escrow on a condition" "^identity person knows(Peer) coin(Peer) escrow_coin(Peer, Peer, Peer, Speech) $" "$(cva_atom "$CVA/currency/platform.vglp")"
-check "CVA machine states: GSN's atoms, a speech act at a speech-act variable's place" "^identity person knows(Peer) friend(Peer) message(Peer, Speech) leader(Speech) member(Speech, Peer) listed(Peer, Speech) posted(Speech, Peer, Speech) group_delivered(Peer, Speech, Speech, Peer) group_message(Peer, Speech, Speech, Peer) $" "$(cva_atom "$GLP_DIR/programs/apps/gsn/platform.vglp")"
-# GSNP holds no atom authored since GSNP d0d98714 (2026-11-07, "item with its holder, author_of, GFP's, in place of authored"), and item comes before attestation, the atoms in the order of their predicates' first occurrence.
-check "CVA machine states: GSNP's, on GKK, GnW and GAI, a signed term a speech act" "^identity person knows(Peer) friend(Peer) item(Speech) leader(Speech) member(Speech, Peer) listed(Peer, Speech) posted(Speech, Peer, Speech) group_delivered(Peer, Speech, Speech, Peer) ai_agent has_guardian(Peer) attestation(Speech) principal(Peer) guardian(Peer) attestation_record(Peer, Speech) retired $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
+check "CVA machine states: GSN's atoms, a speech act at a speech-act variable's place and a constant at the group's, const('Grupo')" "^identity person knows(Peer) friend(Peer) message(Peer, Speech) leader(Constant) member(Constant, Peer) listed(Peer, Constant) posted(Speech, Peer, Constant) group_delivered(Peer, Speech, Constant, Peer) group_message(Peer, Speech, Constant, Peer) $" "$(cva_atom "$GLP_DIR/programs/apps/gsn/platform.vglp")"
+# GSNP holds no atom authored since GSNP d0d98714 (2026-11-07, "item with its holder, author_of, GFP's, in place of authored"), and item comes before attestation, the atoms in the order of their predicates' first occurrence.  Enter's roles are Alice, the guardian, then Alf, the agent (programs/gai/Provenance-Groups.glp, since const e4121fc1b; Alf first before it), so Alice's principal, guardian and attestation_record come before Alf's ai_agent, has_guardian and attestation; and the group's name is a constant, const('Grupo').
+check "CVA machine states: GSNP's, on GKK, GnW and GAI, a signed term a speech act" "^identity person knows(Peer) friend(Peer) item(Speech) leader(Constant) member(Constant, Peer) listed(Peer, Constant) posted(Speech, Peer, Constant) group_delivered(Peer, Speech, Constant, Peer) principal(Peer) guardian(Peer) attestation_record(Peer, Speech) ai_agent has_guardian(Peer) attestation(Speech) retired $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
 
 cva_friends_load=$("$REPL_RUN" <<HEREDOC
 $CVA/friends/
