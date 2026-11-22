@@ -71,3 +71,10 @@ Code #36 compacted twice and stays, by Udi's rule of 2026-11-20 14:32 UTC.  Afte
 
 - Branch head after aef905575: the last 22 records of the full recording (num(N), cvac mend, GSC val-number check), Secure Friendship recorded again, and its platform copied into programs/vglp/cva/secure_friendship/.
 - 2026-11-21 19:00 UTC: main a56485a68: every record printed again, and Secure Friendship recorded with SPM #2's four plays (PLAYLIMIT 60000000).  Fast tier at ff122013f: 4205 passed, 0 failed.  Sent to SPM #2, Website and, through the coordinator, Audit.  Next: Section CAS and #118 at the nightly; the Finding 1 set.
+
+## After the fifth compaction (2026-11-21, 23:20 UTC)
+
+- Main 3e428e043: the Calculus's 42a4a5964, b58c17cc9, fb822922d (4049b899c, 2a248be19, b590ada98); six plays, PLAYLIMIT 200000000 (2aa20416b); vGLP's cvac wildcard mend (411150bed); Children's platform reprinted by compile.sh (3e428e043).
+- The Claudese filter, tools/myenglish (6be5ee9bf): inflections, section 17, usage rules, register.txt, tests.tsv and `--test`; Coordination's rejected-coordination.md (9f7c0a3c6).  Standing duty: each text Udi calls Claudese goes into the filter and tests.tsv, merged, the commit reported in one line.
+- In flight: every record printed again on 3e428e043 (the cvac mend changes 43 platforms), four queues in wt-ren, wt-rg, wt-q3, wt-q4 (scratchpad runq.sh, nq0..3.txt, nlog_0..3).  wt-q4 is on the Calculus's 65796c8f9 (Restore friend) and records Secure Friendship first (sfpre.sh: platform, copy to programs/vglp/cva/secure_friendship, then the plays).  Groups+Coins, Rehearsal-Rooms and Tennis-Courts held.
+- Next: gather the four worktrees' cascade changes onto one commit with 65796c8f9, path-limited; Section CAS and the fast tier; push to main; tell Website, Calculus, SPM #2, vGLP and the coordinator (Audit PR 76); close #118.
