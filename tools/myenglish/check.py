@@ -371,7 +371,7 @@ SYNTAX = [
     ('a demand of a thing', r"\b(?:its|this|that|whose)\s+demands?\b|\b(?:specification|paper|section|text|contract|clause|definition|theorem|work|design|protocol|standard|law|rule|model|tool|program|system|framework|method|test)s?(?:'s|s')?\s+demands?\b|\bdemands?\s+of\s+(?:the|a|an|its|this|that|their)\s+(?:specification|paper|section|text|contract|clause|definition|theorem|work|design|protocol|standard|law|rule|model|tool|program|system|framework|method|test)",
      'requirement: "its requirement is ours"; demands come from a person (Udi, 2026-11-22, claudese.md)'),
     ('a negative restatement after "only"', r"\bonly\b[^.;:?!]{1,80},?\s+and\s+not\b|\bonly\b[^.?!]{1,100}[;,]\s+(?:and\s+|but\s+)?(?:the|its|their|no|nothing|none)\b[^.;?!]{0,40}\b(?:does|do|is|are|did|was|were|will|can|need)\s+not\b",
-     'delete what "only" already excludes: "Supporting another distribution requires changing only how an activation time is drawn (Section 7)." (Udi, 2026-11-22; claudese.md, 36)'),
+     'delete what "only" already excludes: "Supporting another distribution only requires changing how an activation time is drawn." (Udi, 2026-11-22; claudese.md, 36)'),
     ('an act written as a noun', r"\bthe\s+(?:draw|drawing|making|taking|doing|giving|picking|sending|setting)\s+of\s+(?:a|an|the|its|their|each|every)\b",
      'write the verb: "how an activation time is drawn" (Udi, 2026-11-22)'),
     ('"guarded at"', r'\bguard(?:ed|s)?\s+at\b', '"guarded by X"; an atom is required or added at a role (claudese.md)'),
