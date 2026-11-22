@@ -297,3 +297,8 @@ Wrong: Supporting another distribution requires changing only how an activation 
 Right: Supporting another distribution only requires changing how an activation time is drawn.
 Why: a negative tail restating what "only" already says; delete it.
 Source: Udi, 2026-11-22 16:55 and 16:58 UTC, the sGLP rebuttal.
+
+Wrong: A yes to a text in chat is not his consent to replace his words in the paper.  A change to his sentence is shown to him as his sentence, marked.  At his yes the paper gets his sentence with that change and nothing else.
+Right: A change to his text is made only as he approved it, marked.
+Why: "too wordy and in Claudese, try to say it in one short sentnece"; a rule told by what is not consent, and as a story of steps.
+Source: Udi, 2026-11-22 23:21 UTC.
