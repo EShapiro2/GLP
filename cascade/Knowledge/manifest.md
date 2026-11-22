@@ -1,10 +1,10 @@
 # A run of the cascade on Knowledge
 
-- Contract: `Knowledge` (`knowledge` to the checker), its owner's two files `programs/gsc/Knowledge.txt` and `programs/gsc/Knowledge.glp`, copied here as they stood at `a6fc2475`.
+- Contract: `Knowledge` (`knowledge` to the checker), its owner's two files `programs/gsc/Knowledge.txt` and `programs/gsc/Knowledge.glp`, copied here as they stood at `65796c8f`.
 - The paper: `/Users/udi/Grassroots/GSC (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gsc/Knowledge.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gsc/Knowledge.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-21 16:02 UTC by `cascade.sh knowledge`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `a6fc2475`; each artefact's source and tool:
+- Run on 2026-11-22 00:53 UTC by `cascade.sh knowledge`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `65796c8f`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

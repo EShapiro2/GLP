@@ -1,10 +1,10 @@
 # A run of the cascade on Mutual-Credit
 
-- Contract: `Mutual-Credit` (`mutual_credit` to the checker), its owner's two files `programs/go/Mutual-Credit.txt` and `programs/go/Mutual-Credit.glp`, copied here as they stood at `a6fc2475`.
+- Contract: `Mutual-Credit` (`mutual_credit` to the checker), its owner's two files `programs/go/Mutual-Credit.txt` and `programs/go/Mutual-Credit.glp`, copied here as they stood at `3e428e04`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/Mutual-Credit.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Mutual-Credit.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-21 16:03 UTC by `cascade.sh mutual_credit`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `a6fc2475`; each artefact's source and tool:
+- Run on 2026-11-22 00:29 UTC by `cascade.sh mutual_credit`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `3e428e04`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
