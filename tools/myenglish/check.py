@@ -299,6 +299,11 @@ def close_matches(text, entries, threshold=0.75):
                     best = (r, i, size)
         if best[0] >= threshold:
             r, i, size = best
+            # A passage at least as close to the entry's Right text as to its Wrong text is the Right text, or its
+            # like, and passes (Coordination #17, 2026-11-22: section 41's Right text failed as close to its Wrong).
+            right = words_of(e.get('Right', ''))
+            if right and difflib.SequenceMatcher(None, right, seq[i:i + size], autojunk=False).ratio() >= r:
+                continue
             no = toks[i][1]
             found = ' '.join(seq[i:i + size])
             kind = 'wrong text' if r >= 0.999 else 'close to a wrong text (%d%%)' % round(100 * r)
@@ -363,6 +368,8 @@ SYNTAX = [
     ('a gloss after a colon or dash naming the quantity', r'\b(?:what (?:it|they|she|he) (?:holds|can reach|knows|sees))\b',
      'name the quantity (claudese.md)'),
     ('"X-dependent" as a predicate', r'\b[\w]+-dependent\b', 'say who decides: "is a question for each jurisdiction" (claudese.md)'),
+    ('a demand of a thing', r"\b(?:its|this|that|whose)\s+demands?\b|\b(?:specification|paper|section|text|contract|clause|definition|theorem|work|design|protocol|standard|law|rule|model|tool|program|system|framework|method|test)s?(?:'s|s')?\s+demands?\b|\bdemands?\s+of\s+(?:the|a|an|its|this|that|their)\s+(?:specification|paper|section|text|contract|clause|definition|theorem|work|design|protocol|standard|law|rule|model|tool|program|system|framework|method|test)",
+     'requirement: "its requirement is ours"; demands come from a person (Udi, 2026-11-22, claudese.md)'),
     ('"guarded at"', r'\bguard(?:ed|s)?\s+at\b', '"guarded by X"; an atom is required or added at a role (claudese.md)'),
     ('a proposal left out for its cost', r'\b(?:because of|for) (?:its|the) cost\b|\bwhatever (?:its|the) cost\b', '"If cost is very high, state it." (claude.md)'),
     ('"turns on"', r'\bturns?\s+on\s+(?:its|the|whether|a|an|their)\b', '"is subject to" (claudese.md)'),
