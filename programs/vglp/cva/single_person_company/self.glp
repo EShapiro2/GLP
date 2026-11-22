@@ -1,0 +1,49 @@
+%% draft, not committed: stops at Found, which the platform never proposes (GO #14's helper, 2026-11-22)
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_sole_officer(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_sole_officer(LA?, LD?, LG?, LO?, N?) :-
+    quartet([own([A1], propose(establish(A1?))), wait(holds(identity)),
+             own([A2], propose(acquaint(A2?, gov))), wait(holds(knows(gov))),
+             own([A3], propose(found(orga, A3?, gov, 'sole officer'))), wait(holds(officer(orga))),
+             approval(acquaint(dave, alice), yes), wait(holds(knows(dave)))],
+            [own([D1], propose(establish(D1?))), wait(holds(identity)),
+             own([D2], propose(organisation_acquaint(orga, D2?))), wait(holds(knows(orga))),
+             own([D3], propose(acquaint(D3?, alice))), wait(holds(knows(alice))),
+             own([D4], propose(join(D4?, orga, alice)))],
+            [own([G1], propose(establish(G1?))), wait(holds(identity)),
+             approval(acquaint(alice, gov), yes),
+             approval(found(orga, alice, gov, 'sole officer'), yes), wait(holds(founder(orga)))],
+            [approval(found(orga, alice, gov, 'sole officer'), yes), wait(holds(identity)),
+             approval(organisation_acquaint(orga, dave), yes)],
+            LA, LD, LG, LO, N).
+
+procedure quartet(ScriptSteps?, ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog),
+    Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+quartet(SA, SD, SG, SO, LA?, LD?, LG?, LO?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(dave, InD?, OutD, TD, AsD),
+    platform # dispatch(AsD?, ch(GD?, DD), MD),
+    to_person(MD?, TD?),
+    person(DD?, GD, ps(nosess, [], [], SD?), LD),
+    platform # agent(gov, InG?, OutG, TG, AsG),
+    platform # dispatch(AsG?, ch(GG?, DG), MG),
+    to_person(MG?, TG?),
+    person(DG?, GG, ps(nosess, [], [], SG?), LG),
+    platform # agent(orga, InO?, OutO, TO, AsO),
+    platform # dispatch(AsO?, ch(GO?, DO), MO),
+    to_person(MO?, TO?),
+    person(DO?, GO, ps(nosess, [], [], SO?), LO),
+    merge(OutA?, OutD?, Net1),
+    merge(OutG?, OutO?, Net2),
+    merge(Net1?, Net2?, Net),
+    route4(Net?, alice, InA, dave, InD, gov, InG, orga, InO, N).
