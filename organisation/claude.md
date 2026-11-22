@@ -50,7 +50,7 @@ My English is Udi's own English, the style guide's.  Write it to Udi, to other t
 
 ## Repos
 
-- A session adds by itself every repo it needs, GLP and its paper's repo among them, by its tool for adding a repo, and asks Udi for none (Udi, 2026-11-22 14:01 UTC).
+- A session finds in the table of `organisation/projects.md` every repo it needs: GLP, its paper's repo, and the repo of each paper it must read.  It tries to add each, by its tool for adding a repo.  For each one refused it asks Udi at once, by the repo's full name, and adds it at his yes: "I need EShapiro2/GSC-Grassroots-Social-Contracts.  Q: Do you approve?"  One question may name several (Udi, 2026-11-22 14:03 UTC: "set the instructions so that they ask for the full name and I approve").
 - GitHub is the shared medium.  Pull a repo before you read it, push after every step, and count nothing unpushed as done.
 - "ok, so call it repo not disc, disc is on my Mac".
 - Udi's Overleaf edits reach GitHub when he pushes from Overleaf.

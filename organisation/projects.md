@@ -1,6 +1,6 @@
 # Projects
 
-Every project and paper of Grassroots, with its repo and its record (Udi, 2026-11-20, "yes, but just do it"; the table, Udi, 2026-11-22 14:01 UTC: "have a table mapping project/paper names/acronyms to repo names").  Coordination keeps this file.  A session finds its project or paper here by name or acronym, adds the repos it needs (claude.md, "Repos"), and reads the record named here.  A record's last section, "Moved from CLAUDE.md, 2026-11-20", holds the rules that stood in the repo's `CLAUDE.md` until that day.  Repos are under `EShapiro2/` unless the table names another owner.
+Every project and paper of Grassroots, with its repo and its record (Udi, 2026-11-20, "yes, but just do it"; the table, Udi, 2026-11-22 14:01 UTC: "have a table mapping project/paper names/acronyms to repo names").  Coordination keeps this file.  A session finds its project or paper here by name or acronym, adds the repos it needs, asking Udi by full name for any refused (claude.md, "Repos"), and reads the record named here.  A record's last section, "Moved from CLAUDE.md, 2026-11-20", holds the rules that stood in the repo's `CLAUDE.md` until that day.  Repos are under `EShapiro2/` unless the table names another owner.
 
 | Project | Paper or part | Repo | Main file | Cite key | Record |
 |---|---|---|---|---|---|
