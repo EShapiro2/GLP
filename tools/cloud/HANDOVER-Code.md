@@ -85,3 +85,10 @@ Code #36 compacted twice and stays, by Udi's rule of 2026-11-20 14:32 UTC.  Afte
 - Udi, 2026-11-22 14:15 UTC (relayed by the coordinator): no question to Udi in this thread; each goes to the coordinator as the full text ready for him.  Claudese texts now come from the coordinator directly.
 - PRs #128, #129, #130 (Nimrod): the Calculus's verdict 2026-11-22 17:23 UTC (/mnt/project-files/calculus/gce-prs/verdicts.txt): 130 and 128's Dial and Plane hold; Budget and Committee need #125; none merges until Udi approves the five names, GCE as owner, and DAO's clauses 6 to 8.
 - Found is never proposed on a compiled platform (GO #14, branch GO-spc-play a1d69fab): vGLP confirms a gap of the OSPM paper; its revision waits on Udi, then the cvac change on gxjvnp and the reprint of programs/go's platforms.  Then record GO's Single-Person Company play (PLAYDIR single_person_company, a row in cascade.sh, PLAYLIMIT 200000000) for Audit finding 4.
+
+## After the sixth compaction (2026-11-22, 23:30 UTC)
+
+- Main 1c68797ea: d89942a32, the text check rejects a symbol defined in words ("where n is its clause and its name") and a new word followed by its restatement (Calculus #2's three texts, Udi 22:05 UTC); tests.tsv 15 tests, 0 wrong; and Coordination's d9fb9a57c (organisation/cowork-instructions.md).
+- Earlier the same day: rules for "a demand of a thing", "a negative restatement after only", "an act written as a noun"; close_matches passes a text at least as close to its Right text as to its Wrong; "precisely" out of register.txt.
+- Udi's first rule (2026-11-22 17:08 UTC): no Claude talks to Udi about anything it has not read in full, first hand.
+- The right text Calculus #2 proposed for n is not yet accepted by Udi; it is not cited as right.
