@@ -82,3 +82,4 @@ Code #36 compacted twice and stays, by Udi's rule of 2026-11-20 14:32 UTC.  Afte
 - Main fe4192d3c: Section CAS checks every record in cascade/ (23 had no row, all pass); the records of the held Tennis Courts and Rehearsal Rooms removed, adopt.py printing no .glp for them; Calculus asked to say when they are certified.  Website asked to deploy fe4192d3c.
 - Main 769f038f2: the two records restored (the live site shows their pages from them; removing them needs Udi's yes).  Section CAS reports Tennis-Courts and Rehearsal-Rooms until the Calculus certifies them; then record both again.
 - Main e6b768b5f: SPM's 225430f3 and ba79cda1 (plays 7 and 8, Audit PR 76 Findings 5 and 4); Secure Friendship recorded with eight plays, 20 min.
+- Udi, 2026-11-22 14:15 UTC (relayed by the coordinator): no question to Udi in this thread; each goes to the coordinator as the full text ready for him.  Claudese texts now come from the coordinator directly.
