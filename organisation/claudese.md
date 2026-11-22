@@ -86,7 +86,7 @@ demand, demands (of a specification, a paper or a text: "its demand is ours") --
 33. A rule written as a description ("last, alone, marked Q: or Request:, and nothing after it"; "sentences only, no write of any kind") --- My English: an instruction in plain verbs, once: "comes last"; "No writing"
 34. A vague verb for what was run ("I took the gate as its sections run separately on one commit") --- My English: "Before merging into main I did not run the whole suite in one go.  I ran each of its parts by itself, all on the same commit, and merged when every part had passed."
 35. An abstract noun as subject and the paper's machinery for what happens ("A change of a fact the phone finds is a trigger of the agent, read with its other triggers.") --- My English: "When a fact Alice's phone finds changes, as when a person comes near, the phone tells Alice's agent, which then checks again which of its own transactions it can take."
-36. A negative tail after "only" ("changes only the draw of an activation time, and not the language"; "changing only how an activation time is drawn; the language does not change") --- My English: delete it: "Supporting another distribution requires changing only how an activation time is drawn (Section 7)."
+36. A negative tail after "only" ("changes only the draw of an activation time, and not the language"; "changing only how an activation time is drawn; the language does not change") --- My English: delete it: "Supporting another distribution only requires changing how an activation time is drawn."
 
 ## The rule under them
 

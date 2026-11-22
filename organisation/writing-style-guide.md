@@ -293,11 +293,11 @@ Why: in My English demands come from a person; a specification has requirements.
 Source: Udi, 2026-11-22 16:45 UTC.
 
 Wrong: Any other distribution changes only the draw of an activation time, and not the language (Section 7).
-Right: Supporting another distribution requires changing only how an activation time is drawn (Section 7).
+Right: Supporting another distribution only requires changing how an activation time is drawn.
 Why: a distribution as the actor, a noun for the act, and a negative tail after the statement; say what supporting it requires.
-Source: Udi, 2026-11-22 16:55 and 16:56 UTC, the sGLP rebuttal.
+Source: Udi, 2026-11-22 16:55 and 16:58 UTC, the sGLP rebuttal.
 
 Wrong: Supporting another distribution requires changing only how an activation time is drawn; the language does not change (Section 7).
-Right: Supporting another distribution requires changing only how an activation time is drawn (Section 7).
+Right: Supporting another distribution only requires changing how an activation time is drawn.
 Why: a negative tail restating what "only" already says; delete it.
-Source: Udi, 2026-11-22 16:55 and 16:56 UTC, the sGLP rebuttal.
+Source: Udi, 2026-11-22 16:55 and 16:58 UTC, the sGLP rebuttal.
