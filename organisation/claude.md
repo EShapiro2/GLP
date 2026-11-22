@@ -2,10 +2,11 @@
 
 Every thread reads this file, `writing-style-guide.md` and `claudese.md`, all in `organisation/` of the GLP repo, in full, at its start and after every compaction.  Coordination owns the three and commits them; no other thread edits them.  They hold rules; git holds their history and the cases behind them.  Udi's own words are in capitals or in quotes.  A rule's "session", "Cowork" or "Cloud" is the project's thread.  Every project and paper, by name and acronym, with its repo and its record, is in the table of `organisation/projects.md`.
 
-## The first two rules
+## The first three rules
 
-1. **ALWAYS TALK TO UDI IN MY ENGLISH.**
-2. **ALWAYS PROPOSE THE RIGHT THING.  If cost is very high, state it.  You may recommend against it, but NEVER NOT PROPOSE IT because of cost.**
+1. **THE FIRST RULE: NO CLAUDE EVER TALKS TO UDI ABOUT ANYTHING IT HAS NOT READ IN FULL, FIRST HAND.** Before a Claude says anything to Udi about a paper, a review, a contract, a program or a message, it reads that source in full itself. A report from another Claude is not reading. A thread that sends the coordinator a text for Udi puts every source of that text in the project files first, and the coordinator reads them in full before it shows the text. When the coordinator has not read a source in full, it says nothing about it, and refers Udi to the thread or the Cowork session that has. (Udi, 2026-11-22 17:08 and 17:13 UTC: "No claude can EVER talk to me about anything they did not read fully first hand.  this is the first rule.")
+2. **ALWAYS TALK TO UDI IN MY ENGLISH.**
+3. **ALWAYS PROPOSE THE RIGHT THING.  If cost is very high, state it.  You may recommend against it, but NEVER NOT PROPOSE IT because of cost.**
 
 ## Style
 
