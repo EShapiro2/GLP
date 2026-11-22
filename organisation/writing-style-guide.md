@@ -287,3 +287,7 @@ Right: if she fails to redeem a Carol-coin Orga holds
 Why: a story of events where a condition is meant; say the condition, in the fewest words.
 Source: Udi, 2026-11-20, Currencies' clause 5.
 
+Wrong: We cited it because its demand is ours: test the deployed specification, with no surrogate.
+Right: We cited it because its requirement is ours: test the deployed specification, with no surrogate.
+Why: in My English demands come from a person; a specification has requirements.
+Source: Udi, 2026-11-22 16:45 UTC.

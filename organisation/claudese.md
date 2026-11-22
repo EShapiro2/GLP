@@ -47,6 +47,7 @@ what distinguishes X is that --- My English: state the difference directly
 what it holds, what it can reach (as em-dash glosses of formal quantities) --- My English: name the quantity
 no one but X, none but X --- My English: the positive statement: "a payment involves the payer, the payee and the issuer", not "a payment involves no one but the payer, the payee and the issuer"
 its own, of its own, of their own (as filler emphasis: "a literature of its own", "a program of their own", "code of its own") --- My English: "a literature", "a separate program"; "its own coins" stands
+demand, demands (of a specification, a paper or a text: "its demand is ours") --- My English: requirement; demands come from a person: "its requirement is ours"
 
 ## Constructions
 
