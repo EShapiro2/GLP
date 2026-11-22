@@ -1,10 +1,10 @@
 # A run of the cascade on Warded-Groups
 
-- Contract: `Warded-Groups` (`warded_groups` to the checker), its owner's two files `programs/cssn/Warded-Groups.txt` and `programs/cssn/Warded-Groups.glp`, copied here as they stood at `a6fc2475`.
+- Contract: `Warded-Groups` (`warded_groups` to the checker), its owner's two files `programs/cssn/Warded-Groups.txt` and `programs/cssn/Warded-Groups.glp`, copied here as they stood at `3e428e04`.
 - The paper: `/Users/udi/Grassroots/CSSN (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/cssn/Warded-Groups.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/cssn/Warded-Groups.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-21 16:12 UTC by `cascade.sh warded_groups`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `a6fc2475`; each artefact's source and tool:
+- Run on 2026-11-22 00:57 UTC by `cascade.sh warded_groups`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `3e428e04`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

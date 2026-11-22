@@ -3863,7 +3863,11 @@ unable_at1(RsP, Bn, Sh, L?, H?) :- ground(RsP?), ground(Bn?), ground(Sh?) | lack
 
 procedure held_in(GAtoms?, GAtoms?, GAtoms).
 held_in([], _, []).
-held_in([G | Gs], Sh, H?) :- ground(G?), ground(Sh?) | mem(G?, Sh?, In), held_in(Gs?, Sh?, H1), keep_g(In?, G?, H1?, H).
+held_in([G | Gs], Sh, H?) :- ground(G?), ground(Sh?) | g_wild(G?, W), held_one(W?, G?, Sh?, H0), held_in(Gs?, Sh?, H1), app(H0?, H1?, H).
+
+procedure held_one(YesNo?, GAtom?, GAtoms?, GAtoms).
+held_one(no, G, Sh, H?) :- ground(G?) | mem(G?, Sh?, In), keep_g(In?, G?, [], H).
+held_one(yes, K, Sh, H?) :- g_matched(K?, Sh?, H).
 
 procedure keep_g(YesNo?, GAtom?, GAtoms?, GAtoms).
 keep_g(yes, G, H, [G? | H?]).
@@ -4054,7 +4058,22 @@ forb_ok([A | As], B, Sh, R?) :- ground(A?), ground(B?), ground(Sh?) | atom_bound
 
 procedure forb_one(YesNo?, SAtom?, Binding?, GAtoms?, YesNo).
 forb_one(no, _, _, _, yes).
-forb_one(yes, A, B, Sh, R?) :- ground(Sh?) | img_atom(A?, B?, G), mem(G?, Sh?, In), neg(In?, R).
+forb_one(yes, A, B, Sh, R?) :- ground(Sh?) | img_atom(A?, B?, G), forb_held(G?, Sh?, In), neg(In?, R).
+
+procedure forb_held(GAtom?, GAtoms?, YesNo).
+forb_held(G, Sh, In?) :- ground(G?) | g_wild(G?, W), forb_held1(W?, G?, Sh?, In).
+
+procedure forb_held1(YesNo?, GAtom?, GAtoms?, YesNo).
+forb_held1(no, G, Sh, In?) :- mem(G?, Sh?, In).
+forb_held1(yes, K, Sh, In?) :- g_matched(K?, Sh?, Ms), nonempty(Ms?, In).
+
+procedure g_matched(GAtom?, GAtoms?, GAtoms).
+g_matched(_, [], []).
+g_matched(K, [G | Gs], H?) :- ground(K?), ground(G?) | g_matches(K?, G?, M), g_matched(K?, Gs?, H1), keep_g(M?, G?, H1?, H).
+
+procedure nonempty(GAtoms?, YesNo).
+nonempty([], no).
+nonempty([_ | _], yes).
 
 procedure forb_ok1(YesNo?, SAtoms?, Binding?, GAtoms?, YesNo).
 forb_ok1(no, _, _, _, no).
@@ -4801,11 +4820,11 @@ live_at1(no, _, _, _, _, no).
 live_at1(yes, Ps, Rs, B, Rf, Ok?) :- live_at(Ps?, Rs?, B?, Rf?, Ok).
 
 procedure live_one(CAtoms?, CAtoms?, Peer?, Preds?, YesNo).
-live_one(R, F, P, Rf, Ok?) :- ground(F?) | ms_meets(R?, F?, M1), own_reflexive_in(F?, P?, Rf?, M2), or(M1?, M2?, M), neg(M?, Ok).
+live_one(R, F, P, Rf, Ok?) :- ground(F?) | forb_meets(R?, F?, M1), own_reflexive_in(F?, P?, Rf?, M2), or(M1?, M2?, M), neg(M?, Ok).
 
 procedure linked(Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
 linked([], _, _, _, _, _, yes).
-linked([P | Ps], Rs1, B1, Rs2, B2, Rf, L?) :- ground(P?), ground(Rs1?), ground(B1?), ground(Rs2?), ground(B2?), ground(Rf?) | reqs_at(Rs1?, B1?, P?, Rf?, R1), reqs_at(Rs2?, B2?, P?, Rf?, R2), forbs_at(Rs1?, B1?, P?, F1), forbs_at(Rs2?, B2?, P?, F2), bound_cs(R1?, Rb1), bound_cs(R2?, Rb2), ms_meets(Rb1?, F2?, C1), ms_meets(Rb2?, F1?, C2), or(C1?, C2?, C), linked1(C?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
+linked([P | Ps], Rs1, B1, Rs2, B2, Rf, L?) :- ground(P?), ground(Rs1?), ground(B1?), ground(Rs2?), ground(B2?), ground(Rf?) | reqs_at(Rs1?, B1?, P?, Rf?, R1), reqs_at(Rs2?, B2?, P?, Rf?, R2), forbs_at(Rs1?, B1?, P?, F1), forbs_at(Rs2?, B2?, P?, F2), bound_cs(R1?, Rb1), bound_cs(R2?, Rb2), forb_meets(Rb1?, F2?, C1), forb_meets(Rb2?, F1?, C2), or(C1?, C2?, C), linked1(C?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
 
 procedure linked1(YesNo?, Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
 linked1(yes, _, _, _, _, _, _, no).
@@ -4816,6 +4835,41 @@ reqs_at(Rs, B, P, Rf, R?) :- ground(B?), ground(P?) | specs_at(Rs?, 1, B?, P?, R
 
 procedure forbs_at(RoleSpecs?, Binding?, Peer?, CAtoms).
 forbs_at(Rs, B, P, F?) :- ground(B?) | specs_at(Rs?, 1, B?, P?, RsP), forbs_of(RsP?, Fs), cimg_atoms(Fs?, B?, F).
+
+procedure forb_meets(CAtoms?, CAtoms?, YesNo).
+forb_meets([], _, no).
+forb_meets([X | Xs], Fs, R?) :- ground(X?), ground(Fs?) | c_forbidden(Fs?, X?, R1), forb_meets1(R1?, Xs?, Fs?, R).
+
+procedure forb_meets1(YesNo?, CAtoms?, CAtoms?, YesNo).
+forb_meets1(yes, _, _, yes).
+forb_meets1(no, Xs, Fs, R?) :- forb_meets(Xs?, Fs?, R).
+
+procedure c_forbidden(CAtoms?, CAtom?, YesNo).
+c_forbidden([], _, no).
+c_forbidden([K | Ks], X, R?) :- ground(K?), ground(X?) | c_matches(K?, X?, R1), c_forbidden1(R1?, Ks?, X?, R).
+
+procedure c_forbidden1(YesNo?, CAtoms?, CAtom?, YesNo).
+c_forbidden1(yes, _, _, yes).
+c_forbidden1(no, Ks, X, R?) :- c_forbidden(Ks?, X?, R).
+
+procedure c_matches(CAtom?, CAtom?, YesNo).
+c_matches(cmp_atom(P, Ks), cmp_atom(Q, Xs), M?) :- (P? =?= Q?) | cm_vals(Ks?, Xs?, M).
+c_matches(_, _, no) :- otherwise | true.
+
+procedure cm_vals(CVals?, CVals?, YesNo).
+cm_vals([], [], yes).
+cm_vals([], [_ | _], no).
+cm_vals([_ | _], [], no).
+cm_vals([K | Ks], [X | Xs], M?) :- ground(K?), ground(X?) | cm_val(K?, X?, M1), cm_vals1(M1?, Ks?, Xs?, M).
+
+procedure cm_vals1(YesNo?, CVals?, CVals?, YesNo).
+cm_vals1(no, _, _, no).
+cm_vals1(yes, Ks, Xs, M?) :- cm_vals(Ks?, Xs?, M).
+
+procedure cm_val(CVal?, CVal?, YesNo).
+cm_val(cmp_free(any), _, yes).
+cm_val(cmp_val(K), cmp_val(X), M?) :- gm_val(K?, X?, M).
+cm_val(K, X, M?) :- otherwise | same(K?, X?, M).
 
 procedure forbs_of(RoleSpecs?, SAtoms).
 forbs_of([], []).
@@ -5406,6 +5460,7 @@ vars_bound([], _, yes).
 vars_bound([num(X) | Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
 vars_bound([val(_) | Vs], B, R?) :- vars_bound(Vs?, B?, R).
 vars_bound([item_of(V) | Vs], B, R?) :- vars_bound([V? | Vs?], B?, R).
+vars_bound([any | Vs], B, R?) :- vars_bound(Vs?, B?, R).
 vars_bound([nterm(N) | Vs], B, R?) :- ground(N?) | nt_vars(N?, Ws), app(Ws?, Vs?, Vs1), vars_bound(Vs1?, B?, R).
 vars_bound([V | Vs], B, R?) :- otherwise, ground(B?) | lookup(V?, B?, F), vars_bound1(F?, Vs?, B?, R).
 
