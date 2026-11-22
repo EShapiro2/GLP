@@ -12,4 +12,4 @@ wrong	The demands of the specification are met by the run.	like Udi's of 2026-11
 right	We cited it because its requirement is ours: test the deployed specification, with no surrogate.	Udi, 2026-11-22 16:45 UTC, section 41
 wrong	Any other distribution changes only the draw of an activation time, and not the language (Section 7).	Udi, 2026-11-22 16:55 UTC, sGLP rebuttal
 wrong	Supporting another distribution requires changing only how an activation time is drawn; the language does not change (Section 7).	Udi, 2026-11-22 16:55 UTC: "; the language does not change - Claudese!"
-right	Another distribution can be supported by changing only the way an activation time is sampled (Section 7).	the coordinator's proposal to Udi, 2026-11-22, not yet approved
+right	Supporting another distribution requires changing only how an activation time is drawn (Section 7).	Udi, 2026-11-22 16:56 UTC, sGLP rebuttal
