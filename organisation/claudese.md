@@ -1,6 +1,6 @@
 # Claudese — do not use
 
-Claude's stock words and phrases are banned: to Udi, to another Claude, and in every document and paper.  Write My English, Udi's own, the English of `writing-style-guide.md`.  Each entry is one line, `banned --- My English: <what to write>`; the text check, `tools/myenglish/check.py`, reads this form.  Udi adds more over time.
+Claude's stock words and phrases are banned everywhere; write My English (`writing-style-guide.md`).  Each entry is one line, `banned --- My English: <what to write>`, which the text check, `tools/myenglish/check.py`, reads.
 
 ## Words
 
@@ -91,4 +91,4 @@ demand, demands (of a specification, a paper or a text: "its demand is ours") --
 
 ## The rule under them
 
-**Think of Udi as the reader**: "Why don't you use this clear language in the paper, only with me?  think of me as the reader".  The sentence you would write to him in chat is the sentence for the paper.  A paragraph has three sentences: the claim, its warrant, the proposal.
+**Think of Udi as the reader** (style guide, 30).  A paragraph has three sentences: the claim, its warrant, the proposal.
