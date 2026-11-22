@@ -12,7 +12,7 @@ A *bond* is a note that is a unit of its issuer's debt, due at its maturity date
 A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
 A *corporation* is an organisation that holds, pays and issues Dollar-denominated coins and bonds.
 A *single-person limited-liability company* is a corporation whose bylaws name one role, the *sole officer*, who decides every act of the company, and admit no participant but the sole officer.
-Alice, Bob and Carol are persons, Orga and Will organisations.
+Alice, Bob and Carol are persons, Orga a single-person limited-liability company, Will an organisation.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -26,7 +26,7 @@ Guardians:4. ■ Organisations. Organisations acquaint: Orga, an organisation of
 Guardians:5. ■ Retire: Those who decide for Orga may retire Orga; every guardianship and relation of Orga then ends and Orga can take no act.
 Organisation:1. ■ Found: An organisation may create Orga (Guardians:1) with the consent of Alice; Alice is then its first officer.
 Organisation:2. ■ Acts of the organisation. Propose: An officer, or a person the bylaws name, may propose an act of Orga. Vote: Those who decide the act may vote on it. Act: An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.
-Organisation:3. ■ Participation. Join: Bob may become a participant of Orga with the consent of those who decide for Orga. Leave, Expel: Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
+Organisation:3, Single-Person Company:1. ■ Participation. Join: Bob may become a participant of Orga with the consent of those who decide for Orga, only if Bob is the first officer of Orga. Leave, Expel: Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
 Organisation:5. ■ Amend: Those who decide it may amend the bylaws.
 Organisation:6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
 Notes:1, Bonds:1. ■ Issue: Alice may issue Alice-notes, for bonds, with maturity later than the current date.

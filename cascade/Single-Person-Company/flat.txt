@@ -52,7 +52,7 @@ Organisation:2 ■ Propose: Bob may Orga has Motion proposed, provided Bob is an
 Organisation:2 ■ Vote: Bob may Orga holds Bob's vote on Motion, provided Bob is an officer of Orga, Orga is an organisation, Orga has Motion proposed and not Orga holds Bob's vote on Motion.
 Organisation:2 ■ Act: Alice may Orga has Motion taken, provided Alice is an officer of Orga, Orga holds the votes of at least Votes persons on Motion, Double is Votes times 2, Orga has fewer than Double persons as an officer and not Orga has Motion taken.
 Organisation:3 ■ | Participation.
-Organisation:3 ■ Join: Bob and the sole officer of Orga may jointly Bob is a participant of Orga and Orga has Bob as a participant, provided not Bob is a participant of Orga and not Orga has anyone as a participant.
+Organisation:3+Single-Person Company:1 ■ Join: Bob and those who decide for Orga may jointly Bob is a participant of Orga and Orga has Bob as a participant, provided not Bob is a participant of Orga and Orga has Bob as its first officer.
 Organisation:3 ■ Leave: Bob may no longer Bob is a participant of Orga and no longer Orga has Bob as a participant, provided not Bob is an officer of Orga.
 Organisation:3 ■ Officer leave: Bob may no longer Bob is a participant of Orga, no longer Orga has Bob as a participant, no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
 Organisation:3 ■ Expel: Those who decide for Orga may no longer Bob is a participant of Orga and no longer Orga has Bob as a participant, provided not Bob is an officer of Orga.
