@@ -370,8 +370,14 @@ SYNTAX = [
     ('"X-dependent" as a predicate', r'\b[\w]+-dependent\b', 'say who decides: "is a question for each jurisdiction" (claudese.md)'),
     ('a demand of a thing', r"\b(?:its|this|that|whose)\s+demands?\b|\b(?:specification|paper|section|text|contract|clause|definition|theorem|work|design|protocol|standard|law|rule|model|tool|program|system|framework|method|test)s?(?:'s|s')?\s+demands?\b|\bdemands?\s+of\s+(?:the|a|an|its|this|that|their)\s+(?:specification|paper|section|text|contract|clause|definition|theorem|work|design|protocol|standard|law|rule|model|tool|program|system|framework|method|test)",
      'requirement: "its requirement is ours"; demands come from a person (Udi, 2026-11-22, claudese.md)'),
-    ('a negative restatement after "only"', r"\bonly\b[^.;:?!]{1,80},?\s+and\s+not\b|\bonly\b[^.?!]{1,100}[;,]\s+(?:and\s+|but\s+)?(?:the|its|their|no|nothing|none)\b[^.;?!]{0,40}\b(?:does|do|is|are|did|was|were|will|can|need)\s+not\b",
+    ('a negative restatement after "only"', r"\bonly\b[^.;:?!]{1,80},?\s+and\s+not\b|\bonly\b[^.?!]{1,100}[;,]\s+(?:and\s+|but\s+)?(?:the|its|their|no|nothing|none)\b[^.;?!]{0,40}\b(?:does|do|is|are|did|was|were|will|can|need)\s+not\b|\bonly\b[^.;?!]{1,100},\s+and\s+no\s+[a-z]+\s+[a-z]+s\b",
      'delete what "only" already excludes: "Supporting another distribution only requires changing how an activation time is drawn." (Udi, 2026-11-22; claudese.md, 36)'),
+    ('a text giving no reason', r"\b(?:contract|paper|clause|section|text|definition)\s+gives\s+no\s+reason\b",
+     'say who knows no reason: "we know no reason for it" (claudese.md, construction 31)'),
+    ('a rule told by what is not consent', r"\bis\s+not\s+(?:his|her|their|Udi's)\s+(?:consent|approval|permission|agreement|yes)\b",
+     'say what holds, in one sentence (Udi, 2026-11-22 23:21 UTC: "too wordy and in Claudese, try to say it in one short sentnece"; claudese.md, 22)'),
+    ('a rule told as a story of steps', r"\b(?:at|after|upon|on)\s+(?:his|her|their|Udi's)\s+(?:yes|approval|consent)\b,?\s+(?:the|a|an|its|his|her|their)\s+\w+\s+(?:gets|receives|takes|is\s+given)\b",
+     'the rule, once, in one sentence (Udi, 2026-11-22 23:21 UTC; claudese.md, 23)'),
     ('an act written as a noun', r"\bthe\s+(?:draw|drawing|making|taking|doing|giving|picking|sending|setting)\s+of\s+(?:a|an|the|its|their|each|every)\b",
      'write the verb: "how an activation time is drawn" (Udi, 2026-11-22)'),
     ('a symbol defined in words', r"\bwhere\s+\$?[A-Za-z][A-Za-z0-9_']{0,2}\$?\s+is\s+(?:its|their|the\s+(?:pair|tuple|triple|label|name|clause|number|string)s?\b)",
@@ -470,6 +476,12 @@ def check(text, mode, fails, checks):
             qcount += len(re.findall(r'(?<![\w])Q:', line))
             if '?' in line and 'Q:' not in line:
                 out_check.append((no, 'question', line.strip()[:80], 'a question for Udi is one line, ending "Q: Do you approve?"'))
+    if mode == 'udi':
+        total = [s for l in lines for s in sentences(re.sub(r'^\s*(\d+[.)]|[-*])\s+', '', strip_code(l)))
+                 if not s.strip().startswith(('Q:', 'Request:'))]
+        if len(total) > 4:
+            out_fail.append((0, 'too many sentences', '%d sentences' % len(total),
+                             'at most 3-4 terse sentences (claude.md, "Answering Udi")'))
     if mode == 'udi' and qcount > 1:
         out_fail.append((0, 'questions', '%d questions' % qcount, 'one question at a time (project instructions)'))
     return out_fail, out_check
@@ -488,7 +500,10 @@ def run_tests():
         if not l.strip() or l.startswith('#'):
             continue
         want, text, src = (l.split('\t') + ['', ''])[:3]
-        of, _ = check(text, 'paper', fails, checks)
+        want, _, tmode = want.partition(':')
+        tmode = tmode or 'paper'
+        text = text.replace('\\n', '\n')
+        of, _ = check(text, tmode, fails, checks)
         of = list(of) + close_matches(text, wrongs)
         n += 1
         if (want == 'wrong') != bool(of):
