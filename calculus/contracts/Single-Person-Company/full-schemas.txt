@@ -52,7 +52,7 @@ Organisation:2 ■ Propose: proposed(Orga,Motion) <- officer(Bob,Orga), ~propose
 Organisation:2 ■ Vote: vote(Orga,Bob,Motion) <- officer(Bob,Orga), organisation(Orga), proposed(Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.
 Organisation:2 ■ Act: taken(Orga,Motion) <- officer(Alice,Orga), vote(Orga,>=Votes,Motion), product(Double,Votes,2), has_officer(Orga,<Double), ~taken(Orga,Motion) guarded by Alice.
 Organisation:3 ■ | Participation.
-Organisation:3 ■ Join: participant(Bob,Orga), has_participant(Orga,Bob) <- ~participant(Bob,Orga), ~has_participant(Orga,_) guarded by Bob, sole_officers(Orga).
+Organisation:3+Single-Person Company:1 ■ Join: participant(Bob,Orga), has_participant(Orga,Bob) <- ~participant(Bob,Orga), first_officer(Orga,Bob) guarded by Bob, deciders(Orga).
 Organisation:3 ■ Leave: ~participant(Bob,Orga), ~has_participant(Orga,Bob) <- ~officer(Bob,Orga), participant(Bob,Orga), has_participant(Orga,Bob) guarded by Bob.
 Organisation:3 ■ Officer leave: ~participant(Bob,Orga), ~has_participant(Orga,Bob), ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- participant(Bob,Orga), has_participant(Orga,Bob), officer(Bob,Orga), has_officer(Orga,Bob) guarded by Bob.
 Organisation:3 ■ Expel: ~participant(Bob,Orga), ~has_participant(Orga,Bob) <- ~officer(Bob,Orga), participant(Bob,Orga), has_participant(Orga,Bob) guarded by deciders(Orga).

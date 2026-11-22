@@ -21,7 +21,7 @@ Single-Person Company
 20. ■ Propose.  An officer, or a person the bylaws name, may propose an act of Orga.
 21. ■ Vote.  Those who decide the act may vote on it.
 22. ■ Act.  An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.
-23. ■ Join.  Bob may become a participant of Orga with the consent of those who decide for Orga.
+23. ■ Join.  Bob may become a participant of Orga with the consent of those who decide for Orga, only if Bob is the first officer of Orga.
 24. ■ Leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
 25. ■ Officer leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
 26. ■ Expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.

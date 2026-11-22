@@ -81,7 +81,7 @@ Services GNA yes yes no
 Shareholding-Corporation GO yes yes no
 Shares GO yes yes no
 Short-Feeds GFF yes yes no
-Single-Person-Company GO yes no no
+Single-Person-Company GO yes yes no
 Stays GCE yes yes no
 Trading-Company GO yes yes no
 Warded-Groups CSSN yes yes no

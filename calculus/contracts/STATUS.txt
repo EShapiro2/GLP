@@ -83,7 +83,7 @@ Services   certified; VMAT 19 displays; platform.vglp 7677 lines; platform.glp 5
 Shareholding-Corporation certified; VMAT 196 displays; platform.vglp 16679 lines; platform.glp 9040 lines
 Shares     certified; VMAT 59 displays; platform.vglp 9763 lines; platform.glp 6086 lines
 Short-Feeds certified; VMAT 16 displays; platform.vglp 7421 lines; platform.glp 5100 lines
-Single-Person-Company certified; VMAT 157 displays; platform not compiled: %% not compiled(single_person_company)
+Single-Person-Company certified; VMAT 157 displays; platform.vglp 14756 lines; platform.glp 8267 lines; platform.glp loads
 Stays      certified; VMAT 15 displays; platform.vglp 7543 lines; platform.glp 5148 lines
 Trading-Company certified; VMAT 160 displays; platform.vglp 14846 lines; platform.glp 8266 lines
 Warded-Groups certified; VMAT 42 displays; platform.vglp 8467 lines; platform.glp 5534 lines

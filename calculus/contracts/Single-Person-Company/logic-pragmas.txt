@@ -1,6 +1,5 @@
 Single-Person Company
-Single-Person Company instantiates Corporation with single-person limited-liability company bylaws; x is an officer of z for x is entitled to propose m in z; x is an officer of z for x is entitled to take m for z; x is an officer of z for x is entitled to vote on m in z; the sole officer of z while z has no one as a participant for those who admit participants of z.
+Single-Person Company instantiates Corporation with single-person limited-liability company bylaws; x is an officer of z for x is entitled to propose m in z; x is an officer of z for x is entitled to take m for z; x is an officer of z for x is entitled to vote on m in z, and restricts it.
 A *single-person limited-liability company* is a corporation whose bylaws name one role, the *sole officer*, who decides every act of the company, and admit no participant but the sole officer.
-Orga is a single-person limited-liability company.
-Logic pragmas.
-Roles: the sole officer of z = sole_officers(z), listed by z has y as its first officer.
+Bob is a person, Orga a single-person limited-liability company.
+1. ■ Join: Organisation:3 Join, only if Orga has Bob as its first officer.
