@@ -10476,6 +10476,20 @@ for cas_row in $(sed -n 's/^    \([a-z0-9_]*\)) FILE=\([A-Za-z0-9-]*\);.*/\1:\2/
     done
     check "cascade $cas_c: cascade.sh --check exits 0" "^exit 0$" "$cas_out"
 done
+# A record whose contract has no row in cascade.sh's table is printed by the table's last case, its key the record's name in lower case with each hyphen an underscore (cascade.sh, "A contract with no row yet"); it is held here too, so that every record in cascade/ is checked (Code #36, 2026-11-22: 23 records printed that night had no row, and the section did not check them).  A composition, NAME+NAME, is checked below.
+cas_tab=" $(sed -n 's/^    [a-z0-9_]*) FILE=\([A-Za-z0-9-]*\);.*/\1/p' "$GLP_DIR/cascade.sh" | tr '\n' ' ') "
+for cas_o in "$GLP_DIR"/cascade/*/manifest.md; do
+    cas_n=$(basename "$(dirname "$cas_o")")
+    case "$cas_n" in *+*) continue ;; esac
+    case "$cas_tab" in *" $cas_n "*) continue ;; esac
+    cas_c=$(echo "$cas_n" | tr 'A-Z-' 'a-z_')
+    cas_out=$(bash "$GLP_DIR/cascade.sh" "$cas_c" --check 2>&1; echo "exit $?")
+    for cas_f in "$cas_n.txt" "$cas_n.md" "$cas_n.glp" schemas.txt full-contract.txt full-pragmas.txt flat.txt full-schemas.txt verdict.txt vmat.tex platform.vglp platform.glp interface.glp run.log; do
+        [ -f "$GLP_DIR/cascade/$cas_n/$cas_f" ] || continue
+        check "cascade $cas_c: $cas_f is what the tools print" "^$cas_f: as printed$" "$cas_out"
+    done
+    check "cascade $cas_c: cascade.sh --check exits 0" "^exit 0$" "$cas_out"
+done
 # A composition of contracts, recorded in cascade/<NAME>+<NAME>/ (vGLP 7c631b1, Section 5.4, "The contract's words": "The compiler takes one contract or several: of several it prints the platform of their composition"; cascade.sh, several contracts): GSN and GC, both extending GKK.
 for cas_cs in "groups coins"; do
     cas_n=Groups+Coins
