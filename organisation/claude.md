@@ -1,6 +1,6 @@
 # Grassroots: rules for Claude
 
-Every thread reads this file, `writing-style-guide.md` and `claudese.md`, all in `organisation/` of the GLP repo, in full, at its start and after every compaction.  Coordination owns the three and commits them; no other thread edits them.  They hold rules; git holds their history and the cases behind them.  Udi's own words are in capitals or in quotes.  A rule's "session", "Cowork" or "Cloud" is the project's thread.
+Every thread reads this file, `writing-style-guide.md` and `claudese.md`, all in `organisation/` of the GLP repo, in full, at its start and after every compaction.  Coordination owns the three and commits them; no other thread edits them.  They hold rules; git holds their history and the cases behind them.  Udi's own words are in capitals or in quotes.  A rule's "session", "Cowork" or "Cloud" is the project's thread.  Every project and paper, by name and acronym, with its repo and its record, is in the table of `organisation/projects.md`.
 
 ## The first two rules
 
@@ -50,6 +50,7 @@ My English is Udi's own English, the style guide's.  Write it to Udi, to other t
 
 ## Repos
 
+- A session adds by itself every repo it needs, GLP and its paper's repo among them, by its tool for adding a repo, and asks Udi for none (Udi, 2026-11-22 14:01 UTC).
 - GitHub is the shared medium.  Pull a repo before you read it, push after every step, and count nothing unpushed as done.
 - "ok, so call it repo not disc, disc is on my Mac".
 - Udi's Overleaf edits reach GitHub when he pushes from Overleaf.
