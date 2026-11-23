@@ -1,0 +1,25 @@
+The map of predicates of each contract from each contract its first line names (sweep.py, a).
+
+Agents from Guardians: creator to principal, ward to ai_agent
+    one-to-one: yes
+    maps a predicate to one Guardians has: no
+
+Children from Warded Groups: guardian to parent, has_guardian to has_parent, ward to child
+    one-to-one: yes
+    maps a predicate to one Warded Groups has: no
+    not one map: guardian also to has_parent (1 clauses); has_guardian also to parent (1 clauses)
+
+Coins from Notes: escrow_note to escrow_coin, note to coin
+    one-to-one: yes
+    maps a predicate to one Notes has: no
+
+Organisation from Guardians: guardian to officer, has_guardian to has_officer, ward to organisation
+    one-to-one: yes
+    maps a predicate to one Guardians has: no
+    not one map: guardian also to has_officer (1 clauses); has_guardian also to first_officer (1 clauses); has_guardian also to officer (1 clauses)
+
+Shares from Notes: escrow_note to escrow_share, note to share
+    one-to-one: yes
+    maps a predicate to one Notes has: no
+
+Contracts with no map (no predicate renamed): Ads, Agora, Anonymous Matching, Anonymous Rendezvous, App, AppStore, Appointments, Auction, Backchannel Feeds, Backed Community, Bank, Bonds, Booking, Carpool, Central Bank, Commercial Bank, Community, Community Bank, Community Market, Community Network, Constitution, Consumers' Cooperative, Cooperative, Cooperative DAO, Corporation, DAO, Dating, Democratic Community, Denominated Coins, Denominated Currencies, Directory, Disputes, Distrust, Encounters, Feeds, Forwarding, Foundation, Free Matching, Friendship, Funded DAO, Gigs, Gossip, Groups, Guardians, Help, Home Exchange, Jobs, Joint Accounts, Knowledge, Labelled Overlay, Lending, Library, Liquid Cooperative, Liquid DAO, Local Overlay, Lodging, Lost and Found, Matching, Meeting Rooms, Mutual Credit, Nonprofit, Notes, Overlay, Partners, Partnership, Programs, Promoted Gossip, Provenance Groups, Recommendations, Rehearsal Rooms, Rendezvous, Resilient Feeds, Rides, Second-Score Auction, Secure Friendship, Separating Distrust, Services, Shareholding Corporation, Short Feeds, Single-Person Company, Stays, Tennis Courts, Trading Company, Warded Groups, Warnings, Workers' Cooperative

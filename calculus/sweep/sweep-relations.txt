@@ -1,0 +1,549 @@
+Each contract: its first line as it is, and the relations of the paper that its lines generate (sweep.py).
+extends: a clause Added; unites: two contracts or more named; weakens: a clause 3 or 4; strengthens: a clause 5; amends: both; renames: a clause 6.
+
+Ads
+    first line: Ads extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
+    contracts named: Community Network, Overlay
+    its lines generate: extends, unites, weakens
+    lines of residue: 8
+
+Agents
+    first line: Agents instantiates Guardians with the guardians of z for those who decide for z, an AI agent for a ward and a principal for a creator, composes it with Forwarding, and restricts, strengthens and extends the composition (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    contracts named: Guardians, Forwarding
+    its lines generate: extends, unites, weakens, strengthens, amends, renames
+    lines of residue: 7
+
+Agora
+    first line: Agora extends Bonds.
+    contracts named: Bonds
+    its lines generate: extends
+    lines of residue: 2
+
+Anonymous Matching
+    first line: Anonymous Matching composes Matching with Anonymous Rendezvous, and restricts the composition.
+    contracts named: Matching, Anonymous Rendezvous
+    its lines generate: unites, weakens
+    lines of residue: 4
+
+Anonymous Rendezvous
+    first line: Anonymous Rendezvous extends Rendezvous.
+    contracts named: Rendezvous
+    its lines generate: extends
+    lines of residue: 0
+
+App
+    first line: App composes Encounters with AppStore and Directory.
+    contracts named: Encounters, AppStore, Directory
+    its lines generate: unites, weakens
+    lines of residue: 2
+
+AppStore
+    first line: AppStore composes Programs with Services (GNA, GLP Networking API and Services, in preparation) and extends the composition.
+    contracts named: Programs, Services
+    its lines generate: extends, unites, weakens
+    lines of residue: 4
+
+Appointments
+    first line: Appointments instantiates Booking with the time of a *provider*, an officer of the organisation, for a resource.
+    contracts named: Booking
+    its lines generate: nothing: every clause is its source
+    lines of residue: 4
+
+Auction
+    first line: Auction extends Local Overlay.
+    contracts named: Local Overlay
+    its lines generate: extends
+    lines of residue: 0
+
+Backchannel Feeds
+    first line: Backchannel Feeds extends Resilient Feeds.
+    contracts named: Resilient Feeds
+    its lines generate: extends
+    lines of residue: 0
+
+Backed Community
+    first line: Backed Community extends Community and restricts it.
+    contracts named: Community
+    its lines generate: extends, weakens
+    lines of residue: 4
+
+Bank
+    first line: Bank extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    contracts named: Organisation, Denominated Currencies
+    its lines generate: unites, weakens
+    lines of residue: 104
+
+Bonds
+    first line: Bonds restricts and extends Coins.
+    contracts named: Coins
+    its lines generate: extends
+    lines of residue: 1
+
+Booking
+    first line: Booking extends Organisation.
+    contracts named: Organisation
+    its lines generate: extends
+    lines of residue: 4
+
+Carpool
+    first line: Carpool instantiates Free Matching with a test of the match of commutes and a fixed budget.
+    contracts named: Free Matching
+    its lines generate: nothing: every clause is its source
+    lines of residue: 0
+
+Central Bank
+    first line: Central Bank instantiates Bank with central bank bylaws; x is a governor of z for x is entitled to propose m in z; x is a governor of z for x is entitled to take m for z; x is a governor of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Governor for the votes decide m according to the bylaws of z, and restricts and extends it.
+    contracts named: Bank
+    its lines generate: extends, weakens
+    lines of residue: 102
+
+Children
+    first line: Children instantiates Warded Groups with the parents of z for those who decide for z, a child for a ward and a parent for a guardian, and restricts and extends it.
+    contracts named: Warded Groups
+    its lines generate: extends, weakens, renames
+    lines of residue: 6
+
+Coins
+    first line: Coins relaxes and extends Notes.
+    contracts named: Notes
+    its lines generate: extends, renames
+    lines of residue: 0
+
+Commercial Bank
+    first line: Commercial Bank instantiates Bank with commercial bank bylaws; x is a director of z for x is entitled to propose m in z; x is a director of z for x is entitled to take m for z; x is a director of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Director for the votes decide m according to the bylaws of z, and restricts and extends it.
+    contracts named: Bank
+    its lines generate: extends, weakens
+    lines of residue: 102
+
+Community
+    first line: Community instantiates Bank with community bylaws; x is a treasurer of z for x is entitled to propose m in z; x is a treasurer of z for x is entitled to take m for z; x is a treasurer of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Treasurer for the votes decide m according to the bylaws of z, and extends it.
+    contracts named: Bank
+    its lines generate: extends
+    lines of residue: 102
+
+Community Bank
+    first line: Community Bank instantiates Bank with community bank bylaws; x is a director of z for x is entitled to propose m in z; x is a director of z for x is entitled to take m for z; x is a director of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Director for the votes decide m according to the bylaws of z, and restricts and extends it.
+    contracts named: Bank
+    its lines generate: extends, weakens
+    lines of residue: 102
+
+Community Market
+    first line: Community Market extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+    contracts named: Community Network, Overlay, Recommendations
+    its lines generate: extends, unites, weakens
+    lines of residue: 12
+
+Community Network
+    first line: Community Network extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727), and restricts and strengthens Organisation.
+    contracts named: Organisation, Denominated Currencies
+    its lines generate: extends, unites, weakens, strengthens, amends
+    lines of residue: 109
+
+Constitution
+    first line: Constitution restricts and strengthens Organisation.
+    contracts named: Organisation
+    its lines generate: weakens, strengthens, amends
+    lines of residue: 8
+
+Consumers' Cooperative
+    first line: Consumers' Cooperative instantiates Cooperative and Trading Company with bylaws that delegate no act; x is a member of z for x is entitled to propose m in z; x is a member of z for x is entitled to take m for z; x is a member of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z, and restricts and extends them.
+    contracts named: Cooperative, Trading Company
+    its lines generate: extends, unites, weakens, strengthens, amends
+    lines of residue: 105
+
+Cooperative
+    first line: Cooperative extends Constitution and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    contracts named: Constitution, Denominated Currencies
+    its lines generate: unites, weakens
+    lines of residue: 104
+
+Cooperative DAO
+    first line: Cooperative DAO instantiates Cooperative with DAO bylaws.
+    contracts named: Cooperative
+    its lines generate: nothing: every clause is its source
+    lines of residue: 4
+
+Corporation
+    first line: Corporation extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    contracts named: Organisation, Denominated Currencies
+    its lines generate: unites, weakens
+    lines of residue: 104
+
+DAO
+    first line: DAO extends Knowledge.
+    contracts named: Knowledge
+    its lines generate: extends
+    lines of residue: 0
+
+Dating
+    first line: Dating instantiates Free Matching with a test of the match of profiles and a budget set by the maker.
+    contracts named: Free Matching
+    its lines generate: nothing: every clause is its source
+    lines of residue: 0
+
+Democratic Community
+    first line: Democratic Community extends Community and Constitution.
+    contracts named: Community, Constitution
+    its lines generate: unites, weakens, strengthens, amends
+    lines of residue: 7
+
+Denominated Coins
+    first line: Denominated Coins extends and restricts Coins.
+    contracts named: Coins
+    its lines generate: extends, weakens
+    lines of residue: 8
+
+Denominated Currencies
+    first line: Denominated Currencies extends Bonds and Denominated Coins, and restricts and strengthens Bonds.
+    contracts named: Bonds, Denominated Coins
+    its lines generate: extends, unites, weakens, strengthens, amends
+    lines of residue: 18
+
+Directory
+    first line: Directory extends Rendezvous.
+    contracts named: Rendezvous
+    its lines generate: extends
+    lines of residue: 0
+
+Disputes
+    first line: Disputes extends Organisation.
+    contracts named: Organisation
+    its lines generate: extends
+    lines of residue: 4
+
+Distrust
+    first line: Distrust extends Friendship.
+    contracts named: Friendship
+    its lines generate: extends
+    lines of residue: 0
+
+Encounters
+    first line: Encounters extends Knowledge (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    contracts named: Knowledge
+    its lines generate: extends
+    lines of residue: 0
+
+Feeds
+    first line: Feeds extends and restricts Labelled Overlay.
+    contracts named: Labelled Overlay
+    its lines generate: extends, weakens
+    lines of residue: 0
+
+Forwarding
+    first line: Forwarding extends Friendship.
+    contracts named: Friendship
+    its lines generate: extends
+    lines of residue: 0
+
+Foundation
+    first line: Foundation instantiates Nonprofit with foundation bylaws; x is an officer of z for x is entitled to propose m in z; x is an officer of z for x is entitled to take m for z; x is an officer of z for x is entitled to vote on m in z, and restricts it.
+    contracts named: Nonprofit
+    its lines generate: weakens
+    lines of residue: 4
+
+Free Matching
+    first line: Free Matching instantiates Anonymous Matching with an integer budget, a forward costing one, and a gossip protocol of forwarding to any friend with the budget less one.
+    contracts named: Anonymous Matching
+    its lines generate: nothing: every clause is its source
+    lines of residue: 0
+
+Friendship
+    first line: Friendship extends Knowledge.
+    contracts named: Knowledge
+    its lines generate: extends
+    lines of residue: 0
+
+Funded DAO
+    first line: Funded DAO extends DAO and Coins.
+    contracts named: DAO, Coins
+    its lines generate: extends, unites
+    lines of residue: 0
+
+Gigs
+    first line: Gigs extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+    contracts named: Community Network, Overlay, Recommendations
+    its lines generate: extends, unites, weakens
+    lines of residue: 12
+
+Gossip
+    first line: Gossip extends Friendship.
+    contracts named: Friendship
+    its lines generate: extends
+    lines of residue: 0
+
+Groups
+    first line: Groups extends and strengthens Friendship.
+    contracts named: Friendship
+    its lines generate: extends, strengthens
+    lines of residue: 0
+
+Guardians
+    first line: Guardians extends and restricts Friendship.
+    contracts named: Friendship
+    its lines generate: extends, weakens
+    lines of residue: 0
+
+Help
+    first line: Help instantiates Free Matching with a test of the match of services and needs and a budget set by the maker.
+    contracts named: Free Matching
+    its lines generate: nothing: every clause is its source
+    lines of residue: 0
+
+Home Exchange
+    first line: Home Exchange instantiates Free Matching with a test of the match of homes and a budget set by the maker.
+    contracts named: Free Matching
+    its lines generate: nothing: every clause is its source
+    lines of residue: 0
+
+Jobs
+    first line: Jobs instantiates Free Matching with a test of the match of vacancies and candidacies and a budget set by the maker.
+    contracts named: Free Matching
+    its lines generate: nothing: every clause is its source
+    lines of residue: 0
+
+Joint Accounts
+    first line: Joint Accounts extends Coins.
+    contracts named: Coins
+    its lines generate: extends
+    lines of residue: 0
+
+Knowledge
+    first line: An *identity* is a unique cryptographic key pair.
+    contracts named: none
+    its lines generate: -
+    lines of residue: 0
+
+Labelled Overlay
+    first line: Labelled Overlay extends and strengthens Overlay.
+    contracts named: Overlay
+    its lines generate: extends, weakens, strengthens, amends
+    lines of residue: 0
+
+Lending
+    first line: Lending instantiates Free Matching with a test of the match of loans, gifts and wishes and a fixed budget.
+    contracts named: Free Matching
+    its lines generate: nothing: every clause is its source
+    lines of residue: 0
+
+Library
+    first line: Library extends Knowledge.
+    contracts named: Knowledge
+    its lines generate: extends
+    lines of residue: 0
+
+Liquid Cooperative
+    first line: Liquid Cooperative extends Cooperative DAO.
+    contracts named: Cooperative DAO
+    its lines generate: extends
+    lines of residue: 5
+
+Liquid DAO
+    first line: Liquid DAO extends DAO.
+    contracts named: DAO
+    its lines generate: extends
+    lines of residue: 0
+
+Local Overlay
+    first line: Local Overlay restricts Overlay.
+    contracts named: Overlay
+    its lines generate: weakens
+    lines of residue: 0
+
+Lodging
+    first line: Lodging extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Community Network and Recommendations.
+    contracts named: Community Network, Overlay, Recommendations
+    its lines generate: extends, unites, weakens
+    lines of residue: 12
+
+Lost and Found
+    first line: Lost and Found instantiates Free Matching with a test of the match of losses and finds and a fixed budget.
+    contracts named: Free Matching
+    its lines generate: nothing: every clause is its source
+    lines of residue: 0
+
+Matching
+    first line: Matching extends Gossip.
+    contracts named: Gossip
+    its lines generate: extends
+    lines of residue: 0
+
+Meeting Rooms
+    first line: Meeting Rooms instantiates Booking with a *room* for a resource.
+    contracts named: Booking
+    its lines generate: nothing: every clause is its source
+    lines of residue: 4
+
+Mutual Credit
+    first line: Mutual Credit instantiates Bank with mutual credit society bylaws; x is a member of z for x is entitled to propose m in z; x is a member of z for x is entitled to take m for z; x is a member of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z, and restricts and extends it.
+    contracts named: Bank
+    its lines generate: extends, weakens
+    lines of residue: 102
+
+Nonprofit
+    first line: Nonprofit restricts Corporation.
+    contracts named: Corporation
+    its lines generate: weakens
+    lines of residue: 4
+
+Notes
+    first line: Notes extends Knowledge.
+    contracts named: Knowledge
+    its lines generate: extends
+    lines of residue: 0
+
+Organisation
+    first line: Organisation instantiates Guardians with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    contracts named: Guardians
+    its lines generate: extends, weakens, strengthens, amends, renames
+    lines of residue: 7
+
+Overlay
+    first line: Overlay extends Friendship.
+    contracts named: Friendship
+    its lines generate: extends
+    lines of residue: 0
+
+Partners
+    first line: Partners instantiates Free Matching with a test of the match of plans and a budget set by the maker.
+    contracts named: Free Matching
+    its lines generate: nothing: every clause is its source
+    lines of residue: 0
+
+Partnership
+    first line: Partnership instantiates Corporation with partnership bylaws; x is an officer of z for x is entitled to propose m in z; x is an officer of z for x is entitled to take m for z; x is an officer of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as an officer for the votes decide m according to the bylaws of z, and restricts it.
+    contracts named: Corporation
+    its lines generate: weakens
+    lines of residue: 4
+
+Programs
+    first line: Programs extends Forwarding (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    contracts named: Forwarding
+    its lines generate: extends
+    lines of residue: 0
+
+Promoted Gossip
+    first line: Promoted Gossip composes Gossip with Community, and strengthens and extends it.
+    contracts named: Gossip, Community
+    its lines generate: extends, unites, weakens, strengthens, amends
+    lines of residue: 8
+
+Provenance Groups
+    first line: Provenance Groups instantiates Groups with y holds the item t for y has the message t from x; z holds the item t signed by y for z has the message t of x in g delivered by y, composes it with Agents (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231), and restricts and extends the composition.
+    contracts named: Groups, Agents
+    its lines generate: extends, unites, weakens, strengthens, amends
+    lines of residue: 7
+
+Recommendations
+    first line: Recommendations extends Knowledge.
+    contracts named: Knowledge
+    its lines generate: extends
+    lines of residue: 0
+
+Rehearsal Rooms
+    first line: Rehearsal Rooms instantiates Booking with a room for a resource, and composes it with Partners.
+    contracts named: Booking, Partners
+    its lines generate: extends, unites
+    lines of residue: 19
+
+Rendezvous
+    first line: Rendezvous extends Services.
+    contracts named: Services
+    its lines generate: extends
+    lines of residue: 0
+
+Resilient Feeds
+    first line: Resilient Feeds extends Feeds.
+    contracts named: Feeds
+    its lines generate: extends
+    lines of residue: 0
+
+Rides
+    first line: Rides extends Community Network and restricts and strengthens Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
+    contracts named: Community Network, Second-Score Auction
+    its lines generate: extends, unites, weakens, strengthens, amends
+    lines of residue: 10
+
+Second-Score Auction
+    first line: Second-Score Auction instantiates Auction with second-score terms; y is the bidder on x's call c whose admissible bid has the highest score, ties broken as the terms say for the terms of x's call c select y; no bid on x's call c is admissible for the terms of x's call c select no bidder, and restricts it.
+    contracts named: Auction
+    its lines generate: weakens
+    lines of residue: 2
+
+Secure Friendship
+    first line: Secure Friendship extends Friendship.
+    contracts named: Friendship
+    its lines generate: extends
+    lines of residue: 0
+
+Separating Distrust
+    first line: Separating Distrust restricts Distrust.
+    contracts named: Distrust
+    its lines generate: weakens
+    lines of residue: 0
+
+Services
+    first line: Services instantiates Guardians with the guardians of z for those who decide for z (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    contracts named: Guardians
+    its lines generate: nothing: every clause is its source
+    lines of residue: 3
+
+Shareholding Corporation
+    first line: Shareholding Corporation instantiates Corporation with shareholding corporation bylaws; x is a director of z for x is entitled to propose m in z; x is a director of z for x is entitled to take m for z; x is a director of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Director for the votes decide m according to the bylaws of z; the first officer of z while z has not issued shares, or any officer of z while z has issued shares and the shareholders of z decided the issue of shares by a majority of the shares they hold for those who decide the issue of shares of z; any officer of z while the shareholders of z decided the officers by a majority of the shares they hold for those who decide the officers of z, composes it with Shares, and extends the composition.
+    contracts named: Corporation, Shares
+    its lines generate: extends, unites, weakens
+    lines of residue: 133
+
+Shares
+    first line: Shares restricts Organisation and Notes.
+    contracts named: Organisation, Notes
+    its lines generate: unites, weakens, renames
+    lines of residue: 32
+
+Short Feeds
+    first line: Short Feeds extends Feeds.
+    contracts named: Feeds
+    its lines generate: extends
+    lines of residue: 0
+
+Single-Person Company
+    first line: Single-Person Company instantiates Corporation with single-person limited-liability company bylaws; x is an officer of z for x is entitled to propose m in z; x is an officer of z for x is entitled to take m for z; x is an officer of z for x is entitled to vote on m in z, and restricts it.
+    contracts named: Corporation
+    its lines generate: weakens
+    lines of residue: 4
+
+Stays
+    first line: Stays extends Coins.
+    contracts named: Coins
+    its lines generate: extends
+    lines of residue: 0
+
+Tennis Courts
+    first line: Tennis Courts instantiates Booking with a court for a resource, composes it with Partners, and restricts the composition.
+    contracts named: Booking, Partners
+    its lines generate: extends, unites, weakens
+    lines of residue: 19
+
+Trading Company
+    first line: Trading Company extends Corporation.
+    contracts named: Corporation
+    its lines generate: extends
+    lines of residue: 4
+
+Warded Groups
+    first line: Warded Groups extends, restricts and strengthens Groups and Guardians.
+    contracts named: Groups, Guardians
+    its lines generate: extends, unites, weakens, strengthens, amends
+    lines of residue: 4
+
+Warnings
+    first line: Warnings extends and restricts Organisation.
+    contracts named: Organisation
+    its lines generate: extends, weakens
+    lines of residue: 4
+
+Workers' Cooperative
+    first line: Workers' Cooperative instantiates Cooperative with bylaws that delegate no act, and extends it.
+    contracts named: Cooperative
+    its lines generate: extends
+    lines of residue: 5
+
