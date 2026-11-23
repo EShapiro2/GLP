@@ -1103,7 +1103,7 @@ def vote_family(lex, name, t, zp, org):
         if not go:
             raise Err("on the votes of: no state '%s' of GO, unbound, in this contract" % T)
         _, gp, ga = go[0]
-        st[k] = dict(go=gp, goargs=ga, pred=gp + "_" + fid, tpl=" ".join("whether " + P if tok == "m" else tok for tok in toks(T)),
+        st[k] = dict(go=gp, goargs=ga, go_t=T, pred=gp + "_" + fid, tpl=" ".join("whether " + P if tok == "m" else tok for tok in toks(T)),
                      args=tuple(a2 for a in ga for a2 in (places if a == "m" else [a])))
     return dict(name=name, vname="Vote of %s for %s" % (org, name), id=fid, org=org, t=t, zp=zp, ren=ren, P=P, places=places, st=st)
 
@@ -1127,8 +1127,8 @@ def add_family(lex, f):
         raise Err("two acts named %s, of different phrases, decided on votes" % f["name"])
     for k, v in f["st"].items():
         lex.basic.append((v["tpl"], v["pred"], v["args"]))
-        if k != "vote":
-            lex.par.append(v["tpl"])
+        if k != "vote":      # given by the platform where GO's state is (Organisation, 'Environment:'), else a parameter
+            (lex.env if any(T.replace(",", "") == f["st"][k]["go_t"].replace(",", "") for T in lex.env) else lex.par).append(v["tpl"])
     vt = f["st"]["vote"]["tpl"]
     act = "x votes on whether %s in z" % f["P"]
     lex.defs.append((act, vt, True))
@@ -2362,6 +2362,10 @@ def expand_schemas(w, n):
                 gen = gen_votes(lex, e, org, e["name"], e["label"], e["mark"], agents=vote_agents(w, n)) if org else None
                 if gen:
                     e["body"], e["head"] = e["body"] + gen[0], e["head"] + gen[1]
+                vv = [k for k, x in enumerate(entries) if x.get("voteact") and x["name"] == e["name"]]
+                if vv:      # the contract writes the vote act it decides an act on, with its own conditions (Constitution: the one who votes is a participant)
+                    entries[vv[0]] = dict(e, voteact=True, of=entries[vv[0]].get("of"))
+                    continue
                 entries += [e] + (new_votes(entries, gen[2]) if gen else [])
             else:
                 entries.append(e)
@@ -3232,6 +3236,10 @@ def expand_text(w, n, own):
                 gen = gen_votes_text(lex, e, org, e["name"], e["label"], e["mark"], agents=vote_agents(w, n)) if org else None
                 if gen:
                     e["conds"], e["effects"] = e["conds"] + gen[0], e["effects"] + gen[1]
+                vv = [k for k, x in enumerate(entries) if x.get("voteact") and x["name"] == e["name"]]
+                if vv:      # the contract writes the vote act it decides an act on, with its own conditions (Constitution: the one who votes is a participant)
+                    entries[vv[0]] = dict(e, voteact=True, of=entries[vv[0]].get("of"))
+                    continue
                 entries += [e] + (new_votes(entries, gen[2]) if gen else [])
             else:
                 entries.append(e)

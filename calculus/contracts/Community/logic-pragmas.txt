@@ -1,6 +1,6 @@
 Community
-Community instantiates Bank with community bylaws; x is a treasurer of z for x is entitled to propose m in z; x is a treasurer of z for x is entitled to take m for z; x is a treasurer of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Treasurer for the votes decide m according to the bylaws of z, and extends it.
-A *community* is a bank whose coins are Dollar-denominated. The coins it issues are *community coins*. Its bylaws name two roles, *member*, held by every participant, and *treasurer*. They say who decides the admission and the expulsion of a member and the amendment of the bylaws. The treasurers jointly decide its other acts.
+Community instantiates Bank with community bylaws, and extends it.
+A *community* is a bank whose coins are Dollar-denominated. The coins it issues are *community coins*. Its bylaws name two roles, *member*, held by every participant, and *treasurer*.
 Alice and Bob are persons, Orga a community, Sum a number.
 1. ■ Draw: Alice may swap Sum Alice-coins for Sum Orga-coins, provided Alice is a treasurer of Orga.
 2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.

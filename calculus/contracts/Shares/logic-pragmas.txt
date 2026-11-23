@@ -6,5 +6,4 @@ Alice is a party, Orga an organisation.
 Logic pragmas.
 Vocabulary: x holds a share of z = share(x,z); x holds n shares of z = share(x,z,*n); x holds exactly n shares of z = share(x,z,#n); z holds n shares of w in escrow from x for y on k = escrow_share(z,w,x,y,k,*n).
 Roles: those who decide the issue of shares of z = share_deciders(z).
-Default: those who decide for z for those who decide the issue of shares of z.
 Kind of note: share, shares of y for y-notes.

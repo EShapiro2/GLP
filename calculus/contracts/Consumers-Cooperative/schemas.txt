@@ -1,5 +1,5 @@
 Consumers' Cooperative
-Consumers' Cooperative instantiates Cooperative and Trading Company with bylaws that delegate no act; participant(x,z) for proposer(x,z,m); participant(x,z) for taker(x,z,m); participant(x,z) for voter(x,z,m); vote(z,>=Votes,m), product(Double,Votes,2), has_participant(z,<Double) for decided(z,m), and restricts and extends them.
+Consumers' Cooperative instantiates Cooperative and Trading Company with bylaws that delegate no act, and restricts and extends them.
 Vocabulary: y has paid z the fee = paid_fee(z,y); z has the fee at the number n = fee(z,n).
 the earlier fee of z has ended: z has the fee at no number.
 After g sets the fee of z at n: the earlier fee of z has ended and z has the fee at the number n.

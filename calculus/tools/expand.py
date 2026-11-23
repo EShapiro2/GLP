@@ -631,9 +631,13 @@ def expand(name, contracts, cache):
             same = [x for x in exp.clauses if x.origin == cl.origin]
             if not same:
                 exp.clauses.append(cl)
-            elif same[0].render() != cl.render() and not merge(same[0], cl):
-                fail('%s, %s: comes by two paths in two texts that are not one clause with restrictions: [%s] and [%s]'
-                     % (name, cl.origin, same[0].render(), cl.render()))
+            elif any(x.render() == cl.render() for x in same):
+                continue
+            elif not any(merge(x, cl) for x in same):
+                # plain union (the task of 2026-11-23, point 6): two texts of one clause that are not one clause with
+                # restrictions are two clauses of the union, as Retire of Orga and Retire of Wendy in Rehearsal Rooms
+                note(name, cl.origin, 'two clauses of the union: [%s] and [%s]' % (same[0].render(), cl.render()))
+                exp.clauses.append(cl)
     exp.inherited = len(exp.clauses)
 
     for k, line in enumerate(c.def_lines):

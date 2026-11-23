@@ -1,5 +1,5 @@
 Agents
-Agents instantiates Guardians with guardians(z) for deciders(z), an AI agent for a ward and a principal for a creator, composes it with Forwarding, and restricts, strengthens and extends the composition (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Agents instantiates Guardians with an AI agent for a ward and a principal for a creator, composes it with Forwarding, and restricts, strengthens and extends the composition (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Vocabulary: z holds the attestation t = attestation(z,t); y holds a record of z's attestation t = attestation_record(y,z,t).
 Roles: the guardians of z = guardians(z), listed by z has y as a guardian, y is a guardian of z and y holds a record of z's attestation Proof.
 Agents:0 - | The *developer* of an AI agent is the signer of its code.

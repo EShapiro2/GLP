@@ -1,5 +1,5 @@
 Children
-Children instantiates Warded Groups with parents(z) for deciders(z), a child for a ward and a parent for a guardian, and restricts and extends it.
+Children instantiates Warded Groups with a child for a ward and a parent for a guardian, and restricts and extends it.
 Vocabulary: z is of age = of_age(z).
 Roles: the parents of z = parents(z), listed by z has y as a parent and y is a parent of z.
 every guardianship of z has ended: no one is a parent of z and z has no one as a parent.

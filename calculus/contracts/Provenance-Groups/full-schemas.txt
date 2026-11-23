@@ -15,7 +15,7 @@ Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 Groups:0 - | A *message*, a parameter of Groups, is what a person sends.
 Groups:0 - | Bob and Carol are possibly Alice or one person.
-Groups:1+Provenance Groups:1 ■ Message: item(Bob,Text) <- friend(Alice,Bob), friend(Bob,Alice), person(Alice), item(Alice,Text), author(Alice,Text) guarded by Alice possibly Alice=Bob.
+Groups:1+Provenance Groups:1 ■ Message: message(Bob,Alice,Text), item(Bob,Text) <- friend(Alice,Bob), friend(Bob,Alice), person(Alice), item(Alice,Text), author(Alice,Text) guarded by Alice possibly Alice=Bob.
 Groups:2 ■ | Group.
 Groups:2+Provenance Groups:1 ■ Create: leader(Alice,Grupo), member(Alice,Grupo,Alice), listed(Alice,Alice,Grupo) <- ~leader(Alice,Grupo), person(Alice) guarded by Alice.
 Groups:2 ■ | Alice is then its leader and first member.
@@ -27,17 +27,16 @@ Groups:3+Provenance Groups:1 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,
 Groups:4 ■ | Group messaging.
 Groups:4+Provenance Groups:1 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo), person(Bob), item(Bob,Text), author(Bob,Text) guarded by Bob possibly Alice=Bob.
 Groups:4+Provenance Groups:1 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo), person(Alice), item(Alice,Text), author(Alice,Text) guarded by Alice.
-Groups:4+Provenance Groups:1 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), item(Carol,Text@Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol), ~author(Alice,Text) possibly Alice=Bob, Alice=Carol, Bob=Carol.
-Groups:4+Provenance Groups:1 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), item(Alice,Text@Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice), ~author(Alice,Text) possibly Alice=Bob.
-Guardians:0 - | Bob *trusts* Alf, an AI agent of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an AI agent and how. An AI agent takes an act of a party by those who decide for the AI agent.
+Groups:4+Provenance Groups:1 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice), item(Carol,Text@Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol), ~author(Alice,Text) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+Groups:4+Provenance Groups:1 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice), item(Alice,Text@Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice), ~author(Alice,Text) possibly Alice=Bob.
+Guardians:0 - | Bob *trusts* Alf, an AI agent of Alice, when he trusts Alice. The *decision rule*, which the principal of an AI agent decides, says who decides for an AI agent and how. An AI agent takes an act of a party by those who decide for the AI agent.
 Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
-Guardians:0 - | Default: any guardian of z for those who decide for z.
 Guardians:1+Agents:2 ■ Enter: identity(Alf), ai_agent(Alf), has_guardian(Alf,Alice), principal(Alice,Alf), guardian(Alice,Alf), knows(Alice,Alf), knows(Alf,Alice), friend(Alice,Alf), friend(Alf,Alice), attestation(Alf,Proof), attestation_record(Alice,Alf,Proof) <- person(Alice), ~identity(Alf), item(Alice,Proof), author(Alice,Proof) guarded by Alice, Alf must Alf.
 Guardians:1 ■ | Alice chooses Alf's key pair.
 Guardians:2 ■ | Guardian decisions.
-Guardians:2+Agents:2 ■ Make guardian: guardian(Bob,Alf), has_guardian(Alf,Bob), knows(Bob,Alf), knows(Alf,Bob), friend(Bob,Alf), friend(Alf,Bob), attestation_record(Bob,Alf,Proof) <- ai_agent(Alf), ~retired(Alf), person(Bob), has_guardian(Alf,Alice), friend(Bob,Alice), ~guardian(Bob,Alf), ~has_guardian(Alf,Bob), attestation(Alf,Proof) guarded by guardians(Alf), Bob.
+Guardians:2+Agents:2 ■ Make guardian: guardian(Bob,Alf), has_guardian(Alf,Bob), knows(Bob,Alf), knows(Alf,Bob), friend(Bob,Alf), friend(Alf,Bob), attestation_record(Bob,Alf,Proof) <- ai_agent(Alf), ~retired(Alf), person(Bob), has_guardian(Alf,Alice), friend(Bob,Alice), ~guardian(Bob,Alf), ~has_guardian(Alf,Bob), attestation(Alf,Proof) guarded by deciders(Alf), Bob.
 Guardians:2 ■ Resign: ~guardian(Bob,Alf), ~has_guardian(Alf,Bob) <- guardian(Bob,Alf), has_guardian(Alf,Bob) guarded by Bob.
-Guardians:2 ■ End guardian: ~guardian(Bob,Alf), ~has_guardian(Alf,Bob) <- guardian(Bob,Alf), has_guardian(Alf,Bob) guarded by guardians(Alf,-Bob).
+Guardians:2 ■ End guardian: ~guardian(Bob,Alf), ~has_guardian(Alf,Bob) <- guardian(Bob,Alf), has_guardian(Alf,Bob) guarded by deciders(Alf,-Bob).
 Guardians:2 ■ Guardian unfriend: ~friend(Bob,Alf), ~friend(Alf,Bob), ~guardian(Bob,Alf), ~has_guardian(Alf,Bob) <- friend(Bob,Alf), friend(Alf,Bob), guardian(Bob,Alf), has_guardian(Alf,Bob) guarded by Bob.
 Guardians:2 ■ | Alf may not end a friendship with her guardian.
 Guardians:3 ■ | Ward and person.
@@ -50,7 +49,7 @@ Guardians:4 ■ | Wards.
 Guardians:4+Agents:2 ■ AI agents acquaint: knows(Alf,Will), knows(Will,Alf), attestation_record(Alf,Will,Seal), attestation_record(Will,Alf,Proof) <- ai_agent(Alf), has_guardian(Alf,Alice), ai_agent(Will), has_guardian(Will,Bob), attestation(Alf,Proof), attestation(Will,Seal) guarded by Alf, Will possibly Alice=Bob.
 Guardians:4+Agents:2 ■ AI agents befriend: friend(Alf,Will), friend(Will,Alf) <- ai_agent(Alf), ~retired(Alf), has_guardian(Alf,Alice), ai_agent(Will), ~retired(Will), has_guardian(Will,Bob), knows(Alf,Will), knows(Will,Alf), knows(Alice,Will), friend(Alice,Bob), friend(Bob,Alice), ~friend(Alf,Will), ~friend(Will,Alf), attestation(Alf,Proof), attestation(Will,Seal) guarded by Alf, Will, Alice, Bob possibly Alice=Bob.
 Guardians:4+Agents:2 ■ AI agents of one guardian befriend: friend(Alf,Will), friend(Will,Alf) <- ai_agent(Alf), ~retired(Alf), has_guardian(Alf,Alice), ai_agent(Will), ~retired(Will), has_guardian(Will,Alice), knows(Alf,Will), knows(Will,Alf), ~friend(Alf,Will), ~friend(Will,Alf), attestation(Alf,Proof), attestation(Will,Seal) guarded by Alf, Will, Alice.
-Guardians:5 ■ Retire: retired(Alf), ~guardian(_,Alf), ~has_guardian(Alf,_), ~friend(Alf,_), ~friend(_,Alf) <- ~retired(Alf) guarded by guardians(Alf).
+Guardians:5 ■ Retire: retired(Alf), ~guardian(_,Alf), ~has_guardian(Alf,_), ~friend(Alf,_), ~friend(_,Alf) <- ~retired(Alf) guarded by deciders(Alf).
 Guardians:5 ■ | Alf can then take no act.
 Forwarding:0 - | The *author* of an item is its first signer.
 Forwarding:1+Agents:2 ■ Sign: item(Alice,Item) <- ~item(Alice,Item), person(Alice) guarded by Alice.

@@ -29,15 +29,14 @@ Groups:4+Warded Groups:1 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Gr
 Groups:4+Warded Groups:1 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo), person(Alice) guarded by Alice.
 Groups:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
 Groups:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.
-Guardians:0 - | Bob *trusts* Wendy, a child of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a child and how. A child takes an act of a party by those who decide for the child.
+Guardians:0 - | Bob *trusts* Wendy, a child of Alice, when he trusts Alice. The *decision rule*, which the creator of a child decides, says who decides for a child and how. A child takes an act of a party by those who decide for the child.
 Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
-Guardians:0 - | Default: any parent of z for those who decide for z.
 Guardians:1+Children:1 ◆ Enter: identity(Wendy), child(Wendy), has_parent(Wendy,Alice), creator(Alice,Wendy), parent(Alice,Wendy), knows(Alice,Wendy), knows(Wendy,Alice), friend(Alice,Wendy), friend(Wendy,Alice) <- person(Alice), ~identity(Wendy) guarded by Alice, Wendy must Wendy.
 Guardians:1 ■ | Alice chooses Wendy's key pair.
 Guardians:2 ■ | Guardian decisions.
-Guardians:2 ■ Make parent: parent(Bob,Wendy), has_parent(Wendy,Bob), knows(Bob,Wendy), knows(Wendy,Bob), friend(Bob,Wendy), friend(Wendy,Bob) <- child(Wendy), ~retired(Wendy), person(Bob), has_parent(Wendy,Alice), friend(Bob,Alice), ~parent(Bob,Wendy), ~has_parent(Wendy,Bob) guarded by parents(Wendy), Bob.
+Guardians:2 ■ Make parent: parent(Bob,Wendy), has_parent(Wendy,Bob), knows(Bob,Wendy), knows(Wendy,Bob), friend(Bob,Wendy), friend(Wendy,Bob) <- child(Wendy), ~retired(Wendy), person(Bob), has_parent(Wendy,Alice), friend(Bob,Alice), ~parent(Bob,Wendy), ~has_parent(Wendy,Bob) guarded by deciders(Wendy), Bob.
 Guardians:2 ■ Resign: ~parent(Bob,Wendy), ~has_parent(Wendy,Bob) <- parent(Bob,Wendy), has_parent(Wendy,Bob) guarded by Bob.
-Guardians:2 ■ End parent: ~parent(Bob,Wendy), ~has_parent(Wendy,Bob) <- parent(Bob,Wendy), has_parent(Wendy,Bob) guarded by parents(Wendy,-Bob).
+Guardians:2 ■ End parent: ~parent(Bob,Wendy), ~has_parent(Wendy,Bob) <- parent(Bob,Wendy), has_parent(Wendy,Bob) guarded by deciders(Wendy,-Bob).
 Guardians:2+Warded Groups:3 ■ Parent unfriend: ~friend(Bob,Wendy), ~friend(Wendy,Bob), ~parent(Bob,Wendy), ~has_parent(Wendy,Bob), ~member(Bob,_,Wendy), ~member(Wendy,_,Bob), ~listed(Bob,Wendy,_), ~listed(Wendy,Bob,_) <- friend(Bob,Wendy), friend(Wendy,Bob), parent(Bob,Wendy), has_parent(Wendy,Bob) guarded by Bob.
 Guardians:2 ■ | Wendy may not end a friendship with her parent.
 Guardians:3 ■ | Ward and person.
@@ -50,7 +49,7 @@ Guardians:4 ■ | Wards.
 Guardians:4+Children:2 ■ Children acquaint: knows(Wendy,Will), knows(Will,Wendy) <- child(Wendy), has_parent(Wendy,Alice), child(Will), has_parent(Will,Bob), knows(Alice,Will), knows(Bob,Wendy), knows(Alice,Bob), knows(Bob,Alice), parent(Alice,Wendy), parent(Bob,Will) guarded by Wendy, Will, Alice, Bob possibly Alice=Bob.
 Guardians:4 ■ Children befriend: friend(Wendy,Will), friend(Will,Wendy) <- child(Wendy), ~retired(Wendy), has_parent(Wendy,Alice), child(Will), ~retired(Will), has_parent(Will,Bob), knows(Wendy,Will), knows(Will,Wendy), knows(Alice,Will), friend(Alice,Bob), friend(Bob,Alice), ~friend(Wendy,Will), ~friend(Will,Wendy) guarded by Wendy, Will, Alice, Bob possibly Alice=Bob.
 Guardians:4 ■ Children of one parent befriend: friend(Wendy,Will), friend(Will,Wendy) <- child(Wendy), ~retired(Wendy), has_parent(Wendy,Alice), child(Will), ~retired(Will), has_parent(Will,Alice), knows(Wendy,Will), knows(Will,Wendy), ~friend(Wendy,Will), ~friend(Will,Wendy) guarded by Wendy, Will, Alice.
-Guardians:5+Warded Groups:3 ■ Retire: retired(Wendy), ~parent(_,Wendy), ~has_parent(Wendy,_), ~friend(Wendy,_), ~friend(_,Wendy), ~member(Wendy,_,_), ~listed(_,Wendy,_) <- ~retired(Wendy) guarded by parents(Wendy).
+Guardians:5+Warded Groups:3 ■ Retire: retired(Wendy), ~parent(_,Wendy), ~has_parent(Wendy,_), ~friend(Wendy,_), ~friend(_,Wendy), ~member(Wendy,_,_), ~listed(_,Wendy,_) <- ~retired(Wendy) guarded by deciders(Wendy).
 Guardians:5 ■ | Wendy can then take no act.
 Warded Groups:0 - | In clause 1 Wendy is possibly Alice.
 Warded Groups:1 ■ | A child's messages.
