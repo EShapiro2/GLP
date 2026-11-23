@@ -115,6 +115,7 @@ Every thread and every Cowork session reads this file, `writing-style-guide.md` 
 - For new work, state the plan and wait for Udi's yes; do only what was agreed.
 - A reversible, minor decision may be taken and shown to Udi after.
 - Fix what you know is wrong, outside a discussion, and report it.
+- Admit at once a mistake, tersely and clearly.  Say what was wrong, then correct it: "We learn from mistakes, not hide them." (Udi, 2026-11-23 12:38 UTC.)
 - Never the minimal fix if it is not the correct one.
 - A decision of Udi's is applied everywhere it reaches, in one step.
 - Within an approved task, run to completion; never offer to do less.
