@@ -145,6 +145,7 @@ Every thread and every Cowork session reads this file, `writing-style-guide.md` 
 
 - **THE WHOLE CASCADE IS IN THE REPOSITORY, AND THE REPOSITORY IS THE SOURCE OF TRUTH FOR ITS ARTEFACTS.**  A contract is `programs/<owner>/NAME.txt` of GLP, in one copy.
 - **THE CALCULUS IS THE AUTHORITY ON THE CONTRACTS AND ON THE RELATIONS AMONG THEM; AN OWNER MAY PUSH BACK, AND UDI APPROVES ANY CHANGE.**  "I must approve ANY change to a contract as current written in Calculus".
+- **"always look to simplify not complicate, and the contracts are not cast in stone; let's revise the contracts so that they need simple mathematical machinery, not complicate the machinery to address them."** (Udi, 2026-11-23 18:52 UTC, to Calculus #6, cited verbatim by the Calculus Cowork session.)
 - A contract's first line states one relation of the Calculus.
 - A contract's printed artefacts come from `calculus/tools`, never by hand.
 - Contract names are in `GLP/calculus/NAMES.txt`, each approved by Udi.
