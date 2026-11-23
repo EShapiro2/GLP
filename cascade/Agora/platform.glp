@@ -73,7 +73,7 @@ Rho ::= one(Class) ; rho(Proposal).
 Names ::= none ; request(Rho, Integer).
 Attempt ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision) ; yield(Attempt) ; ready(Attempt) ; request(Rho, Integer).
-Content ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
+Content ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo) ; who(Peer) ; rehello(Peer, Peer).
 Net ::= msg(Peer, Content).
 Asking ::= Attempt ; hello(Peer, Proposal).
 Approval ::= approval(Asking, List(Word), YesNo?).
@@ -161,7 +161,7 @@ CVals ::= [] ; [CVal | CVals].
 CAtom ::= cmp_atom(Constant, CVals).
 CAtoms ::= [] ; [CAtom | CAtoms].
 Lock ::= unlocked ; held(Attempt).
-Rec ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo) ; got(Attempt, Peer, Vote) ; chose(Attempt, Binding) ; closed(Attempt) ; wounded(Attempt) ; yielded(Attempt) ; requested(Rho, Integer) ; ended(Rho, Integer) ; readied(Attempt) ; ready(Attempt, Peer) ; unable(Attempt, Peer) ; unmet(Attempt, Integer) ; commits(Integer) ; ended(Attempt) ; introduced(Peer, Peer).
+Rec ::= asked(Attempt) ; answered(Attempt, YesNo) ; voted(Attempt, YesNo) ; got(Attempt, Peer, Vote) ; chose(Attempt, Binding) ; closed(Attempt) ; wounded(Attempt) ; yielded(Attempt) ; requested(Rho, Integer) ; ended(Rho, Integer) ; readied(Attempt) ; ready(Attempt, Peer) ; unable(Attempt, Peer) ; unmet(Attempt, Integer) ; commits(Integer) ; refire_due(Attempt) ; refired(Attempt) ; ended(Attempt) ; introduced(Peer, Peer).
 Recs ::= [] ; [Rec | Recs].
 App ::= app(GAtoms, Integer, Lock, Recs).
 Pend ::= deferred(Net).
@@ -745,13 +745,15 @@ then_read(yes, own_unread).
 then_read(no, write_own).
 
 procedure step(Trigger?, Then?, Stream(Trigger)?, Stream(Trigger)?, Stream(Trigger), Stream(Output), Stream(Net), Stream(Trigger), OpenApprovals?, Recs?, St?, Stream(Ask(Question))).
-step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(N?), ground(St?) | st_app(St?, Ap0), ask_next(Ans, Ans1?, D1), st_id(St?, Id), meeting_peer(N?, Id?, Mp), meet_hello(Mp?, N?, St?, Out, Out1?, Thr, Thr1?, St0), request_cond(N?, St0?, Cd, St1), dispatch_request(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr1, Out1, Ow, Approvals?, H?, St1?, D2), merge(D1?, D2?, D).
+step(req(propose(N)), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(N?), ground(St?) | st_app(St?, Ap0), ask_next(Ans, Ans1?, D1), st_id(St?, Id), refire(St?, Out, Out00?, St00), meeting_peer(N?, Id?, Mp), meet_hello(Mp?, N?, St00?, Out00, Out1?, Thr, Thr1?, St0), request_cond(N?, St0?, Cd, St1), dispatch_request(Cd?, Th?, Ap0?, Ls?, In?, Ans1, Thr1, Out1, Ow, Approvals?, H?, St1?, D2), merge(D1?, D2?, D).
 step(greeted(N), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(N?), ground(St?) | st_app(St?, Ap0), st_id(St?, Id), meeting_peer(N?, Id?, Mp), meet_hello(Mp?, N?, St?, Out, Out1?, Thr, Thr1?, St0), request_cond(N?, St0?, Cd, St1), dispatch_request(Cd?, Th?, Ap0?, Ls?, In?, Ans, Thr1, Out1, Ow, Approvals?, H?, St1?, D).
 step(again(N), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(N?), ground(St?) | st_app(St?, Ap0), request_cond(N?, St?, Cd, St1), dispatch_request(Cd?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
 step(net(msg(_, hello(P, N))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(P?), ground(N?), ground(St?) | st_app(St?, Ap0), hello_cond(P?, St?, Cd), dispatch_hello(Cd?, P?, N?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
 step(net(msg(_, ihello(P))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(P?), ground(St?) | st_app(St?, Ap0), ihello_cond(P?, St?, Cd), dispatch_ihello(Cd?, P?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
 step(net(msg(_, intro(_, Q))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(Q?), ground(St?) | st_app(St?, Ap0), intro_cond(Q?, St?, Cd), dispatch_intro(Cd?, Q?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
-step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(To?), ground(F?), ground(X?), ground(St?) | st_app(St?, Ap0), message_cond(X?, St?, Cd, St1), dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St1?, D).
+step(net(msg(To, cargo(F, X))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(To?), ground(F?), ground(X?), ground(St?) | st_app(St?, Ap0), who_unless(X?, F?, St?, Out, Out0?), message_cond(X?, St?, Cd, St1), dispatch_message(Cd?, msg(To?, cargo(F?, X?)), F?, X?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out0, Ow, Approvals?, H?, St1?, D).
+step(net(msg(_, who(P))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(P?), ground(St?) | st_app(St?, Ap0), known_st(P?, St?, K), rehello_if(K?, P?, St?, Out, Out1?), next(Th?, no, Ap0?, Ls?, In?, Ans, Thr, Out1, Ow, Approvals?, H?, St?, D).
+step(net(msg(_, rehello(P, Pf))), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(P?), ground(Pf?), ground(St?) | st_app(St?, Ap0), st_id(St?, Me), same(Pf?, Me?, Mine), st_sent(St?, Se), mem(P?, Se?, S), st_recd(St?, Rc), mem(P?, Rc?, R), or(S?, R?, K), neg(K?, NK), and(Mine?, NK?, Take), take_rehello(Take?, P?, St?, Thr, Thr1?, St1), next(Th?, yes, Ap0?, Ls?, In?, Ans, Thr1, Out, Ow, Approvals?, H?, St1?, D).
 step(answered(At, YN), Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(At?), ground(YN?), ground(St?) | st_app(St?, Ap0), close_approval(At?, Approvals?, Approvals1), answer_cond(At?, St?, Cd, St1), dispatch_answer(Cd?, YN?, At?, Th?, Ap0?, Ls?, In?, Ans, Thr, Out, Ow, Approvals1?, H?, St1?, D).
 step(recheck, Th, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- ground(St?) | st_pends(St?, Pd), st_view(St?, V), st_trie(St?, Tr), recheck_find(Pd?, V?, Tr?, St?, F), recheck1(F?, Th?, Ls?, In?, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
 step(own, _, Ls, In, Ans?, Thr?, Out?, Ow?, Approvals, H, St, D?) :- agent_goal(Ls?, In?, no, Ans, Thr, Out, Ow, Approvals?, H?, St?, D).
@@ -1108,6 +1110,59 @@ procedure meet_hello(MeetPeer?, Proposal?, St?, Stream(Net), Stream(Net)?, Strea
 meet_hello(nopeer, _, St, Out1?, Out1, Thr1?, Thr1, St?).
 meet_hello(peer(Q), N, St, Out?, Out1, Thr?, Thr1, St1?) :- ground(Q?), ground(N?), ground(St?) | known_st(Q?, St?, K), st_sent(St?, Se), mem(Q?, Se?, S), or(K?, S?, B), meet_hello1(B?, Q?, N?, St?, Out, Out1?, Thr, Thr1?, St1).
 
+procedure who_unless(Cargo?, Peer?, St?, Stream(Net), Stream(Net)?).
+who_unless(start(_), F, St, Out?, Out0) :- ground(F?), ground(St?) | st_sent(St?, Se), mem(F?, Se?, S), st_recd(St?, Rc), mem(F?, Rc?, R), or(S?, R?, K), st_id(St?, Me), who_send(K?, F?, Me?, Out, Out0?).
+who_unless(_, _, _, Out0?, Out0) :- otherwise | true.
+
+procedure who_send(YesNo?, Peer?, Peer?, Stream(Net), Stream(Net)?).
+who_send(yes, _, _, Out0?, Out0).
+who_send(no, F, Me, [msg(F?, who(Me?)) | Out0?], Out0).
+
+procedure rehello_if(YesNo?, Peer?, St?, Stream(Net), Stream(Net)?).
+rehello_if(yes, P, St, [msg(P?, rehello(Me?, P?)) | Out1?], Out1) :- ground(St?) | st_id(St?, Me).
+rehello_if(no, _, _, Out1?, Out1).
+
+procedure take_rehello(YesNo?, Peer?, St?, Stream(Output), Stream(Output)?, St).
+take_rehello(no, _, St, Thr1?, Thr1, St?).
+take_rehello(yes, P, St, Thr?, Thr1, St3?) :- ground(P?), ground(St?) | add_sent(P?, St?, St1), add_recd(P?, St1?, St2), show_known(P?, St?, St2?, Thr, Thr1?, St3).
+
+procedure refire(St?, Stream(Net), Stream(Net)?, St).
+refire(St, Out?, Out1, St2?) :- ground(St?) | st_app(St?, Ap), app_lock_recs(Ap?, L, _), st_id(St?, Id), refire1(L?, Id?, St?, Out, Out1?, St2).
+
+procedure refire1(Lock?, Peer?, St?, Stream(Net), Stream(Net)?, St).
+refire1(unlocked, _, St, Out1?, Out1, St?).
+refire1(held(At), Id, St, Out?, Out1, St2?) :- ground(At?), ground(Id?), ground(St?) | attempt_id(At?, I), same(I?, Id?, Own), refire2(Own?, At?, Id?, St?, Out, Out1?, St2).
+
+procedure refire2(YesNo?, Attempt?, Peer?, St?, Stream(Net), Stream(Net)?, St).
+refire2(no, _, _, St, Out1?, Out1, St?).
+refire2(yes, At, Id, St, Out?, Out1, St2?) :- ground(At?), ground(Id?), ground(St?) | st_app(St?, Ap), app_recs(Ap?, R0), mem(refire_due(At?), R0?, Due), refire_due(Due?, At?, Id?, St?, Out, Out1?, St2).
+
+procedure refire_due(YesNo?, Attempt?, Peer?, St?, Stream(Net), Stream(Net)?, St).
+refire_due(no, At, _, St, Out1?, Out1, St1?) :- ground(At?), ground(St?) | st_app(St?, Ap), add_rec(refire_due(At?), Ap?, Ap1), set_app(St?, Ap1?, St1).
+refire_due(yes, At, Id, St, Out?, Out1, St2?) :- ground(At?), ground(Id?), ground(St?) | st_app(St?, Ap), app_recs(Ap?, R0), mem(refired(At?), R0?, Done), attempt_class(At?, C), st_class(C?, St?, R, St1), refire_or_give_up(Done?, R?, At?, Id?, St1?, Out, Out1?, St2).
+
+procedure refire_or_give_up(YesNo?, ClassRes?, Attempt?, Peer?, St?, Stream(Net), Stream(Net)?, St).
+refire_or_give_up(no, R, At, Id, St, Out?, Out1, St2?) :- ground(At?), ground(St?) | st_app(St?, Ap), add_rec(refired(At?), Ap?, Ap1), set_app(St?, Ap1?, St0), refire3(R?, At?, Id?, St0?, Out, Out1?, St2).
+refire_or_give_up(yes, nocls, _, _, St, Out1?, Out1, St?).
+refire_or_give_up(yes, cls(I), At, Id, St, Out?, Out1, St2?) :- ground(I?), ground(At?), ground(Id?), ground(St?) | st_app(St?, Ap), abort_own(I?, At?, Id?, Ap?, Ss, Ap1), set_app(St?, Ap1?, St1), send_all(Ss?, St1?, Ms, St2), put_all(Ms?, Out, Out1?).
+
+procedure refire3(ClassRes?, Attempt?, Peer?, St?, Stream(Net), Stream(Net)?, St).
+refire3(nocls, _, _, St, Out1?, Out1, St?).
+refire3(cls(I), At, Id, St, Out?, Out1, St2?) :- ground(I?), ground(At?), ground(Id?), ground(St?) | info_q(I?, Q), st_app(St?, Ap), app_recs(Ap?, R), unvoted(Q?, At?, R?, Q1), tell(Q1?, Id?, start(At?), Ss), send_all(Ss?, St?, Ms, St2), put_all(Ms?, Out, Out1?).
+
+procedure unvoted(Peers?, Attempt?, Recs?, Peers).
+unvoted([], _, _, []).
+unvoted([Q | Qs], At, R, Q1?) :- ground(Q?), ground(At?), ground(R?) | got_from(Q?, At?, R?, G), unvoted1(G?, Q?, Qs?, At?, R?, Q1).
+
+procedure unvoted1(YesNo?, Peer?, Peers?, Attempt?, Recs?, Peers).
+unvoted1(yes, _, Qs, At, R, Q1?) :- unvoted(Qs?, At?, R?, Q1).
+unvoted1(no, Q, Qs, At, R, [Q? | Q1?]) :- unvoted(Qs?, At?, R?, Q1).
+
+procedure got_from(Peer?, Attempt?, Recs?, YesNo).
+got_from(_, _, [], no).
+got_from(Q, At, [got(A, P, _) | _], yes) :- ground(Q?), ground(At?), ground(A?), ground(P?), (A? =?= At?), (P? =?= Q?) | true.
+got_from(Q, At, [_ | R], G?) :- otherwise | got_from(Q?, At?, R?, G).
+
 procedure meet_hello1(YesNo?, Peer?, Proposal?, St?, Stream(Net), Stream(Net)?, Stream(Output), Stream(Output)?, St).
 meet_hello1(yes, _, _, St, Out1?, Out1, Thr1?, Thr1, St?).
 meet_hello1(no, Q, N, St, [msg(Q?, hello(Id?, N?)) | Out1?], Out1, Thr?, Thr1, St2?) :- ground(Q?), ground(N?), ground(St?) | st_id(St?, Id), add_sent(Q?, St?, St1), show_known(Q?, St?, St1?, Thr, Thr1?, St2).
@@ -1164,11 +1219,18 @@ message_cond(ready(At), St, Cd?, St1?) :- ground(At?), ground(St?) | attempt_cla
 procedure message_cond1(ClassRes?, Cargo?, St?, MCond, St).
 message_cond1(nocls, _, St, noparticipant, St?).
 message_cond1(_, request(_, _), St, mhold, St?).
-message_cond1(cls(I), start(At), St, Cd?, St?) :- ground(I?), ground(At?), ground(St?) | st_closed(At?, St?, Cl), start_cond(Cl?, I?, At?, St?, Cd).
+message_cond1(cls(I), start(At), St, Cd?, St?) :- ground(I?), ground(At?), ground(St?) | st_closed(At?, St?, Cl), st_app(St?, Ap), app_lock_recs(Ap?, _, R), start_dup(At?, R?, Cl?, Dup), start_cond_dup(Dup?, Cl?, I?, At?, St?, Cd).
 message_cond1(cls(I), vote(_, _), St, mgo(I?), St?).
 message_cond1(cls(I), yield(_), St, mgo(I?), St?).
 message_cond1(cls(I), outcome(_, _), St, mgo(I?), St?).
 message_cond1(cls(I), ready(_), St, mgo(I?), St?).
+
+procedure start_dup(Attempt?, Recs?, YesNo?, YesNo).
+start_dup(At, R, _, B?) :- ground(At?), ground(R?) | mem(asked(At?), R?, B1), mem(voted(At?, yes), R?, B2), mem(voted(At?, no), R?, B3), or(B1?, B2?, B12), or(B12?, B3?, B).
+
+procedure start_cond_dup(YesNo?, YesNo?, Info?, Attempt?, St?, MCond).
+start_cond_dup(yes, _, _, _, _, noparticipant).
+start_cond_dup(no, Cl, I, At, St, Cd?) :- start_cond(Cl?, I?, At?, St?, Cd).
 
 procedure start_cond(YesNo?, Info?, Attempt?, St?, MCond).
 start_cond(yes, I, _, _, mgo(I?)).
@@ -2451,6 +2513,8 @@ spent_rec(chose(A, _), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
 spent_rec(unmet(A, N), _, _, R, Id, Tr, F?, Tr?) :- ground(A?), integer(N?), ground(R?), ground(Id?) | attempt_id(A?, P), same(P?, Id?, Own), commits_of(R?, M), since(M?, N?, Sn), any_ready(R?, A?, Rd), mem(readied(A?), R?, Dn), or(Sn?, Rd?, X1), unmet_gone(Own?, X1?, Dn?, G), fate_of(G?, F).
 spent_rec(commits(_), _, _, _, _, Tr, keep, Tr?).
 spent_rec(closed(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
+spent_rec(refire_due(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
+spent_rec(refired(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
 spent_rec(wounded(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
 spent_rec(yielded(A), Cl, _, _, _, Tr, F?, Tr?) :- in_closed(A?, Cl?, F).
 spent_rec(ended(A), _, _, _, _, Tr, F?, Tr1?) :- ground(A?) | attempt_id(A?, I), attempt_k(A?, K), trie_look(K?, a(I?), Tr?, Cd, Tr1), fate_of(Cd?, F).

@@ -36,7 +36,7 @@
 %% ---------------------------------------------------------------------------
 
 Peer       ::= Key.
-Carried(X, R) ::= hello(Peer, R) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, X).
+Carried(X, R) ::= hello(Peer, R) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, X) ; who(Peer) ; rehello(Peer, Peer).
 Msg(X, R)  ::= msg(Peer, Carried(X, R)).
 Sent(X)    ::= sent(Peer, Peer, X) ; intro(Peer, Peer, Peer).
 Step(T, Q, S, P, D) ::= req(T) ; own(Holes, T) ; look ; wait(Cond(Q, S, P, D)) ; approval(Q, T) ; refresh ; clock(Integer).
@@ -122,10 +122,12 @@ route4([msg(_, _)|Ms], A, OA?, B, OB?, C, OC?, D, OD?, Log?) :- otherwise |
 route4([], _, [], _, [], _, [], _, [], []).
 
 %% A cargo, logged with its sender and its recipient, and an introduction,
-%% intro(From, To, Q), From introducing Q to To; a hello or an ihello, not.
+%% intro(From, To, Q), From introducing Q to To; a hello, an ihello, a who or a rehello, not.
 procedure(X, R) note(Carried(X, R)?, Peer?, Stream(Sent(X)), Stream(Sent(X))?).
 note(hello(_, _), _, Log1?, Log1).
 note(ihello(_), _, Log1?, Log1).
+note(who(_), _, Log1?, Log1).
+note(rehello(_, _), _, Log1?, Log1).
 note(intro(F, Q), To, [intro(F?, To?, Q?)|Log1?], Log1).
 note(cargo(F, X), To, [sent(F?, To?, X?)|Log1?], Log1).
 

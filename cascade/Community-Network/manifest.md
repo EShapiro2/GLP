@@ -1,11 +1,11 @@
 # A run of the cascade on Community-Network
 
-- Contract: `Community-Network` (`community_network` to the checker), its owner's two files `programs/go/Community-Network.txt` and `programs/go/Community-Network.glp`, copied here as they stood at `3e428e04`.
+- Contract: `Community-Network` (`community_network` to the checker), its owner's two files `programs/go/Community-Network.txt` and `programs/go/Community-Network.glp`, copied here as they stood at `849004b4`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
 - Adopted from the Calculus: `programs/go/Community-Network.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Community-Network.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-22 00:54 UTC by `cascade.sh community_network`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `3e428e04`; each artefact's source and tool:
+- Run on 2026-11-23 18:08 UTC by `cascade.sh community_network`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `849004b4`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

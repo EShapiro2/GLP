@@ -104,6 +104,42 @@ mkdir -p "$RUNDIR" || exit 2
 cp "$HERE/self.glp.in" "$RUNDIR/self.glp" && cp "$HERE/harness.glp.in" "$RUNDIR/harness.glp" &&
     cp "$PLATFORM" "$RUNDIR/platform.glp" && cp "$PRINTED/profiles.glp" "$RUNDIR/profiles.glp" &&
     cp "$PRINTED/population.glp" "$RUNDIR/population.glp" || exit 2
+# The agents start by seat_agent/5 (fault.glp.in), which starts the agent of
+# each key and, at the run's fault key, if any, the state loss during the run.
+# A platform whose contract declares environment predicates other than the day
+# exports agent/6, its fifth argument the atoms given when the platform is
+# deployed (vGLP compiler README, "Environment predicates"): none at startup,
+# and state_loss to the fresh agent of a state loss; agent/5 takes none.
+sed -i 's/^    agent(K?, In?, Out, Thr, Asks),$/    seat_agent(K?, In?, Out, Thr, Asks),/' "$RUNDIR/harness.glp" || exit 2
+grep -q '^    seat_agent(K?, In?, Out, Thr, Asks),$' "$RUNDIR/harness.glp" || { echo "run.sh: the harness's agent call was not found" >&2; exit 2; }
+if grep -q '^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?,' "$RUNDIR/platform.glp"; then
+    ENV0='[], '; ENV1='[state_loss], '
+else
+    ENV0=''; ENV1=''
+fi
+# FAULT_KEY the key of the agent whose machine loses its state, FAULT_RATE the
+# rate per second of the time drawn for it; no fault where FAULT_KEY is unset;
+# FAULT_KIND state, the default, restarts the agent from the empty state, and
+# identity starts none, its key lost.
+{ sed -e "s/@ENV0@/$ENV0/; s/@ENV1@/$ENV1/" "$HERE/fault.glp.in"
+  echo
+  echo "procedure fault_of(Key?, Fault)."
+  if [ -n "${FAULT_KEY:-}" ]; then
+      [[ "${FAULT_RATE:-}" =~ ^[0-9]+(\.[0-9]+)?([eE]-?[0-9]+)?$ ]] || { echo "run.sh: FAULT_RATE is a number" >&2; exit 2; }
+      echo "fault_of($FAULT_KEY, yes($FAULT_RATE))."
+      echo "fault_of(_, no) :- otherwise | true."
+  else
+      echo "fault_of(_, no)."
+  fi
+  echo "procedure restart_of(Restart)."
+  case "${FAULT_KIND:-state}" in
+      state) echo "restart_of(restarts)." ;;
+      identity) echo "restart_of(none)." ;;
+      *) echo "run.sh: FAULT_KIND is state or identity" >&2; exit 2 ;;
+  esac
+} >> "$RUNDIR/harness.glp" || exit 2
+[ -n "${FAULT_KEY:-}" ] && echo "fault: ${FAULT_KIND:-state} loss at $FAULT_KEY at rate $FAULT_RATE per second"
+[ -n "${NET_TAP:-}" ] && { bash "$NET_TAP" "$RUNDIR/harness.glp" || exit 2; }
 
 # The dimensions' profiles, in the order population.glp declares them, the
 # line of each type DimensionK ::= p1 ; p2 ; ... ., a dimension's profiles

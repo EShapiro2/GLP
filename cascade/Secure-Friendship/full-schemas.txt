@@ -23,12 +23,15 @@ Secure Friendship:2 ■ Tell: records_friend(Carol,Alice,Bob) <- friend(Alice,Ca
 Secure Friendship:2 ■ Tell end: ~records_friend(Carol,Alice,Bob) <- friend(Alice,Carol), friend(Carol,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), records_friend(Carol,Alice,Bob).
 Secure Friendship:2 ■ Send record: records_custodian(Bob,Alice,Carol) <- friend(Alice,Bob), friend(Bob,Alice), fixed(Alice), custodian(Alice,Carol), ~records_custodian(Bob,Alice,Carol).
 Secure Friendship:2 ■ Send threshold: records_threshold(Bob,Alice,Share) <- friend(Alice,Bob), friend(Bob,Alice), threshold(Alice,Share), ~records_threshold(Bob,Alice,Share).
-Secure Friendship:3 ■ Checkpoint: checkpoint(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice), ~checkpoint(Bob,Alice).
-Secure Friendship:3 ■ | Bob keeps it.
+Secure Friendship:3 ■ Checkpoint: checkpoint(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice), ~checkpoint(Bob,Alice) guarded by Alice.
+Secure Friendship:3 ■ | Bob adopts what is newer or missing.
+Secure Friendship:3 ■ Checkpoint tell: records_friend(Bob,Alice,Carol) <- friend(Alice,Bob), friend(Bob,Alice), friend(Alice,Carol), friend(Carol,Alice), ~records_friend(Bob,Alice,Carol) guarded by Alice.
+Secure Friendship:3 ■ Checkpoint record: records_custodian(Bob,Alice,Carol) <- friend(Alice,Bob), friend(Bob,Alice), fixed(Alice), custodian(Alice,Carol), ~records_custodian(Bob,Alice,Carol) guarded by Alice.
+Secure Friendship:3 ■ Checkpoint threshold: records_threshold(Bob,Alice,Share) <- friend(Alice,Bob), friend(Bob,Alice), threshold(Alice,Share), ~records_threshold(Bob,Alice,Share) guarded by Alice.
 Secure Friendship:4 ■ | State recovery.
-Secure Friendship:4 ■ Restore: friend(Alice,Bob), recovered(Alice,Bob) <- state_loss(Alice), friend(Bob,Alice), checkpoint(Bob,Alice), ~accepted(Alice,_,Bob), ~friend(Alice,Bob).
-Secure Friendship:4 ■ Restore friend: friend(Alice,Carol), recovered_friend(Alice,Carol,Bob) <- state_loss(Alice), friend(Bob,Alice), checkpoint(Bob,Alice), records_friend(Bob,Alice,Carol), ~records_replacement(Bob,Alice,Carol,_), ~accepted(Alice,_,Carol), ~friend(Alice,Carol).
-Secure Friendship:4 ■ Restore replaced friend: friend(Alice,Dave), recovered_replaced(Alice,Bob,Dave,Carol) <- state_loss(Alice), friend(Bob,Alice), checkpoint(Bob,Alice), records_friend(Bob,Alice,Carol), records_replacement(Bob,Alice,Carol,Dave), ~friend(Alice,Dave).
+Secure Friendship:4 ■ Restore: friend(Alice,Bob), recovered(Alice,Bob) <- friend(Bob,Alice), ~accepted(Alice,_,Bob), ~friend(Alice,Bob) guarded by Bob.
+Secure Friendship:4 ■ Restore friend: friend(Alice,Carol), recovered_friend(Alice,Carol,Bob) <- state_loss(Alice), friend(Bob,Alice), checkpoint(Bob,Alice), records_friend(Bob,Alice,Carol), ~records_replacement(Bob,Alice,Carol,_), ~accepted(Alice,_,Carol), ~friend(Alice,Carol) guarded by Bob.
+Secure Friendship:4 ■ Restore replaced friend: friend(Alice,Dave), recovered_replaced(Alice,Bob,Dave,Carol) <- state_loss(Alice), friend(Bob,Alice), checkpoint(Bob,Alice), records_friend(Bob,Alice,Carol), records_replacement(Bob,Alice,Carol,Dave), ~friend(Alice,Dave) guarded by Bob.
 Secure Friendship:5 ◆ | Identity replacement.
 Secure Friendship:5 ◆ Replace: asked(Carol,Alicia,Alice) <- knows(Alicia,Carol), custodian_of(Carol,Alice), ~asked(Carol,Alicia,Alice) guarded by Alicia.
 Secure Friendship:5 ◆ | Alicia asks only after an identity loss of Alice.

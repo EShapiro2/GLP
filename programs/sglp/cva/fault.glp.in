@@ -1,0 +1,84 @@
+
+%% A state loss during the run (SPM, Definition "State-Loss Fault"; Appendix
+%% SGSG-CVA, Restore Protocol, "Fault model"), appended to the harness by
+%% run.sh for a platform whose agent takes the atoms of its environment
+%% predicates, agent/6, or none, agent/5 (run.sh prints the call of the one the platform exports).  At the agent keyed by the run's fault key, at a time
+%% drawn from the clock's exponential distribution with the run's fault rate
+%% (rated/2), its machine loses its state: the agent that ran until then is
+%% cut off, its network input closed and its output, its person's output and
+%% its asks dropped from then on, and a fresh agent of the same key starts
+%% from the empty state, with the atom state_loss given it where the agent takes environment atoms, on the same
+%% network input, its person's screen and its person process.  Every other
+%% agent is as the harness starts it.  fault_of/2, printed by run.sh, gives
+%% the fault key its rate, yes(Rate), and every other key no; restart_of/1 whether the faulted
+%% agent restarts, a state loss, or not, an identity loss (FAULT_KIND).
+
+%% seat_agent(K?, In?, Out, Thr, Asks): the agent keyed K, on its input stream,
+%% its output to the network, its output to its person and its ask stream.
+procedure seat_agent(Key?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
+seat_agent(K, In, Out?, Thr?, Asks?) :- ground(K?) |
+    fault_of(K?, F),
+    seat_agent(F?, K?, In?, Out, Thr, Asks).
+
+procedure seat_agent(Fault?, Key?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
+seat_agent(no, K, In, Out?, Thr?, Asks?) :-
+    agent(K?, In?, Out, Thr, @ENV0@Asks).
+seat_agent(yes(R), K, In, Out?, Thr?, Asks?) :- number(R?) |
+    rated(R?, Tok),
+    copies(Tok?, T1, T2, T3, T4, T5),
+    switch_in(T1?, In?, In1, In2),
+    agent(K?, In1?, Out1, Thr1, @ENV0@Asks1),
+    cut(T2?, Out1?, OutA),
+    cut(T3?, Thr1?, ThrA),
+    cut(T4?, Asks1?, AsksA),
+    after(T5?, K?, In2?, Out2, Thr2, Asks2),
+    fmerge(OutA?, Out2?, Out),
+    fmerge(ThrA?, Thr2?, Thr),
+    fmerge(AsksA?, Asks2?, Asks).
+
+Fault ::= no ; yes(Number).
+
+%% copies(Tok?, T1, ..., T5): five copies of the fault's token, one for each
+%% goal that reads it.
+procedure copies(Token?, Token, Token, Token, Token, Token).
+copies(go(T), go(T?), go(T?), go(T?), go(T?), go(T?)) :- number(T?) | true.
+copies(stop, stop, stop, stop, stop, stop).
+
+%% switch_in(Tok?, In?, In1, In2): the messages of In to In1 until the fault,
+%% In1 then closed and the rest of In to In2.
+procedure switch_in(Token?, Stream(Net)?, Stream(Net), Stream(Net)).
+switch_in(go(_), In, [], In?).
+switch_in(stop, _, [], []).
+switch_in(Tok, [M|In], [M?|In1?], In2?) :- switch_in(Tok?, In?, In1, In2).
+switch_in(_, [], [], []).
+
+%% cut(Tok?, Xs?, Ys): the elements of Xs until the fault, and none after.
+procedure(X) cut(Token?, Stream(X)?, Stream(X)).
+cut(go(_), _, []).
+cut(stop, _, []).
+cut(Tok, [X|Xs], [X?|Ys?]) :- cut(Tok?, Xs?, Ys).
+cut(_, [], []).
+
+%% after(Tok?, K?, In?, Out, Thr, Asks): at the fault, the fresh agent keyed K,
+%% from the empty state with state_loss given; none where the run ends first.
+procedure after(Token?, Key?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
+after(go(_), K, In, Out?, Thr?, Asks?) :- ground(K?) |
+    restart_of(Rs),
+    after1(Rs?, K?, In?, Out, Thr, Asks).
+after(stop, _, _, [], [], []).
+
+%% after1(Rs?, K?, In?, Out, Thr, Asks): a state loss, restarts, starts the fresh agent keyed K; an
+%% identity loss, none, starts none, the lost key's machine gone (SPM, Definition Identity-Loss Fault).
+procedure after1(Restart?, Key?, Stream(Net)?, Stream(Net), Stream(Output), Stream(Ask(Question))).
+after1(restarts, K, In, Out?, Thr?, Asks?) :- ground(K?) |
+    agent(K?, In?, Out, Thr, @ENV1@Asks).
+after1(none, _, _, [], [], []).
+
+Restart ::= restarts ; none.
+
+%% fmerge(Xs?, Ys?, Zs): the elements of Xs and Ys, as each comes.
+procedure(X) fmerge(Stream(X)?, Stream(X)?, Stream(X)).
+fmerge([X|Xs], Ys, [X?|Zs?]) :- fmerge(Ys?, Xs?, Zs).
+fmerge(Xs, [Y|Ys], [Y?|Zs?]) :- fmerge(Xs?, Ys?, Zs).
+fmerge([], Ys, Ys?).
+fmerge(Xs, [], Xs?).

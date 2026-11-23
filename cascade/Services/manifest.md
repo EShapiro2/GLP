@@ -1,10 +1,10 @@
 # A run of the cascade on Services
 
-- Contract: `Services` (`services` to the checker), its owner's two files `programs/examples/rendezvous/Services.txt` and `programs/examples/rendezvous/Services.glp`, copied here as they stood at `3e428e04`.
+- Contract: `Services` (`services` to the checker), its owner's two files `programs/examples/rendezvous/Services.txt` and `programs/examples/rendezvous/Services.glp`, copied here as they stood at `849004b4`.
 - The paper: `/Users/udi/Grassroots/GNA (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/examples/rendezvous/Services.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/examples/rendezvous/Services.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-22 01:01 UTC by `cascade.sh services`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `3e428e04`; each artefact's source and tool:
+- Run on 2026-11-23 14:39 UTC by `cascade.sh services`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `849004b4`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

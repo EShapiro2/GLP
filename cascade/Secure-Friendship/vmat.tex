@@ -1066,7 +1066,323 @@ checkpoint
 }
 ,\\
 &
-\text{guarded by } \emptyset
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+checkpoint_tell
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{\detokenize{
+records_friend
+}}
+(
+\Bob
+,
+\mathit{Carol}
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{Carol}
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+records_friend
+}}
+(
+\Bob
+,
+\mathit{Carol}
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+checkpoint_record
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{\detokenize{
+records_custodian
+}}
+(
+\Bob
+,
+Carol
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+fixed
+}}
+,
+\mathit{\detokenize{
+custodian
+}}
+(
+Carol
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+records_custodian
+}}
+(
+\Bob
+,
+Carol
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+checkpoint_threshold
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{\detokenize{
+records_threshold
+}}
+(
+\Bob
+,
+Share
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+threshold
+}}
+(
+Share
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+records_threshold
+}}
+(
+\Bob
+,
+Share
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
 \end{align*}
 \iffalse
 restore
@@ -1082,6 +1398,22 @@ c_
 {
 \Alice
 }
+ \uplus 
+\{
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+recovered
+}}
+(
+\Bob
+)
+\}
 , \qquad 
 c'_
 {
@@ -1092,42 +1424,12 @@ c_
 {
 \Bob
 }
- \uplus 
-\{
-\mathit{\detokenize{
-friend
-}}
-(
-\Alice
-)
-,
-\mathit{\detokenize{
-recovered
-}}
-(
-\Alice
-)
-\}
 ,\\
 &
 \text{provided } 
 \mathit{\detokenize{
 identity
 }}
-,
-\mathit{\detokenize{
-friend
-}}
-(
-\Bob
-)
-,
-\mathit{\detokenize{
-checkpoint
-}}
-(
-\Bob
-)
  \in c_
 {
 \Alice
@@ -1138,8 +1440,11 @@ identity
 }}
 ,
 \mathit{\detokenize{
-state_loss
+friend
 }}
+(
+\Alice
+)
  \in c_
 {
 \Bob
@@ -1154,24 +1459,26 @@ accepted
 (
 \ast
 ,
-\Alice
+\Bob
 )
 ,
 \mathit{\detokenize{
 friend
 }}
 (
-\Alice
+\Bob
 )
 \}
  \cap c_
 {
-\Bob
+\Alice
 }
  = \emptyset
 ,\\
 &
-\text{guarded by } \emptyset
+\text{guarded by } \{
+\Bob
+\}
 \end{align*}
 \iffalse
 restore_friend
@@ -1186,16 +1493,6 @@ c'_
 c_
 {
 \Alice
-}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
 }
  \uplus 
 \{
@@ -1212,43 +1509,22 @@ recovered_friend
 (
 Carol
 ,
-\Alice
+\Bob
 )
 \}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
 ,\\
 &
 \text{provided } 
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-friend
-}}
-(
-\Bob
-)
-,
-\mathit{\detokenize{
-checkpoint
-}}
-(
-\Bob
-)
-,
-\mathit{\detokenize{
-records_friend
-}}
-(
-\Bob
-,
-Carol
-)
- \in c_
-{
-\Alice
-}
- \text{ and } 
 \mathit{\detokenize{
 identity
 }}
@@ -1258,26 +1534,42 @@ state_loss
 }}
  \in c_
 {
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+checkpoint
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+records_friend
+}}
+(
+\Alice
+,
+Carol
+)
+ \in c_
+{
 \Bob
 }
 ,\\
 &
 \text{provided } 
-\mathit{\detokenize{
-records_replacement
-}}
-(
-\Bob
-,
-Carol
-,
-\ast
-)
- \notin c_
-{
-\Alice
-}
- \text{ and } 
 \{
 \mathit{\detokenize{
 accepted
@@ -1297,12 +1589,29 @@ Carol
 \}
  \cap c_
 {
-\Bob
+\Alice
 }
  = \emptyset
+ \text{ and } 
+\mathit{\detokenize{
+records_replacement
+}}
+(
+\Alice
+,
+Carol
+,
+\ast
+)
+ \notin c_
+{
+\Bob
+}
 ,\\
 &
-\text{guarded by } \emptyset
+\text{guarded by } \{
+\Bob
+\}
 \end{align*}
 \iffalse
 restore_replaced_friend
@@ -1318,16 +1627,6 @@ c_
 {
 \Alice
 }
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
  \uplus 
 \{
 \mathit{\detokenize{
@@ -1341,13 +1640,23 @@ Dave
 recovered_replaced
 }}
 (
-\Alice
+\Bob
 ,
 Dave
 ,
 Carol
 )
 \}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
 ,\\
 &
 \text{provided } 
@@ -1356,38 +1665,8 @@ identity
 }}
 ,
 \mathit{\detokenize{
-friend
+state_loss
 }}
-(
-\Bob
-)
-,
-\mathit{\detokenize{
-checkpoint
-}}
-(
-\Bob
-)
-,
-\mathit{\detokenize{
-records_friend
-}}
-(
-\Bob
-,
-Carol
-)
-,
-\mathit{\detokenize{
-records_replacement
-}}
-(
-\Bob
-,
-Carol
-,
-Dave
-)
  \in c_
 {
 \Alice
@@ -1398,8 +1677,38 @@ identity
 }}
 ,
 \mathit{\detokenize{
-state_loss
+friend
 }}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+checkpoint
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+records_friend
+}}
+(
+\Alice
+,
+Carol
+)
+,
+\mathit{\detokenize{
+records_replacement
+}}
+(
+\Alice
+,
+Carol
+,
+Dave
+)
  \in c_
 {
 \Bob
@@ -1415,11 +1724,13 @@ Dave
 )
  \notin c_
 {
-\Bob
+\Alice
 }
 ,\\
 &
-\text{guarded by } \emptyset
+\text{guarded by } \{
+\Bob
+\}
 \end{align*}
 \iffalse
 replace
