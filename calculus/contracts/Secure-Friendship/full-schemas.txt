@@ -1,7 +1,7 @@
 Secure Friendship (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Secure Friendship:0 - | Alice, Bob, Carol and Dave are persons, Alicia a new identity of Alice, Share, Double, Epoch and Old numbers.
+Secure Friendship:0 - | Alice, Bob, Carol and Dave are persons, Alicia a new identity of Alice, Share and Double numbers.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
@@ -23,10 +23,9 @@ Secure Friendship:2 ■ Tell: records_friend(Carol,Alice,Bob) <- friend(Alice,Ca
 Secure Friendship:2 ■ Tell end: ~records_friend(Carol,Alice,Bob) <- friend(Alice,Carol), friend(Carol,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), records_friend(Carol,Alice,Bob).
 Secure Friendship:2 ■ Send record: records_custodian(Bob,Alice,Carol) <- friend(Alice,Bob), friend(Bob,Alice), fixed(Alice), custodian(Alice,Carol), ~records_custodian(Bob,Alice,Carol).
 Secure Friendship:2 ■ Send threshold: records_threshold(Bob,Alice,Share) <- friend(Alice,Bob), friend(Bob,Alice), threshold(Alice,Share), ~records_threshold(Bob,Alice,Share).
-Secure Friendship:3 ■ Checkpoint: checkpoint(Bob,Alice), checkpoint_epoch(Bob,Alice,Epoch) <- friend(Alice,Bob), friend(Bob,Alice), ~checkpoint(Bob,Alice) guarded by Alice.
-Secure Friendship:3 ■ Newer checkpoint: ~checkpoint_epoch(Bob,Alice,_), checkpoint_epoch(Bob,Alice,Epoch) <- friend(Alice,Bob), friend(Bob,Alice), checkpoint_epoch(Bob,Alice,Old), lt(Old,Epoch) guarded by Alice.
-Secure Friendship:3 ■ | Bob adopts what is newer or missing.
+Secure Friendship:3 ■ Checkpoint: checkpoint(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice), ~checkpoint(Bob,Alice) guarded by Alice.
 Secure Friendship:3 ■ Checkpoint tell: records_friend(Bob,Alice,Carol) <- friend(Alice,Bob), friend(Bob,Alice), friend(Alice,Carol), friend(Carol,Alice), ~records_friend(Bob,Alice,Carol) guarded by Alice.
+Secure Friendship:3 ■ Checkpoint tell end: ~records_friend(Bob,Alice,Carol) <- friend(Alice,Bob), friend(Bob,Alice), knows(Alice,Carol), ~friend(Alice,Carol), ~friend(Carol,Alice), records_friend(Bob,Alice,Carol), records_friend(Bob,Alice,Carol) guarded by Alice.
 Secure Friendship:3 ■ Checkpoint record: records_custodian(Bob,Alice,Carol) <- friend(Alice,Bob), friend(Bob,Alice), fixed(Alice), custodian(Alice,Carol), ~records_custodian(Bob,Alice,Carol) guarded by Alice.
 Secure Friendship:3 ■ Checkpoint threshold: records_threshold(Bob,Alice,Share) <- friend(Alice,Bob), friend(Bob,Alice), threshold(Alice,Share), ~records_threshold(Bob,Alice,Share) guarded by Alice.
 Secure Friendship:4 ■ | State recovery.

@@ -1,7 +1,7 @@
 Secure Friendship (flat text)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Secure Friendship:0 - | Alice, Bob, Carol and Dave are persons, Alicia a new identity of Alice, Share, Double, Epoch and Old numbers.
+Secure Friendship:0 - | Alice, Bob, Carol and Dave are persons, Alicia a new identity of Alice, Share and Double numbers.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
@@ -23,10 +23,9 @@ Secure Friendship:2 ■ Tell: Carol records the friendship of Alice and Bob, pro
 Secure Friendship:2 ■ Tell end: No longer Carol records the friendship of Alice and Bob, provided Alice counts Carol as a friend, Carol counts Alice as a friend, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
 Secure Friendship:2 ■ Send record: Bob records Carol as an identity custodian of Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has a fixed identity record, Alice has Carol as an identity custodian and not Bob records Carol as an identity custodian of Alice.
 Secure Friendship:2 ■ Send threshold: Bob records the threshold Share of Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has the threshold Share and not Bob records the threshold Share of Alice.
-Secure Friendship:3 ■ Checkpoint: Alice may Bob keeps a checkpoint of Alice and Bob keeps Alice's checkpoint at the number Epoch, provided Alice counts Bob as a friend, Bob counts Alice as a friend and not Bob keeps a checkpoint of Alice.
-Secure Friendship:3 ■ Newer checkpoint: Alice may no longer Bob keeps Alice's checkpoint at the number anyone and Bob keeps Alice's checkpoint at the number Epoch, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Bob keeps Alice's checkpoint at the number Old and Old is less than Epoch.
-Secure Friendship:3 ■ | Bob adopts what is newer or missing.
+Secure Friendship:3 ■ Checkpoint: Alice may Bob keeps a checkpoint of Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend and not Bob keeps a checkpoint of Alice.
 Secure Friendship:3 ■ Checkpoint tell: Alice may Bob records the friendship of Alice and Carol, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice counts Carol as a friend, Carol counts Alice as a friend and not Bob records the friendship of Alice and Carol.
+Secure Friendship:3 ■ Checkpoint tell end: Alice may no longer Bob records the friendship of Alice and Carol, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice knows Carol, not Alice counts Carol as a friend, not Carol counts Alice as a friend and Bob records the friendship of Alice and Carol.
 Secure Friendship:3 ■ Checkpoint record: Alice may Bob records Carol as an identity custodian of Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has a fixed identity record, Alice has Carol as an identity custodian and not Bob records Carol as an identity custodian of Alice.
 Secure Friendship:3 ■ Checkpoint threshold: Alice may Bob records the threshold Share of Alice, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice has the threshold Share and not Bob records the threshold Share of Alice.
 Secure Friendship:4 ■ | State recovery.

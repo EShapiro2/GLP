@@ -11,8 +11,8 @@ Secure Friendship
 10. ■ Send record.  Alice sends Bob, when they become friends, her friends and her identity record, and Bob keeps them.
 11. ■ Send threshold.  Alice sends Bob the threshold Share, provided Alice and Bob are friends and Alice has the threshold Share.
 12. ■ Checkpoint.  Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.
-13. ■ Newer checkpoint.  Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.
-14. ■ Checkpoint tell.  Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.
+13. ■ Checkpoint tell.  Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.
+14. ■ Checkpoint tell end.  Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.
 15. ■ Checkpoint record.  Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.
 16. ■ Checkpoint threshold.  Alice sends each of her friends a checkpoint of her friends and her identity record, and the friend keeps it.
 17. ■ Restore.  After a state loss of Alice, each friend of Alice sends her the friendship updates and the checkpoints they keep, and Alice records them again.
@@ -37,9 +37,9 @@ Befriend: Alice [Befriend]
 Unfriend: Alice [Unfriend]
 Name custodian: Alice [Name custodian]
 Identity record: Alice [Identity record] <share>
-Checkpoint: Alice [Checkpoint] <epoch>
-Newer checkpoint: Alice [Newer checkpoint] <epoch>
+Checkpoint: Alice [Checkpoint]
 Checkpoint tell: Alice [Checkpoint tell]
+Checkpoint tell end: Alice [Checkpoint tell end]
 Checkpoint record: Alice [Checkpoint record]
 Checkpoint threshold: Alice [Checkpoint threshold]
 Restore: Bob [Restore]
