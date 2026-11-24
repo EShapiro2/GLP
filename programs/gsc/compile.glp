@@ -219,7 +219,7 @@ update_body(yes, yes, _, _, _, S, T, ['c_'|R?]) :- ground(S?), ground(T?) |
 update_body(no, yes, Add, _, Sep, S, T, ['c_'|R?]) :-
     ground(Add?), ground(Sep?), ground(S?), ground(T?) |
     latex_set(Add?, Sep?, T?, R1),
-    chunks_app(S?, [' \\uplus '|R1?], R).
+    chunks_app(S?, [' \\cup '|R1?], R).
 update_body(yes, no, _, Del, Sep, S, T, ['c_'|R?]) :-
     ground(Del?), ground(Sep?), ground(S?), ground(T?) |
     latex_set(Del?, Sep?, T?, R1),
@@ -227,7 +227,7 @@ update_body(yes, no, _, Del, Sep, S, T, ['c_'|R?]) :-
 update_body(no, no, Add, Del, Sep, S, T, ['(c_'|R?]) :-
     ground(Add?), ground(Del?), ground(Sep?), ground(S?), ground(T?) |
     latex_set(Add?, Sep?, T?, R1),
-    latex_set(Del?, Sep?, [') \\uplus '|R1?], R2),
+    latex_set(Del?, Sep?, [') \\cup '|R1?], R2),
     chunks_app(S?, [' \\setminus '|R2?], R).
 
 procedure latex_update_at(NRoleSpec?, Constant?, Chunks?, Chunks?, Chunks).
@@ -241,11 +241,11 @@ latex_update_at(RS, Sep, S, T, ['c\'_'|R?]) :-
 
 % --- The cleared atoms of a role: K_S (def:compile, GSC 327e035) ----------
 % Where the roles whose extents hold the agent S clear an atom, def:compile
-% assigns c'_S := ((c_S \ -) \ K_S) u +, K_S holding every atom of c_S, with
-% its multiplicity, that matches a cleared atom of those roles; an empty
+% assigns c'_S := ((c_S \ -) \ K_S) u +, K_S holding every atom of c_S
+% that matches a cleared atom of those roles; an empty
 % half is left out as above.  The display then says which atoms K_S holds,
 % on a line of its own after the assignment, in the words of def:compile,
-% "K_p holds every atom of d_p, with its multiplicity, that matches", the
+% "K_p holds every atom of d_p that matches", the
 % cleared atoms joined by "or", the side condition of the assignment after
 % it.  The displays of Section 5.1 leave out the proviso that what is
 % added at an agent is disjoint from what is deleted there, and the
@@ -278,7 +278,7 @@ k_rhs(yes, DE, _, Del, Sep, S, T, R?) :-
 k_rhs(no, DE, Add, Del, Sep, S, T, ['('|R?]) :-
     ground(DE?), ground(Add?), ground(Del?), ground(Sep?), ground(S?), ground(T?) |
     latex_set(Add?, Sep?, T?, R1),
-    k_inner(DE?, Del?, Sep?, S?, [') \\uplus '|R1?], R).
+    k_inner(DE?, Del?, Sep?, S?, [') \\cup '|R1?], R).
 
 % The line saying which atoms K_S holds, with the side condition Sd; none
 % where the roles clear nothing.
@@ -286,7 +286,7 @@ procedure k_line(Mults?, Chunks?, Chunks?, ChunkLists?, ChunkLists).
 k_line([], _, _, T, T?).
 k_line([C|Cs], S, Sd, T, [L?|T?]) :- ground(C?), ground(Cs?), ground(S?), ground(Sd?), ground(T?) |
     latex_atoms([C?|Cs?], ' \\text{ or } ', Sd?, L1),
-    chunks_app(S?, [' \\text{, with its multiplicity, that matches } '|L1?], L2),
+    chunks_app(S?, [' \\text{ that matches } '|L1?], L2),
     chunks_app(S?, [' \\text{ holds every atom of } c_'|L2?], L3),
     chunks_app(['\\text{where } K_'], L3?, L).
 
@@ -1349,19 +1349,9 @@ malformed_lines([guard_not_role(S, G)|Fs], T,
                 [S?, 'is guarded by', G?, 'which is no agent variable of it;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
-malformed_lines([multiplicity_not_numeric(S, I, _)|Fs], T,
+malformed_lines([multiplicity(S, I, _)|Fs], T,
                 [S?, 'at role', I?,
-                 'carries a multiplicity that is not a number;'|R?]) :-
-    ground(Fs?), ground(T?) |
-    malformed_lines(Fs?, T?, R).
-malformed_lines([multiplicity_not_whole(S, I, _)|Fs], T,
-                [S?, 'at role', I?,
-                 'carries a multiplicity that is not a positive whole number;'|R?]) :-
-    ground(Fs?), ground(T?) |
-    malformed_lines(Fs?, T?, R).
-malformed_lines([multiplicity_wildcard(S, I, _)|Fs], T,
-                [S?, 'at role', I?,
-                 'carries a multiplicity on an atom with the wildcard;'|R?]) :-
+                 'carries a multiplicity, and a local state is a set;'|R?]) :-
     ground(Fs?), ground(T?) |
     malformed_lines(Fs?, T?, R).
 malformed_lines([constraint_not_numeric(S, _)|Fs], T,
