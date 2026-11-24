@@ -16,6 +16,7 @@ Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Lin
         ; day_only(Line) ; dayless_only(Line) ; env_only(Line) ; envless_only(Line)
         ; wild_only(Line) ; wildless_only(Line)
         ; const_only(Line) ; constless_only(Line)
+        ; set_only(Line) ; setless_only(Line)
         ; found_only(Line) ; foundless_only(Line)
         ; trust_only(Line) ; trustless_only(Line).
 Lines ::= [] ; [Line | Lines].
@@ -255,7 +256,9 @@ procedure q_faults(QContract?, Lines).
 q_faults([], []).
 q_faults([S|Ss], L?) :- ground(S?) |
     q_schema(S?, L1),
-    const_faults(S?, L0),
+    const_faults(S?, L00),
+    set_faults(S?, L01),
+    lapp(L00?, L01?, L0),
     q_faults(Ss?, L2),
     lapp(L0?, L2?, L02),
     lapp(L1?, L02?, L).
@@ -265,6 +268,48 @@ const_faults(schema(S, Hd, Rs), L?) :- hd_consts(Hd?, Xs), const_check(Xs?, [], 
 const_faults(cschema(S, Hd, _, Rs), L?) :- hd_consts(Hd?, Xs), const_check(Xs?, [], true, Rs?, [], [], S?, L).
 const_faults(nschema(S, Hd, C, Rs), L?) :- hd_consts(Hd?, Xs), const_check(Xs?, [], C?, Rs?, [], [], S?, L).
 const_faults(qschema(S, Hd, Bd, C, Rs, Cj, Fs), L?) :- hd_consts(Hd?, Xs), hd_consts(Bd?, Bs), const_check(Xs?, Bs?, C?, Rs?, Cj?, Fs?, S?, L).
+%% (5) A set variable, set(X) among a schema's variables (GSC, the appendix on values, Definition "Schema with values"), stands in an atom for its elements, one atom each, and in a constraint as size(X), its size, a whole number; the compiler carries it in a constraint only as size(X).
+procedure set_faults(QSchema?, Lines).
+set_faults(schema(_, _, _), []).
+set_faults(cschema(_, _, _, _), []).
+set_faults(nschema(S, Hd, C, _), L?) :- set_check(Hd?, C?, S?, L).
+set_faults(qschema(S, Hd, _, C, _, _, _), L?) :- set_check(Hd?, C?, S?, L).
+procedure set_check(Args?, Constraint?, Constant?, Lines).
+set_check(Hd, C, S, L?) :- ground(Hd?), ground(C?), ground(S?) |
+    hd_sets(Hd?, Xs),
+    sz_con(C?, C1),
+    con_args(C1?, A),
+    names_in(A?, Xs?, K),
+    const_fault(K?, S?, '%% it has a set variable in a constraint other than as size(N), its size, which the compiler does not carry (GSC, the appendix on values, Definition "Schema with values"):', L).
+procedure hd_sets(Args?, Preds).
+hd_sets([], []).
+hd_sets([set(X)|As], [X?|Xs?]) :- hd_sets(As?, Xs).
+hd_sets([_|As], Xs?) :- otherwise | hd_sets(As?, Xs).
+%% The constraint with each size(X), fn(size, [num(X)]), written as a constant, so that the names left are those outside a size.
+procedure sz_con(Constraint?, Constraint).
+sz_con(true, true).
+sz_con(and(A, B), and(A1?, B1?)) :- sz_con(A?, A1), sz_con(B?, B1).
+sz_con(or(A, B), or(A1?, B1?)) :- sz_con(A?, A1), sz_con(B?, B1).
+sz_con(implies(A, B), implies(A1?, B1?)) :- sz_con(A?, A1), sz_con(B?, B1).
+sz_con(not(A), not(A1?)) :- sz_con(A?, A1).
+sz_con(eq(X, Y), eq(X1?, Y1?)) :- sz_expr(X?, X1), sz_expr(Y?, Y1).
+sz_con(ne(X, Y), ne(X1?, Y1?)) :- sz_expr(X?, X1), sz_expr(Y?, Y1).
+sz_con(le(X, Y), le(X1?, Y1?)) :- sz_expr(X?, X1), sz_expr(Y?, Y1).
+sz_con(lt(X, Y), lt(X1?, Y1?)) :- sz_expr(X?, X1), sz_expr(Y?, Y1).
+sz_con(ge(X, Y), ge(X1?, Y1?)) :- sz_expr(X?, X1), sz_expr(Y?, Y1).
+sz_con(gt(X, Y), gt(X1?, Y1?)) :- sz_expr(X?, X1), sz_expr(Y?, Y1).
+sz_con(rel(R, Es), rel(R?, Es1?)) :- sz_exprs(Es?, Es1).
+sz_con(C, C?) :- otherwise | true.
+procedure sz_exprs(Exprs?, Exprs).
+sz_exprs([], []).
+sz_exprs([E|Es], [E1?|Es1?]) :- sz_expr(E?, E1), sz_exprs(Es?, Es1).
+procedure sz_expr(Expr?, Expr).
+sz_expr(fn(size, [num(_)]), val(size)).
+sz_expr(plus(X, Y), plus(X1?, Y1?)) :- sz_expr(X?, X1), sz_expr(Y?, Y1).
+sz_expr(minus(X, Y), minus(X1?, Y1?)) :- sz_expr(X?, X1), sz_expr(Y?, Y1).
+sz_expr(mul(X, Y), mul(X1?, Y1?)) :- sz_expr(X?, X1), sz_expr(Y?, Y1).
+sz_expr(fn(F, Es), fn(F?, Es1?)) :- otherwise | sz_exprs(Es?, Es1).
+sz_expr(E, E?) :- otherwise | true.
 %% The names of the variables over the constants among a schema's variables.
 procedure hd_consts(Args?, Preds).
 hd_consts([], []).
@@ -544,12 +589,15 @@ expr_beyond(num(_), no).
 expr_beyond(real(_), no).
 %% A variable over the constants is num(X) to the checks (consts_off); the clause covers the type.
 expr_beyond(const(_), no).
+expr_beyond(set(_), no).
 expr_beyond(any, no).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 expr_beyond(ilist(_, _), no).
 procedure fn_named(Constant?, YesNo).
 fn_named(min, no).
 fn_named(floor, no).
+%% The size of a set, |N| (GSC, def:numbers, the set variable).
+fn_named(size, no).
 fn_named(_, yes) :- otherwise | true.
 procedure exprl_beyond(Exprs?, YesNo).
 exprl_beyond([], no).
@@ -578,6 +626,7 @@ nums_of([], []).
 nums_of([real(X)|As], [num(X?)|Bs?]) :- nums_of(As?, Bs).
 %% A variable over the constants is num(X) likewise, its type printed from the table cn(S, X) (consts_off, below).
 nums_of([const(X)|As], [num(X?)|Bs?]) :- nums_of(As?, Bs).
+%% A set variable stays set(X) in the head, so that no role takes it as local (local.glp, num_info_of), its atoms and its constraint writing num(X) (GSC, the checker's form).
 nums_of([A|As], [A?|Bs?]) :- otherwise | nums_of(As?, Bs).
 procedure real_lx(QContract?, Lxs).
 real_lx([], []).
@@ -589,6 +638,7 @@ procedure hd_reals(Args?, Constant?, Lxs).
 hd_reals([], _, []).
 hd_reals([real(X)|As], S, [rl(S?, X?)|L?]) :- ground(S?) | hd_reals(As?, S?, L).
 hd_reals([const(X)|As], S, [cn(S?, X?)|L?]) :- ground(S?) | hd_reals(As?, S?, L).
+hd_reals([set(X)|As], S, [st(S?, X?)|L?]) :- ground(S?) | hd_reals(As?, S?, L).
 hd_reals([_|As], S, L?) :- otherwise | hd_reals(As?, S?, L).
 %% The contract with each real variable of a schema's head written real(X) again, for the printers of the class term and the request type.
 procedure real_heads(Contract?, Lxs?, Contract).
@@ -629,6 +679,7 @@ consts_off([nschema(S, Hd, Cn, Rs)|Ss], [nschema(S?, Hd?, Cn1?, Rs1?)|Ns?]) :- c
 consts_off([qschema(S, Hd, Bd, Cn, Rs, Cj, Fs)|Ss], [qschema(S?, Hd?, Bd?, Cn1?, Rs1?, Cj1?, Fs1?)|Ns?]) :- co_con(Cn?, Cn1), co_roles(Rs?, Rs1), co_conjs(Cj?, Cj1), co_forms(Fs?, Fs1), consts_off(Ss?, Ns).
 procedure co_arg(Arg?, Arg).
 co_arg(const(X), num(X?)).
+co_arg(set(X), num(X?)).
 co_arg(item_of(A), item_of(A1?)) :- co_arg(A?, A1).
 co_arg(A, A?) :- otherwise | true.
 procedure co_args(Args?, Args).
@@ -672,6 +723,7 @@ co_exprs([], []).
 co_exprs([E|Es], [E1?|Es1?]) :- co_expr(E?, E1), co_exprs(Es?, Es1).
 procedure co_expr(Expr?, Expr).
 co_expr(const(X), num(X?)).
+co_expr(set(X), num(X?)).
 co_expr(plus(X, Y), plus(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
 co_expr(minus(X, Y), minus(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
 co_expr(mul(X, Y), mul(X1?, Y1?)) :- co_expr(X?, X1), co_expr(Y?, Y1).
@@ -721,6 +773,19 @@ procedure lx_consts(Lxs?, YesNo).
 lx_consts([], no).
 lx_consts([cn(_, _)|_], yes).
 lx_consts([_|Lx], B?) :- otherwise | lx_consts(Lx?, B).
+%% Whether the contract has a set variable, by the table.
+procedure lx_sets(Lxs?, YesNo).
+lx_sets([], no).
+lx_sets([st(_, _)|_], yes).
+lx_sets([_|Lx], B?) :- otherwise | lx_sets(Lx?, B).
+%% The shared text's lines, a line set_only(L) printed as L where the contract has a set variable and left out where it has none, and a line setless_only(L) the other way about, so that a platform with none prints what it printed before set variables were built.
+procedure set_lines(Lines?, YesNo?, Lines).
+set_lines([], _, []).
+set_lines([set_only(L)|Ls], yes, [L?|Ls1?]) :- set_lines(Ls?, yes, Ls1).
+set_lines([set_only(_)|Ls], no, Ls1?) :- set_lines(Ls?, no, Ls1).
+set_lines([setless_only(_)|Ls], yes, Ls1?) :- set_lines(Ls?, yes, Ls1).
+set_lines([setless_only(L)|Ls], no, [L?|Ls1?]) :- set_lines(Ls?, no, Ls1).
+set_lines([L|Ls], C, [L?|Ls1?]) :- otherwise | set_lines(Ls?, C?, Ls1).
 %% The shared text's lines, a line const_only(L) printed as L where the contract has a variable over the constants and left out where it has none, and a line constless_only(L) the other way about, so that a platform with none prints what it printed before such variables were built.
 procedure const_lines(Lines?, YesNo?, Lines).
 const_lines([], _, []).
@@ -1138,6 +1203,7 @@ cj_deleted(no, _, _, []).
 procedure hd_const_names(Args?, Preds).
 hd_const_names([], []).
 hd_const_names([const(X)|As], [X?|Xs?]) :- hd_const_names(As?, Xs).
+hd_const_names([set(X)|As], [X?|Xs?]) :- hd_const_names(As?, Xs).
 hd_const_names([_|As], Xs?) :- otherwise | hd_const_names(As?, Xs).
 procedure hd_real_names(Args?, Preds).
 hd_real_names([], []).
@@ -1782,7 +1848,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     wild_shared(Fx?, Wl?, Fx00),
     worded_lx(W?, Lx9),
     lx_consts(Lx9?, Kn),
-    const_lines(Fx00?, Kn?, Fx01),
+    const_lines(Fx00?, Kn?, Fx0s),
+    worded_lx(W?, Lx10),
+    lx_sets(Lx10?, Ks),
+    set_lines(Fx0s?, Ks?, Fx01),
     worded_phone(W?, Ph0),
     phone_found(Ph0?, Fd),
     env_any(Fd?, Fy),
@@ -1799,7 +1868,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     proved_rules(C?, Rl),
     worded_lx(W?, Lx7),
     real_heads(C?, Lx7?, Ch),
-    widget_lines(W?, C?, Ch?, Ps?, ctx(Rf?, Rl?), Lw),
+    widget_lines(W?, C?, Ch?, Ps?, ctx(Rf?, Rl?), Lw0),
+    worded_lx(W?, Lx11),
+    lx_sets(Lx11?, Ks1),
+    menu_lines(Lw0?, Ks1?, Lw),
     lapp(Lr0?, Lw?, Lr),
     worded_lx(W?, Lx3),
     atom_parts(C?, Nt?, Lx3?, La0),
@@ -1919,6 +1991,8 @@ var_types_l([any|Vs], Lis, Ts?) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([num(_)|Vs], Lis, ['Integer'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([real(_)|Vs], Lis, ['Real'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 var_types_l([const(_)|Vs], Lis, ['Constant'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
+%% A set variable's value is a set of constants, a list of them in the request (GSC, def:numbers, the set variable).
+var_types_l([set(_)|Vs], Lis, ['List(Constant)'|Ts?]) :- var_types_l(Vs?, Lis?, Ts).
 %% The place of the instances of a conjunct, the list of them, each a person, the one agent variable its quantifier binds, in the order of identifiers (inst_heads).
 var_types_l([ilist(_, T)|Vs], Lis, [L?|Ts?]) :- ground(T?) | string_concat(['List(', T?, ')'], L), var_types_l(Vs?, Lis?, Ts).
 procedure role_type(YesNo?, String).
@@ -1953,6 +2027,7 @@ var_types([num(_)|Vs], ['Integer'|Ts?]) :- var_types(Vs?, Ts).
 var_types([real(_)|Vs], ['Real'|Ts?]) :- var_types(Vs?, Ts).
 %% A variable over the constants the schema-binding binds, a constant in the class term and in the request, the name its proposer types (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a variable over the constants taking the name its proposer types").
 var_types([const(_)|Vs], ['Constant'|Ts?]) :- var_types(Vs?, Ts).
+var_types([set(_)|Vs], ['List(Constant)'|Ts?]) :- var_types(Vs?, Ts).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 var_types([ilist(_, _)|Vs], Ts?) :- var_types(Vs?, Ts).
 
@@ -2281,6 +2356,8 @@ arg_kinds([item_of(_)|Xs], [item|Ks?]) :- arg_kinds(Xs?, Ks).
 %% A constant the contract names, val(C), a value or an utterance (vGLP 0eeea71, Section 5.4), of the kind const: its place in the atom is of the type Constant, and the agent holds it as v(C), printed as C in the view.
 arg_kinds([val(_)|Xs], [const|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([num(_)|Xs], [num|Ks?]) :- arg_kinds(Xs?, Ks).
+%% An atom with a set variable stands for one atom per element (GSC, def:binding-numbers), so the place holds a constant.
+arg_kinds([set(_)|Xs], [const|Ks?]) :- arg_kinds(Xs?, Ks).
 arg_kinds([real(_)|Xs], [real|Ks?]) :- arg_kinds(Xs?, Ks).
 %% A variable over the constants (const_atoms), of the kind const, as a constant the contract names is: its place is of the type Constant, and the agent holds its value as v(C).
 arg_kinds([const(_)|Xs], [const|Ks?]) :- arg_kinds(Xs?, Ks).
@@ -2445,6 +2522,7 @@ procedure bind_key(Arg?, Arg).
 bind_key(real(X), num(X?)).
 %% And so is a variable over the constants (consts_off), its value in the binding a constant, v(C).
 bind_key(const(X), num(X?)).
+bind_key(set(X), num(X?)).
 bind_key(A, A?) :- otherwise | true.
 procedure wrapped(Arg?, Found?, String).
 wrapped(role(_), named(_, Q), W?) :- call_text(p, [Q?], W).
@@ -2454,6 +2532,8 @@ wrapped(nterm(_), named(_, Q), W?) :- call_text(p, [Q?], W).
 wrapped(num(_), named(_, Q), W?) :- call_text(n, [Q?], W).
 wrapped(real(_), named(_, Q), W?) :- call_text(r, [Q?], W).
 wrapped(const(_), named(_, Q), W?) :- call_text(v, [Q?], W).
+%% A set, named by the request as a list of constants, is st(L) in the binding, each element one atom (GSC, def:binding-numbers).
+wrapped(set(_), named(_, Q), W?) :- call_text(st, [Q?], W).
 wrapped(_, unnamed, 'p(unnamed)').
 procedure var_names(Args?, Integer?, Strings, Strings).
 var_names([], _, [], []).
@@ -2523,6 +2603,8 @@ val_goal(num(X), N, G?) :- ground(X?), ground(N?) | term_to_string(num(X?), Vt),
 val_goal(real(X), N, G?) :- ground(X?), ground(N?) | term_to_string(num(X?), Vt), call_text(val_real, [Vt?, 'B?', N?], G).
 %% The constant of a variable over the constants (the shared text's val_const, a line const_only).
 val_goal(const(X), N, G?) :- ground(X?), ground(N?) | term_to_string(num(X?), Vt), call_text(val_const, [Vt?, 'B?', N?], G).
+%% The elements of a set variable, a list of constants (the shared text's val_set, a line set_only).
+val_goal(set(X), N, G?) :- ground(X?), ground(N?) | term_to_string(num(X?), Vt), call_text(val_set, [Vt?, 'B?', N?], G).
 %% A signed term is no variable of a schema (schema_vars); the clause covers
 %% the type.
 val_goal(sgn(_, _), N, G?) :- ground(N?) | call_text(val_peer, [unnamed, 'B?', 'D?', N?], G).
@@ -3321,6 +3403,7 @@ lx_atoms([lx(_, _, _, CA, CD)|Ls], As?) :-
     app(A1?, A23?, As).
 lx_atoms([rl(_, _)|Ls], As?) :- lx_atoms(Ls?, As).
 lx_atoms([cn(_, _)|Ls], As?) :- lx_atoms(Ls?, As).
+lx_atoms([st(_, _)|Ls], As?) :- lx_atoms(Ls?, As).
 lx_atoms([lc(_, _, _, A, Phi, CA, CD)|Ls], [A?|As?]) :-
     f_atoms(Phi?, A0),
     hm_atoms(CA?, A1),
@@ -3473,6 +3556,7 @@ a_field(svar(_), _, _, yes).
 a_field(num(_), _, _, yes).
 a_field(real(_), _, _, yes).
 a_field(const(_), _, _, yes).
+a_field(set(_), _, _, yes).
 a_field(nterm(_), _, _, no).
 a_field(sgn(_, _), _, _, no).
 a_field(item_of(_), _, _, no).
@@ -3502,6 +3586,7 @@ a_person(svar(_), _, _, no).
 a_person(num(_), _, _, no).
 a_person(real(_), _, _, no).
 a_person(const(_), _, _, no).
+a_person(set(_), _, _, no).
 a_person(nterm(_), _, _, no).
 a_person(sgn(_, _), _, _, no).
 a_person(item_of(_), _, _, no).
@@ -3631,6 +3716,7 @@ field_type(num(_), _, number).
 field_type(real(_), _, number).
 %% A variable over the constants, a text, the name its proposer types (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a variable over the constants taking the name its proposer types"), which the request carries as the constant of that name.
 field_type(const(_), _, text).
+field_type(set(_), _, set).
 %% A name term, a signed term and the wildcard are at no place a field may name (field_places); the clauses cover the type.
 field_type(nterm(_), _, text).
 field_type(sgn(_, _), _, text).
@@ -4066,6 +4152,8 @@ add_yes(no, M, M?).
 procedure place_of(Arg?, Args?, Integer?, Integer).
 place_of(_, [], _, 0).
 place_of(A, [B|_], I, I?) :- A? =?= B? | true.
+%% A set variable is set(X) in the head and num(X) in its atoms and its constraint (nums_of).
+place_of(num(X), [set(Y)|_], I, I?) :- X? =?= Y? | true.
 place_of(A, [_|Bs], I, P?) :- otherwise, integer(I?) | I1 := I? + 1, place_of(A?, Bs?, I1?, P).
 procedure nth_arg(Integer?, Args?, Arg).
 nth_arg(1, [A|_], A?).
@@ -4077,7 +4165,8 @@ procedure word_lines(Worded?, Contract?, NumInfos?, Lines).
 word_lines(words(pragmas(Ls, As, Ss, Lk, Vn, Tx, _), Ev, Lx, Dn, Vl), C, Nt, L?) :- ground(Ls?), ground(As?), ground(C?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Dn?), ground(Lx?) |
     export_lines(Dn?, pragmas(Ls?, As?, Ss?, Lk?, Vn?), Tx?, Vn?, Lex0),
     lx_consts(Lx?, Kn),
-    rarg_lines(Lex0?, Kn?, Lex),
+    lx_sets(Lx?, Ks),
+    rarg_lines(Lex0?, Kn?, Ks?, Lex),
     contract_preds_lx(C?, Nt?, Lx?, Pr),
     mult_preds(C?, Mp),
     tab_terms(Ls?, Pr?, Mp?, Ts),
@@ -4117,12 +4206,21 @@ export_lines(Dn, Pr, Tx, Vn, L?) :- ground(Pr?) |
     export_tail(Dn?, Pr?, Tx?, Vn?, Tl),
     lapp(Hd?, Ma?, L1),
     lapp(L1?, Tl?, L).
-%% The type of an argument of the contract as read has the alternative const(Constant) only where the contract has a variable over the constants (lx_consts), so that a platform with none prints as before.
-procedure rarg_lines(Lines?, YesNo?, Lines).
-rarg_lines(Ls, no, Ls?).
-rarg_lines([], yes, []).
-rarg_lines([L|Ls], yes, ['RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant) ; const(Constant).'|Ls?]) :- L? =?= 'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).' | true.
-rarg_lines([L|Ls], yes, [L?|Ls1?]) :- otherwise | rarg_lines(Ls?, yes, Ls1).
+%% The type of an argument of the contract as read has the alternative const(Constant) only where the contract has a variable over the constants (lx_consts), and set(Constant) only where it has a set variable (lx_sets), so that a platform with neither prints as before.
+%% A field's type has the alternative set only where the contract has a set variable (lx_sets), a field of a set variable taking its elements, so that a platform with none prints as before.
+procedure menu_lines(Lines?, YesNo?, Lines).
+menu_lines(Ls, no, Ls?).
+menu_lines(Ls, yes, R?) :- line_sub(Ls?, 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuFieldType ::= person ; key ; agent ; text ; number ; set.', R).
+procedure rarg_lines(Lines?, YesNo?, YesNo?, Lines).
+rarg_lines(Ls, no, no, Ls?).
+rarg_lines(Ls, yes, no, R?) :- line_sub(Ls?, 'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).', 'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant) ; const(Constant).', R).
+rarg_lines(Ls, no, yes, R?) :- line_sub(Ls?, 'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).', 'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant) ; set(Constant).', R).
+rarg_lines(Ls, yes, yes, R?) :- line_sub(Ls?, 'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).', 'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant) ; const(Constant) ; set(Constant).', R).
+%% The lines with the line Old replaced by New.
+procedure line_sub(Lines?, String?, String?, Lines).
+line_sub([], _, _, []).
+line_sub([L|Ls], O, A, [A?|Ls?]) :- L? =?= O? | true.
+line_sub([L|Ls], O, A, [L?|Ls1?]) :- otherwise | line_sub(Ls?, O?, A?, Ls1).
 procedure export_head(Lines).
 export_head(['',
         '% The contract the platform is compiled from (vGLP, Section 5.4, "The contract\'s words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC\'s reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC\'s reader\'s and the pragmas\', named with an R before them.',
