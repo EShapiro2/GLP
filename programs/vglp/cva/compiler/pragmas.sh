@@ -535,7 +535,8 @@ sub relation_names {
     my $nm = $known;
     # composes, the composition of contracts (GSC, Section Relations among Contracts), names the contracts composed, "composes A with B", A or B "it", "the instance" or "the composition" where it is what the line has named before, as "GAI instantiates GnW, composes it with GFP and restricts the composition" (Agents.txt) and "GSNP composes GAI with GSN and amends the composition" (Provenance-Groups.txt; GAI #13, Code_inbox.md, 2026-11-10 20:39 UTC).
     # relaxes, the sixth relation of the Calculus (calculus/PARTS.txt, 2: "a relaxing citation ... adds the relaxed act and keeps the act cited"), as "GC relaxes and extends GN." (Code #33, vGLP_inbox.md, 2026-11-16 16:50 UTC).
-    my $rel = qr/(?:amends|extends|instantiates|implements|restricts|strengthens|relaxes|composes)\b/;
+    # weakens, a relation of the Calculus (calculus/tools/adopt.py, written_from), as "Feeds extends Labelled Overlay, and weakens it." (Code #37, 2026-11-24).
+    my $rel = qr/(?:amends|extends|instantiates|implements|restricts|strengthens|relaxes|weakens|composes)\b/;
     my $back = qr/(?:it|them|the instance|the composition)/;
     if ($body[1] !~ /^$nm\s+$rel/ && $body[1] =~ /^((?:[A-Z][^\s,]*\s+){1,2}?)$rel/) {
         (my $w = $1) =~ s/\s+$//;
