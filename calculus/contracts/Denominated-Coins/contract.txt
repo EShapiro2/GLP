@@ -1,5 +1,5 @@
 Denominated Coins
-Denominated Coins extends and restricts Coins.
+Denominated Coins lifts Coins, and extends and weakens it.
 *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
 Alice is a party.
 1. ■ Issue: Alice may issue Alice-coins denominated by a fiat currency.

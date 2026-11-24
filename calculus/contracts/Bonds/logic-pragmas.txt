@@ -1,5 +1,5 @@
 Bonds
-Bonds restricts and extends Coins.
+Bonds extends Coins.
 A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
 Alice, Bob and Carol are parties, Day and Term maturity dates, Today a date; Carol is possibly Alice or Bob.
 1. ■ Issue bond: Notes:1, for bonds, only if the current date is Today and Day is more than Today.

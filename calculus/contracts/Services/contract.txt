@@ -1,3 +1,3 @@
 Services
-Services instantiates Guardians with the guardians deciding jointly for the decision rule (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Services extends Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 A *service* is a ward operated by a machine at an address every person can reach.

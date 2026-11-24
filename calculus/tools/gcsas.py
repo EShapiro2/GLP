@@ -66,6 +66,7 @@ MARK = "*#"   # the last argument of an atom: *n, n copies; #n, exactly n copies
 DFLL = "Default: "   # 'Default: x is an officer of z for x is entitled to vote on m in z.': the state a parameter takes where no first line binds it (Udi, 2026-11-16, to Calculus #6)
 PARL = "Parameters: "   # 'Parameters: x is entitled to propose m in z.': a state a later contract, the bylaws or the terms fill; a parameter of the term
 FUNL = "Functions: "   # 'Functions: n is the root of m.': a state that is a function of its places but the first, its value; no act adds or ends it, and the checker reads it as fn(root, [m]) (GSC def:numbers: "the relations and functions the types of the values provide")
+REN = re.compile(r"^Renaming of (.+?): (.*)\.$")      # 'Renaming of Guardians: an organisation for a ward.': the words for words of a renaming
 ENVL = "Environment: "   # 'Environment: x is nearby y.': a state the platform gives, an environment predicate of the term; no act adds or ends it
 KNDL = "Kind of note: "   # 'Kind of note: bond, y-bonds due Day for y-notes.': a kind of Notes's notes (Udi, 2026-11-16: special cases, not instances); see kind_forms
 KINDL = re.compile(r"^Kind of note: ([a-z]+), (.+?) for ([b-z])-notes(; its acts keep their names)?\.$")
@@ -543,6 +544,7 @@ def read_gr(name, d="gr"):
     c.title = lines[0]
     c.params = params_of(lines, name)
     c.first = None
+    c.ren = {}         # 'Renaming of Guardians: an organisation for a ward and an officer for a guardian.': the words a renaming puts, a pragma (Udi, 2026-11-23, no parameters)
     c.own = Lex()
     c.header = []      # (kind, line): vocabulary, roles, definitions, prose and names, in order
     c.clauses = []     # (number, mark, text)
@@ -555,7 +557,7 @@ def read_gr(name, d="gr"):
             c.clauses.append((int(m.group(1)), m.group(2), params_in(m.group(3), c.params)))
         elif l == PRAGMAS:
             continue
-        elif i == 0 and re.match(re.escape(name) + r" (extends|restricts|strengthens|instantiates|composes|relaxes)\b", l):
+        elif i == 0 and re.match(re.escape(name) + r" (extends|restricts|strengthens|instantiates|composes|relaxes|weakens|amends|renames|lifts|unites)\b", l):
             c.first = l
         elif KINDR.match(l):
             m = KINDR.match(l)
@@ -573,6 +575,9 @@ def read_gr(name, d="gr"):
         elif l.startswith(FUNL):
             c.own.fn.extend(t for t in params_in(l[len(FUNL):], c.params).rstrip(".").split("; ") if t not in c.own.fn)
             c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
+        elif REN.match(l):
+            m = REN.match(l)
+            c.ren[m.group(1)] = m.group(2)
         elif l.startswith(ENVL):
             c.own.env.extend(t for t in params_in(l[len(ENVL):], c.params).rstrip(".").split("; ") if t not in c.own.env)
             c.header.append(("prose", l))      # a kept declaration: once in the schemas, in the flat text and in every expansion
@@ -635,9 +640,10 @@ def params_of(lines, name):
     the recovered clauses write the letter again (decompile)."""
     out = {}
     for l in lines:
-        if re.search(r" (?:is a parameter|are parameters) of %s\.$" % re.escape(name), l):
-            for x in re.findall(r"(?<![A-Za-z])([b-z]) (?:[<>]=?|=) ", l):
-                out[x] = x.upper()
+        for s in re.split(r"(?<=\.) ", l):      # 'd > 1 is an integer.', 'd > 0, an integer, and e > 0 are numbers.', '*f* is a fraction, 0 ≤ f < 1.' (Udi, 2026-11-23, no parameters)
+            if re.search(r" (?:is a parameter of %s|are parameters of %s|is an integer|are integers|is a number|are numbers|is a fraction\b.*)\.$" % (re.escape(name), re.escape(name)), s):
+                for x in re.findall(r"(?<![A-Za-z*])([b-z])\*? (?:[<>]=?|=|≤|≥) ", s):
+                    out[x] = x.upper()
     names = set(re.findall(NAME, " ".join(l for l in lines if re.match(NAME + r"(?:, " + NAME + r")*(?: and " + NAME + r")? (?:is|are) ", l))))
     for x, y in out.items():
         if y in names:
@@ -658,7 +664,7 @@ def first_line(c, known):
         return [], {}, []
     s = strip_refs(c.first)[:-1]
     subs, prose = {}, []
-    m = re.search(r"instantiates ((?:%s)(?: and (?:%s))*) with (.*?)(?=, (?:and )?(?:restricts|strengthens|extends|composes|relaxes)\b|$)" % (NAMES_.NAME_RX, NAMES_.NAME_RX), s)
+    m = re.search(r"instantiates ((?:%s)(?: and (?:%s))*) with (.*?)(?=, (?:and )?(?:extends|restricts|strengthens|instantiates|composes|relaxes|weakens|amends|renames|lifts|unites)\b|$)" % (NAMES_.NAME_RX, NAMES_.NAME_RX), s)
     if m:
         items = m.group(2).split("; ") if ";" in m.group(2) else re.split(r", | and ", m.group(2))
         for p in m.group(1).split(" and "):
@@ -668,6 +674,9 @@ def first_line(c, known):
     for _, _, nm in NAMES_.find(operands, known):          # the known names, longest first (tools/names.py)
         if nm not in parents and nm != c.name:
             parents.append(nm)
+    for p, r in getattr(c, "ren", {}).items():      # a renaming's words, in its pragma
+        items = r.split("; ") if ";" in r else re.split(r", | and ", r)
+        subs[p] = [it for it in items if " for " in it]
     cm = re.search(r"composes it with ((?:%s)(?: and (?:%s))*)" % (NAMES_.NAME_RX, NAMES_.NAME_RX), operands) if m else None
     if cm:          # the instance composed with a contract: its states put for states bind the contract composed too (SC's bylaws, Shares's issue of shares)
         states = [it for it in subs[m.group(1).split(" and ")[0]] if re.search(r"(?<![A-Za-z'_-])[b-z](?='s|-[A-Za-z]|[ ,.)]|$)", it)]
@@ -1551,7 +1560,7 @@ def sas_first(w, n):
     if not c.first:
         return None
     parents, subs, _ = first_line(c, w.known)
-    s = c.first
+    s = c.first + "".join("\nRenaming of %s: %s." % (p, r) for p, r in c.ren.items())
     for p in parents:
         for item in subs.get(p, []):
             sf = split_for(item, w.lexicon(p))
@@ -1817,9 +1826,10 @@ def map_guard(g, mp):
 def read_sas(w, n):
     """sas/n: title, first line with its substitutions as predicates, entries."""
     lines = get("sas", n)
-    first = lines[1] if len(lines) > 1 and re.match(re.escape(n) + r" (extends|restricts|strengthens|instantiates|composes|relaxes)\b", lines[1]) else None
+    first = lines[1] if len(lines) > 1 and re.match(re.escape(n) + r" (extends|restricts|strengthens|instantiates|composes|relaxes|weakens|amends|renames|lifts|unites)\b", lines[1]) else None
     c = Contract()
     c.name, c.first = n, first
+    c.ren = {m.group(1): m.group(2) for m in (REN.match(l) for l in lines) if m}
     parents, subs, _ = first_line(c, w.known)
     return lines[0], first, parents, subs, [read_schema_line(l) for l in lines if ENTRY.match(l)]
 

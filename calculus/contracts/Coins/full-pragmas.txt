@@ -4,8 +4,8 @@ Of Notes: A *note* includes its issuer's public key, is signed by their private 
 Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Carol is possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
 Notes:1. ■ Issue: Alice may issue Sum Alice-coins.
 Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other.
 Notes:3. ■ Pay: Alice may pay Bob Sum Carol-coins, with the consent of Bob, provided Alice knows Bob.

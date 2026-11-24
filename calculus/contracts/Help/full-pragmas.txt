@@ -1,20 +1,21 @@
 Help
 Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
 Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Of Gossip: *Posts* have a *budget*, a parameter of Gossip: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*, a parameter: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them. Environment: n is a budget of a new post, for x; n covers the cost of a forward leaving m, for x; the gossip protocol forwards p to y with m of n, for x.
-Of Matching: Posts have a *test*, a parameter of Matching, whether two *match*. Environment: p and q match, for x.
+Of Gossip: *Posts* have a *budget*: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them. Environment: n is a budget of a new post, for x; n covers the cost of a forward leaving m, for x; the gossip protocol forwards p to y with m of n, for x.
+Of Matching: Posts have a *test*, whether two *match*. Environment: p and q match, for x.
 Of Guardians: Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward. In clause 4 Alice and Bob are possibly one person.
 Of Services: A *service* is a ward operated by a machine at an address every person can reach.
 Of Rendezvous: An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
 Of Anonymous Rendezvous: A *one-time key* is a key pair its maker uses for one meeting. Environment: x holds the one-time key k; x knows the public key of k.
 Of Anonymous Matching: Each post carries the public key of a one-time key of its maker, and names a rendezvous server. Environment: p carries the public key of k, for x; d is named by the one of p and q whose public key has the smaller hash, for x.
+Of Free Matching: The budget of a post is an integer, the cost of a forward is one, and the gossip protocol is forwarding to any friend with the budget less one.
 Of Help: A post is a *service*, stating work its maker does, or a *need*, stating work its maker seeks done. A service and a need match when the service is the work the need seeks.
 Alice, Bob and Carol are persons, Post and Reply posts, Budget, Rest and Part numbers, Other and Key one-time keys, Wendy and Will wards, Dave a service, Link an invitation link.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
-Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
-Friendship:1, Guardians:3. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
-Friendship:2, Guardians:3. ■ Person unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
+Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person, Bob is a person, Alice is a person and Bob is a person.
+Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+Friendship:1, Guardians:3. ○ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person, Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
+Friendship:2, Guardians:3. ■ Person unfriend: Alice may end her friendship with Bob, provided Alice is a person, Bob is a person, Alice is a person and Bob is a person.
 Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 Gossip:1. ■ Post: Alice may make Post with the budget Budget, provided Budget is a budget of a new post.
 Gossip:2. ■ Tell: Alice may forward Post to Bob with the budget Part, provided Alice holds the post Post, Alice has the budget Budget for Post, Budget covers the cost of a forward leaving Rest, Alice and Bob are friends and the gossip protocol forwards Post to Bob with Part of Rest.

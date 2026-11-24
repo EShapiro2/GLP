@@ -1,5 +1,5 @@
 Community
-Community instantiates Bank with community bylaws, and extends it.
+Community extends Bank.
 A *community* is a bank whose coins are Dollar-denominated. The coins it issues are *community coins*. Its bylaws name two roles, *member*, held by every participant, and *treasurer*.
 Alice and Bob are persons, Orga a community, Sum a number.
 1. ■ Draw: Alice may swap Sum Alice-coins for Sum Orga-coins, provided Alice is a treasurer of Orga.

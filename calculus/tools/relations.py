@@ -75,7 +75,7 @@ import names as NM      # the names of the contracts and their files (tools/name
 from collections import Counter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes')
+VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes', 'weakens', 'amends', 'renames', 'lifts', 'unites')
 DERIVED = re.compile(r'^(?:.+ for .+|Vote of .+)$')
 
 
@@ -113,7 +113,7 @@ def schemas(n, d=None):
     if (n, d) not in _cache:
         _cache[(n, d)] = _schemas(n, d)
     s = _cache[(n, d)]
-    return None if s is None else [dict(a, head=Counter(a['head']), body=Counter(a['body']), guards=set(a['guards']), src=list(a['src'])) for a in s]
+    return None if s is None else [dict(a, head=Counter(a['head']), body=Counter(set(a['body'])), guards=set(a['guards']), src=list(a['src'])) for a in s]
 
 
 def published():
@@ -206,7 +206,7 @@ def first_line(n):
         with_ = None
         if verb == 'composes' and ' with ' in obj:
             obj, with_ = obj.split(' with ', 1)
-        bases = None if obj in ('it', 'them', 'the composition') else [b.strip() for b in re.split(r',\s*|\s+and\s+', obj) if b.strip()]
+        bases = None if obj in ('it', 'them', 'the composition', 'the union') else [re.sub(r'^(?:an? (?:weakening|strengthening|amendment|renaming|lift) of )+', '', b.strip()) for b in re.split(r',\s*|\s+and\s+', obj) if b.strip()]      # 'a weakening of a lift of Bonds': Bonds
         for v in pend:
             steps.append((v, bases, ''))
         pend = []
@@ -214,7 +214,37 @@ def first_line(n):
             steps.append((verb, bases, with_.strip().rstrip(',')))
         else:
             steps.append((verb, bases, sigma))
-    return steps
+    return new_verbs(n, steps)
+
+
+def new_verbs(n, steps):
+    """The relations of Section 3 read as the operations this program checks (Udi, 2026-11-23 23:45, the six forms):
+    weakens as restricts, amends as restricts and strengthens, unites and lifts as extends, and renames as instantiates
+    with the words of gr/n's pragma 'Renaming of B: an organisation for a ward.'"""
+    ren = {}
+    if os.path.exists(path(n, 'first')):
+        for l in open(path(n, 'first'), encoding='utf-8'):
+            m = re.match(r'^Renaming of (.+?): (.*)\.$', l.rstrip('\n'))
+            if m:
+                ren[m.group(1)] = m.group(2)
+    out = []
+    for v, bs, sigma in steps:
+        if v == 'weakens':
+            out.append(('restricts', bs, sigma))
+        elif v == 'amends':
+            out += [('restricts', bs, sigma), ('strengthens', bs, sigma)]
+        elif v == 'unites' and bs and any(b in ren for b in bs):      # a union with a renaming: its instance composed with the others
+            r = [b for b in bs if b in ren][0]
+            out.append(('instantiates', [r], ren[r]))
+            if len(bs) > 1:
+                out.append(('composes', None, ', '.join(b for b in bs if b != r)))
+        elif v in ('unites', 'lifts'):
+            out.append(('extends', bs, sigma))
+        elif v == 'renames':
+            out.append(('instantiates', bs, ren.get(bs[0], '') if bs else ''))
+        else:
+            out.append((v, bs, sigma))
+    return out
 
 
 def words(sigma):

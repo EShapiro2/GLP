@@ -1,5 +1,5 @@
 Commercial Bank
-Commercial Bank instantiates Bank with commercial bank bylaws, and restricts and extends it.
+Commercial Bank extends Bank, and weakens it.
 Vocabulary: z has the lending limit of x at the number n = lending_limit(z,x,n); z holds v's vote to set the lending limit of x at n = vote_limit(z,v,x,n); z holds v's vote to lend y n z-coins due e = vote_lend(z,v,y,n,e).
 y is a customer of z: y is a participant of z and y holds no role in z.
 x is a loan officer of z: x holds the role Lender in z and z has x in the role Lender.

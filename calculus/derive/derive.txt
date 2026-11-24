@@ -1,46 +1,28 @@
 Ads: derived
-    first line: Ads extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
-    proposed:   Ads unites Community Network and a weakening of Overlay, and extends the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Overlay by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Knowledge:3 Introduce of Overlay by conditions person(Alice), person(Bob), person(Carol), as Community Network has it
-    step: weaken or strengthen Friendship:1 Befriend of Overlay by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Friendship:2 Unfriend of Overlay by conditions person(Alice), person(Bob), as Community Network has it
+    first line: Ads unites Community Network and Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
+    proposed:   Ads unites Community Network and Overlay, and extends the union.
 Agents: derived
-    first line: Agents instantiates Guardians with an AI agent for a ward and a principal for a creator, composes it with Forwarding, and restricts, strengthens and extends the composition (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-    proposed:   Agents unites a renaming of Guardians and a weakening of Forwarding, and extends and amends the union.
+    first line: Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    proposed:   Agents unites a renaming of Guardians and Forwarding, and extends and amends the union.
     step: rename Guardians: principal for creator, ai_agent for ward
-    step: weaken or strengthen Knowledge:2 Acquaint of Forwarding by conditions person(Alice), person(Bob), as Guardians has it
-    step: weaken or strengthen Knowledge:3 Introduce of Forwarding by conditions person(Alice), person(Bob), person(Carol), as Guardians has it
-    step: weaken or strengthen Friendship:1 Befriend of Forwarding by conditions person(Alice), person(Bob), as Guardians has it
-    step: weaken or strengthen Friendship:2 Unfriend of Forwarding by conditions person(Alice), person(Bob), as Guardians has it
 Agora: derived
     first line: Agora extends Bonds.
     proposed:   Agora extends Bonds.
 Anonymous Matching: derived
-    first line: Anonymous Matching composes Matching with Anonymous Rendezvous, and restricts the composition.
-    proposed:   Anonymous Matching unites a weakening of Matching and Anonymous Rendezvous, and weakens the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Matching by conditions person(Alice), person(Bob), as Anonymous Rendezvous has it
-    step: weaken or strengthen Knowledge:3 Introduce of Matching by conditions person(Alice), person(Bob), person(Carol), as Anonymous Rendezvous has it
-    step: weaken or strengthen Friendship:1 Befriend of Matching by conditions person(Alice), person(Bob), as Anonymous Rendezvous has it
-    step: weaken or strengthen Friendship:2 Unfriend of Matching by conditions person(Alice), person(Bob), as Anonymous Rendezvous has it
+    first line: Anonymous Matching unites Matching and Anonymous Rendezvous, and weakens the union.
+    proposed:   Anonymous Matching unites Matching and Anonymous Rendezvous, and weakens the union.
 Anonymous Rendezvous: derived
     first line: Anonymous Rendezvous extends Rendezvous.
     proposed:   Anonymous Rendezvous extends Rendezvous.
 App: derived
-    first line: App composes Encounters with AppStore and Directory.
-    proposed:   App unites a weakening of Encounters, AppStore and Directory.
-    step: weaken or strengthen Knowledge:2 Acquaint of Encounters by conditions person(Alice), person(Bob), as AppStore has it
-    step: weaken or strengthen Knowledge:3 Introduce of Encounters by conditions person(Alice), person(Bob), person(Carol), as AppStore has it
+    first line: App unites Encounters, AppStore and Directory.
+    proposed:   App unites Encounters, AppStore and Directory.
 AppStore: derived
-    first line: AppStore composes Programs with Services (GNA, GLP Networking API and Services, in preparation) and extends the composition.
-    proposed:   AppStore unites a weakening of Programs and Services, and extends the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Programs by conditions person(Alice), person(Bob), as Services has it
-    step: weaken or strengthen Knowledge:3 Introduce of Programs by conditions person(Alice), person(Bob), person(Carol), as Services has it
-    step: weaken or strengthen Friendship:1 Befriend of Programs by conditions person(Alice), person(Bob), as Services has it
-    step: weaken or strengthen Friendship:2 Unfriend of Programs by conditions person(Alice), person(Bob), as Services has it
+    first line: AppStore unites Programs and Services, and extends the union (GNA, GLP Networking API and Services, in preparation).
+    proposed:   AppStore unites Programs and Services, and extends the union.
 Appointments: derived
-    first line: Appointments instantiates Booking with the time of a *provider*, an officer of the organisation, for a resource.
-    proposed:   Appointments is Booking.
+    first line: Appointments extends Booking.
+    proposed:   Appointments extends Booking.
 Auction: derived
     first line: Auction extends Local Overlay.
     proposed:   Auction extends Local Overlay.
@@ -48,15 +30,13 @@ Backchannel Feeds: derived
     first line: Backchannel Feeds extends Resilient Feeds.
     proposed:   Backchannel Feeds extends Resilient Feeds.
 Backed Community: derived
-    first line: Backed Community extends Community and restricts it.
+    first line: Backed Community extends Community, and weakens it.
     proposed:   Backed Community extends Community, and weakens it.
 Bank: derived
-    first line: Bank extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-    proposed:   Bank unites Organisation and a weakening of Denominated Currencies, and extends the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Denominated Currencies by conditions person(Alice), person(Bob), as Organisation has it
-    step: weaken or strengthen Knowledge:3 Introduce of Denominated Currencies by conditions person(Alice), person(Bob), person(Carol), as Organisation has it
+    first line: Bank unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    proposed:   Bank unites Organisation and Denominated Currencies, and extends the union.
 Bonds: 6 clauses differ
-    first line: Bonds restricts and extends Coins.
+    first line: Bonds extends Coins.
     proposed:   Bonds extends Coins.
     differs: a clause of Bonds that no contract of the first line has and Bonds does not write
         source: none
@@ -80,86 +60,74 @@ Booking: derived
     first line: Booking extends Organisation.
     proposed:   Booking extends Organisation.
 Carpool: derived
-    first line: Carpool instantiates Free Matching with a test of the match of commutes and a fixed budget.
-    proposed:   Carpool is Free Matching.
+    first line: Carpool extends Free Matching.
+    proposed:   Carpool extends Free Matching.
 Central Bank: derived
-    first line: Central Bank instantiates Bank with central bank bylaws, and restricts and extends it.
+    first line: Central Bank extends Bank, and weakens it.
     proposed:   Central Bank extends Bank, and weakens it.
 Children: 1 clauses differ
-    first line: Children instantiates Warded Groups with a child for a ward and a parent for a guardian, and restricts and extends it.
+    first line: Children renames Warded Groups, and extends and weakens it.
     proposed:   Children renames Warded Groups, and extends and weakens it.
     step: rename Warded Groups: parent for guardian, has_parent for has_guardian, child for ward
     differs: a clause of Warded Groups that is not in Children
         source: Warded Groups:3 ■ Ward add: member(Bob,Grupo,Wendy), listed(Wendy,Bob,Grupo) <- leader(Wendy,Grupo), ward(Wendy), ~retired(Wendy), has_guardian(Wendy,Alice), guardian(Alice,Wendy), friend(Wendy,Bob), friend(Bob,Wendy), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_) guarded by Wendy, Bob, Alice.
         Children: none
 Coins: derived
-    first line: Coins relaxes and extends Notes.
+    first line: Coins renames Notes, and extends it.
     proposed:   Coins renames Notes, and extends it.
     step: rename Notes: escrow_coin for escrow_note, coin for note
 Commercial Bank: derived
-    first line: Commercial Bank instantiates Bank with commercial bank bylaws, and restricts and extends it.
+    first line: Commercial Bank extends Bank, and weakens it.
     proposed:   Commercial Bank extends Bank, and weakens it.
 Community: derived
-    first line: Community instantiates Bank with community bylaws, and extends it.
+    first line: Community extends Bank.
     proposed:   Community extends Bank.
 Community Bank: derived
-    first line: Community Bank instantiates Bank with community bank bylaws, and restricts and extends it.
+    first line: Community Bank extends Bank, and weakens it.
     proposed:   Community Bank extends Bank, and weakens it.
 Community Market: derived
-    first line: Community Market extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
-    proposed:   Community Market unites Community Network, a weakening of Overlay and a weakening of Recommendations, and extends and weakens the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Overlay by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Knowledge:2 Acquaint of Recommendations by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Knowledge:3 Introduce of Overlay by conditions person(Alice), person(Bob), person(Carol), as Community Network has it
-    step: weaken or strengthen Knowledge:3 Introduce of Recommendations by conditions person(Alice), person(Bob), person(Carol), as Community Network has it
-    step: weaken or strengthen Friendship:1 Befriend of Overlay by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Friendship:2 Unfriend of Overlay by conditions person(Alice), person(Bob), as Community Network has it
+    first line: Community Market unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
+    proposed:   Community Market unites Community Network, Overlay and Recommendations, and extends and weakens the union.
 Community Network: derived
-    first line: Community Network extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727), and restricts and strengthens Organisation.
-    proposed:   Community Network unites Organisation and a weakening of Denominated Currencies, and extends and amends the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Denominated Currencies by conditions person(Alice), person(Bob), as Organisation has it
-    step: weaken or strengthen Knowledge:3 Introduce of Denominated Currencies by conditions person(Alice), person(Bob), person(Carol), as Organisation has it
+    first line: Community Network unites Organisation and Denominated Currencies, and extends and amends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    proposed:   Community Network unites Organisation and Denominated Currencies, and extends and amends the union.
 Constitution: derived
-    first line: Constitution restricts and strengthens Organisation.
+    first line: Constitution extends Organisation, and amends it.
     proposed:   Constitution extends Organisation, and amends it.
 Consumers' Cooperative: derived
-    first line: Consumers' Cooperative instantiates Cooperative and Trading Company with bylaws that delegate no act, and restricts and extends them.
+    first line: Consumers' Cooperative unites Cooperative and an amendment of Trading Company, and extends and amends the union.
     proposed:   Consumers' Cooperative unites Cooperative and an amendment of Trading Company, and extends and amends the union.
     step: weaken or strengthen Organisation:3 Expel of Trading Company by conclusions ~vote_expel_orga(Orga,_,Orga,Bob); conditions vote_expel_orga(Orga,>=Votes,Orga,Bob), product(Double,Votes,2), has_participant(Orga,<Double), decided_expel_orga(Orga,Orga,Bob), as Cooperative has it
     step: weaken or strengthen Organisation:3 Officer expel of Trading Company by conclusions ~vote_officer_expel_orga(Orga,_,Orga,Bob); conditions vote_officer_expel_orga(Orga,>=Votes,Orga,Bob), product(Double,Votes,2), has_participant(Orga,<Double), decided_officer_expel_orga(Orga,Orga,Bob), as Cooperative has it
     step: weaken or strengthen Organisation:5 Amend of Trading Company by conclusions ~vote_amend_orga(Orga,_,Alice,Motion); conditions egalitarian(Orga,Motion), vote_amend_orga(Orga,>=Votes,Alice,Motion), product(Double,Votes,2), has_participant(Orga,<Double), decided_amend_orga(Orga,Alice,Motion), as Cooperative has it
 Cooperative: derived
-    first line: Cooperative extends Constitution and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-    proposed:   Cooperative unites Constitution and a weakening of Denominated Currencies, and extends the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Denominated Currencies by conditions person(Alice), person(Bob), as Constitution has it
-    step: weaken or strengthen Knowledge:3 Introduce of Denominated Currencies by conditions person(Alice), person(Bob), person(Carol), as Constitution has it
+    first line: Cooperative unites Constitution and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    proposed:   Cooperative unites Constitution and Denominated Currencies, and extends the union.
 Cooperative DAO: derived
-    first line: Cooperative DAO instantiates Cooperative with DAO bylaws.
-    proposed:   Cooperative DAO is Cooperative.
+    first line: Cooperative DAO extends Cooperative.
+    proposed:   Cooperative DAO extends Cooperative.
 Corporation: derived
-    first line: Corporation extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-    proposed:   Corporation unites Organisation and a weakening of Denominated Currencies, and extends the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Denominated Currencies by conditions person(Alice), person(Bob), as Organisation has it
-    step: weaken or strengthen Knowledge:3 Introduce of Denominated Currencies by conditions person(Alice), person(Bob), person(Carol), as Organisation has it
+    first line: Corporation unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    proposed:   Corporation unites Organisation and Denominated Currencies, and extends the union.
 DAO: derived
     first line: DAO extends Knowledge.
     proposed:   DAO extends Knowledge.
 Dating: derived
-    first line: Dating instantiates Free Matching with a test of the match of profiles and a budget set by the maker.
-    proposed:   Dating is Free Matching.
+    first line: Dating extends Free Matching.
+    proposed:   Dating extends Free Matching.
 Democratic Community: derived
-    first line: Democratic Community extends Community and Constitution.
+    first line: Democratic Community unites an amendment of Community and Constitution.
     proposed:   Democratic Community unites an amendment of Community and Constitution.
     step: weaken or strengthen Organisation:3 Join of Community by conclusions ~vote_join_orga(Orga,_,Bob); conditions vote_join_orga(Orga,>=Votes,Bob), product(Double,Votes,2), has_participant(Orga,<Double), decided_join_orga(Orga,Bob), as Constitution has it
     step: weaken or strengthen Organisation:3 Expel of Community by conclusions ~vote_expel_orga(Orga,_,Orga,Bob); conditions vote_expel_orga(Orga,>=Votes,Orga,Bob), product(Double,Votes,2), has_participant(Orga,<Double), decided_expel_orga(Orga,Orga,Bob), as Constitution has it
     step: weaken or strengthen Organisation:3 Officer expel of Community by conclusions ~vote_officer_expel_orga(Orga,_,Orga,Bob); conditions vote_officer_expel_orga(Orga,>=Votes,Orga,Bob), product(Double,Votes,2), has_participant(Orga,<Double), decided_officer_expel_orga(Orga,Orga,Bob), as Constitution has it
     step: weaken or strengthen Organisation:5 Amend of Community by conclusions ~vote_amend_orga(Orga,_,Alice,Motion); conditions egalitarian(Orga,Motion), vote_amend_orga(Orga,>=Votes,Alice,Motion), product(Double,Votes,2), has_participant(Orga,<Double), decided_amend_orga(Orga,Alice,Motion), as Constitution has it
 Denominated Coins: derived
-    first line: Denominated Coins extends and restricts Coins.
+    first line: Denominated Coins lifts Coins, and extends and weakens it.
     proposed:   Denominated Coins lifts Coins, and extends and weakens it.
     step: lift Coins at coin (place 3), escrow_coin (place 3)
 Denominated Currencies: derived
-    first line: Denominated Currencies extends Bonds and Denominated Coins, and restricts and strengthens Bonds.
+    first line: Denominated Currencies unites a weakening of a lift of Bonds and Denominated Coins, and extends and amends the union.
     proposed:   Denominated Currencies unites a weakening of a lift of Bonds and Denominated Coins, and extends and amends the union.
     step: lift Bonds at bond (place 4), coin (place 3), escrow_bond (place 4), escrow_coin (place 3)
     step: weaken or strengthen Notes:1 Issue of Bonds by conditions issued_in(Alice,Dollar), as Denominated Coins has it
@@ -176,50 +144,44 @@ Encounters: derived
     first line: Encounters extends Knowledge (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed:   Encounters extends Knowledge.
 Feeds: derived
-    first line: Feeds extends and restricts Labelled Overlay.
+    first line: Feeds extends Labelled Overlay, and weakens it.
     proposed:   Feeds extends Labelled Overlay, and weakens it.
 Forwarding: derived
     first line: Forwarding extends Friendship.
     proposed:   Forwarding extends Friendship.
 Foundation: derived
-    first line: Foundation instantiates Nonprofit with foundation bylaws, and restricts it.
+    first line: Foundation weakens Nonprofit.
     proposed:   Foundation weakens Nonprofit.
 Free Matching: derived
-    first line: Free Matching instantiates Anonymous Matching with an integer budget, a forward costing one, and a gossip protocol of forwarding to any friend with the budget less one.
-    proposed:   Free Matching is Anonymous Matching.
+    first line: Free Matching extends Anonymous Matching.
+    proposed:   Free Matching extends Anonymous Matching.
 Friendship: derived
     first line: Friendship extends Knowledge.
     proposed:   Friendship extends Knowledge.
 Funded DAO: derived
-    first line: Funded DAO extends DAO and Coins.
+    first line: Funded DAO unites DAO and Coins, and extends the union.
     proposed:   Funded DAO unites DAO and Coins, and extends the union.
 Gigs: derived
-    first line: Gigs extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
-    proposed:   Gigs unites Community Network, a weakening of Overlay and a weakening of Recommendations, and extends and weakens the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Overlay by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Knowledge:2 Acquaint of Recommendations by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Knowledge:3 Introduce of Overlay by conditions person(Alice), person(Bob), person(Carol), as Community Network has it
-    step: weaken or strengthen Knowledge:3 Introduce of Recommendations by conditions person(Alice), person(Bob), person(Carol), as Community Network has it
-    step: weaken or strengthen Friendship:1 Befriend of Overlay by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Friendship:2 Unfriend of Overlay by conditions person(Alice), person(Bob), as Community Network has it
+    first line: Gigs unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
+    proposed:   Gigs unites Community Network, Overlay and Recommendations, and extends and weakens the union.
 Gossip: derived
     first line: Gossip extends Friendship.
     proposed:   Gossip extends Friendship.
 Groups: derived
-    first line: Groups extends and strengthens Friendship.
+    first line: Groups extends Friendship, and strengthens it.
     proposed:   Groups extends Friendship, and strengthens it.
 Guardians: derived
-    first line: Guardians extends and restricts Friendship.
-    proposed:   Guardians extends Friendship, and weakens it.
+    first line: Guardians extends Friendship.
+    proposed:   Guardians extends Friendship.
 Help: derived
-    first line: Help instantiates Free Matching with a test of the match of services and needs and a budget set by the maker.
-    proposed:   Help is Free Matching.
+    first line: Help extends Free Matching.
+    proposed:   Help extends Free Matching.
 Home Exchange: derived
-    first line: Home Exchange instantiates Free Matching with a test of the match of homes and a budget set by the maker.
-    proposed:   Home Exchange is Free Matching.
+    first line: Home Exchange extends Free Matching.
+    proposed:   Home Exchange extends Free Matching.
 Jobs: derived
-    first line: Jobs instantiates Free Matching with a test of the match of vacancies and candidacies and a budget set by the maker.
-    proposed:   Jobs is Free Matching.
+    first line: Jobs extends Free Matching.
+    proposed:   Jobs extends Free Matching.
 Joint Accounts: derived
     first line: Joint Accounts extends Coins.
     proposed:   Joint Accounts extends Coins.
@@ -227,11 +189,11 @@ Knowledge: derived
     first line: Vocabulary: x has an identity = identity(x); x is a person = person(x); x knows y = knows(x,y).
     proposed:   Knowledge.
 Labelled Overlay: derived
-    first line: Labelled Overlay extends and strengthens Overlay.
+    first line: Labelled Overlay extends Overlay, and amends it.
     proposed:   Labelled Overlay extends Overlay, and amends it.
 Lending: derived
-    first line: Lending instantiates Free Matching with a test of the match of loans, gifts and wishes and a fixed budget.
-    proposed:   Lending is Free Matching.
+    first line: Lending extends Free Matching.
+    proposed:   Lending extends Free Matching.
 Library: derived
     first line: Library extends Knowledge.
     proposed:   Library extends Knowledge.
@@ -242,75 +204,62 @@ Liquid DAO: derived
     first line: Liquid DAO extends DAO.
     proposed:   Liquid DAO extends DAO.
 Local Overlay: derived
-    first line: Local Overlay restricts Overlay.
+    first line: Local Overlay weakens Overlay.
     proposed:   Local Overlay weakens Overlay.
 Lodging: derived
-    first line: Lodging extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Community Network and Recommendations.
-    proposed:   Lodging unites Community Network, a weakening of Overlay and a weakening of Recommendations, and extends and weakens the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Overlay by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Knowledge:2 Acquaint of Recommendations by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Knowledge:3 Introduce of Overlay by conditions person(Alice), person(Bob), person(Carol), as Community Network has it
-    step: weaken or strengthen Knowledge:3 Introduce of Recommendations by conditions person(Alice), person(Bob), person(Carol), as Community Network has it
-    step: weaken or strengthen Friendship:1 Befriend of Overlay by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Friendship:2 Unfriend of Overlay by conditions person(Alice), person(Bob), as Community Network has it
+    first line: Lodging unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
+    proposed:   Lodging unites Community Network, Overlay and Recommendations, and extends and weakens the union.
 Lost and Found: derived
-    first line: Lost and Found instantiates Free Matching with a test of the match of losses and finds and a fixed budget.
-    proposed:   Lost and Found is Free Matching.
+    first line: Lost and Found extends Free Matching.
+    proposed:   Lost and Found extends Free Matching.
 Matching: derived
     first line: Matching extends Gossip.
     proposed:   Matching extends Gossip.
 Meeting Rooms: derived
-    first line: Meeting Rooms instantiates Booking with a *room* for a resource.
-    proposed:   Meeting Rooms is Booking.
+    first line: Meeting Rooms extends Booking.
+    proposed:   Meeting Rooms extends Booking.
 Mutual Credit: derived
-    first line: Mutual Credit instantiates Bank with mutual credit society bylaws, and restricts and extends it.
+    first line: Mutual Credit extends Bank, and weakens it.
     proposed:   Mutual Credit extends Bank, and weakens it.
 Nonprofit: derived
-    first line: Nonprofit restricts Corporation.
+    first line: Nonprofit weakens Corporation.
     proposed:   Nonprofit weakens Corporation.
 Notes: derived
     first line: Notes extends Knowledge.
     proposed:   Notes extends Knowledge.
 Organisation: derived
-    first line: Organisation instantiates Guardians with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    first line: Organisation renames Guardians, and extends and amends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed:   Organisation renames Guardians, and extends and amends it.
     step: rename Guardians: officer for guardian, has_officer for has_guardian, organisation for ward
 Overlay: derived
     first line: Overlay extends Friendship.
     proposed:   Overlay extends Friendship.
 Partners: derived
-    first line: Partners instantiates Free Matching with a test of the match of plans and a budget set by the maker.
-    proposed:   Partners is Free Matching.
+    first line: Partners extends Free Matching.
+    proposed:   Partners extends Free Matching.
 Partnership: derived
-    first line: Partnership instantiates Corporation with partnership bylaws, and restricts it.
+    first line: Partnership weakens Corporation.
     proposed:   Partnership weakens Corporation.
 Programs: derived
     first line: Programs extends Forwarding (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed:   Programs extends Forwarding.
 Promoted Gossip: derived
-    first line: Promoted Gossip composes Gossip with Community, and strengthens and extends it.
-    proposed:   Promoted Gossip unites a weakening of Gossip and Community, and extends and amends the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Gossip by conditions person(Alice), person(Bob), as Community has it
-    step: weaken or strengthen Knowledge:3 Introduce of Gossip by conditions person(Alice), person(Bob), person(Carol), as Community has it
-    step: weaken or strengthen Friendship:1 Befriend of Gossip by conditions person(Alice), person(Bob), as Community has it
-    step: weaken or strengthen Friendship:2 Unfriend of Gossip by conditions person(Alice), person(Bob), as Community has it
+    first line: Promoted Gossip unites Gossip and Community, and extends and amends the union.
+    proposed:   Promoted Gossip unites Gossip and Community, and extends and amends the union.
 Promoted Matching: derived
-    first line: Promoted Matching composes Anonymous Matching with Promoted Gossip.
+    first line: Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
     proposed:   Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
     step: weaken or strengthen Gossip:1 Post of Anonymous Matching by conclusions ~coin(Alice,Orga,Dollar,*Budget), post_coins(Alice,Post,Orga,*Budget), part_due(Alice,Post); conditions coin(Alice,Orga,Dollar,*Budget), as Promoted Gossip has it
     step: weaken or strengthen Gossip:2 Tell of Anonymous Matching by conclusions ~post_coins(Alice,Post,Orga,*Part), post_coins(Bob,Post,Orga,*Part), part_due(Bob,Post); conditions post_coins(Alice,Post,Orga,*Part), as Promoted Gossip has it
 Provenance Groups: derived
-    first line: Provenance Groups composes Groups with Agents (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231), and restricts, strengthens and extends the composition.
-    proposed:   Provenance Groups unites a weakening of Groups and a strengthening of Agents, and extends and amends the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Groups by conditions person(Alice), person(Bob), as Agents has it
-    step: weaken or strengthen Knowledge:3 Introduce of Groups by conditions person(Alice), person(Bob), person(Carol), as Agents has it
-    step: weaken or strengthen Friendship:1 Befriend of Groups by conditions person(Alice), person(Bob), as Agents has it
-    step: union of Friendship:2+Groups:3+Guardians:3 Person unfriend of Groups, Agents, each weakened or strengthened by what the other has
+    first line: Provenance Groups unites Groups and a strengthening of Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    proposed:   Provenance Groups unites Groups and a strengthening of Agents, and extends and amends the union.
+    step: weaken or strengthen Friendship:2+Guardians:3 Person unfriend of Agents by conclusions ~member(Alice,_,Bob), ~member(Bob,_,Alice), ~listed(Alice,Bob,_), ~listed(Bob,Alice,_), as Groups has it
 Recommendations: derived
     first line: Recommendations extends Knowledge.
     proposed:   Recommendations extends Knowledge.
 Rehearsal Rooms: derived
-    first line: Rehearsal Rooms instantiates Booking with a room for a resource, and composes it with Partners.
+    first line: Rehearsal Rooms unites Booking and Partners.
     proposed:   Rehearsal Rooms unites Booking and Partners.
 Rendezvous: derived
     first line: Rendezvous extends Services.
@@ -319,26 +268,22 @@ Resilient Feeds: derived
     first line: Resilient Feeds extends Feeds.
     proposed:   Resilient Feeds extends Feeds.
 Rides: derived
-    first line: Rides extends Community Network and restricts and strengthens Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
-    proposed:   Rides unites Community Network and a weakening of Second-Score Auction, and extends and amends the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Second-Score Auction by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Knowledge:3 Introduce of Second-Score Auction by conditions person(Alice), person(Bob), person(Carol), as Community Network has it
-    step: weaken or strengthen Friendship:1 Befriend of Second-Score Auction by conditions person(Alice), person(Bob), as Community Network has it
-    step: weaken or strengthen Friendship:2 Unfriend of Second-Score Auction by conditions person(Alice), person(Bob), as Community Network has it
+    first line: Rides unites Community Network and Second-Score Auction, and extends and amends the union (GRH, Grassroots Ride-Hailing, in preparation).
+    proposed:   Rides unites Community Network and Second-Score Auction, and extends and amends the union.
 Second-Score Auction: derived
-    first line: Second-Score Auction instantiates Auction with second-score terms, and restricts it.
+    first line: Second-Score Auction weakens Auction.
     proposed:   Second-Score Auction weakens Auction.
 Secure Friendship: derived
     first line: Secure Friendship extends Friendship.
     proposed:   Secure Friendship extends Friendship.
 Separating Distrust: derived
-    first line: Separating Distrust restricts Distrust.
+    first line: Separating Distrust weakens Distrust.
     proposed:   Separating Distrust weakens Distrust.
 Services: derived
-    first line: Services instantiates Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-    proposed:   Services is Guardians.
+    first line: Services extends Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    proposed:   Services extends Guardians.
 Shareholding Corporation: 2 clauses differ
-    first line: Shareholding Corporation instantiates Corporation with shareholding corporation bylaws, composes it with Shares, and extends the composition.
+    first line: Shareholding Corporation unites Corporation and Shares, and extends the union.
     proposed:   Shareholding Corporation unites Corporation and Shares, and extends the union.
     differs: a clause of Shareholding Corporation that no contract of the first line has and Shareholding Corporation does not write
         source: none
@@ -347,11 +292,9 @@ Shareholding Corporation: 2 clauses differ
         source: none
         Shareholding Corporation: Notes:2+Denominated Currencies:2 ○ Swap bond for share: ~bond(Alice,Carol,Day,Dollar,*Sum), bond(Bob,Carol,Day,Dollar,*Sum), ~share(Bob,Dave,*Total), share(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), bond(Alice,Carol,Day,Dollar,*Sum), share(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
 Shares: 2 clauses differ
-    first line: Shares restricts Organisation and Notes.
-    proposed:   Shares unites Organisation and a weakening of a renaming of Notes, and extends the union.
+    first line: Shares unites Organisation and a renaming of Notes, and extends the union.
+    proposed:   Shares unites Organisation and a renaming of Notes, and extends the union.
     step: rename Notes: escrow_share for escrow_note, share for note
-    step: weaken or strengthen Knowledge:2 Acquaint of Notes by conditions person(Alice), person(Bob), as Organisation has it
-    step: weaken or strengthen Knowledge:3 Introduce of Notes by conditions person(Alice), person(Bob), person(Carol), as Organisation has it
     differs: a clause of Notes that is not in Shares
         source: Notes:1 ■ Issue: note(Alice,Alice,*Sum) <- guarded by Alice.
         Shares: none
@@ -362,29 +305,26 @@ Short Feeds: derived
     first line: Short Feeds extends Feeds.
     proposed:   Short Feeds extends Feeds.
 Single-Person Company: derived
-    first line: Single-Person Company instantiates Corporation with single-person limited-liability company bylaws, and restricts it.
+    first line: Single-Person Company weakens Corporation.
     proposed:   Single-Person Company weakens Corporation.
 Stays: derived
     first line: Stays extends Coins.
     proposed:   Stays extends Coins.
 Tennis Courts: derived
-    first line: Tennis Courts instantiates Booking with a court for a resource, composes it with Partners, and restricts the composition.
+    first line: Tennis Courts unites Booking and Partners, and weakens the union.
     proposed:   Tennis Courts unites Booking and Partners, and weakens the union.
 Trading Company: derived
     first line: Trading Company extends Corporation.
     proposed:   Trading Company extends Corporation.
 Warded Groups: derived
-    first line: Warded Groups extends, restricts and strengthens Groups and Guardians.
-    proposed:   Warded Groups unites a weakening of Groups and a strengthening of Guardians, and extends and amends the union.
-    step: weaken or strengthen Knowledge:2 Acquaint of Groups by conditions person(Alice), person(Bob), as Guardians has it
-    step: weaken or strengthen Knowledge:3 Introduce of Groups by conditions person(Alice), person(Bob), person(Carol), as Guardians has it
-    step: weaken or strengthen Friendship:1 Befriend of Groups by conditions person(Alice), person(Bob), as Guardians has it
-    step: union of Friendship:2+Groups:3+Guardians:3 Person unfriend of Groups, Guardians, each weakened or strengthened by what the other has
+    first line: Warded Groups unites Groups and a strengthening of Guardians, and extends and amends the union.
+    proposed:   Warded Groups unites Groups and a strengthening of Guardians, and extends and amends the union.
+    step: weaken or strengthen Friendship:2+Guardians:3 Person unfriend of Guardians by conclusions ~member(Alice,_,Bob), ~member(Bob,_,Alice), ~listed(Alice,Bob,_), ~listed(Bob,Alice,_), as Groups has it
 Warnings: derived
-    first line: Warnings extends and restricts Organisation.
+    first line: Warnings extends Organisation, and weakens it.
     proposed:   Warnings extends Organisation, and weakens it.
 Workers' Cooperative: derived
-    first line: Workers' Cooperative instantiates Cooperative with bylaws that delegate no act, and extends it.
+    first line: Workers' Cooperative extends Cooperative.
     proposed:   Workers' Cooperative extends Cooperative.
 
 92 contracts, 88 derived

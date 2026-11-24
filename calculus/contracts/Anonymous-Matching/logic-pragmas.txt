@@ -1,5 +1,5 @@
 Anonymous Matching
-Anonymous Matching composes Matching with Anonymous Rendezvous, and restricts the composition.
+Anonymous Matching unites Matching and Anonymous Rendezvous, and weakens the union.
 Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
 Alice and Carol are persons, Dave a service, Post and Reply posts, Key and Pair one-time keys.
 1. ■ Meet. Present: Anonymous Rendezvous:1 Present, only if Alice has made the post Post, Alice holds the post Reply, Post carries the public key of Key, Reply carries the public key of Pair and Dave is named by the one of Post and Reply whose public key has the smaller hash. Meet: Matching:2, only if Alice has the address of Carol and Carol has the address of Alice.

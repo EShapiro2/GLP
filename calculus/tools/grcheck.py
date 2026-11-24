@@ -22,7 +22,7 @@ import names as NM
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLAUSE = re.compile(r"^(\d+)\. ([■◆○]) (.*)$")
-RELATIONS = ("extends", "restricts", "relaxes", "strengthens", "amends", "instantiates")
+RELATIONS = ("extends", "restricts", "relaxes", "strengthens", "amends", "instantiates", "weakens", "renames", "lifts", "unites")
 ACTS = re.compile(r"(?:^|(?<=[.;] ))([A-Z][A-Za-z' -]*(?:, [A-Z][A-Za-z' -]*)*): ")
 GR_PHRASE = re.compile(r", (provided|only if|and then) ")
 GR_END = re.compile(r", (?:provided|only if|and then|with the consent of|without the consent of|decided by|on the votes of|taken for) |\.(?: |$)")

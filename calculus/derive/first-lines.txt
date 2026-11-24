@@ -1,27 +1,27 @@
 Ads
-    present:  Ads extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
-    proposed: Ads unites Community Network and a weakening of Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
+    present:  Ads unites Community Network and Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
+    proposed: Ads unites Community Network and Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
 Agents
-    present:  Agents instantiates Guardians with the guardians deciding jointly for the decision rule, an AI agent for a ward and a principal for a creator, composes it with Forwarding, and restricts, strengthens and extends the composition (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-    proposed: Agents unites a renaming of Guardians and a weakening of Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    present:  Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    proposed: Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Agora
     present:  Agora extends Bonds.
     proposed: Agora extends Bonds.
 Anonymous Matching
-    present:  Anonymous Matching composes Matching with Anonymous Rendezvous, and restricts the composition.
-    proposed: Anonymous Matching unites a weakening of Matching and Anonymous Rendezvous, and weakens the union.
+    present:  Anonymous Matching unites Matching and Anonymous Rendezvous, and weakens the union.
+    proposed: Anonymous Matching unites Matching and Anonymous Rendezvous, and weakens the union.
 Anonymous Rendezvous
     present:  Anonymous Rendezvous extends Rendezvous.
     proposed: Anonymous Rendezvous extends Rendezvous.
 App
-    present:  App composes Encounters with AppStore and Directory.
-    proposed: App unites a weakening of Encounters, AppStore and Directory.
+    present:  App unites Encounters, AppStore and Directory.
+    proposed: App unites Encounters, AppStore and Directory.
 AppStore
-    present:  AppStore composes Programs with Services (GNA, GLP Networking API and Services, in preparation) and extends the composition.
-    proposed: AppStore unites a weakening of Programs and Services, and extends the union (GNA, GLP Networking API and Services, in preparation).
+    present:  AppStore unites Programs and Services, and extends the union (GNA, GLP Networking API and Services, in preparation).
+    proposed: AppStore unites Programs and Services, and extends the union (GNA, GLP Networking API and Services, in preparation).
 Appointments
-    present:  Appointments instantiates Booking with the time of a *provider*, an officer of the organisation, for a resource.
-    proposed: Appointments is Booking.
+    present:  Appointments extends Booking.
+    proposed: Appointments extends Booking.
 Auction
     present:  Auction extends Local Overlay.
     proposed: Auction extends Local Overlay.
@@ -29,75 +29,75 @@ Backchannel Feeds
     present:  Backchannel Feeds extends Resilient Feeds.
     proposed: Backchannel Feeds extends Resilient Feeds.
 Backed Community
-    present:  Backed Community extends Community and restricts it.
+    present:  Backed Community extends Community, and weakens it.
     proposed: Backed Community extends Community, and weakens it.
 Bank
-    present:  Bank extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-    proposed: Bank unites Organisation and a weakening of Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    present:  Bank unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    proposed: Bank unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 Bonds
-    present:  Bonds restricts and extends Coins.
+    present:  Bonds extends Coins.
     proposed: Bonds extends Coins.
     not derived: 6 clauses differ (derive.txt)
 Booking
     present:  Booking extends Organisation.
     proposed: Booking extends Organisation.
 Carpool
-    present:  Carpool instantiates Free Matching with a test of the match of commutes and a fixed budget.
-    proposed: Carpool is Free Matching.
+    present:  Carpool extends Free Matching.
+    proposed: Carpool extends Free Matching.
 Central Bank
-    present:  Central Bank instantiates Bank with central bank bylaws and restricts and extends it.
+    present:  Central Bank extends Bank, and weakens it.
     proposed: Central Bank extends Bank, and weakens it.
 Children
-    present:  Children instantiates Warded Groups with the guardians deciding jointly for the decision rule, a child for a ward and a parent for a guardian, and restricts and extends it.
+    present:  Children renames Warded Groups, and extends and weakens it.
     proposed: Children renames Warded Groups, and extends and weakens it.
     not derived: 1 clauses differ (derive.txt)
 Coins
-    present:  Coins relaxes and extends Notes.
+    present:  Coins renames Notes, and extends it.
     proposed: Coins renames Notes, and extends it.
 Commercial Bank
-    present:  Commercial Bank instantiates Bank with commercial bank bylaws and restricts and extends it.
+    present:  Commercial Bank extends Bank, and weakens it.
     proposed: Commercial Bank extends Bank, and weakens it.
 Community
-    present:  Community instantiates Bank with community bylaws and extends it.
+    present:  Community extends Bank.
     proposed: Community extends Bank.
 Community Bank
-    present:  Community Bank instantiates Bank with community bank bylaws and restricts and extends it.
+    present:  Community Bank extends Bank, and weakens it.
     proposed: Community Bank extends Bank, and weakens it.
 Community Market
-    present:  Community Market extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
-    proposed: Community Market unites Community Network, a weakening of Overlay and a weakening of Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
+    present:  Community Market unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
+    proposed: Community Market unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
 Community Network
-    present:  Community Network extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727), and restricts and strengthens Organisation.
-    proposed: Community Network unites Organisation and a weakening of Denominated Currencies, and extends and amends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    present:  Community Network unites Organisation and Denominated Currencies, and extends and amends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    proposed: Community Network unites Organisation and Denominated Currencies, and extends and amends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 Constitution
-    present:  Constitution restricts and strengthens Organisation.
+    present:  Constitution extends Organisation, and amends it.
     proposed: Constitution extends Organisation, and amends it.
 Consumers' Cooperative
-    present:  Consumers' Cooperative instantiates Cooperative and Trading Company with bylaws that delegate no act and restricts and extends them.
+    present:  Consumers' Cooperative unites Cooperative and an amendment of Trading Company, and extends and amends the union.
     proposed: Consumers' Cooperative unites Cooperative and an amendment of Trading Company, and extends and amends the union.
 Cooperative
-    present:  Cooperative extends Constitution and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-    proposed: Cooperative unites Constitution and a weakening of Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    present:  Cooperative unites Constitution and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    proposed: Cooperative unites Constitution and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 Cooperative DAO
-    present:  Cooperative DAO instantiates Cooperative with DAO bylaws.
-    proposed: Cooperative DAO is Cooperative.
+    present:  Cooperative DAO extends Cooperative.
+    proposed: Cooperative DAO extends Cooperative.
 Corporation
-    present:  Corporation extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-    proposed: Corporation unites Organisation and a weakening of Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    present:  Corporation unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    proposed: Corporation unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 DAO
     present:  DAO extends Knowledge.
     proposed: DAO extends Knowledge.
 Dating
-    present:  Dating instantiates Free Matching with a test of the match of profiles and a budget set by the maker.
-    proposed: Dating is Free Matching.
+    present:  Dating extends Free Matching.
+    proposed: Dating extends Free Matching.
 Democratic Community
-    present:  Democratic Community extends Community and Constitution.
+    present:  Democratic Community unites an amendment of Community and Constitution.
     proposed: Democratic Community unites an amendment of Community and Constitution.
 Denominated Coins
-    present:  Denominated Coins extends and restricts Coins.
+    present:  Denominated Coins lifts Coins, and extends and weakens it.
     proposed: Denominated Coins lifts Coins, and extends and weakens it.
 Denominated Currencies
-    present:  Denominated Currencies extends Bonds and Denominated Coins, and restricts and strengthens Bonds.
+    present:  Denominated Currencies unites a weakening of a lift of Bonds and Denominated Coins, and extends and amends the union.
     proposed: Denominated Currencies unites a weakening of a lift of Bonds and Denominated Coins, and extends and amends the union.
 Directory
     present:  Directory extends Rendezvous.
@@ -112,44 +112,44 @@ Encounters
     present:  Encounters extends Knowledge (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed: Encounters extends Knowledge (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Feeds
-    present:  Feeds extends and restricts Labelled Overlay.
+    present:  Feeds extends Labelled Overlay, and weakens it.
     proposed: Feeds extends Labelled Overlay, and weakens it.
 Forwarding
     present:  Forwarding extends Friendship.
     proposed: Forwarding extends Friendship.
 Foundation
-    present:  Foundation instantiates Nonprofit with foundation bylaws; x is an officer of z for x is entitled to propose m in z; x is an officer of z for x is entitled to take m for z; x is an officer of z for x is entitled to vote on m in z, and restricts it.
+    present:  Foundation weakens Nonprofit.
     proposed: Foundation weakens Nonprofit.
 Free Matching
-    present:  Free Matching instantiates Anonymous Matching with an integer budget, a forward costing one, and a gossip protocol of forwarding to any friend with the budget less one.
-    proposed: Free Matching is Anonymous Matching.
+    present:  Free Matching extends Anonymous Matching.
+    proposed: Free Matching extends Anonymous Matching.
 Friendship
     present:  Friendship extends Knowledge.
     proposed: Friendship extends Knowledge.
 Funded DAO
-    present:  Funded DAO extends DAO and Coins.
+    present:  Funded DAO unites DAO and Coins, and extends the union.
     proposed: Funded DAO unites DAO and Coins, and extends the union.
 Gigs
-    present:  Gigs extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
-    proposed: Gigs unites Community Network, a weakening of Overlay and a weakening of Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
+    present:  Gigs unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
+    proposed: Gigs unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
 Gossip
     present:  Gossip extends Friendship.
     proposed: Gossip extends Friendship.
 Groups
-    present:  Groups extends and strengthens Friendship.
+    present:  Groups extends Friendship, and strengthens it.
     proposed: Groups extends Friendship, and strengthens it.
 Guardians
-    present:  Guardians extends and restricts Friendship.
-    proposed: Guardians extends Friendship, and weakens it.
+    present:  Guardians extends Friendship.
+    proposed: Guardians extends Friendship.
 Help
-    present:  Help instantiates Free Matching with a test of the match of services and needs and a budget set by the maker.
-    proposed: Help is Free Matching.
+    present:  Help extends Free Matching.
+    proposed: Help extends Free Matching.
 Home Exchange
-    present:  Home Exchange instantiates Free Matching with a test of the match of homes and a budget set by the maker.
-    proposed: Home Exchange is Free Matching.
+    present:  Home Exchange extends Free Matching.
+    proposed: Home Exchange extends Free Matching.
 Jobs
-    present:  Jobs instantiates Free Matching with a test of the match of vacancies and candidacies and a budget set by the maker.
-    proposed: Jobs is Free Matching.
+    present:  Jobs extends Free Matching.
+    proposed: Jobs extends Free Matching.
 Joint Accounts
     present:  Joint Accounts extends Coins.
     proposed: Joint Accounts extends Coins.
@@ -157,11 +157,11 @@ Knowledge
     present:  An *identity* is a unique cryptographic key pair.
     proposed: Knowledge.
 Labelled Overlay
-    present:  Labelled Overlay extends and strengthens Overlay.
+    present:  Labelled Overlay extends Overlay, and amends it.
     proposed: Labelled Overlay extends Overlay, and amends it.
 Lending
-    present:  Lending instantiates Free Matching with a test of the match of loans, gifts and wishes and a fixed budget.
-    proposed: Lending is Free Matching.
+    present:  Lending extends Free Matching.
+    proposed: Lending extends Free Matching.
 Library
     present:  Library extends Knowledge.
     proposed: Library extends Knowledge.
@@ -172,58 +172,58 @@ Liquid DAO
     present:  Liquid DAO extends DAO.
     proposed: Liquid DAO extends DAO.
 Local Overlay
-    present:  Local Overlay restricts Overlay.
+    present:  Local Overlay weakens Overlay.
     proposed: Local Overlay weakens Overlay.
 Lodging
-    present:  Lodging extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Community Network and Recommendations.
-    proposed: Lodging unites Community Network, a weakening of Overlay and a weakening of Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
+    present:  Lodging unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
+    proposed: Lodging unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
 Lost and Found
-    present:  Lost and Found instantiates Free Matching with a test of the match of losses and finds and a fixed budget.
-    proposed: Lost and Found is Free Matching.
+    present:  Lost and Found extends Free Matching.
+    proposed: Lost and Found extends Free Matching.
 Matching
     present:  Matching extends Gossip.
     proposed: Matching extends Gossip.
 Meeting Rooms
-    present:  Meeting Rooms instantiates Booking with a *room* for a resource.
-    proposed: Meeting Rooms is Booking.
+    present:  Meeting Rooms extends Booking.
+    proposed: Meeting Rooms extends Booking.
 Mutual Credit
-    present:  Mutual Credit instantiates Bank with mutual credit society bylaws and restricts and extends it.
+    present:  Mutual Credit extends Bank, and weakens it.
     proposed: Mutual Credit extends Bank, and weakens it.
 Nonprofit
-    present:  Nonprofit restricts Corporation.
+    present:  Nonprofit weakens Corporation.
     proposed: Nonprofit weakens Corporation.
 Notes
     present:  Notes extends Knowledge.
     proposed: Notes extends Knowledge.
 Organisation
-    present:  Organisation instantiates Guardians with bylaws for the decision rule, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    present:  Organisation renames Guardians, and extends and amends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed: Organisation renames Guardians, and extends and amends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Overlay
     present:  Overlay extends Friendship.
     proposed: Overlay extends Friendship.
 Partners
-    present:  Partners instantiates Free Matching with a test of the match of plans and a budget set by the maker.
-    proposed: Partners is Free Matching.
+    present:  Partners extends Free Matching.
+    proposed: Partners extends Free Matching.
 Partnership
-    present:  Partnership instantiates Corporation with partnership bylaws; x is an officer of z for x is entitled to propose m in z; x is an officer of z for x is entitled to take m for z; x is an officer of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as an officer for the votes decide m according to the bylaws of z, and restricts it.
+    present:  Partnership weakens Corporation.
     proposed: Partnership weakens Corporation.
 Programs
     present:  Programs extends Forwarding (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed: Programs extends Forwarding (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Promoted Gossip
-    present:  Promoted Gossip composes Gossip with Community, and strengthens and extends it.
-    proposed: Promoted Gossip unites a weakening of Gossip and Community, and extends and amends the union.
+    present:  Promoted Gossip unites Gossip and Community, and extends and amends the union.
+    proposed: Promoted Gossip unites Gossip and Community, and extends and amends the union.
 Promoted Matching
-    present:  Promoted Matching composes Anonymous Matching with Promoted Gossip.
+    present:  Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
     proposed: Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
 Provenance Groups
-    present:  Provenance Groups instantiates Groups with items authored by their senders for messages, composes it with Agents (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231), and restricts and extends the composition.
-    proposed: Provenance Groups unites a weakening of Groups and a strengthening of Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    present:  Provenance Groups unites Groups and a strengthening of Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    proposed: Provenance Groups unites Groups and a strengthening of Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Recommendations
     present:  Recommendations extends Knowledge.
     proposed: Recommendations extends Knowledge.
 Rehearsal Rooms
-    present:  Rehearsal Rooms instantiates Booking with a room for a resource, and composes it with Partners.
+    present:  Rehearsal Rooms unites Booking and Partners.
     proposed: Rehearsal Rooms unites Booking and Partners.
 Rendezvous
     present:  Rendezvous extends Services.
@@ -232,49 +232,49 @@ Resilient Feeds
     present:  Resilient Feeds extends Feeds.
     proposed: Resilient Feeds extends Feeds.
 Rides
-    present:  Rides extends Community Network and restricts and strengthens Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
-    proposed: Rides unites Community Network and a weakening of Second-Score Auction, and extends and amends the union (GRH, Grassroots Ride-Hailing, in preparation).
+    present:  Rides unites Community Network and Second-Score Auction, and extends and amends the union (GRH, Grassroots Ride-Hailing, in preparation).
+    proposed: Rides unites Community Network and Second-Score Auction, and extends and amends the union (GRH, Grassroots Ride-Hailing, in preparation).
 Second-Score Auction
-    present:  Second-Score Auction instantiates Auction with second-score terms and restricts it.
+    present:  Second-Score Auction weakens Auction.
     proposed: Second-Score Auction weakens Auction.
 Secure Friendship
     present:  Secure Friendship extends Friendship.
     proposed: Secure Friendship extends Friendship.
 Separating Distrust
-    present:  Separating Distrust restricts Distrust.
+    present:  Separating Distrust weakens Distrust.
     proposed: Separating Distrust weakens Distrust.
 Services
-    present:  Services instantiates Guardians with the guardians deciding jointly for the decision rule (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-    proposed: Services is Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    present:  Services extends Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    proposed: Services extends Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Shareholding Corporation
-    present:  Shareholding Corporation instantiates Corporation with shareholding corporation bylaws, composes it with Shares, and extends the composition.
+    present:  Shareholding Corporation unites Corporation and Shares, and extends the union.
     proposed: Shareholding Corporation unites Corporation and Shares, and extends the union.
     not derived: 2 clauses differ (derive.txt)
 Shares
-    present:  Shares restricts Organisation and Notes.
-    proposed: Shares unites Organisation and a weakening of a renaming of Notes, and extends the union.
+    present:  Shares unites Organisation and a renaming of Notes, and extends the union.
+    proposed: Shares unites Organisation and a renaming of Notes, and extends the union.
     not derived: 2 clauses differ (derive.txt)
 Short Feeds
     present:  Short Feeds extends Feeds.
     proposed: Short Feeds extends Feeds.
 Single-Person Company
-    present:  Single-Person Company instantiates Corporation with single-person limited-liability company bylaws, and restricts it.
+    present:  Single-Person Company weakens Corporation.
     proposed: Single-Person Company weakens Corporation.
 Stays
     present:  Stays extends Coins.
     proposed: Stays extends Coins.
 Tennis Courts
-    present:  Tennis Courts instantiates Booking with a court for a resource, composes it with Partners, and restricts the composition.
+    present:  Tennis Courts unites Booking and Partners, and weakens the union.
     proposed: Tennis Courts unites Booking and Partners, and weakens the union.
 Trading Company
     present:  Trading Company extends Corporation.
     proposed: Trading Company extends Corporation.
 Warded Groups
-    present:  Warded Groups extends, restricts and strengthens Groups and Guardians.
-    proposed: Warded Groups unites a weakening of Groups and a strengthening of Guardians, and extends and amends the union.
+    present:  Warded Groups unites Groups and a strengthening of Guardians, and extends and amends the union.
+    proposed: Warded Groups unites Groups and a strengthening of Guardians, and extends and amends the union.
 Warnings
-    present:  Warnings extends and restricts Organisation.
+    present:  Warnings extends Organisation, and weakens it.
     proposed: Warnings extends Organisation, and weakens it.
 Workers' Cooperative
-    present:  Workers' Cooperative instantiates Cooperative with bylaws that delegate no act and extends it.
+    present:  Workers' Cooperative extends Cooperative.
     proposed: Workers' Cooperative extends Cooperative.

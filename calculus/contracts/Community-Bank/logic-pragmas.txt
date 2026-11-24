@@ -1,5 +1,5 @@
 Community Bank
-Community Bank instantiates Bank with community bank bylaws, and restricts and extends it.
+Community Bank extends Bank, and weakens it.
 A *community bank* is a bank whose bylaws name two roles, *member*, held by every participant, and *director*, held by its first officer and by members. A member's *credit line* is a number of coins.
 Bob is a person, Orga a community bank, Sum, Line, Held and Total numbers.
 1. ■ Leave: Organisation:3 Leave, only if Bob holds exactly 0 Orga-coins. Leave owed nothing: Organisation:3 Leave, only if Orga holds exactly 0 Bob-coins. Officer leave: Organisation:3 Officer leave, only if Bob holds exactly 0 Orga-coins. Officer leave owed nothing: Organisation:3 Officer leave, only if Orga holds exactly 0 Bob-coins.

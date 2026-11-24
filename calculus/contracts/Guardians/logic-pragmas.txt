@@ -1,5 +1,5 @@
 Guardians
-Guardians extends and restricts Friendship.
+Guardians extends Friendship.
 Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
 Alice and Bob are persons, Wendy and Will wards; in clause 4 Alice and Bob are possibly one person.
 1. ■ Enter: Alice may create Wendy, and Wendy must consent, provided Alice is a person. Alice chooses Wendy's key pair.

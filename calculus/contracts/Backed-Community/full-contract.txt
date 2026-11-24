@@ -12,7 +12,7 @@ A *bond* is a note that is a unit of its issuer's debt, due at its maturity date
 A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
 A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
 A *community* is a bank whose coins are Dollar-denominated. The coins it issues are *community coins*. Its bylaws name two roles, *member*, held by every participant, and *treasurer*.
-*f*, a fraction 0 ≤ f < 1, is a parameter of Backed Community. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
+*f* is a fraction, 0 ≤ f < 1. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
 Alice, Bob and Carol are persons, Orga a community, Will an organisation.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.

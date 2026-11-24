@@ -1,5 +1,5 @@
 Community Bank
-Community Bank instantiates Bank with community bank bylaws, and restricts and extends it.
+Community Bank extends Bank, and weakens it.
 Vocabulary: z has y's credit line at the number n = credit_line(z,y,n).
 Roles: the directors of z = directors(z), listed by z has y in the role Director and y holds the role Director in z.
 x is a director of z: x holds the role Director in z.

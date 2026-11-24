@@ -85,7 +85,7 @@ def clause_of(l):
     if " guarded by " in " " + b:
         b, g = (" " + b).split(" guarded by ", 1)
     return dict(lab=lab, first=lab.split("+")[0], name=name, mark=mark, raw=l.rstrip("\n"), taken=taken,
-                H=[lit(x) for x in split_top(h)], B=[lit(x) for x in split_top(b)],
+                H=[lit(x) for x in split_top(h)], B=list(dict.fromkeys(lit(x) for x in split_top(b))),      # a condition twice is once (an act and its weakening both say 'Alice is a person')
                 G=[lit(x) for x in split_top(g)] + [(True, "must", (x,)) for x in split_top(must)])
 
 
@@ -222,8 +222,13 @@ class Deriver:
         """The renamings of words of the first line's 'instantiates B with ...': [(new, old)], 'a child for a ward'."""
         s = re.sub(r"\([^)]*\)", "", self.first_line(n)).rstrip(".")
         m = re.search(r"instantiates .*?" + self.WITH, s)
+        its = re.split(r", | and |; ", m.group(1)) if m else []
+        for l in open(self.path(n, "sas"), encoding="utf-8"):      # the pragma 'Renaming of Guardians: an organisation for a ward.'
+            r = re.match(r"^Renaming of .+?: (.*)\.$", l.rstrip("\n"))
+            if r:
+                its += re.split(r", | and |; ", r.group(1))
         out = []
-        for it in re.split(r", | and |; ", m.group(1)) if m else []:
+        for it in its:
             w = re.match(r"^(?:an? |the )?([a-z][a-z ]*?) for (?:an? |the )?([a-z][a-z ]*)$", it.strip())
             if w:
                 out.append((w.group(1).replace(" ", "_"), w.group(2).replace(" ", "_")))
@@ -263,6 +268,8 @@ class Deriver:
                 if cand != q and cand in An:
                     ren[q] = cand
                     absent.discard(q)
+                    if {k + 1 for k in Ap[q]} <= An[cand]:      # renamed and lifted: a bond for a note, with its maturity date
+                        lift[q] = None
         if absent or lift:
             # the renaming and the place of each lift, from the clauses of p and n of one first label and of one shape
             votes, lvotes = collections.Counter(), collections.Counter()
@@ -278,7 +285,7 @@ class Deriver:
                                     continue
                                 if q1 in absent and q2 not in Ap and len(a1) == len(a2):
                                     votes[(q1, q2)] += 1
-                                if q1 in lift and q1 == q2 and len(a2) == len(a1) + 1:
+                                if q1 in lift and ren.get(q1, q1) == q2 and len(a2) == len(a1) + 1:
                                     for i in range(len(a2)):
                                         if a2[:i] + a2[i + 1:] == a1:
                                             lvotes[(q1, i)] += 1
@@ -413,7 +420,7 @@ class Deriver:
             k = ws(r["pre"][p])
             verbs = first + own
             if not verbs:
-                return "%s is %s." % (n, p)
+                return "%s extends %s." % (n, p)      # the clauses of p and no other: 'extends' (Udi, 2026-11-23 23:36, item 28)
             if len(verbs) == 1:
                 return "%s %s %s." % (n, verbs[0], p)
             return "%s %s %s, and %s it." % (n, verbs[0], p, andl(verbs[1:]))

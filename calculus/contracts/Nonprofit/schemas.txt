@@ -1,5 +1,5 @@
 Nonprofit
-Nonprofit restricts Corporation.
+Nonprofit weakens Corporation.
 Nonprofit:0 - | A *nonprofit* is a corporation that pays none of its coins, notes or bonds to its officers.
 Nonprofit:0 - | Alice and Bob are parties, Orga a nonprofit.
 Nonprofit:1 ■ | Nondistribution.

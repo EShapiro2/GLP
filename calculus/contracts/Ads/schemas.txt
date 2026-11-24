@@ -1,5 +1,5 @@
 Ads
-Ads extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
+Ads unites Community Network and Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
 Vocabulary: y has d posted in z = posted(y,d,z); y has the budget of d locked in z = budget_locked(y,d,z); x has received d of y in z = received(x,d,y,z); d is for the profile of x = for_profile(x,d); x has been shown d of y in z = ad_shown(x,d,y,z); x has attested a view of d of y = viewed(x,d,y); x has attested a click of d of y = clicked(x,d,y).
 y is an advertiser of z: y is a provider of z.
 x is a member of z: x is a customer of z.

@@ -1,5 +1,6 @@
 Organisation
-Organisation instantiates Guardians with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Organisation renames Guardians, and extends and amends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Renaming of Guardians: an organisation for a ward and an officer for a guardian.
 Vocabulary: x is the founder of z = founder(x,z); z has y as its first officer = first_officer(z,y); y holds the role r in z = role(y,z,r); z has y in the role r = has_role(z,y,r); x is a participant of z = participant(x,z); z has x as a participant = has_participant(z,x); x is entitled to propose m in z = proposer(x,z,m); z has m proposed = proposed(z,m); x is entitled to vote on m in z = voter(x,z,m); z holds x's vote on m = vote(z,x,m); the votes decide m according to the bylaws of z = decided(z,m); x is entitled to take m for z = taker(x,z,m); z has m taken = taken(z,m); x is entitled to amend the bylaws of z as m says = amender(x,z,m); the amendment m is decided according to the bylaws of z = amendment_decided(z,m); z has its bylaws amended = amended(z).
 Roles: those who decide m for z = act_deciders(z,m); those who admit participants of z = admitters(z); those who expel participants of z = expellers(z).
 After x proposes m in z, which requires z does not have m proposed: z has m proposed.

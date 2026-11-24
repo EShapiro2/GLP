@@ -1,2 +1,3 @@
 Appointments
-Appointments instantiates Booking with the time of a *provider*, an officer of the organisation, for a resource.
+Appointments extends Booking.
+A resource is the time of a *provider*, an officer of the organisation.

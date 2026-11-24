@@ -11,7 +11,7 @@ A *bond* is a note that is a unit of its issuer's debt, due at its maturity date
 *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
 A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
 A *community network* is created by a backed community, and uses its community coins. Its bylaws name the role *arbiter*. A *provider* is a member of the community whose *stake*, the community coins they hold, is at least *S*, a number of community coins, and a *customer* is a member of the community who accepts community coins. A *dispute* is over community coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
-A person has a *location*. d > 0, an integer, and e > 0 are parameters of Local Overlay. Here: second-score terms.
+A person has a *location*. d > 0, an integer, and e > 0 are numbers.
 A *pickup delay* is measured from the award. The *terms* of a call state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
 *Second-score terms* state a maximum pickup delay T ≥ 0, a willingness to pay W(τ) = A − λτ with A, λ ≥ 0, and a deposit D ≥ 0. The award is at time t₀. A bid (p, τ) is the fare p ≥ 0 the bidder asks and the pickup delay τ ≥ 0 the bidder promises. Its *score* is W(τ) − p, and it is *admissible* iff τ ≤ T and its score is at least 0.
 A *driver* is a provider and a *rider* a customer.

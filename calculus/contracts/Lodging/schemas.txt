@@ -1,5 +1,5 @@
 Lodging
-Lodging extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Community Network and Recommendations.
+Lodging unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
 Vocabulary: y has l posted in z = posted(y,l,z); x has received l of y in z = received(x,l,y,z); x has nights of l booked with y = booked(x,l,y); y has nights of l booked by x = booked_by(y,l,x); x is at the place of l on the first night = at_place(x,l); x is checked in at l of y = checked_in(x,l,y); x leaves the place of l after the last night = leaves(x,l); x has checked out of l of y = checked_out(x,l,y); it is before the first night of l, for x = before_first_night(x,l); no check-in at l is recorded on the first night while x is at the place = no_show(x,l); the terms of l set the payment at n and the deposit at m, for x = terms(x,l,n,m); the terms of l release p to the customer and q to the provider on cancellation, for x = cancel_terms(x,l,p,q).
 y is a host of z: y is a provider of z.
 x is a traveller of z: x is a customer of z.

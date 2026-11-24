@@ -3,8 +3,8 @@ Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a c
 Of DAO: Carol is possibly Alice or Bob.
 Alice, Bob and Carol are persons, Delos a DAO, Prop a proposal, Votes and Double numbers.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
 DAO:1. ■ Found: Alice may found Delos under a new name of hers.
 DAO:2. ■ Join: Alice may admit Bob to Delos, with the consent of Bob, provided Alice is the steward of Delos and Alice knows Bob.
 DAO:3. ■ Proposing. Propose: Carol may make the proposal Prop to Alice's Delos, provided Carol is a member of Alice's Delos and Alice is the steward of Delos. Propose own: Alice may make the proposal Prop to Alice's Delos, provided Alice is a member of Alice's Delos and Alice is the steward of Delos. Deliver proposal: Alice delivers Prop of Delos to Bob, provided Alice is the steward of Delos, Alice holds Prop of Delos and Alice has Bob as a member of Delos.

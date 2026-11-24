@@ -68,9 +68,10 @@ LEAD_IN = ('Each contract with the operations of its first line and of its citin
 
 NAME = NM.NAME_RX      # a name of the table, longest first, or one word (tools/names.py)
 REF = NM.REF
-VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes')
+VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes', 'weakens', 'amends', 'renames', 'lifts', 'unites')
 VERB = r'(?:%s)' % '|'.join(VERBS)
-PRONOUNS = ('it', 'them', 'the composition')
+PRONOUNS = ('it', 'them', 'the composition', 'the union')
+OF = re.compile(r'^(?:an? (?:weakening|strengthening|amendment|renaming|lift) of )+')      # 'a weakening of a lift of Bonds': the contract Bonds
 
 # The act sentences a citing clause restricts, where its heading names none of the
 # cited clause: (contract, clause number) -> the acts, as the cited contract heads
@@ -222,7 +223,7 @@ def parse_first(name, line, known):
             if not last:
                 raise ValueError("'%s' refers to nothing" % text)
             return list(last)
-        out = re.split(r', and |, | and ', text)
+        out = [OF.sub('', x) for x in re.split(r', and |, | and ', text)]
         for x in out:
             if not re.match(r'^%s$' % NAME, x):
                 raise ValueError("'%s' in '%s' is no contract's name" % (x, chunk))
@@ -313,6 +314,18 @@ def resolve(x, contracts):
     return None
 
 
+def renamings(name):
+    """[(contract, words)] of gr/NAME's 'Renaming of Guardians: an organisation for a ward and an officer for a guardian.'"""
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'gr', NM.file_of(name) + '.txt')
+    out = []
+    if os.path.exists(p):
+        for l in open(p, encoding='utf-8'):
+            m = re.match(r'^Renaming of (.+?): (.*)\.$', l.rstrip('\n'))
+            if m:
+                out.append((m.group(1), m.group(2)))
+    return out
+
+
 def link(contracts):
     """Parse every first line; check that each contract it names is in rev/."""
     unparsed = []
@@ -325,6 +338,11 @@ def link(contracts):
             continue
         try:
             c.first = parse_first(name, c.first_line, contracts)
+            for dep, words in renamings(name):      # the words of a renaming, a pragma of gr/ (Udi, 2026-11-23, no parameters)
+                pairs = parse_pairs(words)
+                if pairs and dep in c.first.deps:
+                    c.first.inst.append(dep)
+                    c.first.pairs += pairs
         except ValueError as e:
             fail('%s: the first line is not read (%s): %s' % (name, e, c.first_line))
             unparsed.append(name)
@@ -613,7 +631,8 @@ def expand(name, contracts, cache):
                     s.heads = [sub(h) for h in s.heads] if s.heads else s.heads
                     s.text = sub(s.text)
                     s.rests = [sub(x) for x in s.rests]
-            bind(name, dep, e.defs, c.first.binding, sub)
+            if c.first.binding:
+                bind(name, dep, e.defs, c.first.binding, sub)
         for d in e.defs:                      # definitions: a sentence once
             same = [x for x in exp.defs if x.text == d.text]
             if same:

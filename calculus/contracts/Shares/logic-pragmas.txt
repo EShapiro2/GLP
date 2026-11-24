@@ -1,5 +1,5 @@
 Shares
-Shares restricts Organisation and Notes.
+Shares unites Organisation and a renaming of Notes, and extends the union.
 A *share* of Orga is an Orga-note that gives its holder a vote in Orga and a part of its dividends.
 Alice is a party, Orga an organisation.
 1. ■ Issue shares: Notes:1, for shares, only if Alice is an organisation, with the consent of those who decide the issue of shares of Alice.

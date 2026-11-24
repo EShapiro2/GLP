@@ -7,10 +7,10 @@ Of Rendezvous: An *invitation link* of Alice's is a term she signs, naming her, 
 Of Anonymous Rendezvous: A *one-time key* is a key pair its maker uses for one meeting. Environment: x holds the one-time key k; x knows the public key of k.
 Alice, Bob and Carol are persons, Wendy and Will wards, Dave a service, Link an invitation link, Key and Other one-time keys.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
-Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
-Friendship:1, Guardians:3. ■ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
-Friendship:2, Guardians:3. ■ Person unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
+Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person, Bob is a person, Alice is a person and Bob is a person.
+Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+Friendship:1, Guardians:3. ■ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person, Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
+Friendship:2, Guardians:3. ■ Person unfriend: Alice may end her friendship with Bob, provided Alice is a person, Bob is a person, Alice is a person and Bob is a person.
 Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 Guardians:1. ■ Enter: Alice may create Wendy, and Wendy must consent, provided Alice is a person. Alice chooses Wendy's key pair.
 Guardians:2. ■ Guardian decisions. Make guardian: Those who decide for Wendy may make Bob a guardian of Wendy, with the consent of Bob, provided Wendy is a ward, Wendy is not retired, Bob is a person, Wendy has Alice as a guardian and Bob counts Alice as a friend. Resign: Bob may end his guardianship of Wendy. End guardian: Those who decide for Wendy, other than Bob, may end Bob's guardianship of Wendy. Guardian unfriend: Bob may end his friendship with his ward Wendy. Wendy may not end a friendship with her guardian.

@@ -1,5 +1,5 @@
 Gigs
-Gigs extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+Gigs unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
 Vocabulary: x has j posted in z = posted(x,j,z); y has received j of x in z = received(y,j,x,z); x has engaged y for j = engaged(x,y,j); y is engaged by x for j = engaged_by(y,x,j); y has attested the delivery of j to x = delivered(y,j,x); x has accepted j of y = accepted(x,j,y); x has rejected j of y = rejected(x,j,y); no delivery of j is attested by the deadline, for x = lapsed(x,j); the terms of j set the payment at n and the deposit at m, for x = terms(x,j,n,m); the terms of j release p to the customer and q to the provider on cancellation, for x = cancel_terms(x,j,p,q).
 y is a worker of z: y is a provider of z.
 x is a client of z: x is a customer of z.

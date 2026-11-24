@@ -1,5 +1,5 @@
 Community Market
-Community Market extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+Community Market unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
 Vocabulary: y has l posted in z = posted(y,l,z); x has received l of y in z = received(x,l,y,z); x has ordered the good of l from y = ordered(x,l,y); y has an order of the good of l from x = ordered_from(y,l,x); x has attested the delivery of the good of l by y = delivered(x,l,y); the terms of l set the payment at n and the deposit at m, for x = terms(x,l,n,m); the terms of l release p to the customer and q to the provider on cancellation, for x = cancel_terms(x,l,p,q).
 y is a seller of z: y is a provider of z.
 x is a buyer of z: x is a customer of z.

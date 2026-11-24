@@ -1,16 +1,16 @@
 Provenance Groups
 Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
 Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Of Groups: A *message*, a parameter of Groups, is what a person sends. Bob and Carol are possibly Alice or one person.
+Of Groups: A *message* is what a person sends. Bob and Carol are possibly Alice or one person.
 Of Guardians: Bob *trusts* Alf, an AI agent of Alice, when he trusts Alice. The *decision rule*, which the principal of an AI agent decides, says who decides for an AI agent and how. An AI agent takes an act of a party by those who decide for the AI agent. In clause 4 Alice and Bob are possibly one person.
 Of Forwarding: The *author* of an item is its first signer.
 Of Agents: The *developer* of an AI agent is the signer of its code. In clause 2 Will is an AI agent.
 Alice, Bob and Carol are persons, Grupo a group, Text a message, Alf and Will AI agents, Item an item, Proof and Seal attestations.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
-Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
-Friendship:1, Guardians:3. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
-Friendship:2, Groups:3, Guardians:3. ■ Person unfriend: Alice may end Bob's membership in _, provided Alice is a person and Bob is a person, and then no longer Alice counts Bob as a friend, no longer Bob counts Alice as a friend, Alice is a member of no group of Bob and Bob has Alice as a member of no group.
+Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person, Bob is a person, Alice is a person and Bob is a person.
+Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+Friendship:1, Guardians:3. ○ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person, Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
+Friendship:2, Groups:3, Guardians:3. ■ Person unfriend: Alice may end Bob's membership in _, provided Alice is a person, Bob is a person, Alice is a person and Bob is a person, and then no longer Alice counts Bob as a friend, no longer Bob counts Alice as a friend, Alice is a member of no group of Bob and Bob has Alice as a member of no group.
 Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 Groups:1, Provenance Groups:1. ■ Message: Alice may send Text to Bob, provided Alice and Bob are friends, Alice is a person, Alice holds the item Text and Alice is the author of Text, and then Bob holds the item Text.
 Groups:2. ■ Group.

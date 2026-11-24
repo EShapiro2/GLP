@@ -5,8 +5,8 @@ Funded DAO:0 - | Alice, Bob, Carol and Dave are persons, Delos a DAO, Prop a pro
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
-Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 DAO:0 - | Carol is possibly Alice or Bob.
 DAO:1 ■ Found: steward(Alice,Delos), member(Alice,Delos,Alice), listed(Alice,Alice,Delos) <- ~steward(Alice,Delos) guarded by Alice.
 DAO:2 ■ Join: member(Bob,Delos,Alice), listed(Alice,Bob,Delos) <- steward(Alice,Delos), knows(Alice,Bob), ~member(Bob,Delos,Alice) guarded by Alice, Bob.

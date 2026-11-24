@@ -1,5 +1,5 @@
 Community Network
-Community Network extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727), and restricts and strengthens Organisation.
+Community Network unites Organisation and Denominated Currencies, and extends and amends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 Vocabulary: z has the stake at the number n = stake(z,n); z has c as its community = community(z,c); x has n f-denominated c-coins locked in z on k as the customer of y = customer_lock(x,y,z,k,c,f,n); y has n f-denominated c-coins locked in z on k as the provider of x = provider_lock(y,x,z,k,c,f,n); w holds the dispute of x and y over k in z = dispute(w,x,y,z,k); the terms of k set the arbiter's fee at n, for w = arbiter_fee(w,k,n).
 n and m c-coins are locked in z on k between the provider y and the customer x: x has n Dollar-denominated c-coins locked in z on k as the customer of y and y has m Dollar-denominated c-coins locked in z on k as the provider of x.
 x is an arbiter of z: x holds the role Arbiter in z and z has x in the role Arbiter.

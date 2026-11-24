@@ -1,5 +1,5 @@
 Mutual Credit
-Mutual Credit instantiates Bank with mutual credit society bylaws, and restricts and extends it.
+Mutual Credit extends Bank, and weakens it.
 A *mutual credit society* is a bank whose bylaws name one role, *member*, held by every participant. A member is *in the red* by their coins in circulation less the other persons' coins they hold.
 Alice and Bob are persons, Orga a mutual credit society.
 1. ■ Leave: Organisation:3 Leave, only if Bob holds exactly 0 Orga-coins. Leave owed nothing: Organisation:3 Leave, only if Orga holds exactly 0 Bob-coins. Officer leave: Organisation:3 Officer leave, only if Bob holds exactly 0 Orga-coins. Officer leave owed nothing: Organisation:3 Officer leave, only if Orga holds exactly 0 Bob-coins.

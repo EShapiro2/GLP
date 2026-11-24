@@ -1,16 +1,16 @@
 Meeting Rooms (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Meeting Rooms:0 - | Alice, Bob and Carol are persons, Orga, Will and Gov organisations, Motion an act of Orga, Role a role.
+Meeting Rooms:0 - | Alice, Bob and Carol are persons, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Res a resource, Slot a slot.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2+Guardians:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
-Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
+Knowledge:2+Guardians:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob), person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:1+Guardians:3 ■ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice, Bob.
+Friendship:1+Guardians:3 ■ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- person(Alice), person(Bob), knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice, Bob.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
-Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- friend(Alice,Bob), friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice.
+Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- person(Alice), person(Bob), friend(Alice,Bob), friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
 Guardians:0 - | Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, which the creator of an organisation decides, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
@@ -53,8 +53,8 @@ Organisation:4 ■ | The decision names his role.
 Organisation:5 ■ Amend: amended(Orga), taken(Orga,Motion) <- amender(Alice,Orga,Motion), amendment_decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
 Organisation:6 ○ | Accountability.
 Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
-Booking:0 - | An organisation has **room*s*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
-Booking:0 - | Alice is a person, Orga an organisation, Res a *room*, Slot a slot.
-Booking:0 - | Environment: z has the slot s of the *room* r; x has fewer outstanding bookings in z than the bound.
+Booking:0 - | An organisation has *resources*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
+Booking:0 - | Environment: z has the slot s of the resource r; x has fewer outstanding bookings in z than the bound.
 Booking:1 ■ Book: booking(Alice,Orga,Res,Slot), booked(Orga,Res,Slot,Alice) <- participant(Alice,Orga), has_participant(Orga,Alice), under_bound(Alice,Orga), slot(Orga,Res,Slot), ~booked(Orga,Res,Slot,_) guarded by Alice.
 Booking:2 ■ Cancel: ~booking(Alice,Orga,Res,Slot), ~booked(Orga,Res,Slot,Alice) <- booking(Alice,Orga,Res,Slot), booked(Orga,Res,Slot,Alice) guarded by Alice.
+Meeting Rooms:0 - | A resource is a *room*.

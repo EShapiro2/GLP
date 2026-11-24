@@ -1,5 +1,5 @@
 Coins
-Coins relaxes and extends Notes.
+Coins renames Notes, and extends it.
 Vocabulary: x holds a y-coin = coin(x,y); x holds n y-coins = coin(x,y,*n); x holds exactly n y-coins = coin(x,y,#n); z holds n w-coins in escrow from x for y on k = escrow_coin(z,w,x,y,k,*n).
 After x pays the issuer y n y-coins: no longer x holds n y-coins and y holds n y-coins.
 After x redeems a y-coin against a z-coin: no longer x holds a y-coin, y holds a y-coin, no longer y holds a z-coin, x holds a z-coin and x knows z.

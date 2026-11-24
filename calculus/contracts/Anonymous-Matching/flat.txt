@@ -5,19 +5,19 @@ Anonymous Matching:0 - | Alice, Bob and Carol are persons, Post and Reply posts,
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2+Guardians:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
-Knowledge:3+Guardians:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+Knowledge:2+Guardians:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person, Bob is a person, Alice is a person and Bob is a person.
+Knowledge:3+Guardians:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice is a person, Bob is a person, Carol is a person, Alice knows Bob, Bob knows Alice, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:1+Guardians:3 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend, not Bob counts Alice as a friend, Alice is a person and Bob is a person.
+Friendship:1+Guardians:3 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice is a person, Bob is a person, Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend, not Bob counts Alice as a friend, Alice is a person and Bob is a person.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
-Friendship:2+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
+Friendship:2+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person, Bob is a person, Alice is a person and Bob is a person.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Gossip:0 - | *Posts* have a *budget*, a parameter of Gossip: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*, a parameter: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them.
+Gossip:0 - | *Posts* have a *budget*: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them.
 Gossip:0 - | Environment: n is a budget of a new post, for x; n covers the cost of a forward leaving m, for x; the gossip protocol forwards p to y with m of n, for x.
 Gossip:1 ■ Post: Alice may Alice has made the post Post, Alice holds the post Post and Alice has the budget Budget for Post, provided Budget is a budget of a new post for Alice and not Alice has made the post Post.
 Gossip:2 ■ Tell: Alice may Bob holds the post Post from Alice, Bob holds the post Post and Bob has the budget Part for Post, provided Alice holds the post Post, Alice has the budget Budget for Post, Budget covers the cost of a forward leaving Rest for Alice, Alice counts Bob as a friend, Bob counts Alice as a friend and the gossip protocol forwards Post to Bob with Part of Rest for Alice.
-Matching:0 - | Posts have a *test*, a parameter of Matching, whether two *match*.
+Matching:0 - | Posts have a *test*, whether two *match*.
 Matching:0 - | Environment: p and q match, for x.
 Matching:1 ■ Return: Alice holds the post Other from Bob and Alice holds the post Other, provided Bob holds the post Post from Alice, Bob holds the post Other, Post and Other match for Bob and not Alice holds the post Other from Bob.
 Matching:2+Anonymous Matching:1 ■ Meet: Alice and Carol may jointly Alice knows Carol and Carol knows Alice, provided Alice has made the post Post, Carol has made the post Other, Alice holds the post Other, Carol holds the post Post, Post and Other match for Alice, Alice has the address of Carol and Carol has the address of Alice.

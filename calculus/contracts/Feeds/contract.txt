@@ -1,5 +1,5 @@
 Feeds
-Feeds extends and restricts Labelled Overlay.
+Feeds extends Labelled Overlay, and weakens it.
 A *feed* is named by its author.
 Alice, Bob and Carol are persons, Bob and Carol possibly one person.
 1. ■ Post: Alice has a feed and may post to it an item, created or received.

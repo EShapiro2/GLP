@@ -1,5 +1,5 @@
 Foundation
-Foundation instantiates Nonprofit with foundation bylaws, and restricts it.
+Foundation weakens Nonprofit.
 x is a trustee of z: x is an officer of z.
 Vocabulary: m keeps the purpose of z = keeps_purpose(z,m).
 Roles: the trustees of z = trustees(z), listed by z has y as an officer and y is an officer of z.

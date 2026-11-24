@@ -1,5 +1,5 @@
 Single-Person Company
-Single-Person Company instantiates Corporation with single-person limited-liability company bylaws, and restricts it.
+Single-Person Company weakens Corporation.
 Single-Person Company:0 - | A *single-person limited-liability company* is a corporation whose bylaws name one role, the *sole officer*, and admit no participant but the sole officer.
 Single-Person Company:0 - | Bob is a person, Orga a single-person limited-liability company.
 Single-Person Company:1 ■ Join: Organisation:3 Join <- first_officer(Orga,Bob).

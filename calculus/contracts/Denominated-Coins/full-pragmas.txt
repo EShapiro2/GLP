@@ -5,8 +5,8 @@ Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin
 Of Denominated Coins: *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar. Kind of note: coin, Dollar-denominated y-coins for y-coins.
 Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Dollar a fiat currency.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
 Notes:1, Denominated Coins:1. ■ Issue: Alice may issue Sum Dollar-denominated Alice-coins, provided Alice has issued coins of the denomination Dollar.
 Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Dollar-denominated Carol-coins for Total Dollar-denominated Dave-coins, provided Alice and Bob know each other.
 Notes:3. ■ Pay: Alice may pay Bob Sum Dollar-denominated Carol-coins, with the consent of Bob, provided Alice knows Bob.

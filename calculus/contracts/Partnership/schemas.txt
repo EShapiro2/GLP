@@ -1,5 +1,5 @@
 Partnership
-Partnership instantiates Corporation with partnership bylaws, and restricts it.
+Partnership weakens Corporation.
 x is a partner of z: x is an officer of z.
 Roles: the partners of z = partners(z), listed by z has y as an officer and y is an officer of z.
 Partnership:0 - | A *partnership* is a corporation whose bylaws name one role, *partner*, held by every officer; a person joins only with the consent of every partner.

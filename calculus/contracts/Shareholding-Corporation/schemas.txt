@@ -1,5 +1,5 @@
 Shareholding Corporation
-Shareholding Corporation instantiates Corporation with shareholding corporation bylaws, composes it with Shares, and extends the composition.
+Shareholding Corporation unites Corporation and Shares, and extends the union.
 Vocabulary: z has v as a dividend = dividend(z,v); z has paid y the dividend v in the denomination f = paid_dividend(z,y,v,f); z holds v's vote to set u as a dividend = vote_dividend(z,v,u).
 Vocabulary: z has issued shares = issued_shares(z); the shareholders of z decided the issue of shares by a majority of the shares they hold = share_majority(z); the shareholders of z decided the officers by a majority of the shares they hold = officer_majority(z).
 Roles: the directors of z = directors(z); the first officer of z = first_officers(z), listed by z has y as its first officer.

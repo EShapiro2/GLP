@@ -1,5 +1,5 @@
 Foundation
-Foundation instantiates Nonprofit with foundation bylaws, and restricts it.
+Foundation weakens Nonprofit.
 A *foundation* is a nonprofit whose bylaws name one role, *trustee*, held by every officer, and state a *purpose*; a person joins only with the consent of every trustee.
 Bob is a person, Orga a foundation, Motion an act of Orga.
 1. ■ Join: Organisation:3 Join, with the consent of the trustees of Orga.

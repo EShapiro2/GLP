@@ -7,8 +7,8 @@ Of Denominated Coins: *Dollar* names one denomination, and a *Dollar-denominated
 Of Denominated Currencies: A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date. In clause 4 Carol is possibly Alice or Bob. Kind of note: bond, Dollar-denominated y-bonds due Day for y-bonds due Day.
 Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum, Total and Limit numbers, Day, Term and Due maturity dates, Today a date, Dollar a fiat currency.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
 Notes:1, Denominated Coins:1. ■ Issue: Alice may issue Sum Dollar-denominated Alice-coins, provided Alice has issued coins of the denomination Dollar.
 Notes:1, Bonds:1. ■ Issue bond: Alice may issue Sum Dollar-denominated Alice-bonds due Day, provided the current date is Today and Day is more than Today.
 Notes:2, Denominated Currencies:2. ○ Swap: Alice and Bob may jointly swap Sum Dollar-denominated Carol-coins for Total Dollar-denominated Dave-coins, provided Alice and Bob know each other. Swap coin for bond: Alice and Bob may jointly swap Sum Dollar-denominated Carol-coins for Total Dollar-denominated Dave-bonds due Day, provided Alice and Bob know each other. Swap bonds: Alice and Bob may jointly swap Sum Dollar-denominated Carol-bonds due Day for Total Dollar-denominated Dave-bonds due Term, provided Alice and Bob know each other.

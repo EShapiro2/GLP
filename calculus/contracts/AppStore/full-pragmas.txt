@@ -8,10 +8,10 @@ Of Services: A *service* is a ward operated by a machine at an address every per
 Of AppStore: A *store* is a service holding a list of programs. Alice *trusts* a store when she has declared it and has not withdrawn the declaration.
 Alice, Bob, Carol and Erin are persons, Item an item, Prog a program, Wendy and Will wards, Dave a service.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
-Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
-Friendship:1, Guardians:3. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
-Friendship:2, Guardians:3. ■ Person unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
+Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person, Bob is a person, Alice is a person and Bob is a person.
+Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+Friendship:1, Guardians:3. ○ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person, Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
+Friendship:2, Guardians:3. ■ Person unfriend: Alice may end her friendship with Bob, provided Alice is a person, Bob is a person, Alice is a person and Bob is a person.
 Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 Forwarding:1. ■ Sign: Alice may create Item by signing it.
 Forwarding:2. ■ Forward: Alice may forward Item to Bob, adding her signature to the signatures Item carries, provided Alice holds the item Item and Alice and Bob are friends.

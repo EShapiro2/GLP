@@ -1,5 +1,5 @@
 Constitution
-Constitution restricts and strengthens Organisation.
+Constitution extends Organisation, and amends it.
 x is a member of z: x is a participant of z.
 Vocabulary: m keeps the bylaws of z egalitarian = egalitarian(z,m).
 Constitution:0 - | A *constitutional democratic community* is an organisation whose bylaws name one role, *member*, held by every participant, and are *egalitarian*: the rule by which the members decide an act names no member and no other role.

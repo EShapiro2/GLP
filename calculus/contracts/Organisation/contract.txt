@@ -1,5 +1,5 @@
 Organisation
-Organisation instantiates Guardians with bylaws for the decision rule, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Organisation renames Guardians, and extends and amends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
 Alice and Bob are persons, Orga an organisation.
 1. ■ Found: An organisation may create Orga (Guardians:1) with the consent of Alice; Alice is then its first officer.

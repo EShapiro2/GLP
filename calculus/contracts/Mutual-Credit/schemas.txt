@@ -1,5 +1,5 @@
 Mutual Credit
-Mutual Credit instantiates Bank with mutual credit society bylaws, and restricts and extends it.
+Mutual Credit extends Bank, and weakens it.
 Vocabulary: every member of z is then in the red by at most 1000 coins, for x = credit_limit(x,z).
 y is a member of z: y is a participant of z.
 After y redeems with z an x-coin against a z-coin: no longer y holds an x-coin, z holds an x-coin, no longer z holds a z-coin and y holds a z-coin.

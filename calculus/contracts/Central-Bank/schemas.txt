@@ -1,5 +1,5 @@
 Central Bank
-Central Bank instantiates Bank with central bank bylaws, and restricts and extends it.
+Central Bank extends Bank, and weakens it.
 Vocabulary: z has the policy rate for e at the number n = policy_rate(z,e,n); z holds v's vote to set the policy rate for e at n = vote_rate(z,v,e,n); z holds v's vote to lend y n z-coins due e = vote_lend(z,v,y,n,e).
 Roles: the governors of z = governors(z), listed by z has y in the role Governor and y holds the role Governor in z; the committee members of z = committee_members(z).
 x is a governor of z: x holds the role Governor in z.

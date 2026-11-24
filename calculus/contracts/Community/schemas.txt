@@ -1,5 +1,5 @@
 Community
-Community instantiates Bank with community bylaws, and extends it.
+Community extends Bank.
 x is a member of z: x is a participant of z.
 x is a treasurer of z: x holds the role Treasurer in z.
 After x swaps n x-coins for n z-coins: no longer x holds n x-coins, z holds n x-coins, no longer z holds n z-coins and x holds n z-coins.
