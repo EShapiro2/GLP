@@ -1,5 +1,5 @@
 Consumers' Cooperative
-Consumers' Cooperative unites Cooperative and an amendment of Trading Company, and extends and amends the union.
+Consumers' Cooperative unites Cooperative and an augmentation of Trading Company, and extends and augments the union.
 Vocabulary: y has paid z the fee = paid_fee(z,y); z has the fee at the number n = fee(z,n).
 the earlier fee of z has ended: z has the fee at no number.
 After g sets the fee of z at n: the earlier fee of z has ended and z has the fee at the number n.

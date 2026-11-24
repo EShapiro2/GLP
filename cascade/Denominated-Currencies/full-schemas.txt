@@ -7,7 +7,7 @@ Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) gu
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
-Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+Notes:0 - | A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1+Denominated Coins:1 ■ Issue: note(Alice,Alice,Type,Dollar,*Sum) <- issued_in(Alice,Dollar) guarded by Alice.
 Notes:2+Denominated Currencies:2 ○ Swap: knows(Bob,Carol), knows(Alice,Dave), ~note(Alice,Carol,Type,Dollar,*Sum), note(Bob,Carol,Type,Dollar,*Sum), ~note(Bob,Dave,Other,Dollar,*Total), note(Alice,Dave,Other,Dollar,*Total) <- knows(Alice,Bob), knows(Bob,Alice), note(Alice,Carol,Type,Dollar,*Sum), note(Bob,Dave,Other,Dollar,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.

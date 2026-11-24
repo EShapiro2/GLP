@@ -2,7 +2,7 @@
 Denominated Currencies
 An *identity* is a unique cryptographic key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
 *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.

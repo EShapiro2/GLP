@@ -6,13 +6,13 @@
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 3b5fd5d; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GAI's: the tab Known AI agents, which lists attestation_record; GAI's words for the questions of Enter, End guardian and Retire; and a line AI acts with a button for each other act of GAI:2.  The tab Guardianships, which lists the AI agents a person is a guardian of, and the other buttons are GnW's, GSG's and GKK's.  Git holds what the file said before.
 % Schemas: AI-Agents.glp beside this file, the full schemas, GKK's, GSG's, GnW's and GFP's with GAI's, printed by calculus/tools/adopt.py AI-Agents from the Logic pragmas and never written by hand; adopt.py --check AI-Agents holds it and cascade/AI-Agents/ to what the tools print.
 AI Agents
-AI Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+AI Agents unites a renaming of Guardians and Forwarding, and extends and augments the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 The *developer* of an AI agent is the signer of its code.
 Alf is an AI agent.
 1. ○ AI developer and guardian accountability. The developer of Alf will be accountable for Alf's defects. Every guardian of Alf will be accountable for operating it recklessly.
 2. ■ AI acts. Enter: The principal of Alf attests at its creation (Guardians:1), signed over Alf's public key, that Alf runs code signed by its developer. Every act of Alf requires this attestation and names its developer and its principal.
 Logic pragmas
-AI Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+AI Agents unites a renaming of Guardians and Forwarding, and extends and augments the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 The *developer* of an AI agent is the signer of its code.
 Alice and Bob are persons, Alf an AI agent, Proof and Seal attestations, Item an item; in clause 2 Will is an AI agent.
 1. ○ AI developer and guardian accountability. The developer of Alf will be accountable for Alf's defects. Every guardian of Alf will be accountable for operating it recklessly.
