@@ -1,8 +1,10 @@
-# Code #37, 2026-11-24, after its 1st compaction (in flight)
+# Code #37, 2026-11-24 10:45 UTC, after its 1st compaction
 
-- Task (papers thread, Udi 01:07 UTC "work to completion"): adopt all 91 Calculus contracts (calculus/contracts/NAME/) into programs/ and cascade/ by calculus/tools/adopt.py, rename Agents->AI-Agents, Community->Community-Bank (gcc), Backed-Community->Backed-Community-Bank, delete go's Community-Bank (= Mutual Credit); build.py reads calculus/contracts; about.json keys renamed; cascade.sh rows renamed.  Branch code/adopt-2026-11-24 (uncommitted at the compaction; then committed and merged to main).
-- Old Agents.glp, gcc/Community.glp, go/Backed-Community.glp and their cascade dirs kept: apps/compile.sh, run_all_tests.sh 9494-9495, apps/gai and vglp/cva still read them.  To move them to the new names is a follow-up.
-- cascade.sh failed on 20 rows with the new texts: pragmas no longer fit (Guardians, Notes, Feeds, Organisation: owners GSC, GFF, GO) and plays' platforms not printed again (apps/gkk, vglp/cva: compile.sh).  Owners told; records of those rows stale until then.
+- Done: the 91 Calculus contracts adopted on main f26b0da (adopt.py --adopted-check 91/0, --split-check 91/0); renames AI Agents, Community Bank (gcc), Backed Community Bank; go's Community Bank deleted; build.py reads calculus/contracts (local build: 92 contracts, the 91 plus Promoted Community Market, on Udi's list); apps/compile.sh and Section APPS read AI-Agents.  Merged with it: GSC 0898e2a, Currencies e772ed5, GO c41cd4a, vGLP a5a59e2, Calculus 70330f3, sGLP ae2a75c.
+- Open, with owners: the CVA compiler refuses 11 that compiled before (App, Auction, Children, Local Overlay, Second-Score Auction, Separating Distrust, Provenance Groups, Denominated Coins, Denominated Currencies: pragmas.sh does not inherit buttons through weakens, unites, renames, lifts; vGLP) and Coins, Bonds (list pragmas name no predicate; Currencies).  When fixed: merge, run compile.sh of vglp/cva and apps, cascade.sh on those rows.  secure_friendship's play platform (programs/vglp/cva/secure_friendship) is printed by no compile.sh: vGLP's.
+- 20 GO contracts are parametric (Calculus #11 certifies it): no platform until instantiated.
+- Old programs/gai/Agents.glp, gcc/Community.glp, go/Backed-Community.glp and cascade/Agents, Community, Backed-Community still in the tree; vglp/cva and tests may read them; remove once nothing does.
+- The full suite was not run on f26b0da.
 
 # Code #37, 2026-11-24 00:58 UTC (a thread of the project "Grassroots Oversight")
 
