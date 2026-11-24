@@ -1,0 +1,257 @@
+bash programs/sglp/test_sglp.sh, run by sGLP #14 on GLP main at 87eb09ab, 2026-11-24 11:17 UTC, Linux, Dart 3.13.7; checks (xxi), the clock, and (xxii), the environment, at its end.
+
+--- (i) a token is bound only when the machine rests
+  PASS  tests/busy loads
+  PASS  the rated goal, spawned before and after count(100000, Z), is released after it
+--- (ii) the times between releases are exponential with the rates' sum
+  PASS  tests/law loads
+        S = stats(10000, 0.21751575689391048, 0.04676802397673373); expected mean 0.222222, variance 0.049383
+  PASS  10000 times between releases
+  PASS  their mean is within 10% of 1/4.5
+  PASS  their variance is within 10% of 1/4.5^2
+--- (iii) the social graph's runs are reproducible from the seed
+  PASS  100 agents, 30 days, seed 20260927 (a): the run ends with no error
+  PASS  100 agents, 30 days, seed 20260927 (a): the log is not empty
+  PASS  100 agents, 30 days, seed 20260927 (b): the run ends with no error
+  PASS  100 agents, 30 days, seed 20260927 (b): the log is not empty
+  PASS  100 agents, 30 days, seed 1 (s1): the run ends with no error
+  PASS  100 agents, 30 days, seed 1 (s1): the log is not empty
+  PASS  two runs from seed 20260927 write byte-identical logs
+  PASS  seeds 20260927 and 1 write different logs
+--- (iv) the social graph, 100 agents for one year
+  PASS  100 agents, 1 year, seed 20260927: the run ends with no error
+  PASS  the log is not empty
+  PASS  the log is menus, approvals and their answers, and the monitor's last line
+        wall-clock 41 s; load average: 0.79, 0.27, 0.10
+        answers 15055
+        menu_answers 7532
+        approval_answers 7523
+        yes 3248
+        edges 1899
+        components 1
+        isolated 0
+        largest 100
+        clock 31557387.65284648
+        unread 0
+--- (v) the mix as arguments
+  PASS  100 agents, 30 days, seed 20260927, mix 60 70: the run ends with no error
+  PASS  100 agents, 30 days, seed 20260927, mix 0 0: the run ends with no error
+  PASS  100 agents, 30 days, seed 20260927, mix 100 100: the run ends with no error
+  PASS  social_graph/6 at 60 and 70 writes the log social_graph/4 writes
+        mix 0 0: 875 menus, other-sex share 0.5074; 874 approvals, yes share 0.8993
+  PASS  at 0 and 0, indifferent and sociable: over 0.4 of the menus pick the other sex, over 0.8 of the approvals are answered yes
+        mix 100 100: 449 menus, other-sex share 0.0200; 439 approvals, yes share 0.2301
+  PASS  at 100 and 100, homophile and wary: under 0.1 of the menus pick the other sex, under 0.3 of the approvals are answered yes
+--- (vi) friendship.awk's months
+  PASS  twelve month lines
+  PASS  the edges do not decrease, are those within a sex and across, and month 12's graph is the year's
+  PASS  month 1's edges are the 191 pairs with a yes before 2629800 s
+        month 1 at 2629800 edges 191 components 8 isolated 7 largest 93 within 137 across 54
+        month 2 at 5259600 edges 370 components 4 isolated 3 largest 97 within 257 across 113
+        month 3 at 7889400 edges 558 components 3 isolated 2 largest 98 within 376 across 182
+        month 4 at 10519200 edges 753 components 2 isolated 1 largest 99 within 505 across 248
+        month 5 at 13149000 edges 927 components 1 isolated 0 largest 100 within 614 across 313
+        month 6 at 15778800 edges 1110 components 1 isolated 0 largest 100 within 734 across 376
+        month 7 at 18408600 edges 1266 components 1 isolated 0 largest 100 within 840 across 426
+        month 8 at 21038400 edges 1398 components 1 isolated 0 largest 100 within 923 across 475
+        month 9 at 23668200 edges 1527 components 1 isolated 0 largest 100 within 1008 across 519
+        month 10 at 26298000 edges 1662 components 1 isolated 0 largest 100 within 1107 across 555
+        month 11 at 28927800 edges 1785 components 1 isolated 0 largest 100 within 1184 across 601
+        month 12 at 31557600 edges 1899 components 1 isolated 0 largest 100 within 1257 across 642
+--- (vii) the population's draw
+        run.sh: homophile 58 indifferent 42 wary 70 sociable 30; the log: homophile 58 indifferent 42 wary 70 sociable 30
+  PASS  the draw run.sh prints for (iv) is the profiles its log shows
+  PASS  the .draw file of (iv) is the counts line run.sh prints, then agents 1..100 in order, whose counts it is
+        the .draw file of (iv): 0 of 100 agents' lines not the profiles the log shows
+  PASS  each agent's line in the .draw file of (iv) is its profiles as the log of (iv) shows them
+  PASS  the draw of (iv) is the seeds of Appendix B: the clock's split from the run's first, then one for each agent, from which its profiles are drawn (tests/seeds)
+  PASS  at 0 and 0 the draw is no homophile and no wary agent, in its counts and in every agent's line
+  PASS  at 100 and 100 the draw is every agent homophile and wary, in its counts and in every agent's line
+--- (viii) circulation.awk on a fixed four-agent log
+  PASS  circulation.awk on tests/circulation/four.log prints the months and totals computed by hand
+--- (ix) coins among friends, four agents for a week, and the draw over a year
+  PASS  4 agents, 1 week, seed 20260927 (a): the run ends with no error
+  PASS  4 agents, 1 week, seed 20260927 (b): the run ends with no error
+  PASS  4 agents, 1 week, seed 1 (s1): the run ends with no error
+  PASS  two runs from seed 20260927 write byte-identical logs
+  PASS  seeds 20260927 and 1 write different logs
+  PASS  the run ends at its clock, within the week
+  PASS  the log is menus and offers and their answers, in the order of time, each offer the proposal waiting at its agent, read whole by circulation.awk
+  PASS  every menu and offer of the log is as the agent's clauses and request/2 give it (0 not)
+        wall-clock 1 s; load average: 0.80, 0.28, 0.10
+        month 1 at 2629800 circulation 118 holdings 8 wallets 4 pays 26 proposals 10 accepted 10 declined 0
+        answers 46
+        menu_answers 36
+        offer_answers 10
+        pays 26
+        proposals 10
+        accepted 10
+        declined 0
+        circulation 118
+        holdings 8
+        wallets 4
+        clock 596634.983657822
+        unread 0
+        unordered 0
+        unmatched 0
+  PASS  4 agents, 1 year, seed 1 (cy): the run ends with no error
+  PASS  the .draw files of (a), (s1) and (cy) are the counts line run.sh prints, then agents 1..4 in order, whose counts it is
+        the .draw file of (cy): 0 of 4 agents' lines not the profiles the log shows; the log shows the credit of 2
+  PASS  each agent's line in the .draw file of (cy) is its profiles where the log of (cy) shows them
+        draw spender 3 saver 1 generous 3 cautious 1
+        agent 1 saver generous
+        agent 2 spender cautious
+        agent 3 spender generous
+        agent 4 spender generous
+--- (x) the transformation
+  PASS  the printed modules are what the transformation prints from the sGLP sources
+  PASS  a source with a dimension not summing to one is refused with that fault alone, nothing printed, its profile in no dimension being no fault (Definitions "Stochastic Person, Population", "Well-Formed")
+  PASS  a mix with a share of 0.0 is translated, last or first, and its draw of 1..100 against the threshold 100 or 0 selects that profile for no agent (Definitions "Stochastic Person, Population", "Well-Formed")
+  PASS  the mended source is translated: the token and its clause go(_), its stop clause dropping the arguments, the rated goal rated(R, Tok), R the rate a second, the screen's reference, the asks, the person process's clause on an ask, its person and its seeding, the declaration and the draw
+  PASS  the printer: a declaration and a type definition each one line, a type T? T then ?, every constant of the source by term_to_string/2, in a clause and in a type's alternative, a type's name not quoted
+  PASS  in reader mode the person goal receives a writer and the program the reader: the person procedure of the dual type, its person second, the ask chosen by its type constant and taken apart to its functor only, rating_r(E?), the person ground, and the relay over its own type, relay_1(Rating, Rating?), the answer assigned from the copy and logged (Definitions "Copy, Relay" and "Person Process", sGLP a5aa59b and 0270ac6; sGLP's task of 2026-10-14 09:46 UTC, items 1 and 3)
+  PASS  a reader-mode type with an argument the program writes is translated: the answer handed over once the argument the person writes is ground, a fresh writer at the one the program writes, logged as _, the person goal's writer there bound to a reader the person process holds, and the program's term shown to the person goal by the present procedure of its type once ground
+  PASS  in writer mode an answer holding a position the program writes is handed over once the positions the person writes are ground, a fresh writer there, and the program's term shown to the person goal by the present procedure of its type
+  PASS  a writer-mode type with positions the person writes inside an argument the program writes is translated: shown whole once the term the program writes has no reader, the panel and its list of cards built and shown once complete, each card's answer a question of its own, logged in the panel as shown whole
+  PASS  a rated goal whose procedure has an output argument is refused, nothing printed
+  PASS  a profile whose predicate is the compiled program's is refused with that fault, nothing printed
+  PASS  a census of two roles is translated: the census exported from the profiles module and called by the persons of the run, which the run refuses where a person is of a role of no dimension; the stochastic person of each role, its functor the role, one profile per dimension of its role; a person procedure shared by two profiles; the person process giving each person goal its person; and the screen (Definitions "Person, Census", "Stochastic Person, Population", "Screen, Seen")
+  PASS  a role whose dimensions do not cover the interactive types is refused, naming the role, nothing printed (Definition "Profile, Dimension": disjoint and covering for each role)
+  PASS  a run declaration naming a census the source does not declare is refused (Definition "Person, Census")
+  PASS  a person procedure declared without the person, p(T°, Integer?), is refused (Definition "Dual, Person Procedure, Person Declaration": p(T°, Person?, Integer?))
+  PASS  the reserved names: a platform defining the type Person or the procedure seen, and a profile defining seen, are refused (Definition "Well-Formed")
+  PASS  a Person the source defines not of the terms person(K, Role, V) is refused (Definition "Person, Census")
+  PASS  a goal seen(L) becomes the request seen(L) on the screen's reference, which the person procedure and each procedure reaching the screen take, last (Section 4, "The transformation")
+--- (xi) a run with an interactive type in reader mode
+  PASS  tests/reader loads, its population printed before the run
+  PASS  five answers logged in the order of time, each a rating of 1..5 of type Rating?, the program reading those five, and the clock last
+        entry(9864.973212322917, 1, Rating?, rating(3))
+        entry(29553.194602395823, 1, Rating?, rating(2))
+        entry(30560.448195001987, 1, Rating?, rating(1))
+        entry(35581.397583946724, 1, Rating?, rating(2))
+        entry(100879.53342709826, 1, Rating?, rating(3))
+        clock(100879.53342709826)
+        Ns = [2, 3, 2, 1, 3]
+--- (xii) a run with the delivery status of vGLP's chat
+  PASS  the printed relay: each element once its text is ground, a fresh writer at its status, whose reader the person process keeps and shows the person goal once ground, the tail the next answer, and the stream's end
+  PASS  tests/delivery loads, its population printed before the run
+  PASS  the log: each message with its status as a variable, then the stream's end, in the order of time; the program reads the three texts; the person, waiting on each status, writes all three; the clock last
+        entry(1231.3831084331591, 1, Stream(Msg)?, [msg(hello, _) | _])
+        entry(5434.69700122892, 1, Stream(Msg)?, [msg(there, _) | _])
+        entry(6917.255233893367, 1, Stream(Msg)?, [msg(bye, _) | _])
+        entry(8190.60724201845, 1, Stream(Msg)?, [])
+        clock(8190.60724201845)
+        Ts = [hello, there, bye]
+--- (xiii) a run with a question the program puts inside an answer
+  PASS  the printed relay: the status shown to the person goal by the present procedure of Status, the question inside it a fresh writer whose reader the person process keeps, the acknowledgement handed over and logged in the status as shown
+  PASS  tests/receipt loads, its population printed before the run
+  PASS  the log: the three messages, the acknowledgement of the one read, read(ack), after it and before the next, then the stream's end, in the order of time; the program reads the acknowledgement into its receipt; the clock last
+        entry(1231.3831084331591, 1, Stream(Msg)?, [msg(hello, _) | _])
+        entry(5434.69700122892, 1, Stream(Msg)?, [msg(there, _) | _])
+        entry(6917.255233893367, 1, Stream(Msg)?, read(ack))
+        entry(8190.60724201845, 1, Stream(Msg)?, [msg(bye, _) | _])
+        entry(8601.647792531905, 1, Stream(Msg)?, [])
+        clock(8601.647792531905)
+        Rs = [plain(hello), acked(there, ack), plain(bye)]
+--- (xiv) a run with positions the person writes inside an argument the program writes
+  PASS  tests/panel loads, its population printed before the run
+  PASS  the log: each card answered as a question of its own, in the panel as shown whole, the other cards' answers _, in the order of time; the program reads the three answers logged; the clock last
+        entry(1231.3831084331591, 1, Panel, panel([card(1, no), card(2, _), card(3, _)]))
+        entry(1482.5582326644467, 1, Panel, panel([card(1, _), card(2, _), card(3, yes)]))
+        entry(4203.313892795761, 1, Panel, panel([card(1, _), card(2, no), card(3, _)]))
+        clock(4203.313892795761)
+        As = [no, no, yes]
+--- (xv) a run with a stream the person writes, its element type holding no position the program writes
+  PASS  the printed relay: a Stream(Integer) the person writes handed over one element at a time, the tail the next answer, and the stream's end
+  PASS  tests/numbers loads, its population printed before the run
+  PASS  the log: each integer as an element of its own, then the stream's end, in the order of time; the program reads their sum, 6; the clock last
+        entry(1231.3831084331591, 1, Stream(Integer)?, [1 | _])
+        entry(5434.69700122892, 1, Stream(Integer)?, [2 | _])
+        entry(6917.255233893367, 1, Stream(Integer)?, [3 | _])
+        entry(8190.60724201845, 1, Stream(Integer)?, [])
+        clock(8190.60724201845)
+        S = 6
+--- (xvi) the social graph's people meet through their friends
+  PASS  a run of 4 agents is refused, the harness requiring at least 6 (Appendix B)
+        menus checked against a yes before them 1217, people missing 0, met through a friend 446, lists out of order or of the wrong sex 0, lists shrunk 0
+  PASS  each menu shows the people its agent knows, in increasing order and by sex, two and two at the start, never fewer later; a menu asked after a yes shows the friend and the friend's friends, some met only so (Section 5)
+--- (xvii) a list the program writes in two steps, shown once, whole
+  PASS  the printed relays: Ready's shown at once, the Panel's shown whole once the term the program writes has no reader, each card's answer logged in the panel as shown whole
+  PASS  tests/steps loads, its population printed before the run
+  PASS  the log: the readiness, then the two cards, the second written only after it, the panel shown once both were written, in either order, each card at rate 3600/hour, each in the panel as shown whole; the program reads the three answers; the clock last
+        entry(29553.194602395823, 1, Ready, ready(yes))
+        entry(29553.60642412712, 1, Panel, panel([card(1, _), card(2, yes)]))
+        entry(29554.362189588264, 1, Panel, panel([card(1, yes), card(2, _)]))
+        clock(29554.362189588264)
+        As = [yes, yes, yes]
+--- (xviii) the harness of every canonical CVA platform
+  PASS  a horizon in months is refused by run.sh and by record.sh with exit 2, naming the six units, and nothing made (sGLP's paper, Appendix B)
+  PASS  the canonical platform of the social graph compiled to GLP, its agent/5 the compilation's, with its ask stream
+  PASS  the platform's interface in sGLP's term form, the Friendship record's interface.glp: its types, Request, propose(Proposal), Approval and Output among them, and the root's it names, Key and List, its volitional declarations, Request?'s request and Approval's respond and greet, with the constants and functors of their asks, and its compiled predicates (vGLP d433f71, "The compilation")
+  PASS  the scripted profiles transformed against the platform's interface (transform.sh --interface): the relay of Request?, in reader mode, the person of run n agents keyed by the platform's Key, the run's entries of one arity, each agent's seat, its person process and its screen
+  PASS  two agents of the canonical platform, one day, seed 20260927 (a): the run ends with no error
+  PASS  two agents of the canonical platform, one day, seed 20260927 (b): the run ends with no error
+  PASS  two agents of the canonical platform, one day, seed 1 (s1): the run ends with no error
+  PASS  two runs from seed 20260927 write one log and seed 1 another
+  PASS  the log: each request question answered by proposing establishing, an acquaintance with the other or befriending it, each at least once; the other's hello or attempt of acquaintance and its attempt to befriend approved yes; and each element of the program's output each agent's screen shows, output, a view showing its agent's own key or a notice, the first the empty view at 0 with the record's two tabs, an acquaintance and a friendship in a view after the approvals; in the order of time; the clock last (sGLP's task of 2026-10-20 08:00 UTC, item 5, of 2026-11-04 16:22 UTC, item 3, and of 2026-11-06 18:43 UTC, item 2)
+  PASS  the population's draw beside the log: its counts, then agents 1 and 2 with their profiles
+        draw scripted 2 agreeable 2
+        draw /tmp/tmp.bUNtvBfmMh/cva_a.draw: the counts and 2 agents' profiles
+        wall-clock 7 s
+        0	1	output	view(p1, [], [], [], [tab(Contacts, knows), tab(Friends, friend)])
+        0	2	output	view(p2, [], [], [], [tab(Contacts, knows), tab(Friends, friend)])
+        1231.3831084331591	1	Request?	propose(befriend(p1, p2))
+        1231.3831084331591	1	output	refused(befriend(p1, p2), p1, unable)
+        2713.941341097606	1	Request?	propose(establish(p1))
+        2713.941341097606	1	output	view(p1, [], [], [establish(p1)], [tab(Contacts, knows), tab(Friends, friend)])
+  PASS  a simulation record (cva/record.sh): the sGLP source as it stood, the printed modules, each seed's log and draw, the runs' logs, and the manifest naming the cascade, the commits and the seeds
+  PASS  the record's check (record.sh --check): its printed modules as printed and each seed's first day as recorded
+        profiles.glp: as printed
+        population.glp: as printed
+        20260927.log: first day as recorded, 146 entries
+        1.log: first day as recorded, 143 entries
+  PASS  the check fails on a record whose log or printed population was changed, naming each
+  PASS  a census over the canonical platform transformed against its interface: two roles, the guest's one dimension declaring both questions by the host's person procedures, the seats keyed by the platform's Key
+  PASS  the census's two agents on the canonical platform, one day, seed 20260927: the run ends with no error
+  PASS  the draw beside the log the host's two profiles and the guest's one, agents 1 and 2 the census's persons in its order; each agent's requests are proposals by its person's key, p1 and p2, read off its person, and its views show that key; its screen's output lines are logged
+  PASS  a record of the census's run (cva/record.sh), its agents census, its log the run's, and its check passing on it
+  PASS  a census keyed p2, p1, p3, not in the order @< takes: every message reaches the agent of its key, agent 1 p2's three, agent 2 p1's and agent 3 p3's (GLP-Spec, Cold-call)
+--- (xix) the screen: seen before and after an element arrives, and the log's output lines
+  PASS  tests/screen loads, its population printed before the run
+  PASS  the log: the first count answered 0, seen before the notes were shown, note(N1) not yet ground holding back note(9); each note then shown in order, output, at the time of the answer that grounds the first; the second count answered 2, seen after both; the program reads [0, 2]; the clock last
+        entry(0.3420508634536553, 1, Count, count(0))
+        entry(0.3420508634536553, 1, output, note(0))
+        entry(0.3420508634536553, 1, output, note(9))
+        entry(1.509638055896922, 1, Count, count(2))
+        clock(1.509638055896922)
+        Ns = [0, 2]
+--- (xx) a census of two roles with attributes, a dimension of one role, and seen with no Output
+  PASS  tests/census loads, its population printed before the run
+        4 persons, 12 entries, 0 not as their persons and draws say
+  PASS  the agents are the persons the census draws, in its order, a parent and its children, each with the stochastic person of its role, a parent two profiles and a child one; each greets with the key and the attribute its person gives it, the parent with the number of elements seen, none, the program writing nothing to its person; the moods as drawn; in the order of time; the clock last
+        entry(329.7443052975472, 2, Hello, hello(bea, _))
+        entry(329.7443052975472, 2, Hello, hello(_, 7))
+        entry(572.1930679705869, 1, Hello, hello(ann, _))
+        entry(572.1930679705869, 1, Hello, hello(_, 0))
+        entry(747.5695735755086, 1, Mood, mood(kind))
+        entry(1918.718300255823, 4, Mood, mood(happy))
+        entry(2139.6103755384393, 3, Hello, hello(cal, _))
+        entry(2139.6103755384393, 3, Hello, hello(_, 5))
+        entry(8241.506447335345, 4, Hello, hello(dov, _))
+        entry(8241.506447335345, 4, Hello, hello(_, 3))
+        entry(8329.167207793304, 3, Mood, mood(happy))
+        entry(9007.156319486387, 2, Mood, mood(happy))
+        clock(9007.156319486387)
+        Ps = [person(ann, parent, [kids(3)]), person(bea, child, [age(7)]), person(cal, child, [age(5)]), person(dov, child, [age(3)])]
+        Ds = [agent(1, parent(formal, kind)), agent(2, child(casual)), agent(3, child(casual)), agent(4, child(casual))]
+  PASS  a census drawing no person, and one drawing a person of a role of no dimension, are refused by the run, which takes no goal but the line refused (Section 3, after Definition "Well-Formed")
+--- (xxi) the machine's clock is the simulated clock
+  PASS  tests/clock loads
+        40 readings, the last at 3031988 s, 0 not of their Release
+  PASS  each of forty Releases, a day apart on average, read by now/1 one goal after the released goal's: its simulated time in milliseconds from 1970-01-01, up to under a second, and its day
+--- (xxii) a platform of an environment, agent/6
+  PASS  the source of an environment transformed over Local Overlay's interface, whose agent is agent/6: the printed profiles export environment(Person?, List(Atom))
+  PASS  two agents of Local Overlay for a day (cva/run.sh): each agent's first view shows its person's environment, bound(two) and bound(three), and each establishes its identity
+  PASS  run.sh refuses, with exit 2 and nothing run, a source with no environment/2 over Local Overlay, and Encounters, whose agent is agent/8
+
+=== 108 passed, 0 failed ===
