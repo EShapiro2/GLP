@@ -21,24 +21,24 @@ Acquaint: Alice [Acquaint] <bob>
   Bob: Alice asks for your consent to acquaint.
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
-Issue: Alice [Issue] <type>
-Swap: Alice [Swap] <dave> <other>
+Issue: Alice [Issue] <type> <sum>
+Swap: Alice [Swap] <sum> <dave> <other> <total>
   Bob: Alice asks for your consent to swap.
-Pay: Alice [Pay]
+Pay: Alice [Pay] <sum>
   Bob: Alice asks for your consent to pay.
-Pay issuer: Alice [Pay issuer]
-Deposit: Alice [Deposit] <cond>
+Pay issuer: Alice [Pay issuer] <sum>
+Deposit: Alice [Deposit] <sum> <cond>
   Carol: Alice asks for your consent to deposit.
-Release: Carol [Release]
+Release: Carol [Release] <sum>
   Bob: Carol asks for your consent to release.
-Return: Carol [Return]
+Return: Carol [Return] <sum>
   Alice: Carol asks for your consent to return.
 Redeem: Alice [Redeem] <carol>
 Open account: Alice [Open account] <acct>
   Bob: Alice asks for your consent to open account.
-Account deposit: Alice [Account deposit]
-Partner deposit: Bob [Partner deposit]
-Withdraw: Alice [Withdraw]
+Account deposit: Alice [Account deposit] <sum>
+Partner deposit: Bob [Partner deposit] <sum>
+Withdraw: Alice [Withdraw] <sum>
   Bob: Alice asks for your consent to withdraw.
-Partner withdraw: Alice [Partner withdraw]
+Partner withdraw: Alice [Partner withdraw] <sum>
   Bob: Alice asks for your consent to partner withdraw.

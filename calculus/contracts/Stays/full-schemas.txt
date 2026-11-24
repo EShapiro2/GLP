@@ -20,7 +20,7 @@ Notes:4 ○ Return: ~escrow_note(Carol,Dave,Type,Alice,Bob,Cond,*Sum), note(Alic
 Notes:4 ○ | Carol will release them only if Cond is met, and return them only if it fails.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 Coins:0 - | Carol is possibly Alice or Bob.
-Coins:2 ■ Redeem: ~note(Alice,Bob,coin), note(Bob,Bob,coin), ~note(Bob,Carol,coin), note(Alice,Carol,coin), knows(Alice,Carol) <- knows(Alice,Bob), note(Alice,Bob,coin), note(Bob,Carol,coin) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Coins:2 ■ Redeem: ~note(Alice,Bob,coin,*1), note(Bob,Bob,coin,*1), ~note(Bob,Carol,coin,*1), note(Alice,Carol,coin,*1), knows(Alice,Carol) <- knows(Alice,Bob), note(Alice,Bob,coin,*1), note(Bob,Carol,coin,*1) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 Stays:0 - | Environment: x can host guests.

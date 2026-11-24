@@ -29,7 +29,6 @@ DAO GCE yes yes yes
 Dating GM yes yes yes
 Democratic-Community GO yes parametric yes
 Denominated-Coins Currencies yes yes yes
-Denominated-Currencies Currencies yes yes yes
 Directory GNA yes yes yes
 Disputes GCE yes yes yes
 Distrust GGGA yes yes yes

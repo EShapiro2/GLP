@@ -18,44 +18,45 @@ Tennis Courts
 17. ■ Organisations befriend.  Orga may enter a relation with Will with the consent of Will, Alice and Bob, provided Orga and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
 18. ■ Organisations of one officer befriend.  Orga may enter a relation with Will with the consent of Will, Alice and Bob, provided Orga and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
 19. ■ Retire.  Those who decide for Orga may retire Orga; every guardianship and relation of Orga then ends and Orga can take no act.
-20. ■ Propose.  An officer, or a person the bylaws name, may propose an act of Orga.
-21. ■ Vote.  Those who decide the act may vote on it.
-22. ■ Act.  An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.
-23. ■ Join.  Bob may become a participant of Orga with the consent of those who decide for Orga.
-24. ■ Leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
-25. ■ Officer leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
-26. ■ Expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
-27. ■ Officer expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
-28. ■ Amend.  Those who decide it may amend the bylaws.
-29. ■ Book.  Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a court of Orga, by Alice and Carol jointly, each a participant of the Club with fewer outstanding bookings than the bound.
-30. ■ Cancel.  Alice may cancel her booking.
-31. ■ Post.  Alice may make a post.
-32. ■ Tell.  Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with a part of the rest of the budget, both according to the gossip protocol.
-33. ■ Return.  Bob, who holds two matching posts, one from Alice, forwards to Alice the second post.
-34. ■ Meet.  Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other, only by Anonymous Rendezvous:1 with the one-time keys of the two posts, at the rendezvous server named by the post whose public key has the smaller hash.
-35. ■ Enter.  Alice may create an organisation, Orga, and establish Orga's identity by choosing Orga's key pair, and Wendy must consent.
-36. ■ Make guardian.  Those who decide for Wendy may make Bob a guardian of Wendy, with the consent of Bob, provided Wendy is a ward, Wendy is not retired, Bob is a person, Wendy has Alice as a guardian and Bob counts Alice as a friend.
-37. ■ Resign 2.  Bob may end his guardianship of Orga.
-38. ■ End guardian.  Those who decide for Wendy, other than Bob, may end Bob's guardianship of Wendy.
-39. ■ Guardian unfriend.  Bob may end his friendship with his ward Wendy.
-40. ■ Ward acquaint.  Wendy and Bob may jointly come to know each other, provided Wendy is a ward, Wendy has Alice as a guardian and Bob is a person.
-41. ■ Ward befriend.  Wendy and Bob may jointly become friends, with the consent of Alice, provided Wendy is a ward, Wendy is not retired, Wendy has Alice as a guardian, Bob is a person, Wendy and Bob know each other and Alice and Bob are friends.
-42. ■ Ward end.  Wendy may end her friendship with Bob, provided Wendy does not have Bob as a guardian.
-43. ■ Unfriend 2.  Orga, Bob or Alice may end the relation of Bob and Orga.
-44. ■ Ward unfriend.  Orga, Bob or Alice may end the relation of Bob and Orga.
-45. ■ Wards acquaint.  Wendy and Will may jointly come to know each other, provided Wendy is a ward, Wendy has Alice as a guardian, Will is a ward and Will has Bob as a guardian.
-46. ■ Wards befriend.  Wendy and Will may jointly become friends, with the consent of Alice and Bob, provided Wendy is a ward, Wendy is not retired, Wendy has Alice as a guardian, Will is a ward, Will is not retired, Will has Bob as a guardian, Wendy and Will know each other, Alice knows Will and Alice and Bob are friends.
-47. ■ Wards of one guardian befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
-48. ■ Retire 2.  Those who decide for Orga may retire Orga; every guardianship and relation of Orga then ends and Orga can take no act.
-49. ■ Open server.  Carol may make her service Dave a rendezvous server.
-50. ■ Sign link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
-51. ■ Invite by link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
-52. ■ Use link.  Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
-53. ■ Present.  Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship.
-54. ■ Match.  Dave then gives each the address of the other.
-55. ■ Present 2.  Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own.
-56. ■ Match 2.  Dave then gives each the address of the other.
-57. ■ Organisation ward acquaint.  Club, an organisation, and Wendy, a ward, may jointly come to know each other.
+20. ■ Found by an organisation.  Alice, or an organisation with the consent of Alice, may create Orga (Guardians:1); Alice is then its first officer, and Orga must consent.
+21. ■ Propose.  An officer, or a person the bylaws name, may propose an act of Orga.
+22. ■ Vote.  Those who decide the act may vote on it.
+23. ■ Act.  An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.
+24. ■ Join.  Bob may become a participant of Orga with the consent of those who decide for Orga.
+25. ■ Leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
+26. ■ Officer leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
+27. ■ Expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
+28. ■ Officer expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
+29. ■ Amend.  Those who decide it may amend the bylaws.
+30. ■ Book.  Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a court of Orga, by Alice and Carol jointly, each a participant of the Club with fewer outstanding bookings than the bound.
+31. ■ Cancel.  Alice may cancel her booking.
+32. ■ Post.  Alice may make a post.
+33. ■ Tell.  Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with a part of the rest of the budget, both according to the gossip protocol.
+34. ■ Return.  Bob, who holds two matching posts, one from Alice, forwards to Alice the second post.
+35. ■ Meet.  Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other, only by Anonymous Rendezvous:1 with the one-time keys of the two posts, at the rendezvous server named by the post whose public key has the smaller hash.
+36. ■ Enter.  Alice may create an organisation, Orga, and establish Orga's identity by choosing Orga's key pair, and Wendy must consent.
+37. ■ Make guardian.  Those who decide for Wendy may make Bob a guardian of Wendy, with the consent of Bob, provided Wendy is a ward, Wendy is not retired, Bob is a person, Wendy has Alice as a guardian and Bob counts Alice as a friend.
+38. ■ Resign 2.  Bob may end his guardianship of Orga.
+39. ■ End guardian.  Those who decide for Wendy, other than Bob, may end Bob's guardianship of Wendy.
+40. ■ Guardian unfriend.  Bob may end his friendship with his ward Wendy.
+41. ■ Ward acquaint.  Wendy and Bob may jointly come to know each other, provided Wendy is a ward, Wendy has Alice as a guardian and Bob is a person.
+42. ■ Ward befriend.  Wendy and Bob may jointly become friends, with the consent of Alice, provided Wendy is a ward, Wendy is not retired, Wendy has Alice as a guardian, Bob is a person, Wendy and Bob know each other and Alice and Bob are friends.
+43. ■ Ward end.  Wendy may end her friendship with Bob, provided Wendy does not have Bob as a guardian.
+44. ■ Unfriend 2.  Orga, Bob or Alice may end the relation of Bob and Orga.
+45. ■ Ward unfriend.  Orga, Bob or Alice may end the relation of Bob and Orga.
+46. ■ Wards acquaint.  Wendy and Will may jointly come to know each other, provided Wendy is a ward, Wendy has Alice as a guardian, Will is a ward and Will has Bob as a guardian.
+47. ■ Wards befriend.  Wendy and Will may jointly become friends, with the consent of Alice and Bob, provided Wendy is a ward, Wendy is not retired, Wendy has Alice as a guardian, Will is a ward, Will is not retired, Will has Bob as a guardian, Wendy and Will know each other, Alice knows Will and Alice and Bob are friends.
+48. ■ Wards of one guardian befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+49. ■ Retire 2.  Those who decide for Orga may retire Orga; every guardianship and relation of Orga then ends and Orga can take no act.
+50. ■ Open server.  Carol may make her service Dave a rendezvous server.
+51. ■ Sign link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+52. ■ Invite by link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+53. ■ Use link.  Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
+54. ■ Present.  Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship.
+55. ■ Match.  Dave then gives each the address of the other.
+56. ■ Present 2.  Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own.
+57. ■ Match 2.  Dave then gives each the address of the other.
+58. ■ Organisation ward acquaint.  Club, an organisation, and Wendy, a ward, may jointly come to know each other.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -65,8 +66,7 @@ Introduce: Alice [Introduce]
 Befriend: Alice [Befriend]
   Bob: Alice asks for your consent to befriend.
 Person unfriend: Alice [Person unfriend]
-Found: Alice [Found] <orga> <gov> <role>
-  Gov: Alice asks for your consent to found.
+Found: Alice [Found] <orga> <role>
 Appoint: Bob [Appoint] <role>
   Decider: Bob asks for your consent to appoint.
   Codecider: Bob asks for your consent to appoint.
@@ -93,6 +93,8 @@ Organisations of one officer befriend: Orga [Organisations of one officer befrie
   Alice: Orga asks for your consent to organisations of one officer befriend.
 Retire: Decider [Retire]
   Codecider: Decider asks for your consent to retire.
+Found by an organisation: Alice [Found by an organisation] <orga> <gov> <role>
+  Gov: Alice asks for your consent to found by an organisation.
 Propose: Bob [Propose] <motion>
 Vote: Bob [Vote]
 Act: Alice [Act]
