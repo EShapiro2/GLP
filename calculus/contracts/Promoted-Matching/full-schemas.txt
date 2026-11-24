@@ -219,3 +219,5 @@ Community Bank:2 ○ | Any treasurer will redeem an Orga-coin Bob holds against 
 Promoted Gossip:0 - | The budget of a post is Orga-coins, and the cost of a forward is a number of them. The gossip protocol also says what part of the budget is the holder's.
 Promoted Gossip:0 - | Environment: the gossip protocol leaves x n of p.
 Promoted Gossip:3 ■ Keep: ~part_due(Alice,Post), ~post_coins(Alice,Post,Orga,*Kept), note(Alice,Orga,coin,Dollar,*Kept) <- post(Alice,Post), leaves(Alice,Post,Kept), part_due(Alice,Post), post_coins(Alice,Post,Orga,*Kept) guarded by Alice.
+Promoted Matching:1 ■ | Organisation and ward.
+Promoted Matching:1 ■ Organisation ward acquaint: knows(Orga,Wendy), knows(Wendy,Orga) <- organisation(Orga), has_officer(Orga,Alice), ward(Wendy), has_guardian(Wendy,Bob) guarded by Orga, Wendy.

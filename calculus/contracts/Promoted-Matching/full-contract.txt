@@ -68,3 +68,4 @@ Denominated Currencies:4. ■ Pay accepted coins: Alice may pay Bob, whom she kn
 Community Bank:1. ■ Draw: Alice, a treasurer, may swap Alice-coins for Orga-coins.
 Community Bank:2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.
 Promoted Gossip:3. ■ Keep: Alice may take her part of the budget of a post she holds, according to the gossip protocol.
+Promoted Matching:1. ■ Organisation and ward. Organisation ward acquaint: Orga, an organisation, and Wendy, a ward, may jointly come to know each other.

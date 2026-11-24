@@ -49,3 +49,4 @@ Rendezvous:2. ■ Invite by link: Alice may register with Dave an invitation lin
 Rendezvous:3. ■ Use link: Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
 Rendezvous:4. ■ Reconnection. Present: Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship. Match: Dave then gives each the address of the other.
 Anonymous Rendezvous:1. ■ Meet. Present: Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own. Match: Dave then gives each the address of the other.
+Tennis Courts:2. ■ Organisation and ward. Organisation ward acquaint: Club, an organisation, and Wendy, a ward, may jointly come to know each other.

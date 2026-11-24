@@ -1,7 +1,7 @@
 AI Agents: derived
     first line: AI Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed:   AI Agents unites a renaming of Guardians and Forwarding, and extends and amends the union.
-    step: rename Guardians: principal for creator, ai_agent for ward
+    step: rename Guardians: principal for creator, guardians for deciders, ai_agent for ward
 Ads: derived
     first line: Ads unites Community Network and Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
     proposed:   Ads unites Community Network and Overlay, and extends the union.
@@ -222,8 +222,8 @@ Promoted Gossip: derived
     first line: Promoted Gossip unites Gossip and Community Bank, and extends and amends the union.
     proposed:   Promoted Gossip unites Gossip and Community Bank, and extends and amends the union.
 Promoted Matching: derived
-    first line: Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
-    proposed:   Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
+    first line: Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip, and extends the union.
+    proposed:   Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip, and extends the union.
     step: weaken or strengthen Gossip:1 Post of Anonymous Matching by conclusions ~note(Alice,Orga,coin,Dollar,*Budget), post_coins(Alice,Post,Orga,*Budget), part_due(Alice,Post); conditions note(Alice,Orga,coin,Dollar,*Budget), as Promoted Gossip has it
     step: weaken or strengthen Gossip:2 Tell of Anonymous Matching by conclusions ~post_coins(Alice,Post,Orga,*Part), post_coins(Bob,Post,Orga,*Part), part_due(Bob,Post); conditions post_coins(Alice,Post,Orga,*Part), as Promoted Gossip has it
 Provenance Groups: derived
@@ -234,8 +234,8 @@ Recommendations: derived
     first line: Recommendations extends Knowledge.
     proposed:   Recommendations extends Knowledge.
 Rehearsal Rooms: derived
-    first line: Rehearsal Rooms unites Booking and Partners.
-    proposed:   Rehearsal Rooms unites Booking and Partners.
+    first line: Rehearsal Rooms unites Booking and Partners, and extends the union.
+    proposed:   Rehearsal Rooms unites Booking and Partners, and extends the union.
 Rendezvous: derived
     first line: Rendezvous extends Services.
     proposed:   Rendezvous extends Services.
@@ -276,8 +276,8 @@ Stays: derived
     first line: Stays extends Coins.
     proposed:   Stays extends Coins.
 Tennis Courts: derived
-    first line: Tennis Courts unites Booking and Partners, and weakens the union.
-    proposed:   Tennis Courts unites Booking and Partners, and weakens the union.
+    first line: Tennis Courts unites Booking and Partners, and extends and weakens the union.
+    proposed:   Tennis Courts unites Booking and Partners, and extends and weakens the union.
 Trading Company: derived
     first line: Trading Company extends Corporation.
     proposed:   Trading Company extends Corporation.

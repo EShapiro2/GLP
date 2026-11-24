@@ -219,3 +219,5 @@ Community Bank:2 ○ | Any treasurer will redeem an Orga-coin Bob holds against 
 Promoted Gossip:0 - | The budget of a post is Orga-coins, and the cost of a forward is a number of them. The gossip protocol also says what part of the budget is the holder's.
 Promoted Gossip:0 - | Environment: the gossip protocol leaves x n of p.
 Promoted Gossip:3 ■ Keep: Alice may no longer Alice has a part of Post to take, no longer Alice holds Kept Orga-coins for Post and Alice holds Kept Dollar-denominated Orga-coins, provided Alice holds the post Post and the gossip protocol leaves Alice Kept of Post.
+Promoted Matching:1 ■ | Organisation and ward.
+Promoted Matching:1 ■ Organisation ward acquaint: Orga and Wendy may jointly Orga knows Wendy and Wendy knows Orga, provided Orga is an organisation, Orga has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.

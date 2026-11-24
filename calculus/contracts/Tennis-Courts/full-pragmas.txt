@@ -13,7 +13,7 @@ Of Anonymous Matching: Each post carries the public key of a one-time key of its
 Of Free Matching: The budget of a post is an integer, the cost of a forward is one, and the gossip protocol is forwarding to any friend with the budget less one.
 Of Partners: A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
 Of Tennis Courts: The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
-Alice, Bob and Carol are persons, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Res a court, Slot a slot, Post and Reply posts, Budget, Rest and Part numbers, Other and Key one-time keys, Wendy a ward, Dave a service, Link an invitation link.
+Alice, Bob and Carol are persons, Orga, Will, Gov and Club organisations, Motion an act of Orga, Role a role, Res a court, Slot a slot, Post and Reply posts, Budget, Rest and Part numbers, Other and Key one-time keys, Wendy a ward, Dave a service, Link an invitation link.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
 Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
@@ -50,3 +50,4 @@ Anonymous Rendezvous:1. ■ Meet.
 Anonymous Rendezvous:1, Anonymous Matching:1. ■ Present: Alice may present to Dave the keys Key and Other signed with Key, provided Alice holds the one-time key Key, Alice knows the public key of Other, Alice knows Dave, Dave is a rendezvous server, Alice has made the post Post, Alice holds the post Reply, Post carries the public key of Key, Reply carries the public key of Other and Dave is named by the one of Post and Reply whose public key has the smaller hash.
 Anonymous Rendezvous:1. ■ Match: Dave matches Alice and Bob on Key and Other.
 Anonymous Matching:1. ■ Meet.
+Tennis Courts:2. ■ Organisation and ward. Organisation ward acquaint: Club and Wendy may jointly come to know each other, provided Club is an organisation, Club has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.

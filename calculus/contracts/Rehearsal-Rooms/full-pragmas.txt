@@ -50,3 +50,4 @@ Anonymous Rendezvous:1. ■ Meet.
 Anonymous Rendezvous:1, Anonymous Matching:1. ■ Present: Alice may present to Dave the keys Key and Other signed with Key, provided Alice holds the one-time key Key, Alice knows the public key of Other, Alice knows Dave, Dave is a rendezvous server, Alice has made the post Post, Alice holds the post Reply, Post carries the public key of Key, Reply carries the public key of Other and Dave is named by the one of Post and Reply whose public key has the smaller hash.
 Anonymous Rendezvous:1. ■ Match: Dave matches Alice and Bob on Key and Other.
 Anonymous Matching:1. ■ Meet.
+Rehearsal Rooms:1. ■ Organisation and ward. Organisation ward acquaint: Orga and Wendy may jointly come to know each other, provided Orga is an organisation, Orga has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.

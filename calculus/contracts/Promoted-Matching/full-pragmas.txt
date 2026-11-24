@@ -72,3 +72,4 @@ Denominated Currencies:4. ■ Pay accepted coins: Alice may pay Bob a Carol-coin
 Community Bank:1. ■ Draw: Alice may swap Sum Dollar-denominated Alice-coins for Sum Dollar-denominated Orga-coins, provided Alice is a treasurer of Orga.
 Community Bank:2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.
 Promoted Gossip:3. ■ Keep: Alice may take Kept Dollar-denominated Orga-coins of Post, provided Alice holds the post Post and the gossip protocol leaves Alice Kept of Post.
+Promoted Matching:1. ■ Organisation and ward. Organisation ward acquaint: Orga and Wendy may jointly come to know each other, provided Orga is an organisation, Orga has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.

@@ -209,8 +209,8 @@ Promoted Gossip
     present:  Promoted Gossip unites Gossip and Community Bank, and extends and amends the union.
     proposed: Promoted Gossip unites Gossip and Community Bank, and extends and amends the union.
 Promoted Matching
-    present:  Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
-    proposed: Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
+    present:  Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip, and extends the union.
+    proposed: Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip, and extends the union.
 Provenance Groups
     present:  Provenance Groups unites Groups and a strengthening of AI Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed: Provenance Groups unites Groups and a strengthening of AI Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
@@ -218,8 +218,8 @@ Recommendations
     present:  Recommendations extends Knowledge.
     proposed: Recommendations extends Knowledge.
 Rehearsal Rooms
-    present:  Rehearsal Rooms unites Booking and Partners.
-    proposed: Rehearsal Rooms unites Booking and Partners.
+    present:  Rehearsal Rooms unites Booking and Partners, and extends the union.
+    proposed: Rehearsal Rooms unites Booking and Partners, and extends the union.
 Rendezvous
     present:  Rendezvous extends Services.
     proposed: Rendezvous extends Services.
@@ -257,8 +257,8 @@ Stays
     present:  Stays extends Coins.
     proposed: Stays extends Coins.
 Tennis Courts
-    present:  Tennis Courts unites Booking and Partners, and weakens the union.
-    proposed: Tennis Courts unites Booking and Partners, and weakens the union.
+    present:  Tennis Courts unites Booking and Partners, and extends and weakens the union.
+    proposed: Tennis Courts unites Booking and Partners, and extends and weakens the union.
 Trading Company
     present:  Trading Company extends Corporation.
     proposed: Trading Company extends Corporation.

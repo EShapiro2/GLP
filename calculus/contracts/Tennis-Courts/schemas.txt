@@ -1,6 +1,8 @@
 Tennis Courts
-Tennis Courts unites Booking and Partners, and weakens the union.
+Tennis Courts unites Booking and Partners, and extends and weakens the union.
 Renaming of Booking: a court for a resource.
 Tennis Courts:0 - | The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
 Tennis Courts:0 - | Alice and Carol are persons, Club an organisation.
 Tennis Courts:1 ■ Book: Booking:1 <- participant(Carol,Club), has_participant(Club,Carol), under_bound(Carol,Club) guarded by Carol.
+Tennis Courts:2 ■ | Organisation and ward.
+Tennis Courts:2 ■ Organisation ward acquaint: knows(Club,Wendy), knows(Wendy,Club) <- organisation(Club), has_officer(Club,Alice), ward(Wendy), has_guardian(Wendy,Bob) guarded by Club, Wendy.
