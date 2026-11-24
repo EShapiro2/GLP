@@ -408,6 +408,9 @@ SYNTAX = [
     ('"Yes, but only if"', r'\byes,? but only if\b', '"No, not unless X" (claude.md)'),
     ('a dash-list glossing "every"', r'\bevery\s+\w+(?:\s+\w+)?\s*(?:---|—|--)\s*\w', 'the rule, once (claudese.md, construction 23)'),
     ('"X is no Y" with a predicate noun', r'\band no \w+ of (?:it|them|him|her)\b', 'state what it is (claudese.md, construction 15)'),
+    ('the present tense for what may happen',
+     r"\b(?:which|that|whom|where|when|if|unless|until|once)\s+(?:a|an|the|its|their|his|her|each|every|any|this|that|some|no)\s+(?:[\w'-]+\s+){0,3}?(?!(?:is|has|was|does)\b)[a-z]{2,}(?:s|es)\s+or\s+(?!(?:is|has|was|does)\b)(?:[a-z]{2,}(?:s|es)|not)\b",
+     '"which a local state may pass or fail": a modality, or the past or future; the present only for what is (Udi, 2026-11-23 22:58 UTC; claudese.md, 32)'),
     ('a vague abstraction for a fact', r'\b(?:in (?:effect|essence)|at (?:heart|its core)|the (?:heart|crux|essence) of|boils? down|in its own right)\b',
      'state the fact'),
 ]
