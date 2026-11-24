@@ -12,6 +12,6 @@ C: Relaxed (expanded schemas)
 C:0 - | Alice, Bob and Carol are persons, Sum a number.
 B:1+C:1 ■ Pay free: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice.
 --- term B
-[sas(pay, ['Alice', 'Bob', 'Carol'], ['Carol', 'Sum'], [not(times(num('Sum'), atom(coin, ['Alice', 'Carol']))), times(num('Sum'), atom(coin, ['Bob', 'Carol']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), times(num('Sum'), atom(coin, ['Alice', 'Carol']))], true, ['Alice', 'Bob'])]
+[sas(pay, ['Alice', 'Bob', 'Carol'], ['Carol', 'SumSet', 'Sum'], [not(atom(coin, ['Alice', 'Carol', set('SumSet')])), atom(coin, ['Bob', 'Carol', set('SumSet')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(coin, ['Alice', 'Carol', set('SumSet')])], eq(size('SumSet'), num('Sum')), ['Alice', 'Bob'])]
 --- term C
-[sas(pay_free, ['Alice', 'Bob', 'Carol'], ['Carol', 'Sum'], [not(times(num('Sum'), atom(coin, ['Alice', 'Carol']))), times(num('Sum'), atom(coin, ['Bob', 'Carol']))], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), times(num('Sum'), atom(coin, ['Alice', 'Carol']))], true, ['Alice'])]
+[sas(pay_free, ['Alice', 'Bob', 'Carol'], ['Carol', 'SumSet', 'Sum'], [not(atom(coin, ['Alice', 'Carol', set('SumSet')])), atom(coin, ['Bob', 'Carol', set('SumSet')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(coin, ['Alice', 'Carol', set('SumSet')])], eq(size('SumSet'), num('Sum')), ['Alice'])]

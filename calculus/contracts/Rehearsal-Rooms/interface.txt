@@ -113,7 +113,7 @@ Tell: Alice [Tell]
 Meet: Alice [Meet]
   Carol: Alice asks for your consent to meet.
 Enter: Alice [Enter] <wendy>
-Make guardian: Bob [Make guardian] <wendy> <decider>
+Make guardian: Bob [Make guardian] <wendy>
   Decider: Bob asks for your consent to make guardian.
   Codecider: Bob asks for your consent to make guardian.
 Resign 2: Bob [Resign 2]

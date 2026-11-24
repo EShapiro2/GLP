@@ -36,17 +36,17 @@ Acquaint: Alice [Acquaint] <bob>
   Bob: Alice asks for your consent to acquaint.
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
-Issue: Alice [Issue] <type> <sum>
-Swap: Alice [Swap] <sum> <dave> <other> <total>
+Issue: Alice [Issue] <type>
+Swap: Alice [Swap] <dave> <other>
   Bob: Alice asks for your consent to swap.
-Pay: Alice [Pay] <sum>
+Pay: Alice [Pay]
   Bob: Alice asks for your consent to pay.
-Pay issuer: Alice [Pay issuer] <sum>
-Deposit: Alice [Deposit] <sum> <cond>
+Pay issuer: Alice [Pay issuer]
+Deposit: Alice [Deposit] <cond>
   Carol: Alice asks for your consent to deposit.
-Release: Carol [Release] <sum>
+Release: Carol [Release]
   Bob: Carol asks for your consent to release.
-Return: Carol [Return] <sum>
+Return: Carol [Return]
   Alice: Carol asks for your consent to return.
 Redeem: Alice [Redeem] <carol>
 Redeem coin against bond: Alice [Redeem coin against bond] <carol>
@@ -62,9 +62,9 @@ Want: Carol [Want] <wish>
 Want own: Alice [Want own] <wish>
 Withdraw: Carol [Withdraw] <alice> <item> <mart>
 Withdraw own: Alice [Withdraw own]
-Swap item for coin: Alice [Swap item for coin] <dave> <sum>
+Swap item for coin: Alice [Swap item for coin] <dave>
   Bob: Alice asks for your consent to swap item for coin.
-Swap item for bond: Alice [Swap item for bond] <dave> <sum>
+Swap item for bond: Alice [Swap item for bond] <dave>
   Bob: Alice asks for your consent to swap item for bond.
 Swap items: Alice [Swap items] <thing>
   Bob: Alice asks for your consent to swap items.

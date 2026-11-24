@@ -44,18 +44,18 @@ Vote against: Carol [Vote against]
 Vote own against: Alice [Vote own against]
 Pass: Alice [Pass] <votes>
 Reject: Alice [Reject] <votes>
-Issue: Alice [Issue] <type> <sum>
-Swap: Alice [Swap] <sum> <dave> <other> <total>
+Issue: Alice [Issue] <type>
+Swap: Alice [Swap] <dave> <other>
   Bob: Alice asks for your consent to swap.
-Pay: Alice [Pay] <sum>
+Pay: Alice [Pay]
   Bob: Alice asks for your consent to pay.
-Pay issuer: Alice [Pay issuer] <sum>
-Deposit: Alice [Deposit] <sum> <cond>
+Pay issuer: Alice [Pay issuer]
+Deposit: Alice [Deposit] <cond>
   Carol: Alice asks for your consent to deposit.
-Release: Carol [Release] <sum>
+Release: Carol [Release]
   Bob: Carol asks for your consent to release.
-Return: Carol [Return] <sum>
+Return: Carol [Return]
   Alice: Carol asks for your consent to return.
 Redeem: Alice [Redeem] <carol>
-Fund: Carol [Fund] <sum>
-Grant: Alice [Grant] <carol> <sum>
+Fund: Carol [Fund]
+Grant: Alice [Grant] <carol>

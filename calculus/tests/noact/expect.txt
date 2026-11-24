@@ -22,6 +22,6 @@ W:3 ■ Greet: greeted(Carol) <- guarded by Carol.
 --- term W
 [sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice']),
  sas(enter, ['Carol', 'Alice'], [], [atom(identity, ['Carol']), atom(ward, ['Carol']), atom(has_guardian, ['Carol', 'Alice']), atom(guardian, ['Alice', 'Carol'])], [atom(identity, ['Alice']), not(atom(identity, ['Carol'])), atom(person, ['Alice'])], true, ['Alice']),
- sas(greet, ['Carol'], [], [atom(greeted, ['Carol'])], [atom(identity, ['Carol']), or(atom(person, ['Carol']), and(atom(ward, ['Carol']), exists(['G1'], atom(has_guardian, ['Carol', 'G1']), true)))], true, ['Carol'])]
+ sas(greet, ['Carol', 'G1'], ['G1'], [atom(greeted, ['Carol'])], [atom(identity, ['Carol']), atom(ward, ['Carol']), atom(has_guardian, ['Carol', 'G1'])], true, ['Carol'])]
 --- relations.py
 V restricts W: holds
