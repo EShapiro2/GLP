@@ -18,55 +18,55 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-found(Peer, Constant)
+found(Peer, Speech)
 ;
-join(Peer, Peer, Constant)
+join(Peer, Peer, Speech)
 ;
-propose(Peer, Peer, Speech, Constant)
+propose(Peer, Peer, Speech, Speech)
 ;
-propose_own(Peer, Speech, Constant)
+propose_own(Peer, Speech, Speech)
 ;
-deliver_proposal(Peer, Peer, Speech, Constant)
+deliver_proposal(Peer, Peer, Speech, Speech)
 ;
-vote_for(Peer, Peer, Speech, Constant)
+vote_for(Peer, Peer, Speech, Speech)
 ;
-vote_own_for(Peer, Speech, Constant)
+vote_own_for(Peer, Speech, Speech)
 ;
-vote_against(Peer, Peer, Speech, Constant)
+vote_against(Peer, Peer, Speech, Speech)
 ;
-vote_own_against(Peer, Speech, Constant)
+vote_own_against(Peer, Speech, Speech)
 ;
-deliver_vote_for(Peer, Peer, Peer, Speech, Constant)
+deliver_vote_for(Peer, Peer, Peer, Speech, Speech)
 ;
-deliver_vote_against(Peer, Peer, Peer, Speech, Constant)
+deliver_vote_against(Peer, Peer, Peer, Speech, Speech)
 ;
-pass(Peer, Speech, Constant, Integer, Integer)
+pass(Peer, Speech, Speech, Integer, Integer)
 ;
-reject(Peer, Speech, Constant, Integer, Integer)
+reject(Peer, Speech, Speech, Integer, Integer)
 ;
-deliver_pass(Peer, Peer, Speech, Constant)
+deliver_pass(Peer, Peer, Speech, Speech)
 ;
-deliver_reject(Peer, Peer, Speech, Constant)
+deliver_reject(Peer, Peer, Speech, Speech)
 ;
-issue(Peer, Constant, Integer)
+issue(Peer, Integer)
 ;
-swap(Peer, Peer, Peer, Constant, Integer, Peer, Constant, Integer)
+swap(Peer, Peer, Peer, Integer, Peer, Integer)
 ;
-pay(Peer, Peer, Peer, Constant, Integer)
+pay(Peer, Peer, Peer, Integer)
 ;
-pay_issuer(Peer, Peer, Constant, Integer)
+pay_issuer(Peer, Peer, Integer)
 ;
-deposit(Peer, Peer, Peer, Constant, Integer, Peer, Speech)
+deposit(Peer, Peer, Peer, Integer, Peer, Speech)
 ;
-release(Peer, Peer, Peer, Constant, Peer, Speech, Integer)
+release(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
-return(Peer, Peer, Peer, Constant, Peer, Speech, Integer)
+return(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
 redeem(Peer, Peer, Peer)
 ;
-fund(Peer, Peer, Peer, Integer, Constant)
+fund(Peer, Peer, Peer, Integer, Speech)
 ;
-grant(Peer, Peer, Peer, Constant, Integer, Speech)
+grant(Peer, Peer, Peer, Speech, Integer, Speech)
 .
 
 Proposal ::=
@@ -76,52 +76,52 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-found(Peer, Constant)
+found(Peer, Speech)
 ;
-join(Peer, Peer, Constant)
+join(Peer, Peer, Speech)
 ;
-propose(Peer, Peer, Speech, Constant)
+propose(Peer, Peer, Speech, Speech)
 ;
-propose_own(Peer, Speech, Constant)
+propose_own(Peer, Speech, Speech)
 ;
-vote_for(Peer, Peer, Speech, Constant)
+vote_for(Peer, Peer, Speech, Speech)
 ;
-vote_own_for(Peer, Speech, Constant)
+vote_own_for(Peer, Speech, Speech)
 ;
-vote_against(Peer, Peer, Speech, Constant)
+vote_against(Peer, Peer, Speech, Speech)
 ;
-vote_own_against(Peer, Speech, Constant)
+vote_own_against(Peer, Speech, Speech)
 ;
-pass(Peer, Speech, Constant, Integer, Integer)
+pass(Peer, Speech, Speech, Integer, Integer)
 ;
-reject(Peer, Speech, Constant, Integer, Integer)
+reject(Peer, Speech, Speech, Integer, Integer)
 ;
-issue(Peer, Constant, Integer)
+issue(Peer, Integer)
 ;
-swap(Peer, Peer, Peer, Constant, Integer, Peer, Constant, Integer)
+swap(Peer, Peer, Peer, Integer, Peer, Integer)
 ;
-pay(Peer, Peer, Peer, Constant, Integer)
+pay(Peer, Peer, Peer, Integer)
 ;
-pay_issuer(Peer, Peer, Constant, Integer)
+pay_issuer(Peer, Peer, Integer)
 ;
-deposit(Peer, Peer, Peer, Constant, Integer, Peer, Speech)
+deposit(Peer, Peer, Peer, Integer, Peer, Speech)
 ;
-release(Peer, Peer, Peer, Constant, Peer, Speech, Integer)
+release(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
-return(Peer, Peer, Peer, Constant, Peer, Speech, Integer)
+return(Peer, Peer, Peer, Peer, Speech, Integer)
 ;
 redeem(Peer, Peer, Peer)
 ;
-fund(Peer, Peer, Peer, Integer, Constant)
+fund(Peer, Peer, Peer, Integer, Speech)
 ;
-grant(Peer, Peer, Peer, Constant, Integer, Speech)
+grant(Peer, Peer, Peer, Speech, Integer, Speech)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, []), req(person, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2, 3], [req(identity, []), req(person, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Found", [act(found, 1, [1], [req(identity, []), forb(steward, [at(2)])], [], [field(2, "delos", text)], [], [])]), button("Join", [act(join, 2, [1, 2], [req(identity, []), req(steward, [at(3)]), req(knows, [at(1)])], [3, 1], [], [], [])]), button("Propose", [act(propose, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)])], [4, 2], [field(3, "prop", text)], [], [])]), button("Propose own", [act(propose_own, 1, [1], [req(identity, []), req(member, [at(3), at(1)]), req(steward, [at(3)]), forb(proposal, [at(2), at(3)])], [3], [field(2, "prop", text)], [], [])]), button("Vote for", [act(vote_for, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), req(proposal, [at(3), at(4)]), forb(voted, [at(3), at(4)])], [4, 2, 3], [], [], [])]), button("Vote against", [act(vote_against, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), req(proposal, [at(3), at(4)]), forb(voted, [at(3), at(4)])], [4, 2, 3], [], [], [])]), button("Vote own for", [act(vote_own_for, 1, [1], [req(identity, []), req(member, [at(3), at(1)]), req(proposal, [at(2), at(3)]), req(steward, [at(3)]), forb(decided, [at(2), at(3)]), forb(voted, [at(2), at(3)])], [3, 2], [], [], [])]), button("Vote own against", [act(vote_own_against, 1, [1], [req(identity, []), req(member, [at(3), at(1)]), req(proposal, [at(2), at(3)]), req(steward, [at(3)]), forb(decided, [at(2), at(3)]), forb(voted, [at(2), at(3)])], [3, 2], [], [], [])]), button("Pass", [act(pass, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [], [])]), button("Reject", [act(reject, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [], [])]), button("Issue", [act(issue, 1, [1], [req(identity, [])], [], [field(2, "type", text), field(3, "amount", number)], [], [])]), button("Pay issuer", [act(pay_issuer, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(note, [at(2), at(3)])], [2, 3], [field(4, "amount", number)], [], [])]), button("Redeem", [act(redeem, 1, [1, 2, 3], [req(identity, []), req(knows, [at(2)]), req(note, [at(2), any])], [2], [field(3, "issuer wanted", agent)], [same(3, 1), same(3, 2)], [])]), button("Swap", [act(swap, 1, [1, 2, 3, 6], [req(identity, []), req(knows, [at(2)]), req(note, [at(3), at(4)])], [2, 3, 4], [field(5, "amount given", number), field(6, "issuer wanted", agent), field(7, "type wanted", text), field(8, "amount wanted", number)], [same(3, 1), same(3, 2), same(6, 1), same(6, 2), same(6, 3)], [])]), button("Pay", [act(pay, 1, [1, 2, 3], [req(identity, []), req(knows, [at(2)]), req(note, [at(3), at(4)])], [2, 3, 4], [field(5, "amount", number)], [same(3, 1), same(3, 2)], [])]), button("Deposit", [act(deposit, 1, [1, 2, 3, 6], [req(identity, []), req(knows, [at(2)]), req(knows, [at(6)]), req(note, [at(3), at(4)])], [2, 6, 3, 4], [field(5, "amount", number), field(7, "condition", text)], [same(3, 1), same(3, 2), same(6, 3)], [])]), button("Release", [act(release, 1, [1, 2, 3, 5], [req(identity, []), req(knows, [at(2)]), req(escrow_note, [at(3), at(4), at(5), at(2), at(6)])], [2, 3, 4, 5, 6], [field(7, "amount", number)], [same(3, 1), same(3, 2), same(5, 3)], [])]), button("Return", [act(return, 1, [1, 2, 3, 5], [req(identity, []), req(knows, [at(2)]), req(escrow_note, [at(3), at(4), at(2), at(5), at(6)])], [2, 3, 4, 5, 6], [field(7, "amount", number)], [same(3, 1), same(3, 2), same(5, 3)], [])]), button("Fund", [act(fund, 1, [1, 2, 3], [req(identity, []), req(member, [at(5), at(2)]), req(note, [at(3), any])], [5, 2, 3], [field(4, "sum", number)], [same(2, 1)], [])]), button("Grant", [act(grant, 1, [1, 2, 3], [req(identity, []), req(steward, [at(4)]), req(passed, [at(6), at(4)]), req(dao_coin, [at(3), at(4)]), forb(granted, [at(6), at(4)]), proved(identity, [], knows, [at(2)]), proved(identity, [], member, [any, at(2)]), proved(identity, [], listed, [at(2), any]), proved(identity, [], proposed, [any, any, at(2)]), proved(identity, [], delivered, [any, any, at(2)]), proved(identity, [], vote_for, [at(2), any, any]), proved(identity, [], vote_against, [at(2), any, any]), proved(identity, [], delivered_vote, [any, any, any, at(2)]), proved(identity, [], delivered_decision, [any, any, at(2)]), proved(identity, [], escrow_note, [any, any, at(2), any, any])], [4, 6, 3], [field(2, "carol", person), field(5, "sum", number)], [same(2, 1)], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2, 3], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)])], [1, 3], [], [], [])]), button("Found", [act(found, 1, [1], [req(identity, []), forb(steward, [at(2)])], [], [field(2, "delos", text)], [], [])]), button("Join", [act(join, 2, [1, 2], [req(identity, []), req(steward, [at(3)]), req(knows, [at(1)])], [3, 1], [], [], [])]), button("Propose", [act(propose, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)])], [4, 2], [field(3, "prop", text)], [], [])]), button("Propose own", [act(propose_own, 1, [1], [req(identity, []), req(member, [at(3), at(1)]), req(steward, [at(3)]), forb(proposal, [at(2), at(3)])], [3], [field(2, "prop", text)], [], [])]), button("Vote for", [act(vote_for, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), req(proposal, [at(3), at(4)]), forb(voted, [at(3), at(4)])], [4, 2, 3], [], [], [])]), button("Vote against", [act(vote_against, 1, [1, 2], [req(identity, []), req(member, [at(4), at(2)]), req(proposal, [at(3), at(4)]), forb(voted, [at(3), at(4)])], [4, 2, 3], [], [], [])]), button("Vote own for", [act(vote_own_for, 1, [1], [req(identity, []), req(member, [at(3), at(1)]), req(proposal, [at(2), at(3)]), req(steward, [at(3)]), forb(decided, [at(2), at(3)]), forb(voted, [at(2), at(3)])], [3, 2], [], [], [])]), button("Vote own against", [act(vote_own_against, 1, [1], [req(identity, []), req(member, [at(3), at(1)]), req(proposal, [at(2), at(3)]), req(steward, [at(3)]), forb(decided, [at(2), at(3)]), forb(voted, [at(2), at(3)])], [3, 2], [], [], [])]), button("Pass", [act(pass, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [], [])]), button("Reject", [act(reject, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [], [])]), button("Issue", [act(issue, 1, [1], [req(identity, [])], [], [field(2, "amount", number)], [], [])]), button("Swap", [act(swap, 1, [1, 2, 3, 5], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, "amount given", number), field(5, "issuer wanted", agent), field(6, "amount wanted", number)], [same(3, 1), same(3, 2), same(5, 1), same(5, 2), same(5, 3)], [])]), button("Pay", [act(pay, 1, [1, 2, 3], [req(identity, []), req(knows, [at(2)]), req(coin, [at(3)])], [2, 3], [field(4, "amount", number)], [same(3, 1), same(3, 2)], [])]), button("Deposit", [act(deposit, 1, [1, 2, 3, 5], [req(identity, []), req(knows, [at(2)]), req(knows, [at(5)]), req(coin, [at(3)])], [2, 5, 3], [field(4, "amount", number), field(6, "condition", text)], [same(3, 1), same(3, 2), same(5, 3)], [])]), button("Release", [act(release, 1, [1, 2, 3, 4], [req(identity, []), req(knows, [at(2)]), req(escrow_coin, [at(3), at(4), at(2), at(5)])], [2, 3, 4, 5], [field(6, "amount", number)], [same(3, 1), same(3, 2), same(4, 3)], [])]), button("Return", [act(return, 1, [1, 2, 3, 4], [req(identity, []), req(knows, [at(2)]), req(escrow_coin, [at(3), at(2), at(4), at(5)])], [2, 3, 4, 5], [field(6, "amount", number)], [same(3, 1), same(3, 2), same(4, 3)], [])]), button("Pay issuer", [act(pay_issuer, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "amount", number)], [], [])]), button("Redeem", [act(redeem, 1, [1, 2, 3], [req(identity, []), req(knows, [at(2)]), req(coin, [at(2)])], [2], [field(3, "issuer wanted", agent)], [same(3, 1), same(3, 2)], [])]), button("Fund", [act(fund, 1, [1, 2, 3], [req(identity, []), req(member, [at(5), at(2)]), req(coin, [at(3)])], [5, 2, 3], [field(4, "sum", number)], [same(2, 1)], [])]), button("Grant", [act(grant, 1, [1, 2, 3], [req(identity, []), req(steward, [at(4)]), req(passed, [at(6), at(4)]), req(dao_coin, [at(3), at(4)]), forb(granted, [at(6), at(4)]), proved(identity, [], knows, [at(2)]), proved(identity, [], member, [any, at(2)]), proved(identity, [], listed, [at(2), any]), proved(identity, [], proposed, [any, any, at(2)]), proved(identity, [], delivered, [any, any, at(2)]), proved(identity, [], vote_for, [at(2), any, any]), proved(identity, [], vote_against, [at(2), any, any]), proved(identity, [], delivered_vote, [any, any, any, at(2)]), proved(identity, [], delivered_decision, [any, any, at(2)]), proved(identity, [], escrow_coin, [any, at(2), any, any])], [4, 6, 3], [field(2, "carol", person), field(5, "sum", number)], [same(2, 1)], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -142,41 +142,41 @@ person
 ;
 knows(Peer)
 ;
-steward(Constant)
+steward(Speech)
 ;
-member(Constant, Peer)
+member(Speech, Peer)
 ;
-listed(Peer, Constant)
+listed(Peer, Speech)
 ;
-proposed(Speech, Constant, Peer)
+proposed(Speech, Speech, Peer)
 ;
-proposal(Speech, Constant)
+proposal(Speech, Speech)
 ;
-delivered(Speech, Constant, Peer)
+delivered(Speech, Speech, Peer)
 ;
-voted(Speech, Constant)
+voted(Speech, Speech)
 ;
-vote_for(Peer, Speech, Constant)
+vote_for(Peer, Speech, Speech)
 ;
-decided(Speech, Constant)
+decided(Speech, Speech)
 ;
-vote_against(Peer, Speech, Constant)
+vote_against(Peer, Speech, Speech)
 ;
-delivered_vote(Peer, Speech, Constant, Peer)
+delivered_vote(Peer, Speech, Speech, Peer)
 ;
-passed(Speech, Constant)
+passed(Speech, Speech)
 ;
-rejected(Speech, Constant)
+rejected(Speech, Speech)
 ;
-delivered_decision(Speech, Constant, Peer)
+delivered_decision(Speech, Speech, Peer)
 ;
-note(Peer, Constant)
+coin(Peer)
 ;
-escrow_note(Peer, Constant, Peer, Peer, Speech)
+escrow_coin(Peer, Peer, Peer, Speech)
 ;
-dao_coin(Peer, Constant)
+dao_coin(Peer, Speech)
 ;
-granted(Speech, Constant)
+granted(Speech, Speech)
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -186,104 +186,104 @@ atom_of(g(person, []), shown(person))
 .
 atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
 .
-atom_of(g(steward, [v(V1)]), shown(steward(V1?)))
+atom_of(g(steward, [s(V1)]), shown(steward(V1?)))
 .
-atom_of(g(member, [v(V1), p(V2)]), shown(member(V1?, V2?)))
+atom_of(g(member, [s(V1), p(V2)]), shown(member(V1?, V2?)))
 .
-atom_of(g(listed, [p(V1), v(V2)]), shown(listed(V1?, V2?)))
+atom_of(g(listed, [p(V1), s(V2)]), shown(listed(V1?, V2?)))
 .
-atom_of(g(proposed, [s(V1), v(V2), p(V3)]), shown(proposed(V1?, V2?, V3?)))
+atom_of(g(proposed, [s(V1), s(V2), p(V3)]), shown(proposed(V1?, V2?, V3?)))
 .
-atom_of(g(proposal, [s(V1), v(V2)]), shown(proposal(V1?, V2?)))
+atom_of(g(proposal, [s(V1), s(V2)]), shown(proposal(V1?, V2?)))
 .
-atom_of(g(delivered, [s(V1), v(V2), p(V3)]), shown(delivered(V1?, V2?, V3?)))
+atom_of(g(delivered, [s(V1), s(V2), p(V3)]), shown(delivered(V1?, V2?, V3?)))
 .
-atom_of(g(voted, [s(V1), v(V2)]), shown(voted(V1?, V2?)))
+atom_of(g(voted, [s(V1), s(V2)]), shown(voted(V1?, V2?)))
 .
-atom_of(g(vote_for, [p(V1), s(V2), v(V3)]), shown(vote_for(V1?, V2?, V3?)))
+atom_of(g(vote_for, [p(V1), s(V2), s(V3)]), shown(vote_for(V1?, V2?, V3?)))
 .
-atom_of(g(decided, [s(V1), v(V2)]), shown(decided(V1?, V2?)))
+atom_of(g(decided, [s(V1), s(V2)]), shown(decided(V1?, V2?)))
 .
-atom_of(g(vote_against, [p(V1), s(V2), v(V3)]), shown(vote_against(V1?, V2?, V3?)))
+atom_of(g(vote_against, [p(V1), s(V2), s(V3)]), shown(vote_against(V1?, V2?, V3?)))
 .
-atom_of(g(delivered_vote, [p(V1), s(V2), v(V3), p(V4)]), shown(delivered_vote(V1?, V2?, V3?, V4?)))
+atom_of(g(delivered_vote, [p(V1), s(V2), s(V3), p(V4)]), shown(delivered_vote(V1?, V2?, V3?, V4?)))
 .
-atom_of(g(passed, [s(V1), v(V2)]), shown(passed(V1?, V2?)))
+atom_of(g(passed, [s(V1), s(V2)]), shown(passed(V1?, V2?)))
 .
-atom_of(g(rejected, [s(V1), v(V2)]), shown(rejected(V1?, V2?)))
+atom_of(g(rejected, [s(V1), s(V2)]), shown(rejected(V1?, V2?)))
 .
-atom_of(g(delivered_decision, [s(V1), v(V2), p(V3)]), shown(delivered_decision(V1?, V2?, V3?)))
+atom_of(g(delivered_decision, [s(V1), s(V2), p(V3)]), shown(delivered_decision(V1?, V2?, V3?)))
 .
-atom_of(g(note, [p(V1), v(V2)]), shown(note(V1?, V2?)))
+atom_of(g(coin, [p(V1)]), shown(coin(V1?)))
 .
-atom_of(g(escrow_note, [p(V1), v(V2), p(V3), p(V4), s(V5)]), shown(escrow_note(V1?, V2?, V3?, V4?, V5?)))
+atom_of(g(escrow_coin, [p(V1), p(V2), p(V3), s(V4)]), shown(escrow_coin(V1?, V2?, V3?, V4?)))
 .
-atom_of(g(dao_coin, [p(V1), v(V2)]), shown(dao_coin(V1?, V2?)))
+atom_of(g(dao_coin, [p(V1), s(V2)]), shown(dao_coin(V1?, V2?)))
 .
-atom_of(g(granted, [s(V1), v(V2)]), shown(granted(V1?, V2?)))
+atom_of(g(granted, [s(V1), s(V2)]), shown(granted(V1?, V2?)))
 .
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(knows, [role(3)])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(found, [num('Delos')], [rs(guarded, [atom(steward, [num('Delos')]), atom(member, [num('Delos'), role(1)]), atom(listed, [role(1), num('Delos')])], [], [atom(identity, [])], [atom(steward, [num('Delos')])])]), schema(join, [num('Delos')], [rs(guarded, [atom(member, [num('Delos'), role(2)])], [], [atom(identity, [])], [atom(member, [num('Delos'), role(2)])]), rs(guarded, [atom(listed, [role(1), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(knows, [role(1)])], [])]), schema(propose, [svar('Prop'), num('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(member, [num('Delos'), role(2)])], []), rs(unguarded, [atom(proposal, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')])], [atom(proposal, [svar('Prop'), num('Delos')])])]), schema(propose_own, [svar('Prop'), num('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), num('Delos'), role(1)]), atom(proposal, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(1)]), atom(steward, [num('Delos')])], [atom(proposal, [svar('Prop'), num('Delos')])])]), schema(deliver_proposal, [svar('Prop'), num('Delos')], [rs(unguarded, [atom(delivered, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(proposal, [svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered, [svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(proposal, [svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]), schema(vote_for, [svar('Prop'), num('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(2)]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(voted, [svar('Prop'), num('Delos')])]), rs(unguarded, [atom(vote_for, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])]), schema(vote_own_for, [svar('Prop'), num('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')]), atom(vote_for, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(1)]), atom(proposal, [svar('Prop'), num('Delos')]), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')]), atom(voted, [svar('Prop'), num('Delos')])])]), schema(vote_against, [svar('Prop'), num('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(2)]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(voted, [svar('Prop'), num('Delos')])]), rs(unguarded, [atom(vote_against, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])]), schema(vote_own_against, [svar('Prop'), num('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')]), atom(vote_against, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(1)]), atom(proposal, [svar('Prop'), num('Delos')]), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')]), atom(voted, [svar('Prop'), num('Delos')])])]), schema(deliver_vote_for, [pvar('Carol'), svar('Prop'), num('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(vote_for, [pvar('Carol'), svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(vote_for, [pvar('Carol'), svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_vote_against, [pvar('Carol'), svar('Prop'), num('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(vote_against, [pvar('Carol'), svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(vote_against, [pvar('Carol'), svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]), schema(pass, [svar('Prop'), num('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), num('Delos')]), atom(passed, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])]), schema(reject, [svar('Prop'), num('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), num('Delos')]), atom(rejected, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])]), schema(deliver_pass, [svar('Prop'), num('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(passed, [svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(passed, [svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_reject, [svar('Prop'), num('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(rejected, [svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(rejected, [svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]), schema(issue, [num('Type'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(note, [role(1), num('Type')]))], [], [atom(identity, [])], [])]), schema(swap, [pvar('Carol'), num('Type'), num('Sum'), pvar('Dave'), num('Other'), num('Total')], [rs(guarded, [times(num('Total'), atom(note, [pvar('Dave'), num('Other')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(note, [pvar('Dave'), num('Other')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [pvar('Carol'), num('Type'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')])), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]), schema(pay_issuer, [num('Type'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(note, [role(2), num('Type')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(note, [role(2), num('Type')]))], [], [atom(identity, [])], [])]), schema(deposit, [pvar('Dave'), num('Type'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Dave'), num('Type')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_note, [pvar('Dave'), num('Type'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release, [pvar('Dave'), num('Type'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_note, [pvar('Dave'), num('Type'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Dave'), num('Type')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, [pvar('Dave'), num('Type'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_note, [pvar('Dave'), num('Type'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Dave'), num('Type')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(redeem, [pvar('Carol')], [rs(guarded, [atom(note, [pvar('Carol'), val(coin)]), atom(knows, [pvar('Carol')])], [atom(note, [role(2), val(coin)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(note, [role(2), val(coin)])], [atom(note, [pvar('Carol'), val(coin)])], [atom(identity, [])], [])]), schema(fund, [pvar('Dave'), num('Sum'), num('Delos')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Dave'), val(coin)]))], [atom(identity, []), atom(member, [num('Delos'), role(2)])], []), rs(unguarded, [times(num('Sum'), atom(dao_coin, [pvar('Dave'), num('Delos')]))], [], [atom(identity, []), atom(steward, [num('Delos')])], [])]), schema(grant, [pvar('Dave'), num('Delos'), num('Sum'), svar('Prop')], [rs(guarded, [atom(granted, [svar('Prop'), num('Delos')])], [times(num('Sum'), atom(dao_coin, [pvar('Dave'), num('Delos')]))], [atom(identity, []), atom(steward, [num('Delos')]), atom(passed, [svar('Prop'), num('Delos')])], [atom(granted, [svar('Prop'), num('Delos')])]), rs(unguarded, [times(num('Sum'), atom(note, [pvar('Dave'), val(coin)]))], [], [atom(identity, []), atom(proposed, [svar('Prop'), num('Delos'), role(1)])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(found, [svar('Delos')], [rs(guarded, [atom(steward, [svar('Delos')]), atom(member, [svar('Delos'), role(1)]), atom(listed, [role(1), svar('Delos')])], [], [atom(identity, [])], [atom(steward, [svar('Delos')])])]), schema(join, [svar('Delos')], [rs(guarded, [atom(member, [svar('Delos'), role(2)])], [], [atom(identity, [])], [atom(member, [svar('Delos'), role(2)])]), rs(guarded, [atom(listed, [role(1), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(knows, [role(1)])], [])]), schema(propose, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]), schema(propose_own, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]), schema(deliver_proposal, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(vote_for, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(vote_own_for, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]), schema(vote_against, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(vote_own_against, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]), schema(deliver_vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(pass, [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(reject, [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(deliver_pass, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_reject, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(issue, [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, [pvar('Carol'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]), schema(pay_issuer, [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(deposit, [pvar('Dave'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release, [pvar('Dave'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, [pvar('Dave'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(redeem, [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(fund, [pvar('Dave'), num('Sum'), svar('Delos')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [], [atom(identity, []), atom(steward, [svar('Delos')])], [])]), schema(grant, [pvar('Dave'), svar('Delos'), num('Sum'), svar('Prop')], [rs(guarded, [atom(granted, [svar('Prop'), svar('Delos')])], [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [atom(granted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [], [atom(identity, []), atom(proposed, [svar('Prop'), svar('Delos'), role(1)])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
 schema_entry(establish, schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]))
 .
-schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]))
+schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]))
 .
-schema_entry(introduce, schema(introduce, [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(knows, [role(3)])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]))
+schema_entry(introduce, schema(introduce, [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]))
 .
-schema_entry(found, schema(found, [num('Delos')], [rs(guarded, [atom(steward, [num('Delos')]), atom(member, [num('Delos'), role(1)]), atom(listed, [role(1), num('Delos')])], [], [atom(identity, [])], [atom(steward, [num('Delos')])])]))
+schema_entry(found, schema(found, [svar('Delos')], [rs(guarded, [atom(steward, [svar('Delos')]), atom(member, [svar('Delos'), role(1)]), atom(listed, [role(1), svar('Delos')])], [], [atom(identity, [])], [atom(steward, [svar('Delos')])])]))
 .
-schema_entry(join, schema(join, [num('Delos')], [rs(guarded, [atom(member, [num('Delos'), role(2)])], [], [atom(identity, [])], [atom(member, [num('Delos'), role(2)])]), rs(guarded, [atom(listed, [role(1), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(knows, [role(1)])], [])]))
+schema_entry(join, schema(join, [svar('Delos')], [rs(guarded, [atom(member, [svar('Delos'), role(2)])], [], [atom(identity, [])], [atom(member, [svar('Delos'), role(2)])]), rs(guarded, [atom(listed, [role(1), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(knows, [role(1)])], [])]))
 .
-schema_entry(propose, schema(propose, [svar('Prop'), num('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(member, [num('Delos'), role(2)])], []), rs(unguarded, [atom(proposal, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')])], [atom(proposal, [svar('Prop'), num('Delos')])])]))
+schema_entry(propose, schema(propose, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]))
 .
-schema_entry(propose_own, schema(propose_own, [svar('Prop'), num('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), num('Delos'), role(1)]), atom(proposal, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(1)]), atom(steward, [num('Delos')])], [atom(proposal, [svar('Prop'), num('Delos')])])]))
+schema_entry(propose_own, schema(propose_own, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]))
 .
-schema_entry(deliver_proposal, schema(deliver_proposal, [svar('Prop'), num('Delos')], [rs(unguarded, [atom(delivered, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(proposal, [svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered, [svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(proposal, [svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]))
+schema_entry(deliver_proposal, schema(deliver_proposal, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]))
 .
-schema_entry(vote_for, schema(vote_for, [svar('Prop'), num('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(2)]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(voted, [svar('Prop'), num('Delos')])]), rs(unguarded, [atom(vote_for, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])]))
+schema_entry(vote_for, schema(vote_for, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]))
 .
-schema_entry(vote_own_for, schema(vote_own_for, [svar('Prop'), num('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')]), atom(vote_for, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(1)]), atom(proposal, [svar('Prop'), num('Delos')]), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')]), atom(voted, [svar('Prop'), num('Delos')])])]))
+schema_entry(vote_own_for, schema(vote_own_for, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]))
 .
-schema_entry(vote_against, schema(vote_against, [svar('Prop'), num('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(2)]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(voted, [svar('Prop'), num('Delos')])]), rs(unguarded, [atom(vote_against, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])]))
+schema_entry(vote_against, schema(vote_against, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]))
 .
-schema_entry(vote_own_against, schema(vote_own_against, [svar('Prop'), num('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')]), atom(vote_against, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(1)]), atom(proposal, [svar('Prop'), num('Delos')]), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')]), atom(voted, [svar('Prop'), num('Delos')])])]))
+schema_entry(vote_own_against, schema(vote_own_against, [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]))
 .
-schema_entry(deliver_vote_for, schema(deliver_vote_for, [pvar('Carol'), svar('Prop'), num('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(vote_for, [pvar('Carol'), svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(vote_for, [pvar('Carol'), svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]))
+schema_entry(deliver_vote_for, schema(deliver_vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]))
 .
-schema_entry(deliver_vote_against, schema(deliver_vote_against, [pvar('Carol'), svar('Prop'), num('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(vote_against, [pvar('Carol'), svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(vote_against, [pvar('Carol'), svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]))
+schema_entry(deliver_vote_against, schema(deliver_vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]))
 .
-schema_entry(pass, schema(pass, [svar('Prop'), num('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), num('Delos')]), atom(passed, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])]))
+schema_entry(pass, schema(pass, [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]))
 .
-schema_entry(reject, schema(reject, [svar('Prop'), num('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), num('Delos')]), atom(rejected, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])]))
+schema_entry(reject, schema(reject, [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]))
 .
-schema_entry(deliver_pass, schema(deliver_pass, [svar('Prop'), num('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(passed, [svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(passed, [svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]))
+schema_entry(deliver_pass, schema(deliver_pass, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]))
 .
-schema_entry(deliver_reject, schema(deliver_reject, [svar('Prop'), num('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(rejected, [svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(rejected, [svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]))
+schema_entry(deliver_reject, schema(deliver_reject, [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]))
 .
-schema_entry(issue, schema(issue, [num('Type'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(note, [role(1), num('Type')]))], [], [atom(identity, [])], [])]))
+schema_entry(issue, schema(issue, [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]))
 .
-schema_entry(swap, schema(swap, [pvar('Carol'), num('Type'), num('Sum'), pvar('Dave'), num('Other'), num('Total')], [rs(guarded, [times(num('Total'), atom(note, [pvar('Dave'), num('Other')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(note, [pvar('Dave'), num('Other')]))], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(swap, schema(swap, [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(pay, schema(pay, [pvar('Carol'), num('Type'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')])), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]))
+schema_entry(pay, schema(pay, [pvar('Carol'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]))
 .
-schema_entry(pay_issuer, schema(pay_issuer, [num('Type'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(note, [role(2), num('Type')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(note, [role(2), num('Type')]))], [], [atom(identity, [])], [])]))
+schema_entry(pay_issuer, schema(pay_issuer, [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]))
 .
-schema_entry(deposit, schema(deposit, [pvar('Dave'), num('Type'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Dave'), num('Type')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_note, [pvar('Dave'), num('Type'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(deposit, schema(deposit, [pvar('Dave'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(release, schema(release, [pvar('Dave'), num('Type'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_note, [pvar('Dave'), num('Type'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Dave'), num('Type')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(release, schema(release, [pvar('Dave'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(return, schema(return, [pvar('Dave'), num('Type'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_note, [pvar('Dave'), num('Type'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Dave'), num('Type')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
+schema_entry(return, schema(return, [pvar('Dave'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]))
 .
-schema_entry(redeem, schema(redeem, [pvar('Carol')], [rs(guarded, [atom(note, [pvar('Carol'), val(coin)]), atom(knows, [pvar('Carol')])], [atom(note, [role(2), val(coin)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(note, [role(2), val(coin)])], [atom(note, [pvar('Carol'), val(coin)])], [atom(identity, [])], [])]))
+schema_entry(redeem, schema(redeem, [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]))
 .
-schema_entry(fund, schema(fund, [pvar('Dave'), num('Sum'), num('Delos')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Dave'), val(coin)]))], [atom(identity, []), atom(member, [num('Delos'), role(2)])], []), rs(unguarded, [times(num('Sum'), atom(dao_coin, [pvar('Dave'), num('Delos')]))], [], [atom(identity, []), atom(steward, [num('Delos')])], [])]))
+schema_entry(fund, schema(fund, [pvar('Dave'), num('Sum'), svar('Delos')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [], [atom(identity, []), atom(steward, [svar('Delos')])], [])]))
 .
-schema_entry(grant, schema(grant, [pvar('Dave'), num('Delos'), num('Sum'), svar('Prop')], [rs(guarded, [atom(granted, [svar('Prop'), num('Delos')])], [times(num('Sum'), atom(dao_coin, [pvar('Dave'), num('Delos')]))], [atom(identity, []), atom(steward, [num('Delos')]), atom(passed, [svar('Prop'), num('Delos')])], [atom(granted, [svar('Prop'), num('Delos')])]), rs(unguarded, [times(num('Sum'), atom(note, [pvar('Dave'), val(coin)]))], [], [atom(identity, []), atom(proposed, [svar('Prop'), num('Delos'), role(1)])], [])]))
+schema_entry(grant, schema(grant, [pvar('Dave'), svar('Delos'), num('Sum'), svar('Prop')], [rs(guarded, [atom(granted, [svar('Prop'), svar('Delos')])], [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [atom(granted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [], [atom(identity, []), atom(proposed, [svar('Prop'), svar('Delos'), role(1)])], [])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -316,9 +316,9 @@ schema_numeric(deliver_vote_for, numeric([cj(every, true)], [], []))
 .
 schema_numeric(deliver_vote_against, numeric([cj(every, true)], [], []))
 .
-schema_numeric(pass, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote_for, [pvar('X1'), svar('Prop'), num('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), num(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(listed, [pvar('X2'), num('Delos')]), fcons(true)), num('Double')))], [], []))
+schema_numeric(pass, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote_for, [pvar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(listed, [pvar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], []))
 .
-schema_numeric(reject, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote_against, [pvar('X1'), svar('Prop'), num('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), num(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(listed, [pvar('X2'), num('Delos')]), fcons(true)), num('Double')))], [], []))
+schema_numeric(reject, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote_against, [pvar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(listed, [pvar('X2'), svar('Delos')]), fcons(true)), num('Double')))], [], []))
 .
 schema_numeric(deliver_pass, numeric([cj(every, true)], [], []))
 .
@@ -512,57 +512,57 @@ binding_of(establish(V1), establish, [b(role(1), p(V1?))])
 .
 binding_of(acquaint(V1, V2), acquaint, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
-binding_of(introduce(V1, V2, V3), introduce, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))])
+binding_of(introduce(V1, V2, V3), introduce, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?))])
 .
-binding_of(found(V1, V2), found, [b(role(1), p(V1?)), b(num('Delos'), v(V2?))])
+binding_of(found(V1, V2), found, [b(role(1), p(V1?)), b(svar('Delos'), s(V2?))])
 .
-binding_of(join(V1, V2, V3), join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Delos'), v(V3?))])
+binding_of(join(V1, V2, V3), join, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Delos'), s(V3?))])
 .
-binding_of(propose(V1, V2, V3, V4), propose, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(num('Delos'), v(V4?))])
+binding_of(propose(V1, V2, V3, V4), propose, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(svar('Delos'), s(V4?))])
 .
-binding_of(propose_own(V1, V2, V3), propose_own, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(num('Delos'), v(V3?))])
+binding_of(propose_own(V1, V2, V3), propose_own, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(svar('Delos'), s(V3?))])
 .
-binding_of(deliver_proposal(V1, V2, V3, V4), deliver_proposal, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(num('Delos'), v(V4?))])
+binding_of(deliver_proposal(V1, V2, V3, V4), deliver_proposal, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(svar('Delos'), s(V4?))])
 .
-binding_of(vote_for(V1, V2, V3, V4), vote_for, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(num('Delos'), v(V4?))])
+binding_of(vote_for(V1, V2, V3, V4), vote_for, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(svar('Delos'), s(V4?))])
 .
-binding_of(vote_own_for(V1, V2, V3), vote_own_for, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(num('Delos'), v(V3?))])
+binding_of(vote_own_for(V1, V2, V3), vote_own_for, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(svar('Delos'), s(V3?))])
 .
-binding_of(vote_against(V1, V2, V3, V4), vote_against, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(num('Delos'), v(V4?))])
+binding_of(vote_against(V1, V2, V3, V4), vote_against, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(svar('Delos'), s(V4?))])
 .
-binding_of(vote_own_against(V1, V2, V3), vote_own_against, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(num('Delos'), v(V3?))])
+binding_of(vote_own_against(V1, V2, V3), vote_own_against, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(svar('Delos'), s(V3?))])
 .
-binding_of(deliver_vote_for(V1, V2, V3, V4, V5), deliver_vote_for, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(svar('Prop'), s(V4?)), b(num('Delos'), v(V5?))])
+binding_of(deliver_vote_for(V1, V2, V3, V4, V5), deliver_vote_for, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(svar('Prop'), s(V4?)), b(svar('Delos'), s(V5?))])
 .
-binding_of(deliver_vote_against(V1, V2, V3, V4, V5), deliver_vote_against, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(svar('Prop'), s(V4?)), b(num('Delos'), v(V5?))])
+binding_of(deliver_vote_against(V1, V2, V3, V4, V5), deliver_vote_against, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(svar('Prop'), s(V4?)), b(svar('Delos'), s(V5?))])
 .
-binding_of(pass(V1, V2, V3, V4, V5), pass, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(num('Delos'), v(V3?)), b(num('Votes'), n(V4?)), b(num('Double'), n(V5?))])
+binding_of(pass(V1, V2, V3, V4, V5), pass, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(svar('Delos'), s(V3?)), b(num('Votes'), n(V4?)), b(num('Double'), n(V5?))])
 .
-binding_of(reject(V1, V2, V3, V4, V5), reject, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(num('Delos'), v(V3?)), b(num('Votes'), n(V4?)), b(num('Double'), n(V5?))])
+binding_of(reject(V1, V2, V3, V4, V5), reject, [b(role(1), p(V1?)), b(svar('Prop'), s(V2?)), b(svar('Delos'), s(V3?)), b(num('Votes'), n(V4?)), b(num('Double'), n(V5?))])
 .
-binding_of(deliver_pass(V1, V2, V3, V4), deliver_pass, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(num('Delos'), v(V4?))])
+binding_of(deliver_pass(V1, V2, V3, V4), deliver_pass, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(svar('Delos'), s(V4?))])
 .
-binding_of(deliver_reject(V1, V2, V3, V4), deliver_reject, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(num('Delos'), v(V4?))])
+binding_of(deliver_reject(V1, V2, V3, V4), deliver_reject, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Prop'), s(V3?)), b(svar('Delos'), s(V4?))])
 .
-binding_of(issue(V1, V2, V3), issue, [b(role(1), p(V1?)), b(num('Type'), v(V2?)), b(num('Sum'), n(V3?))])
+binding_of(issue(V1, V2), issue, [b(role(1), p(V1?)), b(num('Sum'), n(V2?))])
 .
-binding_of(swap(V1, V2, V3, V4, V5, V6, V7, V8), swap, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(num('Type'), v(V4?)), b(num('Sum'), n(V5?)), b(pvar('Dave'), p(V6?)), b(num('Other'), v(V7?)), b(num('Total'), n(V8?))])
+binding_of(swap(V1, V2, V3, V4, V5, V6), swap, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(num('Sum'), n(V4?)), b(pvar('Dave'), p(V5?)), b(num('Total'), n(V6?))])
 .
-binding_of(pay(V1, V2, V3, V4, V5), pay, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(num('Type'), v(V4?)), b(num('Sum'), n(V5?))])
+binding_of(pay(V1, V2, V3, V4), pay, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?)), b(num('Sum'), n(V4?))])
 .
-binding_of(pay_issuer(V1, V2, V3, V4), pay_issuer, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Type'), v(V3?)), b(num('Sum'), n(V4?))])
+binding_of(pay_issuer(V1, V2, V3), pay_issuer, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num('Sum'), n(V3?))])
 .
-binding_of(deposit(V1, V2, V3, V4, V5, V6, V7), deposit, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Type'), v(V4?)), b(num('Sum'), n(V5?)), b(pvar('Bob'), p(V6?)), b(svar('Cond'), s(V7?))])
+binding_of(deposit(V1, V2, V3, V4, V5, V6), deposit, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Sum'), n(V4?)), b(pvar('Bob'), p(V5?)), b(svar('Cond'), s(V6?))])
 .
-binding_of(release(V1, V2, V3, V4, V5, V6, V7), release, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Type'), v(V4?)), b(pvar('Alice'), p(V5?)), b(svar('Cond'), s(V6?)), b(num('Sum'), n(V7?))])
+binding_of(release(V1, V2, V3, V4, V5, V6), release, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(pvar('Alice'), p(V4?)), b(svar('Cond'), s(V5?)), b(num('Sum'), n(V6?))])
 .
-binding_of(return(V1, V2, V3, V4, V5, V6, V7), return, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Type'), v(V4?)), b(pvar('Bob'), p(V5?)), b(svar('Cond'), s(V6?)), b(num('Sum'), n(V7?))])
+binding_of(return(V1, V2, V3, V4, V5, V6), return, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(pvar('Bob'), p(V4?)), b(svar('Cond'), s(V5?)), b(num('Sum'), n(V6?))])
 .
 binding_of(redeem(V1, V2, V3), redeem, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Carol'), p(V3?))])
 .
-binding_of(fund(V1, V2, V3, V4, V5), fund, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Sum'), n(V4?)), b(num('Delos'), v(V5?))])
+binding_of(fund(V1, V2, V3, V4, V5), fund, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Sum'), n(V4?)), b(svar('Delos'), s(V5?))])
 .
-binding_of(grant(V1, V2, V3, V4, V5, V6), grant, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(num('Delos'), v(V4?)), b(num('Sum'), n(V5?)), b(svar('Prop'), s(V6?))])
+binding_of(grant(V1, V2, V3, V4, V5, V6), grant, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(pvar('Dave'), p(V3?)), b(svar('Delos'), s(V4?)), b(num('Sum'), n(V5?)), b(svar('Prop'), s(V6?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -594,7 +594,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_peer(role(3), B?, D?, V3)
+val_peer(pvar('Carol'), B?, D?, V3)
 .
 class_of(found, B, D, found(V1?, V2?))
 :-
@@ -604,7 +604,7 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 ,
-val_const(num('Delos'), B?, V2)
+val_speech(svar('Delos'), B?, D?, V2)
 .
 class_of(join, B, D, join(V1?, V2?, V3?))
 :-
@@ -616,7 +616,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_const(num('Delos'), B?, V3)
+val_speech(svar('Delos'), B?, D?, V3)
 .
 class_of(propose, B, D, propose(V1?, V2?, V3?, V4?))
 :-
@@ -630,7 +630,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Prop'), B?, D?, V3)
 ,
-val_const(num('Delos'), B?, V4)
+val_speech(svar('Delos'), B?, D?, V4)
 .
 class_of(propose_own, B, D, propose_own(V1?, V2?, V3?))
 :-
@@ -642,7 +642,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_speech(svar('Prop'), B?, D?, V2)
 ,
-val_const(num('Delos'), B?, V3)
+val_speech(svar('Delos'), B?, D?, V3)
 .
 class_of(deliver_proposal, B, D, deliver_proposal(V1?, V2?, V3?, V4?))
 :-
@@ -656,7 +656,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Prop'), B?, D?, V3)
 ,
-val_const(num('Delos'), B?, V4)
+val_speech(svar('Delos'), B?, D?, V4)
 .
 class_of(vote_for, B, D, vote_for(V1?, V2?, V3?, V4?))
 :-
@@ -670,7 +670,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Prop'), B?, D?, V3)
 ,
-val_const(num('Delos'), B?, V4)
+val_speech(svar('Delos'), B?, D?, V4)
 .
 class_of(vote_own_for, B, D, vote_own_for(V1?, V2?, V3?))
 :-
@@ -682,7 +682,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_speech(svar('Prop'), B?, D?, V2)
 ,
-val_const(num('Delos'), B?, V3)
+val_speech(svar('Delos'), B?, D?, V3)
 .
 class_of(vote_against, B, D, vote_against(V1?, V2?, V3?, V4?))
 :-
@@ -696,7 +696,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Prop'), B?, D?, V3)
 ,
-val_const(num('Delos'), B?, V4)
+val_speech(svar('Delos'), B?, D?, V4)
 .
 class_of(vote_own_against, B, D, vote_own_against(V1?, V2?, V3?))
 :-
@@ -708,7 +708,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_speech(svar('Prop'), B?, D?, V2)
 ,
-val_const(num('Delos'), B?, V3)
+val_speech(svar('Delos'), B?, D?, V3)
 .
 class_of(deliver_vote_for, B, D, deliver_vote_for(V1?, V2?, V3?, V4?, V5?))
 :-
@@ -724,7 +724,7 @@ val_peer(pvar('Carol'), B?, D?, V3)
 ,
 val_speech(svar('Prop'), B?, D?, V4)
 ,
-val_const(num('Delos'), B?, V5)
+val_speech(svar('Delos'), B?, D?, V5)
 .
 class_of(deliver_vote_against, B, D, deliver_vote_against(V1?, V2?, V3?, V4?, V5?))
 :-
@@ -740,7 +740,7 @@ val_peer(pvar('Carol'), B?, D?, V3)
 ,
 val_speech(svar('Prop'), B?, D?, V4)
 ,
-val_const(num('Delos'), B?, V5)
+val_speech(svar('Delos'), B?, D?, V5)
 .
 class_of(pass, B, D, pass(V1?, V2?, V3?, V4?, V5?))
 :-
@@ -752,7 +752,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_speech(svar('Prop'), B?, D?, V2)
 ,
-val_const(num('Delos'), B?, V3)
+val_speech(svar('Delos'), B?, D?, V3)
 ,
 val_num(num('Votes'), B?, V4)
 ,
@@ -768,7 +768,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_speech(svar('Prop'), B?, D?, V2)
 ,
-val_const(num('Delos'), B?, V3)
+val_speech(svar('Delos'), B?, D?, V3)
 ,
 val_num(num('Votes'), B?, V4)
 ,
@@ -786,7 +786,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Prop'), B?, D?, V3)
 ,
-val_const(num('Delos'), B?, V4)
+val_speech(svar('Delos'), B?, D?, V4)
 .
 class_of(deliver_reject, B, D, deliver_reject(V1?, V2?, V3?, V4?))
 :-
@@ -800,9 +800,9 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Prop'), B?, D?, V3)
 ,
-val_const(num('Delos'), B?, V4)
+val_speech(svar('Delos'), B?, D?, V4)
 .
-class_of(issue, B, D, issue(V1?, V2?, V3?))
+class_of(issue, B, D, issue(V1?, V2?))
 :-
 ground(B?)
 ,
@@ -810,33 +810,9 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 ,
-val_const(num('Type'), B?, V2)
-,
-val_num(num('Sum'), B?, V3)
+val_num(num('Sum'), B?, V2)
 .
-class_of(swap, B, D, swap(V1?, V2?, V3?, V4?, V5?, V6?, V7?, V8?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-,
-val_peer(role(2), B?, D?, V2)
-,
-val_peer(pvar('Carol'), B?, D?, V3)
-,
-val_const(num('Type'), B?, V4)
-,
-val_num(num('Sum'), B?, V5)
-,
-val_peer(pvar('Dave'), B?, D?, V6)
-,
-val_const(num('Other'), B?, V7)
-,
-val_num(num('Total'), B?, V8)
-.
-class_of(pay, B, D, pay(V1?, V2?, V3?, V4?, V5?))
+class_of(swap, B, D, swap(V1?, V2?, V3?, V4?, V5?, V6?))
 :-
 ground(B?)
 ,
@@ -848,11 +824,13 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(pvar('Carol'), B?, D?, V3)
 ,
-val_const(num('Type'), B?, V4)
+val_num(num('Sum'), B?, V4)
 ,
-val_num(num('Sum'), B?, V5)
+val_peer(pvar('Dave'), B?, D?, V5)
+,
+val_num(num('Total'), B?, V6)
 .
-class_of(pay_issuer, B, D, pay_issuer(V1?, V2?, V3?, V4?))
+class_of(pay, B, D, pay(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
 ,
@@ -862,11 +840,11 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_const(num('Type'), B?, V3)
+val_peer(pvar('Carol'), B?, D?, V3)
 ,
 val_num(num('Sum'), B?, V4)
 .
-class_of(deposit, B, D, deposit(V1?, V2?, V3?, V4?, V5?, V6?, V7?))
+class_of(pay_issuer, B, D, pay_issuer(V1?, V2?, V3?))
 :-
 ground(B?)
 ,
@@ -876,17 +854,9 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 ,
-val_peer(pvar('Dave'), B?, D?, V3)
-,
-val_const(num('Type'), B?, V4)
-,
-val_num(num('Sum'), B?, V5)
-,
-val_peer(pvar('Bob'), B?, D?, V6)
-,
-val_speech(svar('Cond'), B?, D?, V7)
+val_num(num('Sum'), B?, V3)
 .
-class_of(release, B, D, release(V1?, V2?, V3?, V4?, V5?, V6?, V7?))
+class_of(deposit, B, D, deposit(V1?, V2?, V3?, V4?, V5?, V6?))
 :-
 ground(B?)
 ,
@@ -898,33 +868,47 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(pvar('Dave'), B?, D?, V3)
 ,
-val_const(num('Type'), B?, V4)
-,
-val_peer(pvar('Alice'), B?, D?, V5)
-,
-val_speech(svar('Cond'), B?, D?, V6)
-,
-val_num(num('Sum'), B?, V7)
-.
-class_of(return, B, D, return(V1?, V2?, V3?, V4?, V5?, V6?, V7?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-,
-val_peer(role(2), B?, D?, V2)
-,
-val_peer(pvar('Dave'), B?, D?, V3)
-,
-val_const(num('Type'), B?, V4)
+val_num(num('Sum'), B?, V4)
 ,
 val_peer(pvar('Bob'), B?, D?, V5)
 ,
 val_speech(svar('Cond'), B?, D?, V6)
+.
+class_of(release, B, D, release(V1?, V2?, V3?, V4?, V5?, V6?))
+:-
+ground(B?)
 ,
-val_num(num('Sum'), B?, V7)
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(pvar('Dave'), B?, D?, V3)
+,
+val_peer(pvar('Alice'), B?, D?, V4)
+,
+val_speech(svar('Cond'), B?, D?, V5)
+,
+val_num(num('Sum'), B?, V6)
+.
+class_of(return, B, D, return(V1?, V2?, V3?, V4?, V5?, V6?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+,
+val_peer(role(2), B?, D?, V2)
+,
+val_peer(pvar('Dave'), B?, D?, V3)
+,
+val_peer(pvar('Bob'), B?, D?, V4)
+,
+val_speech(svar('Cond'), B?, D?, V5)
+,
+val_num(num('Sum'), B?, V6)
 .
 class_of(redeem, B, D, redeem(V1?, V2?, V3?))
 :-
@@ -952,7 +936,7 @@ val_peer(pvar('Dave'), B?, D?, V3)
 ,
 val_num(num('Sum'), B?, V4)
 ,
-val_const(num('Delos'), B?, V5)
+val_speech(svar('Delos'), B?, D?, V5)
 .
 class_of(grant, B, D, grant(V1?, V2?, V3?, V4?, V5?, V6?))
 :-
@@ -966,7 +950,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_peer(pvar('Dave'), B?, D?, V3)
 ,
-val_const(num('Delos'), B?, V4)
+val_speech(svar('Delos'), B?, D?, V4)
 ,
 val_num(num('Sum'), B?, V5)
 ,
@@ -1000,19 +984,19 @@ name_class(pass(V1, V2, V3, V4, V5), _, pass(V1?, V2?, V3?, V4?, V5?))
 .
 name_class(reject(V1, V2, V3, V4, V5), _, reject(V1?, V2?, V3?, V4?, V5?))
 .
-name_class(issue(V1, V2, V3), _, issue(V1?, V2?, V3?))
+name_class(issue(V1, V2), _, issue(V1?, V2?))
 .
-name_class(swap(V1, V2, V3, V4, V5, V6, V7, V8), _, swap(V1?, V2?, V3?, V4?, V5?, V6?, V7?, V8?))
+name_class(swap(V1, V2, V3, V4, V5, V6), _, swap(V1?, V2?, V3?, V4?, V5?, V6?))
 .
-name_class(pay(V1, V2, V3, V4, V5), _, pay(V1?, V2?, V3?, V4?, V5?))
+name_class(pay(V1, V2, V3, V4), _, pay(V1?, V2?, V3?, V4?))
 .
-name_class(pay_issuer(V1, V2, V3, V4), _, pay_issuer(V1?, V2?, V3?, V4?))
+name_class(pay_issuer(V1, V2, V3), _, pay_issuer(V1?, V2?, V3?))
 .
-name_class(deposit(V1, V2, V3, V4, V5, V6, V7), _, deposit(V1?, V2?, V3?, V4?, V5?, V6?, V7?))
+name_class(deposit(V1, V2, V3, V4, V5, V6), _, deposit(V1?, V2?, V3?, V4?, V5?, V6?))
 .
-name_class(release(V1, V2, V3, V4, V5, V6, V7), _, release(V1?, V2?, V3?, V4?, V5?, V6?, V7?))
+name_class(release(V1, V2, V3, V4, V5, V6), _, release(V1?, V2?, V3?, V4?, V5?, V6?))
 .
-name_class(return(V1, V2, V3, V4, V5, V6, V7), _, return(V1?, V2?, V3?, V4?, V5?, V6?, V7?))
+name_class(return(V1, V2, V3, V4, V5, V6), _, return(V1?, V2?, V3?, V4?, V5?, V6?))
 .
 name_class(redeem(V1, V2, V3), _, redeem(V1?, V2?, V3?))
 .
@@ -1048,19 +1032,19 @@ request_name(pass(V1, V2, V3, V4, V5), pname(pass(V1?, V2?, V3?, V4?, V5?)))
 .
 request_name(reject(V1, V2, V3, V4, V5), pname(reject(V1?, V2?, V3?, V4?, V5?)))
 .
-request_name(issue(V1, V2, V3), pname(issue(V1?, V2?, V3?)))
+request_name(issue(V1, V2), pname(issue(V1?, V2?)))
 .
-request_name(swap(V1, V2, V3, V4, V5, V6, V7, V8), pname(swap(V1?, V2?, V3?, V4?, V5?, V6?, V7?, V8?)))
+request_name(swap(V1, V2, V3, V4, V5, V6), pname(swap(V1?, V2?, V3?, V4?, V5?, V6?)))
 .
-request_name(pay(V1, V2, V3, V4, V5), pname(pay(V1?, V2?, V3?, V4?, V5?)))
+request_name(pay(V1, V2, V3, V4), pname(pay(V1?, V2?, V3?, V4?)))
 .
-request_name(pay_issuer(V1, V2, V3, V4), pname(pay_issuer(V1?, V2?, V3?, V4?)))
+request_name(pay_issuer(V1, V2, V3), pname(pay_issuer(V1?, V2?, V3?)))
 .
-request_name(deposit(V1, V2, V3, V4, V5, V6, V7), pname(deposit(V1?, V2?, V3?, V4?, V5?, V6?, V7?)))
+request_name(deposit(V1, V2, V3, V4, V5, V6), pname(deposit(V1?, V2?, V3?, V4?, V5?, V6?)))
 .
-request_name(release(V1, V2, V3, V4, V5, V6, V7), pname(release(V1?, V2?, V3?, V4?, V5?, V6?, V7?)))
+request_name(release(V1, V2, V3, V4, V5, V6), pname(release(V1?, V2?, V3?, V4?, V5?, V6?)))
 .
-request_name(return(V1, V2, V3, V4, V5, V6, V7), pname(return(V1?, V2?, V3?, V4?, V5?, V6?, V7?)))
+request_name(return(V1, V2, V3, V4, V5, V6), pname(return(V1?, V2?, V3?, V4?, V5?, V6?)))
 .
 request_name(redeem(V1, V2, V3), pname(redeem(V1?, V2?, V3?)))
 .
@@ -1072,7 +1056,7 @@ request_name(_, nopname) :- otherwise | true.
 
 %% The lists the app shows, as the contract's pragmas give them, each its name and the predicate whose atoms it lists (vGLP, Section 5.4, "The contract's words").
 procedure tabs(List(Tab)).
-tabs([tab("Contacts", knows), tab("DAOs", member), tab("Proposals", proposal), tab("For", vote_for), tab("Against", vote_against), tab("Passed", passed), tab("Notes", note, counted), tab("Treasury", dao_coin, counted), tab("Grants", granted)])
+tabs([tab("Contacts", knows), tab("DAOs", member), tab("Proposals", proposal), tab("For", vote_for), tab("Against", vote_against), tab("Passed", passed), tab("Coins", coin, counted), tab("Treasury", dao_coin, counted), tab("Grants", granted)])
 .
 
 %% The question the contract puts to the agent Me on an attempt of the part C, the question of the guarding role beyond the proposer's that Me is in, its persons filled in from the binding C names, with the role of the proposer, asked(G, Words); none, asked(0, []), where Me is in none or the contract puts none (vGLP, Section 6.2, "The words a platform shows"; GSC, Section 2, its first paragraph).
@@ -1109,75 +1093,75 @@ ground(Me?)
 |
 ask_of([q(V1?, 2, [person(V2?), text(" invites you to their DAO.")])], Me?, Ws)
 .
-sentence_of(swap(V1, V2, _, _, V5, V6, _, V8), Me, Ws?)
+sentence_of(swap(V1, V2, _, V4, V5, V6), Me, Ws?)
 :-
 ground(V2?)
 ,
 ground(V1?)
+,
+ground(V4?)
 ,
 ground(V5?)
 ,
 ground(V6?)
 ,
-ground(V8?)
-,
 ground(Me?)
 |
-ask_of([q(V2?, 1, [person(V1?), text(" asks to swap coins or bonds with you."), valued("amount given", V5?), named("issuer wanted", V6?), valued("amount wanted", V8?)])], Me?, Ws)
+ask_of([q(V2?, 1, [person(V1?), text(" asks to swap coins with you."), valued("amount given", V4?), named("issuer wanted", V5?), valued("amount wanted", V6?)])], Me?, Ws)
 .
-sentence_of(pay(V1, V2, _, _, V5), Me, Ws?)
+sentence_of(pay(V1, V2, _, V4), Me, Ws?)
 :-
 ground(V2?)
 ,
 ground(V1?)
 ,
-ground(V5?)
+ground(V4?)
 ,
 ground(Me?)
 |
-ask_of([q(V2?, 1, [person(V1?), text(" asks to pay you coins or bonds."), valued("amount", V5?)])], Me?, Ws)
+ask_of([q(V2?, 1, [person(V1?), text(" asks to pay you coins."), valued("amount", V4?)])], Me?, Ws)
 .
-sentence_of(deposit(V1, V2, _, _, V5, _, _), Me, Ws?)
+sentence_of(deposit(V1, V2, _, V4, _, _), Me, Ws?)
 :-
 ground(V2?)
 ,
 ground(V1?)
 ,
-ground(V5?)
+ground(V4?)
 ,
 ground(Me?)
 |
-ask_of([q(V2?, 1, [person(V1?), text(" asks to deposit coins or bonds with you."), valued("amount", V5?)])], Me?, Ws)
+ask_of([q(V2?, 1, [person(V1?), text(" asks to deposit coins with you."), valued("amount", V4?)])], Me?, Ws)
 .
-sentence_of(release(V1, V2, _, _, _, _, V7), Me, Ws?)
+sentence_of(release(V1, V2, _, _, _, V6), Me, Ws?)
 :-
 ground(V2?)
 ,
 ground(V1?)
 ,
-ground(V7?)
+ground(V6?)
 ,
 ground(Me?)
 |
-ask_of([q(V2?, 1, [person(V1?), text(" asks to release coins or bonds to you."), valued("amount", V7?)])], Me?, Ws)
+ask_of([q(V2?, 1, [person(V1?), text(" asks to release coins to you."), valued("amount", V6?)])], Me?, Ws)
 .
-sentence_of(return(V1, V2, _, _, _, _, V7), Me, Ws?)
+sentence_of(return(V1, V2, _, _, _, V6), Me, Ws?)
 :-
 ground(V2?)
 ,
 ground(V1?)
 ,
-ground(V7?)
+ground(V6?)
 ,
 ground(Me?)
 |
-ask_of([q(V2?, 1, [person(V1?), text(" asks to return coins or bonds to you."), valued("amount", V7?)])], Me?, Ws)
+ask_of([q(V2?, 1, [person(V1?), text(" asks to return coins to you."), valued("amount", V6?)])], Me?, Ws)
 .
 sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 % The contract the platform is compiled from (vGLP, Section 5.4, "The contract's words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC's reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC's reader's and the pragmas', named with an R before them.
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
-RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant) ; const(Constant).
+RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
 RArgs     ::= [] ; [RArg | RArgs].
 RAtom     ::= atom(Constant, RArgs) ; times(RArg, RAtom) ; rest(RArg, RArg, RAtom).
 RAtoms    ::= [] ; [RAtom | RAtoms].
@@ -1223,7 +1207,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("Funded DAO\nFunded DAO unites DAO and Coins, and extends the union.\n1. ■ Fund: A member of a DAO may give it coins they hold; its steward keeps them apart as the DAO's.\n2. ■ Grant: The steward may grant the proposer of a passed proposal, once per proposal, any amount of the DAO's coins of one issuer.\n3. ○ Amount. The steward will grant a passed proposal the amount it asks for, as far as the DAO's coins allow.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, ['Bob', 'Alice', 'Carol'], [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(knows, [role(3)])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(found, ['Alice'], [const('Delos')], [rs(guarded, [atom(steward, [num('Delos')]), atom(member, [num('Delos'), role(1)]), atom(listed, [role(1), num('Delos')])], [], [atom(identity, [])], [atom(steward, [num('Delos')])])]), schema(join, ['Bob', 'Alice'], [const('Delos')], [rs(guarded, [atom(member, [num('Delos'), role(2)])], [], [atom(identity, [])], [atom(member, [num('Delos'), role(2)])]), rs(guarded, [atom(listed, [role(1), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(knows, [role(1)])], [])]), schema(propose, ['Carol', 'Alice'], [svar('Prop'), const('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(member, [num('Delos'), role(2)])], []), rs(unguarded, [atom(proposal, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')])], [atom(proposal, [svar('Prop'), num('Delos')])])]), schema(propose_own, ['Alice'], [svar('Prop'), const('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), num('Delos'), role(1)]), atom(proposal, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(1)]), atom(steward, [num('Delos')])], [atom(proposal, [svar('Prop'), num('Delos')])])]), schema(deliver_proposal, ['Alice', 'Bob'], [svar('Prop'), const('Delos')], [rs(unguarded, [atom(delivered, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(proposal, [svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered, [svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(proposal, [svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]), schema(vote_for, ['Carol', 'Alice'], [svar('Prop'), const('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(2)]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(voted, [svar('Prop'), num('Delos')])]), rs(unguarded, [atom(vote_for, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])]), schema(vote_own_for, ['Alice'], [svar('Prop'), const('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')]), atom(vote_for, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(1)]), atom(proposal, [svar('Prop'), num('Delos')]), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')]), atom(voted, [svar('Prop'), num('Delos')])])]), schema(vote_against, ['Carol', 'Alice'], [svar('Prop'), const('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(2)]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(voted, [svar('Prop'), num('Delos')])]), rs(unguarded, [atom(vote_against, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])]), schema(vote_own_against, ['Alice'], [svar('Prop'), const('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), num('Delos')]), atom(vote_against, [role(1), svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(member, [num('Delos'), role(1)]), atom(proposal, [svar('Prop'), num('Delos')]), atom(steward, [num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')]), atom(voted, [svar('Prop'), num('Delos')])])]), schema(deliver_vote_for, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), svar('Prop'), const('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(vote_for, [pvar('Carol'), svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(vote_for, [pvar('Carol'), svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_vote_against, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), svar('Prop'), const('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(vote_against, [pvar('Carol'), svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(vote_against, [pvar('Carol'), svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]), qschema(pass, ['Alice'], [svar('Prop'), const('Delos'), num('Votes'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(vote_for, [svar('X1'), svar('Prop'), num('Delos')]), fcons(true)), num('Votes')), and(eq(num('Double'), mul(num('Votes'), num(2))), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), num('Delos')]), fcons(true)), num('Double')))), [rs(guarded, [atom(decided, [svar('Prop'), num('Delos')]), atom(passed, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])], [], []), qschema(reject, ['Alice'], [svar('Prop'), const('Delos'), num('Votes'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(vote_against, [svar('X1'), svar('Prop'), num('Delos')]), fcons(true)), num('Votes')), and(eq(num('Double'), mul(num('Votes'), num(2))), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), num('Delos')]), fcons(true)), num('Double')))), [rs(guarded, [atom(decided, [svar('Prop'), num('Delos')]), atom(rejected, [svar('Prop'), num('Delos')])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(proposal, [svar('Prop'), num('Delos')])], [atom(decided, [svar('Prop'), num('Delos')])])], [], []), schema(deliver_pass, ['Alice', 'Bob'], [svar('Prop'), const('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(passed, [svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(passed, [svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_reject, ['Alice', 'Bob'], [svar('Prop'), const('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [num('Delos')]), atom(rejected, [svar('Prop'), num('Delos')]), atom(listed, [role(2), num('Delos')])], [atom(delivered_decision, [svar('Prop'), num('Delos'), role(2)])]), rs(unguarded, [atom(rejected, [svar('Prop'), num('Delos')])], [], [atom(identity, [])], [])]), schema(issue, ['Alice'], [const('Type'), num('Sum')], [rs(guarded, [times(num('Sum'), atom(note, [role(1), num('Type')]))], [], [atom(identity, [])], [])]), schema(swap, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob']), one('Dave', ['Alice', 'Bob', 'Carol'])], [pvar('Carol'), const('Type'), num('Sum'), pvar('Dave'), const('Other'), num('Total')], [rs(guarded, [times(num('Total'), atom(note, [pvar('Dave'), num('Other')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(note, [pvar('Dave'), num('Other')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), const('Type'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Carol'), num('Type')])), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]), schema(pay_issuer, ['Alice', 'Bob'], [const('Type'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(note, [role(2), num('Type')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(note, [role(2), num('Type')]))], [], [atom(identity, [])], [])]), schema(deposit, ['Alice', 'Carol', one('Dave', ['Alice', 'Carol']), one('Bob', 'Dave')], [pvar('Dave'), const('Type'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Dave'), num('Type')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_note, [pvar('Dave'), num('Type'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release, ['Carol', 'Bob', one('Dave', ['Carol', 'Bob']), one('Alice', 'Dave')], [pvar('Dave'), const('Type'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_note, [pvar('Dave'), num('Type'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Dave'), num('Type')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, ['Carol', 'Alice', one('Dave', ['Carol', 'Alice']), one('Bob', 'Dave')], [pvar('Dave'), const('Type'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_note, [pvar('Dave'), num('Type'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(note, [pvar('Dave'), num('Type')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(redeem, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol')], [rs(guarded, [atom(note, [pvar('Carol'), val(coin)]), atom(knows, [pvar('Carol')])], [atom(note, [role(2), val(coin)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(note, [role(2), val(coin)])], [atom(note, [pvar('Carol'), val(coin)])], [atom(identity, [])], [])]), schema(fund, ['Carol', one('Alice', 'Carol')], [pvar('Dave'), num('Sum'), const('Delos')], [rs(guarded, [], [times(num('Sum'), atom(note, [pvar('Dave'), val(coin)]))], [atom(identity, []), atom(member, [num('Delos'), role(2)])], []), rs(unguarded, [times(num('Sum'), atom(dao_coin, [pvar('Dave'), num('Delos')]))], [], [atom(identity, []), atom(steward, [num('Delos')])], [])]), schema(grant, ['Alice', one('Carol', 'Alice')], [pvar('Dave'), const('Delos'), num('Sum'), svar('Prop')], [rs(guarded, [atom(granted, [svar('Prop'), num('Delos')])], [times(num('Sum'), atom(dao_coin, [pvar('Dave'), num('Delos')]))], [atom(identity, []), atom(steward, [num('Delos')]), atom(passed, [svar('Prop'), num('Delos')])], [atom(granted, [svar('Prop'), num('Delos')])]), rs(unguarded, [times(num('Sum'), atom(note, [pvar('Dave'), val(coin)]))], [], [atom(identity, []), atom(proposed, [svar('Prop'), num('Delos'), role(1)])], [])])]), pragmas([list("Contacts", [knows]), list("DAOs", [member]), list("Proposals", [proposal]), list("For", [vote_for]), list("Against", [vote_against]), list("Passed", [passed]), list("Notes", [note]), list("Treasury", [dao_coin]), list("Grants", [granted])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(found, "Found", ["", "delos"], none, "DAOs", by([1])), act(join, "Join", [], said([[person(2), text(" invites you to their DAO.")], []]), "DAOs", by([2])), act(propose, "Propose", ["", "", "prop"], none, "DAOs", by([1])), act(propose_own, "Propose own", ["", "prop"], none, "DAOs", by([1])), act(vote_for, "Vote for", [], none, "DAOs", by([1])), act(vote_against, "Vote against", [], none, "DAOs", by([1])), act(vote_own_for, "Vote own for", [], none, "DAOs", by([1])), act(vote_own_against, "Vote own against", [], none, "DAOs", by([1])), act(pass, "Pass", ["", "", "", "votes"], none, "DAOs", by([1])), act(reject, "Reject", ["", "", "", "votes"], none, "DAOs", by([1])), act(issue, "Issue", ["", "type", "amount"], none, "Notes", by([1])), act(pay_issuer, "Pay issuer", ["", "", "", "amount"], none, "", by([1])), act(redeem, "Redeem", ["", "", "issuer wanted"], none, "", by([1], [same(3, 1), same(3, 2)])), act(swap, "Swap", ["", "", "", "", "amount given", "issuer wanted", "type wanted", "amount wanted"], said([[], [person(1), text(" asks to swap coins or bonds with you.")]]), "", by([1], [same(3, 1), same(3, 2), same(6, 1), same(6, 2), same(6, 3)])), act(pay, "Pay", ["", "", "", "", "amount"], said([[], [person(1), text(" asks to pay you coins or bonds.")]]), "", by([1], [same(3, 1), same(3, 2)])), act(deposit, "Deposit", ["", "", "", "", "amount", "", "condition"], said([[], [person(1), text(" asks to deposit coins or bonds with you.")]]), "", by([1], [same(3, 1), same(3, 2), same(6, 3)])), act(release, "Release", ["", "", "", "", "", "", "amount"], said([[], [person(1), text(" asks to release coins or bonds to you.")]]), "", by([1], [same(3, 1), same(3, 2), same(5, 3)])), act(return, "Return", ["", "", "", "", "", "", "amount"], said([[], [person(1), text(" asks to return coins or bonds to you.")]]), "", by([1], [same(3, 1), same(3, 2), same(5, 3)])), act(fund, "Fund", ["", "", "", "sum"], none, "Treasury", by([1], [same(2, 1)])), act(grant, "Grant", ["", "carol", "", "", "sum"], none, "Treasury", by([1], [same(2, 1)]))], [], nolook, version(1, 1))))
+contract("Funded DAO\nFunded DAO extends DAO and Coins.\n1. ■ Fund: A member of a DAO may give it coins they hold; its steward keeps them apart as the DAO's.\n2. ■ Grant: The steward may grant the proposer of a passed proposal, once per proposal, any amount of the DAO's coins of one issuer.\n3. ○ Amount. The steward will grant a passed proposal the amount it asks for, as far as the DAO's coins allow.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(found, ['Alice'], [svar('Delos')], [rs(guarded, [atom(steward, [svar('Delos')]), atom(member, [svar('Delos'), role(1)]), atom(listed, [role(1), svar('Delos')])], [], [atom(identity, [])], [atom(steward, [svar('Delos')])])]), schema(join, ['Bob', 'Alice'], [svar('Delos')], [rs(guarded, [atom(member, [svar('Delos'), role(2)])], [], [atom(identity, [])], [atom(member, [svar('Delos'), role(2)])]), rs(guarded, [atom(listed, [role(1), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(knows, [role(1)])], [])]), schema(propose, ['Carol', 'Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]), schema(propose_own, ['Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(proposed, [svar('Prop'), svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(steward, [svar('Delos')])], [atom(proposal, [svar('Prop'), svar('Delos')])])]), schema(deliver_proposal, ['Alice', 'Bob'], [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(proposal, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(vote_for, ['Carol', 'Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(vote_own_for, ['Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_for, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]), schema(vote_against, ['Carol', 'Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(2)]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(voted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])]), schema(vote_own_against, ['Alice'], [svar('Prop'), svar('Delos')], [rs(guarded, [atom(voted, [svar('Prop'), svar('Delos')]), atom(vote_against, [role(1), svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(member, [svar('Delos'), role(1)]), atom(proposal, [svar('Prop'), svar('Delos')]), atom(steward, [svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')]), atom(voted, [svar('Prop'), svar('Delos')])])]), schema(deliver_vote_for, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_for, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_vote_against, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_vote, [pvar('Carol'), svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(vote_against, [pvar('Carol'), svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), qschema(pass, ['Alice'], [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(vote_for, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes')), and(eq(num('Double'), mul(num('Votes'), val(2))), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))), [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])], [], []), qschema(reject, ['Alice'], [svar('Prop'), svar('Delos'), num('Votes'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(vote_against, [svar('X1'), svar('Prop'), svar('Delos')]), fcons(true)), num('Votes')), and(eq(num('Double'), mul(num('Votes'), val(2))), lt(cardinality([svar('X2')], role(1), atom(listed, [svar('X2'), svar('Delos')]), fcons(true)), num('Double')))), [rs(guarded, [atom(decided, [svar('Prop'), svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(proposal, [svar('Prop'), svar('Delos')])], [atom(decided, [svar('Prop'), svar('Delos')])])], [], []), schema(deliver_pass, ['Alice', 'Bob'], [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(passed, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(deliver_reject, ['Alice', 'Bob'], [svar('Prop'), svar('Delos')], [rs(unguarded, [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])], [], [atom(identity, []), atom(steward, [svar('Delos')]), atom(rejected, [svar('Prop'), svar('Delos')]), atom(listed, [role(2), svar('Delos')])], [atom(delivered_decision, [svar('Prop'), svar('Delos'), role(2)])]), rs(unguarded, [atom(rejected, [svar('Prop'), svar('Delos')])], [], [atom(identity, [])], [])]), schema(issue, ['Alice'], [num('Sum')], [rs(guarded, [times(num('Sum'), atom(coin, [role(1)]))], [], [atom(identity, [])], [])]), schema(swap, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob']), one('Dave', ['Alice', 'Bob', 'Carol'])], [pvar('Carol'), num('Sum'), pvar('Dave'), num('Total')], [rs(guarded, [times(num('Total'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [times(num('Total'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(pay, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Carol')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Carol')])), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]), schema(pay_issuer, ['Alice', 'Bob'], [num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(coin, [role(2)]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [times(num('Sum'), atom(coin, [role(2)]))], [], [atom(identity, [])], [])]), schema(deposit, ['Alice', 'Carol', one('Dave', ['Alice', 'Carol']), one('Bob', 'Dave')], [pvar('Dave'), num('Sum'), pvar('Bob'), svar('Cond')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(knows, [role(2)]), atom(knows, [pvar('Bob')])], []), rs(guarded, [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(1), pvar('Bob'), svar('Cond')]))], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(release, ['Carol', 'Bob', one('Dave', ['Carol', 'Bob']), one('Alice', 'Dave')], [pvar('Dave'), pvar('Alice'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), pvar('Alice'), role(2), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(return, ['Carol', 'Alice', one('Dave', ['Carol', 'Alice']), one('Bob', 'Dave')], [pvar('Dave'), pvar('Bob'), svar('Cond'), num('Sum')], [rs(guarded, [], [times(num('Sum'), atom(escrow_coin, [pvar('Dave'), role(2), pvar('Bob'), svar('Cond')]))], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [times(num('Sum'), atom(coin, [pvar('Dave')])), atom(knows, [pvar('Dave')])], [], [atom(identity, []), atom(knows, [role(1)])], [])]), schema(redeem, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol')], [rs(guarded, [atom(coin, [pvar('Carol')]), atom(knows, [pvar('Carol')])], [atom(coin, [role(2)])], [atom(identity, []), atom(knows, [role(2)])], []), rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar('Carol')])], [atom(identity, [])], [])]), schema(fund, ['Carol', one('Alice', 'Carol')], [pvar('Dave'), num('Sum'), svar('Delos')], [rs(guarded, [], [times(num('Sum'), atom(coin, [pvar('Dave')]))], [atom(identity, []), atom(member, [svar('Delos'), role(2)])], []), rs(unguarded, [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [], [atom(identity, []), atom(steward, [svar('Delos')])], [])]), schema(grant, ['Alice', one('Carol', 'Alice')], [pvar('Dave'), svar('Delos'), num('Sum'), svar('Prop')], [rs(guarded, [atom(granted, [svar('Prop'), svar('Delos')])], [times(num('Sum'), atom(dao_coin, [pvar('Dave'), svar('Delos')]))], [atom(identity, []), atom(steward, [svar('Delos')]), atom(passed, [svar('Prop'), svar('Delos')])], [atom(granted, [svar('Prop'), svar('Delos')])]), rs(unguarded, [times(num('Sum'), atom(coin, [pvar('Dave')]))], [], [atom(identity, []), atom(proposed, [svar('Prop'), svar('Delos'), role(1)])], [])])]), pragmas([list("Contacts", [knows]), list("DAOs", [member]), list("Proposals", [proposal]), list("For", [vote_for]), list("Against", [vote_against]), list("Passed", [passed]), list("Coins", [coin]), list("Treasury", [dao_coin]), list("Grants", [granted])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(found, "Found", ["", "delos"], none, "DAOs", by([1])), act(join, "Join", [], said([[person(2), text(" invites you to their DAO.")], []]), "DAOs", by([2])), act(propose, "Propose", ["", "", "prop"], none, "DAOs", by([1])), act(propose_own, "Propose own", ["", "prop"], none, "DAOs", by([1])), act(vote_for, "Vote for", [], none, "DAOs", by([1])), act(vote_against, "Vote against", [], none, "DAOs", by([1])), act(vote_own_for, "Vote own for", [], none, "DAOs", by([1])), act(vote_own_against, "Vote own against", [], none, "DAOs", by([1])), act(pass, "Pass", ["", "", "", "votes"], none, "DAOs", by([1])), act(reject, "Reject", ["", "", "", "votes"], none, "DAOs", by([1])), act(issue, "Issue", ["", "amount"], none, "", by([1])), act(swap, "Swap", ["", "", "", "amount given", "issuer wanted", "amount wanted"], said([[], [person(1), text(" asks to swap coins with you.")]]), "Coins", by([1], [same(3, 1), same(3, 2), same(5, 1), same(5, 2), same(5, 3)])), act(pay, "Pay", ["", "", "", "amount"], said([[], [person(1), text(" asks to pay you coins.")]]), "Coins", by([1], [same(3, 1), same(3, 2)])), act(deposit, "Deposit", ["", "", "", "amount", "", "condition"], said([[], [person(1), text(" asks to deposit coins with you.")]]), "Coins", by([1], [same(3, 1), same(3, 2), same(5, 3)])), act(release, "Release", ["", "", "", "", "", "amount"], said([[], [person(1), text(" asks to release coins to you.")]]), "Coins", by([1], [same(3, 1), same(3, 2), same(4, 3)])), act(return, "Return", ["", "", "", "", "", "amount"], said([[], [person(1), text(" asks to return coins to you.")]]), "Coins", by([1], [same(3, 1), same(3, 2), same(4, 3)])), act(pay_issuer, "Pay issuer", ["", "", "amount"], none, "Coins", by([1])), act(redeem, "Redeem", ["", "", "issuer wanted"], none, "Coins", by([1], [same(3, 1), same(3, 2)])), act(fund, "Fund", ["", "", "", "sum"], none, "Treasury", by([1], [same(2, 1)])), act(grant, "Grant", ["", "carol", "", "", "sum"], none, "Treasury", by([1], [same(2, 1)]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -5061,14 +5045,9 @@ unable_at1(RsP, Bn, Sh, L?, H?) :- ground(RsP?), ground(Bn?), ground(Sh?) |
 procedure held_in(GAtoms?, GAtoms?, GAtoms).
 held_in([], _, []).
 held_in([G|Gs], Sh, H?) :- ground(G?), ground(Sh?) |
-    g_wild(G?, W),
-    held_one(W?, G?, Sh?, H0),
+    mem(G?, Sh?, In),
     held_in(Gs?, Sh?, H1),
-    app(H0?, H1?, H).
-%% A forbidden atom the state has: the atom, or, where it carries the wildcard, the atoms of the state it matches.
-procedure held_one(YesNo?, GAtom?, GAtoms?, GAtoms).
-held_one(no, G, Sh, H?) :- ground(G?) | mem(G?, Sh?, In), keep_g(In?, G?, [], H).
-held_one(yes, K, Sh, H?) :- g_matched(K?, Sh?, H).
+    keep_g(In?, G?, H1?, H).
 procedure keep_g(YesNo?, GAtom?, GAtoms?, GAtoms).
 keep_g(yes, G, H, [G?|H?]).
 keep_g(no, _, H, H?).
@@ -5359,24 +5338,8 @@ procedure forb_one(YesNo?, SAtom?, Binding?, GAtoms?, YesNo).
 forb_one(no, _, _, _, yes).
 forb_one(yes, A, B, Sh, R?) :- ground(Sh?) |
     img_atom(A?, B?, G),
-    forb_held(G?, Sh?, In),
+    mem(G?, Sh?, In),
     neg(In?, R).
-%% Whether the state holds an atom the image G of a forbidden atom forbids: G itself, or, where G carries the wildcard, an atom it matches, as the image of a cleared atom does, g_matches (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches"; GSC, Definition "Compilation": "d_p holds ... no atom matching phi").
-procedure forb_held(GAtom?, GAtoms?, YesNo).
-forb_held(G, Sh, In?) :- ground(G?) | g_wild(G?, W), forb_held1(W?, G?, Sh?, In).
-procedure forb_held1(YesNo?, GAtom?, GAtoms?, YesNo).
-forb_held1(no, G, Sh, In?) :- mem(G?, Sh?, In).
-forb_held1(yes, K, Sh, In?) :- g_matched(K?, Sh?, Ms), nonempty(Ms?, In).
-%% The atoms of a state that the image K of an atom with the wildcard matches.
-procedure g_matched(GAtom?, GAtoms?, GAtoms).
-g_matched(_, [], []).
-g_matched(K, [G|Gs], H?) :- ground(K?), ground(G?) |
-    g_matches(K?, G?, M),
-    g_matched(K?, Gs?, H1),
-    keep_g(M?, G?, H1?, H).
-procedure nonempty(GAtoms?, YesNo).
-nonempty([], no).
-nonempty([_|_], yes).
 procedure forb_ok1(YesNo?, SAtoms?, Binding?, GAtoms?, YesNo).
 forb_ok1(no, _, _, _, no).
 forb_ok1(yes, As, B, Sh, R?) :- forb_ok(As?, B?, Sh?, R).
@@ -6219,23 +6182,12 @@ mates_check([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), gro
     app(M1?, M2?, M).
 procedure mates_check1(LNorm?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_check1(badnorm, _, _, _, []).
-%% A numeric variable that no deleted or added atom names, and that is not local to a role, is given its values by the constraint once those the atoms bind are bound, by the conjuncts local to every role (con_extend), as at a Propose (num_extend): "or the constraint gives the variable finitely many values once those are bound" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"); so identity_record of Secure Friendship, whose Double only its constraint names, has the schema-binding of its class term among those of its class.
 mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
-    schema_numeric(Nm?, N),
-    mates_extend(N?, B?, Bs),
-    mates_check2(Bs?, Nm?, Rs?, Ps?, M).
-procedure mates_extend(Numeric?, Binding?, Bindings).
-mates_extend(numeric(Cj, _, _), B, Bs?) :- ground(Cj?), ground(B?) | conjs_every(Cj?, C), con_extend(C?, B?, Bs).
-procedure mates_check2(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
-mates_check2([], _, _, _, []).
-mates_check2([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
     sig_of(Rs?, B?, Ps1),
     deltas_eq(Ps?, Ps1?, E1),
     admissible(Rs?, B?, E2),
     and(E1?, E2?, E),
-    mate_of(E?, B?, Nm?, Rs?, M1),
-    mates_check2(Bs?, Nm?, Rs?, Ps?, M2),
-    app(M1?, M2?, M).
+    mate_of(E?, B?, Nm?, Rs?, M).
 %% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role, agent, speech-act or numeric, are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
 procedure local_norm(Constant?, Binding?, LNorm).
 local_norm(Nm, B, R?) :- ground(Nm?), ground(B?) |
@@ -6480,7 +6432,7 @@ live_at1(no, _, _, _, _, no).
 live_at1(yes, Ps, Rs, B, Rf, Ok?) :- live_at(Ps?, Rs?, B?, Rf?, Ok).
 procedure live_one(CAtoms?, CAtoms?, Peer?, Preds?, YesNo).
 live_one(R, F, P, Rf, Ok?) :- ground(F?) |
-    forb_meets(R?, F?, M1),
+    ms_meets(R?, F?, M1),
     own_reflexive_in(F?, P?, Rf?, M2),
     or(M1?, M2?, M),
     neg(M?, Ok).
@@ -6496,8 +6448,8 @@ linked([P|Ps], Rs1, B1, Rs2, B2, Rf, L?) :-
     forbs_at(Rs2?, B2?, P?, F2),
     bound_cs(R1?, Rb1),
     bound_cs(R2?, Rb2),
-    forb_meets(Rb1?, F2?, C1),
-    forb_meets(Rb2?, F1?, C2),
+    ms_meets(Rb1?, F2?, C1),
+    ms_meets(Rb2?, F1?, C2),
     or(C1?, C2?, C),
     linked1(C?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
 procedure linked1(YesNo?, Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
@@ -6516,36 +6468,6 @@ forbs_at(Rs, B, P, F?) :- ground(B?) |
     specs_at(Rs?, 1, B?, P?, RsP),
     forbs_of(RsP?, Fs),
     cimg_atoms(Fs?, B?, F).
-%% Whether an atom of Rs is forbidden by an atom of Fs: it is one of them, or one with the wildcard matches it, the wildcard, which no binding binds, compared as cmp_free(any), and N.* as its image (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches").
-procedure forb_meets(CAtoms?, CAtoms?, YesNo).
-forb_meets([], _, no).
-forb_meets([X|Xs], Fs, R?) :- ground(X?), ground(Fs?) | c_forbidden(Fs?, X?, R1), forb_meets1(R1?, Xs?, Fs?, R).
-procedure forb_meets1(YesNo?, CAtoms?, CAtoms?, YesNo).
-forb_meets1(yes, _, _, yes).
-forb_meets1(no, Xs, Fs, R?) :- forb_meets(Xs?, Fs?, R).
-procedure c_forbidden(CAtoms?, CAtom?, YesNo).
-c_forbidden([], _, no).
-c_forbidden([K|Ks], X, R?) :- ground(K?), ground(X?) | c_matches(K?, X?, R1), c_forbidden1(R1?, Ks?, X?, R).
-procedure c_forbidden1(YesNo?, CAtoms?, CAtom?, YesNo).
-c_forbidden1(yes, _, _, yes).
-c_forbidden1(no, Ks, X, R?) :- c_forbidden(Ks?, X?, R).
-procedure c_matches(CAtom?, CAtom?, YesNo).
-c_matches(cmp_atom(P, Ks), cmp_atom(Q, Xs), M?) :- P? =?= Q? | cm_vals(Ks?, Xs?, M).
-c_matches(_, _, no) :- otherwise | true.
-procedure cm_vals(CVals?, CVals?, YesNo).
-cm_vals([], [], yes).
-cm_vals([], [_|_], no).
-cm_vals([_|_], [], no).
-cm_vals([K|Ks], [X|Xs], M?) :- ground(K?), ground(X?) |
-    cm_val(K?, X?, M1),
-    cm_vals1(M1?, Ks?, Xs?, M).
-procedure cm_vals1(YesNo?, CVals?, CVals?, YesNo).
-cm_vals1(no, _, _, no).
-cm_vals1(yes, Ks, Xs, M?) :- cm_vals(Ks?, Xs?, M).
-procedure cm_val(CVal?, CVal?, YesNo).
-cm_val(cmp_free(any), _, yes).
-cm_val(cmp_val(K), cmp_val(X), M?) :- gm_val(K?, X?, M).
-cm_val(K, X, M?) :- otherwise | same(K?, X?, M).
 procedure forbs_of(RoleSpecs?, SAtoms).
 forbs_of([], []).
 forbs_of([R|Rs], F?) :- rs_forb(R?, F1), forbs_of(Rs?, F2), app(F1?, F2?, F).
@@ -7274,8 +7196,6 @@ vars_bound([num(X)|Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
 vars_bound([val(_)|Vs], B, R?) :- vars_bound(Vs?, B?, R).
 %% An item is bound where its variable is.
 vars_bound([item_of(V)|Vs], B, R?) :- vars_bound([V?|Vs?], B?, R).
-%% The wildcard of a forbidden atom is no variable, and leaves the atom bound (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches").
-vars_bound([any|Vs], B, R?) :- vars_bound(Vs?, B?, R).
 vars_bound([nterm(N)|Vs], B, R?) :- ground(N?) |
     nt_vars(N?, Ws),
     app(Ws?, Vs?, Vs1),
@@ -7455,8 +7375,6 @@ kind_ok(svar(_), c(_), no).
 kind_ok(num(_), n(_), yes).
 kind_ok(num(_), r(_), yes).
 kind_ok(num(_), lv(_, _), yes).
-%% A variable over the constants is a value variable, num(X) in the schemas the text carries, its value a constant, v(C), as the image of a constant the contract names is (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it"); the place of an atom is of one type, so no variable over the numbers is matched with a constant.
-kind_ok(num(_), v(_), yes).
 kind_ok(num(_), p(_), no).
 kind_ok(num(_), s(_), no).
 kind_ok(num(_), c(_), no).
@@ -7541,12 +7459,6 @@ val_real(V, B, K?) :- ground(B?) | lookup(V?, B?, F), real_found(F?, K).
 procedure real_found(Found?, Real).
 real_found(found(r(K)), K?).
 real_found(_, 0.0) :- otherwise | true.
-%% The constant of a variable over the constants of a class term, written in the term (class_of); none where none is bound, which a schema-binding of a class never leaves.
-procedure val_const(Var?, Binding?, Constant).
-val_const(V, B, C?) :- ground(B?) | lookup(V?, B?, F), const_found(F?, C).
-procedure const_found(Found?, Constant).
-const_found(found(v(C)), C?).
-const_found(_, none) :- otherwise | true.
 %% Whether the constraint holds under the binding, every number it names bound: and(C1, C2), C1 and C2; eq(X, Y), X = Y; le(X, Y), X =< Y; lt(X, Y), X < Y; ge(X, Y), X >= Y; gt(X, Y), X > Y; succ(X, Y), Y = X + 1; or(C1, C2), C1 or C2, X and Y the values of the expressions under the binding.  A number not bound makes a comparison false.
 procedure con_holds(Constraint?, Binding?, YesNo).
 con_holds(true, _, yes).
@@ -7590,12 +7502,7 @@ expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
 expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
 %% A constant the contract names is its own value, v(C).
 expr_term1(val(C), _, found(v(C?))).
-%% A variable over the constants is the constant the binding, or a reading, gives it, v(C), so that eq and ne compare two such variables, or one and a constant the contract names, for equality, the comparison of constants (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a constraint ... is over the relations and functions the value types provide --- comparison and arithmetic").
-expr_term1(num(X), B, F?) :- ground(B?) | lookup(num(X?), B?, F0), const_term(F0?, F).
 expr_term1(_, _, free) :- otherwise | true.
-procedure const_term(Found?, Found).
-const_term(found(v(C)), found(v(C?))).
-const_term(_, free) :- otherwise | true.
 procedure author_found(Found?, Found).
 author_found(found(s(S)), found(p(P?))) :- ground(S?) | first_signer(S?, P).
 author_found(_, free) :- otherwise | true.
@@ -7890,17 +7797,11 @@ schema_head(lschema(_, Hd, _, _), Hd?).
 procedure hd_nums_bound(Vars?, Binding?, YesNo).
 hd_nums_bound([], _, yes).
 hd_nums_bound([num(X)|Vs], B, Ok?) :- ground(X?), ground(B?) |
-    lookup(num(X?), B?, F),
-    is_value(F?, O1),
+    num_of(num(X?), B?, K),
+    is_num(K?, O1),
     hd_nums_bound(Vs?, B?, O2),
     and(O1?, O2?, Ok).
 hd_nums_bound([_|Vs], B, Ok?) :- otherwise | hd_nums_bound(Vs?, B?, Ok).
-%% A value variable of the head is bound to a value: a number, or, a variable over the constants, a constant.
-procedure is_value(Found?, YesNo).
-is_value(found(n(_)), yes).
-is_value(found(r(_)), yes).
-is_value(found(v(_)), yes).
-is_value(_, no) :- otherwise | true.
 procedure is_num(NumRes?, YesNo).
 is_num(num_is(_), yes).
 is_num(no_num, no).

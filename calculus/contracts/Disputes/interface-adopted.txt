@@ -1,3 +1,0 @@
-Interface pragmas
-Raise: Alice [Raise] <orga> <carol> <issue> <bob>
-Decide: Carol [Decide]

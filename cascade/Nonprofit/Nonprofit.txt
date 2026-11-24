@@ -5,13 +5,13 @@
 % Checked: calculus/tools/gcsas.py (commute, return, recover), relations.py, and toglp.py --check (Dart 3.14.1): syntactically_grassroots_with_wards.
 % Schemas: Nonprofit.glp beside this file.
 Nonprofit
-Nonprofit weakens Corporation.
+Nonprofit restricts Corporation.
 A *nonprofit* is a corporation that pays none of its coins, notes or bonds to its officers.
 Alice and Bob are parties, Orga a nonprofit.
-1. ■ Nondistribution. Pay, Pay issuer: Notes:3 and Coins:1, only if Bob is not an officer of Alice.
+1. ■ Nondistribution. Pay for Alice: Notes:3 Pay for Alice, only if Bob is not an officer of Alice. Pay issuer for Alice: Notes:3 Pay issuer for Alice, only if Bob is not an officer of Alice. Pay bond for Alice: Notes:3 Pay bond for Alice, only if Bob is not an officer of Alice.
 Logic pragmas
-Nonprofit weakens Corporation.
+Nonprofit restricts Corporation.
 A *nonprofit* is a corporation that pays none of its coins, notes or bonds to its officers.
 Alice and Bob are parties, Orga a nonprofit.
-1. ■ Nondistribution. Pay: Notes:3 Pay, only if Bob is not an officer of Alice. Pay issuer: Notes:3 Pay issuer, only if Bob is not an officer of Alice.
+1. ■ Nondistribution. Pay for Alice: Notes:3 Pay for Alice, only if Bob is not an officer of Alice. Pay issuer for Alice: Notes:3 Pay issuer for Alice, only if Bob is not an officer of Alice. Pay bond for Alice: Notes:3 Pay bond for Alice, only if Bob is not an officer of Alice.
 Interface pragmas

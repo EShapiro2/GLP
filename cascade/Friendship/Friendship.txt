@@ -16,8 +16,8 @@ Logic pragmas
 Friendship extends Knowledge.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 Alice and Bob are persons.
-1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person and Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
-2. ■ Unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
+1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+2. ■ Unfriend: Alice may end her friendship with Bob.
 3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 Logic pragmas.
 Vocabulary: x counts y as a friend = friend(x,y).

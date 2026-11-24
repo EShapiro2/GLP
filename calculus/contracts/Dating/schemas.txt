@@ -1,3 +1,6 @@
 Dating
-Dating extends Free Matching.
+Dating instantiates Anonymous Matching with a test of the match of profiles and a budget of a count set by the maker, a forward costing one, and restricts it.
+x has no profile: x has made the post no one.
 Dating:0 - | A post is a *profile*, stating who its maker is and whom they seek. Two profiles match when each states whom the other seeks.
+Dating:0 - | Alice is a person.
+Dating:1 ■ Post: Matching:1 <- ~made(Alice,_).

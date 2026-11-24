@@ -5,11 +5,11 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Cooperative-DAO.glp beside this file.
 Cooperative DAO
-Cooperative DAO extends Cooperative.
-A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer.
+Cooperative DAO instantiates Cooperative with DAO bylaws.
+A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer, and delegate to the steward the admission of a member.
 Logic pragmas
-Cooperative DAO extends Cooperative.
-A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer.
+Cooperative DAO instantiates Cooperative with DAO bylaws.
+A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer, and delegate to the steward the admission of a member.
 Orga is a DAO.
 Interface pragmas
 Look: 🗳️, governance

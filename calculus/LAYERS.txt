@@ -7,4 +7,4 @@
 6 Cooperative-DAO App Shareholding-Corporation Central-Bank Commercial-Bank Community-Bank Community-Currency Mutual-Credit Single-Person-Company Trading-Company Workers-Cooperative Backchannel-Feeds
 7 Consumers-Cooperative Liquid-Cooperative Backed-Currency
 8 Community-Network
-9 Gigs Lodging Community-Market Ads Rides
+9 Gigs Lodging Marketplace Ads Rides

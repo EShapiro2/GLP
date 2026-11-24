@@ -1,5 +1,5 @@
 Funded DAO
-Funded DAO unites DAO and Coins, and extends the union.
+Funded DAO extends DAO and Coins.
 Alice, Bob, Carol and Dave are persons, Delos a DAO and Prop a proposal, Sum a number, Carol possibly Alice or Bob, Dave possibly Alice, Bob or Carol.
 1. ■ Fund: Carol may give Alice's Delos Sum Dave-coins, provided Carol is a member of Alice's Delos and Alice is the steward of Delos.
 2. ■ Grant: Alice may grant Carol Sum Dave-coins of Delos for Prop, provided Alice is the steward of Delos, Alice holds Prop of Delos as passed and Carol has proposed Prop to Alice's Delos.

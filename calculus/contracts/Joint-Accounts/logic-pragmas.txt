@@ -2,7 +2,7 @@ Joint Accounts
 Joint Accounts extends Coins.
 Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
 1. ■ Open account: Alice and Bob may jointly open the joint account Acct under a new name of Alice's, provided Alice and Bob know each other.
-2. ■ Account deposit: Alice may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct. Partner deposit: Bob may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct.
+2. ■ Deposit: Alice may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct. Partner deposit: Bob may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct.
 3. ■ Withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Alice. Partner withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Bob.
 Logic pragmas.
 Vocabulary: x has an account named n = account(x,n); x holds the joint account n with y = joint(x,n,y); x keeps m z-coins in n with y = joint_coin(x,z,n,y,*m).

@@ -1,6 +1,6 @@
 Commercial Bank
-Commercial Bank extends Bank, and weakens it.
-A *commercial bank* is a bank that may issue Dollar-denominated coins and bonds, whose bylaws name two roles, *director*, held by its first officer, and *loan officer*; a loan officer decides a loan within their *lending limit*, a number of Dollars. A participant who holds no role is a *customer*.
+Commercial Bank instantiates Bank with commercial bank bylaws and restricts and extends it.
+A *commercial bank* is a bank that may issue Dollar-denominated coins and bonds, whose bylaws name two roles, *director*, held by its first officer, and *loan officer*; the directors jointly decide the acts of the bank, but a loan officer decides a loan within their *lending limit*, a number of Dollars. A participant who holds no role is a *customer*.
 Bob and Carol are persons, Orga a commercial bank.
 1. ■ Leave, Expel: Organisation:3, only with the consent of both Bob and the directors.
 2. ■ Bank deposit: Bob, a customer, may swap Dollar-denominated coins he holds for Orga-coins.

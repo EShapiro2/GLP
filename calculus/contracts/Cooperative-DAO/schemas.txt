@@ -1,4 +1,4 @@
 Cooperative DAO
-Cooperative DAO extends Cooperative.
-Cooperative DAO:0 - | A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer.
+Cooperative DAO instantiates Cooperative with DAO bylaws.
+Cooperative DAO:0 - | A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer, and delegate to the steward the admission of a member.
 Cooperative DAO:0 - | Orga is a DAO.

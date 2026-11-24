@@ -34,7 +34,7 @@ Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) gu
 Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
 Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
 Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
-Joint Accounts:1+Pair:1 ■ Open: joint(Alice,Acct,Bob), joint(Bob,Acct,Alice) <- knows(Bob,Alice), knows(Alice,Bob) guarded by Alice, Bob.
+Joint Accounts:1+Pair:1 ■ Open: joint(Alice,Acct,Bob), joint(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Bob) guarded by Alice, Bob.
 Pair:1 ■ | Joint accounts stay open until both close them.
 --- relations.py
 Joint Accounts extends Knowledge: holds

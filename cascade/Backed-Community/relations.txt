@@ -1,0 +1,2 @@
+Backed Community extends Community: holds
+Backed Community restricts it (Community): holds

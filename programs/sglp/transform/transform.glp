@@ -669,25 +669,11 @@ seer(yes, H, Cs, [K?|Ks?]) :- key(H?, K), seers(Cs?, Ks).
 %% The analysis of the profiles: an(Ps, Rs, Ss, Xs), the keys of the
 %% person procedures, of the procedures a rated goal calls, of those that take
 %% the screen's reference, and of those
-%% exported, the person procedures, which the person process calls, the
-%% census, which the population's persons/5 calls, from the module beside, and
-%% environment/2 where the source defines it, which the harness of a canonical
-%% CVA platform whose agent is agent/6 calls (programs/sglp/cva/agent6.glp.in).
+%% exported, the person procedures, which the person process calls, and the
+%% census, which the population's persons/5 calls, from the module beside.
 procedure analysis(List(Item)?, An).
 analysis(S, An?) :- ground(S?) |
-    binds(S?, none, Bs), clauses(S?, Cs), clauses(S?, Cs1), runs(S?, Rs), census_keys(Rs?, Ws0),
-    env_keys(Cs1?, Es), append(Ws0?, Es?, Ws), analysis1(Bs?, Cs?, Ws?, An).
-
-%% env_keys(Cs?, Es): key(environment, 2) where a clause of Cs defines
-%% environment/2, the environment of a person (programs/sglp/cva/agent6.glp.in);
-%% none otherwise.
-procedure env_keys(List(Cl)?, List(Key)).
-env_keys([], []).
-env_keys([cl(H, _, _)|Cs], Es?) :- ground(H?) |
-    key(H?, K), member(K?, [key(environment, 2)], A), env_keys1(A?, Cs?, Es).
-procedure env_keys1(Ans?, List(Cl)?, List(Key)).
-env_keys1(yes, _, [key(environment, 2)]).
-env_keys1(no, Cs, Es?) :- env_keys(Cs?, Es).
+    binds(S?, none, Bs), clauses(S?, Cs), runs(S?, Rs), census_keys(Rs?, Ws), analysis1(Bs?, Cs?, Ws?, An).
 procedure analysis1(List(Bind)?, List(Cl)?, List(Key)?, An).
 analysis1(Bs, Cs, Ws, an(Ps?, Rs?, Ss?, Xs?)) :- ground(Cs?) |
     person_keys(Bs?, Ps0), dedup(Ps0?, Ps1), analysis2(Ps1?, Cs?, Ws?, Ps, Ss, Xs),

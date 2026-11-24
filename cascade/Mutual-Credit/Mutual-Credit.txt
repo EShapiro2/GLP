@@ -5,15 +5,15 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Mutual-Credit.glp beside this file.
 Mutual Credit
-Mutual Credit extends Bank, and weakens it.
-A *mutual credit society* is a bank whose bylaws name one role, *member*, held by every participant. A member is *in the red* by their coins in circulation less the other persons' coins they hold.
+Mutual Credit instantiates Bank with mutual credit society bylaws and restricts and extends it.
+A *mutual credit society* is a bank whose bylaws name one role, *member*, held by every participant; the members jointly decide its acts. A member is *in the red* by their coins in circulation less the other persons' coins they hold.
 Alice and Bob are persons, Orga a mutual credit society.
 1. ■ Leave: Organisation:3, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other.
 2. ■ Redeem member's coin: Bob, a member, may redeem an Alice-coin he holds against an Orga-coin, provided Alice is a member.
 3. ■ Credit limit. Denominated Currencies:2, Notes:3, Coins:1 and Denominated Currencies:4, only if every member is then in the red by at most 1000 coins.
 Logic pragmas
-Mutual Credit extends Bank, and weakens it.
-A *mutual credit society* is a bank whose bylaws name one role, *member*, held by every participant. A member is *in the red* by their coins in circulation less the other persons' coins they hold.
+Mutual Credit instantiates Bank with mutual credit society bylaws; x is a member of z for x is entitled to propose m in z; x is a member of z for x is entitled to take m for z; x is a member of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z, and restricts and extends it.
+A *mutual credit society* is a bank whose bylaws name one role, *member*, held by every participant; the members jointly decide its acts. A member is *in the red* by their coins in circulation less the other persons' coins they hold.
 Alice and Bob are persons, Orga a mutual credit society.
 1. ■ Leave: Organisation:3 Leave, only if Bob holds exactly 0 Orga-coins. Leave owed nothing: Organisation:3 Leave, only if Orga holds exactly 0 Bob-coins. Officer leave: Organisation:3 Officer leave, only if Bob holds exactly 0 Orga-coins. Officer leave owed nothing: Organisation:3 Officer leave, only if Orga holds exactly 0 Bob-coins.
 2. ■ Redeem member's coin: Bob may redeem with Orga an Alice-coin against an Orga-coin, provided Bob is a member of Orga and Alice is a member of Orga.

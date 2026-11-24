@@ -1,6 +1,5 @@
 Children
-Children renames Warded Groups, and extends and weakens it.
-Renaming of Warded Groups: a child for a ward and a parent for a guardian.
+Children instantiates Warded Groups with parents(z) for deciders(z), a child for a ward and a parent for a guardian, and restricts and extends it.
 Vocabulary: z is of age = of_age(z).
 Roles: the parents of z = parents(z), listed by z has y as a parent and y is a parent of z.
 every guardianship of z has ended: no one is a parent of z and z has no one as a parent.
@@ -13,8 +12,8 @@ Children:2 ■ Child acquaint: Guardians:3 Ward acquaint <- knows(Alice,Bob), pa
 Children:2 ■ Children acquaint: Guardians:4 Wards acquaint <- knows(Alice,Will), knows(Bob,Wendy), knows(Alice,Bob), knows(Bob,Alice), parent(Alice,Wendy), parent(Bob,Will) guarded by Alice, Bob.
 Children:3 ■ Child create: Warded Groups:2 Ward create <- has_parent(Wendy,Alice) guarded by Alice.
 Children:3 ■ Join: Groups:3 Join <- person(Alice).
-Children:3 ■ Child add: Warded Groups:3 Ward add, Will in place of Bob <- child(Will), has_parent(Will,Bob) guarded by Bob.
-Children:3 ■ | Only a child, Will, may join the group, with the consent of Bob, a parent of Will.
+Children:3 ■ Child add: Warded Groups:3 Ward add <- child(Bob).
+Children:3 ■ | Only a child, Will, may join the group.
 Children:4 ○ Of age: of_age(Wendy), ~child(Wendy), ~parent(_,Wendy), ~has_parent(Wendy,_), person(Wendy) <- creator(Alice,Wendy), has_parent(Wendy,Bob), ~of_age(Wendy), child(Wendy) guarded by Alice.
 Children:4 ○ | Wendy is then a person.
 Children:4 ○ | The creator will do so if the minor who operates Wendy comes of age, and not before.

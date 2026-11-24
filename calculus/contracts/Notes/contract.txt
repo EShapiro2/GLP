@@ -1,6 +1,6 @@
 Notes
 Notes extends Knowledge.
-A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Alice, Bob and Carol are parties.
 1. ■ Issue: Alice may issue Alice-notes.
 2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.

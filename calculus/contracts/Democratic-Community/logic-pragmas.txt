@@ -1,5 +1,15 @@
 Democratic Community
-Democratic Community unites an augmentation of Community Bank and Constitution.
+Democratic Community extends Community and Constitution.
 A *democratic community* is a community that is a constitutional democratic community.
 Alice and Bob are persons, Orga a democratic community.
 Logic pragmas.
+Default: x is a participant of z for x is entitled to amend the bylaws of z as m says.
+Default: z is an organisation and z has m proposed for the amendment m is decided according to the bylaws of z.
+Default: x is a participant of z for x is entitled to vote on whether y becomes a participant of z in z.
+Default: z holds the votes of at least VotesOrga persons on whether y becomes a participant of z, DoubleOrga is VotesOrga times 2 and z has fewer than DoubleOrga persons as a participant for the votes decide whether y becomes a participant of z according to the bylaws of z.
+Default: x is a participant of z for x is entitled to vote on whether g ends y's participation in z in z.
+Default: z holds the votes of at least VotesOrga persons on whether g ends y's participation in z, DoubleOrga is VotesOrga times 2 and z has fewer than DoubleOrga persons as a participant for the votes decide whether g ends y's participation in z according to the bylaws of z.
+Default: x is a participant of z for x is entitled to vote on whether g ends y's participation and y's office in z in z.
+Default: z holds the votes of at least VotesOrga persons on whether g ends y's participation and y's office in z, DoubleOrga is VotesOrga times 2 and z has fewer than DoubleOrga persons as a participant for the votes decide whether g ends y's participation and y's office in z according to the bylaws of z.
+Default: x is a participant of z for x is entitled to vote on whether b amends the bylaws of z as c says in z.
+Default: z holds the votes of at least VotesOrga persons on whether b amends the bylaws of z as c says, DoubleOrga is VotesOrga times 2 and z has fewer than DoubleOrga persons as a participant for the votes decide whether b amends the bylaws of z as c says according to the bylaws of z.

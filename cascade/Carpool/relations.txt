@@ -1,1 +1,1 @@
-Carpool extends Free Matching: holds
+Carpool instantiates Anonymous Matching: holds

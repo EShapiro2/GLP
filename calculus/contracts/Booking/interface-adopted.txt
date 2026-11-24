@@ -1,3 +1,0 @@
-Interface pragmas
-Book: Alice [Book] <res> <slot>
-Cancel: Alice [Cancel]

@@ -1,31 +1,20 @@
 %% The monitor of an sGLP run (sGLP's paper, the repository
-%% svGLP-Stochastic-Volitional-GLP at 4534e66: Appendix C, "The Monitor", the
+%% svGLP-Stochastic-Volitional-GLP at 8c05210: Appendix C, "The Monitor", the
 %% whole module; Section 4, "The guard", "The clock" and "The monitor";
 %% Appendix B, "Implementation Notes").  It steps GLP's simulated clock
 %% (GLP-ICLP, appendix-guards, "Simulated time (start_clock/1, rated/2,
-%% step_clock/2)"), whose types Token and ClockStep are the root's, and sets
-%% the machine's clock to the simulated clock, in Unix milliseconds, at the
-%% start and at each Release, by set_clock/1 (GLP-ICLP, appendix-guards,
-%% "Clock access (now/1, set_clock/1)"), so that a program that reads the date
-%% by now/1, as a canonical CVA platform does, reads the simulated date: the
-%% run starts at 0, 1970-01-01 00:00 UTC (Audit #4, Grassroots-Audit
-%% programs/sglp/cva/harness.glp.in.md, Finding 2).  The set_clock goal
-%% reduces after the released goal and the goals that goal spawns: a now/1
-%% reduced before it, called by the released goal or by a goal it spawns,
-%% reads the clock of the previous Release; a canonical CVA platform reads the
-%% date further on, as it takes the person's answer.
+%% step_clock/2)"), whose types Token and ClockStep are the root's.
 
 Request ::= time(Number?).
 Clock   ::= clock(Number).
 
 %% monitor(Requests?, Seed?, Horizon?, Log?): the input stream, the clock's
 %% seed, the horizon in seconds and the log's reference; it starts the
-%% engine's clock with the seed, the machine's at zero, and its own at zero.
+%% engine's clock with the seed, and its own at zero.
 exported procedure monitor(Stream(Request)?, Integer?, Number?,
                            MutualRef?).
 monitor(In, Seed, Horizon, Log) :-
     start_clock(Seed?),
-    set_clock(0),
     monitor_loop(In?, 0, Horizon?, Log?).
 
 %% monitor_loop(Requests?, Clock?, Horizon?, Log?): a time request answered from
@@ -38,14 +27,10 @@ monitor_loop(In, _, Horizon, Log) :-
     step_clock(Horizon?, Step),
     stepped(Step?, In?, Horizon?, Log?).
 
-%% stepped(Step?, Requests?, Horizon?, Log?): released(T) sets the machine's
-%% clock to T seconds and goes on with T as the clock; stopped(C) writes
-%% clock(C) to the log and ends.
+%% stepped(Step?, Requests?, Horizon?, Log?): released(T) goes on with T as
+%% the clock; stopped(C) writes clock(C) to the log and ends.
 procedure stepped(ClockStep?, Stream(Request)?, Number?, MutualRef?).
 stepped(released(T), In, Horizon, Log) :-
-    number(T?) |
-    Ms := floor(T? * 1000),
-    set_clock(Ms?),
     monitor_loop(In?, T?, Horizon?, Log?).
 stepped(stopped(Clock), _, _, Log) :-
     stream_append(clock(Clock?), Log?, _).

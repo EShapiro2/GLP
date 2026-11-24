@@ -1,32 +1,41 @@
 Agora (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Agora:0 - | Alice, Bob, Carol and Dave are persons, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Type and Other types, Day and Term maturity dates, Today a date, Item and Thing items, Wish something wanted, Mart a market.
+Agora:0 - | Alice, Bob, Carol and Dave are persons, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Day and Term maturity dates, Today a date, Item and Thing items, Wish something wanted, Mart a market.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
-Knowledge:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
-Notes:1 ■ Issue: note(Alice,Alice,Type,*Sum) <- guarded by Alice.
-Notes:2 ■ Swap: ~note(Alice,Carol,Type,*Sum), note(Bob,Carol,Type,*Sum), ~note(Bob,Dave,Other,*Total), note(Alice,Dave,Other,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), note(Alice,Carol,Type,*Sum), note(Bob,Dave,Other,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
-Notes:3 ■ Pay: ~note(Alice,Carol,Type,*Sum), note(Bob,Carol,Type,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), note(Alice,Carol,Type,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
-Notes:3+Coins:1 ■ Pay issuer: ~note(Alice,Bob,Type,*Sum), note(Bob,Bob,Type,*Sum) <- knows(Alice,Bob), note(Alice,Bob,Type,*Sum) guarded by Alice.
+Notes:1 ■ Issue: coin(Alice,Alice,*Sum) <- guarded by Alice.
+Notes:1+Bonds:1 ■ Issue bond: bond(Alice,Alice,Day,*Sum) <- today(Alice,Today), gt(Day,Today) guarded by Alice.
+Notes:2 ■ Swap: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~coin(Bob,Dave,*Total), coin(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), coin(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+Notes:2 ■ Swap coin for bond: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~bond(Bob,Dave,Day,*Total), bond(Alice,Dave,Day,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), bond(Bob,Dave,Day,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+Notes:2 ■ Swap bonds: ~bond(Alice,Carol,Day,*Sum), bond(Bob,Carol,Day,*Sum), ~bond(Bob,Dave,Term,*Total), bond(Alice,Dave,Term,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), bond(Alice,Carol,Day,*Sum), bond(Bob,Dave,Term,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+Notes:3 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+Notes:3+Coins:1 ■ Pay issuer: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum) guarded by Alice.
+Notes:3 ■ Pay bond: ~bond(Alice,Carol,Day,*Sum), bond(Bob,Carol,Day,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), bond(Alice,Carol,Day,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
 Notes:4 ○ | Escrow.
-Notes:4 ○ Deposit: ~note(Alice,Dave,Type,*Sum), escrow_note(Carol,Dave,Type,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), note(Alice,Dave,Type,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ○ Release: ~escrow_note(Carol,Dave,Type,Alice,Bob,Cond,*Sum), note(Bob,Dave,Type,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_note(Carol,Dave,Type,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ○ Return: ~escrow_note(Carol,Dave,Type,Alice,Bob,Cond,*Sum), note(Alice,Dave,Type,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_note(Carol,Dave,Type,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Deposit: ~coin(Alice,Dave,*Sum), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), coin(Alice,Dave,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Deposit bond: ~bond(Alice,Dave,Day,*Sum), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), bond(Alice,Dave,Day,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Release bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Bob,Dave,Day,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Return bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Alice,Dave,Day,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
 Notes:4 ○ | Carol will release them only if Cond is met, and return them only if it fails.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 Coins:0 - | Carol is possibly Alice or Bob.
-Coins:2+Bonds:1 ■ Redeem: ~note(Alice,Bob,coin), note(Bob,Bob,coin), ~note(Bob,Carol,coin), note(Alice,Carol,coin), knows(Alice,Carol) <- knows(Alice,Bob), note(Alice,Bob,coin), note(Bob,Carol,coin) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
+Coins:2+Bonds:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 Bonds:0 - | A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
-Bonds:1 ■ Redeem coin against bond: ~note(Alice,Bob,coin), note(Bob,Bob,coin), ~note(Bob,Carol,bond(Day)), note(Alice,Carol,bond(Day)), knows(Alice,Carol) <- knows(Alice,Bob), note(Alice,Bob,coin), note(Bob,Carol,bond(Day)) guarded by Alice possibly Alice=Carol, Bob=Carol.
-Bonds:1 ■ Redeem bond: ~note(Alice,Bob,bond(Day)), note(Bob,Bob,bond(Day)), ~note(Bob,Carol,coin), note(Alice,Carol,coin), knows(Alice,Carol) <- knows(Alice,Bob), today(Bob,Today), le(Day,Today), note(Alice,Bob,bond(Day)), note(Bob,Carol,coin) guarded by Alice possibly Alice=Carol, Bob=Carol.
-Bonds:1 ■ Redeem bond against bond: ~note(Alice,Bob,bond(Day)), note(Bob,Bob,bond(Day)), ~note(Bob,Carol,bond(Term)), note(Alice,Carol,bond(Term)), knows(Alice,Carol) <- knows(Alice,Bob), today(Bob,Today), le(Day,Today), note(Alice,Bob,bond(Day)), note(Bob,Carol,bond(Term)) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Bonds:0 - | Kind of note: bond, y-bonds due Day for y-notes.
+Bonds:2 ■ Redeem coin against bond: ~coin(Alice,Bob), coin(Bob,Bob), ~bond(Bob,Carol,Day), bond(Alice,Carol,Day), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), bond(Bob,Carol,Day) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Bonds:2 ■ Redeem bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), today(Bob,Today), le(Day,Today), bond(Alice,Bob,Day), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Bonds:2 ■ Redeem bond against bond: ~bond(Alice,Bob,Day), bond(Bob,Bob,Day), ~bond(Bob,Carol,Term), bond(Alice,Carol,Term), knows(Alice,Carol) <- knows(Alice,Bob), today(Bob,Today), le(Day,Today), bond(Alice,Bob,Day), bond(Bob,Carol,Term) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Agora:0 - | An *item* is a one-of-a-kind thing named by its maker.
 Agora:0 - | In clauses 4 and 5 Carol is possibly Alice, and in clause 6 Dave is possibly Alice or Bob.
 Agora:1 ■ Make: made(Alice,Item), item(Alice,Item) <- ~made(Alice,Item) guarded by Alice.
@@ -42,8 +51,8 @@ Agora:4 ■ Deliver to poster: delivered_post(Alice,Carol,Item,Mart,Carol), post
 Agora:5 ■ Withdraw: ~post(Alice,Carol,Item,Mart), ~post(_,Carol,Item,Mart), ~delivered_post(Alice,Carol,Item,Mart,_) <- post(Alice,Carol,Item,Mart) guarded by Carol possibly Alice=Carol.
 Agora:5 ■ Withdraw own: ~post(Alice,Alice,Item,Mart), ~post(_,Alice,Item,Mart), ~delivered_post(Alice,Alice,Item,Mart,_) <- post(Alice,Alice,Item,Mart) guarded by Alice.
 Agora:5 ■ | Carol may not post Item to Mart again.
-Agora:6 ○ Swap item for coin: ~item(Alice,Item), item(Bob,Item), ~note(Bob,Dave,coin,*Sum), note(Alice,Dave,coin,*Sum) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), note(Bob,Dave,coin,*Sum) guarded by Alice, Bob possibly Alice=Dave, Bob=Dave.
-Agora:6 ○ Swap item for bond: ~item(Alice,Item), item(Bob,Item), ~note(Bob,Dave,bond(Day),*Sum), note(Alice,Dave,bond(Day),*Sum) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), note(Bob,Dave,bond(Day),*Sum) guarded by Alice, Bob possibly Alice=Dave, Bob=Dave.
+Agora:6 ○ Swap item for coin: ~item(Alice,Item), item(Bob,Item), ~coin(Bob,Dave,*Sum), coin(Alice,Dave,*Sum) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), coin(Bob,Dave,*Sum) guarded by Alice, Bob possibly Alice=Dave, Bob=Dave.
+Agora:6 ○ Swap item for bond: ~item(Alice,Item), item(Bob,Item), ~bond(Bob,Dave,Day,*Sum), bond(Alice,Dave,Day,*Sum) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), bond(Bob,Dave,Day,*Sum) guarded by Alice, Bob possibly Alice=Dave, Bob=Dave.
 Agora:6 ○ Swap items: ~item(Alice,Item), item(Bob,Item), ~item(Bob,Thing), item(Alice,Thing) <- knows(Alice,Bob), knows(Bob,Alice), item(Alice,Item), item(Bob,Thing) guarded by Alice, Bob.
 Agora:6 ○ Deposit item: ~item(Alice,Item), escrow_item(Carol,Item,Alice,Bob,Cond) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), item(Alice,Item) guarded by Alice, Carol.
 Agora:6 ○ Release item: ~escrow_item(Carol,Item,Alice,Bob,Cond), item(Bob,Item) <- knows(Carol,Bob), knows(Bob,Carol), escrow_item(Carol,Item,Alice,Bob,Cond) guarded by Carol, Bob.

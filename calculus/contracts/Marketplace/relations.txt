@@ -1,0 +1,2 @@
+Marketplace extends Community Network and Overlay: holds
+Marketplace restricts Recommendations: holds

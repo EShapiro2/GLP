@@ -1,4 +1,3 @@
-Rides extends Community Network and Second-Score Auction: holds
-Rides extends it (Community Network and Second-Score Auction): holds
-Rides restricts it (Community Network and Second-Score Auction): holds
-Rides strengthens it (Community Network and Second-Score Auction): holds
+Rides extends Community Network: holds
+Rides restricts Second-Score Auction: holds
+Rides strengthens Second-Score Auction: holds

@@ -1,10 +1,10 @@
 # A run of the cascade on Coins
 
-- Contract: `Coins` (`coins` to the checker), its owner's two files `programs/currencies/coins/Coins.txt` and `programs/currencies/coins/Coins.glp`, copied here as they stood at `763dc9f3`.
+- Contract: `Coins` (`coins` to the checker), its owner's two files `programs/currencies/coins/Coins.txt` and `programs/currencies/coins/Coins.glp`, copied here as they stood at `bd76d455`.
 - The paper: `/Users/udi/Grassroots/GC (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/currencies/coins/Coins.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/currencies/coins/Coins.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-24 10:20 UTC by `cascade.sh coins`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `763dc9f3`; each artefact's source and tool:
+- Run on 2026-11-17 13:51 UTC by `cascade.sh coins`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `bd76d455`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
@@ -17,7 +17,7 @@
 | `full-schemas.txt` | the same | calculus/tools/adopt.py | the schemas, the relations applied |
 | `verdict.txt` | `Coins.glp` | programs/gsc, check/2 | the checker's verdict: `syntactically_grassroots` |
 | `vmat.tex` | `Coins.glp` | programs/gsc, compile_contract/2 | the VMAT form, 11 displays, one per schema |
-| `platform.vglp` | `Coins.glp` | programs/vglp/cva/compiler, compile/5 | the CVA compiler's refusal, and no platform.glp and no run |
-
-What the tools refused or lacked:
-- platform: %% not compiled(coins)
+| `platform.vglp` | `Coins.glp` read by programs/gsc's as_read/2, and `Coins.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
+| `platform.glp` | `platform.vglp` | glp_runtime's :emit | the platform compiled to GLP, as emitted |
+| `interface.glp` | `platform.vglp` and `platform.glp` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |
+| `run.log` | `platform.vglp` | programs/vglp/cva/currency, the plays with scripted persons, in the REPL | the plays' logs: play_pay_swap play_redeem play_busy play_declined |

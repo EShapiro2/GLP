@@ -1,1 +1,1 @@
-Home Exchange extends Free Matching: holds
+Home Exchange instantiates Anonymous Matching: holds

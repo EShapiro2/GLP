@@ -5,7 +5,7 @@ A *party* to a contract is whoever has an identity, and a *person* is a party wh
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice.
 A *feed* is named by its author.
-d > 1 is an integer.
+d > 1, an integer, is a parameter of Resilient Feeds.
 Alice, Bob, Carol and Dave are persons. Carol and Dave are possibly one person. Bob and Carol are possibly one person. Bob and Dave are possibly one person.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.

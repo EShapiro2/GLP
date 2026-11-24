@@ -5,7 +5,7 @@ App
 4. ■ Open place.  Alice may declare the place she is in open.
 5. ■ Close place.  Alice may close it.
 6. ■ Encounter.  Alice and Bob, nearby each other, who have both declared the place open, come to know each other, and Alice must consent, and Bob must consent.
-7. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+7. ■ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
 8. ■ Person unfriend.  Alice may end her friendship with Bob.
 9. ■ Sign.  Alice may create an item by signing it.
 10. ■ Forward.  Alice may forward an item she holds to her friend Bob, adding her signature to the signatures the item carries.
@@ -17,20 +17,20 @@ App
 16. ■ Install.  Alice may install a program she published, as well as a program offered to her whose developer she trusts.
 17. ■ Invite.  Alice may invite her friend Bob to join her in a program she installed, with the consent of Bob, who trusts its developer; Bob then has the program installed, with Alice's signature added, and each is a participant of the program with the other.
 18. ■ Leave.  Alice may leave a program she installed; it is then no longer installed, and her participation in it with every participant ends.
-19. ■ Enter.  Alice may create a ward, Wendy, and establish Wendy's identity by choosing Wendy's key pair, and Wendy must consent.
-20. ■ Make guardian.  Those who decide for Wendy may make Bob, a friend of a guardian of Wendy, a guardian and a friend of Wendy, with the consent of Bob.
-21. ■ Resign.  Bob may end his guardianship of Wendy.
-22. ■ End guardian.  Those who decide for Wendy, other than Bob, may end Bob's guardianship.
-23. ■ Guardian unfriend.  Bob may end his friendship with Wendy, which ends his guardianship.
-24. ■ Ward acquaint.  Wendy, a ward of Alice, and Bob may jointly come to know each other.
-25. ■ Ward befriend.  Wendy may enter a relation with Bob with the consent of Bob and Alice, provided Wendy and Bob know each other and Alice and Bob are friends.
-26. ■ Ward end.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
-27. ■ Unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
-28. ■ Ward unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
-29. ■ Wards acquaint.  Wendy, a ward of Alice, and Will, a ward of Bob, may jointly come to know each other.
-30. ■ Wards befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
-31. ■ Wards of one guardian befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
-32. ■ Retire.  Those who decide for Wendy may retire Wendy; every guardianship and relation of Wendy then ends and Wendy can take no act.
+19. ■ Enter.  Alice may create a ward, Carol, and establish Carol's identity by choosing Carol's key pair, and Carol must consent.
+20. ■ Make guardian.  Those who decide for Carol may make Bob, a friend of a guardian of Carol, a guardian and a friend of Carol, with the consent of Bob.
+21. ■ Resign.  Bob may end his guardianship of Carol.
+22. ■ End guardian.  Those who decide for Carol, other than Bob, may end Bob's guardianship.
+23. ■ Guardian unfriend.  Bob may end his friendship with Carol, which ends his guardianship.
+24. ■ Ward acquaint.  Carol, a ward of Alice, and Bob may jointly come to know each other.
+25. ■ Ward befriend.  Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends.
+26. ■ Ward end.  Carol, Bob or Alice may end the relation of Bob and Carol.
+27. ■ Unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
+28. ■ Ward unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
+29. ■ Wards acquaint.  Carol, a ward of Alice, and Dave, a ward of Bob, may jointly come to know each other.
+30. ■ Wards befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+31. ■ Wards of one guardian befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
+32. ■ Retire.  Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
 33. ■ Open store.  Carol may make her service Dave a store.
 34. ○ List.  Carol may list in Dave a program developed by Bob, after adding her signature to its signatures, provided she trusts Bob as a developer.
 35. ○ Delist.  Carol may delist it.
@@ -73,31 +73,31 @@ Install: Alice [Install]
 Invite: Alice [Invite]
   Bob: Alice asks for your consent to invite.
 Leave: Alice [Leave]
-Enter: Alice [Enter] <wendy>
-Make guardian: Bob [Make guardian] <wendy>
+Enter: Alice [Enter] <carol>
+Make guardian: Bob [Make guardian] <carol>
   Decider: Bob asks for your consent to make guardian.
   Codecider: Bob asks for your consent to make guardian.
 Resign: Bob [Resign]
 End guardian: Decider [End guardian] <bob>
   Codecider: Decider asks for your consent to end guardian.
 Guardian unfriend: Bob [Guardian unfriend]
-Ward acquaint: Wendy [Ward acquaint] <bob>
-  Bob: Wendy asks for your consent to ward acquaint.
-Ward befriend: Wendy [Ward befriend]
-  Bob: Wendy asks for your consent to ward befriend.
-  Alice: Wendy asks for your consent to ward befriend.
-Ward end: Wendy [Ward end]
+Ward acquaint: Carol [Ward acquaint] <bob>
+  Bob: Carol asks for your consent to ward acquaint.
+Ward befriend: Carol [Ward befriend]
+  Bob: Carol asks for your consent to ward befriend.
+  Alice: Carol asks for your consent to ward befriend.
+Ward end: Carol [Ward end]
 Unfriend: Bob [Unfriend]
-Ward unfriend: Alice [Ward unfriend] <wendy> <bob>
-Wards acquaint: Wendy [Wards acquaint] <will>
-  Will: Wendy asks for your consent to wards acquaint.
-Wards befriend: Wendy [Wards befriend] <bob>
-  Will: Wendy asks for your consent to wards befriend.
-  Alice: Wendy asks for your consent to wards befriend.
-  Bob: Wendy asks for your consent to wards befriend.
-Wards of one guardian befriend: Wendy [Wards of one guardian befriend]
-  Will: Wendy asks for your consent to wards of one guardian befriend.
-  Alice: Wendy asks for your consent to wards of one guardian befriend.
+Ward unfriend: Alice [Ward unfriend] <carol> <bob>
+Wards acquaint: Carol [Wards acquaint] <dave>
+  Dave: Carol asks for your consent to wards acquaint.
+Wards befriend: Carol [Wards befriend] <bob>
+  Dave: Carol asks for your consent to wards befriend.
+  Alice: Carol asks for your consent to wards befriend.
+  Bob: Carol asks for your consent to wards befriend.
+Wards of one guardian befriend: Carol [Wards of one guardian befriend]
+  Dave: Carol asks for your consent to wards of one guardian befriend.
+  Alice: Carol asks for your consent to wards of one guardian befriend.
 Retire: Decider [Retire]
   Codecider: Decider asks for your consent to retire.
 Open store: Carol [Open store]

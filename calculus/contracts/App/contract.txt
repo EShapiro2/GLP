@@ -1,2 +1,2 @@
 App
-App unites Encounters, AppStore and Directory.
+App composes Encounters with AppStore and Directory.

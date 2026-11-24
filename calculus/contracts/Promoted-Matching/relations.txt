@@ -1,2 +1,0 @@
-Promoted Matching extends Anonymous Matching and Promoted Gossip: holds
-Promoted Matching extends it (Anonymous Matching and Promoted Gossip): holds

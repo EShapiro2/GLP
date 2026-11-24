@@ -1,3 +1,3 @@
 Home Exchange
-Home Exchange extends Free Matching.
+Home Exchange instantiates Anonymous Matching with a test of the match of homes and a budget of a count set by the maker, a forward costing one.
 Home Exchange:0 - | A post is a *home*, stating a dwelling, when it is free, and where and when its maker seeks one. Two homes match when each is where and when the other's maker seeks.

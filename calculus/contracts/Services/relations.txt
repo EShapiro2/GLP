@@ -1,1 +1,1 @@
-Services extends Guardians: holds
+Services instantiates Guardians: holds

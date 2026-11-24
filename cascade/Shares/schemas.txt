@@ -1,5 +1,9 @@
 Shares
-Shares unites Organisation and Notes, and extends the union.
-Vocabulary: x holds a share of z = note(x,z,share); x holds n shares of z = note(x,z,share,*n); x holds exactly n shares of z = note(x,z,share,#n); z holds n shares of w in escrow from x for y on k = escrow_note(z,w,share,x,y,k,*n).
+Shares restricts Organisation and Notes.
+Vocabulary: x holds a share of z = share(x,z); x holds n shares of z = share(x,z,*n); x holds exactly n shares of z = share(x,z,#n); z holds n shares of w in escrow from x for y on k = escrow_share(z,w,x,y,k,*n).
+Roles: those who decide the issue of shares of z = share_deciders(z).
 Shares:0 - | A *share* of Orga is an Orga-note that gives its holder a vote in Orga and a part of its dividends.
 Shares:0 - | Alice is a party, Orga an organisation.
+Shares:0 - | Default: those who decide for z for those who decide the issue of shares of z.
+Shares:0 - | Kind of note: share, shares of y for y-notes.
+Shares:1 ■ Issue shares: Notes:1, for shares <- organisation(Alice) guarded by share_deciders(Alice).

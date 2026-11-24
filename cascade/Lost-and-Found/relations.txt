@@ -1,1 +1,1 @@
-Lost and Found extends Free Matching: holds
+Lost and Found instantiates Anonymous Matching: holds

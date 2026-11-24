@@ -543,7 +543,7 @@ budget
 (
 Post
 ,
-Part
+Rest
 )
 \}
 , \qquad 
@@ -611,24 +611,26 @@ friend
 )
 ,
 \mathit{\detokenize{
-protocol
-}}
-(
-Post
-,
-\Alice
-,
-Part
-,
-Rest
-)
-,
-\mathit{\detokenize{
 person
 }}
  \in c_
 {
 \Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+post_from
+}}
+(
+Post
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
 }
 ,\\
 &
@@ -739,6 +741,70 @@ Other
 ,\\
 &
 \text{guarded by } \emptyset
+\end{align*}
+\iffalse
+withdraw
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+made
+}}
+(
+Post
+)
+,
+\mathit{\detokenize{
+post
+}}
+(
+Post
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+made
+}}
+(
+Post
+)
+,
+\mathit{\detokenize{
+post
+}}
+(
+Post
+)
+ \in c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+\}
 \end{align*}
 \iffalse
 meet

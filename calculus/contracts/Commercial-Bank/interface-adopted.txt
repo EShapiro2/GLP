@@ -16,9 +16,9 @@ Leave, Expel: Bob [Leave] <decider>
   Codecider: Bob asks for your consent to officer expel.
   CodeciderB: Bob asks for your consent to officer expel.
 Bank deposit: Bob [Bank deposit] <sum> [Bank deposit own coins] <sum>
-Loan: Alice [Loan] <bob> <dollar> <sum> <day> <total>
+Loan: Alice [Loan] <bob> <sum> <day> <total>
   Bob: Alice asks for your consent to loan.
-  Alice [Loan by the directors] <bob> <dollar> <sum> <day> <total> <votes>
+  Alice [Loan by the directors] <bob> <sum> <day> <total> <votes>
   Bob: Alice asks for your consent to loan by the directors.
   Erin [Vote to lend] <bob> <sum> <day>
 Set lending limit: Alice [Set lending limit] <carol> <limit> <votes>

@@ -1,1 +1,2 @@
-Foundation restricts Nonprofit: holds
+Foundation instantiates Nonprofit: holds
+Foundation restricts it (Nonprofit): holds

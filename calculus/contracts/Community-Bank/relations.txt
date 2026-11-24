@@ -1,1 +1,3 @@
-Community Bank extends Bank: holds
+Community Bank instantiates Bank: holds
+Community Bank restricts it (Bank): holds
+Community Bank extends it (Bank): holds

@@ -43,17 +43,12 @@ faults(C, Rf, Nt, Os, Ls?) :- ground(C?), ground(Rf?), ground(Nt?), ground(Os?) 
 %% Readings (vGLP 566c186 and 6abbed9, Section 5.4, "Speech-act schemas as local specifications"): the conjuncts of the constraint each with its role (conjuncts_of), and what each role reads with its vote yes (reads_of).
 exported procedure num_info_of(Constant?, Args?, Constraint?, Forms?, RoleSpecs?, Integer?, NumInfo).
 num_info_of(Nm, Hd, C, Fs, Rs, B, num_info(Nm?, C?, Ls?, Cj?, Fi?, Rd?)) :- ground(Hd?), ground(Rs?), ground(C?), integer(B?) |
-    unset(Hd?, Hu1),
-    unset(Hd?, Hu2),
-    unset(Hd?, Hu3),
-    unset(Hd?, Hu5),
-    unset(Hd?, Hu6),
-    variables_of(Hu1?, Vs1),
-    variables_of(Hu2?, Vs2),
-    variables_of(Hu3?, Vs3),
+    variables_of(Hd?, Vs1),
+    variables_of(Hd?, Vs2),
+    variables_of(Hd?, Vs3),
     variables_of(Hd?, Vs4),
-    variables_of(Hu5?, Vs5),
-    variables_of(Hu6?, Vs6),
+    variables_of(Hd?, Vs5),
+    variables_of(Hd?, Vs6),
     con_args(C?, Ca1),
     locals_of(Vs1?, Rs?, Ca1?, B?, Ls00),
     con_args(C?, Ca2),
@@ -64,26 +59,15 @@ num_info_of(Nm, Hd, C, Fs, Rs, B, num_info(Nm?, C?, Ls?, Cj?, Fi?, Rd?)) :- grou
     locals_of(Vs5?, Rs?, Ca5?, B?, Ls30),
     con_args(C?, Ca6),
     locals_of(Vs6?, Rs?, Ca6?, B?, Ls40),
-    unset(Hd?, Hd1),
-    unset(Hd?, Hd2),
-    unset(Hd?, Hd3),
-    unset(Hd?, Hd4),
-    unset(Hd?, Hd5),
-    det_locals(C?, Hd1?, Rs?, Ls00?, Ls),
-    det_locals(C?, Hd2?, Rs?, Ls10?, Ls1),
-    det_locals(C?, Hd3?, Rs?, Ls20?, Ls2),
-    det_locals(C?, Hd4?, Rs?, Ls30?, Ls3),
-    det_locals(C?, Hd5?, Rs?, Ls40?, Ls4),
+    det_locals(C?, Hd?, Rs?, Ls00?, Ls),
+    det_locals(C?, Hd?, Rs?, Ls10?, Ls1),
+    det_locals(C?, Hd?, Rs?, Ls20?, Ls2),
+    det_locals(C?, Hd?, Rs?, Ls30?, Ls3),
+    det_locals(C?, Hd?, Rs?, Ls40?, Ls4),
     conjuncts_of(C?, Ls1?, Cj, _),
     conjuncts_of(C?, Ls3?, Cj2, Crs),
     reads_of(Rs?, Ls2?, Cj2?, Crs?, Rd),
     form_infos(Fs?, Vs4?, Ls4?, Fi).
-
-%% The head with its set variables left out: a set variable is local to no role, the schema-binding binding it and the request naming it, as the notes a payer pays (GSC, the set variable, def:numbers; OSPM, act-schemas-local).
-procedure unset(Args?, Args).
-unset([], []).
-unset([set(_)|As], Bs?) :- unset(As?, Bs).
-unset([A|As], [A?|Bs?]) :- otherwise | unset(As?, Bs).
 
 %% The conjuncts of the constraint, each with its role (conj_role): every, where it names no local variable and holds no count or sum; at(I), the one role whose local variables it names or whose anchors its counts hold; and cond, two roles or more, "a conjunct that names variables local to two roles or more is of the part's condition" (vGLP 566c186, Section 5.4).  A conjunct of the condition is taken with each of its counts and sums replaced by a numeric variable of a name no schema writes, '#1', '#2', ..., the k-th count of the condition (cnt_name), whose value the role holding its anchor reads with its vote: "a precondition that compares a count in one participant's state with a count in another's is a condition on two readings, each participant reading its own count and the initiator comparing them" (vGLP 566c186, Section 3.2); Crs holds each, cr(H, N, E), H its anchor's holder.
 procedure conjuncts_of(Constraint?, Locs?, Conjs, CReads).
@@ -272,7 +256,7 @@ stray_counts([], []).
 stray_counts([cr(role(_), _, _)|Crs], Cxs?) :- stray_counts(Crs?, Cxs).
 stray_counts([cr(H, N, E)|Crs], [cx(N?, E?)|Cxs?]) :- otherwise, ground(H?) | stray_counts(Crs?, Cxs).
 
-%% "so is a variable the constraint determines from the variables local to that role and the variables the schema-binding binds, as the count i_1 a treasurer's state holds after minting k coins with i held before, i_1 = i + k" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"): a numeric variable of the head, not local by its occurrences, that an equality conjunct of the constraint determines, its one variable not local, with a coefficient not 0, from variables local to one role I, one at least, and others the schema-binding binds, and that no atom of another role names, role I's atoms naming it or none, is local to I, as Score, which Second-Score Auction's Rank behind names in no atom, W = Score + Fare, A = W + Cost and Cost = L times Delay, A and L local to Alice's role (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 2): "the machine of the person in that role finds a value for it in its own state, or computes it" (ibid.).
+%% "so is a variable the constraint determines from the variables local to that role and the variables the schema-binding binds, as the count i_1 a treasurer's state holds after minting k coins with i held before, i_1 = i + k" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"): a numeric variable of the head, not local by its occurrences, that an equality conjunct of the constraint determines, its one variable not local, with a coefficient not 0, from variables local to one role I, one at least, and others the schema-binding binds, and that only role I's atoms name, is local to I: "the machine of the person in that role finds a value for it in its own state, or computes it" (ibid.).
 procedure det_locals(Constraint?, Args?, RoleSpecs?, Locs?, Locs).
 det_locals(C, Hd, Rs, Ls, R?) :- ground(C?), ground(Hd?), ground(Rs?), ground(Ls?) |
     con_conjuncts(C?, Cs),
@@ -301,20 +285,9 @@ det_each([eq(X, Y)|Cs], Hd, Rs, Ls, R?) :- ground(X?), ground(Y?), ground(Hd?), 
     dedup(A1?, A),
     det_split(A?, Ls?, Lr0, Nl),
     dedup(Lr0?, Lr),
-    det_pick(Nl?, Rs?, Nc),
-    det_one(Nc?, Lr?, X?, Y?, Hd?, Rs?, Ls?, Ls1),
+    det_one(Nl?, Lr?, X?, Y?, Hd?, Rs?, Ls?, Ls1),
     det_each(Cs?, Hd?, Rs?, Ls1?, R).
 det_each([_|Cs], Hd, Rs, Ls, R?) :- otherwise | det_each(Cs?, Hd?, Rs?, Ls?, R).
-%% The one variable an equality determines: its one variable local to no role; or, where it has more, of those the one that no atom of the schema names, the others being named by atoms, so bound by the schema-binding, as Fare in W = Score + Fare (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 2).
-procedure det_pick(Args?, RoleSpecs?, Args).
-det_pick([V], _, [V?]).
-det_pick(Nl, Rs, Nc?) :- otherwise, ground(Nl?), ground(Rs?) | det_unnamed(Nl?, Rs?, Nc).
-procedure det_unnamed(Args?, RoleSpecs?, Args).
-det_unnamed([], _, []).
-det_unnamed([A|As], Rs, R?) :- ground(A?), ground(Rs?) |
-    roles_naming(Rs?, 1, A?, Is),
-    det_unnamed(As?, Rs?, R1),
-    det_keep(Is?, A?, R1?, R).
 %% The roles of the variables local to a role among the arguments, and the arguments local to none.
 procedure det_split(Args?, Locs?, Ints, Args).
 det_split([], _, [], []).
@@ -334,29 +307,11 @@ det_one([V], [I], X, Y, Hd, Rs, Ls, R?) :- ground(V?), integer(I?), ground(X?), 
     lin_coef(minus(X?, Y?), V?, K),
     roles_naming(Rs?, 1, V?, Is0),
     dedup(Is0?, Is),
-    det_ok(Nv?, InH?, K?, Is?, I?, Ok0),
-    dels_name(Rs?, V?, Dd),
-    det_undeleted(Dd?, Ok0?, Ok),
+    det_ok(Nv?, InH?, K?, Is?, I?, Ok),
     det_add(Ok?, I?, V?, Ls?, R).
 det_one(_, _, _, _, _, _, Ls, Ls?) :- otherwise | true.
-%% A variable of an atom the schema deletes is bound by the state that holds the atom, or by the schema-binding, as the fare of the bid Alice ranks; the constraint does not determine it (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 2).
-procedure dels_name(RoleSpecs?, Arg?, YesNo).
-dels_name([], _, no).
-dels_name([R|Rs], V, D?) :- ground(R?), ground(V?) |
-    rs_lists(R?, _, M, _, _),
-    atoms_args(M?, A),
-    flat_args(A?, Af),
-    mem(V?, Af?, In),
-    dels_name1(In?, Rs?, V?, D).
-procedure dels_name1(YesNo?, RoleSpecs?, Arg?, YesNo).
-dels_name1(yes, _, _, yes).
-dels_name1(no, Rs, V, D?) :- dels_name(Rs?, V?, D).
-procedure det_undeleted(YesNo?, YesNo?, YesNo).
-det_undeleted(no, Ok, Ok?).
-det_undeleted(yes, _, no).
 procedure det_ok(YesNo?, YesNo?, Number?, Ints?, Integer?, YesNo).
 det_ok(yes, yes, K, [J], I, yes) :- K? =\= 0, J? =:= I? | true.
-det_ok(yes, yes, K, [], _, yes) :- K? =\= 0 | true.
 det_ok(_, _, _, _, _, no) :- otherwise | true.
 procedure det_add(YesNo?, Integer?, Arg?, Locs?, Locs).
 det_add(yes, I, V, Ls, [loc(I?, V?)|Ls?]).
@@ -522,7 +477,6 @@ var_name(num(X), vn(X?)).
 var_name(real(X), vn(X?)).
 %% A variable over the constants is num(X) to the checks (cvac.glp, consts_off); the clause covers the type.
 var_name(const(X), vn(X?)).
-var_name(set(X), vn(X?)).
 var_name(role(_), novar).
 var_name(nterm(_), novar).
 var_name(sgn(_, _), novar).
@@ -944,7 +898,6 @@ lin_coef(num(X), V, K?) :- ground(X?), ground(V?) | same_arg_coef(num(X?), V?, K
 lin_coef(real(X), V, K?) :- ground(X?), ground(V?) | same_arg_coef(num(X?), V?, K).
 %% A variable over the constants is num(X) to the checks (cvac.glp, consts_off); the clause covers the type.
 lin_coef(const(X), V, K?) :- ground(X?), ground(V?) | same_arg_coef(num(X?), V?, K).
-lin_coef(set(X), V, K?) :- ground(X?), ground(V?) | same_arg_coef(num(X?), V?, K).
 lin_coef(role(_), _, 0).
 lin_coef(pvar(_), _, 0).
 lin_coef(svar(_), _, 0).
@@ -1087,7 +1040,6 @@ variables_of([num(X)|As], R?) :- ground(X?) | is_nvar(num(X?), B), variables_of(
 variables_of([real(X)|As], [num(X?)|R?]) :- variables_of(As?, R).
 %% A variable over the constants is num(X) to the checks (cvac.glp, consts_off); the clause covers the type.
 variables_of([const(X)|As], [num(X?)|R?]) :- variables_of(As?, R).
-variables_of([set(X)|As], [num(X?)|R?]) :- variables_of(As?, R).
 variables_of([pvar(X)|As], [pvar(X?)|R?]) :- variables_of(As?, R).
 variables_of([svar(X)|As], [svar(X?)|R?]) :- variables_of(As?, R).
 variables_of([role(_)|As], R?) :- variables_of(As?, R).
@@ -1391,7 +1343,6 @@ person_vars([val(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([num(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([real(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([const(_)|Vs], R?) :- person_vars(Vs?, R).
-person_vars([set(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([any|Vs], R?) :- person_vars(Vs?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 person_vars([ilist(_, _)|Vs], R?) :- person_vars(Vs?, R).
@@ -1407,7 +1358,6 @@ speech_vars([val(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([num(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([real(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([const(_)|Vs], R?) :- speech_vars(Vs?, R).
-speech_vars([set(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([any|Vs], R?) :- speech_vars(Vs?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 speech_vars([ilist(_, _)|Vs], R?) :- speech_vars(Vs?, R).
@@ -1799,7 +1749,6 @@ adm_var(num(_), _, _, _, yes).
 adm_var(real(_), _, _, _, yes).
 %% A constant names no agent either.
 adm_var(const(_), _, _, _, yes).
-adm_var(set(_), _, _, _, yes).
 %% The wildcard is in no added atom (GSC 327e035, Definition "Speech-act schema"); the clause covers the type.
 adm_var(any, _, _, _, yes).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.

@@ -1,10 +1,12 @@
 Bonds
-Bonds extends Coins.
+Bonds restricts and extends Coins.
 A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
 Alice, Bob and Carol are parties, Day and Term maturity dates, Today a date; Carol is possibly Alice or Bob.
-1. ■ Redeem: Coins:2. Redeem coin against bond: Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob. Redeem bond: Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today. Redeem bond against bond: Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.
+1. ■ Issue bond: Notes:1, for bonds, only if the current date is Today and Day is more than Today.
+2. ■ Redeem: Coins:2. Redeem coin against bond: Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob. Redeem bond: Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today. Redeem bond against bond: Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.
 Logic pragmas.
-Vocabulary: x holds a y-bond due e = note(x,y,bond(e)); x holds n y-bonds due e = note(x,y,bond(e),*n); the current date is e, for x = today(x,e); z holds n w-bonds due e in escrow from x for y on k = escrow_note(z,w,bond(e),x,y,k,*n).
+Vocabulary: x holds a y-bond due e = bond(x,y,e); x holds n y-bonds due e = bond(x,y,e,*n); the current date is e, for x = today(x,e); z holds n w-bonds due e in escrow from x for y on k = escrow_bond(z,w,e,x,y,k,*n).
 After x redeems a y-coin against a z-bond due e: no longer x holds a y-coin, y holds a y-coin, no longer y holds a z-bond due e, x holds a z-bond due e and x knows z.
 After x redeems a y-bond due e against a z-coin: no longer x holds a y-bond due e, y holds a y-bond due e, no longer y holds a z-coin, x holds a z-coin and x knows z.
 After x redeems a y-bond due e against a z-bond due f: no longer x holds a y-bond due e, y holds a y-bond due e, no longer y holds a z-bond due f, x holds a z-bond due f and x knows z.
+Kind of note: bond, y-bonds due Day for y-notes.

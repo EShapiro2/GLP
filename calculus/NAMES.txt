@@ -1,4 +1,4 @@
-The names of the contracts; the 66 first (Udi, 2026-11-16, to Calculus #8), on main since 24318f2c (2026-11-17).
+The names of the 66 contracts (Udi, 2026-11-16, to Calculus #8), on main since 24318f2c (2026-11-17).
 The first and the fifth column are the names, rows and atoms of before the renaming; their headings keep their words,
 since the readers of this table find it by them.
 
@@ -10,9 +10,8 @@ The row of cascade.sh and the atom of contract_named are the file name in lower 
 How a reader knows a name: a name is one of the names of this table and nothing else.  Match the known names longest
 first, so that "Community Bank restricts Bank and extends Coins." names Community Bank, Bank and Coins, and
 "Trading Company and Bank" two contracts.
-A first line is: NAME, then its relation to the contracts it is written from (extends, weakens, strengthens, amends,
-renames, lifts, unites ... and ..., and the union extended, weakened, strengthened or amended), the contracts joined by
-commas and "and"; a reference in parentheses may follow a name.
+A first line is: NAME, then its relations (extends, restricts, relaxes, strengthens, instantiates ... with ..., composes
+... with ...), the contracts after a relation joined by commas and "and"; a reference in parentheses may follow a name.
 A citation is: NAME, a colon, the clause's number, then the act's name where one act is cited: "Community Bank:1",
 "Notes:3", "Organisation:4 Appoint".  The act's name is the name of an act of the clause cited, as the cited contract's
 full schemas print it; a reader matches the names of that clause's acts longest first, as "Deposit bond with the issuer"
@@ -40,7 +39,7 @@ GSN | Groups | Groups | groups | gsn
 GSNW | Warded Groups | Warded-Groups | warded_groups | gsnw
 GSNP | Provenance Groups | Provenance-Groups | provenance_groups | gsnp
 CSSN | Children | Children | children | cssn
-GAI | AI Agents | AI-Agents | ai_agents | gai
+GAI | Agents | Agents | agents | gai
 GSV | Services | Services | services | gsv
 GRV | Rendezvous | Rendezvous | rendezvous | grv
 GDS | Directory | Directory | directory | gds
@@ -69,11 +68,12 @@ GO | Organisation | Organisation | organisation | go
 CDC | Constitution | Constitution | constitution | cdc
 GNO | Community Network | Community-Network | community_network | gno
 GBank | Bank | Bank | bank | gbank
+CB | Community Bank | Community-Bank | community_bank | cb
 CMB | Commercial Bank | Commercial-Bank | commercial_bank | cmb
 SCB | Central Bank | Central-Bank | central_bank | scb
 MCS | Mutual Credit | Mutual-Credit | mutual_credit | mcs
-GCC | Community Bank | Community-Bank | community_bank | gcc
-GBCC | Backed Community Bank | Backed-Community-Bank | backed_community_bank | gbcc
+GCC | Community | Community | community | gcc
+GBCC | Backed Community | Backed-Community | backed_community | gbcc
 Democratic Community | Democratic Community | Democratic-Community | democratic_community | democratic_community
 GCorp | Corporation | Corporation | corporation | gcorp
 SC | Shareholding Corporation | Shareholding-Corporation | shareholding_corporation | sc
@@ -87,19 +87,15 @@ GLDAO | Liquid Cooperative | Liquid-Cooperative | liquid_cooperative | gldao
 GAN | Ads | Ads | ads | gan
 GNG | Gigs | Gigs | gigs | gng
 GNL | Lodging | Lodging | lodging | gnl
-GNM | Community Market | Community-Market | community_market | gnm
+GNM | Marketplace | Marketplace | marketplace | gnm
 Notes | Notes | Notes | notes | notes
 Coins | Coins | Coins | coins | coins
 Bonds | Bonds | Bonds | bonds | bonds
 Shares | Shares | Shares | shares | shares
 Agora | Agora | Agora | agora | agora
 DAO | DAO | DAO | dao | dao
-Gossip | Gossip | Gossip | gossip | gossip
-Promoted Gossip | Promoted Gossip | Promoted-Gossip | promoted_gossip | promoted_gossip
 Matching | Matching | Matching | matching | matching
 Anonymous Matching | Anonymous Matching | Anonymous-Matching | anonymous_matching | anonymous_matching
-Free Matching | Free Matching | Free-Matching | free_matching | free_matching
-Promoted Matching | Promoted Matching | Promoted-Matching | promoted_matching | promoted_matching
 Dating | Dating | Dating | dating | dating
 Jobs | Jobs | Jobs | jobs | jobs
 Help | Help | Help | help | help

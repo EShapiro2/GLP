@@ -1,1 +1,1 @@
-Appointments extends Booking: holds
+Appointments instantiates Booking: holds

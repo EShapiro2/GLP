@@ -1,3 +1,0 @@
-Promoted Matching
-Promoted Matching unites an augmentation of Anonymous Matching and Promoted Gossip, and extends the union.
-1. ■ Organisation and ward. Organisation ward acquaint: Orga and Wendy may jointly come to know each other, provided Orga is an organisation, Orga has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.

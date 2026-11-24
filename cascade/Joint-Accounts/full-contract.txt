@@ -16,5 +16,5 @@ Coins:1. ■ Pay issuer: Notes:3, without the consent of Bob, if the coins are B
 Coins:2. ■ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
 Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 Joint Accounts:1. ■ Open account: Alice and Bob, who know each other, may jointly open a joint account, under a new name of Alice's.
-Joint Accounts:2. ■ Account deposit: Either of them may move coins they hold into their joint account.
+Joint Accounts:2. ■ Deposit: Either of them may move coins they hold into their joint account.
 Joint Accounts:3. ■ Withdraw: Alice and Bob may jointly move coins from their joint account to either of them.

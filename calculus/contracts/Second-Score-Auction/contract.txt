@@ -1,5 +1,5 @@
 Second-Score Auction
-Second-Score Auction weakens Auction.
+Second-Score Auction instantiates Auction with second-score terms and restricts it.
 *Second-score terms* state a maximum pickup delay T ≥ 0, a willingness to pay W(τ) = A − λτ with A, λ ≥ 0, and a deposit D ≥ 0. The award is at time t₀. A bid (p, τ) is the fare p ≥ 0 the bidder asks and the pickup delay τ ≥ 0 the bidder promises. Its *score* is W(τ) − p, and it is *admissible* iff τ ≤ T and its score is at least 0.
 Alice is a rider, Bob a driver and Carol a person.
 1. ■ Point transitive: Local Overlay:2, only if Carol is a driver.

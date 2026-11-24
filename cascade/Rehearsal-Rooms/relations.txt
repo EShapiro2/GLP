@@ -1,3 +1,2 @@
 Rehearsal Rooms instantiates Booking: holds
 Rehearsal Rooms composes it (Booking) with Partners: holds
-Rehearsal Rooms extends it (Booking and Partners): holds

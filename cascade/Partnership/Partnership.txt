@@ -5,14 +5,14 @@
 % Checked: calculus/tools/gcsas.py (commute, return, recover), relations.py, and toglp.py --check (Dart 3.14.1): syntactically_grassroots_with_wards.
 % Schemas: Partnership.glp beside this file.
 Partnership
-Partnership weakens Corporation.
-A *partnership* is a corporation whose bylaws name one role, *partner*, held by every officer; a person joins only with the consent of every partner.
+Partnership instantiates Corporation with partnership bylaws; x is an officer of z for x is entitled to propose m in z; x is an officer of z for x is entitled to take m for z; x is an officer of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as an officer for the votes decide m according to the bylaws of z, and restricts it.
+A *partnership* is a corporation whose bylaws name one role, *partner*, held by every officer; the partners decide by a majority of the partners, but a person joins only with the consent of every partner.
 Bob is a person, Orga a partnership.
 1. ■ Join: Organisation:3 Join, with the consent of the partners of Orga.
 2. ○ Partners' liability. Every partner will be accountable at law for the undertakings of Orga, with Orga.
 Logic pragmas
-Partnership weakens Corporation.
-A *partnership* is a corporation whose bylaws name one role, *partner*, held by every officer; a person joins only with the consent of every partner.
+Partnership instantiates Corporation with partnership bylaws; x is an officer of z for x is entitled to propose m in z; x is an officer of z for x is entitled to take m for z; x is an officer of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as an officer for the votes decide m according to the bylaws of z, and restricts it.
+A *partnership* is a corporation whose bylaws name one role, *partner*, held by every officer; the partners decide by a majority of the partners, but a person joins only with the consent of every partner.
 Bob is a person, Orga a partnership.
 1. ■ Join: Organisation:3 Join, with the consent of the partners of Orga.
 2. ○ Partners' liability. Every partner will be accountable at law for the undertakings of Orga, with Orga.

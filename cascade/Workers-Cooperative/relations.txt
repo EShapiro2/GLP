@@ -1,1 +1,2 @@
-Workers' Cooperative extends Cooperative: holds
+Workers' Cooperative instantiates Cooperative: holds
+Workers' Cooperative extends it (Cooperative): holds

@@ -3,10 +3,8 @@
 # 20:50 UTC, item 2, and of 2026-10-20 08:00 UTC, items 1, 4 and 5; sGLP's
 # paper, Section 4, "The run", "The screen" and "The log"; Appendix B) through
 # the REPL: the harness of every canonical platform,
-# self.glp.in and harness.glp.in beside this script, with agent5.glp.in or
-# agent6.glp.in appended as the platform's agent is agent/5 or agent/6, with the
-# platform's canonical compilation and an owner's printed profiles and
-# population.
+# self.glp.in and harness.glp.in beside this script, with the platform's
+# canonical compilation and an owner's printed profiles and population.
 #
 #   bash programs/sglp/cva/run.sh <platform.glp> <printed> <agents> <until> <seed> <log>
 #
@@ -25,13 +23,6 @@
 #                   other refused with exit 2;
 #   <seed>          the run's seed;
 #   <log>           the log, written as the run goes.
-#
-# The platform's agent is agent/5, or agent/6 where its contract has an
-# "Environment:" line, the fifth argument the environment's atoms (vGLP,
-# Section 5.4); over agent/6 the owner's source defines
-# environment(Person?, List(Atom)), each person's environment, which
-# profiles.glp exports.  A platform of another arity, or of agent/6 with no
-# environment/2 in profiles.glp, is refused with exit 2.
 #
 # It assembles the run's directory, programs/sglp/runs/cva_<pid>/, a
 # directory of its own under programs/sglp, since a simulation of another
@@ -92,25 +83,6 @@ for f in "$PLATFORM" "$PRINTED/profiles.glp" "$PRINTED/population.glp" "$HERE/se
     [ -f "$f" ] || { echo "run.sh: no file $f" >&2; exit 2; }
 done
 
-# The arity of the platform's agent, from its declaration: the arguments at
-# depth one of "exported procedure agent(...)."
-ARITY=$(awk '/^exported procedure agent\(/ {
-    s = $0; sub(/^exported procedure agent\(/, "", s); sub(/\)\.[ \t]*$/, "", s)
-    d = 0; n = 1
-    for (i = 1; i <= length(s); i++) {
-        c = substr(s, i, 1)
-        if (c == "(") d++; else if (c == ")") d--; else if (c == "," && d == 0) n++
-    }
-    print n; exit }' "$PLATFORM")
-case "${ARITY:-}" in
-    5) ;;
-    6) grep -q '^exported procedure environment(Person?, List(Atom))\.$' "$PRINTED/profiles.glp" || {
-           echo "run.sh: the platform's agent is agent/6, of an environment, and $PRINTED/profiles.glp exports no environment(Person?, List(Atom))" >&2
-           exit 2; } ;;
-    *) echo "run.sh: the platform's agent is agent/5 or agent/6, not ${ARITY:-undeclared}" >&2
-       exit 2 ;;
-esac
-
 # The keys: p and the agent's number, zero-padded to the width of N; none for
 # a census, whose persons' keys are the agents'.
 if [ "$N" = census ]; then
@@ -129,7 +101,7 @@ done
 RUNDIR="$RUNS/cva_$$"
 trap 'rm -rf "$WORK" "$RUNDIR"' EXIT
 mkdir -p "$RUNDIR" || exit 2
-cp "$HERE/self.glp.in" "$RUNDIR/self.glp" && cat "$HERE/harness.glp.in" "$HERE/agent$ARITY.glp.in" > "$RUNDIR/harness.glp" &&
+cp "$HERE/self.glp.in" "$RUNDIR/self.glp" && cp "$HERE/harness.glp.in" "$RUNDIR/harness.glp" &&
     cp "$PLATFORM" "$RUNDIR/platform.glp" && cp "$PRINTED/profiles.glp" "$RUNDIR/profiles.glp" &&
     cp "$PRINTED/population.glp" "$RUNDIR/population.glp" || exit 2
 

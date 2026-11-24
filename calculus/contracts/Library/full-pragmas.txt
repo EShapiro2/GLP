@@ -2,8 +2,8 @@ Library
 Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
 Alice, Bob and Carol are persons, Tome a thing, Day a day, Today a date.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
-Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
 Library:1. ◆ Shelve: Alice may put Tome on her shelf under a new name of hers. Tome is a thing of Alice's own.
 Library:2. ■ Lend: Alice may lend Bob Tome from her shelf until Day, with the consent of Bob, provided Alice and Bob know each other, the current date is Today and Day is more than Today.
 Library:3. ■ Return: Bob may return Tome borrowed from Alice until Day.

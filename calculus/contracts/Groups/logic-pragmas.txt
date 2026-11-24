@@ -1,6 +1,6 @@
 Groups
-Groups extends Friendship, and strengthens it.
-A *message* is what a person sends.
+Groups extends and strengthens Friendship.
+A *message*, a parameter of Groups, is what a person sends.
 Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
 1. ■ Message: Alice may send Text to Bob, provided Alice and Bob are friends.
 2. ■ Group. Create: Alice may create Grupo. Alice is then its leader and first member. Close: Alice may close Grupo by leaving it.

@@ -2,7 +2,7 @@
 /// H is the SHA-256 of the UTF-8 bytes of the string S, lowercase hex, the
 /// catalogue's Hash (programs/self.glp, `Hash ::= String`), the same at every
 /// participant, so that a value sealed by the hash of a text naming it and a
-/// secret is checked later against the seal (GLP-Spec
+/// secret is checked later against the seal (proposed for GLP-Spec
 /// appendix-guards, "Text").
 library;
 

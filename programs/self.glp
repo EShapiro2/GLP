@@ -309,12 +309,8 @@ SNT    ::= own(Constant) ; ext(SNT, Constant).
 % const(X) is the value variable X whose values are constants, as val(C) is a
 % constant value (GSC, the appendix "Values in Speech-Act Schemas": "a value
 % variable of a schema has a type, which the schema's term form writes").
-% set(X) is the value variable X of a type Set(A), the finite sets of values
-% of a type A, as an argument where the predicate takes a value of A: the
-% atom stands for one atom per element of X; size(X) is its size |X|, a whole
-% number, in a constraint (GSC, def:numbers, the set variable).
 SArg   ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-         ; real(Constant) ; const(Constant) ; set(Constant)
+         ; real(Constant) ; const(Constant)
          ; sgn(Constant, Constant) ; item_of(Constant)
          ; typed(Constant, Constant)
          ; val(Constant).
@@ -326,8 +322,7 @@ SQLit  ::= SMult ; not(SMult).
 SQLits ::= [] ; [SQLit | SQLits].
 SExpr  ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
          ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SConstraint)
-         ; sum(PNames, SAtom, SConstraint, SExpr) ; author_of(Constant)
-         ; size(Constant).
+         ; sum(PNames, SAtom, SConstraint, SExpr) ; author_of(Constant).
 SExprs ::= [] ; [SExpr | SExprs].
 % A safe formula and a constraint are one type, a constraint being a safe
 % formula with no atom and no quantifier.
@@ -970,7 +965,7 @@ term_to_string(T, S?) :-
 % hash(S, H): H is the SHA-256 of the UTF-8 bytes of the string S, lowercase
 % hex, a Hash; the same at every participant, so that the hash of a text naming
 % a value and a secret seals the value, and the value and the secret, stated
-% later, are checked against the seal (GLP-Spec appendix-guards,
+% later, are checked against the seal (proposed for GLP-Spec appendix-guards,
 % "Text").
 procedure hash(String?, Hash).
 hash(S, H?) :-

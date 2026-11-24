@@ -662,19 +662,6 @@ out=$(run "compile_contract(gsn, $GSNT).")
 check_eq "GSN compiles to fifteen displays" "15" \
          "$(printf '%s' "$out" | grep -c 'begin{align')"
 
-# compile_contract/3 checks the contract once, compiles it on that verdict and
-# gives the verdict back, as cascade.sh takes it: the same displays as
-# compile_contract/2 and the same verdict as check/2, of the one term.
-out3=$(run "compile_contract(gsn, $GSNT, V).")
-check_eq "compile_contract/3 prints the displays compile_contract/2 prints" \
-         "$(printf '%s' "$out" | grep -c 'begin{align')" "$(printf '%s' "$out3" | grep -c 'begin{align')"
-check_eq "and prints them the same" \
-         "$(printf '%s' "$out" | sed -e 's/^\(GLP> \)*//' | grep -v '^V = ')" \
-         "$(printf '%s' "$out3" | sed -e 's/^\(GLP> \)*//' | grep -v '^V = ')"
-check_eq "compile_contract/3 gives the verdict check/2 gives" \
-         "$(run "check($GSNT, V)." | sed -e 's/^\(GLP> \)*//' | grep '^V = ')" \
-         "$(printf '%s' "$out3" | sed -e 's/^\(GLP> \)*//' | grep '^V = ')"
-
 # sg_chain_cut on GSG, which fails volition (above): sg_gossip certifies on
 # GSG and on GSN, both extending GKK, whose acquaint stays unobstructed.
 out=$(run "compile_variant(sg_chain_cut, $GSGV).")
@@ -2281,17 +2268,6 @@ check "a whole t blocks every whole x: meet obstructed" "intro_act(meet, obstruc
 check "a whole t blocks no real x but a whole one: meet unobstructed" "intro_act(meet, unobstructed)" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 2p)"
 check "a real t blocks every real x: meet obstructed" "intro_act(meet, obstructed(" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 3p)"
 
-# A number is written num(N), and val(C) is a value of any other type
-# (programs/gsc/self.glp, Arg): val(N) of a number N, in an atom or in a
-# constraint, is refused, value_number (Audit PR 76, Finding 5).
-RE_VALN=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', num(k)])], [atom(identity, ['Alice'])], gt(num(k), val(0)), ['Alice'])")
-RE_VALA=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', num(k)]), atom(tag, ['Alice', val(2)])], [atom(identity, ['Alice'])], gt(num(k), num(0)), ['Alice'])")
-RE_VALC=$(gkk_with "sas(mint, ['Alice'], [k], [atom(coin, ['Alice', num(k)]), atom(tag, ['Alice', val(blue)])], [atom(identity, ['Alice'])], gt(num(k), num(0)), ['Alice'])")
-out=$(run "check($RE_VALN, V)." "check($RE_VALA, V)." "check($RE_VALC, V).")
-check_eq "a number written val(0) in a constraint is refused" "V = malformed([value_number(mint, 0)])" "$(sf 1)"
-check_eq "a number written val(2) in an atom is refused" "V = malformed([value_number(mint, 2)])" "$(sf 2)"
-check_eq "a constant written val(blue) is read" "V = syntactically_grassroots" "$(sf 3)"
-
 # Restriction by its syntactic approximations (GSC, Section 9: def:stronger,
 # prop:syntactic; restrict.glp, README "Restriction"), over GSG written in the
 # clause syntax: befriend strengthened by an atom of its body, by (a); unfriend
@@ -2823,65 +2799,6 @@ out=$(run "compile_contract(t, environment([badge], [$SUPK, $SUPN]))." "compile_
 check_not "compile_contract takes an environment predicate, a parameter and either around reflexive as supplying what an act requires, as check/2 does" \
       "requires an atom of" "$out"
 check "a contract supplied by its environment is compiled" "begin{align" "$out"
-
-# --- clause 1 of def:unobstructed: a schema of arity one forbidding another atom it adds
-# Knowledge with the persons of the Calculus's item 29: acquaint requires
-# person, which establish adds with identity, forbidding identity.  Clause 1
-# admits establish for person: both have no arguments, no schema deletes or
-# clears person, and every schema adding identity at a role adds person
-# there.  A schema adding identity without person, or deleting person,
-# leaves person unobtainable.
-KPE="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
-KPA="sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(person, ['Alice']), atom(person, ['Bob'])], true, ['Alice', 'Bob'])"
-KPI="sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob'])"
-KPX="sas(enter, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
-KPR="sas(retire, ['Alice'], [], [not(atom(person, ['Alice']))], [atom(person, ['Alice'])], true, ['Alice'])"
-out=$(run "check(reflexive([knows], [$KPE, $KPA, $KPI]), V1)." \
-          "check(reflexive([knows], [$KPE, $KPA, $KPI, $KPX]), V2)." \
-          "check(reflexive([knows], [$KPE, $KPA, $KPI, $KPR]), V3).")
-check "person, added by establish with identity, which it forbids, is obtainable, by clause 1 of def:unobstructed" \
-      "V1 = syntactically_grassroots" "$out"
-check "a schema adding identity without person leaves person unobtainable" \
-      "V2 = not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable)])" "$out"
-check "a schema deleting person leaves person unobtainable" \
-      "V3 = not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable)])" "$out"
-
-# --- set variables (def:numbers and def:binding-numbers, the set variable;
-# the Calculus's record, items 49 to 51): set(N) is the value variable N of a
-# type Set(A), an atom with it standing for one atom per element of N, and
-# size(N) its size |N|.  The conditions read N as a value variable over
-# constants; Vars writes it set(N), an atom num(N).
-SKE="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
-SKA="sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(person, ['Alice']), atom(person, ['Bob'])], true, ['Alice', 'Bob'])"
-SKI="sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob'])"
-SIS="sas(issue, ['Alice'], ['Type', 'N'], [atom(note, ['Alice', 'Alice', const('Type'), set('N')])], [atom(identity, ['Alice'])], true, ['Alice'])"
-SPY="sas(pay, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'Type', 'N'], [not(atom(note, ['Alice', 'Carol', const('Type'), set('N')])), atom(note, ['Bob', 'Carol', const('Type'), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', const('Type'), set('N')])], true, ['Alice', 'Bob'])"
-SPZ="sas(payn, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'Type', 'N', 'Sum'], [not(atom(note, ['Alice', 'Carol', const('Type'), set('N')])), atom(note, ['Bob', 'Carol', const('Type'), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', const('Type'), set('N')])], eq(size('N'), num('Sum')), ['Alice', 'Bob'])"
-SPM="sas(paym, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'Type', 'N', 'M'], [not(atom(note, ['Alice', 'Carol', const('Type'), set('N')])), atom(note, ['Bob', 'Carol', const('Type'), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', const('Type'), set('M')])], true, ['Alice', 'Bob'])"
-SPT="sas(payt, ['Alice', 'Bob'], ['N'], [atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(token, ['Alice', set('N')]), times(num('N'), atom(mark, ['Alice']))], true, ['Alice', 'Bob'])"
-SPC="sas(payc, ['Alice', 'Bob'], ['T', 'N'], [atom(knows, ['Bob', 'Alice']), atom(tag, ['Bob', const('T')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], eq(size('T'), num('N')), ['Alice', 'Bob'])"
-SPD="sas(payd, ['Alice', 'Bob'], ['T'], [atom(knows, ['Bob', 'Alice']), atom(tag, ['Bob', const('T')]), atom(mark, ['Bob', set('T')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
-SBA="sas(acquaint, ['Alice', 'Bob'], ['B'], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(person, ['Alice']), atom(person, ['Bob']), atom(badge, ['Alice', set('B')])], true, ['Alice', 'Bob'])"
-SBS="sas(badge, ['Alice'], ['X'], [atom(badge, ['Alice', const('X')])], [], true, ['Alice'])"
-SBT="sas(badge, ['Alice'], ['X'], [atom(badge, ['Alice', set('X')])], [], true, ['Alice'])"
-SG="reflexive([knows], [$SKE, $SKI, $SIS"
-out=$(run "check($SG, $SKA, $SPY]), V1)." "check($SG, $SKA, $SPZ]), V2)." "check($SG, $SKA, $SPM]), V3)." \
-          "check($SG, $SKA, $SPT]), V4)." "check($SG, $SKA, $SPC]), V5)." "check($SG, $SKA, $SPD]), V6)." \
-          "check($SG, $SBA, $SBS]), V7)." "check($SG, $SBA, $SBT]), V8)." "check($SG, $SBA]), V9)." \
-          "as_read($SG, $SKA, $SPZ]), R10)." "compile_schema_in(t, $SG, $SKA, $SPZ]), payn).")
-check "a payment of a set of notes, required and deleted at the payer and added at the payee, is syntactically grassroots" "V1 = syntactically_grassroots" "$out"
-check "a constraint on the size of the set is read, and no condition reads it" "V2 = syntactically_grassroots" "$out"
-check "a set deleted is required with the same set variable" \
-      "V3 = malformed([deleted_not_required(paym, 1, atom(note, [pvar('Carol'), num('Type'), num('N')]))])" "$out"
-check "a set variable written as a multiplicity is of two types" "V4 = malformed([value_type(payt, 'N')])" "$out"
-check "the size of a variable written const(X) is of two types" "V5 = malformed([value_type(payc, 'T')])" "$out"
-check "a variable written set(X) and const(X) is of two types" "V6 = malformed([value_type(payd, 'T')])" "$out"
-check "an atom of a set an introductory act requires is supplied by a schema of arity one adding one element" "V7 = syntactically_grassroots" "$out"
-check "or adding a set" "V8 = syntactically_grassroots" "$out"
-check "and is unsupplied where no schema adds it" "V9 = malformed([unsupplied(acquaint, badge)])" "$out"
-check "the checker's form writes a set variable set(N) among the variables, num(N) in an atom, and its size fn(size, [num(N)])" \
-      "nschema(payn, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), const('Type'), set('N'), num('Sum')], eq(fn(size, [num('N')]), num('Sum'))" "$out"
-check "the compiler prints the size of a set |N|" "$(printf '|\nN\n|')" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

@@ -19,10 +19,6 @@
     python3 adopt.py --split-check      writes every contract's adopted file into a temporary directory and checks
                                         that it splits back into its contract and its Logic pragmas, byte for byte;
                                         prints the count and the contracts that do not, and exits 1 if there is one
-    python3 adopt.py --adopted-check    splits every adopted file found in GLP, programs/<dir>/NAME.txt, and compares its
-                                        contract and its Logic pragmas with the Calculus's two texts of NAME; prints the
-                                        count and, for each file that differs, its path and the first line of each text
-                                        that differs, and exits 1 if there is one
 
 THE ADOPTED FILE, programs/<dir>/NAME.txt, line by line:
 1. the owner's lines that begin with %, as they are;
@@ -274,7 +270,7 @@ def written_from(name, ps):
             die('%s, which a contract compiled is written from, is not among the contracts found' % n)
         out[n] = texts(n, ps[n])
         ls = lines(out[n][0])
-        if len(ls) > 1 and re.match(re.escape(n) + r' (extends|restricts|strengthens|instantiates|composes|relaxes|weakens|augments|renames|lifts|unites)\b', ls[1]):
+        if len(ls) > 1 and re.match(re.escape(n) + r' (extends|restricts|strengthens|instantiates|composes|relaxes)\b', ls[1]):
             first = re.sub(r' \([^()]*\)', '', ls[1])
             todo += [w for _, _, w in NM.find(first[len(n):], ps)]      # the known names, longest first (tools/names.py)
     return out
@@ -443,25 +439,6 @@ def main():
                 bad.append(n)
         print('%d contracts, %d that do not split back%s' % (len(names), len(bad), (': ' + ' '.join(bad)) if bad else ''))
         sys.exit(1 if bad else 0)
-    elif a == ['--adopted-check']:
-        def first(x, y):
-            xs, ys = x.split('\n'), y.split('\n')
-            return next((i + 1 for i in range(max(len(xs), len(ys))) if i >= len(xs) or i >= len(ys) or xs[i] != ys[i]), 0)
-        bad, k = [], 0
-        for n, path in sorted(computed_paths().items()):
-            f = os.path.join(GLP, path.strip())
-            if not f.endswith('.txt'):
-                continue
-            k += 1
-            rev, gr = calculus_text(n)
-            _, arev, agr, _ = split(read(f))
-            d = [(w, first(x, y)) for w, x, y in (('contract', arev, rev), ('Logic pragmas', agr, gr)) if x != y]
-            if d:
-                bad.append('%s: %s' % (path.strip(), '; '.join('%s, line %d' % x for x in d)))
-        print('%d adopted files, %d that differ from the Calculus\'s texts' % (k, len(bad)))
-        for b in bad:
-            print(b)
-        sys.exit(1 if bad else 0)
     elif a[:1] == ['--check'] and len(a) == 2:
         bad = [p for p, t in targets(a[1], root).items() if not os.path.exists(p) or read(p) != t]
         for p in bad:
@@ -473,7 +450,7 @@ def main():
             with open(p, 'w', encoding='utf-8', newline='') as f:
                 f.write(t)
     else:
-        die('usage: adopt.py --write NAME DIR | --paths | NAME [--out DIR] | --check NAME [--out DIR] | --split-check | --adopted-check')
+        die('usage: adopt.py --write NAME DIR | --paths | NAME [--out DIR] | --check NAME [--out DIR] | --split-check')
 
 
 if __name__ == '__main__':

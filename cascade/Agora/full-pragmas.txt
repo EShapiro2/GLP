@@ -1,21 +1,23 @@
 Agora
 Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
 Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
-Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Carol is possibly Alice or Bob.
-Of Bonds: A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
+Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice. Carol is possibly Alice or Bob. Kind of note: coin, y-coins for y-notes; its acts keep their names.
+Of Bonds: A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date. Kind of note: bond, y-bonds due Day for y-notes.
 Of Agora: An *item* is a one-of-a-kind thing named by its maker. In clauses 4 and 5 Carol is possibly Alice, and in clause 6 Dave is possibly Alice or Bob.
-Alice, Bob, Carol and Dave are persons, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Type and Other types, Day and Term maturity dates, Today a date, Item and Thing items, Wish something wanted, Mart a market.
+Alice, Bob, Carol and Dave are persons, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Day and Term maturity dates, Today a date, Item and Thing items, Wish something wanted, Mart a market.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
-Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
-Notes:1. ■ Issue: Alice may issue Sum Alice-notes of type Type.
-Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-notes of type Type for Total Dave-notes of type Other, provided Alice and Bob know each other.
-Notes:3. ■ Pay: Alice may pay Bob Sum Carol-notes of type Type, with the consent of Bob, provided Alice knows Bob.
-Notes:3, Coins:1. ■ Pay issuer: Alice may pay the issuer Bob Sum Bob-notes of type Type, provided Alice knows Bob.
-Notes:4. ○ Escrow. Deposit: Alice may deposit Sum Dave-notes of type Type with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-notes of type Type that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-notes of type Type deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
-Coins:2, Bonds:1. ■ Redeem: Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Notes:1. ■ Issue: Alice may issue Sum Alice-coins.
+Notes:1, Bonds:1. ■ Issue bond: Alice may issue Sum Alice-bonds due Day, provided the current date is Today and Day is more than Today.
+Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-coins, provided Alice and Bob know each other. Swap coin for bond: Alice and Bob may jointly swap Sum Carol-coins for Total Dave-bonds due Day, provided Alice and Bob know each other. Swap bonds: Alice and Bob may jointly swap Sum Carol-bonds due Day for Total Dave-bonds due Term, provided Alice and Bob know each other.
+Notes:3. ■ Pay: Alice may pay Bob Sum Carol-coins, with the consent of Bob, provided Alice knows Bob.
+Notes:3, Coins:1. ■ Pay issuer: Alice may pay the issuer Bob Sum Bob-coins, provided Alice knows Bob.
+Notes:3. ■ Pay bond: Alice may pay Bob Sum Carol-bonds due Day, with the consent of Bob, provided Alice knows Bob.
+Notes:4. ○ Escrow. Deposit: Alice may deposit Sum Dave-coins with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Deposit bond: Alice may deposit Sum Dave-bonds due Day with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-coins that Alice deposited on Cond, provided Carol and Bob know each other. Release bond: Carol and Bob may jointly release Sum Dave-bonds due Day that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-coins deposited for Bob on Cond, provided Carol and Alice know each other. Return bond: Carol and Alice may jointly return Sum Dave-bonds due Day deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
+Coins:2, Bonds:2. ■ Redeem: Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
 Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
-Bonds:1. ■ Redeem coin against bond: Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob. Redeem bond: Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today. Redeem bond against bond: Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.
+Bonds:2. ■ Redeem coin against bond: Alice may redeem a Bob-coin against a Carol-bond due Day, provided Alice knows Bob. Redeem bond: Alice may redeem a Bob-bond due Day against a Carol-coin, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today. Redeem bond against bond: Alice may redeem a Bob-bond due Day against a Carol-bond due Term, provided Alice knows Bob, the current date is Today for Bob and Day is at most Today.
 Agora:1. ■ Make: Alice may make the item Item.
 Agora:2. ■ Open: Alice may open Mart under a new name of hers.
 Agora:3. ■ Join: Alice may admit Bob to Mart, with the consent of Bob, provided Alice is the keeper of Mart and Alice knows Bob.

@@ -13,7 +13,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 | AppStore | GSA | `programs/social/graph/GAS.txt` | 4 lines differ (owner 2, ours 2) | 4 |
 | Auction | GRH | `programs/lbm/GRA.txt` | 6 lines differ (owner 3, ours 3) | 6 |
 | Backchannel Feeds | GFF | `programs/gff/GFF-FR-BC.txt` | 4 lines differ (owner 2, ours 2) | 4 |
-| Backed Currency | GO | `programs/go/GBCC.txt` | 12 lines differ (owner 6, ours 6) | 12 |
+| Backed Community | GO | `programs/go/GBCC.txt` | 12 lines differ (owner 6, ours 6) | 12 |
 | Bank | GO | `programs/go/GBank.txt` | 4 lines differ (owner 2, ours 2) | 4 |
 | Bonds | Currencies | `programs/currencies/bonds/Bonds.txt` | same | same |
 | Central Bank | GO | `programs/go/SCB.txt` | 10 lines differ (owner 5, ours 5) | 10 |
@@ -21,7 +21,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 | Coins | Currencies | `programs/currencies/coins/Coins.txt` | same | same |
 | Commercial Bank | GO | `programs/go/CMB.txt` | 6 lines differ (owner 3, ours 3) | 6 |
 | Community Bank | GO | `programs/go/CB.txt` | 6 lines differ (owner 3, ours 3) | 6 |
-| Community Currency | Currencies | `programs/currencies/gcc/GCC.txt` | 4 lines differ (owner 2, ours 2) | 4 |
+| Community | Currencies | `programs/currencies/gcc/GCC.txt` | 4 lines differ (owner 2, ours 2) | 4 |
 | Constitution | GO | `programs/go/CDC.txt` | 10 lines differ (owner 5, ours 5) | 10 |
 | Consumers' Cooperative | GO | `programs/go/CnC.txt` | 8 lines differ (owner 4, ours 4) | 8 |
 | Cooperative | GO | `programs/go/GCoop.txt` | 4 lines differ (owner 2, ours 2) | 4 |
@@ -48,9 +48,9 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 | Liquid DAO | GCE | `programs/gce/ldao/LDAO.txt` | 4 lines differ (owner 2, ours 2) | 4 |
 | Local Overlay | GRH | `programs/lbm/GDO-LB.txt` | 12 lines differ (owner 6, ours 6) | 12 |
 | Lodging | GO | `programs/go/GNL.txt` | 8 lines differ (owner 4, ours 4) | 8 |
-| Community Market | GO | `programs/go/GNM.txt` | 6 lines differ (owner 3, ours 3) | 6 |
+| Marketplace | GO | `programs/go/GNM.txt` | 6 lines differ (owner 3, ours 3) | 6 |
 | Mutual Credit | GO | `programs/go/MCS.txt` | 8 lines differ (owner 4, ours 4) | 8 |
-| Networked Organisation | GO | `programs/go/GNO.txt` | 4 lines differ (owner 2, ours 2) | 4 |
+| Community Network | GO | `programs/go/GNO.txt` | 4 lines differ (owner 2, ours 2) | 4 |
 | Notes | GSC | `programs/gsc/Notes.txt` | 2 lines differ (owner 1, ours 1) | 2 |
 | Organisation | GO | `programs/go/GO.txt` | 10 lines differ (owner 5, ours 5) | 10 |
 | Overlay | GRH | `programs/lbm/GDO.txt` | 4 lines differ (owner 2, ours 2) | 4 |
@@ -80,7 +80,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: GAN: Grassroots Ad Network
 - owner: GAN extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation).
 - ours: Ads
-- ours: Ads extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
+- ours: Ads extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation).
 
 ### Agents
 
@@ -127,22 +127,22 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - ours: Backchannel Feeds
 - ours: Backchannel Feeds extends Resilient Feeds.
 
-### Backed Currency
+### Backed Community
 
-- owner: GBCC: Grassroots Backed Community Currency
+- owner: GBCC: Grassroots Backed Community
 - owner: GBCC extends GCC and restricts it.
 - owner: *f*, a fraction 0 ≤ f < 1, is a parameter of GBCC. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
-- ours: Backed Currency
-- ours: Backed Currency extends Community Currency and restricts it.
-- ours: *f*, a fraction 0 ≤ f < 1, is a parameter of Backed Currency. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
+- ours: Backed Community
+- ours: Backed Community extends Community and restricts it.
+- ours: *f*, a fraction 0 ≤ f < 1, is a parameter of Backed Community. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
 
 - owner: 1. ■ Treasurers. GO:4 and GnW:2, only if every treasurer stays backed. Leave, Expel: GO:3, only if every treasurer stays backed. Swap, Pay, Redeem, Escrow: Notes:2, Notes:3, Notes:4, Coins:1, Coins:2, Bonds:2 and DGC:4, only if every treasurer stays backed.
 - owner: 2. ■ Draw: GCC:1, only if Alice stays backed.
 - ours: 1. ■ Treasurers. Organisation:4 and Guardians:2, only if every treasurer stays backed. Leave, Expel: Organisation:3, only if every treasurer stays backed. Swap, Pay, Redeem, Escrow: Notes:2, Notes:3, Notes:4, Coins:1, Coins:2, Bonds:2 and Denominated Currencies:4, only if every treasurer stays backed.
-- ours: 2. ■ Draw: Community Currency:1, only if Alice stays backed.
+- ours: 2. ■ Draw: Community:1, only if Alice stays backed.
 
 - owner: 4. ○ Fiat redemption. GCC:2, from the account while it holds Dollars, and from a treasurer if it holds none.
-- ours: 4. ○ Fiat redemption. Community Currency:2, from the account while it holds Dollars, and from a treasurer if it holds none.
+- ours: 4. ○ Fiat redemption. Community:2, from the account while it holds Dollars, and from a treasurer if it holds none.
 
 ### Bank
 
@@ -200,12 +200,12 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: 1. ■ Leave: GO:3, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other.
 - ours: 1. ■ Leave: Organisation:3, only if the Orga-coins Bob holds and the Bob-coins Orga holds have been redeemed against each other.
 
-### Community Currency
+### Community
 
-- owner: GCC: Grassroots Community Currency
+- owner: GCC: Grassroots Community
 - owner: GCC instantiates GBank with community currency bylaws and extends it.
-- ours: Community Currency
-- ours: Community Currency instantiates Bank with community currency bylaws and extends it.
+- ours: Community
+- ours: Community instantiates Bank with community currency bylaws and extends it.
 
 ### Constitution
 
@@ -332,10 +332,10 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: GNG: Network Gig Work
 - owner: GNG extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation) and restricts Rec.
 - ours: Gigs
-- ours: Gigs extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+- ours: Gigs extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
 
 - owner: 4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (GNO:2).
-- ours: 4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (Networked Organisation:2).
+- ours: 4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (Community Network:2).
 
 - owner: 6. ◆ Recommend: Rec:1, where Alice recommends Bob for the work after acceptance.
 - ours: 6. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the work after acceptance.
@@ -419,19 +419,19 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: GNL: Network Lodging
 - owner: GNL extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation), and restricts GNO and Rec.
 - ours: Lodging
-- ours: Lodging extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Networked Organisation and Recommendations.
+- ours: Lodging extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation), and restricts Community Network and Recommendations.
 
 - owner: 5. ■ Raise: GNO:2, only before checkout, and by Alice only if she is checked in.
 - owner: 6. ◆ Recommend: Rec:1, where Alice recommends Bob for the stay after checkout.
-- ours: 5. ■ Raise: Networked Organisation:2, only before checkout, and by Alice only if she is checked in.
+- ours: 5. ■ Raise: Community Network:2, only before checkout, and by Alice only if she is checked in.
 - ours: 6. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the stay after checkout.
 
-### Community Market
+### Marketplace
 
 - owner: GNM: Network Marketplace
 - owner: GNM extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation) and restricts Rec.
-- ours: Community Market
-- ours: Community Market extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+- ours: Marketplace
+- ours: Marketplace extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
 
 - owner: 5. ◆ Recommend: Rec:1, where Alice recommends Bob for the good after delivery.
 - ours: 5. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the good after delivery.
@@ -449,12 +449,12 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: 3. ■ Credit limit. DGC:2, Notes:3, Coins:1 and DGC:4, only if every member is then in the red by at most 1000 coins.
 - ours: 3. ■ Credit limit. Denominated Currencies:2, Notes:3, Coins:1 and Denominated Currencies:4, only if every member is then in the red by at most 1000 coins.
 
-### Networked Organisation
+### Community Network
 
-- owner: GNO: Grassroots Networked Organisation
+- owner: GNO: Grassroots Community Network
 - owner: GNO extends GBCC and restricts it.
-- ours: Networked Organisation
-- ours: Networked Organisation extends Backed Currency and restricts it.
+- ours: Community Network
+- ours: Community Network extends Backed Community and restricts it.
 
 ### Notes
 
@@ -527,10 +527,10 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - owner: ORH: Ride-Hailing Organisation
 - owner: ORH extends GNO and restricts and strengthens GRA-SS (GRH, Grassroots Ride-Hailing, in preparation).
 - ours: Rides
-- ours: Rides extends Networked Organisation and restricts and strengthens Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
+- ours: Rides extends Community Network and restricts and strengthens Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
 
 - owner: 1. ■ Award: GRA-SS:2, only if the fare and the deposit are in Orga-coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (GNO:2).
-- ours: 1. ■ Award: Second-Score Auction:2, only if the fare and the deposit are in Orga-coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (Networked Organisation:2).
+- ours: 1. ■ Award: Second-Score Auction:2, only if the fare and the deposit are in Orga-coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (Community Network:2).
 
 ### Second-Score Auction
 

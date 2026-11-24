@@ -1,6 +1,0 @@
-R: Required and deleted
-Alice is a person.
-1. ■ Spend: Alice may spend her pass, provided Alice has a pass.
-Logic pragmas.
-Vocabulary: x has a pass = p(x).
-After x spends x's pass: no longer x has a pass.

@@ -2,11 +2,11 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 3, Grassroots Organisations and cites a clause as Organisation:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Guardians, Guardians 'n' Wards, GSC's (programs/gsc), and through it Friendship and Knowledge.
-% Last changed: 2026-11-24, by GO #15: the Calculus's text at GLP 24dce13, adopted; Interface pragmas of Vote, Act and Amend without fields, their atoms binding Motion and Orga.
+% Last changed: 2026-11-20, by GO #14: the Calculus's text at its 96d0ad2d: the first line names the parameter instantiated (Udi, 2026-11-17, to Calculus #8, reported by the Calculus), and the Logic pragmas of Join, Expel and Amend.
 % Schemas: Organisation.glp beside this file.
 Organisation
-Organisation renames Guardians, and extends and augments it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
+Organisation instantiates Guardians with bylaws for the decision rule, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
 Alice and Bob are persons, Orga an organisation.
 1. ■ Found: An organisation may create Orga (Guardians:1) with the consent of Alice; Alice is then its first officer.
 2. ■ Acts of the organisation. Propose: An officer, or a person the bylaws name, may propose an act of Orga. Vote: Those who decide the act may vote on it. Act: An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.
@@ -15,23 +15,19 @@ Alice and Bob are persons, Orga an organisation.
 5. ■ Amend: Those who decide it may amend the bylaws.
 6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
 Logic pragmas
-Organisation renames Guardians, and extends and augments it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
+Organisation instantiates Guardians with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
 Alice and Bob are persons, Gov and Orga organisations, Motion an act of Orga, Role a role, Votes and Double numbers.
-1. ■ Found: Guardians:1, with the consent of Gov, and then Orga has Alice as its first officer, Alice holds the role Role in Orga, Orga has Alice in the role Role, Alice is a participant of Orga, Orga has Alice as a participant and Gov is the founder of Orga.
+1. ■ Found: Gov may create Orga with Alice as its first officer in the role Role, with the consent of Alice, and Orga must consent, provided Alice is a person.
 2. ■ Acts of the organisation. Propose: Bob may propose Motion in Orga, provided Bob is entitled to propose Motion in Orga. Vote: Bob may vote on Motion in Orga, provided Bob is entitled to vote on Motion in Orga, Orga is an organisation and Orga has Motion proposed. Act: Alice may take Motion for Orga, provided Alice is entitled to take Motion for Orga and the votes decide Motion according to the bylaws of Orga.
 3. ■ Participation. Join: Bob may become a participant of Orga, with the consent of those who admit participants of Orga. Leave: Bob may end his participation in Orga, provided Bob is not an officer of Orga. Officer leave: Bob may end his participation and his office in Orga. Expel: Those who expel participants of Orga may end Bob's participation in Orga, provided Bob is not an officer of Orga. Officer expel: Those who expel participants of Orga may end Bob's participation and Bob's office in Orga. Every role Bob holds in Orga ends with his participation.
-4. ■ Officers. Appoint: Guardians:2 Make guardian, only if Bob is a participant of Orga, and then Bob holds the role Role in Orga and Orga has Bob in the role Role. The decision names his role. Resign: Guardians:2 Resign, and then Bob holds no role in Orga and Orga has Bob in no role. End officer: Guardians:2 End guardian, and then Bob holds no role in Orga and Orga has Bob in no role. Officer unfriend: Guardians:2 Guardian unfriend, and then Bob holds no role in Orga and Orga has Bob in no role. Retire: Guardians:5, and then no one holds any role in Orga and Orga has no one in any role.
+4. ■ Officers. Appoint: Guardians:2 Make guardian, only if Bob is a participant of Orga, decided by those who decide the officers of Orga in place of those who decide for Orga, and then Bob holds the role Role in Orga and Orga has Bob in the role Role. The decision names his role. Resign: Guardians:2 Resign, and then Bob holds no role in Orga and Orga has Bob in no role. End officer: Guardians:2 End guardian, decided by those who decide the officers of Orga in place of those who decide for Orga, and then Bob holds no role in Orga and Orga has Bob in no role. Officer unfriend: Guardians:2 Guardian unfriend, and then Bob holds no role in Orga and Orga has Bob in no role. Retire: Guardians:5, and then no one holds any role in Orga and Orga has no one in any role.
 5. ■ Amend: Alice may amend the bylaws of Orga as Motion says, provided Alice is entitled to amend the bylaws of Orga as Motion says and the amendment Motion is decided according to the bylaws of Orga.
 6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
 Logic pragmas.
-Renaming of Guardians: an organisation for a ward and an officer for a guardian.
-Vocabulary: x is the founder of z = founder(x,z); z has y as its first officer = first_officer(z,y); y holds the role r in z = role(y,z,r); z has y in the role r = has_role(z,y,r); x is a participant of z = participant(x,z); z has x as a participant = has_participant(z,x); the bylaws of z entitle x to propose motions = proposer(x,z); z has m proposed = proposed(z,m); the bylaws of z entitle x to vote on m = voter(x,z,m); z holds x's vote on m = vote(z,x,m); the votes decide m according to the bylaws of z = decided(z,m); the bylaws of z entitle x to take m = taker(x,z,m); z has m taken = taken(z,m); the bylaws of z entitle x to amend them as m says = amender(x,z,m); the amendment m is decided according to the bylaws of z = amendment_decided(z,m); z has its bylaws amended = amended(z).
-Roles: those who decide m for z = act_deciders(z,m); those who admit participants of z = admitters(z), listed by z has y as an officer and y is an officer of z; those who expel participants of z = expellers(z), listed by z has y as an officer and y is an officer of z.
-x is entitled to propose m in z: x is an officer of z and the bylaws of z entitle x to propose motions.
-x is entitled to vote on m in z: x is a participant of z and the bylaws of z entitle x to vote on m.
-x is entitled to take m for z: x is an officer of z, z has m proposed and the bylaws of z entitle x to take m.
-x is entitled to amend the bylaws of z as m says: x is an officer of z, z has m proposed and the bylaws of z entitle x to amend them as m says.
+Vocabulary: z has y as its first officer = first_officer(z,y); y holds the role r in z = role(y,z,r); z has y in the role r = has_role(z,y,r); x is a participant of z = participant(x,z); z has x as a participant = has_participant(z,x); x is entitled to propose m in z = proposer(x,z,m); z has m proposed = proposed(z,m); x is entitled to vote on m in z = voter(x,z,m); z holds x's vote on m = vote(z,x,m); the votes decide m according to the bylaws of z = decided(z,m); x is entitled to take m for z = taker(x,z,m); z has m taken = taken(z,m); x is entitled to amend the bylaws of z as m says = amender(x,z,m); the amendment m is decided according to the bylaws of z = amendment_decided(z,m); z has its bylaws amended = amended(z).
+Roles: those who decide m for z = act_deciders(z,m); those who decide the officers of z = officer_deciders(z); those who admit participants of z = admitters(z); those who expel participants of z = expellers(z).
+After x creates z with y as its first officer in the role r, which requires z does not have an identity: z has an identity, z is an organisation, x is the creator of z, z has y as its first officer, y is an officer of z, z has y as an officer, y holds the role r in z, z has y in the role r, y is a participant of z, z has y as a participant, y and z know each other and y and z are friends.
 After x proposes m in z, which requires z does not have m proposed: z has m proposed.
 After x votes on m in z, which requires z does not hold x's vote on m: z holds x's vote on m.
 After x takes m for z, which requires z does not have m taken: z has m taken.
@@ -41,15 +37,24 @@ After g ends y's participation in z: no longer y is a participant of z and no lo
 After y ends y's participation and y's office in z: no longer y is a participant of z, no longer z has y as a participant, no longer y is an officer of z, no longer z has y as an officer, y holds no role in z and z has y in no role.
 After g ends y's participation and y's office in z: no longer y is a participant of z, no longer z has y as a participant, no longer y is an officer of z, no longer z has y as an officer, y holds no role in z and z has y in no role.
 After x amends the bylaws of z as m says, which requires z does not have m taken: z has its bylaws amended and z has m taken.
-Environment: the bylaws of z entitle x to propose motions; the bylaws of z entitle x to vote on m; the bylaws of z entitle x to take m; the votes decide m according to the bylaws of z; the bylaws of z entitle x to amend them as m says; the amendment m is decided according to the bylaws of z.
+Parameters: x is entitled to propose m in z; x is entitled to vote on m in z; x is entitled to take m for z; the votes decide m according to the bylaws of z; x is entitled to amend the bylaws of z as m says; the amendment m is decided according to the bylaws of z.
+Default: those who decide for z for those who decide the officers of z.
+Default: those who decide for z for those who admit participants of z.
+Default: those who decide for z for those who expel participants of z.
+Default: x is an officer of z for x is entitled to propose m in z.
+Default: x is an officer of z for x is entitled to vote on m in z.
+Default: x is an officer of z for x is entitled to take m for z.
+Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as an officer for the votes decide m according to the bylaws of z.
+Default: x is entitled to take m for z for x is entitled to amend the bylaws of z as m says.
+Default: z is an organisation, z has m proposed and the votes decide m according to the bylaws of z for the amendment m is decided according to the bylaws of z.
 Interface pragmas
 Look: 🏛️, governance
 Organisations: those Alice is a participant of.
-Found: Alice [Found] <organisation> <founder> <role>
-  Gov: Alice asks for your consent to found the organisation Orga.
-  Orga: Alice asks to found you.
-Acts of the organisation: Bob [Propose] <act> [Vote]
-  Alice [Act]
+Found: Gov [Found] <organisation> <person> <role>
+  Alice: Gov asks you to be the first officer of its organisation Orga.
+  Orga: Gov asks to found you.
+Acts of the organisation: Bob [Propose] <act> [Vote] <act>
+  Alice [Act] <act> <votes>
 Participation: Bob [Join] <organisation> <officer>
   Decider: Bob asks to become a participant of Orga.
   Codecider: Bob asks to become a participant of Orga.
@@ -64,7 +69,7 @@ Officers: Decider [Appoint] <person> <role>
   Decider [End officer] <person>
   Codecider: Decider asks to end Bob's office in your organisation Orga.
   Bob [Resign] [Officer unfriend]
-Amend: Alice [Amend]
+Amend: Alice [Amend] <act> <votes>
 Ward and person: Bob [Organisation acquaint] <organisation>
   Orga: Bob wishes that you know each other.
   Alice [Organisation befriend] <organisation>

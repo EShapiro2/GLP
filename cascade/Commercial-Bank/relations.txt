@@ -1,2 +1,3 @@
-Commercial Bank extends Bank: holds
+Commercial Bank instantiates Bank: holds
 Commercial Bank restricts it (Bank): holds
+Commercial Bank extends it (Bank): holds

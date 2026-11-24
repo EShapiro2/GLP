@@ -5,10 +5,10 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Bank.glp beside this file.
 Bank
-Bank unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Bank extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
 Logic pragmas
-Bank unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Bank extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
 Interface pragmas
 Look: 🏦, money

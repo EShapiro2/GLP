@@ -5,13 +5,13 @@
 % Checked: calculus/tools/gcsas.py (commute, return, recover), relations.py, and toglp.py --check (Dart 3.14.1): syntactically_grassroots_with_wards.
 % Schemas: Warnings.glp beside this file.
 Warnings
-Warnings extends Organisation, and weakens it.
+Warnings extends and restricts Organisation.
 A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking.
 Alice and Bob are persons, Orga an organisation.
 1. ■ Warn: Alice may warn Bob in Orga, provided Alice is an officer of Orga and Orga has Bob as a participant.
 2. ■ Expel: Organisation:3 Expel, only if two officers of Orga have warned Bob. Officer expel: Organisation:3 Officer expel, only if two officers of Orga have warned Bob.
 Logic pragmas
-Warnings extends Organisation, and weakens it.
+Warnings extends and restricts Organisation.
 A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking.
 Alice and Bob are persons, Orga an organisation.
 1. ■ Warn: Alice may warn Bob in Orga, provided Alice is an officer of Orga and Orga has Bob as a participant.

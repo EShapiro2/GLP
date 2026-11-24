@@ -6,10 +6,10 @@
 % Last changed: 2026-11-17, its Interface pragmas name the ward Wendy, as Guardians' wards are named on the Calculus's batch (Code #33, 2026-11-17 12:38 UTC; GSA #7); 2026-11-16, its Interface pragmas of GnW's Guardian decisions and Retire, asking the other guardians, GnW's lines having gone with GnW's default rule, any guardian alone (GSC #19, GSA_inbox.md, 2026-11-16 16:54 UTC; GSA #7); 2026-11-15, the Calculus's text adopted, at the branch Calculus 79ec48f, its Logic pragmas as mended there (first adopted at c475902), by calculus/MIGRATION.md, which Udi confirmed: the contract as the Calculus has it, its Logic pragmas after the clauses, and the Interface and Implementation pragmas keyed to its act names (GSA #6); 2026-11-10, written by GSA #3 Cowork (Udi, 2026-11-10 13:52 UTC, approving its text): the one definition GRV, GDS and GAS each held, a ward operated by a machine at an address every person can reach, GnW being parametric since that day.
 % Schemas: Services.glp beside this file, the full schemas, printed from the Logic pragmas by calculus/tools/adopt.py and never written by hand; a check holds it to what the tool prints.
 Services
-Services extends Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Services instantiates Guardians with the guardians deciding jointly for the decision rule (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 A *service* is a ward operated by a machine at an address every person can reach.
 Logic pragmas
-Services extends Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Services instantiates Guardians with the guardians of z for those who decide for z (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 A *service* is a ward operated by a machine at an address every person can reach.
 Logic pragmas.
 Roles: the guardians of z = guardians(z), listed by z has y as a guardian and y is a guardian of z.

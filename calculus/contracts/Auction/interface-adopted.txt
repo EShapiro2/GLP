@@ -1,6 +1,0 @@
-Interface pragmas
-Call: Alice [Call] <trip>
-Bid: Bob [Bid]
-Award: Alice [Award] [Close]
-Cancel: Alice [Cancel]
-Withdraw: Alice [Withdraw]

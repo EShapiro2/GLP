@@ -1,1 +1,2 @@
-Second-Score Auction restricts Auction: holds
+Second-Score Auction instantiates Auction: holds
+Second-Score Auction restricts it (Auction): holds

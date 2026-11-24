@@ -1,5 +1,5 @@
 AppStore
-AppStore unites Programs and Services, and extends the union (GNA, GLP Networking API and Services, in preparation).
+AppStore composes Programs with Services (GNA, GLP Networking API and Services, in preparation) and extends the composition.
 Vocabulary: d is a store = store(d); d lists p of y = lists_program(d,p,y); d has p of y signed by x = listing_signed(d,p,y,x); x trusts the store d = trusts_store(x,d).
 After x makes d a store, which requires d is not a store: d is a store.
 After x lists in d p of y, which requires d does not list p of y: d lists p of y and d has p of y signed by x.

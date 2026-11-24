@@ -1,1 +1,2 @@
-Dating extends Free Matching: holds
+Dating instantiates Anonymous Matching: holds
+Dating restricts it (Anonymous Matching): holds

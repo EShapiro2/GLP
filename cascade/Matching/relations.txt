@@ -1,1 +1,1 @@
-Matching extends Gossip: holds
+Matching extends Friendship: holds

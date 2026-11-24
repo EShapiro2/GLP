@@ -13,8 +13,8 @@
 %% Compilation, first step), which in programs/sglp/cva/ would call a platform
 %% module and a population module that are not there.
 %%
-%% The platform's module is exposed: its exported procedures, agent/5 or
-%% agent/6 among them, and the types their signatures carry are lifted into this directory's
+%% The platform's module is exposed: its exported procedures, agent/5 among
+%% them, and the types their signatures carry are lifted into this directory's
 %% scope (TGLP, modules.tex, "The -expose directive"), so that the harness,
 %% written once for every canonical platform, names the platform's types, Net
 %% and Question among them, without restating them.

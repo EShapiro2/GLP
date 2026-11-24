@@ -4,8 +4,4 @@
 % Last changed: 2026-11-18, by GO #10, first line as Udi approved (16:25 UTC).  Logic pragmas and schemas: the Calculus's to write.
 % Extends: Booking, instantiating it.
 Appointments
-Appointments extends Booking.
-A resource is the time of a *provider*, an officer of the organisation.
-Logic pragmas
-Appointments extends Booking.
-A resource is the time of a *provider*, an officer of the organisation.
+Appointments instantiates Booking with the time of a *provider*, an officer of the organisation, for a resource.

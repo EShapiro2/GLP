@@ -92,7 +92,7 @@ script(alice, Me, [Acme, Alf, Bob], [own([A1], propose(establish(A1?))), wait(ho
                                      wait(holds(item(speech(utterance('The code of Alf'), Acme?)))),
                                      own([A2, A3], propose(sign(A2?, speech(utterance('Alf runs code signed by Acme Ltd'), A3?)))),
                                      wait(holds(item(speech(utterance('Alf runs code signed by Acme Ltd'), Me?)))),
-                                     own([A4, A5], propose(enter(A4?, Alf?, speech(utterance('Alf runs code signed by Acme Ltd'), A5?)))),
+                                     own([A4, A5], propose(enter(Alf?, A4?, speech(utterance('Alf runs code signed by Acme Ltd'), A5?)))),
                                      wait(holds(principal(Alf?))),
                                      own([A6], propose(acquaint(A6?, Bob?))), wait(holds(knows(Bob?))),
                                      approval(befriend(Bob?, Me?), yes), wait(holds(friend(Bob?))),
@@ -100,7 +100,7 @@ script(alice, Me, [Acme, Alf, Bob], [own([A1], propose(establish(A1?))), wait(ho
                                      wait(done(ai_agent_befriend(Alf?, Bob?, Me?), 1)),
                                      own([A8], propose(retire(Alf?, A8?)))]) :-
     ground(Me?), ground(Acme?), ground(Alf?), ground(Bob?) | true.
-script(alf, Me, [Alice, Bob], [approval(enter(Alice?, Me?, speech(utterance('Alf runs code signed by Acme Ltd'), Alice?)), yes),
+script(alf, Me, [Alice, Bob], [approval(enter(Me?, Alice?, speech(utterance('Alf runs code signed by Acme Ltd'), Alice?)), yes),
                                approval(ai_agent_acquaint(Me?, Bob?), yes),
                                approval(ai_agent_befriend(Me?, Bob?, Alice?), yes),
                                wait(holds(friend(Bob?))),

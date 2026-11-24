@@ -1,6 +1,6 @@
 Central Bank
-Central Bank extends Bank, and weakens it.
-A *central bank* is a bank created by an organisation, Gov (Organisation:1), as the *sovereign* of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar. Its bylaws name two roles, *governor*, held by its first officer, and *committee member*. The *policy rate* for each term is the return over that term at which the bank lends its coins against bonds. A participant who holds no role is a *counterparty*.
+Central Bank instantiates Bank with central bank bylaws and restricts and extends it.
+A *central bank* is a bank created by an organisation, Gov (Organisation:1), as the *sovereign* of a denomination, Dollar: its Dollar-denominated coins and bonds are the sovereign coins and bonds of the Dollar. Its bylaws name two roles, *governor*, held by its first officer, and *committee member*; the governors jointly decide the acts of the bank, but the officers of Gov decide the appointment and the removal of its officers, and the committee members, the monetary policy committee, set by a majority the *policy rate* for each term, the return over that term at which the bank lends its coins against bonds. A participant who holds no role is a *counterparty*.
 Gov is an organisation, Bob a person, Orga a central bank.
 1. ■ Leave, Expel: Organisation:3, only with the consent of both Bob and the governors.
 2. ■ Set policy rate: The committee members may set the policy rate for a term.

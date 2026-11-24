@@ -1,5 +1,5 @@
 Feeds
-Feeds extends Labelled Overlay, and weakens it.
+Feeds extends and restricts Labelled Overlay.
 Vocabulary: x holds the item t of z's feed = item(x,t,z); x has received the item t of z's feed from y = received(x,t,z,y).
 After x posts t to x's feed, which requires x does not hold the item t of x's feed: x holds the item t of x's feed.
 After x receives from y the item t of z's feed, which requires x does not hold the item t of z's feed: x holds the item t of z's feed and x has received the item t of z's feed from y.

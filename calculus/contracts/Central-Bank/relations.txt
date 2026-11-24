@@ -1,2 +1,3 @@
-Central Bank extends Bank: holds
+Central Bank instantiates Bank: holds
 Central Bank restricts it (Bank): holds
+Central Bank extends it (Bank): holds

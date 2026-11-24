@@ -16,8 +16,8 @@ Acquaint: Alice [Acquaint] <bob>
   Bob: Alice asks for your consent to acquaint.
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
-Issue: Alice [Issue] <type> <sum>
-Swap: Alice [Swap] <sum> <dave> <other> <total>
+Issue: Alice [Issue] <sum>
+Swap: Alice [Swap] <sum> <dave> <total>
   Bob: Alice asks for your consent to swap.
 Pay: Alice [Pay] <sum>
   Bob: Alice asks for your consent to pay.

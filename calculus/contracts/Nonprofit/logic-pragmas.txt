@@ -1,5 +1,5 @@
 Nonprofit
-Nonprofit weakens Corporation.
+Nonprofit restricts Corporation.
 A *nonprofit* is a corporation that pays none of its coins, notes or bonds to its officers.
 Alice and Bob are parties, Orga a nonprofit.
-1. ■ Nondistribution. Pay: Notes:3 Pay, only if Bob is not an officer of Alice. Pay issuer: Notes:3 Pay issuer, only if Bob is not an officer of Alice.
+1. ■ Nondistribution. Pay for Alice: Notes:3 Pay for Alice, only if Bob is not an officer of Alice. Pay issuer for Alice: Notes:3 Pay issuer for Alice, only if Bob is not an officer of Alice. Pay bond for Alice: Notes:3 Pay bond for Alice, only if Bob is not an officer of Alice.

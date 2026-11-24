@@ -1,11 +1,16 @@
 Constitution
-Constitution extends Organisation, and augments it.
+Constitution restricts and strengthens Organisation.
 A *constitutional democratic community* is an organisation whose bylaws name one role, *member*, held by every participant, and are *egalitarian*: the rule by which the members decide an act names no member and no other role.
-Alice, Bob and Carol are persons, Orga a constitutional democratic community, Motion an act of Orga, Votes and Double numbers.
-1. ■ Join: Organisation:3 Join, only if Orga holds the votes of at least Votes persons on whether Bob becomes a participant of Orga, Double is Votes times 2 and Orga has fewer than Double persons as a participant, on the votes of Orga for it. Vote of Orga for Join: Carol may vote on whether Bob becomes a participant of Orga in Orga, provided Carol is entitled to vote on whether Bob becomes a participant of Orga in Orga, Orga knows Bob and Carol is a participant of Orga.
-2. ■ Expel: Organisation:3 Expel, only if Orga holds the votes of at least Votes persons on whether Orga ends Bob's participation in Orga, Double is Votes times 2 and Orga has fewer than Double persons as a participant, on the votes of Orga for it. Vote of Orga for Expel: Carol may vote on whether Orga ends Bob's participation in Orga in Orga, provided Carol is entitled to vote on whether Orga ends Bob's participation in Orga in Orga, Orga knows Bob and Carol is a participant of Orga. Officer expel: Organisation:3 Officer expel, only if Orga holds the votes of at least Votes persons on whether Orga ends Bob's participation and Bob's office in Orga, Double is Votes times 2 and Orga has fewer than Double persons as a participant, on the votes of Orga for it. Vote of Orga for Officer expel: Carol may vote on whether Orga ends Bob's participation and Bob's office in Orga in Orga, provided Carol is entitled to vote on whether Orga ends Bob's participation and Bob's office in Orga in Orga, Orga knows Bob and Carol is a participant of Orga.
-3. ■ Amend: Organisation:5 Amend, only if Motion keeps the bylaws of Orga egalitarian, Orga holds the votes of at least Votes persons on whether Alice amends the bylaws of Orga as Motion says, Double is Votes times 2 and Orga has fewer than Double persons as a participant, on the votes of Orga for it. Vote of Orga for Amend: Carol may vote on whether Alice amends the bylaws of Orga as Motion says in Orga, provided Carol is entitled to vote on whether Alice amends the bylaws of Orga as Motion says in Orga, Orga knows Alice and Carol is a participant of Orga.
+Alice and Bob are persons, Orga a constitutional democratic community, Motion an act of Orga.
+1. ■ Join: Organisation:3 Join, on the votes of Orga for it.
+2. ■ Expel: Organisation:3 Expel, on the votes of Orga for it. Officer expel: Organisation:3 Officer expel, on the votes of Orga for it.
+3. ■ Amend: Organisation:5 Amend, only if Motion keeps the bylaws of Orga egalitarian, on the votes of Orga for it.
 Logic pragmas.
 x is a member of z: x is a participant of z.
 Vocabulary: m keeps the bylaws of z egalitarian = egalitarian(z,m).
 Environment: m keeps the bylaws of z egalitarian.
+Default: x is a member of z for x is entitled to propose m in z.
+Default: x is a member of z for x is entitled to vote on m in z.
+Default: x is a member of z for x is entitled to take m for z.
+Default: z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z.
+Default: z is an organisation and z has m proposed for the amendment m is decided according to the bylaws of z.

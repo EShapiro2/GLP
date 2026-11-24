@@ -20,23 +20,23 @@ person_unfriend(Peer, Peer)
 ;
 message(Peer, Peer, Speech)
 ;
-create(Peer, Constant)
+create(Peer, Speech)
 ;
-close(Peer, List(Peer), Constant)
+close(Peer, List(Peer), Speech)
 ;
-join(Peer, Peer, Constant)
+join(Peer, Peer, Speech)
 ;
-remove(Peer, Peer, Constant)
+remove(Peer, Peer, Speech)
 ;
-leave(Peer, Peer, Constant)
+leave(Peer, Peer, Speech)
 ;
-post(Peer, Peer, Speech, Constant)
+post(Peer, Peer, Speech, Speech)
 ;
-post_own(Peer, Speech, Constant)
+post_own(Peer, Speech, Speech)
 ;
-deliver(Peer, Peer, Peer, Speech, Constant)
+deliver(Peer, Peer, Peer, Speech, Speech)
 ;
-deliver_leader(Peer, Peer, Speech, Constant)
+deliver_leader(Peer, Peer, Speech, Speech)
 ;
 enter(Peer, Peer, Speech)
 ;
@@ -76,9 +76,9 @@ agent_forward(Peer, Peer, Speech)
 ;
 agent_message(Peer, Peer, Speech)
 ;
-deliver_own(Peer, Peer, Speech, Constant)
+deliver_own(Peer, Peer, Speech, Speech)
 ;
-post_forward(Peer, Peer, Speech, Constant)
+post_forward(Peer, Peer, Speech, Speech)
 .
 Proposal ::=
 establish(Peer)
@@ -93,19 +93,19 @@ person_unfriend(Peer, Peer)
 ;
 message(Peer, Peer, Speech)
 ;
-create(Peer, Constant)
+create(Peer, Speech)
 ;
-close(Peer, Constant)
+close(Peer, Speech)
 ;
-join(Peer, Peer, Constant)
+join(Peer, Peer, Speech)
 ;
-remove(Peer, Peer, Constant)
+remove(Peer, Peer, Speech)
 ;
-leave(Peer, Peer, Constant)
+leave(Peer, Peer, Speech)
 ;
-post(Peer, Peer, Speech, Constant)
+post(Peer, Peer, Speech, Speech)
 ;
-post_own(Peer, Speech, Constant)
+post_own(Peer, Speech, Speech)
 ;
 enter(Peer, Peer, Speech)
 ;
@@ -145,7 +145,7 @@ agent_forward(Peer, Peer, Speech)
 ;
 agent_message(Peer, Peer, Speech)
 ;
-post_forward(Peer, Peer, Speech, Constant)
+post_forward(Peer, Peer, Speech, Speech)
 .
 Request ::= propose(Proposal).
 YesNo     ::= yes ; no.
@@ -170,27 +170,27 @@ friend(Peer)
 ;
 item(Speech)
 ;
-leader(Constant)
+leader(Speech)
 ;
-member(Constant, Peer)
+member(Speech, Peer)
 ;
-listed(Peer, Constant)
+listed(Peer, Speech)
 ;
-posted(Speech, Peer, Constant)
+posted(Speech, Peer, Speech)
 ;
-group_delivered(Peer, Speech, Constant, Peer)
-;
-principal(Peer)
-;
-guardian(Peer)
-;
-attestation_record(Peer, Speech)
+group_delivered(Peer, Speech, Speech, Peer)
 ;
 ai_agent
 ;
 has_guardian(Peer)
 ;
 attestation(Speech)
+;
+principal(Peer)
+;
+guardian(Peer)
+;
+attestation_record(Peer, Speech)
 ;
 retired
 .

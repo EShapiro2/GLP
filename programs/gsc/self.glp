@@ -66,12 +66,6 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 % linear constraint (sas_ictx_of1; unobstructed.glp, inst_env and intro_env;
 % restrict.glp, impl_env), and written as a multiplicity it is of two types
 % (sas_faults2); in a match it meets a constant value (match_nvar).
-% set(X) is a value variable of a type Set(A), the finite sets of values of a
-% type A, among a schema's variables, written set(X) in the clause syntax
-% (sas_arg): an atom writes it num(X), standing for one atom per element of
-% X in its place, and the conditions read it as they read const(X), each
-% element being a value over constants that names no agent (def:numbers and
-% def:binding-numbers, the set variable).
 % item_of(svar(Y)) is the item item(y) of the speech-act variable y, the
 % utterance under the signatures of y, an argument of an atom and an
 % expression of a constraint (def:numbers, GSC 4401dd6); it names no agent and
@@ -89,7 +83,7 @@ NameTerms ::= [] ; [NameTerm | NameTerms].
 % parametric(Params, D).
 Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
         ; sgn(Constant, Integer) ; num(Constant) ; real(Constant)
-        ; const(Constant) ; set(Constant) ; any
+        ; const(Constant) ; any
         ; item_of(Arg) ; val(Constant).
 Args  ::= [] ; [Arg | Args].
 Atom  ::= atom(Constant, Args).
@@ -876,15 +870,6 @@ sas_arg(real(X), _, _, num(X?)) :- otherwise | true.
 % num(X) is, its type the head's (Arg, above).
 sas_arg(const(X), _, _, any) :- X? =?= '_' | true.
 sas_arg(const(X), _, _, num(X?)) :- otherwise | true.
-% set(X) is the value variable X of a type Set(A), whose values are the
-% finite sets of values of a type A, written where the predicate takes a value
-% of A: the atom stands for one atom with each element of X in its place
-% (def:numbers and def:binding-numbers, the set variable).  The conditions
-% read it as a value variable over constants, const(X) (sas_vars), each
-% element naming no agent, and a deleted atom with set(X) is required with
-% set(X), as any deleted atom is required.
-sas_arg(set(X), _, _, any) :- X? =?= '_' | true.
-sas_arg(set(X), _, _, num(X?)) :- otherwise | true.
 sas_arg(sgn(Y, N), E, _, sgn(Y?, I?)) :-
     sas_look(N?, E?, L),
     sas_index(L?, I).
@@ -999,10 +984,6 @@ sas_expr(ext(S, Y), E, V, R?) :- sas_arg(ext(S?, Y?), E?, V?, R).
 sas_expr(num(X), E, V, R?) :- sas_arg(num(X?), E?, V?, R).
 sas_expr(real(X), E, V, R?) :- sas_arg(real(X?), E?, V?, R).
 sas_expr(const(X), E, V, R?) :- sas_arg(const(X?), E?, V?, R).
-sas_expr(set(X), E, V, R?) :- sas_arg(set(X?), E?, V?, R).
-% size(X) is the size |X| of the set variable X, a whole number, the function
-% size the type Set(A) provides (def:numbers).
-sas_expr(size(X), E, V, fn(size, [R?])) :- sas_arg(set(X?), E?, V?, R).
 sas_expr(sgn(Y, N), E, V, R?) :- sas_arg(sgn(Y?, N?), E?, V?, R).
 sas_expr(author_of(Y), E, V, author_of(R?)) :- sas_bare(Y?, E?, V?, R).
 sas_expr(item_of(Y), E, V, item_of(R?)) :- sas_bare(Y?, E?, V?, R).
@@ -1037,14 +1018,11 @@ sas_nums_arg(real(X), T, T?) :- X? =?= '_' | true.
 sas_nums_arg(real(X), T, [X?|T?]) :- otherwise | true.
 sas_nums_arg(const(X), T, T?) :- X? =?= '_' | true.
 sas_nums_arg(const(X), T, [X?|T?]) :- otherwise | true.
-sas_nums_arg(set(X), T, T?) :- X? =?= '_' | true.
-sas_nums_arg(set(X), T, [X?|T?]) :- otherwise | true.
 sas_nums_arg(_, T, T?) :- otherwise | true.
 
 % The value variables a schema writes as of one type, K num, real or const:
 % those written num(X), those written real(X) and those written const(X)
-% (Arg, above), a set variable, written set(X), among those over constants;
-% K cst gives those written const(X) and K set those written set(X).
+% (Arg, above).
 procedure sas_vk_arg(Constant?, SArg?, PNames?, PNames).
 sas_vk_arg(_, num(X), T, T?) :- X? =?= '_' | true.
 sas_vk_arg(_, real(X), T, T?) :- X? =?= '_' | true.
@@ -1052,14 +1030,9 @@ sas_vk_arg(_, const(X), T, T?) :- X? =?= '_' | true.
 sas_vk_arg(_, num(X), T, T?) :- number(X?) | true.
 sas_vk_arg(_, real(X), T, T?) :- number(X?) | true.
 sas_vk_arg(_, const(X), T, T?) :- number(X?) | true.
-sas_vk_arg(_, set(X), T, T?) :- X? =?= '_' | true.
-sas_vk_arg(_, set(X), T, T?) :- number(X?) | true.
 sas_vk_arg(K, num(X), T, [X?|T?]) :- otherwise, K? =?= num | true.
 sas_vk_arg(K, real(X), T, [X?|T?]) :- otherwise, K? =?= real | true.
 sas_vk_arg(K, const(X), T, [X?|T?]) :- otherwise, K? =?= const | true.
-sas_vk_arg(K, const(X), T, [X?|T?]) :- otherwise, K? =?= cst | true.
-sas_vk_arg(K, set(X), T, [X?|T?]) :- otherwise, K? =?= const | true.
-sas_vk_arg(K, set(X), T, [X?|T?]) :- otherwise, K? =?= set | true.
 sas_vk_arg(_, _, T, T?) :- otherwise | true.
 
 procedure sas_vk_args(Constant?, SArgs?, PNames?, PNames).
@@ -1094,8 +1067,6 @@ sas_vk_expr(K, sum(_, _, _, U), T, R?) :- sas_vk_expr(K?, U?, T?, R).
 sas_vk_expr(K, num(X), T, R?) :- sas_vk_arg(K?, num(X?), T?, R).
 sas_vk_expr(K, real(X), T, R?) :- sas_vk_arg(K?, real(X?), T?, R).
 sas_vk_expr(K, const(X), T, R?) :- sas_vk_arg(K?, const(X?), T?, R).
-sas_vk_expr(K, set(X), T, R?) :- sas_vk_arg(K?, set(X?), T?, R).
-sas_vk_expr(K, size(X), T, R?) :- sas_vk_arg(K?, set(X?), T?, R).
 sas_vk_expr(_, _, T, T?) :- otherwise | true.
 
 procedure sas_vk_exprs(Constant?, SExprs?, PNames?, PNames).
@@ -1148,8 +1119,6 @@ sas_nums_expr(sum(_, _, _, U), T, R?) :- sas_nums_expr(U?, T?, R).
 sas_nums_expr(num(X), T, R?) :- sas_nums_arg(num(X?), T?, R).
 sas_nums_expr(real(X), T, R?) :- sas_nums_arg(real(X?), T?, R).
 sas_nums_expr(const(X), T, R?) :- sas_nums_arg(const(X?), T?, R).
-sas_nums_expr(set(X), T, R?) :- sas_nums_arg(set(X?), T?, R).
-sas_nums_expr(size(X), T, R?) :- sas_nums_arg(set(X?), T?, R).
 sas_nums_expr(_, T, T?) :- otherwise | true.
 
 procedure sas_nums_exprs(SExprs?, PNames?, PNames).
@@ -1193,20 +1162,6 @@ sas_var_arg(lnone, yes, no, no, X, num(X?)).
 sas_var_arg(lnone, yes, no, yes, X, const(X?)).
 sas_var_arg(lnone, yes, yes, _, X, real(X?)).
 sas_var_arg(lnone, no, _, _, X, svar(X?)).
-
-% The set variables among a schema's variables, those it writes set(X): each
-% is read as a value variable over constants, const(X), and written set(X).
-procedure sas_setvars(Args?, PNames?, Args).
-sas_setvars([], _, []).
-sas_setvars([const(X)|As], St, [A?|R?]) :- ground(X?), ground(St?) |
-    sas_in(X?, St?, Y),
-    sas_setvar(Y?, X?, A),
-    sas_setvars(As?, St?, R).
-sas_setvars([A|As], St, [A?|R?]) :- otherwise, ground(St?) | sas_setvars(As?, St?, R).
-
-procedure sas_setvar(Ans?, Constant?, Arg).
-sas_setvar(yes, X, set(X?)).
-sas_setvar(no, X, const(X?)).
 
 % The literals of a list with holder N, the atoms and the negated ones, in
 % order, each without its holder.
@@ -1587,7 +1542,6 @@ sas_occ_arg(ext(S, Y), X, R?) :- sas_occ_nt(ext(S?, Y?), X?, R).
 sas_occ_arg(num(Y), X, yes) :- Y? =?= X? | true.
 sas_occ_arg(real(Y), X, yes) :- Y? =?= X? | true.
 sas_occ_arg(const(Y), X, yes) :- Y? =?= X? | true.
-sas_occ_arg(set(Y), X, yes) :- Y? =?= X? | true.
 sas_occ_arg(sgn(Y, N), X, yes) :- Y? =?= X?, ground(N?) | true.
 sas_occ_arg(sgn(Y, N), X, yes) :- N? =?= X?, ground(Y?) | true.
 sas_occ_arg(typed(_, Y), X, yes) :- Y? =?= X? | true.
@@ -1851,9 +1805,7 @@ sas_schema2(Nm, Vs, sa(_, HQ, _, _, BQ, BF, Cn, _, _, _, AA, Bs, Cs, Ks), E,
     sas_nums_leaves(Cs?, N2?, Nums),
     sas_vk3(real, AA?, Cs?, Ks?, Rl),
     sas_vk3(const, AA?, Cs?, Ks?, Cl),
-    sas_vk3(set, AA?, Cs?, Ks?, St),
-    sas_vars(Vs?, E?, Nums?, Rl?, Cl?, Vars0),
-    sas_setvars(Vars0?, St?, Vars),
+    sas_vars(Vs?, E?, Nums?, Rl?, Cl?, Vars),
     sas_cons(Cn?, E?, Vs?, Cn1),
     sas_conjs(HQ?, E?, Vq?, Cj),
     sas_body_forms(BQ?, BF?, E?, Vq?, Fs),
@@ -1926,14 +1878,10 @@ sas_arg_vf(ext(_, _), _, _, _, _, T, T?).
 sas_arg_vf(num(_), _, _, _, _, T, T?).
 sas_arg_vf(real(_), _, _, _, _, T, T?).
 sas_arg_vf(const(_), _, _, _, _, T, T?).
-sas_arg_vf(set(_), _, _, _, _, T, T?).
 sas_arg_vf(sgn(_, _), _, _, _, _, T, T?).
 sas_arg_vf(item_of(Y), E, V, Nm, P, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, P?, T?, R).
 sas_arg_vf(typed(_, Y), E, V, Nm, P, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, P?, T?, R).
-% A number is written num(N), and val(C) is a value of any other type (Arg,
-% above), so val(N) of a number N is a fault value_number(Schema, N).
-sas_arg_vf(val(C), _, _, Nm, _, T, [value_number(Nm?, C?)|T?]) :- ground(C?), number(C?) | true.
-sas_arg_vf(val(_), _, _, _, _, T, T?) :- otherwise | true.
+sas_arg_vf(val(_), _, _, _, _, T, T?).
 sas_arg_vf(C, E, V, Nm, P, T, R?) :- otherwise | sas_bare_vf(C?, E?, V?, Nm?, P?, T?, R).
 
 procedure(X) sas_bare_vf(X?, REnts?, PNames?, Constant?, Constant?, Faults?, Faults).
@@ -2037,13 +1985,10 @@ sas_expr_vf(ext(_, _), _, _, _, T, T?).
 sas_expr_vf(num(_), _, _, _, T, T?).
 sas_expr_vf(real(_), _, _, _, T, T?).
 sas_expr_vf(const(_), _, _, _, T, T?).
-sas_expr_vf(set(_), _, _, _, T, T?).
-sas_expr_vf(size(_), _, _, _, T, T?).
 sas_expr_vf(sgn(_, _), _, _, _, T, T?).
 sas_expr_vf(author_of(Y), E, V, Nm, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, constraint, T?, R).
 sas_expr_vf(item_of(Y), E, V, Nm, T, R?) :- sas_bare_vf(Y?, E?, V?, Nm?, constraint, T?, R).
-sas_expr_vf(val(C), _, _, Nm, T, [value_number(Nm?, C?)|T?]) :- ground(C?), number(C?) | true.
-sas_expr_vf(val(_), _, _, _, T, T?) :- otherwise | true.
+sas_expr_vf(val(_), _, _, _, T, T?).
 sas_expr_vf(C, E, V, Nm, T, R?) :- otherwise | sas_bare_vf(C?, E?, V?, Nm?, constraint, T?, R).
 
 procedure sas_exprs_vf(SExprs?, REnts?, PNames?, Constant?, Faults?, Faults).
@@ -2214,15 +2159,12 @@ sas_faults2(Nm, Ns, sa(HP, HQ, HF, BP, BQ, BF, Cn, PP, AQ, CQ, AA, Bs, Cs, Ks),
     sas_vk3(num, AA?, Cs?, Ks?, Nn),
     sas_vk3(real, AA?, Cs?, Ks?, Nr),
     sas_vk3(const, AA?, Cs?, Ks?, Nc),
-    sas_vk3(set, AA?, Cs?, Ks?, Nst),
-    sas_vk3(cst, AA?, Cs?, Ks?, Nk),
     sas_vk3(num, AA?, Cs?, Ks?, Nn2),
     sas_vk3(real, AA?, Cs?, Ks?, Nr2),
     sas_nums_args(Ks?, [], Ms),
     sas_papp(Nn2?, Nr2?, Nnr),
     sas_papp(Nnr?, Ms?, Nx),
-    sas_type_faults(Nst?, Nk?, Nm?, [], F9),
-    sas_type_faults(Nc?, Nx?, Nm?, F9?, F8),
+    sas_type_faults(Nc?, Nx?, Nm?, [], F8),
     sas_type_faults(Nn?, Nr?, Nm?, F8?, F7),
     sas_gfaults(G?, Nm?, E?, F7?, F6),
     sas_hffaults(HF?, Nm?, F6?, F5),
@@ -2240,9 +2182,6 @@ sas_faults2(Nm, Ns, sa(HP, HQ, HF, BP, BQ, BF, Cn, PP, AQ, CQ, AA, Bs, Cs, Ks),
 % Speech-Act Schemas").  So is one written const(X) and num(X) or real(X),
 % and one written const(X) and written as a multiplicity, a multiplicity
 % being "a positive whole number" at every binding (def:binding-numbers).
-% A set variable, written set(X), is of the type Set(A): one written set(X)
-% and num(X), real(X) or const(X), or as a multiplicity, or whose size(X) is
-% taken where it is written num(X), real(X) or const(X), is of two types.
 procedure sas_type_faults(PNames?, PNames?, Constant?, Faults?, Faults).
 sas_type_faults([], _, _, T, T?).
 sas_type_faults([X|Xs], Rl, Nm, T, R?) :- ground(X?), ground(Xs?), ground(Rl?), ground(Nm?), ground(T?) |
@@ -2405,7 +2344,6 @@ Fault ::= no_introductory_act
         ; listed_agent_role(Constant, Constant)
         ; guard_not_role(Constant, Constant)
         ; value_type(Constant, Constant)
-        ; value_number(Constant, Number)
         ; item_argument(Constant, Constant)
         ; unsupplied(Constant, Constant).
 Faults  ::= [] ; [Fault | Faults].
@@ -2853,13 +2791,6 @@ kind_ok(const(_), speech(_), no).
 kind_ok(const(_), signed(_, _), no).
 kind_ok(const(_), undef, no).
 kind_ok(const(_), utt(_), no).
-kind_ok(set(_), nval(_), yes).
-kind_ok(set(_), nfree(_), yes).
-kind_ok(set(_), person(_), no).
-kind_ok(set(_), speech(_), no).
-kind_ok(set(_), signed(_, _), no).
-kind_ok(set(_), undef, no).
-kind_ok(set(_), utt(_), no).
 % The wildcard and an item are matched by match_one, never here.
 kind_ok(any, _, no).
 kind_ok(item_of(_), _, no).
@@ -2956,7 +2887,6 @@ binding_ok(sgn(_, _), _, _, _, no).
 binding_ok(num(_), _, _, _, no).
 binding_ok(real(_), _, _, _, no).
 binding_ok(const(_), _, _, _, no).
-binding_ok(set(_), _, _, _, no).
 binding_ok(any, _, _, _, no).
 binding_ok(item_of(_), _, _, _, no).
 binding_ok(val(_), _, _, _, no).
@@ -3312,7 +3242,6 @@ filter_pvars([sgn(_, _)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([num(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([real(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([const(_)|As], R?) :- filter_pvars(As?, R).
-filter_pvars([set(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([any|As], R?) :- filter_pvars(As?, R).
 filter_pvars([item_of(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([val(_)|As], R?) :- filter_pvars(As?, R).
@@ -3330,7 +3259,6 @@ filter_svars([sgn(Y, _)|As], [svar(Y?)|R?]) :- filter_svars(As?, R).
 filter_svars([num(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([real(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([const(_)|As], R?) :- filter_svars(As?, R).
-filter_svars([set(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([any|As], R?) :- filter_svars(As?, R).
 % An item names no agent and has no base (Arg), so the speech-act variable
 % inside it is not read as one the atom carries.
@@ -3399,7 +3327,6 @@ fresh_val(sgn(_, _), _, undef).
 fresh_val(num(X), _, nfree(X?)).
 fresh_val(real(X), _, nfree(X?)).
 fresh_val(const(X), _, nfree(X?)).
-fresh_val(set(X), _, nfree(X?)).
 fresh_val(any, _, undef).
 fresh_val(item_of(_), _, undef).
 fresh_val(val(C), _, cval(C?)).
@@ -3800,7 +3727,6 @@ arg_base(sgn(_, J), b_role(J?)).
 arg_base(num(_), b_num).
 arg_base(real(_), b_num).
 arg_base(const(_), b_num).
-arg_base(set(_), b_num).
 arg_base(any, b_any).
 % An item, an utterance, has no base, as a value has none (Arg).
 arg_base(item_of(_), b_num).
@@ -4313,7 +4239,6 @@ expr_args(mul(X, Y), T, R?) :- ground(X?), ground(Y?), ground(T?) | exprs_args([
 expr_args(num(X), T, [num(X?)|T?]).
 expr_args(real(X), T, [num(X?)|T?]).
 expr_args(const(X), T, [num(X?)|T?]).
-expr_args(set(X), T, [num(X?)|T?]).
 expr_args(role(I), T, [role(I?)|T?]).
 expr_args(pvar(X), T, [pvar(X?)|T?]).
 expr_args(svar(X), T, [svar(X?)|T?]).
@@ -5678,24 +5603,6 @@ compile_read([], Nm, D) :- ground(D?) |
     param_list(D?, Pm),
     compile # compile_contract(Nm?, D0?, Ev?, Pm?).
 compile_read([F|Fs], Nm, _) :- compile # compile_malformed(Nm?, [F?|Fs?]).
-
-% A contract checked once and compiled on its verdict, which is given back, as
-% cascade.sh and cascade.py take it: the verdict and the displays are of the
-% one term given, the verdict check/2 gives it.
-imported procedure compile#compile_contract(Constant?, NDeclared?, Preds?, SParams?, Verdict).
-exported procedure compile_contract(Constant?, WDeclared?, Verdict).
-compile_contract(Nm, D, V?) :- ground(D?) |
-    read_faults(D?, F),
-    compile_read(F?, Nm?, D?, V).
-
-procedure compile_read(Faults?, Constant?, WDeclared?, Verdict).
-compile_read([], Nm, D, V?) :- ground(D?) |
-    unnamed(D?, D0),
-    env_preds(D?, Ev),
-    param_list(D?, Pm),
-    compile # compile_contract(Nm?, D0?, Ev?, Pm?, V).
-compile_read([F|Fs], Nm, _, malformed([F?|Fs?])) :- ground(F?), ground(Fs?) |
-    compile # compile_malformed(Nm?, [F?|Fs?]).
 
 imported procedure compile#compile_variant(Constant?, WContract?).
 exported procedure compile_variant(Constant?, WContract?).

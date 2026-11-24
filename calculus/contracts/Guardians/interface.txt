@@ -2,7 +2,7 @@ Guardians
 1. ○ Establish.  Alice may establish an identity once.
 2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
 3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+4. ■ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
 5. ■ Person unfriend.  Alice may end her friendship with Bob.
 6. ■ Enter.  Alice may create a ward, Wendy, and establish Wendy's identity by choosing Wendy's key pair, and Wendy must consent.
 7. ■ Make guardian.  Those who decide for Wendy may make Bob, a friend of a guardian of Wendy, a guardian and a friend of Wendy, with the consent of Bob.
@@ -30,10 +30,8 @@ Person unfriend: Alice [Person unfriend]
 Enter: Alice [Enter] <wendy>
 Make guardian: Bob [Make guardian] <wendy>
   Decider: Bob asks for your consent to make guardian.
-  Codecider: Bob asks for your consent to make guardian.
 Resign: Bob [Resign]
 End guardian: Decider [End guardian] <bob>
-  Codecider: Decider asks for your consent to end guardian.
 Guardian unfriend: Bob [Guardian unfriend]
 Ward acquaint: Wendy [Ward acquaint] <bob>
   Bob: Wendy asks for your consent to ward acquaint.
@@ -53,4 +51,3 @@ Wards of one guardian befriend: Wendy [Wards of one guardian befriend]
   Will: Wendy asks for your consent to wards of one guardian befriend.
   Alice: Wendy asks for your consent to wards of one guardian befriend.
 Retire: Decider [Retire]
-  Codecider: Decider asks for your consent to retire.

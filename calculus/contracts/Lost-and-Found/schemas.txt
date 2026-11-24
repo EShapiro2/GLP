@@ -1,3 +1,3 @@
 Lost and Found
-Lost and Found extends Free Matching.
+Lost and Found instantiates Anonymous Matching with a test of the match of losses and finds and a budget of a fixed count, a forward costing one.
 Lost and Found:0 - | A post is a *loss*, stating a thing its maker lost, or a *find*, stating a thing its maker found. A loss and a find match when they are of the same thing.

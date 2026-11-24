@@ -1,3 +1,2 @@
 Meeting Rooms
-Meeting Rooms extends Booking.
-A resource is a *room*.
+Meeting Rooms instantiates Booking with a *room* for a resource.

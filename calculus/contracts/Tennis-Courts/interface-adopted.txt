@@ -1,5 +1,0 @@
-Interface pragmas
-Book: Alice [Book] <carol> <res> <slot>
-  Carol: Alice asks for your consent to book.
-Organisation and ward: Club [Organisation ward acquaint] <wendy>
-  Wendy: Club asks for your consent to organisation ward acquaint.

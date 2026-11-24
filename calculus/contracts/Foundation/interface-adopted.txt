@@ -1,7 +1,0 @@
-Interface pragmas
-Join: Bob [Join] <orga> <decider> <deciderb>
-  Decider: Bob asks for your consent to join.
-  DeciderB: Bob asks for your consent to join.
-  Codecider: Bob asks for your consent to join.
-  CodeciderB: Bob asks for your consent to join.
-Amend: Alice [Amend] <motion> <votes>

@@ -1,5 +1,5 @@
 Coins
-Coins extends Notes.
+Coins relaxes and extends Notes.
 A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 Alice and Bob are parties.
 1. ■ Pay issuer: Notes:3, without the consent of Bob, if the coins are Bob-coins.

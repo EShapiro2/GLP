@@ -1,5 +1,5 @@
 Consumers' Cooperative
-Consumers' Cooperative unites Cooperative and an augmentation of Trading Company, and extends and augments the union.
+Consumers' Cooperative instantiates Cooperative and Trading Company with bylaws that delegate no act; x is a member of z for x is entitled to propose m in z; x is a member of z for x is entitled to take m for z; x is a member of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z, and restricts and extends them.
 A *consumers' cooperative* is a cooperative that is a trading company. Its *fee* is a number of Dollars the members set, and the *cost* of a good is the coins Orga paid for it.
 Bob, Dave and Erin are persons, Orga a consumers' cooperative, Ware a good, Dollar a fiat currency, Fee, Sum, Votes and Double numbers.
 1. ■ Fee. Set fee: Those who decide for Orga may set the fee of Orga at Fee, provided Orga is an organisation. Pay fee: Bob may pay Orga the fee in Fee Dave-coins, provided Orga has the fee at the number Fee, Orga accepts a Dollar-denominated Dave-coin in payment and Bob knows Orga. Join: Organisation:3 Join, only if Bob has paid Orga the fee.

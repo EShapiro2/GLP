@@ -40,10 +40,6 @@ arrive(Peer)
 ;
 leave(Peer, List(Peer))
 ;
-greet(Peer, Peer)
-;
-idle(Peer)
-;
 dissolve(Peer, List(Peer))
 ;
 retire(Peer, List(Peer))
@@ -78,10 +74,6 @@ arrive(Peer)
 ;
 leave(Peer)
 ;
-greet(Peer, Peer)
-;
-idle(Peer)
-;
 dissolve(Peer)
 ;
 retire(Peer)
@@ -91,7 +83,7 @@ Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Issue", [act(issue, 1, [1, 2], [forb(issued, [at(2), at(3)])], [], [field(2, "alice", key), field(3, "maturity", number)], [], [])]), button("Accept", [act(accept, 1, [1, 2], [req(bond, [at(2), any]), forb(accepted, [at(2)]), unless(accepted, [at(2)])], [2], [], [], [])]), button("Appoint", [act(appoint, 1, [1, 2], [forb(has_role, [at(2), at(3)])], [], [field(2, "bob", key), field(3, "role", text)], [], [])]), button("Boast", [act(boast, 1, [1], [forb(officer, [])], [], [], [], [])]), button("Report", [act(report, 1, [1, 2], [forb(reported, [at(2)])], [], [field(2, "alice", key)], [], [])]), button("Vow", [act(vow, 1, [1], [forb(vowed, [])], [], [], [], [])]), button("Rest", [act(rest, 1, [1], [forb(rested, [])], [], [], [], [])]), button("Point", [act(point, 1, [1, 2], [req(issued, [at(2), any]), forb(pointer, [at(2), at(3)])], [2], [field(3, "label", text)], [], [])]), button("Unpoint", [act(unpoint, 1, [1, 2], [req(pointer, [at(2), at(3)])], [2, 3], [], [], [])]), button("Office", [act(office, 1, [1, 2], [forb(has_office, [at(2), at(3)])], [], [field(2, "bob", key), field(3, "title", text)], [], [])]), button("Serve", [act(serve, 1, [1, 2], [req(office, [at(2), any]), forb(serving, [at(2)]), unless(serving, [at(2)])], [2], [], [], [])]), button("Enrol", [act(enrol, 1, [1, 2], [forb(member, [at(3), at(2)])], [], [field(2, "alice", key), field(3, "group", text)], [], [])]), button("Arrive", [act(arrive, 1, [1], [forb(here, [])], [], [], [], [])]), button("Leave", [act(leave, 1, [1], [forb(left, [])], [], [], [], [])]), button("Greet", [act(greet, 1, [1, 2], [forb(greeting, [at(2)]), unless(greeting, [at(2)])], [], [field(2, "carol", key)], [], [])]), button("Idle", [act(idle, 1, [1], [forb(idle, []), forb(member, [any, any])], [], [], [], [])]), button("Dissolve", [act(dissolve, 1, [1], [forb(dissolved, [])], [], [], [], [])]), button("Retire", [act(retire, 1, [1], [forb(retired, [])], [], [], [], [])])])
+Request? =::= social_menu([button("Issue", [act(issue, 1, [1, 2], [forb(issued, [at(2), at(3)])], [], [field(2, "alice", key), field(3, "maturity", number)], [], [])]), button("Accept", [act(accept, 1, [1, 2], [req(bond, [at(2), any]), forb(accepted, [at(2)]), unless(accepted, [at(2)])], [2], [], [], [])]), button("Appoint", [act(appoint, 1, [1, 2], [forb(has_role, [at(2), at(3)])], [], [field(2, "bob", key), field(3, "role", text)], [], [])]), button("Boast", [act(boast, 1, [1], [forb(officer, [])], [], [], [], [])]), button("Report", [act(report, 1, [1, 2], [forb(reported, [at(2)])], [], [field(2, "alice", key)], [], [])]), button("Vow", [act(vow, 1, [1], [forb(vowed, [])], [], [], [], [])]), button("Rest", [act(rest, 1, [1], [forb(rested, [])], [], [], [], [])]), button("Point", [act(point, 1, [1, 2], [req(issued, [at(2), any]), forb(pointer, [at(2), at(3)])], [2], [field(3, "label", text)], [], [])]), button("Unpoint", [act(unpoint, 1, [1, 2], [req(pointer, [at(2), at(3)])], [2, 3], [], [], [])]), button("Office", [act(office, 1, [1, 2], [forb(has_office, [at(2), at(3)])], [], [field(2, "bob", key), field(3, "title", text)], [], [])]), button("Serve", [act(serve, 1, [1, 2], [req(office, [at(2), any]), forb(serving, [at(2)]), unless(serving, [at(2)])], [2], [], [], [])]), button("Enrol", [act(enrol, 1, [1, 2], [forb(member, [at(3), at(2)])], [], [field(2, "alice", key), field(3, "group", text)], [], [])]), button("Arrive", [act(arrive, 1, [1], [forb(here, [])], [], [], [], [])]), button("Leave", [act(leave, 1, [1], [forb(left, [])], [], [], [], [])]), button("Dissolve", [act(dissolve, 1, [1], [forb(dissolved, [])], [], [], [], [])]), button("Retire", [act(retire, 1, [1], [forb(retired, [])], [], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -144,12 +136,6 @@ here
 ;
 left
 ;
-greeting(Peer)
-;
-greeted(Peer)
-;
-idle
-;
 dissolved
 ;
 retired
@@ -196,12 +182,6 @@ atom_of(g(here, []), shown(here))
 .
 atom_of(g(left, []), shown(left))
 .
-atom_of(g(greeting, [p(V1)]), shown(greeting(V1?)))
-.
-atom_of(g(greeted, [p(V1)]), shown(greeted(V1?)))
-.
-atom_of(g(idle, []), shown(idle))
-.
 atom_of(g(dissolved, []), shown(dissolved))
 .
 atom_of(g(retired, []), shown(retired))
@@ -211,7 +191,7 @@ atom_of(g(title, [p(V1), s(V2)]), shown(title(V1?, V2?)))
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(issue, [num('D')], [rs(guarded, [atom(issued, [role(2), num('D')])], [], [], [atom(issued, [role(2), num('D')])]), rs(guarded, [atom(bond, [role(1), num('D')])], [], [], [atom(bond, [role(1), num('D')])])]), schema(accept, [], [rs(guarded, [atom(accepted, [role(2)])], [], [atom(bond, [role(2), num('_1')])], [atom(accepted, [role(2)])]), rs(guarded, [atom(accepted_by, [role(1)])], [], [], [atom(accepted_by, [role(1)])])]), schema(appoint, [svar('Role')], [rs(guarded, [atom(has_role, [role(2), svar('Role')])], [], [], [atom(has_role, [role(2), svar('Role')])]), rs(guarded, [atom(role, [role(1), svar('Role')])], [], [], [atom(role, [role(1), svar('Role')])])]), schema(boast, [], [rs(guarded, [atom(officer, [])], [], [], [atom(officer, [])])]), lschema(report, [], [rs(guarded, [atom(reported, [role(2)])], [], [], [atom(reported, [role(2)])]), rs(guarded, [], [], [], [])], [instances(1, 1, [svar('Role')], atom(has_role, [pvar('_1'), svar('Role')]), fcons(true), [hm(2, atom(title, [role(1), svar('Role')]))], [])]), schema(vow, [], [rs(guarded, [atom(vowed, [])], [], [], [atom(vowed, [])])]), schema(rest, [], [rs(guarded, [atom(rested, [])], [], [], [atom(rested, [])])]), schema(point, [pvar('Carol'), svar('Label')], [rs(guarded, [atom(pointer, [pvar('Carol'), svar('Label')])], [], [atom(issued, [pvar('Carol'), num('_1')])], [atom(pointer, [pvar('Carol'), svar('Label')])])]), schema(unpoint, [pvar('Carol'), svar('Label')], [rs(guarded, [], [atom(pointer, [pvar('Carol'), svar('Label')])], [], [])]), schema(office, [num('Title')], [rs(guarded, [atom(has_office, [role(2), num('Title')])], [], [], [atom(has_office, [role(2), num('Title')])]), rs(guarded, [atom(office, [role(1), num('Title')])], [], [], [atom(office, [role(1), num('Title')])])]), schema(serve, [], [rs(guarded, [atom(serving, [role(2)])], [], [atom(office, [role(2), num('_1')])], [atom(serving, [role(2)])]), rs(guarded, [atom(served_by, [role(1)])], [], [], [atom(served_by, [role(1)])])]), schema(enrol, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [], [atom(member, [svar('Grupo'), role(2)])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [], [atom(listed, [role(1), svar('Grupo')])])]), schema(arrive, [], [rs(guarded, [atom(here, [])], [], [], [atom(here, [])])]), lschema(leave, [], [rs(guarded, [atom(left, [])], [atom(member, [any, any])], [], [atom(left, [])]), rs(unguarded, [], [atom(listed, [role(1), any])], [atom(here, [])], [])], [listing(2, 1, member, [any, role(2)], fcons(true), [], [])]), schema(greet, [], [rs(guarded, [atom(greeting, [role(2)])], [], [], [atom(greeting, [role(2)])]), rs(guarded, [atom(greeted, [role(1)])], [], [], [atom(greeted, [role(1)]), atom(member, [any, role(1)])])]), schema(idle, [], [rs(guarded, [atom(idle, [])], [], [], [atom(idle, []), atom(member, [any, any])])]), lschema(dissolve, [], [rs(guarded, [atom(dissolved, [])], [atom(has_office, [any, any])], [], [atom(dissolved, [])]), rs(unguarded, [], [atom(office, [role(1), any])], [atom(office, [role(1), num('_1')])], [])], [listing(2, 1, has_office, [role(2), any], fcons(true), [], [])]), lschema(retire, [], [rs(guarded, [atom(retired, [])], [atom(has_role, [any, any])], [], [atom(retired, [])]), rs(unguarded, [], [atom(role, [role(1), any])], [atom(role, [role(1), svar('_1')])], [])], [listing(2, 1, has_role, [role(2), any], fcons(true), [], [])])])
+contract_schemas([schema(issue, [num('D')], [rs(guarded, [atom(issued, [role(2), num('D')])], [], [], [atom(issued, [role(2), num('D')])]), rs(guarded, [atom(bond, [role(1), num('D')])], [], [], [atom(bond, [role(1), num('D')])])]), schema(accept, [], [rs(guarded, [atom(accepted, [role(2)])], [], [atom(bond, [role(2), num('_1')])], [atom(accepted, [role(2)])]), rs(guarded, [atom(accepted_by, [role(1)])], [], [], [atom(accepted_by, [role(1)])])]), schema(appoint, [svar('Role')], [rs(guarded, [atom(has_role, [role(2), svar('Role')])], [], [], [atom(has_role, [role(2), svar('Role')])]), rs(guarded, [atom(role, [role(1), svar('Role')])], [], [], [atom(role, [role(1), svar('Role')])])]), schema(boast, [], [rs(guarded, [atom(officer, [])], [], [], [atom(officer, [])])]), lschema(report, [], [rs(guarded, [atom(reported, [role(2)])], [], [], [atom(reported, [role(2)])]), rs(guarded, [], [], [], [])], [instances(1, 1, [svar('Role')], atom(has_role, [pvar('_1'), svar('Role')]), fcons(true), [hm(2, atom(title, [role(1), svar('Role')]))], [])]), schema(vow, [], [rs(guarded, [atom(vowed, [])], [], [], [atom(vowed, [])])]), schema(rest, [], [rs(guarded, [atom(rested, [])], [], [], [atom(rested, [])])]), schema(point, [pvar('Carol'), svar('Label')], [rs(guarded, [atom(pointer, [pvar('Carol'), svar('Label')])], [], [atom(issued, [pvar('Carol'), num('_1')])], [atom(pointer, [pvar('Carol'), svar('Label')])])]), schema(unpoint, [pvar('Carol'), svar('Label')], [rs(guarded, [], [atom(pointer, [pvar('Carol'), svar('Label')])], [], [])]), schema(office, [num('Title')], [rs(guarded, [atom(has_office, [role(2), num('Title')])], [], [], [atom(has_office, [role(2), num('Title')])]), rs(guarded, [atom(office, [role(1), num('Title')])], [], [], [atom(office, [role(1), num('Title')])])]), schema(serve, [], [rs(guarded, [atom(serving, [role(2)])], [], [atom(office, [role(2), num('_1')])], [atom(serving, [role(2)])]), rs(guarded, [atom(served_by, [role(1)])], [], [], [atom(served_by, [role(1)])])]), schema(enrol, [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [], [atom(member, [svar('Grupo'), role(2)])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [], [atom(listed, [role(1), svar('Grupo')])])]), schema(arrive, [], [rs(guarded, [atom(here, [])], [], [], [atom(here, [])])]), lschema(leave, [], [rs(guarded, [atom(left, [])], [atom(member, [any, any])], [], [atom(left, [])]), rs(unguarded, [], [atom(listed, [role(1), any])], [atom(here, [])], [])], [listing(2, 1, member, [any, role(2)], fcons(true), [], [])]), lschema(dissolve, [], [rs(guarded, [atom(dissolved, [])], [atom(has_office, [any, any])], [], [atom(dissolved, [])]), rs(unguarded, [], [atom(office, [role(1), any])], [atom(office, [role(1), num('_1')])], [])], [listing(2, 1, has_office, [role(2), any], fcons(true), [], [])]), lschema(retire, [], [rs(guarded, [atom(retired, [])], [atom(has_role, [any, any])], [], [atom(retired, [])]), rs(unguarded, [], [atom(role, [role(1), any])], [atom(role, [role(1), svar('_1')])], [])], [listing(2, 1, has_role, [role(2), any], fcons(true), [], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -242,10 +222,6 @@ schema_entry(enrol, schema(enrol, [svar('Grupo')], [rs(guarded, [atom(member, [s
 schema_entry(arrive, schema(arrive, [], [rs(guarded, [atom(here, [])], [], [], [atom(here, [])])]))
 .
 schema_entry(leave, lschema(leave, [], [rs(guarded, [atom(left, [])], [atom(member, [any, any])], [], [atom(left, [])]), rs(unguarded, [], [atom(listed, [role(1), any])], [atom(here, [])], [])], [listing(2, 1, member, [any, role(2)], fcons(true), [], [])]))
-.
-schema_entry(greet, schema(greet, [], [rs(guarded, [atom(greeting, [role(2)])], [], [], [atom(greeting, [role(2)])]), rs(guarded, [atom(greeted, [role(1)])], [], [], [atom(greeted, [role(1)]), atom(member, [any, role(1)])])]))
-.
-schema_entry(idle, schema(idle, [], [rs(guarded, [atom(idle, [])], [], [], [atom(idle, []), atom(member, [any, any])])]))
 .
 schema_entry(dissolve, lschema(dissolve, [], [rs(guarded, [atom(dissolved, [])], [atom(has_office, [any, any])], [], [atom(dissolved, [])]), rs(unguarded, [], [atom(office, [role(1), any])], [atom(office, [role(1), num('_1')])], [])], [listing(2, 1, has_office, [role(2), any], fcons(true), [], [])]))
 .
@@ -281,10 +257,6 @@ schema_numeric(enrol, numeric([cj(every, true)], [], []))
 schema_numeric(arrive, numeric([cj(every, true)], [], []))
 .
 schema_numeric(leave, numeric([cj(every, true)], [], []))
-.
-schema_numeric(greet, numeric([cj(every, true)], [], []))
-.
-schema_numeric(idle, numeric([cj(every, true)], [], []))
 .
 schema_numeric(dissolve, numeric([cj(every, true)], [num('_1')], []))
 .
@@ -337,10 +309,6 @@ schema_base(arrive, 1)
 .
 schema_base(leave, 1)
 .
-schema_base(greet, 1)
-.
-schema_base(idle, 1)
-.
 schema_base(dissolve, 1)
 .
 schema_base(retire, 1)
@@ -377,10 +345,6 @@ schema_ones(enrol, [])
 schema_ones(arrive, [])
 .
 schema_ones(leave, [])
-.
-schema_ones(greet, [])
-.
-schema_ones(idle, [])
 .
 schema_ones(dissolve, [])
 .
@@ -448,10 +412,6 @@ binding_of(arrive(V1), arrive, [b(role(1), p(V1?))])
 binding_of(leave(V1, V2), leave, B?)
 :-
 listed_binding(leave, [b(role(1), p(V1?))], [ppl(V2?)], B)
-.
-binding_of(greet(V1, V2), greet, [b(role(1), p(V1?)), b(role(2), p(V2?))])
-.
-binding_of(idle(V1), idle, [b(role(1), p(V1?))])
 .
 binding_of(dissolve(V1, V2), dissolve, B?)
 :-
@@ -609,24 +569,6 @@ val_peer(role(1), B?, D?, V1)
 ,
 copies_of(B?, 2, V2)
 .
-class_of(greet, B, D, greet(V1?, V2?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-,
-val_peer(role(2), B?, D?, V2)
-.
-class_of(idle, B, D, idle(V1?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-.
 class_of(dissolve, B, D, dissolve(V1?, V2?))
 :-
 ground(B?)
@@ -681,10 +623,6 @@ name_class(leave(V1), St, C?)
 :-
 listed_class(leave, [b(role(1), p(V1?))], St?, C)
 .
-name_class(greet(V1, V2), _, greet(V1?, V2?))
-.
-name_class(idle(V1), _, idle(V1?))
-.
 name_class(dissolve(V1), St, C?)
 :-
 listed_class(dissolve, [b(role(1), p(V1?))], St?, C)
@@ -722,10 +660,6 @@ request_name(enrol(V1, V2, V3), pname(enrol(V1?, V2?, V3?)))
 request_name(arrive(V1), pname(arrive(V1?)))
 .
 request_name(leave(V1, _), pname(leave(V1?)))
-.
-request_name(greet(V1, V2), pname(greet(V1?, V2?)))
-.
-request_name(idle(V1), pname(idle(V1?)))
 .
 request_name(dissolve(V1, _), pname(dissolve(V1?)))
 .
@@ -812,16 +746,6 @@ ground(Me?)
 |
 ask_of([q(V2?, 1, [person(V1?), text(" enrols with you.")])], Me?, Ws)
 .
-sentence_of(greet(V1, V2), Me, Ws?)
-:-
-ground(V2?)
-,
-ground(V1?)
-,
-ground(Me?)
-|
-ask_of([q(V2?, 1, [person(V1?), text(" greets you.")])], Me?, Ws)
-.
 sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 % The contract the platform is compiled from (vGLP, Section 5.4, "The contract's words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC's reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC's reader's and the pragmas', named with an R before them.
@@ -872,7 +796,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("", with([schema(issue, ['Carol', 'Alice'], [num('D')], [rs(guarded, [atom(issued, [role(2), num('D')])], [], [], [atom(issued, [role(2), num('D')])]), rs(guarded, [atom(bond, [role(1), num('D')])], [], [], [atom(bond, [role(1), num('D')])])]), schema(accept, ['Alice', 'Carol'], [], [rs(guarded, [atom(accepted, [role(2)])], [], [atom(bond, [role(2), any])], [atom(accepted, [role(2)])]), rs(guarded, [atom(accepted_by, [role(1)])], [], [], [atom(accepted_by, [role(1)])])]), schema(appoint, ['Carol', 'Bob'], [svar('Role')], [rs(guarded, [atom(has_role, [role(2), svar('Role')])], [], [], [atom(has_role, [role(2), svar('Role')])]), rs(guarded, [atom(role, [role(1), svar('Role')])], [], [], [atom(role, [role(1), svar('Role')])])]), qschema(boast, ['Bob'], [], [pvar('Role'), svar('Role'), num('Role')], true, [rs(guarded, [atom(officer, [])], [], [], [atom(officer, [])])], [], [fexists([svar('Role')], role(1), atom(role, [any, svar('Role')]), fcons(true))]), qschema(report, ['Carol', 'Alice'], [], [pvar('Role'), svar('Role'), num('Role')], true, [rs(guarded, [atom(reported, [role(2)])], [], [], [atom(reported, [role(2)])]), rs(guarded, [], [], [], [])], [conjunct([svar('Role')], 1, atom(has_role, [any, svar('Role')]), fcons(true), [hm(2, atom(title, [role(1), svar('Role')]))], [], [fa(role(2), atom(title, [role(1), svar('Role')]))])], []), qschema(vow, ['Bob'], [], [pvar('G'), svar('G'), num('G')], true, [rs(guarded, [atom(vowed, [])], [], [], [atom(vowed, [])])], [], [fnot(fexists([svar('G')], role(1), atom(accepted, [svar('G')]), fcons(true)))]), qschema(rest, ['Bob'], [], [], true, [rs(guarded, [atom(rested, [])], [], [], [atom(rested, [])])], [], [for(fnot(fa(role(1), atom(role, [any, any]))), fa(role(1), atom(retired, [])))]), schema(point, ['Alice'], [pvar('Carol'), svar('Label')], [rs(guarded, [atom(pointer, [pvar('Carol'), svar('Label')])], [], [atom(issued, [pvar('Carol'), any])], [atom(pointer, [pvar('Carol'), svar('Label')])])]), schema(unpoint, ['Alice'], [pvar('Carol'), svar('Label')], [rs(guarded, [], [atom(pointer, [pvar('Carol'), svar('Label')])], [], [])]), schema(office, ['Carol', 'Bob'], [const('Title')], [rs(guarded, [atom(has_office, [role(2), num('Title')])], [], [], [atom(has_office, [role(2), num('Title')])]), rs(guarded, [atom(office, [role(1), num('Title')])], [], [], [atom(office, [role(1), num('Title')])])]), schema(serve, ['Bob', 'Carol'], [], [rs(guarded, [atom(serving, [role(2)])], [], [atom(office, [role(2), any])], [atom(serving, [role(2)])]), rs(guarded, [atom(served_by, [role(1)])], [], [], [atom(served_by, [role(1)])])]), schema(enrol, ['Carol', 'Alice'], [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [], [atom(member, [svar('Grupo'), role(2)])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [], [atom(listed, [role(1), svar('Grupo')])])]), schema(arrive, ['Alice'], [], [rs(guarded, [atom(here, [])], [], [], [atom(here, [])])]), qschema(leave, ['Carol', 'E'], [], [pvar('E'), svar('E'), num('E'), pvar('E'), svar('E'), num('E')], true, [rs(guarded, [atom(left, [])], [atom(member, [any, any])], [], [atom(left, [])]), crs(qlisted(1, member, [any, role(2)], [role(2)]), unguarded, [], [atom(listed, [role(1), any])], [atom(here, [])], [])], [conjunct([role(2)], 1, atom(member, [any, role(2)]), fcons(true), [], [], [fnot(fa(role(2), atom(listed, [role(1), any])))])], [fforall([role(2)], role(1), atom(member, [any, role(2)]), fcons(true), [fa(role(2), atom(here, []))])]), schema(greet, ['Alice', 'Carol'], [], [rs(guarded, [atom(greeting, [role(2)])], [], [], [atom(greeting, [role(2)])]), rs(guarded, [atom(greeted, [role(1)])], [], [], [atom(greeted, [role(1)]), atom(member, [any, role(1)])])]), schema(idle, ['Carol'], [], [rs(guarded, [atom(idle, [])], [], [], [atom(idle, []), atom(member, [any, any])])]), cschema(dissolve, ['Carol', 'E'], [], [], [rs(guarded, [atom(dissolved, [])], [atom(has_office, [any, any])], [], [atom(dissolved, [])]), crs(listed(1, has_office, [any]), unguarded, [], [atom(office, [role(1), any])], [atom(office, [role(1), any])], [])]), cschema(retire, ['Carol', 'E'], [], [], [rs(guarded, [atom(retired, [])], [atom(has_role, [any, any])], [], [atom(retired, [])]), crs(listed(1, has_role, [any]), unguarded, [], [atom(role, [role(1), any])], [atom(role, [role(1), any])], [])])], pragmas([list("Bonds", [bond]), list("Accepted", [accepted]), list("Roles", [role]), list("Titles", [title])], [act(issue, "Issue", ["", "alice", "maturity"], said([[], [person(1), text(" issues you a bond.")]]), "Bonds", by([1])), act(accept, "Accept", [], said([[], [person(1), text(" asks you to accept her by a bond.")]]), "Bonds", by([1])), act(appoint, "Appoint", ["", "bob", "role"], said([[], [person(1), text(" appoints you.")]]), "Bonds", by([1])), act(boast, "Boast", [], none, "Bonds", by([1])), act(report, "Report", ["", "alice"], said([[], [person(1), text(" reports her roles to you.")]]), "Bonds", by([1])), act(vow, "Vow", [], none, "Bonds", by([1])), act(rest, "Rest", [], none, "Bonds", by([1])), act(point, "Point", ["", "", "label"], none, "Bonds", by([1])), act(unpoint, "Unpoint", [], none, "Bonds", by([1])), act(office, "Office", ["", "bob", "title"], said([[], [person(1), text(" gives you an office.")]]), "Bonds", by([1])), act(serve, "Serve", [], said([[], [person(1), text(" asks to serve you.")]]), "Bonds", by([1])), act(enrol, "Enrol", ["", "alice", "group"], said([[], [person(1), text(" enrols with you.")]]), "Bonds", by([1])), act(arrive, "Arrive", [], none, "Bonds", by([1])), act(leave, "Leave", [], none, "Bonds", by([1])), act(greet, "Greet", ["", "carol"], said([[], [person(1), text(" greets you.")]]), "Bonds", by([1])), act(idle, "Idle", [], none, "Bonds", by([1])), act(dissolve, "Dissolve", [], none, "Bonds", by([1])), act(retire, "Retire", [], none, "Bonds", by([1]))], [], nolook, version(1, 1))))
+contract("", with([schema(issue, ['Carol', 'Alice'], [num('D')], [rs(guarded, [atom(issued, [role(2), num('D')])], [], [], [atom(issued, [role(2), num('D')])]), rs(guarded, [atom(bond, [role(1), num('D')])], [], [], [atom(bond, [role(1), num('D')])])]), schema(accept, ['Alice', 'Carol'], [], [rs(guarded, [atom(accepted, [role(2)])], [], [atom(bond, [role(2), any])], [atom(accepted, [role(2)])]), rs(guarded, [atom(accepted_by, [role(1)])], [], [], [atom(accepted_by, [role(1)])])]), schema(appoint, ['Carol', 'Bob'], [svar('Role')], [rs(guarded, [atom(has_role, [role(2), svar('Role')])], [], [], [atom(has_role, [role(2), svar('Role')])]), rs(guarded, [atom(role, [role(1), svar('Role')])], [], [], [atom(role, [role(1), svar('Role')])])]), qschema(boast, ['Bob'], [], [pvar('Role'), svar('Role'), num('Role')], true, [rs(guarded, [atom(officer, [])], [], [], [atom(officer, [])])], [], [fexists([svar('Role')], role(1), atom(role, [any, svar('Role')]), fcons(true))]), qschema(report, ['Carol', 'Alice'], [], [pvar('Role'), svar('Role'), num('Role')], true, [rs(guarded, [atom(reported, [role(2)])], [], [], [atom(reported, [role(2)])]), rs(guarded, [], [], [], [])], [conjunct([svar('Role')], 1, atom(has_role, [any, svar('Role')]), fcons(true), [hm(2, atom(title, [role(1), svar('Role')]))], [], [fa(role(2), atom(title, [role(1), svar('Role')]))])], []), qschema(vow, ['Bob'], [], [pvar('G'), svar('G'), num('G')], true, [rs(guarded, [atom(vowed, [])], [], [], [atom(vowed, [])])], [], [fnot(fexists([svar('G')], role(1), atom(accepted, [svar('G')]), fcons(true)))]), qschema(rest, ['Bob'], [], [], true, [rs(guarded, [atom(rested, [])], [], [], [atom(rested, [])])], [], [for(fnot(fa(role(1), atom(role, [any, any]))), fa(role(1), atom(retired, [])))]), schema(point, ['Alice'], [pvar('Carol'), svar('Label')], [rs(guarded, [atom(pointer, [pvar('Carol'), svar('Label')])], [], [atom(issued, [pvar('Carol'), any])], [atom(pointer, [pvar('Carol'), svar('Label')])])]), schema(unpoint, ['Alice'], [pvar('Carol'), svar('Label')], [rs(guarded, [], [atom(pointer, [pvar('Carol'), svar('Label')])], [], [])]), schema(office, ['Carol', 'Bob'], [const('Title')], [rs(guarded, [atom(has_office, [role(2), num('Title')])], [], [], [atom(has_office, [role(2), num('Title')])]), rs(guarded, [atom(office, [role(1), num('Title')])], [], [], [atom(office, [role(1), num('Title')])])]), schema(serve, ['Bob', 'Carol'], [], [rs(guarded, [atom(serving, [role(2)])], [], [atom(office, [role(2), any])], [atom(serving, [role(2)])]), rs(guarded, [atom(served_by, [role(1)])], [], [], [atom(served_by, [role(1)])])]), schema(enrol, ['Carol', 'Alice'], [svar('Grupo')], [rs(guarded, [atom(member, [svar('Grupo'), role(2)])], [], [], [atom(member, [svar('Grupo'), role(2)])]), rs(guarded, [atom(listed, [role(1), svar('Grupo')])], [], [], [atom(listed, [role(1), svar('Grupo')])])]), schema(arrive, ['Alice'], [], [rs(guarded, [atom(here, [])], [], [], [atom(here, [])])]), qschema(leave, ['Carol', 'E'], [], [pvar('E'), svar('E'), num('E'), pvar('E'), svar('E'), num('E')], true, [rs(guarded, [atom(left, [])], [atom(member, [any, any])], [], [atom(left, [])]), crs(qlisted(1, member, [any, role(2)], [role(2)]), unguarded, [], [atom(listed, [role(1), any])], [atom(here, [])], [])], [conjunct([role(2)], 1, atom(member, [any, role(2)]), fcons(true), [], [], [fnot(fa(role(2), atom(listed, [role(1), any])))])], [fforall([role(2)], role(1), atom(member, [any, role(2)]), fcons(true), [fa(role(2), atom(here, []))])]), cschema(dissolve, ['Carol', 'E'], [], [], [rs(guarded, [atom(dissolved, [])], [atom(has_office, [any, any])], [], [atom(dissolved, [])]), crs(listed(1, has_office, [any]), unguarded, [], [atom(office, [role(1), any])], [atom(office, [role(1), any])], [])]), cschema(retire, ['Carol', 'E'], [], [], [rs(guarded, [atom(retired, [])], [atom(has_role, [any, any])], [], [atom(retired, [])]), crs(listed(1, has_role, [any]), unguarded, [], [atom(role, [role(1), any])], [atom(role, [role(1), any])], [])])], pragmas([list("Bonds", [bond]), list("Accepted", [accepted]), list("Roles", [role]), list("Titles", [title])], [act(issue, "Issue", ["", "alice", "maturity"], said([[], [person(1), text(" issues you a bond.")]]), "Bonds", by([1])), act(accept, "Accept", [], said([[], [person(1), text(" asks you to accept her by a bond.")]]), "Bonds", by([1])), act(appoint, "Appoint", ["", "bob", "role"], said([[], [person(1), text(" appoints you.")]]), "Bonds", by([1])), act(boast, "Boast", [], none, "Bonds", by([1])), act(report, "Report", ["", "alice"], said([[], [person(1), text(" reports her roles to you.")]]), "Bonds", by([1])), act(vow, "Vow", [], none, "Bonds", by([1])), act(rest, "Rest", [], none, "Bonds", by([1])), act(point, "Point", ["", "", "label"], none, "Bonds", by([1])), act(unpoint, "Unpoint", [], none, "Bonds", by([1])), act(office, "Office", ["", "bob", "title"], said([[], [person(1), text(" gives you an office.")]]), "Bonds", by([1])), act(serve, "Serve", [], said([[], [person(1), text(" asks to serve you.")]]), "Bonds", by([1])), act(enrol, "Enrol", ["", "alice", "group"], said([[], [person(1), text(" enrols with you.")]]), "Bonds", by([1])), act(arrive, "Arrive", [], none, "Bonds", by([1])), act(leave, "Leave", [], none, "Bonds", by([1])), act(dissolve, "Dissolve", [], none, "Bonds", by([1])), act(retire, "Retire", [], none, "Bonds", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -922,16 +846,6 @@ ground(Me?)
 meet_other(V1?, V2?, Me?, P)
 .
 meeting_peer(enrol(V1, V2, _), Me, P?)
-:-
-ground(V1?)
-,
-ground(V2?)
-,
-ground(Me?)
-|
-meet_other(V1?, V2?, Me?, P)
-.
-meeting_peer(greet(V1, V2), Me, P?)
 :-
 ground(V1?)
 ,
@@ -4760,14 +4674,9 @@ unable_at1(RsP, Bn, Sh, L?, H?) :- ground(RsP?), ground(Bn?), ground(Sh?) |
 procedure held_in(GAtoms?, GAtoms?, GAtoms).
 held_in([], _, []).
 held_in([G|Gs], Sh, H?) :- ground(G?), ground(Sh?) |
-    g_wild(G?, W),
-    held_one(W?, G?, Sh?, H0),
+    mem(G?, Sh?, In),
     held_in(Gs?, Sh?, H1),
-    app(H0?, H1?, H).
-%% A forbidden atom the state has: the atom, or, where it carries the wildcard, the atoms of the state it matches.
-procedure held_one(YesNo?, GAtom?, GAtoms?, GAtoms).
-held_one(no, G, Sh, H?) :- ground(G?) | mem(G?, Sh?, In), keep_g(In?, G?, [], H).
-held_one(yes, K, Sh, H?) :- g_matched(K?, Sh?, H).
+    keep_g(In?, G?, H1?, H).
 procedure keep_g(YesNo?, GAtom?, GAtoms?, GAtoms).
 keep_g(yes, G, H, [G?|H?]).
 keep_g(no, _, H, H?).
@@ -5058,24 +4967,8 @@ procedure forb_one(YesNo?, SAtom?, Binding?, GAtoms?, YesNo).
 forb_one(no, _, _, _, yes).
 forb_one(yes, A, B, Sh, R?) :- ground(Sh?) |
     img_atom(A?, B?, G),
-    forb_held(G?, Sh?, In),
+    mem(G?, Sh?, In),
     neg(In?, R).
-%% Whether the state holds an atom the image G of a forbidden atom forbids: G itself, or, where G carries the wildcard, an atom it matches, as the image of a cleared atom does, g_matches (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches"; GSC, Definition "Compilation": "d_p holds ... no atom matching phi").
-procedure forb_held(GAtom?, GAtoms?, YesNo).
-forb_held(G, Sh, In?) :- ground(G?) | g_wild(G?, W), forb_held1(W?, G?, Sh?, In).
-procedure forb_held1(YesNo?, GAtom?, GAtoms?, YesNo).
-forb_held1(no, G, Sh, In?) :- mem(G?, Sh?, In).
-forb_held1(yes, K, Sh, In?) :- g_matched(K?, Sh?, Ms), nonempty(Ms?, In).
-%% The atoms of a state that the image K of an atom with the wildcard matches.
-procedure g_matched(GAtom?, GAtoms?, GAtoms).
-g_matched(_, [], []).
-g_matched(K, [G|Gs], H?) :- ground(K?), ground(G?) |
-    g_matches(K?, G?, M),
-    g_matched(K?, Gs?, H1),
-    keep_g(M?, G?, H1?, H).
-procedure nonempty(GAtoms?, YesNo).
-nonempty([], no).
-nonempty([_|_], yes).
 procedure forb_ok1(YesNo?, SAtoms?, Binding?, GAtoms?, YesNo).
 forb_ok1(no, _, _, _, no).
 forb_ok1(yes, As, B, Sh, R?) :- forb_ok(As?, B?, Sh?, R).
@@ -5918,23 +5811,12 @@ mates_check([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), gro
     app(M1?, M2?, M).
 procedure mates_check1(LNorm?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_check1(badnorm, _, _, _, []).
-%% A numeric variable that no deleted or added atom names, and that is not local to a role, is given its values by the constraint once those the atoms bind are bound, by the conjuncts local to every role (con_extend), as at a Propose (num_extend): "or the constraint gives the variable finitely many values once those are bound" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"); so identity_record of Secure Friendship, whose Double only its constraint names, has the schema-binding of its class term among those of its class.
 mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
-    schema_numeric(Nm?, N),
-    mates_extend(N?, B?, Bs),
-    mates_check2(Bs?, Nm?, Rs?, Ps?, M).
-procedure mates_extend(Numeric?, Binding?, Bindings).
-mates_extend(numeric(Cj, _, _), B, Bs?) :- ground(Cj?), ground(B?) | conjs_every(Cj?, C), con_extend(C?, B?, Bs).
-procedure mates_check2(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
-mates_check2([], _, _, _, []).
-mates_check2([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
     sig_of(Rs?, B?, Ps1),
     deltas_eq(Ps?, Ps1?, E1),
     admissible(Rs?, B?, E2),
     and(E1?, E2?, E),
-    mate_of(E?, B?, Nm?, Rs?, M1),
-    mates_check2(Bs?, Nm?, Rs?, Ps?, M2),
-    app(M1?, M2?, M).
+    mate_of(E?, B?, Nm?, Rs?, M).
 %% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role, agent, speech-act or numeric, are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
 procedure local_norm(Constant?, Binding?, LNorm).
 local_norm(Nm, B, R?) :- ground(Nm?), ground(B?) |
@@ -6179,7 +6061,7 @@ live_at1(no, _, _, _, _, no).
 live_at1(yes, Ps, Rs, B, Rf, Ok?) :- live_at(Ps?, Rs?, B?, Rf?, Ok).
 procedure live_one(CAtoms?, CAtoms?, Peer?, Preds?, YesNo).
 live_one(R, F, P, Rf, Ok?) :- ground(F?) |
-    forb_meets(R?, F?, M1),
+    ms_meets(R?, F?, M1),
     own_reflexive_in(F?, P?, Rf?, M2),
     or(M1?, M2?, M),
     neg(M?, Ok).
@@ -6195,8 +6077,8 @@ linked([P|Ps], Rs1, B1, Rs2, B2, Rf, L?) :-
     forbs_at(Rs2?, B2?, P?, F2),
     bound_cs(R1?, Rb1),
     bound_cs(R2?, Rb2),
-    forb_meets(Rb1?, F2?, C1),
-    forb_meets(Rb2?, F1?, C2),
+    ms_meets(Rb1?, F2?, C1),
+    ms_meets(Rb2?, F1?, C2),
     or(C1?, C2?, C),
     linked1(C?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
 procedure linked1(YesNo?, Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
@@ -6215,36 +6097,6 @@ forbs_at(Rs, B, P, F?) :- ground(B?) |
     specs_at(Rs?, 1, B?, P?, RsP),
     forbs_of(RsP?, Fs),
     cimg_atoms(Fs?, B?, F).
-%% Whether an atom of Rs is forbidden by an atom of Fs: it is one of them, or one with the wildcard matches it, the wildcard, which no binding binds, compared as cmp_free(any), and N.* as its image (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches").
-procedure forb_meets(CAtoms?, CAtoms?, YesNo).
-forb_meets([], _, no).
-forb_meets([X|Xs], Fs, R?) :- ground(X?), ground(Fs?) | c_forbidden(Fs?, X?, R1), forb_meets1(R1?, Xs?, Fs?, R).
-procedure forb_meets1(YesNo?, CAtoms?, CAtoms?, YesNo).
-forb_meets1(yes, _, _, yes).
-forb_meets1(no, Xs, Fs, R?) :- forb_meets(Xs?, Fs?, R).
-procedure c_forbidden(CAtoms?, CAtom?, YesNo).
-c_forbidden([], _, no).
-c_forbidden([K|Ks], X, R?) :- ground(K?), ground(X?) | c_matches(K?, X?, R1), c_forbidden1(R1?, Ks?, X?, R).
-procedure c_forbidden1(YesNo?, CAtoms?, CAtom?, YesNo).
-c_forbidden1(yes, _, _, yes).
-c_forbidden1(no, Ks, X, R?) :- c_forbidden(Ks?, X?, R).
-procedure c_matches(CAtom?, CAtom?, YesNo).
-c_matches(cmp_atom(P, Ks), cmp_atom(Q, Xs), M?) :- P? =?= Q? | cm_vals(Ks?, Xs?, M).
-c_matches(_, _, no) :- otherwise | true.
-procedure cm_vals(CVals?, CVals?, YesNo).
-cm_vals([], [], yes).
-cm_vals([], [_|_], no).
-cm_vals([_|_], [], no).
-cm_vals([K|Ks], [X|Xs], M?) :- ground(K?), ground(X?) |
-    cm_val(K?, X?, M1),
-    cm_vals1(M1?, Ks?, Xs?, M).
-procedure cm_vals1(YesNo?, CVals?, CVals?, YesNo).
-cm_vals1(no, _, _, no).
-cm_vals1(yes, Ks, Xs, M?) :- cm_vals(Ks?, Xs?, M).
-procedure cm_val(CVal?, CVal?, YesNo).
-cm_val(cmp_free(any), _, yes).
-cm_val(cmp_val(K), cmp_val(X), M?) :- gm_val(K?, X?, M).
-cm_val(K, X, M?) :- otherwise | same(K?, X?, M).
 procedure forbs_of(RoleSpecs?, SAtoms).
 forbs_of([], []).
 forbs_of([R|Rs], F?) :- rs_forb(R?, F1), forbs_of(Rs?, F2), app(F1?, F2?, F).
@@ -6821,8 +6673,8 @@ rs_add(rs(_, A, _, _, _), A?).
 procedure rs_del(RoleSpec?, SAtoms).
 rs_del(rs(_, _, D, _, _), D?).
 procedure rs_req(RoleSpec?, SAtoms).
-%% The atoms a role requires: those it keeps, and those it deletes but its cleared atoms, which it deletes and does not require (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "the act deletes every atom of the state that it matches, and requires none"; GSC 327e035, =(i) u -(i)).  The union, so that an atom the role keeps and deletes is required once, as "Rank: provided Alice holds Bob's unranked bid ...; after which no longer Alice holds Bob's unranked bid" (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 1).
-rs_req(rs(_, _, D, K, _), R?) :- uncleared(D?, D1), ms_join(K?, D1?, R).
+%% The atoms a role requires: those it keeps, and those it deletes but its cleared atoms, which it deletes and does not require (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "the act deletes every atom of the state that it matches, and requires none"; GSC 327e035, =(i) u -(i)).
+rs_req(rs(_, _, D, K, _), R?) :- uncleared(D?, D1), app(K?, D1?, R).
 procedure uncleared(SAtoms?, SAtoms).
 uncleared([], []).
 uncleared([A|As], R?) :- ground(A?) |
@@ -6983,8 +6835,6 @@ vars_bound([num(X)|Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
 vars_bound([val(_)|Vs], B, R?) :- vars_bound(Vs?, B?, R).
 %% An item is bound where its variable is.
 vars_bound([item_of(V)|Vs], B, R?) :- vars_bound([V?|Vs?], B?, R).
-%% The wildcard of a forbidden atom is no variable, and leaves the atom bound (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches").
-vars_bound([any|Vs], B, R?) :- vars_bound(Vs?, B?, R).
 vars_bound([nterm(N)|Vs], B, R?) :- ground(N?) |
     nt_vars(N?, Ws),
     app(Ws?, Vs?, Vs1),

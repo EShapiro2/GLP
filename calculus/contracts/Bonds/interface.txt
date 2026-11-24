@@ -2,36 +2,56 @@ Bonds
 1. ○ Establish.  Alice may establish an identity once.
 2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
 3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-4. ■ Issue.  Alice may issue Alice-notes.
-5. ■ Swap.  Alice and Bob, who know each other, may jointly swap notes they hold.
-6. ■ Pay.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
-7. ■ Pay issuer.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
-8. ○ Deposit.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol.
-9. ○ Release.  Carol and Bob may jointly release them to Bob.
-10. ○ Return.  Carol and Alice may jointly return them to Alice.
-11. ■ Redeem.  Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
-12. ■ Redeem coin against bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
-13. ■ Redeem bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
-14. ■ Redeem bond against bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
+4. ■ Issue.  Alice may issue Alice-notes, for bonds, with maturity later than the current date.
+5. ■ Issue bond.  Alice may issue Alice-notes, for bonds, with maturity later than the current date.
+6. ■ Swap.  Alice and Bob, who know each other, may jointly swap notes they hold.
+7. ■ Swap coin for bond.  Alice and Bob may jointly swap Sum Carol-coins for Total Dave-bonds due Day, provided Alice and Bob know each other.
+8. ■ Swap bonds.  Alice and Bob, who know each other, may jointly swap notes they hold.
+9. ■ Pay.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
+10. ■ Pay issuer.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
+11. ■ Pay bond.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
+12. ■ Deposit.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol.
+13. ■ Deposit bond.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol.
+14. ■ Release.  Carol and Bob may jointly release them to Bob.
+15. ■ Release bond.  Carol and Bob may jointly release them to Bob.
+16. ■ Return.  Carol and Alice may jointly return them to Alice.
+17. ■ Return bond.  Carol and Alice may jointly return them to Alice.
+18. ■ Redeem.  Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
+19. ■ Redeem coin against bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
+20. ■ Redeem bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
+21. ■ Redeem bond against bond.  Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
   Bob: Alice asks for your consent to acquaint.
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
-Issue: Alice [Issue] <type> <sum>
-Swap: Alice [Swap] <sum> <dave> <other> <total>
+Issue: Alice [Issue] <sum>
+Issue bond: Alice [Issue bond] <day> <sum>
+Swap: Alice [Swap] <sum> <dave> <total>
   Bob: Alice asks for your consent to swap.
+Swap coin for bond: Alice [Swap coin for bond] <sum> <dave> <day> <total>
+  Bob: Alice asks for your consent to swap coin for bond.
+Swap bonds: Alice [Swap bonds] <sum> <dave> <term> <total>
+  Bob: Alice asks for your consent to swap bonds.
 Pay: Alice [Pay] <sum>
   Bob: Alice asks for your consent to pay.
 Pay issuer: Alice [Pay issuer] <sum>
+Pay bond: Alice [Pay bond] <sum>
+  Bob: Alice asks for your consent to pay bond.
 Deposit: Alice [Deposit] <sum> <cond>
   Carol: Alice asks for your consent to deposit.
+Deposit bond: Alice [Deposit bond] <sum> <cond>
+  Carol: Alice asks for your consent to deposit bond.
 Release: Carol [Release] <sum>
   Bob: Carol asks for your consent to release.
+Release bond: Carol [Release bond] <sum>
+  Bob: Carol asks for your consent to release bond.
 Return: Carol [Return] <sum>
   Alice: Carol asks for your consent to return.
+Return bond: Carol [Return bond] <sum>
+  Alice: Carol asks for your consent to return bond.
 Redeem: Alice [Redeem] <carol>
-Redeem coin against bond: Alice [Redeem coin against bond] <carol>
-Redeem bond: Alice [Redeem bond] <carol> <day>
-Redeem bond against bond: Alice [Redeem bond against bond] <carol> <day>
+Redeem coin against bond: Alice [Redeem coin against bond] <carol> <day>
+Redeem bond: Alice [Redeem bond] <carol>
+Redeem bond against bond: Alice [Redeem bond against bond] <carol> <term>

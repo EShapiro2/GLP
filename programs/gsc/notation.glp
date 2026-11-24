@@ -86,7 +86,6 @@ c_arg(sgn(X, J), Ns, T, ['sgn(', X?, ', '|R?]) :- c_name(J?, Ns?, [')'|T?], R).
 c_arg(num(X), _, T, [X?|T?]).
 c_arg(real(X), _, T, [X?|T?]).
 c_arg(const(X), _, T, [X?|T?]).
-c_arg(set(X), _, T, [X?|T?]).
 c_arg(any, _, T, ['_'|T?]).
 c_arg(item_of(Y), Ns, T, ['item('|R?]) :- c_arg(Y?, Ns?, [')'|T?], R).
 c_arg(val(C), _, T, [C?|T?]).
@@ -370,7 +369,6 @@ c_expr(sum(Xs, H, A, F, U), Ns, T, ['sum('|R?]) :- ground(Ns?) |
 c_expr(num(X), Ns, T, R?) :- c_arg(num(X?), Ns?, T?, R).
 c_expr(real(X), Ns, T, R?) :- c_arg(real(X?), Ns?, T?, R).
 c_expr(const(X), Ns, T, R?) :- c_arg(const(X?), Ns?, T?, R).
-c_expr(set(X), Ns, T, R?) :- c_arg(set(X?), Ns?, T?, R).
 c_expr(role(I), Ns, T, R?) :- c_arg(role(I?), Ns?, T?, R).
 c_expr(pvar(X), Ns, T, R?) :- c_arg(pvar(X?), Ns?, T?, R).
 c_expr(svar(X), Ns, T, R?) :- c_arg(svar(X?), Ns?, T?, R).
@@ -398,7 +396,6 @@ c_operand(sum(Xs, H, A, F, U), Ns, T, R?) :- c_expr(sum(Xs?, H?, A?, F?, U?), Ns
 c_operand(num(X), Ns, T, R?) :- c_arg(num(X?), Ns?, T?, R).
 c_operand(real(X), Ns, T, R?) :- c_arg(real(X?), Ns?, T?, R).
 c_operand(const(X), Ns, T, R?) :- c_arg(const(X?), Ns?, T?, R).
-c_operand(set(X), Ns, T, R?) :- c_arg(set(X?), Ns?, T?, R).
 c_operand(role(I), Ns, T, R?) :- c_arg(role(I?), Ns?, T?, R).
 c_operand(pvar(X), Ns, T, R?) :- c_arg(pvar(X?), Ns?, T?, R).
 c_operand(svar(X), Ns, T, R?) :- c_arg(svar(X?), Ns?, T?, R).

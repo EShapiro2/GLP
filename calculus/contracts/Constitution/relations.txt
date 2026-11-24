@@ -1,3 +1,2 @@
-Constitution extends Organisation: holds
-Constitution restricts it (Organisation): holds
-Constitution strengthens it (Organisation): holds
+Constitution restricts Organisation: holds
+Constitution strengthens Organisation: holds

@@ -1,5 +1,5 @@
 Constitution
-Constitution extends Organisation, and augments it.
+Constitution restricts and strengthens Organisation.
 A *constitutional democratic community* is an organisation whose bylaws name one role, *member*, held by every participant, and are *egalitarian*: the rule by which the members decide an act names no member and no other role.
 Alice and Bob are persons, Orga a constitutional democratic community.
 1. ■ Join: Organisation:3, only if the members decide it.

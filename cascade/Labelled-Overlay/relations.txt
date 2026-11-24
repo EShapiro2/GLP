@@ -1,3 +1,2 @@
 Labelled Overlay extends Overlay: holds
-Labelled Overlay restricts it (Overlay): holds
-Labelled Overlay strengthens it (Overlay): holds
+Labelled Overlay strengthens Overlay: holds

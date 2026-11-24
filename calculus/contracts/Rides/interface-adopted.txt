@@ -1,2 +1,2 @@
 Interface pragmas
-Award: Alice [Award] <top> [Cancel] [Cancel for the rider]
+Award: Alice [Award] [Cancel]

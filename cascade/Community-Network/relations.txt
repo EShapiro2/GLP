@@ -1,3 +1,3 @@
-Community Network extends Backed Community Bank: holds
-Community Network restricts it (Backed Community Bank): holds
-Community Network strengthens it (Backed Community Bank): holds
+Community Network extends Organisation and Denominated Currencies: holds
+Community Network restricts Organisation: holds
+Community Network strengthens Organisation: holds

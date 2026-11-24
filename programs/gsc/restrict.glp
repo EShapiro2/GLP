@@ -354,9 +354,6 @@ rn_arg(real(X), M, real(R?)) :- ground(X?), ground(M?) |
 rn_arg(const(X), M, const(R?)) :- ground(X?), ground(M?) |
     vm_read(M?, num(X?), A),
     num_name(A?, X?, R).
-rn_arg(set(X), M, set(R?)) :- ground(X?), ground(M?) |
-    vm_read(M?, num(X?), A),
-    num_name(A?, X?, R).
 rn_arg(any, _, any).
 rn_arg(item_of(Y), M, item_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
 rn_arg(val(C), _, val(C?)).
@@ -433,9 +430,6 @@ rn_expr(real(X), M, R?) :- ground(X?), ground(M?) |
 rn_expr(const(X), M, R?) :- ground(X?), ground(M?) |
     rn_arg(const(X?), M?, A),
     arg_expr(A?, R).
-rn_expr(set(X), M, R?) :- ground(X?), ground(M?) |
-    rn_arg(set(X?), M?, A),
-    arg_expr(A?, R).
 rn_expr(any, _, any).
 rn_expr(author_of(Y), M, author_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
 rn_expr(item_of(Y), M, item_of(Y1?)) :- ground(Y?), ground(M?) | rn_arg(Y?, M?, Y1).
@@ -474,7 +468,6 @@ arg_expr(sgn(Y, I), sgn(Y?, I?)).
 arg_expr(num(X), num(X?)).
 arg_expr(real(X), real(X?)).
 arg_expr(const(X), const(X?)).
-arg_expr(set(X), set(X?)).
 arg_expr(any, any).
 arg_expr(item_of(Y), item_of(Y?)).
 arg_expr(val(C), val(C?)).
@@ -723,7 +716,6 @@ clash_faults([V|Vs], M, R?) :- ground(V?), ground(Vs?), ground(M?) |
 procedure clash_key(Arg?, Arg).
 clash_key(real(X), num(X?)).
 clash_key(const(X), num(X?)).
-clash_key(set(X), num(X?)).
 clash_key(A, A?) :- otherwise | true.
 
 procedure clash_one(Arg?, RMs?, Ans).

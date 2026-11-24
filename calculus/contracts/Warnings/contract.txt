@@ -1,5 +1,5 @@
 Warnings
-Warnings extends Organisation, and weakens it.
+Warnings extends and restricts Organisation.
 A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking.
 Alice and Bob are persons, Orga an organisation.
 1. ■ Warn: Alice may warn Bob in Orga, provided Alice is an officer of Orga and Orga has Bob as a participant.

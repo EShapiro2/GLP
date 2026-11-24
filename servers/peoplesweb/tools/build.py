@@ -391,8 +391,7 @@ for n in compiled:
 # since 2026-11-16.  calculus/STATE.txt, where there is one, has a line for each
 # contract: its name, its owner, and yes or no for certified by GLP's checker,
 # compiled to GLP, and adopted by its owner.
-# Since 2026-11-24 the Calculus keeps each contract in calculus/contracts/NAME/ (Code #37).
-CALC = os.environ.get('CALCULUS_DIR') or next((d for d in (os.path.join(GLP, 'calculus', 'contracts'), os.path.join(GLP, 'calculus')) if os.path.exists(os.path.join(d, 'STATE.txt'))), os.path.join(GLP, 'calculus', 'contracts'))
+CALC = os.environ.get('CALCULUS_DIR') or os.path.join(GLP, 'calculus')
 calc_state = {}
 if os.path.exists(os.path.join(CALC, 'STATE.txt')):
     for l in read(os.path.join(CALC, 'STATE.txt')).split('\n'):
@@ -494,13 +493,11 @@ for n in sorted(set(compiled) | set(cat)):
     c['icon'], c['family'], c['about'] = _icon, _family, _a[2] or c['title'] + '.'
     # The shown name starts with the letters, and a contract built on another
     # names the base by its letters, never by its full title: "GDO-L: GDO with
-    # Labels" (Udi, 2026-11-07).  The base is named by its shown name, so a
-    # contract named in words, Backed Community Bank, keeps its name whole
-    # (Website #6, 2026-11-24).
+    # Labels" (Udi, 2026-11-07).
     t = c['title']
     for p in c['extends']:
         if p in cat:
-            t = re.sub(re.escape(cat[p]['title']), cat[p]['name'], t, flags=re.I)
+            t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
     c['label'] = f"{c['name']}: {t}" if t != c['name'] else c['name'] 
     c['cascade'] = n in compiled
     c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''

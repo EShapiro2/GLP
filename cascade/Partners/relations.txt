@@ -1,1 +1,1 @@
-Partners extends Free Matching: holds
+Partners instantiates Anonymous Matching: holds

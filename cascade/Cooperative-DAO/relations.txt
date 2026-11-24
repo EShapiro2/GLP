@@ -1,1 +1,1 @@
-Cooperative DAO extends Cooperative: holds
+Cooperative DAO instantiates Cooperative: holds

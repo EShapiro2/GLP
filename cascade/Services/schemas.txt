@@ -1,4 +1,4 @@
 Services
-Services extends Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Services instantiates Guardians with guardians(z) for deciders(z) (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Roles: the guardians of z = guardians(z), listed by z has y as a guardian and y is a guardian of z.
 Services:0 - | A *service* is a ward operated by a machine at an address every person can reach.

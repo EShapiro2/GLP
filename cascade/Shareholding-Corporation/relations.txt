@@ -1,4 +1,3 @@
-Shareholding Corporation extends Corporation and Shares: holds
+Shareholding Corporation instantiates Corporation: holds
+Shareholding Corporation composes it (Corporation) with Shares: holds
 Shareholding Corporation extends it (Corporation and Shares): holds
-Shareholding Corporation restricts it (Corporation and Shares): holds
-Shareholding Corporation strengthens it (Corporation and Shares): holds

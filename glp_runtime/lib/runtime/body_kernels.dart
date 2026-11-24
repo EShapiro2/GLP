@@ -2075,7 +2075,7 @@ BodyKernelResult termToStringKernel(GlpRuntime rt, List<Object?> args) {
 /// lowercase hex, the catalogue's Hash (the root self.glp, `Hash ::= String`):
 /// the same at every participant, so that a sealed value, the hash of a text
 /// naming it and a secret, shows nothing of either, and a value and a secret
-/// later stated can be checked against it (GLP-Spec
+/// later stated can be checked against it (proposed for GLP-Spec
 /// appendix-guards, "Text").  The clause of hash/2 guards S ground; a first
 /// argument that is no string is out of the kernel's domain, and it aborts.
 BodyKernelResult hashKernel(GlpRuntime rt, List<Object?> args) {

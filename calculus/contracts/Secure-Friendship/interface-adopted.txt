@@ -2,4 +2,3 @@ Interface pragmas
 Identity record: Alice [Name custodian] [Identity record] <share>
 Identity replacement: Alicia [Replace] <alice>
   Carol [Vouch]
-  Alicia [Present]

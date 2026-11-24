@@ -5,22 +5,23 @@ Guardians:0 - | Alice, Bob and Carol are persons, Wendy and Will wards.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
-Knowledge:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice is a person, Bob is a person, Carol is a person, Alice knows Bob, Bob knows Alice and Alice knows Carol.
+Knowledge:2+Guardians:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
+Knowledge:3+Guardians:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:1 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice is a person, Bob is a person, Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
+Friendship:1+Guardians:3 ■ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend, not Bob counts Alice as a friend, Alice is a person and Bob is a person.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Guardians:0 - | Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
+Guardians:0 - | Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
 Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
+Guardians:0 - | Default: any guardian of z for those who decide for z.
 Guardians:1 ■ Enter: Alice and Wendy may jointly Wendy has an identity, Wendy is a ward, Wendy has Alice as a guardian, Alice is the creator of Wendy, Alice is a guardian of Wendy, Alice knows Wendy, Wendy knows Alice, Alice counts Wendy as a friend and Wendy counts Alice as a friend, provided Alice is a person and not Wendy has an identity. Must consent: Wendy.
 Guardians:1 ■ | Alice chooses Wendy's key pair.
 Guardians:2 ■ | Guardian decisions.
-Guardians:2 ■ Make guardian: Those who decide for Wendy and Bob may jointly Bob is a guardian of Wendy, Wendy has Bob as a guardian, Bob knows Wendy, Wendy knows Bob, Bob counts Wendy as a friend and Wendy counts Bob as a friend, provided Wendy is a ward, not Wendy is retired, Bob is a person, Wendy has Alice as a guardian, Bob counts Alice as a friend, not Bob is a guardian of Wendy and not Wendy has Bob as a guardian.
+Guardians:2 ■ Make guardian: Any guardian of Wendy and Bob may jointly Bob is a guardian of Wendy, Wendy has Bob as a guardian, Bob knows Wendy, Wendy knows Bob, Bob counts Wendy as a friend and Wendy counts Bob as a friend, provided Wendy is a ward, not Wendy is retired, Bob is a person, Wendy has Alice as a guardian, Bob counts Alice as a friend, not Bob is a guardian of Wendy and not Wendy has Bob as a guardian.
 Guardians:2 ■ Resign: Bob may no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
-Guardians:2 ■ End guardian: Those who decide for Wendy, other than Bob, may no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
+Guardians:2 ■ End guardian: Any guardian of Wendy, other than Bob, may no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
 Guardians:2 ■ Guardian unfriend: Bob may no longer Bob counts Wendy as a friend, no longer Wendy counts Bob as a friend, no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
 Guardians:2 ■ | Wendy may not end a friendship with her guardian.
 Guardians:3 ■ | Ward and person.
@@ -33,5 +34,5 @@ Guardians:4 ■ | Wards.
 Guardians:4 ■ Wards acquaint: Wendy and Will may jointly Wendy knows Will and Will knows Wendy, provided Wendy is a ward, Wendy has Alice as a guardian, Will is a ward and Will has Bob as a guardian. Possibly one: Alice=Bob.
 Guardians:4 ■ Wards befriend: Wendy, Will, Alice and Bob may jointly Wendy counts Will as a friend and Will counts Wendy as a friend, provided Wendy is a ward, not Wendy is retired, Wendy has Alice as a guardian, Will is a ward, not Will is retired, Will has Bob as a guardian, Wendy knows Will, Will knows Wendy, Alice knows Will, Alice counts Bob as a friend, Bob counts Alice as a friend, not Wendy counts Will as a friend and not Will counts Wendy as a friend. Possibly one: Alice=Bob.
 Guardians:4 ■ Wards of one guardian befriend: Wendy, Will and Alice may jointly Wendy counts Will as a friend and Will counts Wendy as a friend, provided Wendy is a ward, not Wendy is retired, Wendy has Alice as a guardian, Will is a ward, not Will is retired, Will has Alice as a guardian, Wendy knows Will, Will knows Wendy, not Wendy counts Will as a friend and not Will counts Wendy as a friend.
-Guardians:5 ■ Retire: Those who decide for Wendy may Wendy is retired, no longer anyone is a guardian of Wendy, no longer Wendy has anyone as a guardian, no longer Wendy counts anyone as a friend and no longer anyone counts Wendy as a friend, provided not Wendy is retired.
+Guardians:5 ■ Retire: Any guardian of Wendy may Wendy is retired, no longer anyone is a guardian of Wendy, no longer Wendy has anyone as a guardian, no longer Wendy counts anyone as a friend and no longer anyone counts Wendy as a friend, provided not Wendy is retired.
 Guardians:5 ■ | Wendy can then take no act.
