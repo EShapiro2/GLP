@@ -32,13 +32,13 @@ After z and x return n w-notes of type t deposited for y on k: no longer z holds
 Interface pragmas
 Notes: the notes Alice holds.
 Issue: Alice [Issue] <type> <amount>
-Swap: Alice [Swap] <issuer wanted> <type wanted>
+Swap: Alice [Swap] <amount given> <issuer wanted> <type wanted> <amount wanted>
   Bob: Alice asks to swap notes with you.
-Pay: Alice [Pay]
+Pay: Alice [Pay] <amount>
   Bob: Alice asks to pay you notes.
-Escrow: Alice [Deposit] <condition>
+Escrow: Alice [Deposit] <amount> <condition>
   Carol: Alice asks to deposit notes with you.
-  Carol [Release]
+  Carol [Release] <amount>
   Bob: Carol asks to release notes to you.
-  Carol [Return]
+  Carol [Return] <amount>
   Alice: Carol asks to return notes to you.
