@@ -1,0 +1,4 @@
+Seek and Find
+Seek and Find extends Knowledge.
+Alice and Bob are persons.
+1. ■ Seek: Alice may seek from Bob, provided Alice knows Bob.

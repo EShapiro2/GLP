@@ -608,6 +608,20 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     used[name] = k + 1
     if k:
         name += '_%d' % (k + 1)
+    # A single note the act only requires, neither deleting nor adding it nor naming it elsewhere, is written with the
+    # wildcard, note(Alice, Carol, coin, Dollar, _): some note it holds, which the act neither names nor records (vGLP,
+    # Section 5.4: a wildcard in an unnegated atom of B is a variable of its own; vGLP #32, Calculus_inbox.md,
+    # 2026-11-24 21:16 UTC, on Denominated Currencies' Accept)
+    for sc in list(sizes):
+        m = re.fullmatch(r"eq\(size\('(\w+1Set)'\), num\(1\)\)", sc)
+        if not m:
+            continue
+        sv = "set('%s')" % m.group(1)
+        if sum(x.count(sv) for x in body) == 1 and not any(sv in x for x in head + lists + idn + cons) \
+                and not any(sv in x and x.startswith('not(') for x in body):
+            body = [x.replace(sv, "'_'") for x in body]
+            sizes.remove(sc)
+            others = [o for o in others if o != m.group(1)]
     constraint = 'true'
     for c in reversed(cons + sizes):
         constraint = c if constraint == 'true' else 'and(%s, %s)' % (c, constraint)

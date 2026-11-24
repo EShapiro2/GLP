@@ -29,7 +29,7 @@ Disputes
 28. ■ Officer expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
 29. ■ Amend.  Those who decide it may amend the bylaws.
 30. ■ Raise.  Alice may raise Issue with Bob in Orga to Carol, provided Orga has Alice as a participant, Orga has Bob as a participant and Orga has Carol in the role Arbiter.
-31. ■ Decide.  Carol may decide Issue between Alice and Bob in Orga.
+31. ■ Decide.  Carol may decide Issue between Alice and Bob in Orga with the ruling Ruling.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -82,4 +82,4 @@ Officer expel: Decider [Officer expel] <bob>
   Codecider: Decider asks for your consent to officer expel.
 Amend: Alice [Amend]
 Raise: Alice [Raise] <orga> <carol> <issue> <bob>
-Decide: Carol [Decide]
+Decide: Carol [Decide] <ruling>

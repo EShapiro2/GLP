@@ -32,38 +32,38 @@ Acquaint: Alice [Acquaint] <bob>
   Bob: Alice asks for your consent to acquaint.
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
-Issue: Alice [Issue] <type>
-Swap: Alice [Swap] <dave> <other>
+Issue: Alice [Issue] <type> <sum>
+Swap: Alice [Swap] <dave> <sum> <other> <total>
   Bob: Alice asks for your consent to swap.
-Pay: Alice [Pay]
+Pay: Alice [Pay] <sum>
   Bob: Alice asks for your consent to pay.
-Pay issuer: Alice [Pay issuer]
-Deposit: Alice [Deposit] <cond>
+Pay issuer: Alice [Pay issuer] <sum>
+Deposit: Alice [Deposit] <sum> <cond>
   Carol: Alice asks for your consent to deposit.
-Release: Carol [Release]
+Release: Carol [Release] <sum>
   Bob: Carol asks for your consent to release.
-Return: Carol [Return]
+Return: Carol [Return] <sum>
   Alice: Carol asks for your consent to return.
 Redeem: Alice [Redeem] <carol>
 Redeem coin against bond: Alice [Redeem coin against bond] <carol>
 Redeem bond: Alice [Redeem bond] <carol> <day>
 Redeem bond against bond: Alice [Redeem bond against bond] <carol> <day>
-First issue: Alice [First issue] <dollar>
-Issue denominated bond: Alice [Issue denominated bond] <dollar> <day>
-Deposit own coins: Alice [Deposit own coins] <cond>
+First issue: Alice [First issue] <dollar> <sum>
+Issue denominated bond: Alice [Issue denominated bond] <dollar> <sum> <day>
+Deposit own coins: Alice [Deposit own coins] <sum> <cond>
   Carol: Alice asks for your consent to deposit own coins.
-Deposit with the issuer: Alice [Deposit with the issuer] <cond>
+Deposit with the issuer: Alice [Deposit with the issuer] <sum> <cond>
   Carol: Alice asks for your consent to deposit with the issuer.
-Deposit more: Alice [Deposit more] <cond>
+Deposit more: Alice [Deposit more] <sum> <cond>
   Carol: Alice asks for your consent to deposit more.
-Deposit own bonds: Alice [Deposit own bonds] <cond>
+Deposit own bonds: Alice [Deposit own bonds] <sum> <cond>
   Carol: Alice asks for your consent to deposit own bonds.
-Deposit bond with the issuer: Alice [Deposit bond with the issuer] <cond>
+Deposit bond with the issuer: Alice [Deposit bond with the issuer] <sum> <cond>
   Carol: Alice asks for your consent to deposit bond with the issuer.
-Deposit bond more: Alice [Deposit bond more] <cond>
+Deposit bond more: Alice [Deposit bond more] <sum> <cond>
   Carol: Alice asks for your consent to deposit bond more.
-Accept: Alice [Accept]
-Accept by bond: Alice [Accept by bond] <day>
+Accept: Alice [Accept] <limit>
+Accept by bond: Alice [Accept by bond] <limit> <day>
 Pay accepted coins: Alice [Pay accepted coins]
 Pay own accepted coins: Alice [Pay own accepted coins]
 Pay accepted coins to the issuer: Alice [Pay accepted coins to the issuer]
