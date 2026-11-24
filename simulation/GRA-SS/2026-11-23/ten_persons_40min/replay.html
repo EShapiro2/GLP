@@ -1,0 +1,215 @@
+<title>Ride Auction Replay</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a tall street map of the island on the left, the clock and what just happened on the right, the ride ledger below. */
+:root{
+  --bg:#f3f4f1; --surface:#ffffff; --ink:#1b1f23; --muted:#5d6670; --line:#d9ddd6; --grid:#e6e9e3;
+  --taxi:#d99a00; --taxi-ink:#3a2a00; --rider:#1f6f8b; --rider-soft:#cfe5ec; --ok:#2f7d4a; --warn:#b5542b;
+  --display:"Barlow Semi Condensed", "Arial Narrow", sans-serif; --body:"IBM Plex Sans", system-ui, sans-serif; --mono:"IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14171a; --surface:#1c2024; --ink:#e8eae6; --muted:#9aa3ab; --line:#2d3338; --grid:#22272b;
+  --taxi:#f2b705; --taxi-ink:#1a1300; --rider:#5fb3cf; --rider-soft:#1d3a44; --ok:#5cb87a; --warn:#e07a4f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14171a; --surface:#1c2024; --ink:#e8eae6; --muted:#9aa3ab; --line:#2d3338; --grid:#22272b;
+  --taxi:#f2b705; --taxi-ink:#1a1300; --rider:#5fb3cf; --rider-soft:#1d3a44; --ok:#5cb87a; --warn:#e07a4f; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:22px}
+h1{font-family:var(--display);font-weight:700;font-size:2.1rem;letter-spacing:.01em;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-weight:600;font-size:1.3rem;margin:0}
+.lede{color:var(--muted);max-width:68ch;margin:6px 0 0}
+.stage{display:grid;grid-template-columns:minmax(240px,340px) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:760px){.stage{grid-template-columns:1fr}}
+.map{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0}
+.map svg{display:block;width:100%;height:auto;max-height:78vh}
+.panel{display:grid;gap:16px;min-width:0}
+.clock{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.clock .t{font-family:var(--mono);font-size:2.4rem;font-variant-numeric:tabular-nums;font-weight:500}
+.clock .u{color:var(--muted);font-size:.9rem}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+button,select{font:inherit;font-size:.9rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}
+button.primary{background:var(--taxi);color:var(--taxi-ink);border-color:var(--taxi);font-weight:600;min-width:84px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--rider);outline-offset:2px}
+input[type=range]{width:100%;accent-color:var(--taxi)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:.85rem}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;display:inline-block;border-radius:50%}
+.sw.sq{border-radius:3px}
+.feed{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-height:300px}
+.feed ol{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.feed li{display:grid;grid-template-columns:4.2em minmax(0,1fr);gap:10px;font-size:.92rem}
+.feed li .m{font-family:var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.feed li.new{animation:flash 1.2s ease-out}
+@keyframes flash{from{background:var(--rider-soft)}to{background:transparent}}
+.tag{font-family:var(--mono);font-size:.85em;padding:0 4px;border-radius:3px}
+.tag.d{background:var(--taxi);color:var(--taxi-ink)}
+.tag.r{background:var(--rider-soft);color:var(--ink)}
+.ledger{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:760px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);font-weight:600;font-size:.95rem;color:var(--muted);letter-spacing:.02em}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr.future td{color:var(--muted);opacity:.55}
+.ok{color:var(--ok)} .warn{color:var(--warn)}
+.note{color:var(--muted);font-size:.85rem;max-width:80ch}
+@media (prefers-reduced-motion:reduce){.feed li.new{animation:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Ride Auction Replay</h1>
+    <p class="lede">Forty minutes of the Second-Score Auction run under sGLP: six drivers and four riders at real Manhattan pickup points. Drivers bid on every call they receive. The rider always awards the leading bid; if the driver's phone answers that he already has a ride, she skips him and the next bid wins. Every act you see was accepted by the app's rules in the recorded run.</p>
+  </header>
+
+  <section class="stage">
+    <div class="map" aria-label="Map of the run">
+      <svg id="svg" role="img" aria-label="Drivers and riders on a street map"></svg>
+    </div>
+    <div class="panel">
+      <div class="clock"><span class="t" id="clock">0.0</span><span class="u">simulated minutes of 40</span></div>
+      <div class="controls">
+        <button class="primary" id="play">Play</button>
+        <button id="restart">Restart</button>
+        <label for="speed" class="u">Speed</label>
+        <select id="speed"><option value="0.5">1 min / 2 s</option><option value="1" selected>1 min / s</option><option value="2">2 min / s</option><option value="4">4 min / s</option></select>
+      </div>
+      <input type="range" id="scrub" min="0" max="2400" step="1" value="0" aria-label="Time in the run">
+      <div class="legend">
+        <span><i class="sw sq" style="background:var(--taxi)"></i>driver</span>
+        <span><i class="sw" style="background:var(--rider)"></i>rider</span>
+        <span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--rider)" stroke-width="2" stroke-dasharray="4 3"/></svg>call, to its destination</span>
+        <span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--taxi)" stroke-width="2" stroke-dasharray="2 3"/></svg>driving to pick up</span>
+        <span><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--taxi)" stroke-width="3"/></svg>ride under way</span>
+      </div>
+      <div class="feed" aria-live="polite">
+        <h2>What just happened</h2>
+        <ol id="feed"></ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="ledger">
+    <h2>Rides so far</h2>
+    <p class="note">Score = 50 − λ·delay − fare. The winner is paid 50 − λ·(its delay) − the second score. A late pickup refunds min(price, λ·minutes late). Bids are listed best first as fare, delay in minutes, and score. A skipped driver's bid counts neither for the winner nor for the second score.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Min</th><th>Call</th><th>Rider</th><th>λ</th><th>Bids</th><th>Winner</th><th>Price</th><th>Pickup</th><th>Arrival</th></tr></thead>
+      <tbody id="rides"></tbody>
+    </table></div>
+    <p class="note">Scratch run on the branch gra-numbers. Each person points to the three nearest drivers at the start; one app day is one simulated minute, so times are in whole minutes.</p>
+  </section>
+</div>
+
+<script>
+const D = {"pos":{"d06":[[4.5,2767,6366],[478.9,2684,6366],[485.5,2601,6366],[485.9,2518,6366],[486.3,2435,6366],[499.5,2352,6366],[507.4,2293,6390],[514.1,2293,6473],[515.8,2293,6556],[523.2,2293,6639],[526.9,2293,6722],[539.5,2293,6805],[544.7,2293,6820],[617.4,1793,6820],[689.0,1293,6820],[761.3,1080,7107],[783.3,1080,7547],[1212.4,1580,7547],[1290.5,2080,7547],[1350.4,2452,7419],[1390.8,2452,6919],[1442.0,2452,6419],[1513.1,2452,5919],[1582.5,2452,5419],[1633.1,2452,4919],[1687.9,2452,4419],[1768.1,2452,3919],[1817.3,2452,3419],[1876.5,2452,2919],[1940.2,2452,2419],[2010.6,2452,1919],[2067.8,2452,1419],[2138.3,2452,1387]],"r04":[[7.7,1363,7197],[925.8,1863,7197],[1020.1,2195,7365],[1024.4,2195,7865],[1084.8,2195,8365],[1155.0,2195,8865],[1220.0,2195,9365],[1263.4,2195,9865],[1346.6,2195,10365],[1389.9,2195,10865],[1453.6,2195,11365],[1531.4,2195,11865],[1575.8,2195,12365],[1628.6,2195,12810]],"r01":[[10.5,1623,5730],[622.4,1681,5288],[680.8,1681,4788],[733.0,1681,4288],[790.2,1681,3788],[853.5,1681,3643],[1383.2,2181,3643],[1461.9,2195,4129],[1524.6,2195,4629],[1592.3,2195,5129],[1653.0,2195,5629],[1716.6,2195,6129],[1756.1,2195,6629],[1804.7,2195,7129],[1879.7,2195,7629],[1975.4,2195,8129],[1996.6,2195,8629],[2048.2,2195,9129],[2107.8,2195,9629],[2168.1,2195,10129],[2260.6,2195,10629],[2296.1,2195,11129],[2360.5,2195,11629]],"r02":[[11.1,2293,6820],[621.2,1793,6820],[667.8,1293,6820],[793.8,1080,7547],[1215.5,1580,7547],[1278.0,2080,7547],[1334.8,2452,7419],[1386.2,2452,6919],[1457.6,2452,6419],[1538.7,2452,5919],[1573.1,2452,5419],[1635.9,2452,4919],[1682.6,2452,4419],[1751.6,2452,3919],[1809.1,2452,3419],[1898.0,2452,2919],[1931.6,2452,2419],[2032.8,2452,1919],[2054.5,2452,1419],[2121.4,2452,1387]],"d02":[[11.2,2713,4877]],"d01":[[17.2,2185,4405],[560.7,2102,4405],[563.4,2019,4405],[578.8,1936,4405],[609.9,1853,4405],[624.6,1770,4405],[634.3,1687,4405],[638.9,1604,4405],[644.4,1521,4405],[673.3,1438,4405],[688.8,1355,4405],[690.1,1272,4405],[692.1,1189,4405],[698.8,1106,4405],[716.6,1023,4405],[717.2,940,4405],[736.5,857,4405],[755.2,774,4405],[771.5,691,4405],[798.1,608,4405],[810.7,528,4408],[815.0,528,4491],[822.5,528,4574],[849.5,528,4657],[850.9,528,4740],[854.3,528,4823],[863.8,528,4906],[866.0,528,4989],[874.0,528,5002],[930.6,1028,5002],[977.0,1528,5002],[1072.6,2028,5002],[1096.6,2452,4926],[1145.4,2452,4426],[1200.8,2452,3926],[1268.1,2452,3426],[1356.7,2452,2926],[1390.6,2452,2426],[1457.3,2452,1926],[1559.8,2452,1426],[1572.9,2452,1387],[1935.6,1952,1387],[1999.9,1452,1387],[2044.9,1080,1515],[2111.2,1080,2015],[2178.0,1080,2515],[2238.8,1080,3015],[2311.0,1080,3515],[2350.8,1080,4015]],"d04":[[24.6,2504,5562]],"d03":[[30.1,1366,5769],[704.5,1363,5849],[705.5,1363,5932],[705.9,1363,6015],[710.3,1363,6098],[713.7,1363,6181],[726.5,1363,6264],[730.0,1363,6347],[735.6,1363,6430],[743.8,1363,6513],[744.1,1363,6596],[746.6,1363,6679],[751.8,1363,6762],[790.1,1363,6845],[800.6,1363,6928],[822.0,1363,7011],[822.0,1363,7094],[836.4,1363,7177],[839.2,1363,7197],[911.4,1863,7197],[986.9,2195,7365],[1039.1,2195,7865],[1097.1,2195,8365],[1170.0,2195,8865],[1227.7,2195,9365],[1269.5,2195,9865],[1333.2,2195,10365],[1394.7,2195,10865],[1456.3,2195,11365],[1521.1,2195,11865],[1562.9,2195,12365],[1653.2,2195,12810]],"d05":[[38.7,1398,6389],[447.3,1481,6389],[455.2,1564,6389],[471.7,1623,6365],[505.9,1623,6282],[509.4,1623,6199],[526.5,1623,6116],[547.4,1623,6033],[555.6,1623,5950],[556.7,1623,5867],[575.1,1623,5784],[577.7,1623,5730],[610.1,1681,5288],[670.2,1681,4788],[744.4,1681,4288],[795.3,1681,3788],[843.4,1681,3643],[1406.4,2181,3643],[1482.5,2195,4129],[1511.7,2195,4629],[1562.2,2195,5129],[1657.3,2195,5629],[1701.0,2195,6129],[1757.0,2195,6629],[1811.8,2195,7129],[1883.5,2195,7629],[1940.6,2195,8129],[2016.0,2195,8629],[2067.9,2195,9129],[2127.7,2195,9629],[2163.2,2195,10129],[2251.4,2195,10629],[2282.7,2195,11129],[2378.6,2195,11629]],"r03":[[64.5,528,5002],[923.6,1028,5002],[973.3,1528,5002],[1045.0,2028,5002],[1095.8,2452,4926],[1143.4,2452,4426],[1221.6,2452,3926],[1265.1,2452,3426],[1335.9,2452,2926],[1398.8,2452,2426],[1467.6,2452,1926],[1573.5,2452,1426],[1599.2,2452,1387],[1938.4,1952,1387],[1996.4,1452,1387],[2064.6,1080,1515],[2130.5,1080,2015],[2203.6,1080,2515],[2231.9,1080,3015],[2317.2,1080,3515],[2351.9,1080,4015]]},"ev":[[160.7,"call","r01",2119,5,50,2,10,5,1623,5730,1681,3643],[162.2,"bid","d04","r01",2119,15,3],[162.2,"bid","d06","r01",2119,16,4],[167.6,"bid","d02","r01",2119,13,4],[172.5,"call","r02",2726,5,50,3,10,5,2293,6820,1080,7547],[173.3,"bid","d02","r02",2726,16,5],[174.8,"bid","d03","r02",2726,18,4],[176.9,"bid","d05","r02",2726,13,3],[180.1,"bid","d03","r01",2119,15,1],[181.1,"bid","d06","r02",2726,10,2],[189.2,"bid","d05","r01",2119,12,2],[223.8,"bid","d04","r02",2726,11,3],[242.9,"call","r04",3552,6,50,1,10,5,1363,7197,2195,12810],[246.7,"bid","d05","r04",3552,13,2],[248.7,"call","r03",4090,7,50,2,10,5,528,5002,2452,1387],[251.2,"bid","d05","r03",4090,18,5],[254.5,"bid","d06","r03",4090,18,8],[254.8,"bid","d03","r03",4090,16,4],[256.4,"bid","d02","r03",4090,15,5],[256.6,"bid","d03","r04",3552,15,3],[261.4,"bid","d06","r04",3552,13,5],[262.1,"bid","d04","r03",4090,15,6],[264.4,"bid","d02","r04",3552,17,8],[266.3,"bid","d01","r03",4090,14,5],[275.5,"bid","d04","r04",3552,17,6],[382.6,"rank_first","r02","d04",2726,11,3,30,9,41],[398.8,"rank_first","r01","d05",2119,12,2,34,4,46],[402.1,"rank_second","r01","d03",2119,15,1,33,2,48],[402.7,"rank_behind","r01","d02",2119,13,4,29,8,42],[403.2,"rank_ahead","r02","d06",2726,10,2,"d04",30,3,34,6,44],[416.1,"rank_behind","r02","d05",2726,13,3,28,9,41],[417.6,"rank_behind","r01","d06",2119,16,4,26,8,42],[426.8,"rank_behind","r01","d04",2119,15,3,29,6,44],[445.5,"award","r01","d05",2119,13,1623,5730,1681,3643,7,2,2,10,4,46],[451.5,"rank_first","r04","d04",3552,17,6,27,6,44],[453.7,"rank_behind","r02","d03",2726,18,4,20,12,38],[470.6,"rank_behind","r02","d02",2726,16,5,19,15,35],[473.3,"award","r02","d06",2726,14,2293,6820,1080,7547,7,2,3,10,6,44],[476.9,"rank_second","r04","d02",3552,17,8,25,8,42],[483.7,"rank_ahead","r04","d06",3552,13,5,"d04",27,6,32,5,45],[491.4,"rank_first","r03","d01",4090,14,5,26,10,40],[514.2,"rank_second","r04","d03",3552,15,3,32,3,47],[516.5,"rank_ahead_even","r04","d05",3552,13,2,"d06",5,35,2,48],[516.5,"rank_second","r03","d04",4090,15,6,23,12,38],[523.3,"skip_busy","r04","d05",3552,35,2,32],[524.6,"drop_skipped","r04","d05",3552,13,2],[535.5,"rank_second","r03","d02",4090,15,5,25,10,40],[543.2,"rank_second","r03","d03",4090,16,4,26,8,42],[546.2,"rank_behind","r03","d06",4090,18,8,16,16,34],[553.5,"pickup","r02","d06",9],[555.9,"rank_behind","r03","d05",4090,18,5,22,10,40],[558.1,"return","r04","d03",3552,15,3],[560.3,"award","r03","d01",4090,14,528,5002,2452,1387,9,5,2,10,10,40],[561.9,"return","r04","d06",3552,13,5],[572.8,"return","r04","d02",3552,17,8],[574.4,"return","r04","d04",3552,17,6],[582.9,"finish","r04",3552],[588.2,"pickup","r01","d05",9],[605.6,"rank_first","r04","d04",3552,17,6,27,6,44],[605.9,"rank_second","r04","d02",3552,17,8,25,8,42],[611.7,"rank_ahead","r04","d06",3552,13,5,"d04",27,6,32,5,45],[612.8,"rank_second","r04","d03",3552,15,3,32,3,47],[623.0,"skip_busy","r04","d06",3552,32,5,32],[625.5,"return","r04","d03",3552,15,3],[627.2,"drop_skipped","r04","d06",3552,13,5],[630.1,"return","r04","d02",3552,17,8],[641.5,"return","r04","d04",3552,17,6],[643.6,"finish","r04",3552],[650.6,"rank_first","r04","d04",3552,17,6,27,6,44],[659.6,"rank_second","r04","d02",3552,17,8,25,8,42],[687.2,"rank_ahead","r04","d03",3552,15,3,"d04",27,6,32,3,47],[704.3,"award","r04","d03",3552,20,1363,7197,2195,12810,11,3,1,10,3,47],[794.8,"arrive_on_time","r02","d06",9],[874.9,"pickup","r04","d03",14],[885.8,"arrive_on_time","r01","d05",9],[886.7,"call","r02",14865,17,50,1,10,5,1080,7547,2452,1387],[887.2,"bid","d05","r02",14865,15,10],[887.8,"bid","d06","r02",14865,11,0],[888.3,"pickup","r03","d01",14],[892.4,"bid","d04","r02",14865,13,7],[905.3,"bid","d02","r02",14865,20,9],[1089.1,"rank_first","r02","d02",14865,20,9,21,9,41],[1093.0,"rank_ahead","r02","d04",14865,13,7,"d02",21,9,30,7,43],[1107.3,"rank_ahead","r02","d06",14865,11,0,"d04",30,7,39,0,50],[1122.1,"call","r01",18510,21,50,1,10,5,1681,3643,2195,12810],[1130.0,"bid","d04","r01",18510,12,6],[1131.5,"bid","d05","r01",18510,11,0],[1132.2,"bid","d02","r01",18510,16,5],[1147.0,"bid","d06","r01",18510,14,10],[1166.6,"rank_behind","r02","d05",14865,15,10,25,10,40],[1177.7,"award","r02","d06",14865,20,1080,7547,2452,1387,19,0,1,10,0,50],[1191.3,"pickup","r02","d06",19],[1328.2,"rank_first","r01","d06",18510,14,10,26,10,40],[1328.4,"rank_ahead","r01","d02",18510,16,5,"d06",26,10,29,5,45],[1331.5,"rank_ahead","r01","d05",18510,11,0,"d02",29,5,39,0,50],[1334.6,"rank_second","r01","d04",18510,12,6,32,6,44],[1341.3,"award","r01","d05",18510,18,1681,3643,2195,12810,22,0,1,10,0,50],[1347.6,"pickup","r01","d05",22],[1612.6,"arrive_on_time","r03","d01",14],[1655.0,"call","r03",27338,30,50,3,10,5,2452,1387,1080,7547],[1656.3,"bid","d01","r03",27338,13,0],[1666.3,"arrive_on_time","r04","d03",14],[1667.2,"bid","d03","r03",27338,27,24],[1672.9,"bid","d04","r03",27338,18,9],[1681.0,"bid","d02","r03",27338,13,8],[1874.7,"rank_first","r03","d02",27338,13,8,13,24,26],[1886.2,"rank_second","r03","d04",27338,18,9,5,27,23],[1889.9,"rank_late","r03","d03",27338,27,24,72,-22],[1897.5,"rank_ahead","r03","d01",27338,13,0,"d02",13,8,37,0,50],[1902.7,"award","r03","d01",27338,37,2452,1387,1080,7547,31,0,3,10,0,50],[1903.0,"pickup","r03","d01",31],[2047.6,"call","r04",34736,37,50,3,10,5,2195,12810,3272,7643],[2051.2,"bid","d04","r04",34736,17,16],[2052.2,"bid","d03","r04",34736,10,0],[2080.9,"bid","d02","r04",34736,23,17],[2141.2,"arrive_on_time","r02","d06",19],[2192.6,"bid","d06","r04",34736,27,24],[2196.8,"call","r02",36415,39,50,3,10,5,2452,1387,2195,12810],[2199.6,"bid","d06","r02",36415,13,0],[2202.6,"bid","d03","r02",36415,22,24],[2202.7,"bid","d04","r02",36415,13,9],[2209.0,"bid","d02","r02",36415,14,8],[2317.2,"rank_late","r04","d06",34736,27,24,72,-22],[2333.9,"rank_late","r04","d02",34736,23,17,51,-1],[2335.4,"rank_first","r04","d03",34736,10,0,40,0,50],[2342.7,"rank_late","r04","d04",34736,17,16,48,2],[2362.0,"award","r04","d03",34736,50,2195,12810,3272,7643,39,0,3,10,0,50],[2372.3,"pickup","r04","d03",39]],"end":2400};
+const A = 50;
+const svg = document.getElementById('svg');
+const NS = 'http://www.w3.org/2000/svg';
+const X0 = -300, X1 = 4100, Y0 = 600, Y1 = 13400;
+svg.setAttribute('viewBox', `0 0 ${X1 - X0} ${Y1 - Y0}`);
+const sx = x => x - X0, sy = y => Y1 - y;
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; }
+// street grid, 500 m
+const g0 = el('g', {});
+for (let x = 0; x <= 4000; x += 500) el('line', {x1: sx(x), y1: 0, x2: sx(x), y2: Y1 - Y0, stroke: 'var(--grid)', 'stroke-width': 14}, g0);
+for (let y = 1000; y <= 13000; y += 500) el('line', {x1: 0, y1: sy(y), x2: X1 - X0, y2: sy(y), stroke: 'var(--grid)', 'stroke-width': 10}, g0);
+el('line', {x1: sx(0), y1: sy(800), x2: sx(1000), y2: sy(800), stroke: 'var(--muted)', 'stroke-width': 24}, g0);
+const sc = el('text', {x: sx(0), y: sy(800) + 190, fill: 'var(--muted)', 'font-size': 170, 'font-family': 'IBM Plex Mono, monospace'}, g0); sc.textContent = '1 km';
+const layerLines = el('g', {}); const layerPts = el('g', {});
+const people = Object.keys(D.pos).sort();
+const marks = {};
+for (const k of people) {
+  const g = el('g', {}, layerPts);
+  const d = k[0] === 'd';
+  const ring = el('circle', {r: 260, fill: 'none', stroke: 'var(--rider)', 'stroke-width': 40, opacity: 0}, g);
+  const shape = d ? el('rect', {x: -130, y: -130, width: 260, height: 260, rx: 50, fill: 'var(--taxi)', stroke: 'var(--surface)', 'stroke-width': 30}, g)
+                  : el('circle', {r: 130, fill: 'var(--rider)', stroke: 'var(--surface)', 'stroke-width': 30}, g);
+  const t = el('text', {x: d ? -190 : 190, y: 60, 'text-anchor': d ? 'end' : 'start', 'font-size': 190, 'font-family': 'IBM Plex Mono, monospace', fill: 'var(--ink)', 'font-weight': 500}, g); t.textContent = k;
+  marks[k] = {g, ring};
+}
+function posAt(k, t) { const L = D.pos[k]; let p = L[0]; for (const q of L) { if (q[0] <= t) p = q; else break; } return [p[1], p[2]]; }
+const mins = s => (s / 60).toFixed(1);
+
+// replay the accepted acts up to time t
+function stateAt(t) {
+  const calls = {}, order = [], feed = [];
+  for (const e of D.ev) {
+    if (e[0] > t) break;
+    const [tm, nm] = e;
+    if (nm === 'call') { const [, , r, trip, end, a, L, T, dep, px, py, qx, qy] = e; calls[trip] = {t: tm, r, trip, L, end, p: [px, py], q: [qx, qy], bids: [], status: 'bidding'}; order.push(trip); feed.push([tm, `<span class="tag r">${r}</span> calls for a ride: λ ${L}, bidding until min ${end}`]); }
+    else if (nm === 'bid') { const [, , dr, r, trip, f, dl] = e; const c = calls[trip]; c.bids.push({dr, f, dl, s: A - c.L * dl - f}); feed.push([tm, `<span class="tag d">${dr}</span> bids on ${r}'s call: fare ${f}, there in ${dl} min (score ${A - c.L * dl - f})`]); }
+    else if (nm.startsWith('rank_')) { const c = calls[e[4]]; const what = {rank_first: 'first', rank_ahead: 'into the lead', rank_ahead_even: 'into the lead', rank_second: 'second', rank_behind: 'behind', rank_late: 'out: too late', rank_low: 'out: score below 0'}[nm]; feed.push([tm, `<span class="tag r">${e[2]}</span> ranks <span class="tag d">${e[3]}</span> ${what}`]); }
+    else if (nm === 'skip_busy') { const c = calls[e[4]]; c.skipped = (c.skipped || []).concat(e[3]); feed.push([tm, `<span class="tag r">${e[2]}</span> skips <span class="tag d">${e[3]}</span>, who already has a ride, and ranks the other bids again`]); }
+    else if (nm === 'finish') { feed.push([tm, `<span class="tag r">${e[2]}</span> has all the other bids back for ranking`]); }
+    else if (nm === 'return' || nm === 'drop_skipped') { }
+    else if (nm === 'award') { const [, , r, dr, trip, price, px, py, qx, qy, at, dl] = e; const c = calls[trip]; Object.assign(c, {status: 'awarded', dr, price, due: at + dl, awardT: tm}); feed.push([tm, `<span class="tag r">${r}</span> awards the ride to <span class="tag d">${dr}</span> at <b>${price}</b>, due by min ${at + dl}`]); }
+    else if (nm === 'close') { const c = calls[e[3]]; c.status = 'closed'; feed.push([tm, `<span class="tag r">${e[2]}</span> closes the call: no admissible bid`]); }
+    else if (nm === 'pickup') { const [, , r, dr, day] = e; const c = findRide(calls, order, r, dr); if (c) { c.status = 'riding'; c.pick = day; } feed.push([tm, `<span class="tag d">${dr}</span> picks up <span class="tag r">${r}</span> at min ${day}`]); }
+    else if (nm.startsWith('arrive')) { const [, , r, dr] = e; const c = findRide(calls, order, r, dr); let txt;
+      if (nm === 'arrive_on_time') txt = 'on time, no refund'; else txt = `late by ${e[5]}, refund ${e[4]}`;
+      if (c) { c.status = 'done'; c.arr = txt; } feed.push([tm, `<span class="tag r">${r}</span> arrives with <span class="tag d">${dr}</span>: ${txt}`]); }
+  }
+  return {calls, order, feed};
+}
+function findRide(calls, order, r, dr) { for (let i = order.length - 1; i >= 0; i--) { const c = calls[order[i]]; if (c.r === r && c.dr === dr && c.status !== 'done') return c; } return null; }
+
+const allTrips = D.ev.filter(e => e[1] === 'call').map(e => e[3]);
+function draw(t) {
+  const st = stateAt(t);
+  layerLines.replaceChildren();
+  for (const k of people) { const [x, y] = posAt(k, t); marks[k].g.setAttribute('transform', `translate(${sx(x)},${sy(y)})`); marks[k].ring.setAttribute('opacity', 0); }
+  for (const trip of st.order) {
+    const c = st.calls[trip];
+    if (c.status === 'bidding') {
+      el('line', {x1: sx(c.p[0]), y1: sy(c.p[1]), x2: sx(c.q[0]), y2: sy(c.q[1]), stroke: 'var(--rider)', 'stroke-width': 45, 'stroke-dasharray': '160 110', opacity: .8}, layerLines);
+      el('circle', {cx: sx(c.q[0]), cy: sy(c.q[1]), r: 110, fill: 'none', stroke: 'var(--rider)', 'stroke-width': 35}, layerLines);
+      for (const b of c.bids) { const [x, y] = posAt(b.dr, t); el('line', {x1: sx(x), y1: sy(y), x2: sx(c.p[0]), y2: sy(c.p[1]), stroke: 'var(--taxi)', 'stroke-width': 18, opacity: .55}, layerLines); }
+      marks[c.r].ring.setAttribute('opacity', .9);
+    } else if (c.status === 'awarded') {
+      const [x, y] = posAt(c.dr, t);
+      el('line', {x1: sx(x), y1: sy(y), x2: sx(c.p[0]), y2: sy(c.p[1]), stroke: 'var(--taxi)', 'stroke-width': 45, 'stroke-dasharray': '70 100'}, layerLines);
+      el('line', {x1: sx(c.p[0]), y1: sy(c.p[1]), x2: sx(c.q[0]), y2: sy(c.q[1]), stroke: 'var(--rider)', 'stroke-width': 25, opacity: .35}, layerLines);
+    } else if (c.status === 'riding') {
+      const [x, y] = posAt(c.dr, t);
+      el('line', {x1: sx(x), y1: sy(y), x2: sx(c.q[0]), y2: sy(c.q[1]), stroke: 'var(--taxi)', 'stroke-width': 60}, layerLines);
+      el('circle', {cx: sx(c.q[0]), cy: sy(c.q[1]), r: 110, fill: 'var(--taxi)'}, layerLines);
+    }
+  }
+  document.getElementById('clock').textContent = mins(t);
+  document.getElementById('scrub').value = Math.round(t);
+  // feed: the latest ten, newest first
+  const fe = document.getElementById('feed'); const last = st.feed.slice(-10).reverse();
+  const sig = last.map(f => f[0] + f[1]).join('|');
+  if (sig !== fe.dataset.sig) {
+    const prev = fe.dataset.top; fe.dataset.sig = sig; fe.dataset.top = last.length ? last[0][0] + last[0][1] : '';
+    fe.innerHTML = last.map((f, i) => `<li class="${i === 0 && prev !== (f[0] + f[1]) && playing ? 'new' : ''}"><span class="m">${mins(f[0])}</span><span>${f[1]}</span></li>`).join('') || '<li><span class="m">0.0</span><span>Everyone sets up: identities, friends, and each person points to the three nearest drivers.</span></li>';
+  }
+  // ledger
+  const tb = document.getElementById('rides');
+  tb.innerHTML = st.order.map(trip => {
+    const c = st.calls[trip];
+    const bids = c.bids.slice().sort((a, b) => b.s - a.s).map(b => `${b.dr} (${b.f}, ${b.dl} → ${b.s})`).join(', ') || 'none yet';
+    const win = (c.dr || (c.status === 'closed' ? '—' : 'bidding')) + (c.skipped ? ` <span class="note">(skipped busy ${c.skipped.join(', ')})</span>` : '');
+    const pick = c.pick != null ? `min ${c.pick}, due ${c.due}` : (c.status === 'awarded' ? 'driver on the way' : '—');
+    const arr = c.arr ? `<span class="${c.arr.startsWith('late') ? 'warn' : 'ok'}">${c.arr}</span>` : (c.status === 'riding' ? 'riding' : (c.status === 'closed' ? 'closed, no bid' : '—'));
+    return `<tr><td class="num">${mins(c.t)}</td><td class="num">${trip}</td><td>${c.r}</td><td class="num">${c.L}</td><td>${bids}</td><td>${win}</td><td class="num">${c.price ?? '—'}</td><td>${pick}</td><td>${arr}</td></tr>`;
+  }).join('') || `<tr class="future"><td colspan="9">No call yet. The first comes at min ${mins(D.ev[0][0])}.</td></tr>`;
+}
+
+let t = 0, playing = false, lastTs = null;
+const speedSel = document.getElementById('speed'), playBtn = document.getElementById('play');
+function frame(ts) {
+  if (!playing) return;
+  if (lastTs != null) { t = Math.min(D.end, t + (ts - lastTs) / 1000 * 60 * Number(speedSel.value)); }
+  lastTs = ts; draw(t);
+  if (t >= D.end) { playing = false; playBtn.textContent = 'Play'; return; }
+  requestAnimationFrame(frame);
+}
+playBtn.addEventListener('click', () => { if (t >= D.end) t = 0; playing = !playing; playBtn.textContent = playing ? 'Pause' : 'Play'; lastTs = null; if (playing) requestAnimationFrame(frame); });
+document.getElementById('restart').addEventListener('click', () => { t = 0; draw(t); });
+document.getElementById('scrub').addEventListener('input', e => { t = Number(e.target.value); draw(t); });
+// open on a moment with something on screen: the first awards
+t = 7.2 * 60; draw(t);
+</script>
