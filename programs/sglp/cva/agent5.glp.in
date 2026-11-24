@@ -1,0 +1,16 @@
+
+%% The initial goals of a platform whose agent is agent/5 (vGLP, Section 5.4,
+%% "The compilation"), which run.sh appends to harness.glp.in.
+
+%% agents(Ss?, Ins?, Merges, B?, K0?): at each agent, its initial goal, agent/5
+%% of the platform, with its key, its input stream of Ins, its output stream
+%% for mwm/2, and the program's output to its person and its ask stream, the
+%% writers its seat holds; the persons' seed and keys, B and K0, unread.
+procedure agents(Stream(Seat(Output))?, Stream(Stream(Net))?, MwmInput(Net), Integer?, Stream(Key)?).
+agents(Ss, Ins, Ms?, _, _) :- seated(Ss?, Ins?, Ms).
+
+procedure seated(Stream(Seat(Output))?, Stream(Stream(Net))?, MwmInput(Net)).
+seated([seat(K, Asks?, Thr?)|Ss], [In|Ins], [merge(Out?)|Ms?]) :-
+    agent(K?, In?, Out, Thr, Asks),
+    seated(Ss?, Ins?, Ms).
+seated([], [], []).
