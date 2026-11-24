@@ -1,1 +1,1 @@
-Auction extends Local Overlay: holds
+Auction extends Overlay: holds

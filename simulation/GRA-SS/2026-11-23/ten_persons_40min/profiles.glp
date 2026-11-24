@@ -1,0 +1,1559 @@
+%% Printed by programs/sglp/transform/transform.glp from the sGLP source in the term form
+%% (README.md, "The term form"); edit the source and run transform.sh, not this file.
+%% transform(given, cva_profiles)
+
+GrXY ::= xy(Integer, Integer).
+
+GrLoc ::= loc(Key, Integer, Integer).
+
+GrAttr ::= home(Integer, Integer) ; kind(Constant) ; knows(List(Key)) ; points(List(Key)) ; table(List(GrLoc)) ; dests(List(GrXY)).
+
+Person ::= person(Key, Constant, List(GrAttr)).
+
+GrPick ::= pick(Key) ; nothing.
+
+GrPos ::= pos(Integer, Integer) ; nopos.
+
+GrRide ::= withb(Key) ; noride.
+
+GrUr ::= ur(Key, Constant, Integer, Integer) ; noun.
+
+GrLead ::= lead(Key, Integer, Integer) ; nolead.
+
+GrDk ::= dk(Integer, Key).
+
+GrCall ::= cl(Key, Constant) ; nocall.
+exported procedure gr_town(Integer?, List(Person)).
+gr_town(_, Ps?)
+:-
+gr_keys(Ks)
+,
+gr_keys(Ks2)
+,
+gr_xys(XYs)
+,
+gr_locs(Ks?, XYs?, Locs)
+,
+gr_persons(Ks2?, Locs?, Ps)
+.
+procedure gr_keys(List(Key)).
+gr_keys([d01, d02, d03, d04, d05, d06, r01, r02, r03, r04])
+.
+procedure gr_xys(List(GrXY)).
+gr_xys([xy(2185, 4405), xy(2713, 4877), xy(1366, 5769), xy(2504, 5562), xy(1398, 6389), xy(2767, 6366), xy(1623, 5730), xy(2293, 6820), xy(528, 5002), xy(1363, 7197)])
+.
+procedure gr_dests(List(GrXY)).
+gr_dests([xy(2195, 12810), xy(1080, 7547), xy(3272, 7643), xy(2838, 8195), xy(2452, 1387), xy(1681, 3643), xy(2553, 9322), xy(3516, 8976)])
+.
+procedure gr_locs(List(Key)?, List(GrXY)?, List(GrLoc)).
+gr_locs([], _, [])
+.
+gr_locs([_ | _], [], [])
+.
+gr_locs([K | Ks], [xy(X, Y) | XYs], [loc(K?, X?, Y?) | Ls?])
+:-
+gr_locs(Ks?, XYs?, Ls)
+.
+procedure gr_persons(List(Key)?, List(GrLoc)?, List(Person)).
+gr_persons([], _, [])
+.
+gr_persons([Me | Ks], Locs, [P? | Ps?])
+:-
+ground(Me?)
+,
+ground(Locs?)
+|
+gr_person(Me?, Locs?, P)
+,
+gr_persons(Ks?, Locs?, Ps)
+.
+procedure gr_person(Key?, List(GrLoc)?, Person).
+gr_person(Me, Locs, person(Me?, agent, [home(X?, Y?), kind(K?), knows(Kn?), points(Pt?), table(Locs?), dests(Ds?)]))
+:-
+ground(Me?)
+,
+ground(Locs?)
+|
+gr_loc_of(Me?, Locs?, X, Y)
+,
+gr_kind_of(Me?, K)
+,
+gr_others(Locs?, Me?, Kn)
+,
+gr_near_drivers(Locs?, Me?, Pt)
+,
+gr_dests(Ds)
+.
+procedure gr_kind_of(Key?, Constant).
+gr_kind_of(K, driver)
+:-
+'@<'(K?, e)
+|
+true
+.
+gr_kind_of(_, rider)
+:-
+otherwise
+|
+true
+.
+procedure gr_loc_of(Key?, List(GrLoc)?, Integer, Integer).
+gr_loc_of(_, [], 0, 0)
+.
+gr_loc_of(Me, [loc(Q, X, Y) | _], X?, Y?)
+:-
+'=?='(Me?, Q?)
+|
+true
+.
+gr_loc_of(Me, [_ | Ls], X?, Y?)
+:-
+otherwise
+,
+ground(Me?)
+|
+gr_loc_of(Me?, Ls?, X, Y)
+.
+procedure gr_others(List(GrLoc)?, Key?, List(Key)).
+gr_others([], _, [])
+.
+gr_others([loc(Q, _, _) | Ls], Me, Ks?)
+:-
+'=?='(Q?, Me?)
+|
+gr_others(Ls?, Me?, Ks)
+.
+gr_others([loc(Q, _, _) | Ls], Me, [Q? | Ks?])
+:-
+otherwise
+,
+ground(Me?)
+|
+gr_others(Ls?, Me?, Ks)
+.
+procedure gr_near_drivers(List(GrLoc)?, Key?, List(Key)).
+gr_near_drivers(Locs, Me, Pt?)
+:-
+ground(Locs?)
+,
+ground(Me?)
+|
+gr_loc_of(Me?, Locs?, X, Y)
+,
+gr_dsorted(Locs?, Me?, X?, Y?, Ds)
+,
+gr_take(3, Ds?, Pt)
+.
+procedure gr_dsorted(List(GrLoc)?, Key?, Integer?, Integer?, List(GrDk)).
+gr_dsorted([], _, _, _, [])
+.
+gr_dsorted([loc(Q, X1, Y1) | Ls], Me, X, Y, Ds?)
+:-
+ground(Q?)
+,
+ground(Me?)
+,
+ground(X?)
+,
+ground(Y?)
+|
+gr_kind_of(Q?, K)
+,
+gr_same(Q?, Me?, Sm)
+,
+gr_dsorted1(K?, Sm?, Q?, X1?, Y1?, X?, Y?, Ls?, Me?, Ds)
+.
+procedure gr_dsorted1(Constant?, Constant?, Key?, Integer?, Integer?, Integer?, Integer?, List(GrLoc)?, Key?, List(GrDk)).
+gr_dsorted1(driver, no, Q, X1, Y1, X, Y, Ls, Me, Ds?)
+:-
+ground(X?)
+,
+ground(Y?)
+|
+gr_dist(X?, Y?, X1?, Y1?, D)
+,
+gr_dsorted(Ls?, Me?, X?, Y?, Ds0)
+,
+gr_insert(dk(D?, Q?), Ds0?, Ds)
+.
+gr_dsorted1(_, _, _, _, _, X, Y, Ls, Me, Ds?)
+:-
+otherwise
+|
+gr_dsorted(Ls?, Me?, X?, Y?, Ds)
+.
+procedure gr_same(Key?, Key?, Constant).
+gr_same(A, B, yes)
+:-
+'=?='(A?, B?)
+|
+true
+.
+gr_same(_, _, no)
+:-
+otherwise
+|
+true
+.
+procedure gr_dist(Integer?, Integer?, Integer?, Integer?, Integer).
+gr_dist(X, Y, X1, Y1, D?)
+:-
+':='(D, '+'(abs('-'(X?, X1?)), abs('-'(Y?, Y1?))))
+.
+procedure gr_insert(GrDk?, List(GrDk)?, List(GrDk)).
+gr_insert(dk(D, Q), [], [dk(D?, Q?)])
+.
+gr_insert(dk(D, Q), [dk(D1, Q1) | Ds], [dk(D?, Q?), dk(D1?, Q1?) | Ds?])
+:-
+'=<'(D?, D1?)
+|
+true
+.
+gr_insert(dk(D, Q), [dk(D1, Q1) | Ds], [dk(D1?, Q1?) | R?])
+:-
+'>'(D?, D1?)
+|
+gr_insert(dk(D?, Q?), Ds?, R)
+.
+procedure gr_take(Integer?, List(GrDk)?, List(Key)).
+gr_take(0, _, [])
+.
+gr_take(K, [], [])
+:-
+'>'(K?, 0)
+|
+true
+.
+gr_take(K, [dk(_, Q) | Ds], [Q? | Qs?])
+:-
+'>'(K?, 0)
+|
+':='(K1, '-'(K?, 1))
+,
+gr_take(K1?, Ds?, Qs)
+.
+procedure gr_home(List(GrAttr)?, Integer, Integer).
+gr_home([], 0, 0)
+.
+gr_home([home(X, Y) | _], X?, Y?)
+.
+gr_home([_ | As], X?, Y?)
+:-
+otherwise
+|
+gr_home(As?, X, Y)
+.
+procedure gr_kind(List(GrAttr)?, Constant).
+gr_kind([], rider)
+.
+gr_kind([kind(K) | _], K?)
+.
+gr_kind([_ | As], K?)
+:-
+otherwise
+|
+gr_kind(As?, K)
+.
+procedure gr_aknows(List(GrAttr)?, List(Key)).
+gr_aknows([], [])
+.
+gr_aknows([knows(V) | _], V?)
+.
+gr_aknows([_ | As], V?)
+:-
+otherwise
+|
+gr_aknows(As?, V)
+.
+procedure gr_apoints(List(GrAttr)?, List(Key)).
+gr_apoints([], [])
+.
+gr_apoints([points(V) | _], V?)
+.
+gr_apoints([_ | As], V?)
+:-
+otherwise
+|
+gr_apoints(As?, V)
+.
+procedure gr_atable(List(GrAttr)?, List(GrLoc)).
+gr_atable([], [])
+.
+gr_atable([table(V) | _], V?)
+.
+gr_atable([_ | As], V?)
+:-
+otherwise
+|
+gr_atable(As?, V)
+.
+procedure gr_adests(List(GrAttr)?, List(GrXY)).
+gr_adests([], [])
+.
+gr_adests([dests(V) | _], V?)
+.
+gr_adests([_ | As], V?)
+:-
+otherwise
+|
+gr_adests(As?, V)
+.
+procedure gr_view(List(Output)?, List(Atom)).
+gr_view([], [])
+.
+gr_view([view(_, A, _, _, _) | _], A?)
+.
+gr_view([refused(_, _, _) | L], A?)
+:-
+gr_view(L?, A)
+.
+procedure gr_has_id(List(Atom)?, Constant).
+gr_has_id([], no)
+.
+gr_has_id([identity | _], yes)
+.
+gr_has_id([_ | As], R?)
+:-
+otherwise
+|
+gr_has_id(As?, R)
+.
+procedure gr_clock(List(Atom)?, Integer).
+gr_clock([], 0)
+.
+gr_clock([clock(C) | _], C?)
+.
+gr_clock([_ | As], R?)
+:-
+otherwise
+|
+gr_clock(As?, R)
+.
+procedure gr_at(List(Atom)?, GrPos).
+gr_at([], nopos)
+.
+gr_at([at(X, Y) | _], pos(X?, Y?))
+.
+gr_at([_ | As], R?)
+:-
+otherwise
+|
+gr_at(As?, R)
+.
+procedure gr_ride(List(Atom)?, GrRide).
+gr_ride([], noride)
+.
+gr_ride([rides_with(B) | _], withb(B?))
+.
+gr_ride([_ | As], R?)
+:-
+otherwise
+|
+gr_ride(As?, R)
+.
+
+GrTrip ::= trip(Constant) ; notrip.
+procedure gr_open(List(Atom)?, GrTrip).
+gr_open([], notrip)
+.
+gr_open([open_call(T) | _], trip(T?))
+.
+gr_open([_ | As], R?)
+:-
+otherwise
+|
+gr_open(As?, R)
+.
+procedure gr_unranked(List(Atom)?, GrUr).
+gr_unranked([], noun)
+.
+gr_unranked([unranked(B, T, F, D) | _], ur(B?, T?, F?, D?))
+.
+gr_unranked([_ | As], R?)
+:-
+otherwise
+|
+gr_unranked(As?, R)
+.
+procedure gr_keys_of(Constant?, List(Atom)?, List(Key)).
+gr_keys_of(_, [], [])
+.
+gr_keys_of(knows, [knows(Q) | As], [Q? | Qs?])
+:-
+gr_keys_of(knows, As?, Qs)
+.
+gr_keys_of(friend, [friend(Q) | As], [Q? | Qs?])
+:-
+gr_keys_of(friend, As?, Qs)
+.
+gr_keys_of(points, [points_to(Q) | As], [Q? | Qs?])
+:-
+gr_keys_of(points, As?, Qs)
+.
+gr_keys_of(W, [_ | As], Qs?)
+:-
+otherwise
+|
+gr_keys_of(W?, As?, Qs)
+.
+procedure gr_first_missing(List(Key)?, List(Key)?, GrPick).
+gr_first_missing([], _, nothing)
+.
+gr_first_missing([X | Xs], Ks, P?)
+:-
+ground(X?)
+,
+ground(Ks?)
+|
+gr_mem(X?, Ks?, In)
+,
+gr_fm1(In?, X?, Xs?, Ks?, P)
+.
+procedure gr_fm1(Constant?, Key?, List(Key)?, List(Key)?, GrPick).
+gr_fm1(no, X, _, _, pick(X?))
+.
+gr_fm1(yes, _, Xs, Ks, P?)
+:-
+gr_first_missing(Xs?, Ks?, P)
+.
+procedure gr_mem(Key?, List(Key)?, Constant).
+gr_mem(_, [], no)
+.
+gr_mem(X, [Y | _], yes)
+:-
+'=?='(X?, Y?)
+|
+true
+.
+gr_mem(X, [_ | Ys], R?)
+:-
+otherwise
+|
+gr_mem(X?, Ys?, R)
+.
+
+%% person(steady)
+%% binds(Request, steady_request)
+%% binds(Approval, steady_approval)
+exported procedure steady_request(Request, Person?, Integer?, MutualRef?).
+steady_request(R?, person(Me, _, As), S, Scr)
+:-
+rated(0.1, Tok)
+,
+gr_tick(Tok?, Me?, As?, S?, slot(R), Scr?)
+.
+exported procedure steady_approval(Approval?, Person?, Integer?, MutualRef?).
+steady_approval(approval(_, _, A?), _, _, _)
+:-
+gr_say(slot(A), yes)
+.
+procedure gr_say(Slot(YesNo)?, YesNo?).
+gr_say(slot(V?), V)
+.
+procedure gr_tick(Token?, Key?, List(GrAttr)?, Integer?, Slot(Request)?, MutualRef?).
+gr_tick(stop, _, _, _, _, _)
+.
+gr_tick(go(_), Me, As, S, slot(W?), Scr)
+:-
+stream_append(seen(L), Scr?, _)
+,
+gr_view(L?, Atoms)
+,
+gr_decide(Atoms?, Me?, As?, S?, slot(W), Scr?)
+.
+procedure gr_decide(List(Atom)?, Key?, List(GrAttr)?, Integer?, Slot(Request)?, MutualRef?).
+gr_decide(Atoms, Me, As, S, slot(W?), Scr)
+:-
+ground(Atoms?)
+,
+ground(Me?)
+,
+ground(As?)
+|
+gr_has_id(Atoms?, Id)
+,
+gr_d1(Id?, Atoms?, Me?, As?, S?, slot(W), Scr?)
+.
+procedure gr_d1(Constant?, List(Atom)?, Key?, List(GrAttr)?, Integer?, Slot(Request)?, MutualRef?).
+gr_d1(no, _, Me, _, _, slot(propose(establish(Me?))), _)
+.
+gr_d1(yes, Atoms, Me, As, S, slot(W?), Scr)
+:-
+ground(Atoms?)
+|
+gr_at(Atoms?, P)
+,
+gr_d2(P?, Atoms?, Me?, As?, S?, slot(W), Scr?)
+.
+procedure gr_d2(GrPos?, List(Atom)?, Key?, List(GrAttr)?, Integer?, Slot(Request)?, MutualRef?).
+gr_d2(nopos, _, Me, As, _, slot(propose(move(Me?, X?, Y?))), _)
+:-
+gr_home(As?, X, Y)
+.
+gr_d2(pos(X, Y), Atoms, Me, As, S, slot(W?), Scr)
+:-
+ground(Atoms?)
+,
+ground(As?)
+|
+gr_aknows(As?, Kn)
+,
+gr_keys_of(knows, Atoms?, Kw)
+,
+gr_first_missing(Kn?, Kw?, U)
+,
+gr_d3(U?, X?, Y?, Atoms?, Me?, As?, S?, slot(W), Scr?)
+.
+procedure gr_d3(GrPick?, Integer?, Integer?, List(Atom)?, Key?, List(GrAttr)?, Integer?, Slot(Request)?, MutualRef?).
+gr_d3(pick(Q), _, _, _, Me, _, _, slot(propose(acquaint(Me?, Q?))), _)
+.
+gr_d3(nothing, X, Y, Atoms, Me, As, S, slot(W?), Scr)
+:-
+ground(Atoms?)
+,
+ground(As?)
+|
+gr_aknows(As?, Kn)
+,
+gr_keys_of(friend, Atoms?, Fr)
+,
+gr_first_missing(Kn?, Fr?, U)
+,
+gr_d4(U?, X?, Y?, Atoms?, Me?, As?, S?, slot(W), Scr?)
+.
+procedure gr_d4(GrPick?, Integer?, Integer?, List(Atom)?, Key?, List(GrAttr)?, Integer?, Slot(Request)?, MutualRef?).
+gr_d4(pick(Q), _, _, _, Me, _, _, slot(propose(befriend(Me?, Q?))), _)
+.
+gr_d4(nothing, X, Y, Atoms, Me, As, S, slot(W?), Scr)
+:-
+ground(Atoms?)
+,
+ground(As?)
+|
+gr_apoints(As?, Pt0)
+,
+gr_keys_of(points, Atoms?, Pt)
+,
+gr_first_missing(Pt0?, Pt?, U)
+,
+gr_d5(U?, X?, Y?, Atoms?, Me?, As?, S?, slot(W), Scr?)
+.
+procedure gr_d5(GrPick?, Integer?, Integer?, List(Atom)?, Key?, List(GrAttr)?, Integer?, Slot(Request)?, MutualRef?).
+gr_d5(pick(Q), _, _, _, Me, _, _, slot(propose(point_friend(Me?, Q?))), _)
+.
+gr_d5(nothing, X, Y, Atoms, Me, As, S, slot(W?), Scr)
+:-
+ground(As?)
+,
+ground(Atoms?)
+|
+gr_kind(As?, K)
+,
+gr_clock(Atoms?, C)
+,
+gr_role(K?, C?, X?, Y?, Atoms?, Me?, As?, S?, slot(W), Scr?)
+.
+procedure gr_role(Constant?, Integer?, Integer?, Integer?, List(Atom)?, Key?, List(GrAttr)?, Integer?, Slot(Request)?, MutualRef?).
+gr_role(rider, C, X, Y, Atoms, Me, As, S, slot(W?), Scr)
+:-
+ground(Atoms?)
+|
+gr_ride(Atoms?, R)
+,
+gr_rider(R?, C?, X?, Y?, Atoms?, Me?, As?, S?, slot(W), Scr?)
+.
+gr_role(driver, C, X, Y, Atoms, Me, As, S, slot(W?), _)
+:-
+ground(Atoms?)
+|
+gr_ride(Atoms?, R)
+,
+gr_driver(R?, C?, X?, Y?, Atoms?, Me?, As?, S?, slot(W))
+.
+procedure gr_ping(Key?, Slot(Request)?).
+gr_ping(Me, slot(propose(withdraw(Me?, 0))))
+.
+procedure gr_step(Key?, Integer?, Integer?, Integer?, Integer?, Slot(Request)?).
+gr_step(Me, X, Y, TX, TY, slot(W?))
+:-
+'=:='(X?, TX?)
+,
+'=:='(Y?, TY?)
+|
+gr_ping(Me?, slot(W))
+.
+gr_step(Me, X, Y, TX, TY, slot(propose(move(Me?, X1?, Y1?))))
+:-
+otherwise
+|
+gr_towards(X?, TX?, 83, X1, Rem)
+,
+gr_towards(Y?, TY?, Rem?, Y1, _)
+.
+procedure gr_towards(Integer?, Integer?, Integer?, Integer, Integer).
+gr_towards(X, TX, Bd, TX?, Rem?)
+:-
+'=<'(abs('-'(TX?, X?)), Bd?)
+|
+':='(Rem, '-'(Bd?, abs('-'(TX?, X?))))
+.
+gr_towards(X, TX, Bd, X1?, 0)
+:-
+'>'(TX?, X?)
+,
+'>'('-'(TX?, X?), Bd?)
+|
+':='(X1, '+'(X?, Bd?))
+.
+gr_towards(X, TX, Bd, X1?, 0)
+:-
+'<'(TX?, X?)
+,
+'>'('-'(X?, TX?), Bd?)
+|
+':='(X1, '-'(X?, Bd?))
+.
+procedure gr_rider(GrRide?, Integer?, Integer?, Integer?, List(Atom)?, Key?, List(GrAttr)?, Integer?, Slot(Request)?, MutualRef?).
+gr_rider(withb(B), C, X, Y, Atoms, Me, _, _, slot(W?), _)
+:-
+ground(Atoms?)
+,
+ground(B?)
+|
+gr_picked(Atoms?, B?, Pk)
+,
+gr_rider_ride(Pk?, B?, C?, X?, Y?, Atoms?, Me?, slot(W))
+.
+gr_rider(noride, C, X, Y, Atoms, Me, As, S, slot(W?), Scr)
+:-
+ground(Atoms?)
+|
+gr_open(Atoms?, O)
+,
+gr_rider_free(O?, C?, X?, Y?, Atoms?, Me?, As?, S?, slot(W), Scr?)
+.
+procedure gr_picked(List(Atom)?, Key?, Constant).
+gr_picked([], _, no)
+.
+gr_picked([pickup(Q) | _], B, yes)
+:-
+'=?='(Q?, B?)
+|
+true
+.
+gr_picked([_ | As], B, R?)
+:-
+otherwise
+|
+gr_picked(As?, B?, R)
+.
+procedure gr_rider_ride(Constant?, Key?, Integer?, Integer?, Integer?, List(Atom)?, Key?, Slot(Request)?).
+gr_rider_ride(no, B, C, _, _, Atoms, Me, slot(W?))
+:-
+ground(Atoms?)
+|
+gr_awarded(Atoms?, St)
+,
+gr_rterms(Atoms?, T)
+,
+':='(Due, '+'(St?, T?))
+,
+gr_wait_pickup(Due?, B?, C?, Me?, slot(W))
+.
+gr_rider_ride(yes, B, C, X, Y, Atoms, Me, slot(W?))
+:-
+ground(Atoms?)
+,
+ground(B?)
+|
+gr_rroute(Atoms?, PX, PY, QX, QY)
+,
+gr_picked_on(Atoms?, B?, Pk)
+,
+gr_car(PX?, PY?, QX?, QY?, Pk?, C?, CX, CY)
+,
+gr_ride_on(CX?, CY?, X?, Y?, QX?, QY?, B?, Atoms?, Me?, slot(W))
+.
+procedure gr_car(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer, Integer).
+gr_car(PX, PY, QX, QY, Pk, C, CX?, CY?)
+:-
+ground(Pk?)
+,
+ground(C?)
+|
+':='(Dist, '*'(500, '-'(C?, Pk?)))
+,
+gr_towards(PX?, QX?, Dist?, CX, Rem)
+,
+gr_towards(PY?, QY?, Rem?, CY, _)
+.
+procedure gr_ride_on(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Key?, List(Atom)?, Key?, Slot(Request)?).
+gr_ride_on(CX, CY, X, _, _, _, _, _, Me, slot(propose(move(Me?, CX?, CY?))))
+:-
+'=\\='(CX?, X?)
+|
+true
+.
+gr_ride_on(CX, CY, X, Y, _, _, _, _, Me, slot(propose(move(Me?, CX?, CY?))))
+:-
+'=:='(CX?, X?)
+,
+'=\\='(CY?, Y?)
+|
+true
+.
+gr_ride_on(_, _, X, Y, QX, QY, B, Atoms, Me, slot(W?))
+:-
+otherwise
+|
+gr_at_dest(X?, Y?, QX?, QY?, B?, Atoms?, Me?, slot(W))
+.
+procedure gr_wait_pickup(Integer?, Key?, Integer?, Key?, Slot(Request)?).
+gr_wait_pickup(Due, B, C, Me, slot(propose(cancel_waiting(Me?, B?, Due?))))
+:-
+'>'(C?, Due?)
+|
+true
+.
+gr_wait_pickup(_, B, C, Me, slot(propose(pickup(Me?, B?, C?))))
+:-
+otherwise
+|
+true
+.
+procedure gr_awarded(List(Atom)?, Integer).
+gr_awarded([], 0)
+.
+gr_awarded([awarded(St, _) | _], St?)
+.
+gr_awarded([_ | As], R?)
+:-
+otherwise
+|
+gr_awarded(As?, R)
+.
+procedure gr_at_dest(Integer?, Integer?, Integer?, Integer?, Key?, List(Atom)?, Key?, Slot(Request)?).
+gr_at_dest(X, Y, QX, QY, B, Atoms, Me, slot(W?))
+:-
+'=:='(X?, QX?)
+,
+'=:='(Y?, QY?)
+,
+ground(Atoms?)
+,
+ground(B?)
+|
+gr_awarded(Atoms?, St)
+,
+gr_adelay(Atoms?, Dl)
+,
+gr_picked_on(Atoms?, B?, Pk)
+,
+gr_fare(Atoms?, Pr)
+,
+gr_rlambda(Atoms?, L)
+,
+':='(Due, '+'(St?, Dl?))
+,
+gr_release(Pk?, Due?, Pr?, L?, B?, Me?, slot(W))
+.
+gr_at_dest(_, _, _, _, _, _, Me, slot(W?))
+:-
+otherwise
+|
+gr_ping(Me?, slot(W))
+.
+procedure gr_adelay(List(Atom)?, Integer).
+gr_adelay([], 0)
+.
+gr_adelay([awarded(_, Dl) | _], Dl?)
+.
+gr_adelay([_ | As], R?)
+:-
+otherwise
+|
+gr_adelay(As?, R)
+.
+procedure gr_fare(List(Atom)?, Integer).
+gr_fare([], 0)
+.
+gr_fare([fare(P) | _], P?)
+.
+gr_fare([_ | As], R?)
+:-
+otherwise
+|
+gr_fare(As?, R)
+.
+procedure gr_picked_on(List(Atom)?, Key?, Integer).
+gr_picked_on([], _, 0)
+.
+gr_picked_on([picked(Q, E) | _], B, E?)
+:-
+'=?='(Q?, B?)
+|
+true
+.
+gr_picked_on([_ | As], B, E?)
+:-
+otherwise
+|
+gr_picked_on(As?, B?, E)
+.
+procedure gr_rlambda(List(Atom)?, Integer).
+gr_rlambda([], 0)
+.
+gr_rlambda([ride_terms(L, _) | _], L?)
+.
+gr_rlambda([_ | As], R?)
+:-
+otherwise
+|
+gr_rlambda(As?, R)
+.
+procedure gr_release(Integer?, Integer?, Integer?, Integer?, Key?, Key?, Slot(Request)?).
+gr_release(Pk, Due, _, _, B, Me, slot(propose(arrive_on_time(Me?, B?, Due?))))
+:-
+'=<'(Pk?, Due?)
+|
+true
+.
+gr_release(Pk, Due, Pr, L, B, Me, slot(propose(arrive_late(Me?, B?, Rf?, Late?, Due?))))
+:-
+'>'(Pk?, Due?)
+,
+'=<'('*'(L?, '-'(Pk?, Due?)), Pr?)
+|
+':='(Late, '-'(Pk?, Due?))
+,
+':='(Rf, '*'(L?, '-'(Pk?, Due?)))
+.
+gr_release(Pk, Due, Pr, L, B, Me, slot(propose(arrive_very_late(Me?, B?, Pr?, Late?, Due?, Rs?))))
+:-
+'>'(Pk?, Due?)
+,
+'>'('*'(L?, '-'(Pk?, Due?)), Pr?)
+|
+':='(Late, '-'(Pk?, Due?))
+,
+':='(Rs, '*'(L?, '-'(Pk?, Due?)))
+.
+procedure gr_rterms(List(Atom)?, Integer).
+gr_rterms([], 0)
+.
+gr_rterms([ride_terms(_, T) | _], T?)
+.
+gr_rterms([_ | As], R?)
+:-
+otherwise
+|
+gr_rterms(As?, R)
+.
+procedure gr_rroute(List(Atom)?, Integer, Integer, Integer, Integer).
+gr_rroute([], 0, 0, 0, 0)
+.
+gr_rroute([ride_route(A, B, C, D) | _], A?, B?, C?, D?)
+.
+gr_rroute([_ | As], A?, B?, C?, D?)
+:-
+otherwise
+|
+gr_rroute(As?, A, B, C, D)
+.
+procedure gr_rider_free(GrTrip?, Integer?, Integer?, Integer?, List(Atom)?, Key?, List(GrAttr)?, Integer?, Slot(Request)?, MutualRef?).
+gr_rider_free(trip(T), C, _, _, Atoms, Me, _, _, slot(W?), Scr)
+:-
+ground(Atoms?)
+,
+ground(T?)
+,
+ground(Me?)
+|
+gr_end(Atoms?, Me?, T?, E)
+,
+gr_after_end(E?, T?, C?, Atoms?, Me?, slot(W), Scr?)
+.
+gr_rider_free(notrip, C, X, Y, _, Me, As, S, slot(W?), _)
+:-
+ground(As?)
+,
+ground(C?)
+,
+ground(X?)
+,
+ground(S?)
+|
+':='(S0, '+'('+'(S?, '*'(C?, 7919)), X?))
+,
+random(S0?, 12, R, S1)
+,
+gr_adests(As?, Ds)
+,
+gr_maybe_call(R?, S1?, Ds?, X?, Y?, C?, Me?, slot(W))
+.
+procedure gr_end(List(Atom)?, Key?, Constant?, Integer).
+gr_end([], _, _, 0)
+.
+gr_end([call_end(Q, T1, E) | _], Me, T, E?)
+:-
+'=?='(Q?, Me?)
+,
+'=?='(T1?, T?)
+|
+true
+.
+gr_end([_ | As], Me, T, E?)
+:-
+otherwise
+|
+gr_end(As?, Me?, T?, E)
+.
+procedure gr_after_end(Integer?, Constant?, Integer?, List(Atom)?, Key?, Slot(Request)?, MutualRef?).
+gr_after_end(E, _, C, _, Me, slot(W?), _)
+:-
+'=<'(C?, E?)
+|
+gr_ping(Me?, slot(W))
+.
+gr_after_end(_, T, C, Atoms, Me, slot(W?), Scr)
+:-
+otherwise
+,
+ground(Atoms?)
+,
+ground(T?)
+|
+gr_reranking(Atoms?, T?, Rr)
+,
+gr_after_end1(Rr?, T?, C?, Atoms?, Me?, slot(W), Scr?)
+.
+procedure gr_after_end1(Constant?, Constant?, Integer?, List(Atom)?, Key?, Slot(Request)?, MutualRef?).
+gr_after_end1(no, T, C, Atoms, Me, slot(W?), Scr)
+:-
+ground(Atoms?)
+|
+gr_unranked(Atoms?, U)
+,
+gr_rank(U?, T?, C?, Atoms?, Me?, slot(W), Scr?)
+.
+gr_after_end1(yes, T, _, Atoms, Me, slot(W?), _)
+:-
+ground(Atoms?)
+,
+ground(T?)
+|
+gr_ranked(Atoms?, T?, Rk)
+,
+gr_rerank(Rk?, T?, Atoms?, Me?, slot(W))
+.
+procedure gr_reranking(List(Atom)?, Constant?, Constant).
+gr_reranking([], _, no)
+.
+gr_reranking([reranking(T1) | _], T, yes)
+:-
+'=?='(T1?, T?)
+|
+true
+.
+gr_reranking([_ | As], T, R?)
+:-
+otherwise
+|
+gr_reranking(As?, T?, R)
+.
+procedure gr_ranked(List(Atom)?, Constant?, GrUr).
+gr_ranked([], _, noun)
+.
+gr_ranked([ranked(B, T1, F, D) | _], T, ur(B?, T1?, F?, D?))
+:-
+'=?='(T1?, T?)
+|
+true
+.
+gr_ranked([_ | As], T, R?)
+:-
+otherwise
+|
+gr_ranked(As?, T?, R)
+.
+procedure gr_rerank(GrUr?, Constant?, List(Atom)?, Key?, Slot(Request)?).
+gr_rerank(noun, T, _, Me, slot(propose(finish(Me?, T?))))
+.
+gr_rerank(ur(B, T, F, D), _, Atoms, Me, slot(W?))
+:-
+ground(Atoms?)
+,
+ground(B?)
+,
+ground(T?)
+|
+gr_skipped(Atoms?, B?, T?, Sk)
+,
+gr_rerank1(Sk?, B?, T?, F?, D?, Me?, slot(W))
+.
+procedure gr_skipped(List(Atom)?, Key?, Constant?, Constant).
+gr_skipped([], _, _, no)
+.
+gr_skipped([skipped(B1, T1) | _], B, T, yes)
+:-
+'=?='(B1?, B?)
+,
+'=?='(T1?, T?)
+|
+true
+.
+gr_skipped([_ | As], B, T, R?)
+:-
+otherwise
+|
+gr_skipped(As?, B?, T?, R)
+.
+procedure gr_rerank1(Constant?, Key?, Constant?, Integer?, Integer?, Key?, Slot(Request)?).
+gr_rerank1(yes, B, T, F, D, Me, slot(propose(drop_skipped(Me?, B?, T?, F?, D?))))
+.
+gr_rerank1(no, B, T, F, D, Me, slot(propose(return(Me?, B?, T?, F?, D?))))
+.
+procedure gr_terms(List(Atom)?, Constant?, GrTm).
+gr_terms([], _, notm)
+.
+gr_terms([terms(T1, A, L, TT, D) | _], T, tm(T1?, A?, L?, TT?, D?))
+:-
+'=?='(T1?, T?)
+|
+true
+.
+gr_terms([_ | As], T, R?)
+:-
+otherwise
+|
+gr_terms(As?, T?, R)
+.
+
+GrTm ::= tm(Constant, Integer, Integer, Integer, Integer) ; notm.
+procedure gr_leader(List(Atom)?, Constant?, GrLd).
+gr_leader([], _, nold)
+.
+gr_leader([leader(T1, B, Best, D) | _], T, ld(T1?, B?, Best?, D?))
+:-
+'=?='(T1?, T?)
+|
+true
+.
+gr_leader([_ | As], T, R?)
+:-
+otherwise
+|
+gr_leader(As?, T?, R)
+.
+
+GrLd ::= ld(Constant, Key, Integer, Integer) ; nold.
+procedure gr_second(List(Atom)?, Constant?, Integer).
+gr_second([], _, 0)
+.
+gr_second([second(T1, S2) | _], T, S2?)
+:-
+'=?='(T1?, T?)
+|
+true
+.
+gr_second([_ | As], T, R?)
+:-
+otherwise
+|
+gr_second(As?, T?, R)
+.
+procedure gr_route(List(Atom)?, Constant?, GrRt).
+gr_route([], _, rt(0, 0, 0, 0))
+.
+gr_route([route(T1, A, B, C, D) | _], T, rt(A?, B?, C?, D?))
+:-
+'=?='(T1?, T?)
+|
+true
+.
+gr_route([_ | As], T, R?)
+:-
+otherwise
+|
+gr_route(As?, T?, R)
+.
+
+GrRt ::= rt(Integer, Integer, Integer, Integer).
+procedure gr_rank(GrUr?, Constant?, Integer?, List(Atom)?, Key?, Slot(Request)?, MutualRef?).
+gr_rank(ur(B, T, F, D), _, _, Atoms, Me, slot(W?), _)
+:-
+ground(Atoms?)
+,
+ground(T?)
+|
+gr_terms(Atoms?, T?, Tm)
+,
+gr_leader(Atoms?, T?, Ld)
+,
+gr_second(Atoms?, T?, S2)
+,
+gr_rank0(Tm?, Ld?, S2?, B?, T?, F?, D?, Me?, slot(W))
+.
+gr_rank(noun, T, C, Atoms, Me, slot(W?), Scr)
+:-
+ground(Atoms?)
+,
+ground(T?)
+|
+gr_leader(Atoms?, T?, Ld)
+,
+gr_award(Ld?, T?, C?, Atoms?, Me?, slot(W), Scr?)
+.
+procedure gr_rank0(GrTm?, GrLd?, Integer?, Key?, Constant?, Integer?, Integer?, Key?, Slot(Request)?).
+gr_rank0(tm(_, A, L, TT, _), Ld, S2, B, T, F, D, Me, slot(W?))
+:-
+ground(D?)
+,
+ground(F?)
+|
+':='(Cost, '*'(L?, D?))
+,
+':='(Wl, '-'(A?, Cost?))
+,
+':='(Sc, '-'(Wl?, F?))
+,
+gr_rank1(Ld?, S2?, B?, T?, F?, D?, TT?, Cost?, Wl?, Sc?, Me?, slot(W))
+.
+gr_rank0(notm, _, _, _, _, _, _, Me, slot(W?))
+:-
+gr_ping(Me?, slot(W))
+.
+procedure gr_rank1(GrLd?, Integer?, Key?, Constant?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Key?, Slot(Request)?).
+gr_rank1(_, _, B, T, F, D, TT, Cost, Wl, _, Me, slot(propose(rank_late(Me?, B?, T?, F?, D?, Cost?, Wl?))))
+:-
+'>'(D?, TT?)
+|
+true
+.
+gr_rank1(_, _, B, T, F, D, TT, Cost, Wl, _, Me, slot(propose(rank_low(Me?, B?, T?, F?, D?, Cost?, Wl?))))
+:-
+'=<'(D?, TT?)
+,
+'<'(Wl?, F?)
+|
+true
+.
+gr_rank1(nold, _, B, T, F, D, TT, Cost, Wl, Sc, Me, slot(propose(rank_first(Me?, B?, T?, F?, D?, Sc?, Cost?, Wl?))))
+:-
+ground(F?)
+,
+ground(D?)
+,
+'=<'(D?, TT?)
+,
+'>='(Wl?, F?)
+|
+true
+.
+gr_rank1(ld(_, Cb, Best, LD), S2, B, T, F, D, TT, Cost, Wl, Sc, Me, slot(propose(rank_ahead(Me?, B?, T?, F?, D?, Cb?, Best?, LD?, Sc?, Cost?, Wl?))))
+:-
+ground(F?)
+,
+ground(D?)
+,
+'=<'(D?, TT?)
+,
+'>='(Wl?, F?)
+,
+'>'(Sc?, Best?)
+,
+'<'(S2?, Best?)
+|
+true
+.
+gr_rank1(ld(_, Cb, Best, LD), S2, B, T, F, D, TT, Cost, Wl, Sc, Me, slot(propose(rank_ahead_even(Me?, B?, T?, F?, D?, Cb?, LD?, Sc?, Cost?, Wl?))))
+:-
+ground(F?)
+,
+ground(D?)
+,
+'=<'(D?, TT?)
+,
+'>='(Wl?, F?)
+,
+'>'(Sc?, Best?)
+,
+'>='(S2?, Best?)
+|
+true
+.
+gr_rank1(ld(_, _, Best, _), S2, B, T, F, D, TT, Cost, Wl, Sc, Me, slot(propose(rank_second(Me?, B?, T?, F?, D?, Sc?, Cost?, Wl?))))
+:-
+ground(F?)
+,
+ground(D?)
+,
+'=<'(D?, TT?)
+,
+'>='(Wl?, F?)
+,
+'=<'(Sc?, Best?)
+,
+'>'(Sc?, S2?)
+|
+true
+.
+gr_rank1(ld(_, _, Best, _), S2, B, T, F, D, TT, Cost, Wl, Sc, Me, slot(propose(rank_behind(Me?, B?, T?, F?, D?, Sc?, Cost?, Wl?))))
+:-
+ground(F?)
+,
+ground(D?)
+,
+'=<'(D?, TT?)
+,
+'>='(Wl?, F?)
+,
+'=<'(Sc?, Best?)
+,
+'=<'(Sc?, S2?)
+|
+true
+.
+procedure gr_award(GrLd?, Constant?, Integer?, List(Atom)?, Key?, Slot(Request)?, MutualRef?).
+gr_award(nold, T, _, _, Me, slot(propose(close(Me?, T?))), _)
+.
+gr_award(ld(_, B, Best, D), T, C, Atoms, Me, slot(W?), Scr)
+:-
+ground(Atoms?)
+,
+ground(T?)
+,
+ground(B?)
+|
+stream_append(seen(L), Scr?, _)
+,
+gr_refused_by(L?, B?, Bz)
+,
+gr_award2(Bz?, B?, Best?, D?, T?, C?, Atoms?, Me?, slot(W))
+.
+procedure gr_award2(Constant?, Key?, Integer?, Integer?, Constant?, Integer?, List(Atom)?, Key?, Slot(Request)?).
+gr_award2(yes, B, Best, D, T, _, Atoms, Me, slot(propose(skip_busy(Me?, B?, T?, Best?, D?, S2?))))
+:-
+ground(Atoms?)
+|
+gr_second(Atoms?, T?, S2)
+.
+gr_award2(no, B, _, D, T, C, Atoms, Me, slot(W?))
+:-
+ground(Atoms?)
+,
+ground(T?)
+|
+gr_terms(Atoms?, T?, Tm)
+,
+gr_second(Atoms?, T?, S2)
+,
+gr_route(Atoms?, T?, Rt)
+,
+gr_award1(Tm?, Rt?, S2?, B?, D?, T?, C?, Me?, slot(W))
+.
+procedure gr_refused_by(List(Output)?, Key?, Constant).
+gr_refused_by([], _, no)
+.
+gr_refused_by([view(_, _, _, _, _) | L], B, R?)
+:-
+gr_refused_by(L?, B?, R)
+.
+gr_refused_by([refused(award(_, B1, _, _, _, _, _, _, _, _, _, _, _, _), K, _) | _], B, yes)
+:-
+'=?='(B1?, B?)
+,
+'=?='(K?, B?)
+|
+true
+.
+gr_refused_by([refused(_, _, _) | _], _, no)
+:-
+otherwise
+|
+true
+.
+procedure gr_award1(GrTm?, GrRt?, Integer?, Key?, Integer?, Constant?, Integer?, Key?, Slot(Request)?).
+gr_award1(tm(_, A, L, TT, _), rt(PX, PY, QX, QY), S2, B, D, T, C, Me, slot(propose(award(Me?, B?, T?, Pr?, PX?, PY?, QX?, QY?, C?, D?, L?, TT?, Cost?, Wl?))))
+:-
+ground(D?)
+,
+ground(L?)
+|
+':='(Cost, '*'(L?, D?))
+,
+':='(Wl, '-'(A?, Cost?))
+,
+':='(Pr, '-'(Wl?, S2?))
+.
+gr_award1(notm, _, _, _, _, _, _, Me, slot(W?))
+:-
+gr_ping(Me?, slot(W))
+.
+procedure gr_maybe_call(Integer?, Integer?, List(GrXY)?, Integer?, Integer?, Integer?, Key?, Slot(Request)?).
+gr_maybe_call(1, S, Ds, HX, HY, C, Me, slot(W?))
+:-
+ground(Ds?)
+,
+ground(HX?)
+,
+ground(HY?)
+|
+gr_len(Ds?, N)
+,
+random(S?, N?, K, S1)
+,
+gr_nth(K?, Ds?, QX, QY)
+,
+random(S1?, 999, R, S2)
+,
+random(S2?, 3, L, _)
+,
+':='(Trip, '+'('*'(C?, 1000), R?))
+,
+':='(E, '+'(C?, 3))
+,
+gr_call(QX?, QY?, HX?, HY?, Trip?, E?, L?, Me?, slot(W))
+.
+gr_maybe_call(R, _, _, _, _, _, Me, slot(W?))
+:-
+'>'(R?, 1)
+|
+gr_ping(Me?, slot(W))
+.
+procedure gr_call(Integer?, Integer?, Integer?, Integer?, Constant?, Integer?, Integer?, Key?, Slot(Request)?).
+gr_call(QX, QY, HX, HY, _, _, _, Me, slot(W?))
+:-
+'=:='(QX?, HX?)
+,
+'=:='(QY?, HY?)
+|
+gr_ping(Me?, slot(W))
+.
+gr_call(QX, QY, HX, HY, Trip, E, L, Me, slot(propose(call(Me?, Trip?, E?, 50, L?, 10, 5, HX?, HY?, QX?, QY?))))
+:-
+otherwise
+|
+true
+.
+procedure gr_len(List(GrXY)?, Integer).
+gr_len([], 0)
+.
+gr_len([_ | Xs], N?)
+:-
+gr_len(Xs?, N1)
+,
+':='(N, '+'(N1?, 1))
+.
+procedure gr_nth(Integer?, List(GrXY)?, Integer, Integer).
+gr_nth(_, [], 0, 0)
+.
+gr_nth(1, [xy(X, Y) | _], X?, Y?)
+.
+gr_nth(K, [_ | Xs], X?, Y?)
+:-
+'>'(K?, 1)
+|
+':='(K1, '-'(K?, 1))
+,
+gr_nth(K1?, Xs?, X, Y)
+.
+procedure gr_driver(GrRide?, Integer?, Integer?, Integer?, List(Atom)?, Key?, List(GrAttr)?, Integer?, Slot(Request)?).
+gr_driver(withb(A), C, X, Y, Atoms, Me, _, _, slot(W?))
+:-
+ground(Atoms?)
+,
+ground(A?)
+|
+gr_picked(Atoms?, A?, Pk)
+,
+gr_rroute(Atoms?, PX, PY, QX, QY)
+,
+gr_picked_on(Atoms?, A?, Pt)
+,
+gr_drive(Pk?, PX?, PY?, QX?, QY?, Pt?, C?, X?, Y?, Me?, slot(W))
+.
+gr_driver(noride, C, X, Y, Atoms, Me, As, S, slot(W?))
+:-
+ground(Atoms?)
+,
+ground(C?)
+|
+gr_driver_free(no, C?, X?, Y?, Atoms?, Me?, As?, S?, slot(W))
+.
+procedure gr_drive(Constant?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Key?, Slot(Request)?).
+gr_drive(no, PX, PY, _, _, _, _, X, Y, Me, slot(W?))
+:-
+gr_step(Me?, X?, Y?, PX?, PY?, slot(W))
+.
+gr_drive(yes, PX, PY, QX, QY, Pt, C, X, Y, Me, slot(W?))
+:-
+gr_car(PX?, PY?, QX?, QY?, Pt?, C?, CX, CY)
+,
+gr_step_to(CX?, CY?, X?, Y?, Me?, slot(W))
+.
+procedure gr_step_to(Integer?, Integer?, Integer?, Integer?, Key?, Slot(Request)?).
+gr_step_to(CX, CY, X, Y, Me, slot(W?))
+:-
+'=:='(CX?, X?)
+,
+'=:='(CY?, Y?)
+|
+gr_ping(Me?, slot(W))
+.
+gr_step_to(CX, CY, _, _, Me, slot(propose(move(Me?, CX?, CY?))))
+:-
+otherwise
+|
+true
+.
+procedure gr_pending(List(Atom)?, List(Atom)?, Integer?, Constant).
+gr_pending([], _, _, no)
+.
+gr_pending([bid(A, T, _, _) | As], All, C, P?)
+:-
+ground(All?)
+,
+ground(C?)
+,
+ground(A?)
+,
+ground(T?)
+|
+gr_end(All?, A?, T?, E)
+,
+gr_pending1(E?, C?, As?, All?, P)
+.
+gr_pending([_ | As], All, C, P?)
+:-
+otherwise
+|
+gr_pending(As?, All?, C?, P)
+.
+procedure gr_pending1(Integer?, Integer?, List(Atom)?, List(Atom)?, Constant).
+gr_pending1(E, C, _, _, yes)
+:-
+'>='('+'(E?, 3), C?)
+|
+true
+.
+gr_pending1(_, C, As, All, P?)
+:-
+otherwise
+|
+gr_pending(As?, All?, C?, P)
+.
+procedure gr_driver_free(Constant?, Integer?, Integer?, Integer?, List(Atom)?, Key?, List(GrAttr)?, Integer?, Slot(Request)?).
+gr_driver_free(yes, _, _, _, _, Me, _, _, slot(W?))
+:-
+gr_ping(Me?, slot(W))
+.
+gr_driver_free(no, C, X, Y, Atoms, Me, _, S, slot(W?))
+:-
+ground(Atoms?)
+,
+ground(C?)
+,
+ground(S?)
+|
+gr_open_calls(Atoms?, Atoms?, C?, K)
+,
+':='(S0, '+'(S?, '*'(C?, 7919)))
+,
+gr_bid(K?, X?, Y?, Me?, Atoms?, S0?, slot(W))
+.
+procedure gr_open_calls(List(Atom)?, List(Atom)?, Integer?, GrCall).
+gr_open_calls([], _, _, nocall)
+.
+gr_open_calls([call(A, T) | As], All, C, K?)
+:-
+ground(All?)
+,
+ground(A?)
+,
+ground(T?)
+,
+ground(C?)
+|
+gr_end(All?, A?, T?, E)
+,
+gr_bidded(All?, A?, T?, Bd)
+,
+gr_oc1(E?, Bd?, A?, T?, C?, As?, All?, K)
+.
+gr_open_calls([_ | As], All, C, K?)
+:-
+otherwise
+|
+gr_open_calls(As?, All?, C?, K)
+.
+procedure gr_oc1(Integer?, Constant?, Key?, Constant?, Integer?, List(Atom)?, List(Atom)?, GrCall).
+gr_oc1(E, no, A, T, C, _, _, cl(A?, T?))
+:-
+'>'(E?, C?)
+|
+true
+.
+gr_oc1(_, _, _, _, C, As, All, K?)
+:-
+otherwise
+|
+gr_open_calls(As?, All?, C?, K)
+.
+procedure gr_bidded(List(Atom)?, Key?, Constant?, Constant).
+gr_bidded([], _, _, no)
+.
+gr_bidded([bid(A1, T1, _, _) | _], A, T, yes)
+:-
+'=?='(A1?, A?)
+,
+'=?='(T1?, T?)
+|
+true
+.
+gr_bidded([_ | As], A, T, R?)
+:-
+otherwise
+|
+gr_bidded(As?, A?, T?, R)
+.
+procedure gr_pickup_of(List(Atom)?, Key?, Constant?, Integer, Integer).
+gr_pickup_of([], _, _, 0, 0)
+.
+gr_pickup_of([call_pickup(Q, T1, PX, PY) | _], A, T, PX?, PY?)
+:-
+'=?='(Q?, A?)
+,
+'=?='(T1?, T?)
+|
+true
+.
+gr_pickup_of([_ | As], A, T, PX?, PY?)
+:-
+otherwise
+|
+gr_pickup_of(As?, A?, T?, PX, PY)
+.
+procedure gr_bid(GrCall?, Integer?, Integer?, Key?, List(Atom)?, Integer?, Slot(Request)?).
+gr_bid(nocall, _, _, Me, _, _, slot(W?))
+:-
+gr_ping(Me?, slot(W))
+.
+gr_bid(cl(A, T), X, Y, Me, Atoms, S, slot(propose(bid(Me?, A?, T?, F?, D?))))
+:-
+ground(A?)
+,
+ground(T?)
+,
+ground(Atoms?)
+|
+gr_pickup_of(Atoms?, A?, T?, AX, AY)
+,
+gr_dist(X?, Y?, AX?, AY?, Dst)
+,
+':='(D, '//'('+'(Dst?, 499), 500))
+,
+random(S?, 8, R, _)
+,
+':='(F, '+'('+'(8, R?), '//'(D?, 2)))
+.
