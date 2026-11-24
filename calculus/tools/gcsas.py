@@ -1453,7 +1453,8 @@ def compile_contract(w, n):
                     head = [(x[0], x[3], x[4]) for x in eff]
                     if any(WILD in x[4] for x in eff if not x[0]) or any(a[:1] in "<>" for x in eff for a in x[4]):
                         raise Err("an act cannot make a state hold of someone unnamed, or of a number of persons")
-                    body = [(x[0], x[3], x[4]) for x in cnd] + [(False, x[3], x[4]) for x in eff if x[0] and WILD not in x[4]]
+                    body = [(x[0], x[3], x[4]) for x in cnd]
+                    body += [d for d in ((False, x[3], x[4]) for x in eff if x[0] and WILD not in x[4]) if d not in body]      # a condition also deleted is required once (vGLP #32, Audit PR 83)
                     sas_n.append(dict(kind="act", label=label, mark=mark, name=m.group(1), head=head, body=body,
                                     guards=list(dict.fromkeys(g for _, g in persons + cons))))
                     same = same_of(c, num, names_of(sas_n[-1]))
