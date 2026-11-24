@@ -1,5 +1,5 @@
 %% The monitor of an sGLP run (sGLP's paper, the repository
-%% svGLP-Stochastic-Volitional-GLP at 8c05210: Appendix C, "The Monitor", the
+%% svGLP-Stochastic-Volitional-GLP at 4534e66: Appendix C, "The Monitor", the
 %% whole module; Section 4, "The guard", "The clock" and "The monitor";
 %% Appendix B, "Implementation Notes").  It steps GLP's simulated clock
 %% (GLP-ICLP, appendix-guards, "Simulated time (start_clock/1, rated/2,
