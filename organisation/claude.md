@@ -80,6 +80,7 @@ Every thread and every Cowork session reads this file, `writing-style-guide.md` 
 - The mail is `EShapiro2/Grassroots-Mail`, each inbox `mail/<Project>_inbox.md`.
 - Every thread and every Cowork session answers each mail at once, by mail.
 - It asks Udi nothing about it (Udi, 2026-11-22 20:46 UTC: "you dont need my permission to answer mail; you are obligated to answer mail").
+- No session asks Udi whether to read its mail or its notifications; it reads them (Udi, 2026-11-24 14:05 UTC, to Calculus #7, cited verbatim by the Calculus Cowork session: "you never need my permission to read mail, no project needs, make sure this is clear to all").
 - Mail between a Cowork session and the threads goes through the coordinator.
 
 ## Sessions
