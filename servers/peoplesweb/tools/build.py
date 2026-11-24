@@ -362,7 +362,11 @@ def has_platform(n):
 compiled = sorted(n for n in os.listdir(os.path.join(GLP, 'cascade')) if has_platform(n) and n in cat)
 # The test site writes no world: its apps are the live server's, so a contract
 # is live there where the live build made its world.
+# The live build's worlds are in the live clone, LIVE_WORLDS, which
+# deploy/test.sh names, since the test site builds its own tree, which has
+# none (Website #6, 2026-11-24: /next said "0 run as apps").
 if TEST:
+    WORLDS = os.environ.get('LIVE_WORLDS') or WORLDS
     compiled = [n for n in compiled if os.path.exists(os.path.join(WORLDS, f'live_{n.lower()}', 'platform.vglp'))]
 
 shutil.rmtree(BUILD, ignore_errors=True)
