@@ -425,7 +425,13 @@ def calculus_of(n):
     v['adopted'] = bool(st and st['adopted']) or os.path.exists(own)
     if not v['adopted'] and os.path.exists(os.path.join(CALC, n, 'contract.txt')):
         v['proposed'] = read(os.path.join(CALC, n, 'contract.txt')).strip()
-    fc = own if v['adopted'] else os.path.join(CALC, n, 'full-contract.txt')
+    # The Calculus's full contract, printed from the current texts, where it
+    # has one: a record of the cascade keeps the full contract of the text it
+    # was printed from, and 28 records were behind the Calculus on
+    # 2026-11-24 (Calculus #11 to Website #6: the site shows the text of
+    # calculus/contracts/NAME/ and its pragmas).
+    calc_fc = os.path.join(CALC, n, 'full-contract.txt')
+    fc = calc_fc if os.path.exists(calc_fc) else own if v['adopted'] else calc_fc
     if os.path.exists(fc):
         os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
         shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))
