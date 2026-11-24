@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), person_unfriend('Peer', 'Peer'), found('Peer', 'Peer', 'Peer', 'Constant'), appoint('Peer', 'Peer', 'Peer', 'List'('Peer'), 'Constant'), resign('Peer', 'Peer'), end_officer('Peer', 'Peer', 'Peer', 'List'('Peer')), officer_unfriend('Peer', 'Peer'), organisation_acquaint('Peer', 'Peer'), organisation_befriend('Peer', 'Peer', 'Peer'), organisation_end('Peer', 'Peer'), unfriend('Peer', 'Peer'), organisation_unfriend('Peer', 'Peer', 'Peer'), organisations_acquaint('Peer', 'Peer'), organisations_befriend('Peer', 'Peer', 'Peer', 'Peer'), organisations_of_one_officer_befriend('Peer', 'Peer', 'Peer'), retire('Peer', 'Peer', 'List'('Peer'), 'List'('Peer'), 'List'('Peer'), 'List'('Peer')), propose('Peer', 'Peer', 'Speech'), vote('Peer', 'Peer', 'Speech'), act('Peer', 'Peer', 'Speech'), join('Peer', 'Peer', 'Peer', 'List'('Peer')), leave('Peer', 'Peer'), officer_leave('Peer', 'Peer'), expel('Peer', 'Peer', 'Peer', 'List'('Peer')), officer_expel('Peer', 'Peer', 'Peer', 'List'('Peer')), amend('Peer', 'Peer', 'Speech')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), person_unfriend('Peer', 'Peer'), found('Peer', 'Peer', 'Peer', 'Constant'), appoint('Peer', 'Peer', 'Peer', 'Constant'), resign('Peer', 'Peer'), end_officer('Peer', 'Peer', 'Peer'), officer_unfriend('Peer', 'Peer'), organisation_acquaint('Peer', 'Peer'), organisation_befriend('Peer', 'Peer', 'Peer'), organisation_end('Peer', 'Peer'), unfriend('Peer', 'Peer'), organisation_unfriend('Peer', 'Peer', 'Peer'), organisations_acquaint('Peer', 'Peer'), organisations_befriend('Peer', 'Peer', 'Peer', 'Peer'), organisations_of_one_officer_befriend('Peer', 'Peer', 'Peer'), retire('Peer', 'Peer'), propose('Peer', 'Peer', 'Speech'), vote('Peer', 'Peer', 'Speech'), act('Peer', 'Peer', 'Speech'), join('Peer', 'Peer', 'Peer'), leave('Peer', 'Peer'), officer_leave('Peer', 'Peer'), expel('Peer', 'Peer', 'Peer'), officer_expel('Peer', 'Peer', 'Peer'), amend('Peer', 'Peer', 'Speech')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), person_unfriend('Peer', 'Peer'), found('Peer', 'Peer', 'Constant'), appoint('Peer', 'Peer', 'Peer', 'List'('Peer'), 'Constant'), resign('Peer', 'Peer'), end_officer('Peer', 'Peer', 'Peer', 'List'('Peer')), officer_unfriend('Peer', 'Peer'), organisation_acquaint('Peer', 'Peer'), organisation_befriend('Peer', 'Peer', 'Peer'), organisation_end('Peer', 'Peer'), unfriend('Peer', 'Peer'), organisation_unfriend('Peer', 'Peer', 'Peer'), organisations_acquaint('Peer', 'Peer'), organisations_befriend('Peer', 'Peer', 'Peer', 'Peer'), organisations_of_one_officer_befriend('Peer', 'Peer', 'Peer'), retire('Peer', 'Peer', 'List'('Peer'), 'List'('Peer'), 'List'('Peer'), 'List'('Peer')), found_by_an_organisation('Peer', 'Peer', 'Peer', 'Constant'), propose('Peer', 'Peer', 'Speech'), vote('Peer', 'Peer', 'Speech'), act('Peer', 'Peer', 'Speech'), join('Peer', 'Peer', 'Peer', 'List'('Peer')), leave('Peer', 'Peer'), officer_leave('Peer', 'Peer'), expel('Peer', 'Peer', 'Peer', 'List'('Peer')), officer_expel('Peer', 'Peer', 'Peer', 'List'('Peer')), amend('Peer', 'Peer', 'Speech')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), person_unfriend('Peer', 'Peer'), found('Peer', 'Peer', 'Constant'), appoint('Peer', 'Peer', 'Peer', 'Constant'), resign('Peer', 'Peer'), end_officer('Peer', 'Peer', 'Peer'), officer_unfriend('Peer', 'Peer'), organisation_acquaint('Peer', 'Peer'), organisation_befriend('Peer', 'Peer', 'Peer'), organisation_end('Peer', 'Peer'), unfriend('Peer', 'Peer'), organisation_unfriend('Peer', 'Peer', 'Peer'), organisations_acquaint('Peer', 'Peer'), organisations_befriend('Peer', 'Peer', 'Peer', 'Peer'), organisations_of_one_officer_befriend('Peer', 'Peer', 'Peer'), retire('Peer', 'Peer'), found_by_an_organisation('Peer', 'Peer', 'Peer', 'Constant'), propose('Peer', 'Peer', 'Speech'), vote('Peer', 'Peer', 'Speech'), act('Peer', 'Peer', 'Speech'), join('Peer', 'Peer', 'Peer'), leave('Peer', 'Peer'), officer_leave('Peer', 'Peer'), expel('Peer', 'Peer', 'Peer'), officer_expel('Peer', 'Peer', 'Peer'), amend('Peer', 'Peer', 'Speech')]),
   type('Request', [propose('Proposal')]),
   type('RequestMenu', [social_menu('List'('MenuEntry'))]),
   type('MenuEntry', [button('String', 'List'('MenuAct')), label('Constant', 'String'), label('Constant', 'Integer', 'String')]),
@@ -1348,7 +1348,7 @@ interface([
   compiled(join_proposal_introduce_3, 4),
   compiled(join_proposal_befriend_2, 3),
   compiled(join_proposal_person_unfriend_2, 3),
-  compiled(join_proposal_found_4, 5),
+  compiled(join_proposal_found_3, 4),
   compiled(join_proposal_appoint_4, 5),
   compiled(join_proposal_resign_2, 3),
   compiled(join_proposal_end_officer_3, 4),
@@ -1362,6 +1362,7 @@ interface([
   compiled(join_proposal_organisations_befriend_4, 5),
   compiled(join_proposal_organisations_of_one_officer_befriend_3, 4),
   compiled(join_proposal_retire_2, 3),
+  compiled(join_proposal_found_by_an_organisation_4, 5),
   compiled(join_utterance_utterance_1, 2),
   compiled(join_utterance_program_1, 2),
   compiled(join_utterance_speech_2, 3),
