@@ -22,10 +22,7 @@ Guardians:2 ■ End guardian: ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) <- 
 Guardians:2 ■ Guardian unfriend: ~friend(Bob,Wendy), ~friend(Wendy,Bob), ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) <- friend(Bob,Wendy), friend(Wendy,Bob), guardian(Bob,Wendy), has_guardian(Wendy,Bob) guarded by Bob.
 Guardians:2 ■ | Wendy may not end a friendship with her guardian.
 Guardians:3 ■ | Ward and person.
-Guardians:3 ■ Acquaint: Knowledge:2 <- person(Alice), person(Bob).
-Guardians:3 ■ Introduce: Knowledge:3 <- person(Alice), person(Bob), person(Carol).
-Guardians:3 ■ Befriend: Friendship:1 <- person(Alice), person(Bob).
-Guardians:3 ■ Person unfriend: Friendship:2 <- person(Alice), person(Bob).
+Guardians:3 ■ Person unfriend: Friendship:2 <-.
 Guardians:3 ■ Ward acquaint: knows(Wendy,Bob), knows(Bob,Wendy) <- ward(Wendy), has_guardian(Wendy,Alice), person(Bob) guarded by Wendy, Bob.
 Guardians:3 ■ Ward befriend: friend(Wendy,Bob), friend(Bob,Wendy) <- ward(Wendy), ~retired(Wendy), has_guardian(Wendy,Alice), person(Bob), knows(Wendy,Bob), knows(Bob,Wendy), friend(Alice,Bob), friend(Bob,Alice), ~friend(Wendy,Bob), ~friend(Bob,Wendy) guarded by Wendy, Bob, Alice.
 Guardians:3 ■ Ward end: ~friend(Wendy,Bob), ~friend(Bob,Wendy) <- ~has_guardian(Wendy,Bob), friend(Wendy,Bob), friend(Bob,Wendy) guarded by Wendy.
