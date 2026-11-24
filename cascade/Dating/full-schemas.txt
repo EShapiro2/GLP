@@ -5,10 +5,10 @@ Dating:0 - | Alice, Bob and Carol are persons, Post and Reply posts, Budget, Res
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2+Guardians:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
-Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:1+Guardians:3 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- person(Alice), person(Bob), knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- person(Alice), person(Bob), knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- person(Alice), person(Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.

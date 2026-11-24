@@ -47,7 +47,7 @@ Look: 🛒, network
 Listing: Bob [Post] <listing>
   Alice [Pass]
   Bob [Withdraw listing]
-Order: Alice [Order] <stake and deposit>
+Order: Alice [Order]
   Bob: Alice asks to order the good of your listing.
 Deliver: Alice [Deliver] <deposit>
 Cancel: Alice [Cancel] [Cancel for the buyer] [Cancel for the seller]

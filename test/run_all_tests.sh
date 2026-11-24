@@ -4030,7 +4030,7 @@ CVA="$GLP_DIR/programs/vglp/cva"
 CVA_NAMES=$(mktemp)
 cat "$GLP_DIR/calculus/NAMES.txt" > "$CVA_NAMES"
 cva_cols=$(awk -F'|' '{ x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x) } x == "name on main" { print NF; exit }' "$CVA_NAMES")
-for cva_x in XA XB XB-L XB2 XC XC2 XD XE XG XG-L XH XI XJ XK XL XLF XLI XLX XM XN XNONE XO XP XQ XR XS XT XU XV XVB XVE XVF XVO XVT XW; do
+for cva_x in XA XB XB-L XB2 XC XC2 XD XE XG XG-L XH XI XJ XK XL XLF XLI XLX XM XN XNONE XO XP XQ XR XS XT XU XV XVB XVE XVF XVO XVT XW XY; do
     cva_a=$(printf '%s' "$cva_x" | tr 'A-Z-' 'a-z_')
     if [ "$cva_cols" = 5 ]; then printf '%s | %s | %s | %s | %s\n' "$cva_x" "$cva_x" "$cva_x" "$cva_a" "$cva_a"; else printf '%s | %s | %s | %s\n' "$cva_x" "$cva_x" "$cva_x" "$cva_a"; fi >> "$CVA_NAMES"
 done
@@ -4390,6 +4390,14 @@ check "CVA pragmas: ... the inherited button that stands, with its question, rea
 check "CVA pragmas: ... the extending contract's [Link], no field, its Bob bound by friend(Bob), on its own tab (inherit)" "act('link', '\"Link\"', \[\], none, '\"Linked\"', by(\[1\]))" "$cva_px_inherit"
 check_not "CVA pragmas: ... no act of mint (inherit)" "act('mint'" "$cva_px_inherit"
 check "CVA pragmas: a line leaving unnamed a variable no required atom binds, refused, the variable named (unnamed)" 'the pragma "Minting" leaves unnamed the variable k of mint' "$cva_px_unnamed"
+# A number the constraint determines from the variables a role names, which no atom names, is local to that role, and the line names no field for it (OSPM, act-schemas-local; Grassroots-Audit, cvac.glp.md, Finding 2; local.glp, det_pick, det_ok, dels_name): Rides' Award, Top = S + Total, S named at Orga's role by stake(S), as GO's contract gives it (GO #15, 2026-11-24) (top).
+cva_pt=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XY' 'Alice, Bob and Orga are persons.' '1. ■ Award. Alice may award Bob.' 'Pragmas' 'Rides: the rides of Alice.' 'Award: Alice [Award]' > "$cva_pt/XY.txt"
+cva_pt_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_pt/XY.txt" "[qschema(award, ['Alice', 'Bob', 'Orga'], [const('Trip'), pvar('Gov'), const('Dollar'), num('Sum'), num('Total'), num('S'), num('Held'), num('Top')], [pvar('G1'), svar('G1'), num('G1')], and(ge(num('Held'), num('S')), and(eq(num('Top'), plus(num('S'), num('Total'))), ge(num('Held'), num('Top')))), [rs(guarded, [atom(ride, []), atom(rides_with, [role(2)]), atom(fare_locked, []), atom(customer_lock, [role(2), role(3), num('Trip'), pvar('Gov'), num('Dollar'), num('Sum')])], [atom(open_call, [num('Trip')]), times(num('Sum'), atom(note, [pvar('Gov'), val(coin), num('Dollar')]))], [atom(identity, []), atom(period_ended, [num('Trip')]), atom(selects, [role(2), num('Trip')]), atom(highest_score, [role(2), num('Trip')]), atom(sets_deposit, [num('Trip')]), atom(second_score_fare, [role(2), num('Trip')]), atom(knows, [role(3)]), atom(participant, [pvar('Gov')]), atom(accepts, [pvar('Gov'), num('Dollar')]), atom(fare_deposit, [num('Trip'), pvar('Gov'), num('Sum'), num('Total')])], []), rs(unguarded, [atom(ride, []), atom(rides_with, [role(1)]), atom(deposit_locked, []), atom(provider_lock, [role(1), role(3), num('Trip'), pvar('Gov'), num('Dollar'), num('Total')])], [times(num('Total'), atom(note, [pvar('Gov'), val(coin), num('Dollar')]))], [atom(identity, []), atom(bid, [role(1), num('Trip')]), atom(knows, [role(3)]), atom(participant, [pvar('Gov')]), times(num('Held'), atom(note, [pvar('Gov'), val(coin), num('Dollar')]))], [atom(ride, [])]), rs(unguarded, [], [], [atom(identity, []), atom(community, [pvar('Gov')]), atom(stake, [num('S')])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(organisation, [])), fexists([svar('G1')], role(1), atom(has_officer, [svar('G1')]), fcons(true))))])]" 2>&1; echo "exit $?")
+rm -rf "$cva_pt"
+check "CVA pragmas: a number the constraint determines at one role, named by no atom, asks for no field (top)" "act('award', '\"Award\"', \[\], none, '\"Rides\"', by(\[1\]))" "$cva_pt_out"
+check_not "CVA pragmas: ... Top not asked for (top)" 'leaves unnamed the variable Top' "$cva_pt_out"
+check "CVA pragmas: ... and pragmas.sh exits 0 (top)" "^exit 0$" "$cva_pt_out"
 # A schema whose name the term quotes, being no plain atom, as 'no-show' of the act No-show: its button [No-show] names it, the name in lower case and each space an underscore (programs/vglp/cva/compiler/README.md, 2), and the act is written with that name (quoted).
 cva_pq=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XH' 'Alice is a person.' '1. ■ No-show. Alice may mint coins.' 'Pragmas' 'Coins: the coins Alice holds.' 'No-show: Alice [No-show] <amount>' > "$cva_pq/XH.txt"
@@ -6670,6 +6678,36 @@ check "CVA sets: the payer's button binds the notes from the notes it holds" "ac
 check "CVA sets: an atom with a set variable is one atom per element (set_atoms)" "^img_one(atom(P, Vs), B, Gs?) :- img_args(Vs?, B?, Xs), set_atoms(P?, Xs?, Gs).$" "$cva_sets_out"
 check "CVA sets: size(N) is the number of the elements" "^expr_val(fn(size, \[num(X)\]), B, R?) :- ground(B?) | lookup(num(X?), B?, F), set_size(F?, R).$" "$cva_sets_out"
 check "CVA sets: a set variable in a constraint other than as size(N) is refused, with the line saying why" "it has a set variable in a constraint other than as size(N)" "$cva_sets_out"
+# The notes platform emitted, loaded and run (Code #37, GLP 03bc123: _checkInteractive admits a List of Constant under a List, OSPM's revision): pay with the notes a and b takes the state with both and not the state with a; issue adds one note per element; size(N) = Sum holds with Sum 2 and not 3.
+cva_sets_dir="$GLP_DIR/programs/tests/vg_sets_$$"
+mkdir -p "$cva_sets_dir"
+cva_sets_one=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(notes, reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(introduce, ['Bob', 'Alice'], [pvar('Carol')], [rs(guarded, [atom(knows, [pvar('Carol')])], [], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [pvar('Carol')])], [])]), schema(issue, ['Alice'], [const('Type'), set('N')], [rs(guarded, [atom(note, [role(1), num('Type'), num('N')])], [], [atom(identity, [])], [])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(person, [])], [])]), schema(pay, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), const('Type'), set('N')], [rs(guarded, [], [atom(note, [pvar('Carol'), num('Type'), num('N')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(note, [pvar('Carol'), num('Type'), num('N')]), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])]), nschema(payn, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), const('Type'), set('N'), num('Sum')], eq(fn(size, [num('N')]), num('Sum')), [rs(guarded, [], [atom(note, [pvar('Carol'), num('Type'), num('N')])], [atom(identity, []), atom(knows, [role(2)])], []), rs(guarded, [atom(note, [pvar('Carol'), num('Type'), num('N')]), atom(knows, [pvar('Carol')])], [], [atom(identity, [])], [])])]), syntactically_grassroots, no_introduction, pragmas([list('"Contacts"', [knows]), list('"Notes"', [note])], [act(establish, '"Establish"', [], none, '"Contacts"', by([1])), act(acquaint, '"Acquaint"', [], none, '"Contacts"', by([1])), act(introduce, '"Introduce"', [], none, '"Contacts"', by([2])), act(issue, '"Issue"', ['""', '"type"', '"notes"'], none, '"Notes"', by([1])), act(pay, '"Pay"', [], none, '"Notes"', by([1])), act(payn, '"Pay n"', [], none, '"Notes"', by([1]))])).
+:quit
+HEREDOC
+2>&1)
+printf '%s\n' "$cva_sets_one" | sed -e 's/^\(GLP> \)*//' | awk '$0 == "%% compile begin" { on = 1; next } $0 == "%% compile end" && on { on = 0; next } on { print }' > "$cva_sets_dir/platform.vglp"
+cva_sets=$("$REPL_RUN" <<HEREDOC
+:emit $cva_sets_dir
+load $cva_sets_dir/platform.glp
+:limit 10000000
+binding_of(pay(alice, bob, carol, coin, [a, b]), N1, B1), bound_spec(N1?, B1?, Rs1), cand_ok(Rs1?, B1?, [g(identity, []), g(knows, [p(bob)]), g(note, [p(carol), v(coin), v(a)]), g(note, [p(carol), v(coin), v(b)])], K1).
+binding_of(pay(alice, bob, carol, coin, [a, b]), N2, B2), bound_spec(N2?, B2?, Rs2), cand_ok(Rs2?, B2?, [g(identity, []), g(knows, [p(bob)]), g(note, [p(carol), v(coin), v(a)])], K2).
+binding_of(issue(carol, coin, [a, b]), N3, B3), bound_spec(N3?, B3?, Rs3), adds_join(Rs3?, B3?, [], G3).
+binding_of(payn(alice, bob, carol, coin, [a, b], 2), N4, B4), con_holds(eq(fn(size, [num('N')]), num('Sum')), B4?, K4).
+binding_of(payn(alice, bob, carol, coin, [a, b], 3), N5, B5), con_holds(eq(fn(size, [num('N')]), num('Sum')), B5?, K5).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_sets_dir"
+check "CVA sets: the notes platform emitted and loaded, its types checked" "Loaded: .*vg_sets_.*platform.glp" "$cva_sets"
+check "CVA sets: pay with the notes a and b takes the payer's state holding both" "K1 = yes\$" "$cva_sets"
+check "CVA sets: ... and not the state holding a" "K2 = no\$" "$cva_sets"
+check "CVA sets: issue with the notes a and b adds the two notes" "^G3 = \[g(note, \[p(carol), v(coin), v(a)\]), g(note, \[p(carol), v(coin), v(b)\])\]\$" "$cva_sets"
+check "CVA sets: size(N) = Sum holds with two notes and Sum 2" "K4 = yes\$" "$cva_sets"
+check "CVA sets: ... and not with Sum 3" "K5 = no\$" "$cva_sets"
 
 # A button naming a guarded schema no binding of which determines a transaction, as one adding at a role an atom it deletes there ("no atom a schema adds at a person is one it deletes there", vGLP, Section 5.4), is a fault of the pragmas, and the contract is not compiled, with the line saying why (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 3): touch(p? ; a, l) deletes and adds terms(a, l).
 cva_dead=$("$REPL_RUN" <<HEREDOC

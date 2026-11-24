@@ -64,6 +64,10 @@ A ward's messages: Wendy [Child message] <text>
   Wendy [Child post own] <text>
 Child create: Wendy [Child create] <name>
   Alice: Wendy asks to create a group.
+  Wendy [Child add] <parent>
+  Will: Wendy asks you to join the group.
+  Alice: Wendy asks that Will join the group.
+  Bob: Wendy asks that your child Will join the group.
 A ward's group: Wendy [Child close]
   Alice [Parent close] <group>
 Ward join: Bob [Child join]

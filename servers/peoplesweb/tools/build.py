@@ -257,7 +257,11 @@ for m in re.finditer(r'^#\s+[a-z]+\s+([A-Z][A-Za-z]*)\s+(\S+)\s+programs/', read
 # 2026-11-16), instantiates and composes, the last read
 # apart below; implements is GSC's, and amends stands while a text in force
 # states it.
-RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implements', 'instantiates')
+RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implements', 'instantiates',
+             # The Calculus's words since 2026-11-24 (calculus/contracts): a
+             # contract unites, renames or lifts others, and weakens or
+             # augments what it extends (Website #6).
+             'unites', 'renames', 'lifts', 'weakens', 'augments')
 
 
 NAMEID, NAMES_RE = {}, [None]
@@ -358,7 +362,11 @@ def has_platform(n):
 compiled = sorted(n for n in os.listdir(os.path.join(GLP, 'cascade')) if has_platform(n) and n in cat)
 # The test site writes no world: its apps are the live server's, so a contract
 # is live there where the live build made its world.
+# The live build's worlds are in the live clone, LIVE_WORLDS, which
+# deploy/test.sh names, since the test site builds its own tree, which has
+# none (Website #6, 2026-11-24: /next said "0 run as apps").
 if TEST:
+    WORLDS = os.environ.get('LIVE_WORLDS') or WORLDS
     compiled = [n for n in compiled if os.path.exists(os.path.join(WORLDS, f'live_{n.lower()}', 'platform.vglp'))]
 
 shutil.rmtree(BUILD, ignore_errors=True)
@@ -417,7 +425,13 @@ def calculus_of(n):
     v['adopted'] = bool(st and st['adopted']) or os.path.exists(own)
     if not v['adopted'] and os.path.exists(os.path.join(CALC, n, 'contract.txt')):
         v['proposed'] = read(os.path.join(CALC, n, 'contract.txt')).strip()
-    fc = own if v['adopted'] else os.path.join(CALC, n, 'full-contract.txt')
+    # The Calculus's full contract, printed from the current texts, where it
+    # has one: a record of the cascade keeps the full contract of the text it
+    # was printed from, and 28 records were behind the Calculus on
+    # 2026-11-24 (Calculus #11 to Website #6: the site shows the text of
+    # calculus/contracts/NAME/ and its pragmas).
+    calc_fc = os.path.join(CALC, n, 'full-contract.txt')
+    fc = calc_fc if os.path.exists(calc_fc) else own if v['adopted'] else calc_fc
     if os.path.exists(fc):
         os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
         shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))
@@ -494,11 +508,13 @@ for n in sorted(set(compiled) | set(cat)):
     c['icon'], c['family'], c['about'] = _icon, _family, _a[2] or c['title'] + '.'
     # The shown name starts with the letters, and a contract built on another
     # names the base by its letters, never by its full title: "GDO-L: GDO with
-    # Labels" (Udi, 2026-11-07).
+    # Labels" (Udi, 2026-11-07).  The base is named by its shown name, so a
+    # contract named in words, Backed Community Bank, keeps its name whole
+    # (Website #6, 2026-11-24).
     t = c['title']
     for p in c['extends']:
         if p in cat:
-            t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
+            t = re.sub(re.escape(cat[p]['title']), cat[p]['name'], t, flags=re.I)
     c['label'] = f"{c['name']}: {t}" if t != c['name'] else c['name'] 
     c['cascade'] = n in compiled
     c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''

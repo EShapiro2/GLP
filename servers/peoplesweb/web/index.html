@@ -737,7 +737,7 @@ function drawGlobe(){
   // relation's outline and its right side the second's; a third relation is a
   // slim arrow of its own outline along the middle, drawn darker (Udi,
   // 2026-11-15, to Website #2).
-  const RELCOL = {extends: '#3b7dd8', restricts: '#d64550', strengthens: '#2a9d6f', relaxes: '#17a5b8', instantiates: '#8b5fd3', composes: '#e39a2d', implements: '#6b7785', amends: '#8d6e63'};
+  const RELCOL = {extends: '#3b7dd8', restricts: '#d64550', strengthens: '#2a9d6f', relaxes: '#17a5b8', instantiates: '#8b5fd3', composes: '#e39a2d', implements: '#6b7785', amends: '#8d6e63', unites: '#e39a2d', renames: '#5c6bc0', lifts: '#00897b', weakens: '#d64550', augments: '#2a9d6f'};
   const SOLID = {extends: [0.4, 4.2, 7.5], restricts: [4.2, 0.4, 2.8], strengthens: [3.4, 3.4, 7.5], amends: [2.2, 2.2, 6.5]};
   const solids = rs => rs.length > 1 && rs.every(r => SOLID[r]);
   // The key's arrows, drawn flat in its corner, each a straight shaft and head:
@@ -890,7 +890,7 @@ function drawGlobe(){
   // while a text in force still states it.
   const ALL = D.contracts.flatMap(c => Object.values(c.rels_all || {}));
   const USED = new Set([...D.contracts.flatMap(c => [c.relation, ...Object.values(c.rels || {})]), ...ALL.flat()]);
-  const KEY = ['extends', 'restricts', 'strengthens', 'relaxes', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r])
+  const KEY = ['extends', 'unites', 'renames', 'lifts', 'weakens', 'augments', 'restricts', 'strengthens', 'relaxes', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r])
     .concat([...new Set(ALL.filter(rs => rs.length > 1).sort((a, b) => a.length - b.length).map(rs => rs.join('|')))].map(x => [x.split('|'), x.split('|').join(', ').replace(/, ([^,]*)$/, ' and $1')]));
   const KW = Math.max(150, 84 + 6.6*Math.max(...KEY.map(([, t]) => t.length))), nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
   s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="${KW}" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
@@ -1277,8 +1277,10 @@ async function texShow(box, src, gh){
       // A name with an underscore, \mathit{has_officer}, is written as it is
       // named: GSC's printer (programs/gsc/compile.glp, latex_pred/3) does
       // not escape it, which LaTeX would read as a subscript (reported to
-      // Code, 2026-11-18).
-      const tex = body.replace(/\s*\n\s*/g, ' ').replace(/\\mathit\{\s*([A-Za-z0-9_]+)\s*\}/g, (_, w) => `\\mathit{${w.replace(/_/g, '\\_')}}`);
+      // Code, 2026-11-18).  A name the printer wraps in \detokenize, which
+      // KaTeX lacks and showed in red, is taken out of it first, so that its
+      // underscores are escaped the same way (Website #6, 2026-11-24).
+      const tex = body.replace(/\s*\n\s*/g, ' ').replace(/\\detokenize\{\s*([^{}]*?)\s*\}/g, (_, w) => w).replace(/\\mathit\{\s*([A-Za-z0-9_]+)\s*\}/g, (_, w) => `\\mathit{${w.replace(/_/g, '\\_')}}`);
       try { k.render(tex, m, {displayMode: true, throwOnError: false, maxExpand: 100000, macros: {...TEXMACROS}}); }
       catch (e){ m.textContent = body; }
       div.appendChild(m); frag.appendChild(div);
