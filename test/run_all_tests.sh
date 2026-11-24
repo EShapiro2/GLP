@@ -4456,10 +4456,17 @@ printf '%s\n' 'Children' 'Children renames Bank, and extends and weakens it.' 'A
 cva_nm_lifts=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Denominated-Coins.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_nm_unites=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/App.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_nm_renames=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Children.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+# The relation augments of the Calculus, read as restricts and strengthens, and a contract named as "an augmentation of" it (calculus/tools/relations.py, new_verbs; Calculus 1724963; CSSN #19 and Code #37, 2026-11-24: Warded Groups and Rides not compiled) (rels).
+printf '%s\n' 'Rides' 'Rides unites Bank and an augmentation of Coins, and extends and augments the union.' 'Alice is a person.' > "$cva_nm/Rides.txt"
+printf '%s\n' 'Constitution' 'Constitution extends Bank, and augments it.' 'Alice is a person.' > "$cva_nm/Constitution.txt"
+cva_nm_augu=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Rides.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_augi=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Constitution.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 rm -rf "$cva_nm"
 check "CVA pragmas: Denominated Coins lifts Coins, and extends and weakens it, Coins found (rels)" "^Coins.txt Denominated-Coins.txt \$" "$cva_nm_lifts"
 check "CVA pragmas: App unites Bank and a strengthening of Coins, and extends and amends the union, Bank and Coins found (rels)" "^Bank.txt Coins.txt App.txt \$" "$cva_nm_unites"
 check "CVA pragmas: Children renames Bank, and extends and weakens it, Bank found (rels)" "^Bank.txt Children.txt \$" "$cva_nm_renames"
+check "CVA pragmas: Rides unites Bank and an augmentation of Coins, and extends and augments the union, Bank and Coins found (rels)" "^Bank.txt Coins.txt Rides.txt \$" "$cva_nm_augu"
+check "CVA pragmas: Constitution extends Bank, and augments it, Bank found (rels)" "^Bank.txt Constitution.txt \$" "$cva_nm_augi"
 check "CVA pragmas: the table of the other form, of four columns where this section's has five and of five where it has four (names3)" "^[45]$" "$cva_nm_t_cols"
 check_not "CVA pragmas: ... and not of the columns of this section's table (names3)" "^$cva_cols$" "$cva_nm_t_cols"
 check "CVA pragmas: ... Community Bank, Bank and Coins found by it (names3)" "^Bank.txt Coins.txt Community-Bank.txt $" "$cva_nm3_two"
