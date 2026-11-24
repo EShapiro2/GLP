@@ -4433,7 +4433,7 @@ printf '%s\n' 'Trading Company' 'Alice is a person.' '1. ■ Trade: Alice may tr
 printf '%s\n' 'Community Bank' 'Community Bank restricts Bank and extends Coins.' '1. ■ Leave: Community Bank:1, only if Alice and Bob agree.' 'Pragmas' 'Left: the banks Alice left.' 'Leave: Alice [Leave]' '  Bob: Alice leaves the Bank.' > "$cva_nm/Community-Bank.txt"
 printf '%s\n' "Workers' Cooperative" "Workers' Cooperative extends Trading Company and Bank." 'Alice is a person.' > "$cva_nm/Workers-Cooperative.txt"
 printf '%s\n' 'GBank' 'Alice is a person.' '1. ■ Open: Alice may open an account.' > "$cva_nm/GBank.txt"
-printf '%s\n' 'CB: Community Bank' 'CB restricts GBank and extends Coins.' 'Alice is a person.' > "$cva_nm/CB.txt"
+printf '%s\n' 'GCC: Community Bank' 'GCC restricts GBank and extends Coins.' 'Alice is a person.' > "$cva_nm/CB.txt"
 printf '%s\n' 'Community Bank' 'Community Bank restricts Bank and extends Coinz.' 'Alice is a person.' > "$cva_nm/None.txt"
 printf '%s\n' 'Comunity Bank' 'Comunity Bank restricts Bank.' 'Alice is a person.' > "$cva_nm/Lead.txt"
 cva_nm_two=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Community-Bank.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
@@ -4449,14 +4449,24 @@ cva_nm_t_cols=$(awk -F'|' '{ x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x) } x == "name
 cva_nm3_two=$(CONTRACT_NAMES="$cva_nm_t" bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Community-Bank.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_nm3_main=$(CONTRACT_NAMES="$cva_nm_t" bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/CB.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 rm -f "$cva_nm_t"
+# The relations renames, lifts and unites of the Calculus, read as instantiates, extends and extends, "the union" what the line has named before, and a contract named as "a strengthening of" it (calculus/tools/relations.py, new_verbs; Code #37, 2026-11-24: Children, App, Provenance Groups and Second-Score Auction not compiled): each contract the line names found by its file name (rels).
+printf '%s\n' 'Denominated Coins' 'Denominated Coins lifts Coins, and extends and weakens it.' 'Alice is a person.' > "$cva_nm/Denominated-Coins.txt"
+printf '%s\n' 'App' 'App unites Bank and a strengthening of Coins, and extends and amends the union.' 'Alice is a person.' > "$cva_nm/App.txt"
+printf '%s\n' 'Children' 'Children renames Bank, and extends and weakens it.' 'Alice is a person.' 'Logic pragmas' 'Renaming of Bank: a child for a ward.' > "$cva_nm/Children.txt"
+cva_nm_lifts=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Denominated-Coins.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_unites=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/App.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_renames=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Children.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 rm -rf "$cva_nm"
+check "CVA pragmas: Denominated Coins lifts Coins, and extends and weakens it, Coins found (rels)" "^Coins.txt Denominated-Coins.txt \$" "$cva_nm_lifts"
+check "CVA pragmas: App unites Bank and a strengthening of Coins, and extends and amends the union, Bank and Coins found (rels)" "^Bank.txt Coins.txt App.txt \$" "$cva_nm_unites"
+check "CVA pragmas: Children renames Bank, and extends and weakens it, Bank found (rels)" "^Bank.txt Children.txt \$" "$cva_nm_renames"
 check "CVA pragmas: the table of the other form, of four columns where this section's has five and of five where it has four (names3)" "^[45]$" "$cva_nm_t_cols"
 check_not "CVA pragmas: ... and not of the columns of this section's table (names3)" "^$cva_cols$" "$cva_nm_t_cols"
 check "CVA pragmas: ... Community Bank, Bank and Coins found by it (names3)" "^Bank.txt Coins.txt Community-Bank.txt $" "$cva_nm3_two"
-check "CVA pragmas: ... CB, GBank and Coins, names of the first column, found by it (names3)" "^GBank.txt Coins.txt CB.txt $" "$cva_nm3_main"
+check "CVA pragmas: ... GCC, GBank and Coins, names of the first column, found by it (names3)" "^GBank.txt Coins.txt CB.txt $" "$cva_nm3_main"
 check "CVA pragmas: a first line naming Community Bank, a name of two words, read longest first, and Bank and Coins in it, each found by its file name (names2)" "^Bank.txt Coins.txt Community-Bank.txt $" "$cva_nm_two"
 check "CVA pragmas: ... Trading Company and Bank, two contracts, after Workers' Cooperative, its file found without the apostrophe (names2_and)" "^Trading-Company.txt Bank.txt Workers-Cooperative.txt $" "$cva_nm_and"
-check "CVA pragmas: ... a first line in the names of the first column, CB restricts GBank and extends Coins, as on main (names2_main)" "^GBank.txt Coins.txt CB.txt $" "$cva_nm_main"
+check "CVA pragmas: ... a first line in the names of the first column, GCC restricts GBank and extends Coins, as on main (names2_main)" "^GBank.txt Coins.txt CB.txt $" "$cva_nm_main"
 check "CVA pragmas: ... a word in neither column after a relation refused, named (names2_none)" "names no contract at \"Coinz\"" "$cva_nm_none"
 check_not "CVA pragmas: ... and pragmas.sh does not exit 0 (names2_none)" "^exit 0$" "$cva_nm_none"
 check "CVA pragmas: ... a first line whose first words are in neither column refused, named (names2_lead)" "names no contract at \"Comunity Bank\", no name of calculus/NAMES.txt" "$cva_nm_lead"
@@ -6607,6 +6617,35 @@ check "CVA ranks: ... terms(50, 2) and bid(12, 2) at alice: c = 4, w = 46 and s 
 check "CVA ranks: ... terms(10, 2): s = -6, below 0, not in it" "D3 = no\$" "$cva_rank"
 check "CVA ranks: ... behind2 with s = 34, in it" "D4 = yes\$" "$cva_rank"
 check "CVA ranks: ... and with s = 33, not" "D5 = no\$" "$cva_rank"
+
+# An atom a role keeps and deletes is required once: the atoms a role requires are the union of those it keeps and those it deletes but its cleared ones (GSC 327e035, =(i) u -(i); vGLP, Section 5.4, "Act schemas as local specifications"), and not their sum, which asked the state for two copies, as Second-Score Auction's "Rank: provided Alice holds Bob's unranked bid ...; after which no longer Alice holds Bob's unranked bid", refused in every state (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 1).  rank(p? ; f) keeps and deletes bid(f) and adds ranked(f); its control, rank2(p? ; f), deletes bid(f) and adds ranked(f).
+cva_once_dir="$GLP_DIR/programs/tests/vg_once_$$"
+mkdir -p "$cva_once_dir"
+cva_once_out=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(onces, [schema(bid, [num(f)], [rs(guarded, [atom(bid, [num(f)])], [], [], [])]), schema(rank, [num(f)], [rs(guarded, [atom(ranked, [num(f)])], [atom(bid, [num(f)])], [atom(bid, [num(f)])], [])]), schema(rank2, [num(f)], [rs(guarded, [atom(ranked, [num(f)])], [atom(bid, [num(f)])], [], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"Bids"', [bid])], [act(bid, '"Bid"', [], none, '"Bids"', by([1])), act(rank, '"Rank"', [], none, '"Bids"', by([1])), act(rank2, '"Rank2"', [], none, '"Bids"', by([1]))])).
+:quit
+HEREDOC
+2>&1)
+printf '%s\n' "$cva_once_out" | sed -e 's/^\(GLP> \)*//' | awk '$0 == "%% compile begin" { on = 1; next } $0 == "%% compile end" && on { on = 0; next } on { print }' > "$cva_once_dir/platform.vglp"
+cva_once=$("$REPL_RUN" <<HEREDOC
+:emit $cva_once_dir
+load $cva_once_dir/platform.glp
+:limit 10000000
+binding_of(rank(alice, 7), N1, B1), bound_spec(N1?, B1?, Rs1), cand_ok(Rs1?, B1?, [g(bid, [n(7)])], K1).
+binding_of(rank(alice, 7), N2, B2), bound_spec(N2?, B2?, Rs2), cand_ok(Rs2?, B2?, [], K2).
+binding_of(rank2(alice, 7), N3, B3), bound_spec(N3?, B3?, Rs3), cand_ok(Rs3?, B3?, [g(bid, [n(7)])], K3).
+binding_of(rank2(alice, 7), N4, B4), bound_spec(N4?, B4?, Rs4), cand_ok(Rs4?, B4?, [], K4).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_once_dir"
+check "CVA once: the platform emitted and loaded, its types checked" "Loaded: .*vg_once_.*platform.glp" "$cva_once"
+check "CVA once: rank(alice, 7), keeping and deleting bid(7), takes the state with one bid(7)" "K1 = yes\$" "$cva_once"
+check "CVA once: ... and not the state without it" "K2 = no\$" "$cva_once"
+check "CVA once: the control, rank2(alice, 7), deleting bid(7), takes the state with one bid(7)" "K3 = yes\$" "$cva_once"
+check "CVA once: ... and not the state without it" "K4 = no\$" "$cva_once"
 
 # A button naming a guarded schema no binding of which determines a transaction, as one adding at a role an atom it deletes there ("no atom a schema adds at a person is one it deletes there", vGLP, Section 5.4), is a fault of the pragmas, and the contract is not compiled, with the line saying why (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 3): touch(p? ; a, l) deletes and adds terms(a, l).
 cva_dead=$("$REPL_RUN" <<HEREDOC
