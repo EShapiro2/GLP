@@ -12,7 +12,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 identity
@@ -52,7 +52,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -71,7 +71,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -128,7 +128,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -238,7 +238,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 open_place
@@ -332,7 +332,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -351,7 +351,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -454,7 +454,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -473,7 +473,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -656,7 +656,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 item
@@ -712,7 +712,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 item
@@ -798,7 +798,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 program
@@ -858,7 +858,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 trusts_developer
@@ -971,7 +971,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 program
@@ -1061,7 +1061,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 installed
@@ -1130,7 +1130,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 installed
@@ -1206,7 +1206,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 program
@@ -1255,7 +1255,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 participant
@@ -1390,7 +1390,7 @@ Carol
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 participant
 }}
@@ -1486,7 +1486,7 @@ Carol
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 participant
 }}
@@ -1708,7 +1708,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 identity
@@ -1749,7 +1749,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 creator
@@ -1825,7 +1825,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 guardian
@@ -1859,7 +1859,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_guardian
@@ -1908,7 +1908,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_guardian
@@ -2691,7 +2691,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -2710,7 +2710,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -2774,7 +2774,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2793,7 +2793,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2949,8 +2949,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2975,6 +2974,17 @@ friend
 \mathit{\detokenize{
 identity
 }}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
 ,
 \mathit{\detokenize{
 friend
@@ -3014,39 +3024,6 @@ has_guardian
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Alice
-)
-\lor
-(
-\mathit{\detokenize{
-ward
-}}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_guardian
-}}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -3286,7 +3263,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -3305,7 +3282,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -3376,7 +3353,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -3395,7 +3372,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -3587,7 +3564,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -3606,7 +3583,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -3758,7 +3735,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3817,7 +3794,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -3899,7 +3876,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3958,7 +3935,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -4040,7 +4017,7 @@ guardian
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4099,7 +4076,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -4188,7 +4165,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4247,7 +4224,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -4320,7 +4297,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4379,7 +4356,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -4461,7 +4438,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4520,7 +4497,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -4602,7 +4579,7 @@ guardian
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4661,7 +4638,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -4750,7 +4727,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4809,7 +4786,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -5562,7 +5539,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 store
@@ -5637,7 +5614,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 lists_program
@@ -5788,7 +5765,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listing_signed
 }}
@@ -5857,7 +5834,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 trusts_store
@@ -6024,7 +6001,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 program
@@ -6127,7 +6104,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 rendezvous_server
@@ -6202,7 +6179,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 link
@@ -6269,7 +6246,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 registered
@@ -6390,7 +6367,7 @@ Link
 \Bob
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 spent
@@ -6411,7 +6388,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 address
@@ -6430,7 +6407,7 @@ c_
 {
 \mathit{Carol}
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 address
@@ -6518,7 +6495,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 presented
@@ -6669,7 +6646,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 address
@@ -6688,7 +6665,7 @@ c_
 {
 \mathit{Carol}
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 address
@@ -6759,7 +6736,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 directory
@@ -6834,7 +6811,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 lists_shown
@@ -6963,7 +6940,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 lists_unshown
@@ -7244,7 +7221,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 holds_link
@@ -7325,7 +7302,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 holds_link

@@ -12,7 +12,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 identity
@@ -52,7 +52,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -71,7 +71,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -128,7 +128,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -165,15 +165,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Bob
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Alice
@@ -181,6 +181,10 @@ person
  \text{ and } 
 \mathit{\detokenize{
 identity
+}}
+,
+\mathit{\detokenize{
+person
 }}
 ,
 \mathit{\detokenize{
@@ -196,10 +200,6 @@ knows
 (
 \mathit{Carol}
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Bob
@@ -238,7 +238,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -257,7 +257,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -274,15 +274,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Bob
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Alice
@@ -293,15 +293,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Alice
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Bob
@@ -440,7 +440,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 identity
@@ -494,8 +494,7 @@ has_participant
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -505,7 +504,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 creator
@@ -551,8 +550,7 @@ participant
 \Alice
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -562,7 +560,7 @@ c_
 {
 \mathit{Carol}
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 founder
@@ -589,6 +587,17 @@ person
 \mathit{\detokenize{
 identity
 }}
+,
+\mathit{\detokenize{
+organisation
+}}
+,
+\mathit{\detokenize{
+has_officer
+}}
+(
+G1
+)
  \in c_
 {
 \mathit{Carol}
@@ -603,39 +612,6 @@ identity
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{\detokenize{
-organisation
-}}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_officer
-}}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -660,7 +636,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 officer
@@ -703,7 +679,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_officer
@@ -761,7 +737,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_officer
@@ -1045,7 +1021,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -1064,7 +1040,7 @@ role
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -1167,7 +1143,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -1240,7 +1216,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -1313,7 +1289,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -1386,7 +1362,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -1706,7 +1682,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -1725,7 +1701,7 @@ role
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -1804,7 +1780,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -1823,7 +1799,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -1887,7 +1863,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -1906,7 +1882,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2062,8 +2038,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2088,6 +2063,17 @@ friend
 \mathit{\detokenize{
 identity
 }}
+,
+\mathit{\detokenize{
+organisation
+}}
+,
+\mathit{\detokenize{
+has_officer
+}}
+(
+G1
+)
 ,
 \mathit{\detokenize{
 friend
@@ -2127,39 +2113,6 @@ has_officer
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Alice
-)
-\lor
-(
-\mathit{\detokenize{
-organisation
-}}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_officer
-}}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -2399,7 +2352,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -2418,7 +2371,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -2489,7 +2442,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2508,7 +2461,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2700,7 +2653,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2719,7 +2672,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2871,7 +2824,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -2946,7 +2899,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3044,7 +2997,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3119,7 +3072,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3235,7 +3188,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3310,7 +3263,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3417,7 +3370,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3492,7 +3445,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3608,7 +3561,7 @@ officer
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3683,7 +3636,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3790,7 +3743,7 @@ officer
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3865,7 +3818,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3988,7 +3941,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4063,7 +4016,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -4177,7 +4130,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4252,7 +4205,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -4359,7 +4312,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4434,7 +4387,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -4532,7 +4485,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4607,7 +4560,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -4723,7 +4676,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4798,7 +4751,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -4905,7 +4858,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4980,7 +4933,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -5096,7 +5049,7 @@ officer
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5171,7 +5124,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -5278,7 +5231,7 @@ officer
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5353,7 +5306,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -5476,7 +5429,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5551,7 +5504,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -5665,7 +5618,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5740,7 +5693,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -5947,7 +5900,7 @@ has_role
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -6117,7 +6070,7 @@ has_role
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -6237,7 +6190,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -6481,7 +6434,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -6725,7 +6678,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -6983,7 +6936,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -7209,7 +7162,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -7453,7 +7406,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -7697,7 +7650,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -7955,7 +7908,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -8212,7 +8165,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 proposed
@@ -8300,7 +8253,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote
@@ -8405,7 +8358,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 taken
@@ -8509,7 +8462,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 participant
@@ -8544,7 +8497,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 participant
@@ -8584,7 +8537,7 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 has_participant
@@ -8618,7 +8571,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_join_orga
 }}
@@ -8658,7 +8611,7 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 has_participant
@@ -8692,7 +8645,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_join_orga
 }}
@@ -9000,7 +8953,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_join_orga
@@ -9258,7 +9211,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -9277,7 +9230,7 @@ role
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -9464,7 +9417,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_expel_orga
 }}
@@ -9539,7 +9492,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_expel_orga
 }}
@@ -9861,7 +9814,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_expel_orga
@@ -10013,7 +9966,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -10093,7 +10046,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -10173,7 +10126,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -10264,7 +10217,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -10596,7 +10549,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_officer_expel_orga
@@ -10708,7 +10661,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 amended
@@ -10731,7 +10684,7 @@ Motion
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_amend_orga
 }}
@@ -10896,7 +10849,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_amend_orga
@@ -11003,10 +10956,8 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11016,6 +10967,8 @@ note
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ,\\
@@ -11041,6 +10994,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 \}
@@ -11064,10 +11025,8 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11077,6 +11036,8 @@ note
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -11099,7 +11060,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_issue_alice
 }}
@@ -11168,6 +11129,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Bob
 \}
@@ -11186,7 +11155,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_issue_alice
@@ -11281,8 +11250,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11292,9 +11259,11 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -11303,8 +11272,6 @@ knows
 Dave
 )
 ,
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11314,6 +11281,8 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
 \}
 , \qquad 
@@ -11328,8 +11297,6 @@ c'_
 }
  \setminus 
 \{
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11339,9 +11306,11 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -11350,8 +11319,6 @@ knows
 Carol
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11361,12 +11328,13 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -11382,8 +11350,6 @@ knows
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11393,14 +11359,14 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -11416,8 +11382,6 @@ knows
 person
 }}
 ,
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11427,12 +11391,27 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+\land
+|
+TotalSet
+|
+=
+Total
 ,\\
 &
 \text{guarded by } \{
@@ -11457,8 +11436,6 @@ c'_
 }
  \setminus 
 \{
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11468,9 +11445,11 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -11479,8 +11458,6 @@ knows
 Carol
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11490,6 +11467,8 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -11505,8 +11484,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11516,13 +11493,15 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -11531,8 +11510,6 @@ knows
 Dave
 )
 ,
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11542,6 +11519,8 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
 \}
 , \qquad 
@@ -11564,7 +11543,7 @@ c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_swap_alice
 }}
@@ -11588,7 +11567,6 @@ Other
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -11604,8 +11582,6 @@ knows
 person
 }}
 ,
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11615,14 +11591,14 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -11653,8 +11629,6 @@ Dave
 Other
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11664,9 +11638,10 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -11733,6 +11708,20 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+\land
+|
+TotalSet
+|
+=
+Total
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -11753,7 +11742,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_swap_alice
@@ -11900,8 +11889,6 @@ c'_
 }
  \setminus 
 \{
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11911,13 +11898,15 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
 \}
 ) \setminus K_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -11926,8 +11915,6 @@ knows
 Carol
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11937,6 +11924,8 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -11951,8 +11940,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11962,9 +11949,11 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -11973,8 +11962,6 @@ knows
 Dave
 )
 ,
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -11984,6 +11971,8 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
 \}
 , \qquad 
@@ -12006,7 +11995,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_swap_bob
 }}
@@ -12030,7 +12019,6 @@ Other
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -12061,8 +12049,6 @@ Dave
 Other
 )
 ,
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12072,14 +12058,14 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -12095,8 +12081,6 @@ knows
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12106,9 +12090,10 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -12175,6 +12160,20 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+\land
+|
+TotalSet
+|
+=
+Total
+,\\
+&
 \text{guarded by } \{
 \Bob
 ,
@@ -12195,7 +12194,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_swap_bob
@@ -12342,8 +12341,6 @@ c'_
 }
  \setminus 
 \{
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12353,13 +12350,15 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
 \}
 ) \setminus K_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -12368,8 +12367,6 @@ knows
 Carol
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12379,6 +12376,8 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -12394,8 +12393,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12405,13 +12402,15 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -12420,8 +12419,6 @@ knows
 Dave
 )
 ,
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12431,6 +12428,8 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
 \}
 , \qquad 
@@ -12463,7 +12462,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_swap_bob
 }}
@@ -12494,7 +12493,7 @@ Other
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_swap_alice
 }}
@@ -12518,7 +12517,6 @@ Other
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -12549,8 +12547,6 @@ Dave
 Other
 )
 ,
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12560,14 +12556,14 @@ Dave
 Other
 ,
 Dollar
+,
+TotalSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -12598,8 +12594,6 @@ Dave
 Other
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12609,9 +12603,10 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -12739,6 +12734,20 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+\land
+|
+TotalSet
+|
+=
+Total
+,\\
+&
 \text{guarded by } \{
 \mathit{Carol}
 ,
@@ -12761,8 +12770,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12772,6 +12779,8 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -12784,7 +12793,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -12793,8 +12802,6 @@ knows
 Carol
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12804,12 +12811,13 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -12825,8 +12833,6 @@ knows
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12836,9 +12842,10 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -12854,6 +12861,14 @@ person
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -12878,8 +12893,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12889,6 +12902,8 @@ note
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -12901,10 +12916,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12914,12 +12927,13 @@ note
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -12935,8 +12949,6 @@ knows
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12946,9 +12958,10 @@ note
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -12960,6 +12973,14 @@ identity
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -12982,8 +13003,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -12993,6 +13012,8 @@ note
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -13009,10 +13030,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -13022,6 +13041,8 @@ note
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -13044,7 +13065,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_pay_issuer_alice
 }}
@@ -13060,7 +13081,6 @@ Type
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -13083,8 +13103,6 @@ Sum
 Type
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -13094,9 +13112,10 @@ note
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -13149,6 +13168,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \mathit{Carol}
 \}
@@ -13167,7 +13194,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_pay_issuer_alice
@@ -13273,7 +13300,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -13282,8 +13309,6 @@ knows
 Carol
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -13293,6 +13318,8 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -13307,8 +13334,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -13318,6 +13343,8 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -13344,7 +13371,7 @@ c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_pay_alice
 }}
@@ -13374,7 +13401,6 @@ person
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -13399,8 +13425,6 @@ Carol
 Type
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -13410,9 +13434,10 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -13466,6 +13491,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -13486,7 +13519,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_pay_alice
@@ -13610,7 +13643,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -13619,8 +13652,6 @@ knows
 Carol
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -13630,6 +13661,8 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -13644,8 +13677,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -13655,6 +13686,8 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -13677,7 +13710,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_pay_bob
 }}
@@ -13716,7 +13749,6 @@ Type
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -13732,8 +13764,6 @@ knows
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -13743,9 +13773,10 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -13799,6 +13830,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Bob
 ,
@@ -13819,7 +13858,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_pay_bob
@@ -13943,7 +13982,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -13952,8 +13991,6 @@ knows
 Carol
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -13963,6 +14000,8 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -13977,8 +14016,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -13988,6 +14025,8 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -14024,7 +14063,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_pay_bob
 }}
@@ -14049,7 +14088,7 @@ Type
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_pay_alice
 }}
@@ -14088,7 +14127,6 @@ Type
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -14113,8 +14151,6 @@ Carol
 Type
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -14124,9 +14160,10 @@ Carol
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -14228,6 +14265,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \mathit{Carol}
 ,
@@ -14250,8 +14295,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -14261,6 +14304,8 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -14273,10 +14318,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -14292,6 +14335,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -14310,7 +14355,6 @@ Dollar
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -14333,8 +14377,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -14344,9 +14386,10 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -14390,6 +14433,14 @@ Cond
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -14412,8 +14463,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -14423,6 +14472,8 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -14439,10 +14490,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -14458,6 +14507,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -14493,7 +14544,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_alice
 }}
@@ -14515,7 +14566,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -14551,8 +14601,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -14562,9 +14610,10 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -14667,6 +14716,14 @@ Cond
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Bob
 ,
@@ -14687,7 +14744,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_deposit_alice
@@ -14827,8 +14884,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -14838,6 +14893,8 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -14855,10 +14912,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -14874,6 +14929,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -14909,7 +14966,7 @@ c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_carol
 }}
@@ -14931,7 +14988,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -14954,8 +15010,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -14965,9 +15019,10 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -15083,6 +15138,14 @@ Cond
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -15103,7 +15166,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_deposit_carol
@@ -15243,8 +15306,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -15254,6 +15315,8 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -15275,10 +15338,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -15294,6 +15355,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -15339,7 +15402,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_alice
 }}
@@ -15368,7 +15431,7 @@ Cond
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_carol
 }}
@@ -15390,7 +15453,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -15426,8 +15488,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -15437,9 +15497,10 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -15614,6 +15675,14 @@ Cond
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \mathit{Carol}
 ,
@@ -15636,8 +15705,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -15653,6 +15720,8 @@ Alice
 \Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 , \qquad 
@@ -15665,7 +15734,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -15674,8 +15743,6 @@ knows
 Dave
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -15685,12 +15752,13 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -15706,8 +15774,6 @@ knows
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -15723,9 +15789,10 @@ Alice
 \Bob
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -15750,6 +15817,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -15770,7 +15845,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -15779,8 +15854,6 @@ knows
 Dave
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -15790,6 +15863,8 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -15804,8 +15879,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -15821,6 +15894,8 @@ Alice
 \Alice
 ,
 Cond
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -15847,7 +15922,7 @@ c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_release_carol
 }}
@@ -15888,7 +15963,6 @@ person
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -15917,8 +15991,6 @@ Alice
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -15934,9 +16006,10 @@ Alice
 \Alice
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -16001,6 +16074,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -16021,7 +16102,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_release_carol
@@ -16164,7 +16245,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -16173,8 +16254,6 @@ knows
 Dave
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -16184,6 +16263,8 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -16198,8 +16279,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -16215,6 +16294,8 @@ Alice
 \Alice
 ,
 Cond
+,
+SumSet
 )
 \}
 , \qquad 
@@ -16237,7 +16318,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_release_bob
 }}
@@ -16291,7 +16372,6 @@ Cond
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -16307,8 +16387,6 @@ knows
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -16324,9 +16402,10 @@ Alice
 \Alice
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -16391,6 +16470,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Bob
 ,
@@ -16411,7 +16498,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_release_bob
@@ -16554,7 +16641,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -16563,8 +16650,6 @@ knows
 Dave
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -16574,6 +16659,8 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -16588,8 +16675,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -16605,6 +16690,8 @@ Alice
 \Alice
 ,
 Cond
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -16641,7 +16728,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_release_bob
 }}
@@ -16670,7 +16757,7 @@ Cond
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_release_carol
 }}
@@ -16724,7 +16811,6 @@ Cond
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -16753,8 +16839,6 @@ Alice
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -16770,9 +16854,10 @@ Alice
 \Alice
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -16896,6 +16981,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \mathit{Carol}
 ,
@@ -16918,8 +17011,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -16935,6 +17026,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 , \qquad 
@@ -16947,7 +17040,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -16956,8 +17049,6 @@ knows
 Dave
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -16967,12 +17058,13 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -16988,8 +17080,6 @@ knows
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -17005,9 +17095,10 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -17032,6 +17123,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -17052,7 +17151,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -17061,8 +17160,6 @@ knows
 Dave
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -17072,6 +17169,8 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -17086,8 +17185,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -17103,6 +17200,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -17129,7 +17228,7 @@ c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_return_carol
 }}
@@ -17170,7 +17269,6 @@ person
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -17199,8 +17297,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -17216,9 +17312,10 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -17283,6 +17380,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -17303,7 +17408,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_return_carol
@@ -17446,7 +17551,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -17455,8 +17560,6 @@ knows
 Dave
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -17466,6 +17569,8 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -17480,8 +17585,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -17497,6 +17600,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 , \qquad 
@@ -17519,7 +17624,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_return_alice
 }}
@@ -17573,7 +17678,6 @@ Cond
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -17589,8 +17693,6 @@ knows
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -17606,9 +17708,10 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -17673,6 +17776,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Bob
 ,
@@ -17693,7 +17804,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_return_alice
@@ -17836,7 +17947,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -17845,8 +17956,6 @@ knows
 Dave
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -17856,6 +17965,8 @@ Dave
 Type
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -17870,8 +17981,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -17887,6 +17996,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -17923,7 +18034,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_return_alice
 }}
@@ -17952,7 +18063,7 @@ Cond
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_return_carol
 }}
@@ -18006,7 +18117,6 @@ Cond
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -18035,8 +18145,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -18052,9 +18160,10 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
@@ -18178,6 +18287,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \mathit{Carol}
 ,
@@ -18211,7 +18328,7 @@ coin
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -18254,7 +18371,7 @@ coin
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -18356,7 +18473,7 @@ Dollar
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -18399,7 +18516,7 @@ coin
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -18432,7 +18549,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_redeem_alice
 }}
@@ -18563,7 +18680,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_redeem_alice
@@ -18683,7 +18800,7 @@ coin
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -18726,7 +18843,7 @@ bond(Day)
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -18828,7 +18945,7 @@ Dollar
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -18871,7 +18988,7 @@ bond(Day)
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -18904,7 +19021,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_redeem_coin_against_bond_alice
 }}
@@ -19041,7 +19158,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_redeem_coin_against_bond_alice
@@ -19167,7 +19284,7 @@ bond(Day)
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -19210,7 +19327,7 @@ coin
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -19325,7 +19442,7 @@ Dollar
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -19368,7 +19485,7 @@ coin
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -19401,7 +19518,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_redeem_bond_alice
 }}
@@ -19551,7 +19668,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_redeem_bond_alice
@@ -19677,7 +19794,7 @@ bond(Day)
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -19720,7 +19837,7 @@ bond(Term)
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -19835,7 +19952,7 @@ Dollar
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -19878,7 +19995,7 @@ bond(Term)
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -19911,7 +20028,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_redeem_bond_against_bond_alice
 }}
@@ -20067,7 +20184,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_redeem_bond_against_bond_alice
@@ -20186,10 +20303,8 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -20199,6 +20314,8 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -20237,6 +20354,14 @@ issued_in
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 \}
@@ -20260,10 +20385,8 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -20273,6 +20396,8 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -20302,7 +20427,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_first_issue_alice
 }}
@@ -20377,6 +20502,14 @@ issued_in
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Bob
 \}
@@ -20395,7 +20528,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_first_issue_alice
@@ -20488,10 +20621,8 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -20501,6 +20632,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -20539,6 +20672,12 @@ person
 Day
 >
 Today
+\land
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -20564,10 +20703,8 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -20577,6 +20714,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -20608,7 +20747,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_issue_denominated_bond_alice
 }}
@@ -20687,6 +20826,12 @@ person
 Day
 >
 Today
+\land
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -20707,7 +20852,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_issue_denominated_bond_alice
@@ -20808,8 +20953,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -20819,6 +20962,8 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -20831,10 +20976,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -20850,6 +20993,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -20868,7 +21013,6 @@ Dollar
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -20891,8 +21035,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -20902,9 +21044,10 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -20948,6 +21091,14 @@ Cond
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -20970,8 +21121,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -20981,6 +21130,8 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -20997,10 +21148,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -21016,6 +21165,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -21051,7 +21202,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_alice
 }}
@@ -21073,7 +21224,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -21109,8 +21259,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -21120,9 +21268,10 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -21218,6 +21367,14 @@ Cond
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Bob
 ,
@@ -21238,7 +21395,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_deposit_own_coins_alice
@@ -21371,8 +21528,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -21382,6 +21537,8 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -21399,10 +21556,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -21418,6 +21573,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -21453,7 +21610,7 @@ c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_carol
 }}
@@ -21475,7 +21632,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -21498,8 +21654,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -21509,9 +21663,10 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -21620,6 +21775,14 @@ Cond
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -21640,7 +21803,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_deposit_own_coins_carol
@@ -21773,8 +21936,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -21784,6 +21945,8 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -21805,10 +21968,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -21824,6 +21985,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -21869,7 +22032,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_alice
 }}
@@ -21898,7 +22061,7 @@ Cond
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_carol
 }}
@@ -21920,7 +22083,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -21956,8 +22118,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -21967,9 +22127,10 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -22128,6 +22289,14 @@ Cond
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -22152,8 +22321,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -22163,6 +22330,8 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -22175,10 +22344,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -22194,6 +22361,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -22212,7 +22381,6 @@ Dollar
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -22235,8 +22403,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -22246,9 +22412,10 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -22290,6 +22457,14 @@ Cond
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -22314,8 +22489,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -22325,6 +22498,8 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -22341,10 +22516,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -22360,6 +22533,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -22395,7 +22570,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_alice
 }}
@@ -22417,7 +22592,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -22453,8 +22627,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -22464,9 +22636,10 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -22560,6 +22733,14 @@ Cond
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -22584,8 +22765,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -22595,6 +22774,8 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -22612,10 +22793,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -22631,6 +22810,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -22666,7 +22847,7 @@ c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_carol
 }}
@@ -22688,7 +22869,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -22711,8 +22891,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -22722,9 +22900,10 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -22831,6 +23010,14 @@ Cond
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -22855,8 +23042,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -22866,6 +23051,8 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -22887,10 +23074,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -22906,6 +23091,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -22951,7 +23138,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_alice
 }}
@@ -22980,7 +23167,7 @@ Cond
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_carol
 }}
@@ -23002,7 +23189,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -23038,8 +23224,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -23049,9 +23233,10 @@ note
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -23210,6 +23395,14 @@ Cond
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -23234,8 +23427,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -23245,6 +23436,8 @@ Dave
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -23257,10 +23450,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -23276,6 +23467,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -23294,7 +23487,6 @@ Dollar
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -23317,8 +23509,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -23328,9 +23518,10 @@ Dave
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -23366,6 +23557,14 @@ person
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -23390,8 +23589,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -23401,6 +23598,8 @@ Dave
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -23417,10 +23616,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -23436,6 +23633,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -23471,7 +23670,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_alice
 }}
@@ -23493,7 +23692,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -23529,8 +23727,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -23540,9 +23736,10 @@ Dave
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -23637,6 +23834,14 @@ person
 {
 \mathit{Carol}
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -23661,8 +23866,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -23672,6 +23875,8 @@ Dave
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -23689,10 +23894,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -23708,6 +23911,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -23743,7 +23948,7 @@ c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_carol
 }}
@@ -23765,7 +23970,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -23788,8 +23992,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -23799,9 +24001,10 @@ Dave
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -23911,6 +24114,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -23933,8 +24144,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -23944,6 +24153,8 @@ Dave
 coin
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -23965,10 +24176,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -23984,6 +24193,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -24029,7 +24240,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_alice
 }}
@@ -24058,7 +24269,7 @@ Cond
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_coins_carol
 }}
@@ -24080,7 +24291,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -24116,8 +24326,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -24127,9 +24335,10 @@ Dave
 coin
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -24298,6 +24507,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \mathit{Carol}
 ,
@@ -24320,8 +24537,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -24331,6 +24546,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -24343,10 +24560,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -24362,6 +24577,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -24380,7 +24597,6 @@ Dollar
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -24403,8 +24619,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -24414,9 +24628,10 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -24460,6 +24675,14 @@ Cond
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -24482,8 +24705,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -24493,6 +24714,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -24509,10 +24732,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -24528,6 +24749,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -24563,7 +24786,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_alice
 }}
@@ -24587,7 +24810,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -24625,8 +24847,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -24636,9 +24856,10 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -24736,6 +24957,14 @@ Cond
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Bob
 ,
@@ -24756,7 +24985,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_deposit_own_bonds_alice
@@ -24895,8 +25124,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -24906,6 +25133,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -24923,10 +25152,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -24942,6 +25169,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -24977,7 +25206,7 @@ c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_carol
 }}
@@ -25001,7 +25230,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -25024,8 +25252,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -25035,9 +25261,10 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -25150,6 +25377,14 @@ Cond
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -25170,7 +25405,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_deposit_own_bonds_carol
@@ -25309,8 +25544,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -25320,6 +25553,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -25341,10 +25576,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -25360,6 +25593,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -25405,7 +25640,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_alice
 }}
@@ -25436,7 +25671,7 @@ Cond
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_carol
 }}
@@ -25460,7 +25695,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -25498,8 +25732,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -25509,9 +25741,10 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -25676,6 +25909,14 @@ Cond
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -25700,8 +25941,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -25711,6 +25950,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -25723,10 +25964,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -25742,6 +25981,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -25760,7 +26001,6 @@ Dollar
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -25783,8 +26023,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -25794,9 +26032,10 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -25838,6 +26077,14 @@ Cond
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -25862,8 +26109,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -25873,6 +26118,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -25889,10 +26136,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -25908,6 +26153,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -25943,7 +26190,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_alice
 }}
@@ -25967,7 +26214,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -26005,8 +26251,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -26016,9 +26260,10 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -26114,6 +26359,14 @@ Cond
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -26138,8 +26391,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -26149,6 +26400,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -26166,10 +26419,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -26185,6 +26436,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -26220,7 +26473,7 @@ c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_carol
 }}
@@ -26244,7 +26497,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -26267,8 +26519,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -26278,9 +26528,10 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -26391,6 +26642,14 @@ Cond
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -26415,8 +26674,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -26426,6 +26683,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -26447,10 +26706,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -26466,6 +26723,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -26511,7 +26770,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_alice
 }}
@@ -26542,7 +26801,7 @@ Cond
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_carol
 }}
@@ -26566,7 +26825,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -26604,8 +26862,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -26615,9 +26871,10 @@ note
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -26784,6 +27041,14 @@ Cond
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \mathit{Carol}
 ,
@@ -26806,8 +27071,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -26817,6 +27080,8 @@ Dave
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -26829,10 +27094,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -26848,6 +27111,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -26866,7 +27131,6 @@ Dollar
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -26889,8 +27153,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -26900,9 +27162,10 @@ Dave
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -26938,6 +27201,14 @@ person
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -26962,8 +27233,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -26973,6 +27242,8 @@ Dave
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -26989,10 +27260,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -27008,6 +27277,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -27043,7 +27314,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_alice
 }}
@@ -27067,7 +27338,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -27105,8 +27375,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -27116,9 +27384,10 @@ Dave
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -27215,6 +27484,14 @@ person
 {
 \mathit{Carol}
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -27239,8 +27516,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -27250,6 +27525,8 @@ Dave
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -27267,10 +27544,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -27286,6 +27561,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -27321,7 +27598,7 @@ c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_carol
 }}
@@ -27345,7 +27622,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -27368,8 +27644,6 @@ Bob
 person
 }}
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -27379,9 +27653,10 @@ Dave
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -27495,6 +27770,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \Alice
 ,
@@ -27517,8 +27800,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -27528,6 +27809,8 @@ Dave
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
 \}
 ) \setminus K_
@@ -27549,10 +27832,8 @@ c_
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -27568,6 +27849,8 @@ Dollar
 Bob
 ,
 Cond
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -27613,7 +27896,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_alice
 }}
@@ -27644,7 +27927,7 @@ Cond
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_deposit_own_bonds_carol
 }}
@@ -27668,7 +27951,6 @@ Cond
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -27706,8 +27988,6 @@ Bob
 Cond
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -27717,9 +27997,10 @@ Dave
 bond(Day)
 ,
 Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -27894,6 +28175,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+,\\
+&
 \text{guarded by } \{
 \mathit{Carol}
 ,
@@ -27914,10 +28203,8 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-Limit
-\cdot
 \mathit{\detokenize{
 accepts
 }}
@@ -27925,6 +28212,8 @@ accepts
 Carol
 ,
 Dollar
+,
+LimitSet
 )
 \}
 ,\\
@@ -27954,6 +28243,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+LimitSet
+|
+=
+Limit
+,\\
+&
 \text{guarded by } \{
 \Alice
 \}
@@ -27977,10 +28274,8 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-Limit
-\cdot
 \mathit{\detokenize{
 accepts
 }}
@@ -27988,6 +28283,8 @@ accepts
 Carol
 ,
 Dollar
+,
+LimitSet
 )
 \}
 , \qquad 
@@ -28010,7 +28307,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_accept_alice
 }}
@@ -28096,6 +28393,14 @@ person
 }
 ,\\
 &
+\text{provided } 
+|
+LimitSet
+|
+=
+Limit
+,\\
+&
 \text{guarded by } \{
 \Bob
 \}
@@ -28114,7 +28419,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_accept_alice
@@ -28220,10 +28525,8 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-Limit
-\cdot
 \mathit{\detokenize{
 accepts
 }}
@@ -28231,6 +28534,8 @@ accepts
 \Bob
 ,
 Dollar
+,
+LimitSet
 )
 \}
 , \qquad 
@@ -28295,6 +28600,12 @@ Due
 Due
 \le
 Day
+\land
+|
+LimitSet
+|
+=
+Limit
 ,\\
 &
 \text{guarded by } \{
@@ -28320,10 +28631,8 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-Limit
-\cdot
 \mathit{\detokenize{
 accepts
 }}
@@ -28331,6 +28640,8 @@ accepts
 \Bob
 ,
 Dollar
+,
+LimitSet
 )
 \}
 , \qquad 
@@ -28363,7 +28674,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_accept_alice
 }}
@@ -28474,6 +28785,12 @@ Due
 Due
 \le
 Day
+\land
+|
+LimitSet
+|
+=
+Limit
 ,\\
 &
 \text{guarded by } \{
@@ -28528,7 +28845,7 @@ accepts
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -28673,7 +28990,7 @@ accepts
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -28716,7 +29033,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_pay_accepted_coins_alice
 }}
@@ -28866,7 +29183,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_pay_accepted_coins_alice
@@ -29013,7 +29330,7 @@ accepts
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -29140,7 +29457,7 @@ accepts
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -29173,7 +29490,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_pay_accepted_coins_alice
 }}
@@ -29342,7 +29659,7 @@ accepts
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -29469,7 +29786,7 @@ accepts
 Dollar
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -29502,7 +29819,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 vote_pay_accepted_coins_alice
 }}
