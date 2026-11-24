@@ -659,11 +659,13 @@ if [ "$COMPILED" = 1 ]; then
             exit 1
         fi
         # One goal per play the plays export, a fresh variable per argument.
-        GOALS=$(perl -ne '
-            next unless /^exported procedure (play_[a-z0-9_]*)\((.*)\)\.\s*$/;
+        # A declaration may run over several lines.
+        GOALS=$(perl -0777 -ne '
+            while (/^exported procedure (play_[a-z0-9_]*)\((.*?)\)\.[ \t]*$/msg) {
             my ($p, $args) = ($1, $2); my $d = 0; my $n = 1;
             for my $ch (split //, $args) { $d++ if $ch eq "("; $d-- if $ch eq ")"; $n++ if $ch eq "," && $d == 0 }
             print "$p(", join(", ", map { "V$_" } 1 .. $n), ").\n";
+            }
         ' "$PLAYS/self.glp")
         if [ -z "$GOALS" ]; then
             NOTE+=("run: $PLAYS/self.glp exports no play")

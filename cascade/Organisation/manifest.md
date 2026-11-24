@@ -1,10 +1,10 @@
 # A run of the cascade on Organisation
 
-- Contract: `Organisation` (`organisation` to the checker), its owner's two files `programs/go/Organisation.txt` and `programs/go/Organisation.glp`, copied here as they stood at `91308311`.
+- Contract: `Organisation` (`organisation` to the checker), its owner's two files `programs/go/Organisation.txt` and `programs/go/Organisation.glp`, copied here as they stood at `bc17eea9`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/Organisation.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Organisation.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-24 21:54 UTC by `cascade.sh organisation`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `91308311`; each artefact's source and tool:
+- Run on 2026-11-24 21:56 UTC by `cascade.sh organisation`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `bc17eea9`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
@@ -20,7 +20,4 @@
 | `platform.vglp` | `Organisation.glp` read by programs/gsc's as_read/2, and `Organisation.txt`'s Interface pragmas | programs/vglp/cva/compiler, compile/5 and pragmas.sh | the canonical CVA platform, as printed |
 | `platform.glp` | `platform.vglp` | glp_runtime's :emit | the platform compiled to GLP, as emitted |
 | `interface.glp` | `platform.vglp` and `platform.glp` | programs/sglp/cva/interface.sh | the platform's interface in sGLP's term form |
-| (no run) | | | /home/user/glp/programs/vglp/cva/organisation/self.glp exports no play |
-
-What the tools refused or lacked:
-- run: /home/user/glp/programs/vglp/cva/organisation/self.glp exports no play
+| `run.log` | `platform.vglp` | programs/vglp/cva/organisation, the plays with scripted persons, in the REPL | the plays' logs: play_found play_person_gov play_retired_gov |
