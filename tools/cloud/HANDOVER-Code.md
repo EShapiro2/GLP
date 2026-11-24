@@ -1,3 +1,13 @@
+# Code #37, 2026-11-24 16:10 UTC, after its 2nd compaction
+
+- Main 55c8532: the 91 contracts adopted and printed afresh (d966834, adopt.py --check on all 91); renames done and old Agents, Community, Backed-Community programs and records deleted; Audit PR 83 fixes; GSC 0daa1b8; CSSN Children; Website e7ec8fc (relation words; the 13:40 UTC outage); GO 55c8532.
+- Udi's rule, 13:47 UTC: before every push to main run `bash tools/cloud/site-check.sh` (builds the site, loads it in Chromium; must say N contracts, >=50 svg, 0 errors).
+- Held: printing all 66 records waits for the sets change.  When Calculus #11 sends GLP branch claude/project-thread-23okte (calculus/ only, set terms plus Audit 102 Findings 18, 19, #58), merge it together with GSC claude/project-thread-pgtsao 4a9175a; adopt.py on all 91 (three passes, then --check); programs/apps/compile.sh and programs/vglp/cva/compile.sh --check; print the 66 records in three worktrees (/home/user/wt-sglp, wt-gsc, wt-vg); site-check; push; tell the thread "Answer audit findings on contracts" the commit (Audit PR 106 Findings 18, 19, 20).
+- Owed: Flutter QF run as non-root (Flutter 3.47.9 / Dart 3.13.7, /private/tmp, libsodium); vGLP's 19 reds were a root run.
+- Not merged: Website-site 749372f4 (carries LWG's listing; no LWG on main without Udi's yes).
+- Retrospective-approval list: constructs.dart one-line change (03bc123) for OSPM; deletion of the old files; Website-site held for LWG; Promoted-Community-Market on Udi's question list.
+- In hand: answer Calculus #8's worlds proposal (Calculus docs/design-decisions.md 63, 64) to Coordination_inbox.md.
+
 # Code #37, 2026-11-24 10:45 UTC, after its 1st compaction
 
 - Done: the 91 Calculus contracts adopted on main f26b0da (adopt.py --adopted-check 91/0, --split-check 91/0); renames AI Agents, Community Bank (gcc), Backed Community Bank; go's Community Bank deleted; build.py reads calculus/contracts (local build: 92 contracts, the 91 plus Promoted Community Market, on Udi's list); apps/compile.sh and Section APPS read AI-Agents.  Merged with it: GSC 0898e2a, Currencies e772ed5, GO c41cd4a, vGLP a5a59e2, Calculus 70330f3, sGLP ae2a75c.
