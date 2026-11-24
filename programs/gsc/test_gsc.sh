@@ -2824,5 +2824,27 @@ check_not "compile_contract takes an environment predicate, a parameter and eith
       "requires an atom of" "$out"
 check "a contract supplied by its environment is compiled" "begin{align" "$out"
 
+# --- clause 1 of def:unobstructed: a schema of arity one forbidding another atom it adds
+# Knowledge with the persons of the Calculus's item 29: acquaint requires
+# person, which establish adds with identity, forbidding identity.  Clause 1
+# admits establish for person: both have no arguments, no schema deletes or
+# clears person, and every schema adding identity at a role adds person
+# there.  A schema adding identity without person, or deleting person,
+# leaves person unobtainable.
+KPE="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+KPA="sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(person, ['Alice']), atom(person, ['Bob'])], true, ['Alice', 'Bob'])"
+KPI="sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob'])"
+KPX="sas(enter, ['Alice'], [], [atom(identity, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+KPR="sas(retire, ['Alice'], [], [not(atom(person, ['Alice']))], [atom(person, ['Alice'])], true, ['Alice'])"
+out=$(run "check(reflexive([knows], [$KPE, $KPA, $KPI]), V1)." \
+          "check(reflexive([knows], [$KPE, $KPA, $KPI, $KPX]), V2)." \
+          "check(reflexive([knows], [$KPE, $KPA, $KPI, $KPR]), V3).")
+check "person, added by establish with identity, which it forbids, is obtainable, by clause 1 of def:unobstructed" \
+      "V1 = syntactically_grassroots" "$out"
+check "a schema adding identity without person leaves person unobtainable" \
+      "V2 = not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable)])" "$out"
+check "a schema deleting person leaves person unobtainable" \
+      "V3 = not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable)])" "$out"
+
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

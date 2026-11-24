@@ -1,3 +1,9 @@
+# Code #37, 2026-11-24 00:58 UTC (a thread of the project "Grassroots Oversight")
+
+- Merged to main Udi's two rules (8b5a3fa: claude.md, Contracts; claudese.md, 32) and the text check's present-tense construction with its pair in tests.tsv (29bdf37): 18 tests, 0 wrong; 214 of 285 rejected texts caught.  Mailed to_all to reread them.
+- Udi, 2026-11-24 00:53 UTC: "fault resilience is not at this level of abstraction".  GLP #144 and #145 (Ohad Eitan) answered on GitHub, not merged, on SPM's verdict; the Calculus's 37f2045 and 0588310 withdrawn, not merged; 25b4215 (stamp for #144's term) waits on SPM's revision of #144.
+- Not checked by Code #37: Calculus #9's Calculus-next17 490a4afde of 2026-11-19 is not an ancestor of main (Code-next17 and Code-gce may hold it).
+
 # Handover of Code #36, 2026-11-23 13:00 UTC
 
 Code #36 shut down at Udi's word (2026-11-23 12:49 UTC: "yes, we need to shut down and restart with a new account, so shut down all threads and write everything clearly in the handover").  This file is for the next Code session, on a new account with none of the old project's chat, threads or project files.  Earlier handovers are in git history of this file.
