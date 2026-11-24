@@ -6540,8 +6540,8 @@ rs_add(rs(_, A, _, _, _), A?).
 procedure rs_del(RoleSpec?, SAtoms).
 rs_del(rs(_, _, D, _, _), D?).
 procedure rs_req(RoleSpec?, SAtoms).
-%% The atoms a role requires: those it keeps, and those it deletes but its cleared atoms, which it deletes and does not require (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "the act deletes every atom of the state that it matches, and requires none"; GSC 327e035, =(i) u -(i)).
-rs_req(rs(_, _, D, K, _), R?) :- uncleared(D?, D1), app(K?, D1?, R).
+%% The atoms a role requires: those it keeps, and those it deletes but its cleared atoms, which it deletes and does not require (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "the act deletes every atom of the state that it matches, and requires none"; GSC 327e035, =(i) u -(i)).  The union, so that an atom the role keeps and deletes is required once, as "Rank: provided Alice holds Bob's unranked bid ...; after which no longer Alice holds Bob's unranked bid" (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 1).
+rs_req(rs(_, _, D, K, _), R?) :- uncleared(D?, D1), ms_join(K?, D1?, R).
 procedure uncleared(SAtoms?, SAtoms).
 uncleared([], []).
 uncleared([A|As], R?) :- ground(A?) |
