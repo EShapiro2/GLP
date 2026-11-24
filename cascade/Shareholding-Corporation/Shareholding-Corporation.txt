@@ -28,14 +28,62 @@ Look: 📈, money
 Shareholdings: the shares Alice holds.
 Officers: Decider [Appoint] <person> <role>
   Bob: Decider asks you to be an officer of the organisation Orga.
+  Codecider: Decider asks that Bob be an officer of your organisation Orga.
   Decider [End officer] <person>
+  Codecider: Decider asks to end Bob's office in your organisation Orga.
   Bob [Resign] [Officer unfriend]
-Issue: AliceOfficer [Issue shares by any officer for Alice] <decider> <amount>
-  Decider: AliceOfficer asks to issue the first shares of your organisation Alice.
-Swap: Alice [Swap coin for share] <amount given> <issuer of the shares> <amount wanted>
-  Bob: Alice asks to swap coins for shares with you.
-  Alice [Swap bond for share] <amount given> <issuer of the shares> <amount wanted>
-  Bob: Alice asks to swap bonds for shares with you.
+Issue: AliceOfficer [Issue for Alice] <denomination>
+  Voter [Vote of Alice for Issue]
+Swap, Redeem, Escrow: Alice [Swap] <issuer wanted> <amount given> <type wanted> <amount wanted>
+  Bob: Alice asks to swap coins with you.
+  AliceOfficer [Swap for Alice] <denomination>
+  Bob: AliceOfficer asks to swap coins of the organisation Alice with you.
+  Voter [Vote of Alice for Swap]
+  Alice [Swap for Bob] <officer of the other party> <issuer wanted> <amount given> <amount wanted> <votes of the other party>
+  BobOfficer: Alice asks to swap coins with your organisation Bob.
+  Voter [Vote of Bob for Swap]
+  AliceOfficer [Swap for Alice and Bob] <officer of the other party> <denomination>
+  BobOfficer: AliceOfficer asks to swap coins of the organisation Alice with your organisation Bob.
+  Alice [Deposit] <amount> <condition>
+  Carol: Alice asks to deposit coins with you.
+  AliceOfficer [Deposit for Alice] <denomination>
+  Carol: AliceOfficer asks to deposit coins of the organisation Alice with you.
+  Voter [Vote of Alice for Deposit]
+  Alice [Deposit for Carol] <officer of the other party> <amount> <condition>
+  CarolOfficer: Alice asks to deposit coins with your organisation Carol.
+  Voter [Vote of Carol for Deposit]
+  AliceOfficer [Deposit for Alice and Carol] <officer of the other party> <denomination>
+  CarolOfficer: AliceOfficer asks to deposit coins of the organisation Alice with your organisation Carol.
+Pay: Alice [Pay] <amount>
+  Bob: Alice asks to pay you coins or bonds.
+  AliceOfficer [Pay for Alice] <denomination>
+  Bob: AliceOfficer asks to pay coins of the organisation Alice to you.
+  Voter [Vote of Alice for Pay]
+  Alice [Pay for Bob] <officer of the other party> <amount>
+  BobOfficer: Alice asks to pay coins to your organisation Bob.
+  Voter [Vote of Bob for Pay]
+  AliceOfficer [Pay for Alice and Bob] <officer of the other party> <denomination>
+  BobOfficer: AliceOfficer asks to pay coins of the organisation Alice to your organisation Bob.
+Escrow: Carol [Release] <amount>
+  Bob: Carol asks to release coins or bonds to you.
+  CarolOfficer [Release for Carol] <denomination>
+  Bob: CarolOfficer asks to release coins held by the organisation Carol to you.
+  Voter [Vote of Carol for Release]
+  Carol [Release for Bob] <officer of the other party> <amount>
+  BobOfficer: Carol asks to release coins to your organisation Bob.
+  Voter [Vote of Bob for Release]
+  CarolOfficer [Release for Carol and Bob] <officer of the other party> <denomination>
+  BobOfficer: CarolOfficer asks to release coins held by the organisation Carol to your organisation Bob.
+  Carol [Return] <amount>
+  Alice: Carol asks to return coins or bonds to you.
+  CarolOfficer [Return for Carol] <denomination>
+  Alice: CarolOfficer asks to return coins held by the organisation Carol to you.
+  Voter [Vote of Carol for Return]
+  Carol [Return for Alice] <officer of the other party> <amount>
+  AliceOfficer: Carol asks to return coins to your organisation Alice.
+  Voter [Vote of Alice for Return]
+  CarolOfficer [Return for Carol and Alice] <officer of the other party> <denomination>
+  AliceOfficer: CarolOfficer asks to return coins held by the organisation Carol to your organisation Alice.
 Dividend: Alice [Set dividend] <dividend> <votes>
   Erin [Vote on dividend] <dividend>
   Bob [Claim] <total> <dividend> [Claim own coins] <total> <dividend> [Claim coins of the corporation] <total> <dividend>
