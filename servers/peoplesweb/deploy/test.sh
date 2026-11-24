@@ -41,6 +41,7 @@ $AS git -C "$WORK/tree" fetch -q --depth 1 "$URL" "$BRANCH"
 $AS git -C "$WORK/tree" checkout -q -f --detach FETCH_HEAD
 $AS git -C "$WORK/tree" clean -q -fdx
 $AS env GLP_ROOT="$WORK/tree" BUILD_DIR="$WORK/build" SITE_TEST=1 CERTIFY=0 \
+	LIVE_WORLDS="$GLP/programs/vglp/cva/web_worlds" \
 	PAPERS_DIR="${PAPERS_DIR:-/var/lib/glp/papers}" \
 	python3 -I "$WORK/tree/servers/peoplesweb/tools/build.py"
 mkdir -p "$WWW"
