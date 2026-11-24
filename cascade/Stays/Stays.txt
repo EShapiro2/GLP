@@ -32,5 +32,5 @@ Reviews: the reviews Alice received.
 List place: Alice [List place] <place>
 Book: Bob [Book] <place> <night> <sum>
   Alice: Bob asks to stay at your place.
-Cancel: Alice [Cancel] <bob> <sum>
+Cancel: Alice [Cancel] <bob>
 Review: Bob [Review]

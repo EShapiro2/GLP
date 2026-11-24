@@ -12,7 +12,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 identity
@@ -52,7 +52,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -71,7 +71,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -128,7 +128,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -238,7 +238,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -257,7 +257,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -398,7 +398,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 member
 }}
@@ -426,7 +426,7 @@ listed
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 member
 }}
@@ -504,7 +504,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 message
@@ -581,7 +581,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 leader
@@ -695,7 +695,7 @@ Grupo
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -781,7 +781,7 @@ Grupo
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -917,7 +917,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 member
@@ -938,7 +938,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 listed
@@ -1224,7 +1224,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 posted
@@ -1315,7 +1315,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 posted
@@ -1388,7 +1388,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 group_delivered
@@ -1413,7 +1413,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 group_message
@@ -1510,7 +1510,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 group_delivered
@@ -1603,7 +1603,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 identity
@@ -1644,7 +1644,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 creator
@@ -1720,7 +1720,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 parent
@@ -1754,7 +1754,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_parent
@@ -1803,7 +1803,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_parent
@@ -2534,7 +2534,7 @@ has_parent
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 member
 }}
@@ -2562,7 +2562,7 @@ listed
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 member
 }}
@@ -2650,7 +2650,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -2669,7 +2669,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -2771,7 +2771,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2790,7 +2790,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2950,36 +2950,7 @@ friend
 {
 \Alice
 }
-,\\
-&
-\text{where } K_
-{
-\Alice
-}
- \text{ holds every atom of } c_
-{
-\Alice
-}
- \text{, with its multiplicity, that matches } 
-\mathit{\detokenize{
-member
-}}
-(
-\ast
-,
-\Bob
-)
- \text{ or } 
-\mathit{\detokenize{
-listed
-}}
-(
-\Bob
-,
-\ast
-)
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -3006,13 +2977,41 @@ friend
 &
 \text{where } K_
 {
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+member
+}}
+(
+\ast
+,
+\Bob
+)
+ \text{ or } 
+\mathit{\detokenize{
+listed
+}}
+(
+\Bob
+,
+\ast
+)
+,\\
+&
+\text{where } K_
+{
 \Bob
 }
  \text{ holds every atom of } c_
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 member
 }}
@@ -3036,6 +3035,17 @@ listed
 \mathit{\detokenize{
 identity
 }}
+,
+\mathit{\detokenize{
+child
+}}
+,
+\mathit{\detokenize{
+has_parent
+}}
+(
+G1
+)
 ,
 \mathit{\detokenize{
 friend
@@ -3075,39 +3085,6 @@ has_parent
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Alice
-)
-\lor
-(
-\mathit{\detokenize{
-child
-}}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_parent
-}}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -3174,7 +3151,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 member
 }}
@@ -3202,7 +3179,7 @@ listed
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 member
 }}
@@ -3345,7 +3322,7 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 member
 }}
@@ -3373,7 +3350,7 @@ listed
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 member
 }}
@@ -3475,7 +3452,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -3494,7 +3471,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -3655,7 +3632,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -3674,7 +3651,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -3866,7 +3843,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -3885,7 +3862,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -4037,7 +4014,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4112,7 +4089,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -4210,7 +4187,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4285,7 +4262,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -4401,7 +4378,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4476,7 +4453,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -4583,7 +4560,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4658,7 +4635,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -4774,7 +4751,7 @@ parent
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4849,7 +4826,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -4956,7 +4933,7 @@ parent
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5031,7 +5008,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -5154,7 +5131,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5229,7 +5206,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -5343,7 +5320,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5418,7 +5395,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -5525,7 +5502,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5600,7 +5577,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -5698,7 +5675,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5773,7 +5750,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -5889,7 +5866,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5964,7 +5941,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -6071,7 +6048,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -6146,7 +6123,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -6262,7 +6239,7 @@ parent
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -6337,7 +6314,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -6444,7 +6421,7 @@ parent
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -6519,7 +6496,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -6642,7 +6619,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -6717,7 +6694,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -6831,7 +6808,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -6906,7 +6883,7 @@ member
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -7151,7 +7128,7 @@ member
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -7391,7 +7368,7 @@ member
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -7631,7 +7608,7 @@ member
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -7885,7 +7862,7 @@ member
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -8107,7 +8084,7 @@ member
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -8347,7 +8324,7 @@ member
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -8587,7 +8564,7 @@ member
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -8841,7 +8818,7 @@ member
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -8989,7 +8966,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -9233,7 +9210,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -9477,7 +9454,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -9735,7 +9712,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -9961,7 +9938,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -10205,7 +10182,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -10449,7 +10426,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -10707,7 +10684,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -11193,7 +11170,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 message
@@ -11204,8 +11181,7 @@ message
 Text
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -11233,6 +11209,7 @@ friend
 \Alice
 }
  \text{ and } 
+\{
 \mathit{\detokenize{
 identity
 }}
@@ -11247,7 +11224,19 @@ friend
 (
 \Alice
 )
- \in c_
+,
+\mathit{\detokenize{
+child
+}}
+,
+\mathit{\detokenize{
+has_parent
+}}
+(
+G1
+)
+\}
+ \subseteq c_
 {
 \Bob
 }
@@ -11261,39 +11250,6 @@ retired
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Bob
-)
-\lor
-(
-\mathit{\detokenize{
-child
-}}
-(
-\Bob
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_parent
-}}
-(
-\Bob
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -11314,7 +11270,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 posted
@@ -11327,8 +11283,7 @@ Text
 Grupo
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -11349,6 +11304,7 @@ identity
 \Alice
 }
  \text{ and } 
+\{
 \mathit{\detokenize{
 identity
 }}
@@ -11365,7 +11321,19 @@ Grupo
 ,
 \Alice
 )
- \in c_
+,
+\mathit{\detokenize{
+child
+}}
+,
+\mathit{\detokenize{
+has_parent
+}}
+(
+G1
+)
+\}
+ \subseteq c_
 {
 \Bob
 }
@@ -11396,39 +11364,6 @@ retired
 }
 ,\\
 &
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Bob
-)
-\lor
-(
-\mathit{\detokenize{
-child
-}}
-(
-\Bob
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_parent
-}}
-(
-\Bob
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Bob
 \}
@@ -11447,7 +11382,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 posted
@@ -11463,6 +11398,7 @@ Grupo
 ,\\
 &
 \text{provided } 
+\{
 \mathit{\detokenize{
 identity
 }}
@@ -11479,7 +11415,19 @@ Grupo
 ,
 \Alice
 )
- \in c_
+,
+\mathit{\detokenize{
+child
+}}
+,
+\mathit{\detokenize{
+has_parent
+}}
+(
+G1
+)
+\}
+ \subseteq c_
 {
 \Alice
 }
@@ -11509,39 +11457,6 @@ Grupo
  = \emptyset
 ,\\
 &
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Alice
-)
-\lor
-(
-\mathit{\detokenize{
-child
-}}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_parent
-}}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 \}
@@ -11560,7 +11475,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 leader
@@ -11712,7 +11627,7 @@ Grupo
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -11798,7 +11713,7 @@ Grupo
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -11865,6 +11780,7 @@ q \neq
 ,\\
 &
 \text{provided } 
+\{
 \mathit{\detokenize{
 identity
 }}
@@ -11874,12 +11790,24 @@ child
 }}
 ,
 \mathit{\detokenize{
+child
+}}
+,
+\mathit{\detokenize{
+has_parent
+}}
+(
+G1
+)
+,
+\mathit{\detokenize{
 leader
 }}
 (
 Grupo
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Alice
 }
@@ -11924,103 +11852,6 @@ retired
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-\forall 
-\Bob
-\,(
-\mathit{\detokenize{
-listed
-}}
-(
-\Alice
-,
-\Bob
-,
-Grupo
-)
-\rightarrow
-\mathit{\detokenize{
-identity
-}}
-(
-\Bob
-)
-\land
-\mathit{\detokenize{
-member
-}}
-(
-\Bob
-,
-Grupo
-,
-\Alice
-)
-)
-,\\
-&
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Alice
-)
-\lor
-(
-\mathit{\detokenize{
-child
-}}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_parent
-}}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
-\text{making } 
-\forall 
-\Bob
-\,(
-\mathit{\detokenize{
-listed
-}}
-(
-\Alice
-,
-\Bob
-,
-Grupo
-)
-\rightarrow
-\neg 
-\mathit{\detokenize{
-member
-}}
-(
-\Bob
-,
-Grupo
-,
-\Alice
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -12081,7 +11912,7 @@ Grupo
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -12167,7 +11998,7 @@ Grupo
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 listed
 }}
@@ -12388,7 +12219,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 member
@@ -12399,8 +12230,7 @@ Grupo
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -12410,7 +12240,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 listed
@@ -12421,8 +12251,7 @@ listed
 Grupo
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -12451,6 +12280,17 @@ has_parent
 }}
 (
 \mathit{Carol}
+)
+,
+\mathit{\detokenize{
+child
+}}
+,
+\mathit{\detokenize{
+has_parent
+}}
+(
+G1
 )
  \in c_
 {
@@ -12532,39 +12372,6 @@ Grupo
 }
 ,\\
 &
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Alice
-)
-\lor
-(
-\mathit{\detokenize{
-child
-}}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_parent
-}}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 ,
@@ -12587,7 +12394,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 member
@@ -12608,7 +12415,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 listed
@@ -12800,7 +12607,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 member
@@ -12821,7 +12628,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 listed
@@ -13092,7 +12899,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 member
@@ -13113,7 +12920,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 listed
@@ -13310,8 +13117,7 @@ Grupo
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -13335,6 +13141,7 @@ Grupo
 ,\\
 &
 \text{provided } 
+\{
 \mathit{\detokenize{
 identity
 }}
@@ -13344,6 +13151,17 @@ child
 }}
 ,
 \mathit{\detokenize{
+child
+}}
+,
+\mathit{\detokenize{
+has_parent
+}}
+(
+G1
+)
+,
+\mathit{\detokenize{
 member
 }}
 (
@@ -13351,7 +13169,8 @@ Grupo
 ,
 \Bob
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Alice
 }
@@ -13382,39 +13201,6 @@ retired
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Alice
-)
-\lor
-(
-\mathit{\detokenize{
-child
-}}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_parent
-}}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -13446,8 +13232,7 @@ Grupo
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -13488,6 +13273,7 @@ Grupo
 \Alice
 }
  \text{ and } 
+\{
 \mathit{\detokenize{
 identity
 }}
@@ -13504,6 +13290,17 @@ child
 }}
 ,
 \mathit{\detokenize{
+child
+}}
+,
+\mathit{\detokenize{
+has_parent
+}}
+(
+G1
+)
+,
+\mathit{\detokenize{
 listed
 }}
 (
@@ -13511,7 +13308,8 @@ listed
 ,
 Grupo
 )
- \in c_
+\}
+ \subseteq c_
 {
 \Bob
 }
@@ -13525,39 +13323,6 @@ retired
 {
 \Bob
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Bob
-)
-\lor
-(
-\mathit{\detokenize{
-child
-}}
-(
-\Bob
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_parent
-}}
-(
-\Bob
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -13589,7 +13354,7 @@ child
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 of_age
@@ -13624,7 +13389,7 @@ has_parent
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}
@@ -13675,7 +13440,7 @@ parent
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 of_age
@@ -13710,7 +13475,7 @@ has_parent
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_parent
 }}

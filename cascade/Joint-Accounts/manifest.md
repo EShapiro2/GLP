@@ -1,10 +1,10 @@
 # A run of the cascade on Joint-Accounts
 
-- Contract: `Joint-Accounts` (`joint_accounts` to the checker), its owner's two files `programs/gce/joint/Joint-Accounts.txt` and `programs/gce/joint/Joint-Accounts.glp`, copied here as they stood at `b1cb5969`.
+- Contract: `Joint-Accounts` (`joint_accounts` to the checker), its owner's two files `programs/gce/joint/Joint-Accounts.txt` and `programs/gce/joint/Joint-Accounts.glp`, copied here as they stood at `f20c40e4`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gce/joint/Joint-Accounts.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gce/joint/Joint-Accounts.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-24 10:33 UTC by `cascade.sh joint_accounts`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `b1cb5969`; each artefact's source and tool:
+- Run on 2026-11-24 18:51 UTC by `cascade.sh joint_accounts`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `f20c40e4`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

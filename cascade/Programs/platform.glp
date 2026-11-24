@@ -3970,7 +3970,7 @@ procedure rs_del(RoleSpec?, SAtoms).
 rs_del(rs(_, _, D, _, _), D?).
 
 procedure rs_req(RoleSpec?, SAtoms).
-rs_req(rs(_, _, D, K, _), R?) :- uncleared(D?, D1), app(K?, D1?, R).
+rs_req(rs(_, _, D, K, _), R?) :- uncleared(D?, D1), ms_join(K?, D1?, R).
 
 procedure uncleared(SAtoms?, SAtoms).
 uncleared([], []).

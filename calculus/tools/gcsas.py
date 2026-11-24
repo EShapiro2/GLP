@@ -478,7 +478,7 @@ def unfold(text, lex, neg=False, actor=None):
             b[pay[4]] = actor
             pay = ("basic",) + pay[1:4]
         if pay[0] == "basic":
-            out.append((n ^ neg, pay[1], b, pay[2], tuple(v[0] + b[v[1:]] if v[:1] in MARK else sub_term(v, b) for v in pay[3])))   # a constant, as now; *n: n copies; #n: exactly n
+            out.append((n ^ neg, pay[1], b, pay[2], tuple(v[0] + (v[1:] if v[1:].isdigit() else b[v[1:]]) if v[:1] in MARK else sub_term(v, b) for v in pay[3])))   # a constant, as now; *n: n copies; #n: exactly n
         else:
             if n or neg:
                 inner = unfold(unwild(fill(pay[2], b), "anyone"), lex, actor=actor)
