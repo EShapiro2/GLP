@@ -20,7 +20,7 @@ deposit(Peer, Integer)
 ;
 owe(Peer, Peer, Integer)
 ;
-repay(Peer, Peer)
+repay(Peer, Peer, Integer)
 ;
 join(Peer, Peer, List(Peer))
 .
@@ -34,7 +34,7 @@ deposit(Peer, Integer)
 ;
 owe(Peer, Peer, Integer)
 ;
-repay(Peer, Peer)
+repay(Peer, Peer, Integer)
 ;
 join(Peer, Peer)
 .
@@ -43,7 +43,7 @@ Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Acquaint", [act(acquaint, 1, [1, 2], [forb(knows, [at(2)]), unless(knows, [at(2)])], [], [field(2, "Person", key)], [], [])]), button("Appoint", [act(appoint, 1, [1, 2], [forb(officer, [at(2)]), unless(officer, [at(2)]), unless(owes, [at(2)])], [], [field(2, "Person", key)], [], [])]), button("Deposit", [act(deposit, 1, [1], [], [], [field(2, "Amount", number)], [], [])]), button("Owe", [act(owe, 1, [1, 2], [req(officer, [at(2)])], [2], [field(3, "Amount", number)], [], [])]), button("Repay", [act(repay, 1, [1, 2], [req(owes, [at(2)])], [2], [], [], [])]), button("Join", [act(join, 1, [1, 2], [req(knows, [at(2)]), forb(officer, [at(2)]), unless(officer, [at(2)]), unless(owes, [at(2)])], [2], [], [], [])])])
+Request? =::= social_menu([button("Acquaint", [act(acquaint, 1, [1, 2], [forb(knows, [at(2)]), unless(knows, [at(2)])], [], [field(2, "Person", key)], [], [])]), button("Appoint", [act(appoint, 1, [1, 2], [forb(officer, [at(2)]), unless(officer, [at(2)]), unless(owes, [at(2), any])], [], [field(2, "Person", key)], [], [])]), button("Deposit", [act(deposit, 1, [1], [forb(reserve, [at(2)])], [], [field(2, "Amount", number)], [], [])]), button("Owe", [act(owe, 1, [1, 2], [req(officer, [at(2)]), forb(owes, [at(2), at(3)])], [2], [field(3, "Amount", number)], [], [])]), button("Repay", [act(repay, 1, [1, 2], [req(owes, [at(2), at(3)])], [2, 3], [], [], [])]), button("Join", [act(join, 1, [1, 2], [req(knows, [at(2)]), forb(officer, [at(2)]), unless(officer, [at(2)]), unless(owes, [at(2), any])], [2], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -64,11 +64,11 @@ officer(Peer)
 ;
 officer_of(Peer)
 ;
-reserve
+reserve(Integer)
 ;
-owes(Peer)
+owes(Peer, Integer)
 ;
-repaid(Peer)
+repaid(Peer, Integer)
 ;
 cotreasurer(Peer)
 .
@@ -80,18 +80,18 @@ atom_of(g(officer, [p(V1)]), shown(officer(V1?)))
 .
 atom_of(g(officer_of, [p(V1)]), shown(officer_of(V1?)))
 .
-atom_of(g(reserve, []), shown(reserve))
+atom_of(g(reserve, [n(V1)]), shown(reserve(V1?)))
 .
-atom_of(g(owes, [p(V1)]), shown(owes(V1?)))
+atom_of(g(owes, [p(V1), n(V2)]), shown(owes(V1?, V2?)))
 .
-atom_of(g(repaid, [p(V1)]), shown(repaid(V1?)))
+atom_of(g(repaid, [p(V1), n(V2)]), shown(repaid(V1?, V2?)))
 .
 atom_of(g(cotreasurer, [p(V1)]), shown(cotreasurer(V1?)))
 .
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)])], [], [], [atom(knows, [role(1)])])]), schema(appoint, [], [rs(guarded, [atom(officer, [role(2)])], [], [], [atom(officer, [role(2)])]), rs(guarded, [atom(officer_of, [role(1)])], [], [], [atom(officer_of, [role(1)])])]), schema(deposit, [num(k)], [rs(guarded, [times(num(k), atom(reserve, []))], [], [], [])]), schema(owe, [num(k)], [rs(guarded, [times(num(k), atom(owes, [role(2)]))], [], [atom(officer, [role(2)])], []), rs(unguarded, [], [], [atom(officer_of, [role(1)])], [])]), schema(repay, [pvar(c)], [rs(guarded, [atom(repaid, [pvar(c)])], [atom(owes, [pvar(c)])], [], [])]), lschema(join, [], [rs(guarded, [atom(officer, [role(2)])], [], [atom(knows, [role(2)])], [atom(officer, [role(2)])]), rs(guarded, [atom(officer_of, [role(1)])], [], [atom(knows, [role(1)])], [atom(officer_of, [role(1)])]), rs(unguarded, [atom(cotreasurer, [role(2)])], [], [], [])], [listing(3, 1, officer, [role(3)], fcons(true), [], [])])])
+contract_schemas([schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)])], [], [], [atom(knows, [role(1)])])]), schema(appoint, [], [rs(guarded, [atom(officer, [role(2)])], [], [], [atom(officer, [role(2)])]), rs(guarded, [atom(officer_of, [role(1)])], [], [], [atom(officer_of, [role(1)])])]), schema(deposit, [num(r)], [rs(guarded, [atom(reserve, [num(r)])], [], [], [atom(reserve, [num(r)])])]), schema(owe, [num(k)], [rs(guarded, [atom(owes, [role(2), num(k)])], [], [atom(officer, [role(2)])], [atom(owes, [role(2), num(k)])]), rs(unguarded, [], [], [atom(officer_of, [role(1)])], [])]), schema(repay, [pvar(c), num(k)], [rs(guarded, [atom(repaid, [pvar(c), num(k)])], [atom(owes, [pvar(c), num(k)])], [], [])]), lschema(join, [], [rs(guarded, [atom(officer, [role(2)])], [], [atom(knows, [role(2)])], [atom(officer, [role(2)])]), rs(guarded, [atom(officer_of, [role(1)])], [], [atom(knows, [role(1)])], [atom(officer_of, [role(1)])]), rs(unguarded, [atom(cotreasurer, [role(2)])], [], [], [])], [listing(3, 1, officer, [role(3)], fcons(true), [], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -99,11 +99,11 @@ schema_entry(acquaint, schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])
 .
 schema_entry(appoint, schema(appoint, [], [rs(guarded, [atom(officer, [role(2)])], [], [], [atom(officer, [role(2)])]), rs(guarded, [atom(officer_of, [role(1)])], [], [], [atom(officer_of, [role(1)])])]))
 .
-schema_entry(deposit, schema(deposit, [num(k)], [rs(guarded, [times(num(k), atom(reserve, []))], [], [], [])]))
+schema_entry(deposit, schema(deposit, [num(r)], [rs(guarded, [atom(reserve, [num(r)])], [], [], [atom(reserve, [num(r)])])]))
 .
-schema_entry(owe, schema(owe, [num(k)], [rs(guarded, [times(num(k), atom(owes, [role(2)]))], [], [atom(officer, [role(2)])], []), rs(unguarded, [], [], [atom(officer_of, [role(1)])], [])]))
+schema_entry(owe, schema(owe, [num(k)], [rs(guarded, [atom(owes, [role(2), num(k)])], [], [atom(officer, [role(2)])], [atom(owes, [role(2), num(k)])]), rs(unguarded, [], [], [atom(officer_of, [role(1)])], [])]))
 .
-schema_entry(repay, schema(repay, [pvar(c)], [rs(guarded, [atom(repaid, [pvar(c)])], [atom(owes, [pvar(c)])], [], [])]))
+schema_entry(repay, schema(repay, [pvar(c), num(k)], [rs(guarded, [atom(repaid, [pvar(c), num(k)])], [atom(owes, [pvar(c), num(k)])], [], [])]))
 .
 schema_entry(join, lschema(join, [], [rs(guarded, [atom(officer, [role(2)])], [], [atom(knows, [role(2)])], [atom(officer, [role(2)])]), rs(guarded, [atom(officer_of, [role(1)])], [], [atom(knows, [role(1)])], [atom(officer_of, [role(1)])]), rs(unguarded, [atom(cotreasurer, [role(2)])], [], [], [])], [listing(3, 1, officer, [role(3)], fcons(true), [], [])]))
 .
@@ -125,12 +125,12 @@ schema_numeric(join, numeric([cj(every, true)], [], []))
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
 procedure schema_forms(Constant?, SForms).
-schema_forms(join, [sform(cond, fforall([role(3)], role(1), atom(officer, [role(1), role(3)]), fcons(true), [fcons(le(cardinality([], role(1), atom(owes, [role(1), role(3)]), fcons(true)), cardinality([], role(3), atom(reserve, [role(3)]), fcons(true))))]))])
+schema_forms(join, [sform(cond, fforall([role(3)], role(1), atom(officer, [role(1), role(3)]), fcons(true), [fcons(le(cardinality([num(y)], role(1), atom(owes, [role(1), role(3), num(y)]), fcons(true)), cardinality([num(z)], role(3), atom(reserve, [role(3), num(z)]), fcons(true))))]))])
 .
 schema_forms(_, []) :- otherwise | true.
 
 procedure schema_held(Constant?, HPats).
-schema_held(join, [hp(1, [atom(officer, [pvar('~1')]), atom(owes, [pvar('~1')])]), hp(3, [atom(reserve, [])])])
+schema_held(join, [hp(1, [atom(officer, [pvar('~1')]), atom(owes, [pvar('~1'), num('~2')])]), hp(3, [atom(reserve, [num('~1')])])])
 .
 schema_held(_, []) :- otherwise | true.
 
@@ -202,11 +202,11 @@ binding_of(acquaint(V1, V2), acquaint, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(appoint(V1, V2), appoint, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
-binding_of(deposit(V1, V2), deposit, [b(role(1), p(V1?)), b(num(k), n(V2?))])
+binding_of(deposit(V1, V2), deposit, [b(role(1), p(V1?)), b(num(r), n(V2?))])
 .
 binding_of(owe(V1, V2, V3), owe, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(k), n(V3?))])
 .
-binding_of(repay(V1, V2), repay, [b(role(1), p(V1?)), b(pvar(c), p(V2?))])
+binding_of(repay(V1, V2, V3), repay, [b(role(1), p(V1?)), b(pvar(c), p(V2?)), b(num(k), n(V3?))])
 .
 binding_of(join(V1, V2, V3), join, B?)
 :-
@@ -242,7 +242,7 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 ,
-val_num(num(k), B?, V2)
+val_num(num(r), B?, V2)
 .
 class_of(owe, B, D, owe(V1?, V2?, V3?))
 :-
@@ -256,7 +256,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_num(num(k), B?, V3)
 .
-class_of(repay, B, D, repay(V1?, V2?))
+class_of(repay, B, D, repay(V1?, V2?, V3?))
 :-
 ground(B?)
 ,
@@ -265,6 +265,8 @@ ground(D?)
 val_peer(role(1), B?, D?, V1)
 ,
 val_peer(pvar(c), B?, D?, V2)
+,
+val_num(num(k), B?, V3)
 .
 class_of(join, B, D, join(V1?, V2?, V3?))
 :-
@@ -288,7 +290,7 @@ name_class(deposit(V1, V2), _, deposit(V1?, V2?))
 .
 name_class(owe(V1, V2, V3), _, owe(V1?, V2?, V3?))
 .
-name_class(repay(V1, V2), _, repay(V1?, V2?))
+name_class(repay(V1, V2, V3), _, repay(V1?, V2?, V3?))
 .
 name_class(join(V1, V2), St, C?)
 :-
@@ -304,7 +306,7 @@ request_name(deposit(V1, V2), pname(deposit(V1?, V2?)))
 .
 request_name(owe(V1, V2, V3), pname(owe(V1?, V2?, V3?)))
 .
-request_name(repay(V1, V2), pname(repay(V1?, V2?)))
+request_name(repay(V1, V2, V3), pname(repay(V1?, V2?, V3?)))
 .
 request_name(join(V1, V2, _), pname(join(V1?, V2?)))
 .
@@ -312,7 +314,7 @@ request_name(_, nopname) :- otherwise | true.
 
 %% The lists the app shows, as the contract's pragmas give them, each its name and the predicate whose atoms it lists (vGLP, Section 5.4, "The contract's words").
 procedure tabs(List(Tab)).
-tabs([tab("Treasurers", officer), tab("Reserve", reserve, counted)])
+tabs([tab("Treasurers", officer), tab("Reserve", reserve)])
 .
 
 %% The question the contract puts to the agent Me on an attempt of the part C, the question of the guarding role beyond the proposer's that Me is in, its persons filled in from the binding C names, with the role of the proposer, asked(G, Words); none, asked(0, []), where Me is in none or the contract puts none (vGLP, Section 6.2, "The words a platform shows"; GSC, Section 2, its first paragraph).
@@ -397,7 +399,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("", with([schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)])], [], [], [atom(knows, [role(1)])])]), schema(appoint, [], [rs(guarded, [atom(officer, [role(2)])], [], [], [atom(officer, [role(2)])]), rs(guarded, [atom(officer_of, [role(1)])], [], [], [atom(officer_of, [role(1)])])]), schema(deposit, [num(k)], [rs(guarded, [times(num(k), atom(reserve, []))], [], [], [])]), schema(owe, [num(k)], [rs(guarded, [times(num(k), atom(owes, [role(2)]))], [], [atom(officer, [role(2)])], []), rs(unguarded, [], [], [atom(officer_of, [role(1)])], [])]), schema(repay, [pvar(c)], [rs(guarded, [atom(repaid, [pvar(c)])], [atom(owes, [pvar(c)])], [], [])]), qschema(join, [], [role(3)], true, [rs(guarded, [atom(officer, [role(2)])], [], [atom(knows, [role(2)])], [atom(officer, [role(2)])]), rs(guarded, [atom(officer_of, [role(1)])], [], [atom(knows, [role(1)])], [atom(officer_of, [role(1)])]), crs(qlisted(1, officer, [role(3)], [role(3)]), unguarded, [atom(cotreasurer, [role(2)])], [], [], [])], [conjunct([role(3)], 1, atom(officer, [role(3)]), fcons(true), [], [], [fa(role(3), atom(cotreasurer, [role(2)]))])], [fforall([role(3)], role(1), atom(officer, [role(3)]), fcons(true), [fcons(le(cardinality([], role(1), atom(owes, [role(3)]), fcons(true)), cardinality([], role(3), atom(reserve, []), fcons(true))))])])], pragmas([list("Treasurers", [officer]), list("Reserve", [reserve])], [act(acquaint, "Acquaint", ["", "Person"], said([[], [person(1), text(" asks.")]]), "Treasurers", by([1])), act(appoint, "Appoint", ["", "Person"], said([[], [person(1), text(" asks you to be a treasurer.")]]), "Treasurers", by([1])), act(deposit, "Deposit", ["", "Amount"], none, "Reserve", by([1])), act(owe, "Owe", ["", "", "Amount"], none, "Treasurers", by([1])), act(repay, "Repay", [], none, "Treasurers", by([1])), act(join, "Join", [], said([[], [person(1), text(" asks you to join its treasurers.")]]), "Treasurers", by([1]))], [], nolook, version(1, 1))))
+contract("", with([schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [], [atom(knows, [role(2)])]), rs(guarded, [atom(knows, [role(1)])], [], [], [atom(knows, [role(1)])])]), schema(appoint, [], [rs(guarded, [atom(officer, [role(2)])], [], [], [atom(officer, [role(2)])]), rs(guarded, [atom(officer_of, [role(1)])], [], [], [atom(officer_of, [role(1)])])]), schema(deposit, [num(r)], [rs(guarded, [atom(reserve, [num(r)])], [], [], [atom(reserve, [num(r)])])]), schema(owe, [num(k)], [rs(guarded, [atom(owes, [role(2), num(k)])], [], [atom(officer, [role(2)])], [atom(owes, [role(2), num(k)])]), rs(unguarded, [], [], [atom(officer_of, [role(1)])], [])]), schema(repay, [pvar(c), num(k)], [rs(guarded, [atom(repaid, [pvar(c), num(k)])], [atom(owes, [pvar(c), num(k)])], [], [])]), qschema(join, [], [role(3), num(y), num(z)], true, [rs(guarded, [atom(officer, [role(2)])], [], [atom(knows, [role(2)])], [atom(officer, [role(2)])]), rs(guarded, [atom(officer_of, [role(1)])], [], [atom(knows, [role(1)])], [atom(officer_of, [role(1)])]), crs(qlisted(1, officer, [role(3)], [role(3)]), unguarded, [atom(cotreasurer, [role(2)])], [], [], [])], [conjunct([role(3)], 1, atom(officer, [role(3)]), fcons(true), [], [], [fa(role(3), atom(cotreasurer, [role(2)]))])], [fforall([role(3)], role(1), atom(officer, [role(3)]), fcons(true), [fcons(le(cardinality([num(y)], role(1), atom(owes, [role(3), num(y)]), fcons(true)), cardinality([num(z)], role(3), atom(reserve, [num(z)]), fcons(true))))])])], pragmas([list("Treasurers", [officer]), list("Reserve", [reserve])], [act(acquaint, "Acquaint", ["", "Person"], said([[], [person(1), text(" asks.")]]), "Treasurers", by([1])), act(appoint, "Appoint", ["", "Person"], said([[], [person(1), text(" asks you to be a treasurer.")]]), "Treasurers", by([1])), act(deposit, "Deposit", ["", "Amount"], none, "Reserve", by([1])), act(owe, "Owe", ["", "", "Amount"], none, "Treasurers", by([1])), act(repay, "Repay", [], none, "Treasurers", by([1])), act(join, "Join", [], said([[], [person(1), text(" asks you to join its treasurers.")]]), "Treasurers", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).

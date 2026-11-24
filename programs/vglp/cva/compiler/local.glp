@@ -843,7 +843,7 @@ procedure anon_atom(Atom?, Integer?, Args?, Locs?, Atom).
 anon_atom(atom(P, As), I, Bv, Ls, atom(P?, As1?)) :- anon_args(As?, 1, I?, Bv?, Ls?, As1).
 anon_atom(times(_, M), I, Bv, Ls, M1?) :- anon_atom(M?, I?, Bv?, Ls?, M1).
 anon_atom(rest(_, _, M), I, Bv, Ls, M1?) :- anon_atom(M?, I?, Bv?, Ls?, M1).
-%% An argument the role does not bind is written as a variable of its place, pvar('~K') at the K-th argument, which no schema names and the match binds to any value.
+%% An argument the role does not bind is written as a variable of its place, pvar('~K') at the K-th argument, num('~K') for a numeric argument and svar('~K') for a speech act, which no schema names and the match binds to any value of its kind.
 procedure anon_args(Args?, Integer?, Integer?, Args?, Locs?, Args).
 anon_args([], _, _, _, _, []).
 anon_args([A|As], K, I, Bv, Ls, [A1?|As1?]) :- integer(K?), integer(I?), ground(Bv?), ground(Ls?) |
@@ -859,8 +859,13 @@ anon_arg(A, K, I, Bv, Ls, A1?) :- otherwise, ground(A?), integer(K?), integer(I?
     or(InB?, Ot?, An),
     anon_pick(An?, K?, A?, A1).
 procedure anon_pick(YesNo?, Integer?, Arg?, Arg).
-anon_pick(yes, K, _, pvar(N?)) :- integer(K?) | anon_name(K?, N).
+anon_pick(yes, K, A, A1?) :- integer(K?), ground(A?) | anon_name(K?, N), anon_kind(A?, N?, A1).
 anon_pick(no, _, A, A?).
+%% The variable of a place keeps the kind of the argument it replaces, so that a numeric place matches a number and a speech-act place a speech act (match_args, kind_ok); any other argument is an agent's place.
+procedure anon_kind(Arg?, Constant?, Arg).
+anon_kind(num(_), N, num(N?)).
+anon_kind(svar(_), N, svar(N?)).
+anon_kind(_, N, pvar(N?)) :- otherwise | true.
 procedure anon_name(Integer?, Constant).
 anon_name(1, '~1').
 anon_name(2, '~2').
