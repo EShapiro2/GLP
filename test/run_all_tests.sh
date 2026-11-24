@@ -139,6 +139,16 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
+# Organisation's Found by an organisation has three guarding roles, so it is
+# no acquaintance schema, and its guards must know each other before it is
+# proposed; nobody can know the organisation it founds, which has no identity
+# until then (vGLP, Section 5.4, "The compilation"; vGLP #32, 2026-11-24, to
+# GO #15 and Calculus #11): GO's and the Calculus's to mend in Organisation,
+# or the vGLP paper's; each entry comes off with that mend.
+    "CVA organisation found by an organisation: alice proposes it, and it commits"
+    "CVA organisation found by an organisation: ... alice is the officer of o2, and o1 its founder"
+    "CVA organisation person gov: bob's machine, its state lacking organisation, votes no, unable, and it is refused"
+    "CVA organisation retired gov: o1's machine, its state lacking has_officer, votes no, unable, and it is refused"
 # GAI's contract in the old form forbidding marks, which GSC's Section 8 at
 # df5e454, stated positively, no longer certifies (Code #27, 2026-11-10, on
 # merging GSC-wards8): GAI's to rewrite on GnW (GAI_inbox.md, 2026-11-10 18:43
@@ -4041,6 +4051,7 @@ cva_print=$(bash "$CVA/compile.sh" --check 2>&1 || true)
 check "CVA compiler: the social graph's platform is what the compiler prints" "social_graph/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: the social network's platform, GSC's GSN, close taking the listed role a[listed(*, n)], is what the compiler prints" "social_network/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: the currency's platform, each part guarded by the people its schema-binding marks, is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: the organisation's platform, GO's Organisation, is what the compiler prints" "organisation/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's nudge, certified by GSC's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's introduce, certified by GSC's check/2, compiled to the platform it prints" "introduce/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's gnudge, certified by GSC's check/2, compiled to the platform it prints" "gnudge/platform.vglp: as printed" "$cva_print"
@@ -6269,6 +6280,50 @@ check_not "CVA wards: no notice is written" "refused(\|yielded(" "$cva_wards"
 # The schema-bindings of a class of a schema with listed roles (mates_of): a listed role takes only the participants at whom its deleted and added atoms fit, and two listed roles of one anchor one list, so the lists tried are not every set of the participants for each listed role (GAI #15, Code_inbox.md, 2026-11-15 17:22 UTC: Retire, of three listed roles, cost the GAI app's play 17 to 20 million reductions where it now costs under 2.5 million).
 check "CVA wards: the lists a listed role may take are of the people at whom it fits" "^    twins_fit(All?, I?, Bi?, Rho?, Vs?, Phi?, Q?, As?, Rs?, J?, Ps?, Qi),$" "$(cat "$CVA/wards/platform.vglp")"
 check "CVA wards: ... and the listed roles of one anchor take one list" "^    same_lists(Ts0?, Lsts?, Ts),$" "$(cat "$CVA/wards/platform.vglp")"
+
+# The plays of Organisation (programs/go/Organisation.txt and Organisation.glp, GO's), Organisation:1, Found and Found by an organisation (GO #15, 2026-11-24 21:22 UTC, for Audit PR 108, Finding 19; organisation/self.glp beside the platform).  found(Orga, Alice, Role) is an acquaintance schema, two roles, both guarding, neither requiring an atom naming the other, so alice's request sends o1 a hello and o1, asked, answers yes.  found_by_an_organisation(Orga, Alice, Gov, Role) has three guarding roles and is no acquaintance schema, so its guards must know each other before it is proposed (vGLP, Section 5.4, "The compilation": "A peer is known at the agent when hello, or ihello, has been sent to it and received from it"), and nobody can know Orga, which has no identity until it is founded: alice's request stays pending and no attempt is proposed (vGLP #32, 2026-11-24, to GO #15 and Calculus #11; the checks of the attempt are known red until Organisation or the vGLP paper is mended).
+cva_org_load=$("$REPL_RUN" <<HEREDOC
+$CVA/organisation/
+:quit
+HEREDOC
+2>&1)
+check "CVA organisation: the platform and its plays load, compiled by the canonical compilation" "Loaded program: .*cva/organisation" "$cva_org_load"
+check_not "CVA organisation: no type errors" "Type checking failed" "$cva_org_load"
+check "CVA organisation: found is an acquaintance schema, the meeting of its two roles" "^meeting_peer(found(V1, V2, _), Me, P?)" "$(cat "$CVA/organisation/platform.vglp")"
+cva_org_found=$("$REPL_RUN" <<HEREDOC
+$CVA/organisation/
+:limit 20000000
+play_found(A, B, C, D, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA organisation found: alice founds o1, o1 asked by the hello and answering yes, and it commits at the first attempt" "sent(alice, o1, start(attempt(alice, 4, 4, found(o1, alice, chair), none))), sent(o1, alice, vote(attempt(alice, 4, 4, found(o1, alice, chair), none), yes(\[\[\]\]))), sent(alice, o1, outcome(attempt(alice, 4, 4, found(o1, alice, chair), none), commit(\[\])))" "$cva_org_found"
+check "CVA organisation found: ... o1's answer" "C = \[.*gave(found(o1, alice, chair), yes)" "$cva_org_found"
+check "CVA organisation found: ... alice is the officer of o1, in the role chair" "A = \[.*view(alice, \[creator(o1), officer(o1), knows(o1), friend(o1), role(o1, chair), participant(o1), founder(o1), identity, person\], \[o1\], \[\]" "$cva_org_found"
+check "CVA organisation found: ... o1 is an organisation with alice its first officer" "C = \[.*view(o1, \[identity, organisation, has_officer(alice), knows(alice), friend(alice), first_officer(alice), has_role(alice, chair), has_participant(alice)\], \[alice\], \[\]" "$cva_org_found"
+check "CVA organisation found by an organisation: alice requests found_by_an_organisation(o2, alice, o1, board), o2 unknown, and it stays pending" "A = \[.*view(alice, \[creator(o1), officer(o1), knows(o1), friend(o1), role(o1, chair), participant(o1), founder(o1), identity, person\], \[o1\], \[found_by_an_organisation(o2, alice, o1, board)\]" "$cva_org_found"
+check "CVA organisation found by an organisation: alice proposes it, and it commits" "outcome(attempt(alice, [0-9]*, [0-9]*, found_by_an_organisation(o2, alice, o1, board), none), commit(" "$cva_org_found"
+check "CVA organisation found by an organisation: ... alice is the officer of o2, and o1 its founder" "D = \[.*view(o2, \[[^]]*founder(o1)" "$cva_org_found"
+cva_org_person=$("$REPL_RUN" <<HEREDOC
+$CVA/organisation/
+:limit 20000000
+play_person_gov(A, B, C, D, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA organisation person gov: alice, knowing bob, requests found_by_an_organisation(o2, alice, bob, board), bob a person, o2 unknown, and it stays pending" "A = \[.*view(alice, \[knows(bob), identity, person\], \[bob\], \[found_by_an_organisation(o2, alice, bob, board)\]" "$cva_org_person"
+check "CVA organisation person gov: bob's machine, its state lacking organisation, votes no, unable, and it is refused" "sent(bob, alice, vote(attempt(alice, [0-9]*, [0-9]*, found_by_an_organisation(o2, alice, bob, board), none), no(unable(" "$cva_org_person"
+cva_org_retired=$("$REPL_RUN" <<HEREDOC
+$CVA/organisation/
+:limit 20000000
+play_retired_gov(A, B, C, D, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA organisation retired gov: alice retires o1, a Request of rho_N to o1, the opener, which proposes retire(o1, alice, ...), and it commits" "sent(alice, o1, request(rho(retire(o1, alice)), 5)), sent(o1, alice, start(attempt(o1, 5, 5, retire(o1, alice, \[alice\], \[alice\], \[alice\], \[alice\]), request(rho(retire(o1, alice)), 5)))), sent(alice, o1, vote(attempt(o1, 5, 5, retire(o1, alice, \[alice\], \[alice\], \[alice\], \[alice\]), request(rho(retire(o1, alice)), 5)), yes(\[\[\]\]))), sent(o1, alice, outcome(attempt(o1, 5, 5, retire(o1, alice, \[alice\], \[alice\], \[alice\], \[alice\]), request(rho(retire(o1, alice)), 5)), commit(\[\])))" "$cva_org_retired"
+check "CVA organisation retired gov: ... o1 retired, with no officer" "C = \[.*view(o1, \[retired, identity, organisation, knows(alice), first_officer(alice), has_participant(alice)\], \[alice\], \[\]" "$cva_org_retired"
+check "CVA organisation retired gov: alice requests found_by_an_organisation(o2, alice, o1, board), o2 unknown, and it stays pending" "A = \[.*view(alice, \[creator(o1), knows(o1), participant(o1), founder(o1), identity, person\], \[o1\], \[found_by_an_organisation(o2, alice, o1, board)\]" "$cva_org_retired"
+check "CVA organisation retired gov: o1's machine, its state lacking has_officer, votes no, unable, and it is refused" "sent(o1, alice, vote(attempt(alice, [0-9]*, [0-9]*, found_by_an_organisation(o2, alice, o1, board), none), no(unable(" "$cva_org_retired"
 
 # An unguarded part proposed again only on the refuser's ready (vGLP 76db5e0, Definition "Proposing", Propose: "if [t]_j is unguarded, p is ready for [t]_j, and, where another participant q refused p's last attempt beta of [t]_j as unable, p has recorded ready(beta, q)"; Udi, 2026-11-15; GFF #6, 2026-11-15 21:54 UTC: GFF's Deliver, whose opener's state it does not change, was proposed again without end).  vGLP's contract feeds (programs/vglp/cva/contracts.glp) and its play (feeds/self.glp).
 cva_feeds=$("$REPL_RUN" <<HEREDOC
