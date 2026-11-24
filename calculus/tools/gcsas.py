@@ -85,6 +85,7 @@ VOTES = r", on the votes of %s(?: and of %s)* for it" % (NAME, NAME)
 RELAX = r"(%s)(?: ([A-Z][A-Za-z' -]*?))?((?:, without the consent of .*?)?)((?:, without (?!the consent of ).*?)?)((?:, if .*?)?)\.$" % REF   # an act or a citation decided by the votes of organisations, GO's
 GO_VOTES = {"vote": "z holds x's vote on m", "voter": "x is entitled to vote on m in z", "decided": "the votes decide m according to the bylaws of z"}   # GO's states of a motion m
 VOTER = "Voter"   # the name of the one who votes, in the vote act generated
+GO_ALT = {"x is entitled to vote on m in z": "the bylaws of z entitle x to vote on m", "x is entitled to take m for z": "the bylaws of z entitle x to take m"}   # GO's state of a voter, where GO defines the entitlement by its bylaws and the voter's participation (Calculus #11, 2026-11-24)
 GO_TAKE = "x is entitled to take m for z"   # GO's state of the one who takes a motion m for z, derived for an act taken for a party on votes
 GO_STATES = dict(GO_VOTES, taker=GO_TAKE)
 WARD_ROLE = "those who decide for z"   # GnW's role: a contract whose lexicon has it has wards, and a ward takes an act of a party by those who decide for it
@@ -1055,7 +1056,7 @@ class World:
             entries += instantiate_schemas(expand_schemas(self, p), words)
         entries = kind_forms(self, n, entries, lex=lex)          # the forms of the kinds n adds, which no contract it is written from has
         done = {e["party"] for e in entries if e.get("party")}
-        go = any(e[0] == GO_TAKE for e in lex.basic)
+        go = any(e[0] in (GO_TAKE, GO_ALT[GO_TAKE]) for e in lex.basic)
         role = [r for r in lex.roles if r[0] == WARD_ROLE][0]
         out, seen = [], set()
         for e in entries:
@@ -1115,8 +1116,8 @@ def vote_family(lex, name, t, zp, org):
     P = rename(t, ren)
     places = [ren[v] for v in tv if v != zp]
     st, fid = {}, ident(name + " " + org)
-    for k, T in list(GO_VOTES.items()) + ([("taker", GO_TAKE)] if any(e[0] == GO_TAKE for e in lex.basic) else []):
-        go = [e for e in lex.basic if e[0] == T]
+    for k, T in list(GO_VOTES.items()) + ([("taker", GO_TAKE)] if any(e[0] in (GO_TAKE, GO_ALT[GO_TAKE]) for e in lex.basic) else []):
+        go = [e for e in lex.basic if e[0] in (T, GO_ALT.get(T))]
         if not go:
             raise Err("on the votes of: no state '%s' of GO, unbound, in this contract" % T)
         _, gp, ga = go[0]
@@ -2350,6 +2351,11 @@ def remove_redundant(w, n, entries):
     return [e for e in entries if id(e) not in gone]
 
 
+def keep_last(xs):
+    """xs, each item once, at its last place."""
+    return list(reversed(list(dict.fromkeys(reversed(xs)))))
+
+
 def expand_schemas(w, n):
     if n in w.sasx:
         return w.sasx[n]
@@ -2379,8 +2385,8 @@ def expand_schemas(w, n):
                 mp = cite_map(w, n, e, o)
                 then = [(x, p, tuple(mp.get(a, a) for a in args)) for x, p, args in e.get("then", [])]
                 o["head"] = o["head"] + then
-                o["body"] = o["body"] + [(x, p, tuple(mp.get(a, a) for a in args)) for x, p, args in e["body"]] + \
-                    [(False, p, args) for x, p, args in then if x and WILD not in args]
+                o["body"] = keep_last(o["body"] + [(x, p, tuple(mp.get(a, a) for a in args)) for x, p, args in e["body"]] + \
+                    [(False, p, args) for x, p, args in then if x and WILD not in args])      # a condition the act has already is not added twice (Guardians:3 on Knowledge:2's persons, item 29)
                 gen = gen_votes(lex, o, [mp.get(x, x) for x in e["votes"]], e["name"], e["label"], e["mark"], agents=vote_agents(w, n)) if e.get("votes") else None
                 if e.get("taken"):
                     o["taken"] = taken_map(e, mp, o["guards"])
@@ -3302,7 +3308,7 @@ def expand_text(w, n, own):
                 o = put_in(dict(entries[i]), e, True)
                 mp = cite_map(w, n, e, o, True)
                 o["effects"] = o["effects"] + [(x, map_text(s, mp)) for x, s in e.get("effects", [])]
-                o["conds"] = o["conds"] + [(x, map_text(s, mp)) for x, s in e["conds"]]
+                o["conds"] = keep_last(o["conds"] + [(x, map_text(s, mp)) for x, s in e["conds"]])
                 gen = gen_votes_text(lex, o, [map_text(x, mp) for x in e["votes"]], e["name"], e["label"], e["mark"], agents=vote_agents(w, n)) if e.get("votes") else None
                 if e.get("taken"):
                     o["taken"] = taken_map(e, {k: map_text(k, mp) for k in e["taken"]}, o["persons"])
@@ -3562,7 +3568,7 @@ def fold_states(lits, lex, actor=None):
         if isact:
             continue
         pat = pattern(r, lex)
-        if pat and not any(x[0] for x in pat):
+        if pat and not any(x[0] for x in pat) and set(tvars(t)) <= set(tvars(r)):   # a place the right side does not name cannot be folded back
             defs.append((t, pat))
     defs.sort(key=lambda d: -len(d[1]))
     for neg in (False, True):

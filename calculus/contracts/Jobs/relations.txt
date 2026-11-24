@@ -1,1 +1,1 @@
-Jobs instantiates Free Matching: holds
+Jobs extends Free Matching: holds

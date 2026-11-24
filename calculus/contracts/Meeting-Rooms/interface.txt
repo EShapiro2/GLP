@@ -67,8 +67,8 @@ Organisations of one officer befriend: Orga [Organisations of one officer befrie
 Retire: Decider [Retire]
   Codecider: Decider asks for your consent to retire.
 Propose: Bob [Propose] <motion>
-Vote: Bob [Vote] <motion>
-Act: Alice [Act] <motion> <votes>
+Vote: Bob [Vote]
+Act: Alice [Act]
 Join: Bob [Join] <orga> <decider>
   Decider: Bob asks for your consent to join.
   Codecider: Bob asks for your consent to join.
@@ -78,6 +78,6 @@ Expel: Decider [Expel] <bob>
   Codecider: Decider asks for your consent to expel.
 Officer expel: Decider [Officer expel] <bob>
   Codecider: Decider asks for your consent to officer expel.
-Amend: Alice [Amend] <motion> <votes>
+Amend: Alice [Amend]
 Book: Alice [Book] <res> <slot>
 Cancel: Alice [Cancel]

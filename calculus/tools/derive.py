@@ -228,11 +228,35 @@ class Deriver:
             if r:
                 its += re.split(r", | and |; ", r.group(1))
         out = []
+        roles = self.role_preds()
         for it in its:
+            r = re.match(r"^(.+?) for (.+)$", it.strip())
+            if r and r.group(1) in roles and r.group(2) in roles:      # a role for a role: 'the guardians of z for those who decide for z'
+                out.append((roles[r.group(1)], roles[r.group(2)]))
+                continue
+            r = re.match(r"^([a-z_]+)\([a-z]\) for ([a-z_]+)\([a-z]\)$", it.strip())      # as the schemas print it: 'guardians(z) for deciders(z)'
+            if r:
+                out.append((r.group(1), r.group(2)))
+                continue
             w = re.match(r"^(?:an? |the )?([a-z][a-z ]*?) for (?:an? |the )?([a-z][a-z ]*)$", it.strip())
             if w:
                 out.append((w.group(1).replace(" ", "_"), w.group(2).replace(" ", "_")))
         return out
+
+    def role_preds(self):
+        """{phrase: predicate} of the roles every contract lists, 'those who decide for z' -> 'deciders'."""
+        if not hasattr(self, "_roles"):
+            self._roles = {}
+            for m in self.names:
+                try:
+                    lines = open(self.path(m, "sas"), encoding="utf-8").read().splitlines()
+                except OSError:
+                    continue
+                for l in lines:
+                    if l.startswith("Roles: "):
+                        for ph, q in re.findall(r"(?:^Roles: |; )(.+?) = ([a-z_]+)\(", l):
+                            self._roles.setdefault(ph, q)
+        return self._roles
 
     def parents(self, n):
         s = re.sub(r"\([^)]*\)", "", self.first_line(n))[len(n):]

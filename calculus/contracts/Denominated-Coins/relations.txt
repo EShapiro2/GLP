@@ -1,2 +1,3 @@
 Denominated Coins extends Coins: holds
-Denominated Coins restricts Coins: holds
+Denominated Coins extends it (Coins): holds
+Denominated Coins restricts it (Coins): holds

@@ -30,8 +30,10 @@ Person unfriend: Alice [Person unfriend]
 Enter: Alice [Enter] <wendy>
 Make guardian: Bob [Make guardian] <wendy>
   Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
 Resign: Bob [Resign]
 End guardian: Decider [End guardian] <bob>
+  Codecider: Decider asks for your consent to end guardian.
 Guardian unfriend: Bob [Guardian unfriend]
 Ward acquaint: Wendy [Ward acquaint] <bob>
   Bob: Wendy asks for your consent to ward acquaint.
@@ -51,3 +53,4 @@ Wards of one guardian befriend: Wendy [Wards of one guardian befriend]
   Will: Wendy asks for your consent to wards of one guardian befriend.
   Alice: Wendy asks for your consent to wards of one guardian befriend.
 Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.

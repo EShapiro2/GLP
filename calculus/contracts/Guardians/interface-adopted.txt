@@ -2,8 +2,10 @@ Interface pragmas
 Enter: Alice [Enter] <wendy>
 Guardian decisions: Bob [Make guardian] <wendy>
   Decider: Bob asks for your consent to make guardian.
+  Codecider: Bob asks for your consent to make guardian.
   Bob [Resign]
   Decider [End guardian] <bob>
+  Codecider: Decider asks for your consent to end guardian.
   Bob [Guardian unfriend]
 Ward and person: Alice [Acquaint] <bob>
   Bob: Alice asks for your consent to acquaint.
@@ -30,3 +32,4 @@ Wards: Wendy [Wards acquaint] <will>
   Will: Wendy asks for your consent to wards of one guardian befriend.
   Alice: Wendy asks for your consent to wards of one guardian befriend.
 Retire: Decider [Retire]
+  Codecider: Decider asks for your consent to retire.

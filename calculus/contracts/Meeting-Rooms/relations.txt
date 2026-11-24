@@ -1,1 +1,1 @@
-Meeting Rooms instantiates Booking: holds
+Meeting Rooms extends Booking: holds
