@@ -1,5 +1,7 @@
 Interface pragmas
 Identity record: Alice [Name custodian] [Identity record] <share>
+Checkpoint: Alice [Checkpoint] [Checkpoint tell] [Checkpoint record] [Checkpoint threshold]
+State recovery: Bob [Restore] [Restore friend] [Restore replaced friend]
 Identity replacement: Alicia [Replace] <alice>
   Carol [Vouch]
   Alicia [Present]
