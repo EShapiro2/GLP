@@ -14,7 +14,7 @@ Bonds      certified; VMAT 14 displays; platform.vglp 7618 lines; platform.glp 5
 Booking    certified; VMAT 30 displays; platform.vglp 8306 lines; platform.glp 5522 lines
 Carpool    certified; VMAT 31 displays; platform.vglp 8266 lines; platform.glp 5471 lines
 Central-Bank certified; VMAT 126 displays; no platform: a parametric contract has none until it is instantiated
-Children   certified; VMAT 43 displays; platform.vglp 8677 lines; platform.glp 5689 lines
+Children   certified; VMAT 43 displays; platform.vglp 8679 lines; platform.glp 5689 lines
 Coins      certified; VMAT 11 displays; platform.vglp 7503 lines; platform.glp 5209 lines
 Commercial-Bank certified; VMAT 129 displays; no platform: a parametric contract has none until it is instantiated
 Community-Bank certified; VMAT 123 displays; no platform: a parametric contract has none until it is instantiated
@@ -74,7 +74,7 @@ Recommendations certified; VMAT 6 displays; platform.vglp 7253 lines; platform.g
 Rehearsal-Rooms certified; VMAT 57 displays; platform.vglp 9390 lines; platform.glp 5948 lines
 Rendezvous certified; VMAT 25 displays; platform.vglp 8003 lines; platform.glp 5365 lines
 Resilient-Feeds certified; VMAT 16 displays; platform.vglp 7534 lines; platform.glp 5213 lines
-Rides      certified; VMAT 0 displays; no platform: a parametric contract has none until it is instantiated
+Rides      certified; VMAT 149 displays; no platform: a parametric contract has none until it is instantiated
 Second-Score-Auction certified; VMAT 18 displays; platform.vglp 7732 lines; platform.glp 5259 lines
 Secure-Friendship certified; VMAT 23 displays; platform.vglp 7743 lines; platform.glp 5211 lines
 Separating-Distrust certified; VMAT 9 displays; platform.vglp 7308 lines; platform.glp 5085 lines

@@ -2431,6 +2431,11 @@ def expand_schemas(w, n):
     entries = refine_entries(w, n, kind_forms(w, n, entries))
     derive_party(w, n, lex, entries)
     unclash(entries)
+    for e in entries:       # no head adds and deletes one atom (Udi, 2026-11-24 11:01 UTC; design decision 57)
+        if e["kind"] == "act":
+            dup = {(p, a) for x, p, a in e["head"] if not x} & {(p, a) for x, p, a in e["head"] if x}
+            if dup:
+                raise Err("%s %s: its head adds and deletes %s" % (e["label"], e["name"], ", ".join("%s(%s)" % (p, ",".join(a)) for p, a in sorted(dup))))
     if REMOVE:
         entries = remove_redundant(w, n, entries)
     w.sasx[n] = entries

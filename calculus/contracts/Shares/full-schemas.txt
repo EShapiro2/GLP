@@ -53,7 +53,7 @@ Organisation:4 ■ | The decision names his role.
 Organisation:5 ■ Amend: amended(Orga), taken(Orga,Motion) <- officer(Alice,Orga), proposed(Orga,Motion), amender(Alice,Orga,Motion), amendment_decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
 Organisation:6 ○ | Accountability.
 Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
-Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+Notes:0 - | A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: note(Alice,Alice,Type,*Sum) <- guarded by Alice.
 Notes:1 ■ Issue for Alice: note(Alice,Alice,Type,*Sum), ~vote_issue_alice(Alice,_,Sum,Type) <- knows(AliceOfficer,Alice), taker_issue_alice(AliceOfficer,Alice,Sum,Type), decided_issue_alice(Alice,Sum,Type) guarded by AliceOfficer taken for Alice by AliceOfficer.

@@ -7,7 +7,7 @@ After x pays y n z-notes of type t: no longer x holds n z-notes of type t, y hol
 After x deposits n w-notes of type t with z for y on k: no longer x holds n w-notes of type t and z holds n w-notes of type t in escrow from x for y on k.
 After z and y release n w-notes of type t that x deposited on k: no longer z holds n w-notes of type t in escrow from x for y on k, y holds n w-notes of type t and y knows w.
 After z and x return n w-notes of type t deposited for y on k: no longer z holds n w-notes of type t in escrow from x for y on k, x holds n w-notes of type t and x knows w.
-Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+Notes:0 - | A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Type and Other types; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: note(Alice,Alice,Type,*Sum) <- guarded by Alice.
 Notes:2 ■ Swap: ~note(Alice,Carol,Type,*Sum), note(Bob,Carol,Type,*Sum), ~note(Bob,Dave,Other,*Total), note(Alice,Dave,Other,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), note(Alice,Carol,Type,*Sum), note(Bob,Dave,Other,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.

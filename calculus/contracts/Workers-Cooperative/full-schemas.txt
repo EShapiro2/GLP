@@ -59,7 +59,7 @@ Organisation:6 ○ | Accountability.
 Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
 Constitution:0 - | A *constitutional democratic community* is an organisation whose bylaws name one role, *member*, held by every participant, and are *egalitarian*: the rule by which the members decide an act names no member and no other role.
 Constitution:0 - | Environment: m keeps the bylaws of z egalitarian.
-Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+Notes:0 - | A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1+Denominated Coins:1 ■ Issue: note(Alice,Alice,Type,Dollar,*Sum) <- issued_in(Alice,Dollar) guarded by Alice.
 Notes:1+Denominated Coins:1 ■ Issue for Alice: note(Alice,Alice,Type,Dollar,*Sum), ~vote_issue_alice(Alice,_,Sum,Type) <- issued_in(Alice,Dollar), knows(AliceOfficer,Alice), taker_issue_alice(AliceOfficer,Alice,Sum,Type), decided_issue_alice(Alice,Sum,Type) guarded by AliceOfficer taken for Alice by AliceOfficer.
