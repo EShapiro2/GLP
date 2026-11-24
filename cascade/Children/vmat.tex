@@ -13103,8 +13103,7 @@ Grupo
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -13125,8 +13124,7 @@ listed
 Grupo
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \mathit{Carol}
@@ -13135,6 +13133,16 @@ c'_
 c_
 {
 \mathit{Carol}
+}
+, \qquad 
+c'_
+{
+\mathit{Dave}
+}
+ := 
+c_
+{
+\mathit{Dave}
 }
 ,\\
 &
@@ -13160,6 +13168,13 @@ friend
 \mathit{\detokenize{
 child
 }}
+,
+\mathit{\detokenize{
+has_parent
+}}
+(
+\mathit{Dave}
+)
  \in c_
 {
 \Alice
@@ -13223,6 +13238,18 @@ person
 {
 \mathit{Carol}
 }
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Dave}
+}
 ,\\
 &
 \text{provided } 
@@ -13248,45 +13275,14 @@ retired
 }
 ,\\
 &
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Alice
-)
-\lor
-(
-\mathit{\detokenize{
-child
-}}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_parent
-}}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 ,
 \Bob
 ,
 \mathit{Carol}
+,
+\mathit{Dave}
 \}
 \end{align*}
 \iffalse
