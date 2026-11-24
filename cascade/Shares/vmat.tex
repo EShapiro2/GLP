@@ -549,19 +549,7 @@ participant
 (
 \Alice
 )
-\}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
- \cup 
-\{
+,
 \mathit{\detokenize{
 founder
 }}
@@ -583,25 +571,6 @@ person
 {
 \Bob
 }
- \text{ and } 
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-organisation
-}}
-,
-\mathit{\detokenize{
-has_officer
-}}
-(
-G1
-)
- \in c_
-{
-\mathit{Carol}
-}
 ,\\
 &
 \text{provided } 
@@ -618,8 +587,6 @@ identity
 \Alice
 ,
 \Bob
-,
-\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -8146,6 +8113,202 @@ retired
 ,\\
 &
 \text{guarded by } \{
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+found_by_an_organisation
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+organisation
+}}
+,
+\mathit{\detokenize{
+has_officer
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+first_officer
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+has_role
+}}
+(
+\Bob
+,
+Role
+)
+,
+\mathit{\detokenize{
+has_participant
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+creator
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+officer
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+role
+}}
+(
+\Alice
+,
+Role
+)
+,
+\mathit{\detokenize{
+participant
+}}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \cup 
+\{
+\mathit{\detokenize{
+founder
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+organisation
+}}
+,
+\mathit{\detokenize{
+has_officer
+}}
+(
+G1
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
 \Bob
 ,
 \mathit{Carol}
