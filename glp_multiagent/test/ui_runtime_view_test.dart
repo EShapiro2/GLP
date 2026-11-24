@@ -119,6 +119,13 @@ class _Screen {
   }
 }
 
+/// GSC's payment of notes (programs/gsc/test_gsc.sh, "set variables"), as vGLP's compiler prints it (GLP 90b2cee71): Issue, a field of the notes, a set variable, `field(3, "notes", set)`; Pay, the notes bound by the notes the payer holds, `req(note, [at(3), at(4), at(5)])`, the place 5 a set variable, `List(Constant)`, whose widget is `input_list(text)`.
+final _notesW = _requestWidget(
+    'button("Issue", [act(issue, 1, [1], [req(identity, [])], [], [field(2, "type", text), field(3, "notes", set)], [], [])]), '
+    'button("Pay", [act(pay, 1, [1, 2, 3], [req(identity, []), req(knows, [at(2)]), req(note, [at(3), at(4), at(5)])], [2, 3, 4, 5], [], [], [])])',
+    "form(issue, [field('Peer', peer), field('Constant', text), field('List', input_list(text))]), "
+        "form(pay, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Constant', text), field('List', input_list(text))])");
+
 void main() {
   test(
       'SocialState.read on view(Me, S, K, A, Ts): the key, the atoms, the '
@@ -398,5 +405,45 @@ void main() {
         '[${_view("identity", "bob", "tab('Coins', coin, counted), tab('Contacts', knows)")}]'));
     expect(heldLine(fixtureTerm('coin(alice)'), 2, s), 'Coins: Alice  2');
     expect(heldLine(fixtureTerm('knows(bob)'), 1, s), 'Contacts: Bob');
+  });
+  testWidgets('a set variable: Pay beside a note, the other notes of its type '
+      'picked with it, the request naming the notes picked', (tester) async {
+    final s = _Screen(tester);
+    await s.draw('input([])',
+        w: _notesW,
+        output: '[${_view("identity, knows(bob), note(carol, coin, a), note(carol, coin, b), note(carol, gold, c)", "bob, carol", "tab('Contacts', knows), tab('Notes', note)")}]');
+    await _tap(tester, 'act:pay:note(carol, coin, a)');
+    // The notes of Carol's coin, a and b, and not c, of another type.
+    expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:a')), findsOneWidget);
+    expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:b')), findsOneWidget);
+    expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:c')), findsNothing);
+    await _tap(tester, 'set:pay:note(carol, coin, a):5:b');
+    await _tap(tester, 'send:pay:note(carol, coin, a)');
+    expect(s.grants, ['input(1, [], propose(pay(alice, bob, carol, coin, [a, b])))']);
+  });
+
+  testWidgets('a set variable: Pay of the one note picked names the set of it',
+      (tester) async {
+    final s = _Screen(tester);
+    await s.draw('input([])',
+        w: _notesW,
+        output: '[${_view("identity, knows(bob), note(carol, coin, a)", "bob, carol", "tab('Contacts', knows), tab('Notes', note)")}]');
+    await _tap(tester, 'act:pay:note(carol, coin, a)');
+    expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:a')), findsNothing);
+    await _tap(tester, 'send:pay:note(carol, coin, a)');
+    expect(s.grants, ['input(1, [], propose(pay(alice, bob, carol, coin, [a])))']);
+  });
+
+  testWidgets('a set variable: the field of Issue takes its elements apart by '
+      'commas, each once', (tester) async {
+    final s = _Screen(tester);
+    await s.draw('input([])',
+        w: _notesW,
+        output: '[${_view("identity", "bob", "tab('Notes', note)")}]');
+    await tester.enterText(find.byKey(socialKey(1, 'field:issue::2')), 'coin');
+    await tester.enterText(find.byKey(socialKey(1, 'field:issue::3')), 'a, b, a');
+    await tester.pumpAndSettle();
+    await _tap(tester, 'send:issue:');
+    expect(s.grants, ['input(1, [], propose(issue(alice, coin, [a, b])))']);
   });
 }

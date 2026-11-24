@@ -4030,7 +4030,7 @@ CVA="$GLP_DIR/programs/vglp/cva"
 CVA_NAMES=$(mktemp)
 cat "$GLP_DIR/calculus/NAMES.txt" > "$CVA_NAMES"
 cva_cols=$(awk -F'|' '{ x = $1; gsub(/^[ \t]+|[ \t]+$/, "", x) } x == "name on main" { print NF; exit }' "$CVA_NAMES")
-for cva_x in XA XB XB-L XB2 XC XC2 XD XE XG XG-L XH XI XJ XK XL XLF XLI XLX XM XN XNONE XO XP XQ XR XS XT XU XV XVB XVE XVF XVO XVT XW; do
+for cva_x in XA XB XB-L XB2 XC XC2 XD XE XG XG-L XH XI XJ XK XL XLF XLI XLX XM XN XNONE XO XP XQ XR XS XT XU XV XVB XVE XVF XVO XVT XW XY; do
     cva_a=$(printf '%s' "$cva_x" | tr 'A-Z-' 'a-z_')
     if [ "$cva_cols" = 5 ]; then printf '%s | %s | %s | %s | %s\n' "$cva_x" "$cva_x" "$cva_x" "$cva_a" "$cva_a"; else printf '%s | %s | %s | %s\n' "$cva_x" "$cva_x" "$cva_x" "$cva_a"; fi >> "$CVA_NAMES"
 done
@@ -4390,6 +4390,14 @@ check "CVA pragmas: ... the inherited button that stands, with its question, rea
 check "CVA pragmas: ... the extending contract's [Link], no field, its Bob bound by friend(Bob), on its own tab (inherit)" "act('link', '\"Link\"', \[\], none, '\"Linked\"', by(\[1\]))" "$cva_px_inherit"
 check_not "CVA pragmas: ... no act of mint (inherit)" "act('mint'" "$cva_px_inherit"
 check "CVA pragmas: a line leaving unnamed a variable no required atom binds, refused, the variable named (unnamed)" 'the pragma "Minting" leaves unnamed the variable k of mint' "$cva_px_unnamed"
+# A number the constraint determines from the variables a role names, which no atom names, is local to that role, and the line names no field for it (OSPM, act-schemas-local; Grassroots-Audit, cvac.glp.md, Finding 2; local.glp, det_pick, det_ok, dels_name): Rides' Award, Top = S + Total, S named at Orga's role by stake(S), as GO's contract gives it (GO #15, 2026-11-24) (top).
+cva_pt=$(mktemp -d)
+printf '%s\n' '% Extends: nothing.' 'XY' 'Alice, Bob and Orga are persons.' '1. ■ Award. Alice may award Bob.' 'Pragmas' 'Rides: the rides of Alice.' 'Award: Alice [Award]' > "$cva_pt/XY.txt"
+cva_pt_out=$(bash "$CVA/compiler/pragmas.sh" "$cva_pt/XY.txt" "[qschema(award, ['Alice', 'Bob', 'Orga'], [const('Trip'), pvar('Gov'), const('Dollar'), num('Sum'), num('Total'), num('S'), num('Held'), num('Top')], [pvar('G1'), svar('G1'), num('G1')], and(ge(num('Held'), num('S')), and(eq(num('Top'), plus(num('S'), num('Total'))), ge(num('Held'), num('Top')))), [rs(guarded, [atom(ride, []), atom(rides_with, [role(2)]), atom(fare_locked, []), atom(customer_lock, [role(2), role(3), num('Trip'), pvar('Gov'), num('Dollar'), num('Sum')])], [atom(open_call, [num('Trip')]), times(num('Sum'), atom(note, [pvar('Gov'), val(coin), num('Dollar')]))], [atom(identity, []), atom(period_ended, [num('Trip')]), atom(selects, [role(2), num('Trip')]), atom(highest_score, [role(2), num('Trip')]), atom(sets_deposit, [num('Trip')]), atom(second_score_fare, [role(2), num('Trip')]), atom(knows, [role(3)]), atom(participant, [pvar('Gov')]), atom(accepts, [pvar('Gov'), num('Dollar')]), atom(fare_deposit, [num('Trip'), pvar('Gov'), num('Sum'), num('Total')])], []), rs(unguarded, [atom(ride, []), atom(rides_with, [role(1)]), atom(deposit_locked, []), atom(provider_lock, [role(1), role(3), num('Trip'), pvar('Gov'), num('Dollar'), num('Total')])], [times(num('Total'), atom(note, [pvar('Gov'), val(coin), num('Dollar')]))], [atom(identity, []), atom(bid, [role(1), num('Trip')]), atom(knows, [role(3)]), atom(participant, [pvar('Gov')]), times(num('Held'), atom(note, [pvar('Gov'), val(coin), num('Dollar')]))], [atom(ride, [])]), rs(unguarded, [], [], [atom(identity, []), atom(community, [pvar('Gov')]), atom(stake, [num('S')])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(organisation, [])), fexists([svar('G1')], role(1), atom(has_officer, [svar('G1')]), fcons(true))))])]" 2>&1; echo "exit $?")
+rm -rf "$cva_pt"
+check "CVA pragmas: a number the constraint determines at one role, named by no atom, asks for no field (top)" "act('award', '\"Award\"', \[\], none, '\"Rides\"', by(\[1\]))" "$cva_pt_out"
+check_not "CVA pragmas: ... Top not asked for (top)" 'leaves unnamed the variable Top' "$cva_pt_out"
+check "CVA pragmas: ... and pragmas.sh exits 0 (top)" "^exit 0$" "$cva_pt_out"
 # A schema whose name the term quotes, being no plain atom, as 'no-show' of the act No-show: its button [No-show] names it, the name in lower case and each space an underscore (programs/vglp/cva/compiler/README.md, 2), and the act is written with that name (quoted).
 cva_pq=$(mktemp -d)
 printf '%s\n' '% Extends: nothing.' 'XH' 'Alice is a person.' '1. ■ No-show. Alice may mint coins.' 'Pragmas' 'Coins: the coins Alice holds.' 'No-show: Alice [No-show] <amount>' > "$cva_pq/XH.txt"
