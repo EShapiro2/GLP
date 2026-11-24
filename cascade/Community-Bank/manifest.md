@@ -1,11 +1,11 @@
 # A run of the cascade on Community-Bank
 
-- Contract: `Community-Bank` (`community_bank` to the checker), its owner's two files `programs/currencies/gcc/Community-Bank.txt` and `programs/currencies/gcc/Community-Bank.glp`, copied here as they stood at `f20c40e4`.
+- Contract: `Community-Bank` (`community_bank` to the checker), its owner's two files `programs/currencies/gcc/Community-Bank.txt` and `programs/currencies/gcc/Community-Bank.glp`, copied here as they stood at `8475b1c6`.
 - The paper: `/Users/udi/Grassroots/GCC (not on this machine)` at `unknown`, for the paper's own record.
 - Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
 - Adopted from the Calculus: `programs/currencies/gcc/Community-Bank.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/currencies/gcc/Community-Bank.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-24 18:53 UTC by `cascade.sh community_bank`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `f20c40e4`; each artefact's source and tool:
+- Run on 2026-11-24 22:02 UTC by `cascade.sh community_bank`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8475b1c6`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
@@ -17,7 +17,7 @@
 | `flat.txt` | the same | calculus/tools/adopt.py | the flat text, the relations applied |
 | `full-schemas.txt` | the same | calculus/tools/adopt.py | the schemas, the relations applied |
 | `verdict.txt` | `Community-Bank.glp` | programs/gsc, check/2 | the checker's verdict: `syntactically_grassroots_with_wards(acquaint, [organisation], [guardianship(organisation, officer, has_officer)], [relay(organisation_acquaint, ward(1, organisation, no_guardian), free(2)), relay(organisations_acquaint, ward(1, organisation, no_guardian), ward(2, organisation, no_guardian))], [identity, person])` |
-| `vmat.tex` | `Community-Bank.glp` | programs/gsc, compile_contract/2 | the VMAT form, 123 displays, one per schema |
+| `vmat.tex` | `Community-Bank.glp` | programs/gsc, compile_contract/2 | the VMAT form, 124 displays, one per schema |
 | (no platform) | | | a parametric contract, with no realisation |
 
 What the tools refused or lacked:
