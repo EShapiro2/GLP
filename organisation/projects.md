@@ -38,6 +38,7 @@ Every project and paper of Grassroots, with its repo and its record (Udi, 2026-1
 | GFWC | GFWC, Grassroots Federation Without Consensus | GFWC-Grassroots-Federation-Without-Consensus | main.tex | | docs/decisions.md |
 | CDWC | CDWC, Constitutional Democracy Without Consensus | CDWC-Constitutional-Democracy-Without-Consensus | main.tex | | docs/decisions.md |
 | CCDG | CCDG, Constitutional Consensus | Grassroots-Constitutional-Consensus-2026 | mainConstitutionalConsensus.tex | keidar2025constitutional | docs/decisions.md |
+| Villagers | Village Life: A Grassroots Contract for Villagers, the Villages world | Villagers | main.tex | | docs/decisions.md |
 | CCDG | Constitutional Consensus, OPODIS version | Constitutional-Consensus | mainConstitutionalConsensus_OPODIS.tex | | docs/decisions.md |
 | Secure-GLP | Secure GLP | Secure-GLP | main_SGLP.tex | keidar2026secure | docs/decisions.md |
 | GPW | GPW, Grassroots Personal Websites | GPW-Grassroots-Personal-Websites | main_GPW.tex | shapiro2026gpw | docs/decisions.md |
