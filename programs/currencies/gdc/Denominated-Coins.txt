@@ -21,4 +21,4 @@ Vocabulary: x has issued coins of the denomination f = issued_in(x,f); x holds n
 Kind of note: note, Dollar-denominated y-notes of type t for y-notes of type t.
 After x issues n f-denominated x-coins for the first time: x holds n f-denominated x-coins and x has issued coins of the denomination f.
 Interface pragmas
-Issue: Alice [First issue] <denomination> <amount> [Issue] <amount>
+Issue: Alice [First issue] <denomination> <amount> [Issue] <type> <amount>
