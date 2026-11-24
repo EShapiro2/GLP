@@ -5557,9 +5557,9 @@ cva_text=$("$REPL_RUN" 2>&1 <<HEREDOC
 $cva_scratch/platform.glp
 requests_first([again(establish(alice)), recheck, own, again(establish(bob)), recheck], R1).
 requests_first([recheck, own], R2).
-question_words(swap(alice, bob, alice, coin, 2, bob, coin, 3), bob, W1).
-question_words(swap(alice, bob, carol, coin, 2, bob, coin, 3), bob, W2).
-question_words(swap(bob, carol, alice, coin, 2, bob, coin, 3), bob, W3).
+question_words(swap(alice, bob, alice, coin, [a1, a2], 2, bob, coin, [b1, b2, b3], 3), bob, W1).
+question_words(swap(alice, bob, carol, coin, [c1, c2], 2, bob, coin, [b1, b2, b3], 3), bob, W2).
+question_words(swap(bob, carol, alice, coin, [a1, a2], 2, bob, coin, [b1, b2, b3], 3), bob, W3).
 :quit
 HEREDOC
 )
@@ -5567,8 +5567,8 @@ rm -rf "$cva_scratch"
 check "CVA held requests: every held request before the rest, unread requests before a new recheck" "R1 = \[again(establish(alice)), again(establish(bob)), recheck, own, recheck\]" "$cva_text"
 check "CVA held requests: ... and the triggers left in their order where no request is held" "R2 = \[recheck, own\]" "$cva_text"
 check "CVA next_n: each platform's own list, requests first" "^    requests_first(L0?, L1),$" "$(cat "$CVA/currency/platform.vglp")"
-check "CVA approval: Bob's question for a swap shows after the values the coins Alice gives, with their count, held(note(alice, coin), 2), and the atoms of the other tabs her role requires" 'W1 = \[person(alice), text(.*valued(.amount wanted., 3), held(knows(bob), 1), held(note(alice, coin), 2)\]' "$cva_text"
-check "CVA approval: ... under the attempt's binding, coins of carol" 'W2 = .*held(note(carol, coin), 2)\]' "$cva_text"
+check "CVA approval: Bob's question for a swap shows after the values, each field at its place after the sets, the coins Alice gives, each held(note(alice, coin, a1), 1), and the atoms of the other tabs her role requires" 'W1 = \[person(alice), text(.*valued(.amount given., 2), named(.issuer wanted., bob), valued(.amount wanted., 3), held(knows(bob), 1), held(note(alice, coin, a1), 1), held(note(alice, coin, a2), 1)\]' "$cva_text"
+check "CVA approval: ... under the attempt's binding, coins of carol" 'W2 = .*held(note(carol, coin, c1), 1), held(note(carol, coin, c2), 1)\]' "$cva_text"
 check_not "CVA approval: ... and no atom shown to a person the question is not put to" 'W3 = .*held(' "$cva_text"
 check "CVA widget: a role's place and an agent variable's in the person places, introduce's Carol at place 3 (vGLP, Section 5.4: \"persons of different names to different persons\", roles and agent variables alike; vGLP-distinct 607932d8)" 'button("Introduce", .act(introduce, 2, .1, 2, 3., ' "$(cat "$CVA/social_graph/platform.vglp")"
 cva_poss=$("$REPL_RUN" <<HEREDOC
