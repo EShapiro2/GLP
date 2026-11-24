@@ -1979,7 +1979,8 @@ class ActCondition {
 /// nothing and which the field's widget is told"; programs/vglp/cva/
 /// compiler/README.md, 26).
 class DeclaredField {
-  static const types = {'person', 'key', 'agent', 'text', 'number'};
+  /// `set`, the field of a set variable, its elements (vGLP #32, GLP 90b2cee71).
+  static const types = {'person', 'key', 'agent', 'text', 'number', 'set'};
 
   /// Whether [t] is a field's type: one of [types], or a text's type, a
   /// constant naming it.

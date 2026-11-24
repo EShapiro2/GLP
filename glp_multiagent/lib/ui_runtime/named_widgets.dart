@@ -1043,7 +1043,7 @@ class RequestOffers {
   /// The buttons the declaration gives, each its label and its acts, in the order of the pragmas: "for its request type, a menu of the buttons and the fields of the contract's acts" (vGLP, Section 6.2, "The words a platform shows").
   final List<DeclaredButton> buttons;
 
-  /// The kind of the field of each place of each alternative of Proposal, by its functor and arity, in order, read off its widget: `peer`, `number`, `text`, `speech` or `other`.
+  /// The kind of the field of each place of each alternative of Proposal, by its functor and arity, in order, read off its widget: `peer`, `number`, `text`, `speech`, `set` or `other`.
   final Map<String, List<String>> kinds;
 
   const RequestOffers(this.proposals,
@@ -1067,6 +1067,13 @@ class RequestOffers {
   }
 
   bool has(String f, int n) => proposals.contains('$f/$n');
+
+  /// Whether the place [i], from 1, of the request of functor [f] is that of a set variable, its value a list of constants.
+  bool isSet(String f, int i) {
+    final k = keyOf(f);
+    final ks = k == null ? const <String>[] : kinds[k] ?? const [];
+    return i >= 1 && i <= ks.length && ks[i - 1] == 'set';
+  }
 
   /// What the request `f/n` is called: its label, or its functor where none is given.
   String label(String f, int n) => labels['$f/$n'] ?? f;
@@ -1127,6 +1134,10 @@ class RequestOffers {
     if (k == 'peer' && ws.isEmpty) return 'peer';
     if (k == 'number' && ws.isEmpty) return 'number';
     if (k == 'text' && ws.isEmpty) return 'text';
+    // A list of constants the person writes, `input_list(text)`, the place of a set variable, its elements (GSC, the appendix on values, Definition "Schema with values"; vGLP #32, GLP 90b2cee71: the request names them as List(Constant)).
+    if (k == 'input_list' && ws.length == 1 && ctorArgs(ws[0]).$1 == 'text') {
+      return 'set';
+    }
     if (k == 'form' && ws.isNotEmpty && ctorArgs(ws[0]).$1 == 'speech') {
       return 'speech';
     }
@@ -1646,6 +1657,32 @@ class _SocialTabState extends State<SocialTab> {
   final Map<String, GTerm> _picked = {};
   final Map<String, String> _chosen = {};
 
+  /// The elements picked for the set place of a composer, `composer:place`, each by its text; none picked yet is the element of the way the form was opened for.
+  final Map<String, Set<String>> _setPicked = {};
+
+  /// The places of the request of [a] that its atoms bind and that are set places ([RequestOffers.isSet]).
+  static List<int> _setPlaces(RequestOffers o, ActInfo a) => [
+        for (final p in a.act.binds)
+          if (o.isSet(a.schema, p)) p
+      ];
+
+  /// The elements the set place [p] of the way [w] may take: the value at [p] of each way of its act that binds every other place as [w] does, as the notes of one type the payer holds (GSC, the appendix on values; vGLP, Section 6.2: "How the buttons of one act are arranged ... is the construct family's").
+  static List<GTerm> _setChoices(
+      SocialState s, GTerm me, _Way w, int p) {
+    final seen = <String>{};
+    return [
+      for (final x in w.act.ways(s.atoms, me))
+        if (w.act.act.binds.every((k) =>
+                k == p ||
+                (x[k] != null &&
+                    w.at[k] != null &&
+                    formatTerm(x[k]!) == formatTerm(w.at[k]!))) &&
+            x[p] != null &&
+            seen.add(formatTerm(x[p]!)))
+          x[p]!
+    ];
+  }
+
   /// The value the field [f] of the form holds: a person picked, a number, a key, an agent or a text; null where it is not yet given.
   GTerm? _fieldValue(SocialState s, RequestOffers o, ActInfo a, DeclaredField f,
       String field, String pick, GTerm me) {
@@ -1672,6 +1709,12 @@ class _SocialTabState extends State<SocialTab> {
         return GAtom(t);
       case 'agent':
         return _identifier.hasMatch(t) ? GAtom(t) : null;
+      case 'set':
+        // The elements of a set variable, typed apart by commas, each once; none is no set, a set being nonempty (GSC, the appendix on values, Definition "Binding with values").
+        final es = <String>{
+          for (final e in t.split(',')) if (e.trim().isNotEmpty) e.trim()
+        };
+        return es.isEmpty ? null : GList([for (final e in es) GString(e)]);
     }
     final key = o.keyOf(a.schema);
     final kinds = key == null ? const <String>[] : o.kinds[key] ?? const [];
@@ -1698,7 +1741,13 @@ class _SocialTabState extends State<SocialTab> {
         !w.act.distinct(at)) {
       return null;
     }
-    return GStruct(w.act.schema, [for (final x in args) x!]);
+    // A set place a way binds by one atom holds that atom's element, the set of one (GSC, Definition "Binding with values").
+    return GStruct(w.act.schema, [
+      for (var i = 1; i <= n; i++)
+        o.isSet(w.act.schema, i) && args[i - 1] is! GList
+            ? GList([args[i - 1]!])
+            : args[i - 1]!
+    ]);
   }
 
   /// The form of the button [b] for the ways [cs], each list the ways of one value: its text, the values no atom beside it shows, "with the values that way binds" (vGLP, Section 6.2), a picker of them where they are several, its fields, and the button, enabled once the form makes a request.  The fields are those of the ways of the value chosen, each name once, each name not yet held placed after the one before it in its own act, "the fields of a line name these variables, of the acts its button names together, in the schemas' order" (vGLP, Section 5.4, "The contract's words"); the request is that of the first way whose fields are those the person filled.
@@ -1765,6 +1814,17 @@ class _SocialTabState extends State<SocialTab> {
               pickKey(f.label), me);
           if (v != null) values[f.place] = v;
         }
+        if (identical(w.act, first.act)) {
+          for (final p in sets.keys) {
+            final ps = pickedAt(p);
+            final es = [
+              for (final e in sets[p]!)
+                if (ps.contains(formatTerm(e))) e
+            ];
+            if (es.isEmpty) return null;
+            values[p] = GList(es);
+          }
+        }
         final r = _request(s, o, w, values, ask);
         if (r != null) return r;
       }
@@ -1779,6 +1839,12 @@ class _SocialTabState extends State<SocialTab> {
         if (f.type == 'person')
           if (_picked[pickKey(f.label)] case final p?) f.place: p
     };
+    // A set place the atoms bind: a chip for each element the way may take, several picked at once, the way's own picked first.
+    final sets = <int, List<GTerm>>{
+      for (final p in _setPlaces(o, first.act)) p: _setChoices(s, me, first, p)
+    };
+    Set<String> pickedAt(int p) => _setPicked['$composer:$p'] ??
+        {if (first.at[p] != null) formatTerm(first.at[p]!)};
     final words = [
       for (final w in first.act.words)
         if (w is int) (at[w] == null ? '' : personName(at[w]!)) else w as String
@@ -1818,6 +1884,22 @@ class _SocialTabState extends State<SocialTab> {
                   }),
                 ),
             ]),
+          for (final p in sets.keys)
+            if (sets[p]!.length > 1)
+              Wrap(spacing: 6, runSpacing: 4, children: [
+                Text(_placeName(o, first.act, p), style: small),
+                for (final e in sets[p]!)
+                  FilterChip(
+                    key: socialKey(_id, 'set:$composer:$p:${formatTerm(e)}'),
+                    label: Text(_signed(e)),
+                    selected: pickedAt(p).contains(formatTerm(e)),
+                    onSelected: (on) => setState(() {
+                      final ps = {...pickedAt(p)};
+                      on ? ps.add(formatTerm(e)) : ps.remove(formatTerm(e));
+                      _setPicked['$composer:$p'] = ps;
+                    }),
+                  ),
+              ]),
           for (final l in union)
             if (kept[l]!.$2.type == 'person')
               Wrap(spacing: 6, runSpacing: 4, children: [
@@ -1882,6 +1964,8 @@ class _SocialTabState extends State<SocialTab> {
                         _picked.remove(pickKey(l));
                       }
                       _chosen.remove(composer);
+                      _setPicked.removeWhere(
+                          (k, _) => k.startsWith('$composer:'));
                       _openAct = null;
                     });
                   },
