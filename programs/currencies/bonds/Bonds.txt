@@ -18,7 +18,7 @@ After x redeems a y-coin against a z-bond due e: no longer x holds a y-coin, y h
 After x redeems a y-bond due e against a z-coin: no longer x holds a y-bond due e, y holds a y-bond due e, no longer y holds a z-coin, x holds a z-coin and x knows z.
 After x redeems a y-bond due e against a z-bond due f: no longer x holds a y-bond due e, y holds a y-bond due e, no longer y holds a z-bond due f, x holds a z-bond due f and x knows z.
 Interface pragmas
-Bonds: the bonds Alice holds.
+Bonds: the notes Alice holds.
 Swap: Alice [Swap] <amount given> <issuer wanted> <type wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.
 Pay: Alice [Pay] <amount>
