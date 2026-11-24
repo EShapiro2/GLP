@@ -9,9 +9,9 @@ Posting: Carol [Offer]
   Alice [Want own] <wish>
 Withdraw: Carol [Withdraw] <alice> <item> <mart>
   Alice [Withdraw own]
-Swap, Escrow: Alice [Swap item for coin] <dave> <sum>
+Swap, Escrow: Alice [Swap item for coin] <dave>
   Bob: Alice asks for your consent to swap item for coin.
-  Alice [Swap item for bond] <dave> <sum>
+  Alice [Swap item for bond] <dave>
   Bob: Alice asks for your consent to swap item for bond.
   Alice [Swap items] <thing>
   Bob: Alice asks for your consent to swap items.

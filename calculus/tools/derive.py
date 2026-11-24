@@ -210,6 +210,14 @@ class Deriver:
             self.full[n] = read(self.path(n, "sasx"))
         return self.full[n]
 
+    def own_sas(self, n):
+        """n's own schemas, as its Logic pragmas compile them (sas/), before the operations of its first line."""
+        if not hasattr(self, "ownsas"):
+            self.ownsas = {}
+        if n not in self.ownsas:
+            self.ownsas[n] = read(self.path(n, "sas"))
+        return self.ownsas[n]
+
     def first_line(self, n):
         if n not in self.first:
             ls = open(self.path(n, "sas"), encoding="utf-8").read().split("\n")
@@ -369,7 +377,15 @@ class Deriver:
             if not srcs:
                 if own(d) and not compiled(d):
                     self.rel["own"].add("e")
-                    continue        # added by n
+                    # added by n: as n's own clause writes it, no literal more or fewer (Audit PR 102, Finding 18)
+                    # (a clause written by citation is checked where it cites; a lifted or renamed predicate under the
+                    # maps of the first line's contracts)
+                    ownc = [c for c in self.own_sas(n) if c["lab"] in d["lab"].split("+") and c["H"] and not re.search(r": [A-Z][A-Za-z' -]*:\d", c["raw"])]
+                    sig = lambda x, k: sorted((l[0], l[1]) for l in x[k])      # by predicate: a lift adds a place, a kind refines a word
+                    same = lambda c: all(sig(c, k) == sig(d, k) for k in "HB")
+                    if ownc and not any(same(c) for c in ownc):
+                        diffs.append(("a clause of %s that is not as its own clause writes it" % n, ownc[0], d))
+                    continue
                 if compiled(d):
                     self.rel["own"].add("e")
                     base = self.base_of(d, mine)

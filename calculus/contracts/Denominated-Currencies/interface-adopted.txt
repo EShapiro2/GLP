@@ -1,21 +1,21 @@
 Interface pragmas
-Issue denominated bond: Alice [Issue denominated bond] <dollar> <sum> <day>
-Swap, Redeem, Escrow: Alice [Swap] <dave> <sum> <other> <total>
+Issue denominated bond: Alice [Issue denominated bond] <dollar> <day>
+Swap, Redeem, Escrow: Alice [Swap] <dave> <other>
   Bob: Alice asks for your consent to swap.
-  Alice [Deposit] <sum> <cond>
+  Alice [Deposit] <cond>
   Carol: Alice asks for your consent to deposit.
   Alice [Redeem] <carol> [Redeem coin against bond] <carol> [Redeem bond] <carol> <day> [Redeem bond against bond] <carol> <day>
-  Alice [Deposit own coins] <sum> <cond>
+  Alice [Deposit own coins] <cond>
   Carol: Alice asks for your consent to deposit own coins.
-  Alice [Deposit with the issuer] <sum> <cond>
+  Alice [Deposit with the issuer] <cond>
   Carol: Alice asks for your consent to deposit with the issuer.
-  Alice [Deposit more] <sum> <cond>
+  Alice [Deposit more] <cond>
   Carol: Alice asks for your consent to deposit more.
-  Alice [Deposit own bonds] <sum> <cond>
+  Alice [Deposit own bonds] <cond>
   Carol: Alice asks for your consent to deposit own bonds.
-  Alice [Deposit bond with the issuer] <sum> <cond>
+  Alice [Deposit bond with the issuer] <cond>
   Carol: Alice asks for your consent to deposit bond with the issuer.
-  Alice [Deposit bond more] <sum> <cond>
+  Alice [Deposit bond more] <cond>
   Carol: Alice asks for your consent to deposit bond more.
-Accept: Alice [Accept] <limit> [Accept by bond] <limit> <day>
+Accept: Alice [Accept] [Accept by bond] <day>
 Pay accepted coins: Alice [Pay accepted coins] [Pay own accepted coins] [Pay accepted coins to the issuer]
