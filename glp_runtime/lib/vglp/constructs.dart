@@ -1585,7 +1585,7 @@ class _Generator {
       if (!visited.add('${n.key}|${inSeq != null}')) return;
       final seq = _seqOf(n);
       if (seq != null) {
-        if (inSeq != null) {
+        if (inSeq != null && !(seq.list && n.child(seq.elem).typeKey == 'Constant')) {
           final (outer, elem) = inSeq;
           refuse(
               '${who(outer)} writes ${outer.typeKey}, whose element '
