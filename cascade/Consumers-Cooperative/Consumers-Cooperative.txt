@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 7.2 and cites a clause as Consumers' Cooperative:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Cooperative and Trading Company.
-% Last changed: 2026-11-16, by GO #8.
+% Last changed: 2026-11-24, by GO #15: Interface fields dropped for values another role's state fixes (a deposit, a payment, a fee), by pragmas.sh at vGLP 1ed1b8387 on the Calculus's set terms.
 % Schemas: Consumers-Cooperative.glp beside this file.
 Consumers' Cooperative
 Consumers' Cooperative unites Cooperative and an augmentation of Trading Company, and extends and augments the union.
@@ -28,6 +28,6 @@ Fee: Bob [Join] <organisation> <officer> <votes>
   Codecider: Bob asks to become a member of Orga.
   Decider [Set fee] <fee>
   Codecider: Decider asks to set the fee of Orga.
-  Bob [Pay fee] <fee>
+  Bob [Pay fee]
 Sell: Carol [Sell] <issuer> <denomination> <good>
   Erin: Carol asks that you pay Orga the cost of a good it holds.
