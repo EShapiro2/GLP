@@ -216,7 +216,7 @@ class Deriver:
             self.first[n] = ls[1]
         return self.first[n]
 
-    WITH = r" with (.*?)(?=, (?:and )?(?:restricts|strengthens|extends|composes|relaxes|lifts|renames|weakens|amends|unites)\b|$)"
+    WITH = r" with (.*?)(?=, (?:and )?(?:restricts|strengthens|extends|composes|relaxes|lifts|renames|weakens|augments|unites)\b|$)"
 
     def words(self, n):
         """The renamings of words of the first line's 'instantiates B with ...': [(new, old)], 'a child for a ward'."""
@@ -422,7 +422,7 @@ class Deriver:
         """The first line of n in the seven relations, as derive() found n: 'Ads unites Community Network and a weakening
         of Overlay.'"""
         r = self.rel
-        ws = lambda k: {frozenset("w"): "weakens", frozenset("s"): "strengthens", frozenset("ws"): "amends"}.get(frozenset(k))
+        ws = lambda k: {frozenset("w"): "weakens", frozenset("s"): "strengthens", frozenset("ws"): "augments"}.get(frozenset(k))
         def noun(p):
             x, pm = p, r["pairs"][p]
             if pm.ren:
@@ -431,7 +431,7 @@ class Deriver:
                 x = "a lift of " + x
             k = ws(r["pre"][p])
             if k:
-                x = {"weakens": "a weakening of ", "strengthens": "a strengthening of ", "amends": "an amendment of "}[k] + x
+                x = {"weakens": "a weakening of ", "strengthens": "a strengthening of ", "augments": "an augmentation of "}[k] + x
             return x
         own = (["extends"] if "e" in r["own"] else []) + ([ws(r["own"] - {"e"})] if ws(r["own"] - {"e"}) else [])
         andl = lambda xs: xs[0] if len(xs) == 1 else ", ".join(xs[:-1]) + " and " + xs[-1]

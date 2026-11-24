@@ -1,7 +1,7 @@
 Funded DAO
 Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
 Of DAO: Carol is possibly Alice or Bob.
-Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+Of Notes: A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Of Coins: A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 Of Funded DAO: Dave is possibly Alice, Bob or Carol.
 Alice, Bob, Carol and Dave are persons, Delos a DAO, Prop a proposal, Votes, Double, Sum and Total numbers, Cond a condition Alice, Bob and Carol agree, Type and Other types.

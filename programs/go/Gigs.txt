@@ -50,7 +50,7 @@ Look: 🧰, network
 Job: Alice [Post] <job>
   Bob [Pass]
   Alice [Withdraw job]
-Engage: Alice [Engage] <stake and deposit>
+Engage: Alice [Engage]
   Bob: Alice asks to engage you for her job.
 Deliver: Bob [Deliver]
 Acceptance: Alice [Accept work] <deposit> [Reject] <arbiter>

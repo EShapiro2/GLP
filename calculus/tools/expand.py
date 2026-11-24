@@ -68,10 +68,10 @@ LEAD_IN = ('Each contract with the operations of its first line and of its citin
 
 NAME = NM.NAME_RX      # a name of the table, longest first, or one word (tools/names.py)
 REF = NM.REF
-VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes', 'weakens', 'amends', 'renames', 'lifts', 'unites')
+VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes', 'weakens', 'augments', 'renames', 'lifts', 'unites')
 VERB = r'(?:%s)' % '|'.join(VERBS)
 PRONOUNS = ('it', 'them', 'the composition', 'the union')
-OF = re.compile(r'^(?:an? (?:weakening|strengthening|amendment|renaming|lift) of )+')      # 'a weakening of a lift of Bonds': the contract Bonds
+OF = re.compile(r'^(?:an? (?:weakening|strengthening|augmentation|renaming|lift) of )+')      # 'a weakening of a lift of Bonds': the contract Bonds
 
 # The act sentences a citing clause restricts, where its heading names none of the
 # cited clause: (contract, clause number) -> the acts, as the cited contract heads

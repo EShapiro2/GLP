@@ -2,7 +2,7 @@ Disputes
 1. ○ Establish.  Alice may establish an identity once.
 2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
 3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-4. ■ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
 5. ■ Person unfriend.  Alice may end her friendship with Bob.
 6. ■ Found.  Alice may create an organisation, Orga, and establish Orga's identity by choosing Orga's key pair, and Orga must consent.
 7. ■ Appoint.  Those who decide for Orga may make Bob, a friend of an officer of Orga, an officer and a friend of Orga, with the consent of Bob, only if Bob is a participant; the decision names his role.

@@ -5,10 +5,10 @@ Children:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, 
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2+Guardians:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
-Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:1+Guardians:3 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- person(Alice), person(Bob), knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- person(Alice), person(Bob), knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2+Groups:3+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice), ~member(Alice,_,Bob), ~member(Bob,_,Alice), ~listed(Alice,Bob,_), ~listed(Bob,Alice,_) <- person(Alice), person(Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.
@@ -64,13 +64,13 @@ Warded Groups:3 ■ Child join: member(Wendy,Grupo,Bob), listed(Bob,Wendy,Grupo)
 Warded Groups:3 ■ Children join: member(Will,Grupo,Wendy), listed(Wendy,Will,Grupo) <- leader(Wendy,Grupo), child(Wendy), has_parent(Wendy,Alice), parent(Alice,Wendy), friend(Wendy,Will), friend(Will,Wendy), child(Will), has_parent(Will,Bob), parent(Bob,Will), knows(Alice,Will), friend(Alice,Bob), friend(Bob,Alice), ~member(Will,Grupo,_) guarded by Wendy, Will, Alice, Bob.
 Warded Groups:3 ■ Children of one parent join: member(Will,Grupo,Wendy), listed(Wendy,Will,Grupo) <- leader(Wendy,Grupo), child(Wendy), has_parent(Wendy,Alice), parent(Alice,Wendy), friend(Wendy,Will), friend(Will,Wendy), child(Will), has_parent(Will,Alice), parent(Alice,Will), ~member(Will,Grupo,_) guarded by Wendy, Will, Alice.
 Warded Groups:3 ■ Child withdraw: ~member(Wendy,Grupo,Bob), ~listed(Bob,Wendy,Grupo) <- has_parent(Wendy,Alice), parent(Alice,Wendy), member(Wendy,Grupo,Bob), listed(Bob,Wendy,Grupo) guarded by Alice.
-Warded Groups:3+Children:3 ■ Child add: member(Will,Grupo,Wendy), listed(Wendy,Will,Grupo) <- leader(Wendy,Grupo), child(Wendy), ~retired(Wendy), has_parent(Wendy,Alice), parent(Alice,Wendy), friend(Wendy,Will), friend(Will,Wendy), friend(Alice,Will), friend(Will,Alice), ~member(Will,Grupo,_), child(Will) guarded by Wendy, Will, Alice.
+Warded Groups:3+Children:3 ■ Child add: member(Will,Grupo,Wendy), listed(Wendy,Will,Grupo) <- leader(Wendy,Grupo), child(Wendy), ~retired(Wendy), has_parent(Wendy,Alice), parent(Alice,Wendy), friend(Wendy,Will), friend(Will,Wendy), friend(Alice,Will), friend(Will,Alice), ~member(Will,Grupo,_), child(Will), has_parent(Will,Bob) guarded by Wendy, Will, Alice, Bob.
 Warded Groups:3 ■ Child leave: ~member(Wendy,Grupo,Alice), ~listed(Alice,Wendy,Grupo) <- child(Wendy), ~retired(Wendy), member(Wendy,Grupo,Alice), listed(Alice,Wendy,Grupo) guarded by Wendy.
 Warded Groups:3 ■ Child remove: ~member(Bob,Grupo,Wendy), ~listed(Wendy,Bob,Grupo) <- leader(Wendy,Grupo), child(Wendy), ~retired(Wendy), member(Bob,Grupo,Wendy), listed(Wendy,Bob,Grupo) guarded by Wendy.
 Children:0 - | In clause 2 Alice and Bob are possibly one person.
 Children:1 ◆ | Alice is a legal parent of the minor who operates Wendy.
 Children:2 ■ | A child's acquaintances.
-Children:3 ■ | Only a child, Will, may join the group.
+Children:3 ■ | Only a child, Will, may join the group, with the consent of Bob, a parent of Will.
 Children:4 ○ Of age: of_age(Wendy), ~child(Wendy), ~parent(_,Wendy), ~has_parent(Wendy,_), person(Wendy) <- creator(Alice,Wendy), has_parent(Wendy,Bob), ~of_age(Wendy), child(Wendy) guarded by Alice.
 Children:4 ○ | Wendy is then a person.
 Children:4 ○ | The creator will do so if the minor who operates Wendy comes of age, and not before.

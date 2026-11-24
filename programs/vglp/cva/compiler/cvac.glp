@@ -3163,10 +3163,12 @@ word_faults(words(pragmas(Ls, As, Ss, _, _, _, _), _, Lx, _, _), C, Nt, Ps, F?) 
     unnamed_lines(Ps?, Ns?, F3),
     proposer_faults(As?, C?, Lx?, F4),
     standing_faults(Ss?, C?, F5),
+    dead_lines(As?, C?, Ps?, F6),
     lapp(F1?, F2?, F12),
     lapp(F3?, F4?, F34),
     lapp(F12?, F34?, F1234),
-    lapp(F1234?, F5?, F).
+    lapp(F5?, F6?, F56),
+    lapp(F1234?, F56?, F).
 %% The schemas the standing declarations name: "the standing act has no button" (vGLP d433f71, Section 5.4, "The contract's words"), so a guarded schema declared standing is named although no button names it.
 procedure stand_names(PStands?, Preds).
 stand_names([], []).
@@ -3724,6 +3726,24 @@ form_words([person(K)|Ws], Pp, Vs0, Vs, [at(I?)|Fs?]) :- ground(Pp?), ground(Vs0
     nth_arg(J?, Vs0?, A),
     place_of(A?, Vs?, 1, I),
     form_words(Ws?, Pp?, Vs0?, Vs?, Fs).
+%% A button naming a guarded schema that names no guarded part, no binding of it determining a transaction, as one that adds at a role an atom it deletes there: "no atom a schema adds at a person is one it deletes there" (vGLP, Section 5.4, "Speech-act schemas as local specifications"), so no person can propose its act, and the request type has no alternative for it (local.glp, proposable).  The contract is not compiled, with the line saying why, as for a button naming no schema (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 3).
+procedure dead_lines(TActs?, Contract?, Preds?, Lines).
+dead_lines([], _, _, []).
+dead_lines([act(N, _, _, _, _, _, _)|As], C, Ps, L?) :- ground(N?), ground(C?), ground(Ps?) |
+    find_schema(N?, C?, Sf),
+    mem(N?, Ps?, In),
+    dead_line(Sf?, In?, N?, L1),
+    dead_lines(As?, C?, Ps?, L2),
+    lapp(L1?, L2?, L).
+procedure dead_line(SFound?, YesNo?, Constant?, Lines).
+dead_line(sfound(_, Rs), no, N, L?) :- ground(Rs?), ground(N?) |
+    guard_roles(Rs?, 1, Gs),
+    dead_guarded(Gs?, N?, L).
+dead_line(_, _, _, []) :- otherwise | true.
+procedure dead_guarded(Ints?, Constant?, Lines).
+dead_guarded([], _, []).
+dead_guarded([_|_], N, [H?]) :- ground(N?) |
+    said('%% a pragma\'s button names a guarded schema no binding of which determines a transaction, as one adding at a role an atom it deletes there:', N?, H).
 %% The schemas the buttons name.
 procedure act_names(TActs?, Preds).
 act_names([], []).

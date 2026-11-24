@@ -108,9 +108,10 @@ Children of one parent join: Wendy [Children of one parent join]
   Will: Wendy asks for your consent to children of one parent join.
   Alice: Wendy asks for your consent to children of one parent join.
 Child withdraw: Alice [Child withdraw] <bob> <grupo>
-Child add: Wendy [Child add]
+Child add: Wendy [Child add] <bob>
   Will: Wendy asks for your consent to child add.
   Alice: Wendy asks for your consent to child add.
+  Bob: Wendy asks for your consent to child add.
 Child leave: Wendy [Child leave]
 Child remove: Wendy [Child remove]
 Of age: Alice [Of age]

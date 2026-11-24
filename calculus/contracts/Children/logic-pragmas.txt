@@ -3,7 +3,7 @@ Children renames Warded Groups, and extends and weakens it.
 Alice and Bob are persons, Wendy and Will children; in clause 2 Alice and Bob are possibly one person.
 1. ◆ Enter: Guardians:1. Alice is a legal parent of the minor who operates Wendy.
 2. ■ A child's acquaintances. Child acquaint: Guardians:3 Ward acquaint, only if Alice knows Bob and Alice is a parent of Wendy, with the consent of Alice. Children acquaint: Guardians:4 Wards acquaint, only if Alice knows Will, Bob knows Wendy, Alice and Bob know each other, Alice is a parent of Wendy and Bob is a parent of Will, with the consent of Alice and Bob.
-3. ■ Child create: Warded Groups:2 Ward create, only if Wendy has Alice as a parent, with the consent of Alice. Join: Groups:3 Join, only if Alice is a person. Child add: Warded Groups:3 Ward add, Will in place of Bob, only if Will is a child. Only a child, Will, may join the group.
+3. ■ Child create: Warded Groups:2 Ward create, only if Wendy has Alice as a parent, with the consent of Alice. Join: Groups:3 Join, only if Alice is a person. Child add: Warded Groups:3 Ward add, Will in place of Bob, only if Will is a child and Will has Bob as a parent, with the consent of Bob. Only a child, Will, may join the group, with the consent of Bob, a parent of Will.
 4. ○ Of age: Alice may declare Wendy of age, provided Alice is the creator of Wendy and Wendy has Bob as a parent. Wendy is then a person. The creator will do so if the minor who operates Wendy comes of age, and not before.
 5. ○ A minor who is not a ward. Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.
 Logic pragmas.

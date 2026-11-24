@@ -6,9 +6,9 @@ Of Organisation: An *organisation* is a ward with *participants*, which include 
 Of Booking: An organisation has *resources*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have. Environment: z has the slot s of the resource r; x has fewer outstanding bookings in z than the bound.
 Alice, Bob and Carol are persons, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Res a resource, Slot a slot.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
-Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
-Friendship:1, Guardians:3. ■ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice is a person and Bob is a person. Alice and Bob will become friends only if they trust each other.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person and Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
 Friendship:2, Guardians:3. ■ Person unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
 Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 Guardians:1, Organisation:1. ■ Found: Alice may create Orga, with the consent of Gov, and Orga must consent, provided Alice is a person, and then Orga has Alice as its first officer, Alice holds the role Role in Orga, Orga has Alice in the role Role, Alice is a participant of Orga, Orga has Alice as a participant and Gov is the founder of Orga. Alice chooses Orga's key pair.

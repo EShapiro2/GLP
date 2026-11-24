@@ -28,7 +28,7 @@ DAO:5 ■ Deliver pass: Alice has delivered the decision on Prop of Delos to Bob
 DAO:5 ■ Deliver reject: Alice has delivered the decision on Prop of Delos to Bob and Bob holds Prop of Delos as rejected, provided Alice is the steward of Delos, Alice holds Prop of Delos as rejected, Alice has Bob as a member of Delos and not Alice has delivered the decision on Prop of Delos to Bob.
 DAO:6 ■ | Majority.
 DAO:6 ■ | The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.
-Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+Notes:0 - | A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 Notes:1 ■ Issue: Alice may Alice holds Sum Alice-notes of type Type.
 Notes:2 ■ Swap: Alice and Bob may jointly no longer Alice holds Sum Carol-notes of type Type, Bob holds Sum Carol-notes of type Type, no longer Bob holds Total Dave-notes of type Other, Alice holds Total Dave-notes of type Other, Bob knows Carol and Alice knows Dave, provided Alice knows Bob and Bob knows Alice. Possibly one: Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.

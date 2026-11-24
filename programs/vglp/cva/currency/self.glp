@@ -22,9 +22,9 @@
 %% Section 5.4, "Act schemas as local specifications": "Every other numeric
 %% variable is bound by the schema-binding, as a speech-act variable is, and a
 %% request names it, so the request form takes it"; "a multiplicity k deleting
-%% or adding k copies").  The classes, as the platform names them: issue(P, K),
-%% P issues K coins of P; swap(P, Q, U, K, V, K1), P gives K coins of U and
-%% takes K1 of V, Q the converse; pay(P, Q, U, K), P pays Q K coins of U, with Q's consent (Notes:3); pay_issuer(P, Q, K), P pays Q K coins of Q, guarded by P, without the consent of Q (Coins:1, Pay issuer);
+%% or adding k copies").  The classes, as the platform names them, T the type of the notes, coin in each play (Notes; Coins: "A *coin* is a note that is a unit of its issuer's debt"): issue(P, T, K),
+%% P issues K notes of P of type T, each note(P, T); swap(P, Q, U, T, K, V, T1, K1), P gives K notes of U and
+%% takes K1 of V, Q the converse; pay(P, Q, U, T, K), P pays Q K notes of U, with Q's consent (Notes:3); pay_issuer(P, Q, T, K), P pays Q K notes of Q, guarded by P, without the consent of Q (Coins:1, Pay issuer);
 %% redeem(P, Q, R), P gives Q a coin of Q and takes a coin of R that Q holds (Coins:2).
 %%
 %% Each play opens alike: each person establishes their identity and issues
@@ -35,12 +35,12 @@
 %% other.
 %%
 %% play_pay_swap: alice issues 2 coins and bob 3; alice requests swapping 2 of
-%%   hers for 3 of bob's, swap(alice, bob, alice, 2, bob, 3); bob is asked and
+%%   hers for 3 of bob's, swap(alice, bob, alice, coin, 2, bob, coin, 3); bob is asked and
 %%   answers yes, and it commits; alice then pays bob 2 of his coins back,
-%%   pay_issuer(alice, bob, 2), guarded by her, and bob's machine votes yes, unasked.
+%%   pay_issuer(alice, bob, coin, 2), guarded by her, and bob's machine votes yes, unasked.
 %% play_redeem: each issues one coin and they swap them one for one,
-%%   swap(alice, bob, alice, 1, bob, 1); alice then requests the swap back,
-%%   swap(alice, bob, bob, 1, alice, 1), whose
+%%   swap(alice, bob, alice, coin, 1, bob, coin, 1); alice then requests the swap back,
+%%   swap(alice, bob, bob, coin, 1, alice, coin, 1), whose
 %%   class redeem(alice, bob, alice) and redeem(bob, alice, bob) also
 %%   determine, a redemption moving one coin each way, each schema-binding a
 %%   part with the people in its marked roles as its guard set (vGLP, Section
@@ -57,7 +57,7 @@
 %% play_busy: each having issued 2 coins and swapped one coin for one,
 %%   alice requests a second swap and bob, asked, leaves his approval question
 %%   open, alice's machine holding her attempt prepared; bob requests paying
-%%   alice her coin back, pay_issuer(bob, alice, 1), and alice's machine holds the pay's start waiting,
+%%   alice her coin back, pay_issuer(bob, alice, coin, 1), and alice's machine holds the pay's start waiting,
 %%   her lock set by her swap, which has priority over the pay, so it wounds
 %%   nothing and votes no on nothing for contention (vGLP 49cd9f7,
 %%   wound-wait); bob answers alice's approval question no, his vote no
@@ -86,64 +86,64 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 exported procedure play_pay_swap(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_pay_swap(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
-          own([A2], propose(issue(A2?, 2))), wait(has(coin(alice), 2)),
+          own([A2], propose(issue(A2?, coin, 2))), wait(has(note(alice, coin), 2)),
           own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, 2, bob, 3))),
-          wait(has(coin(bob), 3)),
-          own([A6], propose(pay_issuer(A6?, bob, 2)))],
+          own([A4, A5], propose(swap(A4?, bob, A5?, coin, 2, bob, coin, 3))),
+          wait(has(note(bob, coin), 3)),
+          own([A6], propose(pay_issuer(A6?, bob, coin, 2)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
-          own([B2], propose(issue(B2?, 3))), wait(has(coin(bob), 3)),
+          own([B2], propose(issue(B2?, coin, 3))), wait(has(note(bob, coin), 3)),
           approval(acquaint(alice, bob), yes),
-          approval(swap(alice, bob, alice, 2, bob, 3), yes)],
+          approval(swap(alice, bob, alice, coin, 2, bob, coin, 3), yes)],
          LA, LB, N).
 
 exported procedure play_redeem(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_redeem(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
-          own([A2], propose(issue(A2?, 1))), wait(holds(coin(alice))),
+          own([A2], propose(issue(A2?, coin, 1))), wait(holds(note(alice, coin))),
           
           own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, 1, bob, 1))),
-          wait(holds(coin(bob))),
-          own([A6, A7], propose(swap(A6?, bob, bob, 1, A7?, 1))),
-          wait(holds(coin(alice))),
-          own([A8, A9], propose(swap(A8?, bob, A9?, 1, bob, 1))),
-          wait(holds(coin(bob))),
+          own([A4, A5], propose(swap(A4?, bob, A5?, coin, 1, bob, coin, 1))),
+          wait(holds(note(bob, coin))),
+          own([A6, A7], propose(swap(A6?, bob, bob, coin, 1, A7?, coin, 1))),
+          wait(holds(note(alice, coin))),
+          own([A8, A9], propose(swap(A8?, bob, A9?, coin, 1, bob, coin, 1))),
+          wait(holds(note(bob, coin))),
           own([A10, A11], propose(redeem(A10?, bob, A11?)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
-          own([B2], propose(issue(B2?, 1))), wait(holds(coin(bob))),
+          own([B2], propose(issue(B2?, coin, 1))), wait(holds(note(bob, coin))),
           
           approval(acquaint(alice, bob), yes),
-          approval(swap(alice, bob, alice, 1, bob, 1), yes),
-          approval(swap(alice, bob, bob, 1, alice, 1), yes),
-          approval(swap(alice, bob, alice, 1, bob, 1), yes)],
+          approval(swap(alice, bob, alice, coin, 1, bob, coin, 1), yes),
+          approval(swap(alice, bob, bob, coin, 1, alice, coin, 1), yes),
+          approval(swap(alice, bob, alice, coin, 1, bob, coin, 1), yes)],
          LA, LB, N).
 
 exported procedure play_busy(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_busy(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
-          own([A2], propose(issue(A2?, 2))), wait(has(coin(alice), 2)),
+          own([A2], propose(issue(A2?, coin, 2))), wait(has(note(alice, coin), 2)),
           own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, 1, bob, 1))),
-          wait(holds(coin(bob))),
-          own([A6, A7], propose(swap(A6?, bob, A7?, 1, bob, 1)))],
+          own([A4, A5], propose(swap(A4?, bob, A5?, coin, 1, bob, coin, 1))),
+          wait(holds(note(bob, coin))),
+          own([A6, A7], propose(swap(A6?, bob, A7?, coin, 1, bob, coin, 1)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
-          own([B2], propose(issue(B2?, 2))), wait(has(coin(bob), 2)),
+          own([B2], propose(issue(B2?, coin, 2))), wait(has(note(bob, coin), 2)),
           approval(acquaint(alice, bob), yes),
-          approval(swap(alice, bob, alice, 1, bob, 1), yes),
-          wait(asked(swap(alice, bob, alice, 1, bob, 1))),
-          own([B3], propose(pay_issuer(B3?, alice, 1))),
+          approval(swap(alice, bob, alice, coin, 1, bob, coin, 1), yes),
+          wait(asked(swap(alice, bob, alice, coin, 1, bob, coin, 1))),
+          own([B3], propose(pay_issuer(B3?, alice, coin, 1))),
           wait(asking),
-          approval(swap(alice, bob, alice, 1, bob, 1), no)],
+          approval(swap(alice, bob, alice, coin, 1, bob, coin, 1), no)],
          LA, LB, N).
 
 exported procedure play_declined(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_declined(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
-          own([A2], propose(issue(A2?, 1))), wait(holds(coin(alice))),
+          own([A2], propose(issue(A2?, coin, 1))), wait(holds(note(alice, coin))),
           
           own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, 1, carol, 1)))],
+          own([A4, A5], propose(swap(A4?, bob, A5?, coin, 1, carol, coin, 1)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           
           approval(acquaint(alice, bob), yes)],
