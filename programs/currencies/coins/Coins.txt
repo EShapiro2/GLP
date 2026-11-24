@@ -21,7 +21,7 @@ Vocabulary: x holds a y-coin = note(x,y,coin); x holds n y-coins = note(x,y,coin
 After x pays the issuer y n y-notes of type t: no longer x holds n y-notes of type t and y holds n y-notes of type t.
 After x redeems a y-coin against a z-coin: no longer x holds a y-coin, y holds a y-coin, no longer y holds a z-coin, x holds a z-coin and x knows z.
 Interface pragmas
-Coins: the coins Alice holds.
+Coins: the notes Alice holds.
 Swap: Alice [Swap] <amount given> <issuer wanted> <type wanted> <amount wanted>
   Bob: Alice asks to swap coins with you.
 Pay: Alice [Pay] <amount>
