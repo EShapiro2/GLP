@@ -1,2 +1,3 @@
-Lodging extends Community Network and Overlay: holds
-Lodging restricts Community Network and Recommendations: holds
+Lodging extends Community Network and Overlay and Recommendations: holds
+Lodging extends it (Community Network and Overlay and Recommendations): holds
+Lodging restricts it (Community Network and Overlay and Recommendations): holds

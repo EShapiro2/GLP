@@ -1,1 +1,1 @@
-Help instantiates Anonymous Matching: holds
+Help extends Free Matching: holds

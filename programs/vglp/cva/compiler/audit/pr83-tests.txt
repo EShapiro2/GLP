@@ -1,0 +1,124 @@
+The checks "CVA ranks", "CVA once" and "CVA deads" of test/run_all_tests.sh (Section VG), run by vGLP #32 on GLP main 574caf8b7, 2026-11-24 11:10 UTC, with the harness of test/run_all_tests.sh, for Grassroots-Audit PR 83, programs/vglp/cva/compiler/cvac.glp.md: Finding 1, CVA once; Finding 2, CVA ranks; Finding 3, CVA deads.  15 passed, 0 failed.  The REPL's output of each follows the checks; the compiled platform of ranks is left out but for its line schema_numeric(behind, ...).
+
+ranks platform.vglp: schema_numeric(behind, numeric([cj(at(1), eq(num(c), mul(num(l), num(d)))), cj(at(1), eq(num(a), plus(num(w), num(c)))), cj(at(1), eq(num(w), plus(num(s), num(f)))), cj(at(1), ge(num(s), num(0)))], [num(s), num(w), num(c), num(a), num(l)], []))
+
+
+  PASS: CVA ranks: c, w and s determined through the chain of equalities, local to the role with a and l; f and d bound
+  PASS: CVA ranks: ... the request names f and d of behind, and f, d and s of behind2
+  PASS: CVA ranks: ... behind2(Peer, f, d, s)
+  PASS: CVA ranks: the platform emitted and loaded, its types checked
+  PASS: CVA ranks: ... the class of behind(alice, 12, 2) has its part, proposed by alice
+  PASS: CVA ranks: ... terms(50, 2) and bid(12, 2) at alice: c = 4, w = 46 and s = 34, at least 0, in the domain
+  PASS: CVA ranks: ... terms(10, 2): s = -6, below 0, not in it
+  PASS: CVA ranks: ... behind2 with s = 34, in it
+  PASS: CVA ranks: ... and with s = 33, not
+  PASS: CVA once: the platform emitted and loaded, its types checked
+  PASS: CVA once: rank(alice, 7), keeping and deleting bid(7), takes the state with one bid(7)
+  PASS: CVA once: ... and not the state without it
+  PASS: CVA once: the control, rank2(alice, 7), deleting bid(7), takes the state with one bid(7)
+  PASS: CVA once: ... and not the state without it
+  PASS: CVA deads: a button naming touch, which adds the atom it deletes, is refused, with the line saying why
+
+=== REPL output, CVA ranks: the platform loaded and its procedures called
+╔════════════════════════════════════════╗
+║  GLP REPL - With Type Checking         ║
+╚════════════════════════════════════════╝
+
+Build: 574caf8b7
+Working directory: /home/user/glp-m/glp_runtime
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit, :mad, :app, :boot, :deliveries
+
+Loaded root self.glp
+
+GLP>   wrote /home/user/glp-m/test/../programs/tests/vg_rank_12112/platform.glp
+GLP> ✓ Loaded: /home/user/glp-m/test/../programs/tests/vg_rank_12112/platform.glp
+GLP> Goal reduction limit set to 10000000
+GLP> N1 = behind
+B1 = [b(role(1), p(alice)), b(num(f), n(12)), b(num(d), n(2)), b(num(s), lv(behind, s)), b(num(w), lv(behind, w)), b(num(c), lv(behind, c)), b(num(a), lv(behind, a)), b(num(l), lv(behind, l))]
+N2 = behind
+B2 = [b(role(1), p(alice)), b(num(f), n(12)), b(num(d), n(2)), b(num(s), lv(behind, s)), b(num(w), lv(behind, w)), b(num(c), lv(behind, c)), b(num(a), lv(behind, a)), b(num(l), lv(behind, l))]
+Rs1 = [rs(guarded, [atom(ranked, [num(f), num(d)])], [atom(bid, [num(f), num(d)])], [atom(terms, [num(a), num(l)])], [])]
+Ps1 = [delta(alice, [g(bid, [n(12), n(2)])], [g(ranked, [n(12), n(2)])])]
+I1 = ci(behind(alice, 12, 2), [delta(alice, [g(bid, [n(12), n(2)])], [g(ranked, [n(12), n(2)])])], [alice], [pt(behind(alice, 12, 2), [alice], proposed([alice]))], [mate(behind, [b(num(l), lv(behind, l)), b(num(a), lv(behind, a)), b(num(c), lv(behind, c)), b(num(w), lv(behind, w)), b(num(s), lv(behind, s)), b(num(d), n(2)), b(num(f), n(12)), b(role(1), p(alice))], [alice], alice)])
+P1 = [pt(behind(alice, 12, 2), [alice], proposed([alice]))]
+→ succeeds
+
+GLP> D2 = yes
+→ succeeds
+
+GLP> D3 = no
+→ succeeds
+
+GLP> D4 = yes
+→ succeeds
+
+GLP> D5 = no
+→ succeeds
+
+GLP> Goodbye!
+=== REPL output, CVA once: the platform loaded and its procedures called
+╔════════════════════════════════════════╗
+║  GLP REPL - With Type Checking         ║
+╚════════════════════════════════════════╝
+
+Build: 574caf8b7
+Working directory: /home/user/glp-m/glp_runtime
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit, :mad, :app, :boot, :deliveries
+
+Loaded root self.glp
+
+GLP>   wrote /home/user/glp-m/test/../programs/tests/vg_once_12112/platform.glp
+GLP> ✓ Loaded: /home/user/glp-m/test/../programs/tests/vg_once_12112/platform.glp
+GLP> Goal reduction limit set to 10000000
+GLP> N1 = rank
+B1 = [b(role(1), p(alice)), b(num(f), n(7))]
+Rs1 = [rs(guarded, [atom(ranked, [num(f)])], [atom(bid, [num(f)])], [atom(bid, [num(f)])], [])]
+K1 = yes
+→ succeeds
+
+GLP> N2 = rank
+B2 = [b(role(1), p(alice)), b(num(f), n(7))]
+Rs2 = [rs(guarded, [atom(ranked, [num(f)])], [atom(bid, [num(f)])], [atom(bid, [num(f)])], [])]
+K2 = no
+→ succeeds
+
+GLP> N3 = rank2
+B3 = [b(role(1), p(alice)), b(num(f), n(7))]
+Rs3 = [rs(guarded, [atom(ranked, [num(f)])], [atom(bid, [num(f)])], [], [])]
+K3 = yes
+→ succeeds
+
+GLP> N4 = rank2
+B4 = [b(role(1), p(alice)), b(num(f), n(7))]
+Rs4 = [rs(guarded, [atom(ranked, [num(f)])], [atom(bid, [num(f)])], [], [])]
+K4 = no
+→ succeeds
+
+GLP> Goodbye!
+=== REPL output, CVA deads: compile
+╔════════════════════════════════════════╗
+║  GLP REPL - With Type Checking         ║
+╚════════════════════════════════════════╝
+
+Build: 574caf8b7
+Working directory: /home/user/glp-m/glp_runtime
+
+Input: filename.glp to load, or goal to execute
+Commands: :quit, :help, :trace, :debug, :limit, :mad, :app, :boot, :deliveries
+
+Loaded root self.glp
+
+GLP> [CERTIFICATE REFUSED] compiler reaches the network or the person: vglp/cva/compiler/cvac:compile_q/6 calls send_to_user/1; vglp/cva/compiler/cvac:compile1/8 calls send_to_user/1; vglp/cva/compiler/cvac:compile2/8 calls send_to_user/1; vglp/cva/compiler/cvac:compile3/8 calls send_to_user/1; vglp/cva/compiler/cvac:compile3a/7 calls send_to_user/1; vglp/cva/compiler/cvac:compile4/8 calls send_to_user/1; vglp/cva/compiler:not_instantiated/1 calls send_to_user/1
+✓ Loaded program: /home/user/glp-m/test/../programs/vglp/cva/compiler/
+GLP> Goal reduction limit set to 1000000000
+GLP> %% compile begin
+%% not compiled(deads)
+%% a pragma's button names a guarded schema no binding of which determines a transaction, as one adding at a role an atom it deletes there:(touch)
+%% compile end
+→ succeeds
+
+GLP> Goodbye!

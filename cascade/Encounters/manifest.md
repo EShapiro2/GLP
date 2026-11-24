@@ -1,10 +1,10 @@
 # A run of the cascade on Encounters
 
-- Contract: `Encounters` (`encounters` to the checker), its owner's two files `programs/social/graph/Encounters.txt` and `programs/social/graph/Encounters.glp`, copied here as they stood at `d853af8d`.
+- Contract: `Encounters` (`encounters` to the checker), its owner's two files `programs/social/graph/Encounters.txt` and `programs/social/graph/Encounters.glp`, copied here as they stood at `235bab58`.
 - The paper: `/Users/udi/Grassroots/GSA (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/social/graph/Encounters.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/social/graph/Encounters.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-17 23:18 UTC by `cascade.sh encounters`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `d853af8d`; each artefact's source and tool:
+- Run on 2026-11-24 07:43 UTC by `cascade.sh encounters`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `235bab58`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

@@ -30,7 +30,7 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
 %% const(X), a value variable over the constants (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, a multiplicity and a count being whole numbers, and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"): among a schema's variables, and where it occurs, const(X) or num(X).  The compiler takes it as num(X) for every check, as it takes a real variable, and prints its type, Constant, from the table of such variables (cvac.glp, consts_off, real_lx, real_heads); its place in an atom is of the kind const, as the place of val(C) is, its value held as v(C); it is a variable, so the schema-binding binds it, a request names it and a field takes it, a text, or it is local to a role, whose state binds it (README.md, 30).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
             ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String)
-            ; item_of(Arg) ; val(Constant) ; const(Constant).
+            ; item_of(Arg) ; val(Constant) ; const(Constant) ; set(Constant).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args) ; times(Arg, Atom) ; rest(Arg, Arg, Atom).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -570,6 +570,8 @@ is_nvar(num(X), yes) :- otherwise, ground(X?) | true.
 is_nvar(real(_), yes).
 %% A variable over the constants is num(X) to the checks (cvac.glp, reals_off, consts_off); the clause covers the type.
 is_nvar(const(_), yes).
+%% A set variable likewise (GSC, def:numbers, the set variable).
+is_nvar(set(_), yes).
 is_nvar(role(_), no).
 is_nvar(pvar(_), no).
 is_nvar(svar(_), no).
@@ -610,6 +612,7 @@ expr_args(num(X), [num(X?)]).
 expr_args(real(X), [num(X?)]).
 %% A variable over the constants is num(X) to the checks (cvac.glp, consts_off); the clause covers the type.
 expr_args(const(X), [num(X?)]).
+expr_args(set(X), [num(X?)]).
 expr_args(role(I), [role(I?)]).
 expr_args(pvar(X), [pvar(X?)]).
 expr_args(svar(X), [svar(X?)]).
@@ -648,11 +651,13 @@ TSchemas  ::= [] ; [TSchema | TSchemas].
 %% And each conjunct binding no listed role whose conditional literals are all at the role holding its anchor, local to that role, lc(Schema, Base, Xs, A, Phi, CAdd, CDel) (cvac.glp, lc_conjs).
 %% And each real variable X of a schema S, rl(S, X) (cvac.glp, real_lx).
 %% And each variable X over the constants of a schema S, cn(S, X) (cvac.glp, real_lx).
+%% And each set variable X of a schema S, st(S, X) (cvac.glp, real_lx).
 Lx        ::= lx(Constant, Integer, Form, HMults, HMults)
             ; ix(Constant, Integer, Integer, Args, Atom, Form, HMults, HMults)
             ; lc(Constant, Integer, Args, Atom, Form, HMults, HMults)
             ; rl(Constant, Constant)
-            ; cn(Constant, Constant).
+            ; cn(Constant, Constant)
+            ; st(Constant, Constant).
 Lxs       ::= [] ; [Lx | Lxs].
 procedure listed_ixs(RoleSpecs?, Integer?, Ints).
 listed_ixs([], _, []).

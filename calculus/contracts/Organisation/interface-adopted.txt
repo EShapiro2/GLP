@@ -1,8 +1,8 @@
 Interface pragmas
-Found: Gov [Found] <orga> <alice> <role>
-  Alice: Gov asks for your consent to found.
-Acts of the organisation: Bob [Propose] <motion> [Vote] <motion>
-  Alice [Act] <motion> <votes>
+Found: Alice [Found] <orga> <gov> <role>
+  Gov: Alice asks for your consent to found.
+Acts of the organisation: Bob [Propose] <motion> [Vote]
+  Alice [Act]
 Participation: Bob [Join] <orga> <decider>
   Decider: Bob asks for your consent to join.
   Codecider: Bob asks for your consent to join.
@@ -20,4 +20,4 @@ Officers: Bob [Appoint] <role>
   Bob [Officer unfriend]
   Decider [Retire]
   Codecider: Decider asks for your consent to retire.
-Amend: Alice [Amend] <motion> <votes>
+Amend: Alice [Amend]

@@ -11,6 +11,10 @@ Child create: Alice [Join]
   Bob: Alice asks for your consent to join.
   Wendy [Child create] <grupo>
   Alice: Wendy asks for your consent to child create.
+  Wendy [Child add] <bob>
+  Will: Wendy asks for your consent to child add.
+  Alice: Wendy asks for your consent to child add.
+  Bob: Wendy asks for your consent to child add.
 Of age: Alice [Of age]
 Ward and person: Wendy [Child befriend]
   Bob: Wendy asks for your consent to child befriend.

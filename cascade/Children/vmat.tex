@@ -165,15 +165,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Bob
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Alice
@@ -181,6 +181,10 @@ person
  \text{ and } 
 \mathit{\detokenize{
 identity
+}}
+,
+\mathit{\detokenize{
+person
 }}
 ,
 \mathit{\detokenize{
@@ -196,10 +200,6 @@ knows
 (
 \mathit{Carol}
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Bob
@@ -274,15 +274,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Bob
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Alice
@@ -293,15 +293,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Alice
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Bob
@@ -13076,6 +13076,213 @@ person
 &
 \text{guarded by } \{
 \mathit{Carol}
+\}
+\end{align*}
+\iffalse
+child_add
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \uplus 
+\{
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \uplus 
+\{
+\mathit{\detokenize{
+listed
+}}
+(
+\Alice
+,
+Grupo
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+, \qquad 
+c'_
+{
+\mathit{Dave}
+}
+ := 
+c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+child
+}}
+,
+\mathit{\detokenize{
+has_parent
+}}
+(
+\mathit{Dave}
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+leader
+}}
+(
+Grupo
+)
+,
+\mathit{\detokenize{
+child
+}}
+,
+\mathit{\detokenize{
+has_parent
+}}
+(
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+parent
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Dave}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+member
+}}
+(
+Grupo
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+retired
+}}
+ \notin c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+,
+\mathit{Dave}
 \}
 \end{align*}
 \iffalse

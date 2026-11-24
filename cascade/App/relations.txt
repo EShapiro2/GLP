@@ -1,1 +1,1 @@
-App composes Encounters with AppStore and Directory: holds
+App extends Encounters and AppStore and Directory: holds

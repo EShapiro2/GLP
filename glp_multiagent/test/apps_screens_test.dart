@@ -1803,7 +1803,7 @@ void appsScreens(Screens screens) {
     await run.list(alice, 'item');
     await run.top(alice);
     await run.tap(alice, run.control(alice, 'act:enter:$y'));
-    await run.type(alice, run.control(alice, 'field:enter:$y:1'), 'alf');
+    await run.type(alice, run.control(alice, 'field:enter:$y:2'), 'alf');
     await run.tap(alice, run.control(alice, 'send:enter:$y'));
     expect(alice.atoms, containsAll(['principal(alf)', 'guardian(alf)', 'friend(alf)', 'attestation_record(alf, $y)']));
 
@@ -1940,7 +1940,7 @@ void appsScreens(Screens screens) {
     await run.list(alice, 'item');
     await run.top(alice);
     await run.tap(alice, run.control(alice, 'act:enter:$y'));
-    await run.type(alice, run.control(alice, 'field:enter:$y:1'), 'alf');
+    await run.type(alice, run.control(alice, 'field:enter:$y:2'), 'alf');
     await run.tap(alice, run.control(alice, 'send:enter:$y'));
     expect(alice.atoms, containsAll(['principal(alf)', 'guardian(alf)', 'friend(alf)', 'attestation_record(alf, $y)']));
     // Her AI agents tab, "the AI agents Alice is an operator of.", lists Alf, with Retire in its row; her Known AI agents tab lists her record of it, agent_of(alf, y), with y as she signed it (GAI:2).

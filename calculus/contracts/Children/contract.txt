@@ -1,8 +1,8 @@
 Children
-Children instantiates Warded Groups with the guardians deciding jointly for the decision rule, a child for a ward and a parent for a guardian, and restricts and extends it.
+Children renames Warded Groups, and extends and weakens it.
 Alice and Bob are persons, Wendy and Will children.
 1. ◆ Enter: Guardians:1, only if Alice is a legal parent of the minor who operates Wendy.
 2. ■ A child's acquaintances. Child acquaint: Guardians:3, only if Alice knows Bob, and with the consent of Alice. Children acquaint: Guardians:4, only if Alice knows Will and Bob knows Wendy, and with the consent of Alice and Bob, who know each other, Alice and Bob possibly one person.
-3. ■ Child create: Warded Groups:2, only with the consent of Alice, a parent of Wendy. Only a child, Will, may join the group.
+3. ■ Child create: Warded Groups:2, only with the consent of Alice, a parent of Wendy. Only a child, Will, may join the group, with the consent of Bob, a parent of Will.
 4. ○ Of age: The creator of Wendy may declare Wendy of age, which ends every guardianship of Wendy, and Wendy is then a person. The creator will do so if the minor who operates Wendy comes of age, and not before.
 5. ○ A minor who is not a ward. Alice, aware that someone is a minor though not a ward, will neither befriend the minor nor let her child befriend the minor, and will report it to the minor's legal parents if she knows who they are.

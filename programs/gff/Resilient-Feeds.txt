@@ -7,12 +7,12 @@
 % Schemas: Resilient-Feeds.glp beside this file, the full schemas, printed from the Logic pragmas by calculus/tools/adopt.py and never written by hand.
 Resilient Feeds
 Resilient Feeds extends Feeds.
-d > 1, an integer, is a parameter of Resilient Feeds.
+d > 1 is an integer.
 Alice, Bob and Carol are persons.
 1. ■ Redundant point: Alice, who has Carol-pointers to at least one person and to fewer than d, adds a Carol-pointer to her friend Bob, who has a Carol-pointer.
 Logic pragmas
 Resilient Feeds extends Feeds.
-d > 1, an integer, is a parameter of Resilient Feeds.
+d > 1 is an integer.
 Alice, Bob, Carol, Dave and Erin are persons, Dave and Erin are possibly any of the others.
 1. ■ Redundant point: Alice adds a Carol-pointer to Bob, provided Alice has a Carol-pointer to Dave, Alice has a Carol-pointer to fewer than d persons, Alice and Bob are friends and Bob has a Carol-pointer to Erin.
 Interface pragmas

@@ -535,8 +535,13 @@ sub relation_names {
     my $nm = $known;
     # composes, the composition of contracts (GSC, Section Relations among Contracts), names the contracts composed, "composes A with B", A or B "it", "the instance" or "the composition" where it is what the line has named before, as "GAI instantiates GnW, composes it with GFP and restricts the composition" (Agents.txt) and "GSNP composes GAI with GSN and amends the composition" (Provenance-Groups.txt; GAI #13, Code_inbox.md, 2026-11-10 20:39 UTC).
     # relaxes, the sixth relation of the Calculus (calculus/PARTS.txt, 2: "a relaxing citation ... adds the relaxed act and keeps the act cited"), as "GC relaxes and extends GN." (Code #33, vGLP_inbox.md, 2026-11-16 16:50 UTC).
-    my $rel = qr/(?:amends|extends|instantiates|implements|restricts|strengthens|relaxes|composes)\b/;
-    my $back = qr/(?:it|them|the instance|the composition)/;
+    # weakens, a relation of the Calculus (calculus/tools/adopt.py, written_from), as "Feeds extends Labelled Overlay, and weakens it." (Code #37, 2026-11-24).
+    # renames, lifts and unites, relations of the Calculus, read as instantiates, extends and extends (calculus/tools/relations.py, new_verbs: "weakens as restricts, amends as restricts and strengthens, unites and lifts as extends, and renames as instantiates with the words of gr/n\x27s pragma \x27Renaming of B: an organisation for a ward.\x27"), as "Children renames Warded Groups, and extends and weakens it." and "App unites Encounters, AppStore and Directory."; "the union" what the line has named before; and a contract named as "a weakening of", "a strengthening of", "an amendment of", "a renaming of" or "a lift of" it, the contract itself, as "Provenance Groups unites Groups and a strengthening of AI Agents" (calculus/tools/relations.py: "\x27a weakening of a lift of Bonds\x27: Bonds"; Code #37, 2026-11-24).  augments, read as restricts and strengthens (relations.py, new_verbs: "augments as restricts and strengthens"), and a contract named as "an augmentation of" it, as "Rides unites Community Network and Second-Score Auction, and extends and augments the union" (Calculus 1724963; CSSN #19 and Code #37, 2026-11-24).
+    my $rel = qr/(?:amends|extends|instantiates|implements|restricts|strengthens|relaxes|weakens|composes|renames|lifts|unites|augments)\b/;
+    my $back = qr/(?:it|them|the instance|the composition|the union)/;
+    my $of = qr/(?:an?\s+(?:weakening|strengthening|amendment|renaming|lift|augmentation)\s+of\s+)*/;
+    # The words of a renaming, the contract\x27s pragma "Renaming of B: a child for a ward and a parent for a guardian.", as an instantiation\x27s.
+    for (@body) { push @{ $inst_words{$f}{$1} }, $2 if /^Renaming of ($nm):\s*(.*?)\.\s*$/ }
     if ($body[1] !~ /^$nm\s+$rel/ && $body[1] =~ /^((?:[A-Z][^\s,]*\s+){1,2}?)$rel/) {
         (my $w = $1) =~ s/\s+$//;
         die "pragmas.sh: $f: the line saying what the contract is written from, \"$body[1]\", names no contract at \"$w\", no name of calculus/NAMES.txt\n";
@@ -555,9 +560,9 @@ sub relation_names {
         # The contract they are to: "it", "the instance" or "the composition", what the line has named before, or contracts joined by commas and "and"; and, of composes, the contract it is composed with after "with", either of the two named or named before.
         my $target = sub {
             if ($s =~ s/^($back)(?=$|[\s,])//) { @names or $no->($1); return }
-            $s =~ s/^($nm)(?=$|[\s,])// or $no->($s);
+            $s =~ s/^$of($nm)(?=$|[\s,])// or $no->($s);
             push @names, $1;
-            while ($s =~ s/^(?:\s*,\s*(?:and\s+)?|\s+and\s+)($nm)(?=$|[\s,])//) { push @names, $1 }
+            while ($s =~ s/^(?:\s*,\s*(?:and\s+)?|\s+and\s+)$of($nm)(?=$|[\s,])//) { push @names, $1 }
         };
         $target->();
         if (grep { $_ eq "composes" } @rels) {

@@ -5,32 +5,31 @@ Carpool
 4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
 5. ■ Person unfriend.  Alice may end her friendship with Bob.
 6. ■ Post.  Alice may make a post.
-7. ■ Tell.  Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with the rest of the budget.
+7. ■ Tell.  Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with a part of the rest of the budget, both according to the gossip protocol.
 8. ■ Return.  Bob, who holds two matching posts, one from Alice, forwards to Alice the second post.
-9. ■ Withdraw.  Alice may withdraw a post she made.
-10. ■ Meet.  Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other, only by Anonymous Rendezvous:1 with the one-time keys of the two posts, at the rendezvous server named by the post whose public key has the smaller hash.
-11. ■ Enter.  Alice may create a ward, Wendy, and establish Wendy's identity by choosing Wendy's key pair, and Wendy must consent.
-12. ■ Make guardian.  Those who decide for Wendy may make Bob, a friend of a guardian of Wendy, a guardian and a friend of Wendy, with the consent of Bob.
-13. ■ Resign.  Bob may end his guardianship of Wendy.
-14. ■ End guardian.  Those who decide for Wendy, other than Bob, may end Bob's guardianship.
-15. ■ Guardian unfriend.  Bob may end his friendship with Wendy, which ends his guardianship.
-16. ■ Ward acquaint.  Wendy, a ward of Alice, and Bob may jointly come to know each other.
-17. ■ Ward befriend.  Wendy may enter a relation with Bob with the consent of Bob and Alice, provided Wendy and Bob know each other and Alice and Bob are friends.
-18. ■ Ward end.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
-19. ■ Unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
-20. ■ Ward unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
-21. ■ Wards acquaint.  Wendy, a ward of Alice, and Will, a ward of Bob, may jointly come to know each other.
-22. ■ Wards befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
-23. ■ Wards of one guardian befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
-24. ■ Retire.  Those who decide for Wendy may retire Wendy; every guardianship and relation of Wendy then ends and Wendy can take no act.
-25. ■ Open server.  Carol may make her service Dave a rendezvous server.
-26. ■ Sign link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
-27. ■ Invite by link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
-28. ■ Use link.  Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
-29. ■ Present.  Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship.
-30. ■ Match.  Dave then gives each the address of the other.
-31. ■ Present 2.  Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own.
-32. ■ Match 2.  Dave then gives each the address of the other.
+9. ■ Meet.  Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other, only by Anonymous Rendezvous:1 with the one-time keys of the two posts, at the rendezvous server named by the post whose public key has the smaller hash.
+10. ■ Enter.  Alice may create a ward, Wendy, and establish Wendy's identity by choosing Wendy's key pair, and Wendy must consent.
+11. ■ Make guardian.  Those who decide for Wendy may make Bob, a friend of a guardian of Wendy, a guardian and a friend of Wendy, with the consent of Bob.
+12. ■ Resign.  Bob may end his guardianship of Wendy.
+13. ■ End guardian.  Those who decide for Wendy, other than Bob, may end Bob's guardianship.
+14. ■ Guardian unfriend.  Bob may end his friendship with Wendy, which ends his guardianship.
+15. ■ Ward acquaint.  Wendy, a ward of Alice, and Bob may jointly come to know each other.
+16. ■ Ward befriend.  Wendy may enter a relation with Bob with the consent of Bob and Alice, provided Wendy and Bob know each other and Alice and Bob are friends.
+17. ■ Ward end.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+18. ■ Unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+19. ■ Ward unfriend.  Wendy, Bob or Alice may end the relation of Bob and Wendy.
+20. ■ Wards acquaint.  Wendy, a ward of Alice, and Will, a ward of Bob, may jointly come to know each other.
+21. ■ Wards befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+22. ■ Wards of one guardian befriend.  Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+23. ■ Retire.  Those who decide for Wendy may retire Wendy; every guardianship and relation of Wendy then ends and Wendy can take no act.
+24. ■ Open server.  Carol may make her service Dave a rendezvous server.
+25. ■ Sign link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+26. ■ Invite by link.  Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
+27. ■ Use link.  Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
+28. ■ Present.  Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship.
+29. ■ Match.  Dave then gives each the address of the other.
+30. ■ Present 2.  Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own.
+31. ■ Match 2.  Dave then gives each the address of the other.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -42,7 +41,6 @@ Befriend: Alice [Befriend]
 Person unfriend: Alice [Person unfriend]
 Post: Alice [Post] <post>
 Tell: Alice [Tell]
-Withdraw: Alice [Withdraw]
 Meet: Alice [Meet]
   Carol: Alice asks for your consent to meet.
 Enter: Alice [Enter] <wendy>

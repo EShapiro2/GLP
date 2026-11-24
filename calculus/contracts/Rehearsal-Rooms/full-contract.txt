@@ -3,15 +3,17 @@ Rehearsal Rooms
 An *identity* is a unique cryptographic key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-A *relation* is a friendship or the membership of a group. Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an organisation and how. Here: bylaws for the decision rule. An organisation takes an act of a party by those who decide for the organisation.
-An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included. Here: a room for a resource.
-An organisation has *resources*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
-*Posts* have a *test*, a parameter of Matching, whether two *match*. Posts have a *budget*, a parameter of Matching: what a post has when made, and the *cost* of a forward. Here: a test of the match of plans and a budget of a count set by the maker, a forward costing one. A person *holds* any post they made or forwarded to them.
-Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. Here: the guardians deciding jointly for the decision rule. A ward takes an act of a party by those who decide for the ward.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, which the creator of an organisation decides, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
+An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
+An organisation has *rooms*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
+*Posts* have a *budget*: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them.
+Posts have a *test*, whether two *match*.
+Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
 A *service* is a ward operated by a machine at an address every person can reach.
 An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
 A *one-time key* is a key pair its maker uses for one meeting.
 Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
+The budget of a post is an integer, the cost of a forward is one, and the gossip protocol is forwarding to any friend with the budget less one.
 A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
 The activity is music, the place is a *studio*, an organisation that has rehearsal rooms, and the time is a slot.
 Alice, Bob and Carol are persons, Orga and Will organisations, Wendy a ward, Dave a rendezvous server.
@@ -31,15 +33,20 @@ Organisation:2. ■ Acts of the organisation. Propose: An officer, or a person t
 Organisation:3. ■ Participation. Join: Bob may become a participant of Orga with the consent of those who decide for Orga. Leave, Expel: Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
 Organisation:5. ■ Amend: Those who decide it may amend the bylaws.
 Organisation:6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
-Booking:1. ■ Book: Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a resource of Orga.
+Booking:1. ■ Book: Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a room of Orga.
 Booking:2. ■ Cancel: Alice may cancel her booking.
-Matching:1. ■ Post: Alice may make a post.
-Matching:2. ■ Tell: Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with the rest of the budget.
-Matching:3. ■ Return: Bob, who holds two matching posts, one from Alice, forwards to Alice the second post.
-Matching:4. ■ Withdraw: Alice may withdraw a post she made.
-Matching:5, Anonymous Matching:1. ■ Meet: Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other, only by Anonymous Rendezvous:1 with the one-time keys of the two posts, at the rendezvous server named by the post whose public key has the smaller hash.
+Gossip:1. ■ Post: Alice may make a post.
+Gossip:2. ■ Tell: Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with a part of the rest of the budget, both according to the gossip protocol.
+Matching:1. ■ Return: Bob, who holds two matching posts, one from Alice, forwards to Alice the second post.
+Matching:2, Anonymous Matching:1. ■ Meet: Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other, only by Anonymous Rendezvous:1 with the one-time keys of the two posts, at the rendezvous server named by the post whose public key has the smaller hash.
+Guardians:1. ■ Enter: Alice may create a ward, Wendy, and establish Wendy's identity by choosing Wendy's key pair. Alice is then the creator, a guardian and a friend of Wendy.
+Guardians:2. ■ Guardian decisions. Make guardian: Those who decide for Wendy may make Bob, a friend of a guardian of Wendy, a guardian and a friend of Wendy, with the consent of Bob. Resign: Bob may end his guardianship of Wendy. End guardian: Those who decide for Wendy, other than Bob, may end Bob's guardianship. Guardian unfriend: Bob may end his friendship with Wendy, which ends his guardianship. Wendy may not end a friendship with her guardian.
+Guardians:3. ■ Ward and person. Ward acquaint: Wendy, a ward of Alice, and Bob may jointly come to know each other. Ward befriend: Wendy may enter a relation with Bob with the consent of Bob and Alice, provided Wendy and Bob know each other and Alice and Bob are friends. Ward end, Unfriend, Ward unfriend: Wendy, Bob or Alice may end the relation of Bob and Wendy.
+Guardians:4. ■ Wards. Wards acquaint: Wendy, a ward of Alice, and Will, a ward of Bob, may jointly come to know each other. Wards befriend: Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+Guardians:5. ■ Retire: Those who decide for Wendy may retire Wendy; every guardianship and relation of Wendy then ends and Wendy can take no act.
 Rendezvous:1. ■ Open server: Carol may make her service Dave a rendezvous server.
 Rendezvous:2. ■ Invite by link: Alice may register with Dave an invitation link of hers that names Dave, with a new serial.
 Rendezvous:3. ■ Use link: Bob may present to Dave an invitation link of Alice's registered with Dave that has not expired; Dave then gives Alice Bob's address and Bob Alice's, and the link is spent.
 Rendezvous:4. ■ Reconnection. Present: Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship. Match: Dave then gives each the address of the other.
 Anonymous Rendezvous:1. ■ Meet. Present: Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own. Match: Dave then gives each the address of the other.
+Rehearsal Rooms:1. ■ Organisation and ward. Organisation ward acquaint: Orga, an organisation, and Wendy, a ward, may jointly come to know each other.

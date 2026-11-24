@@ -1,15 +1,9 @@
 Matching
-Matching extends Friendship.
-Vocabulary: x holds the post p = post(x,p); y holds the post p from x = post_from(y,p,x); x has made the post p = made(x,p); p and q match, for x = match(x,p,q); x has the budget n for p = budget(x,p,n); n is a budget of a new post, for x = new_budget(x,n); n covers the cost of a forward leaving m, for x = covers(x,n,m).
-After x makes p with the budget n, which requires x has not made the post p: x has made the post p, x holds the post p and x has the budget n for p.
-After x forwards p to y with the budget n, which requires y does not hold the post p from x: y holds the post p from x, y holds the post p and y has the budget n for p.
+Matching extends Gossip.
+Vocabulary: p and q match, for x = match(x,p,q).
 After x forwards p to y, which requires y does not hold the post p from x: y holds the post p from x and y holds the post p.
-After x withdraws p: no longer x has made the post p and no longer x holds the post p.
-Matching:0 - | *Posts* have a *test*, a parameter of Matching, whether two *match*. Posts have a *budget*, a parameter of Matching: what a post has when made, and the *cost* of a forward. A person *holds* any post they made or forwarded to them.
-Matching:0 - | Alice, Bob and Carol are persons, Post and Other posts, Budget and Rest numbers.
-Matching:0 - | Environment: p and q match, for x; n is a budget of a new post, for x; n covers the cost of a forward leaving m, for x.
-Matching:1 ■ Post: made(Alice,Post), post(Alice,Post), budget(Alice,Post,Budget) <- new_budget(Alice,Budget), ~made(Alice,Post) guarded by Alice.
-Matching:2 ■ Tell: post_from(Bob,Post,Alice), post(Bob,Post), budget(Bob,Post,Rest) <- post(Alice,Post), budget(Alice,Post,Budget), covers(Alice,Budget,Rest), friend(Alice,Bob), friend(Bob,Alice), ~post_from(Bob,Post,Alice) guarded by Alice.
-Matching:3 ■ Return: post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob).
-Matching:4 ■ Withdraw: ~made(Alice,Post), ~post(Alice,Post) <- made(Alice,Post), post(Alice,Post) guarded by Alice.
-Matching:5 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other) guarded by Alice, Carol.
+Matching:0 - | Posts have a *test*, whether two *match*.
+Matching:0 - | Alice, Bob and Carol are persons, Post and Other posts.
+Matching:0 - | Environment: p and q match, for x.
+Matching:1 ■ Return: post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob).
+Matching:2 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other) guarded by Alice, Carol.

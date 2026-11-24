@@ -1,0 +1,47 @@
+
+%% The initial goals of a platform whose agent is agent/6, the contract having
+%% an "Environment:" line: the fifth argument is the environment's atoms, read
+%% once at the start (vGLP, Section 5.4, "The compilation"), which run.sh
+%% appends to harness.glp.in.  The environment of an agent is its person's,
+%% environment(H, E) of the owner's sGLP source, in profiles.glp, E the atoms
+%% of the environment of the person H, of the platform's type List(Atom)
+%% (Audit #4, Grassroots-Audit programs/sglp/cva/harness.glp.in.md, Finding
+%% 1); run.sh refuses a source that defines no environment/2 over such a
+%% platform.
+
+imported procedure population#persons(Integer?, Stream(Key)?, Constant, List(population#Person), Integer).
+imported procedure profiles#environment(population#Person?, List(Atom)).
+
+%% The environment of the agent keyed K.
+Env ::= env(Key, List(Atom)).
+
+%% agents(Ss?, Ins?, Merges, B?, K0?): at each agent, its initial goal, agent/6
+%% of the platform, with its key, its input stream of Ins, its output stream
+%% for mwm/2, the program's output to its person, the environment of its
+%% person and its ask stream; the persons drawn again from B and K0, as
+%% population.glp's cva_agents/6 draws them.
+procedure agents(Stream(Seat(Output))?, Stream(Stream(Net))?, MwmInput(Net), Integer?, Stream(Key)?).
+agents(Ss, Ins, Ms?, B, K0) :- integer(B?), ground(K0?) |
+    population # persons(B?, K0?, _, Ps, _),
+    environments(Ps?, Es),
+    seated(Ss?, Ins?, Ms, Es?).
+
+%% environments(Ps?, Es): the environment of each person of Ps, by its key.
+procedure environments(List(population#Person)?, Stream(Env)).
+environments([], []).
+environments([person(K, R, V)|Ps], [env(K?, E?)|Es?]) :- ground(K?), ground(R?), ground(V?) |
+    profiles # environment(person(K?, R?, V?), E),
+    environments(Ps?, Es).
+
+procedure seated(Stream(Seat(Output))?, Stream(Stream(Net))?, MwmInput(Net), Stream(Env)?).
+seated([seat(K, Asks?, Thr?)|Ss], [In|Ins], [merge(Out?)|Ms?], Es) :- ground(K?), ground(Es?) |
+    env_of(K?, Es?, E),
+    agent(K?, In?, Out, Thr, E?, Asks),
+    seated(Ss?, Ins?, Ms, Es?).
+seated([], [], [], _).
+
+%% env_of(K?, Es?, E): E is the environment of the agent keyed K in Es.
+procedure env_of(Key?, Stream(Env)?, List(Atom)).
+env_of(K, [env(K1, E)|_], E?) :- K? =?= K1? | true.
+env_of(K, [env(K1, _)|Es], E?) :- K? =?\= K1? | env_of(K?, Es?, E).
+env_of(_, [], []).

@@ -1,6 +1,6 @@
 # Claudese — do not use
 
-Claude's stock words and phrases are banned: to Udi, to another Claude, and in every document and paper.  Write My English, Udi's own, the English of `writing-style-guide.md`.  Each entry is one line, `banned --- My English: <what to write>`; the text check, `tools/myenglish/check.py`, reads this form.  Udi adds more over time.
+Claude's stock words and phrases are banned everywhere; write My English (`writing-style-guide.md`).  Each entry is one line, `banned --- My English: <what to write>`, which the text check, `tools/myenglish/check.py`, reads.
 
 ## Words
 
@@ -47,6 +47,7 @@ what distinguishes X is that --- My English: state the difference directly
 what it holds, what it can reach (as em-dash glosses of formal quantities) --- My English: name the quantity
 no one but X, none but X --- My English: the positive statement: "a payment involves the payer, the payee and the issuer", not "a payment involves no one but the payer, the payee and the issuer"
 its own, of its own, of their own (as filler emphasis: "a literature of its own", "a program of their own", "code of its own") --- My English: "a literature", "a separate program"; "its own coins" stands
+demand, demands (of a specification, a paper or a text: "its demand is ours") --- My English: requirement; demands come from a person: "its requirement is ours"
 
 ## Constructions
 
@@ -81,11 +82,13 @@ its own, of its own, of their own (as filler emphasis: "a literature of its own"
 29. An ellipsis that can be read several ways ("and Carol and Alice to return them to Alice, as the agreed condition is met or fails") --- My English: say the verb each time and name the condition: "Carol and Alice may jointly decide to return them to Alice when it fails"
 30. A claim in the vocabulary of form and content ("in Proudhon's substantive sense", "which are judged of what its clauses say, not of its schemas") --- My English: delete the claim
 31. A tool or a text as the actor ("The compiler meets four things the pragmas and Section 5.4 cannot say") --- My English: "The pragmas and Section 5.4 do not say four things the apps need."
-32. The present tense for what is not present ("she no longer trusts him", "by GSG:3 she ends the friendship") --- My English: "she can no longer trust him", "she must end the friendship".  "My English uses tenses AND modalities: present is only for things that are indeed in the present, including eternal.  EVERYTHING ELSE is either past or future, may or must, possibly or necessarily, etc., but not present."
+32. The present tense for what is not present ("she no longer trusts him", "by GSG:3 she ends the friendship") --- My English: "she can no longer trust him", "she must end the friendship".  "My English uses tenses AND modalities: present is only for things that are indeed in the present, including eternal.  EVERYTHING ELSE is either past or future, may or must, possibly or necessarily, etc., but not present."  "remember that present tense is Claudese and always double check if you use present tense, whether it is the right one" (Udi, 2026-11-23 22:58 UTC, to Calculus #7, cited verbatim by the Calculus Cowork session; of "which a local state passes or fails", which he approved as "which a local state may pass or fail").
 33. A rule written as a description ("last, alone, marked Q: or Request:, and nothing after it"; "sentences only, no write of any kind") --- My English: an instruction in plain verbs, once: "comes last"; "No writing"
 34. A vague verb for what was run ("I took the gate as its sections run separately on one commit") --- My English: "Before merging into main I did not run the whole suite in one go.  I ran each of its parts by itself, all on the same commit, and merged when every part had passed."
 35. An abstract noun as subject and the paper's machinery for what happens ("A change of a fact the phone finds is a trigger of the agent, read with its other triggers.") --- My English: "When a fact Alice's phone finds changes, as when a person comes near, the phone tells Alice's agent, which then checks again which of its own transactions it can take."
+36. A negative tail after "only" ("changes only the draw of an activation time, and not the language"; "changing only how an activation time is drawn; the language does not change") --- My English: delete it: "Supporting another distribution only requires changing how an activation time is drawn."
+37. A symbol said in words, in a definition ("where n is its clause and its name"; "where n is the pair of its clause and its name"; "where n is its label, the clause of its contract and its name") --- My English: define the symbol by an equation.  "enough of this BS and hedging! this is anti-math Claudese at its worse" (Udi, 2026-11-22 22:05 UTC, reported by the Calculus Cowork session).
 
 ## The rule under them
 
-**Think of Udi as the reader**: "Why don't you use this clear language in the paper, only with me?  think of me as the reader".  The sentence you would write to him in chat is the sentence for the paper.  A paragraph has three sentences: the claim, its warrant, the proposal.
+**Think of Udi as the reader** (style guide, 30).  A paragraph has three sentences: the claim, its warrant, the proposal.

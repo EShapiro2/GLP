@@ -1,2 +1,0 @@
-Interface pragmas
-Draw: Alice [Draw] <sum>

@@ -6,9 +6,9 @@ Stays
 5. ■ Swap.  Alice and Bob, who know each other, may jointly swap notes they hold.
 6. ■ Pay.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
 7. ■ Pay issuer.  Alice may pay notes she holds to Bob, whom she knows, with his consent.
-8. ■ Deposit.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol.
-9. ■ Release.  Carol and Bob may jointly release them to Bob.
-10. ■ Return.  Carol and Alice may jointly return them to Alice.
+8. ○ Deposit.  Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol.
+9. ○ Release.  Carol and Bob may jointly release them to Bob.
+10. ○ Return.  Carol and Alice may jointly return them to Alice.
 11. ■ Redeem.  Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
 12. ◆ List place.  Alice, who can host guests at a place, may list it under a new name of hers.
 13. ■ Book.  Bob, who knows Alice, may book a stay at a place of Alice's on a night later than the current date, for a price Bob pays in Alice-coins, with the consent of Alice; a place may be booked once a night.
@@ -20,8 +20,8 @@ Acquaint: Alice [Acquaint] <bob>
   Bob: Alice asks for your consent to acquaint.
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
-Issue: Alice [Issue] <sum>
-Swap: Alice [Swap] <sum> <dave> <total>
+Issue: Alice [Issue] <type> <sum>
+Swap: Alice [Swap] <sum> <dave> <other> <total>
   Bob: Alice asks for your consent to swap.
 Pay: Alice [Pay] <sum>
   Bob: Alice asks for your consent to pay.

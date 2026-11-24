@@ -2,7 +2,7 @@ Children
 1. ○ Establish.  Alice may establish an identity once.
 2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
 3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-4. ■ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
 5. ■ Person unfriend.  Alice may end her friendship with Bob.
 6. ■ Message.  Alice may send a message to her friend Bob.
 7. ■ Create.  Alice may create a group, of which she is the leader and first member.
@@ -38,9 +38,10 @@ Children
 37. ■ Children join.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
 38. ■ Children of one parent join.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
 39. ■ Child withdraw.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
-40. ■ Child leave.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
-41. ■ Child remove.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
-42. ○ Of age.  The creator of Wendy may declare Wendy of age, which ends every guardianship of Wendy, and Wendy is then a person.
+40. ■ Child add.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
+41. ■ Child leave.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
+42. ■ Child remove.  Wendy may join a group (Groups:3) only with the consent of Alice, a parent of Wendy.
+43. ○ Of age.  The creator of Wendy may declare Wendy of age, which ends every guardianship of Wendy, and Wendy is then a person.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -107,6 +108,10 @@ Children of one parent join: Wendy [Children of one parent join]
   Will: Wendy asks for your consent to children of one parent join.
   Alice: Wendy asks for your consent to children of one parent join.
 Child withdraw: Alice [Child withdraw] <bob> <grupo>
+Child add: Wendy [Child add] <bob>
+  Will: Wendy asks for your consent to child add.
+  Alice: Wendy asks for your consent to child add.
+  Bob: Wendy asks for your consent to child add.
 Child leave: Wendy [Child leave]
 Child remove: Wendy [Child remove]
 Of age: Alice [Of age]

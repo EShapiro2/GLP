@@ -1,2 +1,0 @@
-Interface pragmas
-Post: Alice [Post] <post>

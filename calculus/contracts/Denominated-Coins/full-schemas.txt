@@ -1,32 +1,31 @@
 Denominated Coins (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Denominated Coins:0 - | Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Dollar a fiat currency.
+Denominated Coins:0 - | Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Type and Other types, Dollar a fiat currency.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
-Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
-Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Notes:0 - | A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
-Notes:1+Denominated Coins:1 ■ Issue: coin(Alice,Alice,Dollar,*Sum) <- issued_in(Alice,Dollar) guarded by Alice.
-Notes:2 ■ Swap: ~coin(Alice,Carol,Dollar,*Sum), coin(Bob,Carol,Dollar,*Sum), ~coin(Bob,Dave,Dollar,*Total), coin(Alice,Dave,Dollar,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,Dollar,*Sum), coin(Bob,Dave,Dollar,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
-Notes:3 ■ Pay: ~coin(Alice,Carol,Dollar,*Sum), coin(Bob,Carol,Dollar,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,Dollar,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
-Notes:3+Coins:1 ■ Pay issuer: ~coin(Alice,Bob,Dollar,*Sum), coin(Bob,Bob,Dollar,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,Dollar,*Sum) guarded by Alice.
+Notes:1+Denominated Coins:1 ■ Issue: note(Alice,Alice,Type,Dollar,*Sum) <- issued_in(Alice,Dollar) guarded by Alice.
+Notes:2 ■ Swap: ~note(Alice,Carol,Type,Dollar,*Sum), note(Bob,Carol,Type,Dollar,*Sum), ~note(Bob,Dave,Other,Dollar,*Total), note(Alice,Dave,Other,Dollar,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), note(Alice,Carol,Type,Dollar,*Sum), note(Bob,Dave,Other,Dollar,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+Notes:3 ■ Pay: ~note(Alice,Carol,Type,Dollar,*Sum), note(Bob,Carol,Type,Dollar,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), note(Alice,Carol,Type,Dollar,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+Notes:3+Coins:1 ■ Pay issuer: ~note(Alice,Bob,Type,Dollar,*Sum), note(Bob,Bob,Type,Dollar,*Sum) <- knows(Alice,Bob), note(Alice,Bob,Type,Dollar,*Sum) guarded by Alice.
 Notes:4 ○ | Escrow.
-Notes:4 ○ Deposit: ~coin(Alice,Dave,Dollar,*Sum), escrow_coin(Carol,Dave,Dollar,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), coin(Alice,Dave,Dollar,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ○ Release: ~escrow_coin(Carol,Dave,Dollar,Alice,Bob,Cond,*Sum), coin(Bob,Dave,Dollar,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_coin(Carol,Dave,Dollar,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ○ Return: ~escrow_coin(Carol,Dave,Dollar,Alice,Bob,Cond,*Sum), coin(Alice,Dave,Dollar,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_coin(Carol,Dave,Dollar,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Deposit: ~note(Alice,Dave,Type,Dollar,*Sum), escrow_note(Carol,Dave,Type,Dollar,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), note(Alice,Dave,Type,Dollar,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Release: ~escrow_note(Carol,Dave,Type,Dollar,Alice,Bob,Cond,*Sum), note(Bob,Dave,Type,Dollar,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_note(Carol,Dave,Type,Dollar,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Return: ~escrow_note(Carol,Dave,Type,Dollar,Alice,Bob,Cond,*Sum), note(Alice,Dave,Type,Dollar,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_note(Carol,Dave,Type,Dollar,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
 Notes:4 ○ | Carol will release them only if Cond is met, and return them only if it fails.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 Coins:0 - | Carol is possibly Alice or Bob.
-Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
-Coins:2 ■ Redeem: ~coin(Alice,Bob,Dollar), coin(Bob,Bob,Dollar), ~coin(Bob,Carol,Dollar), coin(Alice,Carol,Dollar), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob,Dollar), coin(Bob,Carol,Dollar) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Coins:2 ■ Redeem: ~note(Alice,Bob,coin,Dollar), note(Bob,Bob,coin,Dollar), ~note(Bob,Carol,coin,Dollar), note(Alice,Carol,coin,Dollar), knows(Alice,Carol) <- knows(Alice,Bob), note(Alice,Bob,coin,Dollar), note(Bob,Carol,coin,Dollar) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 Denominated Coins:0 - | *Dollar* names one denomination, and a *Dollar-denominated Alice-coin* is an Alice-coin issued as Alice's debt of one Dollar.
-Denominated Coins:0 - | Kind of note: coin, Dollar-denominated y-coins for y-coins.
-Denominated Coins:1 ■ First issue: coin(Alice,Alice,Dollar,*Sum), issued_in(Alice,Dollar) <- ~issued_in(Alice,_) guarded by Alice.
+Denominated Coins:0 - | Kind of note: note, Dollar-denominated y-notes of type t for y-notes of type t.
+Denominated Coins:1 ■ First issue: note(Alice,Alice,coin,Dollar,*Sum), issued_in(Alice,Dollar) <- ~issued_in(Alice,_) guarded by Alice.
 Denominated Coins:2 ○ | Denomination.
 Denominated Coins:2 ○ | A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
 Denominated Coins:3 ○ | Pricing.

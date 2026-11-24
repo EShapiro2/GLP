@@ -7,13 +7,13 @@ Joint Accounts
 Joint Accounts extends Coins.
 Alice and Bob are persons.
 1. ■ Open account: Alice and Bob, who know each other, may jointly open a joint account, under a new name of Alice's.
-2. ■ Deposit: Either of them may move coins they hold into their joint account.
+2. ■ Account deposit: Either of them may move coins they hold into their joint account.
 3. ■ Withdraw: Alice and Bob may jointly move coins from their joint account to either of them.
 Logic pragmas
 Joint Accounts extends Coins.
 Alice, Bob and Carol are persons, Carol possibly Alice or Bob, Acct a joint account, Sum a number.
 1. ■ Open account: Alice and Bob may jointly open the joint account Acct under a new name of Alice's, provided Alice and Bob know each other.
-2. ■ Deposit: Alice may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct. Partner deposit: Bob may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct.
+2. ■ Account deposit: Alice may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct. Partner deposit: Bob may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct.
 3. ■ Withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Alice. Partner withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Bob.
 Logic pragmas.
 Vocabulary: x has an account named n = account(x,n); x holds the joint account n with y = joint(x,n,y); x keeps m z-coins in n with y = joint_coin(x,z,n,y,*m).
@@ -28,9 +28,9 @@ Joint: the joint money Alice shares.
 Accounts: the accounts Alice shares.
 Open account: Alice [Open account] <acct>
   Bob: Alice asks to open a joint account with you.
-Deposit: Alice [Deposit] <sum>
+Account deposit: Alice [Account deposit] <sum>
   Bob [Partner deposit] <sum>
 Withdraw: Alice [Withdraw] <sum> [Partner withdraw] <sum>
   Bob: Alice asks to withdraw from your joint account.
-Escrow: Alice [Deposit coin] <amount> <condition>
+Escrow: Alice [Deposit] <amount> <condition>
   Carol: Alice asks to deposit coins with you.

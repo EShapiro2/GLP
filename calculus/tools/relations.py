@@ -75,7 +75,7 @@ import names as NM      # the names of the contracts and their files (tools/name
 from collections import Counter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes')
+VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes', 'weakens', 'augments', 'renames', 'lifts', 'unites')
 DERIVED = re.compile(r'^(?:.+ for .+|Vote of .+)$')
 
 
@@ -113,7 +113,7 @@ def schemas(n, d=None):
     if (n, d) not in _cache:
         _cache[(n, d)] = _schemas(n, d)
     s = _cache[(n, d)]
-    return None if s is None else [dict(a, head=Counter(a['head']), body=Counter(a['body']), guards=set(a['guards']), src=list(a['src'])) for a in s]
+    return None if s is None else [dict(a, head=Counter(a['head']), body=Counter(set(a['body'])), guards=set(a['guards']), src=list(a['src'])) for a in s]
 
 
 def published():
@@ -160,7 +160,7 @@ def _schemas(n, d):
             body, g = '', rest[len('guarded by '):]
         else:
             body, _, g = rest.partition(' guarded by ')
-        g = re.split(r' possibly | taken | votes ', g)[0]
+        g = re.split(r' possibly | taken | votes | must ', g)[0]      # 'must' marks a guard who must consent; it is no guard
         out.append({'label': m.group(1), 'labels': m.group(1).split('+'), 'first': m.group(1).split('+')[0],
                     'mark': m.group(2), 'name': name, 'head': Counter(split_top(head)),
                     'body': Counter(split_top(body)), 'guards': set(split_top(g)), 'src': [n]})
@@ -206,7 +206,7 @@ def first_line(n):
         with_ = None
         if verb == 'composes' and ' with ' in obj:
             obj, with_ = obj.split(' with ', 1)
-        bases = None if obj in ('it', 'them', 'the composition') else [b.strip() for b in re.split(r',\s*|\s+and\s+', obj) if b.strip()]
+        bases = None if obj in ('it', 'them', 'the composition', 'the union') else [re.sub(r'^(?:an? (?:weakening|strengthening|augmentation|renaming|lift) of )+', '', b.strip()) for b in re.split(r',\s*|\s+and\s+', obj) if b.strip()]      # 'a weakening of a lift of Bonds': Bonds
         for v in pend:
             steps.append((v, bases, ''))
         pend = []
@@ -214,7 +214,37 @@ def first_line(n):
             steps.append((verb, bases, with_.strip().rstrip(',')))
         else:
             steps.append((verb, bases, sigma))
-    return steps
+    return new_verbs(n, steps)
+
+
+def new_verbs(n, steps):
+    """The relations of Section 3 read as the operations this program checks (Udi, 2026-11-23 23:45, the six forms):
+    weakens as restricts, augments as restricts and strengthens, unites and lifts as extends, and renames as instantiates
+    with the words of gr/n's pragma 'Renaming of B: an organisation for a ward.'"""
+    ren = {}
+    if os.path.exists(path(n, 'first')):
+        for l in open(path(n, 'first'), encoding='utf-8'):
+            m = re.match(r'^Renaming of (.+?): (.*)\.$', l.rstrip('\n'))
+            if m:
+                ren[m.group(1)] = m.group(2)
+    out = []
+    for v, bs, sigma in steps:
+        if v == 'weakens':
+            out.append(('restricts', bs, sigma))
+        elif v == 'augments':
+            out += [('restricts', bs, sigma), ('strengthens', bs, sigma)]
+        elif v == 'unites' and bs and any(b in ren for b in bs):      # a union with a renaming: its instance composed with the others
+            r = [b for b in bs if b in ren][0]
+            out.append(('instantiates', [r], ren[r]))
+            if len(bs) > 1:
+                out.append(('composes', None, ', '.join(b for b in bs if b != r)))
+        elif v in ('unites', 'lifts'):
+            out.append(('extends', bs, sigma))
+        elif v == 'renames':
+            out.append(('instantiates', bs, ren.get(bs[0], '') if bs else ''))
+        else:
+            out.append((v, bs, sigma))
+    return out
 
 
 def words(sigma):
@@ -230,20 +260,31 @@ def words(sigma):
 
 # ---- the operations on the base -----------------------------------------------------------------------------------
 
+SEEN = set()       # (first label, name) of the acts of the contract judged (verdicts)
+TWICE = set()      # (first label, name) of the acts the contract judged has twice (verdicts)
+
+
 def merge(a, b):
     """The union of two sets of schemas, an act both have from one act (the same first label and name) being one."""
     out = [dict(x, head=Counter(x['head']), body=Counter(x['body']), guards=set(x['guards']), src=list(x['src'])) for x in a]
     pair = {}
     for k, y in enumerate(b):
-        x = next((i for i, x in enumerate(out) if x['first'] == y['first'] and x['name'] == y['name']), None)
-        if x is not None:
-            pair[k] = x
+        # Two contracts that instantiate differently the contract an act is of have it each (Definition Operations,
+        # Composition): where the contract judged has the act twice (TWICE), two schemas whose effects differ are two.
+        near = lambda x: sum((x['head'] & y['head']).values())
+        xs = [i for i, x in enumerate(out) if i not in pair.values() and x['first'] == y['first'] and x['name'] == y['name']
+              and (x['head'] == y['head'] or (y['first'], y['name']) not in TWICE or not (x['head'] and y['head']))]
+        if xs:
+            pair[k] = max(xs, key=lambda i: (near(out[i]), -i))
     for lab in {y['first'] for y in b}:          # an act one side names anew by a citation: the one act left of its label on each side
         ys = [k for k, y in enumerate(b) if y['first'] == lab and k not in pair and not DERIVED.match(y['name'])]
         xs = [i for i, x in enumerate(out) if x['first'] == lab and i not in pair.values() and not DERIVED.match(x['name'])
               and not any(y['name'] == x['name'] and y['first'] == lab for y in b)]
         sib = lambda x, y: len(x['labels']) > 1 and len(y['labels']) > 1 and x['labels'][1] != y['labels'][1] and (covered(x, y) or covered(y, x))
-        if len(ys) == 1 and len(xs) == 1 and not sib(out[xs[0]], b[ys[0]]):
+        # two acts of one label that the contract judged has both, with different effects, are the acts of two copies of
+        # one contract, instantiated differently, and stay two (Definition Operations, Composition)
+        both = lambda x, y: (lab, x['name']) in SEEN and (lab, y['name']) in SEEN and x['head'] != y['head']
+        if len(ys) == 1 and len(xs) == 1 and not sib(out[xs[0]], b[ys[0]]) and not both(out[xs[0]], b[ys[0]]):
             pair[ys[0]] = xs[0]         # but two citations of one act by two clauses, one making the other redundant, are two acts, the one removed (Udi, 2026-11-16)
     for k, y in enumerate(b):
         x = out[pair[k]] if k in pair else None
@@ -302,7 +343,18 @@ def match(base, mine):
     order where as many are left on each side."""
     got, used = {}, set()
     for i, b in enumerate(base):
-        j = next((j for j, a in enumerate(mine) if j not in used and a['first'] == b['first'] and a['name'] == b['name']), None)
+        js = [j for j, a in enumerate(mine) if j not in used and a['first'] == b['first'] and a['name'] == b['name']]
+        # NAME may have an act of one clause and name twice, for two contracts of its first line that instantiate
+        # differently the contract the act is of (Definition Operations, Composition): the one with most of b's atoms.
+        near = lambda a: sum((a['head'] & b['head']).values()) + sum((a['body'] & b['body']).values()) + len(set(a['guards']) & set(b['guards']))
+        j = max(js, key=lambda j: (near(mine[j]), -j)) if js else None
+        # The other copy may hold the name, and b's act of the copy be named anew beside it (gcsas.py, unclash): the act
+        # of b's very clauses, of a name no base act has, with more of b's atoms than the act of b's name.
+        if j is not None:
+            ks = [k for k, a in enumerate(mine) if k not in used and a['label'] == b['label'] and a['name'] != b['name']
+                  and not any(x['name'] == a['name'] for x in base) and near(a) > near(mine[j])]
+            if ks:
+                j = max(ks, key=lambda k: (near(mine[k]), -k))
         if j is not None:
             got[i] = j
             used.add(j)
@@ -537,11 +589,51 @@ def overridden(bases, n, both=False):
         gcsas.ROOT = saved
 
 
+
+
+def puts(base, n):
+    """The base acts that a clause of n cites with a name put in place of another, 'Child add: Warded Groups:3 Ward
+    add, Will in place of Bob' (Children:3, item 44), with that name in its place: the act n's clause weakens."""
+    p = os.path.join(ROOT, 'sas', NM.file_of(n) + '.txt')
+    if not os.path.exists(p):
+        return base
+    put = {}
+    for l in open(p, encoding='utf-8'):
+        mm = re.match(r'^\S.*?:\d+ \S+ (.+?): .+?:\d+ .+?, ([A-Z]\w*) in place of ([A-Z]\w*)', l)
+        if mm:
+            put[mm.group(1)] = (mm.group(3), mm.group(2))
+    if not put:
+        return base
+    out = []
+    for b in base:
+        if b['name'] in put:
+            old, new = put[b['name']]
+            f = lambda x: re.sub(r'(?<![A-Za-z_])%s(?![A-Za-z_(])' % old, new, x)
+            b = dict(b, head=Counter({f(l): k for l, k in b['head'].items()}), body=Counter({f(l): k for l, k in b['body'].items()}),
+                     guards={f(g) for g in b['guards']})
+        out.append(b)
+    return out
+
+
 def verdicts(n):
     steps = first_line(n)
     mine = schemas(n)
     if not steps or mine is None:
         return []
+    seen = Counter((a['first'], a['name']) for a in mine)
+    SEEN.clear(); SEEN.update(seen)
+    TWICE.clear()
+    TWICE.update(k for k, c in seen.items() if c > 1)
+    # An act the contract has twice, one of the two named anew beside the other (gcsas.py, unclash): an act of the very
+    # clauses of an act of a contract of the first line, under another name, beside an act of that clause and name.
+    named = {}
+    for _, bs, _ in steps:
+        for c in bs or []:
+            for x in schemas(c) or []:
+                named.setdefault(x['label'], set()).add(x['name'])
+    for a in mine:
+        if a['label'] in named and a['name'] not in named[a['label']]:
+            TWICE.update((a['first'], k) for k in named[a['label']] if (a['first'], k) in seen)
     stated = {}
     for v, bs, _ in steps:
         for b in bs or [None]:
@@ -579,7 +671,7 @@ def verdicts(n):
             if add:
                 base = add if base is None else merge(base, add)
                 names = names + [x for x in bs if x not in names]
-    base = refine(kind_forms(base or [], n), n)
+    base = puts(refine(kind_forms(base or [], n), n), n)
     owndef = overridden(names, n, both=True) if names and not inst else (set(), set())
     bpreds = preds(base)
     m = match(base, mine)
