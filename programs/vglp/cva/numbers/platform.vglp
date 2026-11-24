@@ -16,17 +16,11 @@ befriend(Peer, Peer)
 ;
 start(Peer)
 ;
-refuel(Peer, Integer)
+refuel(Peer, Constant)
 ;
-step(Peer, Integer)
+step(Peer, Integer, Constant)
 ;
 claim(Peer, Peer, Integer)
-;
-mint(Peer, Integer)
-;
-spend(Peer, Integer)
-;
-burn(Peer, Integer, Integer)
 .
 
 Proposal ::=
@@ -34,22 +28,16 @@ befriend(Peer, Peer)
 ;
 start(Peer)
 ;
-refuel(Peer, Integer)
+refuel(Peer, Constant)
 ;
 claim(Peer, Peer, Integer)
-;
-mint(Peer, Integer)
-;
-spend(Peer, Integer)
-;
-burn(Peer, Integer, Integer)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Befriend", [act(befriend, 1, [1, 2], [forb(friend, [at(2)]), unless(friend, [at(2)]), unless(claimed, [at(2), any]), unless(honoured, [at(2), any])], [], [], [], [])]), button("Start", [act(start, 1, [1], [forb(started, [])], [], [], [], [])]), button("Refuel", [act(refuel, 1, [1], [req(started, [])], [], [], [], [])]), button("Claim", [act(claim, 1, [1, 2], [req(friend, [at(2)])], [2], [field(3, "Amount", number)], [], [])]), button("Mint", [act(mint, 1, [1], [req(started, [])], [], [field(2, "Amount", number)], [], [])]), button("Spend", [act(spend, 1, [1], [req(started, []), req(token, [])], [], [field(2, "Amount", number)], [], [])]), button("Burn", [act(burn, 1, [1], [req(started, []), req(token, [])], [], [field(2, "Held", number), field(3, "Amount", number)], [], [])])])
+Request? =::= social_menu([button("Befriend", [act(befriend, 1, [1, 2], [forb(friend, [at(2)]), unless(friend, [at(2)]), unless(claimed, [at(2), any]), unless(honoured, [at(2), any])], [], [], [], [])]), button("Start", [act(start, 1, [1], [forb(started, [])], [], [], [], [])]), button("Refuel", [act(refuel, 1, [1], [req(started, []), forb(fuel, [at(2)])], [], [], [], [])]), button("Claim", [act(claim, 1, [1, 2], [req(friend, [at(2)])], [2], [field(3, "Amount", number)], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -70,17 +58,11 @@ started
 ;
 level(Integer)
 ;
-fuel
+fuel(Constant)
 ;
 claimed(Peer, Integer)
 ;
 honoured(Peer, Integer)
-;
-token
-;
-spent(Integer)
-;
-burnt(Integer, Integer)
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -90,22 +72,16 @@ atom_of(g(started, []), shown(started))
 .
 atom_of(g(level, [n(V1)]), shown(level(V1?)))
 .
-atom_of(g(fuel, []), shown(fuel))
+atom_of(g(fuel, [v(V1)]), shown(fuel(V1?)))
 .
 atom_of(g(claimed, [p(V1), n(V2)]), shown(claimed(V1?, V2?)))
 .
 atom_of(g(honoured, [p(V1), n(V2)]), shown(honoured(V1?, V2?)))
 .
-atom_of(g(token, []), shown(token))
-.
-atom_of(g(spent, [n(V1)]), shown(spent(V1?)))
-.
-atom_of(g(burnt, [n(V1), n(V2)]), shown(burnt(V1?, V2?)))
-.
 atom_of(_, unshown) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), schema(refuel, [num(k)], [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]), schema(step, [num(t1)], [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]), schema(claim, [num(d)], [rs(guarded, [atom(claimed, [role(2), num(d)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(honoured, [role(1), num(d)])], [], [atom(friend, [role(1)]), atom(level, [num(t)])], [])]), schema(mint, [num(k)], [rs(guarded, [times(num(k), atom(token, []))], [], [atom(started, [])], [])]), schema(spend, [num(k)], [rs(guarded, [atom(spent, [num(k)])], [atom(token, [])], [atom(started, []), rest(num(k), num(1), atom(token, []))], [])]), schema(burn, [num(k), num(j)], [rs(guarded, [atom(burnt, [num(k), num(j)])], [times(num(j), atom(token, []))], [atom(started, []), rest(num(k), num(j), atom(token, []))], [])])])
+contract_schemas([schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), schema(refuel, [num(f)], [rs(guarded, [atom(fuel, [num(f)])], [], [atom(started, [])], [atom(fuel, [num(f)])])]), schema(step, [num(t1), num(x)], [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, [num(x)]), atom(level, [num(t)])], [], [])]), schema(claim, [num(d)], [rs(guarded, [atom(claimed, [role(2), num(d)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(honoured, [role(1), num(d)])], [], [atom(friend, [role(1)]), atom(level, [num(t)])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -113,17 +89,11 @@ schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)]
 .
 schema_entry(start, schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]))
 .
-schema_entry(refuel, schema(refuel, [num(k)], [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]))
+schema_entry(refuel, schema(refuel, [num(f)], [rs(guarded, [atom(fuel, [num(f)])], [], [atom(started, [])], [atom(fuel, [num(f)])])]))
 .
-schema_entry(step, schema(step, [num(t1)], [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]))
+schema_entry(step, schema(step, [num(t1), num(x)], [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, [num(x)]), atom(level, [num(t)])], [], [])]))
 .
 schema_entry(claim, schema(claim, [num(d)], [rs(guarded, [atom(claimed, [role(2), num(d)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(honoured, [role(1), num(d)])], [], [atom(friend, [role(1)]), atom(level, [num(t)])], [])]))
-.
-schema_entry(mint, schema(mint, [num(k)], [rs(guarded, [times(num(k), atom(token, []))], [], [atom(started, [])], [])]))
-.
-schema_entry(spend, schema(spend, [num(k)], [rs(guarded, [atom(spent, [num(k)])], [atom(token, [])], [atom(started, []), rest(num(k), num(1), atom(token, []))], [])]))
-.
-schema_entry(burn, schema(burn, [num(k), num(j)], [rs(guarded, [atom(burnt, [num(k), num(j)])], [times(num(j), atom(token, []))], [atom(started, []), rest(num(k), num(j), atom(token, []))], [])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -137,12 +107,6 @@ schema_numeric(refuel, numeric([cj(every, true)], [], []))
 schema_numeric(step, numeric([cj(at(1), succ(num(t), num(t1)))], [num(t)], []))
 .
 schema_numeric(claim, numeric([cj(at(2), le(num(d), num(t)))], [num(t)], []))
-.
-schema_numeric(mint, numeric([cj(every, true)], [], []))
-.
-schema_numeric(spend, numeric([cj(every, true)], [], []))
-.
-schema_numeric(burn, numeric([cj(every, le(num(j), num(k)))], [], []))
 .
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
@@ -163,12 +127,6 @@ schema_base(step, 1)
 .
 schema_base(claim, 1)
 .
-schema_base(mint, 1)
-.
-schema_base(spend, 1)
-.
-schema_base(burn, 1)
-.
 schema_base(_, 1) :- otherwise | true.
 
 MayOne    ::= may_one(Integer, Integer).
@@ -184,12 +142,6 @@ schema_ones(step, [])
 .
 schema_ones(claim, [])
 .
-schema_ones(mint, [])
-.
-schema_ones(spend, [])
-.
-schema_ones(burn, [])
-.
 schema_ones(_, []) :- otherwise | true.
 
 VOne      ::= vone(Var, Var) ; vone_any(Var) ; vone_all.
@@ -204,12 +156,6 @@ schema_vones(refuel, [vone_all])
 schema_vones(step, [vone_all])
 .
 schema_vones(claim, [vone_all])
-.
-schema_vones(mint, [vone_all])
-.
-schema_vones(spend, [vone_all])
-.
-schema_vones(burn, [vone_all])
 .
 schema_vones(_, []) :- otherwise | true.
 
@@ -232,17 +178,11 @@ binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(start(V1), start, [b(role(1), p(V1?))])
 .
-binding_of(refuel(V1, V2), refuel, [b(role(1), p(V1?)), b(num(k), n(V2?))])
+binding_of(refuel(V1, V2), refuel, [b(role(1), p(V1?)), b(num(f), v(V2?))])
 .
-binding_of(step(V1, V2), step, [b(role(1), p(V1?)), b(num(t1), n(V2?)), b(num(t), lv(step, t))])
+binding_of(step(V1, V2, V3), step, [b(role(1), p(V1?)), b(num(t1), n(V2?)), b(num(x), v(V3?)), b(num(t), lv(step, t))])
 .
 binding_of(claim(V1, V2, V3), claim, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(d), n(V3?)), b(num(t), lv(claim, t))])
-.
-binding_of(mint(V1, V2), mint, [b(role(1), p(V1?)), b(num(k), n(V2?))])
-.
-binding_of(spend(V1, V2), spend, [b(role(1), p(V1?)), b(num(k), n(V2?))])
-.
-binding_of(burn(V1, V2, V3), burn, [b(role(1), p(V1?)), b(num(k), n(V2?)), b(num(j), n(V3?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -272,9 +212,9 @@ ground(D?)
 |
 val_peer(role(1), B?, D?, V1)
 ,
-val_num(num(k), B?, V2)
+val_const(num(f), B?, V2)
 .
-class_of(step, B, D, step(V1?, V2?))
+class_of(step, B, D, step(V1?, V2?, V3?))
 :-
 ground(B?)
 ,
@@ -283,6 +223,8 @@ ground(D?)
 val_peer(role(1), B?, D?, V1)
 ,
 val_num(num(t1), B?, V2)
+,
+val_const(num(x), B?, V3)
 .
 class_of(claim, B, D, claim(V1?, V2?, V3?))
 :-
@@ -296,38 +238,6 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_num(num(d), B?, V3)
 .
-class_of(mint, B, D, mint(V1?, V2?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-,
-val_num(num(k), B?, V2)
-.
-class_of(spend, B, D, spend(V1?, V2?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-,
-val_num(num(k), B?, V2)
-.
-class_of(burn, B, D, burn(V1?, V2?, V3?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-,
-val_num(num(k), B?, V2)
-,
-val_num(num(j), B?, V3)
-.
 
 procedure name_class(Proposal?, GAtoms?, Class).
 name_class(befriend(V1, V2), _, befriend(V1?, V2?))
@@ -338,12 +248,6 @@ name_class(refuel(V1, V2), _, refuel(V1?, V2?))
 .
 name_class(claim(V1, V2, V3), _, claim(V1?, V2?, V3?))
 .
-name_class(mint(V1, V2), _, mint(V1?, V2?))
-.
-name_class(spend(V1, V2), _, spend(V1?, V2?))
-.
-name_class(burn(V1, V2, V3), _, burn(V1?, V2?, V3?))
-.
 
 procedure request_name(Class?, PName).
 request_name(befriend(V1, V2), pname(befriend(V1?, V2?)))
@@ -353,12 +257,6 @@ request_name(start(V1), pname(start(V1?)))
 request_name(refuel(V1, V2), pname(refuel(V1?, V2?)))
 .
 request_name(claim(V1, V2, V3), pname(claim(V1?, V2?, V3?)))
-.
-request_name(mint(V1, V2), pname(mint(V1?, V2?)))
-.
-request_name(spend(V1, V2), pname(spend(V1?, V2?)))
-.
-request_name(burn(V1, V2, V3), pname(burn(V1?, V2?, V3?)))
 .
 request_name(_, nopname) :- otherwise | true.
 
@@ -383,7 +281,7 @@ sentence_of(_, _, asked(0, [])) :- otherwise | true.
 
 % The contract the platform is compiled from (vGLP, Section 5.4, "The contract's words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC's reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC's reader's and the pragmas', named with an R before them.
 RNameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant) ; ext(RNameTerm, Constant) ; ext_any(RNameTerm).
-RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).
+RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant) ; const(Constant).
 RArgs     ::= [] ; [RArg | RArgs].
 RAtom     ::= atom(Constant, RArgs) ; times(RArg, RAtom) ; rest(RArg, RArg, RAtom).
 RAtoms    ::= [] ; [RAtom | RAtoms].
@@ -429,7 +327,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("", with([schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), schema(refuel, [num(k)], [rs(guarded, [times(num(k), atom(fuel, []))], [], [atom(started, [])], [])]), nschema(step, [num(t), num(t1)], succ(num(t), num(t1)), [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, []), atom(level, [num(t)])], [], [])]), nschema(claim, [num(d), num(t)], le(num(d), num(t)), [rs(guarded, [atom(claimed, [role(2), num(d)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(honoured, [role(1), num(d)])], [], [atom(friend, [role(1)]), atom(level, [num(t)])], [])]), schema(mint, [num(k)], [rs(guarded, [times(num(k), atom(token, []))], [], [atom(started, [])], [])]), schema(spend, [num(k)], [rs(guarded, [atom(spent, [num(k)])], [atom(token, [])], [atom(started, []), rest(num(k), num(1), atom(token, []))], [])]), nschema(burn, [num(k), num(j)], le(num(j), num(k)), [rs(guarded, [atom(burnt, [num(k), num(j)])], [times(num(j), atom(token, []))], [atom(started, []), rest(num(k), num(j), atom(token, []))], [])])], pragmas([list("Friends", [friend])], [act(befriend, "Befriend", [], said([[], [person(1), text(" asks.")]]), "Friends", by([1])), act(start, "Start", [], none, "Friends", by([1])), act(refuel, "Refuel", [], none, "Friends", by([1])), act(claim, "Claim", ["", "", "Amount"], none, "Friends", by([1])), act(mint, "Mint", ["", "Amount"], none, "Friends", by([1])), act(spend, "Spend", ["", "Amount"], none, "Friends", by([1])), act(burn, "Burn", ["", "Held", "Amount"], none, "Friends", by([1]))], [], nolook, version(1, 1))))
+contract("", with([schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]), schema(start, [], [rs(guarded, [atom(started, []), atom(level, [num(0)])], [], [], [atom(started, [])])]), schema(refuel, [const(f)], [rs(guarded, [atom(fuel, [num(f)])], [], [atom(started, [])], [atom(fuel, [num(f)])])]), nschema(step, [num(t), num(t1), const(x)], succ(num(t), num(t1)), [rs(unguarded, [atom(level, [num(t1)])], [atom(fuel, [num(x)]), atom(level, [num(t)])], [], [])]), nschema(claim, [num(d), num(t)], le(num(d), num(t)), [rs(guarded, [atom(claimed, [role(2), num(d)])], [], [atom(friend, [role(2)])], []), rs(unguarded, [atom(honoured, [role(1), num(d)])], [], [atom(friend, [role(1)]), atom(level, [num(t)])], [])])], pragmas([list("Friends", [friend])], [act(befriend, "Befriend", [], said([[], [person(1), text(" asks.")]]), "Friends", by([1])), act(start, "Start", [], none, "Friends", by([1])), act(refuel, "Refuel", [], none, "Friends", by([1])), act(claim, "Claim", ["", "", "Amount"], none, "Friends", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -6661,6 +6559,8 @@ kind_ok(svar(_), c(_), no).
 kind_ok(num(_), n(_), yes).
 kind_ok(num(_), r(_), yes).
 kind_ok(num(_), lv(_, _), yes).
+%% A variable over the constants is a value variable, num(X) in the schemas the text carries, its value a constant, v(C), as the image of a constant the contract names is (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it"); the place of an atom is of one type, so no variable over the numbers is matched with a constant.
+kind_ok(num(_), v(_), yes).
 kind_ok(num(_), p(_), no).
 kind_ok(num(_), s(_), no).
 kind_ok(num(_), c(_), no).
@@ -6745,6 +6645,12 @@ val_real(V, B, K?) :- ground(B?) | lookup(V?, B?, F), real_found(F?, K).
 procedure real_found(Found?, Real).
 real_found(found(r(K)), K?).
 real_found(_, 0.0) :- otherwise | true.
+%% The constant of a variable over the constants of a class term, written in the term (class_of); none where none is bound, which a schema-binding of a class never leaves.
+procedure val_const(Var?, Binding?, Constant).
+val_const(V, B, C?) :- ground(B?) | lookup(V?, B?, F), const_found(F?, C).
+procedure const_found(Found?, Constant).
+const_found(found(v(C)), C?).
+const_found(_, none) :- otherwise | true.
 %% Whether the constraint holds under the binding, every number it names bound: and(C1, C2), C1 and C2; eq(X, Y), X = Y; le(X, Y), X =< Y; lt(X, Y), X < Y; ge(X, Y), X >= Y; gt(X, Y), X > Y; succ(X, Y), Y = X + 1; or(C1, C2), C1 or C2, X and Y the values of the expressions under the binding.  A number not bound makes a comparison false.
 procedure con_holds(Constraint?, Binding?, YesNo).
 con_holds(true, _, yes).
@@ -6788,7 +6694,12 @@ expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
 expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
 %% A constant the contract names is its own value, v(C).
 expr_term1(val(C), _, found(v(C?))).
+%% A variable over the constants is the constant the binding, or a reading, gives it, v(C), so that eq and ne compare two such variables, or one and a constant the contract names, for equality, the comparison of constants (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a constraint ... is over the relations and functions the value types provide --- comparison and arithmetic").
+expr_term1(num(X), B, F?) :- ground(B?) | lookup(num(X?), B?, F0), const_term(F0?, F).
 expr_term1(_, _, free) :- otherwise | true.
+procedure const_term(Found?, Found).
+const_term(found(v(C)), found(v(C?))).
+const_term(_, free) :- otherwise | true.
 procedure author_found(Found?, Found).
 author_found(found(s(S)), found(p(P?))) :- ground(S?) | first_signer(S?, P).
 author_found(_, free) :- otherwise | true.
@@ -7083,11 +6994,17 @@ schema_head(lschema(_, Hd, _, _), Hd?).
 procedure hd_nums_bound(Vars?, Binding?, YesNo).
 hd_nums_bound([], _, yes).
 hd_nums_bound([num(X)|Vs], B, Ok?) :- ground(X?), ground(B?) |
-    num_of(num(X?), B?, K),
-    is_num(K?, O1),
+    lookup(num(X?), B?, F),
+    is_value(F?, O1),
     hd_nums_bound(Vs?, B?, O2),
     and(O1?, O2?, Ok).
 hd_nums_bound([_|Vs], B, Ok?) :- otherwise | hd_nums_bound(Vs?, B?, Ok).
+%% A value variable of the head is bound to a value: a number, or, a variable over the constants, a constant.
+procedure is_value(Found?, YesNo).
+is_value(found(n(_)), yes).
+is_value(found(r(_)), yes).
+is_value(found(v(_)), yes).
+is_value(_, no) :- otherwise | true.
 procedure is_num(NumRes?, YesNo).
 is_num(num_is(_), yes).
 is_num(no_num, no).

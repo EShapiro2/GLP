@@ -79,7 +79,39 @@ def values_of(n, refl=None, env=None, par=None):
     ONE.update(lex.one)
     FN.clear()
     FN.update(lex.env_preds('fn'))
+    # A role two contracts of the first line list differently (Organisation renames Guardians: those who decide for z,
+    # listed by officers of an organisation and by guardians of a ward): each listing with the kinds of its contract.
+    ALTS.clear()
+    parents, _, _ = gcsas.first_line(w.contract(n), w.known)
+    for p in parents:
+        pk = set().union(set(), *[set(v) for v in gcsas.kinds_from(w, p).values()])
+        for r, by in w.lexicon(p).rlist.items():
+            ALTS.setdefault(r, [])
+            if all(b != by for _, b, _ in ALTS[r]):
+                ALTS[r].append((pk, by, gcsas.pattern(by, w.lexicon(p))))
+    for r in [r for r, a in ALTS.items() if len(a) < 2]:
+        del ALTS[r]
     return {p for _, p, a in lex.basic if 'now' in a}, rl, gcsas.kinds_from(w, n)
+
+
+ALTS = {}       # role -> [(kinds of a contract of the first line, its listing, the listing's pattern)]
+
+
+def rlist_for(e, rlist):
+    """The listing of each role of the act: of a role listed differently by the contracts of the first line, the listing
+    of the contract that has the kind of the name the role is of (Wendy a ward: by guardians; Orga an organisation: by officers)."""
+    if not ALTS:
+        return rlist
+    out = dict(rlist)
+    for g in e['guards']:
+        if '(' in g:
+            _, p, a = gcsas.parse_atom(g)
+            if p in ALTS:
+                ks = e.get('_kinds', {}).get(a[0], set())
+                hit = [l for k, _, l in ALTS[p] if ks & k]
+                if len(hit) == 1:
+                    out[p] = hit[0]
+    return out
 
 
 def agents_of(acts, values=()):
@@ -454,11 +486,19 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                 return None, cons
         if exact is not None:
             return None, ['%s(cardinality([], %s, true), %s)' % (cmp('eq'), at, arg(exact))]
-        if mult is not None:
-            at = 'times(%s, %s)' % (arg(mult), at)
+        if mult is not None:        # a set of notes, one atom for each (Udi, 2026-11-24, design decisions 49 to 51; GSC's
+            # set('N') and size('N'), GLP claude/project-thread-pgtsao 0daa1b8): the amount n is the size of the set
+            sv = ('N%sSet' if mult.isdigit() else '%sSet') % mult
+            if sv not in others:
+                others.append(sv)
+            sc = 'eq(size(%s), %s)' % (q(sv), arg(mult))
+            if sc not in sizes:
+                sizes.append(sc)
+            at = 'atom(%s, [%s])' % (l[1], ', '.join([o for o, _ in out] + ['set(%s)' % q(sv)]))
         return at, cons
 
     head, body, cons = [], [], list(onecons)
+    sizes = []
     cleared = [l for l in e['head'] if l[0] and l[2] and l[2][0] in roles and '_' in l[2][1:]]
     for where, ls in ((head, e['head']), (body, e['body'])):
         for l in ls:
@@ -510,6 +550,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                 if at:
                     where.append('not(%s)' % at if l[0] else at)
     made = {l[2][0] for l in e['head'] if l[1] == 'identity' and not l[0]}
+    extra = []
     if marks:                       # who acts is a person, or a ward with a guardian (GSC, Contracts with Wards)
         has = lambda p, g: any(not l[0] and l[1] == p and l[2] and l[2][0] == g for l in e['body'])
         k = 0
@@ -519,11 +560,24 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             if g in persons:        # a guard the act's own contract declares a person or a party is a person, not a ward (Bonds:4's escrow agent, Calculus #6, 2026-11-15 17:23 UTC; a party, Udi, 2026-11-15)
                 lists.append('atom(person, [%s])' % q(g))
                 continue
-            f = 'atom(person, [%s])' % q(g)
+            # a guard the act's contract declares an organisation or a ward is one, acting through its officer or
+            # guardian, never a person (Audit PR 102, Finding 19; GO #15, 2026-11-24): the mirror of persons above
+            own = [m for m in marks if m in e.get('_kinds', {}).get(g, ())]
+            f = None if own else 'atom(person, [%s])' % q(g)
             for m, u in marks.items():
                 k += 1
-                f = 'or(%s, and(atom(%s, [%s]), exists([%s], atom(%s, [%s, %s]), true)))' % (f, m, q(g), q('G%d' % k), u, q(g), q('G%d' % k))
-            lists.append(f)
+                if own and m not in own:
+                    continue
+                if own and len(own) == 1:
+                    # one kind: the guard's ward and its guardian are required literals, G a name of the schema
+                    # (GSC #21, Calculus_inbox.md, 2026-11-24 14:43 UTC: Definition Guardianship's "an atom of the u of its guardianship")
+                    lists.extend(['atom(%s, [%s])' % (m, q(g)), 'atom(%s, [%s, %s])' % (u, q(g), q('G%d' % k))])
+                    extra.append('G%d' % k)
+                    continue
+                d = 'and(atom(%s, [%s]), exists([%s], atom(%s, [%s, %s]), true))' % (m, q(g), q('G%d' % k), u, q(g), q('G%d' % k))
+                f = d if f is None else 'or(%s, %s)' % (f, d)
+            if f is not None:
+                lists.append(f)
         lists[:] = [x.replace('[atom(identity, [%s])' % q(d), '[atom(identity, [%s]), atom(person, [%s])' % (q(d), q(d))) for x in lists for d in [None]] if False else lists
     idn = ['atom(identity, [%s])' % q(r) for r in roles + deciders if r not in made and 'not(atom(identity, [%s]))' % q(r) not in body]
     # Two roles the contract says are possibly one agent are written one(Name, Other), Name the later of the two
@@ -553,10 +607,10 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     if k:
         name += '_%d' % (k + 1)
     constraint = 'true'
-    for c in reversed(cons):
+    for c in reversed(cons + sizes):
         constraint = c if constraint == 'true' else 'and(%s, %s)' % (c, constraint)
     return 'sas(%s, [%s], [%s], [%s], [%s], %s, [%s])' % (
-        q(name), ', '.join(names + [q(x) for x in listed]), ', '.join(q(o) for o in others if o not in roles and o not in deciders), ', '.join(head), ', '.join(idn + body + lists), constraint,
+        q(name), ', '.join(names + [q(x) for x in listed + extra]), ', '.join([q(o) for o in others if o not in roles and o not in deciders] + [q(x) for x in extra]), ', '.join(head), ', '.join(idn + body + lists), constraint,
         ', '.join([q(g) for g in e['guards'] if '(' not in g] + [q(x) for x in deciders + listed]))
 
 
@@ -611,12 +665,15 @@ def contract_term(n):
     w = gcsas.World(NM.names_in(os.path.join(ROOT, 'gr')))
     pmemo = {}
     def persons_of(e):      # the names the contract that wrote the act declares persons or parties, and only those
-        o = re.split(r'[:+]', e['label'])[0]
-        if o not in pmemo:
-            pmemo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if ks & {'person', 'party'} and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
+        out = frozenset()
+        for part in e['label'].split('+'):     # every contract whose clause the act is of (Rides:1 makes Award's Alice a person)
+            o = part.split(':')[0]
+            if o not in pmemo:
+                pmemo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if ks & {'person', 'party'} and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
+            out |= pmemo[o]
         # a party guards the act in its person's form as a person, its ward's form being the act derived 'for' it
         # (gcsas.party_specs); who takes an act for a party, and who votes on it, is a person (GO:2's Act and Vote)
-        return pmemo[o] | frozenset((e.get('taken') or {}).values()) | {gcsas.VOTER}
+        return out | frozenset((e.get('taken') or {}).values()) | {gcsas.VOTER}
     amemo = {}
     def anyof(e):           # the names the clause that wrote the act declares possibly any of the others (gcsas.possibly)
         o, num = re.split(r'[:+]', e['label'])[0], int(re.split(r'[:+]', e['label'])[1])
@@ -624,8 +681,19 @@ def contract_term(n):
             amemo[(o, num)] = frozenset(a for cl, a, b in gcsas.possibly(w.contract(o)) if b == '*' and (cl is None or num in cl)) if o in w.known else frozenset()
         return amemo[(o, num)]
     orders = {}
+    kmemo = {}
+    def kinds_of(e):        # the kinds the contracts of the act's clauses declare each name of (Gov an organisation)
+        out = {}
+        for part in e['label'].split('+'):
+            o = part.split(':')[0]
+            if o not in kmemo:
+                kmemo[o] = gcsas.kinds_from(w, n, o) if o in w.known else {}
+            for x, ks in kmemo[o].items():
+                out[x] = set(out.get(x, set())) | set(ks)
+        return out
     for e in acts:
-        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces, persons_of(e), acts, anyof(e), cvals, nvals, prefs.get((e['label'], e['name'])), orders)
+        e = dict(e, _kinds=kinds_of(e))
+        t = term(e, agents, used, values, rlist_for(e, rlist), marks, consts, places, cplaces, persons_of(e), acts, anyof(e), cvals, nvals, prefs.get((e['label'], e['name'])), orders)
         if t is None:
             roles += 1
         else:

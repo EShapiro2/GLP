@@ -98,7 +98,10 @@ sub local_vars {
             }
         }
         for my $k (1 .. $#p) {
-            for my $x (var_tokens($p[$k])) {
+            # A cleared atom, its wildcard among its arguments, requires nothing, so names no variable local to the role (GSC, Definition "Speech-act schema"; Calculus #11, vGLP_inbox.md, 2026-11-24 18:42 UTC: Commercial Bank\x27s Loan clears every vote_lend(Orga, _, Bob, Sum, Day) "and it requires none; so it binds neither Sum nor Day").
+            my $pk = $p[$k];
+            if ($k == 2) { (my $dl = $pk) =~ s/^\[//; $dl =~ s/\]$//; $pk = join(", ", grep { !/\bany\b|\bext_any\(/ } top_args($dl)) }
+            for my $x (var_tokens($pk)) {
                 if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 }
                 if ($k == 2) { $del{$x} = 1 }
                 if ($k == 1) { $add{$x}{$r} = 1 }
@@ -274,12 +277,12 @@ for my $n (keys %cons) {
     my $r = 0;
     for my $rs (@{ $roles{$n} }) {
         $r++;
-        for my $k (0 .. 3) { for my $a (@{ $rs->{atoms}[$k] }) { $named_at{$_}{$r} = 1 for atom_keys($a) } }
+        for my $k (0 .. 3) { for my $a (@{ $rs->{atoms}[$k] }) { next if $k == 1 && cleared($a); $named_at{$_}{$r} = 1 for atom_keys($a) } }
     }
     for my $x (keys %{ $locals{$n} || {} }) { my @rr = keys %{ $named_at{"v$x"} || {} }; $role_of{"v$x"} = $rr[0] if @rr == 1 }
     # The variables of the atoms the schema deletes, at any role, which the constraint never determines (local.glp, dels_name; Grassroots-Audit, cvac.glp.md, Finding 2).
     my %deleted;
-    for my $rs (@{ $roles{$n} }) { for my $a (@{ $rs->{atoms}[1] }) { $deleted{$_} = 1 for atom_keys($a) } }
+    for my $rs (@{ $roles{$n} }) { for my $a (@{ $rs->{atoms}[1] }) { next if cleared($a); $deleted{$_} = 1 for atom_keys($a) } }
     my $more = 1;
     while ($more) { $more = 0;
     for my $c (con_conjs($cons{$n})) {
@@ -1075,6 +1078,8 @@ sub field_keys3 {
         next unless !$b{$k} && ($_->[0] eq "role" || $_->[0] eq "pvar" || $fills{ $_->[2] });
         if ($_->[0] eq "num" && $cons{$S}) {
             my %known = (%b, map { ($_->[0] eq "role" ? "r$_->[3]" : "v$_->[2]") => 1 } @out);
+            # A set variable is never known: the proposer chooses its size, a field, and the platform takes the set of that size, new names for an issue and the notes the proposer holds for a payment (Calculus #11, vGLP_inbox.md, 2026-11-24 18:12 UTC: "So Sum is a field in every case; SumSet is never one"), so size(SumSet) = Sum determines no Sum.
+            for my $h (@{ $head{$S} }) { if ($h->[0] eq "set") { (my $x = $h->[1][0][0] // "") =~ s/^\x27|\x27$//g; delete $known{"v$x"} } }
             my %d = map { $_ => 1 } det_closure($cons{$S}, \%known);
             next if $d{$k};
         }
@@ -1084,7 +1089,7 @@ sub field_keys3 {
 }
 # The numeric variables a constraint gives finitely many values once those of %$known are bound, taken again with each it gives, as local.glp’s con_det and determined decide it: succ(X, Y) gives Y once X is bound and X once Y is; eq(X, Y) its one numeric variable not bound, where its coefficient in X - Y is not 0; and(C1, C2) what either gives; or(C1, C2) what both give; the rest give none.
 sub nvar_key { my ($e) = @_; return undef unless @$e == 2 && $e->[0] eq "num"; my $x = $e->[1][0][0]; return undef if $x =~ /^-?\d+$/; $x =~ s/^\x27|\x27$//g; return "v$x" }
-sub expr_nvars { my ($e) = @_; return () if @$e == 1; my $v = nvar_key($e); return ($v) if defined $v; return () if $e->[0] eq "num"; return map { expr_nvars($_) } @{ $e->[1] } if $e->[0] =~ /^(plus|minus|mul)$/; return () }
+sub expr_nvars { my ($e) = @_; return () if @$e == 1; my $v = nvar_key($e); return ($v) if defined $v; return () if $e->[0] eq "num"; return map { expr_nvars($_) } @{ $e->[1] } if $e->[0] =~ /^(plus|minus|mul)$/; return map { expr_nvars($_) } @{ $e->[1][1][1] } if $e->[0] eq "fn" && @{ $e->[1] } == 2 && $e->[1][1][0] eq "[]"; return () }
 sub const_of { my ($e) = @_; return 0 if @$e == 1; return $e->[1][0][0] + 0 if $e->[0] eq "num" && $e->[1][0][0] =~ /^-?\d+$/; my ($a, $b) = @{ $e->[1] }; return const_of($a) + const_of($b) if $e->[0] eq "plus"; return const_of($a) - const_of($b) if $e->[0] eq "minus"; return const_of($a) * const_of($b) if $e->[0] eq "mul"; return 0 }
 sub lin_coef {
     my ($e, $v) = @_;
