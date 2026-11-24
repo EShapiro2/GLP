@@ -86,6 +86,10 @@ knows
 \mathit{\detokenize{
 identity
 }}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Alice
@@ -93,6 +97,10 @@ identity
  \text{ and } 
 \mathit{\detokenize{
 identity
+}}
+,
+\mathit{\detokenize{
+person
 }}
  \in c_
 {
@@ -126,7 +134,7 @@ c_
 knows
 }}
 (
-Carol
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -139,11 +147,25 @@ c_
 {
 \Bob
 }
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
 \mathit{\detokenize{
 identity
+}}
+,
+\mathit{\detokenize{
+person
 }}
 ,
 \mathit{\detokenize{
@@ -162,6 +184,10 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
@@ -172,11 +198,23 @@ knows
 knows
 }}
 (
-Carol
+\mathit{Carol}
 )
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
 }
 ,\\
 &
@@ -1845,9 +1883,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Alice
+,
+Type
 )
 \}
 ,\\
@@ -1884,18 +1926,26 @@ c'_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
 )
 \}
 ) \uplus 
 \{
 Total
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Other
 )
 ,
 \mathit{\detokenize{
@@ -1919,18 +1969,26 @@ c'_
 \{
 Total
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Other
 )
 \}
 ) \uplus 
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
 )
 ,
 \mathit{\detokenize{
@@ -1957,9 +2015,13 @@ knows
 ,
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
 )
 \}
  \subseteq c_
@@ -1981,9 +2043,13 @@ knows
 ,
 Total
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Other
 )
 \}
  \subseteq c_
@@ -2016,9 +2082,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
 )
 \}
 , \qquad 
@@ -2035,9 +2105,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
 )
 ,
 \mathit{\detokenize{
@@ -2064,9 +2138,13 @@ knows
 ,
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
 )
 \}
  \subseteq c_
@@ -2107,9 +2185,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+Type
 )
 \}
 , \qquad 
@@ -2126,9 +2208,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+Type
 )
 \}
 ,\\
@@ -2148,9 +2234,13 @@ knows
 ,
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+Type
 )
 \}
  \subseteq c_
@@ -2189,9 +2279,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
 )
 \}
 , \qquad 
@@ -2209,10 +2303,12 @@ c_
 Sum
 \cdot
 \mathit{\detokenize{
-escrow_coin
+escrow_note
 }}
 (
 Dave
+,
+Type
 ,
 \Alice
 ,
@@ -2245,9 +2341,13 @@ Bob
 ,
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
 )
 \}
  \subseteq c_
@@ -2296,10 +2396,12 @@ c_
 Sum
 \cdot
 \mathit{\detokenize{
-escrow_coin
+escrow_note
 }}
 (
 Dave
+,
+Type
 ,
 Alice
 ,
@@ -2322,9 +2424,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
 )
 ,
 \mathit{\detokenize{
@@ -2352,10 +2458,12 @@ knows
 Sum
 \cdot
 \mathit{\detokenize{
-escrow_coin
+escrow_note
 }}
 (
 Dave
+,
+Type
 ,
 Alice
 ,
@@ -2410,10 +2518,12 @@ c_
 Sum
 \cdot
 \mathit{\detokenize{
-escrow_coin
+escrow_note
 }}
 (
 Dave
+,
+Type
 ,
 \Bob
 ,
@@ -2436,9 +2546,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
 )
 ,
 \mathit{\detokenize{
@@ -2466,10 +2580,12 @@ knows
 Sum
 \cdot
 \mathit{\detokenize{
-escrow_coin
+escrow_note
 }}
 (
 Dave
+,
+Type
 ,
 \Bob
 ,
@@ -2521,16 +2637,24 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
 )
 \}
 ) \uplus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
 )
 ,
 \mathit{\detokenize{
@@ -2552,16 +2676,24 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
 )
 \}
 ) \uplus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
 )
 \}
 ,\\
@@ -2578,9 +2710,13 @@ knows
 \Bob
 )
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
 )
  \in c_
 {
@@ -2591,9 +2727,13 @@ knows
 identity
 }}
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
 )
  \in c_
 {
@@ -2623,9 +2763,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+coin
 )
 \}
 , \qquad 
@@ -2670,9 +2814,13 @@ Delos
 ,
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+coin
 )
 \}
  \subseteq c_
@@ -2752,9 +2900,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+coin
 )
 \}
 ,\\

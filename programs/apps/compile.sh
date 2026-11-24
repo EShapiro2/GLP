@@ -9,7 +9,7 @@
 #   gsg    friendship       programs/gsc/Friendship.glp
 #   gsn    groups       programs/gsc/Groups.glp
 #   gsnp   provenance_groups      programs/gai/Provenance-Groups.glp
-#   gai    agents       programs/gai/Agents.glp
+#   gai    ai_agents    programs/gai/AI-Agents.glp
 #   gc     gc        programs/currencies/coins/Coins.glp
 #   gb     gb        programs/currencies/bonds/Bonds.glp
 #   dgc    denominated_currencies  programs/currencies/sovereign/Denominated-Currencies.glp
@@ -31,7 +31,7 @@ contract_of() { # contract_of <app> ; the checker's name of its contract
         gsg) echo friendship ;;
         gsn) echo groups ;;
         gsnp) echo provenance_groups ;;
-        gai) echo agents ;;
+        gai) echo ai_agents ;;
         gc) echo coins ;;
         gb) echo bonds ;;
         dgc) echo denominated_currencies ;;
@@ -44,7 +44,7 @@ file_of() { # file_of <app> ; the owner's file that holds its contract
         gsg) echo "$GLP_DIR/programs/gsc/Friendship.glp" ;;
         gsn) echo "$GLP_DIR/programs/gsc/Groups.glp" ;;
         gsnp) echo "$GLP_DIR/programs/gai/Provenance-Groups.glp" ;;
-        gai) echo "$GLP_DIR/programs/gai/Agents.glp" ;;
+        gai) echo "$GLP_DIR/programs/gai/AI-Agents.glp" ;;
         gc) echo "$GLP_DIR/programs/currencies/coins/Coins.glp" ;;
         gb) echo "$GLP_DIR/programs/currencies/bonds/Bonds.glp" ;;
         dgc) echo "$GLP_DIR/programs/currencies/sovereign/Denominated-Currencies.glp" ;;

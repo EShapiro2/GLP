@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 3, Grassroots Organisations and cites a clause as Organisation:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Guardians, Guardians 'n' Wards, GSC's (programs/gsc), and through it Friendship and Knowledge.
-% Last changed: 2026-11-20, by GO #14: the Calculus's text at its 96d0ad2d: the first line names the parameter instantiated (Udi, 2026-11-17, to Calculus #8, reported by the Calculus), and the Logic pragmas of Join, Expel and Amend.
+% Last changed: 2026-11-24, by GO #15: the Calculus's text at GLP 24dce13, adopted; Interface pragmas of Vote, Act and Amend without fields, their atoms binding Motion and Orga.
 % Schemas: Organisation.glp beside this file.
 Organisation
 Organisation renames Guardians, and extends and amends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
@@ -48,8 +48,8 @@ Organisations: those Alice is a participant of.
 Found: Alice [Found] <organisation> <founder> <role>
   Gov: Alice asks for your consent to found the organisation Orga.
   Orga: Alice asks to found you.
-Acts of the organisation: Bob [Propose] <act> [Vote] <act>
-  Alice [Act] <act> <votes>
+Acts of the organisation: Bob [Propose] <act> [Vote]
+  Alice [Act]
 Participation: Bob [Join] <organisation> <officer>
   Decider: Bob asks to become a participant of Orga.
   Codecider: Bob asks to become a participant of Orga.
@@ -64,7 +64,7 @@ Officers: Decider [Appoint] <person> <role>
   Decider [End officer] <person>
   Codecider: Decider asks to end Bob's office in your organisation Orga.
   Bob [Resign] [Officer unfriend]
-Amend: Alice [Amend] <act> <votes>
+Amend: Alice [Amend]
 Ward and person: Bob [Organisation acquaint] <organisation>
   Orga: Bob wishes that you know each other.
   Alice [Organisation befriend] <organisation>

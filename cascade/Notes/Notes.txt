@@ -31,8 +31,8 @@ After z and y release n w-notes of type t that x deposited on k: no longer z hol
 After z and x return n w-notes of type t deposited for y on k: no longer z holds n w-notes of type t in escrow from x for y on k, x holds n w-notes of type t and x knows w.
 Interface pragmas
 Notes: the notes Alice holds.
-Issue: Alice [Issue] <amount>
-Swap: Alice [Swap] <amount given> <issuer wanted> <amount wanted>
+Issue: Alice [Issue] <type> <amount>
+Swap: Alice [Swap] <amount given> <issuer wanted> <type wanted> <amount wanted>
   Bob: Alice asks to swap notes with you.
 Pay: Alice [Pay] <amount>
   Bob: Alice asks to pay you notes.

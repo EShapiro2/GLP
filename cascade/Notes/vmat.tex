@@ -86,6 +86,10 @@ knows
 \mathit{\detokenize{
 identity
 }}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Alice
@@ -93,6 +97,10 @@ identity
  \text{ and } 
 \mathit{\detokenize{
 identity
+}}
+,
+\mathit{\detokenize{
+person
 }}
  \in c_
 {
@@ -126,7 +134,7 @@ c_
 knows
 }}
 (
-Carol
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -139,11 +147,25 @@ c_
 {
 \Bob
 }
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
 \mathit{\detokenize{
 identity
+}}
+,
+\mathit{\detokenize{
+person
 }}
 ,
 \mathit{\detokenize{
@@ -162,6 +184,10 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
@@ -172,11 +198,23 @@ knows
 knows
 }}
 (
-Carol
+\mathit{Carol}
 )
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
 }
 ,\\
 &
@@ -209,6 +247,8 @@ note
 }}
 (
 \Alice
+,
+Type
 )
 \}
 ,\\
@@ -250,6 +290,8 @@ note
 }}
 (
 Carol
+,
+Type
 )
 \}
 ) \uplus 
@@ -261,6 +303,8 @@ note
 }}
 (
 Dave
+,
+Other
 )
 ,
 \mathit{\detokenize{
@@ -289,6 +333,8 @@ note
 }}
 (
 Dave
+,
+Other
 )
 \}
 ) \uplus 
@@ -300,6 +346,8 @@ note
 }}
 (
 Carol
+,
+Type
 )
 ,
 \mathit{\detokenize{
@@ -331,6 +379,8 @@ note
 }}
 (
 Carol
+,
+Type
 )
 \}
  \subseteq c_
@@ -357,6 +407,8 @@ note
 }}
 (
 Dave
+,
+Other
 )
 \}
  \subseteq c_
@@ -394,6 +446,8 @@ note
 }}
 (
 Carol
+,
+Type
 )
 \}
 , \qquad 
@@ -415,6 +469,8 @@ note
 }}
 (
 Carol
+,
+Type
 )
 ,
 \mathit{\detokenize{
@@ -446,6 +502,8 @@ note
 }}
 (
 Carol
+,
+Type
 )
 \}
  \subseteq c_
@@ -491,6 +549,8 @@ note
 }}
 (
 Dave
+,
+Type
 )
 \}
 , \qquad 
@@ -512,6 +572,8 @@ escrow_note
 }}
 (
 Dave
+,
+Type
 ,
 \Alice
 ,
@@ -549,6 +611,8 @@ note
 }}
 (
 Dave
+,
+Type
 )
 \}
  \subseteq c_
@@ -602,6 +666,8 @@ escrow_note
 (
 Dave
 ,
+Type
+,
 Alice
 ,
 \Bob
@@ -628,6 +694,8 @@ note
 }}
 (
 Dave
+,
+Type
 )
 ,
 \mathit{\detokenize{
@@ -659,6 +727,8 @@ escrow_note
 }}
 (
 Dave
+,
+Type
 ,
 Alice
 ,
@@ -718,6 +788,8 @@ escrow_note
 (
 Dave
 ,
+Type
+,
 \Bob
 ,
 Bob
@@ -744,6 +816,8 @@ note
 }}
 (
 Dave
+,
+Type
 )
 ,
 \mathit{\detokenize{
@@ -775,6 +849,8 @@ escrow_note
 }}
 (
 Dave
+,
+Type
 ,
 \Bob
 ,
