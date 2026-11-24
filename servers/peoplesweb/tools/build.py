@@ -257,7 +257,11 @@ for m in re.finditer(r'^#\s+[a-z]+\s+([A-Z][A-Za-z]*)\s+(\S+)\s+programs/', read
 # 2026-11-16), instantiates and composes, the last read
 # apart below; implements is GSC's, and amends stands while a text in force
 # states it.
-RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implements', 'instantiates')
+RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implements', 'instantiates',
+             # The Calculus's words since 2026-11-24 (calculus/contracts): a
+             # contract unites, renames or lifts others, and weakens or
+             # augments what it extends (Website #6).
+             'unites', 'renames', 'lifts', 'weakens', 'augments')
 
 
 NAMEID, NAMES_RE = {}, [None]
