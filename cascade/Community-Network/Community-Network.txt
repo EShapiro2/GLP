@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 5, Grassroots Network Organisations and cites a clause as Community Network:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Organisation and Denominated Currencies, restricting and strengthening Organisation (Udi, 2026-11-20, to GO #14).
-% Last changed: 2026-11-24, by GO #15: Interface fields dropped for values another role's state fixes (a deposit, a payment, a fee), by pragmas.sh at vGLP 1ed1b8387 on the Calculus's set terms.
+% Last changed: 2026-11-24, by GO #15: Found's line without Gov's question, Gov being the community Alice is a participant of, no role of found (Organisation:1 at Calculus 08f4b51).
 % Schemas: Community-Network.glp beside this file.
 Community Network
 Community Network extends Backed Community Bank, and augments it (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
@@ -42,7 +42,6 @@ Parameters: x has n f-denominated c-coins locked in z on k as the customer of y;
 Interface pragmas
 Look: 🕸️, network
 Found: Alice [Found] <organisation> <role>
-  Gov: Alice asks for your consent to found the community network Orga.
   Orga: Alice asks to found you.
 Set stake: Decider [Set stake] <stake>
   Codecider: Decider asks to set the stake of Orga.
