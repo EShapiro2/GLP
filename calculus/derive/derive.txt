@@ -1,10 +1,10 @@
+AI Agents: derived
+    first line: AI Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    proposed:   AI Agents unites a renaming of Guardians and Forwarding, and extends and amends the union.
+    step: rename Guardians: principal for creator, ai_agent for ward
 Ads: derived
     first line: Ads unites Community Network and Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
     proposed:   Ads unites Community Network and Overlay, and extends the union.
-Agents: derived
-    first line: Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-    proposed:   Agents unites a renaming of Guardians and Forwarding, and extends and amends the union.
-    step: rename Guardians: principal for creator, ai_agent for ward
 Agora: derived
     first line: Agora extends Bonds.
     proposed:   Agora extends Bonds.
@@ -29,33 +29,15 @@ Auction: derived
 Backchannel Feeds: derived
     first line: Backchannel Feeds extends Resilient Feeds.
     proposed:   Backchannel Feeds extends Resilient Feeds.
-Backed Community: derived
-    first line: Backed Community extends Community, and weakens it.
-    proposed:   Backed Community extends Community, and weakens it.
+Backed Community Bank: derived
+    first line: Backed Community Bank extends Community Bank, and weakens it.
+    proposed:   Backed Community Bank extends Community Bank, and weakens it.
 Bank: derived
     first line: Bank unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
     proposed:   Bank unites Organisation and Denominated Currencies, and extends the union.
-Bonds: 6 clauses differ
+Bonds: derived
     first line: Bonds extends Coins.
     proposed:   Bonds extends Coins.
-    differs: a clause of Bonds that no contract of the first line has and Bonds does not write
-        source: none
-        Bonds: Notes:2 ■ Swap coin for bond: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~bond(Bob,Dave,Day,*Total), bond(Alice,Dave,Day,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), bond(Bob,Dave,Day,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
-    differs: a clause of Bonds that no contract of the first line has and Bonds does not write
-        source: none
-        Bonds: Notes:2 ■ Swap bonds: ~bond(Alice,Carol,Day,*Sum), bond(Bob,Carol,Day,*Sum), ~bond(Bob,Dave,Term,*Total), bond(Alice,Dave,Term,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), bond(Alice,Carol,Day,*Sum), bond(Bob,Dave,Term,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
-    differs: a clause of Bonds that no contract of the first line has and Bonds does not write
-        source: none
-        Bonds: Notes:3 ■ Pay bond: ~bond(Alice,Carol,Day,*Sum), bond(Bob,Carol,Day,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), bond(Alice,Carol,Day,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
-    differs: a clause of Bonds that no contract of the first line has and Bonds does not write
-        source: none
-        Bonds: Notes:4 ○ Deposit bond: ~bond(Alice,Dave,Day,*Sum), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), bond(Alice,Dave,Day,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
-    differs: a clause of Bonds that no contract of the first line has and Bonds does not write
-        source: none
-        Bonds: Notes:4 ○ Release bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Bob,Dave,Day,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
-    differs: a clause of Bonds that no contract of the first line has and Bonds does not write
-        source: none
-        Bonds: Notes:4 ○ Return bond: ~escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum), bond(Alice,Dave,Day,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_bond(Carol,Dave,Day,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
 Booking: derived
     first line: Booking extends Organisation.
     proposed:   Booking extends Organisation.
@@ -65,32 +47,25 @@ Carpool: derived
 Central Bank: derived
     first line: Central Bank extends Bank, and weakens it.
     proposed:   Central Bank extends Bank, and weakens it.
-Children: 1 clauses differ
+Children: derived
     first line: Children renames Warded Groups, and extends and weakens it.
     proposed:   Children renames Warded Groups, and extends and weakens it.
     step: rename Warded Groups: parent for guardian, has_parent for has_guardian, child for ward
-    differs: a clause of Warded Groups that is not in Children
-        source: Warded Groups:3 ■ Ward add: member(Bob,Grupo,Wendy), listed(Wendy,Bob,Grupo) <- leader(Wendy,Grupo), ward(Wendy), ~retired(Wendy), has_guardian(Wendy,Alice), guardian(Alice,Wendy), friend(Wendy,Bob), friend(Bob,Wendy), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_) guarded by Wendy, Bob, Alice.
-        Children: none
 Coins: derived
-    first line: Coins renames Notes, and extends it.
-    proposed:   Coins renames Notes, and extends it.
-    step: rename Notes: escrow_coin for escrow_note, coin for note
+    first line: Coins extends Notes.
+    proposed:   Coins extends Notes.
 Commercial Bank: derived
     first line: Commercial Bank extends Bank, and weakens it.
     proposed:   Commercial Bank extends Bank, and weakens it.
-Community: derived
-    first line: Community extends Bank.
-    proposed:   Community extends Bank.
 Community Bank: derived
-    first line: Community Bank extends Bank, and weakens it.
-    proposed:   Community Bank extends Bank, and weakens it.
+    first line: Community Bank extends Bank.
+    proposed:   Community Bank extends Bank.
 Community Market: derived
     first line: Community Market unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
     proposed:   Community Market unites Community Network, Overlay and Recommendations, and extends and weakens the union.
 Community Network: derived
-    first line: Community Network unites Organisation and Denominated Currencies, and extends and amends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-    proposed:   Community Network unites Organisation and Denominated Currencies, and extends and amends the union.
+    first line: Community Network extends Backed Community Bank, and amends it (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    proposed:   Community Network extends Backed Community Bank, and amends it.
 Constitution: derived
     first line: Constitution extends Organisation, and amends it.
     proposed:   Constitution extends Organisation, and amends it.
@@ -116,20 +91,20 @@ Dating: derived
     first line: Dating extends Free Matching.
     proposed:   Dating extends Free Matching.
 Democratic Community: derived
-    first line: Democratic Community unites an amendment of Community and Constitution.
-    proposed:   Democratic Community unites an amendment of Community and Constitution.
-    step: weaken or strengthen Organisation:3 Join of Community by conclusions ~vote_join_orga(Orga,_,Bob); conditions vote_join_orga(Orga,>=Votes,Bob), product(Double,Votes,2), has_participant(Orga,<Double), decided_join_orga(Orga,Bob), as Constitution has it
-    step: weaken or strengthen Organisation:3 Expel of Community by conclusions ~vote_expel_orga(Orga,_,Orga,Bob); conditions vote_expel_orga(Orga,>=Votes,Orga,Bob), product(Double,Votes,2), has_participant(Orga,<Double), decided_expel_orga(Orga,Orga,Bob), as Constitution has it
-    step: weaken or strengthen Organisation:3 Officer expel of Community by conclusions ~vote_officer_expel_orga(Orga,_,Orga,Bob); conditions vote_officer_expel_orga(Orga,>=Votes,Orga,Bob), product(Double,Votes,2), has_participant(Orga,<Double), decided_officer_expel_orga(Orga,Orga,Bob), as Constitution has it
-    step: weaken or strengthen Organisation:5 Amend of Community by conclusions ~vote_amend_orga(Orga,_,Alice,Motion); conditions egalitarian(Orga,Motion), vote_amend_orga(Orga,>=Votes,Alice,Motion), product(Double,Votes,2), has_participant(Orga,<Double), decided_amend_orga(Orga,Alice,Motion), as Constitution has it
+    first line: Democratic Community unites an amendment of Community Bank and Constitution.
+    proposed:   Democratic Community unites an amendment of Community Bank and Constitution.
+    step: weaken or strengthen Organisation:3 Join of Community Bank by conclusions ~vote_join_orga(Orga,_,Bob); conditions vote_join_orga(Orga,>=Votes,Bob), product(Double,Votes,2), has_participant(Orga,<Double), decided_join_orga(Orga,Bob), as Constitution has it
+    step: weaken or strengthen Organisation:3 Expel of Community Bank by conclusions ~vote_expel_orga(Orga,_,Orga,Bob); conditions vote_expel_orga(Orga,>=Votes,Orga,Bob), product(Double,Votes,2), has_participant(Orga,<Double), decided_expel_orga(Orga,Orga,Bob), as Constitution has it
+    step: weaken or strengthen Organisation:3 Officer expel of Community Bank by conclusions ~vote_officer_expel_orga(Orga,_,Orga,Bob); conditions vote_officer_expel_orga(Orga,>=Votes,Orga,Bob), product(Double,Votes,2), has_participant(Orga,<Double), decided_officer_expel_orga(Orga,Orga,Bob), as Constitution has it
+    step: weaken or strengthen Organisation:5 Amend of Community Bank by conclusions ~vote_amend_orga(Orga,_,Alice,Motion); conditions egalitarian(Orga,Motion), vote_amend_orga(Orga,>=Votes,Alice,Motion), product(Double,Votes,2), has_participant(Orga,<Double), decided_amend_orga(Orga,Alice,Motion), as Constitution has it
 Denominated Coins: derived
     first line: Denominated Coins lifts Coins, and extends and weakens it.
     proposed:   Denominated Coins lifts Coins, and extends and weakens it.
-    step: lift Coins at coin (place 3), escrow_coin (place 3)
+    step: lift Coins at escrow_note (place 4), note (place 4)
 Denominated Currencies: derived
     first line: Denominated Currencies unites a weakening of a lift of Bonds and Denominated Coins, and extends and amends the union.
     proposed:   Denominated Currencies unites a weakening of a lift of Bonds and Denominated Coins, and extends and amends the union.
-    step: lift Bonds at bond (place 4), coin (place 3), escrow_bond (place 4), escrow_coin (place 3)
+    step: lift Bonds at escrow_note (place 4), note (place 4)
     step: weaken or strengthen Notes:1 Issue of Bonds by conditions issued_in(Alice,Dollar), as Denominated Coins has it
 Directory: derived
     first line: Directory extends Rendezvous.
@@ -244,17 +219,17 @@ Programs: derived
     first line: Programs extends Forwarding (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed:   Programs extends Forwarding.
 Promoted Gossip: derived
-    first line: Promoted Gossip unites Gossip and Community, and extends and amends the union.
-    proposed:   Promoted Gossip unites Gossip and Community, and extends and amends the union.
+    first line: Promoted Gossip unites Gossip and Community Bank, and extends and amends the union.
+    proposed:   Promoted Gossip unites Gossip and Community Bank, and extends and amends the union.
 Promoted Matching: derived
     first line: Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
     proposed:   Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
-    step: weaken or strengthen Gossip:1 Post of Anonymous Matching by conclusions ~coin(Alice,Orga,Dollar,*Budget), post_coins(Alice,Post,Orga,*Budget), part_due(Alice,Post); conditions coin(Alice,Orga,Dollar,*Budget), as Promoted Gossip has it
+    step: weaken or strengthen Gossip:1 Post of Anonymous Matching by conclusions ~note(Alice,Orga,coin,Dollar,*Budget), post_coins(Alice,Post,Orga,*Budget), part_due(Alice,Post); conditions note(Alice,Orga,coin,Dollar,*Budget), as Promoted Gossip has it
     step: weaken or strengthen Gossip:2 Tell of Anonymous Matching by conclusions ~post_coins(Alice,Post,Orga,*Part), post_coins(Bob,Post,Orga,*Part), part_due(Bob,Post); conditions post_coins(Alice,Post,Orga,*Part), as Promoted Gossip has it
 Provenance Groups: derived
-    first line: Provenance Groups unites Groups and a strengthening of Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-    proposed:   Provenance Groups unites Groups and a strengthening of Agents, and extends and amends the union.
-    step: weaken or strengthen Friendship:2+Guardians:3 Person unfriend of Agents by conclusions ~member(Alice,_,Bob), ~member(Bob,_,Alice), ~listed(Alice,Bob,_), ~listed(Bob,Alice,_), as Groups has it
+    first line: Provenance Groups unites Groups and a strengthening of AI Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    proposed:   Provenance Groups unites Groups and a strengthening of AI Agents, and extends and amends the union.
+    step: weaken or strengthen Friendship:2+Guardians:3 Person unfriend of AI Agents by conclusions ~member(Alice,_,Bob), ~member(Bob,_,Alice), ~listed(Alice,Bob,_), ~listed(Bob,Alice,_), as Groups has it
 Recommendations: derived
     first line: Recommendations extends Knowledge.
     proposed:   Recommendations extends Knowledge.
@@ -282,25 +257,15 @@ Separating Distrust: derived
 Services: derived
     first line: Services extends Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed:   Services extends Guardians.
-Shareholding Corporation: 2 clauses differ
-    first line: Shareholding Corporation unites Corporation and Shares, and extends the union.
-    proposed:   Shareholding Corporation unites Corporation and Shares, and extends the union.
-    differs: a clause of Shareholding Corporation that no contract of the first line has and Shareholding Corporation does not write
-        source: none
-        Shareholding Corporation: Notes:2+Denominated Currencies:2 ○ Swap coin for share: ~coin(Alice,Carol,Dollar,*Sum), coin(Bob,Carol,Dollar,*Sum), ~share(Bob,Dave,*Total), share(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,Dollar,*Sum), share(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
-    differs: a clause of Shareholding Corporation that no contract of the first line has and Shareholding Corporation does not write
-        source: none
-        Shareholding Corporation: Notes:2+Denominated Currencies:2 ○ Swap bond for share: ~bond(Alice,Carol,Day,Dollar,*Sum), bond(Bob,Carol,Day,Dollar,*Sum), ~share(Bob,Dave,*Total), share(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), bond(Alice,Carol,Day,Dollar,*Sum), share(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
-Shares: 2 clauses differ
-    first line: Shares unites Organisation and a renaming of Notes, and extends the union.
-    proposed:   Shares unites Organisation and a renaming of Notes, and extends the union.
-    step: rename Notes: escrow_share for escrow_note, share for note
-    differs: a clause of Notes that is not in Shares
-        source: Notes:1 ■ Issue: note(Alice,Alice,*Sum) <- guarded by Alice.
-        Shares: none
-    differs: an act compiled from no act of Shares
-        source: none
-        Shares: Notes:1+Shares:1 ■ Issue shares for Alice: share(Alice,Alice,*Sum) <- organisation(Alice), officer(AliceOfficer,Alice), knows(AliceOfficer,Alice) guarded by AliceOfficer, share_deciders(Alice) taken for Alice by AliceOfficer.
+Shareholding Corporation: derived
+    first line: Shareholding Corporation unites Corporation and an amendment of a lift of Shares, and extends and amends the union.
+    proposed:   Shareholding Corporation unites Corporation and an amendment of a lift of Shares, and extends and amends the union.
+    step: lift Shares at escrow_note (place 4), note (place 4)
+    step: weaken or strengthen Notes:1 Issue of Shares by conditions issued_in(Alice,Dollar), as Corporation has it
+    step: weaken or strengthen Notes:4 Deposit of Shares by conclusions escrow_denomination(Carol,Alice,Bob,Cond,Dollar); conditions ~escrow_denomination(Carol,Alice,Bob,Cond,_), as Corporation has it
+Shares: derived
+    first line: Shares unites Organisation and Notes, and extends the union.
+    proposed:   Shares unites Organisation and Notes, and extends the union.
 Short Feeds: derived
     first line: Short Feeds extends Feeds.
     proposed:   Short Feeds extends Feeds.
@@ -327,8 +292,4 @@ Workers' Cooperative: derived
     first line: Workers' Cooperative extends Cooperative.
     proposed:   Workers' Cooperative extends Cooperative.
 
-92 contracts, 88 derived
-not derived: Bonds, 6 clauses differ
-not derived: Children, 1 clauses differ
-not derived: Shareholding Corporation, 2 clauses differ
-not derived: Shares, 2 clauses differ
+91 contracts, 91 derived

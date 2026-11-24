@@ -13,7 +13,7 @@ Children:2 ■ Child acquaint: Guardians:3 Ward acquaint <- knows(Alice,Bob), pa
 Children:2 ■ Children acquaint: Guardians:4 Wards acquaint <- knows(Alice,Will), knows(Bob,Wendy), knows(Alice,Bob), knows(Bob,Alice), parent(Alice,Wendy), parent(Bob,Will) guarded by Alice, Bob.
 Children:3 ■ Child create: Warded Groups:2 Ward create <- has_parent(Wendy,Alice) guarded by Alice.
 Children:3 ■ Join: Groups:3 Join <- person(Alice).
-Children:3 ■ Child add: Warded Groups:3 Ward add <- child(Bob).
+Children:3 ■ Child add: Warded Groups:3 Ward add, Will in place of Bob <- child(Will).
 Children:3 ■ | Only a child, Will, may join the group.
 Children:4 ○ Of age: of_age(Wendy), ~child(Wendy), ~parent(_,Wendy), ~has_parent(Wendy,_), person(Wendy) <- creator(Alice,Wendy), has_parent(Wendy,Bob), ~of_age(Wendy), child(Wendy) guarded by Alice.
 Children:4 ○ | Wendy is then a person.

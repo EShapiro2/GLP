@@ -1,5 +1,5 @@
 Provenance Groups
-Provenance Groups unites Groups and a strengthening of Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Provenance Groups unites Groups and a strengthening of AI Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 After x sends t to y: y holds the item t.
 After y delivers t as its author in g to z, which requires y has not delivered the message t of y in g to z: y has delivered the message t of y in g to z and z holds the item t.
 After x forwards t to the group g of y, adding x's signature to the signatures t carries: y has the post t signed by x of x in g.

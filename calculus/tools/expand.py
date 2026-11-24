@@ -314,9 +314,12 @@ def resolve(x, contracts):
     return None
 
 
+GR = None      # the pragmas beside the texts read: gr/ beside --rev
+
+
 def renamings(name):
     """[(contract, words)] of gr/NAME's 'Renaming of Guardians: an organisation for a ward and an officer for a guardian.'"""
-    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'gr', NM.file_of(name) + '.txt')
+    p = os.path.join(GR or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'gr'), NM.file_of(name) + '.txt')
     out = []
     if os.path.exists(p):
         for l in open(p, encoding='utf-8'):
@@ -788,6 +791,8 @@ def main():
     ap.add_argument('--notes', action='store_true', help='print each place where a rule did not decide')
     args = ap.parse_args()
 
+    global GR
+    GR = os.path.join(os.path.dirname(os.path.abspath(args.rev)), 'gr')
     contracts, raw = read_all(args.rev)
     if not contracts:
         sys.exit('expand: no contract in %s' % args.rev)

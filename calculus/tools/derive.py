@@ -259,7 +259,7 @@ class Deriver:
         for q, ks in Ap.items():
             if q not in An:
                 absent.add(q)
-            elif {k + 1 for k in ks} == An[q] and ks != An[q]:
+            elif {k + 1 for k in ks} == An[q] and ks != An[q] or {k + 1 for k in ks} < An[q]:      # lifted; n may have the predicate at more arities (a Dollar-denominated coin beside a share, items 39, 42)
                 lift[q] = None
         ren = {}
         for new, old in self.words(n):          # the words the first line renames, in the names of predicates

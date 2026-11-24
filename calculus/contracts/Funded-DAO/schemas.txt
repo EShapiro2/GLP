@@ -4,7 +4,7 @@ Vocabulary: x keeps n z-coins for d = dao_coin(x,z,d,*n); x has granted p of d =
 After y gives x's d n z-coins: no longer y holds n z-coins and x keeps n z-coins for d.
 After x grants y n z-coins of d for p, which requires x has not granted p of d: no longer x keeps n z-coins for d, y holds n z-coins and x has granted p of d.
 Funded DAO:0 - | Alice, Bob, Carol and Dave are persons, Delos a DAO and Prop a proposal, Sum a number, Carol possibly Alice or Bob, Dave possibly Alice, Bob or Carol.
-Funded DAO:1 ■ Fund: ~coin(Carol,Dave,*Sum), dao_coin(Alice,Dave,Delos,*Sum) <- member(Carol,Delos,Alice), steward(Alice,Delos), coin(Carol,Dave,*Sum) guarded by Carol possibly Alice=Carol.
-Funded DAO:2 ■ Grant: ~dao_coin(Alice,Dave,Delos,*Sum), coin(Carol,Dave,*Sum), granted(Alice,Prop,Delos) <- steward(Alice,Delos), passed(Alice,Prop,Delos), proposed(Carol,Prop,Delos,Alice), ~granted(Alice,Prop,Delos), dao_coin(Alice,Dave,Delos,*Sum) guarded by Alice possibly Alice=Carol.
+Funded DAO:1 ■ Fund: ~note(Carol,Dave,coin,*Sum), dao_coin(Alice,Dave,Delos,*Sum) <- member(Carol,Delos,Alice), steward(Alice,Delos), note(Carol,Dave,coin,*Sum) guarded by Carol possibly Alice=Carol.
+Funded DAO:2 ■ Grant: ~dao_coin(Alice,Dave,Delos,*Sum), note(Carol,Dave,coin,*Sum), granted(Alice,Prop,Delos) <- steward(Alice,Delos), passed(Alice,Prop,Delos), proposed(Carol,Prop,Delos,Alice), ~granted(Alice,Prop,Delos), dao_coin(Alice,Dave,Delos,*Sum) guarded by Alice possibly Alice=Carol.
 Funded DAO:3 ○ | Amount.
 Funded DAO:3 ○ | The steward will grant a passed proposal the amount it asks for, as far as the DAO's coins allow.

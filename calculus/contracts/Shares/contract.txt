@@ -1,5 +1,4 @@
 Shares
-Shares unites Organisation and a renaming of Notes, and extends the union.
+Shares unites Organisation and Notes, and extends the union.
 A *share* of Orga is an Orga-note that gives its holder a vote in Orga and a part of its dividends.
 Orga is an organisation.
-1. ■ Issue shares: Notes:1, for shares, with the consent of those who decide for Orga.

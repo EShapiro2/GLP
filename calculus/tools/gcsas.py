@@ -67,6 +67,7 @@ DFLL = "Default: "   # 'Default: x is an officer of z for x is entitled to vote 
 PARL = "Parameters: "   # 'Parameters: x is entitled to propose m in z.': a state a later contract, the bylaws or the terms fill; a parameter of the term
 FUNL = "Functions: "   # 'Functions: n is the root of m.': a state that is a function of its places but the first, its value; no act adds or ends it, and the checker reads it as fn(root, [m]) (GSC def:numbers: "the relations and functions the types of the values provide")
 REN = re.compile(r"^Renaming of (.+?): (.*)\.$")      # 'Renaming of Guardians: an organisation for a ward.': the words for words of a renaming
+PUT = re.compile(r", ([A-Z][a-z]+) in place of ([A-Z][a-z]+)(?=[,.]|$)")      # a citation that puts one of its names for a name of the act cited: 'Child add: Warded Groups:3 Ward add, Will in place of Bob' (Calculus #8, third task, 2026-11-24)
 ENVL = "Environment: "   # 'Environment: x is nearby y.': a state the platform gives, an environment predicate of the term; no act adds or ends it
 KNDL = "Kind of note: "   # 'Kind of note: bond, y-bonds due Day for y-notes.': a kind of Notes's notes (Udi, 2026-11-16: special cases, not instances); see kind_forms
 KINDL = re.compile(r"^Kind of note: ([a-z]+), (.+?) for ([b-z])-notes(; its acts keep their names)?\.$")
@@ -252,11 +253,18 @@ def lit_s(l):
     return ("~" if l[0] else "") + atom_s(l[1:])
 
 
+def sub_term(v, b):
+    """A place of an atom with the names b puts for its letters: a letter, or a compound term, as bond(e) (item 43)."""
+    if "(" not in v:
+        return b.get(v, v)
+    return re.sub(r"(?<![A-Za-z_])([a-z])(?![A-Za-z_(])", lambda m: b.get(m.group(1), m.group(1)), v)
+
+
 def parse_atom(s):
-    m = re.fullmatch(r"(~?)([a-z_0-9]+)\(([^()]*)\)", s.strip())
-    if not m:
+    m = re.fullmatch(r"(~?)([a-z_0-9]+)\((.*)\)", s.strip())
+    if not m or not re.fullmatch(r"[^()]*(?:\([^()]*\)[^()]*)*", m.group(3)):      # an argument may be a compound term of one level, as bond(e), a type of Typed GLP (Udi, 2026-11-24, items 42, 43)
         raise Err("not an atom: " + s)
-    return (bool(m.group(1)), m.group(2), tuple(x.strip() for x in m.group(3).split(",") if x.strip()))
+    return (bool(m.group(1)), m.group(2), tuple(x.strip() for x in split_top(m.group(3)) if x.strip()))
 
 
 def split_top(s):
@@ -469,7 +477,7 @@ def unfold(text, lex, neg=False, actor=None):
             b[pay[4]] = actor
             pay = ("basic",) + pay[1:4]
         if pay[0] == "basic":
-            out.append((n ^ neg, pay[1], b, pay[2], tuple(v[0] + b[v[1:]] if v[:1] in MARK else b.get(v, v) for v in pay[3])))   # a constant, as now; *n: n copies; #n: exactly n
+            out.append((n ^ neg, pay[1], b, pay[2], tuple(v[0] + b[v[1:]] if v[:1] in MARK else sub_term(v, b) for v in pay[3])))   # a constant, as now; *n: n copies; #n: exactly n
         else:
             if n or neg:
                 inner = unfold(unwild(fill(pay[2], b), "anyone"), lex, actor=actor)
@@ -1380,6 +1388,11 @@ def compile_contract(w, n):
         def one(s):
             """The entries of sas/ and of the flat text of one sentence s, as written."""
             sas_n, own_n = [], []
+            put = PUT.search(s)
+            if put and re.match(r"[A-Z][A-Za-z' -]*?: %s" % REF, s):
+                s = s[:put.start()] + s[put.end():]
+            else:
+                put = None
             m = re.match(r"([A-Z][A-Za-z' -]*?): (.+)$", s)
             cm = m and re.match(r"(%s)(?: ([A-Z][A-Za-z' -]*?))?((?:%s)?)((?:%s)?)((?:, only if .*?)?)((?:, with the consent of .*?)?)((?:, decided by .*? in place of .*?)?)((?:, and then .*?)?)((?:%s)?)\.$"
                                 % (REF, FORK, TAKEN, VOTES), m.group(2))
@@ -1412,6 +1425,8 @@ def compile_contract(w, n):
                         e["decided"] = (persons_of(dn, lex)[0][1], persons_of(dold, lex)[0][1])
                     if cm.group(3):
                         e["kinds_for"] = re.split(r", | and | or ", cm.group(3)[len(", for "):])
+                    if put:
+                        e["put"] = (put.group(1), put.group(2))
                     theirs = {q for _, q, _ in w.lexicon(cm.group(1).split(":")[0]).basic}
                     if any(q in theirs for _, q, _ in e["then"]):
                         raise Err("a strengthening adds a state of the contract it strengthens")
@@ -1482,7 +1497,7 @@ def schema_line(e):
     if e["kind"] == "kept":
         return pre + "| " + e["text"]
     head = ", ".join(lit_s(l) for l in e["head"]) if e["kind"] == "act" else e["target"] + (" " + e["tname"] if e.get("tname") else "") + \
-        (", for " + join(e["kinds_for"]) if e.get("kinds_for") else "") + (", decided by %s in place of %s" % e["decided"] if e.get("decided") else "") + taken_text(e.get("taken")) + (", on the votes of " + votes_text(e["votes"]) if e.get("votes") else "") + \
+        (", for " + join(e["kinds_for"]) if e.get("kinds_for") else "") + (", %s in place of %s" % e["put"] if e.get("put") else "") + (", decided by %s in place of %s" % e["decided"] if e.get("decided") else "") + taken_text(e.get("taken")) + (", on the votes of " + votes_text(e["votes"]) if e.get("votes") else "") + \
         (" + " + ", ".join(lit_s(l) for l in e["then"]) if e.get("then") else "")
     if e.get("relax"):          # a relaxing citation: what it drops after "relaxed;", what it adds as its body
         head += " relaxed" + ("; one " + ", ".join("%s=%s" % q for q in e["eqs"]) if e.get("eqs") else "") + ("; without the consent of " + ", ".join(e["drop_guards"]) if e.get("drop_guards") else "") + \
@@ -1537,6 +1552,11 @@ def read_schema_line(l):
                     then=[], taken={}, votes=None, eqs=[tuple(q.split("=")) for q in rx.group(3).split(", ")] if rx.group(3) else [],
                     drop_guards=rx.group(4).split(", ") if rx.group(4) else [],
                     drop_body=[parse_atom(a) for a in split_top(rx.group(5))] if rx.group(5) else [])
+    pm = re.search(r", ([A-Z][a-z]+) in place of ([A-Z][a-z]+)(?=[,+]|$)", head)
+    if pm:
+        e = read_schema_line(l.replace(pm.group(0), "", 1))
+        e["put"] = (pm.group(1), pm.group(2))
+        return e
     dm = re.search(r", decided by (\S+\)) in place of (\S+\))", head)
     if dm:
         head = head[:dm.start()] + head[dm.end():]
@@ -1808,6 +1828,28 @@ def cite_map(w, n, cite, hit, text=False):
     elif ACTOR in names_of(cite, text):
         raise Err("%s: nobody takes %s, so nobody holds a state of the citation" % (cite["label"], hit["name"]))
     return mp
+
+
+def put_in(o, e, text=False):
+    """The act cited with the name the citation puts in place of one of its names ('Will in place of Bob')."""
+    if not e.get("put"):
+        return o
+    new, old = e["put"]
+    sub = lambda s: re.sub(r"(?<![A-Za-z])%s(?![A-Za-z])" % old, new, s)
+    if text:
+        for k in ("effects", "conds"):
+            o[k] = [(x, sub(s)) for x, s in o.get(k, [])]
+        for k in ("persons", "must"):
+            o[k] = [sub(g) for g in o.get(k, [])]
+    else:
+        for k in ("head", "body"):
+            o[k] = [(x, p, tuple(sub(a) for a in args)) for x, p, args in o.get(k, [])]
+        for k in ("guards", "must"):
+            o[k] = [sub(g) for g in o.get(k, [])]
+    o["same"] = [sub(q) for q in o.get("same", [])]
+    if o.get("taken"):
+        o["taken"] = {sub(a): sub(b) for a, b in o["taken"].items()}
+    return o
 
 
 def map_text(s, mp):
@@ -2333,7 +2375,7 @@ def expand_schemas(w, n):
                     raise Err("%s: a citation taken for a party or on votes names one act, and %s has %d" % (e["label"], e["target"], len(hit)))
             one = len(own_acts(entries, hit)) == 1
             for i in hit:
-                o = dict(entries[i])
+                o = put_in(dict(entries[i]), e)
                 mp = cite_map(w, n, e, o)
                 then = [(x, p, tuple(mp.get(a, a) for a in args)) for x, p, args in e.get("then", [])]
                 o["head"] = o["head"] + then
@@ -2446,14 +2488,17 @@ def refine_map(w, n, lex):
                 continue
             used = set(tvars(t))
             f = [v for v in "fghijklmnopqrstuvw" if v not in used][0]
-            t2 = re.sub(r"\ba ([b-z])-%s\b" % word, r"an %s-denominated \1-%s" % (f, word), t)
-            t2 = re.sub(r"(?<!denominated )\b(n |exactly n )?([b-z])-%ss\b" % word, r"\1%s-denominated \2-%ss" % (f, word), t2)
+            nouns = "|".join(sorted({word, "coin", "bond", "note"}))      # a note of any type: the denomination is a place of note (Udi, 2026-11-24, items 39, 42)
+            t2 = re.sub(r"\ba ([b-z])-(%s)\b" % nouns, r"an %s-denominated \1-\2" % f, t)
+            t2 = re.sub(r"(?<!denominated )\b(n |exactly n )?([b-z])-(%s)s\b" % nouns, r"\1%s-denominated \2-\3s" % f, t2)
             found = None
             for tb, pb, ab in lex.basic:
                 mp = same_phrase(tb, t2)
                 if mp is not None and tb != t:
                     found = (pb, ab, {v: u for u, v in mp.items()})
                     break
+            if not found and t2 == t:
+                continue        # a state of a note with no noun to denominate, as shares of z
             if not found:
                 raise Err("%s: the kind %s with its denomination has no state for '%s' ('%s')" % (n, word, t, t2))
             pb, ab, inv = found
@@ -2607,7 +2652,8 @@ def refine_phrases(w, n, lex):
             continue
         t2 = t
         for word in rs:
-            t2 = refine_noun(t2, word, f)
+            for w2 in ([word, "coin", "bond"] if word == "note" else [word]):      # Coin and Bond are Notes (items 39, 42)
+                t2 = refine_noun(t2, w2, f)
         r2 = fold_states(ref, lex)      # each state of the kind with the denomination, and the others as they are (a vote's)
         if t2 == t or t2 in have:
             continue
@@ -2669,9 +2715,51 @@ def kind_name(name, ks, words, taken):
 NOTES_RX = re.compile(r"(?<![A-Za-z])(%s|[b-z])-notes(?![A-Za-z])" % NAME)
 
 
+TYPED = re.compile(r"(?<![A-Za-z-])([b-z])-notes of type ([b-z])(?![A-Za-z])")
+
+
+def typed_phrases(lex):
+    """The act phrases of notes of a type, 'x and y swap n z-notes of type t for m w-notes of type u', for each type
+    whose noun the lexicon has: 'x and y swap n z-coins for m w-bonds due e', a fresh place for a bond's date (Udi,
+    2026-11-24, items 39, 42: Coin and Bond are subtypes of Note, and one predicate holds them)."""
+    basic = " ".join(t for t, _, _ in lex.basic)
+    kinds = [("coin", lambda s, f: "%s-coins" % s)] if re.search(r"[b-z]-coins\b", basic) else []
+    kinds += [("bond", lambda s, f: "%s-bonds due %s" % (s, f))] if re.search(r"[b-z]-bonds due [b-z]\b", basic) else []
+    kinds += [("share", lambda s, f: "shares of %s" % s)] if re.search(r"shares of [b-z]\b", basic) else []
+    if not kinds:
+        return
+    have = {t for t, _, _ in lex.defs}
+    for t, r, act in list(lex.defs):
+        if not act or not TYPED.search(t):
+            continue
+        slots = list(dict.fromkeys((m.group(1), m.group(2)) for m in TYPED.finditer(t)))
+        for combo in itertools.product([None] + kinds, repeat=len(slots)):
+            if all(k is None for k in combo):
+                continue
+            used = set(tvars(t)) | set(tvars(r))
+            pool = [v for v in "efghijklmnopqrsvwy" if v not in used]
+            nouns = {}
+            for (s, tv), k in zip(slots, combo):
+                if k is not None:
+                    nouns[(s, tv)] = k[1](s, pool.pop(0))
+            sub = lambda txt: TYPED.sub(lambda m: nouns.get((m.group(1), m.group(2)), m.group(0)), txt)
+            t2 = sub(t)
+            if t2 in have:
+                continue
+            try:
+                pattern(sub(r), lex)      # its effects are states of the lexicon (not a vote's, whose motion is the act phrase of notes)
+            except Err:
+                continue
+            have.add(t2)
+            lex.defs.append((t2, sub(r), True))
+            if t in lex.req:
+                lex.req[t2] = sub(lex.req[t])
+
+
 def kind_phrases(w, n, lex):
     """The act phrases of the forms of each act phrase of notes, for the kinds of n: 'x and y swap n z-notes for m
     w-notes' gives 'x and y swap n z-coins for m w-bonds due e', a fresh place for each name a noun adds."""
+    typed_phrases(lex)
     ks = kinds_of(w, n)
     if not ks:
         return
@@ -3211,7 +3299,7 @@ def expand_text(w, n, own):
                     raise Err("%s: a citation taken for a party or on votes names one act, and %s has %d" % (e["label"], e["target"], len(hit)))
             one = len(own_acts(entries, hit)) == 1
             for i in hit:
-                o = dict(entries[i])
+                o = put_in(dict(entries[i]), e, True)
                 mp = cite_map(w, n, e, o, True)
                 o["effects"] = o["effects"] + [(x, map_text(s, mp)) for x, s in e.get("effects", [])]
                 o["conds"] = o["conds"] + [(x, map_text(s, mp)) for x, s in e["conds"]]
@@ -3316,6 +3404,7 @@ def inv_basic(lex):
     ib = {}
     for t, p, a in lex.basic:
         k = p + (a[-1][0] if a and a[-1][:1] in MARK else "")
+        ib.setdefault("#%s/%d" % (k, len(a)), []).append((t, a))      # every phrase of the predicate: a note of type t, a coin, a bond due e
         ib[k] = (t, a)
         ib["%s/%d" % (k, len(a))] = (t, a)      # by its number of places too: a coin's state with its denomination, coin(x,y,f), beside coin(x,y)
     return ib, {p: (t, a) for t, p, a in lex.roles}
@@ -3324,8 +3413,44 @@ def inv_basic(lex):
 def tb_of(l, ib):
     """The phrase of a literal and its binding."""
     k = l[1] + (l[2][-1][0] if l[2] and l[2][-1][:1] in MARK else "")
+    cands = ib.get("#%s/%d" % (k, len(l[2])), [])
+    if len(cands) > 1:          # the phrase whose constants and compound terms are those of the literal, the most specific first
+        fit = [(sum(1 for a in args if not PH.fullmatch(a.lstrip(MARK))), t, args) for t, args in cands
+               if all(arg_bind(a.lstrip(MARK), v.lstrip(MARK), {}) is not None for a, v in zip(args, l[2]))]
+        if fit:
+            _, t, args = max(fit, key=lambda x: x[0])
+            b = {}
+            for a, v in zip(args, l[2]):
+                arg_bind(a.lstrip(MARK), v.lstrip(MARK), b)
+            return t, b
     t, args = ib.get("%s/%d" % (k, len(l[2]))) or ib[k]
-    return t, {a.lstrip(MARK): v.lstrip(MARK) if a[:1] in MARK else v for a, v in zip(args, l[2])}
+    b = {}
+    for a, v in zip(args, l[2]):
+        if "(" in a and arg_bind(a.lstrip(MARK), v.lstrip(MARK), b) is not None:
+            continue
+        b[a.lstrip(MARK)] = v.lstrip(MARK) if a[:1] in MARK else v
+    return t, b
+
+
+def arg_bind(a, v, b):
+    """A place a of a phrase's atom against a place v of a literal: the binding b extended, or None.  A letter binds;
+    a constant is itself; a compound term binds its letters, as bond(e) against bond(Day) (item 43)."""
+    if PH.fullmatch(a):
+        if b.setdefault(a, v) != v:
+            return None
+        return b
+    if "(" in a:
+        ma, mv = re.fullmatch(r"([a-z_0-9]+)\((.*)\)", a), re.fullmatch(r"([a-z_0-9]+)\((.*)\)", v)
+        if not ma or not mv or ma.group(1) != mv.group(1):
+            return None
+        xa, xv = split_top(ma.group(2)), split_top(mv.group(2))
+        if len(xa) != len(xv):
+            return None
+        for x, y in zip(xa, xv):
+            if arg_bind(x, y, b) is None:
+                return None
+        return b
+    return b if a == v else None
 
 
 def phrase_of(l, ib):
@@ -3399,6 +3524,9 @@ def match_lits(pats, lits, b=None):
             elif PH.fullmatch(a):
                 if nb.setdefault(a, v) != v:
                     ok = False
+            elif "(" in a:
+                if arg_bind(a, v, nb) is None:
+                    ok = False
             elif a != v:
                 ok = False
         if ok:
@@ -3412,7 +3540,7 @@ def pattern(text, lex):
     up = {v: "Zz" + v.upper() + "zz" for v in vs}
     filled = " ".join(fill(tok, up) for tok in toks(text))
     back = {v: k for k, v in up.items()}
-    bk = lambda a: "@".join(back.get(x, x) for x in a.split("@"))
+    bk = lambda a: "@".join(back.get(x, x) if "(" not in x else re.sub(r"Zz[A-Z]zz", lambda m: back.get(m.group(0), m.group(0)), x) for x in a.split("@"))
     return [(n, p, tuple(a[0] + bk(a[1:]) if a[:1] in MARK else bk(a) for a in args)) for n, p, args in lits_of(filled, lex)]
 
 
@@ -3514,7 +3642,17 @@ def subject_bindings(sv, b, gts):
 
 
 def act_phrases(lex):
-    return [(t, pattern(r, lex)) for t, r, isact in lex.defs + lex.__dict__.get("rdefs", []) + lex.__dict__.get("twins", []) if isact]
+    out = []
+    for t, r, isact in lex.defs + lex.__dict__.get("rdefs", []) + lex.__dict__.get("twins", []):
+        if not isact:
+            continue
+        try:
+            out.append((t, pattern(r, lex)))
+        except Err:
+            if t in [d[0] for d in lex.defs]:
+                raise
+            continue        # a phrase made for writing only, of a type whose state the lexicon does not read (a vote on a coin's issue)
+    return out
 
 
 def best_phrase(e, lex, acts, gts, prefer=None):
@@ -3704,7 +3842,7 @@ def decompile(w, n):
                 s += ", if " + join(ifs)
             s += "."
         elif e["kind"] == "cite":
-            s = "%s: %s%s%s%s" % (e["name"], e["target"], " " + e["tname"] if e["tname"] else "", ", for " + join(e["kinds_for"]) if e.get("kinds_for") else "", taken_text(e.get("taken")))
+            s = "%s: %s%s%s%s%s" % (e["name"], e["target"], " " + e["tname"] if e["tname"] else "", ", for " + join(e["kinds_for"]) if e.get("kinds_for") else "", ", %s in place of %s" % e["put"] if e.get("put") else "", taken_text(e.get("taken")))
             dec = ", decided by %s in place of %s" % (guard_text(e["decided"][0], ir), guard_text(e["decided"][1], ir)) if e.get("decided") else ""
             if e["body"]:
                 s += ", only if " + fold_states(e["body"], lex, ACTOR)
@@ -3748,7 +3886,7 @@ def norm(entries):
         if e["kind"] == "kept":
             out.append((e["label"], e["mark"], e["text"]))
         elif e["kind"] == "cite":
-            out.append((e["label"], e["mark"], e["name"], e["target"], e["tname"], tuple(sorted(e["body"])), tuple(sorted(e["guards"])), tuple(sorted(e.get("then", []))), tuple(e.get("kinds_for") or ()), tuple(e.get("decided") or ())) +
+            out.append((e["label"], e["mark"], e["name"], e["target"], e["tname"], tuple(sorted(e["body"])), tuple(sorted(e["guards"])), tuple(sorted(e.get("then", []))), tuple(e.get("kinds_for") or ()), tuple(e.get("decided") or ()), tuple(e.get("put") or ())) +
                        ((tuple(sorted(e.get("drop_guards") or ())), tuple(sorted(e.get("drop_body") or ())), tuple(sorted(tuple(q) for q in e.get("eqs") or ()))) if e.get("relax") else ()) +
                        ((tuple(sorted((e.get("taken") or {}).items())), tuple(e.get("votes") or ())) if e.get("taken") or e.get("votes") else ()))
         else:
@@ -3876,6 +4014,7 @@ def main():
                 os.rmdir(os.path.join(ROOT, "back-tmp"))
                 put("back", n, back)
         except Err as ex:
+            if os.environ.get("GCSAS_TRACE"): import traceback; traceback.print_exc()
             res.append("ERROR " + str(ex))
         if any("NO" in r or "ERROR" in r for r in res):
             bad += 1

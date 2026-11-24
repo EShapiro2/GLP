@@ -8,6 +8,6 @@ Consumers' Cooperative:0 - | A *consumers' cooperative* is a cooperative that is
 Consumers' Cooperative:0 - | Bob, Dave and Erin are persons, Orga a consumers' cooperative, Ware a good, Dollar a fiat currency, Fee, Sum, Votes and Double numbers.
 Consumers' Cooperative:1 ■ | Fee.
 Consumers' Cooperative:1 ■ Set fee: ~fee(Orga,_), fee(Orga,Fee) <- organisation(Orga) guarded by deciders(Orga).
-Consumers' Cooperative:1 ■ Pay fee: ~coin(Bob,Dave,*Fee), coin(Orga,Dave,*Fee), paid_fee(Orga,Bob) <- fee(Orga,Fee), accepts(Orga,Dave,Dollar), knows(Bob,Orga), ~paid_fee(Orga,Bob), coin(Bob,Dave,*Fee) guarded by Bob.
+Consumers' Cooperative:1 ■ Pay fee: ~note(Bob,Dave,coin,*Fee), note(Orga,Dave,coin,*Fee), paid_fee(Orga,Bob) <- fee(Orga,Fee), accepts(Orga,Dave,Dollar), knows(Bob,Orga), ~paid_fee(Orga,Bob), note(Bob,Dave,coin,*Fee) guarded by Bob.
 Consumers' Cooperative:1 ■ Join: Organisation:3 Join <- paid_fee(Orga,Bob).
 Consumers' Cooperative:2 ■ Sell: Trading Company:3 <- participant(Erin,Orga), paid_for(Orga,Ware,#Sum).

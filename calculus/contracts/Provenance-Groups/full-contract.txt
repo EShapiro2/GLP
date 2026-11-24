@@ -25,7 +25,7 @@ Guardians:4. ■ AI agents. AI agents acquaint: Alf, an AI agent of Alice, and W
 Guardians:5. ■ Retire: Those who decide for Alf may retire Alf; every guardianship and relation of Alf then ends and Alf can take no act.
 Forwarding:1. ■ Sign: Alice may create an item by signing it.
 Forwarding:2. ■ Forward: Alice may forward an item she holds to her friend Bob, adding her signature to the signatures the item carries.
-Agents:1. ○ AI developer and guardian accountability. The developer of Alf will be accountable for Alf's defects. Every guardian of Alf will be accountable for operating it recklessly.
-Agents:2. ■ AI acts. Enter: The principal of Alf attests at its creation (Guardians:1), signed over Alf's public key, that Alf runs code signed by its developer. Every act of Alf requires this attestation and names its developer and its principal.
+AI Agents:1. ○ AI developer and guardian accountability. The developer of Alf will be accountable for Alf's defects. Every guardian of Alf will be accountable for operating it recklessly.
+AI Agents:2. ■ AI acts. Enter: The principal of Alf attests at its creation (Guardians:1), signed over Alf's public key, that Alf runs code signed by its developer. Every act of Alf requires this attestation and names its developer and its principal.
 Provenance Groups:1. ■ Agent message: An AI agent may send a message to a friend (Groups:1).
 Provenance Groups:2. ■ Post forward: A member of a group, not its leader, may forward an item they hold to the group, adding their signature.

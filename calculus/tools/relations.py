@@ -589,6 +589,32 @@ def overridden(bases, n, both=False):
         gcsas.ROOT = saved
 
 
+
+
+def puts(base, n):
+    """The base acts that a clause of n cites with a name put in place of another, 'Child add: Warded Groups:3 Ward
+    add, Will in place of Bob' (Children:3, item 44), with that name in its place: the act n's clause weakens."""
+    p = os.path.join(ROOT, 'sas', NM.file_of(n) + '.txt')
+    if not os.path.exists(p):
+        return base
+    put = {}
+    for l in open(p, encoding='utf-8'):
+        mm = re.match(r'^\S.*?:\d+ \S+ (.+?): .+?:\d+ .+?, ([A-Z]\w*) in place of ([A-Z]\w*)', l)
+        if mm:
+            put[mm.group(1)] = (mm.group(3), mm.group(2))
+    if not put:
+        return base
+    out = []
+    for b in base:
+        if b['name'] in put:
+            old, new = put[b['name']]
+            f = lambda x: re.sub(r'(?<![A-Za-z_])%s(?![A-Za-z_(])' % old, new, x)
+            b = dict(b, head=Counter({f(l): k for l, k in b['head'].items()}), body=Counter({f(l): k for l, k in b['body'].items()}),
+                     guards={f(g) for g in b['guards']})
+        out.append(b)
+    return out
+
+
 def verdicts(n):
     steps = first_line(n)
     mine = schemas(n)
@@ -645,7 +671,7 @@ def verdicts(n):
             if add:
                 base = add if base is None else merge(base, add)
                 names = names + [x for x in bs if x not in names]
-    base = refine(kind_forms(base or [], n), n)
+    base = puts(refine(kind_forms(base or [], n), n), n)
     owndef = overridden(names, n, both=True) if names and not inst else (set(), set())
     bpreds = preds(base)
     m = match(base, mine)

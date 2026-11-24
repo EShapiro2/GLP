@@ -1,4 +1,4 @@
 Provenance Groups
-Provenance Groups unites Groups and a strengthening of Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Provenance Groups unites Groups and a strengthening of AI Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 1. ■ Agent message: An AI agent may send a message to a friend (Groups:1).
 2. ■ Post forward: A member of a group, not its leader, may forward an item they hold to the group, adding their signature.

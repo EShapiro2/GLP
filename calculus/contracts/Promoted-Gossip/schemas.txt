@@ -1,10 +1,10 @@
 Promoted Gossip
-Promoted Gossip unites Gossip and Community, and extends and amends the union.
+Promoted Gossip unites Gossip and Community Bank, and extends and amends the union.
 Vocabulary: x holds n z-coins for p = post_coins(x,p,z,*n); x has a part of p to take = part_due(x,p); the gossip protocol leaves x n of p = leaves(x,p,n).
 After x takes n z-coins of p: no longer x has a part of p to take, no longer x holds n z-coins for p and x holds n z-coins.
 Promoted Gossip:0 - | The budget of a post is Orga-coins, and the cost of a forward is a number of them. The gossip protocol also says what part of the budget is the holder's.
 Promoted Gossip:0 - | Alice and Bob are persons, Orga a community, Kept a number.
 Promoted Gossip:0 - | Environment: the gossip protocol leaves x n of p.
-Promoted Gossip:1 ■ Post: Gossip:1 + ~coin(Alice,Orga,*Budget), post_coins(Alice,Post,Orga,*Budget), part_due(Alice,Post) <-.
+Promoted Gossip:1 ■ Post: Gossip:1 + ~note(Alice,Orga,coin,*Budget), post_coins(Alice,Post,Orga,*Budget), part_due(Alice,Post) <-.
 Promoted Gossip:2 ■ Tell: Gossip:2 + ~post_coins(Alice,Post,Orga,*Part), post_coins(Bob,Post,Orga,*Part), part_due(Bob,Post) <-.
-Promoted Gossip:3 ■ Keep: ~part_due(Alice,Post), ~post_coins(Alice,Post,Orga,*Kept), coin(Alice,Orga,*Kept) <- post(Alice,Post), leaves(Alice,Post,Kept), part_due(Alice,Post), post_coins(Alice,Post,Orga,*Kept) guarded by Alice.
+Promoted Gossip:3 ■ Keep: ~part_due(Alice,Post), ~post_coins(Alice,Post,Orga,*Kept), note(Alice,Orga,coin,*Kept) <- post(Alice,Post), leaves(Alice,Post,Kept), part_due(Alice,Post), post_coins(Alice,Post,Orga,*Kept) guarded by Alice.

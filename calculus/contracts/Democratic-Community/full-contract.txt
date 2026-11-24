@@ -31,19 +31,19 @@ Organisation:2. ■ Acts of the organisation. Propose: An officer, or a person t
 Organisation:3, Constitution:1, Constitution:2. ■ Participation. Join: Bob may become a participant of Orga with the consent of those who decide for Orga, only if the members decide it. Leave, Expel: Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds, only if Bob or the members decide it.
 Organisation:5, Constitution:3. ■ Amend: Those who decide it may amend the bylaws, only if the members decide it, and the amended bylaws are egalitarian.
 Organisation:6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
-Notes:1, Bonds:1. ■ Issue: Alice may issue Alice-notes, for bonds, with maturity later than the current date.
+Notes:1. ■ Issue: Alice may issue Alice-notes.
 Notes:2, Denominated Currencies:2. ○ Swap: Alice and Bob, who know each other, may jointly swap notes they hold, only if the coins and bonds are of one denomination.
 Notes:3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
 Notes:4, Denominated Currencies:2. ○ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol, only if the coins and bonds are of one denomination. Release: Carol and Bob may jointly release them to Bob, only if the coins and bonds are of one denomination. Return: Carol and Alice may jointly return them to Alice, only if the coins and bonds are of one denomination. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
 Coins:1. ■ Pay issuer: Notes:3, without the consent of Bob, if the coins are Bob-coins.
 Coins:2, Denominated Currencies:2. ○ Redeem: Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows, only if the coins and bonds are of one denomination.
 Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
-Bonds:2, Denominated Currencies:2. ○ Redeem: Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows, only if the coins and bonds are of one denomination.
+Bonds:1, Denominated Currencies:2. ○ Redeem: Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows, only if the coins and bonds are of one denomination.
 Denominated Coins:1. ■ Issue: Alice may issue Alice-coins denominated by a fiat currency.
 Denominated Coins:2. ○ Denomination. A Dollar-denominated Alice-coin is due now; Alice will redeem it on presentation, by a Dollar-denominated coin the bearer accepts or by one Dollar.
 Denominated Coins:3. ○ Pricing. Alice will accept Dollar-denominated Alice-coins in payment for her offerings at one Dollar each.
 Denominated Currencies:1. ■ Issue denominated bond: Alice may issue Alice-bonds denominated by a fiat currency, of a maturity later than the current date.
 Denominated Currencies:3. ■ Accept: Alice may accept Dollar-denominated Carol-coins in payment up to a limit of her choosing, if she holds a Dollar-denominated Carol-coin or Carol-bond; each such coin paid to Alice counts against the limit, and Alice may accept again.
 Denominated Currencies:4. ■ Pay accepted coins: Alice may pay Bob, whom she knows, coins she holds that Bob accepts.
-Community:1. ■ Draw: Alice, a treasurer, may swap Alice-coins for Orga-coins.
-Community:2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.
+Community Bank:1. ■ Draw: Alice, a treasurer, may swap Alice-coins for Orga-coins.
+Community Bank:2. ○ Fiat redemption. Any treasurer will redeem an Orga-coin Bob holds against one Dollar.

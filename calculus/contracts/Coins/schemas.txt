@@ -1,12 +1,11 @@
 Coins
-Coins renames Notes, and extends it.
-Vocabulary: x holds a y-coin = coin(x,y); x holds n y-coins = coin(x,y,*n); x holds exactly n y-coins = coin(x,y,#n); z holds n w-coins in escrow from x for y on k = escrow_coin(z,w,x,y,k,*n).
-After x pays the issuer y n y-coins: no longer x holds n y-coins and y holds n y-coins.
+Coins extends Notes.
+Vocabulary: x holds a y-coin = note(x,y,coin); x holds n y-coins = note(x,y,coin,*n); x holds exactly n y-coins = note(x,y,coin,#n); z holds n w-coins in escrow from x for y on k = escrow_note(z,w,coin,x,y,k,*n).
+After x pays the issuer y n y-notes of type t: no longer x holds n y-notes of type t and y holds n y-notes of type t.
 After x redeems a y-coin against a z-coin: no longer x holds a y-coin, y holds a y-coin, no longer y holds a z-coin, x holds a z-coin and x knows z.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
 Coins:0 - | Alice, Bob and Carol are parties, Sum a number, Carol possibly Alice or Bob.
-Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
 Coins:1 ■ Pay issuer: Notes:3 relaxed; one Carol=Bob; without the consent of Bob <-.
-Coins:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Coins:2 ■ Redeem: ~note(Alice,Bob,coin), note(Bob,Bob,coin), ~note(Bob,Carol,coin), note(Alice,Carol,coin), knows(Alice,Carol) <- knows(Alice,Bob), note(Alice,Bob,coin), note(Bob,Carol,coin) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.

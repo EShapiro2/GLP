@@ -36,7 +36,7 @@ Guardians:4 ■ Organisations of one officer befriend: friend(Orga,Will), friend
 Guardians:5+Organisation:4 ■ Retire: retired(Orga), ~officer(_,Orga), ~has_officer(Orga,_), ~friend(Orga,_), ~friend(_,Orga), ~role(_,Orga,_), ~has_role(Orga,_,_) <- ~retired(Orga) guarded by deciders(Orga).
 Guardians:5 ■ | Orga can then take no act.
 Organisation:0 - | An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
-Organisation:0 - | Environment: x is entitled to propose m in z; x is entitled to vote on m in z; x is entitled to take m for z; the votes decide m according to the bylaws of z; x is entitled to amend the bylaws of z as m says; the amendment m is decided according to the bylaws of z.
+Organisation:0 - | Environment: x is entitled to propose m in z; x is entitled to vote on m in z; x is entitled to take m for z; the votes decide m according to the bylaws of z; x is entitled to amend the bylaws of z as m says; the amendment m is decided according to the bylaws of z; those who admit participants of z; those who expel participants of z.
 Organisation:2 ■ | Acts of the organisation.
 Organisation:2 ■ Propose: proposed(Orga,Motion) <- proposer(Bob,Orga,Motion), ~proposed(Orga,Motion) guarded by Bob.
 Organisation:2 ■ Vote: vote(Orga,Bob,Motion) <- voter(Bob,Orga,Motion), organisation(Orga), proposed(Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.

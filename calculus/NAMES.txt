@@ -39,7 +39,7 @@ GSN | Groups | Groups | groups | gsn
 GSNW | Warded Groups | Warded-Groups | warded_groups | gsnw
 GSNP | Provenance Groups | Provenance-Groups | provenance_groups | gsnp
 CSSN | Children | Children | children | cssn
-GAI | Agents | Agents | agents | gai
+GAI | AI Agents | AI-Agents | ai_agents | gai
 GSV | Services | Services | services | gsv
 GRV | Rendezvous | Rendezvous | rendezvous | grv
 GDS | Directory | Directory | directory | gds
@@ -68,12 +68,11 @@ GO | Organisation | Organisation | organisation | go
 CDC | Constitution | Constitution | constitution | cdc
 GNO | Community Network | Community-Network | community_network | gno
 GBank | Bank | Bank | bank | gbank
-CB | Community Bank | Community-Bank | community_bank | cb
 CMB | Commercial Bank | Commercial-Bank | commercial_bank | cmb
 SCB | Central Bank | Central-Bank | central_bank | scb
 MCS | Mutual Credit | Mutual-Credit | mutual_credit | mcs
-GCC | Community | Community | community | gcc
-GBCC | Backed Community | Backed-Community | backed_community | gbcc
+GCC | Community Bank | Community-Bank | community_bank | gcc
+GBCC | Backed Community Bank | Backed-Community-Bank | backed_community_bank | gbcc
 Democratic Community | Democratic Community | Democratic-Community | democratic_community | democratic_community
 GCorp | Corporation | Corporation | corporation | gcorp
 SC | Shareholding Corporation | Shareholding-Corporation | shareholding_corporation | sc

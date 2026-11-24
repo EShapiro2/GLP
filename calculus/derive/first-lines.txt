@@ -1,9 +1,9 @@
+AI Agents
+    present:  AI Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    proposed: AI Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Ads
     present:  Ads unites Community Network and Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
     proposed: Ads unites Community Network and Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
-Agents
-    present:  Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-    proposed: Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Agora
     present:  Agora extends Bonds.
     proposed: Agora extends Bonds.
@@ -28,16 +28,15 @@ Auction
 Backchannel Feeds
     present:  Backchannel Feeds extends Resilient Feeds.
     proposed: Backchannel Feeds extends Resilient Feeds.
-Backed Community
-    present:  Backed Community extends Community, and weakens it.
-    proposed: Backed Community extends Community, and weakens it.
+Backed Community Bank
+    present:  Backed Community Bank extends Community Bank, and weakens it.
+    proposed: Backed Community Bank extends Community Bank, and weakens it.
 Bank
     present:  Bank unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
     proposed: Bank unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 Bonds
     present:  Bonds extends Coins.
     proposed: Bonds extends Coins.
-    not derived: 6 clauses differ (derive.txt)
 Booking
     present:  Booking extends Organisation.
     proposed: Booking extends Organisation.
@@ -50,25 +49,21 @@ Central Bank
 Children
     present:  Children renames Warded Groups, and extends and weakens it.
     proposed: Children renames Warded Groups, and extends and weakens it.
-    not derived: 1 clauses differ (derive.txt)
 Coins
-    present:  Coins renames Notes, and extends it.
-    proposed: Coins renames Notes, and extends it.
+    present:  Coins extends Notes.
+    proposed: Coins extends Notes.
 Commercial Bank
     present:  Commercial Bank extends Bank, and weakens it.
     proposed: Commercial Bank extends Bank, and weakens it.
-Community
-    present:  Community extends Bank.
-    proposed: Community extends Bank.
 Community Bank
-    present:  Community Bank extends Bank, and weakens it.
-    proposed: Community Bank extends Bank, and weakens it.
+    present:  Community Bank extends Bank.
+    proposed: Community Bank extends Bank.
 Community Market
     present:  Community Market unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
     proposed: Community Market unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
 Community Network
-    present:  Community Network unites Organisation and Denominated Currencies, and extends and amends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-    proposed: Community Network unites Organisation and Denominated Currencies, and extends and amends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    present:  Community Network extends Backed Community Bank, and amends it (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+    proposed: Community Network extends Backed Community Bank, and amends it (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 Constitution
     present:  Constitution extends Organisation, and amends it.
     proposed: Constitution extends Organisation, and amends it.
@@ -91,8 +86,8 @@ Dating
     present:  Dating extends Free Matching.
     proposed: Dating extends Free Matching.
 Democratic Community
-    present:  Democratic Community unites an amendment of Community and Constitution.
-    proposed: Democratic Community unites an amendment of Community and Constitution.
+    present:  Democratic Community unites an amendment of Community Bank and Constitution.
+    proposed: Democratic Community unites an amendment of Community Bank and Constitution.
 Denominated Coins
     present:  Denominated Coins lifts Coins, and extends and weakens it.
     proposed: Denominated Coins lifts Coins, and extends and weakens it.
@@ -211,14 +206,14 @@ Programs
     present:  Programs extends Forwarding (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed: Programs extends Forwarding (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Promoted Gossip
-    present:  Promoted Gossip unites Gossip and Community, and extends and amends the union.
-    proposed: Promoted Gossip unites Gossip and Community, and extends and amends the union.
+    present:  Promoted Gossip unites Gossip and Community Bank, and extends and amends the union.
+    proposed: Promoted Gossip unites Gossip and Community Bank, and extends and amends the union.
 Promoted Matching
     present:  Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
     proposed: Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip.
 Provenance Groups
-    present:  Provenance Groups unites Groups and a strengthening of Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
-    proposed: Provenance Groups unites Groups and a strengthening of Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    present:  Provenance Groups unites Groups and a strengthening of AI Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+    proposed: Provenance Groups unites Groups and a strengthening of AI Agents, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Recommendations
     present:  Recommendations extends Knowledge.
     proposed: Recommendations extends Knowledge.
@@ -247,13 +242,11 @@ Services
     present:  Services extends Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
     proposed: Services extends Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Shareholding Corporation
-    present:  Shareholding Corporation unites Corporation and Shares, and extends the union.
-    proposed: Shareholding Corporation unites Corporation and Shares, and extends the union.
-    not derived: 2 clauses differ (derive.txt)
+    present:  Shareholding Corporation unites Corporation and an amendment of a lift of Shares, and extends and amends the union.
+    proposed: Shareholding Corporation unites Corporation and an amendment of a lift of Shares, and extends and amends the union.
 Shares
-    present:  Shares unites Organisation and a renaming of Notes, and extends the union.
-    proposed: Shares unites Organisation and a renaming of Notes, and extends the union.
-    not derived: 2 clauses differ (derive.txt)
+    present:  Shares unites Organisation and Notes, and extends the union.
+    proposed: Shares unites Organisation and Notes, and extends the union.
 Short Feeds
     present:  Short Feeds extends Feeds.
     proposed: Short Feeds extends Feeds.

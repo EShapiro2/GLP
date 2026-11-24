@@ -24,7 +24,7 @@ Organisation:2. ■ Acts of the organisation. Propose: An officer, or a person t
 Organisation:3. ■ Participation. Join: Bob may become a participant of Orga with the consent of those who decide for Orga. Leave, Expel: Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
 Organisation:5. ■ Amend: Those who decide it may amend the bylaws.
 Organisation:6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
-Notes:1, Shares:1. ■ Issue: Alice may issue Alice-notes, for shares, with the consent of those who decide for Orga.
+Notes:1. ■ Issue: Alice may issue Alice-notes.
 Notes:2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
 Notes:3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
 Notes:4. ○ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.

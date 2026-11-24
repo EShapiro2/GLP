@@ -1,5 +1,5 @@
 Community Network
-Community Network unites Organisation and Denominated Currencies, and extends and amends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Community Network extends Backed Community Bank, and amends it (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 A *community network* is created by a backed community, and uses its community coins. Its bylaws name the role *arbiter*. A *provider* is a member of the community whose *stake*, the community coins they hold, is at least *S*, a number of community coins, and a *customer* is a member of the community who accepts community coins. A *dispute* is over community coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
 Alice, Bob and Carol are persons, Orga a community network, Gov an organisation, Deal an agreement, S, Held, Sum, Total, Pot, Back, Rest, Part and Fee numbers; in clause 2 Alice is the customer and Bob the provider.
 1. ■ Set stake: Those who decide for Orga may set the stake of Orga at S, provided Orga is an organisation.

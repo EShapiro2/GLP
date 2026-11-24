@@ -1,5 +1,0 @@
-Interface pragmas
-Leave: Bob [Leave owed nothing] <dollar> [Officer leave owed nothing] <dollar>
-Set credit line: Decider [Set credit line] <orga> <bob> <line>
-  Codecider: Decider asks for your consent to set credit line.
-Credit: Bob [Credit] <orga> <sum>
