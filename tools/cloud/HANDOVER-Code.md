@@ -1,3 +1,9 @@
+# Code #37, 2026-11-24, after its 1st compaction (in flight)
+
+- Task (papers thread, Udi 01:07 UTC "work to completion"): adopt all 91 Calculus contracts (calculus/contracts/NAME/) into programs/ and cascade/ by calculus/tools/adopt.py, rename Agents->AI-Agents, Community->Community-Bank (gcc), Backed-Community->Backed-Community-Bank, delete go's Community-Bank (= Mutual Credit); build.py reads calculus/contracts; about.json keys renamed; cascade.sh rows renamed.  Branch code/adopt-2026-11-24 (uncommitted at the compaction; then committed and merged to main).
+- Old Agents.glp, gcc/Community.glp, go/Backed-Community.glp and their cascade dirs kept: apps/compile.sh, run_all_tests.sh 9494-9495, apps/gai and vglp/cva still read them.  To move them to the new names is a follow-up.
+- cascade.sh failed on 20 rows with the new texts: pragmas no longer fit (Guardians, Notes, Feeds, Organisation: owners GSC, GFF, GO) and plays' platforms not printed again (apps/gkk, vglp/cva: compile.sh).  Owners told; records of those rows stale until then.
+
 # Code #37, 2026-11-24 00:58 UTC (a thread of the project "Grassroots Oversight")
 
 - Merged to main Udi's two rules (8b5a3fa: claude.md, Contracts; claudese.md, 32) and the text check's present-tense construction with its pair in tests.tsv (29bdf37): 18 tests, 0 wrong; 214 of 285 rejected texts caught.  Mailed to_all to reread them.
