@@ -498,7 +498,7 @@ has_participant
 community
 }}
 (
-\mathit{Carol}
+Gov
 )
 \}
 , \qquad 
@@ -556,19 +556,7 @@ participant
 (
 \Alice
 )
-\}
-, \qquad 
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
- \cup 
-\{
+,
 \mathit{\detokenize{
 founder
 }}
@@ -591,30 +579,11 @@ person
 participant
 }}
 (
-\mathit{Carol}
+Gov
 )
  \in c_
 {
 \Bob
-}
- \text{ and } 
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-organisation
-}}
-,
-\mathit{\detokenize{
-has_officer
-}}
-(
-G1
-)
- \in c_
-{
-\mathit{Carol}
 }
 ,\\
 &
@@ -632,8 +601,6 @@ identity
 \Alice
 ,
 \Bob
-,
-\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -8188,6 +8155,202 @@ retired
 ,\\
 &
 \text{guarded by } \{
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
+found_by_an_organisation
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+organisation
+}}
+,
+\mathit{\detokenize{
+has_officer
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+first_officer
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+has_role
+}}
+(
+\Bob
+,
+Role
+)
+,
+\mathit{\detokenize{
+has_participant
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+creator
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+officer
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+role
+}}
+(
+\Alice
+,
+Role
+)
+,
+\mathit{\detokenize{
+participant
+}}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \cup 
+\{
+\mathit{\detokenize{
+founder
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+organisation
+}}
+,
+\mathit{\detokenize{
+has_officer
+}}
+(
+G1
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
 \Bob
 ,
 \mathit{Carol}
@@ -17387,6 +17550,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 ) \cup 
@@ -17407,6 +17572,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 \}
 , \qquad 
@@ -17430,6 +17597,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 \}
 ) \cup 
@@ -17443,6 +17612,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 ,\\
@@ -17479,6 +17650,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
  \in c_
 {
@@ -17498,11 +17671,27 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
  \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+BobCoinDollar1Set
+|
+=
+1
+\land
+|
+CarolCoinDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -17535,6 +17724,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 ) \setminus K_
@@ -17559,6 +17750,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 \}
 , \qquad 
@@ -17582,6 +17775,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 \}
 ) \cup 
@@ -17595,6 +17790,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 , \qquad 
@@ -17667,6 +17864,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
  \in c_
 {
@@ -17686,6 +17885,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
  \in c_
 {
@@ -17735,6 +17936,20 @@ person
 {
 \mathit{Carol}
 }
+,\\
+&
+\text{provided } 
+|
+BobCoinDollar1Set
+|
+=
+1
+\land
+|
+CarolCoinDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -17873,6 +18088,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 ) \cup 
@@ -17886,6 +18103,8 @@ Carol
 bond(Day)
 ,
 Dollar
+,
+CarolBondDayDollar1Set
 )
 ,
 \mathit{\detokenize{
@@ -17916,6 +18135,8 @@ Carol
 bond(Day)
 ,
 Dollar
+,
+CarolBondDayDollar1Set
 )
 \}
 ) \cup 
@@ -17929,6 +18150,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 ,\\
@@ -17965,6 +18188,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
  \in c_
 {
@@ -17984,11 +18209,27 @@ Carol
 bond(Day)
 ,
 Dollar
+,
+CarolBondDayDollar1Set
 )
  \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+BobCoinDollar1Set
+|
+=
+1
+\land
+|
+CarolBondDayDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -18021,6 +18262,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 ) \setminus K_
@@ -18038,6 +18281,8 @@ Carol
 bond(Day)
 ,
 Dollar
+,
+CarolBondDayDollar1Set
 )
 ,
 \mathit{\detokenize{
@@ -18068,6 +18313,8 @@ Carol
 bond(Day)
 ,
 Dollar
+,
+CarolBondDayDollar1Set
 )
 \}
 ) \cup 
@@ -18081,6 +18328,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 , \qquad 
@@ -18157,6 +18406,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
  \in c_
 {
@@ -18176,6 +18427,8 @@ Carol
 bond(Day)
 ,
 Dollar
+,
+CarolBondDayDollar1Set
 )
  \in c_
 {
@@ -18227,6 +18480,20 @@ person
 {
 \mathit{Carol}
 }
+,\\
+&
+\text{provided } 
+|
+BobCoinDollar1Set
+|
+=
+1
+\land
+|
+CarolBondDayDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -18371,6 +18638,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
 \}
 ) \cup 
@@ -18384,6 +18653,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 ,
 \mathit{\detokenize{
@@ -18414,6 +18685,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 \}
 ) \cup 
@@ -18427,6 +18700,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
 \}
 ,\\
@@ -18463,6 +18738,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
  \in c_
 {
@@ -18489,6 +18766,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
  \in c_
 {
@@ -18500,6 +18779,18 @@ Dollar
 Day
 \le
 Today
+\land
+|
+BobBondDayDollar1Set
+|
+=
+1
+\land
+|
+CarolCoinDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -18532,6 +18823,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
 \}
 ) \setminus K_
@@ -18549,6 +18842,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 ,
 \mathit{\detokenize{
@@ -18579,6 +18874,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 \}
 ) \cup 
@@ -18592,6 +18889,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
 \}
 , \qquad 
@@ -18668,6 +18967,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
  \in c_
 {
@@ -18694,6 +18995,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
  \in c_
 {
@@ -18751,6 +19054,18 @@ person
 Day
 \le
 Today
+\land
+|
+BobBondDayDollar1Set
+|
+=
+1
+\land
+|
+CarolCoinDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -18895,6 +19210,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
 \}
 ) \cup 
@@ -18908,6 +19225,8 @@ Carol
 bond(Term)
 ,
 Dollar
+,
+CarolBondTermDollar1Set
 )
 ,
 \mathit{\detokenize{
@@ -18938,6 +19257,8 @@ Carol
 bond(Term)
 ,
 Dollar
+,
+CarolBondTermDollar1Set
 )
 \}
 ) \cup 
@@ -18951,6 +19272,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
 \}
 ,\\
@@ -18987,6 +19310,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
  \in c_
 {
@@ -19013,6 +19338,8 @@ Carol
 bond(Term)
 ,
 Dollar
+,
+CarolBondTermDollar1Set
 )
  \in c_
 {
@@ -19024,6 +19351,18 @@ Dollar
 Day
 \le
 Today
+\land
+|
+BobBondDayDollar1Set
+|
+=
+1
+\land
+|
+CarolBondTermDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -19056,6 +19395,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
 \}
 ) \setminus K_
@@ -19073,6 +19414,8 @@ Carol
 bond(Term)
 ,
 Dollar
+,
+CarolBondTermDollar1Set
 )
 ,
 \mathit{\detokenize{
@@ -19103,6 +19446,8 @@ Carol
 bond(Term)
 ,
 Dollar
+,
+CarolBondTermDollar1Set
 )
 \}
 ) \cup 
@@ -19116,6 +19461,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
 \}
 , \qquad 
@@ -19196,6 +19543,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+BobBondDayDollar1Set
 )
  \in c_
 {
@@ -19222,6 +19571,8 @@ Carol
 bond(Term)
 ,
 Dollar
+,
+CarolBondTermDollar1Set
 )
  \in c_
 {
@@ -19281,6 +19632,18 @@ person
 Day
 \le
 Today
+\land
+|
+BobBondDayDollar1Set
+|
+=
+1
+\land
+|
+CarolBondTermDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -27461,6 +27824,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 ,
 \mathit{\detokenize{
@@ -27478,6 +27843,12 @@ LimitSet
 |
 =
 Limit
+\land
+|
+CarolCoinDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -27565,6 +27936,8 @@ Carol
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 ,
 \mathit{\detokenize{
@@ -27628,6 +28001,12 @@ LimitSet
 |
 =
 Limit
+\land
+|
+CarolCoinDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -27793,6 +28172,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+CarolBondDayDollar1Set
 )
 ,
 \mathit{\detokenize{
@@ -27835,6 +28216,12 @@ LimitSet
 |
 =
 Limit
+\land
+|
+CarolBondDayDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -27932,6 +28319,8 @@ note
 bond(Day)
 ,
 Dollar
+,
+CarolBondDayDollar1Set
 )
 ,
 \mathit{\detokenize{
@@ -28020,6 +28409,12 @@ LimitSet
 |
 =
 Limit
+\land
+|
+CarolBondDayDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -28051,6 +28446,8 @@ note
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 \}
 , \qquad 
@@ -28085,6 +28482,8 @@ note
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 \}
 , \qquad 
@@ -28131,6 +28530,8 @@ note
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
  \in c_
 {
@@ -28170,6 +28571,14 @@ Dollar
 }
 ,\\
 &
+\text{provided } 
+|
+CarolCoinDollar1Set
+|
+=
+1
+,\\
+&
 \text{guarded by } \{
 \Alice
 \}
@@ -28199,6 +28608,8 @@ note
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 \}
 ) \setminus K_
@@ -28237,6 +28648,8 @@ note
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
 \}
 , \qquad 
@@ -28323,6 +28736,8 @@ note
 coin
 ,
 Dollar
+,
+CarolCoinDollar1Set
 )
  \in c_
 {
@@ -28406,6 +28821,14 @@ person
 {
 \mathit{Dave}
 }
+,\\
+&
+\text{provided } 
+|
+CarolCoinDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -28550,6 +28973,8 @@ note
 coin
 ,
 Dollar
+,
+AliceCoinDollar1Set
 )
 \}
 , \qquad 
@@ -28584,6 +29009,8 @@ note
 coin
 ,
 Dollar
+,
+AliceCoinDollar1Set
 )
 \}
 ,\\
@@ -28627,6 +29054,8 @@ note
 coin
 ,
 Dollar
+,
+AliceCoinDollar1Set
 )
  \in c_
 {
@@ -28649,6 +29078,14 @@ Dollar
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+AliceCoinDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -28680,6 +29117,8 @@ note
 coin
 ,
 Dollar
+,
+AliceCoinDollar1Set
 )
 \}
 ) \setminus K_
@@ -28718,6 +29157,8 @@ note
 coin
 ,
 Dollar
+,
+AliceCoinDollar1Set
 )
 \}
 , \qquad 
@@ -28801,6 +29242,8 @@ note
 coin
 ,
 Dollar
+,
+AliceCoinDollar1Set
 )
  \in c_
 {
@@ -28862,6 +29305,14 @@ person
 {
 \mathit{Carol}
 }
+,\\
+&
+\text{provided } 
+|
+AliceCoinDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -28893,6 +29344,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 , \qquad 
@@ -28927,6 +29380,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 ,\\
@@ -28963,6 +29418,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
  \in c_
 {
@@ -28994,6 +29451,14 @@ Dollar
 }
 ,\\
 &
+\text{provided } 
+|
+BobCoinDollar1Set
+|
+=
+1
+,\\
+&
 \text{guarded by } \{
 \Alice
 \}
@@ -29023,6 +29488,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 ) \setminus K_
@@ -29061,6 +29528,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
 \}
 , \qquad 
@@ -29137,6 +29606,8 @@ note
 coin
 ,
 Dollar
+,
+BobCoinDollar1Set
 )
  \in c_
 {
@@ -29205,6 +29676,14 @@ person
 {
 \mathit{Carol}
 }
+,\\
+&
+\text{provided } 
+|
+BobCoinDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{

@@ -1,10 +1,10 @@
 # A run of the cascade on Labelled-Overlay
 
-- Contract: `Labelled-Overlay` (`labelled_overlay` to the checker), its owner's two files `programs/gff/Labelled-Overlay.txt` and `programs/gff/Labelled-Overlay.glp`, copied here as they stood at `f20c40e4`.
+- Contract: `Labelled-Overlay` (`labelled_overlay` to the checker), its owner's two files `programs/gff/Labelled-Overlay.txt` and `programs/gff/Labelled-Overlay.glp`, copied here as they stood at `8475b1c6`.
 - The paper: `/Users/udi/Grassroots/GFF (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gff/Labelled-Overlay.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gff/Labelled-Overlay.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-24 18:49 UTC by `cascade.sh labelled_overlay`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `f20c40e4`; each artefact's source and tool:
+- Run on 2026-11-24 21:58 UTC by `cascade.sh labelled_overlay`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8475b1c6`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
