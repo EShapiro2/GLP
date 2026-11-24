@@ -46,6 +46,12 @@ def state(out, names):
     own['Notes'] = 'GSC'      # new, Udi's text of 2026-11-16; no text in GLP yet (Calculus #7)
     own['Shares'] = 'GO'      # likewise
     own['Agora'] = 'Currencies'      # Udi, 2026-11-15; its owner line in GLP names Talmon, for Currencies to correct
+    # The owners since the renames of 2026-11-24 (owners-2026-11-24.txt, from the list of paper owners) win over
+    # OWNERS.md, which predates them; Code adopts all 91 into programs/ and cascade/ (Code #37, 2026-11-24).
+    po = os.path.join(ROOT, 'owners-2026-11-24.txt')
+    if os.path.exists(po):
+        for l in open(po, encoding='utf-8'):
+            if '\t' in l: k, v = l.rstrip('\n').split('\t'); own[k] = v; same[k] = True
     yn = lambda b: b if isinstance(b, str) else 'yes' if b else 'no'      # compiled: yes, no, or parametric, certified with no platform until instantiated
     with open(os.path.join(out, 'STATE.txt'), 'w', encoding='utf-8') as f:
         for n in names:
