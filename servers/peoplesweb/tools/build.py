@@ -362,7 +362,11 @@ def has_platform(n):
 compiled = sorted(n for n in os.listdir(os.path.join(GLP, 'cascade')) if has_platform(n) and n in cat)
 # The test site writes no world: its apps are the live server's, so a contract
 # is live there where the live build made its world.
+# The live build's worlds are in the live clone, LIVE_WORLDS, which
+# deploy/test.sh names, since the test site builds its own tree, which has
+# none (Website #6, 2026-11-24: /next said "0 run as apps").
 if TEST:
+    WORLDS = os.environ.get('LIVE_WORLDS') or WORLDS
     compiled = [n for n in compiled if os.path.exists(os.path.join(WORLDS, f'live_{n.lower()}', 'platform.vglp'))]
 
 shutil.rmtree(BUILD, ignore_errors=True)
@@ -498,11 +502,13 @@ for n in sorted(set(compiled) | set(cat)):
     c['icon'], c['family'], c['about'] = _icon, _family, _a[2] or c['title'] + '.'
     # The shown name starts with the letters, and a contract built on another
     # names the base by its letters, never by its full title: "GDO-L: GDO with
-    # Labels" (Udi, 2026-11-07).
+    # Labels" (Udi, 2026-11-07).  The base is named by its shown name, so a
+    # contract named in words, Backed Community Bank, keeps its name whole
+    # (Website #6, 2026-11-24).
     t = c['title']
     for p in c['extends']:
         if p in cat:
-            t = re.sub(re.escape(cat[p]['title']), p, t, flags=re.I)
+            t = re.sub(re.escape(cat[p]['title']), cat[p]['name'], t, flags=re.I)
     c['label'] = f"{c['name']}: {t}" if t != c['name'] else c['name'] 
     c['cascade'] = n in compiled
     c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''
