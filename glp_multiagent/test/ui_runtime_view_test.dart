@@ -412,13 +412,13 @@ void main() {
     await s.draw('input([])',
         w: _notesW,
         output: '[${_view("identity, knows(bob), note(carol, coin, a), note(carol, coin, b), note(carol, gold, c)", "bob, carol", "tab('Contacts', knows), tab('Notes', note)")}]');
-    await _tap(tester, 'act:pay:note(carol,coin,a)');
+    await _tap(tester, 'act:pay:note(carol, coin, a)');
     // The notes of Carol's coin, a and b, and not c, of another type.
-    expect(find.byKey(socialKey(1, 'set:pay:note(carol,coin,a):5:a')), findsOneWidget);
-    expect(find.byKey(socialKey(1, 'set:pay:note(carol,coin,a):5:b')), findsOneWidget);
-    expect(find.byKey(socialKey(1, 'set:pay:note(carol,coin,a):5:c')), findsNothing);
-    await _tap(tester, 'set:pay:note(carol,coin,a):5:b');
-    await _tap(tester, 'send:pay:note(carol,coin,a)');
+    expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:a')), findsOneWidget);
+    expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:b')), findsOneWidget);
+    expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:c')), findsNothing);
+    await _tap(tester, 'set:pay:note(carol, coin, a):5:b');
+    await _tap(tester, 'send:pay:note(carol, coin, a)');
     expect(s.grants, ['input(1, [], propose(pay(alice, bob, carol, coin, [a, b])))']);
   });
 
@@ -428,9 +428,9 @@ void main() {
     await s.draw('input([])',
         w: _notesW,
         output: '[${_view("identity, knows(bob), note(carol, coin, a)", "bob, carol", "tab('Contacts', knows), tab('Notes', note)")}]');
-    await _tap(tester, 'act:pay:note(carol,coin,a)');
-    expect(find.byKey(socialKey(1, 'set:pay:note(carol,coin,a):5:a')), findsNothing);
-    await _tap(tester, 'send:pay:note(carol,coin,a)');
+    await _tap(tester, 'act:pay:note(carol, coin, a)');
+    expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:a')), findsNothing);
+    await _tap(tester, 'send:pay:note(carol, coin, a)');
     expect(s.grants, ['input(1, [], propose(pay(alice, bob, carol, coin, [a])))']);
   });
 
@@ -444,6 +444,6 @@ void main() {
     await tester.enterText(find.byKey(socialKey(1, 'field:issue::3')), 'a, b, a');
     await tester.pumpAndSettle();
     await _tap(tester, 'send:issue:');
-    expect(s.grants, ['input(1, [], propose(issue(alice, "coin", ["a", "b"])))']);
+    expect(s.grants, ['input(1, [], propose(issue(alice, coin, [a, b])))']);
   });
 }

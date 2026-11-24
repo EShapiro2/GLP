@@ -1804,6 +1804,20 @@ class _SocialTabState extends State<SocialTab> {
       return false;
     }
 
+    // The persons the other person fields of the first way hold, for what a field offers and for the text.
+    final first = shown.first;
+    final at = <int, GTerm>{
+      ...first.at,
+      for (final f in first.act.fields)
+        if (f.type == 'person')
+          if (_picked[pickKey(f.label)] case final p?) f.place: p
+    };
+    // A set place the atoms bind: a chip for each element the way may take, several picked at once, the way's own picked first.
+    final sets = <int, List<GTerm>>{
+      for (final p in _setPlaces(o, first.act)) p: _setChoices(s, me, first, p)
+    };
+    Set<String> pickedAt(int p) => _setPicked['$composer:$p'] ??
+        {if (first.at[p] != null) formatTerm(first.at[p]!)};
     GTerm? request() {
       for (final w in chosen ?? const <_Way>[]) {
         final ls = {for (final f in w.act.fields) f.label};
@@ -1831,20 +1845,6 @@ class _SocialTabState extends State<SocialTab> {
       return null;
     }
 
-    // The persons the other person fields of the first way hold, for what a field offers and for the text.
-    final first = shown.first;
-    final at = <int, GTerm>{
-      ...first.at,
-      for (final f in first.act.fields)
-        if (f.type == 'person')
-          if (_picked[pickKey(f.label)] case final p?) f.place: p
-    };
-    // A set place the atoms bind: a chip for each element the way may take, several picked at once, the way's own picked first.
-    final sets = <int, List<GTerm>>{
-      for (final p in _setPlaces(o, first.act)) p: _setChoices(s, me, first, p)
-    };
-    Set<String> pickedAt(int p) => _setPicked['$composer:$p'] ??
-        {if (first.at[p] != null) formatTerm(first.at[p]!)};
     final words = [
       for (final w in first.act.words)
         if (w is int) (at[w] == null ? '' : personName(at[w]!)) else w as String
@@ -1894,7 +1894,7 @@ class _SocialTabState extends State<SocialTab> {
                     label: Text(_signed(e)),
                     selected: pickedAt(p).contains(formatTerm(e)),
                     onSelected: (on) => setState(() {
-                      final ps = {...pickedAt(p)};
+                      final ps = <String>{...pickedAt(p)};
                       on ? ps.add(formatTerm(e)) : ps.remove(formatTerm(e));
                       _setPicked['$composer:$p'] = ps;
                     }),
