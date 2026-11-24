@@ -42,7 +42,9 @@ Enter: Alice [Enter] <name>
   Wendy: Alice asks to be your guardian.
 Guardian decisions: Decider [Make guardian] <person>
   Bob: Decider asks you to be a guardian of the ward Wendy.
+  Codecider: Decider asks that Bob be a guardian of your ward Wendy.
   Decider [End guardian] <person>
+  Codecider: Decider asks to end Bob's guardianship of your ward Wendy.
   Bob [Resign] [Guardian unfriend]
 Ward and person: Bob [Ward acquaint] <person>
   Wendy: Bob wishes that you know each other.
@@ -63,3 +65,4 @@ Wards: Wendy [Wards acquaint] <person>
   Wendy: Alice asks that you and Will befriend.
   Will: Alice asks that you and Wendy befriend.
 Retire: Decider [Retire]
+  Codecider: Decider asks to retire your ward Wendy.
