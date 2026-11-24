@@ -3,7 +3,7 @@
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Community Network, Overlay, Grassroots Directed Overlay, GRH's (programs/lbm), and Recommendations (programs/gce).
 % Changed 2026-11-20 by GO #11: Cur-coins for Orga-coins (Udi, 2026-11-20).
-% Last changed: 2026-11-20, by GO #14 (Udi, 2026-11-20, to GO #13: community coins; Orga a community network).
+% Last changed: 2026-11-24, by GO #15: Interface fields dropped for values another role's state fixes (a deposit, a payment, a fee), by pragmas.sh at vGLP 1ed1b8387 on the Calculus's set terms.
 % Schemas: Gigs.glp beside this file.
 Gigs
 Gigs unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
@@ -53,8 +53,8 @@ Job: Alice [Post] <job>
 Engage: Alice [Engage]
   Bob: Alice asks to engage you for her job.
 Deliver: Bob [Deliver]
-Acceptance: Alice [Accept work] <deposit> [Reject] <arbiter>
+Acceptance: Alice [Accept work] [Reject] <arbiter>
 Cancelling: Alice [Cancel] [Cancel for the client] [Cancel for the worker]
   Bob [Worker cancel] [Worker cancel for the client] [Worker cancel for the worker]
-  Alice [Lapse] <deposit>
+  Alice [Lapse]
 Recommend: Alice [Recommend]

@@ -3,7 +3,7 @@
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Community Network, Overlay, Grassroots Directed Overlay, GRH's (programs/lbm), and Recommendations (programs/gce).
 % Changed 2026-11-20 by GO #11: Cur-coins for Orga-coins (Udi, 2026-11-20).
-% Last changed: 2026-11-20, by GO #14 (Udi, 2026-11-20, to GO #13: community coins; Orga a community network).
+% Last changed: 2026-11-24, by GO #15: Interface fields dropped for values another role's state fixes (a deposit, a payment, a fee), by pragmas.sh at vGLP 1ed1b8387 on the Calculus's set terms.
 % Schemas: Lodging.glp beside this file.
 Lodging
 Lodging unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
@@ -51,10 +51,10 @@ Listing: Bob [Post] <listing>
   Bob [Withdraw listing]
 Book: Alice [Book]
   Bob: Alice asks to book nights of your listing.
-Check-in and checkout: Alice [Check in] [Check out] <deposit>
+Check-in and checkout: Alice [Check in] [Check out]
 Cancelling: Alice [Cancel] [Cancel for the traveller] [Cancel for the host]
   Bob [Host cancel] [Host cancel for the traveller] [Host cancel for the host]
-  Alice [No-show] <deposit>
+  Alice [No-show]
 Raise: Alice [Raise] <arbiter>
   Bob [Provider raise] <arbiter>
 Recommend: Alice [Recommend]
