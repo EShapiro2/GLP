@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 5, Grassroots Network Organisations and cites a clause as Community Network:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Organisation and Denominated Currencies, restricting and strengthening Organisation (Udi, 2026-11-20, to GO #14).
-% Last changed: 2026-11-20, by GO #14 (Udi, 2026-11-20, to GO #13: created by a backed community, community coins, clauses 3 Members and 4 Loss of membership; the name Community Network).
+% Last changed: 2026-11-24, by GO #15: Interface fields dropped for values another role's state fixes (a deposit, a payment, a fee), by pragmas.sh at vGLP 1ed1b8387 on the Calculus's set terms.
 % Schemas: Community-Network.glp beside this file.
 Community Network
 Community Network extends Backed Community Bank, and augments it (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
@@ -48,7 +48,7 @@ Set stake: Decider [Set stake] <stake>
   Codecider: Decider asks to set the stake of Orga.
 Arbitration: Alice [Raise] <arbiter>
   Bob [Provider raise] <arbiter>
-  Carol [Arbitrate] <community> <denomination> <to customer> <to provider> [Arbitrate for the customer] <community> <denomination> <to customer> [Arbitrate for the provider] <community> <denomination> <to provider> [Arbitrate without fee] <community> <denomination> <to customer> <to provider> [Arbitrate for the customer without fee] <community> <denomination> <payment> <deposit> [Arbitrate for the provider without fee] <community> <denomination> <payment> <deposit> [Arbitrate for the fee] <community> <denomination> <payment>
+  Carol [Arbitrate] <community> <denomination> <to customer> <to provider> [Arbitrate for the customer] <community> <denomination> <to customer> [Arbitrate for the provider] <community> <denomination> <to provider> [Arbitrate without fee] <community> <denomination> <to customer> <to provider> [Arbitrate for the customer without fee] <community> <denomination> [Arbitrate for the provider without fee] <community> <denomination> [Arbitrate for the fee] <community> <denomination>
 Issue: AliceOfficer [Issue for Alice] <denomination>
   Voter [Vote of Alice for Issue]
   AliceOfficer [First issue for Alice]

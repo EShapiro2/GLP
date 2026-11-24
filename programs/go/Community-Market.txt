@@ -3,7 +3,7 @@
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Community Network, Overlay, Grassroots Directed Overlay, GRH's (programs/lbm), and Recommendations (programs/gce).
 % Changed 2026-11-20 by GO #11: Cur-coins for Orga-coins (Udi, 2026-11-20).
-% Last changed: 2026-11-20, by GO #14 (Udi, 2026-11-20, to GO #13: community coins; Orga a community network).
+% Last changed: 2026-11-24, by GO #15: Interface fields dropped for values another role's state fixes (a deposit, a payment, a fee), by pragmas.sh at vGLP 1ed1b8387 on the Calculus's set terms.
 % Renamed 2026-11-20 from Marketplace by GO #14 (Udi, 2026-11-20 23:15 UTC, to GO #14: "yes" to the name and to renaming it now).
 % Schemas: Community-Market.glp beside this file.
 Community Market
@@ -49,7 +49,7 @@ Listing: Bob [Post] <listing>
   Bob [Withdraw listing]
 Order: Alice [Order]
   Bob: Alice asks to order the good of your listing.
-Deliver: Alice [Deliver] <deposit>
+Deliver: Alice [Deliver]
 Cancel: Alice [Cancel] [Cancel for the buyer] [Cancel for the seller]
   Bob [Seller cancel] [Seller cancel for the buyer] [Seller cancel for the seller]
 Recommend: Alice [Recommend]
