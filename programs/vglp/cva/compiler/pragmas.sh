@@ -98,7 +98,10 @@ sub local_vars {
             }
         }
         for my $k (1 .. $#p) {
-            for my $x (var_tokens($p[$k])) {
+            # A cleared atom, its wildcard among its arguments, requires nothing, so names no variable local to the role (GSC, Definition "Speech-act schema"; Calculus #11, vGLP_inbox.md, 2026-11-24 18:42 UTC: Commercial Bank\x27s Loan clears every vote_lend(Orga, _, Bob, Sum, Day) "and it requires none; so it binds neither Sum nor Day").
+            my $pk = $p[$k];
+            if ($k == 2) { (my $dl = $pk) =~ s/^\[//; $dl =~ s/\]$//; $pk = join(", ", grep { !/\bany\b|\bext_any\(/ } top_args($dl)) }
+            for my $x (var_tokens($pk)) {
                 if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 }
                 if ($k == 2) { $del{$x} = 1 }
                 if ($k == 1) { $add{$x}{$r} = 1 }
@@ -274,12 +277,12 @@ for my $n (keys %cons) {
     my $r = 0;
     for my $rs (@{ $roles{$n} }) {
         $r++;
-        for my $k (0 .. 3) { for my $a (@{ $rs->{atoms}[$k] }) { $named_at{$_}{$r} = 1 for atom_keys($a) } }
+        for my $k (0 .. 3) { for my $a (@{ $rs->{atoms}[$k] }) { next if $k == 1 && cleared($a); $named_at{$_}{$r} = 1 for atom_keys($a) } }
     }
     for my $x (keys %{ $locals{$n} || {} }) { my @rr = keys %{ $named_at{"v$x"} || {} }; $role_of{"v$x"} = $rr[0] if @rr == 1 }
     # The variables of the atoms the schema deletes, at any role, which the constraint never determines (local.glp, dels_name; Grassroots-Audit, cvac.glp.md, Finding 2).
     my %deleted;
-    for my $rs (@{ $roles{$n} }) { for my $a (@{ $rs->{atoms}[1] }) { $deleted{$_} = 1 for atom_keys($a) } }
+    for my $rs (@{ $roles{$n} }) { for my $a (@{ $rs->{atoms}[1] }) { next if cleared($a); $deleted{$_} = 1 for atom_keys($a) } }
     my $more = 1;
     while ($more) { $more = 0;
     for my $c (con_conjs($cons{$n})) {
