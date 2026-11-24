@@ -28,14 +28,10 @@ Look: 📈, money
 Shareholdings: the shares Alice holds.
 Officers: Decider [Appoint] <person> <role>
   Bob: Decider asks you to be an officer of the organisation Orga.
+  Codecider: Decider asks that Bob be an officer of your organisation Orga.
   Decider [End officer] <person>
+  Codecider: Decider asks to end Bob's office in your organisation Orga.
   Bob [Resign] [Officer unfriend]
-Issue: AliceOfficer [Issue shares by any officer for Alice] <decider> <amount>
-  Decider: AliceOfficer asks to issue the first shares of your organisation Alice.
-Swap: Alice [Swap coin for share] <amount given> <issuer of the shares> <amount wanted>
-  Bob: Alice asks to swap coins for shares with you.
-  Alice [Swap bond for share] <amount given> <issuer of the shares> <amount wanted>
-  Bob: Alice asks to swap bonds for shares with you.
 Dividend: Alice [Set dividend] <dividend> <votes>
   Erin [Vote on dividend] <dividend>
   Bob [Claim] <total> <dividend> [Claim own coins] <total> <dividend> [Claim coins of the corporation] <total> <dividend>
