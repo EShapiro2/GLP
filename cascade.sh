@@ -211,13 +211,13 @@ case "$1" in
     children) FILE=Children; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR=""
           PLAYAT="programs/cssn"; PLAYLIMIT=100000000 ;;
     gfwc) FILE=GFWC; OWNER="programs/federation";       PAPER="/Users/udi/Grassroots/GFWC"; PLAYDIR="" ;;
-    agents) FILE=Agents;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
+    ai_agents) FILE=AI-Agents;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
     feeds) FILE=Feeds;  OWNER="programs/gff";              PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR=""
           PLAYAT="programs/apps/gff"; PLAYLIMIT=30000000 ;;   # the five persons' play, the same limit as Section APPS's
     agora) FILE=Agora; OWNER="programs/currencies/agora"; PAPER="";                           PLAYDIR="" ;;
     overlay) FILE=Overlay;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/GRH";  PLAYDIR="" ;;
     denominated_currencies) FILE=Denominated-Currencies;  OWNER="programs/currencies/sovereign"; PAPER="/Users/udi/Grassroots/SGC"; PLAYDIR="" ;;
-    community) FILE=Community;  OWNER="programs/currencies/gcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
+    community_bank) FILE=Community-Bank;  OWNER="programs/currencies/gcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     denominated_coins) FILE=Denominated-Coins;  OWNER="programs/currencies/gdc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     auction) FILE=Auction;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/GRH";  PLAYDIR="" ;;
     short_feeds) FILE=Short-Feeds; OWNER="programs/gff";             PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
@@ -233,11 +233,10 @@ case "$1" in
     stays) FILE=Stays; OWNER="programs/gce/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     library) FILE=Library;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     joint_accounts) FILE=Joint-Accounts; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    community_bank) FILE=Community-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's twenty-three, each its % Owner line's (Udi, 2026-11-09, to GO #3); rows added 2026-11-12, the contracts having been checked and never recorded (Udi, 2026-11-12, to Code #28)
-    commercial_bank) FILE=Commercial-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    commercial_bank) FILE=Commercial-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's twenty-three, each its % Owner line's (Udi, 2026-11-09, to GO #3); rows added 2026-11-12, the contracts having been checked and never recorded (Udi, 2026-11-12, to Code #28); Community Bank deleted 2026-11-24 (Udi)
     consumers_cooperative) FILE=Consumers-Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     ads) FILE=Ads; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
-    backed_community) FILE=Backed-Community; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    backed_community_bank) FILE=Backed-Community-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     bank) FILE=Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     cooperative) FILE=Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     corporation) FILE=Corporation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
@@ -270,7 +269,7 @@ case "$1" in
            OWNER=$(dirname "$FOUND"); PAPER=""; PLAYDIR=""
            return
        fi
-       echo "cascade.sh: no contract named $1; the names are forwarding programs appstore rendezvous services directory encounters knowledge friendship groups guardians provenance_groups coins bonds warded_groups children gfwc agents feeds agora overlay denominated_currencies community denominated_coins auction short_feeds resilient_feeds backchannel_feeds distrust separating_distrust labelled_overlay dao liquid_dao funded_dao recommendations stays library joint_accounts community_bank commercial_bank consumers_cooperative ads backed_community bank cooperative corporation cooperative_dao liquid_cooperative gigs lodging community_market community_network organisation mutual_credit rides notes app constitution shares shareholding_corporation central_bank single_person_company trading_company workers_cooperative local_overlay second_score_auction secure_friendship" >&2; exit 2 ;;
+       echo "cascade.sh: no contract named $1; the names are forwarding programs appstore rendezvous services directory encounters knowledge friendship groups guardians provenance_groups coins bonds warded_groups children gfwc ai_agents feeds agora overlay denominated_currencies denominated_coins auction short_feeds resilient_feeds backchannel_feeds distrust separating_distrust labelled_overlay dao liquid_dao funded_dao recommendations stays library joint_accounts community_bank commercial_bank consumers_cooperative ads backed_community_bank bank cooperative corporation cooperative_dao liquid_cooperative gigs lodging community_market community_network organisation mutual_credit rides notes app constitution shares shareholding_corporation central_bank single_person_company trading_company workers_cooperative local_overlay second_score_auction secure_friendship" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not

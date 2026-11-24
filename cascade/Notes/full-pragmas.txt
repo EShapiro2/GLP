@@ -1,11 +1,11 @@
 Notes
 Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
 Of Notes: A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice. In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
-Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers.
+Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Type and Other types.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-Notes:1. ■ Issue: Alice may issue Sum Alice-notes.
-Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-notes for Total Dave-notes, provided Alice and Bob know each other.
-Notes:3. ■ Pay: Alice may pay Bob Sum Carol-notes, with the consent of Bob, provided Alice knows Bob.
-Notes:4. ○ Escrow. Deposit: Alice may deposit Sum Dave-notes with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-notes that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-notes deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
+Notes:1. ■ Issue: Alice may issue Sum Alice-notes of type Type.
+Notes:2. ■ Swap: Alice and Bob may jointly swap Sum Carol-notes of type Type for Total Dave-notes of type Other, provided Alice and Bob know each other.
+Notes:3. ■ Pay: Alice may pay Bob Sum Carol-notes of type Type, with the consent of Bob, provided Alice knows Bob.
+Notes:4. ○ Escrow. Deposit: Alice may deposit Sum Dave-notes of type Type with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-notes of type Type that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-notes of type Type deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.

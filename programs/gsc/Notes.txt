@@ -16,19 +16,19 @@ Alice, Bob and Carol are parties.
 Logic pragmas
 Notes extends Knowledge.
 A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
-Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
-1. ■ Issue: Alice may issue Sum Alice-notes.
-2. ■ Swap: Alice and Bob may jointly swap Sum Carol-notes for Total Dave-notes, provided Alice and Bob know each other.
-3. ■ Pay: Alice may pay Bob Sum Carol-notes, with the consent of Bob, provided Alice knows Bob.
-4. ○ Escrow. Deposit: Alice may deposit Sum Dave-notes with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-notes that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-notes deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
+Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Type and Other types; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
+1. ■ Issue: Alice may issue Sum Alice-notes of type Type.
+2. ■ Swap: Alice and Bob may jointly swap Sum Carol-notes of type Type for Total Dave-notes of type Other, provided Alice and Bob know each other.
+3. ■ Pay: Alice may pay Bob Sum Carol-notes of type Type, with the consent of Bob, provided Alice knows Bob.
+4. ○ Escrow. Deposit: Alice may deposit Sum Dave-notes of type Type with Carol for Bob on Cond, with the consent of Carol, provided Alice and Carol know each other and Alice knows Bob. Release: Carol and Bob may jointly release Sum Dave-notes of type Type that Alice deposited on Cond, provided Carol and Bob know each other. Return: Carol and Alice may jointly return Sum Dave-notes of type Type deposited for Bob on Cond, provided Carol and Alice know each other. Carol will release them only if Cond is met, and return them only if it fails.
 Logic pragmas.
-Vocabulary: x holds n y-notes = note(x,y,*n); z holds n w-notes in escrow from x for y on k = escrow_note(z,w,x,y,k,*n).
-After x issues n x-notes: x holds n x-notes.
-After x and y swap n z-notes for m w-notes: no longer x holds n z-notes, y holds n z-notes, no longer y holds m w-notes, x holds m w-notes, y knows z and x knows w.
-After x pays y n z-notes: no longer x holds n z-notes, y holds n z-notes and y knows z.
-After x deposits n w-notes with z for y on k: no longer x holds n w-notes and z holds n w-notes in escrow from x for y on k.
-After z and y release n w-notes that x deposited on k: no longer z holds n w-notes in escrow from x for y on k, y holds n w-notes and y knows w.
-After z and x return n w-notes deposited for y on k: no longer z holds n w-notes in escrow from x for y on k, x holds n w-notes and x knows w.
+Vocabulary: x holds n y-notes of type t = note(x,y,t,*n); z holds n w-notes of type t in escrow from x for y on k = escrow_note(z,w,t,x,y,k,*n).
+After x issues n x-notes of type t: x holds n x-notes of type t.
+After x and y swap n z-notes of type t for m w-notes of type u: no longer x holds n z-notes of type t, y holds n z-notes of type t, no longer y holds m w-notes of type u, x holds m w-notes of type u, y knows z and x knows w.
+After x pays y n z-notes of type t: no longer x holds n z-notes of type t, y holds n z-notes of type t and y knows z.
+After x deposits n w-notes of type t with z for y on k: no longer x holds n w-notes of type t and z holds n w-notes of type t in escrow from x for y on k.
+After z and y release n w-notes of type t that x deposited on k: no longer z holds n w-notes of type t in escrow from x for y on k, y holds n w-notes of type t and y knows w.
+After z and x return n w-notes of type t deposited for y on k: no longer z holds n w-notes of type t in escrow from x for y on k, x holds n w-notes of type t and x knows w.
 Interface pragmas
 Notes: the notes Alice holds.
 Issue: Alice [Issue] <amount>

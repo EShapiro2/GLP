@@ -1,1 +1,1 @@
-Help instantiates Free Matching: holds
+Help extends Free Matching: holds

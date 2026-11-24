@@ -6,30 +6,29 @@ Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2+Guardians:3 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
-Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol), person(Alice), person(Bob), person(Carol) guarded by Alice, Bob.
+Knowledge:3+Guardians:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:1+Guardians:3 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice), person(Alice), person(Bob) guarded by Alice, Bob.
+Friendship:1+Guardians:3 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- person(Alice), person(Bob), knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- person(Alice), person(Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Gossip:0 - | *Posts* have a *budget*, a parameter of Gossip: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*, a parameter: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them.
+Gossip:0 - | *Posts* have a *budget*: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them.
 Gossip:0 - | Environment: n is a budget of a new post, for x; n covers the cost of a forward leaving m, for x; the gossip protocol forwards p to y with m of n, for x.
 Gossip:1 ■ Post: made(Alice,Post), post(Alice,Post), budget(Alice,Post,Budget) <- new_budget(Alice,Budget), ~made(Alice,Post) guarded by Alice.
 Gossip:2 ■ Tell: post_from(Bob,Post,Alice), post(Bob,Post), budget(Bob,Post,Part) <- post(Alice,Post), budget(Alice,Post,Budget), covers(Alice,Budget,Rest), friend(Alice,Bob), friend(Bob,Alice), protocol(Alice,Post,Bob,Part,Rest) guarded by Alice.
-Matching:0 - | Posts have a *test*, a parameter of Matching, whether two *match*.
+Matching:0 - | Posts have a *test*, whether two *match*.
 Matching:0 - | Environment: p and q match, for x.
 Matching:1 ■ Return: post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob).
 Matching:2+Anonymous Matching:1 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other), address(Alice,Carol), address(Carol,Alice) guarded by Alice, Carol.
-Guardians:0 - | Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
+Guardians:0 - | Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
 Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
-Guardians:0 - | Default: any guardian of z for those who decide for z.
 Guardians:1 ■ Enter: identity(Wendy), ward(Wendy), has_guardian(Wendy,Alice), creator(Alice,Wendy), guardian(Alice,Wendy), knows(Alice,Wendy), knows(Wendy,Alice), friend(Alice,Wendy), friend(Wendy,Alice) <- person(Alice), ~identity(Wendy) guarded by Alice, Wendy must Wendy.
 Guardians:1 ■ | Alice chooses Wendy's key pair.
 Guardians:2 ■ | Guardian decisions.
-Guardians:2 ■ Make guardian: guardian(Bob,Wendy), has_guardian(Wendy,Bob), knows(Bob,Wendy), knows(Wendy,Bob), friend(Bob,Wendy), friend(Wendy,Bob) <- ward(Wendy), ~retired(Wendy), person(Bob), has_guardian(Wendy,Alice), friend(Bob,Alice), ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) guarded by guardians(Wendy), Bob.
+Guardians:2 ■ Make guardian: guardian(Bob,Wendy), has_guardian(Wendy,Bob), knows(Bob,Wendy), knows(Wendy,Bob), friend(Bob,Wendy), friend(Wendy,Bob) <- ward(Wendy), ~retired(Wendy), person(Bob), has_guardian(Wendy,Alice), friend(Bob,Alice), ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) guarded by deciders(Wendy), Bob.
 Guardians:2 ■ Resign: ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) <- guardian(Bob,Wendy), has_guardian(Wendy,Bob) guarded by Bob.
-Guardians:2 ■ End guardian: ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) <- guardian(Bob,Wendy), has_guardian(Wendy,Bob) guarded by guardians(Wendy,-Bob).
+Guardians:2 ■ End guardian: ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) <- guardian(Bob,Wendy), has_guardian(Wendy,Bob) guarded by deciders(Wendy,-Bob).
 Guardians:2 ■ Guardian unfriend: ~friend(Bob,Wendy), ~friend(Wendy,Bob), ~guardian(Bob,Wendy), ~has_guardian(Wendy,Bob) <- friend(Bob,Wendy), friend(Wendy,Bob), guardian(Bob,Wendy), has_guardian(Wendy,Bob) guarded by Bob.
 Guardians:2 ■ | Wendy may not end a friendship with her guardian.
 Guardians:3 ■ | Ward and person.
@@ -42,7 +41,7 @@ Guardians:4 ■ | Wards.
 Guardians:4 ■ Wards acquaint: knows(Wendy,Will), knows(Will,Wendy) <- ward(Wendy), has_guardian(Wendy,Alice), ward(Will), has_guardian(Will,Bob) guarded by Wendy, Will possibly Alice=Bob.
 Guardians:4 ■ Wards befriend: friend(Wendy,Will), friend(Will,Wendy) <- ward(Wendy), ~retired(Wendy), has_guardian(Wendy,Alice), ward(Will), ~retired(Will), has_guardian(Will,Bob), knows(Wendy,Will), knows(Will,Wendy), knows(Alice,Will), friend(Alice,Bob), friend(Bob,Alice), ~friend(Wendy,Will), ~friend(Will,Wendy) guarded by Wendy, Will, Alice, Bob possibly Alice=Bob.
 Guardians:4 ■ Wards of one guardian befriend: friend(Wendy,Will), friend(Will,Wendy) <- ward(Wendy), ~retired(Wendy), has_guardian(Wendy,Alice), ward(Will), ~retired(Will), has_guardian(Will,Alice), knows(Wendy,Will), knows(Will,Wendy), ~friend(Wendy,Will), ~friend(Will,Wendy) guarded by Wendy, Will, Alice.
-Guardians:5 ■ Retire: retired(Wendy), ~guardian(_,Wendy), ~has_guardian(Wendy,_), ~friend(Wendy,_), ~friend(_,Wendy) <- ~retired(Wendy) guarded by guardians(Wendy).
+Guardians:5 ■ Retire: retired(Wendy), ~guardian(_,Wendy), ~has_guardian(Wendy,_), ~friend(Wendy,_), ~friend(_,Wendy) <- ~retired(Wendy) guarded by deciders(Wendy).
 Guardians:5 ■ | Wendy can then take no act.
 Services:0 - | A *service* is a ward operated by a machine at an address every person can reach.
 Rendezvous:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
@@ -64,4 +63,5 @@ Anonymous Rendezvous:1 ■ Match: ~presented_keys(Dave,Key,Other,Alice), ~presen
 Anonymous Matching:0 - | Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
 Anonymous Matching:0 - | Environment: p carries the public key of k, for x; d is named by the one of p and q whose public key has the smaller hash, for x.
 Anonymous Matching:1 ■ | Meet.
+Free Matching:0 - | The budget of a post is an integer, the cost of a forward is one, and the gossip protocol is forwarding to any friend with the budget less one.
 Lending:0 - | A post is a *loan* or a *gift*, stating a thing its maker lends or gives away, or a *wish*, stating a thing its maker seeks to borrow or receive. A loan or a gift matches a wish when it is of the thing the wish seeks.

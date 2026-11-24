@@ -6,7 +6,7 @@
 % Last changed: 2026-11-20, by GO #14 (Udi, 2026-11-20, to GO #13: community coins; Orga a community network).
 % Schemas: Gigs.glp beside this file.
 Gigs
-Gigs extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+Gigs unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
 A *worker* is a provider and a *client* a customer. A *job* names the work, its price in community coins and its deadline; its terms say what is released to whom on cancellation.
 Alice and Bob are persons, Orga a community network.
 1. ■ Job. Post: Alice, a client, may post a job to the workers she points to. Pass: A worker may pass it to the workers they point to. Withdraw job: Alice may withdraw it.
@@ -16,7 +16,7 @@ Alice and Bob are persons, Orga a community network.
 5. ■ Cancelling. Cancel: Alice or Bob may cancel the engagement before delivery, and the payment and the deposit are then released to Alice and to Bob as the terms say. Lapse: If no delivery is attested by the deadline, Alice may cancel and both are then released to her.
 6. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the work after acceptance.
 Logic pragmas
-Gigs extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+Gigs unites Community Network, Overlay and Recommendations, and extends and weakens the union (GRH, Grassroots Ride-Hailing, in preparation).
 A *worker* is a provider and a *client* a customer. A *job* names the work, its price in community coins and its deadline; its terms say what is released to whom on cancellation.
 Alice, Bob and Carol are persons, Orga a community network, Gov an organisation, Kept, Sum, Total, Top, Pot, Back and Rest numbers, Job a job, Skill a skill or a service; in clause 1 Carol is a worker, in clause 4 an arbiter, and in clause 6 Skill is the job.
 1. ■ Job. Post: Alice may post Job in Orga, provided Alice is a client of Orga. Alice posts the job to the workers she points to. Send job: Job of Alice goes to Bob in Orga, provided Alice has Job posted in Orga, Alice points to Bob and Bob is a worker of Orga. Pass: Bob may pass Job of Alice to Carol in Orga, provided Bob is a worker of Orga, Bob has received Job of Alice in Orga, Bob points to Carol, Carol is a participant of Gov, Orga has the stake at the number S, Carol holds Kept Gov-coins and Kept is at least S. Withdraw job: Alice may withdraw Job from Orga.

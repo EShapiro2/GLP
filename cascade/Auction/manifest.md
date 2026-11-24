@@ -1,11 +1,10 @@
 # A run of the cascade on Auction
 
-- Contract: `Auction` (`auction` to the checker), its owner's two files `programs/lbm/Auction.txt` and `programs/lbm/Auction.glp`, copied here as they stood at `65796c8f`.
+- Contract: `Auction` (`auction` to the checker), its owner's two files `programs/lbm/Auction.txt` and `programs/lbm/Auction.glp`, copied here as they stood at `235bab58`.
 - The paper: `/Users/udi/Grassroots/GRH (not on this machine)` at `unknown`, for the paper's own record.
-- Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
 - Adopted from the Calculus: `programs/lbm/Auction.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/lbm/Auction.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-22 00:55 UTC by `cascade.sh auction`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `65796c8f`; each artefact's source and tool:
+- Run on 2026-11-24 07:48 UTC by `cascade.sh auction`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `235bab58`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
@@ -18,7 +17,7 @@
 | `full-schemas.txt` | the same | calculus/tools/adopt.py | the schemas, the relations applied |
 | `verdict.txt` | `Auction.glp` | programs/gsc, check/2 | the checker's verdict: `syntactically_grassroots` |
 | `vmat.tex` | `Auction.glp` | programs/gsc, compile_contract/2 | the VMAT form, 18 displays, one per schema |
-| (no platform) | | | a parametric contract, with no realisation |
+| `platform.vglp` | `Auction.glp` | programs/vglp/cva/compiler, compile/5 | the CVA compiler's refusal, and no platform.glp and no run |
 
 What the tools refused or lacked:
-- platform: a parametric contract has no realisation (GSC, Definition Parametric contract); its instances are compiled
+- platform: %% not compiled(auction)

@@ -4,6 +4,8 @@
 % Last changed: 2026-11-18, by GO #10, first line as Udi approved (16:25 UTC).  Logic pragmas and schemas: the Calculus's to write.
 % Extends: Booking, instantiating it.
 Meeting Rooms
-Meeting Rooms instantiates Booking with a *room* for a resource.
+Meeting Rooms extends Booking.
+A resource is a *room*.
 Logic pragmas
-Meeting Rooms instantiates Booking with a *room* for a resource.
+Meeting Rooms extends Booking.
+A resource is a *room*.

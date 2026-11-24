@@ -3,4 +3,8 @@
 % Paper: GM, Anonymous Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
 % Last changed: 2026-11-20, first written, the text as Udi approved it; no Logic pragmas yet, the Calculus's to write; no Interface pragmas yet.
 Promoted Matching
-Promoted Matching composes Anonymous Matching with Promoted Gossip.
+Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip, and extends the union.
+1. ■ Organisation and ward. Organisation ward acquaint: Orga, an organisation, and Wendy, a ward, may jointly come to know each other.
+Logic pragmas
+Promoted Matching unites an amendment of Anonymous Matching and Promoted Gossip, and extends the union.
+1. ■ Organisation and ward. Organisation ward acquaint: Orga and Wendy may jointly come to know each other, provided Orga is an organisation, Orga has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.

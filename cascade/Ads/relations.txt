@@ -1,1 +1,2 @@
 Ads extends Community Network and Overlay: holds
+Ads extends it (Community Network and Overlay): holds
