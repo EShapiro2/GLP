@@ -13,19 +13,7 @@
 %% the person answers an approval question, and the network's log of the
 %% cargoes it carries.
 %%
-%% The schemas carry amounts, the numbers act schemas allow (Currencies
-%% 72cf826b; GSC, Section 3.2 and Appendix "Numbers in Act Schemas"): issue issues
-%% k coins, a swap exchanges k coins for k1, a payment pays k, and a redemption
-%% redeems one coin.  Each amount is a numeric variable bound by the
-%% schema-binding, so the request names it and the request form takes it, and
-%% an atom with the multiplicity k is added or deleted k times (vGLP 660834d,
-%% Section 5.4, "Act schemas as local specifications": "Every other numeric
-%% variable is bound by the schema-binding, as a speech-act variable is, and a
-%% request names it, so the request form takes it"; "a multiplicity k deleting
-%% or adding k copies").  The classes, as the platform names them, T the type of the notes, coin in each play (Notes; Coins: "A *coin* is a note that is a unit of its issuer's debt"): issue(P, T, K),
-%% P issues K notes of P of type T, each note(P, T); swap(P, Q, U, T, K, V, T1, K1), P gives K notes of U and
-%% takes K1 of V, Q the converse; pay(P, Q, U, T, K), P pays Q K notes of U, with Q's consent (Notes:3); pay_issuer(P, Q, T, K), P pays Q K notes of Q, guarded by P, without the consent of Q (Coins:1, Pay issuer);
-%% redeem(P, Q, R), P gives Q a coin of Q and takes a coin of R that Q holds (Coins:2).
+%% The schemas carry sets of notes, GSC's set variables (GSC 4a9175a, set(N) of type Set(A); Currencies 57fa953): each note is note(P, T, N), its holder P, its type T and its identifier N, and a set variable names the notes a request moves, an atom with it standing for one atom per element, size(N) the number of its elements.  The request names each set as the list of its notes, and the amount, the set's size, as a number (vGLP decisions 5 and 7, 2026-11-24).  The classes, as the platform names them, T the type of the notes, coin in each play (Notes; Coins: "A *coin* is a note that is a unit of its issuer's debt"): issue(P, T, Ns, K), P issues the K notes Ns of P of type T; swap(P, Q, U, T, Ns, K, V, T1, Ms, K1), P gives the K notes Ns of U and takes the K1 notes Ms of V, Q the converse; pay(P, Q, U, T, Ns, K), P pays Q the K notes Ns of U, with Q's consent (Notes:3); pay_issuer(P, Q, T, Ns, K), P pays Q the K notes Ns of Q, guarded by P, without the consent of Q (Coins:1, Pay issuer); redeem(P, Q, [B], R, [C]), P gives Q the Q-coin B and takes the R-coin C that Q holds (Coins:2, Redeem).
 %%
 %% Each play opens alike: each person establishes their identity and issues
 %% coins of their own, each a class of one participant, applied at once; each
@@ -35,29 +23,20 @@
 %% other.
 %%
 %% play_pay_swap: alice issues 2 coins and bob 3; alice requests swapping 2 of
-%%   hers for 3 of bob's, swap(alice, bob, alice, coin, 2, bob, coin, 3); bob is asked and
+%%   hers for 3 of bob's, swap(alice, bob, alice, coin, [a1, a2], 2, bob, coin, [b1, b2, b3], 3); bob is asked and
 %%   answers yes, and it commits; alice then pays bob 2 of his coins back,
-%%   pay_issuer(alice, bob, coin, 2), guarded by her, and bob's machine votes yes, unasked.
+%%   pay_issuer(alice, bob, coin, [b1, b2], 2), guarded by her, and bob's machine votes yes, unasked.
 %% play_redeem: each issues one coin and they swap them one for one,
-%%   swap(alice, bob, alice, coin, 1, bob, coin, 1); alice then requests the swap back,
-%%   swap(alice, bob, bob, coin, 1, alice, coin, 1), whose
-%%   class redeem(alice, bob, alice) and redeem(bob, alice, bob) also
-%%   determine, a redemption moving one coin each way, each schema-binding a
-%%   part with the people in its marked roles as its guard set (vGLP, Section
-%%   5.4, "Act schemas as local specifications"): the swaps' part, guarded by
-%%   alice and bob, and the two redeems', guarded by alice and by bob.  Her
-%%   machine proposes the part her request names, the swaps', which asks bob;
-%%   he answers yes and it commits.  She swaps again and then requests the
-%%   redemption, redeem(alice, bob, alice), a Bob-coin given back for an
-%%   Alice-coin bob holds: "on an own trigger the agent proposes, of the class
-%%   of a pending request, only the parts that request names" (vGLP, Section
-%%   5.4, "The compilation"; vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC,
-%%   item 4), so her machine proposes her redeem's part, guarded by her, which
-%%   asks nobody, and bob's machine votes yes.
+%%   swap(alice, bob, alice, coin, [a1], 1, bob, coin, [b1], 1); bob is asked
+%%   and answers yes, and it commits.  alice then swaps them back and swaps
+%%   again, and requests the redemption, redeem(alice, bob, [b1], alice, [a1]),
+%%   the Bob-coin b1 given back for the Alice-coin a1 bob holds, guarded by her:
+%%   her machine proposes it, which asks nobody, bob's machine votes yes, and
+%%   it commits, alice holding a1.
 %% play_busy: each having issued 2 coins and swapped one coin for one,
 %%   alice requests a second swap and bob, asked, leaves his approval question
 %%   open, alice's machine holding her attempt prepared; bob requests paying
-%%   alice her coin back, pay_issuer(bob, alice, coin, 1), and alice's machine holds the pay's start waiting,
+%%   alice her coin back, pay_issuer(bob, alice, coin, [a1], 1), and alice's machine holds the pay's start waiting,
 %%   her lock set by her swap, which has priority over the pay, so it wounds
 %%   nothing and votes no on nothing for contention (vGLP 49cd9f7,
 %%   wound-wait); bob answers alice's approval question no, his vote no
@@ -109,7 +88,7 @@ play_redeem(LA?, LB?, N?) :-
           wait(holds(note(alice, coin, a1))),
           own([A8, A9], propose(swap(A8?, bob, A9?, coin, [a1], 1, bob, coin, [b1], 1)), [at(5, [a1, [end]]), at(9, [b1, [end]])]),
           wait(holds(note(bob, coin, b1))),
-          own([A10, A11], propose(redeem(A10?, bob, A11?)))],
+          own([A10, A11], propose(redeem(A10?, bob, [b1], A11?, [a1])), [at(3, [b1, [end]]), at(5, [a1, [end]])])],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(issue(B2?, coin, [b1], 1)), [at(3, [b1, [end]])]), wait(holds(note(bob, coin, b1))),
           
