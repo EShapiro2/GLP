@@ -246,7 +246,7 @@ case "$1" in
     lodging) FILE=Lodging; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     community_market) FILE=Community-Market; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     community_network) FILE=Community-Network; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
-    organisation) FILE=Organisation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    organisation) FILE=Organisation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="organisation" ;;
     mutual_credit) FILE=Mutual-Credit; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     rides) FILE=Rides; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     notes) FILE=Notes; OWNER="programs/gsc"; PAPER="/Users/udi/Grassroots/GSC"; PLAYDIR="" ;;   # the notes, GSC's (the Calculus's publication of 2026-11-16)
