@@ -7,7 +7,7 @@
 % Schemas: GN.glp beside this file, the full schemas, printed by calculus/tools/adopt.py GN from the Logic pragmas and never written by hand; adopt.py --check GN holds it and cascade/GN/ to what the tools print.
 Notes
 Notes extends Knowledge.
-A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Alice, Bob and Carol are parties.
 1. ■ Issue: Alice may issue Alice-notes.
 2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
@@ -15,7 +15,7 @@ Alice, Bob and Carol are parties.
 4. ○ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
 Logic pragmas
 Notes extends Knowledge.
-A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Alice, Bob, Carol and Dave are parties, Cond a condition Alice, Bob and Carol agree, Sum and Total numbers, Type and Other types; in clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
 1. ■ Issue: Alice may issue Sum Alice-notes of type Type.
 2. ■ Swap: Alice and Bob may jointly swap Sum Carol-notes of type Type for Total Dave-notes of type Other, provided Alice and Bob know each other.

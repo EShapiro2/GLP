@@ -1,5 +1,5 @@
 Rides
-Rides unites Community Network and Second-Score Auction, and extends and amends the union (GRH, Grassroots Ride-Hailing, in preparation).
+Rides unites Community Network and Second-Score Auction, and extends and augments the union (GRH, Grassroots Ride-Hailing, in preparation).
 A *driver* is a provider and a *rider* a customer.
 Alice and Bob are persons, Orga a community network.
 1. ■ Award: Second-Score Auction:2, only if the fare and the deposit are in community coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (Community Network:2).

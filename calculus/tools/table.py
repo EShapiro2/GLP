@@ -5,7 +5,7 @@ import os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import names as NM      # the names of the contracts and their files (tools/names.py, NAMES.txt)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REL = re.compile(r'\b(extends|restricts|strengthens|instantiates|composes|relaxes|weakens|amends|renames|lifts|unites)\b')
+REL = re.compile(r'\b(extends|restricts|strengthens|instantiates|composes|relaxes|weakens|augments|renames|lifts|unites)\b')
 def lines(path):
     return [l.rstrip('\n') for l in open(path, encoding='utf-8') if l.strip() and not l.startswith('%')]
 def words(ls):

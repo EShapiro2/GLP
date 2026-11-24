@@ -1,5 +1,5 @@
 AI Agents
-AI Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+AI Agents unites a renaming of Guardians and Forwarding, and extends and augments the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 Renaming of Guardians: an AI agent for a ward, a principal for a creator and guardians(z) for deciders(z).
 Vocabulary: z holds the attestation t = attestation(z,t); y holds a record of z's attestation t = attestation_record(y,z,t).
 Roles: the guardians of z = guardians(z), listed by z has y as a guardian, y is a guardian of z and y holds a record of z's attestation Proof.

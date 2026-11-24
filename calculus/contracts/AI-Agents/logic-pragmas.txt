@@ -1,5 +1,5 @@
 AI Agents
-AI Agents unites a renaming of Guardians and Forwarding, and extends and amends the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+AI Agents unites a renaming of Guardians and Forwarding, and extends and augments the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 The *developer* of an AI agent is the signer of its code.
 Alice and Bob are persons, Alf an AI agent, Proof and Seal attestations, Item an item; in clause 2 Will is an AI agent.
 1. ○ AI developer and guardian accountability. The developer of Alf will be accountable for Alf's defects. Every guardian of Alf will be accountable for operating it recklessly.

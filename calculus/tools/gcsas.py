@@ -566,7 +566,7 @@ def read_gr(name, d="gr"):
             c.clauses.append((int(m.group(1)), m.group(2), params_in(m.group(3), c.params)))
         elif l == PRAGMAS:
             continue
-        elif i == 0 and re.match(re.escape(name) + r" (extends|restricts|strengthens|instantiates|composes|relaxes|weakens|amends|renames|lifts|unites)\b", l):
+        elif i == 0 and re.match(re.escape(name) + r" (extends|restricts|strengthens|instantiates|composes|relaxes|weakens|augments|renames|lifts|unites)\b", l):
             c.first = l
         elif KINDR.match(l):
             m = KINDR.match(l)
@@ -673,7 +673,7 @@ def first_line(c, known):
         return [], {}, []
     s = strip_refs(c.first)[:-1]
     subs, prose = {}, []
-    m = re.search(r"instantiates ((?:%s)(?: and (?:%s))*) with (.*?)(?=, (?:and )?(?:extends|restricts|strengthens|instantiates|composes|relaxes|weakens|amends|renames|lifts|unites)\b|$)" % (NAMES_.NAME_RX, NAMES_.NAME_RX), s)
+    m = re.search(r"instantiates ((?:%s)(?: and (?:%s))*) with (.*?)(?=, (?:and )?(?:extends|restricts|strengthens|instantiates|composes|relaxes|weakens|augments|renames|lifts|unites)\b|$)" % (NAMES_.NAME_RX, NAMES_.NAME_RX), s)
     if m:
         items = m.group(2).split("; ") if ";" in m.group(2) else re.split(r", | and ", m.group(2))
         for p in m.group(1).split(" and "):
@@ -1869,7 +1869,7 @@ def map_guard(g, mp):
 def read_sas(w, n):
     """sas/n: title, first line with its substitutions as predicates, entries."""
     lines = get("sas", n)
-    first = lines[1] if len(lines) > 1 and re.match(re.escape(n) + r" (extends|restricts|strengthens|instantiates|composes|relaxes|weakens|amends|renames|lifts|unites)\b", lines[1]) else None
+    first = lines[1] if len(lines) > 1 and re.match(re.escape(n) + r" (extends|restricts|strengthens|instantiates|composes|relaxes|weakens|augments|renames|lifts|unites)\b", lines[1]) else None
     c = Contract()
     c.name, c.first = n, first
     c.ren = {m.group(1): m.group(2) for m in (REN.match(l) for l in lines) if m}
@@ -2010,7 +2010,8 @@ def both(a, b, fields):
     for f in fields:
         o[f] = more(a[f], b[f])
     if "body" in fields:        # of schemas: the conditions of both, and what the head of both deletes; never a condition
-        o["body"] = more(conditions(a), conditions(b)) + [(False, q, args) for x, q, args in o["head"] if x and WILD not in args]      # merged with a deletion
+        cs = more(conditions(a), conditions(b))
+        o["body"] = cs + [d for d in ((False, q, args) for x, q, args in o["head"] if x and WILD not in args) if d not in cs]      # merged with a deletion; a condition also deleted is required once (vGLP #32, Audit PR 83)
     o["same"] = sorted(set(a.get("same", [])) | set(b.get("same", [])))
     o["must"] = more(a.get("must", []), b.get("must", []))
     o["label"] = "+".join(more(a["label"].split("+"), b["label"].split("+")))
@@ -2430,6 +2431,11 @@ def expand_schemas(w, n):
     entries = refine_entries(w, n, kind_forms(w, n, entries))
     derive_party(w, n, lex, entries)
     unclash(entries)
+    for e in entries:       # no head adds and deletes one atom (Udi, 2026-11-24 11:01 UTC; design decision 57)
+        if e["kind"] == "act":
+            dup = {(p, a) for x, p, a in e["head"] if not x} & {(p, a) for x, p, a in e["head"] if x}
+            if dup:
+                raise Err("%s %s: its head adds and deletes %s" % (e["label"], e["name"], ", ".join("%s(%s)" % (p, ",".join(a)) for p, a in sorted(dup))))
     if REMOVE:
         entries = remove_redundant(w, n, entries)
     w.sasx[n] = entries
@@ -3401,7 +3407,7 @@ def phi(lines, lex):
         rp = lex.refl_preds()
         cnd = [x for x in cnd if x[0] or not self_atom(x[1], x[2], rp)]
         out.append(dict(kind="act", label=label, mark=mark, name=name, head=eff, same=same, must=must,
-                        body=cnd + [(False, p, a) for x, p, a in eff if x and WILD not in a], guards=[g for _, g in persons]))
+                        body=cnd + [d for d in ((False, p, a) for x, p, a in eff if x and WILD not in a) if d not in cnd], guards=[g for _, g in persons]))
     return out
 
 
