@@ -49,7 +49,7 @@ Look: 🏠, network
 Listing: Bob [Post] <listing>
   Alice [Pass]
   Bob [Withdraw listing]
-Book: Alice [Book] <stake and deposit>
+Book: Alice [Book]
   Bob: Alice asks to book nights of your listing.
 Check-in and checkout: Alice [Check in] [Check out] <deposit>
 Cancelling: Alice [Cancel] [Cancel for the traveller] [Cancel for the host]
