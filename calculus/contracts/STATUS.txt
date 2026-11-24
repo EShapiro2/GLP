@@ -84,7 +84,7 @@ Shares     certified; VMAT 61 displays; no platform: a parametric contract has n
 Short-Feeds certified; VMAT 16 displays; platform.vglp 7534 lines; platform.glp 5213 lines
 Single-Person-Company certified; VMAT 122 displays; no platform: a parametric contract has none until it is instantiated
 Stays      certified; VMAT 15 displays; platform.vglp 7750 lines; platform.glp 5372 lines
-Tennis-Courts certified; VMAT 57 displays; platform.vglp 9398 lines; platform.glp 5948 lines
+Tennis-Courts certified; VMAT 57 displays; platform.vglp 9396 lines; platform.glp 5947 lines
 Trading-Company certified; VMAT 125 displays; no platform: a parametric contract has none until it is instantiated
 Warded-Groups certified; VMAT 42 displays; platform.vglp 8617 lines; platform.glp 5662 lines
 Warnings   certified; VMAT 29 displays; platform.vglp 8260 lines; platform.glp 5502 lines
