@@ -11,7 +11,7 @@ Joint Accounts
 10. ○ Return.  Carol and Alice may jointly return them to Alice.
 11. ■ Redeem.  Alice may redeem a Bob-coin she holds against any coin held by Bob, whom she knows.
 12. ■ Open account.  Alice and Bob, who know each other, may jointly open a joint account, under a new name of Alice's.
-13. ■ Deposit 2.  Either of them may move coins they hold into their joint account.
+13. ■ Account deposit.  Either of them may move coins they hold into their joint account.
 14. ■ Partner deposit.  Either of them may move coins they hold into their joint account.
 15. ■ Withdraw.  Alice and Bob may jointly move coins from their joint account to either of them.
 16. ■ Partner withdraw.  Alice and Bob may jointly move coins from their joint account to either of them.
@@ -36,7 +36,7 @@ Return: Carol [Return] <sum>
 Redeem: Alice [Redeem] <carol>
 Open account: Alice [Open account] <acct>
   Bob: Alice asks for your consent to open account.
-Deposit 2: Alice [Deposit 2] <sum>
+Account deposit: Alice [Account deposit] <sum>
 Partner deposit: Bob [Partner deposit] <sum>
 Withdraw: Alice [Withdraw] <sum>
   Bob: Alice asks for your consent to withdraw.

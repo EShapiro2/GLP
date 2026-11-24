@@ -24,7 +24,7 @@ Coins:2 ■ Redeem: Alice may no longer Alice holds a Bob-coin, Bob holds a Bob-
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 Joint Accounts:1 ■ Open account: Alice and Bob may jointly Alice has an account named Acct, Alice holds the joint account Acct with Bob and Bob holds the joint account Acct with Alice, provided Alice knows Bob, Bob knows Alice and not Alice has an account named Acct.
-Joint Accounts:2 ■ Deposit: Alice may no longer Alice holds Sum Carol-coins, Alice keeps Sum Carol-coins in Acct with Bob and Bob knows Carol, provided Alice holds the joint account Acct with Bob and Bob holds the joint account Acct with Alice. Possibly one: Alice=Carol, Bob=Carol.
+Joint Accounts:2 ■ Account deposit: Alice may no longer Alice holds Sum Carol-coins, Alice keeps Sum Carol-coins in Acct with Bob and Bob knows Carol, provided Alice holds the joint account Acct with Bob and Bob holds the joint account Acct with Alice. Possibly one: Alice=Carol, Bob=Carol.
 Joint Accounts:2 ■ Partner deposit: Bob may no longer Bob holds Sum Carol-coins, Alice keeps Sum Carol-coins in Acct with Bob and Alice knows Carol, provided Alice holds the joint account Acct with Bob and Bob holds the joint account Acct with Alice. Possibly one: Alice=Carol, Bob=Carol.
 Joint Accounts:3 ■ Withdraw: Alice and Bob may jointly no longer Alice keeps Sum Carol-coins in Acct with Bob and Alice holds Sum Carol-coins. Possibly one: Alice=Carol, Bob=Carol.
 Joint Accounts:3 ■ Partner withdraw: Alice and Bob may jointly no longer Alice keeps Sum Carol-coins in Acct with Bob and Bob holds Sum Carol-coins. Possibly one: Alice=Carol, Bob=Carol.
