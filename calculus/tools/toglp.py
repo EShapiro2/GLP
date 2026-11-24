@@ -665,12 +665,15 @@ def contract_term(n):
     w = gcsas.World(NM.names_in(os.path.join(ROOT, 'gr')))
     pmemo = {}
     def persons_of(e):      # the names the contract that wrote the act declares persons or parties, and only those
-        o = re.split(r'[:+]', e['label'])[0]
-        if o not in pmemo:
-            pmemo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if ks & {'person', 'party'} and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
+        out = frozenset()
+        for part in e['label'].split('+'):     # every contract whose clause the act is of (Rides:1 makes Award's Alice a person)
+            o = part.split(':')[0]
+            if o not in pmemo:
+                pmemo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if ks & {'person', 'party'} and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
+            out |= pmemo[o]
         # a party guards the act in its person's form as a person, its ward's form being the act derived 'for' it
         # (gcsas.party_specs); who takes an act for a party, and who votes on it, is a person (GO:2's Act and Vote)
-        return pmemo[o] | frozenset((e.get('taken') or {}).values()) | {gcsas.VOTER}
+        return out | frozenset((e.get('taken') or {}).values()) | {gcsas.VOTER}
     amemo = {}
     def anyof(e):           # the names the clause that wrote the act declares possibly any of the others (gcsas.possibly)
         o, num = re.split(r'[:+]', e['label'])[0], int(re.split(r'[:+]', e['label'])[1])
