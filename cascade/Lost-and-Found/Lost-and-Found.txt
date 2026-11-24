@@ -3,8 +3,8 @@
 % Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
 % Last changed: 2026-11-18, written from the paper at GM main 794a6a2; first line as Udi approved it, 2026-11-18, on the Calculus's recommendation; the Logic pragmas are the Calculus's, in calculus/contracts; no Interface pragmas yet. First line: instantiates Anonymous Matching, 2026-11-19 (Udi, 2026-11-19, "yes", relayed by the coordinator); the Logic pragmas below are the Calculus's and are to be printed again. Budget in the first line, 2026-11-19 (Udi, 2026-11-19, "yes", relayed by the coordinator); the Logic pragmas below are the Calculus's, to be printed again. The text of 2026-11-20 (Udi, 2026-11-20, "yes" to each item and to writing it, in the thread Grassroots Matching); the Logic pragmas below are the Calculus's, printed again by adopt.py on 2026-11-21.
 Lost and Found
-Lost and Found instantiates Free Matching with a test of the match of losses and finds and a fixed budget.
+Lost and Found extends Free Matching.
 A post is a *loss*, stating a thing its maker lost, or a *find*, stating a thing its maker found. A loss and a find match when they are of the same thing.
 Logic pragmas
-Lost and Found instantiates Free Matching with a test of the match of losses and finds and a fixed budget.
+Lost and Found extends Free Matching.
 A post is a *loss*, stating a thing its maker lost, or a *find*, stating a thing its maker found. A loss and a find match when they are of the same thing.

@@ -1,1 +1,1 @@
-Dating instantiates Free Matching: holds
+Dating extends Free Matching: holds

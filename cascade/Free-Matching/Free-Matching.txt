@@ -3,6 +3,8 @@
 % Paper: GM, Anonymous Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
 % Last changed: 2026-11-20, first written, the text as Udi approved it; the Logic pragmas are the Calculus's, written by adopt.py on 2026-11-21; no Interface pragmas yet.
 Free Matching
-Free Matching instantiates Anonymous Matching with an integer budget, a forward costing one, and a gossip protocol of forwarding to any friend with the budget less one.
+Free Matching extends Anonymous Matching.
+The budget of a post is an integer, the cost of a forward is one, and the gossip protocol is forwarding to any friend with the budget less one.
 Logic pragmas
-Free Matching instantiates Anonymous Matching with an integer budget, a forward costing one, and a gossip protocol of forwarding to any friend with the budget less one.
+Free Matching extends Anonymous Matching.
+The budget of a post is an integer, the cost of a forward is one, and the gossip protocol is forwarding to any friend with the budget less one.

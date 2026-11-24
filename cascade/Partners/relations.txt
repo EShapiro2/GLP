@@ -1,1 +1,1 @@
-Partners instantiates Free Matching: holds
+Partners extends Free Matching: holds

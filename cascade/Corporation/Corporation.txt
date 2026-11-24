@@ -5,10 +5,10 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Corporation.glp beside this file.
 Corporation
-Corporation extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Corporation unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 A *corporation* is an organisation that holds, pays and issues Dollar-denominated coins and bonds.
 Logic pragmas
-Corporation extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Corporation unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 A *corporation* is an organisation that holds, pays and issues Dollar-denominated coins and bonds.
 Interface pragmas
 Look: 🏢, money

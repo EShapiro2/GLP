@@ -1,2 +1,2 @@
-Anonymous Matching composes Matching with Anonymous Rendezvous: holds
+Anonymous Matching extends Matching and Anonymous Rendezvous: holds
 Anonymous Matching restricts it (Matching and Anonymous Rendezvous): holds

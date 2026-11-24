@@ -7,8 +7,8 @@
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus c475902; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GSC's, a line for each act, named by the act, its persons those of the schemas, the decider Decider.  2026-11-16, GSC #19: the lines asking Codecider removed, the Calculus's ed9032e7 making the decision rule's default any guardian of the ward, who decides alone (GnW's Default line); an instance whose rule is the guardians jointly asks the others in its own lines.  Git holds what the file said before.
 % Schemas: Guardians.glp beside this file, the full schemas, GKK's and GSG's with GnW's, knows reflexive, printed by calculus/tools/adopt.py GnW from the Logic pragmas and never written by hand; adopt.py --check GnW holds it and cascade/Guardians/ to what the tools print.  GnW as GSC wrote it by hand, parametric in six predicates, is the tests' fixture gnw_parametric.glp.
 Guardians
-Guardians extends and restricts Friendship.
-A *relation* is a friendship or the membership of a group. Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
+Guardians extends Friendship.
+A *relation* is a friendship or the membership of a group. Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
 Alice and Bob are persons, Wendy and Will wards.
 1. ■ Enter: Alice may create a ward, Wendy, and establish Wendy's identity by choosing Wendy's key pair. Alice is then the creator, a guardian and a friend of Wendy.
 2. ■ Guardian decisions. Make guardian: Those who decide for Wendy may make Bob, a friend of a guardian of Wendy, a guardian and a friend of Wendy, with the consent of Bob. Resign: Bob may end his guardianship of Wendy. End guardian: Those who decide for Wendy, other than Bob, may end Bob's guardianship. Guardian unfriend: Bob may end his friendship with Wendy, which ends his guardianship. Wendy may not end a friendship with her guardian.
@@ -16,8 +16,8 @@ Alice and Bob are persons, Wendy and Will wards.
 4. ■ Wards. Wards acquaint: Wendy, a ward of Alice, and Will, a ward of Bob, may jointly come to know each other. Wards befriend: Wendy may enter a relation with Will with the consent of Will, Alice and Bob, provided Wendy and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
 5. ■ Retire: Those who decide for Wendy may retire Wendy; every guardianship and relation of Wendy then ends and Wendy can take no act.
 Logic pragmas
-Guardians extends and restricts Friendship.
-Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
+Guardians extends Friendship.
+Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
 Alice and Bob are persons, Wendy and Will wards; in clause 4 Alice and Bob are possibly one person.
 1. ■ Enter: Alice may create Wendy, and Wendy must consent, provided Alice is a person. Alice chooses Wendy's key pair.
 2. ■ Guardian decisions. Make guardian: Those who decide for Wendy may make Bob a guardian of Wendy, with the consent of Bob, provided Wendy is a ward, Wendy is not retired, Bob is a person, Wendy has Alice as a guardian and Bob counts Alice as a friend. Resign: Bob may end his guardianship of Wendy. End guardian: Those who decide for Wendy, other than Bob, may end Bob's guardianship of Wendy. Guardian unfriend: Bob may end his friendship with his ward Wendy. Wendy may not end a friendship with her guardian.
@@ -36,14 +36,15 @@ After g ends y's guardianship of z: no longer y is a guardian of z and no longer
 After y ends y's friendship with y's ward z: y and z are no longer friends, no longer y is a guardian of z and no longer z has y as a guardian.
 After g ends the friendship of x and y: x and y are no longer friends.
 After g retires z, which requires z is not retired: z is retired, z has no guardians and z has no friends.
-Default: any guardian of z for those who decide for z.
 Interface pragmas
 Guardianships: those Alice is a guardian of.
 Enter: Alice [Enter] <name>
   Wendy: Alice asks to be your guardian.
 Guardian decisions: Decider [Make guardian] <person>
   Bob: Decider asks you to be a guardian of the ward Wendy.
+  Codecider: Decider asks that Bob be a guardian of your ward Wendy.
   Decider [End guardian] <person>
+  Codecider: Decider asks to end Bob's guardianship of your ward Wendy.
   Bob [Resign] [Guardian unfriend]
 Ward and person: Bob [Ward acquaint] <person>
   Wendy: Bob wishes that you know each other.
@@ -64,3 +65,4 @@ Wards: Wendy [Wards acquaint] <person>
   Wendy: Alice asks that you and Will befriend.
   Will: Alice asks that you and Wendy befriend.
 Retire: Decider [Retire]
+  Codecider: Decider asks to retire your ward Wendy.

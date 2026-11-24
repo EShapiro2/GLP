@@ -12,7 +12,7 @@ Liquid Cooperative:0 - | Bob and Carol are persons.
 Liquid Cooperative:1 ■ | Delegating.
 Liquid Cooperative:1 ■ Delegate: delegating(Bob,Orga), delegation(Orga,Bob,Carol) <- participant(Bob,Orga), participant(Carol,Orga), knows(Bob,Carol), ~delegating(Bob,Orga) guarded by Bob.
 Liquid Cooperative:1 ■ Revoke: ~delegating(Bob,Orga), ~delegation(Orga,Bob,Carol) <- delegating(Bob,Orga), delegation(Orga,Bob,Carol) guarded by Bob.
-Liquid Cooperative:2 ■ Count: vote(Orga,Bob,Motion) <- voter(Bob,Orga,Motion), organisation(Orga), proposed(Orga,Motion), delegation(Orga,Bob,Carol), vote(Orga,Carol,Motion), ~vote(Orga,Bob,Motion).
+Liquid Cooperative:2 ■ Count: vote(Orga,Bob,Motion) <- participant(Bob,Orga), voter(Bob,Orga,Motion), organisation(Orga), proposed(Orga,Motion), delegation(Orga,Bob,Carol), vote(Orga,Carol,Motion), ~vote(Orga,Bob,Motion).
 Liquid Cooperative:2 ■ Count expel: vote_expel_orga(Orga,Bob,Orga,Dave) <- voter_expel_orga(Bob,Orga,Orga,Dave), delegation(Orga,Bob,Carol), vote_expel_orga(Orga,Carol,Orga,Dave), ~vote_expel_orga(Orga,Bob,Orga,Dave).
 Liquid Cooperative:2 ■ Count officer expel: vote_officer_expel_orga(Orga,Bob,Orga,Dave) <- voter_officer_expel_orga(Bob,Orga,Orga,Dave), delegation(Orga,Bob,Carol), vote_officer_expel_orga(Orga,Carol,Orga,Dave), ~vote_officer_expel_orga(Orga,Bob,Orga,Dave).
 Liquid Cooperative:2 ■ Count amend: vote_amend_orga(Orga,Bob,Alice,Motion) <- voter_amend_orga(Bob,Orga,Alice,Motion), delegation(Orga,Bob,Carol), vote_amend_orga(Orga,Carol,Alice,Motion), ~vote_amend_orga(Orga,Bob,Alice,Motion).

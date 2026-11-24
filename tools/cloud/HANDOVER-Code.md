@@ -1,3 +1,11 @@
+# Code #37, 2026-11-24 10:45 UTC, after its 1st compaction
+
+- Done: the 91 Calculus contracts adopted on main f26b0da (adopt.py --adopted-check 91/0, --split-check 91/0); renames AI Agents, Community Bank (gcc), Backed Community Bank; go's Community Bank deleted; build.py reads calculus/contracts (local build: 92 contracts, the 91 plus Promoted Community Market, on Udi's list); apps/compile.sh and Section APPS read AI-Agents.  Merged with it: GSC 0898e2a, Currencies e772ed5, GO c41cd4a, vGLP a5a59e2, Calculus 70330f3, sGLP ae2a75c.
+- Open, with owners: the CVA compiler refuses 11 that compiled before (App, Auction, Children, Local Overlay, Second-Score Auction, Separating Distrust, Provenance Groups, Denominated Coins, Denominated Currencies: pragmas.sh does not inherit buttons through weakens, unites, renames, lifts; vGLP) and Coins, Bonds (list pragmas name no predicate; Currencies).  When fixed: merge, run compile.sh of vglp/cva and apps, cascade.sh on those rows.  secure_friendship's play platform (programs/vglp/cva/secure_friendship) is printed by no compile.sh: vGLP's.
+- 20 GO contracts are parametric (Calculus #11 certifies it): no platform until instantiated.
+- Old programs/gai/Agents.glp, gcc/Community.glp, go/Backed-Community.glp and cascade/Agents, Community, Backed-Community still in the tree; vglp/cva and tests may read them; remove once nothing does.
+- The full suite was not run on f26b0da.
+
 # Code #37, 2026-11-24 00:58 UTC (a thread of the project "Grassroots Oversight")
 
 - Merged to main Udi's two rules (8b5a3fa: claude.md, Contracts; claudese.md, 32) and the text check's present-tense construction with its pair in tests.tsv (29bdf37): 18 tests, 0 wrong; 214 of 285 rejected texts caught.  Mailed to_all to reread them.

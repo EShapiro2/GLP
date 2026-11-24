@@ -5,13 +5,13 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Workers-Cooperative.glp beside this file.
 Workers' Cooperative
-Workers' Cooperative instantiates Cooperative with bylaws that delegate no act and extends it.
+Workers' Cooperative extends Cooperative.
 A *workers' cooperative* is a cooperative whose members work for it.
 Bob is a person, Orga a workers' cooperative.
 1. ■ Pay for work: Orga may pay Bob, a member, Dollar-denominated coins for his work.
 2. ■ Distribute: Orga may distribute Dollar-denominated coins it holds to the members equally.
 Logic pragmas
-Workers' Cooperative instantiates Cooperative with bylaws that delegate no act, and extends it.
+Workers' Cooperative extends Cooperative.
 A *workers' cooperative* is a cooperative whose members work for it.
 Alice, Bob and Carol are persons, Orga a workers' cooperative, Iris a party, Dollar a fiat currency, Sum, Votes and Double numbers.
 1. ■ Pay for work: Alice may pay Bob Sum Iris-coins of Orga for Bob's work, provided Alice is a member of Orga, Orga holds the votes of at least Votes persons to pay Bob Sum Iris-coins, Double is Votes times 2, Orga has fewer than Double persons as a participant, Bob is a member of Orga and Bob accepts Sum Dollar-denominated Iris-coins in payment. Vote to pay: Carol may vote to pay Bob Sum Iris-coins of Orga for Bob's work, provided Carol is a member of Orga, Orga has Bob as a participant and Orga holds a Dollar-denominated Iris-coin.

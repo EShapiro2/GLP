@@ -2,7 +2,7 @@ Matching
 Matching extends Gossip.
 Vocabulary: p and q match, for x = match(x,p,q).
 After x forwards p to y, which requires y does not hold the post p from x: y holds the post p from x and y holds the post p.
-Matching:0 - | Posts have a *test*, a parameter of Matching, whether two *match*.
+Matching:0 - | Posts have a *test*, whether two *match*.
 Matching:0 - | Alice, Bob and Carol are persons, Post and Other posts.
 Matching:0 - | Environment: p and q match, for x.
 Matching:1 ■ Return: post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob).

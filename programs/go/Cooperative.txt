@@ -5,11 +5,11 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Cooperative.glp beside this file.
 Cooperative
-Cooperative extends Constitution and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-A *cooperative* is a constitutional democratic community whose bylaws name one more role, *board member*; the members decide by a majority of the members, one member one vote, but for the acts the bylaws delegate to the board or to another role.
+Cooperative unites Constitution and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A *cooperative* is a constitutional democratic community whose bylaws name one more role, *board member*.
 Logic pragmas
-Cooperative extends Constitution and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
-A *cooperative* is a constitutional democratic community whose bylaws name one more role, *board member*; the members decide by a majority of the members, one member one vote, but for the acts the bylaws delegate to the board or to another role.
+Cooperative unites Constitution and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A *cooperative* is a constitutional democratic community whose bylaws name one more role, *board member*.
 Interface pragmas
 Look: 🌱, sharing
 Issue: AliceOfficer [Issue for Alice] <denomination> <amount> <votes>

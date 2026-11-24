@@ -86,6 +86,10 @@ knows
 \mathit{\detokenize{
 identity
 }}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Alice
@@ -93,6 +97,10 @@ identity
  \text{ and } 
 \mathit{\detokenize{
 identity
+}}
+,
+\mathit{\detokenize{
+person
 }}
  \in c_
 {
@@ -126,7 +134,7 @@ c_
 knows
 }}
 (
-Carol
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -139,11 +147,25 @@ c_
 {
 \Bob
 }
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
 \mathit{\detokenize{
 identity
+}}
+,
+\mathit{\detokenize{
+person
 }}
 ,
 \mathit{\detokenize{
@@ -162,6 +184,10 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
@@ -172,11 +198,23 @@ knows
 knows
 }}
 (
-Carol
+\mathit{Carol}
 )
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
 }
 ,\\
 &
@@ -204,9 +242,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Alice
+,
+Type
 )
 \}
 ,\\
@@ -219,62 +261,6 @@ identity
 {
 \Alice
 }
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-issue_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-Sum
-\cdot
-\mathit{\detokenize{
-bond
-}}
-(
-\Alice
-,
-Day
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-today
-}}
-(
-Today
-)
- \in c_
-{
-\Alice
-}
-,\\
-&
-\text{provided } 
-Day
->
-Today
 ,\\
 &
 \text{guarded by } \{
@@ -299,141 +285,13 @@ c'_
 \{
 Sum
 \cdot
-\text{\textcent}
-(
-Carol
-)
-\}
-) \uplus 
-\{
-Total
-\cdot
-\text{\textcent}
-(
-Dave
-)
-,
 \mathit{\detokenize{
-knows
-}}
-(
-Dave
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-Total
-\cdot
-\text{\textcent}
-(
-Dave
-)
-\}
-) \uplus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-,
-\mathit{\detokenize{
-knows
+note
 }}
 (
 Carol
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{\detokenize{
-identity
-}}
 ,
-\mathit{\detokenize{
-knows
-}}
-(
-\Bob
-)
-,
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\{
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-knows
-}}
-(
-\Alice
-)
-,
-Total
-\cdot
-\text{\textcent}
-(
-Dave
-)
-\}
- \subseteq c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-swap_coin_for_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
+Type
 )
 \}
 ) \uplus 
@@ -441,12 +299,12 @@ Carol
 Total
 \cdot
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Dave
 ,
-Day
+Other
 )
 ,
 \mathit{\detokenize{
@@ -471,160 +329,12 @@ c'_
 Total
 \cdot
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Dave
 ,
-Day
-)
-\}
-) \uplus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-,
-\mathit{\detokenize{
-knows
-}}
-(
-Carol
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-knows
-}}
-(
-\Bob
-)
-,
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\{
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-knows
-}}
-(
-\Alice
-)
-,
-Total
-\cdot
-\mathit{\detokenize{
-bond
-}}
-(
-Dave
-,
-Day
-)
-\}
- \subseteq c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-swap_bonds
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\mathit{\detokenize{
-bond
-}}
-(
-Carol
-,
-Day
-)
-\}
-) \uplus 
-\{
-Total
-\cdot
-\mathit{\detokenize{
-bond
-}}
-(
-Dave
-,
-Term
-)
-,
-\mathit{\detokenize{
-knows
-}}
-(
-Dave
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-Total
-\cdot
-\mathit{\detokenize{
-bond
-}}
-(
-Dave
-,
-Term
+Other
 )
 \}
 ) \uplus 
@@ -632,12 +342,12 @@ Term
 Sum
 \cdot
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Carol
 ,
-Day
+Type
 )
 ,
 \mathit{\detokenize{
@@ -665,12 +375,12 @@ knows
 Sum
 \cdot
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Carol
 ,
-Day
+Type
 )
 \}
  \subseteq c_
@@ -693,12 +403,12 @@ knows
 Total
 \cdot
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Dave
 ,
-Term
+Other
 )
 \}
  \subseteq c_
@@ -731,9 +441,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
 )
 \}
 , \qquad 
@@ -750,9 +464,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
 )
 ,
 \mathit{\detokenize{
@@ -779,9 +497,13 @@ knows
 ,
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
 )
 \}
  \subseteq c_
@@ -822,95 +544,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
-(
-\Bob
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-\Bob
-)
-\}
-,\\
-&
-\text{provided } 
-\{
 \mathit{\detokenize{
-identity
+note
 }}
+(
+\Bob
 ,
-\mathit{\detokenize{
-knows
-}}
-(
-\Bob
-)
-,
-Sum
-\cdot
-\text{\textcent}
-(
-\Bob
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{\detokenize{
-identity
-}}
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-pay_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\mathit{\detokenize{
-bond
-}}
-(
-Carol
-,
-Day
+Type
 )
 \}
 , \qquad 
@@ -928,19 +568,12 @@ c_
 Sum
 \cdot
 \mathit{\detokenize{
-bond
+note
 }}
 (
-Carol
+\Bob
 ,
-Day
-)
-,
-\mathit{\detokenize{
-knows
-}}
-(
-Carol
+Type
 )
 \}
 ,\\
@@ -961,12 +594,12 @@ knows
 Sum
 \cdot
 \mathit{\detokenize{
-bond
+note
 }}
 (
-Carol
+\Bob
 ,
-Day
+Type
 )
 \}
  \subseteq c_
@@ -985,8 +618,6 @@ identity
 &
 \text{guarded by } \{
 \Alice
-,
-\Bob
 \}
 \end{align*}
 \iffalse
@@ -1007,9 +638,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
 )
 \}
 , \qquad 
@@ -1027,122 +662,12 @@ c_
 Sum
 \cdot
 \mathit{\detokenize{
-escrow_coin
+escrow_note
 }}
 (
 Dave
 ,
-\Alice
-,
-Bob
-,
-Cond
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-knows
-}}
-(
-\Bob
-)
-,
-\mathit{\detokenize{
-knows
-}}
-(
-Bob
-)
-,
-Sum
-\cdot
-\text{\textcent}
-(
-Dave
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-knows
-}}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-deposit_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\mathit{\detokenize{
-bond
-}}
-(
-Dave
-,
-Day
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\mathit{\detokenize{
-escrow_bond
-}}
-(
-Dave
-,
-Day
+Type
 ,
 \Alice
 ,
@@ -1176,12 +701,12 @@ Bob
 Sum
 \cdot
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Dave
 ,
-Day
+Type
 )
 \}
  \subseteq c_
@@ -1230,10 +755,12 @@ c_
 Sum
 \cdot
 \mathit{\detokenize{
-escrow_coin
+escrow_note
 }}
 (
 Dave
+,
+Type
 ,
 Alice
 ,
@@ -1256,9 +783,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
 )
 ,
 \mathit{\detokenize{
@@ -1286,132 +817,12 @@ knows
 Sum
 \cdot
 \mathit{\detokenize{
-escrow_coin
+escrow_note
 }}
 (
 Dave
 ,
-Alice
-,
-\Bob
-,
-Cond
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-knows
-}}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-release_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\mathit{\detokenize{
-escrow_bond
-}}
-(
-Dave
-,
-Day
-,
-Alice
-,
-\Bob
-,
-Cond
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\mathit{\detokenize{
-bond
-}}
-(
-Dave
-,
-Day
-)
-,
-\mathit{\detokenize{
-knows
-}}
-(
-Dave
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-knows
-}}
-(
-\Bob
-)
-,
-Sum
-\cdot
-\mathit{\detokenize{
-escrow_bond
-}}
-(
-Dave
-,
-Day
+Type
 ,
 Alice
 ,
@@ -1466,10 +877,12 @@ c_
 Sum
 \cdot
 \mathit{\detokenize{
-escrow_coin
+escrow_note
 }}
 (
 Dave
+,
+Type
 ,
 \Bob
 ,
@@ -1492,9 +905,13 @@ c_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
 )
 ,
 \mathit{\detokenize{
@@ -1522,132 +939,12 @@ knows
 Sum
 \cdot
 \mathit{\detokenize{
-escrow_coin
+escrow_note
 }}
 (
 Dave
 ,
-\Bob
-,
-Bob
-,
-Cond
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-knows
-}}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-return_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\mathit{\detokenize{
-escrow_bond
-}}
-(
-Dave
-,
-Day
-,
-\Bob
-,
-Bob
-,
-Cond
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\mathit{\detokenize{
-bond
-}}
-(
-Dave
-,
-Day
-)
-,
-\mathit{\detokenize{
-knows
-}}
-(
-Dave
-)
-\}
-,\\
-&
-\text{provided } 
-\{
-\mathit{\detokenize{
-identity
-}}
-,
-\mathit{\detokenize{
-knows
-}}
-(
-\Bob
-)
-,
-Sum
-\cdot
-\mathit{\detokenize{
-escrow_bond
-}}
-(
-Dave
-,
-Day
+Type
 ,
 \Bob
 ,
@@ -1699,16 +996,24 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
 )
 \}
 ) \uplus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
 )
 ,
 \mathit{\detokenize{
@@ -1730,16 +1035,24 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
 )
 \}
 ) \uplus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
 )
 \}
 ,\\
@@ -1756,9 +1069,13 @@ knows
 \Bob
 )
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
 )
  \in c_
 {
@@ -1769,9 +1086,13 @@ knows
 identity
 }}
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
 )
  \in c_
 {
@@ -1799,20 +1120,24 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
 )
 \}
 ) \uplus 
 \{
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Carol
 ,
-Day
+bond(Day)
 )
 ,
 \mathit{\detokenize{
@@ -1835,19 +1160,23 @@ c'_
  \setminus 
 \{
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Carol
 ,
-Day
+bond(Day)
 )
 \}
 ) \uplus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
 )
 \}
 ,\\
@@ -1864,9 +1193,13 @@ knows
 \Bob
 )
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
 )
  \in c_
 {
@@ -1878,12 +1211,12 @@ identity
 }}
 ,
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Carol
 ,
-Day
+bond(Day)
 )
  \in c_
 {
@@ -1912,19 +1245,23 @@ c'_
  \setminus 
 \{
 \mathit{\detokenize{
-bond
+note
 }}
 (
 \Bob
 ,
-Day
+bond(Day)
 )
 \}
 ) \uplus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
 )
 ,
 \mathit{\detokenize{
@@ -1946,20 +1283,24 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
 )
 \}
 ) \uplus 
 \{
 \mathit{\detokenize{
-bond
+note
 }}
 (
 \Bob
 ,
-Day
+bond(Day)
 )
 \}
 ,\\
@@ -1977,12 +1318,12 @@ knows
 )
 ,
 \mathit{\detokenize{
-bond
+note
 }}
 (
 \Bob
 ,
-Day
+bond(Day)
 )
  \in c_
 {
@@ -2000,9 +1341,13 @@ today
 Today
 )
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
 )
  \in c_
 {
@@ -2037,23 +1382,23 @@ c'_
  \setminus 
 \{
 \mathit{\detokenize{
-bond
+note
 }}
 (
 \Bob
 ,
-Day
+bond(Day)
 )
 \}
 ) \uplus 
 \{
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Carol
 ,
-Term
+bond(Term)
 )
 ,
 \mathit{\detokenize{
@@ -2076,23 +1421,23 @@ c'_
  \setminus 
 \{
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Carol
 ,
-Term
+bond(Term)
 )
 \}
 ) \uplus 
 \{
 \mathit{\detokenize{
-bond
+note
 }}
 (
 \Bob
 ,
-Day
+bond(Day)
 )
 \}
 ,\\
@@ -2110,12 +1455,12 @@ knows
 )
 ,
 \mathit{\detokenize{
-bond
+note
 }}
 (
 \Bob
 ,
-Day
+bond(Day)
 )
  \in c_
 {
@@ -2134,12 +1479,12 @@ Today
 )
 ,
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Carol
 ,
-Term
+bond(Term)
 )
  \in c_
 {
@@ -3883,9 +3228,13 @@ Item
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+coin
 )
 \}
 , \qquad 
@@ -3902,9 +3251,13 @@ c'_
 \{
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+coin
 )
 \}
 ) \uplus 
@@ -3955,9 +3308,13 @@ knows
 ,
 Sum
 \cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+coin
 )
 \}
  \subseteq c_
@@ -4000,12 +3357,12 @@ Item
 Sum
 \cdot
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Dave
 ,
-Day
+bond(Day)
 )
 \}
 , \qquad 
@@ -4023,12 +3380,12 @@ c'_
 Sum
 \cdot
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Dave
 ,
-Day
+bond(Day)
 )
 \}
 ) \uplus 
@@ -4080,12 +3437,12 @@ knows
 Sum
 \cdot
 \mathit{\detokenize{
-bond
+note
 }}
 (
 Dave
 ,
-Day
+bond(Day)
 )
 \}
  \subseteq c_

@@ -391,7 +391,8 @@ for n in compiled:
 # since 2026-11-16.  calculus/STATE.txt, where there is one, has a line for each
 # contract: its name, its owner, and yes or no for certified by GLP's checker,
 # compiled to GLP, and adopted by its owner.
-CALC = os.environ.get('CALCULUS_DIR') or os.path.join(GLP, 'calculus')
+# Since 2026-11-24 the Calculus keeps each contract in calculus/contracts/NAME/ (Code #37).
+CALC = os.environ.get('CALCULUS_DIR') or next((d for d in (os.path.join(GLP, 'calculus', 'contracts'), os.path.join(GLP, 'calculus')) if os.path.exists(os.path.join(d, 'STATE.txt'))), os.path.join(GLP, 'calculus', 'contracts'))
 calc_state = {}
 if os.path.exists(os.path.join(CALC, 'STATE.txt')):
     for l in read(os.path.join(CALC, 'STATE.txt')).split('\n'):

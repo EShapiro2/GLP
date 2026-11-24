@@ -49,7 +49,7 @@ Posting: Carol [Offer] [Want] <description>
   Alice [Offer own] [Want own] <description>
 Withdraw: Carol [Withdraw] <keeper> <item> <market>
   Alice [Withdraw own]
-Swap, Escrow: Alice [Swap item for coin] <issuer wanted> <amount wanted> [Swap item for bond] <issuer wanted> <maturity wanted> <amount wanted> [Swap items] <item wanted>
+Swap, Escrow: Alice [Swap item for coin] <issuer wanted> <amount wanted> [Swap item for bond] <issuer wanted> <amount wanted> [Swap items] <item wanted>
   Bob: Alice asks to swap an item with you.
   Alice [Deposit item] <condition>
   Carol: Alice asks to deposit an item with you.

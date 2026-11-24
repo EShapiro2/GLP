@@ -1,3 +1,2 @@
-Mutual Credit instantiates Bank: holds
+Mutual Credit extends Bank: holds
 Mutual Credit restricts it (Bank): holds
-Mutual Credit extends it (Bank): holds
