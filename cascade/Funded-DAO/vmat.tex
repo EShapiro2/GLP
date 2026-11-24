@@ -12,7 +12,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 identity
@@ -52,7 +52,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -71,7 +71,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -128,7 +128,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -238,7 +238,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 steward
@@ -308,7 +308,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 member
@@ -329,7 +329,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 listed
@@ -409,7 +409,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 proposed
@@ -432,7 +432,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 proposal
@@ -512,7 +512,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 proposed
@@ -595,7 +595,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 delivered
@@ -618,7 +618,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 proposal
@@ -707,7 +707,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 voted
@@ -728,7 +728,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_for
@@ -832,7 +832,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 voted
@@ -936,7 +936,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 voted
@@ -957,7 +957,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_against
@@ -1061,7 +1061,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 voted
@@ -1165,7 +1165,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 delivered_vote
@@ -1190,7 +1190,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_for
@@ -1285,7 +1285,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 delivered_vote
@@ -1310,7 +1310,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote_against
@@ -1405,7 +1405,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 decided
@@ -1530,7 +1530,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 decided
@@ -1655,7 +1655,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 delivered_decision
@@ -1678,7 +1678,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 passed
@@ -1767,7 +1767,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 delivered_decision
@@ -1790,7 +1790,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 rejected
@@ -1879,10 +1879,8 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -1890,6 +1888,8 @@ note
 \Alice
 ,
 Type
+,
+SumSet
 )
 \}
 ,\\
@@ -1902,6 +1902,14 @@ identity
 {
 \Alice
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -1924,8 +1932,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -1933,12 +1939,12 @@ note
 Carol
 ,
 Type
+,
+SumSet
 )
 \}
-) \uplus 
+) \cup 
 \{
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -1946,6 +1952,8 @@ note
 Dave
 ,
 Other
+,
+TotalSet
 )
 ,
 \mathit{\detokenize{
@@ -1967,8 +1975,6 @@ c'_
 }
  \setminus 
 \{
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -1976,12 +1982,12 @@ note
 Dave
 ,
 Other
+,
+TotalSet
 )
 \}
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -1989,6 +1995,8 @@ note
 Carol
 ,
 Type
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -2001,7 +2009,6 @@ Carol
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -2013,8 +2020,6 @@ knows
 \Bob
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2022,14 +2027,14 @@ note
 Carol
 ,
 Type
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -2041,8 +2046,6 @@ knows
 \Alice
 )
 ,
-Total
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2050,12 +2053,27 @@ note
 Dave
 ,
 Other
+,
+TotalSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+\land
+|
+TotalSet
+|
+=
+Total
 ,\\
 &
 \text{guarded by } \{
@@ -2080,8 +2098,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2089,6 +2105,8 @@ note
 Carol
 ,
 Type
+,
+SumSet
 )
 \}
 , \qquad 
@@ -2101,10 +2119,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2112,6 +2128,8 @@ note
 Carol
 ,
 Type
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -2124,7 +2142,6 @@ Carol
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -2136,8 +2153,6 @@ knows
 \Bob
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2145,9 +2160,10 @@ note
 Carol
 ,
 Type
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -2159,6 +2175,14 @@ identity
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -2183,8 +2207,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2192,6 +2214,8 @@ note
 \Bob
 ,
 Type
+,
+SumSet
 )
 \}
 , \qquad 
@@ -2204,10 +2228,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2215,12 +2237,13 @@ note
 \Bob
 ,
 Type
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -2232,8 +2255,6 @@ knows
 \Bob
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2241,9 +2262,10 @@ note
 \Bob
 ,
 Type
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -2255,6 +2277,14 @@ identity
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -2277,8 +2307,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2286,6 +2314,8 @@ note
 Dave
 ,
 Type
+,
+SumSet
 )
 \}
 , \qquad 
@@ -2298,10 +2328,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -2315,12 +2343,13 @@ Type
 Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -2339,8 +2368,6 @@ knows
 Bob
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2348,9 +2375,10 @@ note
 Dave
 ,
 Type
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -2369,6 +2397,14 @@ knows
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -2393,8 +2429,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -2408,6 +2442,8 @@ Alice
 \Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 , \qquad 
@@ -2420,10 +2456,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2431,6 +2465,8 @@ note
 Dave
 ,
 Type
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -2443,7 +2479,6 @@ Dave
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -2455,8 +2490,6 @@ knows
 \Bob
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -2470,9 +2503,10 @@ Alice
 \Bob
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -2491,6 +2525,14 @@ knows
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -2515,8 +2557,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -2530,6 +2570,8 @@ Type
 Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 , \qquad 
@@ -2542,10 +2584,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2553,6 +2593,8 @@ note
 Dave
 ,
 Type
+,
+SumSet
 )
 ,
 \mathit{\detokenize{
@@ -2565,7 +2607,6 @@ Dave
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -2577,8 +2618,6 @@ knows
 \Bob
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 escrow_note
 }}
@@ -2592,9 +2631,10 @@ Type
 Bob
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -2613,6 +2653,14 @@ knows
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -2646,7 +2694,7 @@ note
 coin
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -2685,7 +2733,7 @@ Carol
 coin
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 note
@@ -2761,8 +2809,6 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2770,6 +2816,8 @@ note
 Dave
 ,
 coin
+,
+SumSet
 )
 \}
 , \qquad 
@@ -2782,10 +2830,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 dao_coin
 }}
@@ -2793,12 +2839,13 @@ dao_coin
 Dave
 ,
 Delos
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -2812,8 +2859,6 @@ Delos
 \Bob
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2821,9 +2866,10 @@ note
 Dave
 ,
 coin
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -2842,6 +2888,14 @@ Delos
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -2864,8 +2918,6 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 dao_coin
 }}
@@ -2873,9 +2925,11 @@ dao_coin
 Dave
 ,
 Delos
+,
+SumSet
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 granted
@@ -2896,10 +2950,8 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
 \mathit{\detokenize{
 note
 }}
@@ -2907,12 +2959,13 @@ note
 Dave
 ,
 coin
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
 \mathit{\detokenize{
 identity
 }}
@@ -2933,8 +2986,6 @@ Prop
 Delos
 )
 ,
-Sum
-\cdot
 \mathit{\detokenize{
 dao_coin
 }}
@@ -2942,9 +2993,10 @@ dao_coin
 Dave
 ,
 Delos
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
@@ -2982,6 +3034,14 @@ Delos
 {
 \Alice
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
