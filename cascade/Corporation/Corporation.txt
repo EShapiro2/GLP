@@ -16,8 +16,6 @@ Issue: AliceOfficer [Issue for Alice] <denomination> <amount> <votes>
   Voter [Vote of Alice for Issue] <amount>
   AliceOfficer [First issue for Alice] <amount> <denomination> <votes>
   Voter [Vote of Alice for First issue] <amount> <denomination>
-Issue bond: AliceOfficer [Issue bond for Alice] <maturity> <denomination> <amount> <votes>
-  Voter [Vote of Alice for Issue bond] <amount> <maturity>
 Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <denomination> <amount given> <amount wanted> <votes>
   Bob: AliceOfficer asks to swap coins of the organisation Alice with you.
   Voter [Vote of Alice for Swap] <with> <amount given> <issuer given> <amount wanted> <issuer wanted>
