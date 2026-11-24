@@ -1326,6 +1326,8 @@ wild_made(item, _, _, any, []).
 wild_made(const, head, N, num(N?), [const(N?)]) :- ground(N?) | true.
 wild_made(const, bound, _, any, []).
 wild_made(wild, _, _, any, []).
+%% A union of kinds is only in the signatures the type Atom is printed from (merge_sigs); the clause covers the type.
+wild_made(u(_), _, _, any, []).
 %% The conjuncts: one binding a listed role, conjunct([role(I)], ...), with its anchor as it is (3), and the anchors of its condition (2); any other with its anchor's wildcards among the variables it binds.
 procedure wild_conjs(Conjuncts?, Sigs?, Integer?, Conjuncts, Integer, Args).
 wild_conjs([], _, K, [], K?, []).
@@ -2203,7 +2205,7 @@ reader_vals([K|Ks], I, [W?|Ws?]) :- ground(K?), integer(I?) |
 
 %% The type of the machine states, List(Atom), in the type of the views, Output ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) in the shared text (vGLP 12f629d, Section 5.4, "The compilation": "the compilation defines Output as the type of the views", a view carrying "its own key k, the machine state s of its app state, the persons K it knows and the approvals A its person made that are pending"): a machine state is a multiset of the contract's atoms, written as a list, and Atom is the union of the contract's predicates at their argument types: an argument is of the type Peer, a person, where the schemas write a role, a party variable or a name term, and of the type Speech, a speech act, where they write a speech-act variable or a signed term; Atom has one alternative for each predicate and argument types the schemas write it with, in order of first occurrence.  The agent holds an atom as g(Name, Vals), each value p(Peer) or s(Speech), and writes it on the output as the contract writes it: atom_of(g(friend, [p(V1)]), shown(friend(V1?))), one clause per alternative.
 %% wild is the kind of a wildcard's place before it takes the type another atom of the contract gives that place (wild_sigs).
-Kind  ::= peer ; speech ; name ; num ; real ; item ; const ; wild.
+Kind  ::= peer ; speech ; name ; num ; real ; item ; const ; wild ; u(Kinds).
 Kinds ::= [] ; [Kind | Kinds].
 Sig   ::= sig(Constant, Kinds).
 Sigs  ::= [] ; [Sig | Sigs].
@@ -2253,9 +2255,101 @@ drop_today([sig(today, _)|Gs], Gs1?) :- drop_today(Gs?, Gs1).
 drop_today([G|Gs], [G?|Gs1?]) :- otherwise | drop_today(Gs?, Gs1).
 procedure atom_parts1(Sigs?, Lines).
 atom_parts1(Gs, L?) :- ground(Gs?) |
-    atom_alts(Gs?, La),
+    merge_sigs(Gs?, [], Gm),
     atom_of_lines(Gs?, Lo),
-    lapp(La?, ['', 'procedure atom_of(GAtom?, Shown).'|Lo?], L).
+    atom_parts2(Gm?, Lo?, L).
+procedure atom_parts2(Sigs?, Lines?, Lines).
+atom_parts2(Gm, Lo, L?) :- ground(Gm?) |
+    atom_alts(Gm?, La),
+    union_lines(Gm?, Lu),
+    lapp(Lu?, ['', 'procedure atom_of(GAtom?, Shown).'|Lo?], L1),
+    lapp(La?, L1?, L).
+%% The type Atom has one alternative of each predicate and arity (TGLP: the alternatives of a union have distinct functors): two signatures of one predicate and arity whose kinds differ at a place are one, the place of the join of the two kinds, as Agora's posted, whose first place is an item a member holds, a speech act, in Offer, and something they want, a constant, in Want (Calculus #11, vGLP_inbox.md, 2026-11-24 16:56 UTC); the agent keeps one atom_of clause for each signature, its values wrapped by their kinds.
+procedure merge_sigs(Sigs?, Sigs?, Sigs).
+merge_sigs([], Acc, Acc?).
+merge_sigs([G|Gs], Acc, R?) :- merge_in(G?, Acc?, Acc1), merge_sigs(Gs?, Acc1?, R).
+procedure merge_in(Sig?, Sigs?, Sigs).
+merge_in(G, [], [G?]).
+merge_in(sig(F, Ks), [sig(F1, Js)|Gs], R?) :- F? =?= F1?, ground(F?), ground(Ks?), ground(Js?) |
+    same_len(Ks?, Js?, B),
+    merge_at(B?, F?, Ks?, Js?, Gs?, R).
+merge_in(G, [H|Gs], [H?|R?]) :- otherwise | merge_in(G?, Gs?, R).
+procedure merge_at(YesNo?, Constant?, Kinds?, Kinds?, Sigs?, Sigs).
+merge_at(yes, F, Ks, Js, Gs, [sig(F?, Ls?)|Gs?]) :- join_kinds(Js?, Ks?, Ls).
+merge_at(no, F, Ks, Js, Gs, [sig(F?, Js?)|R?]) :- merge_in(sig(F?, Ks?), Gs?, R).
+procedure join_kinds(Kinds?, Kinds?, Kinds).
+join_kinds([], _, []).
+join_kinds([J|Js], [K|Ks], [L?|Ls?]) :- kind_join(J?, K?, L), join_kinds(Js?, Ks?, Ls).
+join_kinds([_|_], [], []).
+%% The join of two kinds: the kind itself where they are one; else the kinds of both, less each one another of them holds, a person, a whole number and a real being constants and a speech act an utterance, Peer ::= Key, Key ::= String and Utterance ::= ... ; Speech; one kind left being the join, and several their union u(Ks), in the order peer, speech, item, name, num, real, const.
+procedure kind_join(Kind?, Kind?, Kind).
+kind_join(J, K, J?) :- J? =?= K? | true.
+kind_join(J, K, L?) :- otherwise, ground(J?), ground(K?) |
+    kind_base(J?, B1),
+    kind_base(K?, B2),
+    app(B1?, B2?, B),
+    kinds_kept([peer, speech, item, name, num, real, const], B?, Us),
+    kind_of_union(Us?, L).
+procedure kind_base(Kind?, Kinds).
+kind_base(u(Ks), Ks?).
+kind_base(K, [K?]) :- otherwise | true.
+procedure kinds_kept(Kinds?, Kinds?, Kinds).
+kinds_kept([], _, []).
+kinds_kept([K|Ks], B, R?) :- ground(K?), ground(B?) |
+    kind_in(K?, B?, In),
+    kind_held(K?, B?, Held),
+    kind_keep(In?, Held?, K?, Ks?, B?, R).
+procedure kind_keep(YesNo?, YesNo?, Kind?, Kinds?, Kinds?, Kinds).
+kind_keep(yes, no, K, Ks, B, [K?|R?]) :- kinds_kept(Ks?, B?, R).
+kind_keep(yes, yes, _, Ks, B, R?) :- kinds_kept(Ks?, B?, R).
+kind_keep(no, _, _, Ks, B, R?) :- kinds_kept(Ks?, B?, R).
+procedure kind_in(Kind?, Kinds?, YesNo).
+kind_in(_, [], no).
+kind_in(K, [J|_], yes) :- K? =?= J? | true.
+kind_in(K, [_|Js], B?) :- otherwise | kind_in(K?, Js?, B).
+%% Whether another kind of B holds the kind K.
+procedure kind_held(Kind?, Kinds?, YesNo).
+kind_held(peer, B, H?) :- kind_in(const, B?, H).
+kind_held(num, B, H?) :- kind_in(const, B?, H).
+kind_held(real, B, H?) :- kind_in(const, B?, H).
+kind_held(speech, B, H?) :- kind_in(item, B?, H).
+kind_held(_, _, no) :- otherwise | true.
+procedure kind_of_union(Kinds?, Kind).
+kind_of_union([K], K?).
+kind_of_union(Ks, u(Ks?)) :- otherwise | true.
+%% The union types the signatures name, one line each, Name ::= T1 ; T2 ..., the name their types' names joined by Or, as SpeechOrConstant ::= Speech ; Constant.
+procedure union_lines(Sigs?, Lines).
+union_lines(Gs, L?) :- ground(Gs?) |
+    sigs_unions(Gs?, Us0),
+    dedup(Us0?, Us),
+    union_defs(Us?, L).
+procedure sigs_unions(Sigs?, Kinds).
+sigs_unions([], []).
+sigs_unions([sig(_, Ks)|Gs], R?) :- kinds_unions(Ks?, U1), sigs_unions(Gs?, U2), app(U1?, U2?, R).
+procedure kinds_unions(Kinds?, Kinds).
+kinds_unions([], []).
+kinds_unions([u(Ks)|Js], [u(Ks?)|R?]) :- kinds_unions(Js?, R).
+kinds_unions([_|Js], R?) :- otherwise | kinds_unions(Js?, R).
+procedure union_defs(Kinds?, Lines).
+union_defs([], []).
+union_defs([u(Ks)|Us], ['', D?|L?]) :- ground(Ks?) |
+    kind_types(Ks?, Ts),
+    union_def(Ts?, D),
+    union_defs(Us?, L).
+union_defs([_|Us], L?) :- otherwise | union_defs(Us?, L).
+procedure union_def(Strings?, String).
+union_def(Ts, D?) :- ground(Ts?) |
+    union_name(Ts?, N),
+    union_body(Ts?, Bd),
+    string_concat([N?, ' ::= ', Bd?, '.'], D).
+procedure union_name(Strings?, String).
+union_name([], '').
+union_name([T], T?).
+union_name([T|Ts], N?) :- otherwise | union_name(Ts?, N1), string_concat([T?, 'Or', N1?], N).
+procedure union_body(Strings?, String).
+union_body([], '').
+union_body([T], T?).
+union_body([T|Ts], B?) :- otherwise | union_body(Ts?, B1), string_concat([T?, ' ; ', B1?], B).
 %% The atoms of the schemas' constraints and safe formulas, the anchors of their quantifiers, counts and sums among them: an atom a schema reads only there, as an environment predicate's, is an atom of a state (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications").
 procedure nt_atoms(NumInfos?, Atoms).
 nt_atoms([], []).
@@ -2388,6 +2482,7 @@ kind_types([num|Ks], ['Integer'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([real|Ks], ['Real'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([item|Ks], ['Utterance'|Ts?]) :- kind_types(Ks?, Ts).
 kind_types([const|Ks], ['Constant'|Ts?]) :- kind_types(Ks?, Ts).
+kind_types([u(Us)|Ks], [N?|Ts?]) :- kind_types(Us?, Us1), union_name(Us1?, N), kind_types(Ks?, Ts).
 %% No signature printed has a place wild (unwild); the clause covers the type.
 kind_types([wild|Ks], Ts?) :- kind_types(Ks?, Ts).
 %% atom_of(g(f, [p(V1), s(V2)]), shown(f(V1?, V2?))), one clause per alternative of Atom, and a last clause on any other atom, which covers the type GAtom and is never reached: the agent holds only atoms the contract's schemas add.
@@ -2424,6 +2519,8 @@ kind_val(item, N, W?) :- call_text(i, [N?], W).
 kind_val(const, N, W?) :- call_text(v, [N?], W).
 %% No signature printed has a place wild (unwild); the clause covers the type.
 kind_val(wild, N, N?).
+%% A union of kinds is only in the signatures the type Atom is printed from (merge_sigs); the clause covers the type.
+kind_val(u(_), N, N?).
 
 %% binding_of(s(V1, ..., Vn), s, [b(Var1, p(V1?)), ...]), and, for each variable local to a role, agent, speech-act or numeric, b(pvar(X), lv(s, X)), b(svar(X), lv(s, X)) or b(num(X), lv(s, X)): the schema-binding does not bind it, and its value in the binding stands for the variable, which the state of the person in its role binds (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state"; the shared text, dom_bindings).
 procedure binding_lines(Contract?, NumInfos?, Lines).

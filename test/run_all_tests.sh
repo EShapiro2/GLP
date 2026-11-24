@@ -6662,6 +6662,30 @@ check "CVA once: ... and not the state without it" "K2 = no\$" "$cva_once"
 check "CVA once: the control, rank2(alice, 7), deleting bid(7), takes the state with one bid(7)" "K3 = yes\$" "$cva_once"
 check "CVA once: ... and not the state without it" "K4 = no\$" "$cva_once"
 
+# The type Atom has one alternative of each predicate and arity (TGLP: the alternatives of a union have distinct functors): a place one atom writes as a speech act and another as a constant is of their union, SpeechOrConstant ::= Speech ; Constant, as Agora's posted, an item a member offers or a constant they want (Calculus #11, vGLP_inbox.md, 2026-11-24 16:56 UTC; cvac.glp, merge_sigs); the agent keeps an atom_of clause for each (joins).
+cva_joins_dir="$GLP_DIR/programs/tests/vg_joins_$$"
+mkdir -p "$cva_joins_dir"
+cva_joins_out=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(joins, [schema(offer, [svar(i)], [rs(guarded, [atom(posted, [svar(i)])], [], [], [])]), schema(want, [const(w)], [rs(guarded, [atom(posted, [num(w)])], [], [], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"Posts"', [posted])], [act(offer, '"Offer"', [], none, '"Posts"', by([1])), act(want, '"Want"', [], none, '"Posts"', by([1]))])).
+:quit
+HEREDOC
+2>&1)
+printf '%s\n' "$cva_joins_out" | sed -e 's/^\(GLP> \)*//' | awk '$0 == "%% compile begin" { on = 1; next } $0 == "%% compile end" && on { on = 0; next } on { print }' > "$cva_joins_dir/platform.vglp"
+cva_joins=$("$REPL_RUN" <<HEREDOC
+:emit $cva_joins_dir
+load $cva_joins_dir/platform.glp
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_joins_dir"
+check "CVA joins: one alternative of posted, its place of the union (joins)" "^posted(SpeechOrConstant)$" "$cva_joins_out"
+check "CVA joins: ... the union printed (joins)" "^SpeechOrConstant ::= Speech ; Constant\.$" "$cva_joins_out"
+check "CVA joins: ... an atom_of clause for the speech act (joins)" "^atom_of(g(posted, \[s(V1)\]), shown(posted(V1?)))$" "$cva_joins_out"
+check "CVA joins: ... and for the constant (joins)" "^atom_of(g(posted, \[v(V1)\]), shown(posted(V1?)))$" "$cva_joins_out"
+check "CVA joins: the platform emitted and loaded, its types checked (joins)" "Loaded: .*vg_joins_.*platform.glp" "$cva_joins"
+
 # A set variable, set(N) of a type Set(A) (GSC, the appendix on values, Definitions "Schema with values" and "Binding with values"; the Calculus's record, items 49 to 51): the request names its elements, a list of constants, the schema-binding binds it to st(Cs), an atom with it stands for one atom per element, and size(N) is the number of its elements.  The contract is GSC's own test of payments of notes (programs/gsc/test_gsc.sh, "set variables"), as GSC's reader reads it.
 cva_sets_out=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/vglp/cva/compiler/
