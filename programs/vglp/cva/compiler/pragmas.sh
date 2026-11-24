@@ -238,7 +238,9 @@ sub find_schemas {
                         listed => ((defined $kind && ($kind->[0] eq "listed" || $kind->[0] eq "qlisted")) ? 1 : 0),
                         comps => [ map { [ map { [ $_->[1][0][0], $_->[1][1][1] ] } @{ $_->[1] } ] } @c ],
                         # The same lists as parsed terms, an atom with a multiplicity, times(K, A), read as its atom A, its multiplicity K not an argument of it (GSC, Appendix "Numbers": "a multiplicity k.phi is k copies of phi").
-                        atoms => [ map { [ map { $_->[0] eq "times" ? $_->[1][1] : $_ } @{ $_->[1] } ] } @c ] };
+                        atoms => [ map { [ map { $_->[0] eq "times" ? $_->[1][1] : $_ } @{ $_->[1] } ] } @c ],
+                        # The multiplicities, which name their variables at the role (det, below).
+                        mults => [ map { $_->[1][0] } grep { $_->[0] eq "times" } map { @{ $_->[1] } } @c ] };
         }
         $roles{$n} = \@rs;
         # The names after those of the roles are the marks of the schema\x27s agent variables that are no roles, one(Name, Other) (programs/gsc/self.glp, as_read, GLP GSC-marks f3314f4e): no role is named by one, and a role\x27s or a variable\x27s mark whose Other is no role, a variable or \x27_\x27, is $vmarks{S}, each [key, key], a key "r<i>" of the role i, "v<Name>" of the variable or "_" (vGLP, Section 5.4: "and persons of different names to different persons but for two the clause names as possibly one person").
@@ -278,6 +280,8 @@ for my $n (keys %cons) {
     for my $rs (@{ $roles{$n} }) {
         $r++;
         for my $k (0 .. 3) { for my $a (@{ $rs->{atoms}[$k] }) { next if $k == 1 && cleared($a); $named_at{$_}{$r} = 1 for atom_keys($a) } }
+        # The variable of a multiplicity is named at its role, as k of cmint (local.glp, det_pick).
+        for my $m (@{ $rs->{mults} || [] }) { $named_at{$_}{$r} = 1 for atom_keys($m) }
     }
     for my $x (keys %{ $locals{$n} || {} }) { my @rr = keys %{ $named_at{"v$x"} || {} }; $role_of{"v$x"} = $rr[0] if @rr == 1 }
     # The variables of the atoms the schema deletes, at any role, which the constraint never determines (local.glp, dels_name; Grassroots-Audit, cvac.glp.md, Finding 2).
@@ -1179,9 +1183,10 @@ for my $i (0 .. $#pending) {
     for my $S (@real) {
         my %mine = map { $_->[2] => 1 } field_keys3($S, $pd->{pl}{$S});
         my @sl = field_slots($S);
-        my @own = map { $mine{ $_->[2] } ? $fname{ $_->[2] } : "" } @sl;
+        # Each field at its place in the request, a set variable, which is no field, keeping its place (vGLP #32, 2026-11-24: the swap of Coins, its sets before its amounts).
+        my @own; for my $sl (@sl) { $own[$sl->[1] - 1] = $mine{ $sl->[2] } ? $fname{ $sl->[2] } : "" } @own = map { $_ // "" } @own;
         # The type of each field for a speech-act variable the schema types, typed(T, x), ft(K, T) for its K-th field, as a seventh argument of the act where it has one, the compiler printing T as the field\x27s kind (vGLP 37fe038, Section 5.4: "a text by the type its variable carries in the schema where it carries one").
-        my @ft = map { ($mine{ $sl[$_][2] } && $sl[$_][0] eq "svar" && $ftype{$S}{ $sl[$_][2] }) ? "ft(" . ($_ + 1) . ", " . q_atom($ftype{$S}{ $sl[$_][2] }) . ")" : () } 0 .. $#sl;
+        my @ft = map { ($mine{ $sl[$_][2] } && $sl[$_][0] eq "svar" && $ftype{$S}{ $sl[$_][2] }) ? "ft(" . $sl[$_][1] . ", " . q_atom($ftype{$S}{ $sl[$_][2] }) . ")" : () } 0 .. $#sl;
         push @ft, map { "consents($_)" } @{ $consent_of{$S} // [] };
         pop @own while @own && $own[-1] eq "";
         my $button = (grep { grep { $_ eq $S } @{ $pd->{reals}{$_} } } @{ $pd->{buttons} })[0];
