@@ -355,6 +355,7 @@ Fault     ::= no_introductory_act
             ; not_holder(Constant, Constant)
             ; unsupplied(Constant, Constant)
             ; deleted_not_required(Constant, Integer, Atom)
+            ; multiplicity(Constant, Integer, Atom)
             ; listed_reading(Constant, Integer)
             ; no_signature_atom(Constant)
             ; multiplicity_wildcard(Constant, Integer, Atom)

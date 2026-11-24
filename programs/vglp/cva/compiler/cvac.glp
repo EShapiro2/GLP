@@ -1652,6 +1652,8 @@ realisable([listed_agent_role(_, _)|_], no).
 realisable([guard_not_role(_, _)|_], no).
 realisable([value_type(_, _)|_], no).
 realisable([item_argument(_, _)|_], no).
+%% An atom carries no multiplicity, a local state being a set (GSC 4a9175a).
+realisable([multiplicity(_, _, _)|_], no).
 procedure realisable_lines(YesNo?, Constant?, Lines).
 realisable_lines(yes, _, []).
 realisable_lines(no, Nm, [H?, '%% it lacks traceable provenance or volition, or is otherwise faulty; check_named in programs/gsc gives the faults.']) :-
