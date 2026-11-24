@@ -2356,12 +2356,8 @@ SgnCause ::= not_added ; not_required ; not_agent_role.
 % violates: its condition held by an agent role of its schema (listed_base),
 % and no signed term (GAI's) in its condition, a signed term occurring only
 % in an atom marked + (listed_signed); each names the schema and the listed
-% role.  What def:numbers requires of a multiplicity: a positive whole number
-% or a value variable, so one that is no value argument is a fault
-% multiplicity_not_numeric(Schema, Role, Atom), and one that is a number and
-% no positive whole number a fault multiplicity_not_whole(Schema, Role,
-% Atom); and on an atom with no wildcard, so one on an atom carrying the
-% wildcard is a fault multiplicity_wildcard(Schema, Role, Atom).  A
+% role.  An atom carries no multiplicity, a local state being a set,
+% so one with a multiplicity is a fault multiplicity(Schema, Role, Atom).  A
 % constraint is on the schema's value variables, so an argument of it that
 % is no value argument, but in eq or ne of two agent variables, is a fault
 % constraint_not_numeric(Schema, Arg).  A value variable is a variable of the
@@ -2389,9 +2385,7 @@ Fault ::= no_introductory_act
         ; name_term_base(Constant, NameTerm)
         ; listed_base(Constant, Integer)
         ; listed_signed(Constant, Integer)
-        ; multiplicity_not_numeric(Constant, Integer, Atom)
-        ; multiplicity_not_whole(Constant, Integer, Atom)
-        ; multiplicity_wildcard(Constant, Integer, Atom)
+        ; multiplicity(Constant, Integer, Atom)
         ; constraint_not_numeric(Constant, Arg)
         ; signing_not_agent(Constant, Arg)
         ; signing_not_speech_act(Constant, Arg)
@@ -3142,12 +3136,6 @@ match_atom(atom(P, As), gatom(Q, Vs), Rs, S, E, R?) :-
     items_last(As?, Vs?, As1, Vs1),
     match_args(As1?, Vs1?, S?, E?, Rs?, R).
 match_atom(atom(_, _), gatom(_, _), _, _, _, nomatch) :- otherwise | true.
-
-% A positive whole number, the value of a multiplicity (def:numbers,
-% def:binding-numbers).
-procedure pos_whole(Constant?, Ans).
-pos_whole(X, yes) :- number(X?), X? >= 1, X? =:= floor(X?) | true.
-pos_whole(_, no) :- otherwise | true.
 
 % ---------------------------------------------------------------------------
 % The variables of a schema
