@@ -14,5 +14,5 @@ Notes:4. ○ Escrow. Deposit: Alice may deposit Sum Dave-notes of type Type with
 Coins:2. ■ Redeem: Alice may redeem a Bob-coin against a Carol-coin, provided Alice knows Bob.
 Coins:3. ○ Pricing. Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 Joint Accounts:1. ■ Open account: Alice and Bob may jointly open the joint account Acct under a new name of Alice's, provided Alice and Bob know each other.
-Joint Accounts:2. ■ Deposit: Alice may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct. Partner deposit: Bob may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct.
+Joint Accounts:2. ■ Account deposit: Alice may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct. Partner deposit: Bob may move Sum Carol-coins into the joint account Acct of Alice and Bob, provided Alice and Bob hold the joint account Acct.
 Joint Accounts:3. ■ Withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Alice. Partner withdraw: Alice and Bob may jointly move Sum Carol-coins from the joint account Acct to Bob.

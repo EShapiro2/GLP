@@ -24,7 +24,7 @@ Coins:2 ■ Redeem: ~note(Alice,Bob,coin), note(Bob,Bob,coin), ~note(Bob,Carol,c
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 Joint Accounts:1 ■ Open account: account(Alice,Acct), joint(Alice,Acct,Bob), joint(Bob,Acct,Alice) <- knows(Alice,Bob), knows(Bob,Alice), ~account(Alice,Acct) guarded by Alice, Bob.
-Joint Accounts:2 ■ Deposit: ~note(Alice,Carol,coin,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Bob,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), note(Alice,Carol,coin,*Sum) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Joint Accounts:2 ■ Account deposit: ~note(Alice,Carol,coin,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Bob,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), note(Alice,Carol,coin,*Sum) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Joint Accounts:2 ■ Partner deposit: ~note(Bob,Carol,coin,*Sum), joint_coin(Alice,Carol,Acct,Bob,*Sum), knows(Alice,Carol) <- joint(Alice,Acct,Bob), joint(Bob,Acct,Alice), note(Bob,Carol,coin,*Sum) guarded by Bob possibly Alice=Carol, Bob=Carol.
 Joint Accounts:3 ■ Withdraw: ~joint_coin(Alice,Carol,Acct,Bob,*Sum), note(Alice,Carol,coin,*Sum) <- joint_coin(Alice,Carol,Acct,Bob,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
 Joint Accounts:3 ■ Partner withdraw: ~joint_coin(Alice,Carol,Acct,Bob,*Sum), note(Bob,Carol,coin,*Sum) <- joint_coin(Alice,Carol,Acct,Bob,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
