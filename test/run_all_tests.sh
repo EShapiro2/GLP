@@ -6572,6 +6572,52 @@ check "CVA linear: the platform emitted and loaded, its types checked (double)" 
 check "CVA linear: ... the class of double(alice, 1, 2) holds its own schema-binding, d bound to 2 by the equality, and has its part, opened by alice" "^P1 = \[pt(double(alice, 1, 2), \[\], opener(alice))\]$" "$cva_double"
 check "CVA linear: ... and alice's state, halve(1) and started, is in the part's domain" "D2 = yes$" "$cva_double"
 
+# A numeric variable named by no atom that the constraint determines from the variables local to a role and those the schema-binding binds, through a chain of equalities, is local to that role, and the request does not name it (vGLP, Section 5.4, "Speech-act schemas as local specifications": "and so is a variable the constraint determines from the variables local to that role and the variables the schema-binding binds"): Second-Score Auction's Rank behind, whose Score Alice's machine refused in every state (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 2).  behind(p? ; f, d, a, l, c, w, s) requires terms(a, l), deletes bid(f, d) and adds ranked(f, d), with c = l d, a = w + c, w = s + f and s >= 0: a and l local by their atom, c, w and s determined, f and d bound by the deleted bid.  behind2 adds ranked2(f, d, s): s, in an added atom, is named by the request.  A contract compiled inline into a scratch directory, and its platform's procedures called.
+cva_rank_dir="$GLP_DIR/programs/tests/vg_rank_$$"
+mkdir -p "$cva_rank_dir"
+cva_rank_c="[schema(open, [num(a), num(l)], [rs(guarded, [atom(terms, [num(a), num(l)])], [], [], [])]), schema(bid, [num(f), num(d)], [rs(guarded, [atom(bid, [num(f), num(d)])], [], [], [])]), nschema(behind, [num(f), num(d), num(a), num(l), num(c), num(w), num(s)], and(eq(num(c), mul(num(l), num(d))), and(eq(num(a), plus(num(w), num(c))), and(eq(num(w), plus(num(s), num(f))), ge(num(s), num(0))))), [rs(guarded, [atom(ranked, [num(f), num(d)])], [atom(bid, [num(f), num(d)])], [atom(terms, [num(a), num(l)])], [])]), nschema(behind2, [num(f), num(d), num(a), num(l), num(c), num(w), num(s)], and(eq(num(c), mul(num(l), num(d))), and(eq(num(a), plus(num(w), num(c))), and(eq(num(w), plus(num(s), num(f))), ge(num(s), num(0))))), [rs(guarded, [atom(ranked2, [num(f), num(d), num(s)])], [atom(bid, [num(f), num(d)])], [atom(terms, [num(a), num(l)])], [])])]"
+cva_rank_p="pragmas([list('\"Bids\"', [bid])], [act(open, '\"Open\"', [], none, '\"Bids\"', by([1])), act(bid, '\"Bid\"', [], none, '\"Bids\"', by([1])), act(behind, '\"Behind\"', [], none, '\"Bids\"', by([1])), act(behind2, '\"Behind2\"', [], none, '\"Bids\"', by([1]))])"
+cva_rank_out=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(ranks, $cva_rank_c, not_grassroots([no_introductory_act]), no_introduction, $cva_rank_p).
+:quit
+HEREDOC
+2>&1)
+printf '%s\n' "$cva_rank_out" | sed -e 's/^\(GLP> \)*//' | awk '$0 == "%% compile begin" { on = 1; next } $0 == "%% compile end" && on { on = 0; next } on { print }' > "$cva_rank_dir/platform.vglp"
+check "CVA ranks: c, w and s determined through the chain of equalities, local to the role with a and l; f and d bound" "^schema_numeric(behind, numeric(\[cj(at(1), eq(num(c), mul(num(l), num(d)))), cj(at(1), eq(num(a), plus(num(w), num(c)))), cj(at(1), eq(num(w), plus(num(s), num(f)))), cj(at(1), ge(num(s), num(0)))\], \[num(s), num(w), num(c), num(a), num(l)\], \[\]))\$" "$(cat "$cva_rank_dir/platform.vglp")"
+check "CVA ranks: ... the request names f and d of behind, and f, d and s of behind2" "^behind(Peer, Integer, Integer)\$" "$(cat "$cva_rank_dir/platform.vglp")"
+check "CVA ranks: ... behind2(Peer, f, d, s)" "^behind2(Peer, Integer, Integer, Integer)\$" "$(cat "$cva_rank_dir/platform.vglp")"
+cva_rank=$("$REPL_RUN" <<HEREDOC
+:emit $cva_rank_dir
+load $cva_rank_dir/platform.glp
+:limit 10000000
+binding_of(behind(alice, 12, 2), N1, B1), binding_of(behind(alice, 12, 2), N2, B2), bound_spec(N1?, B1?, Rs1), sig_of(Rs1?, B2?, Ps1), new_info(behind(alice, 12, 2), Ps1?, alice, I1), info_parts(I1?, P1).
+part_dom(behind(alice, 12, 2), alice, [g(terms, [n(50), n(2)]), g(bid, [n(12), n(2)])], D2).
+part_dom(behind(alice, 12, 2), alice, [g(terms, [n(10), n(2)]), g(bid, [n(12), n(2)])], D3).
+part_dom(behind2(alice, 12, 2, 34), alice, [g(terms, [n(50), n(2)]), g(bid, [n(12), n(2)])], D4).
+part_dom(behind2(alice, 12, 2, 33), alice, [g(terms, [n(50), n(2)]), g(bid, [n(12), n(2)])], D5).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_rank_dir"
+check "CVA ranks: the platform emitted and loaded, its types checked" "Loaded: .*vg_rank_.*platform.glp" "$cva_rank"
+check "CVA ranks: ... the class of behind(alice, 12, 2) has its part, proposed by alice" "^P1 = \[pt(behind(alice, 12, 2), \[alice\], proposed(\[alice\]))\]\$" "$cva_rank"
+check "CVA ranks: ... terms(50, 2) and bid(12, 2) at alice: c = 4, w = 46 and s = 34, at least 0, in the domain" "D2 = yes\$" "$cva_rank"
+check "CVA ranks: ... terms(10, 2): s = -6, below 0, not in it" "D3 = no\$" "$cva_rank"
+check "CVA ranks: ... behind2 with s = 34, in it" "D4 = yes\$" "$cva_rank"
+check "CVA ranks: ... and with s = 33, not" "D5 = no\$" "$cva_rank"
+
+# A button naming a guarded schema no binding of which determines a transaction, as one adding at a role an atom it deletes there ("no atom a schema adds at a person is one it deletes there", vGLP, Section 5.4), is a fault of the pragmas, and the contract is not compiled, with the line saying why (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 3): touch(p? ; a, l) deletes and adds terms(a, l).
+cva_dead=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(deads, [schema(open, [num(a), num(l)], [rs(guarded, [atom(terms, [num(a), num(l)])], [], [], [])]), schema(touch, [num(a), num(l)], [rs(guarded, [atom(terms, [num(a), num(l)])], [atom(terms, [num(a), num(l)])], [], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"Terms"', [terms])], [act(open, '"Open"', [], none, '"Terms"', by([1])), act(touch, '"Touch"', [], none, '"Terms"', by([1]))])).
+:quit
+HEREDOC
+2>&1)
+check "CVA deads: a button naming touch, which adds the atom it deletes, is refused, with the line saying why" "a pragma's button names a guarded schema no binding of which determines a transaction, as one adding at a role an atom it deletes there:(touch)" "$cva_dead"
+
 # A safe formula of a schema's body, local to a role, "the machine of the person in that role evaluates it in its own state" (vGLP bcb2726, Section 5.4, "Speech-act schemas as local specifications"): vGLP's forms (programs/vglp/cva/contracts.glp), tick(p) with not exists b (blocked(b) at p and b > 2), its platform emitted by the canonical compilation into a scratch directory and its procedures called on states; and eq comparing two persons, as GFF-I's not(and(friend(Alice, Carol), eq(Carol, Dave))) does ("eq and ne also compare two agent variables", GSC c8c5ead, def:numbers).  The play harness, programs/vglp/cva/self.glp, is on test/OPEN_TYPES, and a play over it would be new GLP with an open type, so the procedures are called directly (qschema_forms).
 check "CVA forms: the safe formula printed with the role it is local to, role 1 (qschema_forms)" "^schema_forms(tick, \[sform(at(1), fnot(fexists(\[num(b)\], role(1), atom(blocked, \[num(b)\]), fcons(gt(num(b), num(2))))))\])$" "$(cat "$CVA/forms/platform.vglp")"
 cva_forms_dir="$GLP_DIR/programs/tests/vg_forms_$$"

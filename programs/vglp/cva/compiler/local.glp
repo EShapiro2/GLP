@@ -256,7 +256,7 @@ stray_counts([], []).
 stray_counts([cr(role(_), _, _)|Crs], Cxs?) :- stray_counts(Crs?, Cxs).
 stray_counts([cr(H, N, E)|Crs], [cx(N?, E?)|Cxs?]) :- otherwise, ground(H?) | stray_counts(Crs?, Cxs).
 
-%% "so is a variable the constraint determines from the variables local to that role and the variables the schema-binding binds, as the count i_1 a treasurer's state holds after minting k coins with i held before, i_1 = i + k" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"): a numeric variable of the head, not local by its occurrences, that an equality conjunct of the constraint determines, its one variable not local, with a coefficient not 0, from variables local to one role I, one at least, and others the schema-binding binds, and that only role I's atoms name, is local to I: "the machine of the person in that role finds a value for it in its own state, or computes it" (ibid.).
+%% "so is a variable the constraint determines from the variables local to that role and the variables the schema-binding binds, as the count i_1 a treasurer's state holds after minting k coins with i held before, i_1 = i + k" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"): a numeric variable of the head, not local by its occurrences, that an equality conjunct of the constraint determines, its one variable not local, with a coefficient not 0, from variables local to one role I, one at least, and others the schema-binding binds, and that no atom of another role names, role I's atoms naming it or none, is local to I, as Score, which Second-Score Auction's Rank behind names in no atom, W = Score + Fare, A = W + Cost and Cost = L times Delay, A and L local to Alice's role (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 2): "the machine of the person in that role finds a value for it in its own state, or computes it" (ibid.).
 procedure det_locals(Constraint?, Args?, RoleSpecs?, Locs?, Locs).
 det_locals(C, Hd, Rs, Ls, R?) :- ground(C?), ground(Hd?), ground(Rs?), ground(Ls?) |
     con_conjuncts(C?, Cs),
@@ -285,9 +285,20 @@ det_each([eq(X, Y)|Cs], Hd, Rs, Ls, R?) :- ground(X?), ground(Y?), ground(Hd?), 
     dedup(A1?, A),
     det_split(A?, Ls?, Lr0, Nl),
     dedup(Lr0?, Lr),
-    det_one(Nl?, Lr?, X?, Y?, Hd?, Rs?, Ls?, Ls1),
+    det_pick(Nl?, Rs?, Nc),
+    det_one(Nc?, Lr?, X?, Y?, Hd?, Rs?, Ls?, Ls1),
     det_each(Cs?, Hd?, Rs?, Ls1?, R).
 det_each([_|Cs], Hd, Rs, Ls, R?) :- otherwise | det_each(Cs?, Hd?, Rs?, Ls?, R).
+%% The one variable an equality determines: its one variable local to no role; or, where it has more, of those the one that no atom of the schema names, the others being named by atoms, so bound by the schema-binding, as Fare in W = Score + Fare (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 2).
+procedure det_pick(Args?, RoleSpecs?, Args).
+det_pick([V], _, [V?]).
+det_pick(Nl, Rs, Nc?) :- otherwise, ground(Nl?), ground(Rs?) | det_unnamed(Nl?, Rs?, Nc).
+procedure det_unnamed(Args?, RoleSpecs?, Args).
+det_unnamed([], _, []).
+det_unnamed([A|As], Rs, R?) :- ground(A?), ground(Rs?) |
+    roles_naming(Rs?, 1, A?, Is),
+    det_unnamed(As?, Rs?, R1),
+    det_keep(Is?, A?, R1?, R).
 %% The roles of the variables local to a role among the arguments, and the arguments local to none.
 procedure det_split(Args?, Locs?, Ints, Args).
 det_split([], _, [], []).
@@ -307,11 +318,29 @@ det_one([V], [I], X, Y, Hd, Rs, Ls, R?) :- ground(V?), integer(I?), ground(X?), 
     lin_coef(minus(X?, Y?), V?, K),
     roles_naming(Rs?, 1, V?, Is0),
     dedup(Is0?, Is),
-    det_ok(Nv?, InH?, K?, Is?, I?, Ok),
+    det_ok(Nv?, InH?, K?, Is?, I?, Ok0),
+    dels_name(Rs?, V?, Dd),
+    det_undeleted(Dd?, Ok0?, Ok),
     det_add(Ok?, I?, V?, Ls?, R).
 det_one(_, _, _, _, _, _, Ls, Ls?) :- otherwise | true.
+%% A variable of an atom the schema deletes is bound by the state that holds the atom, or by the schema-binding, as the fare of the bid Alice ranks; the constraint does not determine it (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 2).
+procedure dels_name(RoleSpecs?, Arg?, YesNo).
+dels_name([], _, no).
+dels_name([R|Rs], V, D?) :- ground(R?), ground(V?) |
+    rs_lists(R?, _, M, _, _),
+    atoms_args(M?, A),
+    flat_args(A?, Af),
+    mem(V?, Af?, In),
+    dels_name1(In?, Rs?, V?, D).
+procedure dels_name1(YesNo?, RoleSpecs?, Arg?, YesNo).
+dels_name1(yes, _, _, yes).
+dels_name1(no, Rs, V, D?) :- dels_name(Rs?, V?, D).
+procedure det_undeleted(YesNo?, YesNo?, YesNo).
+det_undeleted(no, Ok, Ok?).
+det_undeleted(yes, _, no).
 procedure det_ok(YesNo?, YesNo?, Number?, Ints?, Integer?, YesNo).
 det_ok(yes, yes, K, [J], I, yes) :- K? =\= 0, J? =:= I? | true.
+det_ok(yes, yes, K, [], _, yes) :- K? =\= 0 | true.
 det_ok(_, _, _, _, _, no) :- otherwise | true.
 procedure det_add(YesNo?, Integer?, Arg?, Locs?, Locs).
 det_add(yes, I, V, Ls, [loc(I?, V?)|Ls?]).
