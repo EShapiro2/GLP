@@ -1277,8 +1277,10 @@ async function texShow(box, src, gh){
       // A name with an underscore, \mathit{has_officer}, is written as it is
       // named: GSC's printer (programs/gsc/compile.glp, latex_pred/3) does
       // not escape it, which LaTeX would read as a subscript (reported to
-      // Code, 2026-11-18).
-      const tex = body.replace(/\s*\n\s*/g, ' ').replace(/\\mathit\{\s*([A-Za-z0-9_]+)\s*\}/g, (_, w) => `\\mathit{${w.replace(/_/g, '\\_')}}`);
+      // Code, 2026-11-18).  A name the printer wraps in \detokenize, which
+      // KaTeX lacks and showed in red, is taken out of it first, so that its
+      // underscores are escaped the same way (Website #6, 2026-11-24).
+      const tex = body.replace(/\s*\n\s*/g, ' ').replace(/\\detokenize\{\s*([^{}]*?)\s*\}/g, (_, w) => w).replace(/\\mathit\{\s*([A-Za-z0-9_]+)\s*\}/g, (_, w) => `\\mathit{${w.replace(/_/g, '\\_')}}`);
       try { k.render(tex, m, {displayMode: true, throwOnError: false, maxExpand: 100000, macros: {...TEXMACROS}}); }
       catch (e){ m.textContent = body; }
       div.appendChild(m); frag.appendChild(div);
