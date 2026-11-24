@@ -337,6 +337,7 @@ filter_vvars([], []).
 filter_vvars([num(X)|As], [num(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
 filter_vvars([real(X)|As], [real(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
 filter_vvars([const(X)|As], [const(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
+filter_vvars([set(X)|As], [const(X?)|R?]) :- ground(X?), ground(As?) | filter_vvars(As?, R).
 filter_vvars([_|As], R?) :- otherwise, ground(As?) | filter_vvars(As?, R).
 
 % The value variables over constants of a schema, each marked in the
@@ -351,6 +352,7 @@ const_marks(NSc, R?) :- ground(NSc?) |
 procedure const_marks1(Args?, Subst).
 const_marks1([], []).
 const_marks1([const(X)|Vs], [bind(const(X?), undef)|R?]) :- const_marks1(Vs?, R).
+const_marks1([set(X)|Vs], [bind(const(X?), undef)|R?]) :- const_marks1(Vs?, R).
 const_marks1([_|Vs], R?) :- otherwise | const_marks1(Vs?, R).
 
 % The value variables taken as whole: those of type num, and those written as
@@ -1085,6 +1087,9 @@ sym_binds([real(X)|Vs], B, [bind(num(X?), nfree(X?))|R?]) :-
     ground(X?), ground(Vs?), ground(B?) |
     sym_binds(Vs?, B?, R).
 sym_binds([const(X)|Vs], B, [bind(num(X?), nfree(X?))|R?]) :-
+    ground(X?), ground(Vs?), ground(B?) |
+    sym_binds(Vs?, B?, R).
+sym_binds([set(X)|Vs], B, [bind(num(X?), nfree(X?))|R?]) :-
     ground(X?), ground(Vs?), ground(B?) |
     sym_binds(Vs?, B?, R).
 sym_binds([A|Vs], B, R?) :- otherwise, ground(A?), ground(Vs?), ground(B?) |

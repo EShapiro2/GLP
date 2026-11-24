@@ -2846,5 +2846,42 @@ check "a schema adding identity without person leaves person unobtainable" \
 check "a schema deleting person leaves person unobtainable" \
       "V3 = not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable)])" "$out"
 
+# --- set variables (def:numbers and def:binding-numbers, the set variable;
+# the Calculus's record, items 49 to 51): set(N) is the value variable N of a
+# type Set(A), an atom with it standing for one atom per element of N, and
+# size(N) its size |N|.  The conditions read N as a value variable over
+# constants; Vars writes it set(N), an atom num(N).
+SKE="sas(establish, ['Alice'], [], [atom(identity, ['Alice']), atom(person, ['Alice'])], [not(atom(identity, ['Alice']))], true, ['Alice'])"
+SKA="sas(acquaint, ['Alice', 'Bob'], [], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(person, ['Alice']), atom(person, ['Bob'])], true, ['Alice', 'Bob'])"
+SKI="sas(introduce, ['Bob', 'Alice', 'Carol'], ['Carol'], [atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Bob']), atom(identity, ['Alice']), atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice']), atom(knows, ['Alice', 'Carol'])], true, ['Alice', 'Bob'])"
+SIS="sas(issue, ['Alice'], ['Type', 'N'], [atom(note, ['Alice', 'Alice', const('Type'), set('N')])], [atom(identity, ['Alice'])], true, ['Alice'])"
+SPY="sas(pay, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'Type', 'N'], [not(atom(note, ['Alice', 'Carol', const('Type'), set('N')])), atom(note, ['Bob', 'Carol', const('Type'), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', const('Type'), set('N')])], true, ['Alice', 'Bob'])"
+SPZ="sas(payn, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'Type', 'N', 'Sum'], [not(atom(note, ['Alice', 'Carol', const('Type'), set('N')])), atom(note, ['Bob', 'Carol', const('Type'), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', const('Type'), set('N')])], eq(size('N'), num('Sum')), ['Alice', 'Bob'])"
+SPM="sas(paym, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'Type', 'N', 'M'], [not(atom(note, ['Alice', 'Carol', const('Type'), set('N')])), atom(note, ['Bob', 'Carol', const('Type'), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', const('Type'), set('M')])], true, ['Alice', 'Bob'])"
+SPT="sas(payt, ['Alice', 'Bob'], ['N'], [atom(knows, ['Bob', 'Alice'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(token, ['Alice', set('N')]), times(num('N'), atom(mark, ['Alice']))], true, ['Alice', 'Bob'])"
+SPC="sas(payc, ['Alice', 'Bob'], ['T', 'N'], [atom(knows, ['Bob', 'Alice']), atom(tag, ['Bob', const('T')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], eq(size('T'), num('N')), ['Alice', 'Bob'])"
+SPD="sas(payd, ['Alice', 'Bob'], ['T'], [atom(knows, ['Bob', 'Alice']), atom(tag, ['Bob', const('T')]), atom(mark, ['Bob', set('T')])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob'])], true, ['Alice', 'Bob'])"
+SBA="sas(acquaint, ['Alice', 'Bob'], ['B'], [atom(knows, ['Alice', 'Bob']), atom(knows, ['Bob', 'Alice'])], [atom(person, ['Alice']), atom(person, ['Bob']), atom(badge, ['Alice', set('B')])], true, ['Alice', 'Bob'])"
+SBS="sas(badge, ['Alice'], ['X'], [atom(badge, ['Alice', const('X')])], [], true, ['Alice'])"
+SBT="sas(badge, ['Alice'], ['X'], [atom(badge, ['Alice', set('X')])], [], true, ['Alice'])"
+SG="reflexive([knows], [$SKE, $SKI, $SIS"
+out=$(run "check($SG, $SKA, $SPY]), V1)." "check($SG, $SKA, $SPZ]), V2)." "check($SG, $SKA, $SPM]), V3)." \
+          "check($SG, $SKA, $SPT]), V4)." "check($SG, $SKA, $SPC]), V5)." "check($SG, $SKA, $SPD]), V6)." \
+          "check($SG, $SBA, $SBS]), V7)." "check($SG, $SBA, $SBT]), V8)." "check($SG, $SBA]), V9)." \
+          "as_read($SG, $SKA, $SPZ]), R10)." "compile_schema_in(t, $SG, $SKA, $SPZ]), payn).")
+check "a payment of a set of notes, required and deleted at the payer and added at the payee, is syntactically grassroots" "V1 = syntactically_grassroots" "$out"
+check "a constraint on the size of the set is read, and no condition reads it" "V2 = syntactically_grassroots" "$out"
+check "a set deleted is required with the same set variable" \
+      "V3 = malformed([deleted_not_required(paym, 1, atom(note, [pvar('Carol'), num('Type'), num('N')]))])" "$out"
+check "a set variable written as a multiplicity is of two types" "V4 = malformed([value_type(payt, 'N')])" "$out"
+check "the size of a variable written const(X) is of two types" "V5 = malformed([value_type(payc, 'T')])" "$out"
+check "a variable written set(X) and const(X) is of two types" "V6 = malformed([value_type(payd, 'T')])" "$out"
+check "an atom of a set an introductory act requires is supplied by a schema of arity one adding one element" "V7 = syntactically_grassroots" "$out"
+check "or adding a set" "V8 = syntactically_grassroots" "$out"
+check "and is unsupplied where no schema adds it" "V9 = malformed([unsupplied(acquaint, badge)])" "$out"
+check "the checker's form writes a set variable set(N) among the variables, num(N) in an atom, and its size fn(size, [num(N)])" \
+      "nschema(payn, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), const('Type'), set('N'), num('Sum')], eq(fn(size, [num('N')]), num('Sum'))" "$out"
+check "the compiler prints the size of a set |N|" "$(printf '|\nN\n|')" "$out"
+
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

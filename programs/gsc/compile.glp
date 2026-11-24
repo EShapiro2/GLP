@@ -91,6 +91,7 @@ latex_arg(sgn(X, J), T, ['\\mathrm{sgn}(', X?, ','|R?]) :-
 latex_arg(num(X), T, [X?|T?]).
 latex_arg(real(X), T, [X?|T?]).
 latex_arg(const(X), T, [X?|T?]).
+latex_arg(set(X), T, [X?|T?]).
 % The wildcard of a cleared atom, \ast, as Section 3.3 writes unfriend's
 % \mathit{listed}(\Bob,\ast).
 latex_arg(any, T, ['\\ast'|T?]).
@@ -518,7 +519,10 @@ latex_expr(minus(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
 latex_expr(mul(A, B), T, R?) :- ground(A?), ground(B?), ground(T?) |
     latex_operand(B?, T?, R1),
     latex_operand(A?, ['\\cdot'|R1?], R).
-latex_expr(fn(N, Xs), T, ['\\mathrm{', N?, '}('|R?]) :- ground(Xs?), ground(T?) |
+% The size of a set variable, |X| (def:numbers).
+latex_expr(fn(N, [X]), T, ['|'|R?]) :- N? =?= size, ground(X?), ground(T?) |
+    latex_expr(X?, ['|'|T?], R).
+latex_expr(fn(N, Xs), T, ['\\mathrm{', N?, '}('|R?]) :- otherwise, ground(Xs?), ground(T?) |
     latex_exprs(Xs?, [')'|T?], R).
 latex_expr(cardinality(Xs, H, A, F), T, ['\\mathrm{cardinality}('|R?]) :-
     ground(Xs?), ground(H?), ground(A?), ground(F?), ground(T?) |
@@ -532,6 +536,7 @@ latex_expr(sum(Xs, H, A, F, U), T, ['\\mathrm{sum}('|R?]) :-
 latex_expr(num(X), T, R?) :- latex_arg(num(X?), T?, R).
 latex_expr(real(X), T, R?) :- latex_arg(real(X?), T?, R).
 latex_expr(const(X), T, R?) :- latex_arg(const(X?), T?, R).
+latex_expr(set(X), T, R?) :- latex_arg(set(X?), T?, R).
 latex_expr(role(I), T, R?) :- latex_arg(role(I?), T?, R).
 latex_expr(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
 latex_expr(svar(X), T, R?) :- latex_arg(svar(X?), T?, R).
@@ -558,6 +563,7 @@ latex_operand(sum(Xs, H, A, F, U), T, R?) :- latex_expr(sum(Xs?, H?, A?, F?, U?)
 latex_operand(num(X), T, R?) :- latex_arg(num(X?), T?, R).
 latex_operand(real(X), T, R?) :- latex_arg(real(X?), T?, R).
 latex_operand(const(X), T, R?) :- latex_arg(const(X?), T?, R).
+latex_operand(set(X), T, R?) :- latex_arg(set(X?), T?, R).
 latex_operand(role(I), T, R?) :- latex_arg(role(I?), T?, R).
 latex_operand(pvar(X), T, R?) :- latex_arg(pvar(X?), T?, R).
 latex_operand(svar(X), T, R?) :- latex_arg(svar(X?), T?, R).

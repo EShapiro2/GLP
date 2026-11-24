@@ -309,8 +309,12 @@ SNT    ::= own(Constant) ; ext(SNT, Constant).
 % const(X) is the value variable X whose values are constants, as val(C) is a
 % constant value (GSC, the appendix "Values in Speech-Act Schemas": "a value
 % variable of a schema has a type, which the schema's term form writes").
+% set(X) is the value variable X of a type Set(A), the finite sets of values
+% of a type A, as an argument where the predicate takes a value of A: the
+% atom stands for one atom per element of X; size(X) is its size |X|, a whole
+% number, in a constraint (GSC, def:numbers, the set variable).
 SArg   ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
-         ; real(Constant) ; const(Constant)
+         ; real(Constant) ; const(Constant) ; set(Constant)
          ; sgn(Constant, Constant) ; item_of(Constant)
          ; typed(Constant, Constant)
          ; val(Constant).
@@ -322,7 +326,8 @@ SQLit  ::= SMult ; not(SMult).
 SQLits ::= [] ; [SQLit | SQLits].
 SExpr  ::= SArg ; plus(SExpr, SExpr) ; minus(SExpr, SExpr) ; mul(SExpr, SExpr)
          ; fn(Constant, SExprs) ; cardinality(PNames, SAtom, SConstraint)
-         ; sum(PNames, SAtom, SConstraint, SExpr) ; author_of(Constant).
+         ; sum(PNames, SAtom, SConstraint, SExpr) ; author_of(Constant)
+         ; size(Constant).
 SExprs ::= [] ; [SExpr | SExprs].
 % A safe formula and a constraint are one type, a constraint being a safe
 % formula with no atom and no quantifier.
