@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Constant', 'List'('Constant'), 'Integer'), swap('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), pay('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), pay_issuer('Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), deposit('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer', 'Peer', 'Speech'), release('Peer', 'Peer', 'Peer', 'Constant', 'Peer', 'Speech', 'List'('Constant'), 'Integer'), return('Peer', 'Peer', 'Peer', 'Constant', 'Peer', 'Speech', 'List'('Constant'), 'Integer'), redeem('Peer', 'Peer', 'Peer'), list_place('Peer', 'Constant'), book('Peer', 'Peer', 'Constant', 'Integer', 'Integer', 'List'('Constant')), cancel('Peer', 'Peer', 'Constant', 'Integer', 'List'('Constant')), review('Peer', 'Peer', 'Constant', 'Integer')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Constant', 'List'('Constant'), 'Integer'), swap('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), pay('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), pay_issuer('Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), deposit('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer', 'Peer', 'Speech'), release('Peer', 'Peer', 'Peer', 'Constant', 'Peer', 'Speech', 'List'('Constant'), 'Integer'), return('Peer', 'Peer', 'Peer', 'Constant', 'Peer', 'Speech', 'List'('Constant'), 'Integer'), redeem('Peer', 'Peer', 'Peer'), list_place('Peer', 'Constant'), book('Peer', 'Peer', 'Constant', 'Integer', 'Integer', 'List'('Constant')), cancel('Peer', 'Peer', 'Constant', 'Integer', 'List'('Constant')), review('Peer', 'Peer', 'Constant', 'Integer')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Constant', 'List'('Constant'), 'Integer'), swap('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), pay('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), pay_issuer('Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), deposit('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer', 'Peer', 'Speech'), release('Peer', 'Peer', 'Peer', 'Constant', 'Peer', 'Speech', 'List'('Constant'), 'Integer'), return('Peer', 'Peer', 'Peer', 'Constant', 'Peer', 'Speech', 'List'('Constant'), 'Integer'), redeem('Peer', 'Peer', 'List'('Constant'), 'Peer', 'List'('Constant')), list_place('Peer', 'Constant'), book('Peer', 'Peer', 'Constant', 'Integer', 'Integer', 'List'('Constant')), cancel('Peer', 'Peer', 'Constant', 'Integer', 'List'('Constant')), review('Peer', 'Peer', 'Constant', 'Integer')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), issue('Peer', 'Constant', 'List'('Constant'), 'Integer'), swap('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), pay('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), pay_issuer('Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer'), deposit('Peer', 'Peer', 'Peer', 'Constant', 'List'('Constant'), 'Integer', 'Peer', 'Speech'), release('Peer', 'Peer', 'Peer', 'Constant', 'Peer', 'Speech', 'List'('Constant'), 'Integer'), return('Peer', 'Peer', 'Peer', 'Constant', 'Peer', 'Speech', 'List'('Constant'), 'Integer'), redeem('Peer', 'Peer', 'List'('Constant'), 'Peer', 'List'('Constant')), list_place('Peer', 'Constant'), book('Peer', 'Peer', 'Constant', 'Integer', 'Integer', 'List'('Constant')), cancel('Peer', 'Peer', 'Constant', 'Integer', 'List'('Constant')), review('Peer', 'Peer', 'Constant', 'Integer')]),
   type('Request', [propose('Proposal')]),
   type('RequestMenu', [social_menu('List'('MenuEntry'))]),
   type('MenuEntry', [button('String', 'List'('MenuAct')), label('Constant', 'String'), label('Constant', 'Integer', 'String')]),
@@ -18,7 +18,7 @@ interface([
   type('MenuField', [field('Integer', 'String', 'MenuFieldType')]),
   type('MenuFieldType', [person, key, agent, text, number, set]),
   type('MenuWord', [say('String'), at('Integer')]),
-  type('Atom', [identity, person, knows('Peer'), note('Peer', 'Constant', 'Constant'), escrow_note('Peer', 'Constant', 'Peer', 'Peer', 'Speech', 'Constant'), note('Peer', 'Constant'), listed('Constant'), hosts, stay('Peer', 'Constant', 'Integer', 'Integer'), booked('Constant', 'Integer'), review('Peer', 'Constant', 'Integer')]),
+  type('Atom', [identity, person, knows('Peer'), note('Peer', 'Constant', 'Constant'), escrow_note('Peer', 'Constant', 'Peer', 'Peer', 'Speech', 'Constant'), listed('Constant'), hosts, stay('Peer', 'Constant', 'Integer', 'Integer'), booked('Constant', 'Integer'), review('Peer', 'Constant', 'Integer')]),
   type('MayOne', [may_one('Integer', 'Integer')]),
   type('MayOnes', [[], ['MayOne' | 'MayOnes']]),
   type('VOne', [vone('Var', 'Var'), vone_any('Var'), vone_all]),
@@ -1390,7 +1390,7 @@ interface([
   compiled(join_proposal_deposit_8, 8),
   compiled(join_proposal_release_8, 8),
   compiled(join_proposal_return_8, 8),
-  compiled(join_proposal_redeem_3, 4),
+  compiled(join_proposal_redeem_5, 4),
   compiled(join_proposal_list_place_2, 3),
   compiled(join_proposal_book_6, 6),
   compiled(join_proposal_cancel_5, 5),
