@@ -3704,6 +3704,44 @@ def act_sentence(e, lex, acts, ir, prefer=None):
     return s[:-1] + ", and then " + effects_text(rest_h, lex) + "." if rest_h else s
 
 
+
+def own_text(w, e):
+    """The line of e's own clause in gr/, or ''."""
+    c, k = e["label"].rsplit(":", 1)
+    p = os.path.join(ROOT, "gr", NAMES_.file_of(c) + ".txt")
+    return next((l for l in open(p, encoding="utf-8") if l.startswith(k + ". ")), "") if os.path.exists(p) else ""
+
+
+def own_phrase(w, e, acts):
+    """The act phrase that the sentence of e's own clause writes, where two act phrases have its effects: Directory:3
+    Lookup 'look Alice up on Dora's page' and Lookup by address 'look Alice up with Dora by address'; None if none."""
+    if e["kind"] != "act" or "+" in e["label"]:
+        return None
+    c, k = e["label"].rsplit(":", 1)
+    try:
+        cl = [x for x in w.contract(c).clauses if str(x[0]) == k] if hasattr(w.contract(c), "clauses") else []
+    except Exception:
+        return None
+    p = os.path.join(ROOT, "gr", NAMES_.file_of(c) + ".txt")
+    if not os.path.exists(p):
+        return None
+    line = next((l for l in open(p, encoding="utf-8") if l.startswith(k + ". ")), "")
+    i = line.find(" " + e["name"] + ": ")
+    if i < 0:
+        i = line.find(". " + e["name"] + ": ")
+    if i < 0:
+        return None
+    seg = line[i + len(e["name"]) + 3:].split(". ")[0]
+    best = None
+    for t, _ in acts:
+        rest = t.split(" ", 2)[2] if t.count(" ") >= 2 else ""      # after the subject and the verb, whose form the text conjugates
+        parts = re.split(r"\b[a-z]\b", rest)
+        rx = r"\S+".join(re.escape(x) for x in parts)
+        if any(x.strip() for x in parts) and re.match(r"\S+ may \S+ " + rx + r"(,|$)", seg) and (best is None or len(rest) > len(best[1])):
+            best = (t, rest)
+    return best[0] if best else None
+
+
 def origin_phrase(w, e):
     """The act phrase of the act a strengthened act schema e is (GSG:2's Unfriend, of GSN's GSG:2+GSN:3), as its own
     contract writes it; None for an act of one clause, or where its contract has no act of that clause and name."""
@@ -3779,6 +3817,11 @@ def expanded(w, n):
                 prose[of[c0]] += " " + e["text"]
             continue
         txt = e["text"] if e["kind"] == "kept" else act_sentence(e, lex, acts, ir, origin_phrase(w, e))
+        if e["kind"] == "act" and txt and not origin_phrase(w, e):
+            own = own_phrase(w, e, acts)
+            alt = act_sentence(e, lex, acts, ir, own) if own else None
+            if alt and alt != txt and alt.split(", provided")[0] in own_text(w, e) and txt.split(", provided")[0] not in own_text(w, e):
+                txt = alt      # the act phrase its own clause writes, of two with its effects (Directory:3 Lookup by address)
         if txt is None:
             raise Err("%s %s: no act phrase has these effects" % (e["label"], e["name"]))
         if clauses and clauses[-1][0] == e["label"].split("+")[0] and e["kind"] == "kept":

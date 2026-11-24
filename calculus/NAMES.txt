@@ -1,4 +1,4 @@
-The names of the 66 contracts (Udi, 2026-11-16, to Calculus #8), on main since 24318f2c (2026-11-17).
+The names of the contracts; the 66 first (Udi, 2026-11-16, to Calculus #8), on main since 24318f2c (2026-11-17).
 The first and the fifth column are the names, rows and atoms of before the renaming; their headings keep their words,
 since the readers of this table find it by them.
 
@@ -10,8 +10,9 @@ The row of cascade.sh and the atom of contract_named are the file name in lower 
 How a reader knows a name: a name is one of the names of this table and nothing else.  Match the known names longest
 first, so that "Community Bank restricts Bank and extends Coins." names Community Bank, Bank and Coins, and
 "Trading Company and Bank" two contracts.
-A first line is: NAME, then its relations (extends, restricts, relaxes, strengthens, instantiates ... with ..., composes
-... with ...), the contracts after a relation joined by commas and "and"; a reference in parentheses may follow a name.
+A first line is: NAME, then its relation to the contracts it is written from (extends, weakens, strengthens, amends,
+renames, lifts, unites ... and ..., and the union extended, weakened, strengthened or amended), the contracts joined by
+commas and "and"; a reference in parentheses may follow a name.
 A citation is: NAME, a colon, the clause's number, then the act's name where one act is cited: "Community Bank:1",
 "Notes:3", "Organisation:4 Appoint".  The act's name is the name of an act of the clause cited, as the cited contract's
 full schemas print it; a reader matches the names of that clause's acts longest first, as "Deposit bond with the issuer"

@@ -14,7 +14,7 @@ After g ends y's participation and y's office in z: no longer y is a participant
 After x amends the bylaws of z as m says, which requires z does not have m taken: z has its bylaws amended and z has m taken.
 Organisation:0 - | An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
 Organisation:0 - | Alice and Bob are persons, Gov and Orga organisations, Motion an act of Orga, Role a role, Votes and Double numbers.
-Organisation:0 - | Environment: x is entitled to propose m in z; x is entitled to vote on m in z; x is entitled to take m for z; the votes decide m according to the bylaws of z; x is entitled to amend the bylaws of z as m says; the amendment m is decided according to the bylaws of z; those who admit participants of z; those who expel participants of z.
+Organisation:0 - | Environment: x is entitled to propose m in z; x is entitled to vote on m in z; x is entitled to take m for z; the votes decide m according to the bylaws of z; x is entitled to amend the bylaws of z as m says; the amendment m is decided according to the bylaws of z.
 Organisation:1 ■ Found: Guardians:1 + first_officer(Orga,Alice), role(Alice,Orga,Role), has_role(Orga,Alice,Role), participant(Alice,Orga), has_participant(Orga,Alice), founder(Gov,Orga) <- guarded by Gov.
 Organisation:2 ■ | Acts of the organisation.
 Organisation:2 ■ Propose: proposed(Orga,Motion) <- proposer(Bob,Orga,Motion), ~proposed(Orga,Motion) guarded by Bob.
