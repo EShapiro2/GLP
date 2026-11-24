@@ -70,7 +70,7 @@ Body kernels are the mechanism by which GLP system-mode code (in `programs/self.
 
 | Kernel | Arity | Description |
 |--------|-------|-------------|
-| `_hash` | 2 | `_hash(S?, H)` — H is the SHA-256 of the UTF-8 bytes of the string S, lowercase hex (`Hash`); the program-level `hash/2` guards S ground (proposed for GLP-Spec appendix-guards, "Text") |
+| `_hash` | 2 | `_hash(S?, H)` — H is the SHA-256 of the UTF-8 bytes of the string S, lowercase hex (`Hash`); the program-level `hash/2` guards S ground (GLP-Spec appendix-guards, "Text") |
 
 ### Time
 

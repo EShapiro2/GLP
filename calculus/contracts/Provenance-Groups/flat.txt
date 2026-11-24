@@ -5,17 +5,17 @@ Provenance Groups:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a 
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2+Guardians:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
-Knowledge:3+Guardians:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice knows Bob, Bob knows Alice, Alice knows Carol, Alice is a person, Bob is a person and Carol is a person.
+Knowledge:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
+Knowledge:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice is a person, Bob is a person, Carol is a person, Alice knows Bob, Bob knows Alice and Alice knows Carol.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:1+Guardians:3 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend, not Bob counts Alice as a friend, Alice is a person and Bob is a person.
+Friendship:1 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice is a person, Bob is a person, Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2+Groups:3+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend, no longer Bob counts Alice as a friend, no longer Alice is a member of the group anyone of Bob, no longer Bob is a member of the group anyone of Alice, no longer Alice has Bob as a member of the group anyone and no longer Bob has Alice as a member of the group anyone, provided Alice is a person and Bob is a person.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
-Groups:0 - | A *message*, a parameter of Groups, is what a person sends.
+Groups:0 - | A *message* is what a person sends.
 Groups:0 - | Bob and Carol are possibly Alice or one person.
-Groups:1+Provenance Groups:1 ■ Message: Alice may Bob holds the item Text, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice is a person, Alice holds the item Text and Alice is the author of Text. Possibly one: Alice=Bob.
+Groups:1+Provenance Groups:1 ■ Message: Alice may Bob has the message Text from Alice and Bob holds the item Text, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice is a person, Alice holds the item Text and Alice is the author of Text. Possibly one: Alice=Bob.
 Groups:2 ■ | Group.
 Groups:2+Provenance Groups:1 ■ Create: Alice may Alice is the leader of Grupo, Alice is a member of the group Grupo of Alice and Alice has Alice as a member of the group Grupo, provided not Alice is the leader of Grupo and Alice is a person.
 Groups:2 ■ | Alice is then its leader and first member.
@@ -27,44 +27,43 @@ Groups:3+Provenance Groups:1 ■ Leave: Bob may no longer Bob is a member of the
 Groups:4 ■ | Group messaging.
 Groups:4+Provenance Groups:1 ■ Post: Bob may Alice has the post Text of Bob in Grupo, provided Bob is a member of the group Grupo of Alice, not Alice has the post Text of Bob in Grupo, Bob is a person, Bob holds the item Text and Bob is the author of Text. Possibly one: Alice=Bob.
 Groups:4+Provenance Groups:1 ■ Post own: Alice may Alice has the post Text of Alice in Grupo, provided Alice is a member of the group Grupo of Alice, not Alice has the post Text of Alice in Grupo, Alice is a person, Alice holds the item Text and Alice is the author of Text.
-Groups:4+Provenance Groups:1 ■ Deliver: Alice has delivered the message Text of Bob in Grupo to Carol and Carol holds the item Text signed by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, Alice has Carol as a member of the group Grupo, not Alice has delivered the message Text of Bob in Grupo to Carol and not Alice is the author of Text. Possibly one: Alice=Bob, Alice=Carol, Bob=Carol.
-Groups:4+Provenance Groups:1 ■ Deliver leader: Alice has delivered the message Text of Bob in Grupo to Alice and Alice holds the item Text signed by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, not Alice has delivered the message Text of Bob in Grupo to Alice and not Alice is the author of Text. Possibly one: Alice=Bob.
-Guardians:0 - | Bob *trusts* Alf, an AI agent of Alice, when he trusts Alice. The *decision rule*, a parameter of Guardians, says who decides for an AI agent and how. An AI agent takes an act of a party by those who decide for the AI agent.
+Groups:4+Provenance Groups:1 ■ Deliver: Alice has delivered the message Text of Bob in Grupo to Carol, Carol has the message Text of Bob in Grupo delivered by Alice and Carol holds the item Text signed by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, Alice has Carol as a member of the group Grupo, not Alice has delivered the message Text of Bob in Grupo to Carol and not Alice is the author of Text. Possibly one: Alice=Bob, Alice=Carol, Bob=Carol.
+Groups:4+Provenance Groups:1 ■ Deliver leader: Alice has delivered the message Text of Bob in Grupo to Alice, Alice has the message Text of Bob in Grupo delivered by Alice and Alice holds the item Text signed by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, not Alice has delivered the message Text of Bob in Grupo to Alice and not Alice is the author of Text. Possibly one: Alice=Bob.
+Guardians:0 - | Bob *trusts* Alf, an AI agent of Alice, when he trusts Alice. The *decision rule*, which the principal of an AI agent decides, says who decides for an AI agent and how. An AI agent takes an act of a party by those who decide for the AI agent.
 Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
-Guardians:0 - | Default: any guardian of z for those who decide for z.
-Guardians:1+Agents:2 ■ Enter: Alice and Alf may jointly Alf has an identity, Alf is an AI agent, Alf has Alice as a guardian, Alice is the principal of Alf, Alice is a guardian of Alf, Alice knows Alf, Alf knows Alice, Alice counts Alf as a friend, Alf counts Alice as a friend, Alf holds the attestation Proof and Alice holds a record of Alf's attestation Proof, provided Alice is a person, not Alf has an identity, Alice holds the item Proof and Alice is the author of Proof. Must consent: Alf.
+Guardians:1+AI Agents:2 ■ Enter: Alice and Alf may jointly Alf has an identity, Alf is an AI agent, Alf has Alice as a guardian, Alice is the principal of Alf, Alice is a guardian of Alf, Alice knows Alf, Alf knows Alice, Alice counts Alf as a friend, Alf counts Alice as a friend, Alf holds the attestation Proof and Alice holds a record of Alf's attestation Proof, provided Alice is a person, not Alf has an identity, Alice holds the item Proof and Alice is the author of Proof. Must consent: Alf.
 Guardians:1 ■ | Alice chooses Alf's key pair.
 Guardians:2 ■ | Guardian decisions.
-Guardians:2+Agents:2 ■ Make guardian: The guardians of Alf and Bob may jointly Bob is a guardian of Alf, Alf has Bob as a guardian, Bob knows Alf, Alf knows Bob, Bob counts Alf as a friend, Alf counts Bob as a friend and Bob holds a record of Alf's attestation Proof, provided Alf is an AI agent, not Alf is retired, Bob is a person, Alf has Alice as a guardian, Bob counts Alice as a friend, not Bob is a guardian of Alf, not Alf has Bob as a guardian and Alf holds the attestation Proof.
+Guardians:2+AI Agents:2 ■ Make guardian: The guardians of Alf and Bob may jointly Bob is a guardian of Alf, Alf has Bob as a guardian, Bob knows Alf, Alf knows Bob, Bob counts Alf as a friend, Alf counts Bob as a friend and Bob holds a record of Alf's attestation Proof, provided Alf is an AI agent, not Alf is retired, Bob is a person, Alf has Alice as a guardian, Bob counts Alice as a friend, not Bob is a guardian of Alf, not Alf has Bob as a guardian and Alf holds the attestation Proof.
 Guardians:2 ■ Resign: Bob may no longer Bob is a guardian of Alf and no longer Alf has Bob as a guardian.
 Guardians:2 ■ End guardian: The guardians of Alf, other than Bob, may no longer Bob is a guardian of Alf and no longer Alf has Bob as a guardian.
 Guardians:2 ■ Guardian unfriend: Bob may no longer Bob counts Alf as a friend, no longer Alf counts Bob as a friend, no longer Bob is a guardian of Alf and no longer Alf has Bob as a guardian.
 Guardians:2 ■ | Alf may not end a friendship with her guardian.
 Guardians:3 ■ | Ward and person.
-Guardians:3+Agents:2 ■ AI agent acquaint: Alf and Bob may jointly Alf knows Bob, Bob knows Alf and Bob holds a record of Alf's attestation Proof, provided Alf is an AI agent, Alf has Alice as a guardian, Bob is a person and Alf holds the attestation Proof.
-Guardians:3+Agents:2 ■ AI agent befriend: Alf, Bob and Alice may jointly Alf counts Bob as a friend and Bob counts Alf as a friend, provided Alf is an AI agent, not Alf is retired, Alf has Alice as a guardian, Bob is a person, Alf knows Bob, Bob knows Alf, Alice counts Bob as a friend, Bob counts Alice as a friend, not Alf counts Bob as a friend, not Bob counts Alf as a friend and Alf holds the attestation Proof.
-Guardians:3+Agents:2 ■ AI agent end: Alf may no longer Alf counts Bob as a friend and no longer Bob counts Alf as a friend, provided not Alf has Bob as a guardian and Alf holds the attestation Proof.
+Guardians:3+AI Agents:2 ■ AI agent acquaint: Alf and Bob may jointly Alf knows Bob, Bob knows Alf and Bob holds a record of Alf's attestation Proof, provided Alf is an AI agent, Alf has Alice as a guardian, Bob is a person and Alf holds the attestation Proof.
+Guardians:3+AI Agents:2 ■ AI agent befriend: Alf, Bob and Alice may jointly Alf counts Bob as a friend and Bob counts Alf as a friend, provided Alf is an AI agent, not Alf is retired, Alf has Alice as a guardian, Bob is a person, Alf knows Bob, Bob knows Alf, Alice counts Bob as a friend, Bob counts Alice as a friend, not Alf counts Bob as a friend, not Bob counts Alf as a friend and Alf holds the attestation Proof.
+Guardians:3+AI Agents:2 ■ AI agent end: Alf may no longer Alf counts Bob as a friend and no longer Bob counts Alf as a friend, provided not Alf has Bob as a guardian and Alf holds the attestation Proof.
 Guardians:3 ■ Unfriend: Bob may no longer Bob counts Alf as a friend and no longer Alf counts Bob as a friend, provided not Bob is a guardian of Alf.
 Guardians:3 ■ AI agent unfriend: Alice may no longer Alf counts Bob as a friend and no longer Bob counts Alf as a friend, provided Alf has Alice as a guardian and not Bob is a guardian of Alf.
 Guardians:4 ■ | Wards.
-Guardians:4+Agents:2 ■ AI agents acquaint: Alf and Will may jointly Alf knows Will, Will knows Alf, Alf holds a record of Will's attestation Seal and Will holds a record of Alf's attestation Proof, provided Alf is an AI agent, Alf has Alice as a guardian, Will is an AI agent, Will has Bob as a guardian, Alf holds the attestation Proof and Will holds the attestation Seal. Possibly one: Alice=Bob.
-Guardians:4+Agents:2 ■ AI agents befriend: Alf, Will, Alice and Bob may jointly Alf counts Will as a friend and Will counts Alf as a friend, provided Alf is an AI agent, not Alf is retired, Alf has Alice as a guardian, Will is an AI agent, not Will is retired, Will has Bob as a guardian, Alf knows Will, Will knows Alf, Alice knows Will, Alice counts Bob as a friend, Bob counts Alice as a friend, not Alf counts Will as a friend, not Will counts Alf as a friend, Alf holds the attestation Proof and Will holds the attestation Seal. Possibly one: Alice=Bob.
-Guardians:4+Agents:2 ■ AI agents of one guardian befriend: Alf, Will and Alice may jointly Alf counts Will as a friend and Will counts Alf as a friend, provided Alf is an AI agent, not Alf is retired, Alf has Alice as a guardian, Will is an AI agent, not Will is retired, Will has Alice as a guardian, Alf knows Will, Will knows Alf, not Alf counts Will as a friend, not Will counts Alf as a friend, Alf holds the attestation Proof and Will holds the attestation Seal.
+Guardians:4+AI Agents:2 ■ AI agents acquaint: Alf and Will may jointly Alf knows Will, Will knows Alf, Alf holds a record of Will's attestation Seal and Will holds a record of Alf's attestation Proof, provided Alf is an AI agent, Alf has Alice as a guardian, Will is an AI agent, Will has Bob as a guardian, Alf holds the attestation Proof and Will holds the attestation Seal. Possibly one: Alice=Bob.
+Guardians:4+AI Agents:2 ■ AI agents befriend: Alf, Will, Alice and Bob may jointly Alf counts Will as a friend and Will counts Alf as a friend, provided Alf is an AI agent, not Alf is retired, Alf has Alice as a guardian, Will is an AI agent, not Will is retired, Will has Bob as a guardian, Alf knows Will, Will knows Alf, Alice knows Will, Alice counts Bob as a friend, Bob counts Alice as a friend, not Alf counts Will as a friend, not Will counts Alf as a friend, Alf holds the attestation Proof and Will holds the attestation Seal. Possibly one: Alice=Bob.
+Guardians:4+AI Agents:2 ■ AI agents of one guardian befriend: Alf, Will and Alice may jointly Alf counts Will as a friend and Will counts Alf as a friend, provided Alf is an AI agent, not Alf is retired, Alf has Alice as a guardian, Will is an AI agent, not Will is retired, Will has Alice as a guardian, Alf knows Will, Will knows Alf, not Alf counts Will as a friend, not Will counts Alf as a friend, Alf holds the attestation Proof and Will holds the attestation Seal.
 Guardians:5 ■ Retire: The guardians of Alf may Alf is retired, no longer anyone is a guardian of Alf, no longer Alf has anyone as a guardian, no longer Alf counts anyone as a friend and no longer anyone counts Alf as a friend, provided not Alf is retired.
 Guardians:5 ■ | Alf can then take no act.
 Forwarding:0 - | The *author* of an item is its first signer.
-Forwarding:1+Agents:2 ■ Sign: Alice may Alice holds the item Item, provided not Alice holds the item Item and Alice is a person.
-Forwarding:2+Agents:2 ■ Forward: Alice may Bob holds the item Item signed by Alice, provided Alice holds the item Item, Alice counts Bob as a friend, Bob counts Alice as a friend and Alice is a person.
-Agents:0 - | The *developer* of an AI agent is the signer of its code.
-Agents:0 - | In clause 2 Will is an AI agent.
-Agents:1 ○ | AI developer and guardian accountability.
-Agents:1 ○ | The developer of Alf will be accountable for Alf's defects.
-Agents:1 ○ | Every guardian of Alf will be accountable for operating it recklessly.
-Agents:2 ■ | AI acts.
-Agents:2 ■ | The principal of Alf attests at its creation, signed over Alf's public key, that Alf runs code signed by its developer.
-Agents:2 ■ Agent sign: Alf may Alf holds the item Item, provided Alf is an AI agent, Alf holds the attestation Proof, Alf has Alice as a guardian and not Alf holds the item Item.
-Agents:2 ■ Agent forward: Alf may Bob holds the item Item signed by Alf, provided Alf is an AI agent, Alf holds the attestation Proof, Alf has Alice as a guardian, Alf holds the item Item, Alf counts Bob as a friend and Bob counts Alf as a friend.
-Agents:2 ■ | Every act of Alf requires this attestation and names its developer and its principal.
+Forwarding:1+AI Agents:2 ■ Sign: Alice may Alice holds the item Item, provided not Alice holds the item Item and Alice is a person.
+Forwarding:2+AI Agents:2 ■ Forward: Alice may Bob holds the item Item signed by Alice, provided Alice holds the item Item, Alice counts Bob as a friend, Bob counts Alice as a friend and Alice is a person.
+AI Agents:0 - | The *developer* of an AI agent is the signer of its code.
+AI Agents:0 - | In clause 2 Will is an AI agent.
+AI Agents:1 ○ | AI developer and guardian accountability.
+AI Agents:1 ○ | The developer of Alf will be accountable for Alf's defects.
+AI Agents:1 ○ | Every guardian of Alf will be accountable for operating it recklessly.
+AI Agents:2 ■ | AI acts.
+AI Agents:2 ■ | The principal of Alf attests at its creation, signed over Alf's public key, that Alf runs code signed by its developer.
+AI Agents:2 ■ Agent sign: Alf may Alf holds the item Item, provided Alf is an AI agent, Alf holds the attestation Proof, Alf has Alice as a guardian and not Alf holds the item Item.
+AI Agents:2 ■ Agent forward: Alf may Bob holds the item Item signed by Alf, provided Alf is an AI agent, Alf holds the attestation Proof, Alf has Alice as a guardian, Alf holds the item Item, Alf counts Bob as a friend and Bob counts Alf as a friend.
+AI Agents:2 ■ | Every act of Alf requires this attestation and names its developer and its principal.
 Provenance Groups:1 ■ Agent message: Alf may Bob holds the item Text, provided Alf is an AI agent, Alf holds the attestation Proof, Alf has Alice as a guardian, Alf holds the item Text, Alf counts Bob as a friend and Bob counts Alf as a friend.
 Provenance Groups:1 ■ Deliver own: Alice has delivered the message Text of Alice in Grupo to Carol and Carol holds the item Text, provided Alice is the leader of Grupo, Alice has the post Text of Alice in Grupo, Alice has Carol as a member of the group Grupo, Alice is the author of Text and not Alice has delivered the message Text of Alice in Grupo to Carol.
 Provenance Groups:2 ■ Post forward: Bob may Alice has the post Item signed by Bob of Bob in Grupo, provided Bob is a person, Bob is a member of the group Grupo of Alice, not Bob is the leader of Grupo and Bob holds the item Item.

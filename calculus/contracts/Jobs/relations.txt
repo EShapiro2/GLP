@@ -1,1 +1,1 @@
-Jobs instantiates Anonymous Matching: holds
+Jobs extends Free Matching: holds

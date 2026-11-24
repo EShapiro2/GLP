@@ -1,0 +1,4 @@
+Promoted Matching
+Promoted Matching unites an augmentation of Anonymous Matching and Promoted Gossip, and extends the union.
+Promoted Matching:1 ■ | Organisation and ward.
+Promoted Matching:1 ■ Organisation ward acquaint: knows(Orga,Wendy), knows(Wendy,Orga) <- organisation(Orga), has_officer(Orga,Alice), ward(Wendy), has_guardian(Wendy,Bob) guarded by Orga, Wendy.

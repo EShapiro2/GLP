@@ -1,10 +1,10 @@
 # A run of the cascade on Liquid-DAO
 
-- Contract: `Liquid-DAO` (`liquid_dao` to the checker), its owner's two files `programs/gce/ldao/Liquid-DAO.txt` and `programs/gce/ldao/Liquid-DAO.glp`, copied here as they stood at `c75326c9`.
+- Contract: `Liquid-DAO` (`liquid_dao` to the checker), its owner's two files `programs/gce/ldao/Liquid-DAO.txt` and `programs/gce/ldao/Liquid-DAO.glp`, copied here as they stood at `235bab58`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gce/ldao/Liquid-DAO.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gce/ldao/Liquid-DAO.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-17 15:16 UTC by `cascade.sh liquid_dao`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `c75326c9`; each artefact's source and tool:
+- Run on 2026-11-24 07:50 UTC by `cascade.sh liquid_dao`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `235bab58`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

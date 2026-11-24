@@ -4101,9 +4101,14 @@ unable_at1(RsP, Bn, Sh, L?, H?) :- ground(RsP?), ground(Bn?), ground(Sh?) |
 procedure held_in(GAtoms?, GAtoms?, GAtoms).
 held_in([], _, []).
 held_in([G|Gs], Sh, H?) :- ground(G?), ground(Sh?) |
-    mem(G?, Sh?, In),
+    g_wild(G?, W),
+    held_one(W?, G?, Sh?, H0),
     held_in(Gs?, Sh?, H1),
-    keep_g(In?, G?, H1?, H).
+    app(H0?, H1?, H).
+%% A forbidden atom the state has: the atom, or, where it carries the wildcard, the atoms of the state it matches.
+procedure held_one(YesNo?, GAtom?, GAtoms?, GAtoms).
+held_one(no, G, Sh, H?) :- ground(G?) | mem(G?, Sh?, In), keep_g(In?, G?, [], H).
+held_one(yes, K, Sh, H?) :- g_matched(K?, Sh?, H).
 procedure keep_g(YesNo?, GAtom?, GAtoms?, GAtoms).
 keep_g(yes, G, H, [G?|H?]).
 keep_g(no, _, H, H?).
@@ -4394,8 +4399,24 @@ procedure forb_one(YesNo?, SAtom?, Binding?, GAtoms?, YesNo).
 forb_one(no, _, _, _, yes).
 forb_one(yes, A, B, Sh, R?) :- ground(Sh?) |
     img_atom(A?, B?, G),
-    mem(G?, Sh?, In),
+    forb_held(G?, Sh?, In),
     neg(In?, R).
+%% Whether the state holds an atom the image G of a forbidden atom forbids: G itself, or, where G carries the wildcard, an atom it matches, as the image of a cleared atom does, g_matches (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches"; GSC, Definition "Compilation": "d_p holds ... no atom matching phi").
+procedure forb_held(GAtom?, GAtoms?, YesNo).
+forb_held(G, Sh, In?) :- ground(G?) | g_wild(G?, W), forb_held1(W?, G?, Sh?, In).
+procedure forb_held1(YesNo?, GAtom?, GAtoms?, YesNo).
+forb_held1(no, G, Sh, In?) :- mem(G?, Sh?, In).
+forb_held1(yes, K, Sh, In?) :- g_matched(K?, Sh?, Ms), nonempty(Ms?, In).
+%% The atoms of a state that the image K of an atom with the wildcard matches.
+procedure g_matched(GAtom?, GAtoms?, GAtoms).
+g_matched(_, [], []).
+g_matched(K, [G|Gs], H?) :- ground(K?), ground(G?) |
+    g_matches(K?, G?, M),
+    g_matched(K?, Gs?, H1),
+    keep_g(M?, G?, H1?, H).
+procedure nonempty(GAtoms?, YesNo).
+nonempty([], no).
+nonempty([_|_], yes).
 procedure forb_ok1(YesNo?, SAtoms?, Binding?, GAtoms?, YesNo).
 forb_ok1(no, _, _, _, no).
 forb_ok1(yes, As, B, Sh, R?) :- forb_ok(As?, B?, Sh?, R).
@@ -5238,12 +5259,23 @@ mates_check([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), gro
     app(M1?, M2?, M).
 procedure mates_check1(LNorm?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_check1(badnorm, _, _, _, []).
+%% A numeric variable that no deleted or added atom names, and that is not local to a role, is given its values by the constraint once those the atoms bind are bound, by the conjuncts local to every role (con_extend), as at a Propose (num_extend): "or the constraint gives the variable finitely many values once those are bound" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"); so identity_record of Secure Friendship, whose Double only its constraint names, has the schema-binding of its class term among those of its class.
 mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
+    schema_numeric(Nm?, N),
+    mates_extend(N?, B?, Bs),
+    mates_check2(Bs?, Nm?, Rs?, Ps?, M).
+procedure mates_extend(Numeric?, Binding?, Bindings).
+mates_extend(numeric(Cj, _, _), B, Bs?) :- ground(Cj?), ground(B?) | conjs_every(Cj?, C), con_extend(C?, B?, Bs).
+procedure mates_check2(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
+mates_check2([], _, _, _, []).
+mates_check2([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
     sig_of(Rs?, B?, Ps1),
     deltas_eq(Ps?, Ps1?, E1),
     admissible(Rs?, B?, E2),
     and(E1?, E2?, E),
-    mate_of(E?, B?, Nm?, Rs?, M).
+    mate_of(E?, B?, Nm?, Rs?, M1),
+    mates_check2(Bs?, Nm?, Rs?, Ps?, M2),
+    app(M1?, M2?, M).
 %% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role, agent, speech-act or numeric, are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
 procedure local_norm(Constant?, Binding?, LNorm).
 local_norm(Nm, B, R?) :- ground(Nm?), ground(B?) |
@@ -5488,7 +5520,7 @@ live_at1(no, _, _, _, _, no).
 live_at1(yes, Ps, Rs, B, Rf, Ok?) :- live_at(Ps?, Rs?, B?, Rf?, Ok).
 procedure live_one(CAtoms?, CAtoms?, Peer?, Preds?, YesNo).
 live_one(R, F, P, Rf, Ok?) :- ground(F?) |
-    ms_meets(R?, F?, M1),
+    forb_meets(R?, F?, M1),
     own_reflexive_in(F?, P?, Rf?, M2),
     or(M1?, M2?, M),
     neg(M?, Ok).
@@ -5504,8 +5536,8 @@ linked([P|Ps], Rs1, B1, Rs2, B2, Rf, L?) :-
     forbs_at(Rs2?, B2?, P?, F2),
     bound_cs(R1?, Rb1),
     bound_cs(R2?, Rb2),
-    ms_meets(Rb1?, F2?, C1),
-    ms_meets(Rb2?, F1?, C2),
+    forb_meets(Rb1?, F2?, C1),
+    forb_meets(Rb2?, F1?, C2),
     or(C1?, C2?, C),
     linked1(C?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
 procedure linked1(YesNo?, Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
@@ -5524,6 +5556,36 @@ forbs_at(Rs, B, P, F?) :- ground(B?) |
     specs_at(Rs?, 1, B?, P?, RsP),
     forbs_of(RsP?, Fs),
     cimg_atoms(Fs?, B?, F).
+%% Whether an atom of Rs is forbidden by an atom of Fs: it is one of them, or one with the wildcard matches it, the wildcard, which no binding binds, compared as cmp_free(any), and N.* as its image (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches").
+procedure forb_meets(CAtoms?, CAtoms?, YesNo).
+forb_meets([], _, no).
+forb_meets([X|Xs], Fs, R?) :- ground(X?), ground(Fs?) | c_forbidden(Fs?, X?, R1), forb_meets1(R1?, Xs?, Fs?, R).
+procedure forb_meets1(YesNo?, CAtoms?, CAtoms?, YesNo).
+forb_meets1(yes, _, _, yes).
+forb_meets1(no, Xs, Fs, R?) :- forb_meets(Xs?, Fs?, R).
+procedure c_forbidden(CAtoms?, CAtom?, YesNo).
+c_forbidden([], _, no).
+c_forbidden([K|Ks], X, R?) :- ground(K?), ground(X?) | c_matches(K?, X?, R1), c_forbidden1(R1?, Ks?, X?, R).
+procedure c_forbidden1(YesNo?, CAtoms?, CAtom?, YesNo).
+c_forbidden1(yes, _, _, yes).
+c_forbidden1(no, Ks, X, R?) :- c_forbidden(Ks?, X?, R).
+procedure c_matches(CAtom?, CAtom?, YesNo).
+c_matches(cmp_atom(P, Ks), cmp_atom(Q, Xs), M?) :- P? =?= Q? | cm_vals(Ks?, Xs?, M).
+c_matches(_, _, no) :- otherwise | true.
+procedure cm_vals(CVals?, CVals?, YesNo).
+cm_vals([], [], yes).
+cm_vals([], [_|_], no).
+cm_vals([_|_], [], no).
+cm_vals([K|Ks], [X|Xs], M?) :- ground(K?), ground(X?) |
+    cm_val(K?, X?, M1),
+    cm_vals1(M1?, Ks?, Xs?, M).
+procedure cm_vals1(YesNo?, CVals?, CVals?, YesNo).
+cm_vals1(no, _, _, no).
+cm_vals1(yes, Ks, Xs, M?) :- cm_vals(Ks?, Xs?, M).
+procedure cm_val(CVal?, CVal?, YesNo).
+cm_val(cmp_free(any), _, yes).
+cm_val(cmp_val(K), cmp_val(X), M?) :- gm_val(K?, X?, M).
+cm_val(K, X, M?) :- otherwise | same(K?, X?, M).
 procedure forbs_of(RoleSpecs?, SAtoms).
 forbs_of([], []).
 forbs_of([R|Rs], F?) :- rs_forb(R?, F1), forbs_of(Rs?, F2), app(F1?, F2?, F).
@@ -6090,8 +6152,8 @@ rs_add(rs(_, A, _, _, _), A?).
 procedure rs_del(RoleSpec?, SAtoms).
 rs_del(rs(_, _, D, _, _), D?).
 procedure rs_req(RoleSpec?, SAtoms).
-%% The atoms a role requires: those it keeps, and those it deletes but its cleared atoms, which it deletes and does not require (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "the act deletes every atom of the state that it matches, and requires none"; GSC 327e035, =(i) u -(i)).
-rs_req(rs(_, _, D, K, _), R?) :- uncleared(D?, D1), app(K?, D1?, R).
+%% The atoms a role requires: those it keeps, and those it deletes but its cleared atoms, which it deletes and does not require (vGLP f8127b1, Section 5.4, "Act schemas as local specifications": "the act deletes every atom of the state that it matches, and requires none"; GSC 327e035, =(i) u -(i)).  The union, so that an atom the role keeps and deletes is required once, as "Rank: provided Alice holds Bob's unranked bid ...; after which no longer Alice holds Bob's unranked bid" (Grassroots-Audit, programs/vglp/cva/compiler/cvac.glp.md, Finding 1).
+rs_req(rs(_, _, D, K, _), R?) :- uncleared(D?, D1), ms_join(K?, D1?, R).
 procedure uncleared(SAtoms?, SAtoms).
 uncleared([], []).
 uncleared([A|As], R?) :- ground(A?) |
@@ -6252,6 +6314,8 @@ vars_bound([num(X)|Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
 vars_bound([val(_)|Vs], B, R?) :- vars_bound(Vs?, B?, R).
 %% An item is bound where its variable is.
 vars_bound([item_of(V)|Vs], B, R?) :- vars_bound([V?|Vs?], B?, R).
+%% The wildcard of a forbidden atom is no variable, and leaves the atom bound (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches").
+vars_bound([any|Vs], B, R?) :- vars_bound(Vs?, B?, R).
 vars_bound([nterm(N)|Vs], B, R?) :- ground(N?) |
     nt_vars(N?, Ws),
     app(Ws?, Vs?, Vs1),

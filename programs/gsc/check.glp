@@ -508,6 +508,7 @@ procedure head_untyped(Args?, Args).
 head_untyped([], []).
 head_untyped([real(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
 head_untyped([const(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
+head_untyped([set(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
 head_untyped([A|As], [A?|R?]) :- otherwise | head_untyped(As?, R).
 
 procedure head_schemas(NContract?, Faults).

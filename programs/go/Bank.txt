@@ -5,10 +5,10 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Bank.glp beside this file.
 Bank
-Bank extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Bank unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
 Logic pragmas
-Bank extends Organisation and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Bank unites Organisation and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 A *bank* is an organisation whose business is issuing coins and bonds against the coins and bonds it holds.
 Interface pragmas
 Look: 🏦, money
@@ -16,8 +16,6 @@ Issue: AliceOfficer [Issue for Alice] <denomination> <amount> <votes>
   Voter [Vote of Alice for Issue] <amount>
   AliceOfficer [First issue for Alice] <amount> <denomination> <votes>
   Voter [Vote of Alice for First issue] <amount> <denomination>
-Issue bond: AliceOfficer [Issue bond for Alice] <maturity> <denomination> <amount> <votes>
-  Voter [Vote of Alice for Issue bond] <amount> <maturity>
 Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <denomination> <amount given> <amount wanted> <votes>
   Bob: AliceOfficer asks to swap coins of the organisation Alice with you.
   Voter [Vote of Alice for Swap] <with> <amount given> <issuer given> <amount wanted> <issuer wanted>

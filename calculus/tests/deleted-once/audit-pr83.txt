@@ -1,0 +1,9 @@
+Audit PR 83, Finding 1: a condition the act also deletes is required once.
+Run: python3 tools/tests.py (Calculus calc11-no-parameters, 2026-11-24 13:17 UTC)
+deleted-once same
+61 cases, 0 that differ
+
+R:1 states the condition 'provided Alice has a pass' and deletes the pass; S:1, the control, only deletes it.
+Both schemas require p(Alice) once:
+R:1 ■ Spend: ~p(Alice) <- p(Alice) guarded by Alice.
+S:1 ■ Drop: ~p(Alice) <- p(Alice) guarded by Alice.

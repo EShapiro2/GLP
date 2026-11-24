@@ -3,8 +3,8 @@ Second-Score Auction
 An *identity* is a unique cryptographic key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-A person has a *location*. d > 0, an integer, and e > 0 are parameters of Local Overlay.
-A *pickup delay* is measured from the award. The *terms* of a call, a parameter of Auction, state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released. Here: second-score terms.
+A person has a *location*. d > 0, an integer, and e > 0 are numbers.
+A *pickup delay* is measured from the award. The *terms* of a call state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
 *Second-score terms* state a maximum pickup delay T ≥ 0, a willingness to pay W(τ) = A − λτ with A, λ ≥ 0, and a deposit D ≥ 0. The award is at time t₀. A bid (p, τ) is the fare p ≥ 0 the bidder asks and the pickup delay τ ≥ 0 the bidder promises. Its *score* is W(τ) − p, and it is *admissible* iff τ ≤ T and its score is at least 0.
 Alice is a rider, Bob a driver, Carol a person. A person can be either a rider or a driver but not both.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.

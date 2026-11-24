@@ -1,7 +1,3 @@
 Dating
-Dating instantiates Anonymous Matching with a test of the match of profiles and a budget of a count set by the maker, a forward costing one, and restricts it.
+Dating extends Free Matching.
 A post is a *profile*, stating who its maker is and whom they seek. Two profiles match when each states whom the other seeks.
-Alice is a person.
-1. ■ Post: Matching:1, only if Alice has no profile.
-Logic pragmas.
-x has no profile: x has made the post no one.

@@ -1,5 +1,8 @@
 Tennis Courts
-Tennis Courts instantiates Booking with a court for a resource, composes it with Partners, and restricts the composition.
+Tennis Courts unites Booking and Partners, and extends and weakens the union.
 The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
 Alice and Carol are persons, Club an organisation.
 1. ■ Book: Booking:1, only if Carol is a participant of Club, Club has Carol as a participant and Carol has fewer outstanding bookings in Club than the bound, with the consent of Carol.
+2. ■ Organisation and ward. Organisation ward acquaint: Club and Wendy may jointly come to know each other, provided Club is an organisation, Club has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.
+Logic pragmas.
+Renaming of Booking: a court for a resource.

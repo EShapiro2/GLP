@@ -53,6 +53,7 @@ The names of a sentence are different persons, but for those the names line says
 RUN AND CHECK
 python3 tools/gcsas.py NAME [NAME ...]     prints, for each contract and those it is written from: commute, return, recover.
 Wanted: "commute yes; return yes; recover same".  "recover equivalent" is acceptable where two wordings have the same schemas; say which in the notes.  Then read sas/NAME.txt against rev/NAME.txt: each schema must say what its sentence says.
+python3 tools/grcheck.py [NAME ...]        prints how gr/NAME.txt differs from rev/NAME.txt: the title and the first line, the clauses with their legal modalities and titles, the citations, the names, and, for a person to judge, the conditions and effects of gr/ that rev/ has no word for.
 Do not edit tools/gcsas.py, or a contract of gr/ that is not on your list: note what you need of either and go on.
 Notes go in gr/NOTES-<your group>.txt, one line each: "NAME:n D ..." a decision you took; "NAME:n Q ..." a question for Udi; "TOOL ..." what the program could not read; "PARENT NAME ..." what you need changed in a contract not yours.
 

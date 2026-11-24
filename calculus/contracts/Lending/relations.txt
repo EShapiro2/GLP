@@ -1,1 +1,1 @@
-Lending instantiates Anonymous Matching: holds
+Lending extends Free Matching: holds

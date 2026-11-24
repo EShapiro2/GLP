@@ -1,5 +1,5 @@
 Services
-Services instantiates Guardians with the guardians of z for those who decide for z (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Services extends Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 A *service* is a ward operated by a machine at an address every person can reach.
 Logic pragmas.
 Roles: the guardians of z = guardians(z), listed by z has y as a guardian and y is a guardian of z.

@@ -1,4 +1,4 @@
 Organisation instantiates Guardians: holds
+Organisation extends it (Guardians): holds
 Organisation restricts it (Guardians): holds
 Organisation strengthens it (Guardians): holds
-Organisation extends it (Guardians): holds

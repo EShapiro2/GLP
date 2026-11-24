@@ -22,7 +22,7 @@ befriend(Peer, Peer)
 ;
 person_unfriend(Peer, Peer)
 ;
-enter(Peer, Peer)
+found(Peer, Peer, Peer, Constant)
 ;
 appoint(Peer, Peer, Peer, List(Peer), Constant)
 ;
@@ -50,13 +50,11 @@ organisations_of_one_officer_befriend(Peer, Peer, Peer)
 ;
 retire(Peer, Peer, List(Peer), List(Peer), List(Peer), List(Peer))
 ;
-found(Peer, Peer, Peer, Constant)
-;
 propose(Peer, Peer, Speech)
 ;
 vote(Peer, Peer, Speech)
 ;
-act(Peer, Peer, Speech, Integer, Integer)
+act(Peer, Peer, Speech)
 ;
 join(Peer, Peer, Peer, List(Peer))
 ;
@@ -68,7 +66,7 @@ expel(Peer, Peer, Peer, List(Peer))
 ;
 officer_expel(Peer, Peer, Peer, List(Peer))
 ;
-amend(Peer, Peer, Speech, Integer, Integer)
+amend(Peer, Peer, Speech)
 .
 
 Proposal ::=
@@ -82,7 +80,7 @@ befriend(Peer, Peer)
 ;
 person_unfriend(Peer, Peer)
 ;
-enter(Peer, Peer)
+found(Peer, Peer, Peer, Constant)
 ;
 appoint(Peer, Peer, Peer, Constant)
 ;
@@ -110,13 +108,11 @@ organisations_of_one_officer_befriend(Peer, Peer, Peer)
 ;
 retire(Peer, Peer)
 ;
-found(Peer, Peer, Peer, Constant)
-;
 propose(Peer, Peer, Speech)
 ;
 vote(Peer, Peer, Speech)
 ;
-act(Peer, Peer, Speech, Integer, Integer)
+act(Peer, Peer, Speech)
 ;
 join(Peer, Peer, Peer)
 ;
@@ -128,14 +124,14 @@ expel(Peer, Peer, Peer)
 ;
 officer_expel(Peer, Peer, Peer)
 ;
-amend(Peer, Peer, Speech, Integer, Integer)
+amend(Peer, Peer, Speech)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, []), req(person, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2, 3], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)]), req(person, [])], [1, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(person, []), forb(friend, [at(2)])], [2], [], [], [])]), button("Enter", [act(enter, 1, [1, 2], [req(identity, []), req(person, []), unless(knows, [at(2)]), unless(friend, [at(2)]), unless(creator, [at(2)]), unless(officer, [at(2)]), unless(has_officer, [at(2)]), unless(role, [at(2), any]), unless(has_role, [at(2), any]), unless(first_officer, [at(2)]), unless(has_participant, [at(2)]), unless(participant, [at(2)]), unless(vote, [at(2), any])], [], [field(2, "name", key)], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)]), forb(officer, [at(2)])], [2], [], [], [])]), button("Person unfriend", [act(person_unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)])], [2], [], [], [])]), button("Found", [act(found, 2, [1, 2, 3], [req(identity, []), unless(knows, [at(1)]), unless(friend, [at(1)]), unless(creator, [at(1)]), unless(officer, [at(1)]), unless(has_officer, [at(1)]), unless(role, [at(1), any]), unless(has_role, [at(1), any]), unless(first_officer, [at(1)]), unless(has_participant, [at(1)]), unless(participant, [at(1)]), unless(vote, [at(1), any]), proved(identity, [], knows, [at(3)]), proved(identity, [], friend, [at(3)]), proved(identity, [], creator, [at(3)]), proved(identity, [], officer, [at(3)]), proved(identity, [], has_officer, [at(3)]), proved(person, [], has_officer, [at(3)]), proved(identity, [], role, [at(3), any]), proved(identity, [], has_role, [at(3), any]), proved(person, [], has_role, [at(3), any]), proved(identity, [], first_officer, [at(3)]), proved(person, [], first_officer, [at(3)]), proved(identity, [], has_participant, [at(3)]), proved(person, [], has_participant, [at(3)]), proved(identity, [], participant, [at(3)]), proved(identity, [], vote, [at(3), any]), proved(person, [], vote, [at(3), any])], [], [field(1, "organisation", person), field(3, "person", person), field(4, "role", text)], [], [])]), button("Propose", [act(propose, 2, [1, 2], [req(identity, []), req(officer, [at(1)]), req(person, [])], [1], [field(3, "act", text)], [], [])]), button("Vote", [act(vote, 2, [1, 2], [req(identity, []), req(officer, [at(1)]), req(person, [])], [1], [field(3, "act", text)], [], [])]), button("Act", [act(act, 2, [1, 2], [req(identity, []), req(officer, [at(1)]), req(person, [])], [1], [field(3, "act", text), field(4, "votes", number)], [], [])]), button("Join", [act(join, 1, [1, 2, 3], [req(identity, []), req(person, []), forb(participant, [at(2)]), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], creator, [at(2)]), proved(identity, [], officer, [at(2)]), proved(identity, [], has_officer, [at(2)]), proved(identity, [], role, [at(2), any]), proved(identity, [], has_role, [at(2), any]), proved(identity, [], first_officer, [at(2)]), proved(identity, [], has_participant, [at(2)]), proved(identity, [], participant, [at(2)]), proved(identity, [], vote, [at(2), any]), proved(identity, [], knows, [at(3)]), proved(identity, [], friend, [at(3)]), proved(identity, [], creator, [at(3)]), proved(identity, [], officer, [at(3)]), proved(identity, [], has_officer, [at(3)]), proved(person, [], has_officer, [at(3)]), proved(identity, [], role, [at(3), any]), proved(identity, [], has_role, [at(3), any]), proved(person, [], has_role, [at(3), any]), proved(identity, [], first_officer, [at(3)]), proved(person, [], first_officer, [at(3)]), proved(identity, [], has_participant, [at(3)]), proved(person, [], has_participant, [at(3)]), proved(identity, [], participant, [at(3)]), proved(identity, [], vote, [at(3), any]), proved(person, [], vote, [at(3), any])], [], [field(2, "organisation", person), field(3, "officer", person)], [], [])]), button("Leave", [act(leave, 1, [1, 2], [req(identity, []), req(person, []), req(participant, [at(2)]), forb(officer, [at(2)])], [2], [], [], [])]), button("Officer leave", [act(officer_leave, 1, [1, 2], [req(identity, []), req(person, []), req(participant, [at(2)]), req(officer, [at(2)])], [2], [], [], [])]), button("Expel", [act(expel, 3, [1, 2, 3], [req(identity, []), req(person, []), req(officer, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], participant, [at(1)]), proved(identity, [], vote, [at(1), any])], [2], [field(1, "person", person)], [], [])]), button("Officer expel", [act(officer_expel, 3, [1, 2, 3], [req(identity, []), req(person, []), req(officer, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], participant, [at(1)]), proved(identity, [], vote, [at(1), any])], [2], [field(1, "person", person)], [], [])]), button("Appoint", [act(appoint, 3, [1, 2, 3], [req(identity, []), req(person, []), req(officer, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(person, [], has_officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(identity, [], has_role, [at(1), any]), proved(person, [], has_role, [at(1), any]), proved(identity, [], first_officer, [at(1)]), proved(person, [], first_officer, [at(1)]), proved(identity, [], has_participant, [at(1)]), proved(person, [], has_participant, [at(1)]), proved(identity, [], participant, [at(1)]), proved(identity, [], vote, [at(1), any]), proved(person, [], vote, [at(1), any])], [2], [field(1, "person", person), field(4, "role", text)], [], [])]), button("End officer", [act(end_officer, 3, [1, 2, 3], [req(identity, []), req(person, []), req(officer, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], participant, [at(1)]), proved(identity, [], vote, [at(1), any])], [2], [field(1, "person", person)], [], [])]), button("Resign", [act(resign, 1, [1, 2], [req(identity, []), req(person, []), req(officer, [at(2)])], [2], [], [], [])]), button("Officer unfriend", [act(officer_unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)]), req(officer, [at(2)])], [2], [], [], [])]), button("Amend", [act(amend, 2, [1, 2], [req(identity, []), req(officer, [at(1)]), req(person, [])], [1], [field(3, "act", text), field(4, "votes", number)], [], [])]), button("Organisation acquaint", [act(organisation_acquaint, 2, [1, 2], [req(identity, []), req(person, [])], [], [field(1, "organisation", key)], [], [])]), button("Organisation befriend", [act(organisation_befriend, 3, [1, 2, 3], [req(identity, []), req(friend, [at(2)]), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], creator, [at(1)]), proved(organisation, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(organisation, [], officer, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(organisation, [], role, [at(1), any]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], participant, [at(1)]), proved(identity, [], vote, [at(1), any])], [2], [field(1, "organisation", person)], [], [])]), button("Organisation unfriend", [act(organisation_unfriend, 3, [1, 2, 3], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], participant, [at(1)]), proved(identity, [], vote, [at(1), any]), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], creator, [at(2)]), proved(identity, [], officer, [at(2)]), proved(identity, [], has_officer, [at(2)]), proved(identity, [], role, [at(2), any]), proved(identity, [], has_role, [at(2), any]), proved(identity, [], first_officer, [at(2)]), proved(identity, [], has_participant, [at(2)]), proved(identity, [], participant, [at(2)]), proved(identity, [], vote, [at(2), any])], [], [field(1, "organisation", person), field(2, "person", person)], [], [])]), button("Organisation end", [act(organisation_end, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(has_officer, [at(2)])], [2], [], [], [])]), button("Organisations acquaint", [act(organisations_acquaint, 1, [1, 2], [req(identity, []), req(organisation, []), req(has_officer, [any])], [], [field(2, "organisation", key)], [same(4, 3)], [])]), button("Organisations befriend", [act(organisations_befriend, 3, [1, 2, 3, 4], [req(identity, []), req(knows, [at(2)]), req(friend, [at(4)]), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], creator, [at(1)]), proved(organisation, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(organisation, [], officer, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(organisation, [], role, [at(1), any]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], participant, [at(1)]), proved(identity, [], vote, [at(1), any])], [2, 4], [field(1, "organisation", person)], [same(4, 3)], [])]), button("Organisations of one officer befriend", [act(organisations_of_one_officer_befriend, 3, [1, 2, 3], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], creator, [at(1)]), proved(organisation, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(organisation, [], officer, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(organisation, [], role, [at(1), any]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], participant, [at(1)]), proved(identity, [], vote, [at(1), any]), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], creator, [at(2)]), proved(organisation, [], creator, [at(2)]), proved(identity, [], officer, [at(2)]), proved(organisation, [], officer, [at(2)]), proved(identity, [], has_officer, [at(2)]), proved(identity, [], role, [at(2), any]), proved(organisation, [], role, [at(2), any]), proved(identity, [], has_role, [at(2), any]), proved(identity, [], first_officer, [at(2)]), proved(identity, [], has_participant, [at(2)]), proved(identity, [], participant, [at(2)]), proved(identity, [], vote, [at(2), any])], [], [field(1, "organisation", person), field(2, "other organisation", person)], [], [])]), button("Retire", [act(retire, 2, [1, 2], [req(identity, []), req(person, []), req(officer, [at(1)])], [1], [], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [forb(identity, [])], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, []), req(person, [])], [], [field(2, "person", key)], [], [])]), button("Introduce", [act(introduce, 2, [1, 2, 3], [req(identity, []), req(knows, [at(1)]), req(knows, [at(3)]), req(person, [])], [1, 3], [], [], [])]), button("Befriend", [act(befriend, 1, [1, 2], [req(identity, []), req(knows, [at(2)]), req(person, []), forb(friend, [at(2)])], [2], [], [], [])]), button("Unfriend", [act(unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)]), forb(officer, [at(2)])], [2], [], [], [])]), button("Person unfriend", [act(person_unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)])], [2], [], [], [])]), button("Found", [act(found, 2, [1, 2, 3], [req(identity, []), req(person, []), unless(knows, [at(1)]), unless(friend, [at(1)]), unless(has_officer, [at(1)]), unless(first_officer, [at(1)]), unless(has_role, [at(1), any]), unless(has_participant, [at(1)]), unless(creator, [at(1)]), unless(officer, [at(1)]), unless(role, [at(1), any]), unless(participant, [at(1)]), unless(founder, [at(1)]), unless(vote, [at(1), any]), proved(identity, [], knows, [at(3)]), proved(identity, [], friend, [at(3)]), proved(identity, [], has_officer, [at(3)]), proved(identity, [], first_officer, [at(3)]), proved(identity, [], has_role, [at(3), any]), proved(identity, [], has_participant, [at(3)]), proved(identity, [], creator, [at(3)]), proved(identity, [], officer, [at(3)]), proved(identity, [], role, [at(3), any]), proved(identity, [], participant, [at(3)]), proved(identity, [], founder, [at(3)]), proved(identity, [], vote, [at(3), any])], [], [field(1, "organisation", person), field(3, "founder", person), field(4, "role", text)], [], [])]), button("Propose", [act(propose, 2, [1, 2], [req(identity, []), req(officer, [at(1)]), req(proposer, [at(1)]), req(person, [])], [1], [field(3, "act", text)], [], [])]), button("Vote", [act(vote, 2, [1, 2], [req(identity, []), req(participant, [at(1)]), req(voter, [at(1), at(3)]), req(person, [])], [1, 3], [], [], [])]), button("Act", [act(act, 2, [1, 2], [req(identity, []), req(officer, [at(1)]), req(taker, [at(1), at(3)]), req(person, [])], [1, 3], [], [], [])]), button("Join", [act(join, 1, [1, 2, 3], [req(identity, []), req(person, []), forb(participant, [at(2)]), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], has_officer, [at(2)]), proved(identity, [], first_officer, [at(2)]), proved(identity, [], has_role, [at(2), any]), proved(identity, [], has_participant, [at(2)]), proved(identity, [], creator, [at(2)]), proved(identity, [], officer, [at(2)]), proved(identity, [], role, [at(2), any]), proved(identity, [], participant, [at(2)]), proved(identity, [], founder, [at(2)]), proved(identity, [], vote, [at(2), any]), proved(identity, [], knows, [at(3)]), proved(identity, [], friend, [at(3)]), proved(identity, [], has_officer, [at(3)]), proved(person, [], has_officer, [at(3)]), proved(identity, [], first_officer, [at(3)]), proved(person, [], first_officer, [at(3)]), proved(identity, [], has_role, [at(3), any]), proved(person, [], has_role, [at(3), any]), proved(identity, [], has_participant, [at(3)]), proved(person, [], has_participant, [at(3)]), proved(identity, [], creator, [at(3)]), proved(identity, [], officer, [at(3)]), proved(identity, [], role, [at(3), any]), proved(identity, [], participant, [at(3)]), proved(identity, [], founder, [at(3)]), proved(identity, [], vote, [at(3), any]), proved(person, [], vote, [at(3), any])], [], [field(2, "organisation", person), field(3, "officer", person)], [], [])]), button("Leave", [act(leave, 1, [1, 2], [req(identity, []), req(person, []), req(participant, [at(2)]), forb(officer, [at(2)])], [2], [], [], [])]), button("Officer leave", [act(officer_leave, 1, [1, 2], [req(identity, []), req(person, []), req(participant, [at(2)]), req(officer, [at(2)])], [2], [], [], [])]), button("Expel", [act(expel, 3, [1, 2, 3], [req(identity, []), req(person, []), req(officer, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(identity, [], participant, [at(1)]), proved(identity, [], founder, [at(1)]), proved(identity, [], vote, [at(1), any])], [2], [field(1, "person", person)], [], [])]), button("Officer expel", [act(officer_expel, 3, [1, 2, 3], [req(identity, []), req(person, []), req(officer, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(identity, [], participant, [at(1)]), proved(identity, [], founder, [at(1)]), proved(identity, [], vote, [at(1), any])], [2], [field(1, "person", person)], [], [])]), button("Appoint", [act(appoint, 3, [1, 2, 3], [req(identity, []), req(person, []), req(officer, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(person, [], has_officer, [at(1)]), proved(identity, [], first_officer, [at(1)]), proved(person, [], first_officer, [at(1)]), proved(identity, [], has_role, [at(1), any]), proved(person, [], has_role, [at(1), any]), proved(identity, [], has_participant, [at(1)]), proved(person, [], has_participant, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(identity, [], participant, [at(1)]), proved(identity, [], founder, [at(1)]), proved(identity, [], vote, [at(1), any]), proved(person, [], vote, [at(1), any])], [2], [field(1, "person", person), field(4, "role", text)], [], [])]), button("End officer", [act(end_officer, 3, [1, 2, 3], [req(identity, []), req(person, []), req(officer, [at(2)]), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(identity, [], participant, [at(1)]), proved(identity, [], founder, [at(1)]), proved(identity, [], vote, [at(1), any])], [2], [field(1, "person", person)], [], [])]), button("Resign", [act(resign, 1, [1, 2], [req(identity, []), req(person, []), req(officer, [at(2)])], [2], [], [], [])]), button("Officer unfriend", [act(officer_unfriend, 1, [1, 2], [req(identity, []), req(person, []), req(friend, [at(2)]), req(officer, [at(2)])], [2], [], [], [])]), button("Amend", [act(amend, 2, [1, 2], [req(identity, []), req(officer, [at(1)]), req(amender, [at(1), at(3)]), req(person, [])], [1, 3], [], [], [])]), button("Organisation acquaint", [act(organisation_acquaint, 2, [1, 2], [req(identity, []), req(person, [])], [], [field(1, "organisation", key)], [], [])]), button("Organisation befriend", [act(organisation_befriend, 3, [1, 2, 3], [req(identity, []), req(friend, [at(2)]), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], creator, [at(1)]), proved(organisation, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(organisation, [], officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(organisation, [], role, [at(1), any]), proved(identity, [], participant, [at(1)]), proved(identity, [], founder, [at(1)]), proved(organisation, [], founder, [at(1)]), proved(identity, [], vote, [at(1), any])], [2], [field(1, "organisation", person)], [], [])]), button("Organisation unfriend", [act(organisation_unfriend, 3, [1, 2, 3], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(identity, [], participant, [at(1)]), proved(identity, [], founder, [at(1)]), proved(identity, [], vote, [at(1), any]), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], has_officer, [at(2)]), proved(identity, [], first_officer, [at(2)]), proved(identity, [], has_role, [at(2), any]), proved(identity, [], has_participant, [at(2)]), proved(identity, [], creator, [at(2)]), proved(identity, [], officer, [at(2)]), proved(identity, [], role, [at(2), any]), proved(identity, [], participant, [at(2)]), proved(identity, [], founder, [at(2)]), proved(identity, [], vote, [at(2), any])], [], [field(1, "organisation", person), field(2, "person", person)], [], [])]), button("Organisation end", [act(organisation_end, 1, [1, 2], [req(identity, []), req(friend, [at(2)]), forb(has_officer, [at(2)])], [2], [], [], [])]), button("Organisations acquaint", [act(organisations_acquaint, 1, [1, 2], [req(identity, []), req(organisation, []), req(has_officer, [any])], [], [field(2, "organisation", key)], [same(4, 3)], [])]), button("Organisations befriend", [act(organisations_befriend, 3, [1, 2, 3, 4], [req(identity, []), req(knows, [at(2)]), req(friend, [at(4)]), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], creator, [at(1)]), proved(organisation, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(organisation, [], officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(organisation, [], role, [at(1), any]), proved(identity, [], participant, [at(1)]), proved(identity, [], founder, [at(1)]), proved(organisation, [], founder, [at(1)]), proved(identity, [], vote, [at(1), any])], [2, 4], [field(1, "organisation", person)], [same(4, 3)], [])]), button("Organisations of one officer befriend", [act(organisations_of_one_officer_befriend, 3, [1, 2, 3], [req(identity, []), req(person, []), proved(identity, [], knows, [at(1)]), proved(identity, [], friend, [at(1)]), proved(identity, [], has_officer, [at(1)]), proved(identity, [], first_officer, [at(1)]), proved(identity, [], has_role, [at(1), any]), proved(identity, [], has_participant, [at(1)]), proved(identity, [], creator, [at(1)]), proved(organisation, [], creator, [at(1)]), proved(identity, [], officer, [at(1)]), proved(organisation, [], officer, [at(1)]), proved(identity, [], role, [at(1), any]), proved(organisation, [], role, [at(1), any]), proved(identity, [], participant, [at(1)]), proved(identity, [], founder, [at(1)]), proved(organisation, [], founder, [at(1)]), proved(identity, [], vote, [at(1), any]), proved(identity, [], knows, [at(2)]), proved(identity, [], friend, [at(2)]), proved(identity, [], has_officer, [at(2)]), proved(identity, [], first_officer, [at(2)]), proved(identity, [], has_role, [at(2), any]), proved(identity, [], has_participant, [at(2)]), proved(identity, [], creator, [at(2)]), proved(organisation, [], creator, [at(2)]), proved(identity, [], officer, [at(2)]), proved(organisation, [], officer, [at(2)]), proved(identity, [], role, [at(2), any]), proved(organisation, [], role, [at(2), any]), proved(identity, [], participant, [at(2)]), proved(identity, [], founder, [at(2)]), proved(organisation, [], founder, [at(2)]), proved(identity, [], vote, [at(2), any])], [], [field(1, "organisation", person), field(2, "other organisation", person)], [], [])]), button("Retire", [act(retire, 2, [1, 2], [req(identity, []), req(person, []), req(officer, [at(1)])], [1], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -158,33 +154,47 @@ knows(Peer)
 ;
 friend(Peer)
 ;
-creator(Peer)
-;
-officer(Peer)
-;
 organisation
 ;
 has_officer(Peer)
+;
+first_officer(Peer)
+;
+has_role(Peer, Constant)
+;
+has_participant(Peer)
+;
+creator(Peer)
+;
+officer(Peer)
 ;
 role(Peer, Constant)
 ;
 participant(Peer)
 ;
-has_role(Peer, Constant)
+founder(Peer)
 ;
 retired
 ;
-first_officer(Peer)
-;
-has_participant(Peer)
-;
 proposed(Speech)
+;
+proposer(Peer)
 ;
 vote(Peer, Speech)
 ;
+voter(Peer, Speech)
+;
 taken(Speech)
 ;
+decided(Speech)
+;
+taker(Peer, Speech)
+;
 amended
+;
+amendment_decided(Speech)
+;
+amender(Peer, Speech)
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -196,38 +206,68 @@ atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
 .
 atom_of(g(friend, [p(V1)]), shown(friend(V1?)))
 .
-atom_of(g(creator, [p(V1)]), shown(creator(V1?)))
-.
-atom_of(g(officer, [p(V1)]), shown(officer(V1?)))
-.
 atom_of(g(organisation, []), shown(organisation))
 .
 atom_of(g(has_officer, [p(V1)]), shown(has_officer(V1?)))
+.
+atom_of(g(first_officer, [p(V1)]), shown(first_officer(V1?)))
+.
+atom_of(g(has_role, [p(V1), v(V2)]), shown(has_role(V1?, V2?)))
+.
+atom_of(g(has_participant, [p(V1)]), shown(has_participant(V1?)))
+.
+atom_of(g(creator, [p(V1)]), shown(creator(V1?)))
+.
+atom_of(g(officer, [p(V1)]), shown(officer(V1?)))
 .
 atom_of(g(role, [p(V1), v(V2)]), shown(role(V1?, V2?)))
 .
 atom_of(g(participant, [p(V1)]), shown(participant(V1?)))
 .
-atom_of(g(has_role, [p(V1), v(V2)]), shown(has_role(V1?, V2?)))
+atom_of(g(founder, [p(V1)]), shown(founder(V1?)))
 .
 atom_of(g(retired, []), shown(retired))
 .
-atom_of(g(first_officer, [p(V1)]), shown(first_officer(V1?)))
-.
-atom_of(g(has_participant, [p(V1)]), shown(has_participant(V1?)))
-.
 atom_of(g(proposed, [s(V1)]), shown(proposed(V1?)))
+.
+atom_of(g(proposer, [p(V1)]), shown(proposer(V1?)))
 .
 atom_of(g(vote, [p(V1), s(V2)]), shown(vote(V1?, V2?)))
 .
+atom_of(g(voter, [p(V1), s(V2)]), shown(voter(V1?, V2?)))
+.
 atom_of(g(taken, [s(V1)]), shown(taken(V1?)))
+.
+atom_of(g(decided, [s(V1)]), shown(decided(V1?)))
+.
+atom_of(g(taker, [p(V1), s(V2)]), shown(taker(V1?, V2?)))
 .
 atom_of(g(amended, []), shown(amended))
 .
+atom_of(g(amendment_decided, [s(V1)]), shown(amendment_decided(V1?)))
+.
+atom_of(g(amender, [p(V1), s(V2)]), shown(amender(V1?, V2?)))
+.
 atom_of(_, unshown) :- otherwise | true.
 
+%% The atoms of the environment predicates the contract declares, given when the platform is deployed and held from startup (vGLP, Section 5.4, "Speech-act schemas as local specifications").
+procedure env_atom(Atom?, GAtoms).
+env_atom(proposer(V1), [g(proposer, [p(V1?)])])
+.
+env_atom(voter(V1, V2), [g(voter, [p(V1?), s(V2?)])])
+.
+env_atom(decided(V1), [g(decided, [s(V1?)])])
+.
+env_atom(taker(V1, V2), [g(taker, [p(V1?), s(V2?)])])
+.
+env_atom(amendment_decided(V1), [g(amendment_decided, [s(V1?)])])
+.
+env_atom(amender(V1, V2), [g(amender, [p(V1?), s(V2?)])])
+.
+env_atom(_, []) :- otherwise | true.
+
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, []), atom(person, [])], [])]), schema(enter, [], [rs(guarded, [atom(creator, [role(2)]), atom(officer, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(identity, []), atom(organisation, []), atom(has_officer, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [], [atom(identity, [])])]), lschema(appoint, [num('Role')], [rs(guarded, [atom(officer, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)]), atom(role, [role(2), num('Role')])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)]), atom(participant, [role(2)])], [atom(officer, [role(2)])]), rs(unguarded, [atom(has_officer, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)]), atom(has_role, [role(1), num('Role')])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)])], [atom(retired, []), atom(has_officer, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(true), [], [])]), schema(resign, [], [rs(guarded, [], [atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), lschema(end_officer, [], [rs(unguarded, [], [atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(ne(role(4), role(1))), [], [])]), schema(officer_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), schema(organisation_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(organisation_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), schema(organisation_end, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(has_officer, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(organisation_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(officer, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(organisations_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Bob')])], [])]), schema(organisations_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(organisations_of_one_officer_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), lschema(retire, [], [rs(unguarded, [atom(retired, [])], [atom(has_officer, [any]), atom(friend, [any]), atom(has_role, [any, any])], [atom(identity, []), atom(has_officer, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(1)])], []), rs(unguarded, [], [atom(officer, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(role, [role(1), any])], [atom(identity, [])], [])], [listing(3, 1, has_officer, [role(3)], fcons(true), [], []), listing(4, 1, has_officer, [role(4)], fcons(true), [], []), listing(5, 1, friend, [role(5)], fcons(true), [], []), listing(6, 1, has_role, [role(6), any], fcons(true), [], [])]), schema(found, [num('Role')], [rs(guarded, [atom(identity, []), atom(organisation, []), atom(first_officer, [role(3)]), atom(has_officer, [role(3)]), atom(has_role, [role(3), num('Role')]), atom(has_participant, [role(3)]), atom(knows, [role(3)]), atom(friend, [role(3)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)])], [], [atom(identity, [])], []), rs(guarded, [atom(officer, [role(1)]), atom(role, [role(1), num('Role')]), atom(participant, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(propose, [svar('Motion')], [rs(unguarded, [atom(proposed, [svar('Motion')])], [], [atom(identity, [])], [atom(proposed, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])]), schema(vote, [svar('Motion')], [rs(unguarded, [atom(vote, [role(2), svar('Motion')])], [], [atom(identity, []), atom(organisation, []), atom(proposed, [svar('Motion')])], [atom(vote, [role(2), svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])]), schema(act, [svar('Motion'), num('Votes'), num('Double')], [rs(unguarded, [atom(taken, [svar('Motion')])], [], [atom(identity, [])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])]), lschema(join, [], [rs(guarded, [atom(participant, [role(2)])], [], [atom(identity, []), atom(person, [])], [atom(participant, [role(2)])]), rs(unguarded, [atom(has_participant, [role(1)])], [], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(true), [], [])]), schema(leave, [], [rs(guarded, [], [atom(participant, [role(2)])], [atom(identity, []), atom(person, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(has_participant, [role(1)])], [atom(identity, [])], [])]), schema(officer_leave, [], [rs(guarded, [], [atom(participant, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_participant, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), lschema(expel, [], [rs(unguarded, [], [atom(participant, [role(2)])], [atom(identity, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(has_participant, [role(1)])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(true), [], [])]), lschema(officer_expel, [], [rs(unguarded, [], [atom(participant, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_participant, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(true), [], [])]), schema(amend, [svar('Motion'), num('Votes'), num('Double')], [rs(unguarded, [atom(amended, []), atom(taken, [svar('Motion')])], [], [atom(identity, []), atom(organisation, []), atom(proposed, [svar('Motion')])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, []), atom(person, [])], [])]), schema(found, [num('Role')], [rs(guarded, [atom(identity, []), atom(organisation, []), atom(has_officer, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)]), atom(first_officer, [role(2)]), atom(has_role, [role(2), num('Role')]), atom(has_participant, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(officer, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)]), atom(role, [role(1), num('Role')]), atom(participant, [role(1)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(founder, [role(1)])], [], [atom(identity, [])], [])]), lschema(appoint, [num('Role')], [rs(guarded, [atom(officer, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)]), atom(role, [role(2), num('Role')])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)]), atom(participant, [role(2)])], [atom(officer, [role(2)])]), rs(unguarded, [atom(has_officer, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)]), atom(has_role, [role(1), num('Role')])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)])], [atom(retired, []), atom(has_officer, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(true), [], [])]), schema(resign, [], [rs(guarded, [], [atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), lschema(end_officer, [], [rs(unguarded, [], [atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(ne(role(4), role(1))), [], [])]), schema(officer_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), schema(organisation_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(organisation_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), schema(organisation_end, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(has_officer, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(organisation_unfriend, [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(officer, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(organisations_acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Bob')])], [])]), schema(organisations_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(organisations_of_one_officer_befriend, [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), lschema(retire, [], [rs(unguarded, [atom(retired, [])], [atom(has_officer, [any]), atom(friend, [any]), atom(has_role, [any, any])], [atom(identity, []), atom(has_officer, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(1)])], []), rs(unguarded, [], [atom(officer, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(role, [role(1), any])], [atom(identity, [])], [])], [listing(3, 1, has_officer, [role(3)], fcons(true), [], []), listing(4, 1, has_officer, [role(4)], fcons(true), [], []), listing(5, 1, friend, [role(5)], fcons(true), [], []), listing(6, 1, has_role, [role(6), any], fcons(true), [], [])]), schema(propose, [svar('Motion')], [rs(unguarded, [atom(proposed, [svar('Motion')])], [], [atom(identity, [])], [atom(proposed, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(proposer, [role(1)]), atom(person, [])], [])]), schema(vote, [svar('Motion')], [rs(unguarded, [atom(vote, [role(2), svar('Motion')])], [], [atom(identity, []), atom(organisation, []), atom(proposed, [svar('Motion')])], [atom(vote, [role(2), svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(participant, [role(1)]), atom(voter, [role(1), svar('Motion')]), atom(person, [])], [])]), schema(act, [svar('Motion')], [rs(unguarded, [atom(taken, [svar('Motion')])], [], [atom(identity, []), atom(proposed, [svar('Motion')]), atom(decided, [svar('Motion')])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(taker, [role(1), svar('Motion')]), atom(person, [])], [])]), lschema(join, [], [rs(guarded, [atom(participant, [role(2)])], [], [atom(identity, []), atom(person, [])], [atom(participant, [role(2)])]), rs(unguarded, [atom(has_participant, [role(1)])], [], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(true), [], [])]), schema(leave, [], [rs(guarded, [], [atom(participant, [role(2)])], [atom(identity, []), atom(person, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(has_participant, [role(1)])], [atom(identity, [])], [])]), schema(officer_leave, [], [rs(guarded, [], [atom(participant, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_participant, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), lschema(expel, [], [rs(unguarded, [], [atom(participant, [role(2)])], [atom(identity, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(has_participant, [role(1)])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(true), [], [])]), lschema(officer_expel, [], [rs(unguarded, [], [atom(participant, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_participant, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(true), [], [])]), schema(amend, [svar('Motion')], [rs(unguarded, [atom(amended, []), atom(taken, [svar('Motion')])], [], [atom(identity, []), atom(proposed, [svar('Motion')]), atom(amendment_decided, [svar('Motion')])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(amender, [role(1), svar('Motion')]), atom(person, [])], [])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -241,7 +281,7 @@ schema_entry(befriend, schema(befriend, [], [rs(guarded, [atom(friend, [role(2)]
 .
 schema_entry(person_unfriend, schema(person_unfriend, [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, []), atom(person, [])], [])]))
 .
-schema_entry(enter, schema(enter, [], [rs(guarded, [atom(creator, [role(2)]), atom(officer, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(identity, []), atom(organisation, []), atom(has_officer, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [], [atom(identity, [])])]))
+schema_entry(found, schema(found, [num('Role')], [rs(guarded, [atom(identity, []), atom(organisation, []), atom(has_officer, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)]), atom(first_officer, [role(2)]), atom(has_role, [role(2), num('Role')]), atom(has_participant, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(officer, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)]), atom(role, [role(1), num('Role')]), atom(participant, [role(1)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(founder, [role(1)])], [], [atom(identity, [])], [])]))
 .
 schema_entry(appoint, lschema(appoint, [num('Role')], [rs(guarded, [atom(officer, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)]), atom(role, [role(2), num('Role')])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)]), atom(participant, [role(2)])], [atom(officer, [role(2)])]), rs(unguarded, [atom(has_officer, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)]), atom(has_role, [role(1), num('Role')])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)])], [atom(retired, []), atom(has_officer, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(true), [], [])]))
 .
@@ -269,13 +309,11 @@ schema_entry(organisations_of_one_officer_befriend, schema(organisations_of_one_
 .
 schema_entry(retire, lschema(retire, [], [rs(unguarded, [atom(retired, [])], [atom(has_officer, [any]), atom(friend, [any]), atom(has_role, [any, any])], [atom(identity, []), atom(has_officer, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(1)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(1)])], []), rs(unguarded, [], [atom(officer, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), rs(unguarded, [], [atom(role, [role(1), any])], [atom(identity, [])], [])], [listing(3, 1, has_officer, [role(3)], fcons(true), [], []), listing(4, 1, has_officer, [role(4)], fcons(true), [], []), listing(5, 1, friend, [role(5)], fcons(true), [], []), listing(6, 1, has_role, [role(6), any], fcons(true), [], [])]))
 .
-schema_entry(found, schema(found, [num('Role')], [rs(guarded, [atom(identity, []), atom(organisation, []), atom(first_officer, [role(3)]), atom(has_officer, [role(3)]), atom(has_role, [role(3), num('Role')]), atom(has_participant, [role(3)]), atom(knows, [role(3)]), atom(friend, [role(3)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)])], [], [atom(identity, [])], []), rs(guarded, [atom(officer, [role(1)]), atom(role, [role(1), num('Role')]), atom(participant, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]))
+schema_entry(propose, schema(propose, [svar('Motion')], [rs(unguarded, [atom(proposed, [svar('Motion')])], [], [atom(identity, [])], [atom(proposed, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(proposer, [role(1)]), atom(person, [])], [])]))
 .
-schema_entry(propose, schema(propose, [svar('Motion')], [rs(unguarded, [atom(proposed, [svar('Motion')])], [], [atom(identity, [])], [atom(proposed, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])]))
+schema_entry(vote, schema(vote, [svar('Motion')], [rs(unguarded, [atom(vote, [role(2), svar('Motion')])], [], [atom(identity, []), atom(organisation, []), atom(proposed, [svar('Motion')])], [atom(vote, [role(2), svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(participant, [role(1)]), atom(voter, [role(1), svar('Motion')]), atom(person, [])], [])]))
 .
-schema_entry(vote, schema(vote, [svar('Motion')], [rs(unguarded, [atom(vote, [role(2), svar('Motion')])], [], [atom(identity, []), atom(organisation, []), atom(proposed, [svar('Motion')])], [atom(vote, [role(2), svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])]))
-.
-schema_entry(act, schema(act, [svar('Motion'), num('Votes'), num('Double')], [rs(unguarded, [atom(taken, [svar('Motion')])], [], [atom(identity, [])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])]))
+schema_entry(act, schema(act, [svar('Motion')], [rs(unguarded, [atom(taken, [svar('Motion')])], [], [atom(identity, []), atom(proposed, [svar('Motion')]), atom(decided, [svar('Motion')])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(taker, [role(1), svar('Motion')]), atom(person, [])], [])]))
 .
 schema_entry(join, lschema(join, [], [rs(guarded, [atom(participant, [role(2)])], [], [atom(identity, []), atom(person, [])], [atom(participant, [role(2)])]), rs(unguarded, [atom(has_participant, [role(1)])], [], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(true), [], [])]))
 .
@@ -287,7 +325,7 @@ schema_entry(expel, lschema(expel, [], [rs(unguarded, [], [atom(participant, [ro
 .
 schema_entry(officer_expel, lschema(officer_expel, [], [rs(unguarded, [], [atom(participant, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_participant, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [listing(4, 2, has_officer, [role(4)], fcons(true), [], [])]))
 .
-schema_entry(amend, schema(amend, [svar('Motion'), num('Votes'), num('Double')], [rs(unguarded, [atom(amended, []), atom(taken, [svar('Motion')])], [], [atom(identity, []), atom(organisation, []), atom(proposed, [svar('Motion')])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])]))
+schema_entry(amend, schema(amend, [svar('Motion')], [rs(unguarded, [atom(amended, []), atom(taken, [svar('Motion')])], [], [atom(identity, []), atom(proposed, [svar('Motion')]), atom(amendment_decided, [svar('Motion')])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(amender, [role(1), svar('Motion')]), atom(person, [])], [])]))
 .
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
@@ -302,7 +340,7 @@ schema_numeric(befriend, numeric([cj(every, true)], [], []))
 .
 schema_numeric(person_unfriend, numeric([cj(every, true)], [], []))
 .
-schema_numeric(enter, numeric([cj(every, true)], [], []))
+schema_numeric(found, numeric([cj(every, true)], [], []))
 .
 schema_numeric(appoint, numeric([cj(every, true)], [], []))
 .
@@ -330,13 +368,11 @@ schema_numeric(organisations_of_one_officer_befriend, numeric([cj(every, true)],
 .
 schema_numeric(retire, numeric([cj(every, true)], [], []))
 .
-schema_numeric(found, numeric([cj(every, true)], [], []))
-.
 schema_numeric(propose, numeric([cj(every, true)], [], []))
 .
 schema_numeric(vote, numeric([cj(every, true)], [], []))
 .
-schema_numeric(act, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote, [pvar('X1'), svar('Motion')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(has_officer, [pvar('X2')]), fcons(true)), num('Double')))], [], []))
+schema_numeric(act, numeric([cj(every, true)], [], []))
 .
 schema_numeric(join, numeric([cj(every, true)], [], []))
 .
@@ -348,16 +384,16 @@ schema_numeric(expel, numeric([cj(every, true)], [], []))
 .
 schema_numeric(officer_expel, numeric([cj(every, true)], [], []))
 .
-schema_numeric(amend, numeric([cj(at(1), ge(cardinality([pvar('X1')], role(1), atom(vote, [pvar('X1'), svar('Motion')]), fcons(true)), num('Votes'))), cj(every, eq(num('Double'), mul(num('Votes'), val(2)))), cj(at(1), lt(cardinality([pvar('X2')], role(1), atom(has_officer, [pvar('X2')]), fcons(true)), num('Double')))], [], []))
+schema_numeric(amend, numeric([cj(every, true)], [], []))
 .
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
 procedure schema_forms(Constant?, SForms).
+schema_forms(found, [sform(at(3), for(fa(role(3), atom(person, [])), fand(fa(role(3), atom(organisation, [])), fexists([pvar('G1')], role(3), atom(has_officer, [pvar('G1')]), fcons(true)))))])
+.
 schema_forms(end_officer, [sform(cond, fforall([role(4)], role(2), atom(has_officer, [role(2), role(4)]), fcons(ne(role(4), role(1))), [fa(role(4), atom(identity, [role(4)])), fa(role(4), atom(person, [role(4)])), fa(role(4), atom(officer, [role(4), role(2)]))]))])
 .
 schema_forms(organisation_end, [sform(at(1), for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(organisation, [])), fexists([pvar('G1')], role(1), atom(has_officer, [pvar('G1')]), fcons(true)))))])
-.
-schema_forms(found, [sform(at(2), for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(organisation, [])), fexists([pvar('G1')], role(2), atom(has_officer, [pvar('G1')]), fcons(true)))))])
 .
 schema_forms(_, []) :- otherwise | true.
 
@@ -377,7 +413,7 @@ schema_base(befriend, 1)
 .
 schema_base(person_unfriend, 1)
 .
-schema_base(enter, 1)
+schema_base(found, 2)
 .
 schema_base(appoint, 2)
 .
@@ -404,8 +440,6 @@ schema_base(organisations_befriend, 3)
 schema_base(organisations_of_one_officer_befriend, 3)
 .
 schema_base(retire, 1)
-.
-schema_base(found, 2)
 .
 schema_base(propose, 2)
 .
@@ -440,7 +474,7 @@ schema_ones(befriend, [])
 .
 schema_ones(person_unfriend, [])
 .
-schema_ones(enter, [])
+schema_ones(found, [])
 .
 schema_ones(appoint, [])
 .
@@ -467,8 +501,6 @@ schema_ones(organisations_befriend, [may_one(3, 4)])
 schema_ones(organisations_of_one_officer_befriend, [])
 .
 schema_ones(retire, [])
-.
-schema_ones(found, [])
 .
 schema_ones(propose, [])
 .
@@ -522,7 +554,7 @@ binding_of(befriend(V1, V2), befriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
 binding_of(person_unfriend(V1, V2), person_unfriend, [b(role(1), p(V1?)), b(role(2), p(V2?))])
 .
-binding_of(enter(V1, V2), enter, [b(role(1), p(V1?)), b(role(2), p(V2?))])
+binding_of(found(V1, V2, V3, V4), found, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(num('Role'), v(V4?))])
 .
 binding_of(appoint(V1, V2, V3, V4, V5), appoint, B?)
 :-
@@ -556,13 +588,11 @@ binding_of(retire(V1, V2, V3, V4, V5, V6), retire, B?)
 :-
 listed_binding(retire, [b(role(1), p(V1?)), b(role(2), p(V2?))], [ppl(V3?), ppl(V4?), ppl(V5?), ppl(V6?)], B)
 .
-binding_of(found(V1, V2, V3, V4), found, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?)), b(num('Role'), v(V4?))])
-.
 binding_of(propose(V1, V2, V3), propose, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Motion'), s(V3?))])
 .
 binding_of(vote(V1, V2, V3), vote, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Motion'), s(V3?))])
 .
-binding_of(act(V1, V2, V3, V4, V5), act, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Motion'), s(V3?)), b(num('Votes'), n(V4?)), b(num('Double'), n(V5?))])
+binding_of(act(V1, V2, V3), act, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Motion'), s(V3?))])
 .
 binding_of(join(V1, V2, V3, V4), join, B?)
 :-
@@ -580,7 +610,7 @@ binding_of(officer_expel(V1, V2, V3, V4), officer_expel, B?)
 :-
 listed_binding(officer_expel, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))], [ppl(V4?)], B)
 .
-binding_of(amend(V1, V2, V3, V4, V5), amend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Motion'), s(V3?)), b(num('Votes'), n(V4?)), b(num('Double'), n(V5?))])
+binding_of(amend(V1, V2, V3), amend, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(svar('Motion'), s(V3?))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -634,7 +664,7 @@ val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
 .
-class_of(enter, B, D, enter(V1?, V2?))
+class_of(found, B, D, found(V1?, V2?, V3?, V4?))
 :-
 ground(B?)
 ,
@@ -643,6 +673,10 @@ ground(D?)
 val_peer(role(1), B?, D?, V1)
 ,
 val_peer(role(2), B?, D?, V2)
+,
+val_peer(role(3), B?, D?, V3)
+,
+val_const(num('Role'), B?, V4)
 .
 class_of(appoint, B, D, appoint(V1?, V2?, V3?, V4?, V5?))
 :-
@@ -802,20 +836,6 @@ copies_of(B?, 5, V5)
 ,
 copies_of(B?, 6, V6)
 .
-class_of(found, B, D, found(V1?, V2?, V3?, V4?))
-:-
-ground(B?)
-,
-ground(D?)
-|
-val_peer(role(1), B?, D?, V1)
-,
-val_peer(role(2), B?, D?, V2)
-,
-val_peer(role(3), B?, D?, V3)
-,
-val_const(num('Role'), B?, V4)
-.
 class_of(propose, B, D, propose(V1?, V2?, V3?))
 :-
 ground(B?)
@@ -840,7 +860,7 @@ val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Motion'), B?, D?, V3)
 .
-class_of(act, B, D, act(V1?, V2?, V3?, V4?, V5?))
+class_of(act, B, D, act(V1?, V2?, V3?))
 :-
 ground(B?)
 ,
@@ -851,10 +871,6 @@ val_peer(role(1), B?, D?, V1)
 val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Motion'), B?, D?, V3)
-,
-val_num(num('Votes'), B?, V4)
-,
-val_num(num('Double'), B?, V5)
 .
 class_of(join, B, D, join(V1?, V2?, V3?, V4?))
 :-
@@ -918,7 +934,7 @@ val_peer(role(3), B?, D?, V3)
 ,
 copies_of(B?, 4, V4)
 .
-class_of(amend, B, D, amend(V1?, V2?, V3?, V4?, V5?))
+class_of(amend, B, D, amend(V1?, V2?, V3?))
 :-
 ground(B?)
 ,
@@ -929,10 +945,6 @@ val_peer(role(1), B?, D?, V1)
 val_peer(role(2), B?, D?, V2)
 ,
 val_speech(svar('Motion'), B?, D?, V3)
-,
-val_num(num('Votes'), B?, V4)
-,
-val_num(num('Double'), B?, V5)
 .
 
 procedure name_class(Proposal?, GAtoms?, Class).
@@ -946,7 +958,7 @@ name_class(befriend(V1, V2), _, befriend(V1?, V2?))
 .
 name_class(person_unfriend(V1, V2), _, person_unfriend(V1?, V2?))
 .
-name_class(enter(V1, V2), _, enter(V1?, V2?))
+name_class(found(V1, V2, V3, V4), _, found(V1?, V2?, V3?, V4?))
 .
 name_class(appoint(V1, V2, V3, V5), St, C?)
 :-
@@ -980,13 +992,11 @@ name_class(retire(V1, V2), St, C?)
 :-
 listed_class(retire, [b(role(1), p(V1?)), b(role(2), p(V2?))], St?, C)
 .
-name_class(found(V1, V2, V3, V4), _, found(V1?, V2?, V3?, V4?))
-.
 name_class(propose(V1, V2, V3), _, propose(V1?, V2?, V3?))
 .
 name_class(vote(V1, V2, V3), _, vote(V1?, V2?, V3?))
 .
-name_class(act(V1, V2, V3, V4, V5), _, act(V1?, V2?, V3?, V4?, V5?))
+name_class(act(V1, V2, V3), _, act(V1?, V2?, V3?))
 .
 name_class(join(V1, V2, V3), St, C?)
 :-
@@ -1004,7 +1014,7 @@ name_class(officer_expel(V1, V2, V3), St, C?)
 :-
 listed_class(officer_expel, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(role(3), p(V3?))], St?, C)
 .
-name_class(amend(V1, V2, V3, V4, V5), _, amend(V1?, V2?, V3?, V4?, V5?))
+name_class(amend(V1, V2, V3), _, amend(V1?, V2?, V3?))
 .
 
 procedure request_name(Class?, PName).
@@ -1018,7 +1028,7 @@ request_name(befriend(V1, V2), pname(befriend(V1?, V2?)))
 .
 request_name(person_unfriend(V1, V2), pname(person_unfriend(V1?, V2?)))
 .
-request_name(enter(V1, V2), pname(enter(V1?, V2?)))
+request_name(found(V1, V2, V3, V4), pname(found(V1?, V2?, V3?, V4?)))
 .
 request_name(appoint(V1, V2, V3, _, V5), pname(appoint(V1?, V2?, V3?, V5?)))
 .
@@ -1046,13 +1056,11 @@ request_name(organisations_of_one_officer_befriend(V1, V2, V3), pname(organisati
 .
 request_name(retire(V1, V2, _, _, _, _), pname(retire(V1?, V2?)))
 .
-request_name(found(V1, V2, V3, V4), pname(found(V1?, V2?, V3?, V4?)))
-.
 request_name(propose(V1, V2, V3), pname(propose(V1?, V2?, V3?)))
 .
 request_name(vote(V1, V2, V3), pname(vote(V1?, V2?, V3?)))
 .
-request_name(act(V1, V2, V3, V4, V5), pname(act(V1?, V2?, V3?, V4?, V5?)))
+request_name(act(V1, V2, V3), pname(act(V1?, V2?, V3?)))
 .
 request_name(join(V1, V2, V3, _), pname(join(V1?, V2?, V3?)))
 .
@@ -1064,7 +1072,7 @@ request_name(expel(V1, V2, V3, _), pname(expel(V1?, V2?, V3?)))
 .
 request_name(officer_expel(V1, V2, V3, _), pname(officer_expel(V1?, V2?, V3?)))
 .
-request_name(amend(V1, V2, V3, V4, V5), pname(amend(V1?, V2?, V3?, V4?, V5?)))
+request_name(amend(V1, V2, V3), pname(amend(V1?, V2?, V3?)))
 .
 request_name(_, nopname) :- otherwise | true.
 
@@ -1107,16 +1115,6 @@ ground(Me?)
 |
 ask_of([q(V2?, 1, [person(V1?), text(" asks to be your friend.")])], Me?, Ws)
 .
-sentence_of(enter(V1, V2), Me, Ws?)
-:-
-ground(V2?)
-,
-ground(V1?)
-,
-ground(Me?)
-|
-ask_of([q(V2?, 1, [person(V1?), text(" asks to be your guardian.")])], Me?, Ws)
-.
 sentence_of(found(V1, V2, V3, _), Me, Ws?)
 :-
 ground(V1?)
@@ -1127,7 +1125,7 @@ ground(V3?)
 ,
 ground(Me?)
 |
-ask_of([q(V1?, 2, [person(V2?), text(" asks to found you.")]), q(V3?, 2, [person(V2?), text(" asks you to be the first officer of its organisation "), person(V1?), text(".")])], Me?, Ws)
+ask_of([q(V1?, 2, [person(V2?), text(" asks to found you.")]), q(V3?, 2, [person(V2?), text(" asks for your consent to found the organisation "), person(V1?), text(".")])], Me?, Ws)
 .
 sentence_of(join(V1, V2, V3, V4), Me, Ws?)
 :-
@@ -1319,7 +1317,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("Organisation\nOrganisation instantiates Guardians with bylaws for the decision rule, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).\nAn *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, a parameter of Organisation, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.\nAlice and Bob are persons, Orga an organisation.\n1. ■ Found: An organisation may create Orga (Guardians:1) with the consent of Alice; Alice is then its first officer.\n2. ■ Acts of the organisation. Propose: An officer, or a person the bylaws name, may propose an act of Orga. Vote: Those who decide the act may vote on it. Act: An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.\n3. ■ Participation. Join: Bob may become a participant of Orga with the consent of those who decide for Orga. Leave, Expel: Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.\n4. ■ Officers. Appoint: Guardians:2, only if Bob is a participant; the decision names his role.\n5. ■ Amend: Those who decide it may amend the bylaws.\n6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.", with(reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, ['Bob', 'Alice', 'Carol'], [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, []), atom(person, [])], [])]), schema(enter, ['Alice', 'Orga'], [], [rs(guarded, [atom(creator, [role(2)]), atom(officer, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(identity, []), atom(organisation, []), atom(has_officer, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [], [atom(identity, [])])]), cschema(appoint, ['Bob', 'Orga', 'Decider', 'Codecider'], [const('Role')], [], [rs(guarded, [atom(officer, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)]), atom(role, [role(2), num('Role')])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)]), atom(participant, [role(2)])], [atom(officer, [role(2)])]), rs(unguarded, [atom(has_officer, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)]), atom(has_role, [role(1), num('Role')])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)])], [atom(retired, []), atom(has_officer, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), crs(listed(2, has_officer, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])]), schema(resign, ['Bob', 'Orga'], [], [rs(guarded, [], [atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), qschema(end_officer, ['Bob', 'Orga', 'Decider', 'Codecider'], [], [pvar('Codecider'), svar('Codecider'), num('Codecider')], true, [rs(unguarded, [], [atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), crs(qlisted(2, has_officer, [role(4)], [role(4)]), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [], [fforall([role(4)], role(2), atom(has_officer, [role(4)]), fcons(ne(role(4), role(1))), [fa(role(4), atom(identity, [])), fa(role(4), atom(person, [])), fa(role(4), atom(officer, [role(2)]))])]), schema(officer_unfriend, ['Bob', 'Orga'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), schema(organisation_acquaint, ['Orga', 'Bob'], [pvar('Alice')], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(organisation_befriend, ['Orga', 'Bob', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), qschema(organisation_end, ['Orga', 'Bob'], [], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(has_officer, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(organisation, [])), fexists([svar('G1')], role(1), atom(has_officer, [svar('G1')]), fcons(true))))]), schema(unfriend, ['Bob', 'Orga'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(organisation_unfriend, ['Orga', 'Bob', 'Alice'], [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(officer, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(organisations_acquaint, ['Orga', 'Will', one('Bob', 'Alice')], [pvar('Alice'), pvar('Bob')], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Bob')])], [])]), schema(organisations_befriend, ['Orga', 'Will', 'Alice', one('Bob', 'Alice')], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(organisations_of_one_officer_befriend, ['Orga', 'Will', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), cschema(retire, ['Orga', 'Decider', 'Codecider', 'E1', 'E2', 'E3'], [], [], [rs(unguarded, [atom(retired, [])], [atom(has_officer, [any]), atom(friend, [any]), atom(has_role, [any, any])], [atom(identity, []), atom(has_officer, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(1)])], []), crs(listed(1, has_officer, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(1)])], []), crs(listed(1, has_officer, []), unguarded, [], [atom(officer, [role(1)])], [atom(identity, [])], []), crs(listed(1, friend, []), unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), crs(listed(1, has_role, [any]), unguarded, [], [atom(role, [role(1), any])], [atom(identity, [])], [])]), qschema(found, ['Orga', 'Gov', 'Alice'], [const('Role')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [atom(identity, []), atom(organisation, []), atom(first_officer, [role(3)]), atom(has_officer, [role(3)]), atom(has_role, [role(3), num('Role')]), atom(has_participant, [role(3)]), atom(knows, [role(3)]), atom(friend, [role(3)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)])], [], [atom(identity, [])], []), rs(guarded, [atom(officer, [role(1)]), atom(role, [role(1), num('Role')]), atom(participant, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)])], [], [atom(identity, []), atom(person, [])], [])], [], [for(fa(role(2), atom(person, [])), fand(fa(role(2), atom(organisation, [])), fexists([svar('G1')], role(2), atom(has_officer, [svar('G1')]), fcons(true))))]), schema(propose, ['Orga', 'Bob'], [svar('Motion')], [rs(unguarded, [atom(proposed, [svar('Motion')])], [], [atom(identity, [])], [atom(proposed, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])]), schema(vote, ['Orga', 'Bob'], [svar('Motion')], [rs(unguarded, [atom(vote, [role(2), svar('Motion')])], [], [atom(identity, []), atom(organisation, []), atom(proposed, [svar('Motion')])], [atom(vote, [role(2), svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])]), qschema(act, ['Orga', 'Alice'], [svar('Motion'), num('Votes'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(vote, [svar('X1'), svar('Motion')]), fcons(true)), num('Votes')), and(eq(num('Double'), mul(num('Votes'), val(2))), lt(cardinality([svar('X2')], role(1), atom(has_officer, [svar('X2')]), fcons(true)), num('Double')))), [rs(unguarded, [atom(taken, [svar('Motion')])], [], [atom(identity, [])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])], [], []), cschema(join, ['Bob', 'Orga', 'Decider', 'Codecider'], [], [], [rs(guarded, [atom(participant, [role(2)])], [], [atom(identity, []), atom(person, [])], [atom(participant, [role(2)])]), rs(unguarded, [atom(has_participant, [role(1)])], [], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), crs(listed(2, has_officer, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])]), schema(leave, ['Bob', 'Orga'], [], [rs(guarded, [], [atom(participant, [role(2)])], [atom(identity, []), atom(person, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(has_participant, [role(1)])], [atom(identity, [])], [])]), schema(officer_leave, ['Bob', 'Orga'], [], [rs(guarded, [], [atom(participant, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_participant, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), cschema(expel, ['Bob', 'Orga', 'Decider', 'Codecider'], [], [], [rs(unguarded, [], [atom(participant, [role(2)])], [atom(identity, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(has_participant, [role(1)])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), crs(listed(2, has_officer, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])]), cschema(officer_expel, ['Bob', 'Orga', 'Decider', 'Codecider'], [], [], [rs(unguarded, [], [atom(participant, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_participant, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), crs(listed(2, has_officer, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])]), qschema(amend, ['Orga', 'Alice'], [svar('Motion'), num('Votes'), num('Double')], [pvar('X2'), svar('X2'), num('X2'), pvar('X1'), svar('X1'), num('X1')], and(ge(cardinality([svar('X1')], role(1), atom(vote, [svar('X1'), svar('Motion')]), fcons(true)), num('Votes')), and(eq(num('Double'), mul(num('Votes'), val(2))), lt(cardinality([svar('X2')], role(1), atom(has_officer, [svar('X2')]), fcons(true)), num('Double')))), [rs(unguarded, [atom(amended, []), atom(taken, [svar('Motion')])], [], [atom(identity, []), atom(organisation, []), atom(proposed, [svar('Motion')])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(person, [])], [])], [], [])]), pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Organisations", [participant])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(enter, "Enter", ["", "name"], said([[], [person(1), text(" asks to be your guardian.")]]), "", by([1])), act(unfriend, "Unfriend", [], none, "", by([1])), act(person_unfriend, "Person unfriend", [], none, "", by([1])), act(found, "Found", ["organisation", "", "person", "role"], said([[person(2), text(" asks to found you.")], [], [person(2), text(" asks you to be the first officer of its organisation "), person(1), text(".")]]), "Organisations", by([2])), act(propose, "Propose", ["", "", "act"], none, "Organisations", by([2])), act(vote, "Vote", ["", "", "act"], none, "Organisations", by([2])), act(act, "Act", ["", "", "act", "votes"], none, "Organisations", by([2])), act(join, "Join", ["", "organisation", "officer"], said([[], [person(1), text(" asks to become a participant of "), person(2), text(".")], [person(1), text(" asks to become a participant of "), person(2), text(".")]]), "Organisations", by([1])), act(leave, "Leave", [], none, "Organisations", by([1])), act(officer_leave, "Officer leave", [], none, "Organisations", by([1])), act(expel, "Expel", ["person"], said([[], [person(3), text(" asks to end "), person(1), text("'s participation in "), person(2), text(".")]]), "Organisations", by([3])), act(officer_expel, "Officer expel", ["person"], said([[], [person(3), text(" asks to end "), person(1), text("'s participation and his office in "), person(2), text(".")]]), "Organisations", by([3])), act(appoint, "Appoint", ["person", "", "", "role"], said([[person(3), text(" asks you to be an officer of the organisation "), person(2), text(".")], [], [person(3), text(" asks that "), person(1), text(" be an officer of your organisation "), person(2), text(".")]]), "Organisations", by([3])), act(end_officer, "End officer", ["person"], said([[], [person(3), text(" asks to end "), person(1), text("'s office in your organisation "), person(2), text(".")]]), "Organisations", by([3])), act(resign, "Resign", [], none, "Organisations", by([1])), act(officer_unfriend, "Officer unfriend", [], none, "Organisations", by([1])), act(amend, "Amend", ["", "", "act", "votes"], none, "Organisations", by([2])), act(organisation_acquaint, "Organisation acquaint", ["organisation"], said([[person(2), text(" wishes that you know each other.")], []]), "Organisations", by([2])), act(organisation_befriend, "Organisation befriend", ["organisation"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and her organisation "), person(1), text(" befriend.")], []]), "Organisations", by([3])), act(organisation_unfriend, "Organisation unfriend", ["organisation", "person"], none, "Organisations", by([3])), act(organisation_end, "Organisation end", [], none, "Organisations", by([1])), act(organisations_acquaint, "Organisations acquaint", ["", "organisation"], said([[], [person(1), text(" wishes that you know each other.")]]), "Organisations", by([1], [same(4, 3)])), act(organisations_befriend, "Organisations befriend", ["organisation"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], [], [person(3), text(" asks that "), person(1), text(" and your organisation "), person(2), text(" befriend.")]]), "Organisations", by([3], [same(4, 3)])), act(organisations_of_one_officer_befriend, "Organisations of one officer befriend", ["organisation", "other organisation"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], []]), "Organisations", by([3])), act(retire, "Retire", [], said([[], [person(2), text(" asks to retire your organisation "), person(1), text(".")]]), "Organisations", by([2]))], [], look("🏛️", "governance"), version(1, 1))))
+contract("Organisation\nOrganisation renames Guardians, and extends and amends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).\nAn *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.\nAlice and Bob are persons, Orga an organisation.\n1. ■ Found: An organisation may create Orga (Guardians:1) with the consent of Alice; Alice is then its first officer.\n2. ■ Acts of the organisation. Propose: An officer, or a person the bylaws name, may propose an act of Orga. Vote: Those who decide the act may vote on it. Act: An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.\n3. ■ Participation. Join: Bob may become a participant of Orga with the consent of those who decide for Orga. Leave, Expel: Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.\n4. ■ Officers. Appoint: Guardians:2, only if Bob is a participant; the decision names his role.\n5. ■ Amend: Those who decide it may amend the bylaws.\n6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.", with(environment([amender, amendment_decided, decided, proposer, taker, voter], reflexive([knows], [schema(establish, ['Alice'], [], [rs(guarded, [atom(identity, []), atom(person, [])], [], [], [atom(identity, [])])]), schema(acquaint, ['Alice', 'Bob'], [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(introduce, ['Bob', 'Alice', 'Carol'], [], [rs(guarded, [atom(knows, [role(3)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(1)]), atom(knows, [role(3)]), atom(person, [])], []), rs(unguarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(befriend, ['Alice', 'Bob'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(knows, [role(2)]), atom(person, [])], [atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(knows, [role(1)]), atom(person, [])], [atom(friend, [role(1)])])]), schema(person_unfriend, ['Alice', 'Bob'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, []), atom(person, [])], [])]), qschema(found, ['Orga', 'Alice', 'Gov'], [const('Role')], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [atom(identity, []), atom(organisation, []), atom(has_officer, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)]), atom(first_officer, [role(2)]), atom(has_role, [role(2), num('Role')]), atom(has_participant, [role(2)])], [], [], [atom(identity, [])]), rs(guarded, [atom(creator, [role(1)]), atom(officer, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)]), atom(role, [role(1), num('Role')]), atom(participant, [role(1)])], [], [atom(identity, []), atom(person, [])], []), rs(guarded, [atom(founder, [role(1)])], [], [atom(identity, [])], [])], [], [for(fa(role(3), atom(person, [])), fand(fa(role(3), atom(organisation, [])), fexists([svar('G1')], role(3), atom(has_officer, [svar('G1')]), fcons(true))))]), cschema(appoint, ['Bob', 'Orga', 'Decider', 'Codecider'], [const('Role')], [], [rs(guarded, [atom(officer, [role(2)]), atom(knows, [role(2)]), atom(friend, [role(2)]), atom(role, [role(2), num('Role')])], [], [atom(identity, []), atom(person, []), atom(friend, [role(3)]), atom(participant, [role(2)])], [atom(officer, [role(2)])]), rs(unguarded, [atom(has_officer, [role(1)]), atom(knows, [role(1)]), atom(friend, [role(1)]), atom(has_role, [role(1), num('Role')])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)])], [atom(retired, []), atom(has_officer, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), crs(listed(2, has_officer, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])]), schema(resign, ['Bob', 'Orga'], [], [rs(guarded, [], [atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), qschema(end_officer, ['Bob', 'Orga', 'Decider', 'Codecider'], [], [pvar('Codecider'), svar('Codecider'), num('Codecider')], true, [rs(unguarded, [], [atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), crs(qlisted(2, has_officer, [role(4)], [role(4)]), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])], [], [fforall([role(4)], role(2), atom(has_officer, [role(4)]), fcons(ne(role(4), role(1))), [fa(role(4), atom(identity, [])), fa(role(4), atom(person, [])), fa(role(4), atom(officer, [role(2)]))])]), schema(officer_unfriend, ['Bob', 'Orga'], [], [rs(guarded, [], [atom(friend, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(friend, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), schema(organisation_acquaint, ['Orga', 'Bob'], [pvar('Alice')], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(person, [])], [])]), schema(organisation_befriend, ['Orga', 'Bob', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(person, []), atom(knows, [role(1)]), atom(friend, [role(3)])], [atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(2)]), atom(person, [])], [])]), qschema(organisation_end, ['Orga', 'Bob'], [], [pvar('G1'), svar('G1'), num('G1')], true, [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, [])], [atom(has_officer, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])], [], [for(fa(role(1), atom(person, [])), fand(fa(role(1), atom(organisation, [])), fexists([svar('G1')], role(1), atom(has_officer, [svar('G1')]), fcons(true))))]), schema(unfriend, ['Bob', 'Orga'], [], [rs(guarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(person, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [])]), schema(organisation_unfriend, ['Orga', 'Bob', 'Alice'], [], [rs(unguarded, [], [atom(friend, [role(2)])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], [atom(officer, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), schema(organisations_acquaint, ['Orga', 'Will', one('Bob', 'Alice')], [pvar('Alice'), pvar('Bob')], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Alice')])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [pvar('Bob')])], [])]), schema(organisations_befriend, ['Orga', 'Will', 'Alice', one('Bob', 'Alice')], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(4)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(knows, [role(2)]), atom(friend, [role(4)]), atom(person, [])], []), rs(guarded, [], [], [atom(identity, []), atom(friend, [role(3)]), atom(person, [])], [])]), schema(organisations_of_one_officer_befriend, ['Orga', 'Will', 'Alice'], [], [rs(guarded, [atom(friend, [role(2)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(2)])], [atom(retired, []), atom(friend, [role(2)])]), rs(guarded, [atom(friend, [role(1)])], [], [atom(identity, []), atom(organisation, []), atom(has_officer, [role(3)]), atom(knows, [role(1)])], [atom(retired, []), atom(friend, [role(1)])]), rs(guarded, [], [], [atom(identity, []), atom(person, [])], [])]), cschema(retire, ['Orga', 'Decider', 'Codecider', 'E1', 'E2', 'E3'], [], [], [rs(unguarded, [atom(retired, [])], [atom(has_officer, [any]), atom(friend, [any]), atom(has_role, [any, any])], [atom(identity, []), atom(has_officer, [role(2)])], [atom(retired, [])]), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(1)])], []), crs(listed(1, has_officer, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(1)])], []), crs(listed(1, has_officer, []), unguarded, [], [atom(officer, [role(1)])], [atom(identity, [])], []), crs(listed(1, friend, []), unguarded, [], [atom(friend, [role(1)])], [atom(identity, [])], []), crs(listed(1, has_role, [any]), unguarded, [], [atom(role, [role(1), any])], [atom(identity, [])], [])]), schema(propose, ['Orga', 'Bob'], [svar('Motion')], [rs(unguarded, [atom(proposed, [svar('Motion')])], [], [atom(identity, [])], [atom(proposed, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(proposer, [role(1)]), atom(person, [])], [])]), schema(vote, ['Orga', 'Bob'], [svar('Motion')], [rs(unguarded, [atom(vote, [role(2), svar('Motion')])], [], [atom(identity, []), atom(organisation, []), atom(proposed, [svar('Motion')])], [atom(vote, [role(2), svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(participant, [role(1)]), atom(voter, [role(1), svar('Motion')]), atom(person, [])], [])]), schema(act, ['Orga', 'Alice'], [svar('Motion')], [rs(unguarded, [atom(taken, [svar('Motion')])], [], [atom(identity, []), atom(proposed, [svar('Motion')]), atom(decided, [svar('Motion')])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(taker, [role(1), svar('Motion')]), atom(person, [])], [])]), cschema(join, ['Bob', 'Orga', 'Decider', 'Codecider'], [], [], [rs(guarded, [atom(participant, [role(2)])], [], [atom(identity, []), atom(person, [])], [atom(participant, [role(2)])]), rs(unguarded, [atom(has_participant, [role(1)])], [], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), crs(listed(2, has_officer, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])]), schema(leave, ['Bob', 'Orga'], [], [rs(guarded, [], [atom(participant, [role(2)])], [atom(identity, []), atom(person, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(has_participant, [role(1)])], [atom(identity, [])], [])]), schema(officer_leave, ['Bob', 'Orga'], [], [rs(guarded, [], [atom(participant, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, []), atom(person, [])], []), rs(unguarded, [], [atom(has_participant, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, [])], [])]), cschema(expel, ['Bob', 'Orga', 'Decider', 'Codecider'], [], [], [rs(unguarded, [], [atom(participant, [role(2)])], [atom(identity, [])], [atom(officer, [role(2)])]), rs(unguarded, [], [atom(has_participant, [role(1)])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), crs(listed(2, has_officer, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])]), cschema(officer_expel, ['Bob', 'Orga', 'Decider', 'Codecider'], [], [], [rs(unguarded, [], [atom(participant, [role(2)]), atom(officer, [role(2)]), atom(role, [role(2), any])], [atom(identity, [])], []), rs(unguarded, [], [atom(has_participant, [role(1)]), atom(has_officer, [role(1)]), atom(has_role, [role(1), any])], [atom(identity, []), atom(has_officer, [role(3)])], []), rs(guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], []), crs(listed(2, has_officer, []), guarded, [], [], [atom(identity, []), atom(person, []), atom(officer, [role(2)])], [])]), schema(amend, ['Orga', 'Alice'], [svar('Motion')], [rs(unguarded, [atom(amended, []), atom(taken, [svar('Motion')])], [], [atom(identity, []), atom(proposed, [svar('Motion')]), atom(amendment_decided, [svar('Motion')])], [atom(taken, [svar('Motion')])]), rs(guarded, [], [], [atom(identity, []), atom(officer, [role(1)]), atom(amender, [role(1), svar('Motion')]), atom(person, [])], [])])])), pragmas([list("Contacts", [knows]), list("Friends", [friend]), list("Organisations", [participant])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", ["", "person"], said([[], [person(1), text(" wishes that you know each other.")]]), "Contacts", by([1])), act(introduce, "Introduce", [], said([[person(2), text(" asks to introduce "), person(3), text(" to you.")], []]), "Contacts", by([2])), act(befriend, "Befriend", [], said([[], [person(1), text(" asks to be your friend.")]]), "Friends", by([1])), act(unfriend, "Unfriend", [], none, "", by([1])), act(person_unfriend, "Person unfriend", [], none, "", by([1])), act(found, "Found", ["organisation", "", "founder", "role"], said([[person(2), text(" asks to found you.")], [], [person(2), text(" asks for your consent to found the organisation "), person(1), text(".")]]), "Organisations", by([2])), act(propose, "Propose", ["", "", "act"], none, "Organisations", by([2])), act(vote, "Vote", [], none, "Organisations", by([2])), act(act, "Act", [], none, "Organisations", by([2])), act(join, "Join", ["", "organisation", "officer"], said([[], [person(1), text(" asks to become a participant of "), person(2), text(".")], [person(1), text(" asks to become a participant of "), person(2), text(".")]]), "Organisations", by([1])), act(leave, "Leave", [], none, "Organisations", by([1])), act(officer_leave, "Officer leave", [], none, "Organisations", by([1])), act(expel, "Expel", ["person"], said([[], [person(3), text(" asks to end "), person(1), text("'s participation in "), person(2), text(".")]]), "Organisations", by([3])), act(officer_expel, "Officer expel", ["person"], said([[], [person(3), text(" asks to end "), person(1), text("'s participation and his office in "), person(2), text(".")]]), "Organisations", by([3])), act(appoint, "Appoint", ["person", "", "", "role"], said([[person(3), text(" asks you to be an officer of the organisation "), person(2), text(".")], [], [person(3), text(" asks that "), person(1), text(" be an officer of your organisation "), person(2), text(".")]]), "Organisations", by([3])), act(end_officer, "End officer", ["person"], said([[], [person(3), text(" asks to end "), person(1), text("'s office in your organisation "), person(2), text(".")]]), "Organisations", by([3])), act(resign, "Resign", [], none, "Organisations", by([1])), act(officer_unfriend, "Officer unfriend", [], none, "Organisations", by([1])), act(amend, "Amend", [], none, "Organisations", by([2])), act(organisation_acquaint, "Organisation acquaint", ["organisation"], said([[person(2), text(" wishes that you know each other.")], []]), "Organisations", by([2])), act(organisation_befriend, "Organisation befriend", ["organisation"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and her organisation "), person(1), text(" befriend.")], []]), "Organisations", by([3])), act(organisation_unfriend, "Organisation unfriend", ["organisation", "person"], none, "Organisations", by([3])), act(organisation_end, "Organisation end", [], none, "Organisations", by([1])), act(organisations_acquaint, "Organisations acquaint", ["", "organisation"], said([[], [person(1), text(" wishes that you know each other.")]]), "Organisations", by([1], [same(4, 3)])), act(organisations_befriend, "Organisations befriend", ["organisation"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], [], [person(3), text(" asks that "), person(1), text(" and your organisation "), person(2), text(" befriend.")]]), "Organisations", by([3], [same(4, 3)])), act(organisations_of_one_officer_befriend, "Organisations of one officer befriend", ["organisation", "other organisation"], said([[person(3), text(" asks that you and "), person(2), text(" befriend.")], [person(3), text(" asks that you and "), person(1), text(" befriend.")], []]), "Organisations", by([3])), act(retire, "Retire", [], said([[], [person(2), text(" asks to retire your organisation "), person(1), text(".")]]), "Organisations", by([2]))], [], look("🏛️", "governance"), version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
@@ -1329,16 +1327,6 @@ version(1, 1)
 %% The peer a request name N of an acquaintance part names beside the agent Me, peer(Q), or none, nopeer: the acquaintance schemas, each of two roles, both guarding, that requires at neither role an atom naming the other (vGLP, Section 5.4, "The compilation").
 procedure meeting_peer(Proposal?, Peer?, MeetPeer).
 meeting_peer(acquaint(V1, V2), Me, P?)
-:-
-ground(V1?)
-,
-ground(V2?)
-,
-ground(Me?)
-|
-meet_other(V1?, V2?, Me?, P)
-.
-meeting_peer(enter(V1, V2), Me, P?)
 :-
 ground(V1?)
 ,
@@ -1614,8 +1602,11 @@ ApprovalRes ::= approval_for(Attempt) ; noapproval.
 %% When it starts, its view is written on the output: its own key, the machine state of the initial app state, the empty multiset, and no person known; and an own trigger on its stream of own triggers, which the agent goal reads in the fair merge of the answers to its request questions, the arriving messages, the answers to its approval questions and its own triggers (vGLP 6c8c663, Section 5.4, "The compilation").
 %% Where the contract requires the day, the agent reads the date from its phone whenever it reads a trigger, before it computes a condition, and holds today(d), d that date, beside its app state until the next (dated; vGLP, Section 5.4, "Speech-act schemas as local specifications": "we assume that every phone has the correct date, the date in UTC, and the compiled agent reads it from its phone whenever it computes a condition").  It takes no calendar.
 %% Where the contract declares environment predicates other than the day, the agent takes, when the platform is deployed, their atoms, written as the contract writes them, List(Atom), and holds them in its machine state from startup, its first view showing them ("An environment predicate is the day, by the calendar, or a value the contract declares and does not fix, as BCC's f and GFF-FR's d: given when the platform is deployed, held from startup", vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 4; vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "its value is given when the platform is deployed, and the compiled agent holds the atom from startup").
-exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output)).
-agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?]) :- ground(Id?) |
+exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?).
+agent(Id, NetIn, Out?, [view(Id?, V0?, [], [], Ts?)|Thr?], Env) :- ground(Id?), ground(Env?) |
+    env_atoms(Env?, G0),
+    env_atoms(Env?, G1),
+    atoms_of(G1?, V0),
     tabs(Ts),
     request(Rq),
     tag_net(NetIn?, Nt),
@@ -1623,7 +1614,11 @@ agent(Id, NetIn, Out?, [view(Id?, [], [], [], Ts?)|Thr?]) :- ground(Id?) |
     merge(M1?, Ans?, M2),
     merge(M2?, [own|Ow?], In),
     agent_goal([], In?, yes, Ans, Thr, Out, Ow, [], [],
-        st(Id?, app([], 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).
+        st(Id?, app(G0?, 0, unlocked, []), 0, [], [], [], [], [], [], [], [], [], ix(nil, [], [], ic([], [], [])), [])).
+%% The atoms of the environment predicates among those given at deployment (env_atom, printed from the contract).
+procedure env_atoms(List(Atom)?, GAtoms).
+env_atoms([], []).
+env_atoms([A|As], G?) :- env_atom(A?, G1), env_atoms(As?, G2), app(G1?, G2?, G).
 
 %% A request question: its question, of the request type Request?, takes the
 %% person's one request, put up once it is made, of a type with the alternative propose(N) for the request name N of each guarded part (vGLP d433f71, Section 5.4, "The compilation"), so that every agent of a contract with a guarded part asks a request question when it starts and the next when it reads the answer to the last; a refresh is no request but a grant addressed to no construct, on which the dispatcher has every construct draw again what it last drew (Section 6.3), and the agent writes nothing on it.
@@ -5187,9 +5182,14 @@ unable_at1(RsP, Bn, Sh, L?, H?) :- ground(RsP?), ground(Bn?), ground(Sh?) |
 procedure held_in(GAtoms?, GAtoms?, GAtoms).
 held_in([], _, []).
 held_in([G|Gs], Sh, H?) :- ground(G?), ground(Sh?) |
-    mem(G?, Sh?, In),
+    g_wild(G?, W),
+    held_one(W?, G?, Sh?, H0),
     held_in(Gs?, Sh?, H1),
-    keep_g(In?, G?, H1?, H).
+    app(H0?, H1?, H).
+%% A forbidden atom the state has: the atom, or, where it carries the wildcard, the atoms of the state it matches.
+procedure held_one(YesNo?, GAtom?, GAtoms?, GAtoms).
+held_one(no, G, Sh, H?) :- ground(G?) | mem(G?, Sh?, In), keep_g(In?, G?, [], H).
+held_one(yes, K, Sh, H?) :- g_matched(K?, Sh?, H).
 procedure keep_g(YesNo?, GAtom?, GAtoms?, GAtoms).
 keep_g(yes, G, H, [G?|H?]).
 keep_g(no, _, H, H?).
@@ -5480,8 +5480,24 @@ procedure forb_one(YesNo?, SAtom?, Binding?, GAtoms?, YesNo).
 forb_one(no, _, _, _, yes).
 forb_one(yes, A, B, Sh, R?) :- ground(Sh?) |
     img_atom(A?, B?, G),
-    mem(G?, Sh?, In),
+    forb_held(G?, Sh?, In),
     neg(In?, R).
+%% Whether the state holds an atom the image G of a forbidden atom forbids: G itself, or, where G carries the wildcard, an atom it matches, as the image of a cleared atom does, g_matches (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches"; GSC, Definition "Compilation": "d_p holds ... no atom matching phi").
+procedure forb_held(GAtom?, GAtoms?, YesNo).
+forb_held(G, Sh, In?) :- ground(G?) | g_wild(G?, W), forb_held1(W?, G?, Sh?, In).
+procedure forb_held1(YesNo?, GAtom?, GAtoms?, YesNo).
+forb_held1(no, G, Sh, In?) :- mem(G?, Sh?, In).
+forb_held1(yes, K, Sh, In?) :- g_matched(K?, Sh?, Ms), nonempty(Ms?, In).
+%% The atoms of a state that the image K of an atom with the wildcard matches.
+procedure g_matched(GAtom?, GAtoms?, GAtoms).
+g_matched(_, [], []).
+g_matched(K, [G|Gs], H?) :- ground(K?), ground(G?) |
+    g_matches(K?, G?, M),
+    g_matched(K?, Gs?, H1),
+    keep_g(M?, G?, H1?, H).
+procedure nonempty(GAtoms?, YesNo).
+nonempty([], no).
+nonempty([_|_], yes).
 procedure forb_ok1(YesNo?, SAtoms?, Binding?, GAtoms?, YesNo).
 forb_ok1(no, _, _, _, no).
 forb_ok1(yes, As, B, Sh, R?) :- forb_ok(As?, B?, Sh?, R).
@@ -6324,12 +6340,23 @@ mates_check([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), gro
     app(M1?, M2?, M).
 procedure mates_check1(LNorm?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_check1(badnorm, _, _, _, []).
+%% A numeric variable that no deleted or added atom names, and that is not local to a role, is given its values by the constraint once those the atoms bind are bound, by the conjuncts local to every role (con_extend), as at a Propose (num_extend): "or the constraint gives the variable finitely many values once those are bound" (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"); so identity_record of Secure Friendship, whose Double only its constraint names, has the schema-binding of its class term among those of its class.
 mates_check1(norm(B), Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
+    schema_numeric(Nm?, N),
+    mates_extend(N?, B?, Bs),
+    mates_check2(Bs?, Nm?, Rs?, Ps?, M).
+procedure mates_extend(Numeric?, Binding?, Bindings).
+mates_extend(numeric(Cj, _, _), B, Bs?) :- ground(Cj?), ground(B?) | conjs_every(Cj?, C), con_extend(C?, B?, Bs).
+procedure mates_check2(Bindings?, Constant?, RoleSpecs?, Deltas?, Mates).
+mates_check2([], _, _, _, []).
+mates_check2([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), ground(Ps?) |
     sig_of(Rs?, B?, Ps1),
     deltas_eq(Ps?, Ps1?, E1),
     admissible(Rs?, B?, E2),
     and(E1?, E2?, E),
-    mate_of(E?, B?, Nm?, Rs?, M).
+    mate_of(E?, B?, Nm?, Rs?, M1),
+    mates_check2(Bs?, Nm?, Rs?, Ps?, M2),
+    app(M1?, M2?, M).
 %% A schema-binding found by matching a schema's deleted and added atoms with a class's: the variables local to a role, agent, speech-act or numeric, are not bound by it, and stand for themselves, lv(S, X) (the type Val), so a local variable matched with lv(S, X) of its own schema S, or with nothing, is left so, and a binding that sends a local variable to anything else, or a variable that is not local to lv, is no schema-binding of the class (vGLP 8a3ae79, Section 5.4, "Speech-act schemas as local specifications": "A variable that occurs only in atoms the schema requires or deletes at one role, and in the constraint, is local to that role ... A schema-binding does not bind a local variable: the machine of the person in that role finds a value for it in its own state").  A class whose schema-binding deletes or adds an atom with a local variable so holds the schema-bindings of its own schema of those atoms.
 procedure local_norm(Constant?, Binding?, LNorm).
 local_norm(Nm, B, R?) :- ground(Nm?), ground(B?) |
@@ -6574,7 +6601,7 @@ live_at1(no, _, _, _, _, no).
 live_at1(yes, Ps, Rs, B, Rf, Ok?) :- live_at(Ps?, Rs?, B?, Rf?, Ok).
 procedure live_one(CAtoms?, CAtoms?, Peer?, Preds?, YesNo).
 live_one(R, F, P, Rf, Ok?) :- ground(F?) |
-    ms_meets(R?, F?, M1),
+    forb_meets(R?, F?, M1),
     own_reflexive_in(F?, P?, Rf?, M2),
     or(M1?, M2?, M),
     neg(M?, Ok).
@@ -6590,8 +6617,8 @@ linked([P|Ps], Rs1, B1, Rs2, B2, Rf, L?) :-
     forbs_at(Rs2?, B2?, P?, F2),
     bound_cs(R1?, Rb1),
     bound_cs(R2?, Rb2),
-    ms_meets(Rb1?, F2?, C1),
-    ms_meets(Rb2?, F1?, C2),
+    forb_meets(Rb1?, F2?, C1),
+    forb_meets(Rb2?, F1?, C2),
     or(C1?, C2?, C),
     linked1(C?, Ps?, Rs1?, B1?, Rs2?, B2?, Rf?, L).
 procedure linked1(YesNo?, Peers?, RoleSpecs?, Binding?, RoleSpecs?, Binding?, Preds?, YesNo).
@@ -6610,6 +6637,36 @@ forbs_at(Rs, B, P, F?) :- ground(B?) |
     specs_at(Rs?, 1, B?, P?, RsP),
     forbs_of(RsP?, Fs),
     cimg_atoms(Fs?, B?, F).
+%% Whether an atom of Rs is forbidden by an atom of Fs: it is one of them, or one with the wildcard matches it, the wildcard, which no binding binds, compared as cmp_free(any), and N.* as its image (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches").
+procedure forb_meets(CAtoms?, CAtoms?, YesNo).
+forb_meets([], _, no).
+forb_meets([X|Xs], Fs, R?) :- ground(X?), ground(Fs?) | c_forbidden(Fs?, X?, R1), forb_meets1(R1?, Xs?, Fs?, R).
+procedure forb_meets1(YesNo?, CAtoms?, CAtoms?, YesNo).
+forb_meets1(yes, _, _, yes).
+forb_meets1(no, Xs, Fs, R?) :- forb_meets(Xs?, Fs?, R).
+procedure c_forbidden(CAtoms?, CAtom?, YesNo).
+c_forbidden([], _, no).
+c_forbidden([K|Ks], X, R?) :- ground(K?), ground(X?) | c_matches(K?, X?, R1), c_forbidden1(R1?, Ks?, X?, R).
+procedure c_forbidden1(YesNo?, CAtoms?, CAtom?, YesNo).
+c_forbidden1(yes, _, _, yes).
+c_forbidden1(no, Ks, X, R?) :- c_forbidden(Ks?, X?, R).
+procedure c_matches(CAtom?, CAtom?, YesNo).
+c_matches(cmp_atom(P, Ks), cmp_atom(Q, Xs), M?) :- P? =?= Q? | cm_vals(Ks?, Xs?, M).
+c_matches(_, _, no) :- otherwise | true.
+procedure cm_vals(CVals?, CVals?, YesNo).
+cm_vals([], [], yes).
+cm_vals([], [_|_], no).
+cm_vals([_|_], [], no).
+cm_vals([K|Ks], [X|Xs], M?) :- ground(K?), ground(X?) |
+    cm_val(K?, X?, M1),
+    cm_vals1(M1?, Ks?, Xs?, M).
+procedure cm_vals1(YesNo?, CVals?, CVals?, YesNo).
+cm_vals1(no, _, _, no).
+cm_vals1(yes, Ks, Xs, M?) :- cm_vals(Ks?, Xs?, M).
+procedure cm_val(CVal?, CVal?, YesNo).
+cm_val(cmp_free(any), _, yes).
+cm_val(cmp_val(K), cmp_val(X), M?) :- gm_val(K?, X?, M).
+cm_val(K, X, M?) :- otherwise | same(K?, X?, M).
 procedure forbs_of(RoleSpecs?, SAtoms).
 forbs_of([], []).
 forbs_of([R|Rs], F?) :- rs_forb(R?, F1), forbs_of(Rs?, F2), app(F1?, F2?, F).
@@ -7348,6 +7405,8 @@ vars_bound([num(X)|Vs], B, R?) :- number(X?) | vars_bound(Vs?, B?, R).
 vars_bound([val(_)|Vs], B, R?) :- vars_bound(Vs?, B?, R).
 %% An item is bound where its variable is.
 vars_bound([item_of(V)|Vs], B, R?) :- vars_bound([V?|Vs?], B?, R).
+%% The wildcard of a forbidden atom is no variable, and leaves the atom bound (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a wildcard in a negated atom is universally quantified, the atom forbidding, in B, and clearing, in H, every atom of the state that it matches").
+vars_bound([any|Vs], B, R?) :- vars_bound(Vs?, B?, R).
 vars_bound([nterm(N)|Vs], B, R?) :- ground(N?) |
     nt_vars(N?, Ws),
     app(Ws?, Vs?, Vs1),
@@ -7662,7 +7721,12 @@ expr_term1(author_of(Y), B, F?) :- lookup(Y?, B?, F0), author_found(F0?, F).
 expr_term1(item_of(Y), B, F?) :- lookup(Y?, B?, F0), item_found(F0?, F).
 %% A constant the contract names is its own value, v(C).
 expr_term1(val(C), _, found(v(C?))).
+%% A variable over the constants is the constant the binding, or a reading, gives it, v(C), so that eq and ne compare two such variables, or one and a constant the contract names, for equality, the comparison of constants (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a constraint ... is over the relations and functions the value types provide --- comparison and arithmetic").
+expr_term1(num(X), B, F?) :- ground(B?) | lookup(num(X?), B?, F0), const_term(F0?, F).
 expr_term1(_, _, free) :- otherwise | true.
+procedure const_term(Found?, Found).
+const_term(found(v(C)), found(v(C?))).
+const_term(_, free) :- otherwise | true.
 procedure author_found(Found?, Found).
 author_found(found(s(S)), found(p(P?))) :- ground(S?) | first_signer(S?, P).
 author_found(_, free) :- otherwise | true.

@@ -1,5 +1,5 @@
 Labelled Overlay
-Labelled Overlay extends and strengthens Overlay.
+Labelled Overlay extends Overlay, and augments it.
 A pointer may be labeled by a person, and a pointer labeled by Dave is a *Dave-pointer*. Friends Alice and Bob have a Bob-pointer from Alice to Bob and an Alice-pointer from Bob to Alice.
 Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.
 1. ■ Labeled point friend: Alice, who has no Dave-pointer to her friend Bob, may add one, if Bob has a Dave-pointer.

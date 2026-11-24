@@ -1,6 +1,6 @@
 Auction
 Auction extends Local Overlay.
-A *pickup delay* is measured from the award. The *terms* of a call, a parameter of Auction, state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
+A *pickup delay* is measured from the award. The *terms* of a call state a maximum pickup delay, select a bidder, set the fare and the deposit, and say how these are released.
 Alice is a rider and Bob a driver, Trip a call. A person can be either a rider or a driver but not both.
 1. ■ Call. Call: Alice may call for bids on a ride as Trip, provided Alice is a rider and Alice does not have a ride. Alice calls for bids from the persons Alice points to, stating the pickup point, the destination, the bidding period and the terms. Send call: Alice's call Trip goes to Bob, provided Alice has the call Trip open and Alice points to Bob. Forward call: Bob forwards Alice's call Trip to Carol, provided Bob has received Alice's call Trip from Alice and Bob points to Carol.
 2. ■ Bid: Bob may bid a fare and a pickup delay on Alice's call Trip, provided Bob is a driver, Bob has received Alice's call Trip and the bidding period of Alice's call Trip has not ended. Alice may not open a bid before then.
@@ -24,5 +24,4 @@ After the pickup of x and y is recorded, which requires x does not have a pickup
 After the fare and the deposit are released to x and to y as the terms say: no longer x's fare is locked, no longer y's deposit is locked, no longer x and y have a ride, x has a pickup recorded with no one, y has a pickup recorded with no one, x has a release of the ride with y and y has a release of the ride with x.
 After x cancels x's ride with y: no longer x's fare is locked, no longer y's deposit is locked, no longer x and y have a ride, x has a pickup recorded with no one, y has a pickup recorded with no one, x has a release of the ride with y and y has a release of the ride with x.
 After x withdraws x's call c: no longer x has the call c open.
-Environment: x is a rider; x is a driver; the bidding period of x's call c has ended; x is at the pickup point with y; x is at the destination with y; no pickup of x's ride is recorded within the maximum pickup delay.
-Parameters: the terms of x's call c select y; the terms of x's call c select no bidder.
+Environment: x is a rider; x is a driver; the bidding period of x's call c has ended; x is at the pickup point with y; x is at the destination with y; no pickup of x's ride is recorded within the maximum pickup delay; the terms of x's call c select y; the terms of x's call c select no bidder.

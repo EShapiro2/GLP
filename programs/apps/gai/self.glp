@@ -122,12 +122,6 @@ knows(Peer)
 ;
 friend(Peer)
 ;
-ai_agent
-;
-has_guardian(Peer)
-;
-attestation(Speech)
-;
 principal(Peer)
 ;
 guardian(Peer)
@@ -135,6 +129,12 @@ guardian(Peer)
 attestation_record(Peer, Speech)
 ;
 item(Speech)
+;
+ai_agent
+;
+has_guardian(Peer)
+;
+attestation(Speech)
 ;
 retired
 .

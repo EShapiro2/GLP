@@ -1,1 +1,1 @@
-Single-Person Company instantiates Corporation: holds
+Single-Person Company restricts Corporation: holds
