@@ -18,17 +18,18 @@ Meeting Rooms
 17. ■ Organisations befriend.  Orga may enter a relation with Will with the consent of Will, Alice and Bob, provided Orga and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
 18. ■ Organisations of one officer befriend.  Orga may enter a relation with Will with the consent of Will, Alice and Bob, provided Orga and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
 19. ■ Retire.  Those who decide for Orga may retire Orga; every guardianship and relation of Orga then ends and Orga can take no act.
-20. ■ Propose.  An officer, or a person the bylaws name, may propose an act of Orga.
-21. ■ Vote.  Those who decide the act may vote on it.
-22. ■ Act.  An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.
-23. ■ Join.  Bob may become a participant of Orga with the consent of those who decide for Orga.
-24. ■ Leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
-25. ■ Officer leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
-26. ■ Expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
-27. ■ Officer expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
-28. ■ Amend.  Those who decide it may amend the bylaws.
-29. ■ Book.  Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a resource of Orga.
-30. ■ Cancel.  Alice may cancel her booking.
+20. ■ Found by an organisation.  Alice, or an organisation with the consent of Alice, may create Orga (Guardians:1); Alice is then its first officer, and Orga must consent.
+21. ■ Propose.  An officer, or a person the bylaws name, may propose an act of Orga.
+22. ■ Vote.  Those who decide the act may vote on it.
+23. ■ Act.  An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.
+24. ■ Join.  Bob may become a participant of Orga with the consent of those who decide for Orga.
+25. ■ Leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
+26. ■ Officer leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
+27. ■ Expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
+28. ■ Officer expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
+29. ■ Amend.  Those who decide it may amend the bylaws.
+30. ■ Book.  Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a resource of Orga.
+31. ■ Cancel.  Alice may cancel her booking.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -38,8 +39,7 @@ Introduce: Alice [Introduce]
 Befriend: Alice [Befriend]
   Bob: Alice asks for your consent to befriend.
 Person unfriend: Alice [Person unfriend]
-Found: Alice [Found] <orga> <gov> <role>
-  Gov: Alice asks for your consent to found.
+Found: Alice [Found] <orga> <role>
 Appoint: Bob [Appoint] <role>
   Decider: Bob asks for your consent to appoint.
   Codecider: Bob asks for your consent to appoint.
@@ -66,6 +66,8 @@ Organisations of one officer befriend: Orga [Organisations of one officer befrie
   Alice: Orga asks for your consent to organisations of one officer befriend.
 Retire: Decider [Retire]
   Codecider: Decider asks for your consent to retire.
+Found by an organisation: Alice [Found by an organisation] <orga> <gov> <role>
+  Gov: Alice asks for your consent to found by an organisation.
 Propose: Bob [Propose] <motion>
 Vote: Bob [Vote]
 Act: Alice [Act]

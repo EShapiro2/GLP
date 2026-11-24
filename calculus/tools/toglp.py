@@ -488,7 +488,9 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             return None, ['%s(cardinality([], %s, true), %s)' % (cmp('eq'), at, arg(exact))]
         if mult is not None:        # a set of notes, one atom for each (Udi, 2026-11-24, design decisions 49 to 51; GSC's
             # set('N') and size('N'), GLP claude/project-thread-pgtsao 0daa1b8): the amount n is the size of the set
-            sv = ('N%sSet' if mult.isdigit() else '%sSet') % mult
+            sv = '%sSet' % mult
+            if mult.isdigit():      # a number of notes: those of the atom's other places, one set for each (Coins' Redeem: a Bob-coin, a Carol-coin)
+                sv = ''.join(w[:1].upper() + w[1:] for a in l[2][1:] for w in re.findall(r'[A-Za-z0-9]+', a) if not re.fullmatch(r'[*#]?\d+', a)) + mult + 'Set'
             if sv not in others:
                 others.append(sv)
             sc = 'eq(size(%s), %s)' % (q(sv), arg(mult))
