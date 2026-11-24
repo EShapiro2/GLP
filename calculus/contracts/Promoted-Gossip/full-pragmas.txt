@@ -14,9 +14,9 @@ Of Community Bank: A *community* is a bank whose coins are Dollar-denominated. T
 Of Promoted Gossip: The budget of a post is Orga-coins, and the cost of a forward is a number of them. The gossip protocol also says what part of the budget is the holder's. Environment: the gossip protocol leaves x n of p.
 Alice, Bob and Carol are persons, Post a post, Budget, Rest, Part, Sum, Total, Limit and Kept numbers, Orga a community, Will and Gov organisations, Motion an act of Orga, Role a role, Dave a party, Cond a condition Alice, Bob and Carol agree, Type and Other types, Day, Term and Due maturity dates, Today a date, Dollar a fiat currency.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2, Guardians:3. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
-Knowledge:3, Guardians:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
-Friendship:1, Guardians:3. ○ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person and Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person and Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
 Friendship:2, Guardians:3. ■ Person unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
 Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 Gossip:1, Promoted Gossip:1. ■ Post: Alice may make Post with the budget Budget, provided Budget is a budget of a new post, and then no longer Alice holds Budget Dollar-denominated Orga-coins, Alice holds Budget Orga-coins for Post and Alice has a part of Post to take.

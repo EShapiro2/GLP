@@ -5,10 +5,10 @@ Children:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, 
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2+Guardians:3 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
-Knowledge:3+Guardians:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice is a person, Bob is a person, Carol is a person, Alice knows Bob, Bob knows Alice and Alice knows Carol.
+Knowledge:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
+Knowledge:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice is a person, Bob is a person, Carol is a person, Alice knows Bob, Bob knows Alice and Alice knows Carol.
 Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
-Friendship:1+Guardians:3 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice is a person, Bob is a person, Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
+Friendship:1 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice is a person, Bob is a person, Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
 Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
 Friendship:2+Groups:3+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend, no longer Bob counts Alice as a friend, no longer Alice is a member of the group anyone of Bob, no longer Bob is a member of the group anyone of Alice, no longer Alice has Bob as a member of the group anyone and no longer Bob has Alice as a member of the group anyone, provided Alice is a person and Bob is a person.
 Friendship:3 ○ | Loss of Trust.
@@ -64,13 +64,13 @@ Warded Groups:3 ■ Child join: Bob, Wendy and Alice may jointly Wendy is a memb
 Warded Groups:3 ■ Children join: Wendy, Will, Alice and Bob may jointly Will is a member of the group Grupo of Wendy and Wendy has Will as a member of the group Grupo, provided Wendy is the leader of Grupo, Wendy is a child, Wendy has Alice as a parent, Alice is a parent of Wendy, Wendy counts Will as a friend, Will counts Wendy as a friend, Will is a child, Will has Bob as a parent, Bob is a parent of Will, Alice knows Will, Alice counts Bob as a friend, Bob counts Alice as a friend and not Will is a member of the group Grupo of anyone.
 Warded Groups:3 ■ Children of one parent join: Wendy, Will and Alice may jointly Will is a member of the group Grupo of Wendy and Wendy has Will as a member of the group Grupo, provided Wendy is the leader of Grupo, Wendy is a child, Wendy has Alice as a parent, Alice is a parent of Wendy, Wendy counts Will as a friend, Will counts Wendy as a friend, Will is a child, Will has Alice as a parent, Alice is a parent of Will and not Will is a member of the group Grupo of anyone.
 Warded Groups:3 ■ Child withdraw: Alice may no longer Wendy is a member of the group Grupo of Bob and no longer Bob has Wendy as a member of the group Grupo, provided Wendy has Alice as a parent and Alice is a parent of Wendy.
-Warded Groups:3+Children:3 ■ Child add: Wendy, Will and Alice may jointly Will is a member of the group Grupo of Wendy and Wendy has Will as a member of the group Grupo, provided Wendy is the leader of Grupo, Wendy is a child, not Wendy is retired, Wendy has Alice as a parent, Alice is a parent of Wendy, Wendy counts Will as a friend, Will counts Wendy as a friend, Alice counts Will as a friend, Will counts Alice as a friend, not Will is a member of the group Grupo of anyone and Will is a child.
+Warded Groups:3+Children:3 ■ Child add: Wendy, Will, Alice and Bob may jointly Will is a member of the group Grupo of Wendy and Wendy has Will as a member of the group Grupo, provided Wendy is the leader of Grupo, Wendy is a child, not Wendy is retired, Wendy has Alice as a parent, Alice is a parent of Wendy, Wendy counts Will as a friend, Will counts Wendy as a friend, Alice counts Will as a friend, Will counts Alice as a friend, not Will is a member of the group Grupo of anyone, Will is a child and Will has Bob as a parent.
 Warded Groups:3 ■ Child leave: Wendy may no longer Wendy is a member of the group Grupo of Alice and no longer Alice has Wendy as a member of the group Grupo, provided Wendy is a child and not Wendy is retired.
 Warded Groups:3 ■ Child remove: Wendy may no longer Bob is a member of the group Grupo of Wendy and no longer Wendy has Bob as a member of the group Grupo, provided Wendy is the leader of Grupo, Wendy is a child and not Wendy is retired.
 Children:0 - | In clause 2 Alice and Bob are possibly one person.
 Children:1 ◆ | Alice is a legal parent of the minor who operates Wendy.
 Children:2 ■ | A child's acquaintances.
-Children:3 ■ | Only a child, Will, may join the group.
+Children:3 ■ | Only a child, Will, may join the group, with the consent of Bob, a parent of Will.
 Children:4 ○ Of age: Alice may Wendy is of age, no longer Wendy is a child, no longer anyone is a parent of Wendy, no longer Wendy has anyone as a parent and Wendy is a person, provided Alice is the creator of Wendy, Wendy has Bob as a parent and not Wendy is of age.
 Children:4 ○ | Wendy is then a person.
 Children:4 ○ | The creator will do so if the minor who operates Wendy comes of age, and not before.

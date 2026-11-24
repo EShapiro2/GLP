@@ -1,5 +1,5 @@
 Promoted Gossip
-Promoted Gossip unites Gossip and Community Bank, and extends and amends the union.
+Promoted Gossip unites Gossip and Community Bank, and extends and augments the union.
 The budget of a post is Orga-coins, and the cost of a forward is a number of them. The gossip protocol also says what part of the budget is the holder's.
 Alice and Bob are persons, Orga a community.
 1. ■ Post: Gossip:1, and then the budget of the post comes from the Orga-coins Alice holds.

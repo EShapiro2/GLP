@@ -75,7 +75,7 @@ import names as NM      # the names of the contracts and their files (tools/name
 from collections import Counter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes', 'weakens', 'amends', 'renames', 'lifts', 'unites')
+VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes', 'weakens', 'augments', 'renames', 'lifts', 'unites')
 DERIVED = re.compile(r'^(?:.+ for .+|Vote of .+)$')
 
 
@@ -206,7 +206,7 @@ def first_line(n):
         with_ = None
         if verb == 'composes' and ' with ' in obj:
             obj, with_ = obj.split(' with ', 1)
-        bases = None if obj in ('it', 'them', 'the composition', 'the union') else [re.sub(r'^(?:an? (?:weakening|strengthening|amendment|renaming|lift) of )+', '', b.strip()) for b in re.split(r',\s*|\s+and\s+', obj) if b.strip()]      # 'a weakening of a lift of Bonds': Bonds
+        bases = None if obj in ('it', 'them', 'the composition', 'the union') else [re.sub(r'^(?:an? (?:weakening|strengthening|augmentation|renaming|lift) of )+', '', b.strip()) for b in re.split(r',\s*|\s+and\s+', obj) if b.strip()]      # 'a weakening of a lift of Bonds': Bonds
         for v in pend:
             steps.append((v, bases, ''))
         pend = []
@@ -219,7 +219,7 @@ def first_line(n):
 
 def new_verbs(n, steps):
     """The relations of Section 3 read as the operations this program checks (Udi, 2026-11-23 23:45, the six forms):
-    weakens as restricts, amends as restricts and strengthens, unites and lifts as extends, and renames as instantiates
+    weakens as restricts, augments as restricts and strengthens, unites and lifts as extends, and renames as instantiates
     with the words of gr/n's pragma 'Renaming of B: an organisation for a ward.'"""
     ren = {}
     if os.path.exists(path(n, 'first')):
@@ -231,7 +231,7 @@ def new_verbs(n, steps):
     for v, bs, sigma in steps:
         if v == 'weakens':
             out.append(('restricts', bs, sigma))
-        elif v == 'amends':
+        elif v == 'augments':
             out += [('restricts', bs, sigma), ('strengthens', bs, sigma)]
         elif v == 'unites' and bs and any(b in ren for b in bs):      # a union with a renaming: its instance composed with the others
             r = [b for b in bs if b in ren][0]

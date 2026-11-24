@@ -1,5 +1,5 @@
 Organisation
-Organisation renames Guardians, and extends and amends it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Organisation renames Guardians, and extends and augments it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
 Alice and Bob are persons, Gov and Orga organisations, Motion an act of Orga, Role a role, Votes and Double numbers.
 1. ■ Found: Guardians:1, with the consent of Gov, and then Orga has Alice as its first officer, Alice holds the role Role in Orga, Orga has Alice in the role Role, Alice is a participant of Orga, Orga has Alice as a participant and Gov is the founder of Orga.

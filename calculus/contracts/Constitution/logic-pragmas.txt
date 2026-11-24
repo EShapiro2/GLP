@@ -1,5 +1,5 @@
 Constitution
-Constitution extends Organisation, and amends it.
+Constitution extends Organisation, and augments it.
 A *constitutional democratic community* is an organisation whose bylaws name one role, *member*, held by every participant, and are *egalitarian*: the rule by which the members decide an act names no member and no other role.
 Alice, Bob and Carol are persons, Orga a constitutional democratic community, Motion an act of Orga, Votes and Double numbers.
 1. ■ Join: Organisation:3 Join, only if Orga holds the votes of at least Votes persons on whether Bob becomes a participant of Orga, Double is Votes times 2 and Orga has fewer than Double persons as a participant, on the votes of Orga for it. Vote of Orga for Join: Carol may vote on whether Bob becomes a participant of Orga in Orga, provided Carol is entitled to vote on whether Bob becomes a participant of Orga in Orga, Orga knows Bob and Carol is a participant of Orga.

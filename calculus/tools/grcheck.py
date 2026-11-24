@@ -5,7 +5,7 @@
 
 gr/NAME.txt is written by hand from rev/NAME.txt (tools/SAS-WRITING.txt), and gcsas.py reads gr/ and never rev/.  This tool prints, for each contract, how the two files differ, of five kinds.
 
-1. The title and the first line.  The titles are equal.  The first lines are equal once a reference in parentheses is taken out; if they are not, they have the same relations (extends, restricts, relaxes, strengthens, amends, instantiates) and name the same contracts, which is what SAS-WRITING.txt allows the pragmas to write otherwise ("T instantiates P with ITEMS").
+1. The title and the first line.  The titles are equal.  The first lines are equal once a reference in parentheses is taken out; if they are not, they have the same relations (extends, restricts, relaxes, strengthens, augments, instantiates) and name the same contracts, which is what SAS-WRITING.txt allows the pragmas to write otherwise ("T instantiates P with ITEMS").
 2. The clauses.  The same numbers, in order, each with the same legal modality (■ ◆ ○) and the same title, or, if the title of rev/ is a list of act names ("Leave, Expel"), each of them an act name of gr/; a title of rev/ may be an act name of gr/, or begin one ("Count", "Count for"); a clause that one file has and the other lacks; an act name of the clause of rev/ ("Leave, Expel:") that the clause of gr/ lacks, unless an act name of gr/ begins with it ("Swap item for coin" for "Swap") or it is the title or an act name of a clause that the clause cites ("Escrow", Notes:4).  gr/ may name more acts, one sentence for each.
 3. The citations.  The clause of gr/ cites each clause NAME:n that the clause of rev/ cites: itself, or through a clause it cites (Bonds:2 for Coins:2), or by writing its acts out, an act name of gr/ beginning with each ("Deposit item", Agora:6, for Notes:4); a citation of rev/ in parentheses, "(Guardians:1)", is a reference and gr/ may write the act out.  A clause that gr/ cites and rev/ does not is of a contract that the contract is written from; it is then a finding of kind 5, since a clause of rev/ may restrict acts it does not cite ("Every act of Alf requires this attestation").  An act name that gr/ writes after a citation ("Guardians:2 Make guardian") is the title or an act name of that clause, in rev/ or in gr/, or a form of an act of it that flat/ of a contract it is written from prints ("Notes:4 Deposit bond", flat/Bonds.txt).
 4. The names.  Every name of the names line of rev/ is in the names line of gr/, and every such name that a clause of rev/ uses the clause of gr/ uses, or a clause of gr/ that it cites does.  gr/ may have more names.
@@ -22,7 +22,7 @@ import names as NM
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLAUSE = re.compile(r"^(\d+)\. ([■◆○]) (.*)$")
-RELATIONS = ("extends", "restricts", "relaxes", "strengthens", "amends", "instantiates", "weakens", "renames", "lifts", "unites")
+RELATIONS = ("extends", "restricts", "relaxes", "strengthens", "augments", "instantiates", "weakens", "renames", "lifts", "unites")
 ACTS = re.compile(r"(?:^|(?<=[.;] ))([A-Z][A-Za-z' -]*(?:, [A-Z][A-Za-z' -]*)*): ")
 GR_PHRASE = re.compile(r", (provided|only if|and then) ")
 GR_END = re.compile(r", (?:provided|only if|and then|with the consent of|without the consent of|decided by|on the votes of|taken for) |\.(?: |$)")

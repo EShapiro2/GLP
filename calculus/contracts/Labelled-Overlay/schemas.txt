@@ -1,5 +1,5 @@
 Labelled Overlay
-Labelled Overlay extends Overlay, and amends it.
+Labelled Overlay extends Overlay, and augments it.
 Vocabulary: x has a w-pointer to y = pointer(x,y,w).
 After x adds a w-pointer to y, which requires x does not have a w-pointer to y: x has a w-pointer to y.
 After x removes x's w-pointer to y: no longer x has a w-pointer to y.
