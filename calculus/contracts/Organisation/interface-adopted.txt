@@ -1,6 +1,7 @@
 Interface pragmas
-Found: Alice [Found] <orga> <gov> <role>
-  Gov: Alice asks for your consent to found.
+Found: Alice [Found] <orga> <role>
+  Alice [Found by an organisation] <orga> <gov> <role>
+  Gov: Alice asks for your consent to found by an organisation.
 Acts of the organisation: Bob [Propose] <motion> [Vote]
   Alice [Act]
 Participation: Bob [Join] <orga> <decider>

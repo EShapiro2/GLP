@@ -1,3 +1,3 @@
 Interface pragmas
-Pay issuer: Alice [Pay issuer]
+Pay issuer: Alice [Pay issuer] <sum>
 Redeem: Alice [Redeem] <carol>
