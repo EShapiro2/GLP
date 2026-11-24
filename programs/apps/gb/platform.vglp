@@ -96,9 +96,9 @@ person
 ;
 knows(Peer)
 ;
-note(Peer, Constant, Integer)
+note(Peer, Constant, Constant)
 ;
-escrow_note(Peer, Constant, Peer, Peer, Speech, Integer)
+escrow_note(Peer, Constant, Peer, Peer, Speech, Constant)
 ;
 note(Peer, Constant)
 .
@@ -110,9 +110,9 @@ atom_of(g(person, []), shown(person))
 .
 atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
 .
-atom_of(g(note, [p(V1), v(V2), n(V3)]), shown(note(V1?, V2?, V3?)))
+atom_of(g(note, [p(V1), v(V2), v(V3)]), shown(note(V1?, V2?, V3?)))
 .
-atom_of(g(escrow_note, [p(V1), v(V2), p(V3), p(V4), s(V5), n(V6)]), shown(escrow_note(V1?, V2?, V3?, V4?, V5?, V6?)))
+atom_of(g(escrow_note, [p(V1), v(V2), p(V3), p(V4), s(V5), v(V6)]), shown(escrow_note(V1?, V2?, V3?, V4?, V5?, V6?)))
 .
 atom_of(g(note, [p(V1), v(V2)]), shown(note(V1?, V2?)))
 .
@@ -5723,9 +5723,43 @@ mates_assigns([B|Bs], Nm, Rs, Ps, M?) :- ground(B?), ground(Nm?), ground(Rs?), g
     app(M1?, M2?, M).
 procedure mates_assign(YesNo?, Binding?, Constant?, RoleSpecs?, Deltas?, Mates).
 mates_assign(no, _, _, _, _, []).
-mates_assign(yes, B, Nm, Rs, Ps, M?) :- ground(Rs?), ground(Ps?) |
-    match_deltas(Ps?, Rs?, [B?], Bs),
+%% A set variable X of the schema is matched as set(X), its value the elements of the atoms it stands for (set_match, set_merge), and keyed again by num(X) (set_keys) as in the schema-binding of a request.
+mates_assign(yes, B, Nm, Rs, Ps, M?) :- ground(Rs?), ground(Ps?), ground(Nm?) |
+    schema_entry(Nm?, S),
+    set_names(S?, Xs),
+    rs_sets(Rs?, Xs?, Rs1),
+    match_deltas(Ps?, Rs1?, [B?], Bs0),
+    set_keys(Bs0?, Bs),
     mates_check(Bs?, Nm?, Rs?, Ps?, M).
+procedure set_names(Schema?, List(Constant)).
+set_names(schema(_, Vs, _), Xs?) :- set_names1(Vs?, Xs).
+set_names(lschema(_, Vs, _, _), Xs?) :- set_names1(Vs?, Xs).
+procedure set_names1(Vars?, List(Constant)).
+set_names1([], []).
+set_names1([set(X)|Vs], [X?|Xs?]) :- set_names1(Vs?, Xs).
+set_names1([_|Vs], Xs?) :- otherwise | set_names1(Vs?, Xs).
+procedure rs_sets(RoleSpecs?, List(Constant)?, RoleSpecs).
+rs_sets([], _, []).
+rs_sets([rs(G, A, D, Q, F)|Rs], Xs, [rs(G?, A1?, D1?, Q1?, F1?)|Rs1?]) :- ground(Xs?) |
+    satoms_sets(A?, Xs?, A1), satoms_sets(D?, Xs?, D1), satoms_sets(Q?, Xs?, Q1), satoms_sets(F?, Xs?, F1), rs_sets(Rs?, Xs?, Rs1).
+procedure satoms_sets(SAtoms?, List(Constant)?, SAtoms).
+satoms_sets([], _, []).
+satoms_sets([atom(P, Vs)|As], Xs, [atom(P?, Vs1?)|As1?]) :- ground(Xs?) | vars_sets(Vs?, Xs?, Vs1), satoms_sets(As?, Xs?, As1).
+satoms_sets([A|As], Xs, [A?|As1?]) :- otherwise | satoms_sets(As?, Xs?, As1).
+procedure vars_sets(Vars?, List(Constant)?, Vars).
+vars_sets([], _, []).
+vars_sets([num(X)|Vs], Xs, [V?|Vs1?]) :- ground(X?), ground(Xs?) | mem(X?, Xs?, E), var_set(E?, X?, V), vars_sets(Vs?, Xs?, Vs1).
+vars_sets([V|Vs], Xs, [V?|Vs1?]) :- otherwise | vars_sets(Vs?, Xs?, Vs1).
+procedure var_set(YesNo?, Constant?, Var).
+var_set(yes, X, set(X?)).
+var_set(no, X, num(X?)).
+procedure set_keys(Bindings?, Bindings).
+set_keys([], []).
+set_keys([B|Bs], [B1?|Bs1?]) :- set_keys1(B?, B1), set_keys(Bs?, Bs1).
+procedure set_keys1(Binding?, Binding).
+set_keys1([], []).
+set_keys1([b(set(X), V)|B], [b(num(X?), V?)|B1?]) :- set_keys1(B?, B1).
+set_keys1([E|B], [E?|B1?]) :- otherwise | set_keys1(B?, B1).
 procedure match_deltas(Deltas?, RoleSpecs?, Bindings?, Bindings).
 match_deltas([], _, Bs, Bs?).
 match_deltas([delta(P, D, A)|Ps], Rs, Bs, R?) :- ground(P?), ground(D?), ground(A?), ground(Rs?) |
@@ -6846,10 +6880,40 @@ vars_bound1(found(_), Vs, B, R?) :- vars_bound(Vs?, B?, R).
 %% The bindings extending B under which every atom of As is one of Gs, each once: the copies of an atom in a state match it in one way, so equal bindings from equal atoms are one (vGLP, Section 5.4, "Act schemas as local specifications": "with the local variables bound by them in one way").
 procedure match_all(SAtoms?, GAtoms?, Binding?, Bindings).
 match_all([], _, B, [B?]).
-match_all([A|As], Gs, B, R?) :- ground(Gs?) |
+%% An atom with a set variable X free in B matches each of its atoms with X bound to one element (set_match); the bindings equal but for X are one, X bound to all their elements (set_merge).
+match_all([A|As], Gs, B, R?) :- ground(Gs?), ground(B?) |
     match_into(A?, Gs?, B?, Bs0),
-    dedup(Bs0?, Bs),
+    set_merge(Bs0?, B?, Bs1),
+    dedup(Bs1?, Bs),
     match_all_each(Bs?, As?, Gs?, R).
+SetGroup  ::= sg(Binding, Binding).
+procedure set_merge(Bindings?, Binding?, Bindings).
+set_merge(Bs, B, R?) :- ground(Bs?), ground(B?) | set_groups(Bs?, B?, [], Gr), set_unpack(Gr?, R).
+procedure set_groups(Bindings?, Binding?, List(SetGroup)?, List(SetGroup)).
+set_groups([], _, Acc, Acc?).
+set_groups([Bi|Bs], B, Acc, R?) :- ground(Bi?), ground(B?) | set_split(Bi?, B?, S, Rest), set_add(Acc?, S?, Rest?, Acc1), set_groups(Bs?, B?, Acc1?, R).
+procedure set_split(Binding?, Binding?, Binding, Binding).
+set_split([], _, [], []).
+set_split([b(set(X), V)|Bs], B, S?, R?) :- ground(X?), ground(V?), ground(B?) | lookup(set(X?), B?, F), set_split1(F?, X?, V?, Bs?, B?, S, R).
+set_split([E|Bs], B, S?, [E?|R?]) :- otherwise | set_split(Bs?, B?, S, R).
+procedure set_split1(Found?, Constant?, Val?, Binding?, Binding?, Binding, Binding).
+set_split1(free, X, V, Bs, B, [b(set(X?), V?)|S?], R?) :- set_split(Bs?, B?, S, R).
+set_split1(found(_), X, V, Bs, B, S?, [b(set(X?), V?)|R?]) :- set_split(Bs?, B?, S, R).
+procedure set_add(List(SetGroup)?, Binding?, Binding?, List(SetGroup)).
+set_add([], S, Rest, [sg(S?, Rest?)]).
+set_add([sg(S1, R1)|Gs], S, Rest, [sg(S2?, R1?)|Gs?]) :- ground(R1?), ground(Rest?), R1? =?= Rest? | set_union(S1?, S?, S2).
+set_add([G|Gs], S, Rest, [G?|R?]) :- otherwise | set_add(Gs?, S?, Rest?, R).
+procedure set_union(Binding?, Binding?, Binding).
+set_union(S1, [], S1?).
+set_union(S1, [b(V, st(C))|Ss], R?) :- ground(V?), ground(C?), ground(S1?) | set_join1(S1?, V?, C?, S2), set_union(S2?, Ss?, R).
+set_union(S1, [_|Ss], R?) :- otherwise | set_union(S1?, Ss?, R).
+procedure set_join1(Binding?, Var?, List(Constant)?, Binding).
+set_join1([], V, C, [b(V?, st(C?))]).
+set_join1([b(W, st(D))|Bs], V, C, [b(W?, st(E?))|Bs?]) :- ground(W?), ground(V?), W? =?= V?, ground(D?) | ms_join(D?, C?, E).
+set_join1([E|Bs], V, C, [E?|R?]) :- otherwise | set_join1(Bs?, V?, C?, R).
+procedure set_unpack(List(SetGroup)?, Bindings).
+set_unpack([], []).
+set_unpack([sg(S, R)|Gs], [B?|Bs?]) :- app(S?, R?, B), set_unpack(Gs?, Bs).
 procedure match_all_each(Bindings?, SAtoms?, GAtoms?, Bindings).
 match_all_each([], _, _, []).
 match_all_each([B|Bs], As, Gs, R?) :- ground(As?), ground(Gs?) |
@@ -6902,6 +6966,10 @@ match_args([item_of(V)|Vs], [X|Xs], B, R?) :- ground(V?), ground(X?), ground(B?)
     lookup(V?, B?, F),
     item_found(F?, F1),
     item_then(F1?, X?, Vs?, Xs?, B?, R).
+%% A set variable matches a constant: free, it is bound to that one element; bound, the constant is one of its elements, and it binds nothing.
+match_args([set(X)|Vs], [Y|Ys], B, R?) :- ground(X?), ground(Y?), ground(B?) |
+    lookup(set(X?), B?, F),
+    set_match(F?, X?, Y?, Vs?, Ys?, B?, R).
 match_args([any|Vs], [X|Xs], B, R?) :- ground(X?), ground(B?) |
     any_val(X?, E),
     lit_then(E?, Vs?, Xs?, B?, R).
@@ -6910,6 +6978,10 @@ match_args([V|Vs], [X|Xs], B, R?) :- otherwise, ground(V?), ground(X?), ground(B
     kind_ok(V?, X?, K),
     match_one(F?, K?, V?, X?, Vs?, Xs?, B?, R).
 %% A number in an atom of a schema matches that number.
+procedure set_match(Found?, Constant?, Val?, Vars?, Vals?, Binding?, Match).
+set_match(free, X, v(C), Vs, Ys, B, R?) :- match_args(Vs?, Ys?, [b(set(X?), st([C?]))|B?], R).
+set_match(found(st(L)), _, v(C), Vs, Ys, B, R?) :- ground(L?), ground(C?) | mem(C?, L?, E), lit_then(E?, Vs?, Ys?, B?, R).
+set_match(_, _, _, _, _, _, nomatch) :- otherwise | true.
 procedure lit_val(Number?, Val?, YesNo).
 lit_val(X, n(K), yes) :- X? =:= K? | true.
 lit_val(X, r(K), yes) :- X? =:= K? | true.
@@ -6989,6 +7061,8 @@ match_sgn(signed(S, P), Y, I, Vs, Xs, B, R?) :-
     match_args([svar(Y?), role(I?)|Vs?], [S?, p(P?)|Xs?], B?, R).
 match_sgn(unsigned, _, _, _, _, _, nomatch).
 procedure match_one(Found?, YesNo?, Var?, Val?, Vars?, Vals?, Binding?, Match).
+%% A variable bound to a set matches each of its elements, binding nothing.
+match_one(found(st(L)), _, _, v(C), Vs, Xs, B, R?) :- ground(L?), ground(C?) | mem(C?, L?, E), lit_then(E?, Vs?, Xs?, B?, R).
 match_one(found(W), _, _, X, Vs, Xs, B, R?) :- W? =?= X? | match_args(Vs?, Xs?, B?, R).
 match_one(found(_), _, _, _, _, _, _, nomatch) :- otherwise | true.
 match_one(free, yes, V, X, Vs, Xs, B, R?) :- match_args(Vs?, Xs?, [b(V?, X?)|B?], R).
@@ -7425,9 +7499,12 @@ expr_free(plus(X, Y), B, F0, F?) :- ground(B?) | expr_free(X?, B?, F0?, F1), exp
 expr_free(minus(X, Y), B, F0, F?) :- ground(B?) | expr_free(X?, B?, F0?, F1), expr_free(Y?, B?, F1?, F).
 expr_free(mul(X, Y), B, F0, F?) :- ground(B?) | expr_free(X?, B?, F0?, F1), expr_free(Y?, B?, F1?, F).
 expr_free(num(X), _, F0, F0?) :- number(X?) | true.
+%% A set variable the binding binds is not free.
 expr_free(num(X), B, F0, F?) :- otherwise, ground(X?), ground(B?), ground(F0?) |
+    lookup(num(X?), B?, L),
     num_of(num(X?), B?, R),
-    leaf_free1(R?, num(X?), F0?, F).
+    set_free(L?, R?, R1),
+    leaf_free1(R1?, num(X?), F0?, F).
 expr_free(role(_), _, F0, F0?).
 expr_free(pvar(_), _, F0, F0?).
 expr_free(svar(_), _, F0, F0?).
@@ -7442,6 +7519,9 @@ expr_free(inst(_, _, _), _, F0, F0?).
 expr_free(fn(_, Es), B, F0, F?) :- ground(B?) | exprs_free(Es?, B?, F0?, F).
 expr_free(cardinality(_, _, _, _), _, F0, F0?).
 expr_free(sum(_, _, _, _, _), _, F0, F0?).
+procedure set_free(Found?, NumRes?, NumRes).
+set_free(found(st(_)), _, num_is(0)).
+set_free(_, R, R?) :- otherwise | true.
 procedure exprs_free(Exprs?, Binding?, Vars?, Vars).
 exprs_free([], _, F0, F0?).
 exprs_free([E|Es], B, F0, F?) :- ground(B?) | expr_free(E?, B?, F0?, F1), exprs_free(Es?, B?, F1?, F).
