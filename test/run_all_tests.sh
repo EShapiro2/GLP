@@ -139,14 +139,16 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
-# Coins' Redeem names no note identifier, note(Carol, coin), so on Coins' set
-# terms its atom matches no note held, and alice's redemption is refused
-# unable (vGLP #32, 2026-11-24, to Calculus #11 and Currencies #23): the
-# Calculus's and Currencies' to mend in Coins.txt; each entry comes off with
-# that mend and the checks redone on its term.
-    "CVA redeem: after a second swap, attempt 12, alice requests the redemption, redeem(alice, bob, alice), and her machine proposes her redeem's part, the part her request names, attempt 14 (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 4)"
-    "CVA redeem: ... alice's screen: her coin and bob's exchanged at each commit, each request pending until it commits, her own coin back at the last"
-    "CVA redeem: ... guarded by alice: bob's machine votes yes, unasked, and it commits"
+# Organisation's Found by an organisation has three guarding roles, so it is
+# no acquaintance schema, and its guards must know each other before it is
+# proposed; nobody can know the organisation it founds, which has no identity
+# until then (vGLP, Section 5.4, "The compilation"; vGLP #32, 2026-11-24, to
+# GO #15 and Calculus #11): GO's and the Calculus's to mend in Organisation,
+# or the vGLP paper's; each entry comes off with that mend.
+    "CVA organisation found by an organisation: alice proposes it, and it commits"
+    "CVA organisation found by an organisation: ... alice is the officer of o2, and o1 its founder"
+    "CVA organisation person gov: bob's machine, its state lacking organisation, votes no, unable, and it is refused"
+    "CVA organisation retired gov: o1's machine, its state lacking has_officer, votes no, unable, and it is refused"
 # GAI's contract in the old form forbidding marks, which GSC's Section 8 at
 # df5e454, stated positively, no longer certifies (Code #27, 2026-11-10, on
 # merging GSC-wards8): GAI's to rewrite on GnW (GAI_inbox.md, 2026-11-10 18:43
@@ -4049,6 +4051,7 @@ cva_print=$(bash "$CVA/compile.sh" --check 2>&1 || true)
 check "CVA compiler: the social graph's platform is what the compiler prints" "social_graph/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: the social network's platform, GSC's GSN, close taking the listed role a[listed(*, n)], is what the compiler prints" "social_network/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: the currency's platform, each part guarded by the people its schema-binding marks, is what the compiler prints" "currency/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: the organisation's platform, GO's Organisation, is what the compiler prints" "organisation/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's nudge, certified by GSC's check/2, compiled to the platform it prints" "nudge/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's introduce, certified by GSC's check/2, compiled to the platform it prints" "introduce/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's gnudge, certified by GSC's check/2, compiled to the platform it prints" "gnudge/platform.vglp: as printed" "$cva_print"
@@ -5711,8 +5714,8 @@ HEREDOC
 check "CVA currency: the platform and its plays load, compiled by the canonical compilation" "Loaded program: .*cva/currency" "$cva_cur_load"
 check_not "CVA currency: no type errors" "Type checking failed" "$cva_cur_load"
 
-# The plays of Coins (programs/currencies/coins/Coins.txt and Coins.glp), which relaxes and extends Notes (programs/gsc/Notes.txt), which extends GKK: each person establishes their identity, which every other role requires, and issues, and alice and bob come to know each other by acquaint before they swap, pay or redeem.  The schemas carry sets of notes: each note is one atom, note(P, T, X), X its note identifier (GSC 4a9175a: a local state is a set); a set variable is bound by the schema-binding to the list of identifiers the request names, and its atom stands for one atom per element, the amount its size (GSC, the appendix on values, Definition "Schema with values").  T the type of the notes, coin in each play (Notes; Coins: "A *coin* is a note that is a unit of its issuer's debt"): issue(P, T, Xs, K): P issues the K notes Xs; swap(P, Q, U, T, Xs, K, V, T1, Ys, K1): P gives the K notes Xs of U and takes the K1 notes Ys of V; pay(P, Q, U, T, Xs, K): P pays Q the K notes Xs of U, Q asked; pay_issuer(P, Q, T, Xs, K): P pays Q the K notes Xs of Q, guarded by P (Coins:1, Pay issuer); redeem(P, Q, R): P gives Q a coin of Q and takes a coin of R that Q holds (Coins:2).  The scripted person grants each set at its place in the request (own/3, ../self.glp).  Redeem's term, note(Carol, coin), names no note identifier, so its atom matches no note held, and the redemption is refused unable: Coins' Redeem is the Calculus's and Currencies' to mend (reported 2026-11-24).
-check "CVA request type: the currency proposes GKK's three, the six of Notes for coins, issue, swap, pay and the escrow's deposit, release and return, and the two of Coins, pay issuer and redeem, each naming the type of its notes, its set of notes, its amount and its condition" "^establish(Peer) acquaint(Peer, Peer) introduce(Peer, Peer, Peer) issue(Peer, Constant, List(Constant), Integer) swap(Peer, Peer, Peer, Constant, List(Constant), Integer, Peer, Constant, List(Constant), Integer) pay(Peer, Peer, Peer, Constant, List(Constant), Integer) pay_issuer(Peer, Peer, Constant, List(Constant), Integer) deposit(Peer, Peer, Peer, Constant, List(Constant), Integer, Peer, Speech) release(Peer, Peer, Peer, Constant, Peer, Speech, List(Constant), Integer) return(Peer, Peer, Peer, Constant, Peer, Speech, List(Constant), Integer) redeem(Peer, Peer, Peer) $" "$(cva_proposal "$CVA/currency/platform.vglp")"
+# The plays of Coins (programs/currencies/coins/Coins.txt and Coins.glp), which relaxes and extends Notes (programs/gsc/Notes.txt), which extends GKK: each person establishes their identity, which every other role requires, and issues, and alice and bob come to know each other by acquaint before they swap, pay or redeem.  The schemas carry sets of notes: each note is one atom, note(P, T, X), X its note identifier (GSC 4a9175a: a local state is a set); a set variable is bound by the schema-binding to the list of identifiers the request names, and its atom stands for one atom per element, the amount its size (GSC, the appendix on values, Definition "Schema with values").  T the type of the notes, coin in each play (Notes; Coins: "A *coin* is a note that is a unit of its issuer's debt"): issue(P, T, Xs, K): P issues the K notes Xs; swap(P, Q, U, T, Xs, K, V, T1, Ys, K1): P gives the K notes Xs of U and takes the K1 notes Ys of V; pay(P, Q, U, T, Xs, K): P pays Q the K notes Xs of U, Q asked; pay_issuer(P, Q, T, Xs, K): P pays Q the K notes Xs of Q, guarded by P (Coins:1, Pay issuer); redeem(P, Q, [B], R, [C]): P gives Q the Q-coin B and takes the R-coin C that Q holds (Coins:2, Redeem; Currencies 57fa953).  The scripted person grants each set at its place in the request (own/3, ../self.glp).
+check "CVA request type: the currency proposes GKK's three, the six of Notes for coins, issue, swap, pay and the escrow's deposit, release and return, and the two of Coins, pay issuer and redeem, each naming the type of its notes, its set of notes, its amount and its condition, and redeem the coin given and the coin taken" "^establish(Peer) acquaint(Peer, Peer) introduce(Peer, Peer, Peer) issue(Peer, Constant, List(Constant), Integer) swap(Peer, Peer, Peer, Constant, List(Constant), Integer, Peer, Constant, List(Constant), Integer) pay(Peer, Peer, Peer, Constant, List(Constant), Integer) pay_issuer(Peer, Peer, Constant, List(Constant), Integer) deposit(Peer, Peer, Peer, Constant, List(Constant), Integer, Peer, Speech) release(Peer, Peer, Peer, Constant, Peer, Speech, List(Constant), Integer) return(Peer, Peer, Peer, Constant, Peer, Speech, List(Constant), Integer) redeem(Peer, Peer, List(Constant), Peer, List(Constant)) $" "$(cva_proposal "$CVA/currency/platform.vglp")"
 cva_cur_payswap=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
 :limit 20000000
@@ -5732,13 +5735,11 @@ check "CVA pay and swap: bob, unasked, holds 2 of his coins again once the pay c
 check "CVA pay and swap: ... and alice holds the one coin of bob's she kept" "A = \[.*view(alice, \[note(bob, coin, b1), note(bob, coin, b2), note(bob, coin, b3), knows(bob), knows(bob), identity, person\], \[bob\], \[\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(bob, coin, b1), note(bob, coin, b2), note(bob, coin, b3), knows(bob), knows(bob), identity, person\], \[bob\], \[pay_issuer(alice, bob, coin, \[b1, b2\], 2)\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(bob, coin, b3), knows(bob), knows(bob), identity, person\], \[bob\], \[\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]) |" "$cva_cur_payswap"
 
 # An attempt's guard set is its part's (vGLP 099f876, Definition "Attempt";
-# vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 5): the swap back's class
-# has the swaps' part, guarded by alice and bob, and the redeems' parts, guarded
-# by alice and by bob.  Requesting the swap back, alice proposes the part her
-# request names, the swaps', which asks bob; requesting it again after a
-# second swap, she proposes her redeem's part, the guarded part of the class
-# she guards and is ready for and has proposed less recently (Section 5.4,
-# "The compilation"), which asks nobody.
+# vGLP #15, Code_inbox.md, 2026-10-19 10:50 UTC, item 5).  Requesting the swap
+# back, alice proposes the part her request names, the swaps', guarded by
+# alice and bob, which asks bob; requesting the redemption after a second
+# swap, she proposes the redeem's part, guarded by her, which asks nobody
+# (Section 5.4, "The compilation").
 cva_cur_redeem=$("$REPL_RUN" <<HEREDOC
 $CVA/currency/
 :limit 20000000
@@ -5749,9 +5750,9 @@ HEREDOC
 check "CVA redeem: the swap back, alice proposing the swaps' part her request names, guarded by alice and bob, attempt 10: bob is asked and answers yes" "sent(alice, bob, start(attempt(alice, 10, 10, swap(alice, bob, bob, coin, \[b1\], 1, alice, coin, \[a1\], 1), none)))" "$cva_cur_redeem"
 check "CVA redeem: ... his answer" "B = \[.*gave(swap(alice, bob, bob, coin, \[b1\], 1, alice, coin, \[a1\], 1), yes)" "$cva_cur_redeem"
 check "CVA redeem: ... it commits" "sent(bob, alice, vote(attempt(alice, 10, 10, swap(alice, bob, bob, coin, \[b1\], 1, alice, coin, \[a1\], 1), none), yes(\[\[\]\]))), sent(alice, bob, outcome(attempt(alice, 10, 10, swap(alice, bob, bob, coin, \[b1\], 1, alice, coin, \[a1\], 1), none), commit(\[\])))" "$cva_cur_redeem"
-check "CVA redeem: after a second swap, attempt 12, alice requests the redemption, redeem(alice, bob, alice), and her machine proposes her redeem's part, the part her request names, attempt 14 (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 4)" "sent(alice, bob, outcome(attempt(alice, 12, 12, swap(alice, bob, alice, coin, \[a1\], 1, bob, coin, \[b1\], 1), none), commit(\[\]))), sent(alice, bob, start(attempt(alice, 14, 14, redeem(alice, bob, alice), none)))" "$cva_cur_redeem"
-check "CVA redeem: ... alice's screen: her coin and bob's exchanged at each commit, each request pending until it commits, her own coin back at the last" "A = \[.*view(alice, \[note(bob, coin, b1), knows(bob), knows(bob), identity, person\], \[bob\], \[\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(bob, coin, b1), knows(bob), knows(bob), identity, person\], \[bob\], \[swap(alice, bob, bob, coin, \[b1\], 1, alice, coin, \[a1\], 1)\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(alice, coin, a1), knows(alice), knows(bob), knows(bob), identity, person\], \[bob\], \[\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(alice, coin, a1), knows(alice), knows(bob), knows(bob), identity, person\], \[bob\], \[swap(alice, bob, alice, coin, \[a1\], 1, bob, coin, \[b1\], 1)\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(bob, coin, b1), knows(bob), knows(alice), knows(bob), knows(bob), identity, person\], \[bob\], \[\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(bob, coin, b1), knows(bob), knows(alice), knows(bob), knows(bob), identity, person\], \[bob\], \[redeem(alice, bob, alice)\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(alice, coin, a1), knows(alice), knows(bob), knows(alice), knows(bob), knows(bob), identity, person\], \[bob\], \[\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]) | " "$cva_cur_redeem"
-check "CVA redeem: ... guarded by alice: bob's machine votes yes, unasked, and it commits" "sent(bob, alice, vote(attempt(alice, 14, 14, redeem(alice, bob, alice), none), yes(\[\[\]\]))), sent(alice, bob, outcome(attempt(alice, 14, 14, redeem(alice, bob, alice), none), commit(\[\]))) | " "$cva_cur_redeem"
+check "CVA redeem: after a second swap, attempt 12, alice requests the redemption, redeem(alice, bob, [b1], alice, [a1]), and her machine proposes her redeem's part, the part her request names, attempt 14 (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 4)" "sent(alice, bob, outcome(attempt(alice, 12, 12, swap(alice, bob, alice, coin, \[a1\], 1, bob, coin, \[b1\], 1), none), commit(\[\]))), sent(alice, bob, start(attempt(alice, 14, 14, redeem(alice, bob, \[b1\], alice, \[a1\]), none)))" "$cva_cur_redeem"
+check "CVA redeem: ... alice's screen: her coin and bob's exchanged at each commit, each request pending until it commits, her own coin back at the last" "A = \[.*view(alice, \[note(bob, coin, b1), knows(bob), knows(bob), identity, person\], \[bob\], \[\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(bob, coin, b1), knows(bob), knows(bob), identity, person\], \[bob\], \[swap(alice, bob, bob, coin, \[b1\], 1, alice, coin, \[a1\], 1)\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(alice, coin, a1), knows(alice), knows(bob), knows(bob), identity, person\], \[bob\], \[\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(alice, coin, a1), knows(alice), knows(bob), knows(bob), identity, person\], \[bob\], \[swap(alice, bob, alice, coin, \[a1\], 1, bob, coin, \[b1\], 1)\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(bob, coin, b1), knows(bob), knows(alice), knows(bob), knows(bob), identity, person\], \[bob\], \[\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(bob, coin, b1), knows(bob), knows(alice), knows(bob), knows(bob), identity, person\], \[bob\], \[redeem(alice, bob, \[b1\], alice, \[a1\])\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]), view(alice, \[note(alice, coin, a1), knows(alice), knows(bob), knows(alice), knows(bob), knows(bob), identity, person\], \[bob\], \[\], \[tab('Contacts', knows), tab('Notes', note), tab('Coins', note)\]) | " "$cva_cur_redeem"
+check "CVA redeem: ... guarded by alice: bob's machine votes yes, unasked, and it commits" "sent(bob, alice, vote(attempt(alice, 14, 14, redeem(alice, bob, \[b1\], alice, \[a1\]), none), yes(\[\[\]\]))), sent(alice, bob, outcome(attempt(alice, 14, 14, redeem(alice, bob, \[b1\], alice, \[a1\]), none), commit(\[\]))) | " "$cva_cur_redeem"
 check_not "CVA redeem: bob answers nothing for the redeem" "gave(attempt(alice, 14, 14, redeem\|gave(redeem" "$cva_cur_redeem"
 
 cva_cur_busy=$("$REPL_RUN" <<HEREDOC
@@ -6010,7 +6011,7 @@ cva_atom() { # cva_atom <platform.vglp>: the alternatives of Atom, one line
 }
 check "CVA machine states: the social graph's atoms, identity, person, knows(Peer) and friend(Peer)" "^identity person knows(Peer) friend(Peer) $" "$(cva_atom "$CVA/social_graph/platform.vglp")"
 check "CVA machine states: ... friend(bob) written as the contract writes it" "^atom_of(g(friend, \[p(V1)\]), shown(friend(V1?)))$" "$cva_sg_text"
-check "CVA machine states: the currency's atoms, GKK's identity, person and knows(Peer), and note(Peer, Constant, Constant) and escrow_note(Peer, Constant, Peer, Peer, Speech, Constant), each note held, by issuer, type and identifier, and each deposited in escrow on a condition; and note(Peer, Constant), the atom of Coins' Redeem, which names no identifier" "^identity person knows(Peer) note(Peer, Constant, Constant) escrow_note(Peer, Constant, Peer, Peer, Speech, Constant) note(Peer, Constant) $" "$(cva_atom "$CVA/currency/platform.vglp")"
+check "CVA machine states: the currency's atoms, GKK's identity, person and knows(Peer), and note(Peer, Constant, Constant) and escrow_note(Peer, Constant, Peer, Peer, Speech, Constant), each note held, by issuer, type and identifier, and each deposited in escrow on a condition" "^identity person knows(Peer) note(Peer, Constant, Constant) escrow_note(Peer, Constant, Peer, Peer, Speech, Constant) $" "$(cva_atom "$CVA/currency/platform.vglp")"
 check "CVA machine states: GSN's atoms, a speech act at a speech-act variable's place and a constant at the group's, const('Grupo')" "^identity person knows(Peer) friend(Peer) message(Peer, Speech) leader(Constant) member(Constant, Peer) listed(Peer, Constant) posted(Speech, Peer, Constant) group_delivered(Peer, Speech, Constant, Peer) group_message(Peer, Speech, Constant, Peer) $" "$(cva_atom "$GLP_DIR/programs/apps/gsn/platform.vglp")"
 # GSNP holds no atom authored since GSNP d0d98714 (2026-11-07, "item with its holder, author_of, GFP's, in place of authored"), and item comes before attestation, the atoms in the order of their predicates' first occurrence.  Enter's roles are Alice, the guardian, then Alf, the agent (programs/gai/Provenance-Groups.glp, since const e4121fc1b; Alf first before it), so Alice's principal, guardian and attestation_record come before Alf's ai_agent, has_guardian and attestation; and the group's name is a constant, const('Grupo').
 check "CVA machine states: GSNP's, on GKK, GnW and GAI, a signed term a speech act" "^identity person knows(Peer) friend(Peer) item(Speech) leader(Constant) member(Constant, Peer) listed(Peer, Constant) posted(Speech, Peer, Constant) group_delivered(Peer, Speech, Constant, Peer) principal(Peer) guardian(Peer) attestation_record(Peer, Speech) ai_agent has_guardian(Peer) attestation(Speech) retired $" "$(cva_atom "$GLP_DIR/programs/apps/gsnp/platform.vglp")"
@@ -6279,6 +6280,50 @@ check_not "CVA wards: no notice is written" "refused(\|yielded(" "$cva_wards"
 # The schema-bindings of a class of a schema with listed roles (mates_of): a listed role takes only the participants at whom its deleted and added atoms fit, and two listed roles of one anchor one list, so the lists tried are not every set of the participants for each listed role (GAI #15, Code_inbox.md, 2026-11-15 17:22 UTC: Retire, of three listed roles, cost the GAI app's play 17 to 20 million reductions where it now costs under 2.5 million).
 check "CVA wards: the lists a listed role may take are of the people at whom it fits" "^    twins_fit(All?, I?, Bi?, Rho?, Vs?, Phi?, Q?, As?, Rs?, J?, Ps?, Qi),$" "$(cat "$CVA/wards/platform.vglp")"
 check "CVA wards: ... and the listed roles of one anchor take one list" "^    same_lists(Ts0?, Lsts?, Ts),$" "$(cat "$CVA/wards/platform.vglp")"
+
+# The plays of Organisation (programs/go/Organisation.txt and Organisation.glp, GO's), Organisation:1, Found and Found by an organisation (GO #15, 2026-11-24 21:22 UTC, for Audit PR 108, Finding 19; organisation/self.glp beside the platform).  found(Orga, Alice, Role) is an acquaintance schema, two roles, both guarding, neither requiring an atom naming the other, so alice's request sends o1 a hello and o1, asked, answers yes.  found_by_an_organisation(Orga, Alice, Gov, Role) has three guarding roles and is no acquaintance schema, so its guards must know each other before it is proposed (vGLP, Section 5.4, "The compilation": "A peer is known at the agent when hello, or ihello, has been sent to it and received from it"), and nobody can know Orga, which has no identity until it is founded: alice's request stays pending and no attempt is proposed (vGLP #32, 2026-11-24, to GO #15 and Calculus #11; the checks of the attempt are known red until Organisation or the vGLP paper is mended).
+cva_org_load=$("$REPL_RUN" <<HEREDOC
+$CVA/organisation/
+:quit
+HEREDOC
+2>&1)
+check "CVA organisation: the platform and its plays load, compiled by the canonical compilation" "Loaded program: .*cva/organisation" "$cva_org_load"
+check_not "CVA organisation: no type errors" "Type checking failed" "$cva_org_load"
+check "CVA organisation: found is an acquaintance schema, the meeting of its two roles" "^meeting_peer(found(V1, V2, _), Me, P?)" "$(cat "$CVA/organisation/platform.vglp")"
+cva_org_found=$("$REPL_RUN" <<HEREDOC
+$CVA/organisation/
+:limit 20000000
+play_found(A, B, C, D, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA organisation found: alice founds o1, o1 asked by the hello and answering yes, and it commits at the first attempt" "sent(alice, o1, start(attempt(alice, 4, 4, found(o1, alice, chair), none))), sent(o1, alice, vote(attempt(alice, 4, 4, found(o1, alice, chair), none), yes(\[\[\]\]))), sent(alice, o1, outcome(attempt(alice, 4, 4, found(o1, alice, chair), none), commit(\[\])))" "$cva_org_found"
+check "CVA organisation found: ... o1's answer" "C = \[.*gave(found(o1, alice, chair), yes)" "$cva_org_found"
+check "CVA organisation found: ... alice is the officer of o1, in the role chair" "A = \[.*view(alice, \[creator(o1), officer(o1), knows(o1), friend(o1), role(o1, chair), participant(o1), founder(o1), identity, person\], \[o1\], \[\]" "$cva_org_found"
+check "CVA organisation found: ... o1 is an organisation with alice its first officer" "C = \[.*view(o1, \[identity, organisation, has_officer(alice), knows(alice), friend(alice), first_officer(alice), has_role(alice, chair), has_participant(alice)\], \[alice\], \[\]" "$cva_org_found"
+check "CVA organisation found by an organisation: alice requests found_by_an_organisation(o2, alice, o1, board), o2 unknown, and it stays pending" "A = \[.*view(alice, \[creator(o1), officer(o1), knows(o1), friend(o1), role(o1, chair), participant(o1), founder(o1), identity, person\], \[o1\], \[found_by_an_organisation(o2, alice, o1, board)\]" "$cva_org_found"
+check "CVA organisation found by an organisation: alice proposes it, and it commits" "outcome(attempt(alice, [0-9]*, [0-9]*, found_by_an_organisation(o2, alice, o1, board), none), commit(" "$cva_org_found"
+check "CVA organisation found by an organisation: ... alice is the officer of o2, and o1 its founder" "D = \[.*view(o2, \[[^]]*founder(o1)" "$cva_org_found"
+cva_org_person=$("$REPL_RUN" <<HEREDOC
+$CVA/organisation/
+:limit 20000000
+play_person_gov(A, B, C, D, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA organisation person gov: alice, knowing bob, requests found_by_an_organisation(o2, alice, bob, board), bob a person, o2 unknown, and it stays pending" "A = \[.*view(alice, \[knows(bob), identity, person\], \[bob\], \[found_by_an_organisation(o2, alice, bob, board)\]" "$cva_org_person"
+check "CVA organisation person gov: bob's machine, its state lacking organisation, votes no, unable, and it is refused" "sent(bob, alice, vote(attempt(alice, [0-9]*, [0-9]*, found_by_an_organisation(o2, alice, bob, board), none), no(unable(" "$cva_org_person"
+cva_org_retired=$("$REPL_RUN" <<HEREDOC
+$CVA/organisation/
+:limit 20000000
+play_retired_gov(A, B, C, D, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA organisation retired gov: alice retires o1, a Request of rho_N to o1, the opener, which proposes retire(o1, alice, ...), and it commits" "sent(alice, o1, request(rho(retire(o1, alice)), 5)), sent(o1, alice, start(attempt(o1, 5, 5, retire(o1, alice, \[alice\], \[alice\], \[alice\], \[alice\]), request(rho(retire(o1, alice)), 5)))), sent(alice, o1, vote(attempt(o1, 5, 5, retire(o1, alice, \[alice\], \[alice\], \[alice\], \[alice\]), request(rho(retire(o1, alice)), 5)), yes(\[\[\]\]))), sent(o1, alice, outcome(attempt(o1, 5, 5, retire(o1, alice, \[alice\], \[alice\], \[alice\], \[alice\]), request(rho(retire(o1, alice)), 5)), commit(\[\])))" "$cva_org_retired"
+check "CVA organisation retired gov: ... o1 retired, with no officer" "C = \[.*view(o1, \[retired, identity, organisation, knows(alice), first_officer(alice), has_participant(alice)\], \[alice\], \[\]" "$cva_org_retired"
+check "CVA organisation retired gov: alice requests found_by_an_organisation(o2, alice, o1, board), o2 unknown, and it stays pending" "A = \[.*view(alice, \[creator(o1), knows(o1), participant(o1), founder(o1), identity, person\], \[o1\], \[found_by_an_organisation(o2, alice, o1, board)\]" "$cva_org_retired"
+check "CVA organisation retired gov: o1's machine, its state lacking has_officer, votes no, unable, and it is refused" "sent(o1, alice, vote(attempt(alice, [0-9]*, [0-9]*, found_by_an_organisation(o2, alice, o1, board), none), no(unable(" "$cva_org_retired"
 
 # An unguarded part proposed again only on the refuser's ready (vGLP 76db5e0, Definition "Proposing", Propose: "if [t]_j is unguarded, p is ready for [t]_j, and, where another participant q refused p's last attempt beta of [t]_j as unable, p has recorded ready(beta, q)"; Udi, 2026-11-15; GFF #6, 2026-11-15 21:54 UTC: GFF's Deliver, whose opener's state it does not change, was proposed again without end).  vGLP's contract feeds (programs/vglp/cva/contracts.glp) and its play (feeds/self.glp).
 cva_feeds=$("$REPL_RUN" <<HEREDOC
