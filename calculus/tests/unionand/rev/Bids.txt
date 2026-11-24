@@ -1,0 +1,4 @@
+Bids
+Bids extends Knowledge.
+Alice and Bob are persons.
+1. ■ Bid: Alice may bid to Bob, provided Alice knows Bob.
