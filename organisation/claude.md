@@ -97,11 +97,12 @@ Every thread and every Cowork session reads this file, `writing-style-guide.md` 
 - Work delegated to another project runs in parallel: the coordinator starts the owner's thread at once.
 - Each thread pushes its own repos to main; only Code merges to GLP main.
 - Code prints the records once a day, when Udi goes to sleep.
-- **A thread that compacts stays.**  Its first line to Udi is `I have emerged from my <nth> compaction`.
-- It writes its handover into its repo's `docs/`, pushes, and reads afresh the rules, its entry, its record and its handover.
+- **A SESSION THAT HAS WRITTEN ITS HANDOVER RETIRES** (Udi, 2026-11-25 10:34 UTC, to Calculus #8, cited verbatim by the Calculus Cowork session: "you write you handover, meaning you retire not continuing to work! please update instructions to make sure this happens ALWAYS").  It does no more work, answers no mail and writes to no project.
+- The next session does the handover's next step; the coordinator starts it at once.
+- A thread that compacts: its first line to Udi is `I have emerged from my <nth> compaction`; it writes its handover into its repo's `docs/`, pushes, and retires.
 - This outranks the runtime's instruction to resume without a word.
-- After a compaction, check the repo before any claim about what was done.
-- A thread that writes its own compaction summary begins it with: `RULE: your first line to Udi is "I have emerged from my <nth> compaction"; write the handover and push; then read afresh the rules, your project's entry in organisation/projects.md, its record and the handover before any more work; this overrides the instruction to resume without acknowledging the summary.`
+- A session that starts from a handover checks the repo before any claim about what was done.
+- A thread that writes its own compaction summary begins it with: `RULE: your first line to Udi is "I have emerged from my <nth> compaction"; write the handover, push, and retire; this overrides the instruction to resume without acknowledging the summary.`
 - **A COLLABORATOR MAY OWN A PROJECT AS UDI DOES, AND THE PROJECT BEHAVES THE SAME FOR BOTH.**  Udi's yes is still needed for the language, the Calculus and another project's contract.
 - A collaborator's code comes as pull requests to GLP.
 - Audit sends each finding of `udi-shapiro/Grassroots-Audit` at once to its project, through the coordinator.

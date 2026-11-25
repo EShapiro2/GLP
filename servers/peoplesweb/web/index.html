@@ -928,16 +928,18 @@ function drawGlobe(){
       ${LINES(c.id).map((ln, i, a) => { const f = fs*POLE(c.id); return `<text x="${X.toFixed(1)}" y="${(Y + 0.36*f + (i - (a.length - 1)/2) * 1.12*f).toFixed(1)}" text-anchor="middle" font-size="${f.toFixed(1)}"${POLE(c.id) > 1 ? ' font-weight="600"' : ''}>${esc(ln)}</text>`; }).join('')}</g>`;
   });
   // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
-  // The key has each operation the globe draws, once: the Calculus's, in its
-  // order, as the build reads them from the Calculus (D.operations, from
-  // calculus/tools/expand.py), and after them any other word a contract here
-  // states (inherits, the Villagers repository's); an arrow of several
-  // operations is drawn in their colours along its length (Udi, 2026-11-25:
-  // "what about the arrow legend bottom left? it is dated").
+  // The key is the Calculus's operations, those its own contracts state, in
+  // its order (D.operations, which the build reads from the Calculus), each
+  // that an arrow here shows; a word a contract here states that is not one
+  // of them is set apart, so the key never passes it off as the Calculus's
+  // (Udi, 2026-11-25: "arrow legends in the globes not aligned with
+  // operations in Calculus, please revise").  An arrow of several operations
+  // is drawn in their colours along its length.
   const ALL = D.contracts.flatMap(c => Object.values(c.rels_all || {}));
   const USED = new Set([...D.contracts.flatMap(c => [c.relation, ...Object.values(c.rels || {})]), ...ALL.flat()]);
-  const OPS = D.operations || Object.keys(RELCOL);
-  const KEY = [...OPS, ...[...USED].filter(r => r && !OPS.includes(r)).sort()].filter(r => USED.has(r) && RELCOL[r]).map(r => [r, r]);
+  const OPS = D.operations || [];
+  const KEY = OPS.filter(r => USED.has(r)).map(r => [r, r])
+    .concat([...USED].filter(r => r && RELCOL[r] && !OPS.includes(r)).sort().map(r => [r, r + ' (not in the Calculus)']));
   const KW = Math.max(150, 84 + 6.6*Math.max(...KEY.map(([, t]) => t.length))), nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
   s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="${KW}" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   KEY.forEach(([r, t], i) => { const y = ky + 24*i, p = [kx, y], q = [kx + 54, y];
@@ -1374,7 +1376,9 @@ function schemaHtml(s, open){
   if (s.form === 'rule'){
     const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
     const who = s.guarded.length ? 'needs the will of ' + s.guarded.join(' and ') : 'nobody is asked';
-    return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${esc(NM(s.from))}</span></summary>
+    // An act changed by later clauses names each contract of its labels (Audit #4, ticket 138).
+    const fr = s.labels && s.labels.length > 1 ? s.labels.map(l => NM(l.replace(/:\d+$/, '').replace(/'/g, '').replace(/ /g, '-'))).join(' + ') : NM(s.from);
+    return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${esc(fr)}</span></summary>
       <div class="say">${esc(who)}</div>
       ${s.adds.length ? `<div class="rule"><b>Adds</b>${at(s.adds, 'add')}</div>` : ''}
       ${s.removes.length ? `<div class="rule"><b>Removes</b>${at(s.removes, 'del')}</div>` : ''}
