@@ -13,3 +13,5 @@ Democratic Community unites an augmentation of Community Bank and Constitution.
 A *democratic community* is a community that is a constitutional democratic community.
 Alice and Bob are persons, Orga a democratic community.
 Logic pragmas.
+Interface pragmas
+Look: 🏘️, governance

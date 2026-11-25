@@ -9,3 +9,5 @@ A resource is the time of a *provider*, an officer of the organisation.
 Logic pragmas
 Appointments extends Booking.
 A resource is the time of a *provider*, an officer of the organisation.
+Interface pragmas
+Look: 🕒, sharing
