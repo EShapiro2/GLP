@@ -908,6 +908,125 @@ procedure faults_items(Faults?, Items).
 faults_items([], []).
 faults_items([F|Fs], [it_fault(F?)|R?]) :- faults_items(Fs?, R).
 
+% --- clause 3 of def:unobstructed, the act's own record (GSC c38df8e) ------
+% "tau has no agent variable and adds at pi_i an atom with the other role
+% among its arguments, of a predicate that no other schema of C adds" (GSC,
+% Definition Unobstructed, clause 3, on the branch openness-2026-11-25,
+% approved by Udi 2026-11-25 18:50 UTC).  Each agent variable X of the act
+% is a fault obstructed(Act, 0, atom(X, []), agent_variable), and each role I
+% at which the act adds no such atom a fault obstructed(Act, I, atom(P, []),
+% no_own_record), P the predicate of the first atom it adds there naming the
+% other role, or none where it adds none.  Neither touches a value.
+
+procedure c3_vars(Args?, Constant?, Faults).
+c3_vars([], _, []).
+c3_vars([pvar(X)|Vs], Nm, [obstructed(Nm?, 0, atom(X?, []), agent_variable)|R?]) :-
+    ground(X?), ground(Vs?), ground(Nm?) |
+    c3_vars(Vs?, Nm?, R).
+c3_vars([V|Vs], Nm, R?) :- otherwise, ground(V?), ground(Vs?), ground(Nm?) |
+    c3_vars(Vs?, Nm?, R).
+
+procedure c3_mult_pred(Mult?, Constant).
+c3_mult_pred(atom(P, _), P?).
+c3_mult_pred(times(_, atom(P, _)), P?).
+c3_mult_pred(rest(_, _, atom(P, _)), P?).
+
+procedure c3_mults_preds(Mults?, Preds?, Preds).
+c3_mults_preds([], T, T?).
+c3_mults_preds([M|Ms], T, [P?|R?]) :- ground(M?), ground(Ms?), ground(T?) |
+    c3_mult_pred(M?, P),
+    c3_mults_preds(Ms?, T?, R).
+
+procedure c3_hms_preds(HMults?, Preds?, Preds).
+c3_hms_preds([], T, T?).
+c3_hms_preds([hm(_, M)|Ms], T, [P?|R?]) :- ground(M?), ground(Ms?), ground(T?) |
+    c3_mult_pred(M?, P),
+    c3_hms_preds(Ms?, T?, R).
+
+procedure c3_roles_preds(NRoleSpecs?, Preds?, Preds).
+c3_roles_preds([], T, T?).
+c3_roles_preds([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    nrs_add(RS?, P),
+    c3_roles_preds(Rs?, T?, R1),
+    c3_mults_preds(P?, R1?, R).
+
+procedure c3_conjs_preds(Conjuncts?, Preds?, Preds).
+c3_conjs_preds([], T, T?).
+c3_conjs_preds([conjunct(_, _, _, _, P, _, _)|Cs], T, R?) :- ground(P?), ground(Cs?), ground(T?) |
+    c3_conjs_preds(Cs?, T?, R1),
+    c3_hms_preds(P?, R1?, R).
+
+% The predicates of the atoms the schemas of NC other than Nm add, at their
+% roles and in their conjuncts.
+procedure c3_other1(Constant?, Constant?, NSchema?, NContract?, Preds?, Preds).
+c3_other1(Nm2, Nm, _, NSs, T, R?) :- Nm2? =?= Nm?, ground(NSs?), ground(T?) |
+    c3_other(NSs?, Nm?, T?, R).
+c3_other1(_, Nm, NS, NSs, T, R?) :- otherwise, ground(Nm?), ground(NS?), ground(NSs?), ground(T?) |
+    nsch_roles(NS?, Rs),
+    nsch_conjs(NS?, Cj),
+    c3_other(NSs?, Nm?, T?, R1),
+    c3_roles_preds(Rs?, R1?, R2),
+    c3_conjs_preds(Cj?, R2?, R).
+
+procedure c3_other(NContract?, Constant?, Preds?, Preds).
+c3_other([], _, T, T?).
+c3_other([NS|NSs], Nm, T, R?) :- ground(NS?), ground(NSs?), ground(Nm?), ground(T?) |
+    plain_schema(NS?, S),
+    sch_name(S?, Nm2),
+    c3_other1(Nm2?, Nm?, NS?, NSs?, T?, R).
+
+procedure c3_names_role(Args?, Integer?, Ans).
+c3_names_role([], _, no).
+c3_names_role([role(J)|_], O, yes) :- J? =:= O? | true.
+c3_names_role([_|As], O, R?) :- otherwise, ground(As?), integer(O?) |
+    c3_names_role(As?, O?, R).
+
+% The atoms As a role adds: the first naming the role O whose predicate is
+% in no Os is the act's own record (rec(P)); else the first naming O (nrec(P));
+% else none.
+procedure c3_rec1(Ans?, Ans?, Constant?, Atoms?, Integer?, Preds?, Rec?, Rec).
+c3_rec1(yes, no, P, _, _, _, _, rec(P?)).
+c3_rec1(yes, yes, P, As, O, Os, none, R?) :- ground(P?), ground(As?), integer(O?), ground(Os?) |
+    c3_rec(As?, O?, Os?, nrec(P?), R).
+c3_rec1(_, _, _, As, O, Os, F, R?) :- otherwise, ground(As?), integer(O?), ground(Os?), ground(F?) |
+    c3_rec(As?, O?, Os?, F?, R).
+
+procedure c3_rec(Atoms?, Integer?, Preds?, Rec?, Rec).
+c3_rec([], _, _, F, F?).
+c3_rec([atom(P, Bs)|As], O, Os, F, R?) :-
+    ground(P?), ground(Bs?), ground(As?), integer(O?), ground(Os?), ground(F?) |
+    c3_names_role(Bs?, O?, N),
+    pred_member(P?, Os?, M),
+    c3_rec1(N?, M?, P?, As?, O?, Os?, F?, R).
+
+procedure c3_fault(Rec?, Constant?, Integer?, Faults?, Faults).
+c3_fault(rec(_), _, _, T, T?).
+c3_fault(nrec(P), Nm, I, T, [obstructed(Nm?, I?, atom(P?, []), no_own_record)|T?]).
+c3_fault(none, Nm, I, T, [obstructed(Nm?, I?, atom(none, []), no_own_record)|T?]).
+
+% The agent roles of the act, the I-th, the other being 3 - I.
+procedure c3_roles(RoleSpecs?, Integer?, Constant?, Preds?, Faults).
+c3_roles([], _, _, _, []).
+c3_roles([RS|Rs], I, Nm, Os, R?) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(Nm?), ground(Os?) |
+    rs_add(RS?, As),
+    O := 3 - I?,
+    c3_rec(As?, O?, Os?, none, Rc),
+    I1 := I? + 1,
+    c3_roles(Rs?, I1?, Nm?, Os?, R1),
+    c3_fault(Rc?, Nm?, I?, R1?, R).
+
+% Clause 3's faults of the act Sc, written NSc, in the contract NC.
+procedure c3_faults(Schema?, NContract?, Faults).
+c3_faults(Sc, NC, R?) :- ground(Sc?), ground(NC?) |
+    sch_name(Sc?, Nm),
+    sch_vars(Sc?, Vs),
+    sch_roles(Sc?, Rs),
+    c3_other(NC?, Nm?, [], Os),
+    c3_vars(Vs?, Nm?, F1),
+    c3_roles(Rs?, 1, Nm?, Os?, F2),
+    faults_app(F1?, F2?, R).
+
 % --- the conditions at a role ----------------------------------------------
 % Clause 1 asks each atom the role requires, but those of a reflexive
 % predicate naming the role, to be supplied: it_req(I, A, D), D the formula
@@ -1204,16 +1323,19 @@ intro_items(Sc, NSc, B, NC, C, Rf, PwI, R?) :-
     sch_roles(Sc?, Rs),
     nsch_roles(NSc?, NRs),
     fresh_base(Sc?, N),
-    intro_items1(NRs?, Rs?, Nm?, B?, NC?, C?, N?, Rf?, PwI?, R).
+    intro_items1(Sc?, NRs?, Rs?, Nm?, B?, NC?, C?, N?, Rf?, PwI?, R).
 
-procedure intro_items1(NRoleSpecs?, RoleSpecs?, Constant?, Subst?, NContract?, Contract?, Integer?, Preds?, Args?, Items).
-intro_items1(NRs, Rs, Nm, B, NC, C, N, Rf, PwI, R?) :-
-    ground(NRs?), ground(Rs?), ground(Nm?), ground(B?), ground(NC?), ground(C?),
+procedure intro_items1(Schema?, NRoleSpecs?, RoleSpecs?, Constant?, Subst?, NContract?, Contract?, Integer?, Preds?, Args?, Items).
+intro_items1(Sc, NRs, Rs, Nm, B, NC, C, N, Rf, PwI, R?) :-
+    ground(Sc?), ground(NRs?), ground(Rs?), ground(Nm?), ground(B?), ground(NC?), ground(C?),
     integer(N?), ground(Rf?), ground(PwI?) |
     unob_roles(NRs?, 1, Nm?, B?, NC?, N?, Rf?, PwI?, F1),
     listed_faults(Rs?, 1, Nm?, C?, F2),
     faults_items(F2?, I2),
-    items_app(F1?, I2?, R).
+    c3_faults(Sc?, NC?, F3),
+    faults_items(F3?, I3),
+    items_app(I2?, I3?, I23),
+    items_app(F1?, I23?, R).
 
 % One assignment B of the act's agent and speech-act variables.
 procedure intro_b(Subst?, IntroCtx?, Try).

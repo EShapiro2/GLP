@@ -2340,8 +2340,17 @@ Ints  ::= [] ; [Integer | Ints].
 % listed_role(Schema, Role, Atom) is the first part of clause 2 of
 % def:unobstructed: the listed role Role of Schema adds Atom, of the
 % predicate of an atom the introductory act forbids at a role.
+% agent_variable and no_own_record are clause 3 of def:unobstructed (GSC
+% c38df8e): the act has an agent variable, written as the atom of its name at
+% role 0; or it adds at the role no atom naming the other role of a predicate
+% no other schema adds, written as the atom of the first such predicate it
+% adds there, or of none.
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom) ; reflexive ; environment
-        ; listed_role(Constant, Integer, Atom).
+        ; listed_role(Constant, Integer, Atom) ; agent_variable ; no_own_record.
+% What clause 3 of def:unobstructed finds at a role (unobstructed.glp, c3_rec):
+% the act's own record rec(P), an atom naming the other role of a predicate
+% only another schema also adds nrec(P), or none.
+Rec ::= rec(Constant) ; nrec(Constant) ; none.
 % What GAI's Definition Speech-act schema requires of a signed term, and the atom
 % carrying one violates: it occurs in an atom not marked + (not_added), its
 % speech-act variable occurs in no atom its role requires (not_required), or
