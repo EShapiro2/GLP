@@ -54,9 +54,9 @@ Organisation:4 ■ | The decision names his role.
 Organisation:5 ■ Amend: Alice may Orga has its bylaws amended and Orga has Motion taken, provided Alice is an officer of Orga, Orga has Motion proposed, the bylaws of Orga entitle Alice to amend them as Motion says, the amendment Motion is decided according to the bylaws of Orga and not Orga has Motion taken.
 Organisation:6 ○ | Accountability.
 Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
-Warnings:0 - | A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident. An officer holds at most one warning to a participant at a time, and the participant may answer it once.
+Warnings:0 - | A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident. An officer holds at most one warning to a participant at a time, and the participant may answer it once; a withdrawn or annulled warning may be given again, and answered again.
 Warnings:1 ■ Warn: Alice may Orga holds Alice's warning to Bob and Orga holds Alice's warning to Bob of Case, provided Alice is an officer of Orga, Orga has Bob as a participant and not Orga holds Alice's warning to Bob.
 Warnings:2 ■ Answer: Bob may Orga holds Bob's answer to Alice's warning of Case and Orga holds Bob's answer to Alice's warning of Case as Text, provided Orga holds Alice's warning to Bob of Case and not Orga holds Bob's answer to Alice's warning of Case.
 Warnings:3 ■ | Withdrawal.
-Warnings:3 ■ Withdraw: Alice may no longer Orga holds Alice's warning to Bob and no longer Orga holds Alice's warning to Bob of Case.
-Warnings:3 ■ Annul: Those who decide for Orga may no longer Orga holds Alice's warning to Bob and no longer Orga holds Alice's warning to Bob of Case.
+Warnings:3 ■ Withdraw: Alice may no longer Orga holds Alice's warning to Bob, no longer Orga holds Alice's warning to Bob of Case and no longer Orga holds anyone's answer to Alice's warning of Case.
+Warnings:3 ■ Annul: Those who decide for Orga may no longer Orga holds Alice's warning to Bob, no longer Orga holds Alice's warning to Bob of Case and no longer Orga holds anyone's answer to Alice's warning of Case.

@@ -54,9 +54,9 @@ Organisation:4 ■ | The decision names his role.
 Organisation:5 ■ Amend: amended(Orga), taken(Orga,Motion) <- officer(Alice,Orga), proposed(Orga,Motion), amender(Alice,Orga,Motion), amendment_decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
 Organisation:6 ○ | Accountability.
 Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
-Warnings:0 - | A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident. An officer holds at most one warning to a participant at a time, and the participant may answer it once.
+Warnings:0 - | A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident. An officer holds at most one warning to a participant at a time, and the participant may answer it once; a withdrawn or annulled warning may be given again, and answered again.
 Warnings:1 ■ Warn: warning(Orga,Alice,Bob), warning_of(Orga,Alice,Bob,Case) <- officer(Alice,Orga), has_participant(Orga,Bob), ~warning(Orga,Alice,Bob) guarded by Alice.
 Warnings:2 ■ Answer: answered(Orga,Bob,Alice,Case), answer_text(Orga,Bob,Alice,Case,Text) <- warning_of(Orga,Alice,Bob,Case), ~answered(Orga,Bob,Alice,Case) guarded by Bob.
 Warnings:3 ■ | Withdrawal.
-Warnings:3 ■ Withdraw: ~warning(Orga,Alice,Bob), ~warning_of(Orga,Alice,Bob,Case) <- warning(Orga,Alice,Bob), warning_of(Orga,Alice,Bob,Case) guarded by Alice.
-Warnings:3 ■ Annul: ~warning(Orga,Alice,Bob), ~warning_of(Orga,Alice,Bob,Case) <- warning(Orga,Alice,Bob), warning_of(Orga,Alice,Bob,Case) guarded by deciders(Orga).
+Warnings:3 ■ Withdraw: ~warning(Orga,Alice,Bob), ~warning_of(Orga,Alice,Bob,Case), ~answered(Orga,_,Alice,Case) <- warning(Orga,Alice,Bob), warning_of(Orga,Alice,Bob,Case) guarded by Alice.
+Warnings:3 ■ Annul: ~warning(Orga,Alice,Bob), ~warning_of(Orga,Alice,Bob,Case), ~answered(Orga,_,Alice,Case) <- warning(Orga,Alice,Bob), warning_of(Orga,Alice,Bob,Case) guarded by deciders(Orga).
