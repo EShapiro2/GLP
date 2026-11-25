@@ -1157,11 +1157,11 @@ void appsScreens(Screens screens) {
     await run.list(bob, 'group_message');
     expect(run.control(bob, 'atom:group_message(bob, $hiAll, $friends, alice)'),
         findsOneWidget);
-    expect(run.texts(bob), contains('Hi all (Bob), friends, Alice'));
+    expect(run.texts(bob), contains('Hi all (Bob), Friends, Alice'));
     await run.list(alice, 'group_message');
     expect(run.control(alice, 'atom:group_message(bob, $hiAll, $friends, alice)'),
         findsOneWidget);
-    expect(run.texts(alice), contains('Hi all (Bob), friends, Alice'));
+    expect(run.texts(alice), contains('Hi all (Bob), Friends, Alice'));
     await run.list(bob, 'member');
 
     // (c) Bob's view of the group: the atom of his list, the group's name and its leader, and the buttons of the acts of his row, Leave and Post.
@@ -1173,7 +1173,8 @@ void appsScreens(Screens screens) {
           find.descendant(of: g, matching: find.byType(Text))))
         if (t.data != null) t.data!,
     ];
-    expect(inGroup, containsAll(['friends', 'Alice', 'Leave', 'Post']));
+    // A constant is drawn capitalised, as the app draws the group friends "Friends".
+    expect(inGroup, containsAll(['Friends', 'Alice', 'Leave', 'Post']));
     // "A row shows each person once" (vGLP, Section 6.2, "The words a platform shows"): Alice is the group's leader, the atom's other argument, and the row holds her name once.
     expect(inGroup.where((t) => t == 'Alice'), hasLength(1),
         reason: "bob: the group's row shows Alice once");
