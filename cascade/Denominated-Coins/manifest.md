@@ -1,10 +1,10 @@
 # A run of the cascade on Denominated-Coins
 
-- Contract: `Denominated-Coins` (`denominated_coins` to the checker), its owner's two files `programs/currencies/gdc/Denominated-Coins.txt` and `programs/currencies/gdc/Denominated-Coins.glp`, copied here as they stood at `unknown`.
+- Contract: `Denominated-Coins` (`denominated_coins` to the checker), its owner's two files `programs/currencies/gdc/Denominated-Coins.txt` and `programs/currencies/gdc/Denominated-Coins.glp`, copied here as they stood at `75e15253`.
 - The paper: `/Users/udi/Grassroots/GCC (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/currencies/gdc/Denominated-Coins.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/currencies/gdc/Denominated-Coins.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-25 09:46 UTC by `cascade.sh denominated_coins`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `unknown`; each artefact's source and tool:
+- Run on 2026-11-25 11:15 UTC by `cascade.sh denominated_coins`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `75e15253`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

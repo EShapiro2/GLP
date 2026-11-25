@@ -1,10 +1,10 @@
 # A run of the cascade on Groups+Coins
 
-- Contract: the composition of Groups Coins (`groups_coins` to the checker), the schemas and the pragmas of the third contract they amend that all keep with those each adds, their union where they share none or all extend it (vGLP, Section 5.4, "The contract's words"; GSC, Section 8), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at `unknown`:
+- Contract: the composition of Groups Coins (`groups_coins` to the checker), the schemas and the pragmas of the third contract they amend that all keep with those each adds, their union where they share none or all extend it (vGLP, Section 5.4, "The contract's words"; GSC, Section 8), by programs/vglp/cva/compiler/compose.sh; each its owner's two files, copied here as they stood at `75e15253`:
   - `Groups`: `programs/gsc/Groups.txt` and `programs/gsc/Groups.glp`; the paper `/Users/udi/Grassroots/GSC (not on this machine)` at `unknown`.
   - `Coins`: `programs/currencies/coins/Coins.txt` and `programs/currencies/coins/Coins.glp`; the paper `/Users/udi/Grassroots/GC (not on this machine)` at `unknown`.
-- The tools: this repository at `unknown` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
-- Run on 2026-11-25 09:59 UTC by `cascade.sh groups coins`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- The tools: this repository at `75e15253` --- programs/gsc (the printer of the schemas' notation, notation_contract/1, the checker, check/2, and the compiler to VMAT, compile_contract/2), programs/vglp/cva/compiler (the compiler to the canonical CVA platform, compile/5, and its reader of the pragmas, pragmas.sh), glp_runtime's :emit (the canonical compilation to GLP).
+- Run on 2026-11-25 11:20 UTC by `cascade.sh groups coins`; the suite's Section CAS re-runs it and holds these files to what the tools print.
 
 | Artefact | What it holds |
 |---|---|
