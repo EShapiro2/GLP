@@ -6382,9 +6382,10 @@ check "CVA cvalues: the platform types the values over the constants with the co
 check "CVA cvalues: alice issues a note of a compound type, bond(5), and holds it" "view(alice, \[note(bond(5), 1), knows(bob), identity\]" "$cva_cvalues"
 check "CVA cvalues: alice redeems the bond due at 5 to bob, its Day named by the request, and it commits" "sent(alice, bob, outcome(attempt(alice, [0-9]*, [0-9]*, redeem(alice, bob, 5, 1), none), commit(\[\])))" "$cva_cvalues"
 check "CVA cvalues: her redemption of the bond due at 20 is refused, 20 =< 10 failing" "refused(redeem(alice, bob, 20, 2), alice, unable)" "$cva_cvalues"
+check "CVA cvalues: she takes bonded, which requires a bond of any maturity, bond(_)" "view(alice, \[bonded, note(coin, 3), note(bond(20), 2), knows(bob), identity\]" "$cva_cvalues"
 check "CVA cvalues: she pays bob the note of the constant type coin, and it commits" "sent(alice, bob, outcome(attempt(alice, [0-9]*, [0-9]*, pay(alice, bob, coin, 3), none), commit(\[\])))" "$cva_cvalues"
 check "CVA cvalues: bob holds the bond due at 5 and the coin note" "view(bob, \[note(coin, 3), note(bond(5), 1), knows(alice), identity\]" "$cva_cvalues"
-check "CVA cvalues: ... and alice the bond due at 20" "view(alice, \[note(bond(20), 2), knows(bob), identity\]" "$cva_cvalues"
+check "CVA cvalues: ... and alice the bond due at 20" "view(alice, \[bonded, note(bond(20), 2), knows(bob), identity\]" "$cva_cvalues"
 check "CVA cvalues: the run suspends" "→ suspended" "$cva_cvalues"
 check_not "CVA cvalues: ... within its limit" "reduction limit reached\|stopped after" "$cva_cvalues"
 

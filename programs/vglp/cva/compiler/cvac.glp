@@ -1223,9 +1223,13 @@ not_speech(_, yes) :- otherwise | true.
 %% (4) A wildcard in a negated atom, forbidden or cleared, is as it was, and so is one in the name term N._: the printed text has the atom forbid, and clear, every atom of the state that its image matches (forb_held, held_one and forb_meets; clear_out), the wildcard no variable (vars_bound).  A wildcard in an atom of a safe formula that is not the anchor of a quantifier makes the atom the quantifier exists Ws (M) (wild_fa), so that the atom holds where the state has an atom it matches, and its negation where it has none.  Refused with the reason (wild_faults): a wildcard at an argument of a predicate to which no other atom of the contract gives a type; one in a required atom, an anchor or an atom of a safe formula at an argument that is a community name or an item, or, in an anchor that is not a listed role's or in an atom of a safe formula, a constant or a real, a variable a quantifier binds not being carried as one (a wildcard at a constant's place in an atom a role requires is a variable over the constants, const(X), and in a listed role's anchor it stays the wildcard, (3)); one in the anchor of a count or a sum, or in an atom of its condition.  A wildcard in the anchor of a quantifier that binds a listed role in a safe formula across roles, of the part's condition, is carried: the reading of the base holds the atoms of its state the anchor matches, the wildcard matching any value, as a variable a quantifier binds does, and the people the quantifier ranges over are those the attempt lists, each once (vGLP, Section 5.4: "a wildcard in an unnegated atom of B, or in the anchor of a quantifier, is a variable of its own"; GSNW's and CSSN's Retire, member(Carol, _, E), Calculus #6 and Helper #4, vGLP_inbox, 2026-11-15 21:44 and 21:47 UTC; refused until then).
 %% The types of the arguments of the contract's predicates, a signature for each predicate and number of arguments, the wildcard's place taking the type another atom of the contract gives it, and wild where none does (wild_sigs), a person where one atom writes a person and another a variable a quantifier binds (peer_sigs).
 procedure wild_table(QContract?, Sigs).
-wild_table(C, Gs?) :-
+wild_table(C, Gs?) :- ground(C?) |
     q_all_atoms(C?, As),
-    atom_sigs(As?, Gs0),
+    q_all_atoms(C?, As2),
+    atom_sigs(As?, Gs0a),
+    atoms_cmps(As2?, Cs),
+    cmp_sigs(Cs?, Gs0b),
+    app(Gs0a?, Gs0b?, Gs0),
     dedup(Gs0?, Gs1),
     wild_sigs(Gs1?, Gs2),
     peer_sigs_all(Gs2?, Gs).
@@ -1381,19 +1385,32 @@ wild_atoms([A|As], Gs, Md, K, [A1?|As1?], K2?, Vs?) :- ground(Gs?), ground(Md?) 
     app(V1?, V2?, Vs).
 %% An atom with a multiplicity carries no wildcard (programs/gsc/self.glp, multiplicity_wildcard), and is as it is.
 procedure wild_atom(Atom?, Sigs?, WMode?, Integer?, Atom, Integer, Args).
-wild_atom(atom(F, As), Gs, Md, K, atom(F?, As1?), K1?, Vs?) :- ground(F?), ground(As?) |
+wild_atom(atom(F, As), Gs, Md, K, atom(F?, As1?), K1?, Vs?) :- ground(F?), ground(As?), ground(Gs?) |
     place_kinds(F?, As?, Gs?, Ks),
-    wild_args(As?, Ks?, Md?, K?, As1, K1, Vs).
+    wild_args(As?, Ks?, Gs?, Md?, K?, As1, K1, Vs).
 wild_atom(times(M, A), _, _, K, times(M?, A?), K?, []).
 wild_atom(rest(M, J, A), _, _, K, rest(M?, J?, A?), K?, []).
-procedure wild_args(Args?, Kinds?, WMode?, Integer?, Args, Integer, Args).
-wild_args([], _, _, K, [], K?, []).
-wild_args([any|As], [Kd|Ks], Md, K, [A?|As1?], K2?, Vs?) :- ground(Md?) |
+procedure wild_args(Args?, Kinds?, Sigs?, WMode?, Integer?, Args, Integer, Args).
+wild_args([], _, _, _, K, [], K?, []).
+wild_args([any|As], [Kd|Ks], Gs, Md, K, [A?|As1?], K2?, Vs?) :- ground(Md?) |
     wild_var(Kd?, Md?, K?, A, K1, V1),
-    wild_args(As?, Ks?, Md?, K1?, As1, K2, V2),
+    wild_args(As?, Ks?, Gs?, Md?, K1?, As1, K2, V2),
     app(V1?, V2?, Vs).
-wild_args([A|As], [_|Ks], Md, K, [A?|As1?], K1?, Vs?) :- otherwise | wild_args(As?, Ks?, Md?, K?, As1, K1, Vs).
-wild_args([A|As], [], _, K, [A?|As?], K?, []).
+%% A wildcard among the arguments of a compound value is a variable of the kind of its place in that compound value, as the contract writes the compound value elsewhere (cmp_sigs), as a bond of any maturity, bond(_), where another act names bond(Day).
+wild_args([cmp(F, Bs)|As], [_|Ks], Gs, Md, K, [cmp(F?, Bs1?)|As1?], K2?, Vs?) :- ground(F?), ground(Bs?), ground(Gs?), ground(Md?) |
+    cmp_key(F?, Ky),
+    place_kinds(Ky?, Bs?, Gs?, Js),
+    wild_args(Bs?, Js?, Gs?, Md?, K?, Bs1, K1, V1),
+    wild_args(As?, Ks?, Gs?, Md?, K1?, As1, K2, V2),
+    app(V1?, V2?, Vs).
+wild_args([A|As], [_|Ks], Gs, Md, K, [A?|As1?], K1?, Vs?) :- otherwise | wild_args(As?, Ks?, Gs?, Md?, K?, As1, K1, Vs).
+wild_args([A|As], [], _, _, K, [A?|As?], K?, []).
+%% The kinds of the arguments of each compound value, as a signature keyed by its function symbol (cmp_key), among the signatures of the predicates (wild_table).
+procedure cmp_sigs(CShapes?, Sigs).
+cmp_sigs([], []).
+cmp_sigs([cs(F, Ks)|Cs], [sig(Ky?, Ks?)|Gs?]) :- cmp_key(F?, Ky), cmp_sigs(Cs?, Gs).
+procedure cmp_key(Constant?, Constant).
+cmp_key(F, Ky?) :- ground(F?) | term_to_string(F?, Ft), string_concat(['cmp ', Ft?], Ky).
 %% The K-th wildcard of a schema as a variable of the kind of its place, '_K': an agent variable at a person's place, a speech-act variable at a speech act's, a value variable at a number's, a real one, in the head, at a real's; a variable over the constants, in the head, at a constant's; and the wildcard still, where its place has no type (wild), or is a community name's or an item's, or, in an anchor, a constant's or a real's (wild_faults).
 procedure wild_var(Kind?, WMode?, Integer?, Arg, Integer, Args).
 wild_var(Kd, Md, K, A?, K1?, Vs?) :- integer(K?) |

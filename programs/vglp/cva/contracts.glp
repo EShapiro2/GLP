@@ -513,7 +513,8 @@ pragmas_named(cvalues, pragmas([list('"Contacts"', [knows]), list('"Notes"', [no
      act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
      act(issue, '"Issue"', ['""', '"Type"', '"Note"'], none, '"Notes"', by([1])),
      act(pay, '"Pay"', ['""', '""', '"Type"', '"Note"'], said([[], [person(1), text('" asks."')]]), '"Notes"', by([1])),
-     act(redeem, '"Redeem"', ['""', '""', '"Day"', '"Note"'], said([[], [person(1), text('" asks."')]]), '"Notes"', by([1]))])).
+     act(redeem, '"Redeem"', ['""', '""', '"Day"', '"Note"'], said([[], [person(1), text('" asks."')]]), '"Notes"', by([1])),
+     act(bonded, '"Bonded"', [], none, '"Notes"', by([1]))])).
 pragmas_named(feeds, pragmas([list('"Friends"', [friend]), list('"Feed"', [item])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(post, '"Post"', ['""', '"text"'], none, '"Feed"', by([1]))])).
@@ -1214,7 +1215,9 @@ roles([schema(acquaint, [],
 %%                             at q  knows(p), +note(t, n)
 %%   redeem(p?, q? ; d, n)  :  at p  knows(q), -note(bond(d), n)
 %%                             at q  knows(p), +note(bond(d), n)                d =< 10
+%%   bonded(p?)             :  at p  note(bond(_), _), not bonded, +bonded
 %%
+%% bonded requires a bond of any maturity, bond(_), its wildcard a variable of the kind of Day, as redeem writes bond(d).
 %% cvalues/self.glp plays it.
 procedure cvalues(Contract).
 cvalues([schema(establish, [],
@@ -1229,4 +1232,6 @@ cvalues([schema(establish, [],
             rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(knows, [role(1)])], [])]),
          nschema(redeem, [num(d), const(n)], le(num(d), num(10)),
            [rs(guarded, [], [atom(note, [cmp(bond, [num(d)]), num(n)])], [atom(knows, [role(2)])], []),
-            rs(guarded, [atom(note, [cmp(bond, [num(d)]), num(n)])], [], [atom(knows, [role(1)])], [])])]).
+            rs(guarded, [atom(note, [cmp(bond, [num(d)]), num(n)])], [], [atom(knows, [role(1)])], [])]),
+         schema(bonded, [],
+           [rs(guarded, [atom(bonded, [])], [], [atom(note, [cmp(bond, [any]), any])], [atom(bonded, [])])])]).

@@ -16,7 +16,8 @@
 %% atom she deletes, note(bond(5), 1), matches the one she holds by its
 %% function symbol and its argument.  She asks to redeem the bond due at 20,
 %% redeem(alice, bob, 20, 2), which the constraint 20 =< 10 refuses, and her
-%% screen shows it refused.  She pays bob the note of the constant type,
+%% screen shows it refused.  She holds a bond of some maturity, note(bond(20), 2),
+%% and takes bonded(alice), which requires note(bond(_), _).  She pays bob the note of the constant type,
 %% pay(alice, bob, coin, 3), and he holds note(coin, 3).
 %%
 %% The types of platform.vglp, written again for the declarations of the
@@ -41,6 +42,7 @@ play_cvalues(LA?, LB?, N?) :-
           own([A4], propose(issue(A4?, coin, 3))), wait(holds(note(coin, 3))),
           own([A5], propose(redeem(A5?, bob, 5, 1))), wait(lacks(note(bond(5), 1))),
           own([A6], propose(redeem(A6?, bob, 20, 2))),
+          own([A8], propose(bonded(A8?))), wait(holds(bonded)),
           own([A7], propose(pay(A7?, bob, coin, 3))), wait(lacks(note(coin, 3)))],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(acquaint(B2?, alice))), wait(holds(knows(alice))),

@@ -21,6 +21,8 @@ issue(Peer, CValue, CValue)
 pay(Peer, Peer, CValue, CValue)
 ;
 redeem(Peer, Peer, Integer, CValue)
+;
+bonded(Peer)
 .
 
 Proposal ::=
@@ -33,13 +35,15 @@ issue(Peer, CValue, CValue)
 pay(Peer, Peer, CValue, CValue)
 ;
 redeem(Peer, Peer, Integer, CValue)
+;
+bonded(Peer)
 .
 
 Request ::= propose(Proposal).
 
 %% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family's approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract's pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer's role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument's place, at(K), a group's, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).
 Approval =::= approval_sentence.
-Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [], [], [])]), button("Issue", [act(issue, 1, [1], [req(identity, []), forb(note, [at(2), at(3)])], [], [field(2, "Type", text), field(3, "Note", text)], [], [])]), button("Pay", [act(pay, 1, [1, 2], [req(knows, [at(2)]), req(note, [at(3), at(4)])], [2, 3, 4], [field(3, "Type", text), field(4, "Note", text)], [], [])]), button("Redeem", [act(redeem, 1, [1, 2], [req(knows, [at(2)]), req(note, [any, at(4)])], [2, 4], [field(3, "Day", number), field(4, "Note", text)], [], [])])])
+Request? =::= social_menu([button("Establish", [act(establish, 1, [1], [], [], [], [], [])]), button("Acquaint", [act(acquaint, 1, [1, 2], [req(identity, [])], [], [], [], [])]), button("Issue", [act(issue, 1, [1], [req(identity, []), forb(note, [at(2), at(3)])], [], [field(2, "Type", text), field(3, "Note", text)], [], [])]), button("Pay", [act(pay, 1, [1, 2], [req(knows, [at(2)]), req(note, [at(3), at(4)])], [2, 3, 4], [field(3, "Type", text), field(4, "Note", text)], [], [])]), button("Redeem", [act(redeem, 1, [1, 2], [req(knows, [at(2)]), req(note, [any, at(4)])], [2, 4], [field(3, "Day", number), field(4, "Note", text)], [], [])]), button("Bonded", [act(bonded, 1, [1], [req(note, [any, any]), forb(bonded, [])], [], [], [], [])])])
 .
 
 %% The types of the request widget's term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu's one alternative is T's.
@@ -59,6 +63,8 @@ identity
 knows(Peer)
 ;
 note(CValue, CValue)
+;
+bonded
 .
 
 procedure atom_of(GAtom?, Shown).
@@ -67,6 +73,8 @@ atom_of(g(identity, []), shown(identity))
 atom_of(g(knows, [p(V1)]), shown(knows(V1?)))
 .
 atom_of(g(note, [v(V1), v(V2)]), shown(note(V1?, V2?)))
+.
+atom_of(g(bonded, []), shown(bonded))
 .
 atom_of(_, unshown) :- otherwise | true.
 
@@ -82,7 +90,7 @@ cval_join(bond, [n(V1)], bond(V1?)).
 cval_join(F, _, F?) :- otherwise | true.
 
 procedure contract_schemas(Schemas).
-contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(issue, [num(t), num(n)], [rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(identity, [])], [atom(note, [num(t), num(n)])])]), schema(pay, [num(t), num(n)], [rs(guarded, [], [atom(note, [num(t), num(n)])], [atom(knows, [role(2)])], []), rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(knows, [role(1)])], [])]), schema(redeem, [num(d), num(n)], [rs(guarded, [], [atom(note, [cmp(bond, [num(d)]), num(n)])], [atom(knows, [role(2)])], []), rs(guarded, [atom(note, [cmp(bond, [num(d)]), num(n)])], [], [atom(knows, [role(1)])], [])])])
+contract_schemas([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(issue, [num(t), num(n)], [rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(identity, [])], [atom(note, [num(t), num(n)])])]), schema(pay, [num(t), num(n)], [rs(guarded, [], [atom(note, [num(t), num(n)])], [atom(knows, [role(2)])], []), rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(knows, [role(1)])], [])]), schema(redeem, [num(d), num(n)], [rs(guarded, [], [atom(note, [cmp(bond, [num(d)]), num(n)])], [atom(knows, [role(2)])], []), rs(guarded, [atom(note, [cmp(bond, [num(d)]), num(n)])], [], [atom(knows, [role(1)])], [])]), schema(bonded, [], [rs(guarded, [atom(bonded, [])], [], [atom(note, [cmp(bond, [num('_1')]), num('_2')])], [atom(bonded, [])])])])
 .
 
 procedure schema_entry(Constant?, Schema).
@@ -96,6 +104,8 @@ schema_entry(pay, schema(pay, [num(t), num(n)], [rs(guarded, [], [atom(note, [nu
 .
 schema_entry(redeem, schema(redeem, [num(d), num(n)], [rs(guarded, [], [atom(note, [cmp(bond, [num(d)]), num(n)])], [atom(knows, [role(2)])], []), rs(guarded, [atom(note, [cmp(bond, [num(d)]), num(n)])], [], [atom(knows, [role(1)])], [])]))
 .
+schema_entry(bonded, schema(bonded, [], [rs(guarded, [atom(bonded, [])], [], [atom(note, [cmp(bond, [num('_1')]), num('_2')])], [atom(bonded, [])])]))
+.
 schema_entry(Nm, schema(Nm?, [], [])) :- otherwise | true.
 
 procedure schema_numeric(Constant?, Numeric).
@@ -108,6 +118,8 @@ schema_numeric(issue, numeric([cj(every, true)], [], []))
 schema_numeric(pay, numeric([cj(every, true)], [], []))
 .
 schema_numeric(redeem, numeric([cj(every, le(num(d), num(10)))], [], []))
+.
+schema_numeric(bonded, numeric([cj(every, true)], [num('_1'), num('_2')], []))
 .
 schema_numeric(_, numeric([], [], [])) :- otherwise | true.
 
@@ -128,6 +140,8 @@ schema_base(pay, 1)
 .
 schema_base(redeem, 1)
 .
+schema_base(bonded, 1)
+.
 schema_base(_, 1) :- otherwise | true.
 
 MayOne    ::= may_one(Integer, Integer).
@@ -143,6 +157,8 @@ schema_ones(pay, [])
 .
 schema_ones(redeem, [])
 .
+schema_ones(bonded, [])
+.
 schema_ones(_, []) :- otherwise | true.
 
 VOne      ::= vone(Var, Var) ; vone_any(Var) ; vone_all.
@@ -157,6 +173,8 @@ schema_vones(issue, [vone_all])
 schema_vones(pay, [vone_all])
 .
 schema_vones(redeem, [vone_all])
+.
+schema_vones(bonded, [vone_all])
 .
 schema_vones(_, []) :- otherwise | true.
 
@@ -184,6 +202,8 @@ binding_of(issue(V1, V2, V3), issue, [b(role(1), p(V1?)), b(num(t), v(V2?)), b(n
 binding_of(pay(V1, V2, V3, V4), pay, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(t), v(V3?)), b(num(n), v(V4?))])
 .
 binding_of(redeem(V1, V2, V3, V4), redeem, [b(role(1), p(V1?)), b(role(2), p(V2?)), b(num(d), n(V3?)), b(num(n), v(V4?))])
+.
+binding_of(bonded(V1), bonded, [b(role(1), p(V1?)), b(num('_1'), lv(bonded, '_1')), b(num('_2'), lv(bonded, '_2'))])
 .
 
 procedure class_of(Constant?, Binding?, Peer?, Class).
@@ -245,6 +265,14 @@ val_num(num(d), B?, V3)
 ,
 val_const(num(n), B?, V4)
 .
+class_of(bonded, B, D, bonded(V1?))
+:-
+ground(B?)
+,
+ground(D?)
+|
+val_peer(role(1), B?, D?, V1)
+.
 
 procedure name_class(Proposal?, GAtoms?, Class).
 name_class(establish(V1), _, establish(V1?))
@@ -257,6 +285,8 @@ name_class(pay(V1, V2, V3, V4), _, pay(V1?, V2?, V3?, V4?))
 .
 name_class(redeem(V1, V2, V3, V4), _, redeem(V1?, V2?, V3?, V4?))
 .
+name_class(bonded(V1), _, bonded(V1?))
+.
 
 procedure request_name(Class?, PName).
 request_name(establish(V1), pname(establish(V1?)))
@@ -268,6 +298,8 @@ request_name(issue(V1, V2, V3), pname(issue(V1?, V2?, V3?)))
 request_name(pay(V1, V2, V3, V4), pname(pay(V1?, V2?, V3?, V4?)))
 .
 request_name(redeem(V1, V2, V3, V4), pname(redeem(V1?, V2?, V3?, V4?)))
+.
+request_name(bonded(V1), pname(bonded(V1?)))
 .
 request_name(_, nopname) :- otherwise | true.
 
@@ -360,7 +392,7 @@ RPragmas  ::= pragmas(PLists, PActs, PStands, PLook, PVersion).
 Exported  ::= with(RDeclared, RPragmas).
 
 exported procedure contract(String, Exported).
-contract("", with([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(issue, [const(t), const(n)], [rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(identity, [])], [atom(note, [num(t), num(n)])])]), schema(pay, [const(t), const(n)], [rs(guarded, [], [atom(note, [num(t), num(n)])], [atom(knows, [role(2)])], []), rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(knows, [role(1)])], [])]), nschema(redeem, [num(d), const(n)], le(num(d), num(10)), [rs(guarded, [], [atom(note, [cmp(bond, [num(d)]), num(n)])], [atom(knows, [role(2)])], []), rs(guarded, [atom(note, [cmp(bond, [num(d)]), num(n)])], [], [atom(knows, [role(1)])], [])])], pragmas([list("Contacts", [knows]), list("Notes", [note])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", [], said([[], [person(1), text(" asks.")]]), "Contacts", by([1])), act(issue, "Issue", ["", "Type", "Note"], none, "Notes", by([1])), act(pay, "Pay", ["", "", "Type", "Note"], said([[], [person(1), text(" asks.")]]), "Notes", by([1])), act(redeem, "Redeem", ["", "", "Day", "Note"], said([[], [person(1), text(" asks.")]]), "Notes", by([1]))], [], nolook, version(1, 1))))
+contract("", with([schema(establish, [], [rs(guarded, [atom(identity, [])], [], [], [])]), schema(acquaint, [], [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []), rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]), schema(issue, [const(t), const(n)], [rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(identity, [])], [atom(note, [num(t), num(n)])])]), schema(pay, [const(t), const(n)], [rs(guarded, [], [atom(note, [num(t), num(n)])], [atom(knows, [role(2)])], []), rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(knows, [role(1)])], [])]), nschema(redeem, [num(d), const(n)], le(num(d), num(10)), [rs(guarded, [], [atom(note, [cmp(bond, [num(d)]), num(n)])], [atom(knows, [role(2)])], []), rs(guarded, [atom(note, [cmp(bond, [num(d)]), num(n)])], [], [atom(knows, [role(1)])], [])]), schema(bonded, [], [rs(guarded, [atom(bonded, [])], [], [atom(note, [cmp(bond, [any]), any])], [atom(bonded, [])])])], pragmas([list("Contacts", [knows]), list("Notes", [note])], [act(establish, "Establish", [], none, "Contacts", by([1])), act(acquaint, "Acquaint", [], said([[], [person(1), text(" asks.")]]), "Contacts", by([1])), act(issue, "Issue", ["", "Type", "Note"], none, "Notes", by([1])), act(pay, "Pay", ["", "", "Type", "Note"], said([[], [person(1), text(" asks.")]]), "Notes", by([1])), act(redeem, "Redeem", ["", "", "Day", "Note"], said([[], [person(1), text(" asks.")]]), "Notes", by([1])), act(bonded, "Bonded", [], none, "Notes", by([1]))], [], nolook, version(1, 1))))
 .
 
 exported procedure version(Integer, Integer).
