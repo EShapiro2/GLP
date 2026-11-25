@@ -101,3 +101,10 @@ None that Code knows of.
 - The fast tier, `bash test/run_fast.sh TY VG`, takes over 30 minutes; a background task is capped at 2 hours, so Section CAS whole is split over several worktrees.
 - Commits path-limited, never `git add -A` in GLP, no model id in a commit; nothing private (venues, submissions, referee reports, deadlines, tokens) in GLP.
 - An owner's file changes only at the owner's request; printing by adopt.py is accepted.
+
+## 2026-11-25 09:50 UTC (Code #37, after its 3rd compaction)
+
+- GLP main 2e669ad: GSC's GSN app test on constant group names; GSN passes (non-root Flutter, /home/fl/glp).
+- Waiting: vGLP #32 on how the request form fills a set place no atom binds (issue's new names, a payment's notes, a swap's TotalSet); then Code codes `_request` in glp_multiagent named_widgets.dart, and Currencies #23 mends the GC, GB and village market tests.
+- Currencies #23 told yes: drop the Coins and Bonds tab lines (three tabs on note shared one key); on Udi's retrospective list.
+- QF at f762939: 7 red, 3 the Mac's font, GSN now green, GC/GB/village waiting on the sets.
