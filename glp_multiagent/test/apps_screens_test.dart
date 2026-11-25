@@ -1110,13 +1110,13 @@ void appsScreens(Screens screens) {
           'listed(alice, $friends)'
         ]));
 
-    // Joining (GSN:3): Join, GSN's "[Join]", beside the group she leads, member(<alice>.n) binding its leader and name, with a picker of the friends friend(b) binds; she picks Bob and taps Join.
+    // Joining (GSN:3): Join, GSN's "[Join]", beside the group she leads, member(Grupo, Alice) binding its name and leader, with a picker of the friends friend(b) binds; she picks Bob and taps Join.
     await run.list(alice, 'friend');
     await run.tap(alice, run.control(alice, 'act:join:bob'));
     await run.tap(alice, run.control(alice, 'pick:join:bob:$friends'));
     await run.tap(alice, run.control(alice, 'send:join:bob'));
 
-    // (b) Bob's first tab, badged: GSN's question "Alice asks you to join her group.", the group's name, friends, under it, and yes and no at its top.
+    // (b) Bob's first tab, badged: GSN's question "Alice asks you to join her group.", and yes and no at its top.
     final a = bob.approval;
     expect(formatTerm(a.view), contains(', join(bob, alice, $friends), none), '));
     expect(
@@ -1128,12 +1128,10 @@ void appsScreens(Screens screens) {
     await run.top(bob);
     const asks = 'Alice asks you to join her group.';
 
-    // The group's name, a speech act of Alice's, is drawn with its signer: "A speech act, in a row, a question or a field, is drawn with its signers" (vGLP 516a0a2, Section 6.2).
-    // Then the atoms the act requires of the proposer whose predicates the tabs list: the group Alice leads (vGLP e22e2ad, Section 5.4, "The contract's words"), and her friend.
+    // Then the atoms the act requires of the proposer whose predicates the tabs list (vGLP e22e2ad, Section 5.4, "The contract's words"): her friend; leader(Grupo), the one atom of the group join requires of her, is listed by no tab (programs/gsc/Groups.txt).
     expect(run.textsOf(bob, a), [
       asks,
       'Friends: Bob',
-      'friends\nAlice',
       'yes',
       'no'
     ]);
@@ -1159,11 +1157,11 @@ void appsScreens(Screens screens) {
     await run.list(bob, 'group_message');
     expect(run.control(bob, 'atom:group_message(bob, $hiAll, $friends, alice)'),
         findsOneWidget);
-    expect(run.texts(bob), contains('Hi all (Bob), friends (Alice), Alice'));
+    expect(run.texts(bob), contains('Hi all (Bob), friends, Alice'));
     await run.list(alice, 'group_message');
     expect(run.control(alice, 'atom:group_message(bob, $hiAll, $friends, alice)'),
         findsOneWidget);
-    expect(run.texts(alice), contains('Hi all (Bob), friends (Alice), Alice'));
+    expect(run.texts(alice), contains('Hi all (Bob), friends, Alice'));
     await run.list(bob, 'member');
 
     // (c) Bob's view of the group: the atom of his list, the group's name and its leader, and the buttons of the acts of his row, Leave and Post.
@@ -1176,7 +1174,7 @@ void appsScreens(Screens screens) {
         if (t.data != null) t.data!,
     ];
     expect(inGroup, containsAll(['friends', 'Alice', 'Leave', 'Post']));
-    // "A row shows each person once" (vGLP, Section 6.2, "The words a platform shows"): Alice signed the group's name and is its leader, the atom's other argument, so the row holds her name once.
+    // "A row shows each person once" (vGLP, Section 6.2, "The words a platform shows"): Alice is the group's leader, the atom's other argument, and the row holds her name once.
     expect(inGroup.where((t) => t == 'Alice'), hasLength(1),
         reason: "bob: the group's row shows Alice once");
     run.plain(bob);
