@@ -1,11 +1,11 @@
 # A run of the cascade on Central-Bank
 
-- Contract: `Central-Bank` (`central_bank` to the checker), its owner's two files `programs/go/Central-Bank.txt` and `programs/go/Central-Bank.glp`, copied here as they stood at `2d339620`.
+- Contract: `Central-Bank` (`central_bank` to the checker), its owner's two files `programs/go/Central-Bank.txt` and `programs/go/Central-Bank.glp`, copied here as they stood at `8eb5da29`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
 - Adopted from the Calculus: `programs/go/Central-Bank.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Central-Bank.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-25 01:03 UTC by `cascade.sh central_bank`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `2d339620`; each artefact's source and tool:
+- Run on 2026-11-25 08:47 UTC by `cascade.sh central_bank`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8eb5da29`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
