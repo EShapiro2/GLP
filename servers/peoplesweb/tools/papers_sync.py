@@ -144,6 +144,14 @@ def main():
         name = pdf_name(d)
         try:
             path = fetch(s['repo'])
+            # Anonymous: the main file's document class has the option
+            # anonymous, or its author is Anonymous (tools/papers.py, anonymous).
+            try:
+                with open(os.path.join(path, s['main']), encoding='utf-8', errors='replace') as f:
+                    tex = f.read()
+            except OSError:
+                tex = ''
+            st['anonymous'] = bool(re.search(r'\\documentclass\[[^\]]*\banonymous\b', tex) or re.search(r'\\author\{\s*Anonymous', tex))
             head = run(['git', 'rev-parse', 'HEAD'], cwd=path).stdout.strip()
             changed = run(['git', 'log', '-1', '--format=%cI'], cwd=path).stdout.strip()
             target = os.path.join(OUT, name + '.pdf')
