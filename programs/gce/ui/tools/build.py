@@ -163,6 +163,15 @@ def schemas(text):
                 if 'not' in c: walk([c['not']])
         walk(eff_); walk(pre_)
         derived = [v for v in values if isinstance(v, str) and v not in inatoms and v not in szs.values()]
+        # a value the constraint defines by a declared function, Next by "Next is the position after Move on Board", is the machine's to compute
+        def fdefs(g, out):
+            if isinstance(g, dict):
+                if g.get('f') == 'eq' and len(g.get('a', [])) == 2:
+                    x, e = g['a']
+                    if isinstance(e, dict) and e.get('f') == 'fn' and isinstance(x, dict) and x.get('f') in ('num', 'const') and isinstance(x['a'][0], str): out.add(x['a'][0])
+                for y in g.get('a', []): fdefs(y, out) if isinstance(y, dict) else [fdefs(z, out) for z in y] if isinstance(y, list) else None
+            return out
+        derived += [v for v in sorted(fdefs(guard, set())) if v in values and v not in derived]
         out.append({'name': name, 'persons': ps, 'one': one, 'types': dict(TYPES), 'sizes': szs, 'guard': guard, 'derived': derived, 'values': [v for v in values if v not in one],
                     'effects': eff_, 'pre': pre_, 'by': by})
     w = lambda xs: [r['w'] if isinstance(r, dict) else r for r in xs]
@@ -275,13 +284,19 @@ def main():
             names[cols[1]] = cols[2]
     order = chain(calc, name, names)
     refl, envs, param, ss = schemas(open(os.path.join(calc, 'glp', name + '.glp.txt')).read())
-    voc, sent, texts, iface, tabs = {}, {}, [], {}, {}
+    voc, sent, texts, iface, tabs, fns = {}, {}, [], {}, {}, []
     for n in order:
         gr = open(os.path.join(calc, 'gr', n + '.txt')).read().split('\n')
         rev = open(os.path.join(calc, 'rev', n + '.txt')).read().rstrip('\n').split('\n')
         # a predicate's first phrase in the chain is its most general; a later contract may phrase a special case
         for k, x in vocab(gr).items():
             voc.setdefault(k, x)
+        # a declared function, 'Functions: v is the legality of m on b.', holds of values and of no person: of the environment
+        for l in gr:
+            if l.startswith('Functions: '):
+                for f in l[len('Functions: '):].rstrip('.').split('; '):
+                    for k, x in vocab(gr).items():
+                        if x['phrase'] == f.strip() and k not in fns: fns.append(k)
         for t, s in clauses(gr).items():
             m = re.match(r'^(\w[\w ]*):(\d+)', s)
             s = re.split(r', (?:provided|only if|with the consent of)', s)[0].rstrip('.')
@@ -304,7 +319,7 @@ def main():
         s['questions'] = i.get('questions', {})
         s['field'] = i.get('field')
     json.dump({'contract': name, 'chain': texts, 'vocab': voc, 'reflexive': refl, 'schemas': ss, 'tabs': tabs,
-               'env': envs or ['today'], 'parametric': param}, open(out, 'w'), indent=1, ensure_ascii=False)
+               'env': (envs or ['today']) + fns, 'parametric': param}, open(out, 'w'), indent=1, ensure_ascii=False)
     print(name, len(ss), 'schemas;', 'chain', order)
 
 
