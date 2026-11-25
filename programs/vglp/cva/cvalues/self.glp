@@ -1,0 +1,64 @@
+%% ---------------------------------------------------------------------------
+%% The play of the canonical CVA platform of vGLP's contract cvalues
+%% (../contracts.glp, contract_named(cvalues, C): a note's type a constant or
+%% the compound value bond(Day)), platform.vglp, which
+%% programs/vglp/cva/compile.sh prints from it.  The platform's values over
+%% the constants are of the type CValue ::= Constant ; bond(Integer), and it
+%% takes a bond apart and builds it by cval_split and cval_join (GSC compound
+%% values, Definition "Schema with values"; Calculus #11, 2026-11-25).
+%%
+%% play_cvalues: alice and bob establish their identities and come to know
+%% each other, bob asking and alice answering yes.  alice issues three notes,
+%% issue(alice, bond(5), 1), issue(alice, bond(20), 2) and issue(alice, coin,
+%% 3), and holds note(bond(5), 1), note(bond(20), 2) and note(coin, 3).  She
+%% redeems the bond due at 5 to bob, redeem(alice, bob, 5, 1), and bob, who
+%% answers yes, holds note(bond(5), 1): the request names its Day, 5, and the
+%% atom she deletes, note(bond(5), 1), matches the one she holds by its
+%% function symbol and its argument.  She asks to redeem the bond due at 20,
+%% redeem(alice, bob, 20, 2), which the constraint 20 =< 10 refuses, and her
+%% screen shows it refused.  She pays bob the note of the constant type,
+%% pay(alice, bob, coin, 3), and he holds note(coin, 3).
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_cvalues(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_cvalues(LA?, LB?, N?) :-
+    pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
+          approval(acquaint(bob, alice), yes), wait(holds(knows(bob))),
+          own([A2], propose(issue(A2?, bond(5), 1))), wait(holds(note(bond(5), 1))),
+          own([A3], propose(issue(A3?, bond(20), 2))), wait(holds(note(bond(20), 2))),
+          own([A4], propose(issue(A4?, coin, 3))), wait(holds(note(coin, 3))),
+          own([A5], propose(redeem(A5?, bob, 5, 1))), wait(lacks(note(bond(5), 1))),
+          own([A6], propose(redeem(A6?, bob, 20, 2))),
+          own([A7], propose(pay(A7?, bob, coin, 3))), wait(lacks(note(coin, 3)))],
+         [own([B1], propose(establish(B1?))), wait(holds(identity)),
+          own([B2], propose(acquaint(B2?, alice))), wait(holds(knows(alice))),
+          approval(redeem(alice, bob, 5, 1), yes), wait(holds(note(bond(5), 1))),
+          approval(pay(alice, bob, coin, 3), yes), wait(holds(note(coin, 3)))],
+         LA, LB, N).
+
+%% alice and bob, each with its dispatcher and scripted person, their networks
+%% joined.
+procedure pair(ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+pair(SA, SB, LA?, LB?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    merge(OutA?, OutB?, Net),
+    route(Net?, alice, InA, bob, InB, N).

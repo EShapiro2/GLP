@@ -4111,6 +4111,7 @@ check "CVA compiler: vGLP's roles, a value variable over the constants, const(r)
 check "CVA compiler: vGLP's wild, a wildcard in an atom a role requires and in the anchor of a quantifier, written in the clause syntax, read by GSC's as_read/2 and certified by GSC's check/2, compiled to the platform it prints (vGLP, Section 5.4)" "wild/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's wards, coparent taking a listed guarding role whose base, the ward, is its second role and no guard, and meet of four guarding roles, certified by GSC's check/2, compiled to the platform it prints (vGLP, Section 5.4; CSSN #16, Code_inbox.md, 2026-11-15 17:05 UTC)" "wards/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's feeds, an unguarded act its opener's state does not change, compiled to the platform it prints (vGLP 76db5e0, Definition Proposing)" "feeds/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's cvalues, a compound value, bond(Day), as a note's type, compiled to the platform it prints (GSC c28d1c7; Calculus #11, 2026-11-25)" "cvalues/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 # "The platform's own words are four ... Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3): each of vGLP's contracts carries a pragmas term beside it, pragmas_named/2, which compile.sh gives the compiler.
 check "CVA compiler: each of vGLP's contracts carries pragmas, its tab and a button for each guarded schema, which its platform carries (nudge)" '^tabs(\[tab("Friends", friend)\])$' "$(cat "$CVA/nudge/platform.vglp")"
@@ -6368,6 +6369,24 @@ check "CVA feeds: bob, his state as it was, proposes it once more, and alice, wh
 check "CVA feeds: ... and he proposes it no more, her ready not come: two starts of it in all, and the run rests" "^2$" "$(echo "$cva_feeds" | grep -o "sent(bob, alice, start(attempt(bob, [0-9]*, [0-9]*, deliver(bob, alice, speech(utterance(hi), bob), bob), none)))" | wc -l | tr -d ' ')"
 check "CVA feeds: the run suspends" "→ suspended" "$cva_feeds"
 check_not "CVA feeds: ... within its limit" "reduction limit reached\|stopped after" "$cva_feeds"
+# A compound value, bond(Day), as a note's type (GSC compound values, Definition "Schema with values": f(v1, ..., vk) in V; GLP c28d1c7, 95d299c; Calculus #11, 2026-11-25: Bonds' note type bond(Day)).  vGLP's contract cvalues (programs/vglp/cva/contracts.glp) and its play (cvalues/self.glp): the platform types the values over the constants CValue ::= Constant ; bond(Integer), and takes a bond apart and builds it by cval_split and cval_join.
+cva_cvalues=$("$REPL_RUN" <<HEREDOC
+$CVA/cvalues/
+:limit 30000000
+play_cvalues(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA cvalues: the platform and its play load" "Loaded program: .*cva/cvalues" "$cva_cvalues"
+check "CVA cvalues: the platform types the values over the constants with the compound value the contract names" "^CValue ::= Constant ; bond(Integer)\.$" "$(cat "$CVA/cvalues/platform.vglp")"
+check "CVA cvalues: alice issues a note of a compound type, bond(5), and holds it" "view(alice, \[note(bond(5), 1), knows(bob), identity\]" "$cva_cvalues"
+check "CVA cvalues: alice redeems the bond due at 5 to bob, its Day named by the request, and it commits" "sent(alice, bob, outcome(attempt(alice, [0-9]*, [0-9]*, redeem(alice, bob, 5, 1), none), commit(\[\])))" "$cva_cvalues"
+check "CVA cvalues: her redemption of the bond due at 20 is refused, 20 =< 10 failing" "refused(redeem(alice, bob, 20, 2), alice, unable)" "$cva_cvalues"
+check "CVA cvalues: she pays bob the note of the constant type coin, and it commits" "sent(alice, bob, outcome(attempt(alice, [0-9]*, [0-9]*, pay(alice, bob, coin, 3), none), commit(\[\])))" "$cva_cvalues"
+check "CVA cvalues: bob holds the bond due at 5 and the coin note" "view(bob, \[note(coin, 3), note(bond(5), 1), knows(alice), identity\]" "$cva_cvalues"
+check "CVA cvalues: ... and alice the bond due at 20" "view(alice, \[note(bond(20), 2), knows(bob), identity\]" "$cva_cvalues"
+check "CVA cvalues: the run suspends" "→ suspended" "$cva_cvalues"
+check_not "CVA cvalues: ... within its limit" "reduction limit reached\|stopped after" "$cva_cvalues"
 
 # A fact the phone finds (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the compiled agent reads it from its phone afresh whenever it computes a condition that requires it"; "When a fact Alice's phone finds changes, as when a person comes near, the phone tells Alice's agent, which then checks again which of its own transactions it can take"): Encounters' implementation pragma "Found by the phone: x is nearby y." makes its agent take the presences its host reports, the host's operating system making the declarations (GSA, Section 2; GLP, appendix-guards, "Networking seam"), and read each as a trigger that changes nearby(K) in its machine state; a contract the phone finds nothing for prints as before (the fixtures' --check above).
 cva_enc=$(cat "$GLP_DIR/cascade/Encounters/platform.vglp")

@@ -528,6 +528,7 @@ var_name(nterm(_), novar).
 var_name(sgn(_, _), novar).
 var_name(item_of(_), novar).
 var_name(val(_), novar).
+var_name(cmp(_, _), novar).
 var_name(any, novar).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 var_name(ilist(_, _), novar).
@@ -967,6 +968,7 @@ lin_coef(sum(_, _, _, _, _), _, 0).
 lin_coef(author_of(_), _, 0).
 lin_coef(item_of(_), _, 0).
 lin_coef(val(_), _, 0).
+lin_coef(cmp(_, _), _, 0).
 procedure same_arg_coef(Arg?, Arg?, Number).
 same_arg_coef(A, V, 1) :- A? =?= V? | true.
 same_arg_coef(_, _, 0) :- otherwise | true.
@@ -1100,6 +1102,8 @@ variables_of([nterm(_)|As], R?) :- variables_of(As?, R).
 variables_of([sgn(_, _)|As], R?) :- variables_of(As?, R).
 variables_of([item_of(_)|As], R?) :- variables_of(As?, R).
 variables_of([val(_)|As], R?) :- variables_of(As?, R).
+%% A compound value's variables are those of its arguments (GSC compound values, GLP c28d1c7).
+variables_of([cmp(_, Bs)|As], R?) :- variables_of(Bs?, R1), variables_of(As?, R2), app(R1?, R2?, R).
 variables_of([any|As], R?) :- variables_of(As?, R).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
 variables_of([ilist(_, _)|As], R?) :- variables_of(As?, R).
@@ -1393,6 +1397,7 @@ person_vars([nterm(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([sgn(_, _)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([item_of(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([val(_)|Vs], R?) :- person_vars(Vs?, R).
+person_vars([cmp(_, _)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([num(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([real(_)|Vs], R?) :- person_vars(Vs?, R).
 person_vars([const(_)|Vs], R?) :- person_vars(Vs?, R).
@@ -1409,6 +1414,7 @@ speech_vars([nterm(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([sgn(_, _)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([item_of(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([val(_)|Vs], R?) :- speech_vars(Vs?, R).
+speech_vars([cmp(_, _)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([num(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([real(_)|Vs], R?) :- speech_vars(Vs?, R).
 speech_vars([const(_)|Vs], R?) :- speech_vars(Vs?, R).
@@ -1799,6 +1805,7 @@ adm_var(sgn(_, _), _, _, _, yes).
 %% An item names no agent (GSC, the appendix on values: "a value, and an utterance, is no agent role, no agent variable and no name term"), so admissibility does not concern it.
 adm_var(item_of(_), _, _, _, yes).
 adm_var(val(_), _, _, _, yes).
+adm_var(cmp(_, _), _, _, _, yes).
 %% A number names no agent, so admissibility does not concern it (GSC, Section 3.2).
 adm_var(num(_), _, _, _, yes).
 adm_var(real(_), _, _, _, yes).
