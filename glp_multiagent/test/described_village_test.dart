@@ -61,7 +61,7 @@ Future<Map<String, Object?>> _walk(String programs, String dir, String uiPath, i
     problems.add('load: programs/$dir does not load');
     return report;
   }
-  const names = ['alice', 'bob', 'carol'];
+  final names = const ['alice', 'bob', 'carol', 'dave', 'erin'].take(int.parse(Platform.environment['DV_PERSONS'] ?? '3')).toList();
   String conv(String p, String q) => 'conversation($q, ch(C_${q}_$p?, C_${p}_$q))';
   final goals = [
     for (var i = 0; i < names.length; i++)
@@ -136,6 +136,7 @@ Future<Map<String, Object?>> _walk(String programs, String dir, String uiPath, i
   void skip(String why) => skipped[why] = (skipped[why] ?? 0) + 1;
   final missing = <String>{}, extra = <String>{};
   final why = <String>[];
+  final selfRefused = <String, int>{};
   var acts = 0;
 
   String wayKey(DeclaredAct a, Map<int, GTerm> w) =>
@@ -243,6 +244,8 @@ Future<Map<String, Object?>> _walk(String programs, String dir, String uiPath, i
     if (refusedNow) {
       refused[a.schema] = (refused[a.schema] ?? 0) + 1;
       final n = after.notices.last;
+      // Refused by the proposer's own machine: the screens offered what her own machine does not allow.
+      if (formatTerm(n.by) == p.name) selfRefused['${a.schema}${n.declined ? '' : n.lacks.isEmpty && n.has.isEmpty ? ' (no reason)' : ''}'] = (selfRefused['${a.schema}${n.declined ? '' : n.lacks.isEmpty && n.has.isEmpty ? ' (no reason)' : ''}'] ?? 0) + 1;
       if (why.length < 12) {
         why.add('${p.name}: ${formatTerm(r)} refused by ${formatTerm(n.by)}${n.declined ? ' (declined)' : ', lacking ${n.lacks.map(formatTerm).join(' ')} having ${n.has.map(formatTerm).join(' ')}'}');
       }
@@ -256,6 +259,8 @@ Future<Map<String, Object?>> _walk(String programs, String dir, String uiPath, i
   report['refused'] = refused;
   report['skipped'] = skipped;
   report['why'] = why;
+  report['selfRefused'] = selfRefused;
+  report['persons'] = names.length;
   report['missing'] = missing.toList()..sort();
   report['extra'] = extra.toList()..sort();
   return report;

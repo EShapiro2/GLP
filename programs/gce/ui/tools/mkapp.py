@@ -9,7 +9,11 @@ out = os.path.join(apps, '_ui', d)
 os.makedirs(out, exist_ok=True)
 plat = open(os.path.join(glp, 'cascade', name, 'platform.vglp')).read()
 shutil.copy(os.path.join(glp, 'cascade', name, 'platform.vglp'), os.path.join(out, 'platform.vglp'))
-shutil.copy(os.path.join(apps, 'gsg/miniapp.glp'), os.path.join(out, 'miniapp.glp'))
+mini = open(os.path.join(apps, 'gsg/miniapp.glp')).read()
+# A platform whose agent takes its initial atoms, agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?), is started with none.
+if re.search(r'exported procedure agent\(Peer\?, Stream\(Net\)\?, Stream\(Net\), Stream\(Output\), List\(Atom\)\?\)', plat):
+    mini = mini.replace('Stream(Output), Stream(Ask(Question))).', 'Stream(Output), List(Atom)?, Stream(Ask(Question))).').replace('platform # agent(Id?, NetIn?, NetOut, Thread, Asks)', 'platform # agent(Id?, NetIn?, NetOut, Thread, [], Asks)')
+open(os.path.join(out, 'miniapp.glp'), 'w').write(mini)
 gsg = open(os.path.join(apps, 'gsg/self.glp')).read()
 want = ['Peer', 'Class', 'Proposal', 'Request', 'YesNo', 'Reason', 'Vote', 'Decision', 'Rho', 'Names', 'Attempt', 'Cargo', 'Content', 'Net', 'Atom', 'Output', 'Tab', 'Asking', 'Approved', 'Approval', 'Word']
 def block(text, n):
