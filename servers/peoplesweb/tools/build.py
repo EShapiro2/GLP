@@ -28,7 +28,7 @@ BUILD_DIR where the site is written, and SITE_TEST=1 says that the build
 writes no world, the test pages using the live server's worlds, and that the
 pages are served one level below the site's root, where the API is.
 """
-import json, os, re, shutil, subprocess, sys
+import ast, json, os, re, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # servers/peoplesweb
 GLP = os.environ.get('GLP_ROOT') or os.path.dirname(os.path.dirname(HERE))   # the repository
@@ -285,6 +285,10 @@ RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implem
              # 'Villagers inherits from Village Life and ...' (the Villagers
              # repository since 2026-11-24, Calculus item 71).
              'inherits')
+# The Calculus's operations, in its order, read from the Calculus itself
+# (calculus/tools/expand.py, VERBS), so the globe's key never falls behind it
+# (Udi, 2026-11-25: "what about the arrow legend bottom left? it is dated").
+OPERATIONS = list(ast.literal_eval(re.search(r'^VERBS = (\([^)]*\))', open(os.path.join(GLP, 'calculus', 'tools', 'expand.py')).read(), re.M).group(1)))
 
 
 NAMEID, NAMES_RE = {}, [None]
@@ -347,6 +351,18 @@ def extends_of(c, lines):
                     if cur == 'composes':
                         comp = comp or inst or t
                 pend = [] if named else pend + [cur]
+                # 'AI Agents unites a renaming of Guardians and Forwarding, and
+                # extends and augments the union': a relation that names no
+                # contract, where there is no instance or composition, is to
+                # what the line made of the contracts named before it, and so
+                # to each of them (Udi, 2026-11-25).
+                if not named and not (inst or comp) and c['rels_all'] and re.search(r'\b(it|them|the)\b', part):
+                    for t in c['rels_all']:
+                        for r in pend[:-1]:
+                            if r not in c['rels_all'][t]:
+                                c['rels_all'][t].append(r)
+                        if cur not in c['rels_all'][t]:
+                            c['rels_all'][t].append(cur)
                 # 'GAS composes GPD with GSV, restricts the composition, and
                 # extends it': a composition with no instance, named by the
                 # first contract composed (GSC's Section 2, GSC 220151a).
@@ -760,7 +776,7 @@ with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
     data = {'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'projects': projects, 'code': code,
             'noPaper': [] if VILLAGERS else [{'id': i, 'name': n, 'repo': r} for i, n, r in directories.NO_PAPER],
             'otherPapers': [] if VILLAGERS else foundational(served, paper_state, but={k for _, _, ks in directories.PROJECTS for k in ks}),
-            'unaccounted': lost, 'faults': faults}
+            'unaccounted': lost, 'faults': faults, 'operations': OPERATIONS}
     if TEST:
         # The test site's pages are one level below the site's root, and the
         # API they call is the live server's, at the root.
