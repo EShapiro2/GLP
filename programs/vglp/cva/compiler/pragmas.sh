@@ -1299,8 +1299,11 @@ for my $f (@order) {
     next unless -f $ff;
     open(my $h, "<", $ff) or die "pragmas.sh: cannot read $ff\n";
     my @fl = <$h>; close $h; chomp @fl;
+    # A file that exports a procedure gives as functions only the procedures it exports, the others being their helpers; one that exports none gives every procedure it declares.  The lines are carried without the word exported, the platform exporting what it exports.
+    my $exp = grep { /^exported\s+procedure\s/ } @fl;
     for my $x (@fl) {
-        if ($x =~ /^procedure\s+([a-z]\w*)\((.*)\)\.\s*$/) {
+        my $e = ($x =~ s/^exported\s+(procedure\s)/$1/);
+        if ($x =~ /^procedure\s+([a-z]\w*)\((.*)\)\.\s*$/ && ($e || !$exp)) {
             my ($n, $a) = ($1, $2);
             my ($d, $cur, @ts) = (0, "");
             for my $ch (split //, $a) { $d++ if $ch eq "(" || $ch eq "["; $d-- if $ch eq ")" || $ch eq "]"; if ($ch eq "," && $d == 0) { push @ts, $cur; $cur = "" } else { $cur .= $ch } }

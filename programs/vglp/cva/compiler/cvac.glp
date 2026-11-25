@@ -834,7 +834,11 @@ fns_any(fns(_, _), yes).
 %% The platform's call of each function the owner of a value type gives, owner_val and owner_term, then the owner's procedures, the lines of its file, which the platform carries (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; pragmas.sh, NAME-functions.glp).
 procedure owner_fn_lines(PFns?, Lines).
 owner_fn_lines(nofns, []).
-owner_fn_lines(fns(Fs, Ls), L?) :- ground(Fs?) |
+owner_fn_lines(fns(Fs0, Ls), L?) :- ground(Fs0?) |
+    plain_fns(Fs0?, Fs),
+    owner_fn_plain(Fs?, Ls?, L).
+procedure owner_fn_plain(FnDecls?, Lines?, Lines).
+owner_fn_plain(Fs, Ls, L?) :- ground(Fs?) |
     owner_calls(Fs?, num, 'owner_val', Lv),
     owner_calls(Fs?, const, 'owner_term', Lt),
     owner_wrappers(Fs?, Lw),
@@ -842,6 +846,17 @@ owner_fn_lines(fns(Fs, Ls), L?) :- ground(Fs?) |
     lapp(Lt?, ['owner_term(_, _, _, free) :- otherwise | true.'|L3?], L2),
     lapp(Lv?, ['owner_val(_, _, _, no_num) :- otherwise | true.', 'procedure owner_term(Constant?, Exprs?, Binding?, Found).'|L2?], L1),
     lapp(['', '%% The functions of the value types that their owner gives as typed GLP procedures: owner_val(F, Es, B, R), the value R of F at the values of Es under B, a number, and owner_term(F, Es, B, V), a constant; each argument a number or a constant by the type its procedure declares it, the value no_num or free where an argument has none.', 'procedure owner_val(Constant?, Exprs?, Binding?, NumRes).'], L1?, L).
+%% The functions the platform calls: those whose arguments and value are each a number or a constant; a procedure of the file with a place of another type is carried and called by the owner's procedures alone, a constraint applying it being refused (kinds_ok).
+procedure plain_fns(FnDecls?, FnDecls).
+plain_fns([], []).
+plain_fns([fn(F, Ks, V)|Fs], P?) :- ground(Ks?), ground(V?) | fn_plain([V?|Ks?], B), plain_fn(B?, fn(F?, Ks?, V?), Fs?, P).
+procedure plain_fn(YesNo?, FnDecl?, FnDecls?, FnDecls).
+plain_fn(yes, D, Fs, [D?|P?]) :- plain_fns(Fs?, P).
+plain_fn(no, _, Fs, P?) :- plain_fns(Fs?, P).
+procedure fn_plain(FnKinds?, YesNo).
+fn_plain([], yes).
+fn_plain([other|_], no).
+fn_plain([_|Ks], B?) :- otherwise | fn_plain(Ks?, B).
 %% The clauses of owner_val (a value of the kind num) or owner_term (const), one per function of that kind.
 procedure owner_calls(FnDecls?, FnKind?, String?, Lines).
 owner_calls([], _, _, []).

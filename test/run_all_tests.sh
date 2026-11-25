@@ -6890,6 +6890,35 @@ check "CVA functions of constants: b = first() holds with b start" "^K1 = yes\$"
 check "CVA functions of constants: ... and not with b other" "^K2 = no\$" "$cva_fnc_run"
 check "CVA functions of constants: s = side(b) and n = after(m, b) hold with n opened" "^K3 = yes\$" "$cva_fnc_run"
 check "CVA functions of constants: ... and not with n start" "^K4 = no\$" "$cva_fnc_run"
+# Functions a file exports (GCE's Chess-functions.glp; vGLP #35): a file that exports a procedure gives as functions only those it exports, the others being their helpers, carried without the word exported; and a function with a place of a type that is no number or constant is carried and not called by the platform (plain_fns), so that its platform loads.
+cva_fne_t=$(mktemp -d)
+printf '%s\n' 'Game' 'Alice is a person.' '1. ■ Start: Alice may start.' 'Pragmas' 'At: the positions.' 'Start: Alice [Start]' > "$cva_fne_t/Game.txt"
+printf '%s\n' 'Pos ::= pos(Integer).' 'exported procedure first(Constant).' 'first(S?) :- first_pos(P), pos_name(P?, S).' 'procedure first_pos(Pos).' 'first_pos(pos(0)).' 'procedure pos_name(Pos?, Constant).' 'pos_name(pos(_), start).' > "$cva_fne_t/Game-functions.glp"
+cva_fne_pr=$(bash "$CVA/compiler/pragmas.sh" "$cva_fne_t/Game.txt" "[schema(start, ['Alice'], [], [rs(guarded, [atom(at, [])], [], [], [])])]" 2>&1)
+rm -rf "$cva_fne_t"
+check "CVA functions exported: a file that exports a procedure gives only those it exports as functions" "fns(\[fn(first, \[\], const)\], \['Pos ::= pos(Integer).', 'procedure first(Constant).'," "$cva_fne_pr"
+cva_fne_out=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(game, [nschema(start, [const(b)], eq(const(b), fn(first, [])), [rs(guarded, [atom(at, [const(b)])], [], [], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"At"', [at])], [act(start, '"Start"', ['""', '"board"'], none, '"At"', by([1]))], [], nolook, version(1, 1), '""', [], fns([fn(first, [], const), fn(pos_name, [other], const)], ['Pos ::= pos(Integer).', 'procedure first(Constant).', 'first(S?) :- first_pos(P), pos_name(P?, S).', 'procedure first_pos(Pos).', 'first_pos(pos(0)).', 'procedure pos_name(Pos?, Constant).', 'pos_name(pos(_), start).']))).
+:quit
+HEREDOC
+2>&1)
+cva_fne_dir="$GLP_DIR/programs/tests/vg_fne_$$"
+mkdir -p "$cva_fne_dir"
+printf '%s\n' "$cva_fne_out" | sed -e 's/^\(GLP> \)*//' | awk '$0 == "%% compile begin" { on = 1; next } $0 == "%% compile end" && on { on = 0; next } on { print }' > "$cva_fne_dir/platform.vglp"
+cva_fne_run=$("$REPL_RUN" <<HEREDOC
+:emit $cva_fne_dir
+load $cva_fne_dir/platform.glp
+:limit 10000000
+binding_of(start(alice, start), N1, B1), con_holds(eq(num(b), fn(first, [])), B1?, K1).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_fne_dir"
+check_not "CVA functions exported: a function with a place of another type gets no owner_ procedure" "owner_pos_name" "$cva_fne_out"
+check "CVA functions exported: the platform loads" "Loaded: .*vg_fne_" "$cva_fne_run"
+check "CVA functions exported: b = first() holds with b start, first calling helpers over Pos" "^K1 = yes\$" "$cva_fne_run"
 
 # A set variable, set(N) of a type Set(A) (GSC, the appendix on values, Definitions "Schema with values" and "Binding with values"; the Calculus's record, items 49 to 51): the request names its elements, a list of constants, the schema-binding binds it to st(Cs), an atom with it stands for one atom per element, and size(N) is the number of its elements.  The contract is GSC's own test of payments of notes (programs/gsc/test_gsc.sh, "set variables"), as GSC's reader reads it.
 cva_sets_out=$("$REPL_RUN" <<HEREDOC
