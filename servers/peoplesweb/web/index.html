@@ -163,6 +163,7 @@ ol.cl b{font-weight:600}
 .schema summary{padding:9px 14px;font:12.5px var(--mono);list-style:none;display:flex;gap:8px;color:var(--ink);cursor:pointer}
 .schema summary::-webkit-details-marker{display:none}
 .schema summary .fr{margin-left:auto;font:600 11px Inter,sans-serif;color:var(--faint)}
+.schema .imp{padding:2px 14px 10px;font:15px/1.6 'STIX Two Text',Cambria,'Times New Roman',serif;color:var(--ink)}.imp .b{padding-left:2em}.imp .kw{font-style:normal}.imp i{font-style:italic}.imp .lit{white-space:nowrap}
 .schema .say{padding:0 14px 8px;font-size:13.5px;color:var(--mute)}
 table.roles{border-collapse:collapse;width:100%;font-size:13px}
 table.roles th,table.roles td{border-top:1px solid var(--line);padding:7px 14px;text-align:left;vertical-align:top}
@@ -303,9 +304,8 @@ const STAGES = [
 /* ---------- help ---------- */
 const HELP = {
   hood: ['Under the hood', `<p>Nobody writes the app by hand. A chain of programs, the <i>cascade</i>, translates the English contract step by step into the code each person's device runs. Each layer is generated from the one above it.</p>`],
-  acts: ['Speech-act schemas', `<p>Each rule becomes one or more <b>speech acts</b>: who takes part, what each must already have, and what each gains or loses.</p>
-    <p><b>?</b> after a role: the act happens only if that person wants it. A role without it is affected without being asked.</p>
-    <p>Small letters (x, n, k, …) are values chosen when acting. <code>&lt;Alice&gt;.n</code> is a name n in Alice's own namespace, such as her group; <code>Alice[listed(*, n)]</code> is everyone Alice lists for n; <code>k.coin(u)</code> is k coins of u.</p>`],
+  acts: ['Speech-act schemas', `<p>Each rule becomes one or more <b>speech acts</b>, each a volition-guarded implication, <i>H</i> ← <i>B</i> guarded by <i>Q</i>, as the Calculus paper writes it: when the body <i>B</i> holds, the act makes the head <i>H</i> hold, if the persons <i>Q</i> want it.  A literal <i>x</i>:<i>s</i> says that the local state of <i>x</i> holds <i>s</i>; ¬<i>x</i>:<i>s</i> that it does not; in the head, <i>x</i>:<i>s</i> adds <i>s</i> to the state of <i>x</i> and ¬<i>x</i>:<i>s</i> removes it.</p>
+    <p>An act guarded by nobody happens without asking anyone.  <i>possibly</i> <i>Alice</i>=<i>Bob</i> after the guards: Alice and Bob may be one person.</p>`],
   // Udi's text, 2026-11-18, to Website #4.
   contract: ['Legal modalities', `<p>Each clause opens with its legal modality:</p>
     <p>■ Enforced: no act of the contract can breach it.<br>◆ Attested: an agent may breach it, and the contract records the breach.<br>○ Undertaken: its performance is the person’s and not the machine’s.</p>
@@ -928,16 +928,18 @@ function drawGlobe(){
       ${LINES(c.id).map((ln, i, a) => { const f = fs*POLE(c.id); return `<text x="${X.toFixed(1)}" y="${(Y + 0.36*f + (i - (a.length - 1)/2) * 1.12*f).toFixed(1)}" text-anchor="middle" font-size="${f.toFixed(1)}"${POLE(c.id) > 1 ? ' font-weight="600"' : ''}>${esc(ln)}</text>`; }).join('')}</g>`;
   });
   // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
-  // The key has each operation the globe draws, once: the Calculus's, in its
-  // order, as the build reads them from the Calculus (D.operations, from
-  // calculus/tools/expand.py), and after them any other word a contract here
-  // states (inherits, the Villagers repository's); an arrow of several
-  // operations is drawn in their colours along its length (Udi, 2026-11-25:
-  // "what about the arrow legend bottom left? it is dated").
+  // The key is the Calculus's operations, those its own contracts state, in
+  // its order (D.operations, which the build reads from the Calculus), each
+  // that an arrow here shows; a word a contract here states that is not one
+  // of them is set apart, so the key never passes it off as the Calculus's
+  // (Udi, 2026-11-25: "arrow legends in the globes not aligned with
+  // operations in Calculus, please revise").  An arrow of several operations
+  // is drawn in their colours along its length.
   const ALL = D.contracts.flatMap(c => Object.values(c.rels_all || {}));
   const USED = new Set([...D.contracts.flatMap(c => [c.relation, ...Object.values(c.rels || {})]), ...ALL.flat()]);
-  const OPS = D.operations || Object.keys(RELCOL);
-  const KEY = [...OPS, ...[...USED].filter(r => r && !OPS.includes(r)).sort()].filter(r => USED.has(r) && RELCOL[r]).map(r => [r, r]);
+  const OPS = D.operations || [];
+  const KEY = OPS.filter(r => USED.has(r)).map(r => [r, r])
+    .concat([...USED].filter(r => r && RELCOL[r] && !OPS.includes(r)).sort().map(r => [r, r + ' (not in the Calculus)']));
   const KW = Math.max(150, 84 + 6.6*Math.max(...KEY.map(([, t]) => t.length))), nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
   s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="${KW}" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   KEY.forEach(([r, t], i) => { const y = ky + 24*i, p = [kx, y], q = [kx + 54, y];
@@ -1370,17 +1372,37 @@ function artHtml(c){
     : `<p class="sum" style="margin-top:6px">No certified app: ${esc(a.why.split('\n').pop().slice(0, 300))}</p>`;
 }
 
+// A literal of the paper, x:p(...), from an atom p(x, ...) of the cascade's
+// schemas, whose first argument is the agent whose local state holds it:
+// p(x) is x:p, and a literal that is no atom of an agent (an equality, a
+// count of coins, a forall) is written as it is.
+const LIT = /^([a-z_][a-z_0-9]*)\(\s*([A-Z_][A-Za-z0-9_]*)\s*(?:,\s*([\s\S]*))?\)$/;
+function litHtml(a, neg){
+  if (a.startsWith('not ')){ a = a.slice(4); neg = !neg; }
+  const m = a.match(LIT);
+  const t = m ? `${m[2]}:${m[1]}${m[3] !== undefined ? '(' + m[3].replace(/,\s*/g, ', ') + ')' : ''}` : a;
+  return `<span class="lit">${neg ? '¬' : ''}<i>${esc(t)}</i></span>`;
+}
+function impHtml(s){
+  const head = s.adds.map(a => litHtml(a, false)).concat(s.removes.map(a => litHtml(a, true)));
+  const body = s.needs.map(a => litHtml(a, false));
+  const g = s.guard !== undefined ? s.guard : s.guarded.join(', ');
+  const guard = g ? `<span class="kw">guarded by</span> <i>${esc(g).replace(/\b(possibly|taken for|and for|by|must)\b/g, '<span class="kw">$1</span>')}</i>` : '';
+  const tail = [body.join(', '), guard].filter(x => x).join(' ');
+  return `<div class="h">${head.join(', ')} <span class="kw">←</span></div>${tail ? `<div class="b">${tail}.</div>` : ''}`;
+}
 function schemaHtml(s, open){
   if (s.form === 'rule'){
-    const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
-    const who = s.guarded.length ? 'needs the will of ' + s.guarded.join(' and ') : 'nobody is asked';
-    // An act changed by later clauses names each contract of its labels (Audit #4, ticket 138).
+    // An act as the Calculus paper writes it, a volition-guarded implication
+    // "H <- B guarded by Q" (GCC, sections/01b-contract-object.tex,
+    // Definition Volition-guarded implication): each literal x:s, an atom
+    // p(x, ...) of the local state of its agent x, its negation written with
+    // a "not" sign; the head adds the atoms written plain and removes those
+    // negated; the body is the condition (Udi, 2026-11-25: "can they look
+    // like guarded implications, as in the paper?").
     const fr = s.labels && s.labels.length > 1 ? s.labels.map(l => NM(l.replace(/:\d+$/, '').replace(/'/g, '').replace(/ /g, '-'))).join(' + ') : NM(s.from);
     return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${esc(fr)}</span></summary>
-      <div class="say">${esc(who)}</div>
-      ${s.adds.length ? `<div class="rule"><b>Adds</b>${at(s.adds, 'add')}</div>` : ''}
-      ${s.removes.length ? `<div class="rule"><b>Removes</b>${at(s.removes, 'del')}</div>` : ''}
-      ${s.needs.length ? `<div class="rule"><b>Needs</b>${at(s.needs, 'need')}</div>` : ''}</details>`;
+      <div class="imp">${impHtml(s)}</div></details>`;
   }
   const willing = s.parties.filter(p => p.endsWith('?')).map(p => p.slice(0, -1));
   const say = `${s.parties.length === 1 ? 'One person' : s.parties.length + ' roles'}; ${willing.length ? 'needs the will of ' + willing.join(' and ') : 'nobody is asked'}${s.vars.length ? '; values: ' + s.vars.join(', ') : ''}${s.constraint ? '; only if ' + s.constraint : ''}.`;
