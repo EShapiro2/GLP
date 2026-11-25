@@ -128,8 +128,8 @@ final _notesW = _requestWidget(
 
 /// DAO's Pass and Reject as vGLP's compiler prints them (GLP vglp33-calc 4c1663ec, cascade/DAO/platform.vglp): the steward gives the votes, a field, and the form computes Double, the place 5, as Votes * 2, `calc(5, mul(at(4), lit(2)))` (Audit #151; programs/vglp/cva/compiler/README.md, 43).
 final _daoW = _requestWidget(
-    'button("Pass", [act(pass, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)))], [])]), '
-    'button("Reject", [act(reject, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)))], [])])',
+    'button("Pass", [act(pass, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)), num)], [])]), '
+    'button("Reject", [act(reject, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)), num)], [])])',
     "label('Pass', form(pass, [field('Peer', peer), field('Speech', text), field('Constant', text), field('Integer', number), field('Integer', number)])), "
         "label('Reject', form(reject, [field('Peer', peer), field('Speech', text), field('Constant', text), field('Integer', number), field('Integer', number)]))");
 
@@ -479,8 +479,8 @@ void main() {
   });
 
   testWidgets('a number the constraint determines: DAO\'s Pass names the '
-      'votes given and the Double the form computes from them, '
-      'calc(5, mul(at(4), lit(2))) (Audit #151)', (tester) async {
+      'votes given and a placeholder 0 at Double, which the platform computes, '
+      'calc(5, mul(at(4), lit(2)), num) (Audit #151)', (tester) async {
     final s = _Screen(tester);
     await s.draw('input([])',
         w: _daoW,
@@ -504,6 +504,6 @@ void main() {
     await tester.enterText(find.byKey(socialKey(1, 'field:pass:$way:4')), '3');
     await tester.pumpAndSettle();
     await _tap(tester, 'send:pass:$way');
-    expect(s.grants, ['input(1, [], propose(pass(alice, p, delos, 3, 6)))']);
+    expect(s.grants, ['input(1, [], propose(pass(alice, p, delos, 3, 0)))']);
   });
 }

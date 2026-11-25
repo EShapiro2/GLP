@@ -2437,24 +2437,30 @@ procedure (YesNo?)*approve(Integer?).
           "named(approval_sentence, buttons([label('Accept', yes), no]))");
     });
 
-    test('a number the constraint determines, calc(P, E) in the seventh list, '
-        'read and printed again, and computed from the places it names '
-        '(compiler README, 43; Audit #151)', () {
+    test('a place the constraint determines, calc(P, E, K) in the seventh list, '
+        'read and printed again, E arithmetic or a function the owner of a '
+        'value type gives (compiler README, 43, 44; Audit #151, #157)', () {
       const w = 'social_menu([button("Pass", [act(pass, 1, [1], [], [2], '
           '[field(4, "votes", number)], '
-          '[calc(5, mul(at(4), lit(2))), calc(6, minus(plus(at(4), lit(1)), at(2)))], '
+          '[calc(5, mul(at(4), lit(2)), num), calc(6, minus(plus(at(4), lit(1)), at(2)), num), '
+          'calc(7, fn(after, [at(3), at(2)]), const), calc(8, fn(first, []), const)], '
           '[at(1), say(" passes.")])])])';
       final d = DeclaredWidget.parse(w);
       expect(DeclaredWidget.parse(d.source).source, d.source);
       final a = d.buttons.single.acts.single;
-      expect([for (final x in a.same) x.kind], ['calc', 'calc']);
-      expect(a.same[0].source, 'calc(5, mul(at(4), lit(2)))');
-      expect(a.same[1].source, 'calc(6, minus(plus(at(4), lit(1)), at(2)))');
-      final at = {4: 7, 2: 3};
-      expect((a.same[0].args[1] as CalcExpr).value((k) => at[k]), 14);
-      expect((a.same[1].args[1] as CalcExpr).value((k) => at[k]), 5);
-      expect((a.same[0].args[1] as CalcExpr).value((k) => null), null);
+      expect([for (final x in a.same) x.kind], ['calc', 'calc', 'calc', 'calc']);
+      expect(a.same[0].source, 'calc(5, mul(at(4), lit(2)), num)');
+      expect(a.same[1].source, 'calc(6, minus(plus(at(4), lit(1)), at(2)), num)');
+      expect(a.same[2].source, 'calc(7, fn(after, [at(3), at(2)]), const)');
+      expect(a.same[3].source, 'calc(8, fn(first, []), const)');
       expect(DeclaredWidget.parse(w.replaceFirst('lit(2)', 'lit(x)')).buttons,
+          isEmpty);
+      expect(DeclaredWidget.parse(w.replaceFirst(', num)', ', real)')).buttons,
+          isEmpty);
+      expect(
+          DeclaredWidget.parse(
+                  w.replaceFirst('calc(5, mul(at(4), lit(2)), num)', 'calc(5, mul(at(4), lit(2)))'))
+              .buttons,
           isEmpty);
     });
 
