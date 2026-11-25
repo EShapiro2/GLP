@@ -2873,5 +2873,30 @@ check "the checker's form writes a set variable set(N) among the variables, num(
       "nschema(payn, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], [pvar('Carol'), const('Type'), set('N'), num('Sum')], eq(fn(size, [num('N')]), num('Sum'))" "$out"
 check "the compiler prints the size of a set |N|" "$(printf '|\nN\n|')" "$out"
 
+# --- compound values (GSC, Def numbers and Def binding, branch
+# compound-values-2026-11-25 46cbb4e; Calculus #11, 2026-11-25): a value
+# f(t1, ..., tk) of a function symbol f, written val(f, [T1, ..., Tk]), each Ti
+# a value, a value variable or a compound value; the reader writes it cmp(f,
+# Args), a binding sends it to f(beta(t1), ..., beta(tk)), and it matches a
+# value of the same f argument by argument.  A bond's note writes its
+# maturity Day in the type, bond(Day).
+SBI="sas(issue, ['Alice'], ['Day', 'N'], [atom(note, ['Alice', 'Alice', val(bond, [num('Day')]), set('N')])], [atom(identity, ['Alice'])], true, ['Alice'])"
+SBP="sas(pay, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'Day', 'N'], [not(atom(note, ['Alice', 'Carol', val(bond, [num('Day')]), set('N')])), atom(note, ['Bob', 'Carol', val(bond, [num('Day')]), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', val(bond, [num('Day')]), set('N')])], true, ['Alice', 'Bob'])"
+SBQ="sas(pay, ['Alice', 'Bob', one('Carol', ['Alice', 'Bob'])], ['Carol', 'N'], [not(atom(note, ['Alice', 'Carol', val(bond, ['Day']), set('N')])), atom(note, ['Bob', 'Carol', val(bond, ['Day']), set('N')]), atom(knows, ['Bob', 'Carol'])], [atom(identity, ['Alice']), atom(identity, ['Bob']), atom(knows, ['Alice', 'Bob']), atom(note, ['Alice', 'Carol', val(bond, ['Day']), set('N')])], true, ['Alice', 'Bob'])"
+SBG="reflexive([knows], [$SKE, $SKI, $SBI"
+cgap_of() { gkk_with "sas(meet, ['Alice', 'Bob'], [x], [atom(met, ['Alice', 'Bob']), atom(met, ['Bob', 'Alice'])], [atom(identity, ['Alice']), not(atom(date, ['Alice', val(d, [num(x)])])), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(low, ['Alice'], [t], [atom(date, ['Alice', val($1, [num(t)])])], [atom(identity, ['Alice'])], true, ['Alice'])"; }
+out=$(run "check($SBG, $SKA, $SBP]), V1)." "check($SBG, $SKA, $SBQ]), V2)." "as_read([$SBP], R3)." \
+          "intro_acts($(cgap_of d), A)." "intro_acts($(cgap_of e), A)." \
+          "compile_schema_in(t, $SBG, $SKA, $SBP]), pay).")
+check "a payment of bonds, their maturity in the note's type bond(Day), is syntactically grassroots" "V1 = syntactically_grassroots" "$out"
+check "a bare name in a compound value is a variable, refused where the head does not have it" "V2 = malformed([not_in_vars(pay, note)" "$out"
+check "the reader writes val(bond, [num(Day)]) as the compound value cmp(bond, [num(Day)])" \
+      "atom(note, [pvar('Carol'), cmp(bond, [num('Day')]), num('N')])" "$out"
+check "date(d(t)) added at every t blocks date(d(x)): meet obstructed" "intro_act(meet, obstructed(" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 1p)"
+check "date(e(t)) of another function symbol does not: meet unobstructed" "intro_act(meet, unobstructed)" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 2p)"
+check "the compiler prints a compound value \\mathit{bond}(Day)" "$(printf '\\mathit{\nbond\n}(\nDay\n)')" "$out"
+bond_notation=$(notation "$SBG, $SKA, $SBP])")
+check "the notation prints a compound value bond(Day)" "bond(Day)" "$bond_notation"
+
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

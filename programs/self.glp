@@ -317,7 +317,7 @@ SArg   ::= Constant ; own(Constant) ; ext(SNT, Constant) ; num(Constant)
          ; real(Constant) ; const(Constant) ; set(Constant)
          ; sgn(Constant, Constant) ; item_of(Constant)
          ; typed(Constant, Constant)
-         ; val(Constant).
+         ; val(Constant) ; val(Constant, SArgs).
 SArgs  ::= [] ; [SArg | SArgs].
 SAtom  ::= atom(Constant, SArgs).
 SAtoms ::= [] ; [SAtom | SAtoms].
