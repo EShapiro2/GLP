@@ -9,7 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:glp_runtime/vglp/canonical.dart'
-    show ActCondition, DeclaredAct, DeclaredButton, DeclaredField, DeclaredWidget;
+    show ActCondition, CalcExpr, DeclaredAct, DeclaredButton, DeclaredField, DeclaredWidget;
 
 import 'bridge.dart';
 import 'construct_family.dart';
@@ -900,6 +900,12 @@ class ActInfo {
         for (final c in act.same)
           if (c.kind == 'size') c.args[0] as int: c.args[1] as int
       };
+
+  /// The numbers the constraint determines, `calc(P, E)`, each the place P and the expression E that gives it: "A variable the constraint determines from the variables the schema-binding binds is bound by the schema-binding to the value the constraint gives it, which the proposer's machine computes and the request names" (OSPM, act-schemas-local, VEUI vglp33-determined 87f86b7; programs/vglp/cva/compiler/README.md, 43).
+  List<(int, CalcExpr)> get calcs => [
+        for (final c in act.same)
+          if (c.kind == 'calc') (c.args[0] as int, c.args[1] as CalcExpr)
+      ];
 
   /// Whether [at] binds distinct roles to distinct persons, but for two the clause says are possibly one person: "every binding of the variables of the atoms the schema requires there that a schema-binding makes, distinct roles bound to distinct persons" (vGLP e22e2ad, Section 5.4, "The contract's words").  An agent variable is bound by no such rule, so Introduce with Carol = Bob is a way, and Remove of herself is none (vGLP #23, Code_inbox.md, 2026-11-06 12:00 UTC, 1).
   bool distinct(Map<int, GTerm> at) {
@@ -1897,6 +1903,17 @@ class _SocialTabState extends State<SocialTab> {
           final n = sizeAt(w.act, p);
           if (n == null || n < 1) return null;
           values[p] = GList(_newNames(composer, n));
+        }
+        // A number the constraint determines from the places the request names, computed here: "which the proposer's machine computes and the request names" (OSPM, act-schemas-local; Audit #151).
+        for (final (p, e) in w.act.calcs) {
+          int? num(int k) {
+            final v = values[k] ?? w.at[k];
+            return v is GInt ? v.value : null;
+          }
+
+          final n = e.value(num);
+          if (n == null) return null;
+          values[p] = GInt(n);
         }
         final r = _request(s, o, w, values, ask);
         if (r != null) return r;

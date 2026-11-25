@@ -2065,7 +2065,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     widget_lines(W?, C?, Ch?, Ps?, Nt?, ctx(Rf?, Rl?), Lw0),
     worded_lx(W?, Lx11),
     lx_sets(Lx11?, Ks1),
-    menu_lines(Lw0?, Ks1?, Lw),
+    menu_lines(Lw0?, Ks1?, Lw1),
+    calc_acts(W?, Wa),
+    calc_any(Wa?, Ps?, Nt?, C?, Kq),
+    calc_lines(Lw1?, Kq?, Lw),
     lapp(Lr0?, Lw?, Lr),
     worded_lx(W?, Lx3),
     atom_parts(C?, Nt?, Lx3?, Kc?, La00),
@@ -4044,7 +4047,12 @@ schema_acts(yes, sfound(Hd, Rs), sfound(Hh, _), S, Fs, Ft, Q, By, Ni, Rf, Ws?) :
     listed_ixs(Rs?, 1, Lis2),
     drop_listed(Vz0?, Lis2?, Vz),
     size_places(Ni?, Vz?, Sz),
-    app(Sm0?, Sz?, Sm),
+    schema_vars(Rs?, Hd?, Vc0),
+    listed_ixs(Rs?, 1, Lis3),
+    drop_listed(Vc0?, Lis3?, Vc),
+    calc_places(Ni?, Vc?, Cl),
+    app(Sm0?, Sz?, Sm1),
+    app(Sm1?, Cl?, Sm),
     form_text(Hd?, Rs?, Q?, Tx),
     role_acts(Gr?, S?, Vs?, Rs?, Rf?, Fd?, Sm?, Tx?, Ws).
 %% The places of a set variable the request names and of the field that gives its size, size(S, F), for each conjunct eq(size(X), Y) of the schema's constraint, X at the place S and Y at the place F: "The person gives the size of a set variable in a field, a number" (OSPM, act-schemas-local, VEUI vglp32-sets-2026-11-24); a set variable local to a role is at no place of the request and has none.
@@ -4071,6 +4079,81 @@ arg_place(A, [_|Vs], I, R?) :- otherwise, integer(I?) | I1 := I? + 1, arg_place(
 procedure size_item(Ints?, Ints?, Preconds).
 size_item([S], [F], [size(S?, F?)]).
 size_item(_, _, []) :- otherwise | true.
+%% The places of a number the constraint determines from the variables the schema-binding binds, and its value, calc(P, E), for each conjunct eq(num(Y), E) of the schema's constraint, Y at the place P of the request and E an expression whose variables are each at a place of the request, E' being E with each variable at(K), K its place, and each number lit(N): "A variable the constraint determines from the variables the schema-binding binds is bound by the schema-binding to the value the constraint gives it, which the proposer's machine computes and the request names" (OSPM, act-schemas-local, VEUI vglp33-determined 224558d; Audit #151), as Double = Votes * 2, calc(5, mul(at(4), lit(2))); the form computes it from the fields.
+MExpr   ::= at(Integer) ; lit(Constant) ; plus(MExpr, MExpr) ; minus(MExpr, MExpr) ; mul(MExpr, MExpr).
+CalcR   ::= none ; ok(MExpr).
+procedure calc_places(NumInfo?, Args?, Preconds).
+calc_places(num_info(_, C, _, _, _, _), Vs, Cl?) :- ground(C?), ground(Vs?) |
+    con_list(C?, Cs),
+    calc_items(Cs?, Vs?, Cl).
+procedure calc_items(Constraints?, Args?, Preconds).
+calc_items([], _, []).
+calc_items([eq(num(Y), E)|Cs], Vs, Cl?) :- ground(Y?), ground(E?), ground(Vs?) |
+    arg_place(num(Y?), Vs?, 1, Py),
+    calc_expr(E?, Vs?, Me),
+    calc_item(Py?, Me?, C1),
+    calc_items(Cs?, Vs?, C2),
+    app(C1?, C2?, Cl).
+calc_items([_|Cs], Vs, Cl?) :- otherwise | calc_items(Cs?, Vs?, Cl).
+%% An expression of arithmetic: a bare variable or number determines nothing to compute.
+procedure calc_expr(Expr?, Args?, CalcR).
+calc_expr(plus(A, B), Vs, R?) :- ground(Vs?) | calc_arg(A?, Vs?, Ra), calc_arg(B?, Vs?, Rb), calc_plus(Ra?, Rb?, R).
+calc_expr(minus(A, B), Vs, R?) :- ground(Vs?) | calc_arg(A?, Vs?, Ra), calc_arg(B?, Vs?, Rb), calc_minus(Ra?, Rb?, R).
+calc_expr(mul(A, B), Vs, R?) :- ground(Vs?) | calc_arg(A?, Vs?, Ra), calc_arg(B?, Vs?, Rb), calc_mul(Ra?, Rb?, R).
+calc_expr(_, _, none) :- otherwise | true.
+procedure calc_arg(Expr?, Args?, CalcR).
+calc_arg(num(X), Vs, R?) :- ground(X?), ground(Vs?) | calc_num(X?, Vs?, R).
+calc_arg(E, Vs, R?) :- otherwise | calc_expr(E?, Vs?, R).
+procedure calc_num(Constant?, Args?, CalcR).
+calc_num(X, _, ok(lit(X?))) :- integer(X?) | true.
+calc_num(X, Vs, R?) :- otherwise | arg_place(num(X?), Vs?, 1, P), calc_at(P?, R).
+procedure calc_at(Ints?, CalcR).
+calc_at([P], ok(at(P?))).
+calc_at(_, none) :- otherwise | true.
+procedure calc_plus(CalcR?, CalcR?, CalcR).
+calc_plus(ok(A), ok(B), ok(plus(A?, B?))).
+calc_plus(_, _, none) :- otherwise | true.
+procedure calc_minus(CalcR?, CalcR?, CalcR).
+calc_minus(ok(A), ok(B), ok(minus(A?, B?))).
+calc_minus(_, _, none) :- otherwise | true.
+procedure calc_mul(CalcR?, CalcR?, CalcR).
+calc_mul(ok(A), ok(B), ok(mul(A?, B?))).
+calc_mul(_, _, none) :- otherwise | true.
+procedure calc_item(Ints?, CalcR?, Preconds).
+calc_item([P], ok(E), [calc(P?, E?)]).
+calc_item(_, _, []) :- otherwise | true.
+%% Whether an act of the request type has a number to compute (calc_places), an act a button of the pragmas names whose schema the request type proposes, as act_buttons finds them, so that a platform with none prints its types as before.
+procedure calc_acts(Worded?, TActs).
+calc_acts(words(pragmas(_, As, _, _, _, _, _), _, _, _, _), As?).
+calc_acts(_, []) :- otherwise | true.
+procedure calc_any(TActs?, Preds?, NumInfos?, Contract?, YesNo).
+calc_any([], _, _, _, no).
+calc_any([act(N, _, _, _, _, _, _)|As], Ps, Nt, Cs, B?) :- ground(N?), ground(Ps?), ground(Nt?), ground(Cs?) |
+    mem(N?, Ps?, In),
+    num_lookup(N?, Nt?, Ni),
+    find_schema(N?, Cs?, Sf),
+    calc_in(In?, Sf?, Ni?, Cl),
+    calc_any1(Cl?, As?, Ps?, Nt?, Cs?, B).
+procedure calc_any1(Preconds?, TActs?, Preds?, NumInfos?, Contract?, YesNo).
+calc_any1([_|_], _, _, _, _, yes).
+calc_any1([], As, Ps, Nt, Cs, B?) :- calc_any(As?, Ps?, Nt?, Cs?, B).
+procedure calc_in(YesNo?, SFound?, NumInfo?, Preconds).
+calc_in(no, _, _, []).
+calc_in(yes, Sf, Ni, Cl?) :- calc_of(Sf?, Ni?, Cl).
+procedure calc_of(SFound?, NumInfo?, Preconds).
+calc_of(nosfound, _, []).
+calc_of(sfound(Hd, Rs), Ni, Cl?) :- ground(Hd?), ground(Rs?) |
+    schema_vars(Rs?, Hd?, Vz0),
+    listed_ixs(Rs?, 1, Lis),
+    drop_listed(Vz0?, Lis?, Vz),
+    calc_places(Ni?, Vz?, Cl).
+%% The types of the request widget's term gain calc(Integer, MenuExpr) where an act has a number to compute (calc_any).
+procedure calc_lines(Lines?, YesNo?, Lines).
+calc_lines(Ls, no, Ls?).
+calc_lines(Ls, yes, R?) :-
+    line_sub(Ls?, 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; calc(Integer, MenuExpr).', R1),
+    line_sub(R1?, 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; size(Integer, Integer).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; size(Integer, Integer) ; calc(Integer, MenuExpr).', R2),
+    line_after(R2?, 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuExpr ::= at(Integer) ; lit(Integer) ; plus(MenuExpr, MenuExpr) ; minus(MenuExpr, MenuExpr) ; mul(MenuExpr, MenuExpr).', R).
 %% The places of the request that hold persons, its roles and its agent variables: persons of different names are bound to different persons, "but for two the clause names as possibly one person" (vGLP, Section 5.4, "Speech-act schemas as local specifications", Udi, 2026-11-17, to vGLP #30), the pairs pragmas.sh gives as same(K, J) (same_places).
 procedure role_places(Args?, Integer?, Ints).
 role_places([], _, []).
@@ -4516,7 +4599,7 @@ proved_entry(no, _, _, _, _, _, []).
 proved_entry(yes, pat(Q, Ws), P, N, I, K, [proved(Q?, Ws?, P?, As?)]) :- K? > 0 | unless_args(1, N?, I?, K?, As).
 proved_entry(yes, _, _, _, _, 0, []).
 %% The conditions of an act at the proposer's role, printed in its widget declaration: req(P, As) and forb(P, As), the atoms the schema requires and forbids there; unless(P, As) and proved(Q, Ws, P, As), what the schemas prove of the other roles; and same(K, J), two places possibly one person.
-Precond ::= req(Constant, CondArgs) ; forb(Constant, CondArgs) ; unless(Constant, CondArgs) ; proved(Constant, Preds, Constant, CondArgs) ; same(Integer, Integer) ; size(Integer, Integer).
+Precond ::= req(Constant, CondArgs) ; forb(Constant, CondArgs) ; unless(Constant, CondArgs) ; proved(Constant, Preds, Constant, CondArgs) ; same(Integer, Integer) ; size(Integer, Integer) ; calc(Integer, MExpr).
 Preconds ::= [] ; [Precond | Preconds].
 procedure nth_rs(Integer?, RoleSpecs?, RoleSpecs).
 nth_rs(_, [], []).
@@ -4622,6 +4705,11 @@ procedure line_sub(Lines?, String?, String?, Lines).
 line_sub([], _, _, []).
 line_sub([L|Ls], O, A, [A?|Ls?]) :- L? =?= O? | true.
 line_sub([L|Ls], O, A, [L?|Ls1?]) :- otherwise | line_sub(Ls?, O?, A?, Ls1).
+%% The lines with A added as a line of its own after the line O, each type definition on a line of its own, as sGLP's interface.sh reads them (Code #38, 2026-11-25).
+procedure line_after(Lines?, String?, String?, Lines).
+line_after([], _, _, []).
+line_after([L|Ls], O, A, [L?, A?|Ls?]) :- L? =?= O? | true.
+line_after([L|Ls], O, A, [L?|Ls1?]) :- otherwise | line_after(Ls?, O?, A?, Ls1).
 procedure export_head(Lines).
 export_head(['',
         '% The contract the platform is compiled from (vGLP, Section 5.4, "The contract\'s words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC\'s reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC\'s reader\'s and the pragmas\', named with an R before them.',

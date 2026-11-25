@@ -646,20 +646,25 @@ own_args([], []).
 own_args([atom(_, As)|Xs], R?) :- own_args(Xs?, R1), app(As?, R1?, R).
 own_args([times(_, A)|Xs], R?) :- own_args([A?|Xs?], R).
 own_args([rest(_, _, A)|Xs], R?) :- own_args([A?|Xs?], R).
-%% occ_roles(Rs, I, V, Kr, Ot, Dl, Ad): the indices of the roles that keep or delete an atom naming V; whether a role forbids one, or lists V among a listed role's arguments; whether a role deletes one; and the indices of the roles that add one.
+%% occ_roles(Rs, I, V, Kr, Ot, Dl, Ad): the indices of the roles that keep or delete an atom naming V, a cleared atom apart; whether a role forbids or clears one ("A variable that occurs only in atoms the schema requires or deletes at one role": a cleared atom is neither, and the request names its variables, as the sum of the votes a loan clears; OSPM, act-schemas-local, VEUI vglp33-determined), or lists V among a listed role's arguments; whether a role deletes one; and the indices of the roles that add one.
 procedure occ_roles(RoleSpecs?, Integer?, Arg?, Ints, YesNo, YesNo, Ints).
 occ_roles([], _, _, [], no, no, []).
 occ_roles([R|Rs], I, V, Kr?, Ot?, Dl?, Ad?) :- ground(R?), integer(I?), ground(V?) |
     rs_lists(R?, P, M, K, N),
     rs_lists(R?, _, M2, _, _),
+    rs_lists(R?, _, M3, _, _),
+    uncleared(M?, Mu),
+    only_cleared(M3?, Mc),
     atoms_args(K?, A1),
-    atoms_args(M?, A2),
+    atoms_args(Mu?, A2),
     atoms_args(P?, A3),
     atoms_args(N?, A4),
     kind_args(R?, A5),
     atoms_args(M2?, A6),
+    atoms_args(Mc?, A7),
     app(A1?, A2?, Akm0),
-    app(A4?, A5?, Apn0),
+    app(A4?, A5?, Apn1),
+    app(Apn1?, A7?, Apn0),
     flat_args(Akm0?, Akm),
     flat_args(Apn0?, Apn),
     flat_args(A3?, Ap),
