@@ -2895,6 +2895,14 @@ check "the reader writes val(bond, [num(Day)]) as the compound value cmp(bond, [
 check "date(d(t)) added at every t blocks date(d(x)): meet obstructed" "intro_act(meet, obstructed(" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 1p)"
 check "date(e(t)) of another function symbol does not: meet unobstructed" "intro_act(meet, unobstructed)" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 2p)"
 check "the compiler prints a compound value \\mathit{bond}(Day)" "$(printf '\\mathit{\nbond\n}(\nDay\n)')" "$out"
+# A compound value is a value (Def numbers: f(v1, ..., vk) in V), so a value
+# variable over constants, const(t), ranges over it too (Calculus #11 and
+# vGLP #32, 2026-11-25: Notes' Type is a bond's bond(Day)): date(t) added at
+# every constant t blocks date(d(x)); a whole t does not.
+kgap_of() { gkk_with "sas(meet, ['Alice', 'Bob'], [x], [atom(met, ['Alice', 'Bob']), atom(met, ['Bob', 'Alice'])], [atom(identity, ['Alice']), not(atom(date, ['Alice', val(d, [num(x)])])), atom(identity, ['Bob'])], true, ['Alice', 'Bob']), sas(low, ['Alice'], [t], [atom(date, ['Alice', $1(t)])], [atom(identity, ['Alice'])], true, ['Alice'])"; }
+out=$(run "intro_acts($(kgap_of const), A)." "intro_acts($(kgap_of num), A).")
+check "a value variable over constants meets a compound value: meet obstructed" "intro_act(meet, obstructed(" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 1p)"
+check "a whole value variable does not: meet unobstructed" "intro_act(meet, unobstructed)" "$(printf '%s\n' "$out" | sed -e 's/^\(GLP> \)*//' | grep '^A = ' | sed -n 2p)"
 bond_notation=$(notation "$SBG, $SKA, $SBP])")
 check "the notation prints a compound value bond(Day)" "bond(Day)" "$bond_notation"
 
