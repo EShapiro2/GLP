@@ -4489,12 +4489,22 @@ printf '%s\n' 'Rides' 'Rides unites Bank and an augmentation of Coins, and exten
 printf '%s\n' 'Constitution' 'Constitution extends Bank, and augments it.' 'Alice is a person.' > "$cva_nm/Constitution.txt"
 cva_nm_augu=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Rides.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_nm_augi=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Constitution.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+# The Calculus's one first line, "NAME inherits from A, B and C.", the contracts after it read as those of extends, and a renaming's words from its pragma (Calculus calc11-no-parameters fe486d2, record item 71; Code #38, 2026-11-25) (rels).
+printf '%s\n' 'App' 'App inherits from Bank and Coins.' 'Alice is a person.' > "$cva_nm/App.txt"
+printf '%s\n' 'Children' 'Children inherits from Bank.' 'Alice is a person.' 'Logic pragmas' 'Renaming of Bank: a child for a ward.' > "$cva_nm/Children.txt"
+printf '%s\n' 'Rides' 'Rides inherits from Bank, Coins and Constitution.' 'Alice is a person.' > "$cva_nm/Rides.txt"
+cva_nm_inh2=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/App.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_inh1=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Children.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_inh3=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Rides.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 rm -rf "$cva_nm"
 check "CVA pragmas: Denominated Coins lifts Coins, and extends and weakens it, Coins found (rels)" "^Coins.txt Denominated-Coins.txt \$" "$cva_nm_lifts"
 check "CVA pragmas: App unites Bank and a strengthening of Coins, and extends and amends the union, Bank and Coins found (rels)" "^Bank.txt Coins.txt App.txt \$" "$cva_nm_unites"
 check "CVA pragmas: Children renames Bank, and extends and weakens it, Bank found (rels)" "^Bank.txt Children.txt \$" "$cva_nm_renames"
 check "CVA pragmas: Rides unites Bank and an augmentation of Coins, and extends and augments the union, Bank and Coins found (rels)" "^Bank.txt Coins.txt Rides.txt \$" "$cva_nm_augu"
 check "CVA pragmas: Constitution extends Bank, and augments it, Bank found (rels)" "^Bank.txt Constitution.txt \$" "$cva_nm_augi"
+check "CVA pragmas: App inherits from Bank and Coins, Bank and Coins found (rels)" "^Bank.txt Coins.txt App.txt \$" "$cva_nm_inh2"
+check "CVA pragmas: Children inherits from Bank, with the pragma Renaming of Bank, Bank found (rels)" "^Bank.txt Children.txt \$" "$cva_nm_inh1"
+check "CVA pragmas: Rides inherits from Bank, Coins and Constitution, the three found (rels)" "^Bank.txt Coins.txt Constitution.txt Rides.txt \$" "$cva_nm_inh3"
 check "CVA pragmas: the table of the other form, of four columns where this section's has five and of five where it has four (names3)" "^[45]$" "$cva_nm_t_cols"
 check_not "CVA pragmas: ... and not of the columns of this section's table (names3)" "^$cva_cols$" "$cva_nm_t_cols"
 check "CVA pragmas: ... Community Bank, Bank and Coins found by it (names3)" "^Bank.txt Coins.txt Community-Bank.txt $" "$cva_nm3_two"
