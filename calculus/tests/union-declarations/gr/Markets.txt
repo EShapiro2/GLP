@@ -1,0 +1,7 @@
+Markets
+Markets extends Knowledge.
+Alice and Bob are persons.
+1. ■ Enter: Alice may enter the market of Bob, provided Alice knows Bob.
+Logic pragmas.
+Vocabulary: x is a member of the market of y = member(x,y).
+After x enters the market of y: x is a member of the market of y.

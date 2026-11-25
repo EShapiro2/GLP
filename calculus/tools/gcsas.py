@@ -324,6 +324,7 @@ class Lex:
         l.votes = [dict(f) for f in self.votes]
         l.voted = dict(self.voted)
         l.twins = list(self.__dict__.get("twins", []))
+        l.origin = dict(self.__dict__.get("origin", {}))
         return l
 
     def refl_preds(self):
@@ -392,6 +393,29 @@ class Lex:
         ts = sorted(self.roles, key=lambda e: -len(toks(e[0])))
         return [(re.compile(tpl_rx(t) + r"(?=$|[ ,.])"), ("role", t, p, a)) for t, p, a in ts] + \
                [(re.compile(NAME + r"(?=$|[ ,.])"), ("name",))]
+
+
+def declared(n, own, pls):
+    """The contracts that declare each predicate of n, by its name and number of places: those of the contracts of its
+    first line that have it, or n if none has it.  A union is defined if it has one declaration of each predicate
+    (Definition Operations, Union): a predicate two contracts of the first line have, each from a declaration of its
+    own, as member/3 of Groups' 'x is a member of the group g of y' and Agora's 'x is a member of the market m of y',
+    makes n undefined (Audit PR 127)."""
+    out = {}
+    for p, pl in pls:
+        have = {}
+        for t, q, a in pl.basic + pl.roles:
+            have.setdefault((q, len(a)), set()).add(t)
+        for k, ts in have.items():
+            o = pl.__dict__.get("origin", {}).get(k, {p})
+            if k in out and not (out[k][0] & o) and out[k][1] != ts:      # one declaration written alike in each, as GO's derived votes, is one
+                raise Err("%s: the union is undefined: %s/%d is declared by %s ('%s') and by %s ('%s'); rename one of them first"
+                          % (n, k[0], k[1], " and ".join(sorted(out[k][0])), "', '".join(sorted(out[k][1])), " and ".join(sorted(o)), "', '".join(sorted(ts))))
+            out[k] = (out[k][0] | o if k in out and out[k][1] == ts and not (out[k][0] & o) else out[k][0] & o if k in out else set(o), out[k][1] if k in out else ts)
+    res = {k: v[0] for k, v in out.items()}
+    for t, q, a in own.basic + own.roles:
+        res.setdefault((q, len(a)), {n})
+    return res
 
 
 def arith():
@@ -895,6 +919,7 @@ class World:
         c = self.contract(n)
         parents, subs, _ = first_line(c, self.known)
         lex = c.own.copy()
+        pls = []
         for p in parents:
             pl = self.lexicon(p).copy()
             for item in derive_items(subs.get(p, []), self.lexicon(p)):
@@ -922,9 +947,12 @@ class World:
                     pl.par = [ft(t) for t in pl.par]
                     pl.dflt = {ft(k): ft(v) for k, v in pl.dflt.items()}
                     pl.one = {fp(r) for r in pl.one}
+                    pl.origin = {(fp(k[0]), k[1]): v for k, v in pl.__dict__.get("origin", {}).items()}
                     pl.votes = [dict(f, t=ft(f["t"]), P=ft(f["P"]), st={k: dict(v, go=fp(v["go"]), pred=fp(v["pred"]), tpl=ft(v["tpl"])) for k, v in f["st"].items()})
                                 for f in pl.votes]
             lex.add(pl)
+            pls.append((p, pl))
+        lex.origin = declared(n, c.own, pls)
         lex.add(arith())
         for d in c.dfl_later:      # a default of n for a parameter of a contract n is written from: n's, in place of that contract's
             old = [t for t in lex.par + [r[0] for r in lex.roles] if d.endswith(" for " + t)]
