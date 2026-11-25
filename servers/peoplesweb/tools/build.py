@@ -34,6 +34,17 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # servers/p
 GLP = os.environ.get('GLP_ROOT') or os.path.dirname(os.path.dirname(HERE))   # the repository
 BUILD = os.environ.get('BUILD_DIR') or os.path.join(HERE, 'build')
 TEST = os.environ.get('SITE_TEST') == '1'                             # the test site (deploy/test.sh)
+# The Villagers site, peoplesweb.org/villagers (deploy/villagers.sh; Udi,
+# 2026-11-25 00:19 UTC: "a version of the website in /villagers that includes
+# only the contracts in this repo, and one paper, the Villagers paper.  and
+# the Villagers contract in the south pole"): VILLAGERS_DIR names the
+# contracts/ of a clone of EShapiro2/Villagers, each contract in NAME/contract.txt;
+# the site shows those contracts alone, the globe upside down with the
+# contract built on all the others at the south pole, and the Villagers paper
+# alone.  It is served one level below the site's root, as the test site is.
+VILLAGERS = os.environ.get('VILLAGERS_DIR') or ''
+if VILLAGERS:
+    TEST = True
 WORLDS, WWW = os.path.join(GLP, 'programs', 'vglp', 'cva', 'web_worlds'), os.path.join(BUILD, 'www')
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, 'tools'))
@@ -246,6 +257,15 @@ for d, _, fs in os.walk(os.path.join(GLP, 'programs')):
             if first.startswith(f[:-4] + ': ') or file_of(first.strip()) == f[:-4]:
                 texts[f[:-4]] = p
 
+# The Villagers site's contracts: contracts/NAME/contract.txt of the Villagers repository, beside
+# every contract of programs/, of which the site keeps those they inherit from (KEEP, below).
+VILL = set()
+if VILLAGERS:
+    for f in sorted(os.listdir(VILLAGERS)):
+        if os.path.exists(os.path.join(VILLAGERS, f, 'contract.txt')):
+            texts[f] = os.path.join(VILLAGERS, f, 'contract.txt')
+            VILL.add(f)
+
 # The owners, as cascade.sh's table names them; else the first word of the % Owner line.
 owners = {}
 for m in re.finditer(r'^#\s+[a-z]+\s+([A-Z][A-Za-z]*)\s+(\S+)\s+programs/', read(os.path.join(GLP, 'cascade.sh')), re.M):
@@ -261,7 +281,10 @@ RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implem
              # The Calculus's words since 2026-11-24 (calculus/contracts): a
              # contract unites, renames or lifts others, and weakens or
              # augments what it extends (Website #6).
-             'unites', 'renames', 'lifts', 'weakens', 'augments')
+             'unites', 'renames', 'lifts', 'weakens', 'augments',
+             # 'Villagers inherits from Village Life and ...' (the Villagers
+             # repository since 2026-11-24, Calculus item 71).
+             'inherits')
 
 
 NAMEID, NAMES_RE = {}, [None]
@@ -350,6 +373,8 @@ for c in cat.values():
     c['extends'] = extends_of(c, read(texts[c['id']]).split('\n'))
     own = next((l for l in c['meta'] if l.startswith('% Owner:')), '% Owner: ')
     c['owner'] = re.sub(r'[^A-Za-z].*$', '', own[len('% Owner:'):].strip()) or owners.get(c['id'], '')
+    if c['id'] in VILL:
+        c['owner'] = 'Villagers'
     c['source'] = 'example' if c['meta'] and re.search(r'an (example|experimental) contract', c['meta'][0]) else 'paper'
 
 def has_platform(n):
@@ -360,6 +385,27 @@ def has_platform(n):
 
 
 compiled = sorted(n for n in os.listdir(os.path.join(GLP, 'cascade')) if has_platform(n) and n in cat)
+
+
+def ancestors0(cid, seen=None):
+    seen = set() if seen is None else seen
+    for p in cat[cid]['extends']:
+        if p in cat and p not in seen:
+            seen.add(p)
+            ancestors0(p, seen)
+    return seen
+
+
+# The Villagers site keeps the Villagers repository's contracts and every
+# contract they inherit from, directly or through others (Udi, 2026-11-25
+# 01:07 UTC: "it should include all contracts villagers inherit from, and show
+# both terse and full contracts").
+KEEP = set(cat)
+if VILLAGERS:
+    KEEP = set(VILL)
+    for v in VILL:
+        KEEP |= ancestors0(v)
+    compiled = [n for n in compiled if n in KEEP]
 # The test site writes no world: its apps are the live server's, so a contract
 # is live there where the live build made its world.
 # The live build's worlds are in the live clone, LIVE_WORLDS, which
@@ -432,6 +478,20 @@ def calculus_of(n):
     # calculus/contracts/NAME/ and its pragmas).
     calc_fc = os.path.join(CALC, n, 'full-contract.txt')
     fc = calc_fc if os.path.exists(calc_fc) else own if v['adopted'] else calc_fc
+    return full_of(v, n, fc)
+
+
+def villagers_of(n):
+    """A contract of the Villagers repository: its full contract, as its
+    owner prints it, contracts/n/full-contract.txt, where there is one."""
+    fc = os.path.join(VILLAGERS, n, 'full-contract.txt')
+    if not os.path.exists(fc):
+        return None
+    return full_of({'owner': 'Villagers', 'certified': False, 'compiled': False, 'adopted': True}, n, fc)
+
+
+def full_of(v, n, fc):
+    """v with the full contract fc, where it exists, copied into the site."""
     if os.path.exists(fc):
         os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
         shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))
@@ -475,7 +535,7 @@ def ancestors(cid):
     return out
 
 
-shown = set(cat)
+shown = set(cat) & KEEP
 
 
 def nearest(cid):
@@ -498,7 +558,7 @@ def look_line(pragmas):
 
 
 contracts = []
-for n in sorted(set(compiled) | set(cat)):
+for n in sorted((set(compiled) | set(cat)) & KEEP):
     c = dict(cat[n])
     d = os.path.join(GLP, 'cascade', n)
     # The icon and family the contract's Look line names, where its owner
@@ -517,8 +577,8 @@ for n in sorted(set(compiled) | set(cat)):
             t = re.sub(re.escape(cat[p]['title']), cat[p]['name'], t, flags=re.I)
     c['label'] = f"{c['name']}: {t}" if t != c['name'] else c['name'] 
     c['cascade'] = n in compiled
-    c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts else ''
-    c['paper'] = paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
+    c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts and n not in VILL else ''
+    c['paper'] = cite_of('Villagers', served, paper_state) if n in VILL else paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
     c['paperKey'] = key_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''))
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
@@ -550,7 +610,7 @@ for n in sorted(set(compiled) | set(cat)):
     # verbatim: "i want the web to include for each contract a button you
     # press 'full contract' that show the full contract"), and the Calculus's
     # proposed text and state.
-    c['calculus'] = calculus_of(n)
+    c['calculus'] = villagers_of(n) if n in VILL else calculus_of(n)
     # A contract that builds on one with no platform is drawn building on the nearest shown ones.
     ps = nearest(n)
     c['extends'] = [p for p in ps if not any(p in set(ancestors(q)) for q in ps if q != p)]
@@ -612,7 +672,7 @@ with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
 # A contract the Calculus has and its owner has not written, SGSG today: listed
 # from the Calculus with its proposed text and nothing in force, until its
 # owner adopts it (calculus/MIGRATION.md, Website, item 2).
-for n in sorted(set(calc_state) - set(cat)):
+for n in sorted(set(calc_state) - set(cat) if not VILLAGERS else []):
     v = calculus_of(n)
     if not v or 'proposed' not in v:
         continue
@@ -636,6 +696,26 @@ for f in os.listdir(os.path.join(HERE, 'web')):
 # app that opens such a link.
 for d in ('i', '.well-known', 'katex'):
     shutil.copytree(os.path.join(HERE, 'web', d), os.path.join(WWW, d), dirs_exist_ok=True)
+# The Villagers site's link preview says what it is (Udi, 2026-11-25: "link
+# preview of villagers should reflect what it is"): its title, line, address
+# and picture, web/og-villagers.jpg (tools/og.js, OG_URL, OG_TITLE, OG_LINE).
+if VILLAGERS:
+    shutil.copy(os.path.join(HERE, 'web', 'og-villagers.jpg'), os.path.join(WWW, 'og.jpg'))
+    os.remove(os.path.join(WWW, 'og-villagers.jpg'))
+    LINE = 'A grassroots contract for village digital life: the Villagers contract and every contract it inherits from.'
+    t = read(os.path.join(WWW, 'index.html'))
+    for old, new in [('<meta name="description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">', f'<meta name="description" content="{LINE}">'),
+                     ('<meta property="og:title" content="The Grassroots Project">', '<meta property="og:title" content="Villagers: A Grassroots Contract for Village Digital Life">'),
+                     ('<meta property="og:description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">', f'<meta property="og:description" content="{LINE}">'),
+                     ('<meta property="og:url" content="https://peoplesweb.org/">', '<meta property="og:url" content="https://peoplesweb.org/villagers/">'),
+                     ('<meta property="og:image" content="https://peoplesweb.org/og.jpg">', '<meta property="og:image" content="https://peoplesweb.org/villagers/og.jpg">'),
+                     ('<meta property="og:image:alt" content="The grassroots contracts on a globe, beside the name of the Grassroots Project">', '<meta property="og:image:alt" content="The Villagers contract and the contracts it inherits from on a globe, Villagers at the south pole">'),
+                     ('<title>The Grassroots Project</title>', '<title>Villagers · The Grassroots Project</title>')]:
+        if old not in t:
+            raise SystemExit('villagers: index.html has no ' + old)
+        t = t.replace(old, new)
+    with open(os.path.join(WWW, 'index.html'), 'w', encoding='utf-8') as f:
+        f.write(t)
 if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
     for f, path in pdfs.items():
@@ -647,13 +727,14 @@ if served:
 # papers no project holds.  What no entry covers, and what does not fit the
 # tree, the build prints and the page shows, so that every directory is
 # accounted for.
-projects, code, faults = directories.tree(GLP, [(c['id'], os.path.relpath(texts[c['id']], GLP), c.pop('paperKey')) for c in contracts if c['id'] in texts])
+projects, code, faults = ([{'id': 'Villagers', 'name': cite_of('Villagers')['title'], 'dirs': [],
+                             'papers': [{'key': 'Villagers', 'dirs': [], 'contracts': [{'id': c['id'], 'items': []} for c in contracts if c['id'] in VILL]}]}], [], []) if VILLAGERS else directories.tree(GLP, [(c['id'], os.path.relpath(texts[c['id']], GLP), c.pop('paperKey')) for c in contracts if c['id'] in texts])
 for p in projects:
     for q in p['papers']:
         q['cite'] = cite_of(q['key'], served, paper_state) or {}
         if not q['cite']:
             faults.append(f"the paper {q['key']} of {p['id']} is not in tools/papers.py")
-lost = directories.unaccounted(GLP)
+lost = [] if VILLAGERS else directories.unaccounted(GLP)
 if lost:
     print('directories: no entry answers for ' + ', '.join(lost))
 for f in faults:
@@ -677,12 +758,17 @@ for c in contracts:
     c['acts'] = [len(sch), sum(1 for s in sch if s.get('from') == c['id'])]
 with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
     data = {'contracts': contracts, 'families': look['families'], 'glpCommit': commit, 'projects': projects, 'code': code,
-            'noPaper': [{'id': i, 'name': n, 'repo': r} for i, n, r in directories.NO_PAPER],
-            'otherPapers': foundational(served, paper_state, but={k for _, _, ks in directories.PROJECTS for k in ks}),
+            'noPaper': [] if VILLAGERS else [{'id': i, 'name': n, 'repo': r} for i, n, r in directories.NO_PAPER],
+            'otherPapers': [] if VILLAGERS else foundational(served, paper_state, but={k for _, _, ks in directories.PROJECTS for k in ks}),
             'unaccounted': lost, 'faults': faults}
     if TEST:
         # The test site's pages are one level below the site's root, and the
         # API they call is the live server's, at the root.
         data['test'], data['api'] = True, ''
+    if VILLAGERS:
+        # The globe upside down: the contract built on all the others at the
+        # south pole (web/index.html, D.flip).
+        data['south'], data['site'] = 'Villagers', 'villagers'
+        data['villagersCommit'] = subprocess.run(['git', '-C', os.path.dirname(VILLAGERS.rstrip('/')), 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
     f.write('window.DATA = ' + json.dumps(data, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))

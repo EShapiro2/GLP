@@ -34,6 +34,9 @@ BY_DIR = {
     # GM's contracts (programs/gm), in preparation, no PDF served yet;
     # title and author as the GM thread reports them (2026-11-18).
     'GM': {'title': 'Anonymous Grassroots Matching: Dating, Exchanging, Booking', 'authors': 'Ehud Shapiro'},
+    # The one paper of the Villagers site, peoplesweb.org/villagers
+    # (deploy/villagers.sh; Udi, 2026-11-25); title and author as its main file has them.
+    'Villagers': {'title': 'Villagers: A Grassroots Contract for Village Digital Life', 'authors': 'Ehud Shapiro', 'pdf': 'Villagers'},
 }
 
 # Where each paper's source is, this file being the one record of it: its repository under EShapiro2 on GitHub, the one Overleaf syncs with, and its main file.  tools/papers_sync.py builds each from there; a paper on arXiv gets a PDF too, served as Updated while its repository is ahead of its latest arXiv version.
@@ -52,6 +55,8 @@ SOURCES = {
     'GNA': {'repo': 'GLP-Networking-API', 'main': 'main.tex'},
     'GO': {'repo': 'GO-Grassroots-Organisations', 'main': 'main_characterisation_ArXiv.tex'},
 }
+# Papers built only when asked by name (tools/papers_sync.py, PAPERS_ONLY), not by the hourly sweep of the live site's papers: the Villagers paper, which deploy/villagers.sh builds for peoplesweb.org/villagers.
+ONLY_SOURCES = {'Villagers': {'repo': 'Villagers', 'main': 'main.tex'}}
 # Built from a copy with these replacements, the repository left as it is:
 # acmart wants a country in every affiliation, which Overleaf forgives
 # (Udi, 2026-11-07: not to be fixed in GFF's repository).

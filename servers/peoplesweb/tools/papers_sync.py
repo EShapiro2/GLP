@@ -31,13 +31,18 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from papers import FIXES, SOURCES, arxiv_of, pdf_name  # noqa: E402
+from papers import FIXES, ONLY_SOURCES, SOURCES, arxiv_of, pdf_name  # noqa: E402
 
 OUT = os.environ.get('PAPERS_DIR', '/var/lib/glp/papers')
 SRC = os.environ.get('PAPERS_SRC', '/var/lib/glp/papers-src')
 TOKEN = os.environ.get('PAPERS_TOKEN', '/etc/glp/github-token')
 LOCAL = os.environ.get('PAPERS_LOCAL')
 ARXIV_FILE = os.environ.get('ARXIV_FILE')
+# PAPERS_ONLY: the papers to build, by their keys, comma-separated, in place of
+# all of SOURCES; deploy/villagers.sh builds the Villagers paper so, into a
+# PAPERS_DIR of its own.
+if os.environ.get('PAPERS_ONLY'):
+    SOURCES = {k: {**SOURCES, **ONLY_SOURCES}[k] for k in os.environ['PAPERS_ONLY'].split(',')}
 
 
 def run(cmd, cwd=None, timeout=900):
