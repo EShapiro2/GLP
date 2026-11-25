@@ -4,7 +4,7 @@
 // draws it, whole, its keys left out.
 // Usage, with node and Playwright: node tools/og.js <a directory for the
 // globe's picture and og.jpg> [zoom, a fraction of the page's own, 0.74]
-// [tilt, 0.5]; then copy og.jpg to web/og.jpg.  Made again when the globe or
+// [tilt, 0.55, or open for the opening screen's]; then copy og.jpg to web/og.jpg.  Made again when the globe or
 // the name changes much (Udi, 2026-11-12, to GSA #5, the name).
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -16,8 +16,10 @@ const fs = require('fs');
   // site's, web/og-villagers.jpg, from peoplesweb.org/villagers/ (Udi,
   // 2026-11-25: "link preview of villagers should reflect what it is").
   await p.goto(process.env.OG_URL || 'https://peoplesweb.org/', { waitUntil: 'load' }); await p.waitForTimeout(1500);
-  const Z = parseFloat(process.argv[3] || '0.5'), T = parseFloat(process.argv[4] || '0.55');
-  console.log('view', await p.evaluate(([z, t]) => { const v0 = JSON.stringify(V); V.zoom = V.zoom * z; V.tilt = t; drawGlobe();
+  // Tilt 'open' keeps the opening screen's tilt: the Villagers site's picture
+  // shows its south pole, as its opening screen does (Udi, 2026-11-25).
+  const Z = parseFloat(process.argv[3] || '0.5'), T = process.argv[4] === 'open' ? null : parseFloat(process.argv[4] || '0.55');
+  console.log('view', await p.evaluate(([z, t]) => { const v0 = JSON.stringify(V); V.zoom = V.zoom * z; if (t !== null) V.tilt = t; drawGlobe();
     document.head.insertAdjacentHTML('beforeend', '<style>#graph .key{display:none}</style>');
     document.body.style.background = 'transparent'; document.documentElement.style.background = 'transparent';
     document.querySelector('#mapcard').style.cssText += ';box-shadow:none;background:transparent;border-radius:0'; return v0 + ' -> ' + JSON.stringify(V); }, [Z, T]));

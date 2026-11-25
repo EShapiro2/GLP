@@ -86,6 +86,10 @@ RELAX = r"(%s)(?: ([A-Z][A-Za-z' -]*?))?((?:, without the consent of .*?)?)((?:,
 GO_VOTES = {"vote": "z holds x's vote on m", "voter": "x is entitled to vote on m in z", "decided": "the votes decide m according to the bylaws of z"}   # GO's states of a motion m
 VOTER = "Voter"   # the name of the one who votes, in the vote act generated
 GO_ALT = {"x is entitled to vote on m in z": "the bylaws of z entitle x to vote on m", "x is entitled to take m for z": "the bylaws of z entitle x to take m"}   # GO's state of a voter, where GO defines the entitlement by its bylaws and the voter's participation (Calculus #11, 2026-11-24)
+GO_PROPOSED = "z has m proposed"   # GO's state of a motion proposed: an act on votes is proposed, as GO:2's Propose, before it is voted on and taken
+GO_PART = {"voter": "x is a participant of z", "taker": "x is an officer of z", "proposer": "x is an officer of z"}   # GO's participation of the one entitled, of traceable provenance (GO's 'x is entitled to vote on m in z: x is a participant of z and ...'; GSC #21, 2026-11-25)
+GO_PROPOSER = "the bylaws of z entitle x to propose motions"   # GO's entitlement to propose, of the bylaws
+PROPOSER = "Proposer"   # the name of the one who proposes, in the propose act generated
 GO_TAKE = "x is entitled to take m for z"   # GO's state of the one who takes a motion m for z, derived for an act taken for a party on votes
 GO_STATES = dict(GO_VOTES, taker=GO_TAKE)
 WARD_ROLE = "those who decide for z"   # GnW's role: a contract whose lexicon has it has wards, and a ward takes an act of a party by those who decide for it
@@ -1144,14 +1148,15 @@ def vote_family(lex, name, t, zp, org):
     P = rename(t, ren)
     places = [ren[v] for v in tv if v != zp]
     st, fid = {}, ident(name + " " + org)
-    for k, T in list(GO_VOTES.items()) + ([("taker", GO_TAKE)] if any(e[0] in (GO_TAKE, GO_ALT[GO_TAKE]) for e in lex.basic) else []):
+    for k, T in list(GO_VOTES.items()) + ([("taker", GO_TAKE)] if any(e[0] in (GO_TAKE, GO_ALT[GO_TAKE]) for e in lex.basic) else []) + \
+            ([("proposed", GO_PROPOSED)] if any(e[0] == GO_PROPOSED for e in lex.basic) and any(e[0] == GO_ALT[GO_VOTES["voter"]] for e in lex.basic) else []):
         go = [e for e in lex.basic if e[0] in (T, GO_ALT.get(T))]
         if not go:
             raise Err("on the votes of: no state '%s' of GO, unbound, in this contract" % T)
         _, gp, ga = go[0]
-        st[k] = dict(go=gp, goargs=ga, go_t=T, pred=gp + "_" + fid, tpl=" ".join("whether " + P if tok == "m" else tok for tok in toks(T)),
+        st[k] = dict(go=gp, goargs=ga, go_t=T, bylaws=go[0][0] == GO_ALT.get(T), pred=gp + "_" + fid, tpl=" ".join("whether " + P if tok == "m" else tok for tok in toks(T)),
                      args=tuple(a2 for a in ga for a2 in (places if a == "m" else [a])))
-    return dict(name=name, vname="Vote of %s for %s" % (org, name), id=fid, org=org, t=t, zp=zp, ren=ren, P=P, places=places, st=st)
+    return dict(name=name, vname="Vote of %s for %s" % (org, name), pname="Proposal of %s for %s" % (org, name), id=fid, org=org, t=t, zp=zp, ren=ren, P=P, places=places, st=st)
 
 
 def pick_family(lex, name, t, zps, org, out):
@@ -1173,12 +1178,18 @@ def add_family(lex, f):
         raise Err("two acts named %s, of different phrases, decided on votes" % f["name"])
     for k, v in f["st"].items():
         lex.basic.append((v["tpl"], v["pred"], v["args"]))
-        if k != "vote":      # given by the platform where GO's state is (Organisation, 'Environment:'), else a parameter
-            (lex.env if any(T.replace(",", "") == f["st"][k]["go_t"].replace(",", "") for T in lex.env) else lex.par).append(v["tpl"])
+        if k not in ("vote", "proposed"):      # given by the platform where GO's state is (Organisation, 'Environment:'), else a parameter
+            go = {f["st"][k]["go_t"].replace(",", ""), GO_ALT.get(f["st"][k]["go_t"], "").replace(",", "")} - {""}      # GO's state, or its bylaws' entitlement that GO's Environment names (GO_ALT; GO #15 and Code #37, 2026-11-25)
+            (lex.env if any(T.replace(",", "") in go for T in lex.env) else lex.par).append(v["tpl"])
     vt = f["st"]["vote"]["tpl"]
     act = "x votes on whether %s in z" % f["P"]
     lex.defs.append((act, vt, True))
     lex.req[act] = negative(vt)
+    if "proposed" in f["st"]:     # GO:2's Propose, of the act: "x proposes whether z pays y n y-coins in z"
+        pt = f["st"]["proposed"]["tpl"]
+        act = "x proposes whether %s in z" % f["P"]
+        lex.defs.append((act, pt, True))
+        lex.req[act] = negative(pt)
     lex.votes.append(f)
     return f["id"]
 
@@ -2452,6 +2463,8 @@ def expand_schemas(w, n):
                     e["body"], e["head"] = e["body"] + gen[0], e["head"] + gen[1]
                 vv = [k for k, x in enumerate(entries) if x.get("voteact") and x["name"] == e["name"]]
                 if vv:      # the contract writes the vote act it decides an act on, with its own conditions (Constitution: the one who votes is a participant)
+                    entries += new_votes(entries, gen[2]) if gen else []      # its proposal, which the contract does not write
+                    e["body"] = e["body"] + [l for l in proposed_of(entries, e["name"]) if l not in e["body"]]
                     entries[vv[0]] = dict(e, voteact=True, of=entries[vv[0]].get("of"))
                     continue
                 entries += [e] + (new_votes(entries, gen[2]) if gen else [])
@@ -3130,6 +3143,16 @@ def after(entries, i):
     return j
 
 
+def proposed_of(entries, vname, text=False):
+    """The condition that the motion is proposed, which a vote act the contract writes has as GO:2's Vote has it: the
+    effect of the proposal of the same motion (GSC #21, 2026-11-25)."""
+    pn = "Proposal of " + vname[len("Vote of "):] if vname.startswith("Vote of ") else None
+    for x in entries:
+        if x["kind"] == "act" and x["name"] == pn:
+            return [(False, s) for n, s in x["effects"] if not n] if text else [l for l in x["head"] if not l[0]]
+    return []
+
+
 def new_votes(entries, votes):
     """The vote acts generated that the contract does not have yet: one act may be cited on one's votes twice."""
     have = {x["name"] for x in entries if x["kind"] == "act"}
@@ -3160,10 +3183,10 @@ def gen_votes(lex, o, orgs, name, label, mark, takers=None, agents=None):
     the condition that each is entitled to take it for its organisation (GO:2's Act)."""
     out = ([], [], [])
     for k, org in enumerate(orgs):
-        c, clear, vote = gen_vote(lex, o, org, k, name, label, mark, (takers or {}).get(org), agents)
+        c, clear, votes = gen_vote(lex, o, org, k, name, label, mark, (takers or {}).get(org), agents)
         out[0].extend(c)
-        out[1].append(clear)
-        out[2].append(vote)
+        out[1].extend(clear)
+        out[2].extend(votes)
     return out
 
 
@@ -3202,14 +3225,36 @@ def gen_vote(lex, o, org, k, name, label, mark, taker=None, agents=None):
     # 'z knows y'; Calculus #6, the client's decision, 2026-11-15)
     kn = [p for t, p, a in lex.basic if t == KNOWS]
     knows = [(False, kn[0], (org, a)) for a in dict.fromkeys(at("vote", VOTER)) if agents and kn and a in agents and a != org]
+    # where GO's entitlements are its bylaws' (Environment), the one entitled is also named by GO's participation, and
+    # the motion is proposed, as GO:2 has them: an environment atom names no agent and traces no value (GSC #21, 2026-11-25)
+    def go_atoms(T, x):
+        """The atoms of the contract's state that is GO's state T up to the names of its places, x at GO's x and org at z."""
+        out = []
+        for t, q, args in lex.basic:
+            mp = same_phrase(t, T)
+            if mp is not None:
+                inv = {v: k2 for k2, v in mp.items()}
+                out.append((False, q, tuple(x if inv.get(a) == "x" else org for a in args)))
+        return out[:1]
+    part = lambda k, x: go_atoms(GO_PART[k], x) if k == "proposer" or f["st"].get(k, {}).get("bylaws") else []
+    prop = [(False, pr("proposed"), at("proposed", None))] if "proposed" in f["st"] else []
     vote = dict(kind="act", label=label, mark=mark, name=f["vname"], head=[(False, pr("vote"), at("vote", VOTER))],
-                body=[(False, pr("voter"), at("voter", VOTER))] + knows + [(True, pr("vote"), at("vote", VOTER))], guards=[VOTER], must=[],
+                body=[(False, pr("voter"), at("voter", VOTER))] + part("voter", VOTER) + prop + knows + [(True, pr("vote"), at("vote", VOTER))], guards=[VOTER], must=[],
                 same=[p for p in o.get("same", []) if set(p.split("=")) <= set(at("vote", VOTER))],      # the names of the act possibly one are so in its motion
                 names={label: f["vname"]}, voteact=True)
+    votes = [vote]
+    if prop:
+        if PROPOSER in names_of(o):
+            raise Err("%s %s: the act names %s, the name of the one who proposes" % (label, name, PROPOSER))
+        bylaws = go_atoms(GO_PROPOSER, PROPOSER)
+        votes.insert(0, dict(kind="act", label=label, mark=mark, name=f["pname"], head=list(prop),
+                             body=part("proposer", PROPOSER) + bylaws + [(True,) + prop[0][1:]] + [(False, kn[0], (org, a)) for a in dict.fromkeys(at("proposed", None)) if agents and kn and a in agents and a != org],
+                             guards=[PROPOSER], must=[], same=[p for p in o.get("same", []) if set(p.split("=")) <= set(at("proposed", None))],
+                             names={label: f["pname"]}, voteact=True))
     if taker and "taker" not in f["st"]:
         raise Err("%s %s: taken for %s on its votes, and no state '%s' of GO in this contract" % (label, name, org, GO_TAKE))
-    take = [(False, pr("taker"), at("taker", taker))] if taker else []
-    return take + [(False, pr("decided"), at("decided", None))], (True, pr("vote"), at("vote", WILD)), vote
+    take = [(False, pr("taker"), at("taker", taker))] + part("taker", taker) if taker else []
+    return take + prop + [(False, pr("decided"), at("decided", None))], [(True, pr("vote"), at("vote", WILD))] + [(True,) + l[1:] for l in prop], votes
 
 
 # ---- the operations, on the text ----------------------------------------------------
@@ -3377,6 +3422,8 @@ def expand_text(w, n, own):
                     e["conds"], e["effects"] = e["conds"] + gen[0], e["effects"] + gen[1]
                 vv = [k for k, x in enumerate(entries) if x.get("voteact") and x["name"] == e["name"]]
                 if vv:      # the contract writes the vote act it decides an act on, with its own conditions (Constitution: the one who votes is a participant)
+                    entries += new_votes(entries, gen[2]) if gen else []      # its proposal, which the contract does not write
+                    e["conds"] = e["conds"] + [l for l in proposed_of(entries, e["name"], True) if l not in e["conds"]]
                     entries[vv[0]] = dict(e, voteact=True, of=entries[vv[0]].get("of"))
                     continue
                 entries += [e] + (new_votes(entries, gen[2]) if gen else [])
