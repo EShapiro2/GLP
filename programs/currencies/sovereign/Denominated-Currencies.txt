@@ -30,7 +30,7 @@ Issue denominated bond: Alice [Issue denominated bond] <maturity> <denomination>
 Swap, Redeem, Escrow: Alice [Swap] <issuer wanted> <amount given> <type wanted> <amount wanted>
   Bob: Alice asks to swap coins with you.
   Alice [Redeem] <issuer wanted>
-  Alice [Redeem coin against bond] <issuer wanted> [Redeem bond] <issuer wanted> <maturity given> [Redeem bond against bond] <issuer wanted> <maturity given>
+  Alice [Redeem coin against bond] <issuer wanted> <maturity wanted> [Redeem bond] <issuer wanted> [Redeem bond against bond] <issuer wanted> <maturity wanted>
   Alice [Deposit] <amount> <condition>
   Carol: Alice asks to deposit coins with you.
   Alice [Deposit own coins] <amount> <condition>
@@ -49,5 +49,5 @@ Swap, Redeem, Escrow: Alice [Swap] <issuer wanted> <amount given> <type wanted> 
   Bob: Carol asks to release coins or bonds to you.
   Carol [Return] <amount>
   Alice: Carol asks to return coins or bonds to you.
-Accept: Alice [Accept] <limit> [Accept by bond] <limit> <maturity>
+Accept: Alice [Accept] <limit> [Accept by bond] <limit>
 Pay accepted coins: Alice [Pay accepted coins] [Pay own accepted coins] [Pay accepted coins to the issuer]
