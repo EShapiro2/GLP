@@ -1,6 +1,8 @@
 Warnings
 Warnings extends Organisation, and weakens it.
-A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking.
+A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident. An officer holds at most one warning to a participant at a time, and the participant may answer it once; a withdrawn or annulled warning may be given again, and answered again.
 Alice and Bob are persons, Orga an organisation.
-1. ■ Warn: Alice may warn Bob in Orga, provided Alice is an officer of Orga and Orga has Bob as a participant.
-2. ■ Expel: Organisation:3 Expel, only if two officers of Orga have warned Bob. Officer expel: Organisation:3 Officer expel, only if two officers of Orga have warned Bob.
+1. ■ Warn: Alice may warn Bob in Orga of an incident, provided Alice is an officer of Orga and Orga has Bob as a participant.
+2. ■ Answer: Bob may answer a warning to him.
+3. ■ Withdrawal. Withdraw: Alice may withdraw her warning. Annul: Those who decide for Orga may annul a warning.
+4. ■ Expel: Organisation:3 Expel, only if two officers of Orga hold their warnings to Bob. Officer expel: Organisation:3 Officer expel, only if two officers of Orga hold their warnings to Bob.

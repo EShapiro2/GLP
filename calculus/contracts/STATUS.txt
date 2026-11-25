@@ -87,5 +87,5 @@ Stays      certified; VMAT 15 displays; platform.vglp 7752 lines; platform.glp 5
 Tennis-Courts certified; VMAT 58 displays; platform.vglp 9446 lines; platform.glp 5965 lines
 Trading-Company certified; VMAT 150 displays; platform.vglp 14526 lines; platform.glp 8393 lines
 Warded-Groups certified; VMAT 42 displays; platform.vglp 8617 lines; platform.glp 5662 lines
-Warnings   certified; VMAT 30 displays; platform.vglp 8310 lines; platform.glp 5520 lines
+Warnings   certified; VMAT 33 displays; platform.vglp 8442 lines; platform.glp 5573 lines; platform.glp loads
 Workers-Cooperative certified; VMAT 159 displays; platform.vglp 14900 lines; platform.glp 8573 lines
