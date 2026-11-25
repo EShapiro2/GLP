@@ -30,25 +30,79 @@ Move ::= mv(Integer, Integer, Integer).
 
 %% ---------------------------------------------------------------- the six functions, over constants
 
+%% A constant that is the text of no position, or of no move, is read as none: the move is not legal,
+%% the position after it is the position given, and side, mate and draw are 0.
+Read ::= read(Position) ; none.
+ReadMove ::= read(Move) ; none.
+
 exported procedure first(String).
 first(S?) :- first_pos(P), term_to_string(P?, S).
 
 exported procedure side(String?, Integer).
-side(B, S?) :- string(B?) | string_to_term(B?, P), side_pos(P?, S).
+side(B, S?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), side_r(R?, S).
 
 exported procedure legal(String?, String?, Integer).
 legal(M, B, V?) :- string(M?), string(B?) |
-    string_to_term(M?, Mv), string_to_term(B?, P), legal_pos(Mv?, P?, V).
+    string_to_term(M?, Tm), string_to_term(B?, Tb), term_move(Tm?, Rm), term_pos(Tb?, R), legal_r(Rm?, R?, V).
 
 exported procedure after(String?, String?, String).
 after(M, B, C?) :- string(M?), string(B?) |
-    string_to_term(M?, Mv), string_to_term(B?, P), after_pos(Mv?, P?, Q), term_to_string(Q?, C).
+    string_to_term(M?, Tm), string_to_term(B?, Tb), term_move(Tm?, Rm), term_pos(Tb?, R), after_r(Rm?, R?, B?, C).
 
 exported procedure mate(String?, Integer).
-mate(B, V?) :- string(B?) | string_to_term(B?, P), mate_pos(P?, V).
+mate(B, V?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), mate_r(R?, V).
 
 exported procedure draw(String?, Integer).
-draw(B, V?) :- string(B?) | string_to_term(B?, P), draw_pos(P?, V).
+draw(B, V?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), draw_r(R?, V).
+
+procedure side_r(Read?, Integer).
+side_r(read(P), S?) :- side_pos(P?, S).
+side_r(none, 0).
+
+procedure legal_r(ReadMove?, Read?, Integer).
+legal_r(read(M), read(P), V?) :- legal_pos(M?, P?, V).
+legal_r(_, _, 0) :- otherwise | true.
+
+procedure after_r(ReadMove?, Read?, String?, String).
+after_r(read(M), read(P), _, C?) :- after_pos(M?, P?, Q), term_to_string(Q?, C).
+after_r(_, _, B, B?) :- otherwise | true.
+
+procedure mate_r(Read?, Integer).
+mate_r(read(P), V?) :- mate_pos(P?, V).
+mate_r(none, 0).
+
+procedure draw_r(Read?, Integer).
+draw_r(read(P), V?) :- draw_pos(P?, V).
+draw_r(none, 0).
+
+%% the term read from a constant, checked to be a position or a move
+procedure term_pos(Term?, Read).
+term_pos(pos(Cs, S, cas(A, B, C, D), E, H, Ks), R?) :-
+    integer(S?), integer(A?), integer(B?), integer(C?), integer(D?), integer(E?), integer(H?) |
+    term_cells(Cs?, K1, Cs1), term_keys(Ks?, K2, Ks1),
+    pos_ok(K1?, K2?, pos(Cs1?, S?, cas(A?, B?, C?, D?), E?, H?, Ks1?), R).
+term_pos(_, none) :- otherwise | true.
+
+procedure pos_ok(Integer?, Integer?, Position?, Read).
+pos_ok(1, 1, P, read(P?)).
+pos_ok(_, _, _, none) :- otherwise | true.
+
+procedure term_move(Term?, ReadMove).
+term_move(mv(F, T, P), read(mv(F?, T?, P?))) :- integer(F?), integer(T?), integer(P?) | true.
+term_move(_, none) :- otherwise | true.
+
+%% a list of integers: 1 and the cells, else 0
+procedure term_cells(Term?, Integer, Cells).
+term_cells([], 1, []).
+term_cells([X | Xs], K?, [X? | Ys?]) :- integer(X?) | term_cells(Xs?, K, Ys).
+term_cells(_, 0, []) :- otherwise | true.
+
+procedure term_keys(Term?, Integer, Keys).
+term_keys([], 1, []).
+term_keys([key(Cs, S, cas(A, B, C, D), E) | Ks], K?, [key(Cs1?, S?, cas(A?, B?, C?, D?), E?) | Ks1?]) :-
+    integer(S?), integer(A?), integer(B?), integer(C?), integer(D?), integer(E?) |
+    term_cells(Cs?, K1, Cs1), term_keys(Ks?, K2, Ks1), and01(K1?, K2?, K).
+term_keys(_, 0, []) :- otherwise | true.
 
 %% ---------------------------------------------------------------- the six functions, over terms
 

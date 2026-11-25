@@ -11365,6 +11365,7 @@ first_pos(B), after_pos(mv(12,28,0),B?,B1), after_pos(mv(48,40,0),B1?,B2), after
 first_pos(B), after_pos(mv(12,28,0),B?,B1), after_pos(mv(51,35,0),B1?,B2), after_pos(mv(5,33,0),B2?,B3), legal_pos(mv(50,42,0),B3?,Lblock), legal_pos(mv(52,44,0),B3?,Lpinned).
 legal_pos(mv(48,56,5), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, []), Lpromo), legal_pos(mv(48,56,0), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, []), Lnopromo), after_pos(mv(48,56,5), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, []), C), board(C?,Xpromo).
 first(S), side(S?, Xs0), legal('mv(12, 28, 0)', S?, Xe4), legal('mv(12, 36, 0)', S?, Xe5), after('mv(12, 28, 0)', S?, C), side(C?, Xs1), mate(C?, Xm1), draw(C?, Xd1).
+first(S), legal('junk', S?, Xjunk), side('pos(1)', Xbad), after('mv(a, b, c)', S?, Cbad), side(Cbad?, Xsbad).
 :quit
 HEREDOC
 2>&1)
@@ -11407,6 +11408,9 @@ check "GCE: over constants, e2-e5 is not" "Xe5 = 0$" "$gce_out"
 check "GCE: over constants, after e2-e4, black to move" "Xs1 = 2$" "$gce_out"
 check "GCE: over constants, after e2-e4, no mate" "Xm1 = 0$" "$gce_out"
 check "GCE: over constants, after e2-e4, no draw" "Xd1 = 0$" "$gce_out"
+check "GCE: a text that is no move is not legal" "Xjunk = 0$" "$gce_out"
+check "GCE: a text that is no position has side 0" "Xbad = 0$" "$gce_out"
+check "GCE: after a text that is no move, the position given, white to move" "Xsbad = 1$" "$gce_out"
 echo ""
 fi  # Section GCE
 
