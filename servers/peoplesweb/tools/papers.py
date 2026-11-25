@@ -32,8 +32,8 @@ BY_DIR = {
     'GO': {'title': 'Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives',
            'authors': 'Ehud Shapiro', 'pdf': 'GO'},
     # GM's contracts (programs/gm), in preparation, no PDF served yet;
-    # title and author as the GM thread reports them (2026-11-18).
-    'GM': {'title': 'Anonymous Grassroots Matching: Dating, Exchanging, Booking', 'authors': 'Ehud Shapiro'},
+    # its main file is anonymous (\documentclass[...,anonymous,...]; Udi, 2026-11-25).
+    'GM': {'title': 'Anonymous Grassroots Matching: Dating, Exchanging, Booking', 'authors': 'Anonymous'},
     # The one paper of the Villagers site, peoplesweb.org/villagers
     # (deploy/villagers.sh; Udi, 2026-11-25); title and author as its main file has them.
     'Villagers': {'title': 'Villagers: A Grassroots Contract for Village Digital Life', 'authors': 'Anonymous', 'pdf': 'Villagers'},
@@ -227,7 +227,7 @@ FOUNDATIONAL = [
     {'title': 'Cordial Miners: A Family of Simple and Efficient Consensus Protocols for Every Eventuality', 'authors': 'Idit Keidar, Oded Naor and Ehud Shapiro', 'arxiv': '2205.09174', 'venue': 'DISC 2023'},
     {'title': 'Morpheus Consensus: Excelling on trails and autobahns', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2502.08465', 'venue': 'OPODIS 2025'},
     {'title': 'Federated Assemblies', 'authors': 'Daniel Halpern, Ariel D. Procaccia, Ehud Shapiro and Nimrod Talmon', 'arxiv': '2405.19129', 'venue': 'AAAI 2025'},
-    {'key': 'GGGA', 'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
+    {'key': 'GGGA', 'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Anonymous', 'state': 'in preparation'},
     # The papers not on arXiv of the projects that have no other paper on the
     # site (Udi, 2026-11-14, to Website #2), each by its project's name as
     # 'key', with the title and authors its main file has (Website #2,
@@ -241,9 +241,9 @@ FOUNDATIONAL = [
     {'key': 'CDWC', 'title': 'Constitutional Democracy Without Consensus', 'authors': '', 'state': 'in preparation'},
     {'key': 'GPW', 'title': 'The Grassroots Web: A Personal Website on Your Smartphone', 'authors': 'Anonymous', 'state': 'in preparation'},
     {'key': 'Secure-GLP', 'title': 'Secure GLP: Executing Digital Social Contracts without Consensus', 'authors': '', 'state': 'in preparation'},
-    {'key': 'P99', 'title': 'Solving the Ninety-Nine Prolog Problems in Grassroots Logic Programming, with Measured Effort', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
+    {'key': 'P99', 'title': 'Solving the Ninety-Nine Prolog Problems in Grassroots Logic Programming, with Measured Effort', 'authors': 'Anonymous', 'state': 'in preparation'},
     {'key': 'DDD', 'title': 'Digital Speech Acts Dissolve Orphaned Disinformation', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
-    {'key': 'KYC', 'title': 'Making Digital Speech Accountable', 'authors': 'James Golike and Ehud Shapiro', 'state': 'in preparation'},
+    {'key': 'KYC', 'title': 'Making Digital Speech Accountable', 'authors': 'Anonymous', 'state': 'in preparation'},
     {'key': 'LBM', 'title': 'Location-Based Matching for Digital Cooperatives', 'authors': '', 'state': 'in preparation'},
     # 'url': the version a venue publishes, linked from the state (Udi,
     # 2026-11-12, to Website #1).
