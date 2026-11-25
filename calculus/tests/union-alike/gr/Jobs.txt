@@ -1,0 +1,7 @@
+Jobs
+Jobs extends Knowledge.
+Alice and Bob are persons.
+1. ■ Post: Alice may post a job to Bob, provided Alice knows Bob.
+Logic pragmas.
+Vocabulary: x has an offer posted to z = posted(x,z).
+After x posts a job to z: x has an offer posted to z.
