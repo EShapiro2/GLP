@@ -97,10 +97,10 @@ class UiDescription {
       ]);
     }
     return UiDescription(j['start'] as String, screens, {
-      for (final e in ((j['personPos'] ?? const {}) as Map<String, dynamic>).entries)
+      for (final e in ((j['personPos'] ?? const <String, dynamic>{}) as Map<String, dynamic>).entries)
         e.key: [for (final p in e.value as List) p as int]
     }, {
-      for (final e in ((j['look'] ?? const {}) as Map<String, dynamic>).entries) e.key: e.value as String
+      for (final e in ((j['look'] ?? const <String, dynamic>{}) as Map<String, dynamic>).entries) e.key: e.value as String
     });
   }
 }
