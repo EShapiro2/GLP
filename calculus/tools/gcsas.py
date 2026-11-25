@@ -409,17 +409,29 @@ def declared(n, own, pls):
     for p, pl in pls:
         have = {}
         for t, q, a in pl.basic + pl.roles:
-            have.setdefault((q, len(a)), set()).add(t)
+            have.setdefault((q, len(a)), set()).add((t, tuple(a)))
         for k, ts in have.items():
             o = pl.__dict__.get("origin", {}).get(k, {p})
-            if k in out and not (out[k][0] & o) and out[k][1] != ts:      # one declaration written alike in each, as GO's derived votes, is one
+            if k in out and not (out[k][0] & o) and not alike(out[k][1], ts):      # one declaration written alike in each, as GO's derived votes, is one
                 raise Err("%s: the union is undefined: %s/%d is declared by %s ('%s') and by %s ('%s'); rename one of them first"
-                          % (n, k[0], k[1], " and ".join(sorted(out[k][0])), "', '".join(sorted(out[k][1])), " and ".join(sorted(o)), "', '".join(sorted(ts))))
-            out[k] = (out[k][0] | o if k in out and out[k][1] == ts and not (out[k][0] & o) else out[k][0] & o if k in out else set(o), out[k][1] if k in out else ts)
+                          % (n, k[0], k[1], " and ".join(sorted(out[k][0])), "', '".join(sorted(t for t, _ in out[k][1])), " and ".join(sorted(o)), "', '".join(sorted(t for t, _ in ts))))
+            out[k] = (out[k][0] | o if k in out and alike(out[k][1], ts) and not (out[k][0] & o) else out[k][0] & o if k in out else set(o), out[k][1] if k in out else ts)
     res = {k: v[0] for k, v in out.items()}
     for t, q, a in own.basic + own.roles:
         res.setdefault((q, len(a)), {n})
     return res
+
+
+def alike(s1, s2):
+    """Two sets of templates of one predicate are one declaration: each template of either is one of the other up to the
+    names of its places, its arguments renamed alike (Community Market's 'y has l posted in z' and Gigs' 'x has j posted
+    in z', Villagers, 2026-11-25)."""
+    def sub(a, b):
+        for t1, a1 in a:
+            if not any((mp := same_phrase(t2, t1)) is not None and tuple(mp.get(x, x) for x in a1) == a2 for t2, a2 in b):
+                return False
+        return True
+    return sub(s1, s2) and sub(s2, s1)
 
 
 def arith():
