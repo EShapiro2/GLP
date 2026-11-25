@@ -55,6 +55,7 @@ Future<Map<String, Object?>> _walk(String programs, String dir, String uiPath, i
   final report = <String, Object?>{'app': dir, 'ui': uiPath};
   final problems = <String>[];
   report['problems'] = problems;
+  final trace = <String>[];
   final ui = UiDescription.parse(File('$programs/$uiPath').readAsStringSync());
   final engine = GlpEngine(rootSelfGlpPath: '$programs/self.glp');
   if (!engine.loadProgram('$programs/$dir')) {
@@ -70,8 +71,9 @@ Future<Map<String, Object?>> _walk(String programs, String dir, String uiPath, i
   final play = engine.postGoal(goals.join(', '), inputs: [for (var i = 0; i < names.length; i++) 'G$i']);
   final ps = [for (var i = 0; i < names.length; i++) _P(names[i], play.inputs['G$i']!, play.variables['D$i']!)];
 
+  var debugNow = false;
   bool drain() {
-    final r = play.scheduler.drainToQuiescence(maxCycles: 20000000);
+    final r = play.scheduler.drainToQuiescence(maxCycles: 20000000, debug: debugNow);
     if (r.status == ExecutionStatus.failed) {
       problems.add('a goal failed');
       return false;
@@ -164,7 +166,7 @@ Future<Map<String, Object?>> _walk(String programs, String dir, String uiPath, i
           }
         }
         final info = ActInfo(a);
-        final ws = a.binds.isEmpty ? [<int, GTerm>{}] : info.ways(st.atoms, st.me);
+        final ws = info.ways(st.atoms, st.me);
         for (final w in ws) {
           if (info.lacks(st.atoms, {...w, a.proposer: st.me})) platform.add(wayKey(a, w));
         }
@@ -236,7 +238,14 @@ Future<Map<String, Object?>> _walk(String programs, String dir, String uiPath, i
     final noticesBefore = st.notices.length;
     ask.propose(r);
     acts++;
-    if (!settle()) break;
+    debugNow = '$acts' == Platform.environment['DV_DEBUG_ACT'];
+    trace.add('${p.name}: ${formatTerm(r)}');
+    if (!settle()) {
+      // The acts that led to it, and each person's facts, for the report.
+      report['trace'] = trace;
+      report['facts'] = {for (final q in ps) q.name: [for (final a in q.state?.atoms ?? const <GTerm>[]) formatTerm(a)]};
+      break;
+    }
     final after = p.state;
     final changed = after != null && after.atoms.map(formatTerm).toSet().difference(before).isNotEmpty ||
         after != null && before.difference(after.atoms.map(formatTerm).toSet()).isNotEmpty;

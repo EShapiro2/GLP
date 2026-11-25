@@ -233,7 +233,7 @@ class DescribedCore {
         fixed[e.key] = v;
       }
     }
-    final ways = act.binds.isEmpty ? [<int, GTerm>{}] : info.ways(s.atoms, s.me);
+    final ways = info.ways(s.atoms, s.me);
     final out = <DescribedWay>[];
     for (final w in ways) {
       if (fixed.entries.any((f) => w[f.key] != null && !same(w[f.key]!, f.value))) continue;
