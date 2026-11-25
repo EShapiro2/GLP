@@ -29,12 +29,13 @@ if [ -z "$SWEEP_OLD" ] && ! git diff --quiet "$old" "$new" -- servers/peoplesweb
 fi
 # The units in deploy/ are installed from the clone, so that a change to them, as the test site's build on each push to Website-site (peoplesweb-next.timer, Udi, 2026-11-20), takes effect with no run by hand on the server.  A failure here is reported and the sweep goes on.
 { changed=
-  for u in peoplesweb-sweep.service peoplesweb-sweep.timer peoplesweb-next.service peoplesweb-next.timer peoplesweb-villagers.service peoplesweb-villagers.timer; do
+  for u in peoplesweb-sweep.service peoplesweb-sweep.timer peoplesweb-next.service peoplesweb-next.timer peoplesweb-villagers.service peoplesweb-villagers.timer peoplesweb-main.service peoplesweb-main.timer; do
 	cmp -s servers/peoplesweb/deploy/$u /etc/systemd/system/$u || { cp servers/peoplesweb/deploy/$u /etc/systemd/system/$u; changed=1; }
   done
   [ -z "$changed" ] || systemctl daemon-reload
   systemctl is-enabled -q peoplesweb-next.timer || systemctl enable -q --now peoplesweb-next.timer
-  systemctl is-enabled -q peoplesweb-villagers.timer || systemctl enable -q --now peoplesweb-villagers.timer; } ||
+  systemctl is-enabled -q peoplesweb-villagers.timer || systemctl enable -q --now peoplesweb-villagers.timer
+  systemctl is-enabled -q peoplesweb-main.timer || systemctl enable -q --now peoplesweb-main.timer; } ||
   echo "sweep: installing the units of deploy/ failed" >&2
 # The papers (tools/papers_sync.py): pulled from their repositories with the
 # read-only token in /etc/glp/github-token, rebuilt where changed, into
