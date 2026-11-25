@@ -6,8 +6,18 @@ shown).
 
 - `Friendship.ui`: Friendship, person first: everyone Alice knows on the start screen, and a screen for each.
 - `Friendship.ui.json`: the same, compiled with the contract into what the app reads: each act by its schema,
-  each place by its number in the act's request.  Printed by the UI compiler, `src/uic.js` of the language's
-  prototype (`grassroots/ui` of `nimrodtalmon/talmonlab`); edit the `.ui` and print it again.
+  each place by its number in the act's request, the proposer's place the platform's.  Edit the `.ui` and print
+  it again.
+
+## The tools (`tools/`, Node and Python 3, no Dart)
+
+- `build.py CALC NAME OUT.json`: the contract as the tools read it, from a scratch copy of `calculus/` made as
+  `calculus/tools/SAS-WRITING.txt` says (gr/, rev/, then `gcsas.py` and `toglp.py`).
+- `ui.js`: the UI language's reader and the checker of the paper's two propositions; `emit.js` writes it.
+- `mechanical.js OUT.json`: a description any contract has, complete and visible.
+- `uic.js OUT.json NAME.ui cascade/NAME/platform.vglp`: the compiler; it refuses a description with errors or
+  not complete.  `platform.js` reads the platform's requests.
+- `mkapp.py . NAME dir`: an app directory for a contract's cascade platform, for the walk below.
 
 The app draws a description in place of its tabs where it is given one
 (`glp_multiagent/lib/ui_runtime/described.dart`).  To see Friendship's on two phones, its agents GLP's, from
