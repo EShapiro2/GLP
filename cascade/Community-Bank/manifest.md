@@ -1,11 +1,11 @@
 # A run of the cascade on Community-Bank
 
-- Contract: `Community-Bank` (`community_bank` to the checker), its owner's two files `programs/currencies/gcc/Community-Bank.txt` and `programs/currencies/gcc/Community-Bank.glp`, copied here as they stood at `2d339620`.
+- Contract: `Community-Bank` (`community_bank` to the checker), its owner's two files `programs/currencies/gcc/Community-Bank.txt` and `programs/currencies/gcc/Community-Bank.glp`, copied here as they stood at `8eb5da29`.
 - The paper: `/Users/udi/Grassroots/GCC (not on this machine)` at `unknown`, for the paper's own record.
 - Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
 - Adopted from the Calculus: `programs/currencies/gcc/Community-Bank.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/currencies/gcc/Community-Bank.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-25 00:13 UTC by `cascade.sh community_bank`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `2d339620`; each artefact's source and tool:
+- Run on 2026-11-25 07:49 UTC by `cascade.sh community_bank`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8eb5da29`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
