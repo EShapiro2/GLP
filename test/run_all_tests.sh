@@ -1612,10 +1612,15 @@ string_concat(['one'], C3).
 string_concat(['X = ', []], C4).
 text(1, X1).
 shown(14).
+string_to_term('pos([[1, 2], [3]], w, castle(k, q), e2)', T1).
+string_to_term('[a, b | c]', T2).
 :quit
 HEREDOC
 2>&1)
 check "text: the fixture loads" "Loaded: .*text_test.glp" "$a42"
+# string_to_term/2, the converse of term_to_string/2 (Udi, 2026-11-25 22:52 UTC; Audit #157); its aborts are the Dart test's (glp_runtime/test/runtime/string_to_term_kernel_test.dart).
+check "text: string_to_term reads a position" "T1 = pos(\[\[1, 2\], \[3\]\], w, castle(k, q), e2)" "$a42"
+check "text: string_to_term reads a list with a tail" "T2 = \[a, b | c\]" "$a42"
 check "text: string_concat(['Menu', '?'], S)" "C1 = 'Menu?'" "$a42"
 check "text: string_concat of []" "C2 = ''" "$a42"
 check "text: string_concat of one string" "C3 = one" "$a42"

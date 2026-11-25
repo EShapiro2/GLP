@@ -500,6 +500,7 @@ procedure '_tuple_to_list'(_?, Stream(_)).
 procedure '_string_concat'(List(String)?, String).
 procedure '_term_to_string'(_?, String).
 procedure '_hash'(String?, Hash).
+procedure '_string_to_term'(String?, Term).
 
 % Time and random
 procedure '_now'(Integer).
@@ -976,6 +977,16 @@ procedure hash(String?, Hash).
 hash(S, H?) :-
   ground(S?) |
   '_hash'(S?, H).
+
+% string_to_term(S, T): T is the ground term the reader reads from the string
+% S, the converse of term_to_string: term_to_string(T, S), string_to_term(S?,
+% T1) gives T1 equal to T; the kernel aborts where S is not the text of one
+% ground term (Udi, 2026-11-25 22:52 UTC, approving it; GLP-Spec
+% appendix-guards, "Text").
+procedure string_to_term(String?, Term).
+string_to_term(S, T?) :-
+  string(S?) |
+  '_string_to_term'(S?, T).
 
 % =============================================================================
 % UNIV (=../2, ..=/2)
