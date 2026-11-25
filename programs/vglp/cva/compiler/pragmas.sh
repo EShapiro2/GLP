@@ -1292,5 +1292,24 @@ pop @cl while @cl && $cl[-1] !~ /\S/;
 my $tx = join("\n", @cl);
 $tx =~ s/\\/\\\\/g; $tx =~ s/"/\\"/g; $tx =~ s/\n/\\n/g;
 # A contract the phone finds a fact for carries a seventh argument, the predicates found, so that every other contract prints the term it printed before.
-print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "], [" . join(", ", @stands) . "], $lk, $vn, " . q_atom("\"$tx\"") . (@found ? ", [" . join(", ", @found) . "]" : "") . ")\n";
+# The functions of the contract\x27s value types that their owner gives as typed GLP procedures (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"): the file NAME-functions.glp beside the NAME.txt of the contract or of a contract it extends, each procedure it declares a function, fn(Name, Arity), its value its last argument, and its lines, which the platform carries, the eighth argument fns(Fns, Lines); none where no such file is.
+my (@fns, @fn_lines, %fn_seen);
+for my $f (@order) {
+    (my $ff = $f) =~ s/\.txt$/-functions.glp/;
+    next unless -f $ff;
+    open(my $h, "<", $ff) or die "pragmas.sh: cannot read $ff\n";
+    my @fl = <$h>; close $h; chomp @fl;
+    for my $x (@fl) {
+        if ($x =~ /^procedure\s+([a-z]\w*)\((.*)\)\.\s*$/) {
+            my ($n, $a) = ($1, $2);
+            my ($d, $k) = (0, 1);
+            for my $ch (split //, $a) { $d++ if $ch eq "(" || $ch eq "["; $d-- if $ch eq ")" || $ch eq "]"; $k++ if $ch eq "," && $d == 0 }
+            die "pragmas.sh: $ff: the function $n is declared twice\n" if $fn_seen{$n}++;
+            push @fns, "fn($n, $k)";
+        }
+        push @fn_lines, q_atom($x);
+    }
+}
+my $fn_arg = @fns ? ", fns([" . join(", ", @fns) . "], [" . join(", ", @fn_lines) . "])" : "";
+print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "], [" . join(", ", @stands) . "], $lk, $vn, " . q_atom("\"$tx\"") . (@found || @fns ? ", [" . join(", ", @found) . "]" : "") . $fn_arg . ")\n";
 ' "$1" "$PROGRAMS" "${2:-}" "$FROM"

@@ -6812,6 +6812,49 @@ check "CVA calcs: ... d has no field and the form computes it, calc(3, mul(at(2)
 check "CVA calcs: ... the request type has calc (calc_lines)" "same(Integer, Integer) ; calc(Integer, MenuExpr)\.\$" "$cva_calcs_out"
 check "CVA calcs: the request of lend names s, of a cleared atom, and not t or r, local to the role" "^lend(Peer, Integer)\$" "$cva_calcs_out"
 check "CVA calcs: ... MenuExpr is a type definition on a line of its own, as sGLP's interface.sh reads them (line_after)" "^MenuExpr ::= at(Integer) ; lit(Integer)" "$cva_calcs_out"
+# A function the owner of a value type gives as a typed GLP procedure (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; GLP #120; Audit #157): the file NAME-functions.glp beside NAME.txt, which pragmas.sh reads into the eighth argument of the pragmas, fns(Fns, Lines); the compiler takes fn(F, Es) where F is declared there of arity |Es|+1, refuses any other, and the platform carries the owner's procedures and calls them from expr_val (owner_fn).  The contract: square, r = root(m), root the whole square root rounded down.
+cva_fns_out=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(roots, [nschema(square, [num(m), num(r)], eq(num(r), fn(root, [num(m)])), [rs(guarded, [atom(rooted, [num(m), num(r)])], [], [], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"Roots"', [rooted])], [act(square, '"Square"', ['""', '"number"', '"root"'], none, '"Roots"', by([1]))], [], nolook, version(1, 1), '""', [], fns([fn(root, 2)], ['procedure root(Integer?, Integer).', 'root(N, R?) :- integer(N?), N? < 2 | R = N?.', 'root(N, R?) :- otherwise, integer(N?) | root_from(N?, N?, R).', 'procedure root_from(Integer?, Integer?, Integer).', 'root_from(N, X, R?) :- integer(N?), integer(X?) | Y := (X? + N? // X?) // 2, root_step(N?, X?, Y?, R).', 'procedure root_step(Integer?, Integer?, Integer?, Integer).', 'root_step(N, X, Y, R?) :- integer(N?), integer(X?), integer(Y?), Y? < X? | root_from(N?, Y?, R).', 'root_step(_, X, _, X?) :- otherwise | true.']))).
+:quit
+HEREDOC
+2>&1)
+cva_fns_no=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(roots, [nschema(square, [num(m), num(r)], eq(num(r), fn(root, [num(m)])), [rs(guarded, [atom(rooted, [num(m), num(r)])], [], [], [])]), nschema(pass, [num(v), num(d)], eq(num(d), fn(twice, [num(v)])), [rs(guarded, [atom(passed, [num(v), num(d)])], [], [], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"Roots"', [rooted]), list('"Passed"', [passed])], [act(square, '"Square"', ['""', '"number"', '"root"'], none, '"Roots"', by([1])), act(pass, '"Pass"', ['""', '"votes"', '"double"'], none, '"Passed"', by([1]))], [], nolook, version(1, 1), '""', [], fns([fn(root, 2)], ['procedure root(Integer?, Integer).', 'root(N, R?) :- integer(N?), N? < 2 | R = N?.', 'root(N, R?) :- otherwise, integer(N?) | root_from(N?, N?, R).', 'procedure root_from(Integer?, Integer?, Integer).', 'root_from(N, X, R?) :- integer(N?), integer(X?) | Y := (X? + N? // X?) // 2, root_step(N?, X?, Y?, R).', 'procedure root_step(Integer?, Integer?, Integer?, Integer).', 'root_step(N, X, Y, R?) :- integer(N?), integer(X?), integer(Y?), Y? < X? | root_from(N?, Y?, R).', 'root_step(_, X, _, X?) :- otherwise | true.']))).
+:quit
+HEREDOC
+2>&1)
+cva_fns_dir="$GLP_DIR/programs/tests/vg_fns_$$"
+mkdir -p "$cva_fns_dir"
+printf '%s\n' "$cva_fns_out" | sed -e 's/^\(GLP> \)*//' | awk '$0 == "%% compile begin" { on = 1; next } $0 == "%% compile end" && on { on = 0; next } on { print }' > "$cva_fns_dir/platform.vglp"
+cva_fns_run=$("$REPL_RUN" <<HEREDOC
+:emit $cva_fns_dir
+load $cva_fns_dir/platform.glp
+:limit 10000000
+binding_of(square(alice, 17, 4), N1, B1), con_holds(eq(num(r), fn(root, [num(m)])), B1?, K1).
+binding_of(square(alice, 17, 5), N2, B2), con_holds(eq(num(r), fn(root, [num(m)])), B2?, K2).
+binding_of(square(alice, 1000000, 1000), N3, B3), con_holds(eq(num(r), fn(root, [num(m)])), B3?, K3).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_fns_dir"
+cva_fns_t=$(mktemp -d)
+printf '%s\n' 'Bank' 'Alice is a person.' '1. ■ Open: Alice may open an account.' 'Pragmas' 'Accounts: the accounts Alice opened.' 'Open: Alice [Open]' > "$cva_fns_t/Bank.txt"
+printf '%s\n' '% The root, rounded down.' 'procedure root(Integer?, Integer).' 'root(N, N?).' 'procedure pair(Integer?, List(Integer)?, Integer).' 'pair(_, _, 0).' > "$cva_fns_t/Bank-functions.glp"
+cva_fns_pr=$(bash "$CVA/compiler/pragmas.sh" "$cva_fns_t/Bank.txt" "[schema(open, ['Alice'], [], [rs(guarded, [atom(opened, [])], [], [], [])])]" 2>&1)
+rm -rf "$cva_fns_t"
+check "CVA functions: pragmas.sh reads NAME-functions.glp, each procedure a function of its arity, and its lines (fns)" "\[\], fns(\[fn(root, 2), fn(pair, 3)\], \['% The root, rounded down.', 'procedure root(Integer?, Integer).'" "$cva_fns_pr"
+check "CVA functions: the platform calls the owner's root (owner_fn)" "^owner_fn(root, \[num_is(A1)\], num_is(R?)) :- integer(A1?) | root(A1?, R)\.\$" "$cva_fns_out"
+check "CVA functions: ... and carries the owner's procedure" "^procedure root(Integer?, Integer)\.\$" "$cva_fns_out"
+check "CVA functions: ... expr_val takes a function the owner gives" "^expr_val(fn(F, Es), B, R?) :- otherwise, ground(F?), ground(B?) | exprl_vals(Es?, B?, As), owner_fn(F?, As?, R)\.\$" "$cva_fns_out"
+check "CVA functions: a function the owner does not give, twice, is refused, with the line saying why" "it has a relation or a function other than min and floor" "$cva_fns_no"
+check "CVA functions: the platform loads" "Loaded: .*vg_fns_" "$cva_fns_run"
+check "CVA functions: r = root(m) holds with m 17, r 4" "^K1 = yes\$" "$cva_fns_run"
+check "CVA functions: ... and not with r 5" "^K2 = no\$" "$cva_fns_run"
+check "CVA functions: ... and with m 1000000, r 1000" "^K3 = yes\$" "$cva_fns_run"
 
 # A set variable, set(N) of a type Set(A) (GSC, the appendix on values, Definitions "Schema with values" and "Binding with values"; the Calculus's record, items 49 to 51): the request names its elements, a list of constants, the schema-binding binds it to st(Cs), an atom with it stands for one atom per element, and size(N) is the number of its elements.  The contract is GSC's own test of payments of notes (programs/gsc/test_gsc.sh, "set variables"), as GSC's reader reads it.
 cva_sets_out=$("$REPL_RUN" <<HEREDOC

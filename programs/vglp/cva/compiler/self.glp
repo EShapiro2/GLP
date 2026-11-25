@@ -422,7 +422,12 @@ PVersion  ::= version(Integer, Integer).
 RPragmas  ::= pragmas(PLists, TActs, PStands, PLook, PVersion).
 Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStands)
             ; pragmas(PLists, PActs, PStands, PLook, PVersion, String)
-            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String, PhoneFacts).
+            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String, PhoneFacts)
+            ; pragmas(PLists, PActs, PStands, PLook, PVersion, String, PhoneFacts, PFns).
+%% The functions of the contract's value types that their owner gives as typed GLP procedures, fn(Name, Arity), its value its last argument, and the lines of the owner's file, which the platform carries; or none (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; pragmas.sh, NAME-functions.glp).
+PFns       ::= nofns ; fns(FnDecls, List(String)).
+FnDecl     ::= fn(Constant, Integer).
+FnDecls    ::= [] ; [FnDecl | FnDecls].
 %% What the phone does for the contract, from its implementation pragmas (vGLP, Section 5.4): an environment predicate it finds, found(P), and a standing schema whose standing request opens the phone to persons it does not know, trust(S).
 PhoneFact  ::= found(Constant) ; trust(Constant).
 PhoneFacts ::= [] ; [PhoneFact | PhoneFacts].

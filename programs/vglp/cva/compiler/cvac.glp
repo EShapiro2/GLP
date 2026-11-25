@@ -19,7 +19,8 @@ Line  ::= String ; guarded_only(Line) ; unguarded_only(Line) ; standing_only(Lin
         ; set_only(Line) ; setless_only(Line)
         ; cmp_only(Line) ; cmpless_only(Line)
         ; found_only(Line) ; foundless_only(Line)
-        ; trust_only(Line) ; trustless_only(Line).
+        ; trust_only(Line) ; trustless_only(Line)
+        ; fn_only(Line).
 Lines ::= [] ; [Line | Lines].
 imported procedure text#fixed_text(Lines).
 imported procedure local#faults(Contract?, Preds?, NumInfos?, Ones?, Strings).
@@ -57,28 +58,35 @@ compile(Nm, D, V, I, P, E, W, Vl) :- norm_pragmas(P?, Q), compile_intro(Nm?, D?,
 %% A term with no look, no version and no text, vGLP's own contracts' (../contracts.glp, pragmas_named/2), has nolook, version(1, 1) and the empty text.
 procedure norm_pragmas(Pragmas?, WPragmas).
 norm_pragmas(no_pragmas, no_pragmas).
-norm_pragmas(pragmas(Ls, As), pragmas(Ls?, Ts?, [], nolook, version(1, 1), '""', [])) :- norm_acts(As?, Ts).
-norm_pragmas(pragmas(Ls, As, Ss), pragmas(Ls?, Ts?, Ss?, nolook, version(1, 1), '""', [])) :- norm_acts(As?, Ts).
-norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?, [])) :- norm_acts(As?, Ts).
+norm_pragmas(pragmas(Ls, As), pragmas(Ls?, Ts?, [], nolook, version(1, 1), '""', [], nofns)) :- norm_acts(As?, Ts).
+norm_pragmas(pragmas(Ls, As, Ss), pragmas(Ls?, Ts?, Ss?, nolook, version(1, 1), '""', [], nofns)) :- norm_acts(As?, Ts).
+norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?, [], nofns)) :- norm_acts(As?, Ts).
 %% The predicates the phone finds, the seventh argument pragmas.sh prints where the implementation pragmas name one (vGLP, Section 5.4: "An implementation pragma says, of each environment predicate other than the day, whether the phone finds it").
-norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?, Fd?)) :- norm_acts(As?, Ts).
+norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?, Fd?, nofns)) :- norm_acts(As?, Ts).
+%% The functions the owner of a value type gives, the eighth argument pragmas.sh prints where NAME-functions.glp is (PFns).
+norm_pragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd, Fn), pragmas(Ls?, Ts?, Ss?, Lk?, Vn?, Tx?, Fd?, Fn?)) :- norm_acts(As?, Ts).
 %% Every act with the types of its fields, [] where it gives none (self.glp, PAct).
 procedure norm_acts(PActs?, TActs).
 norm_acts([], []).
 norm_acts([act(S, B, Fs, Q, T, By)|As], [act(S?, B?, Fs?, Q?, T?, By?, [])|Ts?]) :- norm_acts(As?, Ts).
 norm_acts([act(S, B, Fs, Q, T, By, Ft)|As], [act(S?, B?, Fs?, Q?, T?, By?, Ft?)|Ts?]) :- norm_acts(As?, Ts).
 %% The contract's words, its pragmas, carried through the compiler whole, with its environment predicates and the contract as read, which the platform exports (export_lines).
-WPragmas ::= no_pragmas ; pragmas(PLists, TActs, PStands, PLook, PVersion, String, PhoneFacts).
+WPragmas ::= no_pragmas ; pragmas(PLists, TActs, PStands, PLook, PVersion, String, PhoneFacts, PFns).
 Words ::= words(WPragmas, Preds, Lxs, WDeclared, DevValues).
 %% The words of a contract carrying pragmas, the only contract the compiler prints a platform from (compile3a; vGLP, Section 5.4, "The contract's words"), which every procedure past compile3a takes, with its environment predicates.
 Worded ::= words(Given, Preds, Lxs, WDeclared, DevValues).
-Given  ::= pragmas(PLists, TActs, PStands, PLook, PVersion, String, PhoneFacts).
+Given  ::= pragmas(PLists, TActs, PStands, PLook, PVersion, String, PhoneFacts, PFns).
 %% Numbers (vGLP 613ee8d, Section 5.4, "Act schemas as local specifications"): each schema's constraint, its local variables and the role whose local variables the constraint names, the table Nt (local.glp, num_info_of); the contract compiled is its plain form (plain_contract), each schema's head less its local variables, which "the schema-binding does not bind", so that a class term names the schema-binding: its roles and its other variables, "bound by the schema-binding, as a speech-act variable is", in the order of the head.
 procedure compile_intro(Constant?, Declared?, Verdict?, Intro?, Words?).
-compile_intro(Nm, D, V, I, W) :- ground(Nm?), ground(D?) |
+compile_intro(Nm, D, V, I, words(P, E, Lx, Dn, Vl)) :- ground(Nm?), ground(D?), ground(P?) |
     decl_schemas(D?, Cq),
-    q_lines(Cq?, Nm?, Lq),
-    compile_q(Lq?, Nm?, D?, V?, I?, W?).
+    pragma_fns(P?, Fs),
+    q_lines(Cq?, Nm?, Fs?, Lq),
+    compile_q(Lq?, Nm?, D?, V?, I?, words(P?, E?, Lx?, Dn?, Vl?)).
+%% The functions the owner of a value type gives (PFns), none where the contract has no such file.
+procedure pragma_fns(WPragmas?, FnDecls).
+pragma_fns(pragmas(_, _, _, _, _, _, _, fns(Fs, _)), Fs?).
+pragma_fns(_, []) :- otherwise | true.
 %% A contract the compiler does not take, by q_lines, is refused before any other procedure reads it, with the lines saying why.
 procedure compile_q(Lines?, Constant?, Declared?, Verdict?, Intro?, Words?).
 compile_q([L|Ls], _, _, _, _, _) :-
@@ -229,9 +237,9 @@ compile3a(_, Nm, _, _, _, _, words(no_pragmas, _, _, _, _)) :- ground(Nm?) |
     send_to_user(['%% compile begin', H?,
         '%% it passes the checks, its verdict, local and effective, and has no pragmas, the words its app shows: the compiler prints a platform only from a contract with pragmas, and refuses one with none (vGLP, Section 5.4, "The contract\'s words").',
         '%% compile end']).
-compile3a(Ps, Nm, C, Rf, E, Nt, words(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd), Ev, Lx, Dn, Vl)) :- ground(Fd?), ground(Vl?), ground(Ps?), ground(C?), ground(Nt?), ground(Ls?), ground(As?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Ev?), ground(Lx?), ground(Dn?) |
-    word_faults(words(pragmas(Ls?, As?, Ss?, Lk?, Vn?, Tx?, Fd?), Ev?, Lx?, Dn?, Vl?), C?, Nt?, Ps?, Wf),
-    compile4(Wf?, Nm?, C?, Rf?, E?, Nt?, words(pragmas(Ls?, As?, Ss?, Lk?, Vn?, Tx?, Fd?), Ev?, Lx?, Dn?, Vl?), Ps?).
+compile3a(Ps, Nm, C, Rf, E, Nt, words(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd, Fn), Ev, Lx, Dn, Vl)) :- ground(Fd?), ground(Fn?), ground(Vl?), ground(Ps?), ground(C?), ground(Nt?), ground(Ls?), ground(As?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Ev?), ground(Lx?), ground(Dn?) |
+    word_faults(words(pragmas(Ls?, As?, Ss?, Lk?, Vn?, Tx?, Fd?, Fn?), Ev?, Lx?, Dn?, Vl?), C?, Nt?, Ps?, Wf),
+    compile4(Wf?, Nm?, C?, Rf?, E?, Nt?, words(pragmas(Ls?, As?, Ss?, Lk?, Vn?, Tx?, Fd?, Fn?), Ev?, Lx?, Dn?, Vl?), Ps?).
 
 %% A contract whose words do not name its schemas, or leave a guarded schema with no button, is not compiled, with the lines saying why (word_faults).
 procedure compile4(Lines?, Constant?, Contract?, Preds?, Preds?, NumInfos?, Worded?, Preds?).
@@ -248,22 +256,22 @@ compile4([L|Ls], Nm, _, _, _, _, _, _) :- ground(Nm?) |
 %% (1) A safe formula of the body local to a role, "the machine of the person in that role evaluates it in its own state", is taken (local.glp, form_infos; the printed text's forms_at).
 %% (2) A listed role bound by a quantifier, qlisted in GSC's term form, whose person is the first argument of its anchor after the holder and the one variable its quantifier binds, is taken as listed/3 with the condition of its quantifier, and a quantified conjunct that binds it with its conditional literals added at other roles, one for each person of the role (q_normal, lx_table; the printed text's listing/7): "its request name is the schema-binding" (vGLP 9ee6f87, Section 5.4), the class term naming the people of the role, as for listed/3.  A conjunct binding no listed role, with a conditional literal at a role other than the one holding its anchor, is taken, its instances a list the base finds and the attempt names, each restricted to the variables its literals name, without repetition (ix_conjs, hm_named, inst_heads; the printed text's instances/7).  A conjunct binding no listed role whose conditional literals are all at the role holding its anchor is local to that role, which finds its instances in its own state and applies its literals at each (lc_conjs, local_lines; the printed text's local_effect).  A conditional literal deleted is subtracted from a state that need not hold it (the printed text's opt).  One with a conditional literal at a listed role or holding a signed term of a speech-act variable its quantifier binds, one whose literals at another role name none of its bound variables, and any other listed role are not yet taken, and refused with the reason (odd_conjunct, inst_odd, odd_qlisted).
 %% (3) A count and a sum of a quantifier's instances, and the functions min and floor, in a constraint or a safe formula are taken, the count or the sum local to the role holding its anchor (local.glp, con_counts; the printed text's con_counted): "A constraint and a safe formula are over the relations and functions of GSC's value types --- comparison, arithmetic, min, floor, signed, unsigned --- and over the count and the sum of a quantifier's instances, each counted by its anchor's multiplicity; a count or a sum is local to the role holding its anchor" (vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3; vGLP 9ee6f87, Section 5.4).  A relation rel(Name, Args) and a function the paper does not name are not: the paper names no relation of a value type beyond comparison, and no function beyond min and floor.
-procedure q_lines(QContract?, Constant?, Lines).
-q_lines(C, Nm, L?) :- ground(C?), ground(Nm?) |
-    q_faults(C?, L0),
+procedure q_lines(QContract?, Constant?, FnDecls?, Lines).
+q_lines(C, Nm, Fs, L?) :- ground(C?), ground(Nm?) |
+    q_faults(C?, Fs?, L0),
     wild_faults(C?, L1),
     bound_faults(C?, L2),
     lapp(L1?, L2?, L12),
     lapp(L0?, L12?, L01),
     head_line(L01?, Nm?, L).
-procedure q_faults(QContract?, Lines).
-q_faults([], []).
-q_faults([S|Ss], L?) :- ground(S?) |
-    q_schema(S?, L1),
+procedure q_faults(QContract?, FnDecls?, Lines).
+q_faults([], _, []).
+q_faults([S|Ss], Fs, L?) :- ground(S?), ground(Fs?) |
+    q_schema(S?, Fs?, L1),
     const_faults(S?, L00),
     set_faults(S?, L01),
     lapp(L00?, L01?, L0),
-    q_faults(Ss?, L2),
+    q_faults(Ss?, Fs?, L2),
     lapp(L0?, L2?, L02),
     lapp(L1?, L02?, L).
 %% (4) A variable over the constants, const(X) among a schema's variables (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it, a multiplicity and a count being whole numbers, and a variable over the constants taking the name its proposer types, as the name of the role to which an organisation appoints an officer, which another act requires as a constant the contract names"), is taken where it is an argument of an atom, bound by the schema-binding or local to a role.  It is no number, so one written as a multiplicity is refused; one in a constraint, or in the constraint of a safe formula or of a conjunct's condition, is refused, the printed text comparing numbers, persons, speech acts and community names and no value such a variable takes (con_holds, expr_term1); and one a quantifier binds is refused, the instances of a conjunct being printed of the types Peer, Speech and Integer (kind_type).
@@ -386,13 +394,13 @@ con_ord(C, A?) :- otherwise | con_args(C?, A).
 procedure side_args(Expr?, Args).
 side_args(num(_), []).
 side_args(E, A?) :- otherwise | expr_args(E?, A).
-procedure q_schema(QSchema?, Lines).
-q_schema(schema(_, _, _), []).
-q_schema(cschema(_, _, _, _), []).
-q_schema(nschema(S, _, C, _), L?) :- ground(S?) |
-    con_beyond(C?, B),
+procedure q_schema(QSchema?, FnDecls?, Lines).
+q_schema(schema(_, _, _), _, []).
+q_schema(cschema(_, _, _, _), _, []).
+q_schema(nschema(S, _, C, _), Fn, L?) :- ground(S?) |
+    con_beyond(Fn?, C?, B),
     beyond_lines(B?, S?, L).
-q_schema(qschema(S, _, _, C, Rs, Cj, Fs), L?) :- ground(S?), ground(Rs?), ground(Cj?) |
+q_schema(qschema(S, _, _, C, Rs, Cj, Fs), Fn, L?) :- ground(S?), ground(Rs?), ground(Cj?), ground(Fn?) |
     q_listed_ixs(Rs?, 1, Lis0),
     listed_ixs(Rs?, 1, Lis1),
     app(Lis0?, Lis1?, Lis),
@@ -400,8 +408,8 @@ q_schema(qschema(S, _, _, C, Rs, Cj, Fs), L?) :- ground(S?), ground(Rs?), ground
     odd_qlisted(Rs?, 1, Q2),
     or(Q1?, Q2?, Q),
     conjunct_lines(Q?, S?, L1),
-    con_beyond(C?, B1),
-    forms_beyond(Fs?, B2),
+    con_beyond(Fn?, C?, B1),
+    forms_beyond(Fn?, Fs?, B2),
     or(B1?, B2?, B),
     beyond_lines(B?, S?, L2),
     inst_base_lines(Cj?, Rs?, S?, L3),
@@ -554,73 +562,82 @@ beyond_lines(no, _, []).
 beyond_lines(yes, S, ['%% it has a relation or a function other than min and floor in a constraint or a safe formula, a program condition of a speech act among them, which vGLP Section 5.4 does not name, a constraint being over comparison, arithmetic, min, floor, the signing conditions, the author and the item of a speech act, counts and sums:', T?]) :-
     ground(S?) | said('%% the schema', S?, T).
 %% Whether a constraint, an expression or a safe formula holds a relation, or a function other than min and floor.
-procedure con_beyond(Constraint?, YesNo).
-con_beyond(true, no).
-con_beyond(and(C1, C2), B?) :- con_beyond(C1?, B1), con_beyond(C2?, B2), or(B1?, B2?, B).
-con_beyond(or(C1, C2), B?) :- con_beyond(C1?, B1), con_beyond(C2?, B2), or(B1?, B2?, B).
-con_beyond(implies(C1, C2), B?) :- con_beyond(C1?, B1), con_beyond(C2?, B2), or(B1?, B2?, B).
-con_beyond(not(C), B?) :- con_beyond(C?, B).
-con_beyond(eq(X, Y), B?) :- exprs_beyond(X?, Y?, B).
-con_beyond(ne(X, Y), B?) :- exprs_beyond(X?, Y?, B).
-con_beyond(le(X, Y), B?) :- exprs_beyond(X?, Y?, B).
-con_beyond(lt(X, Y), B?) :- exprs_beyond(X?, Y?, B).
-con_beyond(ge(X, Y), B?) :- exprs_beyond(X?, Y?, B).
-con_beyond(gt(X, Y), B?) :- exprs_beyond(X?, Y?, B).
-con_beyond(succ(_, _), no).
-con_beyond(signed(_, _), no).
-con_beyond(unsigned(_, _), no).
-con_beyond(rel(_, _), yes).
+procedure con_beyond(FnDecls?, Constraint?, YesNo).
+con_beyond(_, true, no).
+con_beyond(Fs, and(C1, C2), B?) :- ground(Fs?) | con_beyond(Fs?, C1?, B1), con_beyond(Fs?, C2?, B2), or(B1?, B2?, B).
+con_beyond(Fs, or(C1, C2), B?) :- ground(Fs?) | con_beyond(Fs?, C1?, B1), con_beyond(Fs?, C2?, B2), or(B1?, B2?, B).
+con_beyond(Fs, implies(C1, C2), B?) :- ground(Fs?) | con_beyond(Fs?, C1?, B1), con_beyond(Fs?, C2?, B2), or(B1?, B2?, B).
+con_beyond(Fs, not(C), B?) :- con_beyond(Fs?, C?, B).
+con_beyond(Fs, eq(X, Y), B?) :- exprs_beyond(Fs?, X?, Y?, B).
+con_beyond(Fs, ne(X, Y), B?) :- exprs_beyond(Fs?, X?, Y?, B).
+con_beyond(Fs, le(X, Y), B?) :- exprs_beyond(Fs?, X?, Y?, B).
+con_beyond(Fs, lt(X, Y), B?) :- exprs_beyond(Fs?, X?, Y?, B).
+con_beyond(Fs, ge(X, Y), B?) :- exprs_beyond(Fs?, X?, Y?, B).
+con_beyond(Fs, gt(X, Y), B?) :- exprs_beyond(Fs?, X?, Y?, B).
+con_beyond(_, succ(_, _), no).
+con_beyond(_, signed(_, _), no).
+con_beyond(_, unsigned(_, _), no).
+con_beyond(_, rel(_, _), yes).
 %% program(u), that the value u is a program, is a relation of the constraint, local to every role and evaluated where the schema is bound (vGLP b413fe1, Section 5.4: "and program(u), that the value u is a program"); the printed text's con_holds.
-con_beyond(program(_), no).
-procedure exprs_beyond(Expr?, Expr?, YesNo).
-exprs_beyond(X, Y, B?) :- expr_beyond(X?, B1), expr_beyond(Y?, B2), or(B1?, B2?, B).
-procedure expr_beyond(Expr?, YesNo).
-expr_beyond(plus(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+con_beyond(_, program(_), no).
+procedure exprs_beyond(FnDecls?, Expr?, Expr?, YesNo).
+exprs_beyond(Fs, X, Y, B?) :- ground(Fs?) | expr_beyond(Fs?, X?, B1), expr_beyond(Fs?, Y?, B2), or(B1?, B2?, B).
+procedure expr_beyond(FnDecls?, Expr?, YesNo).
+expr_beyond(Fs, plus(X, Y), B?) :- exprs_beyond(Fs?, X?, Y?, B).
 %% The author and the item of a speech act are taken (vGLP 27bae5d, Section 5.4, "Speech-act schemas as local specifications": "a constraint ... is over the relations and functions the value types provide --- ...; the signer, the author and the item of a speech act, its last signer, its first signer and its utterance"; vGLP #24, Code_inbox.md, 2026-11-07 22:27 UTC, 20:36 item 1); a program condition is not, 5.4 naming a program among the values and not how the runtime recognises one.
-expr_beyond(author_of(_), no).
-expr_beyond(item_of(_), no).
-expr_beyond(val(_), no).
+expr_beyond(_, author_of(_), no).
+expr_beyond(_, item_of(_), no).
+expr_beyond(_, val(_), no).
 %% A compound value is in no constraint the printed text evaluates, which compares numbers, persons, speech acts and community names: refused (vGLP #32; Bonds' constraints name a bond's maturity Day, a value variable, and no compound value).
-expr_beyond(cmp(_, _), yes).
-expr_beyond(minus(X, Y), B?) :- exprs_beyond(X?, Y?, B).
-expr_beyond(mul(X, Y), B?) :- exprs_beyond(X?, Y?, B).
+expr_beyond(_, cmp(_, _), yes).
+expr_beyond(Fs, minus(X, Y), B?) :- exprs_beyond(Fs?, X?, Y?, B).
+expr_beyond(Fs, mul(X, Y), B?) :- exprs_beyond(Fs?, X?, Y?, B).
 %% A function the paper names, min or floor, is taken, and a count and a sum (vGLP 9ee6f87, Section 5.4: "over the relations and functions the value types provide --- comparison and arithmetic, min and floor, and signed(u, y) and unsigned(u, y) ... --- and over the count and the sum of the instances of a quantifier"); any other function is not.
-expr_beyond(fn(F, Es), B?) :- ground(F?) | fn_named(F?, B0), exprl_beyond(Es?, B1), or(B0?, B1?, B).
-expr_beyond(cardinality(_, _, _, F), B?) :- form_beyond(F?, B).
-expr_beyond(sum(_, _, _, F, U), B?) :- form_beyond(F?, B1), expr_beyond(U?, B2), or(B1?, B2?, B).
-expr_beyond(role(_), no).
-expr_beyond(pvar(_), no).
-expr_beyond(svar(_), no).
-expr_beyond(nterm(_), no).
-expr_beyond(sgn(_, _), no).
-expr_beyond(num(_), no).
-expr_beyond(real(_), no).
+expr_beyond(Fs, fn(F, Es), B?) :- ground(F?), ground(Es?), ground(Fs?) | exprs_count(Es?, 1, K), fn_named(F?, K?, Fs?, B0), exprl_beyond(Fs?, Es?, B1), or(B0?, B1?, B).
+expr_beyond(Fs, cardinality(_, _, _, F), B?) :- form_beyond(Fs?, F?, B).
+expr_beyond(Fs, sum(_, _, _, F, U), B?) :- ground(Fs?) | form_beyond(Fs?, F?, B1), expr_beyond(Fs?, U?, B2), or(B1?, B2?, B).
+expr_beyond(_, role(_), no).
+expr_beyond(_, pvar(_), no).
+expr_beyond(_, svar(_), no).
+expr_beyond(_, nterm(_), no).
+expr_beyond(_, sgn(_, _), no).
+expr_beyond(_, num(_), no).
+expr_beyond(_, real(_), no).
 %% A variable over the constants is num(X) to the checks (consts_off); the clause covers the type.
-expr_beyond(const(_), no).
-expr_beyond(set(_), no).
-expr_beyond(any, no).
+expr_beyond(_, const(_), no).
+expr_beyond(_, set(_), no).
+expr_beyond(_, any, no).
 %% The place of a conjunct's instances is in no atom, constraint or request (cvac.glp, inst_heads); the clause covers the type.
-expr_beyond(ilist(_, _), no).
-procedure fn_named(Constant?, YesNo).
-fn_named(min, no).
-fn_named(floor, no).
+expr_beyond(_, ilist(_, _), no).
+procedure fn_named(Constant?, Integer?, FnDecls?, YesNo).
+fn_named(min, _, _, no).
+fn_named(floor, _, _, no).
 %% The size of a set, |N| (GSC, def:numbers, the set variable).
-fn_named(size, no).
-fn_named(_, yes) :- otherwise | true.
-procedure exprl_beyond(Exprs?, YesNo).
-exprl_beyond([], no).
-exprl_beyond([E|Es], B?) :- expr_beyond(E?, B1), exprl_beyond(Es?, B2), or(B1?, B2?, B).
-procedure forms_beyond(Forms?, YesNo).
-forms_beyond([], no).
-forms_beyond([F|Fs], B?) :- form_beyond(F?, B1), forms_beyond(Fs?, B2), or(B1?, B2?, B).
-procedure form_beyond(Form?, YesNo).
-form_beyond(fa(_, _), no).
-form_beyond(fnot(F), B?) :- form_beyond(F?, B).
-form_beyond(fand(F, G), B?) :- form_beyond(F?, B1), form_beyond(G?, B2), or(B1?, B2?, B).
-form_beyond(for(F, G), B?) :- form_beyond(F?, B1), form_beyond(G?, B2), or(B1?, B2?, B).
-form_beyond(fexists(_, _, _, F), B?) :- form_beyond(F?, B).
-form_beyond(fforall(_, _, _, F, Gs), B?) :- form_beyond(F?, B1), forms_beyond(Gs?, B2), or(B1?, B2?, B).
-form_beyond(fcons(C), B?) :- con_beyond(C?, B).
+fn_named(size, _, _, no).
+%% A function the owner of a value type gives as a typed GLP procedure, of its arity, its value its last argument (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; pragmas.sh, NAME-functions.glp).
+fn_named(F, K, Fs, B?) :- otherwise | fn_given(F?, K?, Fs?, B).
+procedure fn_given(Constant?, Integer?, FnDecls?, YesNo).
+fn_given(_, _, [], yes).
+fn_given(F, K, [fn(G, J)|_], no) :- F? =?= G?, K? =?= J? | true.
+fn_given(F, K, [_|Fs], B?) :- otherwise | fn_given(F?, K?, Fs?, B).
+%% The arity of a function applied to the expressions, one more than their number, its value its last argument.
+procedure exprs_count(Exprs?, Integer?, Integer).
+exprs_count([], K, K?).
+exprs_count([_|Es], K, N?) :- integer(K?) | K1 := K? + 1, exprs_count(Es?, K1?, N).
+procedure exprl_beyond(FnDecls?, Exprs?, YesNo).
+exprl_beyond(_, [], no).
+exprl_beyond(Fs, [E|Es], B?) :- ground(Fs?) | expr_beyond(Fs?, E?, B1), exprl_beyond(Fs?, Es?, B2), or(B1?, B2?, B).
+procedure forms_beyond(FnDecls?, Forms?, YesNo).
+forms_beyond(_, [], no).
+forms_beyond(Fs, [F|Gs], B?) :- ground(Fs?) | form_beyond(Fs?, F?, B1), forms_beyond(Fs?, Gs?, B2), or(B1?, B2?, B).
+procedure form_beyond(FnDecls?, Form?, YesNo).
+form_beyond(_, fa(_, _), no).
+form_beyond(Fs, fnot(F), B?) :- form_beyond(Fs?, F?, B).
+form_beyond(Fs, fand(F, G), B?) :- ground(Fs?) | form_beyond(Fs?, F?, B1), form_beyond(Fs?, G?, B2), or(B1?, B2?, B).
+form_beyond(Fs, for(F, G), B?) :- ground(Fs?) | form_beyond(Fs?, F?, B1), form_beyond(Fs?, G?, B2), or(B1?, B2?, B).
+form_beyond(Fs, fexists(_, _, _, F), B?) :- form_beyond(Fs?, F?, B).
+form_beyond(Fs, fforall(_, _, _, F, Gs), B?) :- ground(Fs?) | form_beyond(Fs?, F?, B1), forms_beyond(Fs?, Gs?, B2), or(B1?, B2?, B).
+form_beyond(Fs, fcons(C), B?) :- con_beyond(Fs?, C?, B).
 
 %% A real variable, real(X) among a schema's variables, is num(X) to every check and every place of the shared text (reals_off), the schema writing num(X) in its atoms and its constraint; its type, Real, is printed from the table rl(S, X) (real_lx), into the class term, the request type and the atoms (real_heads, real_atoms): "a value variable, whose type, a whole number or a real, the schema writes with it" (vGLP fb40cff, Section 5.4, "Speech-act schemas as local specifications"; vGLP #24, Code_inbox.md, 2026-11-07, 5).
 procedure reals_off(QContract?, QContract).
@@ -787,6 +804,60 @@ lx_sets([], no).
 lx_sets([st(_, _)|_], yes).
 lx_sets([_|Lx], B?) :- otherwise | lx_sets(Lx?, B).
 %% The shared text's lines, a line set_only(L) printed as L where the contract has a set variable and left out where it has none, and a line setless_only(L) the other way about, so that a platform with none prints what it printed before set variables were built.
+%% The shared text's lines, a line fn_only(L) printed as L where the contract has functions the owner of a value type gives and left out where it has none, so that a platform with none prints what it printed before.
+procedure fn_lines_in(Lines?, YesNo?, Lines).
+fn_lines_in([], _, []).
+fn_lines_in([fn_only(L)|Ls], yes, [L?|Ls1?]) :- fn_lines_in(Ls?, yes, Ls1).
+fn_lines_in([fn_only(_)|Ls], no, Ls1?) :- fn_lines_in(Ls?, no, Ls1).
+fn_lines_in([L|Ls], C, [L?|Ls1?]) :- otherwise | fn_lines_in(Ls?, C?, Ls1).
+%% The functions the owner of a value type gives, of the contract's words (PFns).
+procedure worded_fns(Words?, PFns).
+worded_fns(words(pragmas(_, _, _, _, _, _, _, Fn), _, _, _, _), Fn?).
+worded_fns(_, nofns) :- otherwise | true.
+procedure fns_any(PFns?, YesNo).
+fns_any(nofns, no).
+fns_any(fns(_, _), yes).
+%% The platform's call of each function the owner of a value type gives, owner_fn(F, Args, Value), its arguments whole numbers and its value a whole number, then the owner's procedures, the lines of its file, which the platform carries (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; pragmas.sh, NAME-functions.glp).
+procedure owner_fn_lines(PFns?, Lines).
+owner_fn_lines(nofns, []).
+owner_fn_lines(fns(Fs, Ls), L?) :- ground(Fs?) |
+    owner_fn_clauses(Fs?, Lc),
+    lapp(Lc?, ['owner_fn(_, _, no_num) :- otherwise | true.',
+        'procedure exprl_vals(Exprs?, Binding?, NumRess).',
+        'exprl_vals([], _, []).',
+        'exprl_vals([E|Es], B, [R?|Rs?]) :- ground(B?) | expr_val(E?, B?, R), exprl_vals(Es?, B?, Rs).',
+        '', '%% The functions the owner of the value types gives, its file NAME-functions.glp beside the contract.'|Ls?], L1),
+    lapp(['', '%% The functions of the value types that their owner gives as typed GLP procedures, each called with the values of its arguments, whole numbers, its value a whole number; no_num where an argument has no value or is no whole number.',
+        'NumRess   ::= [] ; [NumRes | NumRess].',
+        'procedure owner_fn(Constant?, NumRess?, NumRes).'], L1?, L).
+procedure owner_fn_clauses(FnDecls?, Lines).
+owner_fn_clauses([], []).
+owner_fn_clauses([fn(F, K)|Fs], [T?|Ls?]) :- ground(F?), integer(K?) |
+    K1 := K? - 1,
+    fn_vars(1, K1?, Vs1),
+    fn_vars(1, K1?, Vs2),
+    fn_vars(1, K1?, Vs3),
+    fn_args(Vs1?, Ar),
+    fn_guards(Vs2?, Gs),
+    fn_calls(Vs3?, Ca),
+    term_to_string(F?, Fn),
+    string_concat(['owner_fn(', Fn?, ', [', Ar?, '], num_is(R?)) :- ', Gs?, ' | ', Fn?, '(', Ca?, 'R).'], T),
+    owner_fn_clauses(Fs?, Ls).
+%% The names A1 .. Ak of a function's arguments.
+procedure fn_vars(Integer?, Integer?, List(String)).
+fn_vars(I, K, []) :- integer(I?), integer(K?), I? > K? | true.
+fn_vars(I, K, [V?|Vs?]) :- integer(I?), integer(K?), I? =< K? | term_to_string(I?, Is), string_concat(['A', Is?], V), I1 := I? + 1, fn_vars(I1?, K?, Vs).
+procedure fn_args(List(String)?, String).
+fn_args([], '').
+fn_args([V], T?) :- string_concat(['num_is(', V?, ')'], T).
+fn_args([V, W|Vs], T?) :- string_concat(['num_is(', V?, '), '], T0), fn_args([W?|Vs?], T1), string_concat([T0?, T1?], T).
+procedure fn_guards(List(String)?, String).
+fn_guards([], 'true').
+fn_guards([V], T?) :- string_concat(['integer(', V?, '?)'], T).
+fn_guards([V, W|Vs], T?) :- string_concat(['integer(', V?, '?), '], T0), fn_guards([W?|Vs?], T1), string_concat([T0?, T1?], T).
+procedure fn_calls(List(String)?, String).
+fn_calls([], '').
+fn_calls([V|Vs], T?) :- string_concat([V?, '?, '], T0), fn_calls(Vs?, T1), string_concat([T0?, T1?], T).
 procedure set_lines(Lines?, YesNo?, Lines).
 set_lines([], _, []).
 set_lines([set_only(L)|Ls], yes, [L?|Ls1?]) :- set_lines(Ls?, yes, Ls1).
@@ -1855,7 +1926,7 @@ plain_words(C0, C7, Nt, P, C?, P1?) :- ground(Nt?) |
 %% A set variable local to a role is no place of the request (strip_locals; local.glp, set_locals): "A set variable of atoms the schema deletes at a role other than the base is local to that role, as the notes Bob gives in a swap, which his machine picks from his own" (OSPM, act-schemas-local, VEUI vglp32-sets-2026-11-24).  pragmas.sh gives an act a field string for each place of the schema's head, so the string of such a place is left out, and a field type, ft(K, T), after it renumbered.
 procedure strip_wpragmas(WPragmas?, QContract?, NumInfos?, WPragmas).
 strip_wpragmas(no_pragmas, _, _, no_pragmas).
-strip_wpragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd), C, Nt, pragmas(Ls?, As1?, Ss?, Lk?, Vn?, Tx?, Fd?)) :- strip_tacts(As?, C?, Nt?, As1).
+strip_wpragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd, Fn), C, Nt, pragmas(Ls?, As1?, Ss?, Lk?, Vn?, Tx?, Fd?, Fn?)) :- strip_tacts(As?, C?, Nt?, As1).
 procedure strip_tacts(TActs?, QContract?, NumInfos?, TActs).
 strip_tacts([], _, _, []).
 strip_tacts([act(N, B, Fs, Q, X, By, Ft)|As], C, Nt, [act(N?, B?, Fs1?, Q?, X?, By?, Ft1?)|As1?]) :- ground(N?), ground(C?), ground(Nt?), ground(Fs?), ground(Ft?) |
@@ -1987,6 +2058,7 @@ pragma_acts(pragmas(_, As), Ts?) :- norm_acts(As?, Ts).
 pragma_acts(pragmas(_, As, _), Ts?) :- norm_acts(As?, Ts).
 pragma_acts(pragmas(_, As, _, _, _, _), Ts?) :- norm_acts(As?, Ts).
 pragma_acts(pragmas(_, As, _, _, _, _, _), Ts?) :- norm_acts(As?, Ts).
+pragma_acts(pragmas(_, As, _, _, _, _, _, _), Ts?) :- norm_acts(As?, Ts).
 
 %% A schema's variables are named V1, V2, ... in the printed clauses; there are
 %% as many names as vname/3 has.
@@ -2044,7 +2116,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     const_lines(Fx00?, Kn?, Fx0s),
     worded_lx(W?, Lx10),
     lx_sets(Lx10?, Ks),
-    set_lines(Fx0s?, Ks?, Fx01s),
+    set_lines(Fx0s?, Ks?, Fx01f),
+    worded_fns(W?, Wfn0),
+    fns_any(Wfn0?, Kf),
+    fn_lines_in(Fx01f?, Kf?, Fx01s),
     cmp_lines(Fx01s?, Kc?, Fx01),
     worded_phone(W?, Ph0),
     phone_found(Ph0?, Fd),
@@ -2120,7 +2195,10 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     worded_stands(W?, Ssm),
     meeting_lines(C?, Ps?, Fdm?, Ssm?, Lmt),
     lapp(Lq?, Lp?, Lqp0),
-    lapp(Lqp0?, Lmt?, Lqp),
+    lapp(Lqp0?, Lmt?, Lqp1),
+    worded_fns(W?, Wfn1),
+    owner_fn_lines(Wfn1?, Lfn),
+    lapp(Lqp1?, Lfn?, Lqp),
     lapp(Ln1?, Lqp?, Ln),
     T2a =.. [reflexive_preds, Rf?],
     term_to_string(T2a?, T2),
@@ -3249,13 +3327,13 @@ lc_of([], _, []).
 lc_of([lc(S1, Bi, Xs, A, Phi, CA, CD)|Lx], S, [local(Bi?, Xs?, A?, Phi?, CA?, CD?)|Ls?]) :- S1? =?= S? | lc_of(Lx?, S?, Ls).
 lc_of([_|Lx], S, Ls?) :- otherwise | lc_of(Lx?, S?, Ls).
 procedure worded_acts(Worded?, TActs).
-worded_acts(words(pragmas(_, As, _, _, _, _, _), _, _, _, _), As?).
+worded_acts(words(pragmas(_, As, _, _, _, _, _, _), _, _, _, _), As?).
 %% The standing declarations of a contract carrying pragmas.
 procedure worded_stands(Worded?, PStands).
-worded_stands(words(pragmas(_, _, Ss, _, _, _, _), _, _, _, _), Ss?).
+worded_stands(words(pragmas(_, _, Ss, _, _, _, _, _), _, _, _, _), Ss?).
 %% What the phone does for the contract (norm_pragmas): the predicates it finds, and the standing schemas whose standing request opens it to persons it does not know.
 procedure worded_phone(Worded?, PhoneFacts).
-worded_phone(words(pragmas(_, _, _, _, _, _, Ph), _, _, _, _), Ph?).
+worded_phone(words(pragmas(_, _, _, _, _, _, Ph, _), _, _, _, _), Ph?).
 procedure phone_found(PhoneFacts?, Preds).
 phone_found([], []).
 phone_found([found(P)|Ps], [P?|Fs?]) :- phone_found(Ps?, Fs).
@@ -3593,7 +3671,7 @@ request_name_decl([X|Xs], ['', 'procedure request_name(Class?, PName).', X?|Xs1?
 
 %% A contract whose pragmas name what the contract does not hold is not compiled, with a line saying why: a list naming no predicate of the contract, or more than one; a button naming no schema of the contract, the button's text read in lower case being the schema's name ("each bearing its act's name", GSC 2991379, Section 2); a pragma naming more fields than its schema has variables the person fills; a sentence naming a person, Alice, Bob or Carol, that its schema does not have; and a guarded schema no button names (unnamed_lines).
 procedure word_faults(Worded?, Contract?, NumInfos?, Preds?, Lines).
-word_faults(words(pragmas(Ls, As, Ss, _, _, _, _), _, Lx, _, _), C, Nt, Ps, F?) :- ground(Ls?), ground(As?), ground(Ss?), ground(C?), ground(Ps?), ground(Lx?) |
+word_faults(words(pragmas(Ls, As, Ss, _, _, _, _, _), _, Lx, _, _), C, Nt, Ps, F?) :- ground(Ls?), ground(As?), ground(Ss?), ground(C?), ground(Ps?), ground(Lx?) |
     contract_preds_lx(C?, Nt?, Lx?, Pr),
     list_faults(Ls?, Pr?, F1),
     act_faults(As?, C?, F2),
@@ -3957,7 +4035,7 @@ a_person(ilist(_, _), _, _, no).
 %% The two widget declarations every platform carries (vGLP, Section 6.2, "The words a platform shows": "The compiler prints three widget declarations for a platform: for its request type, a menu of the buttons and the fields of the contract's acts; for its approval type, the question with the buttons yes and no"), so that no app writes a self.vglp: the approval question drawn by the construct family's approval_sentence, the request question by its social_menu.  With pragmas, the request type's declaration carries the buttons the contract's pragmas give, button(B, Acts), B the label in brackets and Acts the acts it names (Section 5.4, "The contract's words": "A button is of the acts it names"); each act, for each guarding role at which it is proposed, act(F, M, Pre, Binds, Fields, Same, Text): F its schema, M the place of the proposer in its request, Pre the atoms its schema requires and forbids at the proposer's role and what the schemas prove, Binds the places of its request those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, in the schema's order, Same its places possibly one person and Text the text of its request form (Section 6.2: the request widget "draws one button for each way the viewer's state, in the last view written, satisfies the act at the proposer's role, with the values that way binds and the act's fields").  It carries no tab and no row: where the construct family draws a button is its own choice, from the atoms that bind the way (Section 6.2: "How the buttons of one act are arranged, each beside the atoms that bind it or as one button with a picker, is the construct family's").  The approval question's two answers are given by no pragma, so its declaration carries no label, and the construct family draws the name of each (Section 6.2: "A construct family draws the label it is given, and the name of the type where it is given none").  The grammar is README.md's beside this file, 6.
 procedure widget_lines(Worded?, Contract?, Contract?, Preds?, NumInfos?, DrawCtx?, Lines).
 widget_lines(_, _, _, [], _, _, ['', '%% The widget declaration of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence; a contract with no guarded part has no request question.', 'Approval =::= approval_sentence.']).
-widget_lines(words(pragmas(_, As, _, _, _, _, _), _, _, _, _), C, Ch, Ps, Nt, Rf, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent\'s own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract\'s pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer\'s role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument\'s place, at(K), a group\'s, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).', 'Approval =::= approval_sentence.', T?, '.', '', '%% The types of the request widget\'s term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu\'s one alternative is T\'s.', 'RequestMenu ::= social_menu(List(MenuEntry)).', 'MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).', 'MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuField ::= field(Integer, String, MenuFieldType).', 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuWord ::= say(String) ; at(Integer).']) :-
+widget_lines(words(pragmas(_, As, _, _, _, _, _, _), _, _, _, _), C, Ch, Ps, Nt, Rf, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent\'s own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract\'s pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer\'s role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument\'s place, at(K), a group\'s, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).', 'Approval =::= approval_sentence.', T?, '.', '', '%% The types of the request widget\'s term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu\'s one alternative is T\'s.', 'RequestMenu ::= social_menu(List(MenuEntry)).', 'MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).', 'MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuField ::= field(Integer, String, MenuFieldType).', 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuWord ::= say(String) ; at(Integer).']) :-
     ground(As?), ground(C?), ground(Ch?), ground(Ps?), ground(Rf?) |
     act_buttons(As?, C?, Ch?, Ps?, Nt?, Rf?, [], Bs),
     button_texts(Bs?, Bt),
@@ -4124,7 +4202,7 @@ calc_item([P], ok(E), [calc(P?, E?)]).
 calc_item(_, _, []) :- otherwise | true.
 %% Whether an act of the request type has a number to compute (calc_places), an act a button of the pragmas names whose schema the request type proposes, as act_buttons finds them, so that a platform with none prints its types as before.
 procedure calc_acts(Worded?, TActs).
-calc_acts(words(pragmas(_, As, _, _, _, _, _), _, _, _, _), As?).
+calc_acts(words(pragmas(_, As, _, _, _, _, _, _), _, _, _, _), As?).
 calc_acts(_, []) :- otherwise | true.
 procedure calc_any(TActs?, Preds?, NumInfos?, Contract?, YesNo).
 calc_any([], _, _, _, no).
@@ -4633,7 +4711,7 @@ nth_arg(_, [], role(0)).
 
 %% The lists and the sentences, printed for a contract with pragmas: tabs(Ts), the lists its app shows, tab(Name, P), P the predicate whose atoms the list holds; and sentence_of(C, Me, Ws), the sentence the contract puts to the agent Me on an attempt of the part C, its roles and variables filled in from the binding C names, or [] where it puts none: where the pragma of C's clause has no sentence, or where the sentence names Me, the sentence being put to the guarding roles whose persons it does not name (README.md beside this file, "The pragmas").
 procedure word_lines(Worded?, Contract?, NumInfos?, Lines).
-word_lines(words(pragmas(Ls, As, Ss, Lk, Vn, Tx, _), Ev, Lx, Dn, Vl), C, Nt, L?) :- ground(Ls?), ground(As?), ground(C?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Dn?), ground(Lx?) |
+word_lines(words(pragmas(Ls, As, Ss, Lk, Vn, Tx, _, _), Ev, Lx, Dn, Vl), C, Nt, L?) :- ground(Ls?), ground(As?), ground(C?), ground(Ss?), ground(Lk?), ground(Vn?), ground(Tx?), ground(Dn?), ground(Lx?) |
     export_lines(Dn?, pragmas(Ls?, As?, Ss?, Lk?, Vn?), Tx?, Vn?, Lex0),
     lx_consts(Lx?, Kn),
     lx_sets(Lx?, Ks),
