@@ -126,8 +126,12 @@ def parse_rules(text):
 
 
 # A label is a contract's name, a colon and a clause's number: 'GSG:1',
-# 'Community Bank:1', "Workers' Cooperative:2" (calculus/NAMES.txt).
-CALC_LINE = re.compile(r"^([A-Z][A-Za-z' -]*?):(\d+) (\S) (.*)$")
+# 'Community Bank:1', "Workers' Cooperative:2" (calculus/NAMES.txt); an act
+# that a later contract's clause changes has the labels of both, joined by
+# '+', 'Booking:1+Tennis Courts:1' (Audit #4, ticket 138: until 2026-11-25
+# such acts were left out).
+LABEL = r"[A-Z][A-Za-z' -]*?:\d+"
+CALC_LINE = re.compile(r"^(" + LABEL + r"(?:\+" + LABEL + r")*) (\S) (.*)$")
 
 
 def parse_calculus(text):
@@ -145,7 +149,8 @@ def parse_calculus(text):
         if not m:
             header.append(line.strip())
             continue
-        rest = m.group(4)
+        rest = m.group(3)
+        labels = [(n, int(k)) for n, k in (x.rsplit(':', 1) for x in m.group(1).split('+'))]
         r = re.match(r'^([^|:][^:]*): (.*?)\s*<-\s*(.*?)\.?$', rest)
         if rest.startswith('|') or not r:
             continue
@@ -154,7 +159,8 @@ def parse_calculus(text):
             body, g = r.group(3), ''
         heads, needs = split_top(r.group(2)), split_top(body)
         out.append({'name': r.group(1), 'head': f"{r.group(1)}: {r.group(2)}", 'form': 'rule',
-                    'origin': file_of(m.group(1)), 'clause': int(m.group(2)),
+                    'origin': file_of(labels[0][0]), 'clause': labels[0][1],
+                    'labels': [f"{n}:{k}" for n, k in labels], 'by': [file_of(n) for n, _ in labels],
                     'adds': [h for h in heads if not h.startswith('~')],
                     'removes': [h[1:] for h in heads if h.startswith('~')],
                     'body': body.strip(), 'needs': ['not ' + n[1:] if n.startswith('~') else n for n in needs],
@@ -636,8 +642,13 @@ for n in sorted((set(compiled) | set(cat)) & KEEP):
 for c in contracts:
     for s in c['schemas']:
         # The Calculus's form names each act's origin itself.
+        # An act a later clause changes, 'Booking:1+Tennis Courts:1', is from
+        # the contract it was first written in, and is this contract's own
+        # where this contract's clause is among its labels.
         if s.get('origin'):
-            s['from'] = s.pop('origin')
+            by = s.pop('by', [])
+            s['from'] = c['id'] if c['id'] in by else s.pop('origin')
+            s.pop('origin', None)
             continue
         s['from'] = c['id']
         for a in ancestors(c['id']):
