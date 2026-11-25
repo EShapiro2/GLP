@@ -235,7 +235,7 @@ FOUNDATIONAL = [
     # a main file whose author is empty or a placeholder ("Friends" in IVMAT's,
     # "Anonymous Author(s)" in GPW's, none in Secure-GLP's) gives no authors.
     {'key': 'GBM', 'title': 'Grassroots Business Models', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
-    {'key': 'CFRI', 'title': 'Composing Fault-Resilient Implementations', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
+    {'key': 'CFRI', 'title': 'Composing Fault-Resilient Implementations', 'authors': 'Anonymous', 'state': 'in preparation'},
     {'key': 'IVMAT', 'title': 'Fault-Resilient Implementations of Volition-Guarded Atomic Transactions', 'authors': '', 'state': 'in preparation'},
     {'key': 'GFWC', 'title': 'Grassroots Federation Without Consensus', 'authors': '', 'state': 'in preparation'},
     {'key': 'CDWC', 'title': 'Constitutional Democracy Without Consensus', 'authors': '', 'state': 'in preparation'},
