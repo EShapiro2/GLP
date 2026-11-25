@@ -2,7 +2,7 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 5, Grassroots Network Organisations and cites a clause as Community Network:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Organisation and Denominated Currencies, restricting and strengthening Organisation (Udi, 2026-11-20, to GO #14).
-% Last changed: 2026-11-24, by GO #15: Found's line without Gov's question, Gov being the community Alice is a participant of, no role of found (Organisation:1 at Calculus 08f4b51).
+% Last changed: 2026-11-25, by GO #15: Interface lines on the compound bond(Day) terms (Calculus c679a4a): the deposits for Carol without <votes of the other party>, Accept by bond for Alice without <maturity>, as pragmas.sh gives them.
 % Schemas: Community-Network.glp beside this file.
 Community Network
 Community Network extends Backed Community Bank, and augments it (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
@@ -96,19 +96,19 @@ Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <denomination>
   CarolOfficer: AliceOfficer asks to deposit more coins of the organisation Alice with your organisation Carol.
   AliceOfficer [Deposit own bonds for Alice]
   Carol: AliceOfficer asks to deposit the organisation Alice's own bonds with you.
-  Alice [Deposit own bonds for Carol] <officer of the other party> <amount> <condition> <votes of the other party>
+  Alice [Deposit own bonds for Carol] <officer of the other party> <amount> <condition>
   CarolOfficer: Alice asks to deposit her own bonds with your organisation Carol.
   AliceOfficer [Deposit own bonds for Alice and Carol] <officer of the other party>
   CarolOfficer: AliceOfficer asks to deposit the organisation Alice's own bonds with your organisation Carol.
   AliceOfficer [Deposit bond with the issuer for Alice]
   Carol: AliceOfficer asks to deposit your bonds, held by the organisation Alice, with you.
-  Alice [Deposit bond with the issuer for Carol] <officer of the other party> <amount> <condition> <votes of the other party>
+  Alice [Deposit bond with the issuer for Carol] <officer of the other party> <amount> <condition>
   CarolOfficer: Alice asks to deposit your organisation Carol's bonds with it.
   AliceOfficer [Deposit bond with the issuer for Alice and Carol] <officer of the other party>
   CarolOfficer: AliceOfficer asks to deposit your organisation Carol's bonds, held by the organisation Alice, with it.
   AliceOfficer [Deposit bond more for Alice]
   Carol: AliceOfficer asks to deposit more bonds of the organisation Alice with you.
-  Alice [Deposit bond more for Carol] <officer of the other party> <amount> <condition> <votes of the other party>
+  Alice [Deposit bond more for Carol] <officer of the other party> <amount> <condition>
   CarolOfficer: Alice asks to deposit more bonds with your organisation Carol.
   AliceOfficer [Deposit bond more for Alice and Carol] <officer of the other party>
   CarolOfficer: AliceOfficer asks to deposit more bonds of the organisation Alice with your organisation Carol.
@@ -142,7 +142,7 @@ Issue denominated bond: AliceOfficer [Issue denominated bond for Alice]
   Voter [Vote of Alice for Issue denominated bond]
 Accept: AliceOfficer [Accept for Alice]
   Voter [Vote of Alice for Accept]
-  AliceOfficer [Accept by bond for Alice] <maturity>
+  AliceOfficer [Accept by bond for Alice]
 Pay accepted coins: AliceOfficer [Pay accepted coins for Alice]
   Voter [Vote of Alice for Pay accepted coins]
   AliceOfficer [Pay own accepted coins for Alice] [Pay accepted coins to the issuer for Alice]
