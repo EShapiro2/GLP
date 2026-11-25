@@ -1,6 +1,6 @@
 AI-Agents  certified; VMAT 23 displays; platform.vglp 7918 lines; platform.glp 5351 lines
 Ads        certified; VMAT 144 displays; no platform: a parametric contract has none until it is instantiated
-Agora      certified; VMAT 31 displays; platform.vglp 8361 lines; platform.glp 5623 lines
+Agora      certified; VMAT 31 displays; platform.vglp 8519 lines; platform.glp 5767 lines
 Anonymous-Matching certified; VMAT 31 displays; platform.vglp 8264 lines; platform.glp 5470 lines
 Anonymous-Rendezvous certified; VMAT 27 displays; platform.vglp 8088 lines; platform.glp 5398 lines
 App        certified; VMAT 51 displays; platform.vglp 8894 lines; platform.glp 5812 lines
@@ -10,7 +10,7 @@ Auction    certified; VMAT 18 displays; platform.vglp 7696 lines; platform.glp 5
 Backchannel-Feeds certified; VMAT 17 displays; platform.vglp 7566 lines; platform.glp 5221 lines
 Backed-Community-Bank certified; VMAT 125 displays; no platform: a parametric contract has none until it is instantiated
 Bank       certified; VMAT 123 displays; no platform: a parametric contract has none until it is instantiated
-Bonds      certified; VMAT 14 displays; platform.vglp 7687 lines; platform.glp 5346 lines
+Bonds      certified; VMAT 14 displays; platform.vglp 7837 lines; platform.glp 5489 lines
 Booking    certified; VMAT 31 displays; platform.vglp 8352 lines; platform.glp 5538 lines
 Carpool    certified; VMAT 31 displays; platform.vglp 8264 lines; platform.glp 5470 lines
 Central-Bank certified; VMAT 127 displays; no platform: a parametric contract has none until it is instantiated
@@ -29,9 +29,9 @@ DAO        certified; VMAT 18 displays; platform.vglp 7655 lines; platform.glp 5
 Dating     certified; VMAT 31 displays; platform.vglp 8264 lines; platform.glp 5470 lines
 Democratic-Community certified; VMAT 128 displays; no platform: a parametric contract has none until it is instantiated
 Denominated-Coins certified; VMAT 12 displays; platform.vglp 7612 lines; platform.glp 5312 lines
-Denominated-Currencies certified; VMAT 27 displays; platform not compiled
+Denominated-Currencies certified; VMAT 27 displays; platform.vglp 8421 lines; platform.glp 5746 lines
 Directory  certified; VMAT 32 displays; platform.vglp 8245 lines; platform.glp 5474 lines
-Disputes   certified; VMAT 31 displays; platform.vglp 8348 lines; platform.glp 5537 lines
+Disputes   certified; VMAT 31 displays; platform.vglp 8350 lines; platform.glp 5538 lines
 Distrust   certified; VMAT 9 displays; platform.vglp 7308 lines; platform.glp 5085 lines
 Encounters certified; VMAT 6 displays; platform.vglp 7231 lines; platform.glp 5051 lines
 Feeds      certified; VMAT 15 displays; platform.vglp 7506 lines; platform.glp 5206 lines

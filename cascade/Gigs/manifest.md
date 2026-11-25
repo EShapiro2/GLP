@@ -1,11 +1,11 @@
 # A run of the cascade on Gigs
 
-- Contract: `Gigs` (`gigs` to the checker), its owner's two files `programs/go/Gigs.txt` and `programs/go/Gigs.glp`, copied here as they stood at `f20c40e4`.
+- Contract: `Gigs` (`gigs` to the checker), its owner's two files `programs/go/Gigs.txt` and `programs/go/Gigs.glp`, copied here as they stood at `2d339620`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Parametric: checked as written, with no realisation, so no platform is compiled (GSC, Definition Parametric contract).
 - Adopted from the Calculus: `programs/go/Gigs.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Gigs.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-24 19:15 UTC by `cascade.sh gigs`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `f20c40e4`; each artefact's source and tool:
+- Run on 2026-11-25 00:35 UTC by `cascade.sh gigs`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `2d339620`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
@@ -17,7 +17,7 @@
 | `flat.txt` | the same | calculus/tools/adopt.py | the flat text, the relations applied |
 | `full-schemas.txt` | the same | calculus/tools/adopt.py | the schemas, the relations applied |
 | `verdict.txt` | `Gigs.glp` | programs/gsc, check/2 | the checker's verdict: `syntactically_grassroots_with_wards(acquaint, [organisation], [guardianship(organisation, officer, has_officer)], [relay(organisation_acquaint, ward(1, organisation, no_guardian), free(2)), relay(organisations_acquaint, ward(1, organisation, no_guardian), ward(2, organisation, no_guardian))], [identity, person])` |
-| `vmat.tex` | `Gigs.glp` | programs/gsc, compile_contract/2 | the VMAT form, 155 displays, one per schema |
+| `vmat.tex` | `Gigs.glp` | programs/gsc, compile_contract/2 | the VMAT form, 156 displays, one per schema |
 | (no platform) | | | a parametric contract, with no realisation |
 
 What the tools refused or lacked:

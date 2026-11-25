@@ -206,7 +206,7 @@ def first_line(n):
         with_ = None
         if verb == 'composes' and ' with ' in obj:
             obj, with_ = obj.split(' with ', 1)
-        bases = None if obj in ('it', 'them', 'the composition', 'the union') else [re.sub(r'^(?:an? (?:weakening|strengthening|augmentation|renaming|lift) of )+', '', b.strip()) for b in re.split(r',\s*|\s+and\s+', obj) if b.strip()]      # 'a weakening of a lift of Bonds': Bonds
+        bases = None if obj in ('it', 'them', 'the composition', 'the union') else [re.sub(r'^(?:an? (?:weakening|strengthening|augmentation|renaming|lift) of )+', '', b.strip()) for b in NM.split_list(obj, r',\s*and\s+|,\s*|\s+and\s+') if b.strip()]      # 'Jobs and Lost and Found' (Audit #116)      # 'a weakening of a lift of Bonds': Bonds
         for v in pend:
             steps.append((v, bases, ''))
         pend = []
@@ -658,7 +658,7 @@ def verdicts(n):
         elif v == 'composes':
             b = bs if bs else None
             first = base if b is None else merge_all(b)
-            withs = [x for x in re.split(r',\s*|\s+and\s+', extra) if x]      # 'GA composes GPE with GAS and GDS': the composition with each (Helper #5, 2026-11-16)
+            withs = [x for x in NM.split_list(extra, r',\s*and\s+|,\s*|\s+and\s+') if x]      # 'GA composes GPE with GAS and GDS': the composition with each (Helper #5, 2026-11-16)
             base = merge(first, merge_all(withs))
             names = (names if b is None else b) + withs
             if inst:            # the states the instance puts for states bind the contract composed with it (SC's bylaws, Shares's issue of shares)

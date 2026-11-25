@@ -64,6 +64,6 @@ AI Agents:2 ■ | The principal of Alf attests at its creation, signed over Alf'
 AI Agents:2 ■ Agent sign: item(Alf,Item) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), ~item(Alf,Item) guarded by Alf.
 AI Agents:2 ■ Agent forward: item(Bob,Item@Alf) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), item(Alf,Item), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
 AI Agents:2 ■ | Every act of Alf requires this attestation and names its developer and its principal.
-Provenance Groups:1 ■ Agent message: item(Bob,Text) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), item(Alf,Text), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
-Provenance Groups:1 ■ Deliver own: group_delivered(Alice,Alice,Text,Grupo,Carol), item(Carol,Text) <- leader(Alice,Grupo), posted(Alice,Text,Alice,Grupo), listed(Alice,Carol,Grupo), author(Alice,Text), ~group_delivered(Alice,Alice,Text,Grupo,Carol).
+Provenance Groups:1 ■ Agent message: message(Bob,Alf,Text), item(Bob,Text) <- ai_agent(Alf), attestation(Alf,Proof), has_guardian(Alf,Alice), item(Alf,Text), friend(Alf,Bob), friend(Bob,Alf) guarded by Alf.
+Provenance Groups:1 ■ Deliver own: group_delivered(Alice,Alice,Text,Grupo,Carol), group_message(Carol,Alice,Text,Grupo,Alice), item(Carol,Text) <- leader(Alice,Grupo), posted(Alice,Text,Alice,Grupo), listed(Alice,Carol,Grupo), author(Alice,Text), ~group_delivered(Alice,Alice,Text,Grupo,Carol).
 Provenance Groups:2 ■ Post forward: posted(Alice,Item@Bob,Bob,Grupo) <- person(Bob), member(Bob,Grupo,Alice), ~leader(Bob,Grupo), item(Bob,Item) guarded by Bob.

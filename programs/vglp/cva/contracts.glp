@@ -300,10 +300,11 @@ NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
 %% real(X) a real value variable among a schema's variables, as programs/gsc/self.glp writes it (GSC 8b1460f; vGLP fb40cff, Section 5.4).
 %% any the wildcard of a cleared atom, as programs/gsc/self.glp writes it (GSC 327e035).
 %% set(X) a set variable, its atoms one for each element, as programs/gsc/self.glp writes it (GSC 0daa1b8).
+%% cmp(F, As) a compound value f(t1, ..., tk), as programs/gsc/self.glp writes it (GSC c28d1c7).
 %% const(X) a value variable over the constants, among a schema's variables and where it occurs (vGLP, Section 5.4, "Speech-act schemas as local specifications": "a value variable, whose type, a whole number, a real or a constant, the schema writes with it"; compiler/README.md, 30).
 Arg       ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm)
             ; num(Constant) ; real(Constant) ; any ; val(Constant) ; const(Constant)
-            ; set(Constant).
+            ; set(Constant) ; cmp(Constant, Args).
 Args      ::= [] ; [Arg | Args].
 Atom      ::= atom(Constant, Args).
 Atoms     ::= [] ; [Atom | Atoms].
@@ -385,6 +386,7 @@ contract_named(wild, C?) :- wild(C).
 contract_named(roles, C?) :- roles(C).
 contract_named(wards, C?) :- wards(C).
 contract_named(feeds, C?) :- feeds(C).
+contract_named(cvalues, C?) :- cvalues(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -423,6 +425,7 @@ introduction_named(wild, no_introduction).
 introduction_named(roles, no_introduction).
 introduction_named(wards, no_introduction).
 introduction_named(feeds, no_introduction).
+introduction_named(cvalues, no_introduction).
 
 %% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
@@ -505,6 +508,13 @@ pragmas_named(wardclose, pragmas([list('"Friends"', [friend])],
      act(create, '"Create"', [], none, '"Friends"', by([1])),
      act(join, '"Join"', ['""', '""', '"Group"'], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(child_close, '"Child close"', ['""', '""', '"Group"'], none, '"Friends"', by([2]))])).
+pragmas_named(cvalues, pragmas([list('"Contacts"', [knows]), list('"Notes"', [note])],
+    [act(establish, '"Establish"', [], none, '"Contacts"', by([1])),
+     act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
+     act(issue, '"Issue"', ['""', '"Type"', '"Note"'], none, '"Notes"', by([1])),
+     act(pay, '"Pay"', ['""', '""', '"Type"', '"Note"'], said([[], [person(1), text('" asks."')]]), '"Notes"', by([1])),
+     act(redeem, '"Redeem"', ['""', '""', '"Day"', '"Note"'], said([[], [person(1), text('" asks."')]]), '"Notes"', by([1])),
+     act(bonded, '"Bonded"', [], none, '"Notes"', by([1]))])).
 pragmas_named(feeds, pragmas([list('"Friends"', [friend]), list('"Feed"', [item])],
     [act(befriend, '"Befriend"', [], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(post, '"Post"', ['""', '"text"'], none, '"Feed"', by([1]))])).
@@ -1194,3 +1204,34 @@ roles([schema(acquaint, [],
        nschema(concur, [const(r), const(s)], eq(num(r), num(s)),
          [rs(guarded, [atom(concurs, [role(2)])], [], [atom(knows, [role(2)]), atom(role, [role(2), num(r)])], [atom(concurs, [role(2)])]),
           rs(unguarded, [atom(concurred, [role(1)])], [], [atom(knows, [role(1)]), atom(role, [role(1), num(s)])], [])])]).
+
+%% cvalues: a compound value, bond(Day), as a note's type, so that a contract compiled here names a compound value (GSC compound values, Definition "Schema with values": f(v1, ..., vk) in V; Calculus #11, 2026-11-25 02:45 UTC: Bonds' note type bond(Day)).  A note is note(Type, N), Type a constant or a compound value; issue and pay move a note of any type; redeem moves only a bond due by day 10, its Day named by the request:
+%%
+%%   establish(p?)          :  at p  +identity
+%%   acquaint(p?, q?)       :  at p  identity, +knows(q)
+%%                             at q  identity, +knows(p)
+%%   issue(p? ; t, n)       :  at p  identity, not note(t, n), +note(t, n)
+%%   pay(p?, q? ; t, n)     :  at p  knows(q), -note(t, n)
+%%                             at q  knows(p), +note(t, n)
+%%   redeem(p?, q? ; d, n)  :  at p  knows(q), -note(bond(d), n)
+%%                             at q  knows(p), +note(bond(d), n)                d =< 10
+%%   bonded(p?)             :  at p  note(bond(_), _), not bonded, +bonded
+%%
+%% bonded requires a bond of any maturity, bond(_), its wildcard a variable of the kind of Day, as redeem writes bond(d).
+%% cvalues/self.glp plays it.
+procedure cvalues(Contract).
+cvalues([schema(establish, [],
+           [rs(guarded, [atom(identity, [])], [], [], [])]),
+         schema(acquaint, [],
+           [rs(guarded, [atom(knows, [role(2)])], [], [atom(identity, [])], []),
+            rs(guarded, [atom(knows, [role(1)])], [], [atom(identity, [])], [])]),
+         schema(issue, [const(t), const(n)],
+           [rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(identity, [])], [atom(note, [num(t), num(n)])])]),
+         schema(pay, [const(t), const(n)],
+           [rs(guarded, [], [atom(note, [num(t), num(n)])], [atom(knows, [role(2)])], []),
+            rs(guarded, [atom(note, [num(t), num(n)])], [], [atom(knows, [role(1)])], [])]),
+         nschema(redeem, [num(d), const(n)], le(num(d), num(10)),
+           [rs(guarded, [], [atom(note, [cmp(bond, [num(d)]), num(n)])], [atom(knows, [role(2)])], []),
+            rs(guarded, [atom(note, [cmp(bond, [num(d)]), num(n)])], [], [atom(knows, [role(1)])], [])]),
+         schema(bonded, [],
+           [rs(guarded, [atom(bonded, [])], [], [atom(note, [cmp(bond, [any]), any])], [atom(bonded, [])])])]).

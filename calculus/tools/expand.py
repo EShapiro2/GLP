@@ -223,7 +223,7 @@ def parse_first(name, line, known):
             if not last:
                 raise ValueError("'%s' refers to nothing" % text)
             return list(last)
-        out = [OF.sub('', x) for x in re.split(r', and |, | and ', text)]
+        out = [OF.sub('', x) for x in NM.split_list(text)]      # 'Jobs and Lost and Found' (Audit #116)
         for x in out:
             if not re.match(r'^%s$' % NAME, x):
                 raise ValueError("'%s' in '%s' is no contract's name" % (x, chunk))

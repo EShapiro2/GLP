@@ -11,7 +11,7 @@ Withdraw: Carol [Withdraw] <alice> <item> <mart>
   Alice [Withdraw own]
 Swap, Escrow: Alice [Swap item for coin] <dave> <sum>
   Bob: Alice asks for your consent to swap item for coin.
-  Alice [Swap item for bond] <dave> <sum>
+  Alice [Swap item for bond] <dave> <day> <sum>
   Bob: Alice asks for your consent to swap item for bond.
   Alice [Swap items] <thing>
   Bob: Alice asks for your consent to swap items.

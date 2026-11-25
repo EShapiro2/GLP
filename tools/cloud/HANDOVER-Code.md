@@ -1,3 +1,12 @@
+# Code #37, 2026-11-25 02:35 UTC
+
+- Main 8d14cc0: the sets change.  The Calculus's set terms (35dafec, d7b7a8f, 08f4b51 Found by an organisation and a single note a set of one, 5e6186d Disputes' ruling, a31ed7e Provenance Groups' messages), GSC 4a9175a (checker for sets), vGLP 881c449 (compiler and pragmas.sh on sets, Organisation's plays), GO da8ae14, GAI 4bef766 (gsnp screens), Currencies eac7ad2 (gc).  All 91 adopted (adopted-check 91/0, --check on all); every platform compiles (apps, CSSN, vGLP --check); the 66 records printed at 2d33962 plus Provenance Groups and Secure Friendship (its plays' platform printed afresh); gfwc dormant.  Section APPS 227/227 with gb's 22 checks known red: Bonds' term names a bond's type val('bond(Day)'), sent by Currencies to Calculus #11 and vGLP #32; Currencies mends gb, then the entries come off.
+- cascade.sh: Organisation plays from cva/organisation; a play's declaration may run over several lines.
+- Code mended GCE's Interface lines (GCE has no thread): Stays' Cancel without <sum>; Disputes' Decide <ruling>.
+- Site check before every push to main: tools/cloud/site-check.sh.
+- Owed: Flutter QF as non-root; the full suite on main (helpers' nightly).
+- Retrospective list: constructs.dart (03bc123); old files deleted; Website-site held for LWG; Promoted-Community-Market; Organisation:1 (Calculus item 15); Disputes' ruling text; gb known red.
+
 # Code #37, 2026-11-24 16:10 UTC, after its 2nd compaction
 
 - Main 55c8532: the 91 contracts adopted and printed afresh (d966834, adopt.py --check on all 91); renames done and old Agents, Community, Backed-Community programs and records deleted; Audit PR 83 fixes; GSC 0daa1b8; CSSN Children; Website e7ec8fc (relation words; the 13:40 UTC outage); GO 55c8532.

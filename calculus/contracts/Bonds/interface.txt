@@ -32,6 +32,6 @@ Release: Carol [Release] <sum>
 Return: Carol [Return] <sum>
   Alice: Carol asks for your consent to return.
 Redeem: Alice [Redeem] <carol>
-Redeem coin against bond: Alice [Redeem coin against bond] <carol>
-Redeem bond: Alice [Redeem bond] <carol> <day>
-Redeem bond against bond: Alice [Redeem bond against bond] <carol> <day>
+Redeem coin against bond: Alice [Redeem coin against bond] <carol> <day>
+Redeem bond: Alice [Redeem bond] <carol>
+Redeem bond against bond: Alice [Redeem bond against bond] <carol> <term>
