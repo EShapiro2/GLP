@@ -6801,6 +6801,7 @@ check "CVA calcs: the request of pass names v and d" "^pass(Peer, Integer, Integ
 check "CVA calcs: ... d has no field and the form computes it, calc(3, mul(at(2), lit(2)))" "field(2, \"votes\", number)\], \[calc(3, mul(at(2), lit(2)))\]" "$cva_calcs_out"
 check "CVA calcs: ... the request type has calc (calc_lines)" "same(Integer, Integer) ; calc(Integer, MenuExpr)\.\$" "$cva_calcs_out"
 check "CVA calcs: the request of lend names s, of a cleared atom, and not t or r, local to the role" "^lend(Peer, Integer)\$" "$cva_calcs_out"
+check "CVA calcs: ... MenuExpr is a type definition on a line of its own, as sGLP's interface.sh reads them (line_after)" "^MenuExpr ::= at(Integer) ; lit(Integer)" "$cva_calcs_out"
 
 # A set variable, set(N) of a type Set(A) (GSC, the appendix on values, Definitions "Schema with values" and "Binding with values"; the Calculus's record, items 49 to 51): the request names its elements, a list of constants, the schema-binding binds it to st(Cs), an atom with it stands for one atom per element, and size(N) is the number of its elements.  The contract is GSC's own test of payments of notes (programs/gsc/test_gsc.sh, "set variables"), as GSC's reader reads it.
 cva_sets_out=$("$REPL_RUN" <<HEREDOC

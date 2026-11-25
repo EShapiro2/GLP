@@ -4153,7 +4153,7 @@ calc_lines(Ls, no, Ls?).
 calc_lines(Ls, yes, R?) :-
     line_sub(Ls?, 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; calc(Integer, MenuExpr).', R1),
     line_sub(R1?, 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; size(Integer, Integer).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; size(Integer, Integer) ; calc(Integer, MenuExpr).', R2),
-    line_sub(R2?, 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.  MenuExpr ::= at(Integer) ; lit(Integer) ; plus(MenuExpr, MenuExpr) ; minus(MenuExpr, MenuExpr) ; mul(MenuExpr, MenuExpr).', R).
+    line_after(R2?, 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuExpr ::= at(Integer) ; lit(Integer) ; plus(MenuExpr, MenuExpr) ; minus(MenuExpr, MenuExpr) ; mul(MenuExpr, MenuExpr).', R).
 %% The places of the request that hold persons, its roles and its agent variables: persons of different names are bound to different persons, "but for two the clause names as possibly one person" (vGLP, Section 5.4, "Speech-act schemas as local specifications", Udi, 2026-11-17, to vGLP #30), the pairs pragmas.sh gives as same(K, J) (same_places).
 procedure role_places(Args?, Integer?, Ints).
 role_places([], _, []).
@@ -4705,6 +4705,11 @@ procedure line_sub(Lines?, String?, String?, Lines).
 line_sub([], _, _, []).
 line_sub([L|Ls], O, A, [A?|Ls?]) :- L? =?= O? | true.
 line_sub([L|Ls], O, A, [L?|Ls1?]) :- otherwise | line_sub(Ls?, O?, A?, Ls1).
+%% The lines with A added as a line of its own after the line O, each type definition on a line of its own, as sGLP's interface.sh reads them (Code #38, 2026-11-25).
+procedure line_after(Lines?, String?, String?, Lines).
+line_after([], _, _, []).
+line_after([L|Ls], O, A, [L?, A?|Ls?]) :- L? =?= O? | true.
+line_after([L|Ls], O, A, [L?|Ls1?]) :- otherwise | line_after(Ls?, O?, A?, Ls1).
 procedure export_head(Lines).
 export_head(['',
         '% The contract the platform is compiled from (vGLP, Section 5.4, "The contract\'s words"): contract(Text, with(Read, Pragmas)), its clauses as text, the contract as GSC\'s reader reads it, with its names, and its pragmas, pragmas(Lists, Acts, Stands, Look, Version), its look among them, where the app and the site read it; and version(Current, Back), its version and the earliest version of itself it is compatible with, from its Version line, or version(1, 1).  The types of the term are GSC\'s reader\'s and the pragmas\', named with an R before them.',
