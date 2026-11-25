@@ -1374,7 +1374,9 @@ function schemaHtml(s, open){
   if (s.form === 'rule'){
     const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
     const who = s.guarded.length ? 'needs the will of ' + s.guarded.join(' and ') : 'nobody is asked';
-    return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${esc(NM(s.from))}</span></summary>
+    // An act changed by later clauses names each contract of its labels (Audit #4, ticket 138).
+    const fr = s.labels && s.labels.length > 1 ? s.labels.map(l => NM(l.replace(/:\d+$/, '').replace(/'/g, '').replace(/ /g, '-'))).join(' + ') : NM(s.from);
+    return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${esc(fr)}</span></summary>
       <div class="say">${esc(who)}</div>
       ${s.adds.length ? `<div class="rule"><b>Adds</b>${at(s.adds, 'add')}</div>` : ''}
       ${s.removes.length ? `<div class="rule"><b>Removes</b>${at(s.removes, 'del')}</div>` : ''}
