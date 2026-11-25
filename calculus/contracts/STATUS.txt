@@ -31,7 +31,7 @@ Democratic-Community certified; VMAT 156 displays; platform.vglp 14770 lines; pl
 Denominated-Coins certified; VMAT 12 displays; platform.vglp 7612 lines; platform.glp 5312 lines
 Denominated-Currencies certified; VMAT 27 displays; platform.vglp 8421 lines; platform.glp 5746 lines
 Directory  certified; VMAT 32 displays; platform.vglp 8245 lines; platform.glp 5474 lines
-Disputes   certified; VMAT 31 displays; platform.vglp 8350 lines; platform.glp 5538 lines
+Disputes   certified; VMAT 31 displays; platform.vglp 8360 lines; platform.glp 5540 lines; platform.glp loads
 Distrust   certified; VMAT 9 displays; platform.vglp 7308 lines; platform.glp 5085 lines
 Encounters certified; VMAT 6 displays; platform.vglp 7231 lines; platform.glp 5051 lines
 Feeds      certified; VMAT 15 displays; platform.vglp 7506 lines; platform.glp 5206 lines
@@ -87,5 +87,5 @@ Stays      certified; VMAT 15 displays; platform.vglp 7752 lines; platform.glp 5
 Tennis-Courts certified; VMAT 58 displays; platform.vglp 9446 lines; platform.glp 5965 lines
 Trading-Company certified; VMAT 150 displays; platform.vglp 14526 lines; platform.glp 8393 lines
 Warded-Groups certified; VMAT 42 displays; platform.vglp 8617 lines; platform.glp 5662 lines
-Warnings   certified; VMAT 30 displays; platform.vglp 8310 lines; platform.glp 5520 lines
+Warnings   certified; VMAT 33 displays; platform.vglp 8442 lines; platform.glp 5573 lines; platform.glp loads
 Workers-Cooperative certified; VMAT 159 displays; platform.vglp 14900 lines; platform.glp 8573 lines

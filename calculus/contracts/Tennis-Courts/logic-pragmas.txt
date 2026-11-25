@@ -1,8 +1,13 @@
 Tennis Courts
-Tennis Courts unites Booking and Partners, and extends and weakens the union.
+Tennis Courts unites Booking and Partners, and extends and augments the union.
 The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
-Alice and Carol are persons, Club an organisation.
-1. ■ Book: Booking:1, only if Carol is a participant of Club, Club has Carol as a participant and Carol has fewer outstanding bookings in Club than the bound, with the consent of Carol.
+A booking is of the one who books and of a *partner*, and counts among the outstanding bookings of each.
+Alice and Carol are persons, Club an organisation, Court a court, Slot a slot.
+1. ■ Book: Booking:1, only if Carol is a participant of Club, Club has Carol as a participant and Carol has fewer outstanding bookings in Club than the bound, with the consent of Carol, and then Club has Slot of Court partnered by Carol.
 2. ■ Organisation and ward. Organisation ward acquaint: Club and Wendy may jointly come to know each other, provided Club is an organisation, Club has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.
+3. ■ Cancel: Booking:2, and then Club has Slot of Court partnered by no one.
+4. ■ Withdraw: Carol may withdraw from Slot of Court in Club.
 Logic pragmas.
 Renaming of Booking: a court for a resource.
+Vocabulary: z has s of r partnered by x = partnered(z,r,s,x).
+After x withdraws from s of r in z: no longer z has s of r partnered by x.

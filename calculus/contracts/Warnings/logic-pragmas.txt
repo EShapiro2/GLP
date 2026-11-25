@@ -1,9 +1,14 @@
 Warnings
 Warnings extends Organisation, and weakens it.
-A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking.
-Alice and Bob are persons, Orga an organisation.
-1. ■ Warn: Alice may warn Bob in Orga, provided Alice is an officer of Orga and Orga has Bob as a participant.
-2. ■ Expel: Organisation:3 Expel, only if Orga holds the warnings of at least 2 persons to Bob. Officer expel: Organisation:3 Officer expel, only if Orga holds the warnings of at least 2 persons to Bob.
+A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident. An officer holds at most one warning to a participant at a time, and the participant may answer it once; a warning withdrawn or annulled may be given again of the same incident only if it was not answered.
+Alice and Bob are persons, Orga an organisation, Case an incident, Text an answer.
+1. ■ Warn: Alice may warn Bob in Orga of Case, provided Alice is an officer of Orga and Orga has Bob as a participant.
+2. ■ Answer: Bob may answer Alice's warning in Orga of Case with Text.
+3. ■ Withdrawal. Withdraw: Alice may withdraw her warning to Bob in Orga of Case. Annul: Those who decide for Orga may annul Alice's warning to Bob in Orga of Case.
+4. ■ Expel: Organisation:3 Expel, only if Orga holds the warnings of at least 2 persons to Bob. Officer expel: Organisation:3 Officer expel, only if Orga holds the warnings of at least 2 persons to Bob.
 Logic pragmas.
-Vocabulary: z holds x's warning to y = warning(z,x,y).
-After x warns y in z, which requires z does not hold x's warning to y: z holds x's warning to y.
+Vocabulary: z holds x's warning to y = warning(z,x,y); z holds x's warning to y of k = warning_of(z,x,y,k); z holds y's answer to x's warning of k = answered(z,y,x,k); z holds y's answer to x's warning of k as t = answer_text(z,y,x,k,t).
+After x warns y in z of k, which requires z does not hold x's warning to y and z does not hold y's answer to x's warning of k: z holds x's warning to y and z holds x's warning to y of k.
+After y answers x's warning in z of k with t, which requires z holds x's warning to y of k and z does not hold y's answer to x's warning of k: z holds y's answer to x's warning of k and z holds y's answer to x's warning of k as t.
+After x withdraws x's warning to y in z of k: no longer z holds x's warning to y and no longer z holds x's warning to y of k.
+After g annuls x's warning to y in z of k: no longer z holds x's warning to y and no longer z holds x's warning to y of k.

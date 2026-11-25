@@ -12,7 +12,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 identity
@@ -52,7 +52,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -71,7 +71,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -128,7 +128,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -165,15 +165,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Bob
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Alice
@@ -181,6 +181,10 @@ person
  \text{ and } 
 \mathit{\detokenize{
 identity
+}}
+,
+\mathit{\detokenize{
+person
 }}
 ,
 \mathit{\detokenize{
@@ -196,10 +200,6 @@ knows
 (
 \mathit{Carol}
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Bob
@@ -238,7 +238,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -257,7 +257,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -274,15 +274,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Bob
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Alice
@@ -293,15 +293,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Alice
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Bob
@@ -440,7 +440,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 identity
@@ -494,8 +494,7 @@ has_participant
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -505,7 +504,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 creator
@@ -550,20 +549,7 @@ participant
 (
 \Alice
 )
-\}
-,\\
-&
-c'_
-{
-\mathit{Carol}
-}
- := 
-c_
-{
-\mathit{Carol}
-}
- \uplus 
-\{
+,
 \mathit{\detokenize{
 founder
 }}
@@ -585,14 +571,6 @@ person
 {
 \Bob
 }
- \text{ and } 
-\mathit{\detokenize{
-identity
-}}
- \in c_
-{
-\mathit{Carol}
-}
 ,\\
 &
 \text{provided } 
@@ -605,45 +583,10 @@ identity
 }
 ,\\
 &
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\mathit{Carol}
-)
-\lor
-(
-\mathit{\detokenize{
-organisation
-}}
-(
-\mathit{Carol}
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_officer
-}}
-(
-\mathit{Carol}
-,
-G1
-)
-)
-)
-)
-,\\
-&
 \text{guarded by } \{
 \Alice
 ,
 \Bob
-,
-\mathit{Carol}
 \}
 \end{align*}
 \iffalse
@@ -660,7 +603,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 officer
@@ -703,7 +646,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_officer
@@ -761,7 +704,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_officer
@@ -1045,7 +988,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -1064,7 +1007,7 @@ role
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -1167,7 +1110,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -1240,7 +1183,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -1313,7 +1256,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -1386,7 +1329,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -1706,7 +1649,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -1725,7 +1668,7 @@ role
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -1804,7 +1747,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -1823,7 +1766,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -1887,7 +1830,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -1906,7 +1849,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2062,8 +2005,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2088,6 +2030,17 @@ friend
 \mathit{\detokenize{
 identity
 }}
+,
+\mathit{\detokenize{
+organisation
+}}
+,
+\mathit{\detokenize{
+has_officer
+}}
+(
+G1
+)
 ,
 \mathit{\detokenize{
 friend
@@ -2127,39 +2080,6 @@ has_officer
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Alice
-)
-\lor
-(
-\mathit{\detokenize{
-organisation
-}}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_officer
-}}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -2399,7 +2319,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -2418,7 +2338,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -2489,7 +2409,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2508,7 +2428,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2700,7 +2620,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2719,7 +2639,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2871,7 +2791,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -2946,7 +2866,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3044,7 +2964,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3119,7 +3039,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3235,7 +3155,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3310,7 +3230,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3417,7 +3337,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3492,7 +3412,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3608,7 +3528,7 @@ officer
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3683,7 +3603,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3790,7 +3710,7 @@ officer
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3865,7 +3785,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -3988,7 +3908,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4063,7 +3983,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -4177,7 +4097,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4252,7 +4172,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -4359,7 +4279,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4434,7 +4354,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -4532,7 +4452,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4607,7 +4527,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -4723,7 +4643,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4798,7 +4718,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -4905,7 +4825,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -4980,7 +4900,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -5096,7 +5016,7 @@ officer
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5171,7 +5091,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -5278,7 +5198,7 @@ officer
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5353,7 +5273,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -5476,7 +5396,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5551,7 +5471,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -5665,7 +5585,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -5740,7 +5660,7 @@ has_role
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_officer
 }}
@@ -5947,7 +5867,7 @@ has_role
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -6117,7 +6037,7 @@ has_role
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -6237,7 +6157,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -6481,7 +6401,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -6725,7 +6645,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -6983,7 +6903,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -7209,7 +7129,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -7453,7 +7373,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -7697,7 +7617,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -7955,7 +7875,7 @@ q \neq
 q
  \text{ holds every atom of } c_
 q
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -8199,6 +8119,202 @@ retired
 \}
 \end{align*}
 \iffalse
+found_by_an_organisation
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+organisation
+}}
+,
+\mathit{\detokenize{
+has_officer
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+first_officer
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+has_role
+}}
+(
+\Bob
+,
+Role
+)
+,
+\mathit{\detokenize{
+has_participant
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+ \cup 
+\{
+\mathit{\detokenize{
+creator
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+officer
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+knows
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+friend
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+role
+}}
+(
+\Alice
+,
+Role
+)
+,
+\mathit{\detokenize{
+participant
+}}
+(
+\Alice
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \cup 
+\{
+\mathit{\detokenize{
+founder
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+organisation
+}}
+,
+\mathit{\detokenize{
+has_officer
+}}
+(
+G1
+)
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Alice
+,
+\Bob
+,
+\mathit{Carol}
+\}
+\end{align*}
+\iffalse
 propose
 \fi
 \begin{align*}
@@ -8212,7 +8328,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 proposed
@@ -8248,6 +8364,13 @@ identity
 ,
 \mathit{\detokenize{
 officer
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+proposer
 }}
 (
 \Alice
@@ -8293,7 +8416,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 vote
@@ -8341,10 +8464,19 @@ identity
 }}
 ,
 \mathit{\detokenize{
-officer
+participant
 }}
 (
 \Alice
+)
+,
+\mathit{\detokenize{
+voter
+}}
+(
+\Alice
+,
+Motion
 )
 ,
 \mathit{\detokenize{
@@ -8389,7 +8521,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 taken
@@ -8398,8 +8530,7 @@ taken
 Motion
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -8415,6 +8546,20 @@ c_
 \mathit{\detokenize{
 identity
 }}
+,
+\mathit{\detokenize{
+proposed
+}}
+(
+Motion
+)
+,
+\mathit{\detokenize{
+decided
+}}
+(
+Motion
+)
  \in c_
 {
 \Alice
@@ -8429,6 +8574,15 @@ officer
 }}
 (
 \Alice
+)
+,
+\mathit{\detokenize{
+taker
+}}
+(
+\Alice
+,
+Motion
 )
 ,
 \mathit{\detokenize{
@@ -8453,46 +8607,6 @@ Motion
 }
 ,\\
 &
-\text{provided } 
-\mathrm{cardinality}(
-X1
-,
-\mathit{\detokenize{
-vote
-}}
-(
-\Alice
-,
-X1
-,
-Motion
-)
-)
-\ge
-Votes
-\land
-Double
-=
-Votes
-\cdot
-2
-\land
-\mathrm{cardinality}(
-X2
-,
-\mathit{\detokenize{
-has_officer
-}}
-(
-\Alice
-,
-X2
-)
-)
-<
-Double
-,\\
-&
 \text{guarded by } \{
 \Bob
 \}
@@ -8511,7 +8625,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 participant
@@ -8546,7 +8660,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 participant
@@ -8581,7 +8695,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_participant
@@ -8616,7 +8730,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_participant
@@ -8955,7 +9069,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -8974,7 +9088,7 @@ role
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -9491,7 +9605,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -9571,7 +9685,7 @@ has_officer
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 role
 }}
@@ -9651,7 +9765,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -9731,7 +9845,7 @@ has_officer
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_role
 }}
@@ -10020,7 +10134,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 amended
@@ -10033,8 +10147,7 @@ taken
 Motion
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -10052,11 +10165,14 @@ identity
 }}
 ,
 \mathit{\detokenize{
-organisation
+proposed
 }}
+(
+Motion
+)
 ,
 \mathit{\detokenize{
-proposed
+amendment_decided
 }}
 (
 Motion
@@ -10075,6 +10191,15 @@ officer
 }}
 (
 \Alice
+)
+,
+\mathit{\detokenize{
+amender
+}}
+(
+\Alice
+,
+Motion
 )
 ,
 \mathit{\detokenize{
@@ -10099,46 +10224,6 @@ Motion
 }
 ,\\
 &
-\text{provided } 
-\mathrm{cardinality}(
-X1
-,
-\mathit{\detokenize{
-vote
-}}
-(
-\Alice
-,
-X1
-,
-Motion
-)
-)
-\ge
-Votes
-\land
-Double
-=
-Votes
-\cdot
-2
-\land
-\mathrm{cardinality}(
-X2
-,
-\mathit{\detokenize{
-has_officer
-}}
-(
-\Alice
-,
-X2
-)
-)
-<
-Double
-,\\
-&
 \text{guarded by } \{
 \Bob
 \}
@@ -10157,7 +10242,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 warning
@@ -10166,6 +10251,17 @@ warning
 \Bob
 ,
 Bob
+)
+,
+\mathit{\detokenize{
+warning_of
+}}
+(
+\Bob
+,
+Bob
+,
+Case
 )
 \}
 , \qquad 
@@ -10217,6 +10313,7 @@ person
 ,\\
 &
 \text{provided } 
+\{
 \mathit{\detokenize{
 warning
 }}
@@ -10224,6 +10321,125 @@ warning
 \Bob
 ,
 Bob
+)
+,
+\mathit{\detokenize{
+answered
+}}
+(
+Bob
+,
+\Bob
+,
+Case
+)
+\}
+ \cap c_
+{
+\Alice
+}
+ = \emptyset
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+answer
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+answered
+}}
+(
+\Bob
+,
+Alice
+,
+Case
+)
+,
+\mathit{\detokenize{
+answer_text
+}}
+(
+\Bob
+,
+Alice
+,
+Case
+,
+Text
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+warning_of
+}}
+(
+Alice
+,
+\Bob
+,
+Case
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+answered
+}}
+(
+\Bob
+,
+Alice
+,
+Case
 )
  \notin c_
 {
@@ -10233,5 +10449,332 @@ Bob
 &
 \text{guarded by } \{
 \Bob
+\}
+\end{align*}
+\iffalse
+withdraw
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+warning
+}}
+(
+\Bob
+,
+Bob
+)
+,
+\mathit{\detokenize{
+warning_of
+}}
+(
+\Bob
+,
+Bob
+,
+Case
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+warning
+}}
+(
+\Bob
+,
+Bob
+)
+,
+\mathit{\detokenize{
+warning_of
+}}
+(
+\Bob
+,
+Bob
+,
+Case
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
+annul
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+warning
+}}
+(
+Alice
+,
+Bob
+)
+,
+\mathit{\detokenize{
+warning_of
+}}
+(
+Alice
+,
+Bob
+,
+Case
+)
+\}
+ \qquad (
+\Alice
+ \notin 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_officer
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+warning
+}}
+(
+Alice
+,
+Bob
+)
+,
+\mathit{\detokenize{
+warning_of
+}}
+(
+Alice
+,
+Bob
+,
+Case
+)
+\}
+ \qquad (
+\Alice
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_officer
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+c'_
+q
+ := 
+c_
+q
+ \qquad (
+q
+ \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_officer
+}}
+(
+\ast
+)
+]
+)
+,\ 
+q \neq 
+\Alice
+,\ 
+q \neq 
+\Bob
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+has_officer
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+warning
+}}
+(
+Alice
+,
+Bob
+)
+,
+\mathit{\detokenize{
+warning_of
+}}
+(
+Alice
+,
+Bob
+,
+Case
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+officer
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
+officer
+}}
+(
+\Alice
+)
+ \in c_
+q
+ \qquad (
+q \in 
+\mathrm{ext}_c(
+\Alice
+[
+\mathit{\detokenize{
+has_officer
+}}
+(
+\ast
+)
+]
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Bob
+,
+\mathit{Carol}
 \}
 \end{align*}
