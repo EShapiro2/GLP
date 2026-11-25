@@ -111,3 +111,4 @@ Tennis Courts:0 - | A booking is of the one who books and of a *partner*, and co
 Tennis Courts:2 ■ | Organisation and ward.
 Tennis Courts:2 ■ Organisation ward acquaint: Club and Wendy may jointly Club knows Wendy and Wendy knows Club, provided Club is an organisation, Club has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.
 Tennis Courts:4 ■ Withdraw: Carol may no longer Club has Slot of Court partnered by Carol.
+Tennis Courts:5 ■ Partner: Alice and Carol may jointly Club has Slot of Court partnered by Carol, provided Club has Slot of Court booked by Alice, not Club has Slot of Court partnered by anyone, Carol is a participant of Club, Club has Carol as a participant and Carol has fewer outstanding bookings in Club than the bound.
