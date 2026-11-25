@@ -6,16 +6,16 @@
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus c475902; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GSC's, a line for each act, named by the act.  Git holds what the file said before.
 % Schemas: Groups.glp beside this file, the full schemas, GKK's and GSG's with those of messages and groups, a message a speech act with a name, a post delivered once to each member, printed by calculus/tools/adopt.py GSN from the Logic pragmas and never written by hand; adopt.py --check GSN holds it and cascade/Groups/ to what the tools print.
 Groups
-Groups extends and strengthens Friendship.
-A *message*, a parameter of Groups, is what a person sends.
+Groups extends Friendship, and strengthens it.
+A *message* is what a person sends.
 Alice and Bob are persons.
 1. ■ Message: Alice may send a message to her friend Bob.
 2. ■ Group. Create: Alice may create a group, of which she is the leader and first member. Close: Alice may close the group by leaving it.
 3. ■ Joining and Leaving. Join: Alice, the leader of a group, may add her friend Bob to it, with the consent of Bob. Remove, Leave: Either Alice or Bob may then end Bob's membership in the group, which also ends when Alice and Bob cease to be friends.
 4. ■ Group messaging. Post: A member of a group may send a message to the group. Deliver: Its leader delivers it to every current member.
 Logic pragmas
-Groups extends and strengthens Friendship.
-A *message*, a parameter of Groups, is what a person sends.
+Groups extends Friendship, and strengthens it.
+A *message* is what a person sends.
 Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
 1. ■ Message: Alice may send Text to Bob, provided Alice and Bob are friends.
 2. ■ Group. Create: Alice may create Grupo. Alice is then its leader and first member. Close: Alice may close Grupo by leaving it.
