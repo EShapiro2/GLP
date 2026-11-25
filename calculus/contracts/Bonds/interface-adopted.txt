@@ -1,2 +1,2 @@
 Interface pragmas
-Redeem: Alice [Redeem] <carol> [Redeem coin against bond] <carol> [Redeem bond] <carol> <day> [Redeem bond against bond] <carol> <day>
+Redeem: Alice [Redeem] <carol> [Redeem coin against bond] <carol> <day> [Redeem bond] <carol> [Redeem bond against bond] <carol> <term>

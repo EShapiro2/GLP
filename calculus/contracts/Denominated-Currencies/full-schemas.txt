@@ -1,7 +1,7 @@
 Denominated Currencies (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Denominated Currencies:0 - | Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum, Total and Limit numbers, Type and Other types, Day, Term and Due maturity dates, Today a date, Dollar a fiat currency.
+Denominated Currencies:0 - | Alice, Bob and Carol are persons, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum, Total and Limit numbers, Type and Other types, Day and Term maturity dates, Today a date, Dollar a fiat currency.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
@@ -44,7 +44,7 @@ Denominated Currencies:2 ○ Deposit own bonds: ~note(Alice,Alice,bond(Day),Doll
 Denominated Currencies:2 ○ Deposit bond with the issuer: ~note(Alice,Carol,bond(Day),Dollar,*Sum), escrow_note(Carol,Carol,bond(Day),Dollar,Alice,Bob,Cond,*Sum), escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), ~escrow_denomination(Carol,Alice,Bob,Cond,_), note(Alice,Carol,bond(Day),Dollar,*Sum) guarded by Alice, Carol.
 Denominated Currencies:2 ○ Deposit bond more: ~note(Alice,Dave,bond(Day),Dollar,*Sum), escrow_note(Carol,Dave,bond(Day),Dollar,Alice,Bob,Cond,*Sum), escrow_denomination(Carol,Alice,Bob,Cond,Dollar) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), escrow_denomination(Carol,Alice,Bob,Cond,Dollar), note(Alice,Dave,bond(Day),Dollar,*Sum) guarded by Alice, Carol.
 Denominated Currencies:3 ■ Accept: accepts(Alice,Carol,Dollar,*Limit) <- note(Alice,Carol,coin,Dollar,*1) guarded by Alice.
-Denominated Currencies:3 ■ Accept by bond: accepts(Alice,Carol,Dollar,*Limit) <- note(Alice,Carol,bond(Day),Dollar,*1), issued_bond_in(Carol,Dollar,Due), le(Day,Due), le(Due,Day) guarded by Alice.
+Denominated Currencies:3 ■ Accept by bond: accepts(Alice,Carol,Dollar,*Limit) <- note(Alice,Carol,bond(_),Dollar,*1) guarded by Alice.
 Denominated Currencies:3 ■ | Each such coin paid to Alice counts against the limit, and Alice may accept again.
 Denominated Currencies:4 ■ Pay accepted coins: ~note(Alice,Carol,coin,Dollar,*1), note(Bob,Carol,coin,Dollar,*1), ~accepts(Bob,Carol,Dollar) <- knows(Alice,Bob), issued_in(Carol,Dollar), note(Alice,Carol,coin,Dollar,*1), accepts(Bob,Carol,Dollar) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Denominated Currencies:4 ■ Pay own accepted coins: ~note(Alice,Alice,coin,Dollar,*1), note(Bob,Alice,coin,Dollar,*1), ~accepts(Bob,Alice,Dollar) <- knows(Alice,Bob), issued_in(Alice,Dollar), note(Alice,Alice,coin,Dollar,*1), accepts(Bob,Alice,Dollar) guarded by Alice.

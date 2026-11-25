@@ -45,11 +45,11 @@ Release: Carol [Release] <sum>
 Return: Carol [Return] <sum>
   Alice: Carol asks for your consent to return.
 Redeem: Alice [Redeem] <carol>
-Redeem coin against bond: Alice [Redeem coin against bond] <carol>
-Redeem bond: Alice [Redeem bond] <carol> <day>
-Redeem bond against bond: Alice [Redeem bond against bond] <carol> <day>
+Redeem coin against bond: Alice [Redeem coin against bond] <carol> <day>
+Redeem bond: Alice [Redeem bond] <carol>
+Redeem bond against bond: Alice [Redeem bond against bond] <carol> <term>
 First issue: Alice [First issue] <dollar> <sum>
-Issue denominated bond: Alice [Issue denominated bond] <dollar> <sum> <day>
+Issue denominated bond: Alice [Issue denominated bond] <day> <dollar> <sum>
 Deposit own coins: Alice [Deposit own coins] <sum> <cond>
   Carol: Alice asks for your consent to deposit own coins.
 Deposit with the issuer: Alice [Deposit with the issuer] <sum> <cond>
@@ -63,7 +63,7 @@ Deposit bond with the issuer: Alice [Deposit bond with the issuer] <sum> <cond>
 Deposit bond more: Alice [Deposit bond more] <sum> <cond>
   Carol: Alice asks for your consent to deposit bond more.
 Accept: Alice [Accept] <limit>
-Accept by bond: Alice [Accept by bond] <limit> <day>
+Accept by bond: Alice [Accept by bond] <limit>
 Pay accepted coins: Alice [Pay accepted coins]
 Pay own accepted coins: Alice [Pay own accepted coins]
 Pay accepted coins to the issuer: Alice [Pay accepted coins to the issuer]

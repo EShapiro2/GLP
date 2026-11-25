@@ -49,9 +49,9 @@ Release: Carol [Release] <sum>
 Return: Carol [Return] <sum>
   Alice: Carol asks for your consent to return.
 Redeem: Alice [Redeem] <carol>
-Redeem coin against bond: Alice [Redeem coin against bond] <carol>
-Redeem bond: Alice [Redeem bond] <carol> <day>
-Redeem bond against bond: Alice [Redeem bond against bond] <carol> <day>
+Redeem coin against bond: Alice [Redeem coin against bond] <carol> <day>
+Redeem bond: Alice [Redeem bond] <carol>
+Redeem bond against bond: Alice [Redeem bond against bond] <carol> <term>
 Make: Alice [Make] <item>
 Open: Alice [Open] <mart>
 Join: Alice [Join]
@@ -64,7 +64,7 @@ Withdraw: Carol [Withdraw] <alice> <item> <mart>
 Withdraw own: Alice [Withdraw own]
 Swap item for coin: Alice [Swap item for coin] <dave> <sum>
   Bob: Alice asks for your consent to swap item for coin.
-Swap item for bond: Alice [Swap item for bond] <dave> <sum>
+Swap item for bond: Alice [Swap item for bond] <dave> <day> <sum>
   Bob: Alice asks for your consent to swap item for bond.
 Swap items: Alice [Swap items] <thing>
   Bob: Alice asks for your consent to swap items.
