@@ -393,7 +393,14 @@ con_ord(ne(X, Y), A?) :- side_args(X?, A1), side_args(Y?, A2), app(A1?, A2?, A).
 con_ord(C, A?) :- otherwise | con_args(C?, A).
 procedure side_args(Expr?, Args).
 side_args(num(_), []).
+%% A variable that is an argument of a function, as fn(side, [const('Board')]), is the value the function is applied to, compared by none of the orders: the function's owner gives its type (vGLP, Section 5.4, "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure"), and the compiler calls it with the constant (owner_fn_lines).
+side_args(fn(_, Es), A?) :- fn_side_args(Es?, A).
 side_args(E, A?) :- otherwise | expr_args(E?, A).
+procedure fn_side_args(Exprs?, Args).
+fn_side_args([], []).
+fn_side_args([num(_)|Es], A?) :- fn_side_args(Es?, A).
+fn_side_args([const(_)|Es], A?) :- fn_side_args(Es?, A).
+fn_side_args([E|Es], A?) :- otherwise | expr_args(E?, A1), fn_side_args(Es?, A2), app(A1?, A2?, A).
 procedure q_schema(QSchema?, FnDecls?, Lines).
 q_schema(schema(_, _, _), _, []).
 q_schema(cschema(_, _, _, _), _, []).
@@ -618,8 +625,15 @@ fn_named(size, _, _, no).
 fn_named(F, K, Fs, B?) :- otherwise | fn_given(F?, K?, Fs?, B).
 procedure fn_given(Constant?, Integer?, FnDecls?, YesNo).
 fn_given(_, _, [], yes).
-fn_given(F, K, [fn(G, J)|_], no) :- F? =?= G?, K? =?= J? | true.
+fn_given(F, K, [fn(G, Ks, V)|_], B?) :- F? =?= G? | kinds_ok(Ks?, V?, 1, K?, B).
 fn_given(F, K, [_|Fs], B?) :- otherwise | fn_given(F?, K?, Fs?, B).
+%% Whether the function's places are of the arity K, its value last, each a number or a constant (FnKind); a place of another type the compiler does not take.
+procedure kinds_ok(FnKinds?, FnKind?, Integer?, Integer?, YesNo).
+kinds_ok([], other, _, _, yes).
+kinds_ok([], _, J, K, no) :- otherwise, integer(J?), integer(K?), J? =?= K? | true.
+kinds_ok([], _, _, _, yes) :- otherwise | true.
+kinds_ok([other|_], _, _, _, yes).
+kinds_ok([_|Ks], V, J, K, B?) :- otherwise, integer(J?) | J1 := J? + 1, kinds_ok(Ks?, V?, J1?, K?, B).
 %% The arity of a function applied to the expressions, one more than their number, its value its last argument.
 procedure exprs_count(Exprs?, Integer?, Integer).
 exprs_count([], K, K?).
@@ -817,47 +831,113 @@ worded_fns(_, nofns) :- otherwise | true.
 procedure fns_any(PFns?, YesNo).
 fns_any(nofns, no).
 fns_any(fns(_, _), yes).
-%% The platform's call of each function the owner of a value type gives, owner_fn(F, Args, Value), its arguments whole numbers and its value a whole number, then the owner's procedures, the lines of its file, which the platform carries (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; pragmas.sh, NAME-functions.glp).
+%% The platform's call of each function the owner of a value type gives, owner_val and owner_term, then the owner's procedures, the lines of its file, which the platform carries (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; pragmas.sh, NAME-functions.glp).
 procedure owner_fn_lines(PFns?, Lines).
 owner_fn_lines(nofns, []).
 owner_fn_lines(fns(Fs, Ls), L?) :- ground(Fs?) |
-    owner_fn_clauses(Fs?, Lc),
-    lapp(Lc?, ['owner_fn(_, _, no_num) :- otherwise | true.',
-        'procedure exprl_vals(Exprs?, Binding?, NumRess).',
-        'exprl_vals([], _, []).',
-        'exprl_vals([E|Es], B, [R?|Rs?]) :- ground(B?) | expr_val(E?, B?, R), exprl_vals(Es?, B?, Rs).',
-        '', '%% The functions the owner of the value types gives, its file NAME-functions.glp beside the contract.'|Ls?], L1),
-    lapp(['', '%% The functions of the value types that their owner gives as typed GLP procedures, each called with the values of its arguments, whole numbers, its value a whole number; no_num where an argument has no value or is no whole number.',
-        'NumRess   ::= [] ; [NumRes | NumRess].',
-        'procedure owner_fn(Constant?, NumRess?, NumRes).'], L1?, L).
-procedure owner_fn_clauses(FnDecls?, Lines).
-owner_fn_clauses([], []).
-owner_fn_clauses([fn(F, K)|Fs], [T?|Ls?]) :- ground(F?), integer(K?) |
-    K1 := K? - 1,
-    fn_vars(1, K1?, Vs1),
-    fn_vars(1, K1?, Vs2),
-    fn_vars(1, K1?, Vs3),
-    fn_args(Vs1?, Ar),
-    fn_guards(Vs2?, Gs),
-    fn_calls(Vs3?, Ca),
+    owner_calls(Fs?, num, 'owner_val', Lv),
+    owner_calls(Fs?, const, 'owner_term', Lt),
+    owner_wrappers(Fs?, Lw),
+    lapp(Lw?, ['', '%% The functions the owner of the value types gives, its file NAME-functions.glp beside the contract.'|Ls?], L3),
+    lapp(Lt?, ['owner_term(_, _, _, free) :- otherwise | true.'|L3?], L2),
+    lapp(Lv?, ['owner_val(_, _, _, no_num) :- otherwise | true.', 'procedure owner_term(Constant?, Exprs?, Binding?, Found).'|L2?], L1),
+    lapp(['', '%% The functions of the value types that their owner gives as typed GLP procedures: owner_val(F, Es, B, R), the value R of F at the values of Es under B, a number, and owner_term(F, Es, B, V), a constant; each argument a number or a constant by the type its procedure declares it, the value no_num or free where an argument has none.', 'procedure owner_val(Constant?, Exprs?, Binding?, NumRes).'], L1?, L).
+%% The clauses of owner_val (a value of the kind num) or owner_term (const), one per function of that kind.
+procedure owner_calls(FnDecls?, FnKind?, String?, Lines).
+owner_calls([], _, _, []).
+owner_calls([fn(F, Ks, V)|Fs], W, H, [T?|Ls?]) :- ground(F?), ground(Ks?), ground(W?), ground(H?), V? =?= W? | owner_call(H?, F?, Ks?, T), owner_calls(Fs?, W?, H?, Ls).
+owner_calls([_|Fs], W, H, Ls?) :- otherwise | owner_calls(Fs?, W?, H?, Ls).
+procedure owner_call(String?, Constant?, FnKinds?, String).
+owner_call(H, F, Ks, T?) :- ground(H?), ground(F?), ground(Ks?) |
+    term_to_string(F?, Fn1),
+    term_to_string(F?, Fn2),
+    kind_list(Ks?, 1, e, Le),
+    joined(Le?, ', ', Es),
+    kind_list(Ks?, 1, get, Lg),
+    kind_list(Ks?, 1, a, La),
+    sapp(La?, ['R'], La1),
+    joined(La1?, ', ', As),
+    string_concat(['owner_', Fn2?, '(', As?, ')'], Ca),
+    sapp(Lg?, [Ca?], Lgc),
+    joined(Lgc?, ', ', Bd),
+    string_concat([H?, '(', Fn1?, ', [', Es?, '], B, R?) :- ground(B?) | ', Bd?, '.'], T).
+%% Each function's own procedure, owner_F, taking the values of its arguments, as expr_val and expr_term give them, and calling the owner's procedure F.
+procedure owner_wrappers(FnDecls?, Lines).
+owner_wrappers([], []).
+owner_wrappers([fn(F, Ks, V)|Fs], [D?, C?|L?]) :- ground(F?), ground(Ks?), ground(V?) |
+    owner_decl(F?, Ks?, V?, D),
+    owner_clause(F?, Ks?, V?, C),
+    owner_rest(F?, Ks?, V?, L0),
+    owner_wrappers(Fs?, L1),
+    lapp(L0?, L1?, L).
+procedure owner_decl(Constant?, FnKinds?, FnKind?, String).
+owner_decl(F, Ks, V, D?) :- ground(F?), ground(Ks?), ground(V?) |
     term_to_string(F?, Fn),
-    string_concat(['owner_fn(', Fn?, ', [', Ar?, '], num_is(R?)) :- ', Gs?, ' | ', Fn?, '(', Ca?, 'R).'], T),
-    owner_fn_clauses(Fs?, Ls).
-%% The names A1 .. Ak of a function's arguments.
-procedure fn_vars(Integer?, Integer?, List(String)).
-fn_vars(I, K, []) :- integer(I?), integer(K?), I? > K? | true.
-fn_vars(I, K, [V?|Vs?]) :- integer(I?), integer(K?), I? =< K? | term_to_string(I?, Is), string_concat(['A', Is?], V), I1 := I? + 1, fn_vars(I1?, K?, Vs).
-procedure fn_args(List(String)?, String).
-fn_args([], '').
-fn_args([V], T?) :- string_concat(['num_is(', V?, ')'], T).
-fn_args([V, W|Vs], T?) :- string_concat(['num_is(', V?, '), '], T0), fn_args([W?|Vs?], T1), string_concat([T0?, T1?], T).
-procedure fn_guards(List(String)?, String).
-fn_guards([], 'true').
-fn_guards([V], T?) :- string_concat(['integer(', V?, '?)'], T).
-fn_guards([V, W|Vs], T?) :- string_concat(['integer(', V?, '?), '], T0), fn_guards([W?|Vs?], T1), string_concat([T0?, T1?], T).
-procedure fn_calls(List(String)?, String).
-fn_calls([], '').
-fn_calls([V|Vs], T?) :- string_concat([V?, '?, '], T0), fn_calls(Vs?, T1), string_concat([T0?, T1?], T).
+    kind_list(Ks?, 1, ty, Lt),
+    val_kind(ty, V?, Vt),
+    sapp(Lt?, [Vt?], Lt1),
+    joined(Lt1?, ', ', Ts),
+    string_concat(['procedure owner_', Fn?, '(', Ts?, ').'], D).
+procedure owner_clause(Constant?, FnKinds?, FnKind?, String).
+owner_clause(F, Ks, V, C?) :- ground(F?), ground(Ks?), ground(V?) |
+    term_to_string(F?, Fn1),
+    term_to_string(F?, Fn2),
+    kind_list(Ks?, 1, pat, Lp),
+    val_kind(pat, V?, Vp),
+    sapp(Lp?, [Vp?], Lp1),
+    joined(Lp1?, ', ', Ps),
+    kind_list(Ks?, 1, guard, Lg),
+    guards_of(Lg?, Gs),
+    kind_list(Ks?, 1, x, Lx),
+    sapp(Lx?, ['R'], Lx1),
+    joined(Lx1?, ', ', Xs),
+    string_concat(['owner_', Fn1?, '(', Ps?, ')', Gs?, Fn2?, '(', Xs?, ').'], C).
+procedure owner_rest(Constant?, FnKinds?, FnKind?, Lines).
+owner_rest(_, [], _, []).
+owner_rest(F, [K|Ks], V, [C?]) :- ground(F?), ground(V?) |
+    term_to_string(F?, Fn),
+    kind_list([K?|Ks?], 1, us, Lu),
+    val_kind(none, V?, Vn),
+    sapp(Lu?, [Vn?], Lu1),
+    joined(Lu1?, ', ', Us),
+    string_concat(['owner_', Fn?, '(', Us?, ') :- otherwise | true.'], C).
+%% The parts of the lines of a function, one per argument, I its place: its expression E<I>, the goal taking its value A<I>, that value, its type, its pattern X<I>, its guard, X<I> read, and _.
+procedure kind_list(FnKinds?, Integer?, Constant?, Strings).
+kind_list([], _, _, []).
+kind_list([K|Ks], I, W, [S?|Ss?]) :- integer(I?), ground(K?), ground(W?) | kind_part(W?, K?, I?, S), I1 := I? + 1, kind_list(Ks?, I1?, W?, Ss).
+procedure kind_part(Constant?, FnKind?, Integer?, String).
+kind_part(W, K, I, S?) :- integer(I?) | term_to_string(I?, Is), part_of(W?, K?, Is?, S).
+procedure part_of(Constant?, FnKind?, String?, String).
+part_of(e, _, Is, S?) :- string_concat(['E', Is?], S).
+part_of(get, num, Is, S?) :- ground(Is?) | string_concat(['expr_val(E', Is?, '?, B?, A', Is?, ')'], S).
+part_of(get, const, Is, S?) :- ground(Is?) | string_concat(['expr_term(E', Is?, '?, B?, A', Is?, ')'], S).
+part_of(a, _, Is, S?) :- string_concat(['A', Is?, '?'], S).
+part_of(ty, num, _, 'NumRes?').
+part_of(ty, const, _, 'Found?').
+part_of(pat, num, Is, S?) :- string_concat(['num_is(X', Is?, ')'], S).
+part_of(pat, const, Is, S?) :- string_concat(['found(v(X', Is?, '))'], S).
+part_of(guard, num, Is, S?) :- string_concat(['integer(X', Is?, '?)'], S).
+part_of(guard, const, Is, S?) :- string_concat(['ground(X', Is?, '?)'], S).
+part_of(x, _, Is, S?) :- string_concat(['X', Is?, '?'], S).
+part_of(us, _, _, '_').
+part_of(_, _, _, '') :- otherwise | true.
+%% The same parts of a function's value.
+procedure val_kind(Constant?, FnKind?, String).
+val_kind(ty, num, 'NumRes').
+val_kind(ty, const, 'Found').
+val_kind(pat, num, 'num_is(R?)').
+val_kind(pat, const, 'found(v(R?))').
+val_kind(none, num, 'no_num').
+val_kind(none, const, 'free').
+val_kind(_, _, '') :- otherwise | true.
+procedure guards_of(Strings?, String).
+guards_of([], ' :- ').
+guards_of([G|Gs], S?) :- joined([G?|Gs?], ', ', S0), string_concat([' :- ', S0?, ' | '], S).
+%% The strings joined, P between each two.
+procedure joined(Strings?, String?, String).
+joined([], _, '').
+joined([S], _, S?).
+joined([S, T|Ss], P, J?) :- ground(P?) | joined([T?|Ss?], P?, J1), string_concat([S?, P?, J1?], J).
 procedure set_lines(Lines?, YesNo?, Lines).
 set_lines([], _, []).
 set_lines([set_only(L)|Ls], yes, [L?|Ls1?]) :- set_lines(Ls?, yes, Ls1).
@@ -4158,8 +4238,10 @@ procedure size_item(Ints?, Ints?, Preconds).
 size_item([S], [F], [size(S?, F?)]).
 size_item(_, _, []) :- otherwise | true.
 %% The places of a number the constraint determines from the variables the schema-binding binds, and its value, calc(P, E), for each conjunct eq(num(Y), E) of the schema's constraint, Y at the place P of the request and E an expression whose variables are each at a place of the request, E' being E with each variable at(K), K its place, and each number lit(N): "A variable the constraint determines from the variables the schema-binding binds is bound by the schema-binding to the value the constraint gives it, which the proposer's machine computes and the request names" (OSPM, act-schemas-local, VEUI vglp33-determined 224558d; Audit #151), as Double = Votes * 2, calc(5, mul(at(4), lit(2))); the form computes it from the fields.
-MExpr   ::= at(Integer) ; lit(Constant) ; plus(MExpr, MExpr) ; minus(MExpr, MExpr) ; mul(MExpr, MExpr).
+MExpr   ::= at(Integer) ; lit(Constant) ; plus(MExpr, MExpr) ; minus(MExpr, MExpr) ; mul(MExpr, MExpr) ; fn(Constant, MExprs).
+MExprs  ::= [] ; [MExpr | MExprs].
 CalcR   ::= none ; ok(MExpr).
+CalcRs  ::= [] ; [CalcR | CalcRs].
 procedure calc_places(NumInfo?, Args?, Preconds).
 calc_places(num_info(_, C, _, _, _, _), Vs, Cl?) :- ground(C?), ground(Vs?) |
     con_list(C?, Cs),
@@ -4178,7 +4260,21 @@ procedure calc_expr(Expr?, Args?, CalcR).
 calc_expr(plus(A, B), Vs, R?) :- ground(Vs?) | calc_arg(A?, Vs?, Ra), calc_arg(B?, Vs?, Rb), calc_plus(Ra?, Rb?, R).
 calc_expr(minus(A, B), Vs, R?) :- ground(Vs?) | calc_arg(A?, Vs?, Ra), calc_arg(B?, Vs?, Rb), calc_minus(Ra?, Rb?, R).
 calc_expr(mul(A, B), Vs, R?) :- ground(Vs?) | calc_arg(A?, Vs?, Ra), calc_arg(B?, Vs?, Rb), calc_mul(Ra?, Rb?, R).
+%% A function the owner of a value type gives, computed by the proposer's machine from the request's places, as the form computes calc's arithmetic (Code #39, vGLP_inbox.md, 2026-11-25 22:29 UTC: "the proposer's machine computes next by owner_fn before the request is signed, as for calc").
+calc_expr(fn(F, Es), Vs, R?) :- ground(F?), ground(Vs?) | calc_args(Es?, Vs?, Rs), calc_fn(F?, Rs?, R).
 calc_expr(_, _, none) :- otherwise | true.
+procedure calc_args(Exprs?, Args?, CalcRs).
+calc_args([], _, []).
+calc_args([E|Es], Vs, [R?|Rs?]) :- ground(Vs?) | calc_arg(E?, Vs?, R), calc_args(Es?, Vs?, Rs).
+procedure calc_fn(Constant?, CalcRs?, CalcR).
+calc_fn(F, Rs, R?) :- ground(F?) | calc_oks(Rs?, Ms, Y), calc_fn1(Y?, F?, Ms?, R).
+procedure calc_fn1(YesNo?, Constant?, MExprs?, CalcR).
+calc_fn1(yes, F, Ms, ok(fn(F?, Ms?))).
+calc_fn1(no, _, _, none).
+procedure calc_oks(CalcRs?, MExprs, YesNo).
+calc_oks([], [], yes).
+calc_oks([ok(M)|Rs], [M?|Ms?], Y?) :- calc_oks(Rs?, Ms, Y).
+calc_oks([none|_], [], no).
 procedure calc_arg(Expr?, Args?, CalcR).
 calc_arg(num(X), Vs, R?) :- ground(X?), ground(Vs?) | calc_num(X?, Vs?, R).
 calc_arg(E, Vs, R?) :- otherwise | calc_expr(E?, Vs?, R).
@@ -4231,7 +4327,7 @@ calc_lines(Ls, no, Ls?).
 calc_lines(Ls, yes, R?) :-
     line_sub(Ls?, 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; calc(Integer, MenuExpr).', R1),
     line_sub(R1?, 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; size(Integer, Integer).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; size(Integer, Integer) ; calc(Integer, MenuExpr).', R2),
-    line_after(R2?, 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuExpr ::= at(Integer) ; lit(Integer) ; plus(MenuExpr, MenuExpr) ; minus(MenuExpr, MenuExpr) ; mul(MenuExpr, MenuExpr).', R).
+    line_after(R2?, 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuExpr ::= at(Integer) ; lit(Integer) ; plus(MenuExpr, MenuExpr) ; minus(MenuExpr, MenuExpr) ; mul(MenuExpr, MenuExpr) ; fn(Constant, List(MenuExpr)).', R).
 %% The places of the request that hold persons, its roles and its agent variables: persons of different names are bound to different persons, "but for two the clause names as possibly one person" (vGLP, Section 5.4, "Speech-act schemas as local specifications", Udi, 2026-11-17, to vGLP #30), the pairs pragmas.sh gives as same(K, J) (same_places).
 procedure role_places(Args?, Integer?, Ints).
 role_places([], _, []).
