@@ -100,7 +100,10 @@ compile_q([], Nm, D, V, I, words(P, E0, _, Dn, Vl)) :- ground(D?), ground(I?), g
     decl_schemas(D?, Cr4),
     real_lx(Cr4?, Rl),
     app(Lx0?, Rl?, Lx),
-    W = words(P?, E0?, Lx?, Dn?, Vl?),
+    W = words(P1?, E0?, Lx?, Dn?, Vl?),
+    decl_schemas(D?, Cr7),
+    reals_off(Cr7?, Cq7),
+    q_normal(Cq7?, C7),
     decl_schemas(D?, Cr5),
     reals_off(Cr5?, Cq5),
     lx_table(Cq5?, Lb1),
@@ -111,7 +114,7 @@ compile_q([], Nm, D, V, I, words(P, E0, _, Dn, Vl)) :- ground(D?), ground(I?), g
     pragma_acts(P?, Pa2),
     num_table(C1?, Pa1?, Lb1?, Nt),
     num_table(C2?, Pa2?, Lb2?, Nt1),
-    plain_contract(C0?, Nt1?, C),
+    plain_words(C0?, C7?, Nt1?, P?, C, P1),
     decl_reflexive(D?, Rf),
     intro_preds(I?, E),
     compile0(Nm?, C?, Rf?, E?, Nt?, V?, W?).
@@ -1844,6 +1847,76 @@ head_line([], _, []).
 head_line([X|Xs], Nm, [H?, X?|Xs?]) :- ground(Nm?) | said('%% not compiled', Nm?, H).
 
 %% A cschema with no reach conditions is a schema of its roles (GSC, Appendix D: a schema carrying a finite set of reach conditions is written cschema, programs/gsc/README.md); a schema with a constraint, nschema, is a schema of its roles, its constraint in the table Nt; and each schema's head is taken less its local variables.
+%% The plain contract and the pragmas with the fields of its local set variables left out (strip_wpragmas).
+procedure plain_words(QContract?, QContract?, NumInfos?, WPragmas?, Contract, WPragmas).
+plain_words(C0, C7, Nt, P, C?, P1?) :- ground(Nt?) |
+    plain_contract(C0?, Nt?, C),
+    strip_wpragmas(P?, C7?, Nt?, P1).
+%% A set variable local to a role is no place of the request (strip_locals; local.glp, set_locals): "A set variable of atoms the schema deletes at a role other than the base is local to that role, as the notes Bob gives in a swap, which his machine picks from his own" (OSPM, act-schemas-local, VEUI vglp32-sets-2026-11-24).  pragmas.sh gives an act a field string for each place of the schema's head, so the string of such a place is left out, and a field type, ft(K, T), after it renumbered.
+procedure strip_wpragmas(WPragmas?, QContract?, NumInfos?, WPragmas).
+strip_wpragmas(no_pragmas, _, _, no_pragmas).
+strip_wpragmas(pragmas(Ls, As, Ss, Lk, Vn, Tx, Fd), C, Nt, pragmas(Ls?, As1?, Ss?, Lk?, Vn?, Tx?, Fd?)) :- strip_tacts(As?, C?, Nt?, As1).
+procedure strip_tacts(TActs?, QContract?, NumInfos?, TActs).
+strip_tacts([], _, _, []).
+strip_tacts([act(N, B, Fs, Q, X, By, Ft)|As], C, Nt, [act(N?, B?, Fs1?, Q?, X?, By?, Ft1?)|As1?]) :- ground(N?), ground(C?), ground(Nt?), ground(Fs?), ground(Ft?) |
+    q_head(N?, C?, Hr),
+    num_lookup(N?, Nt?, Ni),
+    gone_fields(Hr?, Ni?, Gs),
+    strip_fs(Gs?, Fs?, Ft?, Fs1, Ft1),
+    strip_tacts(As?, C?, Nt?, As1).
+procedure strip_fs(Ints?, Strings?, FTypes?, Strings, FTypes).
+strip_fs(Gs, Fs, Ft, Fs1?, Ft1?) :- ground(Gs?) | drop_nths(Fs?, Gs?, 1, Fs1), renum_fts(Ft?, Gs?, Ft1).
+QHead ::= hr(Args, RoleSpecs) ; nohead.
+procedure q_head(Constant?, QContract?, QHead).
+q_head(_, [], nohead).
+q_head(N, [schema(S, Hd, Rs)|_], hr(Hd?, Rs?)) :- N? =?= S? | true.
+q_head(N, [cschema(S, Hd, _, Rs)|_], hr(Hd?, Rs?)) :- N? =?= S? | true.
+q_head(N, [nschema(S, Hd, _, Rs)|_], hr(Hd?, Rs?)) :- N? =?= S? | true.
+q_head(N, [qschema(S, Hd, _, _, Rs, _, _)|_], hr(Hd?, Rs?)) :- N? =?= S? | true.
+q_head(N, [_|Cs], H?) :- otherwise | q_head(N?, Cs?, H).
+%% The ordinals, among the places a field may name (field_places), of the set variables local to a role.
+procedure gone_fields(QHead?, NumInfo?, Ints).
+gone_fields(nohead, _, []).
+gone_fields(hr(Hd, Rs), num_info(_, _, Ls, _, _, _), Gs?) :- ground(Hd?), ground(Rs?) |
+    schema_vars(Rs?, Hd?, Vs0),
+    listed_ixs(Rs?, 1, Lis),
+    drop_listed(Vs0?, Lis?, Vs),
+    loc_vars(Ls?, Lv),
+    gone_walk(Vs?, 1, 1, Lv?, Gs).
+procedure gone_walk(Args?, Integer?, Integer?, Args?, Ints).
+gone_walk([], _, _, _, []).
+gone_walk([V|Vs], I, K, Lv, Gs?) :- integer(I?), integer(K?), ground(Lv?), ground(V?) |
+    a_field(V?, I?, [], F),
+    I1 := I? + 1,
+    gone_step(F?, V?, K?, Lv?, K1, G),
+    gone_walk(Vs?, I1?, K1?, Lv?, Gs1),
+    keep_int(G?, K?, Gs1?, Gs).
+procedure gone_step(YesNo?, Arg?, Integer?, Args?, Integer, YesNo).
+gone_step(no, _, K, _, K?, no).
+gone_step(yes, set(X), K, Lv, K1?, G?) :- ground(X?), ground(Lv?), integer(K?) | K1 := K? + 1, mem(num(X?), Lv?, G).
+gone_step(yes, V, K, _, K1?, no) :- otherwise, integer(K?), ground(V?) | K1 := K? + 1.
+procedure drop_nths(Strings?, Ints?, Integer?, Strings).
+drop_nths([], _, _, []).
+drop_nths([F|Fs], Gs, K, R?) :- integer(K?), ground(Gs?) |
+    mem(K?, Gs?, In),
+    K1 := K? + 1,
+    drop_nths(Fs?, Gs?, K1?, R1),
+    keep_string(In?, F?, R1?, R).
+procedure keep_string(YesNo?, String?, Strings?, Strings).
+keep_string(yes, _, R, R?).
+keep_string(no, F, R, [F?|R?]).
+procedure renum_fts(FTypes?, Ints?, FTypes).
+renum_fts([], _, []).
+renum_fts([ft(J, U)|Ft], Gs, [ft(J1?, U?)|Ft1?]) :- integer(J?), ground(Gs?) |
+    below_count(Gs?, J?, D),
+    J1 := J? - D?,
+    renum_fts(Ft?, Gs?, Ft1).
+renum_fts([consents(I)|Ft], Gs, [consents(I?)|Ft1?]) :- renum_fts(Ft?, Gs?, Ft1).
+procedure below_count(Ints?, Integer?, Integer).
+below_count([], _, 0).
+below_count([G|Gs], J, N?) :- G? < J? | below_count(Gs?, J?, M), N := M? + 1.
+below_count([G|Gs], J, N?) :- G? >= J? | below_count(Gs?, J?, N).
+
 procedure plain_contract(QContract?, NumInfos?, Contract).
 plain_contract([], _, []).
 plain_contract([schema(S, Hd, Rs)|Ss], Nt, [schema(S?, Hd1?, Rs?)|Ps?]) :- ground(S?), ground(Nt?) |
@@ -1867,9 +1940,14 @@ strip_locals1(num_info(_, _, Ls, _, _, _), Hd, Hd1?) :- loc_vars(Ls?, Vs), drop_
 procedure drop_args(Args?, Args?, Args).
 drop_args([], _, []).
 drop_args([A|As], Vs, R?) :- ground(A?), ground(Vs?) |
-    mem(A?, Vs?, In),
+    arg_key(A?, K),
+    mem(K?, Vs?, In),
     drop_args(As?, Vs?, R1),
     keep_unless(In?, A?, R1?, R).
+%% A set variable of the head, set(X), is local as num(X), the atoms naming it so (local.glp, set_locals).
+procedure arg_key(Arg?, Arg).
+arg_key(set(X), num(X?)).
+arg_key(A, A?) :- otherwise | true.
 procedure keep_unless(YesNo?, Arg?, Args?, Args).
 keep_unless(yes, _, R, R?).
 keep_unless(no, A, R, [A?|R?]).
@@ -1984,7 +2062,7 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     proved_rules(C?, Rl),
     worded_lx(W?, Lx7),
     real_heads(C?, Lx7?, Ch),
-    widget_lines(W?, C?, Ch?, Ps?, ctx(Rf?, Rl?), Lw0),
+    widget_lines(W?, C?, Ch?, Ps?, Nt?, ctx(Rf?, Rl?), Lw0),
     worded_lx(W?, Lx11),
     lx_sets(Lx11?, Ks1),
     menu_lines(Lw0?, Ks1?, Lw),
@@ -2000,7 +2078,12 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     worded_lx(W?, Lx),
     text_schemas(C?, Lx?, Ct),
     schema_lines(Ct?, T1, Le0),
-    numeric_lines(Nt?, Lm0),
+    numeric_lines(Nt?, Lm00),
+    worded_lx(W?, Lx12),
+    worded_lx(W?, Lx13),
+    lx_sets(Lx13?, Ks2),
+    lsets_lines(Ks2?, Nt?, Lx12?, Lls),
+    lapp(Lm00?, Lls?, Lm0),
     worded_acts(W?, Was),
     worded_lx(W?, Lx2),
     base_lines(C?, Was?, Lx2?, Lb00),
@@ -3320,6 +3403,35 @@ procedure keep_gi(YesNo?, Integer?, Ints?, Ints).
 keep_gi(yes, I, Gs, [I?|Gs?]).
 keep_gi(no, _, Gs, Gs?).
 %% The schemas' numbers, schema_numeric(Name, numeric(Conjuncts, Locals, Reads)), printed for each schema with a constraint, a local variable or a reading: the conjuncts of its constraint each with its role, cj(every, C), which every role checks, cj(at(I), C), which the role I checks, and cj(cond, C), of the part's condition, which the initiator checks on the readings, its counts named num('#k') (local.glp, conjuncts_of); its variables local to a role; and what each role reads with its vote yes, read(I, Vars, Counts) (local.glp, reads_of) (vGLP 566c186, Section 5.4, "Speech-act schemas as local specifications"); any other schema has none, numeric([], [], []).
+%% The set variables local to a role of each schema, schema_lsets(Name, Xs), printed for a contract with a set variable (lx_sets), which the role's machine binds from its state (text.glp, dom_bindings; local.glp, set_locals): its local variables, num(X), that are set variables of the schema, st(Name, X) in Lx.
+procedure lsets_lines(YesNo?, NumInfos?, Lxs?, Lines).
+lsets_lines(no, _, _, []).
+lsets_lines(yes, Nt, Lx, ['', 'procedure schema_lsets(Constant?, List(Constant)).'|L?]) :- ground(Nt?), ground(Lx?) |
+    lsets_lines1(Nt?, Lx?, L1),
+    lapp(L1?, ['schema_lsets(_, []) :- otherwise | true.'], L).
+procedure lsets_lines1(NumInfos?, Lxs?, Lines).
+lsets_lines1([], _, []).
+lsets_lines1([num_info(S, _, Ls, _, _, _)|Ns], Lx, L?) :- ground(S?), ground(Ls?), ground(Lx?) |
+    loc_vars(Ls?, Vs),
+    lset_names(Vs?, S?, Lx?, Xs),
+    lsets_line(Xs?, S?, L1),
+    lsets_lines1(Ns?, Lx?, L2),
+    lapp(L1?, L2?, L).
+procedure lset_names(Args?, Constant?, Lxs?, List(Constant)).
+lset_names([], _, _, []).
+lset_names([num(X)|Vs], S, Lx, Xs?) :- ground(X?), ground(S?), ground(Lx?) |
+    mem(st(S?, X?), Lx?, In),
+    lset_names(Vs?, S?, Lx?, Xs1),
+    keep_const(In?, X?, Xs1?, Xs).
+lset_names([_|Vs], S, Lx, Xs?) :- otherwise | lset_names(Vs?, S?, Lx?, Xs).
+procedure keep_const(YesNo?, Constant?, List(Constant)?, List(Constant)).
+keep_const(yes, X, Xs, [X?|Xs?]).
+keep_const(no, _, Xs, Xs?).
+procedure lsets_line(List(Constant)?, Constant?, Lines).
+lsets_line([], _, []).
+lsets_line([X|Xs], S, [T?, '.']) :- ground(S?), ground(X?), ground(Xs?) |
+    T0 =.. [schema_lsets, S?, [X?|Xs?]],
+    term_to_string(T0?, T).
 procedure numeric_lines(NumInfos?, Lines).
 numeric_lines(Nt, ['', 'procedure schema_numeric(Constant?, Numeric).'|L?]) :- ground(Nt?) |
     numeric_lines1(Nt?, L1),
@@ -3840,11 +3952,11 @@ a_person(any, _, _, no).
 a_person(ilist(_, _), _, _, no).
 
 %% The two widget declarations every platform carries (vGLP, Section 6.2, "The words a platform shows": "The compiler prints three widget declarations for a platform: for its request type, a menu of the buttons and the fields of the contract's acts; for its approval type, the question with the buttons yes and no"), so that no app writes a self.vglp: the approval question drawn by the construct family's approval_sentence, the request question by its social_menu.  With pragmas, the request type's declaration carries the buttons the contract's pragmas give, button(B, Acts), B the label in brackets and Acts the acts it names (Section 5.4, "The contract's words": "A button is of the acts it names"); each act, for each guarding role at which it is proposed, act(F, M, Pre, Binds, Fields, Same, Text): F its schema, M the place of the proposer in its request, Pre the atoms its schema requires and forbids at the proposer's role and what the schemas prove, Binds the places of its request those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, in the schema's order, Same its places possibly one person and Text the text of its request form (Section 6.2: the request widget "draws one button for each way the viewer's state, in the last view written, satisfies the act at the proposer's role, with the values that way binds and the act's fields").  It carries no tab and no row: where the construct family draws a button is its own choice, from the atoms that bind the way (Section 6.2: "How the buttons of one act are arranged, each beside the atoms that bind it or as one button with a picker, is the construct family's").  The approval question's two answers are given by no pragma, so its declaration carries no label, and the construct family draws the name of each (Section 6.2: "A construct family draws the label it is given, and the name of the type where it is given none").  The grammar is README.md's beside this file, 6.
-procedure widget_lines(Worded?, Contract?, Contract?, Preds?, DrawCtx?, Lines).
-widget_lines(_, _, _, [], _, ['', '%% The widget declaration of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence; a contract with no guarded part has no request question.', 'Approval =::= approval_sentence.']).
-widget_lines(words(pragmas(_, As, _, _, _, _, _), _, _, _, _), C, Ch, Ps, Rf, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent\'s own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract\'s pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer\'s role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument\'s place, at(K), a group\'s, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).', 'Approval =::= approval_sentence.', T?, '.', '', '%% The types of the request widget\'s term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu\'s one alternative is T\'s.', 'RequestMenu ::= social_menu(List(MenuEntry)).', 'MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).', 'MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuField ::= field(Integer, String, MenuFieldType).', 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuWord ::= say(String) ; at(Integer).']) :-
+procedure widget_lines(Worded?, Contract?, Contract?, Preds?, NumInfos?, DrawCtx?, Lines).
+widget_lines(_, _, _, [], _, _, ['', '%% The widget declaration of the platform (vGLP, Section 6.2, Definition "Widget Declaration"): its approval question drawn by the construct family\'s approval_sentence; a contract with no guarded part has no request question.', 'Approval =::= approval_sentence.']).
+widget_lines(words(pragmas(_, As, _, _, _, _, _), _, _, _, _), C, Ch, Ps, Nt, Rf, ['', '%% The widget declarations of the platform (vGLP, Section 6.2, Definition "Widget Declaration"; "The words a platform shows"): its approval question drawn by the construct family\'s approval_sentence, and its request question, of the moded type Request?, by its social_menu, which reads the agent\'s own key and the persons it knows from the last view drawn on construct 0 (Section 6.2), with a button for each button of the contract\'s pragmas, button(B, Acts), B its label and Acts the acts it names, each act(F, M, Roles, Pre, Binds, Fields, Same, Text), F the schema, M the place of the proposer, Roles the places of its roles, Pre the atoms the schema requires, req(P, As), and forbids, forb(P, As), at the proposer\'s role and what the schemas prove, unless(P, As) and proved(Q, Ws, P, As), As each argument\'s place, at(K), a group\'s, grp(J, K), or any, Binds the places those atoms bind, Fields its fields, field(I, S, T), its place I, its label S and its type T, person, key, text or number, Same its places possibly one person, same(K, J), and Text the text of its request form, each word say(S) or at(I) (README.md beside this file, 6).', 'Approval =::= approval_sentence.', T?, '.', '', '%% The types of the request widget\'s term, social_menu(Buttons), printed with the platform as its request type and Atom are (vGLP 0eeea71, Section 5.4: the compiler types the term "by type declarations it prints with the platform"; Section 6.3, the paragraph after the construct process: the compilation forms the union of the values drawn, the raw inputs and the widget terms, the parameter T of the person channel, so the widget a construct draws is typed as its value is; README.md beside this file, 6).  RequestMenu\'s one alternative is T\'s.', 'RequestMenu ::= social_menu(List(MenuEntry)).', 'MenuEntry ::= button(String, List(MenuAct)) ; label(Constant, String) ; label(Constant, Integer, String).', 'MenuAct ::= act(Constant, Integer, List(Integer), List(MenuCond), List(Integer), List(MenuField), List(MenuCond), List(MenuWord)).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuField ::= field(Integer, String, MenuFieldType).', 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuWord ::= say(String) ; at(Integer).']) :-
     ground(As?), ground(C?), ground(Ch?), ground(Ps?), ground(Rf?) |
-    act_buttons(As?, C?, Ch?, Ps?, Rf?, [], Bs),
+    act_buttons(As?, C?, Ch?, Ps?, Nt?, Rf?, [], Bs),
     button_texts(Bs?, Bt),
     list_text(Bt?, Bl),
     call_text('Request? =::= social_menu', [Bl?], T).
@@ -3894,15 +4006,16 @@ WActs     ::= [] ; [WAct | WActs].
 WButton   ::= button(String, WActs).
 WButtons  ::= [] ; [WButton | WButtons].
 %% Ch is the contract C with each real variable of a head written real(X) and each variable over the constants const(X) (real_heads), which gives a field its type (field_type).
-procedure act_buttons(TActs?, Contract?, Contract?, Preds?, DrawCtx?, WButtons?, WButtons).
-act_buttons([], _, _, _, _, Bs, Bs?).
-act_buttons([act(N, B, Fs, Q, _, By, Ft)|As], C, Ch, Ps, Rf, Bs0, Bs?) :- ground(N?), ground(B?), ground(Fs?), ground(Q?), ground(By?), ground(Ft?), ground(C?), ground(Ch?), ground(Ps?), ground(Rf?), ground(Bs0?) |
+procedure act_buttons(TActs?, Contract?, Contract?, Preds?, NumInfos?, DrawCtx?, WButtons?, WButtons).
+act_buttons([], _, _, _, _, _, Bs, Bs?).
+act_buttons([act(N, B, Fs, Q, _, By, Ft)|As], C, Ch, Ps, Nt, Rf, Bs0, Bs?) :- ground(N?), ground(B?), ground(Fs?), ground(Q?), ground(By?), ground(Ft?), ground(C?), ground(Ch?), ground(Ps?), ground(Nt?), ground(Rf?), ground(Bs0?) |
     mem(N?, Ps?, In),
     find_schema(N?, C?, Sf),
     find_schema(N?, Ch?, Sh),
-    schema_acts(In?, Sf?, Sh?, N?, Fs?, Ft?, Q?, By?, Rf?, Ws),
+    num_lookup(N?, Nt?, Ni),
+    schema_acts(In?, Sf?, Sh?, N?, Fs?, Ft?, Q?, By?, Ni?, Rf?, Ws),
     add_button(Bs0?, B?, Ws?, Bs1),
-    act_buttons(As?, C?, Ch?, Ps?, Rf?, Bs1?, Bs).
+    act_buttons(As?, C?, Ch?, Ps?, Nt?, Rf?, Bs1?, Bs).
 %% The acts Ws joined to the button labelled B, or a new button after the others; nothing where Ws is empty.  One name is one button (Section 5.4, "The contract's words": "A button is of the acts it names"), so every act of a name joins one button.
 procedure add_button(WButtons?, String?, WActs?, WButtons).
 add_button(Bs, _, [], Bs?).
@@ -3910,11 +4023,11 @@ add_button([], B, [W|Ws], [button(B?, [W?|Ws?])]).
 add_button([button(B1, Xs)|Bs], B, [W|Ws], [button(B1?, Ys?)|Bs?]) :- ground(B1?), ground(B?), B1? =?= B? | app(Xs?, [W?|Ws?], Ys).
 add_button([X|Bs], B, [W|Ws], [X?|Bs1?]) :- otherwise | add_button(Bs?, B?, [W?|Ws?], Bs1).
 %% The acts of a schema the request type proposes, one for each guarding role at which it is proposed (proposer_roles).
-procedure schema_acts(YesNo?, SFound?, SFound?, Constant?, Strings?, FTypes?, Said?, Proposer?, DrawCtx?, WActs).
-schema_acts(no, _, _, _, _, _, _, _, _, []).
-schema_acts(yes, nosfound, _, _, _, _, _, _, _, []).
-schema_acts(yes, sfound(_, _), nosfound, _, _, _, _, _, _, []).
-schema_acts(yes, sfound(Hd, Rs), sfound(Hh, _), S, Fs, Ft, Q, By, Rf, Ws?) :- ground(Hd?), ground(Hh?), ground(Rs?), ground(S?), ground(Fs?), ground(Ft?), ground(Q?), ground(By?), ground(Rf?) |
+procedure schema_acts(YesNo?, SFound?, SFound?, Constant?, Strings?, FTypes?, Said?, Proposer?, NumInfo?, DrawCtx?, WActs).
+schema_acts(no, _, _, _, _, _, _, _, _, _, []).
+schema_acts(yes, nosfound, _, _, _, _, _, _, _, _, []).
+schema_acts(yes, sfound(_, _), nosfound, _, _, _, _, _, _, _, []).
+schema_acts(yes, sfound(Hd, Rs), sfound(Hh, _), S, Fs, Ft, Q, By, Ni, Rf, Ws?) :- ground(Hd?), ground(Hh?), ground(Rs?), ground(S?), ground(Fs?), ground(Ft?), ground(Q?), ground(By?), ground(Ni?), ground(Rf?) |
     schema_vars(Rs?, Hd?, Vs0),
     listed_ixs(Rs?, 1, Lis),
     drop_listed(Vs0?, Lis?, Vs),
@@ -3926,9 +4039,38 @@ schema_acts(yes, sfound(Hd, Rs), sfound(Hh, _), S, Fs, Ft, Q, By, Rf, Ws?) :- gr
     act_fields(Fp?, Fs?, 1, Ft?, Us?, Mt?, Fd),
     guard_roles(Rs?, 1, Gr0),
     proposer_roles(By?, Gr0?, Gr),
-    same_places(By?, Sm),
+    same_places(By?, Sm0),
+    schema_vars(Rs?, Hd?, Vz0),
+    listed_ixs(Rs?, 1, Lis2),
+    drop_listed(Vz0?, Lis2?, Vz),
+    size_places(Ni?, Vz?, Sz),
+    app(Sm0?, Sz?, Sm),
     form_text(Hd?, Rs?, Q?, Tx),
     role_acts(Gr?, S?, Vs?, Rs?, Rf?, Fd?, Sm?, Tx?, Ws).
+%% The places of a set variable the request names and of the field that gives its size, size(S, F), for each conjunct eq(size(X), Y) of the schema's constraint, X at the place S and Y at the place F: "The person gives the size of a set variable in a field, a number" (OSPM, act-schemas-local, VEUI vglp32-sets-2026-11-24); a set variable local to a role is at no place of the request and has none.
+procedure size_places(NumInfo?, Args?, Preconds).
+size_places(num_info(_, C, _, _, _, _), Vs, Sz?) :- ground(C?), ground(Vs?) |
+    con_list(C?, Cs),
+    size_items(Cs?, Vs?, Sz).
+procedure con_list(Constraint?, Constraints).
+con_list(and(C1, C2), R?) :- con_list(C1?, R1), con_list(C2?, R2), app(R1?, R2?, R).
+con_list(C, [C?]) :- otherwise | true.
+procedure size_items(Constraints?, Args?, Preconds).
+size_items([], _, []).
+size_items([eq(fn(size, [num(X)]), num(Y))|Cs], Vs, Sz?) :- ground(X?), ground(Y?), ground(Vs?) |
+    arg_place(set(X?), Vs?, 1, Ps),
+    arg_place(num(Y?), Vs?, 1, Pf),
+    size_item(Ps?, Pf?, Sz1),
+    size_items(Cs?, Vs?, Sz2),
+    app(Sz1?, Sz2?, Sz).
+size_items([_|Cs], Vs, Sz?) :- otherwise | size_items(Cs?, Vs?, Sz).
+procedure arg_place(Arg?, Args?, Integer?, Ints).
+arg_place(_, [], _, []).
+arg_place(A, [V|_], I, [I?]) :- ground(A?), ground(V?), A? =?= V? | true.
+arg_place(A, [_|Vs], I, R?) :- otherwise, integer(I?) | I1 := I? + 1, arg_place(A?, Vs?, I1?, R).
+procedure size_item(Ints?, Ints?, Preconds).
+size_item([S], [F], [size(S?, F?)]).
+size_item(_, _, []) :- otherwise | true.
 %% The places of the request that hold persons, its roles and its agent variables: persons of different names are bound to different persons, "but for two the clause names as possibly one person" (vGLP, Section 5.4, "Speech-act schemas as local specifications", Udi, 2026-11-17, to vGLP #30), the pairs pragmas.sh gives as same(K, J) (same_places).
 procedure role_places(Args?, Integer?, Ints).
 role_places([], _, []).
@@ -4374,7 +4516,7 @@ proved_entry(no, _, _, _, _, _, []).
 proved_entry(yes, pat(Q, Ws), P, N, I, K, [proved(Q?, Ws?, P?, As?)]) :- K? > 0 | unless_args(1, N?, I?, K?, As).
 proved_entry(yes, _, _, _, _, 0, []).
 %% The conditions of an act at the proposer's role, printed in its widget declaration: req(P, As) and forb(P, As), the atoms the schema requires and forbids there; unless(P, As) and proved(Q, Ws, P, As), what the schemas prove of the other roles; and same(K, J), two places possibly one person.
-Precond ::= req(Constant, CondArgs) ; forb(Constant, CondArgs) ; unless(Constant, CondArgs) ; proved(Constant, Preds, Constant, CondArgs) ; same(Integer, Integer).
+Precond ::= req(Constant, CondArgs) ; forb(Constant, CondArgs) ; unless(Constant, CondArgs) ; proved(Constant, Preds, Constant, CondArgs) ; same(Integer, Integer) ; size(Integer, Integer).
 Preconds ::= [] ; [Precond | Preconds].
 procedure nth_rs(Integer?, RoleSpecs?, RoleSpecs).
 nth_rs(_, [], []).
@@ -4459,7 +4601,9 @@ export_lines(Dn, Pr, Tx, Vn, L?) :- ground(Pr?) |
 %% A field's type has the alternative set only where the contract has a set variable (lx_sets), a field of a set variable taking its elements, so that a platform with none prints as before.
 procedure menu_lines(Lines?, YesNo?, Lines).
 menu_lines(Ls, no, Ls?).
-menu_lines(Ls, yes, R?) :- line_sub(Ls?, 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuFieldType ::= person ; key ; agent ; text ; number ; set.', R).
+menu_lines(Ls, yes, R?) :-
+    line_sub(Ls?, 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuFieldType ::= person ; key ; agent ; text ; number ; set.', R1),
+    line_sub(R1?, 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; size(Integer, Integer).', R).
 procedure rarg_lines(Lines?, YesNo?, YesNo?, Lines).
 rarg_lines(Ls, no, no, Ls?).
 rarg_lines(Ls, yes, no, R?) :- line_sub(Ls?, 'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant).', 'RArg      ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(RNameTerm) ; sgn(Constant, Integer) ; num(Constant) ; real(Constant) ; any ; ilist(Integer, String) ; item_of(RArg) ; val(Constant) ; const(Constant).', R).
