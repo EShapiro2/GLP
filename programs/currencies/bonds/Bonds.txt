@@ -23,7 +23,7 @@ Swap: Alice [Swap] <amount given> <issuer wanted> <type wanted> <amount wanted>
   Bob: Alice asks to swap coins or bonds with you.
 Pay: Alice [Pay] <amount>
   Bob: Alice asks to pay you coins or bonds.
-Redeem: Alice [Redeem coin against bond] <issuer wanted> [Redeem bond] <issuer wanted> <maturity given> [Redeem bond against bond] <issuer wanted> <maturity given>
+Redeem: Alice [Redeem coin against bond] <issuer wanted> <maturity wanted> [Redeem bond] <issuer wanted> [Redeem bond against bond] <issuer wanted> <maturity wanted>
 Escrow: Alice [Deposit] <amount> <condition>
   Carol: Alice asks to deposit coins or bonds with you.
   Carol [Release] <amount>
