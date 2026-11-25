@@ -497,7 +497,11 @@ class Deriver:
         if d["name"].startswith("Vote of "):
             m = re.match(r"Vote of (.+?) for (.+)$", d["name"])
             bn = m.group(2) if m else None
-            return next((c for c in mine if c["name"] in (bn, "%s for %s" % (bn, m.group(1)) if m else "")), None)
+            # the act it is compiled from reads the vote it adds, or clears it when it is taken: a vote no act counts is no vote of the contract
+            # (Audit PR 123 on Finding 18: Library with a vote for Lend that Lend does not count)
+            adds = {l[1] for l in d["H"] if not l[0]}
+            return next((c for c in mine if c["name"] in (bn, "%s for %s" % (bn, m.group(1)) if m else "")
+                         and adds & {l[1] for l in c["B"] + [x for x in c["H"] if x[0]]}), None)
         bn = re.sub(r" for [A-Z][A-Za-z]*(?: and [A-Z][A-Za-z]*)*$", "", d["name"])
         for c in mine:
             if c is d or c["name"] != bn or c["first"] != d["first"]:
