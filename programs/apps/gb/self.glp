@@ -9,6 +9,7 @@
 Peer     ::= Key.
 Speech   ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; program(Module) ; Speech.
+CValue ::= Constant ; bond(Integer).
 Class ::=
 establish(Peer)
 ;
@@ -16,42 +17,29 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-issue(Peer, Integer)
+issue(Peer, CValue, List(Constant), Integer)
 ;
-issue_bond(Peer, Integer, Integer)
+swap(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, CValue, List(Constant), Integer)
 ;
-swap(Peer, Peer, Peer, Integer, Peer, Integer)
+pay(Peer, Peer, Peer, CValue, List(Constant), Integer)
 ;
-swap_coin_for_bond(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
+pay_issuer(Peer, Peer, CValue, List(Constant), Integer)
 ;
-swap_bonds(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
+deposit(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, Speech)
 ;
-pay(Peer, Peer, Peer, Integer)
+release(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
-pay_issuer(Peer, Peer, Integer)
+return(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
-pay_bond(Peer, Peer, Peer, Integer, Integer)
+redeem(Peer, Peer, List(Constant), Peer, List(Constant))
 ;
-deposit(Peer, Peer, Peer, Integer, Peer, Speech)
+redeem_coin_against_bond(Peer, Peer, List(Constant), Peer, Integer, List(Constant))
 ;
-deposit_bond(Peer, Peer, Peer, Integer, Integer, Peer, Speech)
+redeem_bond(Peer, Peer, Integer, List(Constant), Peer, List(Constant))
 ;
-release(Peer, Peer, Peer, Peer, Speech, Integer)
-;
-release_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
-;
-return(Peer, Peer, Peer, Peer, Speech, Integer)
-;
-return_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
-;
-redeem(Peer, Peer, Peer)
-;
-redeem_coin_against_bond(Peer, Peer, Peer, Integer)
-;
-redeem_bond(Peer, Peer, Integer, Peer)
-;
-redeem_bond_against_bond(Peer, Peer, Integer, Peer, Integer)
+redeem_bond_against_bond(Peer, Peer, Integer, List(Constant), Peer, Integer, List(Constant))
 .
+
 Proposal ::=
 establish(Peer)
 ;
@@ -59,55 +47,41 @@ acquaint(Peer, Peer)
 ;
 introduce(Peer, Peer, Peer)
 ;
-issue(Peer, Integer)
+issue(Peer, CValue, List(Constant), Integer)
 ;
-issue_bond(Peer, Integer, Integer)
+swap(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, CValue, List(Constant), Integer)
 ;
-swap(Peer, Peer, Peer, Integer, Peer, Integer)
+pay(Peer, Peer, Peer, CValue, List(Constant), Integer)
 ;
-swap_coin_for_bond(Peer, Peer, Peer, Integer, Peer, Integer, Integer)
+pay_issuer(Peer, Peer, CValue, List(Constant), Integer)
 ;
-swap_bonds(Peer, Peer, Peer, Integer, Integer, Peer, Integer, Integer)
+deposit(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, Speech)
 ;
-pay(Peer, Peer, Peer, Integer)
+release(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
-pay_issuer(Peer, Peer, Integer)
+return(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
-pay_bond(Peer, Peer, Peer, Integer, Integer)
+redeem(Peer, Peer, List(Constant), Peer, List(Constant))
 ;
-deposit(Peer, Peer, Peer, Integer, Peer, Speech)
+redeem_coin_against_bond(Peer, Peer, List(Constant), Peer, Integer, List(Constant))
 ;
-deposit_bond(Peer, Peer, Peer, Integer, Integer, Peer, Speech)
+redeem_bond(Peer, Peer, Integer, List(Constant), Peer, List(Constant))
 ;
-release(Peer, Peer, Peer, Peer, Speech, Integer)
-;
-release_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
-;
-return(Peer, Peer, Peer, Peer, Speech, Integer)
-;
-return_bond(Peer, Peer, Peer, Integer, Peer, Speech, Integer)
-;
-redeem(Peer, Peer, Peer)
-;
-redeem_coin_against_bond(Peer, Peer, Peer, Integer)
-;
-redeem_bond(Peer, Peer, Integer, Peer)
-;
-redeem_bond_against_bond(Peer, Peer, Integer, Peer, Integer)
+redeem_bond_against_bond(Peer, Peer, Integer, List(Constant), Peer, Integer, List(Constant))
 .
 Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.
 Reason   ::= declined ; unable ; unable(List(Atom), List(Atom)).
-Vote     ::= yes ; no(Reason).
-Decision ::= commit ; abort(Peer, Reason) ; yield.
+Vote     ::= yes(Bindings) ; yes(Bindings, GAtoms) ; no(Reason).
+Decision ::= commit(Binding) ; abort(Peer, Reason) ; yield.
 Rho      ::= one(Class) ; rho(Proposal).
 Names    ::= none ; request(Rho, Integer).
 Attempt  ::= attempt(Peer, Integer, Integer, Class, Names).
 Cargo    ::= start(Attempt) ; vote(Attempt, Vote) ; outcome(Attempt, Decision)
-           ; yield(Attempt) ; request(Rho, Integer).
+           ; yield(Attempt) ; ready(Attempt) ; request(Rho, Integer).
 Content  ::= hello(Peer, Proposal) ; ihello(Peer) ; intro(Peer, Peer) ; cargo(Peer, Cargo).
 Net      ::= msg(Peer, Content).
-Atom     ::= identity ; person ; knows(Peer) ; coin(Peer) ; bond(Peer, Integer) ; escrow_coin(Peer, Peer, Peer, Speech) ; escrow_bond(Peer, Integer, Peer, Peer, Speech).
+Atom     ::= identity ; person ; knows(Peer) ; note(Peer, CValue, CValue) ; escrow_note(Peer, CValue, Peer, Peer, Speech, CValue).
 Approved ::= Proposal.
 Output   ::= view(Key, List(Atom), List(Key), List(Approved), List(Tab)) ; refused(Approved, Key, Reason).
 Tab      ::= tab(String, Constant) ; tab(String, Constant, Constant).
