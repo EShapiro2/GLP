@@ -364,7 +364,19 @@ function depthOf(id){
   const ps = C[id].extends.filter(p => C[p]);
   return DEPTH[id] = ps.length ? 1 + Math.max(...ps.map(depthOf)) : 0;
 }
+// Two layouts are made, the tree under each contract's first parent and the
+// tree under its parent on the ring next above, and the one whose arrows reach
+// least far round the globe is kept: the longest arrow first, then all of them
+// (Udi, 2026-11-25: "feeds and children go through more than half the globe
+// to reach village communication. fix not on the case but also the
+// algorithm").
+function clearLayout(){ for (const T of [PHI, LAT, KIDS, WAY, TAIL]) for (const k in T) delete T[k]; }
 function layout(){
+  const a = layoutWith(0, true); clearLayout();
+  const b = layoutWith(1, true); clearLayout();
+  layoutWith(b[0] < a[0] - 1e-6 || (Math.abs(b[0] - a[0]) <= 1e-6 && b[1] < a[1]) ? 1 : 0);
+}
+function layoutWith(rule, probe){
   D.contracts.forEach(c => depthOf(c.id));
   // The rings' colatitudes: equally spaced from the pole down to near the
   // globe's bottom edge as the first view shows it, tilted by V.tilt (Udi,
@@ -379,7 +391,7 @@ function layout(){
   for (let d = 0; d <= maxd0; d++) RING[d] = d === 0 ? 0 : thMax * (d + 0.5) / (maxd0 + 0.5);
   // Where to start: each contract in the range of its first parent, the range
   // shared among its children by how many leaves each has below it.
-  D.contracts.forEach(c => { const p = c.extends.find(x => C[x]); if (p) (KIDS[p] = KIDS[p] || []).push(c.id); });
+  D.contracts.forEach(c => { const p = rule ? c.extends.filter(x => C[x]).sort((x, y) => DEPTH[y] - DEPTH[x])[0] : c.extends.find(x => C[x]); if (p) (KIDS[p] = KIDS[p] || []).push(c.id); });
   const leaves = id => (KIDS[id] || []).reduce((n, k) => n + leaves(k), 0) || 1;
   (function place(id, lo, hi){
     PHI[id] = (lo + hi) / 2;
@@ -456,13 +468,20 @@ function layout(){
       }
     }
     return crossings(); };
+  // How far the arrows reach along the rings: the sum, over the arrows not
+  // from the pole, of the distance between their two contracts' places.
+  const reach = () => { const P = place(); let n = 0;
+    for (const [u, v] of EDG) if (DEPTH[u]) n += Math.abs(P[u] - P[v]);
+    return n; };
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   let best = null, bestN = Infinity;
   // Since 2026-11-18 (Udi, to Website #4: "the tree structure of contracts
   // must be clearer, with as little overlap and crossings as possible") each
   // ring keeps the tree's order, every contract's subtree together under it,
   // so no arrow from a contract's first parent crosses another; of many orders
-  // of the children, the one whose other arrows cross least is kept.
+  // of the children, the one whose other arrows cross least is kept, each
+  // arrow's reach along the rings counting too, a fifth of a crossing for
+  // each hundredth of a ring (Udi, 2026-11-25).
   for (let t = 0; t < 80; t++){
     if (t){ const ord = {}; D.contracts.forEach(c => ord[c.id] = rnd());
       const pos = {}; (function walk(id, lo, hi){ pos[id] = (lo + hi) / 2;
@@ -470,7 +489,7 @@ function layout(){
         let x = lo; for (const k of ks){ const w2 = (hi - lo) * leaves(k) / tot; walk(k, x, x + w2); x += w2; } })(ROOT, -1, 1);
       start.forEach((r, d) => Lr[d] = r.slice().sort((a, b) => pos[a] - pos[b]));
     } else start.forEach((r, d) => Lr[d] = r.slice());
-    const n = crossings();
+    const n = crossings() + 20 * reach();
     if (n < bestN){ bestN = n; best = Lr.map(r => r.slice()); }
   }
   best.forEach((r, d) => Lr[d] = r);
@@ -479,7 +498,9 @@ function layout(){
   // needs, up to nearly all the way round (Udi, 2026-11-09: "we can use more
   // than half the globe if needed, not all contracts have to be visible
   // upfront"); then, again and again, each moved halfway to the mean longitude
-  // of its parents and children, a relation that passes more rings weighing
+  // of all its parents and all its children (until 2026-11-25 only its first
+  // parent and the contracts it is first parent of, which left a contract of
+  // several parents far from all but the first; Udi, 2026-11-25), a relation that passes more rings weighing
   // less (GKK, at the pole, has no longitude), the drawing centred, and the
   // gaps restored in the ring's order.  A ring too full even for that sets
   // alternate names on a second row, toward the wider gap beside it.
@@ -512,13 +533,16 @@ function layout(){
     const nx = {};
     for (let d = 1; d <= maxd; d++) Lr[d].forEach(v => {
       let s = 0, t = 0;
-      [...UP[v].slice(0, 1), ...(KIDS[v] || [])].forEach(u => { if (u !== ROOT){ const g = 1 / span(u, v); s += g * X[u]; t += g; } });
+      [...UP[v], ...DN[v]].forEach(u => { if (u !== ROOT){ const g = 1 / span(u, v); s += g * X[u]; t += g; } });
       nx[v] = t ? (X[v] + s / t) / 2 : X[v]; });
     let lo = Infinity, hi = -Infinity;
     for (const v in nx){ X[v] = nx[v]; lo = Math.min(lo, X[v]); hi = Math.max(hi, X[v]); }
     for (const v in nx) X[v] -= (lo + hi) / 2;
     spread();
   }
+  if (probe){ let mx = 0, sum = 0;
+    for (const [u, v] of EDG) if (DEPTH[u] && v !== D.south){ const r = Math.abs(WRAP(X[v], X[u]) - X[u]); mx = Math.max(mx, r); sum += r; }
+    return [mx, sum]; }
   // The view: the drawing turned so that the most contracts face the viewer,
   // within 75 degrees of its centre, at the start.
   let off = 0, most = -1;
@@ -551,7 +575,7 @@ function layout(){
   for (const [p, q] of longs){
     const t0 = th0(p), t1 = th0(q), rings = [];
     for (let d = DEPTH[p] + 1; d < DEPTH[q]; d++){
-      const R = 265 * Math.sin(RING[d]), ideal = PHI[p] + (PHI[q] - PHI[p]) * (RING[d] - t0) / (t1 - t0);
+      const R = 265 * Math.sin(RING[d]), ideal = PHI[p] + (WRAP(PHI[q], PHI[p]) - PHI[p]) * (RING[d] - t0) / (t1 - t0);
       const merged = blocked(d), cands = [];
       if (!merged.some(([a, b]) => ideal > a && ideal < b)) cands.push(ideal);
       merged.forEach(([a, b]) => [a, b].forEach(x => { if (Math.abs(x - ideal) < Math.PI/3 && !merged.some(([a2, b2]) => x > a2 + 1e-9 && x < b2 - 1e-9)) cands.push(x); }));
@@ -612,7 +636,7 @@ function layout(){
       // point of the bow at the end's longitude.
       if (cur.sw > 0.05){
         cur.way.forEach((_, i) => opts.push(cur.way.filter((_, j) => j !== i)));
-        const pts = course(p, c.id, cur.way), f0 = DEPTH[p] === 0 ? pts[1][1] : PHI[p], lo = Math.min(f0, PHI[c.id]), hi = Math.max(f0, PHI[c.id]);
+        const pts = course(p, c.id, cur.way), f0 = DEPTH[p] === 0 ? pts[1][1] : pts[0][1], fq = pts[pts.length - 1][1], lo = Math.min(f0, fq), hi = Math.max(f0, fq);
         let k = 0, w = -1; pts.forEach(([t, f], i) => { const e = Math.max(lo - f, f - hi) * Math.sin(t); if (e > w){ w = e; k = i; } });
         add(pts[k][0], Math.max(lo, Math.min(hi, pts[k][1]))); }
       return opts.map(way => cand(p, c.id, way)).sort((x, y) => x.cost - y.cost); };
@@ -628,6 +652,11 @@ function layout(){
     WAY[key] = best.way;
   }));
 }
+// A longitude f taken to within half a turn of ref, so that an arrow goes the
+// short way round the globe, never more than half of it (Udi, 2026-11-25:
+// "feeds and children go through more than half the globe to reach village
+// communication. fix not on the case but also the algorithm").
+const WRAP = (f, ref) => ref + ((((f - ref) % (2*Math.PI)) + 3*Math.PI) % (2*Math.PI) - Math.PI);
 // The size of a contract's ellipse on the sphere, in radians east and north,
 // with a margin.
 const ER = id => [(0.31*FS0()*WID(id) + 0.5*FS0() + 3) / 265, ((LINES(id).length > 1 ? 1.6 : 0.85) * FS0() + 3) / 265];
@@ -646,7 +675,7 @@ function hitsOf(p, q, pts){
 // How far, in radians along the sphere, the course swings beyond the
 // longitudes of its two ends: a hook or a loop.
 function swing(p, q, pts, way = []){
-  const f0 = DEPTH[p] === 0 ? pts[1][1] : PHI[p], fs = [f0, PHI[q], ...way.map(x => x[1])], lo = Math.min(...fs), hi = Math.max(...fs);
+  const f0 = DEPTH[p] === 0 ? pts[1][1] : pts[0][1], fs = [f0, pts[pts.length - 1][1], ...way.map(x => WRAP(x[1], f0))], lo = Math.min(...fs), hi = Math.max(...fs);
   let w = 0; for (const [t, f] of pts) w = Math.max(w, (lo - f) * Math.sin(t), (f - hi) * Math.sin(t));
   return w;
 }
@@ -670,6 +699,7 @@ function course(p, q, way = WAY[`${p}>${q}`] || []){
   if (tail.length) way = way.filter(x => x[0] < tail[0][0] - 0.005);
   const cs = [[th0(p), PHI[p]], ...way.map(x => x.slice()), ...tail.map(x => x.slice()), [th0(q), PHI[q]]];
   if (DEPTH[p] === 0) cs[0][1] = cs[1][1];
+  for (let i = 1; i < cs.length; i++) cs[i][1] = WRAP(cs[i][1], cs[i-1][1]);
   if (q === D.south) cs[cs.length - 1][1] = cs[cs.length - 2][1];
   const n = cs.length, h = [], dl = [], m = [];
   for (let i = 0; i + 1 < n; i++){ h.push(cs[i+1][0] - cs[i][0] || 1e-9); dl.push((cs[i+1][1] - cs[i][1]) / h[i]); }
@@ -1015,7 +1045,7 @@ function globeNav(){
   // for the names' size there.
   let was = NARROW();
   addEventListener('resize', () => { if (NARROW() !== was){ was = NARROW();
-    for (const k in PHI) delete PHI[k]; for (const k in LAT) delete LAT[k]; for (const k in KIDS) delete KIDS[k]; for (const k in WAY) delete WAY[k];
+    clearLayout();
     V.zoom = BASEZ();
     layout(); } drawGlobe(); });
 }
