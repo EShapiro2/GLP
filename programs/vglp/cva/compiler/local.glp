@@ -69,11 +69,21 @@ num_info_of(Nm, Hd, C, Fs, Rs, B, num_info(Nm?, C?, Ls?, Cj?, Fi?, Rd?)) :- grou
     unset(Hd?, Hd3),
     unset(Hd?, Hd4),
     unset(Hd?, Hd5),
-    det_locals(C?, Hd1?, Rs?, Ls00?, Ls01),
-    det_locals(C?, Hd2?, Rs?, Ls10?, Ls11),
-    det_locals(C?, Hd3?, Rs?, Ls20?, Ls21),
-    det_locals(C?, Hd4?, Rs?, Ls30?, Ls31),
-    det_locals(C?, Hd5?, Rs?, Ls40?, Ls41),
+    set_reads(Hd?, Rs?, Sr0),
+    set_reads(Hd?, Rs?, Sr1),
+    set_reads(Hd?, Rs?, Sr2),
+    set_reads(Hd?, Rs?, Sr3),
+    set_reads(Hd?, Rs?, Sr4),
+    app(Ls00?, Sr0?, Ls00r),
+    app(Ls10?, Sr1?, Ls10r),
+    app(Ls20?, Sr2?, Ls20r),
+    app(Ls30?, Sr3?, Ls30r),
+    app(Ls40?, Sr4?, Ls40r),
+    det_locals(C?, Hd1?, Rs?, Ls00r?, Ls01),
+    det_locals(C?, Hd2?, Rs?, Ls10r?, Ls11),
+    det_locals(C?, Hd3?, Rs?, Ls20r?, Ls21),
+    det_locals(C?, Hd4?, Rs?, Ls30r?, Ls31),
+    det_locals(C?, Hd5?, Rs?, Ls40r?, Ls41),
     set_locals(Hd?, Rs?, B?, Sl0),
     set_locals(Hd?, Rs?, B?, Sl1),
     set_locals(Hd?, Rs?, B?, Sl2),
@@ -113,6 +123,19 @@ set_deleter([R|Rs], I, B, V, Js?) :- I? =\= B?, ground(R?), ground(V?) |
 procedure set_deleter1(YesNo?, Integer?, RoleSpecs?, Integer?, Integer?, Arg?, Ints).
 set_deleter1(yes, I, _, _, _, _, [I?]).
 set_deleter1(no, _, Rs, I1, B, V, Js?) :- set_deleter(Rs?, I1?, B?, V?, Js).
+%% "... and so is a set variable of atoms the schema requires at one role and neither deletes nor adds, read there, as the coins a provider holds, whose number a constraint on its size compares with a stake" (OSPM, act-schemas-local, VEUI vglp32-sets-2026-11-24; GO #15, vGLP_inbox.md, 2026-11-25 17:08 UTC, Community Market's post): loc(J, num(X)) for each set variable X of the head that the role J alone keeps, no role deleting, adding or forbidding an atom naming it nor listing it; taken before det_locals, so that its size, which the constraint gives, is local to J too, the role's machine reading every atom of its state that the atom matches.
+procedure set_reads(Args?, RoleSpecs?, Locs).
+set_reads([], _, []).
+set_reads([set(X)|As], Rs, Ls?) :- ground(X?), ground(Rs?) |
+    occ_roles(Rs?, 1, num(X?), Kr, Ot, Dl, Ad),
+    set_reader(Kr?, Ot?, Dl?, Ad?, Js),
+    set_locs(Js?, num(X?), L1),
+    set_reads(As?, Rs?, L2),
+    app(L1?, L2?, Ls).
+set_reads([_|As], Rs, Ls?) :- otherwise | set_reads(As?, Rs?, Ls).
+procedure set_reader(Ints?, YesNo?, YesNo?, Ints?, Ints).
+set_reader([J], no, no, [], [J?]).
+set_reader(_, _, _, _, []) :- otherwise | true.
 procedure set_locs(Ints?, Arg?, Locs).
 set_locs([], _, []).
 set_locs([J|_], V, [loc(J?, V?)]).

@@ -389,6 +389,7 @@ contract_named(roles, C?) :- roles(C).
 contract_named(wards, C?) :- wards(C).
 contract_named(feeds, C?) :- feeds(C).
 contract_named(cvalues, C?) :- cvalues(C).
+contract_named(holds, C?) :- holds(C).
 
 %% introduction_named(Name, I): the introduction predicate the contract named
 %% names, introduction(e), or none, no_introduction (vGLP, Section 5.4, the
@@ -428,6 +429,7 @@ introduction_named(roles, no_introduction).
 introduction_named(wards, no_introduction).
 introduction_named(feeds, no_introduction).
 introduction_named(cvalues, no_introduction).
+introduction_named(holds, no_introduction).
 
 %% The pragmas of each contract, the words its app shows, as pragmas.sh prints them from a NAME.txt (compiler/pragmas.sh, its header; compiler/self.glp, Pragmas): "the compiler prints a platform only from a contract with pragmas, and refuses one with none" (vGLP ffcb093, Section 5.4, "The contract's words"), so each contract here that compile.sh prints carries a minimal pragmas term, one tab and one button for each guarded schema, the act proposed at its first guarding role and every other guarding role asked (vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3).  Each act's fields name every place of the act but the proposer's and one, the row's, since "the compiler refus[es] a line whose fields leave more than one place unnamed" (vGLP dd37d2a, Section 5.4, "The contract's words"): a field left empty, '""', names none, the fields aligned with the places in the order of the schema, its roles but its listed roles, then its variables (compiler/cvac.glp, field_places).  These are test code, and their words the compiler's fixtures, not a contract's.
 PWord      ::= text(String) ; person(Integer).
@@ -510,6 +512,11 @@ pragmas_named(wardclose, pragmas([list('"Friends"', [friend])],
      act(create, '"Create"', [], none, '"Friends"', by([1])),
      act(join, '"Join"', ['""', '""', '"Group"'], said([[], [person(1), text('" asks."')]]), '"Friends"', by([1])),
      act(child_close, '"Child close"', ['""', '""', '"Group"'], none, '"Friends"', by([2]))])).
+pragmas_named(holds, pragmas([list('"Notes"', [note])],
+    [act(establish, '"Establish"', [], none, '"Notes"', by([1])),
+     act(issue, '"Issue"', ['""', '"Note"'], none, '"Notes"', by([1])),
+     act(stake, '"Stake"', ['""', '"Stake"'], none, '"Notes"', by([1])),
+     act(provide, '"Provide"', [], none, '"Notes"', by([1]))])).
 pragmas_named(cvalues, pragmas([list('"Contacts"', [knows]), list('"Notes"', [note])],
     [act(establish, '"Establish"', [], none, '"Contacts"', by([1])),
      act(acquaint, '"Acquaint"', [], said([[], [person(1), text('" asks."')]]), '"Contacts"', by([1])),
@@ -1240,3 +1247,23 @@ cvalues([schema(establish, [],
             rs(guarded, [atom(note, [cmp(bond, [num(d)]), num(n)])], [], [atom(knows, [role(1)])], [])]),
          schema(bonded, [],
            [rs(guarded, [atom(bonded, [])], [], [atom(note, [cmp(bond, [any]), any])], [atom(bonded, [])])])]).
+
+%% holds: a set read at one role for its size, so that a contract compiled here has a set variable that the schema requires at one role and neither deletes nor adds, local to that role and read there, as Community Market's provider, who holds Held Gov-coins, Held at least the stake (OSPM, act-schemas-local, VEUI vglp32-sets-2026-11-24: "and so is a set variable of atoms the schema requires at one role and neither deletes nor adds, read there"; GO #15, vGLP_inbox.md, 2026-11-25 17:08 UTC):
+%%
+%%   establish(p?)            :  at p  +identity
+%%   issue(p? ; n)            :  at p  identity, not note(n), +note(n)
+%%   stake(p? ; s)            :  at p  identity, not stake(_), +stake(s)
+%%   provide(p? ; H, held, s) :  at p  note(H), stake(s), not provider, +provider
+%%                               | |H| = held, held >= s
+%%
+%% H, held and s are local to p's role: p's machine reads H, every note it holds, held its size, and s its stake, so the request provide(p) names none of them.
+%% holds/self.glp plays it.
+procedure holds(Contract).
+holds([schema(establish, [],
+         [rs(guarded, [atom(identity, [])], [], [], [])]),
+       schema(issue, [const(n)],
+         [rs(guarded, [atom(note, [num(n)])], [], [atom(identity, [])], [atom(note, [num(n)])])]),
+       schema(stake, [num(s)],
+         [rs(guarded, [atom(stake, [num(s)])], [], [atom(identity, [])], [atom(stake, [any])])]),
+       nschema(provide, [set(h), num(held), num(s)], and(eq(fn(size, [num(h)]), num(held)), ge(num(held), num(s))),
+         [rs(guarded, [atom(provider, [])], [], [atom(stake, [num(s)]), atom(note, [num(h)])], [atom(provider, [])])])]).
