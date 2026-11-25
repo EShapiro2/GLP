@@ -44,7 +44,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
 THEIRS="social_graph social_network currency organisation"
-OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter pokes merges coins wardclose numbers bonds intros days linear forms counts shares published leaves readings backed consts roles wild wards feeds cvalues"
+OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter pokes merges coins wardclose numbers bonds intros days linear forms counts shares published leaves readings backed consts roles wild wards feeds cvalues holds"
 CONTRACTS="$THEIRS $OURS"
 
 # The contract of each of GSC's and Currencies' rows, by its name in the table

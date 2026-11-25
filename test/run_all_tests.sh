@@ -4084,6 +4084,7 @@ check "CVA compiler: vGLP's wild, a wildcard in an atom a role requires and in t
 check "CVA compiler: vGLP's wards, coparent taking a listed guarding role whose base, the ward, is its second role and no guard, and meet of four guarding roles, certified by GSC's check/2, compiled to the platform it prints (vGLP, Section 5.4; CSSN #16, Code_inbox.md, 2026-11-15 17:05 UTC)" "wards/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's feeds, an unguarded act its opener's state does not change, compiled to the platform it prints (vGLP 76db5e0, Definition Proposing)" "feeds/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's cvalues, a compound value, bond(Day), as a note's type, compiled to the platform it prints (GSC c28d1c7; Calculus #11, 2026-11-25)" "cvalues/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: vGLP's holds, a set variable the schema requires at one role and neither deletes nor adds, read there for its size, compiled to the platform it prints (GO #15, 2026-11-25)" "holds/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 # "The platform's own words are four ... Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3): each of vGLP's contracts carries a pragmas term beside it, pragmas_named/2, which compile.sh gives the compiler.
 check "CVA compiler: each of vGLP's contracts carries pragmas, its tab and a button for each guarded schema, which its platform carries (nudge)" '^tabs(\[tab("Friends", friend)\])$' "$(cat "$CVA/nudge/platform.vglp")"
@@ -6373,6 +6374,18 @@ check "CVA cvalues: bob holds the bond due at 5 and the coin note" "view(bob, \[
 check "CVA cvalues: ... and alice the bond due at 20" "view(alice, \[bonded, note(bond(20), 2), knows(bob), identity\]" "$cva_cvalues"
 check "CVA cvalues: the run suspends" "→ suspended" "$cva_cvalues"
 check_not "CVA cvalues: ... within its limit" "reduction limit reached\|stopped after" "$cva_cvalues"
+
+# A set variable the schema requires at one role and neither deletes nor adds is local to that role and read there (OSPM, act-schemas-local, VEUI vglp32-sets-2026-11-24 74a0c6b: "and so is a set variable of atoms the schema requires at one role and neither deletes nor adds, read there, as the coins a provider holds, whose number a constraint on its size compares with a stake"; GO #15, vGLP_inbox.md, 2026-11-25 17:08 UTC, Community Market's post).  vGLP's holds: provide(p) requires note(H) and stake(s) at p, |H| = held and held >= s, all three local to p's role.
+cva_holds=$("$REPL_RUN" <<HEREDOC
+$CVA/holds/
+:limit 3000000
+play_holds(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA holds: the request provide(alice) names no set and no number, its set, its size and the stake read at her role" "^establish(Peer) issue(Peer, Constant) stake(Peer, Integer) provide(Peer) \$" "$(cva_proposal "$CVA/holds/platform.vglp")"
+check "CVA holds: holding two notes and staking 3, her provide is dropped, ready for no part named so, her two notes fewer than her stake" "view(alice, \[stake(3), note(2), note(1), identity\], \[\], \[\], \[tab('Notes', note)\]), refused(provide(alice), alice, unable)" "$cva_holds"
+check "CVA holds: ... and with a third note her provide commits, her machine reading her three notes, at least her stake" "view(alice, \[provider, note(3), stake(3), note(2), note(1), identity\], \[\], \[\], \[tab('Notes', note)\])" "$cva_holds"
 
 # A fact the phone finds (vGLP, Section 5.4, "Speech-act schemas as local specifications": "the compiled agent reads it from its phone afresh whenever it computes a condition that requires it"; "When a fact Alice's phone finds changes, as when a person comes near, the phone tells Alice's agent, which then checks again which of its own transactions it can take"): Encounters' implementation pragma "Found by the phone: x is nearby y." makes its agent take the presences its host reports, the host's operating system making the declarations (GSA, Section 2; GLP, appendix-guards, "Networking seam"), and read each as a trigger that changes nearby(K) in its machine state; a contract the phone finds nothing for prints as before (the fixtures' --check above).
 cva_enc=$(cat "$GLP_DIR/cascade/Encounters/platform.vglp")
