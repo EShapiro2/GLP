@@ -53,3 +53,4 @@ Anonymous Rendezvous:1. ■ Meet. Present: Alice and Bob, each holding a one-tim
 Tennis Courts:2. ■ Organisation and ward. Organisation ward acquaint: Club, an organisation, and Wendy, a ward, may jointly come to know each other.
 Tennis Courts:3. ■ Cancel: Booking:2; the cancel frees the slot and ends the partner's part in the booking.
 Tennis Courts:4. ■ Withdraw: Carol may withdraw as the partner of a booking, which stays the booking of the one who booked.
+Tennis Courts:5. ■ Partner: Alice and Carol may jointly make Carol the partner of a booking of Alice that has no partner, Carol a participant of the Club with fewer outstanding bookings than the bound; so a partner is replaced, the old one withdrawing, while the slot stays booked.

@@ -111,3 +111,4 @@ Tennis Courts:0 - | A booking is of the one who books and of a *partner*, and co
 Tennis Courts:2 ■ | Organisation and ward.
 Tennis Courts:2 ■ Organisation ward acquaint: knows(Club,Wendy), knows(Wendy,Club) <- organisation(Club), has_officer(Club,Alice), ward(Wendy), has_guardian(Wendy,Bob) guarded by Club, Wendy.
 Tennis Courts:4 ■ Withdraw: ~partnered(Club,Court,Slot,Carol) <- partnered(Club,Court,Slot,Carol) guarded by Carol.
+Tennis Courts:5 ■ Partner: partnered(Club,Court,Slot,Carol) <- booked(Club,Court,Slot,Alice), ~partnered(Club,Court,Slot,_), participant(Carol,Club), has_participant(Club,Carol), under_bound(Carol,Club) guarded by Alice, Carol.
