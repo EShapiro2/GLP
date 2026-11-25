@@ -12,7 +12,10 @@ const fs = require('fs');
   const out = process.argv[2];
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 1280, height: 1000 }, deviceScaleFactor: 2 });
-  await p.goto('https://peoplesweb.org/', { waitUntil: 'load' }); await p.waitForTimeout(1500);
+  // OG_URL, OG_TITLE and OG_LINE make another site's picture: the Villagers
+  // site's, web/og-villagers.jpg, from peoplesweb.org/villagers/ (Udi,
+  // 2026-11-25: "link preview of villagers should reflect what it is").
+  await p.goto(process.env.OG_URL || 'https://peoplesweb.org/', { waitUntil: 'load' }); await p.waitForTimeout(1500);
   const Z = parseFloat(process.argv[3] || '0.5'), T = parseFloat(process.argv[4] || '0.55');
   console.log('view', await p.evaluate(([z, t]) => { const v0 = JSON.stringify(V); V.zoom = V.zoom * z; V.tilt = t; drawGlobe();
     document.head.insertAdjacentHTML('beforeend', '<style>#graph .key{display:none}</style>');
@@ -31,7 +34,7 @@ const fs = require('fs');
 h1{font-size:62px;line-height:1.08;letter-spacing:-.025em;font-weight:800;margin:26px 0 22px}
 p{font-size:25px;line-height:1.4;color:#5f6b78;margin:0;max-width:520px}
 img{position:absolute;right:-70px;top:50%;transform:translateY(-50%);height:760px}</style></head>
-<body><div class="l"><div class="mark"></div><h1>The Grassroots Project</h1><p>Social contracts that run: apps owned and run by the people who use them, on their own phones.</p></div>
+<body><div class="l"><div class="mark"></div><h1>${process.env.OG_TITLE || 'The Grassroots Project'}</h1><p>${process.env.OG_LINE || 'Social contracts that run: apps owned and run by the people who use them, on their own phones.'}</p></div>
 <img src="data:image/png;base64,${img}"></body></html>`, { waitUntil: 'load' });
   await q.waitForTimeout(1200);
   await q.screenshot({ path: out + '/og.jpg', type: 'jpeg', quality: 88 });

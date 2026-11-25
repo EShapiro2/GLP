@@ -696,6 +696,26 @@ for f in os.listdir(os.path.join(HERE, 'web')):
 # app that opens such a link.
 for d in ('i', '.well-known', 'katex'):
     shutil.copytree(os.path.join(HERE, 'web', d), os.path.join(WWW, d), dirs_exist_ok=True)
+# The Villagers site's link preview says what it is (Udi, 2026-11-25: "link
+# preview of villagers should reflect what it is"): its title, line, address
+# and picture, web/og-villagers.jpg (tools/og.js, OG_URL, OG_TITLE, OG_LINE).
+if VILLAGERS:
+    shutil.copy(os.path.join(HERE, 'web', 'og-villagers.jpg'), os.path.join(WWW, 'og.jpg'))
+    os.remove(os.path.join(WWW, 'og-villagers.jpg'))
+    LINE = 'A grassroots contract for village digital life: the Villagers contract and every contract it inherits from.'
+    t = read(os.path.join(WWW, 'index.html'))
+    for old, new in [('<meta name="description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">', f'<meta name="description" content="{LINE}">'),
+                     ('<meta property="og:title" content="The Grassroots Project">', '<meta property="og:title" content="Villagers: A Grassroots Contract for Village Digital Life">'),
+                     ('<meta property="og:description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">', f'<meta property="og:description" content="{LINE}">'),
+                     ('<meta property="og:url" content="https://peoplesweb.org/">', '<meta property="og:url" content="https://peoplesweb.org/villagers/">'),
+                     ('<meta property="og:image" content="https://peoplesweb.org/og.jpg">', '<meta property="og:image" content="https://peoplesweb.org/villagers/og.jpg">'),
+                     ('<meta property="og:image:alt" content="The grassroots contracts on a globe, beside the name of the Grassroots Project">', '<meta property="og:image:alt" content="The Villagers contract and the contracts it inherits from on a globe, Villagers at the south pole">'),
+                     ('<title>The Grassroots Project</title>', '<title>Villagers · The Grassroots Project</title>')]:
+        if old not in t:
+            raise SystemExit('villagers: index.html has no ' + old)
+        t = t.replace(old, new)
+    with open(os.path.join(WWW, 'index.html'), 'w', encoding='utf-8') as f:
+        f.write(t)
 if served:
     os.makedirs(os.path.join(WWW, 'papers'), exist_ok=True)
     for f, path in pdfs.items():
