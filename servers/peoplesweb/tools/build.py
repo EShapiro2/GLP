@@ -291,10 +291,16 @@ RELATIONS = ('extends', 'restricts', 'strengthens', 'relaxes', 'amends', 'implem
              # 'Villagers inherits from Village Life and ...' (the Villagers
              # repository since 2026-11-24, Calculus item 71).
              'inherits')
-# The Calculus's operations, in its order, read from the Calculus itself
-# (calculus/tools/expand.py, VERBS), so the globe's key never falls behind it
-# (Udi, 2026-11-25: "what about the arrow legend bottom left? it is dated").
-OPERATIONS = list(ast.literal_eval(re.search(r'^VERBS = (\([^)]*\))', open(os.path.join(GLP, 'calculus', 'tools', 'expand.py')).read(), re.M).group(1)))
+# The Calculus's operations: of its verbs (calculus/tools/expand.py, VERBS),
+# in their order, those the Calculus's own contracts state in their first
+# lines (calculus/contracts/NAME/contract.txt, line 2), so the globe's key is
+# the Calculus's and never falls behind it (Udi, 2026-11-25: "arrow legends in
+# the globes not aligned with operations in Calculus, please revise").
+_VERBS = ast.literal_eval(re.search(r'^VERBS = (\([^)]*\))', open(os.path.join(GLP, 'calculus', 'tools', 'expand.py')).read(), re.M).group(1))
+_FIRST = ' '.join((open(os.path.join(GLP, 'calculus', 'contracts', d, 'contract.txt')).read().split('\n') + ['', ''])[1]
+                  for d in sorted(os.listdir(os.path.join(GLP, 'calculus', 'contracts')))
+                  if os.path.exists(os.path.join(GLP, 'calculus', 'contracts', d, 'contract.txt')))
+OPERATIONS = [v for v in _VERBS if re.search(r'\b' + v + r'\b', _FIRST)]
 
 
 NAMEID, NAMES_RE = {}, [None]
@@ -729,14 +735,14 @@ for d in ('i', '.well-known', 'katex'):
 if VILLAGERS:
     shutil.copy(os.path.join(HERE, 'web', 'og-villagers.jpg'), os.path.join(WWW, 'og.jpg'))
     os.remove(os.path.join(WWW, 'og-villagers.jpg'))
-    LINE = 'A grassroots contract for village digital life: the Villagers contract and every contract it inherits from.'
+    LINE = 'A grassroots contract for village digital life: the Villagers contract and every contract it extends.'
     t = read(os.path.join(WWW, 'index.html'))
     for old, new in [('<meta name="description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">', f'<meta name="description" content="{LINE}">'),
                      ('<meta property="og:title" content="The Grassroots Project">', '<meta property="og:title" content="Villagers: A Grassroots Contract for Village Digital Life">'),
                      ('<meta property="og:description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">', f'<meta property="og:description" content="{LINE}">'),
                      ('<meta property="og:url" content="https://peoplesweb.org/">', '<meta property="og:url" content="https://peoplesweb.org/villagers/">'),
                      ('<meta property="og:image" content="https://peoplesweb.org/og.jpg">', '<meta property="og:image" content="https://peoplesweb.org/villagers/og.jpg">'),
-                     ('<meta property="og:image:alt" content="The grassroots contracts on a globe, beside the name of the Grassroots Project">', '<meta property="og:image:alt" content="The Villagers contract and the contracts it inherits from on a globe, Villagers at the south pole">'),
+                     ('<meta property="og:image:alt" content="The grassroots contracts on a globe, beside the name of the Grassroots Project">', '<meta property="og:image:alt" content="The Villagers contract and the contracts it extends on a globe, Villagers at the south pole">'),
                      ('<title>The Grassroots Project</title>', '<title>Villagers · The Grassroots Project</title>')]:
         if old not in t:
             raise SystemExit('villagers: index.html has no ' + old)
