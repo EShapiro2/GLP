@@ -10,6 +10,10 @@ Then (Udi approved string_to_term, 2026-11-25 22:52 UTC): the six functions take
 
 Encoding: square = rank*8 + file (a1 = 0, h8 = 63); cell 0 empty, else colour*10 + kind (colour 1 white, 2 black; kind 1 pawn ... 6 king); `pos(Cells, Side, cas(WK,WQ,BK,BQ), Ep or -1, HalfMoves, Keys)`; `mv(From, To, PromoKind or 0)`.
 
+## Done by GCE #2, second task (2026-11-25 23:20 UTC)
+
+e08383fdd: Chess #160 (Move / Drawing move by autodraw, Claim draw by the player to move, Draw after two half-moves), #161 (Start requires neither started); Warnings #136 (dated warnings, count toward Expel from seven days, stay when the officer leaves).  Certified by gcsas, relations, toglp --check.  Answers sent to the Audit #5 thread; Calculus asked to publish; Code #39 to adopt.  Decisions for Udi's retrospective list: the seven days; a warning staying after its officer leaves; Drawing move as an act (a grassroots contract has no automatic end).
+
 ## Waiting on others
 
 - #135 Disputes, #136 Warnings (e4aacb8): verified by the auditor; wait for Code to adopt to GLP main, then give Audit #5 thread the main commit.
