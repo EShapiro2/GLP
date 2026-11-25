@@ -5,9 +5,13 @@ checked against the contract: complete (every act a person may take is offered) 
 shown).
 
 - `Friendship.ui`: Friendship, person first: everyone Alice knows on the start screen, and a screen for each.
-- `Friendship.ui.json`: the same, compiled with the contract into what the app reads: each act by its schema,
-  each place by its number in the act's request, the proposer's place the platform's.  Edit the `.ui` and print
-  it again.
+- `Friendship.look`: how it is drawn, one sentence a line, by the names the description uses: a typed value
+  LONG or a SLIDER, a list A GRID, an action IN THE MENU or PRIMARY, the colors of the whole app.  Its checker
+  refuses a look that loses an option the contract allows, such as a slider narrower than the values allowed.
+- `Friendship.ui.json`: the description and its look, compiled with the contract into what the app reads: each
+  act by its schema, each place by its number in the act's request, the proposer's place the platform's.  Edit
+  the `.ui` or the `.look` and print it again:
+  `node tools/uic.js CONTRACT.json Friendship.ui cascade/Friendship/platform.vglp --look Friendship.look`.
 
 ## The tools (`tools/`, Node and Python 3, no Dart)
 
@@ -15,8 +19,8 @@ shown).
   `calculus/tools/SAS-WRITING.txt` says (gr/, rev/, then `gcsas.py` and `toglp.py`).
 - `ui.js`: the UI language's reader and the checker of the paper's two propositions; `emit.js` writes it.
 - `mechanical.js OUT.json`: a description any contract has, complete and visible.
-- `uic.js OUT.json NAME.ui cascade/NAME/platform.vglp`: the compiler; it refuses a description with errors or
-  not complete.  `platform.js` reads the platform's requests.
+- `uic.js CONTRACT.json NAME.ui cascade/NAME/platform.vglp [--look NAME.look]`: the compiler; it refuses a
+  description with errors or not complete, and a look that loses an option.  `platform.js` reads the platform's requests.
 - `mkapp.py . NAME dir`: an app directory for a contract's cascade platform, for the walk below.
 
 The app draws a description in place of its tabs where it is given one

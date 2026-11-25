@@ -7,7 +7,7 @@
  * each other predicate; and an action for each act, each place's value from a list of the predicate of a
  * required fact that holds it, or typed if no required fact does.
  */
-const G = require('./ui.js'), E = require('./emit.js');
+const G = require('../ui.js'), E = require('./emit.js');
 
 function mechanical(sim) {
   const acts = G.acts(sim), env = new Set(sim.env || []), personal = new Set(G.personal(sim));
@@ -19,7 +19,7 @@ function mechanical(sim) {
   for (const p of Object.keys(sim.vocab)) if (!env.has(p) && !(p in arity)) arity[p] = sim.vocab[p].vars.length - 1;
   const preds = Object.keys(arity).filter(p => p !== 'today');
   const zero = preds.filter(p => arity[p] === 0), withP = preds.filter(p => arity[p] > 0 && personal.has(p)), other = preds.filter(p => arity[p] > 0 && !personal.has(p));
-  const out = ['# Mechanical: what a machine writes for any contract. Complete and visible, and not pleasant.', '', 'SCREEN Home:', '    QUESTIONS'];
+  const out = ['# Mechanical: what a machine writes for any contract. Complete and visible, and not pleasant.', '', 'SCREEN Home ABOUT Alice:', '    QUESTIONS'];
   if (zero.length) out.push('    SHOW Alice: ' + zero.join(', '));
   out.push('    LIST People: EVERYONE' + (withP.length ? ' WITH ' + withP.join(', ') : '') + ' OPENS Person');
   for (const p of other) out.push('    LIST ' + p.charAt(0).toUpperCase() + p.slice(1).replace(/_/g, ' ') + ': "' + E.factText(sim.vocab, p, ['Alice'].concat(E.factNames(sim, p))) + '"');

@@ -1,5 +1,8 @@
 {
  "version": 1,
+ "look": {
+  "theme": "fresh"
+ },
  "start": "Home",
  "screens": {
   "Home": {
@@ -27,7 +30,8 @@
       "knows",
       "friend"
      ],
-     "opens": "Person"
+     "opens": "Person",
+     "look": null
     },
     {
      "kind": "action",
@@ -37,7 +41,8 @@
      "me": 1,
      "arity": 1,
      "places": {},
-     "covers": true
+     "covers": true,
+     "where": null
     },
     {
      "kind": "action",
@@ -48,10 +53,12 @@
      "arity": 2,
      "places": {
       "2": {
-       "typed": true
+       "typed": true,
+       "look": null
       }
      },
-     "covers": true
+     "covers": true,
+     "where": null
     }
    ]
   },
@@ -84,7 +91,8 @@
        "subject": null
       }
      },
-     "covers": true
+     "covers": true,
+     "where": "primary"
     },
     {
      "kind": "action",
@@ -98,7 +106,8 @@
        "subject": null
       }
      },
-     "covers": true
+     "covers": true,
+     "where": "menu"
     },
     {
      "kind": "action",
@@ -115,7 +124,8 @@
        "from": "knows"
       }
      },
-     "covers": true
+     "covers": true,
+     "where": null
     },
     {
      "kind": "action",
@@ -132,7 +142,8 @@
        "subject": null
       }
      },
-     "covers": true
+     "covers": true,
+     "where": null
     }
    ]
   }

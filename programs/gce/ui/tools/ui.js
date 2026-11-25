@@ -2,15 +2,15 @@
  *
  * Alice is the person whose phone it is.  Keywords are in capitals; everything else is the contract's.
  *
- *   SCREEN Chats:                                    the first screen is the start screen
+ *   SCREEN Chats ABOUT Alice:                        the first screen is the start screen, about Alice herself
  *   SCREEN Chat ABOUT Bob:                           a screen about a person or a value, named Bob here
- *   SCREEN Group ABOUT "Alice is a member of Bob's Grupo":   or about a fact of Alice's, in the contract's words
+ *   SCREEN Group ABOUT "Alice is a member of Bob's Hikers":  or about a fact of Alice's, in the contract's words
  *       QUESTIONS                                    the questions put to Alice, with yes and no
  *       SHOW Alice: identity, person                 facts of these predicates about Alice, about a name of the
  *       SHOW Bob: knows, friend                      screen's subject, or (SHOW:) about the whole subject
  *       THREAD: message, sent_message                the same, drawn as a conversation
  *       LIST Contacts: EVERYONE WITH knows OPENS Chat        everyone named in Alice's facts
- *       LIST Groups: "Alice is a member of Bob's Grupo" OPENS Group   Alice's facts of a predicate; on a screen
+ *       LIST Groups: "Alice is a member of Bob's Hikers" OPENS Group  Alice's facts of a predicate; on a screen
  *                                                    about a fact, a name they share with it keeps the list to it
  *       LIST Markets: FROM keeper OPENS Market       the values in Alice's facts of a predicate
  *       Introduce: Alice may introduce Carol to Bob, Carol FROM knows
@@ -47,8 +47,11 @@
         if (!(m = s.match(/^SCREEN\s+([A-Za-z][\w-]*)(?:\s+ABOUT\s+(?:"([^"]+)"|([A-Z]\w*)))?\s*:$/))) { err(n, 'expected: SCREEN Name: or SCREEN Name ABOUT Bob: or SCREEN Name ABOUT "a fact":'); continue; }
         scr = m[1];
         if (ui.containers[scr]) { err(n, 'screen ' + scr + ' twice'); scr = null; continue; }
-        ui.containers[scr] = {params: m[2] || m[3] ? ['it'] : [], components: [], line: n, aboutText: m[2] || null, aboutName: m[3] || null};
-        if (!ui.start) { ui.start = scr; if (m[2] || m[3]) err(n, 'the start screen is about nothing'); }
+        /* every screen is about something: the start screen about Alice herself, whose phone it is */
+        const first = !ui.start, me = m[3] === 'Alice';
+        ui.containers[scr] = {params: (m[2] || m[3]) && !(first && me) ? ['it'] : [], components: [], line: n, aboutText: first ? null : m[2] || null, aboutName: first || me ? null : m[3] || null};
+        if (first) { ui.start = scr; if (m[2] || (m[3] && !me)) err(n, 'the start screen is about Alice: SCREEN ' + scr + ' ABOUT Alice:'); }
+        else if (me) err(n, 'only the start screen is about Alice');
         else if (!m[2] && !m[3]) err(n, 'a screen other than the start is ABOUT something');
         mark({kind: 'screen', screen: scr});
         continue;
@@ -167,6 +170,7 @@
         }
         if (!a) { err(c.line, 'not the contract\'s sentence for ' + c.button + ', "' + template(cands[0]) + '", with its names renamed'); continue; }
         c.act = a.name;
+        c.names = Object.fromEntries(a.names.map(r => [r, map[r] || r]));
         const nm = r => map[r] || r, me = a.names[a.me - 1];
         /* in a sentence Alice is the one who acts; a name the sentence does not say, and a line with no sentence, are the act's own */
         if (c.said && me in map && map[me] !== 'Alice') { err(c.line, map[me] + ' acts here; the one who acts is Alice'); continue; }
@@ -214,7 +218,7 @@
       const me = s.by[0], loc = (c) => [c.p, c.args.slice(1).map(x => names.includes(x) ? names.indexOf(x) + 1 : null)];
       const mine = s.pre.filter(c => c.p && c.args[0] === me && !sim.env.includes(c.p));
       return {name: s.name, button: s.button, names, all: s.persons.concat(Object.keys(s.one), s.values), pnames: s.persons.concat(Object.keys(s.one)), me: names.indexOf(me) + 1, args: names, roles: s.persons.map(x => names.indexOf(x) + 1), people: s.persons.concat(Object.keys(s.one)).map(x => names.indexOf(x) + 1),
-        values: s.values.filter(x => !env.has(x) && !s.persons.includes(x) && !sets.has(x) && !derived.has(x)), types: s.types || {}, field: s.field, sentence: s.sentence, questions: s.questions,
+        values: s.values.filter(x => !env.has(x) && !s.persons.includes(x) && !sets.has(x) && !derived.has(x)), types: s.types || {}, field: s.field, guard: s.guard, sentence: s.sentence, questions: s.questions,
         req: mine.filter(c => !c.neg).map(loc), forb: mine.filter(c => c.neg).map(loc)};
     });
   }
@@ -384,6 +388,108 @@
     }
     return Object.keys(out).filter(p => out[p]);
   }
-  const api = {read, resolve, check, brute, acts, personal, fact, template};
+  /* The look: how the app is drawn, one sentence a line, keyed by the names the description uses.
+   *
+   *   LOOK Chats:                               optional first line
+   *   Text IS LONG.                             a typed value: a large box (SHORT, a line)
+   *   Sum IS A SLIDER FROM 1 TO 100.            a typed number: a slider; ", OR TYPED" adds a box beside it
+   *   Day IS A DATE.                            a typed number: a calendar
+   *   Groups ARE A GRID.                        a list: a grid of cards (ROWS, the default; CHIPS)
+   *   Unfriend IS IN THE MENU.                  an action: in the menu (IN THE BAR; PRIMARY, first and marked)
+   *   COLOR IS night.  CORNERS ARE SQUARE.  SPACING IS COMPACT.  LISTS ARE TABS.
+   *   CONVERSATIONS ARE PLAIN.  QUESTIONS ARE IN A BELL.
+   *
+   * No sentence hides anything; the checks are that each name is the description's, that each widget fits its
+   * value, and that no look loses an option: a slider covers every value the contract allows, or is OR TYPED. */
+  const GLOBAL = {
+    COLOR: {key: 'theme', vals: {FRESH: 'fresh', NIGHT: 'night', PAPER: 'paper', CANDY: 'candy'}},
+    CORNERS: {key: 'shape', vals: {ROUND: 'round', SQUARE: 'square'}},
+    SPACING: {key: 'density', vals: {COZY: 'cozy', COMPACT: 'compact'}},
+    LISTS: {key: 'home', vals: {SECTIONS: 'sections', TABS: 'tabs'}},
+    CONVERSATIONS: {key: 'convo', vals: {BUBBLES: 'bubbles', PLAIN: 'plain'}},
+    QUESTIONS: {key: 'questions', vals: {'ON TOP': 'top', 'IN A BELL': 'bell'}},
+    ACTIONS: {key: 'actions', vals: {'IN THE BAR': 'bar', 'IN THE MENU': 'menu', 'ON A BUTTON': 'button'}},
+  };
+  function readLook(text) {
+    const out = {name: null, global: {}, of: {}, lines: [], errors: []};
+    let n = 0;
+    for (const raw of (text || '').split('\n')) {
+      n++;
+      const s = raw.replace(/#.*$/, '').trim().replace(/\.$/, '');
+      const L = {n, raw, kind: s ? 'rule' : raw.trim().startsWith('#') ? 'comment' : 'blank'};
+      out.lines.push(L);
+      if (!s) continue;
+      const err = m => { out.errors.push({line: n, msg: m}); L.kind = 'bad'; };
+      let m;
+      if (n === out.lines.filter(x => x.kind !== 'blank' && x.kind !== 'comment').length && (m = s.match(/^LOOK\s+([A-Za-z][\w-]*)\s*:$/))) { out.name = m[1]; L.kind = 'head'; continue; }
+      if ((m = s.match(/^([A-Z]+)\s+(?:IS|ARE)\s+(.+)$/)) && GLOBAL[m[1]]) {
+        const g = GLOBAL[m[1]], v = g.vals[m[2].toUpperCase()];
+        if (!v) { err(m[1] + ' is one of ' + Object.keys(g.vals).join(', ')); continue; }
+        out.global[g.key] = v; L.global = g.key; continue;
+      }
+      if (!(m = s.match(/^([A-Z][\w' -]*?)\s+(IS|ARE)\s+(.+)$/))) { err('expected: Name IS ... or Name ARE ...'); continue; }
+      const name = m[1].trim(), what = m[3].trim();
+      let r = null, q;
+      if (/^(LONG|SHORT)$/.test(what)) r = {as: what.toLowerCase()};
+      else if ((q = what.match(/^A SLIDER FROM (-?\d+) TO (-?\d+)(,\s*OR TYPED)?$/))) r = {as: 'slider', from: +q[1], to: +q[2], typed: !!q[3]};
+      else if (what === 'A DATE') r = {as: 'date'};
+      else if (/^(A GRID|ROWS|CHIPS)$/.test(what)) r = {as: what === 'A GRID' ? 'grid' : what.toLowerCase()};
+      else if (/^(IN THE MENU|IN THE BAR|PRIMARY)$/.test(what)) r = {as: what === 'PRIMARY' ? 'primary' : what === 'IN THE MENU' ? 'menu' : 'bar'};
+      else { err('not a look: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, A GRID, ROWS, CHIPS, IN THE MENU, IN THE BAR or PRIMARY'); continue; }
+      if (r.as === 'slider' && r.from >= r.to) { err('a slider goes from a smaller number to a larger one'); continue; }
+      if (out.of[name]) { err(name + ' has a look already'); continue; }
+      out.of[name] = {...r, line: n}; L.name = name;
+    }
+    return out;
+  }
+  /* the numbers of a schema's constraint, and the bounds on each that are numerals */
+  function numbersOf(g, out = {names: new Set(), lo: {}, hi: {}}, top = true) {
+    if (!g || typeof g !== 'object') return out;
+    if (g.f === 'num' && typeof g.a[0] === 'string') out.names.add(g.a[0]);
+    if (g.f === 'eq' && g.a.some(e => e && e.f === 'size')) for (const e of g.a) if (e && e.f === 'num' && typeof e.a[0] === 'string') out.lo[e.a[0]] = Math.max(out.lo[e.a[0]] ?? -Infinity, 0);   /* a count of things is never negative */
+    const lit = e => e && e.f === 'num' && typeof e.a[0] === 'number' ? e.a[0] : null, nm = e => e && e.f === 'num' && typeof e.a[0] === 'string' ? e.a[0] : null;
+    if (top && ['ge', 'gt', 'le', 'lt'].includes(g.f)) {
+      const [x, y] = g.a, X = nm(x), Y = lit(y), Xl = lit(x), Yn = nm(y);
+      const bound = (v, f, k) => { if (f === 'ge') out.lo[v] = Math.max(out.lo[v] ?? -Infinity, k); if (f === 'gt') out.lo[v] = Math.max(out.lo[v] ?? -Infinity, k + 1); if (f === 'le') out.hi[v] = Math.min(out.hi[v] ?? Infinity, k); if (f === 'lt') out.hi[v] = Math.min(out.hi[v] ?? Infinity, k - 1); };
+      if (X && Y !== null) bound(X, g.f, Y);
+      if (Yn && Xl !== null) bound(Yn, {ge: 'le', gt: 'lt', le: 'ge', lt: 'gt'}[g.f], Xl);
+    }
+    for (const a of g.a || []) (Array.isArray(a) ? a : [a]).forEach(e => numbersOf(e, out, top && g.f === 'and'));
+    return out;
+  }
+  function checkLook(spec, ui, look) {
+    const errors = [...look.errors], err = (i, m) => errors.push({line: i, msg: m});
+    const fields = {}, lists = {}, buttons = {};
+    for (const C of Object.values(ui.containers)) for (const c of C.components) {
+      if (c.kind === 'list' && !c.hidden) lists[c.title] = c;
+      if (c.kind !== 'action' || !c.act) continue;
+      (buttons[c.button] = buttons[c.button] || []).push(c);
+      const a = spec.acts.find(x => x.name === c.act);
+      for (const [r, v] of Object.entries(c.bind)) if (v && v.field) (fields[(c.names || {})[r] || r] = fields[(c.names || {})[r] || r] || []).push({a, r});
+    }
+    const loses = [];
+    for (const [name, r] of Object.entries(look.of)) {
+      if (['long', 'short', 'slider', 'date'].includes(r.as)) {
+        if (!fields[name]) { err(r.line, name + ' is no value the description has TYPED'); continue; }
+        for (const {a, r: place} of fields[name]) {
+          const ns = numbersOf(a.guard), num = ns.names.has(place) || (a.types || {})[place] === 'num';
+          if ((r.as === 'slider' || r.as === 'date') && !num) { err(r.line, name + ' is not a number in ' + a.button + ', so it is no ' + r.as); continue; }
+          if ((r.as === 'long' || r.as === 'short') && num) { err(r.line, name + ' is a number in ' + a.button + ', so it is no text'); continue; }
+          if (r.as === 'slider' && !r.typed) {
+            const lo = ns.lo[place] ?? -Infinity, hi = ns.hi[place] ?? Infinity, lost = [];
+            const span = (x, y) => x === y ? String(x) : 'from ' + x + ' to ' + y;
+            if (lo < r.from) lost.push(lo === -Infinity ? 'below ' + r.from : span(lo, r.from - 1));
+            if (hi > r.to) lost.push(hi === Infinity ? 'above ' + r.to : span(r.to + 1, hi));
+            if (lost.length) loses.push({line: r.line, name, act: a.button, lost: lost.join(' and ')});
+          }
+        }
+        const mine = loses.filter(x => x.line === r.line);
+        if (mine.length) err(r.line, 'this slider loses values the contract allows, ' + mine[0].lost + ', in ' + [...new Set(mine.map(x => x.act))].join(', ') + ': with ", OR TYPED" they can still be typed');
+      } else if (['grid', 'rows', 'chips'].includes(r.as)) { if (!lists[name]) err(r.line, name + ' is no list of the description'); }
+      else if (!buttons[name]) err(r.line, name + ' is no button of the description');
+    }
+    return {errors, loses, ok: !errors.length};
+  }
+  const api = {read, resolve, check, brute, acts, personal, fact, template, readLook, checkLook, GLOBAL};
   if (typeof module !== 'undefined') module.exports = api; else G.GUI = api;
 })(this);

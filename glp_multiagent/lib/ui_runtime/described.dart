@@ -29,13 +29,16 @@ class PlaceSource {
   final int? pos;
   final String? from;
   final bool typed;
-  const PlaceSource({this.subject = false, this.pos, this.from, this.typed = false});
+
+  /// The look of a typed place: `as` long, short, slider (`from`, `to`, and `typed` for a box beside it) or date.
+  final Map<String, dynamic>? look;
+  const PlaceSource({this.subject = false, this.pos, this.from, this.typed = false, this.look});
 
   static PlaceSource of(Map<String, dynamic> j) => j.containsKey('subject')
       ? PlaceSource(subject: true, pos: j['subject'] as int?)
       : j.containsKey('from')
           ? PlaceSource(from: j['from'] as String)
-          : const PlaceSource(typed: true);
+          : PlaceSource(typed: true, look: j['look'] as Map<String, dynamic>?);
 }
 
 /// A component of a screen, by its [kind]: `questions`, `show`, `thread`, `list` or `action`.
@@ -50,6 +53,10 @@ class UiComponent {
   String? get sentence => j['sentence'] as String?;
   int get me => j['me'] as int;
   int get arity => j['arity'] as int;
+
+  /// The look of an action, `menu`, `bar` or `primary`, and of a list, `grid`, `rows` or `chips`.
+  String? get where => j['where'] as String?;
+  String? get look => j['look'] as String?;
   Map<int, PlaceSource> get places => {
         for (final e in (j['places'] as Map<String, dynamic>).entries)
           int.parse(e.key): PlaceSource.of(e.value as Map<String, dynamic>)
@@ -74,7 +81,10 @@ class UiDescription {
 
   /// The positions of each predicate's facts that hold persons.
   final Map<String, List<int>> personPos;
-  const UiDescription(this.start, this.screens, this.personPos);
+
+  /// The look of the whole app: `theme`, `shape`, `density`, `home`, `convo`, `questions`, `actions`.
+  final Map<String, String> look;
+  const UiDescription(this.start, this.screens, this.personPos, [this.look = const {}]);
 
   static UiDescription parse(String source) {
     final j = jsonDecode(source) as Map<String, dynamic>;
@@ -89,6 +99,8 @@ class UiDescription {
     return UiDescription(j['start'] as String, screens, {
       for (final e in ((j['personPos'] ?? const {}) as Map<String, dynamic>).entries)
         e.key: [for (final p in e.value as List) p as int]
+    }, {
+      for (final e in ((j['look'] ?? const {}) as Map<String, dynamic>).entries) e.key: e.value as String
     });
   }
 }
@@ -413,7 +425,7 @@ class _DescribedScreenState extends State<DescribedScreen> {
     final scr = ui.screens[name]!;
     final theme = Theme.of(context), muted = TextStyle(color: Colors.grey.shade600, fontSize: 13);
     final c = c0;
-    final body = <Widget>[], actions = <Widget>[], menu = <(String, VoidCallback)>[];
+    final body = <Widget>[], actions = <Widget>[], primary = <Widget>[], menu = <(String, VoidCallback)>[];
     Widget? composer;
     final thread = scr.components.any((x) => x.kind == 'thread');
     final here = '$name|${subject == null ? '' : c.key(subject)}';
@@ -490,6 +502,7 @@ class _DescribedScreenState extends State<DescribedScreen> {
           if (items.isEmpty) {
             body.add(Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 6), child: Text('None yet.', style: muted)));
           }
+          final rows = <Widget>[];
           for (final it in items) {
             final lead = isFact ? (c.args(it).isEmpty ? GAtom(c.pred(it)) : c.args(it).first) : it;
             final chips = [
@@ -499,8 +512,16 @@ class _DescribedScreenState extends State<DescribedScreen> {
             final sub = isFact && c.args(it).length > 1
                 ? c.args(it).skip(1).map(c.show).join(' · ')
                 : chips.join(' · ');
-            body.add(Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            if (comp.look == 'chips') {
+              rows.add(ActionChip(
+                  key: describedKey('row:${c.key(it)}'),
+                  avatar: _avatar(lead, r: 10),
+                  label: Text(c.show(lead)),
+                  onPressed: opens == null ? null : () => setState(() => _stack.add((opens, it)))));
+              continue;
+            }
+            final row = Padding(
+              padding: EdgeInsets.symmetric(horizontal: comp.look == 'grid' ? 0 : 10, vertical: 3),
               child: Material(
                 color: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Colors.grey.shade200)),
@@ -514,7 +535,15 @@ class _DescribedScreenState extends State<DescribedScreen> {
                   onTap: opens == null ? null : () => setState(() => _stack.add((opens, it))),
                 ),
               ),
-            ));
+            );
+            if (comp.look == 'grid') {
+              rows.add(SizedBox(width: 168, child: row));
+            } else {
+              body.add(row);
+            }
+          }
+          if (rows.isNotEmpty) {
+            body.add(Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Wrap(spacing: 8, runSpacing: 4, children: rows)));
           }
         case 'action':
           final act = c.act(comp);
@@ -543,6 +572,8 @@ class _DescribedScreenState extends State<DescribedScreen> {
                     key: describedKey('compose:${comp.schema}'),
                     controller: tc,
                     enabled: open,
+                    minLines: 1,
+                    maxLines: comp.places[f.place]?.look?['as'] == 'long' ? 4 : 1,
                     onSubmitted: (_) => send(),
                     decoration: InputDecoration(
                         hintText: comp.button,
@@ -559,11 +590,16 @@ class _DescribedScreenState extends State<DescribedScreen> {
           }
           void go() => _tap(comp, act, ways, subject);
           final k = describedKey('act:${comp.schema}${subject == null ? '' : ':${c.key(subject)}'}');
-          if (thread) {
+          // The look puts an action in the menu, in the bar, or first and marked; on a conversation, the menu.
+          final where = comp.where ?? (thread ? 'menu' : 'bar');
+          if (where == 'menu') {
+            // The menu's actions are marked on the screen, so that a walk finds what it offers.
             menu.add((comp.button, go));
-            actions.add(SizedBox.shrink(key: k));
+            body.add(SizedBox.shrink(key: k));
+          } else if (where == 'primary') {
+            primary.add(FilledButton(key: k, onPressed: open ? go : null, child: Text(comp.button)));
           } else {
-            actions.add(actions.isEmpty
+            actions.add(actions.whereType<ButtonStyleButton>().isEmpty && primary.isEmpty && comp.where == null
                 ? FilledButton(key: k, onPressed: open ? go : null, child: Text(comp.button))
                 : OutlinedButton(key: k, onPressed: open ? go : null, child: Text(comp.button)));
           }
@@ -573,8 +609,10 @@ class _DescribedScreenState extends State<DescribedScreen> {
         ? c.show(s.me) == 'you' ? displayText(s.me) : c.show(s.me)
         : c.show(scr.fact != null && c.args(subject).isNotEmpty ? c.args(subject).first : subject);
     final shown = title.isEmpty ? title : title[0].toUpperCase() + title.substring(1);
-    return ColoredBox(
-      color: const Color(0xFFF6F6F4),
+    return Theme(
+      data: _looked(theme),
+      child: ColoredBox(
+      color: _background(),
       child: Column(children: [
         Material(
           color: Colors.white,
@@ -602,7 +640,7 @@ class _DescribedScreenState extends State<DescribedScreen> {
         Expanded(child: ListView(padding: const EdgeInsets.only(bottom: 10), children: body)),
         if (composer != null)
           Material(color: Colors.white, child: SafeArea(top: false, child: composer))
-        else if (actions.whereType<ButtonStyleButton>().isNotEmpty)
+        else if (actions.whereType<ButtonStyleButton>().isNotEmpty || primary.isNotEmpty)
           Material(
             color: Colors.white,
             child: SafeArea(
@@ -611,13 +649,37 @@ class _DescribedScreenState extends State<DescribedScreen> {
                 width: double.infinity,
                 decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade200))),
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                child: Wrap(spacing: 8, runSpacing: 8, children: actions),
+                child: Wrap(spacing: 8, runSpacing: 8, children: [...primary, ...actions]),
               ),
             ),
           ),
       ]),
-    );
+    ));
   }
+
+  /// The look of the whole app: a theme's colors, and square corners.
+  static const _seeds = {'fresh': Color(0xFF14806E), 'night': Color(0xFF2A9D8F), 'paper': Color(0xFFB4532A), 'candy': Color(0xFF8E44E0)};
+  ThemeData _looked(ThemeData t) {
+    final look = widget.ui.look, seed = _seeds[look['theme']];
+    var d = t;
+    if (seed != null) {
+      d = d.copyWith(colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: look['theme'] == 'night' ? Brightness.dark : Brightness.light));
+    }
+    if (look['shape'] == 'square') {
+      final sq = RoundedRectangleBorder(borderRadius: BorderRadius.circular(4));
+      d = d.copyWith(
+          filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(shape: sq)),
+          outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(shape: sq)));
+    }
+    return d;
+  }
+
+  Color _background() => switch (widget.ui.look['theme']) {
+        'night' => const Color(0xFF14201E),
+        'paper' => const Color(0xFFF4EFE6),
+        'candy' => const Color(0xFFF7F1FD),
+        _ => const Color(0xFFF6F6F4),
+      };
 }
 
 /// The sheet of an action with something left to choose or fill.
@@ -661,6 +723,56 @@ class _SheetState extends State<_Sheet> {
     super.dispose();
   }
 
+  /// A typed place, drawn as its look says: a long box, a slider (with a box beside it when also typed) or a
+  /// calendar, whose day is the number of days since 1970; a short box otherwise.
+  Widget _field(DeclaredField f) {
+    final look = widget.sources[f.place]?.look ?? const {}, tc = _text.putIfAbsent(f.place, TextEditingController.new);
+    final label = f.type == 'key' ? '${f.label} (their key)' : f.label;
+    switch (look['as']) {
+      case 'slider':
+        final lo = (look['from'] as num).toDouble(), hi = (look['to'] as num).toDouble();
+        final v = (double.tryParse(tc.text) ?? lo).clamp(lo, hi);
+        if (tc.text.isEmpty) tc.text = lo.round().toString();
+        return Row(children: [
+          Text(label),
+          Expanded(
+            child: Slider(
+                key: describedKey('slider:${f.place}'),
+                min: lo,
+                max: hi,
+                divisions: (hi - lo).round().clamp(1, 1000),
+                value: v,
+                label: v.round().toString(),
+                onChanged: (x) => setState(() => tc.text = x.round().toString())),
+          ),
+          if (look['typed'] == true)
+            SizedBox(width: 72, child: TextField(key: describedKey('field:${f.place}'), controller: tc, keyboardType: TextInputType.number, onChanged: (_) => setState(() {})))
+          else
+            SizedBox(width: 40, child: Text(tc.text, textAlign: TextAlign.end)),
+        ]);
+      case 'date':
+        final days = int.tryParse(tc.text);
+        return OutlinedButton.icon(
+          key: describedKey('date:${f.place}'),
+          icon: const Icon(Icons.event, size: 18),
+          label: Text(days == null ? label : DateTime.fromMillisecondsSinceEpoch(days * 86400000, isUtc: true).toIso8601String().substring(0, 10)),
+          onPressed: () async {
+            final now = DateTime.now();
+            final d = await showDatePicker(context: context, firstDate: DateTime(1970), lastDate: DateTime(now.year + 50), initialDate: now);
+            if (d != null) setState(() => tc.text = (DateTime.utc(d.year, d.month, d.day).millisecondsSinceEpoch ~/ 86400000).toString());
+          },
+        );
+      default:
+        return TextField(
+          key: describedKey('field:${f.place}'),
+          controller: tc,
+          minLines: look['as'] == 'long' ? 3 : 1,
+          maxLines: look['as'] == 'long' ? 6 : 1,
+          decoration: InputDecoration(labelText: label),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ws = widget.ways, theme = Theme.of(context);
@@ -695,11 +807,7 @@ class _SheetState extends State<_Sheet> {
                 ),
             ])
           else
-            TextField(
-              key: describedKey('field:${f.place}'),
-              controller: _text.putIfAbsent(f.place, TextEditingController.new),
-              decoration: InputDecoration(labelText: f.type == 'key' ? '${f.label} (their key)' : f.label),
-            ),
+            _field(f),
         if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: TextStyle(color: Colors.red.shade700))),
         const SizedBox(height: 14),
         FilledButton(

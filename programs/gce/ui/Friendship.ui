@@ -1,6 +1,6 @@
 # Friendship, person first: everyone Alice knows on the start screen, and a screen for each of them.
 
-SCREEN Home:
+SCREEN Home ABOUT Alice:
     QUESTIONS
     SHOW Alice: identity, person
     LIST Contacts: EVERYONE WITH knows, friend OPENS Person
