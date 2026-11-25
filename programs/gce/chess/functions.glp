@@ -76,10 +76,12 @@ board(pos(B, _, _, _, _, _), B?).
 procedure cell(Integer?, Cells?, Integer).
 cell(0, [X | _], X?).
 cell(I, [_ | Xs], V?) :- I? > 0 | I1 := I? - 1, cell(I1?, Xs?, V).
+cell(_, [], 0).
 
 procedure set(Integer?, Integer?, Cells?, Cells).
 set(0, V, [_ | Xs], [V? | Xs?]).
 set(I, V, [X | Xs], [X? | Ys?]) :- I? > 0 | I1 := I? - 1, set(I1?, V?, Xs?, Ys).
+set(_, _, [], []).
 
 %% ---------------------------------------------------------------- legality
 
