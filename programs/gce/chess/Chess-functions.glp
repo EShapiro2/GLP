@@ -6,7 +6,9 @@
 %%   c is the position after m on b        after(M?, B?, C)
 %%   s is the side to move of b            side(B?, S)          S is 1 (white) or 2 (black)
 %%   v is the mate of b                    mate(B?, V)          V is 1 or 0
-%%   v is the draw of b                    draw(B?, V)          V is 1 or 0
+%%   v is the draw of b                    draw(B?, V)          V is 1 or 0, a draw the player to move may claim
+%%   v is the automatic draw of b          autodraw(B?, V)      V is 1 or 0, a draw that ends the game
+%%   n is the moves made on b              plies(B?, N)
 %% A position and a move are constants, the text term_to_string prints of the position's term and the
 %% move's term below; each function reads its arguments by string_to_term and prints its value by
 %% term_to_string (Udi, 2026-11-25, approving string_to_term; vGLP #34, 22:38 UTC), so the request carries
@@ -18,14 +20,15 @@
 %% colour 1 white, 2 black; kind 1 pawn, 2 knight, 3 bishop, 4 rook, 5 queen, 6 king (white king 16, black pawn 21).
 %% A position holds the 64 cells from a1 to h8, the side to move, the castling rights (white king's side,
 %% white queen's side, black king's side, black queen's side, each 1 or 0), the en passant square or -1, the
-%% half-moves since the last capture or pawn move, and the earlier positions since then, for repetition.
+%% half-moves since the last capture or pawn move, the earlier positions since then, for repetition, and
+%% the moves made in the game.
 %% A move names its square from, its square to and the kind a pawn is promoted to, or 0.
 
 Cells ::= [] ; [Integer | Cells].
 Castling ::= cas(Integer, Integer, Integer, Integer).
 Key ::= key(Cells, Integer, Castling, Integer).
 Keys ::= [] ; [Key | Keys].
-Position ::= pos(Cells, Integer, Castling, Integer, Integer, Keys).
+Position ::= pos(Cells, Integer, Castling, Integer, Integer, Keys, Integer).
 Move ::= mv(Integer, Integer, Integer).
 
 %% ---------------------------------------------------------------- the six functions, over constants
@@ -55,6 +58,12 @@ mate(B, V?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), mate_r(R?,
 exported procedure draw(String?, Integer).
 draw(B, V?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), draw_r(R?, V).
 
+exported procedure autodraw(String?, Integer).
+autodraw(B, V?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), autodraw_r(R?, V).
+
+exported procedure plies(String?, Integer).
+plies(B, V?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), plies_r(R?, V).
+
 procedure side_r(Read?, Integer).
 side_r(read(P), S?) :- side_pos(P?, S).
 side_r(none, 0).
@@ -75,12 +84,20 @@ procedure draw_r(Read?, Integer).
 draw_r(read(P), V?) :- draw_pos(P?, V).
 draw_r(none, 0).
 
+procedure autodraw_r(Read?, Integer).
+autodraw_r(read(P), V?) :- autodraw_pos(P?, V).
+autodraw_r(none, 0).
+
+procedure plies_r(Read?, Integer).
+plies_r(read(P), V?) :- plies_pos(P?, V).
+plies_r(none, 0).
+
 %% the term read from a constant, checked to be a position or a move
 procedure term_pos(Term?, Read).
-term_pos(pos(Cs, S, cas(A, B, C, D), E, H, Ks), R?) :-
-    integer(S?), integer(A?), integer(B?), integer(C?), integer(D?), integer(E?), integer(H?) |
+term_pos(pos(Cs, S, cas(A, B, C, D), E, H, Ks, N), R?) :-
+    integer(S?), integer(A?), integer(B?), integer(C?), integer(D?), integer(E?), integer(H?), integer(N?) |
     term_cells(Cs?, K1, Cs1), term_keys(Ks?, K2, Ks1),
-    pos_ok(K1?, K2?, pos(Cs1?, S?, cas(A?, B?, C?, D?), E?, H?, Ks1?), R).
+    pos_ok(K1?, K2?, pos(Cs1?, S?, cas(A?, B?, C?, D?), E?, H?, Ks1?, N?), R).
 term_pos(_, none) :- otherwise | true.
 
 procedure pos_ok(Integer?, Integer?, Position?, Read).
@@ -114,24 +131,24 @@ first_pos(pos([14, 12, 13, 15, 16, 13, 12, 14,
            0, 0, 0, 0, 0, 0, 0, 0,
            0, 0, 0, 0, 0, 0, 0, 0,
            21, 21, 21, 21, 21, 21, 21, 21,
-           24, 22, 23, 25, 26, 23, 22, 24], 1, cas(1, 1, 1, 1), -1, 0, [])).
+           24, 22, 23, 25, 26, 23, 22, 24], 1, cas(1, 1, 1, 1), -1, 0, [], 0)).
 
 procedure side_pos(Position?, Integer).
-side_pos(pos(_, S, _, _, _, _), S?).
+side_pos(pos(_, S, _, _, _, _, _), S?).
 
 procedure legal_pos(Move?, Position?, Integer).
-legal_pos(mv(F, T, Pr), pos(B, Side, Cas, Ep, _, _), V?) :-
+legal_pos(mv(F, T, Pr), pos(B, Side, Cas, Ep, _, _, _), V?) :-
     ground(B?), F? >= 0, F? =< 63, T? >= 0, T? =< 63, F? =\= T? |
     cell(F?, B?, P), cell(T?, B?, Q),
     legal_own(P?, Q?, F?, T?, Pr?, B?, Side?, Cas?, Ep?, V).
 legal_pos(_, _, 0) :- otherwise | true.
 
 procedure after_pos(Move?, Position?, Position).
-after_pos(mv(F, T, Pr), pos(B, Side, Cas, Ep, H, Ks), pos(B2?, S2?, Cas2?, Ep2?, H2?, Ks2?)) :-
+after_pos(mv(F, T, Pr), pos(B, Side, Cas, Ep, H, Ks, N), pos(B2?, S2?, Cas2?, Ep2?, H2?, Ks2?, N2?)) :-
     ground(B?), ground(Cas?) |
     cell(F?, B?, P), cell(T?, B?, Q),
     move_board(B?, F?, T?, Pr?, Ep?, B2),
-    S2 := 3 - Side?,
+    S2 := 3 - Side?, N2 := N? + 1,
     rights(Cas?, F?, T?, Cas2),
     new_ep(P?, F?, T?, Ep2),
     half(P?, Q?, H?, Z, H2),
@@ -141,17 +158,34 @@ procedure mate_pos(Position?, Integer).
 mate_pos(P, V?) :- ground(P?) |
     board(P?, B), side_pos(P?, S), in_check(B?, S?, C), mate2(C?, P?, V).
 
+%% the draws a player having the move may claim: the position the third time (Article 9.2) or
+%% fifty moves by each player with no capture and no pawn move (9.3)
 procedure draw_pos(Position?, Integer).
 draw_pos(P, V?) :- ground(P?) |
+    reps(P?, N), atleast(N?, 2, A1), fifty(P?, A2), or4(A1?, A2?, 0, 0, V).
+
+%% the draws that end the game with no claim, unless the position is mate (Article 5.1.1): stalemate (5.2.1),
+%% a dead position, here the kings alone or with one knight or one bishop (5.2.2), the position the fifth
+%% time and seventy-five moves by each player with no capture and no pawn move (9.6)
+procedure autodraw_pos(Position?, Integer).
+autodraw_pos(P, V?) :- ground(P?) |
     board(P?, B1), board(P?, B2), side_pos(P?, S),
     in_check(B1?, S?, C), stale(C?, P?, A1),
-    fifty(P?, A2), rep(P?, A3), material(B2?, 0, 0, A4),
-    or4(A1?, A2?, A3?, A4?, V).
+    material(B2?, 0, 0, A2), reps(P?, N), atleast(N?, 4, A3), seventyfive(P?, A4),
+    or4(A1?, A2?, A3?, A4?, W), mate_pos(P?, M), unless(M?, W?, V).
+
+procedure unless(Integer?, Integer?, Integer).
+unless(1, _, 0).
+unless(0, W, W?).
+
+%% the moves made in the game
+procedure plies_pos(Position?, Integer).
+plies_pos(pos(_, _, _, _, _, _, N), N?).
 
 %% ---------------------------------------------------------------- the position
 
 procedure board(Position?, Cells).
-board(pos(B, _, _, _, _, _), B?).
+board(pos(B, _, _, _, _, _, _), B?).
 
 procedure cell(Integer?, Cells?, Integer).
 cell(0, [X | _], X?).
@@ -361,21 +395,27 @@ stale(0, P, V?) :- has_move(P?, M), neg01(M?, V).
 
 %% the fifty-move rule: fifty moves of each player with no capture and no pawn move
 procedure fifty(Position?, Integer).
-fifty(pos(_, _, _, _, H, _), 1) :- H? >= 100 | true.
-fifty(pos(_, _, _, _, H, _), 0) :- H? < 100 | true.
+fifty(pos(_, _, _, _, H, _, _), 1) :- H? >= 100 | true.
+fifty(pos(_, _, _, _, H, _, _), 0) :- H? < 100 | true.
 
-%% repetition: the position has stood twice before, with the same side to move and the same rights
-procedure rep(Position?, Integer).
-rep(pos(B, S, C, E, _, Ks), V?) :- count(key(B?, S?, C?, E?), Ks?, 0, N), ge2(N?, V).
+%% the seventy-five-move rule (Article 9.6.2)
+procedure seventyfive(Position?, Integer).
+seventyfive(pos(_, _, _, _, H, _, _), 1) :- H? >= 150 | true.
+seventyfive(pos(_, _, _, _, H, _, _), 0) :- H? < 150 | true.
+
+%% repetition: the times the position has stood before, with the same side to move and the same rights
+procedure reps(Position?, Integer).
+reps(pos(B, S, C, E, _, Ks, _), N?) :- count(key(B?, S?, C?, E?), Ks?, 0, N).
 
 procedure count(Key?, Keys?, Integer?, Integer).
 count(_, [], N, N?).
 count(K, [K1 | Ks], N, M?) :- ground(K?), K? =?= K1? | N1 := N? + 1, count(K?, Ks?, N1?, M).
 count(K, [_ | Ks], N, M?) :- otherwise | count(K?, Ks?, N?, M).
 
-procedure ge2(Integer?, Integer).
-ge2(N, 1) :- N? >= 2 | true.
-ge2(N, 0) :- N? < 2 | true.
+%% N is at least K: 1, else 0
+procedure atleast(Integer?, Integer?, Integer).
+atleast(N, K, 1) :- N? >= K? | true.
+atleast(N, K, 0) :- N? < K? | true.
 
 %% no mate is possible: the kings alone, or with one knight or one bishop
 procedure material(Cells?, Integer?, Integer?, Integer).
