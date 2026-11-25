@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 
 import 'bridge.dart';
 import 'construct_family.dart';
+import 'described.dart';
 import 'named_widgets.dart';
 import 'term.dart';
 
@@ -147,6 +148,23 @@ class _TabScreenState extends State<TabScreen> {
     // The person's own key, the view's first argument (vGLP 12f629d,
     // Section 5.4, "The compilation": "its own key k").
     if (state != null) _me = state.me;
+    // An app given an interface description draws its screens from it, in place of the tabs (described.dart).
+    final described = DescribedUi.maybeOf(context);
+    if (described != null && state != null) {
+      return DescribedScreen(
+        ui: described.ui,
+        state: state,
+        ask: request == null
+            ? null
+            : SocialAsk(state.me, questionAt(request.view),
+                RequestOffers.of(request.widget),
+                (path, raw) => widget.grant(request!.id, path, raw)),
+        questions: [
+          for (final a in approvals) _view(a, output),
+          for (final o in others) _view(o, output),
+        ],
+      );
+    }
     // The tabs are the lists the view names (vGLP, Section 5.4, "The
     // contract's words").
     final lists = state?.lists ?? const [];
