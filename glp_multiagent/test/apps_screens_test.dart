@@ -1060,8 +1060,8 @@ void appsScreens(Screens screens) {
     final run = await _Run.start(tester, screens, 'gsn');
     final alice = run.alice;
     final bob = run.bob;
-    // The group friends, led by Alice: its name, a speech act of hers.
-    const friends = 'speech(utterance(friends), alice)';
+    // The group friends, led by Alice: its name, the constant Grupo of Groups (programs/gsc/Groups.txt: "Grupo a group"; Groups.glp writes const('Grupo')).
+    const friends = 'friends';
     // The group's row in a member's Groups, the atom member(n, a) of their state, its name and its leader.
     const group = 'member($friends, alice)';
 
