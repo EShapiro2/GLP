@@ -139,6 +139,34 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
+# GB's app on the set terms: Bonds' term names a bond's type as the constant
+# val('bond(Day)'), not bond(Day) with Day a variable, so no bond issued with a
+# maturity can be redeemed, and programs/apps/gb's person.glp waits on it
+# (Currencies #23, 2026-11-25 02:01 UTC, sent to Calculus #11 and vGLP #32):
+# Currencies' to mend in programs/apps/gb on their answer; each entry comes off
+# with that mend (Code #37).
+    "APPS gb: the view names three tabs, one for each list line of the pragmas, GKK's Contacts and GB's Coins and Bonds, the two counted, GB adding and deleting coin and bond with multiplicities (GSC, Section 2; vGLP, Section 5.4)"
+    "APPS gb: Redeem bond's and Redeem bond against bond's fields name the variables the atoms the proposer's role requires do not bind, the current date, today(Bob,Today), required at the issuer's role and not at the bearer's (GB:3; vGLP, Section 5.4)"
+    "APPS gb: the mini-app's artefact is certified"
+    "APPS gb loads"
+    "APPS gb: no failed play"
+    "APPS gb: no error"
+    "APPS gb bonds: the run suspends, no agent left with an own transaction or a trigger"
+    "APPS gb bonds: bob issues four Bob-bonds due day 5, later than day 1, the current date his clock gives (GB:1, Issue bond: today(Alice,Today), gt(Day,Today))"
+    "APPS gb bonds: alice issues three Alice-bonds due day 10, later than day 1, the current date (GB:1, Issue bond)"
+    "APPS gb bonds: bob answers yes to the loan, two Alice-coins for three Bob-bonds due day 5 (GB:2, Swap coin for bond)"
+    "APPS gb bonds: once the loan is taken bob holds two Alice-coins and one of his four Bob-bonds, knowing alice twice over, by their meeting and by the Alice-coins he took (GB:2, Swap coin for bond: knows(Bob,Carol))"
+    "APPS gb bonds: alice redeems a Bob-bond due day 5 once the current date at bob, its issuer, is day 5, against an Alice-coin bob holds, nobody asked, and comes to know the coin's issuer, herself (GB:3, Redeem bond: today(Bob,Today), le(Day,Today), knows(Alice,Carol))"
+    "APPS gb bonds: ... and bob holds the bond presented and one Alice-coin"
+    "APPS gb bonds: carol answers yes to alice's deposit of two Alice-coins for bob on the condition day 10, and holds them in escrow from alice for bob (GB:4, Deposit: escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum))"
+    "APPS gb village: no failed play"
+    "APPS gb village: no error"
+    "APPS gb village: the run suspends, every operation taken"
+    "APPS gb village: diana's presentation of a frank-bond due day 28, against a diana-coin frank holds, before frank's clock gives day 28 is refused by frank's machine, the issuer's, unable, the bond not mature by the current date, no atom lacking or forbidden (GB:3, Redeem bond: today(Bob,Today), le(Day,Today) at Bob)"
+    "APPS gb village: the escrow agent releases the deposit to frank, who answers yes, the release naming the escrow record it removes, charlie the depositor and the condition day 30 (GB:4, Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum))"
+    "APPS gb village: frank's holdings, 7 diana-coins, 10 eve-coins, 6 frank-bonds due day 28, 4 frank-coins; knows of the issuer added at the role that receives coins or bonds in each swap, redemption and release (GC:2, GB:2, GB:3, GB:4: knows(Alice,Dave), knows(Alice,Carol), knows(Bob,Dave)): alice by meeting, whom she comes to know before she asks eve for frank-coins (GKK:2), diana and eve by meeting and by a swap, and himself by five redemptions against frank-bonds and by the release of charlie's deposit of frank-coins"
+    "APPS gb village: the escrow agent holds nothing in escrow once it has released, knowing charlie and frank by meeting, a deposit adding at it the escrow atom alone (GB:4, Deposit and Release)"
+    "APPS gb village: diana's holdings, knowing bob by meeting and by the bob-bonds of her swap, and frank by meeting, by the frank-bonds of her swap and by the frank-coin her redemption takes (GB:2, GB:3)"
 # Organisation's Found by an organisation has three guarding roles, so it is
 # no acquaintance schema, and its guards must know each other before it is
 # proposed; nobody can know the organisation it founds, which has no identity
