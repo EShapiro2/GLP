@@ -3048,6 +3048,11 @@ match_nvar(free, X, nfree(Y), S, E, match([bind(num(X?), nfree(Y?))|S?], E?)).
 match_nvar(free, X, cval(C), S, E, R?) :- ground(X?), ground(C?), ground(S?), ground(E?) |
     subst_lookup(S?, const(X?), F),
     match_cvar(F?, X?, C?, S?, E?, R).
+% A compound value is a value (GSC, Def numbers: f(v1, ..., vk) in V), so
+% a value variable over constants meets it as it meets a constant.
+match_nvar(free, X, cmpv(G, Vs), S, E, R?) :- ground(X?), ground(G?), ground(Vs?), ground(S?), ground(E?) |
+    subst_lookup(S?, const(X?), F),
+    match_cmvar(F?, X?, cmpv(G?, Vs?), S?, E?, R).
 match_nvar(bound(W), _, V, S, E, R?) :- ground(W?), ground(V?), ground(S?), ground(E?) |
     num_same(W?, V?, S?, E?, R).
 match_nvar(_, _, _, _, _, nomatch) :- otherwise | true.
@@ -3056,8 +3061,13 @@ procedure match_cvar(Found?, Constant?, Constant?, Subst?, Eqs?, MatchRes).
 match_cvar(bound(_), X, C, S, E, match([bind(num(X?), cval(C?))|S?], E?)).
 match_cvar(free, _, _, _, _, nomatch).
 
+procedure match_cmvar(Found?, Constant?, Val?, Subst?, Eqs?, MatchRes).
+match_cmvar(bound(_), X, V, S, E, match([bind(num(X?), V?)|S?], E?)).
+match_cmvar(free, _, _, _, _, nomatch).
+
 procedure num_same(Val?, Val?, Subst?, Eqs?, MatchRes).
 num_same(cval(C), cval(D), S, E, match(S?, E?)) :- C? =?= D? | true.
+num_same(cmpv(F, Vs), cmpv(G, Ws), S, E, match(S?, E?)) :- F? =?= G?, Vs? =?= Ws? | true.
 num_same(nval(M), nval(N), S, E, R?) :- number(M?), number(N?), ground(S?), ground(E?) |
     num_eq(M?, N?, S?, E?, R).
 num_same(nfree(Z), nfree(Y), S, E, match(S?, E?)) :- Z? =?= Y? | true.
