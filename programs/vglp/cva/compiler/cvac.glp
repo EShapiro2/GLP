@@ -454,6 +454,8 @@ flat_args([sgn(Y, I)|As], [svar(Y?), role(I?)|R?]) :- flat_args(As?, R).
 flat_args([item_of(V)|As], [V?|R?]) :- flat_args(As?, R).
 %% A constant the contract names, val(C), names no variable (vGLP 0eeea71, Section 5.4).
 flat_args([val(_)|As], R?) :- flat_args(As?, R).
+%% A compound value holds the variables of its arguments.
+flat_args([cmp(_, Bs)|As], R?) :- flat_args(Bs?, R1), flat_args(As?, R2), app(R1?, R2?, R).
 flat_args([A|As], [A?|R?]) :- otherwise | flat_args(As?, R).
 procedure nterm_args(NameTerm?, Args).
 nterm_args(own(I), [role(I?)]).
@@ -2392,7 +2394,7 @@ kind_join(J, K, L?) :- otherwise, ground(J?), ground(K?) |
     kind_base(J?, B1),
     kind_base(K?, B2),
     app(B1?, B2?, B),
-    kinds_kept([peer, speech, item, name, num, real, const], B?, Us),
+    kinds_kept([peer, speech, item, name, num, real, const, cval], B?, Us),
     kind_of_union(Us?, L).
 procedure kind_base(Kind?, Kinds).
 kind_base(u(Ks), Ks?).
@@ -2413,11 +2415,17 @@ kind_in(K, [J|_], yes) :- K? =?= J? | true.
 kind_in(K, [_|Js], B?) :- otherwise | kind_in(K?, Js?, B).
 %% Whether another kind of B holds the kind K.
 procedure kind_held(Kind?, Kinds?, YesNo).
-kind_held(peer, B, H?) :- kind_in(const, B?, H).
-kind_held(num, B, H?) :- kind_in(const, B?, H).
-kind_held(real, B, H?) :- kind_in(const, B?, H).
+kind_held(peer, B, H?) :- kind_const_in(B?, H).
+kind_held(num, B, H?) :- kind_const_in(B?, H).
+kind_held(real, B, H?) :- kind_const_in(B?, H).
 kind_held(speech, B, H?) :- kind_in(item, B?, H).
 kind_held(_, _, no) :- otherwise | true.
+%% Whether B has a kind over the constants, const, or cval where the contract names a compound value (sigs_cval).
+procedure kind_const_in(Kinds?, YesNo).
+kind_const_in(B, H?) :- ground(B?) | kind_in(const, B?, H1), kind_in(cval, B?, H2), yes_or(H1?, H2?, H).
+procedure yes_or(YesNo?, YesNo?, YesNo).
+yes_or(yes, _, yes).
+yes_or(no, B, B?).
 procedure kind_of_union(Kinds?, Kind).
 kind_of_union([K], K?).
 kind_of_union(Ks, u(Ks?)) :- otherwise | true.

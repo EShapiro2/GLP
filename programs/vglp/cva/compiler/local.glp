@@ -1117,6 +1117,8 @@ flat_args([item_of(V)|As], [V?|R?]) :- flat_args(As?, R).
 flat_args([any|As], R?) :- flat_args(As?, R).
 %% A constant the contract names, val(C), is no variable and names nothing, and is left out, as the wildcard is (vGLP 0eeea71, Section 5.4).
 flat_args([val(_)|As], R?) :- flat_args(As?, R).
+%% A compound value holds the variables of its arguments.
+flat_args([cmp(_, Bs)|As], R?) :- flat_args(Bs?, R1), flat_args(As?, R2), app(R1?, R2?, R).
 flat_args([nterm(N)|As], R?) :- nt_flat(N?, Ws), flat_args(As?, R1), app(Ws?, R1?, R).
 flat_args([A|As], [A?|R?]) :- otherwise | flat_args(As?, R).
 %% The variables of a name term, its base, a role or an agent variable, and its speech-act variables: "a variable inside a signed term or a name term included" (vGLP c649c0d, Section 5.4, the paragraph on act schemas), and its base named by it.
@@ -1876,6 +1878,8 @@ img_args([item_of(V)|As], B, [X?|Xs?]) :- ground(B?), ground(V?) |
     img_args(As?, B?, Xs).
 %% A constant the contract names, val(C), stands for itself, as a number does, its image free_var(val(C)), which matches it alone (vGLP 0eeea71, Section 5.4; programs/gsc/self.glp, Arg: "it matches val(C) alone").
 img_args([val(C)|As], B, [free_var(val(C?))|Xs?]) :- ground(B?) | img_args(As?, B?, Xs).
+%% A compound value stands for itself here, as a constant the contract names does.
+img_args([cmp(F, Bs)|As], B, [free_var(cmp(F?, Bs?))|Xs?]) :- ground(B?) | img_args(As?, B?, Xs).
 img_args([A|As], B, [X?|Xs?]) :- otherwise, ground(B?), ground(A?) |
     lookup(A?, B?, F),
     val_or_free(F?, A?, X),
@@ -2353,6 +2357,7 @@ match_arg(item_of(A), V, B, R?) :- ground(A?), ground(V?), ground(B?) |
     same_item(I?, V?, B?, R).
 %% A constant the contract names, val(C), matches its image, free_var(val(C)), alone, and binds nothing.
 match_arg(val(C), V, B, R?) :- ground(C?), ground(V?), ground(B?) | same_const(val(C?), V?, B?, R).
+match_arg(cmp(F, Bs), V, B, R?) :- ground(F?), ground(Bs?), ground(V?), ground(B?) | same_const(cmp(F?, Bs?), V?, B?, R).
 %% The wildcard of a cleared atom matches the wildcard of a cleared atom's image, free_var(any), and nothing else, and binds nothing.
 match_arg(any, V, B, R?) :- ground(V?) | wild_val(V?, B?, R).
 match_arg(A, V, B, R?) :- otherwise, ground(A?), ground(V?), ground(B?) |
