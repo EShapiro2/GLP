@@ -699,8 +699,10 @@ function composed(c){
 // A contract's colatitude: its ring's, and its row's on a ring of two rows.
 const th0 = id => DEPTH[id] === 0 ? 0 : id === D.south ? Math.PI : RING[DEPTH[id]] + (LAT[id] || 0);
 const MAXD = () => Math.max(...Object.values(DEPTH));
-// The Villagers site's globe upright, both its poles on the edge (D.south).
-const V = {phi0: 0, tilt: (D.south ? 0 : 15) * Math.PI/180, zoom: 1};
+// It opens on the south pole, tilted toward the reader, as Udi's figure of
+// 2026-11-25 shows ("for globes with south pole, show the south pole not the
+// equator upon start").
+const V = {phi0: 0, tilt: (D.south ? -66 : 15) * Math.PI/180, zoom: 1};
 // A phone: the card narrower than 640 pixels.  The view is then cropped to the
 // globe, the names drawn larger so they can be read and tapped, and the key
 // set below the globe (Udi, 2026-11-09).
@@ -742,7 +744,9 @@ function drawGlobe(){
   // relation's outline and its right side the second's; a third relation is a
   // slim arrow of its own outline along the middle, drawn darker (Udi,
   // 2026-11-15, to Website #2).
-  const RELCOL = {inherits: '#3b7dd8', extends: '#3b7dd8', restricts: '#d64550', strengthens: '#2a9d6f', relaxes: '#17a5b8', instantiates: '#8b5fd3', composes: '#e39a2d', implements: '#6b7785', amends: '#8d6e63', unites: '#e39a2d', renames: '#5c6bc0', lifts: '#00897b', weakens: '#d64550', augments: '#2a9d6f'};
+  // Each relation a colour of its own, so the key tells them apart (Udi, 2026-11-25:
+  // "the arrow legend arrow should reflect operation names"): inherits was extends' blue, renames near it.
+  const RELCOL = {inherits: '#c2185b', extends: '#3b7dd8', restricts: '#d64550', strengthens: '#2a9d6f', relaxes: '#17a5b8', instantiates: '#8b5fd3', composes: '#6d4c41', implements: '#6b7785', amends: '#8d6e63', unites: '#e39a2d', renames: '#8e24aa', lifts: '#00897b', weakens: '#d64550', augments: '#2a9d6f'};
   const SOLID = {extends: [0.4, 4.2, 7.5], restricts: [4.2, 0.4, 2.8], strengthens: [3.4, 3.4, 7.5], amends: [2.2, 2.2, 6.5]};
   const solids = rs => rs.length > 1 && rs.every(r => SOLID[r]);
   // The key's arrows, drawn flat in its corner, each a straight shaft and head:
@@ -769,7 +773,9 @@ function drawGlobe(){
   const stroked = (p, q, dash, fill, pad0, pad1, kz = k) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*kz, hw = 6.5*kz, cx = bx-ux*hl, cy = by-uy*hl;
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`
       + `<polygon points="${[[bx, by], [cx-uy*hw, cy+ux*hw], [cx+uy*hw, cy-ux*hw]].map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
-  const fs = FS0()*k, rx = id => 0.31*fs*WID(id) + 0.5*fs, ry0 = 0.85*fs, RY = id => LINES(id).length > 1 ? 1.6*fs : ry0, ry = ry0;
+  // The contracts at the poles, the north's and the south's, named larger (Udi, 2026-11-25).
+  const POLE = id => DEPTH[id] === 0 || id === D.south ? 1.6 : 1;
+  const fs = FS0()*k, rx = id => POLE(id)*(0.31*fs*WID(id) + 0.5*fs), ry0 = 0.85*fs, RY = id => POLE(id)*(LINES(id).length > 1 ? 1.6*fs : ry0), ry = ry0;
   // Each arrow painted on the sphere: a smooth curve on the surface from the
   // contract to the one built on it, through the waypoints the layout keeps
   // for it on the rings it passes, so it goes between the names there; its
@@ -888,7 +894,7 @@ function drawGlobe(){
     const col = FAM[famOf(c)];
     s += `<g class="node" data-id="${c.id}">
       <ellipse rx="1" ry="1" fill="color-mix(in srgb, ${col[0]} 26%, white)" stroke="${col[1]}" stroke-width="0.6" transform="matrix(${m} ${X.toFixed(1)} ${Y.toFixed(1)})" vector-effect="non-scaling-stroke"/>
-      ${LINES(c.id).map((ln, i, a) => `<text x="${X.toFixed(1)}" y="${(Y + 0.36*fs + (i - (a.length - 1)/2) * 1.12*fs).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}">${esc(ln)}</text>`).join('')}</g>`;
+      ${LINES(c.id).map((ln, i, a) => { const f = fs*POLE(c.id); return `<text x="${X.toFixed(1)}" y="${(Y + 0.36*f + (i - (a.length - 1)/2) * 1.12*f).toFixed(1)}" text-anchor="middle" font-size="${f.toFixed(1)}"${POLE(c.id) > 1 ? ' font-weight="600"' : ''}>${esc(ln)}</text>`; }).join('')}</g>`;
   });
   // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
   // The key has each relation the globe draws: of the five of the Calculus
