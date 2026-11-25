@@ -388,7 +388,7 @@ class Deriver:
                     continue
                 if compiled(d):
                     self.rel["own"].add("e")
-                    base = self.base_of(d, mine)
+                    base = self.base_of(d, mine, n)
                     if base is None:
                         diffs.append(("an act compiled from no act of %s" % n, None, d))
                     continue
@@ -491,7 +491,7 @@ class Deriver:
             return True     # a guard: the names are the clause's, under the map of names
         return p in said[1] or p.split("(")[0] in said[1]
 
-    def base_of(self, d, mine):
+    def base_of(self, d, mine, n=None):
         """The act d is compiled from: 'Pay for Alice' from Pay, 'Vote of Alice for Pay' from Pay; its conclusions
         and conditions are in d."""
         if d["name"].startswith("Vote of "):
@@ -499,9 +499,27 @@ class Deriver:
             bn = m.group(2) if m else None
             # the act it is compiled from reads the vote it adds, or clears it when it is taken: a vote no act counts is no vote of the contract
             # (Audit PR 123 on Finding 18: Library with a vote for Lend that Lend does not count)
-            adds = {l[1] for l in d["H"] if not l[0]}
-            return next((c for c in mine if c["name"] in (bn, "%s for %s" % (bn, m.group(1)) if m else "")
-                         and adds & {l[1] for l in c["B"] + [x for x in c["H"] if x[0]]}), None)
+            # and the vote is all it does: it adds the one vote atom and deletes nothing, on the voter's atom, the vote
+            # not yet cast and conditions the act it is compiled from has (Audit PR 125 on Finding 18: a vote with an
+            # effect more)
+            if len(d["H"]) != 1 or d["H"][0][0]:
+                return None
+            v = d["H"][0][1]
+            voter = "voter_" + v[len("vote_"):] if v.startswith("vote_") else None
+            for c in mine:
+                if c["name"] not in (bn, "%s for %s" % (bn, m.group(1)) if m else ""):
+                    continue
+                if v not in {l[1] for l in c["B"] + [x for x in c["H"] if x[0]]}:
+                    continue
+                theirs = {(l[0], l[1]) for l in c["B"]}
+                # and the conditions the contract's own clause writes for its vote (Constitution: the one who votes
+                # is a participant)
+                theirs |= {(l[0], l[1]) for o in (self.own_sas(n) if n else []) if o["name"] == d["name"]
+                           and sorted((x[0], x[1]) for x in o["H"]) == sorted((x[0], x[1]) for x in d["H"]) for l in o["B"]}
+                if all((not l[0] and l[1] == voter) or (l[0] and l[1] == v) or (l[0], l[1]) in theirs for l in d["B"]) \
+                        and sum(1 for l in d["B"] if not l[0] and l[1] == voter) == 1:
+                    return c
+            return None
         bn = re.sub(r" for [A-Z][A-Za-z]*(?: and [A-Z][A-Za-z]*)*$", "", d["name"])
         for c in mine:
             if c is d or c["name"] != bn or c["first"] != d["first"]:
