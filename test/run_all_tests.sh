@@ -5659,6 +5659,19 @@ HEREDOC
 check "CVA request question: the first, asked when the agent starts, shows the agent's own key and no person known" "A = \[view(alice, \[\], \[\], \[\], \[tab('Contacts', knows), tab('Friends', friend)\]), menu(alice, \[\]), view(alice, \[\], \[\], \[establish(alice)\], \[tab('Contacts', knows), tab('Friends', friend)\]), view(alice, \[identity, person\], \[\], \[\], \[tab('Contacts', knows), tab('Friends', friend)\])" "$cva_sg_menu"
 check "CVA request question: the one asked on reading the request to befriend bob, once bob is known and met, shows the key and bob" "view(alice, \[friend(bob), knows(bob), identity, person\], \[bob\], \[\], \[tab('Contacts', knows), tab('Friends', friend)\]), menu(alice, \[bob\])" "$cva_sg_menu"
 
+# A local state is a set (the Calculus, Definition "Local state, configuration": "A *local state* is a set of ground atoms, two atoms being the same if their arguments are equal"; GSC 4a9175a).  Audit #128 (Grassroots-Audit PR 129, cascade/Friendship/platform.vglp.md, Finding 1): on peoplesweb.org's Friendship world, acquaint repeated left knows of the other twice in each state.  play_reacquaint: alice and bob come to know each other, alice requests acquaint(alice, bob) again, bob answers yes and it commits, and they befriend.
+cva_sg_reacq=$("$REPL_RUN" <<HEREDOC
+$CVA/social_graph/
+:limit 3000000
+play_reacquaint(A, B, N).
+:quit
+HEREDOC
+2>&1)
+check "CVA set state: alice's second acquaint of bob commits, attempt 6 (Audit #128)" "sent(alice, bob, outcome(attempt(alice, 6, 6, acquaint(alice, bob), none), commit(\[\])))" "$cva_sg_reacq"
+check "CVA set state: ... alice holds knows(bob) once after it, and once befriended (Audit #128)" "view(alice, \[knows(bob), identity, person\], \[bob\], \[acquaint(alice, bob)\], .*view(alice, \[friend(bob), knows(bob), identity, person\], \[bob\], \[\]" "$cva_sg_reacq"
+check "CVA set state: ... and bob, answering yes twice, holds knows(alice) once (Audit #128)" "gave(acquaint(alice, bob), yes), .*gave(acquaint(alice, bob), yes), .*view(bob, \[friend(alice), knows(alice), identity, person\], \[alice\], \[\]" "$cva_sg_reacq"
+check_not "CVA set state: ... no state holds knows twice (Audit #128)" "knows(bob), knows(bob)\|knows(alice), knows(alice)\|knows(bob), [a-z(), ]*knows(bob)\|knows(alice), [a-z(), ]*knows(alice)" "$cva_sg_reacq"
+
 cva_sg_load=$("$REPL_RUN" <<HEREDOC
 $CVA/social_graph/
 :quit
