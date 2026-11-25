@@ -69,17 +69,78 @@ num_info_of(Nm, Hd, C, Fs, Rs, B, num_info(Nm?, C?, Ls?, Cj?, Fi?, Rd?)) :- grou
     unset(Hd?, Hd3),
     unset(Hd?, Hd4),
     unset(Hd?, Hd5),
-    det_locals(C?, Hd1?, Rs?, Ls00?, Ls),
-    det_locals(C?, Hd2?, Rs?, Ls10?, Ls1),
-    det_locals(C?, Hd3?, Rs?, Ls20?, Ls2),
-    det_locals(C?, Hd4?, Rs?, Ls30?, Ls3),
-    det_locals(C?, Hd5?, Rs?, Ls40?, Ls4),
+    set_reads(Hd?, Rs?, Sr0),
+    set_reads(Hd?, Rs?, Sr1),
+    set_reads(Hd?, Rs?, Sr2),
+    set_reads(Hd?, Rs?, Sr3),
+    set_reads(Hd?, Rs?, Sr4),
+    app(Ls00?, Sr0?, Ls00r),
+    app(Ls10?, Sr1?, Ls10r),
+    app(Ls20?, Sr2?, Ls20r),
+    app(Ls30?, Sr3?, Ls30r),
+    app(Ls40?, Sr4?, Ls40r),
+    det_locals(C?, Hd1?, Rs?, Ls00r?, Ls01),
+    det_locals(C?, Hd2?, Rs?, Ls10r?, Ls11),
+    det_locals(C?, Hd3?, Rs?, Ls20r?, Ls21),
+    det_locals(C?, Hd4?, Rs?, Ls30r?, Ls31),
+    det_locals(C?, Hd5?, Rs?, Ls40r?, Ls41),
+    set_locals(Hd?, Rs?, B?, Sl0),
+    set_locals(Hd?, Rs?, B?, Sl1),
+    set_locals(Hd?, Rs?, B?, Sl2),
+    set_locals(Hd?, Rs?, B?, Sl3),
+    set_locals(Hd?, Rs?, B?, Sl4),
+    app(Ls01?, Sl0?, Ls),
+    app(Ls11?, Sl1?, Ls1),
+    app(Ls21?, Sl2?, Ls2),
+    app(Ls31?, Sl3?, Ls3),
+    app(Ls41?, Sl4?, Ls4),
     conjuncts_of(C?, Ls1?, Cj, _),
     conjuncts_of(C?, Ls3?, Cj2, Crs),
     reads_of(Rs?, Ls2?, Cj2?, Crs?, Rd),
     form_infos(Fs?, Vs4?, Ls4?, Fi).
 
-%% The head with its set variables left out: a set variable is local to no role, the schema-binding binding it and the request naming it, as the notes a payer pays (GSC, the set variable, def:numbers; OSPM, act-schemas-local).
+%% "A set variable of atoms the schema deletes at a role other than the base is local to that role, as the notes Bob gives in a swap, which his machine picks from his own" (OSPM, act-schemas-local, VEUI vglp32-sets-2026-11-24): loc(J, num(X)) for each set variable X of the head that the role J, not the base B, deletes, the first such role; taken after det_locals, so that a variable the constraint names with it, its size, stays bound by the schema-binding.
+procedure set_locals(Args?, RoleSpecs?, Integer?, Locs).
+set_locals([], _, _, []).
+set_locals([set(X)|As], Rs, B, Ls?) :- ground(X?), ground(Rs?), integer(B?) |
+    set_deleter(Rs?, 1, B?, num(X?), Js),
+    set_locs(Js?, num(X?), L1),
+    set_locals(As?, Rs?, B?, L2),
+    app(L1?, L2?, Ls).
+set_locals([_|As], Rs, B, Ls?) :- otherwise | set_locals(As?, Rs?, B?, Ls).
+%% The first role, from I, other than B, that deletes an atom, not a cleared one, naming V: [J], or [] where none does.
+procedure set_deleter(RoleSpecs?, Integer?, Integer?, Arg?, Ints).
+set_deleter([], _, _, _, []).
+set_deleter([_|Rs], I, B, V, Js?) :- I? =:= B?, ground(V?) | I1 := I? + 1, set_deleter(Rs?, I1?, B?, V?, Js).
+set_deleter([R|Rs], I, B, V, Js?) :- I? =\= B?, ground(R?), ground(V?) |
+    rs_lists(R?, _, M, _, _),
+    uncleared(M?, M1),
+    own_args(M1?, A0),
+    flat_args(A0?, A),
+    mem(V?, A?, D),
+    I1 := I? + 1,
+    set_deleter1(D?, I?, Rs?, I1?, B?, V?, Js).
+procedure set_deleter1(YesNo?, Integer?, RoleSpecs?, Integer?, Integer?, Arg?, Ints).
+set_deleter1(yes, I, _, _, _, _, [I?]).
+set_deleter1(no, _, Rs, I1, B, V, Js?) :- set_deleter(Rs?, I1?, B?, V?, Js).
+%% "... and so is a set variable of atoms the schema requires at one role and neither deletes nor adds, read there, as the coins a provider holds, whose number a constraint on its size compares with a stake" (OSPM, act-schemas-local, VEUI vglp32-sets-2026-11-24; GO #15, vGLP_inbox.md, 2026-11-25 17:08 UTC, Community Market's post): loc(J, num(X)) for each set variable X of the head that the role J alone keeps, no role deleting, adding or forbidding an atom naming it nor listing it; taken before det_locals, so that its size, which the constraint gives, is local to J too, the role's machine reading every atom of its state that the atom matches.
+procedure set_reads(Args?, RoleSpecs?, Locs).
+set_reads([], _, []).
+set_reads([set(X)|As], Rs, Ls?) :- ground(X?), ground(Rs?) |
+    occ_roles(Rs?, 1, num(X?), Kr, Ot, Dl, Ad),
+    set_reader(Kr?, Ot?, Dl?, Ad?, Js),
+    set_locs(Js?, num(X?), L1),
+    set_reads(As?, Rs?, L2),
+    app(L1?, L2?, Ls).
+set_reads([_|As], Rs, Ls?) :- otherwise | set_reads(As?, Rs?, Ls).
+procedure set_reader(Ints?, YesNo?, YesNo?, Ints?, Ints).
+set_reader([J], no, no, [], [J?]).
+set_reader(_, _, _, _, []) :- otherwise | true.
+procedure set_locs(Ints?, Arg?, Locs).
+set_locs([], _, []).
+set_locs([J|_], V, [loc(J?, V?)]).
+
+%% The head with its set variables left out: a set variable is local to no role, the schema-binding binding it and the request naming it, as the notes a payer pays, but for one set_locals makes local (GSC, the set variable, def:numbers; OSPM, act-schemas-local).
 procedure unset(Args?, Args).
 unset([], []).
 unset([set(_)|As], Bs?) :- unset(As?, Bs).
@@ -585,20 +646,25 @@ own_args([], []).
 own_args([atom(_, As)|Xs], R?) :- own_args(Xs?, R1), app(As?, R1?, R).
 own_args([times(_, A)|Xs], R?) :- own_args([A?|Xs?], R).
 own_args([rest(_, _, A)|Xs], R?) :- own_args([A?|Xs?], R).
-%% occ_roles(Rs, I, V, Kr, Ot, Dl, Ad): the indices of the roles that keep or delete an atom naming V; whether a role forbids one, or lists V among a listed role's arguments; whether a role deletes one; and the indices of the roles that add one.
+%% occ_roles(Rs, I, V, Kr, Ot, Dl, Ad): the indices of the roles that keep or delete an atom naming V, a cleared atom apart; whether a role forbids or clears one ("A variable that occurs only in atoms the schema requires or deletes at one role": a cleared atom is neither, and the request names its variables, as the sum of the votes a loan clears; OSPM, act-schemas-local, VEUI vglp33-determined), or lists V among a listed role's arguments; whether a role deletes one; and the indices of the roles that add one.
 procedure occ_roles(RoleSpecs?, Integer?, Arg?, Ints, YesNo, YesNo, Ints).
 occ_roles([], _, _, [], no, no, []).
 occ_roles([R|Rs], I, V, Kr?, Ot?, Dl?, Ad?) :- ground(R?), integer(I?), ground(V?) |
     rs_lists(R?, P, M, K, N),
     rs_lists(R?, _, M2, _, _),
+    rs_lists(R?, _, M3, _, _),
+    uncleared(M?, Mu),
+    only_cleared(M3?, Mc),
     atoms_args(K?, A1),
-    atoms_args(M?, A2),
+    atoms_args(Mu?, A2),
     atoms_args(P?, A3),
     atoms_args(N?, A4),
     kind_args(R?, A5),
     atoms_args(M2?, A6),
+    atoms_args(Mc?, A7),
     app(A1?, A2?, Akm0),
-    app(A4?, A5?, Apn0),
+    app(A4?, A5?, Apn1),
+    app(Apn1?, A7?, Apn0),
     flat_args(Akm0?, Akm),
     flat_args(Apn0?, Apn),
     flat_args(A3?, Ap),

@@ -160,7 +160,7 @@ Every thread and every Cowork session reads this file, `writing-style-guide.md` 
 
 - **NO CONTRACT IS REVISED, NO PAPER IS REVISED, AND NO DEPENDENCY AMONG CONTRACTS IS CHANGED WITHOUT UDI'S EXPRESS CONSENT.**
 - A change to a contract's schemas or pragmas needs no approval: "no need to show them to me for approval".
-- **EVERY PROPOSED REVISION IS SHOWN TO UDI AS THE FULL ITEM, MARKED.**  Deleted: `~~deleted text~~`.  Inserted: U+0332 after every character.  Nothing else.
+- **EVERY PROPOSED REVISION IS SHOWN TO UDI AS THE FULL ITEM, MARKED.**  Deleted: `~~deleted text~~`, the tildes touching the text, with a space before the opening tildes and after the closing ones, as "to ~~Orga~~ Bob"; never U+0336 (Udi, 2026-11-25 20:30 to 20:34 UTC, to Villagers #2, reported by Villagers #2: "once you get it right, tell everyone how to do this so they dont discover it each on their own").  Inserted: U+0332 after every character.  Nothing else.
 - **NEVER SHOW UDI LATEX IN A CONVERSATION.**  "Either show formatted text (if short or simple edits) or else edit and push and I review in Overleaf".
 - **NEVER INVENT CONTENT WITHOUT UDI'S EXPRESS REQUEST OR APPROVAL.**  Text he gives goes in as he gave it.
 - Never change text Udi wrote or cut without his consent to that change.  A change to his text is made only as he approved it, marked.

@@ -16,7 +16,7 @@ introduce(Peer, Peer, Peer)
 ;
 issue(Peer, Constant, List(Constant), Integer)
 ;
-swap(Peer, Peer, Peer, Constant, List(Constant), Integer, Peer, Constant, List(Constant), Integer)
+swap(Peer, Peer, Peer, Constant, List(Constant), Integer, Peer, Constant, Integer)
 ;
 pay(Peer, Peer, Peer, Constant, List(Constant), Integer)
 ;
@@ -28,7 +28,7 @@ release(Peer, Peer, Peer, Constant, Peer, Speech, List(Constant), Integer)
 ;
 return(Peer, Peer, Peer, Constant, Peer, Speech, List(Constant), Integer)
 ;
-redeem(Peer, Peer, List(Constant), Peer, List(Constant))
+redeem(Peer, Peer, List(Constant), Peer)
 .
 Proposal ::=
 establish(Peer)
@@ -39,7 +39,7 @@ introduce(Peer, Peer, Peer)
 ;
 issue(Peer, Constant, List(Constant), Integer)
 ;
-swap(Peer, Peer, Peer, Constant, List(Constant), Integer, Peer, Constant, List(Constant), Integer)
+swap(Peer, Peer, Peer, Constant, List(Constant), Integer, Peer, Constant, Integer)
 ;
 pay(Peer, Peer, Peer, Constant, List(Constant), Integer)
 ;
@@ -51,7 +51,7 @@ release(Peer, Peer, Peer, Constant, Peer, Speech, List(Constant), Integer)
 ;
 return(Peer, Peer, Peer, Constant, Peer, Speech, List(Constant), Integer)
 ;
-redeem(Peer, Peer, List(Constant), Peer, List(Constant))
+redeem(Peer, Peer, List(Constant), Peer)
 .
 Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.

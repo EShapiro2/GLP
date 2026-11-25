@@ -2437,6 +2437,27 @@ procedure (YesNo?)*approve(Integer?).
           "named(approval_sentence, buttons([label('Accept', yes), no]))");
     });
 
+    test('a number the constraint determines, calc(P, E) in the seventh list, '
+        'read and printed again, and computed from the places it names '
+        '(compiler README, 43; Audit #151)', () {
+      const w = 'social_menu([button("Pass", [act(pass, 1, [1], [], [2], '
+          '[field(4, "votes", number)], '
+          '[calc(5, mul(at(4), lit(2))), calc(6, minus(plus(at(4), lit(1)), at(2)))], '
+          '[at(1), say(" passes.")])])])';
+      final d = DeclaredWidget.parse(w);
+      expect(DeclaredWidget.parse(d.source).source, d.source);
+      final a = d.buttons.single.acts.single;
+      expect([for (final x in a.same) x.kind], ['calc', 'calc']);
+      expect(a.same[0].source, 'calc(5, mul(at(4), lit(2)))');
+      expect(a.same[1].source, 'calc(6, minus(plus(at(4), lit(1)), at(2)))');
+      final at = {4: 7, 2: 3};
+      expect((a.same[0].args[1] as CalcExpr).value((k) => at[k]), 14);
+      expect((a.same[1].args[1] as CalcExpr).value((k) => at[k]), 5);
+      expect((a.same[0].args[1] as CalcExpr).value((k) => null), null);
+      expect(DeclaredWidget.parse(w.replaceFirst('lit(2)', 'lit(x)')).buttons,
+          isEmpty);
+    });
+
     test('a declaration of buttons: the widget term carries it whole, and a '
         'label beside each schema and field its buttons name (compiler '
         'README, 6)', () {

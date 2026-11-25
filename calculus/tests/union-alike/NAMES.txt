@@ -1,0 +1,6 @@
+The made-up contracts of this case, after the table of NAMES.txt: a union of two contracts that each declare posted/2 by one phrase up to the names of its places; the union is defined (Villagers, 2026-11-25: Village Services unites Community Market and Gigs, each with 'y has l posted in z').
+
+name on main | name | file name | row and atom | row and atom on main
+Shops | Shops | Shops | shops | shops
+Jobs | Jobs | Jobs | jobs | jobs
+Union V | Union V | Union-V | union_v | union_v

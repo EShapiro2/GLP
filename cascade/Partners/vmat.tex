@@ -12,7 +12,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 identity
@@ -52,7 +52,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -71,7 +71,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -128,7 +128,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -165,15 +165,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Bob
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Alice
@@ -181,6 +181,10 @@ person
  \text{ and } 
 \mathit{\detokenize{
 identity
+}}
+,
+\mathit{\detokenize{
+person
 }}
 ,
 \mathit{\detokenize{
@@ -196,10 +200,6 @@ knows
 (
 \mathit{Carol}
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Bob
@@ -238,7 +238,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -257,7 +257,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -274,15 +274,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Bob
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Alice
@@ -293,15 +293,15 @@ identity
 }}
 ,
 \mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
 }}
 (
 \Alice
 )
-,
-\mathit{\detokenize{
-person
-}}
  \in c_
 {
 \Bob
@@ -440,7 +440,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 made
@@ -519,7 +519,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 post_from
@@ -660,7 +660,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 post_from
@@ -754,7 +754,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -773,7 +773,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -891,7 +891,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 identity
@@ -932,7 +932,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 creator
@@ -1008,7 +1008,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 guardian
@@ -1042,7 +1042,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_guardian
@@ -1091,7 +1091,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 has_guardian
@@ -1874,7 +1874,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -1893,7 +1893,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -1957,7 +1957,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -1976,7 +1976,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2132,8 +2132,7 @@ friend
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2158,6 +2157,17 @@ friend
 \mathit{\detokenize{
 identity
 }}
+,
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
 ,
 \mathit{\detokenize{
 friend
@@ -2197,39 +2207,6 @@ has_guardian
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{\detokenize{
-person
-}}
-(
-\Alice
-)
-\lor
-(
-\mathit{\detokenize{
-ward
-}}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{\detokenize{
-has_guardian
-}}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -2469,7 +2446,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -2488,7 +2465,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 knows
@@ -2559,7 +2536,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2578,7 +2555,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2770,7 +2747,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2789,7 +2766,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 friend
@@ -2941,7 +2918,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3000,7 +2977,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -3082,7 +3059,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3141,7 +3118,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -3223,7 +3200,7 @@ guardian
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3282,7 +3259,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -3371,7 +3348,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3430,7 +3407,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -3503,7 +3480,7 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3562,7 +3539,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -3644,7 +3621,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3703,7 +3680,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -3785,7 +3762,7 @@ guardian
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3844,7 +3821,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -3933,7 +3910,7 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 retired
@@ -3992,7 +3969,7 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
+ \text{ that matches } 
 \mathit{\detokenize{
 has_guardian
 }}
@@ -4745,7 +4722,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 rendezvous_server
@@ -4820,7 +4797,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 link
@@ -4887,7 +4864,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 registered
@@ -5008,7 +4985,7 @@ Link
 \Bob
 )
 \}
-) \uplus 
+) \cup 
 \{
 \mathit{\detokenize{
 spent
@@ -5029,7 +5006,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 address
@@ -5048,7 +5025,7 @@ c_
 {
 \mathit{Carol}
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 address
@@ -5136,7 +5113,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 presented
@@ -5287,7 +5264,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 address
@@ -5306,7 +5283,7 @@ c_
 {
 \mathit{Carol}
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 address
@@ -5377,7 +5354,7 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 presented_keys
@@ -5561,7 +5538,7 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 address
@@ -5580,7 +5557,7 @@ c_
 {
 \mathit{Carol}
 }
- \uplus 
+ \cup 
 \{
 \mathit{\detokenize{
 address

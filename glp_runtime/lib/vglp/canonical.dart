@@ -1741,10 +1741,17 @@ class DeclaredWidget {
 
   static ActCondition? _condition(Term x) {
     if (x is! StructTerm) return null;
-    if (x.functor == 'same' && x.args.length == 2) {
+    if ((x.functor == 'same' || x.functor == 'size') && x.args.length == 2) {
       final k = _int(x.args[0]), j = _int(x.args[1]);
       if (k == null || j == null) return null;
-      return ActCondition('same', '', [k, j]);
+      return ActCondition(x.functor, '', [k, j]);
+    }
+    // `calc(P, E)`: the number at the place P that the constraint determines, E over `at(K)`, `lit(N)`, `plus`, `minus` and `mul` (programs/vglp/cva/compiler/README.md, 43; OSPM, act-schemas-local: "A variable the constraint determines from the variables the schema-binding binds is bound by the schema-binding to the value the constraint gives it, which the proposer's machine computes and the request names").
+    if (x.functor == 'calc' && x.args.length == 2) {
+      final p = _int(x.args[0]);
+      final e = CalcExpr.of(x.args[1]);
+      if (p == null || e == null) return null;
+      return ActCondition('calc', '', [p, e]);
     }
     if (x.functor == 'proved' && x.args.length == 4) {
       final q = _labelConstant(x.args[0]), p = _labelConstant(x.args[2]);
@@ -1937,9 +1944,12 @@ class DeclaredAct {
 }
 
 /// An entry of an act's `Pre` or `Same`: `req(P, As)`, `forb(P, As)`,
-/// `unless(P, As)`, `proved(Q, Ws, P, As)` or `same(K, J)`, by its [kind].  Of
-/// `As`, [args] holds each argument's place: `at(K)` the int K, `grp(J, K)` the
-/// pair `(J, K)`, and `any` null; of `same(K, J)`, the two places.
+/// `unless(P, As)`, `proved(Q, Ws, P, As)`, `same(K, J)` or `size(S, F)`, by
+/// its [kind].  Of `As`, [args] holds each argument's place: `at(K)` the int K,
+/// `grp(J, K)` the pair `(J, K)`, and `any` null; of `same(K, J)`, the two
+/// places; of `size(S, F)`, the set place S and the place F of the field that
+/// gives its size ("The person gives the size of a set variable in a field, a
+/// number", vGLP, VEUI 7db9d2e).
 class ActCondition {
   final String kind;
   final String pred;
@@ -1953,7 +1963,8 @@ class ActCondition {
       {this.proves = '', this.provesArgs = const []});
 
   String get source {
-    if (kind == 'same') return 'same(${args[0]}, ${args[1]})';
+    if (kind == 'same' || kind == 'size') return '$kind(${args[0]}, ${args[1]})';
+    if (kind == 'calc') return 'calc(${args[0]}, ${(args[1] as CalcExpr).source})';
     final as_ = '[${[
       for (final a in args)
         a is int
@@ -2974,4 +2985,44 @@ String printDeclaration(ProcDecl d) {
   final params = d.typeParams.isEmpty ? '' : '(${d.typeParams.join(', ')})';
   return '${prefix}procedure$params ${d.qualifiedName}'
       '(${d.argTypes.map(typeSource).join(', ')}).';
+}
+
+/// The expression `E` of an act's `calc(P, E)`: `at(K)`, the number at the place K of the request; `lit(N)`, the number N; and `plus`, `minus` and `mul` of two (programs/vglp/cva/compiler/README.md, 43).
+class CalcExpr {
+  final String op;
+  final int n;
+  final CalcExpr? l, r;
+
+  const CalcExpr(this.op, {this.n = 0, this.l, this.r});
+
+  static CalcExpr? of(Term t) {
+    if (t is! StructTerm) return null;
+    if ((t.functor == 'at' || t.functor == 'lit') && t.args.length == 1) {
+      final n = DeclaredWidget._int(t.args[0]);
+      return n == null ? null : CalcExpr(t.functor, n: n);
+    }
+    if ((t.functor == 'plus' || t.functor == 'minus' || t.functor == 'mul') &&
+        t.args.length == 2) {
+      final l = of(t.args[0]), r = of(t.args[1]);
+      return l == null || r == null ? null : CalcExpr(t.functor, l: l, r: r);
+    }
+    return null;
+  }
+
+  /// Its value, [at] giving the number at a place; null where a place it names has none.
+  int? value(int? Function(int) at) {
+    switch (op) {
+      case 'at':
+        return at(n);
+      case 'lit':
+        return n;
+    }
+    final a = l!.value(at), b = r!.value(at);
+    if (a == null || b == null) return null;
+    return switch (op) { 'plus' => a + b, 'minus' => a - b, _ => a * b };
+  }
+
+  String get source => op == 'at' || op == 'lit'
+      ? '$op($n)'
+      : '$op(${l!.source}, ${r!.source})';
 }

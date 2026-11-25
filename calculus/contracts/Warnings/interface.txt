@@ -28,7 +28,10 @@ Warnings
 27. ■ Expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
 28. ■ Officer expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
 29. ■ Amend.  Those who decide it may amend the bylaws.
-30. ■ Warn.  Alice may warn Bob in Orga, provided Alice is an officer of Orga and Orga has Bob as a participant.
+30. ■ Warn.  Alice may warn Bob in Orga of an incident, provided Alice is an officer of Orga and Orga has Bob as a participant.
+31. ■ Answer.  Bob may answer a warning to him.
+32. ■ Withdraw.  Alice may withdraw her warning.
+33. ■ Annul.  Those who decide for Orga may annul a warning.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -80,4 +83,8 @@ Expel: Decider [Expel] <bob>
 Officer expel: Decider [Officer expel] <bob>
   Codecider: Decider asks for your consent to officer expel.
 Amend: Alice [Amend]
-Warn: Alice [Warn] <bob>
+Warn: Alice [Warn] <bob> <case>
+Answer: Bob [Answer] <orga> <alice> <case> <text>
+Withdraw: Alice [Withdraw] <orga>
+Annul: Decider [Annul] <alice> <bob> <case>
+  Codecider: Decider asks for your consent to annul.

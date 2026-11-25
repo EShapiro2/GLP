@@ -8692,11 +8692,20 @@ c'_
 }
  := 
 (
-c_
+(c_
 {
 \Bob
 }
- \setminus K_
+ \setminus 
+\{
+\mathit{\detokenize{
+proposed_join_orga
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
 {
 \Bob
 }
@@ -8766,11 +8775,20 @@ c'_
 }
  := 
 (
-c_
+(c_
 {
 \Bob
 }
- \setminus K_
+ \setminus 
+\{
+\mathit{\detokenize{
+proposed_join_orga
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
 {
 \Bob
 }
@@ -8947,6 +8965,13 @@ has_officer
 (
 \mathit{Carol}
 )
+,
+\mathit{\detokenize{
+proposed_join_orga
+}}
+(
+\Alice
+)
  \in c_
 {
 \Bob
@@ -9103,6 +9128,131 @@ Double
 \}
 \end{align*}
 \iffalse
+proposal_of_orga_for_join
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+proposed_join_orga
+}}
+(
+Bob
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+officer
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+proposer
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+proposed_join_orga
+}}
+(
+Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+(
+\mathit{\detokenize{
+person
+}}
+(
+\Bob
+)
+\lor
+(
+\mathit{\detokenize{
+organisation
+}}
+(
+\Bob
+)
+\land
+\exists 
+G1
+\,(
+\mathit{\detokenize{
+has_officer
+}}
+(
+\Bob
+,
+G1
+)
+)
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
 vote_of_orga_for_join
 \fi
 \begin{align*}
@@ -9146,6 +9296,13 @@ identity
 ,
 \mathit{\detokenize{
 knows
+}}
+(
+Bob
+)
+,
+\mathit{\detokenize{
+proposed_join_orga
 }}
 (
 Bob
@@ -9550,6 +9707,15 @@ has_participant
 (
 \Alice
 )
+,
+\mathit{\detokenize{
+proposed_expel_orga
+}}
+(
+\Bob
+,
+\Alice
+)
 \}
 ) \setminus K_
 {
@@ -9623,6 +9789,15 @@ c'_
 has_participant
 }}
 (
+\Alice
+)
+,
+\mathit{\detokenize{
+proposed_expel_orga
+}}
+(
+\Bob
+,
 \Alice
 )
 \}
@@ -9808,6 +9983,15 @@ has_participant
 (
 \Alice
 )
+,
+\mathit{\detokenize{
+proposed_expel_orga
+}}
+(
+\Bob
+,
+\Alice
+)
  \in c_
 {
 \Bob
@@ -9964,6 +10148,135 @@ Double
 \}
 \end{align*}
 \iffalse
+proposal_of_orga_for_expel
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+proposed_expel_orga
+}}
+(
+\Alice
+,
+Bob
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+officer
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+proposer
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+proposed_expel_orga
+}}
+(
+\Alice
+,
+Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+(
+\mathit{\detokenize{
+person
+}}
+(
+\Bob
+)
+\lor
+(
+\mathit{\detokenize{
+organisation
+}}
+(
+\Bob
+)
+\land
+\exists 
+G1
+\,(
+\mathit{\detokenize{
+has_officer
+}}
+(
+\Bob
+,
+G1
+)
+)
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
 vote_of_orga_for_expel
 \fi
 \begin{align*}
@@ -10011,6 +10324,15 @@ identity
 knows
 }}
 (
+Bob
+)
+,
+\mathit{\detokenize{
+proposed_expel_orga
+}}
+(
+\Alice
+,
 Bob
 )
  \in c_
@@ -10259,6 +10581,15 @@ has_officer
 (
 \Alice
 )
+,
+\mathit{\detokenize{
+proposed_officer_expel_orga
+}}
+(
+\Bob
+,
+\Alice
+)
 \}
 ) \setminus K_
 {
@@ -10348,6 +10679,15 @@ has_participant
 has_officer
 }}
 (
+\Alice
+)
+,
+\mathit{\detokenize{
+proposed_officer_expel_orga
+}}
+(
+\Bob
+,
 \Alice
 )
 \}
@@ -10556,6 +10896,15 @@ has_officer
 (
 \Alice
 )
+,
+\mathit{\detokenize{
+proposed_officer_expel_orga
+}}
+(
+\Bob
+,
+\Alice
+)
  \in c_
 {
 \Bob
@@ -10699,6 +11048,135 @@ Double
 \}
 \end{align*}
 \iffalse
+proposal_of_orga_for_officer_expel
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+proposed_officer_expel_orga
+}}
+(
+\Alice
+,
+Bob
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+officer
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+proposer
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+proposed_officer_expel_orga
+}}
+(
+\Alice
+,
+Bob
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+(
+\mathit{\detokenize{
+person
+}}
+(
+\Bob
+)
+\lor
+(
+\mathit{\detokenize{
+organisation
+}}
+(
+\Bob
+)
+\land
+\exists 
+G1
+\,(
+\mathit{\detokenize{
+has_officer
+}}
+(
+\Bob
+,
+G1
+)
+)
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
 vote_of_orga_for_officer_expel
 \fi
 \begin{align*}
@@ -10746,6 +11224,15 @@ identity
 knows
 }}
 (
+Bob
+)
+,
+\mathit{\detokenize{
+proposed_officer_expel_orga
+}}
+(
+\Alice
+,
 Bob
 )
  \in c_
@@ -10816,11 +11303,22 @@ c'_
 }
  := 
 (
-c_
+(c_
 {
 \Alice
 }
- \setminus K_
+ \setminus 
+\{
+\mathit{\detokenize{
+proposed_amend_orga
+}}
+(
+\Bob
+,
+Motion
+)
+\}
+) \setminus K_
 {
 \Alice
 }
@@ -10899,6 +11397,15 @@ Motion
 ,
 \mathit{\detokenize{
 decided_amend_orga
+}}
+(
+\Bob
+,
+Motion
+)
+,
+\mathit{\detokenize{
+proposed_amend_orga
 }}
 (
 \Bob
@@ -10999,6 +11506,135 @@ Double
 \}
 \end{align*}
 \iffalse
+proposal_of_orga_for_amend
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+proposed_amend_orga
+}}
+(
+Alice
+,
+Motion
+)
+\}
+,\\
+&
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+knows
+}}
+(
+Alice
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+officer
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+proposer
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+proposed_amend_orga
+}}
+(
+Alice
+,
+Motion
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{provided } 
+(
+\mathit{\detokenize{
+person
+}}
+(
+\Bob
+)
+\lor
+(
+\mathit{\detokenize{
+organisation
+}}
+(
+\Bob
+)
+\land
+\exists 
+G1
+\,(
+\mathit{\detokenize{
+has_officer
+}}
+(
+\Bob
+,
+G1
+)
+)
+)
+)
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
+\end{align*}
+\iffalse
 vote_of_orga_for_amend
 \fi
 \begin{align*}
@@ -11047,6 +11683,15 @@ knows
 }}
 (
 Alice
+)
+,
+\mathit{\detokenize{
+proposed_amend_orga
+}}
+(
+Alice
+,
+Motion
 )
  \in c_
 {
