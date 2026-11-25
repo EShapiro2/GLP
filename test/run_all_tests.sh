@@ -11282,7 +11282,7 @@ fi  # Section CALC
 
 if _section GCE; then
 # =============================================================================
-# Section GCE: the functions of Chess (programs/gce/chess/functions.glp)
+# Section GCE: the functions of Chess (programs/gce/chess/Chess-functions.glp)
 # =============================================================================
 # GCE's.  Chess.txt's functions as typed GLP procedures, which the app
 # compiler's platform calls (vGLP Section 5.4; Grassroots-Audit #157, Finding
@@ -11290,7 +11290,7 @@ if _section GCE; then
 # square is rank*8 + file (a1 = 0, h8 = 63); a cell is 0 or colour*10 + kind.
 echo "=== Section GCE: the functions of Chess ==="
 echo ""
-GCE_CHESS="../programs/gce/chess/functions.glp"
+GCE_CHESS="../programs/gce/chess/Chess-functions.glp"
 gce_out=$("$REPL_RUN" <<HEREDOC
 :limit 100000000
 load $GCE_CHESS
@@ -11309,8 +11309,8 @@ legal(mv(48,56,5), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,
 :quit
 HEREDOC
 2>&1)
-check_not "GCE: functions.glp type-checks" "Type checking failed" "$gce_out"
-check_not "GCE: functions.glp loads" "Error loading" "$gce_out"
+check_not "GCE: Chess-functions.glp type-checks" "Type checking failed" "$gce_out"
+check_not "GCE: Chess-functions.glp loads" "Error loading" "$gce_out"
 check "GCE: the first position, white to move" "S0 = 1$" "$gce_out"
 check "GCE: e2-e4 is legal" "Le4 = 1$" "$gce_out"
 check "GCE: e2-e5 is not" "Le5 = 0$" "$gce_out"

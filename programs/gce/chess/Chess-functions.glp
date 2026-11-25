@@ -1,4 +1,4 @@
-%% functions.glp --- the functions of Chess (GCE, programs/gce/chess/Chess.txt), as typed GLP procedures
+%% Chess-functions.glp --- the functions of Chess (GCE, programs/gce/chess/Chess.txt), as typed GLP procedures
 %% that the app compiler's platform calls (vGLP Section 5.4; Grassroots-Audit #157, Finding 1; GLP #120, #174).
 %% One procedure for each function of the contract's Logic pragmas, its places in order and its value last:
 %%   b is the first position               first(B)
