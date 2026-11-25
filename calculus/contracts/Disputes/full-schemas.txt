@@ -54,8 +54,8 @@ Organisation:4 ■ | The decision names his role.
 Organisation:5 ■ Amend: amended(Orga), taken(Orga,Motion) <- officer(Alice,Orga), proposed(Orga,Motion), amender(Alice,Orga,Motion), amendment_decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
 Organisation:6 ○ | Accountability.
 Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
-Disputes:0 - | The bylaws of an organisation name the role *arbiter*. A *dispute* is a disagreement between two participants of an organisation about an act of the organisation or an undertaking. A *ruling* is the text of an arbiter's decision on a dispute.
-Disputes:1 ■ Raise: raised(Orga,Issue,Alice,Bob,Carol), case(Carol,Orga,Issue,Alice,Bob) <- has_participant(Orga,Alice), has_participant(Orga,Bob), has_role(Orga,Carol,Arbiter), ~raised(Orga,Issue,Alice,Bob,Carol) guarded by Alice.
-Disputes:2 ■ Decide: ~raised(Orga,Issue,Alice,Bob,Carol), ~case(Carol,Orga,Issue,Alice,Bob), decision(Orga,Carol,Issue,Alice,Bob,Ruling) <- raised(Orga,Issue,Alice,Bob,Carol), case(Carol,Orga,Issue,Alice,Bob) guarded by Carol.
+Disputes:0 - | The bylaws of an organisation name the role *arbiter*. A *dispute* is a disagreement between two participants of an organisation about an act of the organisation or an undertaking. A *ruling* is the text of an arbiter's decision on a dispute. A dispute is raised once, to one arbiter, and has one ruling, which both parties receive.
+Disputes:1 ■ Raise: dispute(Orga,Issue), raised(Orga,Issue,Alice,Bob,Carol), case(Carol,Orga,Issue,Alice,Bob) <- has_participant(Orga,Alice), has_participant(Orga,Bob), has_role(Orga,Carol,Arbiter), ~dispute(Orga,Issue) guarded by Alice.
+Disputes:2 ■ Decide: ~raised(Orga,Issue,Alice,Bob,Carol), ~case(Carol,Orga,Issue,Alice,Bob), decision(Orga,Carol,Issue,Alice,Bob,Ruling), ruling(Alice,Orga,Issue,Ruling), ruling(Bob,Orga,Issue,Ruling) <- raised(Orga,Issue,Alice,Bob,Carol), case(Carol,Orga,Issue,Alice,Bob) guarded by Carol.
 Disputes:3 ○ | Abide.
 Disputes:3 ○ | Alice and Bob will abide by the decision of Carol.

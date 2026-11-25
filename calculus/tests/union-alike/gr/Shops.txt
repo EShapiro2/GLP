@@ -1,0 +1,7 @@
+Shops
+Shops extends Knowledge.
+Alice and Bob are persons.
+1. ■ Post: Alice may post an offer to Bob, provided Alice knows Bob.
+Logic pragmas.
+Vocabulary: y has an offer posted to x = posted(y,x).
+After y posts an offer to x: y has an offer posted to x.

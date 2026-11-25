@@ -126,6 +126,13 @@ final _notesW = _requestWidget(
     "form(issue, [field('Peer', peer), field('Constant', text), field('List', input_list(text))]), "
         "form(pay, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Constant', text), field('List', input_list(text))])");
 
+/// DAO's Pass and Reject as vGLP's compiler prints them (GLP vglp33-calc 4c1663ec, cascade/DAO/platform.vglp): the steward gives the votes, a field, and the form computes Double, the place 5, as Votes * 2, `calc(5, mul(at(4), lit(2)))` (Audit #151; programs/vglp/cva/compiler/README.md, 43).
+final _daoW = _requestWidget(
+    'button("Pass", [act(pass, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)))], [])]), '
+    'button("Reject", [act(reject, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)))], [])])',
+    "label('Pass', form(pass, [field('Peer', peer), field('Speech', text), field('Constant', text), field('Integer', number), field('Integer', number)])), "
+        "label('Reject', form(reject, [field('Peer', peer), field('Speech', text), field('Constant', text), field('Integer', number), field('Integer', number)]))");
+
 void main() {
   test(
       'SocialState.read on view(Me, S, K, A, Ts): the key, the atoms, the '
@@ -361,6 +368,15 @@ void main() {
       expect(ways.length, 4);
     });
 
+    // "The person gives the size of a set variable in a field, a number" (vGLP, VEUI 7db9d2e): size(S, F), the set place S and its size's field F, is read beside same(K, J) and binds no two roles to one person.
+    test('size(S, F) names the field that gives the size of a set place', () {
+      final (o, s) = read('size(2, 3)');
+      final remove = ActInfo(o.buttons[0].acts.single);
+      expect(remove.sizes, {2: 3});
+      expect(remove.mayShare(2, 3), isFalse);
+      expect(o.buttons[0].acts.single.same.single.source, 'size(2, 3)');
+    });
+
     test('two roles possibly one person may be bound to one', () {
       final (o, s) = read('same(1, 2)');
       final remove = ActInfo(o.buttons[0].acts.single);
@@ -419,7 +435,13 @@ void main() {
     expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:c')), findsNothing);
     await _tap(tester, 'set:pay:note(carol, coin, a):5:b');
     await _tap(tester, 'send:pay:note(carol, coin, a)');
-    expect(s.grants, ['input(1, [], propose(pay(alice, bob, carol, coin, [a, b])))']);
+    // The request, then its set an element at a time and [end] on the proposal's fifth argument (vGLP, Section 6.3: "an open request asks a list one element at a time, end ending it").
+    expect(s.grants, [
+      'input(1, [], propose(pay(alice, bob, carol, coin, [a, b])))',
+      'input(1, [1, 5], a)',
+      'input(1, [1, 5], b)',
+      'input(1, [1, 5], [end])'
+    ]);
   });
 
   testWidgets('a set variable: Pay of the one note picked names the set of it',
@@ -431,7 +453,11 @@ void main() {
     await _tap(tester, 'act:pay:note(carol, coin, a)');
     expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:a')), findsNothing);
     await _tap(tester, 'send:pay:note(carol, coin, a)');
-    expect(s.grants, ['input(1, [], propose(pay(alice, bob, carol, coin, [a])))']);
+    expect(s.grants, [
+      'input(1, [], propose(pay(alice, bob, carol, coin, [a])))',
+      'input(1, [1, 5], a)',
+      'input(1, [1, 5], [end])'
+    ]);
   });
 
   testWidgets('a set variable: the field of Issue takes its elements apart by '
@@ -444,6 +470,40 @@ void main() {
     await tester.enterText(find.byKey(socialKey(1, 'field:issue::3')), 'a, b, a');
     await tester.pumpAndSettle();
     await _tap(tester, 'send:issue:');
-    expect(s.grants, ['input(1, [], propose(issue(alice, coin, [a, b])))']);
+    expect(s.grants, [
+      'input(1, [], propose(issue(alice, coin, [a, b])))',
+      'input(1, [1, 3], a)',
+      'input(1, [1, 3], b)',
+      'input(1, [1, 3], [end])'
+    ]);
+  });
+
+  testWidgets('a number the constraint determines: DAO\'s Pass names the '
+      'votes given and the Double the form computes from them, '
+      'calc(5, mul(at(4), lit(2))) (Audit #151)', (tester) async {
+    final s = _Screen(tester);
+    await s.draw('input([])',
+        w: _daoW,
+        output: '[${_view("identity, steward(delos), proposal(p, delos)", "", "tab('Proposals', proposal)")}]');
+    final keys = [
+      for (final e in find
+          .byWidgetPredicate((w) => w.key is ValueKey<String>)
+          .evaluate())
+        (e.widget.key as ValueKey<String>).value
+    ];
+    final pass = keys.firstWhere((k) => k.contains('act:pass:'),
+        orElse: () => '');
+    expect(pass, isNotEmpty, reason: keys.join(' '));
+    final way = pass.substring(pass.indexOf('act:pass:') + 'act:pass:'.length);
+    await _tap(tester, 'act:pass:$way');
+    // The votes are a field; Double is none, the constraint determining it.
+    // The field of a single act is keyed by its place.
+    expect(find.byKey(socialKey(1, 'field:pass:$way:4')), findsOneWidget);
+    expect(find.byKey(socialKey(1, 'field:pass:$way:5')), findsNothing);
+    await tester.ensureVisible(find.byKey(socialKey(1, 'field:pass:$way:4')));
+    await tester.enterText(find.byKey(socialKey(1, 'field:pass:$way:4')), '3');
+    await tester.pumpAndSettle();
+    await _tap(tester, 'send:pass:$way');
+    expect(s.grants, ['input(1, [], propose(pass(alice, p, delos, 3, 6)))']);
   });
 }

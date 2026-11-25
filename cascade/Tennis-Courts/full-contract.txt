@@ -16,6 +16,7 @@ Each post carries the public key of a one-time key of its maker, and names a ren
 The budget of a post is an integer, the cost of a forward is one, and the gossip protocol is forwarding to any friend with the budget less one.
 A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
 The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
+A booking is of the one who books and of a *partner*, and counts among the outstanding bookings of each.
 Alice, Bob and Carol are persons, Orga and Will organisations, Wendy a ward, Dave a rendezvous server, Club a club.
 Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
@@ -33,7 +34,7 @@ Organisation:2. ■ Acts of the organisation. Propose: An officer, or a person t
 Organisation:3. ■ Participation. Join: Bob may become a participant of Orga with the consent of those who decide for Orga. Leave, Expel: Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
 Organisation:5. ■ Amend: Those who decide it may amend the bylaws.
 Organisation:6. ○ Accountability. Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
-Booking:1, Tennis Courts:1. ■ Book: Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a court of Orga, by Alice and Carol jointly, each a participant of the Club with fewer outstanding bookings than the bound.
+Booking:1, Tennis Courts:1. ■ Book: Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a court of Orga, by Alice and Carol jointly, each a participant of the Club with fewer outstanding bookings than the bound; Carol is the partner of the booking.
 Booking:2. ■ Cancel: Alice may cancel her booking.
 Gossip:1. ■ Post: Alice may make a post.
 Gossip:2. ■ Tell: Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with a part of the rest of the budget, both according to the gossip protocol.
@@ -50,3 +51,5 @@ Rendezvous:3. ■ Use link: Bob may present to Dave an invitation link of Alice'
 Rendezvous:4. ■ Reconnection. Present: Alice and Bob, who are friends, may each present to Dave the other's signature over their friendship. Match: Dave then gives each the address of the other.
 Anonymous Rendezvous:1. ■ Meet. Present: Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own. Match: Dave then gives each the address of the other.
 Tennis Courts:2. ■ Organisation and ward. Organisation ward acquaint: Club, an organisation, and Wendy, a ward, may jointly come to know each other.
+Tennis Courts:3. ■ Cancel: Booking:2; the cancel frees the slot and ends the partner's part in the booking.
+Tennis Courts:4. ■ Withdraw: Carol may withdraw as the partner of a booking, which stays the booking of the one who booked.

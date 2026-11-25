@@ -1,5 +1,5 @@
 AI-Agents  certified; VMAT 23 displays; platform.vglp 7918 lines; platform.glp 5351 lines
-Ads        certified; VMAT 144 displays; no platform: a parametric contract has none until it is instantiated
+Ads        certified; VMAT 168 displays; no platform: a parametric contract has none until it is instantiated
 Agora      certified; VMAT 31 displays; platform.vglp 8519 lines; platform.glp 5767 lines
 Anonymous-Matching certified; VMAT 31 displays; platform.vglp 8264 lines; platform.glp 5470 lines
 Anonymous-Rendezvous certified; VMAT 27 displays; platform.vglp 8088 lines; platform.glp 5398 lines
@@ -8,39 +8,39 @@ AppStore   certified; VMAT 35 displays; platform.vglp 8320 lines; platform.glp 5
 Appointments certified; VMAT 31 displays; platform.vglp 8352 lines; platform.glp 5538 lines
 Auction    certified; VMAT 18 displays; platform.vglp 7696 lines; platform.glp 5247 lines
 Backchannel-Feeds certified; VMAT 17 displays; platform.vglp 7566 lines; platform.glp 5221 lines
-Backed-Community-Bank certified; VMAT 125 displays; no platform: a parametric contract has none until it is instantiated
-Bank       certified; VMAT 123 displays; no platform: a parametric contract has none until it is instantiated
+Backed-Community-Bank certified; VMAT 149 displays; platform.vglp 14462 lines; platform.glp 8367 lines
+Bank       certified; VMAT 147 displays; platform.vglp 14364 lines; platform.glp 8329 lines
 Bonds      certified; VMAT 14 displays; platform.vglp 7837 lines; platform.glp 5489 lines
 Booking    certified; VMAT 31 displays; platform.vglp 8352 lines; platform.glp 5538 lines
 Carpool    certified; VMAT 31 displays; platform.vglp 8264 lines; platform.glp 5470 lines
-Central-Bank certified; VMAT 127 displays; no platform: a parametric contract has none until it is instantiated
+Central-Bank certified; VMAT 151 displays; platform not compiled
 Children   certified; VMAT 43 displays; platform.vglp 8661 lines; platform.glp 5680 lines
 Coins      certified; VMAT 11 displays; platform.vglp 7560 lines; platform.glp 5287 lines
-Commercial-Bank certified; VMAT 130 displays; no platform: a parametric contract has none until it is instantiated
-Community-Bank certified; VMAT 124 displays; no platform: a parametric contract has none until it is instantiated
-Community-Market certified; VMAT 153 displays; no platform: a parametric contract has none until it is instantiated
-Community-Network certified; VMAT 135 displays; no platform: a parametric contract has none until it is instantiated
-Constitution certified; VMAT 33 displays; no platform: a parametric contract has none until it is instantiated
-Consumers-Cooperative certified; VMAT 132 displays; no platform: a parametric contract has none until it is instantiated
-Cooperative certified; VMAT 127 displays; no platform: a parametric contract has none until it is instantiated
-Cooperative-DAO certified; VMAT 127 displays; no platform: a parametric contract has none until it is instantiated
-Corporation certified; VMAT 123 displays; no platform: a parametric contract has none until it is instantiated
+Commercial-Bank certified; VMAT 154 displays; platform not compiled
+Community-Bank certified; VMAT 148 displays; platform.vglp 14398 lines; platform.glp 8346 lines
+Community-Market certified; VMAT 177 displays; platform not compiled
+Community-Network certified; VMAT 159 displays; no platform: a parametric contract has none until it is instantiated
+Constitution certified; VMAT 37 displays; platform.vglp 8640 lines; platform.glp 5670 lines
+Consumers-Cooperative certified; VMAT 160 displays; platform.vglp 14986 lines; platform.glp 8594 lines
+Cooperative certified; VMAT 155 displays; platform.vglp 14736 lines; platform.glp 8495 lines
+Cooperative-DAO certified; VMAT 155 displays; platform.vglp 14736 lines; platform.glp 8495 lines
+Corporation certified; VMAT 147 displays; platform.vglp 14364 lines; platform.glp 8329 lines
 DAO        certified; VMAT 18 displays; platform.vglp 7655 lines; platform.glp 5259 lines
 Dating     certified; VMAT 31 displays; platform.vglp 8264 lines; platform.glp 5470 lines
-Democratic-Community certified; VMAT 128 displays; no platform: a parametric contract has none until it is instantiated
+Democratic-Community certified; VMAT 156 displays; platform.vglp 14770 lines; platform.glp 8512 lines
 Denominated-Coins certified; VMAT 12 displays; platform.vglp 7612 lines; platform.glp 5312 lines
 Denominated-Currencies certified; VMAT 27 displays; platform.vglp 8421 lines; platform.glp 5746 lines
 Directory  certified; VMAT 32 displays; platform.vglp 8245 lines; platform.glp 5474 lines
-Disputes   certified; VMAT 31 displays; platform.vglp 8350 lines; platform.glp 5538 lines
+Disputes   certified; VMAT 31 displays; platform.vglp 8360 lines; platform.glp 5540 lines; platform.glp loads
 Distrust   certified; VMAT 9 displays; platform.vglp 7308 lines; platform.glp 5085 lines
 Encounters certified; VMAT 6 displays; platform.vglp 7231 lines; platform.glp 5051 lines
 Feeds      certified; VMAT 15 displays; platform.vglp 7506 lines; platform.glp 5206 lines
 Forwarding certified; VMAT 7 displays; platform.vglp 7252 lines; platform.glp 5089 lines
-Foundation certified; VMAT 123 displays; no platform: a parametric contract has none until it is instantiated
+Foundation certified; VMAT 147 displays; platform.vglp 14378 lines; platform.glp 8332 lines
 Free-Matching certified; VMAT 31 displays; platform.vglp 8264 lines; platform.glp 5470 lines
 Friendship certified; VMAT 5 displays; platform.vglp 7190 lines; platform.glp 5027 lines
 Funded-DAO certified; VMAT 28 displays; platform.vglp 8158 lines; platform.glp 5529 lines
-Gigs       certified; VMAT 156 displays; no platform: a parametric contract has none until it is instantiated
+Gigs       certified; VMAT 180 displays; platform not compiled
 Gossip     certified; VMAT 7 displays; platform.vglp 7316 lines; platform.glp 5102 lines
 Groups     certified; VMAT 15 displays; platform.vglp 7549 lines; platform.glp 5223 lines
 Guardians  certified; VMAT 19 displays; platform.vglp 7780 lines; platform.glp 5253 lines
@@ -52,40 +52,40 @@ Knowledge  certified; VMAT 3 displays; platform.vglp 7120 lines; platform.glp 49
 Labelled-Overlay certified; VMAT 13 displays; platform.vglp 7442 lines; platform.glp 5151 lines
 Lending    certified; VMAT 31 displays; platform.vglp 8264 lines; platform.glp 5470 lines
 Library    certified; VMAT 6 displays; platform.vglp 7270 lines; platform.glp 5080 lines
-Liquid-Cooperative certified; VMAT 133 displays; no platform: a parametric contract has none until it is instantiated
+Liquid-Cooperative certified; VMAT 161 displays; platform.vglp 14900 lines; platform.glp 8550 lines
 Liquid-DAO certified; VMAT 27 displays; platform.vglp 7927 lines; platform.glp 5367 lines
 Local-Overlay certified; VMAT 8 displays; platform.vglp 7315 lines; platform.glp 5086 lines
-Lodging    certified; VMAT 155 displays; no platform: a parametric contract has none until it is instantiated
+Lodging    certified; VMAT 179 displays; platform not compiled
 Lost-and-Found certified; VMAT 31 displays; platform.vglp 8264 lines; platform.glp 5470 lines
 Matching   certified; VMAT 9 displays; platform.vglp 7394 lines; platform.glp 5126 lines
 Meeting-Rooms certified; VMAT 31 displays; platform.vglp 8352 lines; platform.glp 5538 lines
-Mutual-Credit certified; VMAT 124 displays; no platform: a parametric contract has none until it is instantiated
-Nonprofit  certified; VMAT 123 displays; no platform: a parametric contract has none until it is instantiated
+Mutual-Credit certified; VMAT 148 displays; platform.vglp 14414 lines; platform.glp 8351 lines
+Nonprofit  certified; VMAT 147 displays; platform.vglp 14364 lines; platform.glp 8329 lines
 Notes      certified; VMAT 9 displays; platform.vglp 7490 lines; platform.glp 5253 lines
 Organisation certified; VMAT 29 displays; platform.vglp 8268 lines; platform.glp 5500 lines
 Overlay    certified; VMAT 8 displays; platform.vglp 7280 lines; platform.glp 5071 lines
 Partners   certified; VMAT 31 displays; platform.vglp 8264 lines; platform.glp 5470 lines
-Partnership certified; VMAT 123 displays; no platform: a parametric contract has none until it is instantiated
+Partnership certified; VMAT 147 displays; platform.vglp 14372 lines; platform.glp 8330 lines
 Programs   certified; VMAT 15 displays; platform.vglp 7536 lines; platform.glp 5220 lines
-Promoted-Gossip certified; VMAT 127 displays; no platform: a parametric contract has none until it is instantiated
-Promoted-Matching certified; VMAT 152 displays; no platform: a parametric contract has none until it is instantiated
+Promoted-Gossip certified; VMAT 151 displays; platform.vglp 14552 lines; platform.glp 8413 lines
+Promoted-Matching certified; VMAT 176 displays; platform.vglp 15538 lines; platform.glp 8793 lines
 Provenance-Groups certified; VMAT 36 displays; platform.vglp 8365 lines; platform.glp 5552 lines
 Recommendations certified; VMAT 6 displays; platform.vglp 7253 lines; platform.glp 5070 lines
 Rehearsal-Rooms certified; VMAT 58 displays; platform.vglp 9434 lines; platform.glp 5963 lines
 Rendezvous certified; VMAT 25 displays; platform.vglp 8001 lines; platform.glp 5364 lines
 Resilient-Feeds certified; VMAT 16 displays; platform.vglp 7534 lines; platform.glp 5213 lines
-Rides      certified; VMAT 150 displays; no platform: a parametric contract has none until it is instantiated
+Rides      certified; VMAT 174 displays; platform not compiled
 Second-Score-Auction certified; VMAT 18 displays; platform.vglp 7732 lines; platform.glp 5259 lines
 Secure-Friendship certified; VMAT 23 displays; platform.vglp 7743 lines; platform.glp 5211 lines
 Separating-Distrust certified; VMAT 9 displays; platform.vglp 7308 lines; platform.glp 5085 lines
 Services   certified; VMAT 19 displays; platform.vglp 7780 lines; platform.glp 5253 lines
-Shareholding-Corporation certified; VMAT 128 displays; no platform: a parametric contract has none until it is instantiated
-Shares     certified; VMAT 62 displays; no platform: a parametric contract has none until it is instantiated
+Shareholding-Corporation certified; VMAT 152 displays; platform.vglp 14560 lines; platform.glp 8423 lines
+Shares     certified; VMAT 73 displays; platform.vglp 10779 lines; platform.glp 6695 lines
 Short-Feeds certified; VMAT 16 displays; platform.vglp 7534 lines; platform.glp 5213 lines
-Single-Person-Company certified; VMAT 123 displays; no platform: a parametric contract has none until it is instantiated
+Single-Person-Company certified; VMAT 147 displays; platform.vglp 14364 lines; platform.glp 8329 lines
 Stays      certified; VMAT 15 displays; platform.vglp 7752 lines; platform.glp 5372 lines
 Tennis-Courts certified; VMAT 58 displays; platform.vglp 9446 lines; platform.glp 5965 lines
-Trading-Company certified; VMAT 126 displays; no platform: a parametric contract has none until it is instantiated
+Trading-Company certified; VMAT 150 displays; platform.vglp 14526 lines; platform.glp 8393 lines
 Warded-Groups certified; VMAT 42 displays; platform.vglp 8617 lines; platform.glp 5662 lines
-Warnings   certified; VMAT 30 displays; platform.vglp 8310 lines; platform.glp 5520 lines
-Workers-Cooperative certified; VMAT 131 displays; no platform: a parametric contract has none until it is instantiated
+Warnings   certified; VMAT 33 displays; platform.vglp 8442 lines; platform.glp 5573 lines; platform.glp loads
+Workers-Cooperative certified; VMAT 159 displays; platform.vglp 14900 lines; platform.glp 8573 lines

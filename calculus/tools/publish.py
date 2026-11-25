@@ -96,8 +96,10 @@ def build(out, hold=()):
         c = os.path.join(ROOT, 'cascade', NM.file_of(n))
         for f in sorted(os.listdir(c)) if os.path.isdir(c) else []:
             shutil.copyfile(os.path.join(c, f), os.path.join(d, 'interface.txt' if f == NM.file_of(n) + '.txt' else f))
-        param = any(l.split()[:1] == [NM.file_of(n)] and 'a parametric contract' in l for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8'))
-        for f in ('verdict.txt',) if param else ('verdict.txt', 'platform.glp'):      # a parametric contract has no platform until instantiated
+        st = [l for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8') if l.split()[:1] == [NM.file_of(n)]]
+        param = any('a parametric contract' in l for l in st)
+        unc = any('platform not compiled' in l for l in st)      # its owner's pragmas fault, reported in STATUS.txt and to the owner
+        for f in ('verdict.txt',) if param or unc else ('verdict.txt', 'platform.glp'):      # a parametric contract has no platform until instantiated
             if not os.path.exists(os.path.join(d, f)): missing.append('%s: %s' % (n, f))
     for f, g in (('README-PUBLIC.md', 'README.md'), ('NAMES.txt', 'NAMES.txt'), ('OWNERS.md', 'OWNERS.md'), ('LAYERS.txt', 'LAYERS.txt'), ('MIGRATION.md', 'MIGRATION.md'), ('cascade/STATUS.txt', 'STATUS.txt'), ('glp/VERDICTS.txt', 'VERDICTS.txt')):
         if os.path.exists(os.path.join(ROOT, f)): shutil.copyfile(os.path.join(ROOT, f), os.path.join(out, g))

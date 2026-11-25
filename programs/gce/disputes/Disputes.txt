@@ -2,27 +2,27 @@
 % Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.
 % Extends: Organisation, GO's (programs/go).
 % Defines: arbiter, dispute.
-% Checked: calculus/tools/gcsas.py (commute, return, recover), relations.py, and toglp.py --check (Dart 3.14.1): syntactically_grassroots_with_wards.
+% Checked: calculus/tools/gcsas.py (commute, return, recover), relations.py and toglp.py (translated) at GLP 9d0952c, GCE 2026-11-25 for Grassroots-Audit #135; toglp.py --check (Dart) is left to the adoption.
 % Schemas: Disputes.glp beside this file.
 Disputes
 Disputes extends Organisation.
-The bylaws of an organisation name the role *arbiter*. A *dispute* is a disagreement between two participants of an organisation about an act of the organisation or an undertaking. A *ruling* is the text of an arbiter's decision on a dispute.
+The bylaws of an organisation name the role *arbiter*. A *dispute* is a disagreement between two participants of an organisation about an act of the organisation or an undertaking. A *ruling* is the text of an arbiter's decision on a dispute. A dispute is raised once, to one arbiter, and has one ruling, which both parties receive.
 Alice, Bob and Carol are persons, Orga an organisation, Issue a dispute, Ruling a ruling.
 1. ■ Raise: Alice may raise Issue with Bob in Orga to Carol, provided Orga has Alice as a participant, Orga has Bob as a participant and Orga has Carol in the role Arbiter.
 2. ■ Decide: Carol may decide Issue between Alice and Bob in Orga with the ruling Ruling.
 3. ○ Abide. Alice and Bob will abide by the decision of Carol.
 Logic pragmas
 Disputes extends Organisation.
-The bylaws of an organisation name the role *arbiter*. A *dispute* is a disagreement between two participants of an organisation about an act of the organisation or an undertaking. A *ruling* is the text of an arbiter's decision on a dispute.
+The bylaws of an organisation name the role *arbiter*. A *dispute* is a disagreement between two participants of an organisation about an act of the organisation or an undertaking. A *ruling* is the text of an arbiter's decision on a dispute. A dispute is raised once, to one arbiter, and has one ruling, which both parties receive.
 Alice, Bob and Carol are persons, Orga an organisation, Issue a dispute, Ruling a ruling.
 1. ■ Raise: Alice may raise Issue with Bob in Orga to Carol, provided Orga has Alice as a participant, Orga has Bob as a participant and Orga has Carol in the role Arbiter.
 2. ■ Decide: Carol may decide Issue between Alice and Bob in Orga with the ruling Ruling.
 3. ○ Abide. Alice and Bob will abide by the decision of Carol.
 Logic pragmas.
-Vocabulary: z has d between x and y raised to w = raised(z,d,x,y,w); z has w's decision on d between x and y with the ruling r = decision(z,w,d,x,y,r); w has d between x and y to arbitrate in z = case(w,z,d,x,y).
+Vocabulary: z has d between x and y raised to w = raised(z,d,x,y,w); z has w's decision on d between x and y with the ruling r = decision(z,w,d,x,y,r); w has d between x and y to arbitrate in z = case(w,z,d,x,y); z has a case of d = dispute(z,d); x has the ruling r on d in z = ruling(x,z,d,r).
 x is an arbiter of z: x holds the role Arbiter in z.
-After x raises d with y in z to w, which requires z does not have d between x and y raised to w: z has d between x and y raised to w and w has d between x and y to arbitrate in z.
-After w decides d between x and y in z with the ruling r: no longer z has d between x and y raised to w, no longer w has d between x and y to arbitrate in z and z has w's decision on d between x and y with the ruling r.
+After x raises d with y in z to w, which requires z does not have a case of d: z has a case of d, z has d between x and y raised to w and w has d between x and y to arbitrate in z.
+After w decides d between x and y in z with the ruling r: no longer z has d between x and y raised to w, no longer w has d between x and y to arbitrate in z, z has w's decision on d between x and y with the ruling r, x has the ruling r on d in z and y has the ruling r on d in z.
 Interface pragmas
 Raise: Alice [Raise] <organisation> <arbiter> <issue> <with>
 Decide: Carol [Decide] <ruling>

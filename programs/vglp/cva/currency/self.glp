@@ -23,11 +23,11 @@
 %% other.
 %%
 %% play_pay_swap: alice issues 2 coins and bob 3; alice requests swapping 2 of
-%%   hers for 3 of bob's, swap(alice, bob, alice, coin, [a1, a2], 2, bob, coin, [b1, b2, b3], 3); bob is asked and
+%%   hers for 3 of bob's, swap(alice, bob, alice, coin, [a1, a2], 2, bob, coin, 3); bob is asked and
 %%   answers yes, and it commits; alice then pays bob 2 of his coins back,
 %%   pay_issuer(alice, bob, coin, [b1, b2], 2), guarded by her, and bob's machine votes yes, unasked.
 %% play_redeem: each issues one coin and they swap them one for one,
-%%   swap(alice, bob, alice, coin, [a1], 1, bob, coin, [b1], 1); bob is asked
+%%   swap(alice, bob, alice, coin, [a1], 1, bob, coin, 1); bob is asked
 %%   and answers yes, and it commits.  alice then swaps them back and swaps
 %%   again, and requests the redemption, redeem(alice, bob, [b1], alice, [a1]),
 %%   the Bob-coin b1 given back for the Alice-coin a1 bob holds, guarded by her:
@@ -67,13 +67,13 @@ play_pay_swap(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(issue(A2?, coin, [a1, a2], 2)), [at(3, [a1, a2, [end]])]), wait(holds(note(alice, coin, a2))),
           own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, coin, [a1, a2], 2, bob, coin, [b1, b2, b3], 3)), [at(5, [a1, a2, [end]]), at(9, [b1, b2, b3, [end]])]),
+          own([A4, A5], propose(swap(A4?, bob, A5?, coin, [a1, a2], 2, bob, coin, 3)), [at(5, [a1, a2, [end]])]),
           wait(holds(note(bob, coin, b3))),
           own([A6], propose(pay_issuer(A6?, bob, coin, [b1, b2], 2)), [at(4, [b1, b2, [end]])])],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(issue(B2?, coin, [b1, b2, b3], 3)), [at(3, [b1, b2, b3, [end]])]), wait(holds(note(bob, coin, b3))),
           approval(acquaint(alice, bob), yes),
-          approval(swap(alice, bob, alice, coin, [a1, a2], 2, bob, coin, [b1, b2, b3], 3), yes)],
+          approval(swap(alice, bob, alice, coin, [a1, a2], 2, bob, coin, 3), yes)],
          LA, LB, N).
 
 exported procedure play_redeem(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
@@ -82,20 +82,20 @@ play_redeem(LA?, LB?, N?) :-
           own([A2], propose(issue(A2?, coin, [a1], 1)), [at(3, [a1, [end]])]), wait(holds(note(alice, coin, a1))),
           
           own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, coin, [a1], 1, bob, coin, [b1], 1)), [at(5, [a1, [end]]), at(9, [b1, [end]])]),
+          own([A4, A5], propose(swap(A4?, bob, A5?, coin, [a1], 1, bob, coin, 1)), [at(5, [a1, [end]])]),
           wait(holds(note(bob, coin, b1))),
-          own([A6, A7], propose(swap(A6?, bob, bob, coin, [b1], 1, A7?, coin, [a1], 1)), [at(5, [b1, [end]]), at(9, [a1, [end]])]),
+          own([A6, A7], propose(swap(A6?, bob, bob, coin, [b1], 1, A7?, coin, 1)), [at(5, [b1, [end]])]),
           wait(holds(note(alice, coin, a1))),
-          own([A8, A9], propose(swap(A8?, bob, A9?, coin, [a1], 1, bob, coin, [b1], 1)), [at(5, [a1, [end]]), at(9, [b1, [end]])]),
+          own([A8, A9], propose(swap(A8?, bob, A9?, coin, [a1], 1, bob, coin, 1)), [at(5, [a1, [end]])]),
           wait(holds(note(bob, coin, b1))),
-          own([A10, A11], propose(redeem(A10?, bob, [b1], A11?, [a1])), [at(3, [b1, [end]]), at(5, [a1, [end]])])],
+          own([A10, A11], propose(redeem(A10?, bob, [b1], A11?)), [at(3, [b1, [end]])])],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(issue(B2?, coin, [b1], 1)), [at(3, [b1, [end]])]), wait(holds(note(bob, coin, b1))),
           
           approval(acquaint(alice, bob), yes),
-          approval(swap(alice, bob, alice, coin, [a1], 1, bob, coin, [b1], 1), yes),
-          approval(swap(alice, bob, bob, coin, [b1], 1, alice, coin, [a1], 1), yes),
-          approval(swap(alice, bob, alice, coin, [a1], 1, bob, coin, [b1], 1), yes)],
+          approval(swap(alice, bob, alice, coin, [a1], 1, bob, coin, 1), yes),
+          approval(swap(alice, bob, bob, coin, [b1], 1, alice, coin, 1), yes),
+          approval(swap(alice, bob, alice, coin, [a1], 1, bob, coin, 1), yes)],
          LA, LB, N).
 
 exported procedure play_busy(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
@@ -103,17 +103,17 @@ play_busy(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(issue(A2?, coin, [a1, a2], 2)), [at(3, [a1, a2, [end]])]), wait(holds(note(alice, coin, a2))),
           own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, coin, [a1], 1, bob, coin, [b1], 1)), [at(5, [a1, [end]]), at(9, [b1, [end]])]),
+          own([A4, A5], propose(swap(A4?, bob, A5?, coin, [a1], 1, bob, coin, 1)), [at(5, [a1, [end]])]),
           wait(holds(note(bob, coin, b1))),
-          own([A6, A7], propose(swap(A6?, bob, A7?, coin, [a2], 1, bob, coin, [b2], 1)), [at(5, [a2, [end]]), at(9, [b2, [end]])])],
+          own([A6, A7], propose(swap(A6?, bob, A7?, coin, [a2], 1, bob, coin, 1)), [at(5, [a2, [end]])])],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           own([B2], propose(issue(B2?, coin, [b1, b2], 2)), [at(3, [b1, b2, [end]])]), wait(holds(note(bob, coin, b2))),
           approval(acquaint(alice, bob), yes),
-          approval(swap(alice, bob, alice, coin, [a1], 1, bob, coin, [b1], 1), yes),
-          wait(asked(swap(alice, bob, alice, coin, [a2], 1, bob, coin, [b2], 1))),
+          approval(swap(alice, bob, alice, coin, [a1], 1, bob, coin, 1), yes),
+          wait(asked(swap(alice, bob, alice, coin, [a2], 1, bob, coin, 1))),
           own([B3], propose(pay_issuer(B3?, alice, coin, [a1], 1)), [at(4, [a1, [end]])]),
           wait(asking),
-          approval(swap(alice, bob, alice, coin, [a2], 1, bob, coin, [b2], 1), no)],
+          approval(swap(alice, bob, alice, coin, [a2], 1, bob, coin, 1), no)],
          LA, LB, N).
 
 exported procedure play_declined(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
@@ -122,7 +122,7 @@ play_declined(LA?, LB?, N?) :-
           own([A2], propose(issue(A2?, coin, [a1], 1)), [at(3, [a1, [end]])]), wait(holds(note(alice, coin, a1))),
           
           own([A3], propose(acquaint(A3?, bob))), wait(holds(knows(bob))),
-          own([A4, A5], propose(swap(A4?, bob, A5?, coin, [a1], 1, carol, coin, [c1], 1)), [at(5, [a1, [end]]), at(9, [c1, [end]])])],
+          own([A4, A5], propose(swap(A4?, bob, A5?, coin, [a1], 1, carol, coin, 1)), [at(5, [a1, [end]])])],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
           
           approval(acquaint(alice, bob), yes)],

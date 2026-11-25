@@ -104,8 +104,11 @@ def tmpl(a):
     return NAMEW.sub("\0", a), names
 
 
+GO_PART = ("participant", "officer", "proposer")      # GO's participation and entitlement to propose, which an act compiled on votes requires (gcsas.py GO_PART)
+
+
 def compiled(c):
-    return c["taken"] or c["name"].startswith("Vote of ")
+    return c["taken"] or c["name"].startswith(("Vote of ", "Proposal of "))
 
 
 class Pair:
@@ -467,7 +470,7 @@ class Deriver:
         line = "%s unites %s" % (n, andl([noun(p) for p in ps]))
         return line + (", and %s the union." % andl(own) if own else ".")
 
-    GEN = ("vote_", "voter_", "taker_", "decided_")      # the states of a vote, compiled for an act decided on votes
+    GEN = ("vote_", "voter_", "taker_", "decided_", "proposed_")      # the states of a vote, compiled for an act decided on votes
 
     def said(self, n, d):
         """The labels of n's clauses that d's label names, and the predicates and guards their schemas write."""
@@ -494,6 +497,19 @@ class Deriver:
     def base_of(self, d, mine, n=None):
         """The act d is compiled from: 'Pay for Alice' from Pay, 'Vote of Alice for Pay' from Pay; its conclusions
         and conditions are in d."""
+        if d["name"].startswith("Proposal of "):
+            # GO:2's Propose of the act: it adds the one proposal atom the act requires and clears, on the proposer's
+            # office and the bylaws' entitlement to propose, the proposal not yet made, and the agents the act names known
+            m = re.match(r"Proposal of (.+?) for (.+)$", d["name"])
+            if not m or len(d["H"]) != 1 or d["H"][0][0] or not d["H"][0][1].startswith("proposed_"):
+                return None
+            v = d["H"][0][1]
+            if not all(l[1] in GO_PART + ("knows",) and not l[0] or l[0] and l[1] == v for l in d["B"]):
+                return None
+            for c in mine:
+                if c["name"] in (m.group(2), "%s for %s" % (m.group(2), m.group(1))) and v in {l[1] for l in c["B"]} and v in {l[1] for l in c["H"] if l[0]}:
+                    return c
+            return None
         if d["name"].startswith("Vote of "):
             m = re.match(r"Vote of (.+?) for (.+)$", d["name"])
             bn = m.group(2) if m else None
@@ -506,6 +522,7 @@ class Deriver:
                 return None
             v = d["H"][0][1]
             voter = "voter_" + v[len("vote_"):] if v.startswith("vote_") else None
+            prop = "proposed_" + v[len("vote_"):] if v.startswith("vote_") else None
             for c in mine:
                 if c["name"] not in (bn, "%s for %s" % (bn, m.group(1)) if m else ""):
                     continue
@@ -516,7 +533,7 @@ class Deriver:
                 # is a participant)
                 theirs |= {(l[0], l[1]) for o in (self.own_sas(n) if n else []) if o["name"] == d["name"]
                            and sorted((x[0], x[1]) for x in o["H"]) == sorted((x[0], x[1]) for x in d["H"]) for l in o["B"]}
-                if all((not l[0] and l[1] == voter) or (l[0] and l[1] == v) or (l[0], l[1]) in theirs for l in d["B"]) \
+                if all((not l[0] and l[1] in (voter, prop) + GO_PART) or (l[0] and l[1] == v) or (l[0], l[1]) in theirs for l in d["B"]) \
                         and sum(1 for l in d["B"] if not l[0] and l[1] == voter) == 1:
                     return c
             return None

@@ -287,6 +287,9 @@ for my $n (keys %cons) {
     # The variables of the atoms the schema deletes, at any role, which the constraint never determines (local.glp, dels_name; Grassroots-Audit, cvac.glp.md, Finding 2).
     my %deleted;
     for my $rs (@{ $roles{$n} }) { for my $a (@{ $rs->{atoms}[1] }) { next if cleared($a); $deleted{$_} = 1 for atom_keys($a) } }
+    # The variables of a cleared atom, which the request names, never local and never determined (OSPM, act-schemas-local, VEUI vglp33-determined: "a cleared atom being neither"), as Sum of Central Bank\x27s Lend, so that Interest = Sum * Rate is determined at Orga, Rate local there (local.glp, occ_roles).
+    my %clr;
+    for my $rs (@{ $roles{$n} }) { for my $a (@{ $rs->{atoms}[1] }) { next unless cleared($a); $clr{$_} = 1 for atom_keys($a) } }
     my $more = 1;
     while ($more) { $more = 0;
     for my $c (con_conjs($cons{$n})) {
@@ -295,11 +298,12 @@ for my $n (keys %cons) {
         my @nl = grep { !$role_of{$_} } keys %vs;
         my %lr = map { $role_of{$_} => 1 } grep { $role_of{$_} } keys %vs;
         # Of two variables or more local to no role, the one no atom names, the others bound by the schema-binding (local.glp, det_pick).
-        @nl = grep { !%{ $named_at{$_} || {} } } @nl if @nl > 1;
+        @nl = grep { !%{ $named_at{$_} || {} } && !$clr{$_} } @nl if @nl > 1;
         next unless @nl == 1 && keys %lr == 1;
         my ($v) = @nl; my ($i) = keys %lr;
         next unless lin_coef(["minus", [$c->[1][0], $c->[1][1]]], $v) != 0;
         next if $deleted{$v};
+        next if $clr{$v};
         # Named by the atoms of that role, or by none, as Rides\x27 Top = S + Total (local.glp, det_ok; vGLP #32, a5ea6b25).
         my @at = keys %{ $named_at{$v} || {} };
         next unless @at == 0 || (@at == 1 && $at[0] == $i);
@@ -551,7 +555,8 @@ sub relation_names {
     # relaxes, the sixth relation of the Calculus (calculus/PARTS.txt, 2: "a relaxing citation ... adds the relaxed act and keeps the act cited"), as "GC relaxes and extends GN." (Code #33, vGLP_inbox.md, 2026-11-16 16:50 UTC).
     # weakens, a relation of the Calculus (calculus/tools/adopt.py, written_from), as "Feeds extends Labelled Overlay, and weakens it." (Code #37, 2026-11-24).
     # renames, lifts and unites, relations of the Calculus, read as instantiates, extends and extends (calculus/tools/relations.py, new_verbs: "weakens as restricts, amends as restricts and strengthens, unites and lifts as extends, and renames as instantiates with the words of gr/n\x27s pragma \x27Renaming of B: an organisation for a ward.\x27"), as "Children renames Warded Groups, and extends and weakens it." and "App unites Encounters, AppStore and Directory."; "the union" what the line has named before; and a contract named as "a weakening of", "a strengthening of", "an amendment of", "a renaming of" or "a lift of" it, the contract itself, as "Provenance Groups unites Groups and a strengthening of AI Agents" (calculus/tools/relations.py: "\x27a weakening of a lift of Bonds\x27: Bonds"; Code #37, 2026-11-24).  augments, read as restricts and strengthens (relations.py, new_verbs: "augments as restricts and strengthens"), and a contract named as "an augmentation of" it, as "Rides unites Community Network and Second-Score Auction, and extends and augments the union" (Calculus 1724963; CSSN #19 and Code #37, 2026-11-24).
-    my $rel = qr/(?:amends|extends|instantiates|implements|restricts|strengthens|relaxes|weakens|composes|renames|lifts|unites|augments)\b/;
+    # inherits from, the Calculus\x27s one first line, "NAME inherits from A, B and C.", the contracts after it read as those of extends, the words of a renaming from its pragma "Renaming of B: ..." (Calculus calc11-no-parameters fe486d2, record item 71; Code #38, 2026-11-25).
+    my $rel = qr/(?:amends|extends|instantiates|implements|restricts|strengthens|relaxes|weakens|composes|renames|lifts|unites|augments|inherits\s+from)\b/;
     my $back = qr/(?:it|them|the instance|the composition|the union)/;
     my $of = qr/(?:an?\s+(?:weakening|strengthening|amendment|renaming|lift|augmentation)\s+of\s+)*/;
     # The words of a renaming, the contract\x27s pragma "Renaming of B: a child for a ward and a parent for a guardian.", as an instantiation\x27s.
