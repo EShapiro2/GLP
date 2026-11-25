@@ -90,6 +90,14 @@ c_arg(set(X), _, T, [X?|T?]).
 c_arg(any, _, T, ['_'|T?]).
 c_arg(item_of(Y), Ns, T, ['item('|R?]) :- c_arg(Y?, Ns?, [')'|T?], R).
 c_arg(val(C), _, T, [C?|T?]).
+c_arg(cmp(F, As), Ns, T, [F?, '('|R?]) :- c_cargs(As?, Ns?, [')'|T?], R).
+
+% The arguments of a compound value, after the first each after a comma.
+procedure c_cargs(Args?, NameOfs?, RChunks?, RChunks).
+c_cargs([], _, T, T?).
+c_cargs([A|As], Ns, T, R?) :- ground(Ns?) |
+    c_rest(As?, Ns?, T?, R1),
+    c_arg(A?, Ns?, R1?, R).
 
 % The arguments, each after a comma.
 procedure c_rest(Args?, NameOfs?, RChunks?, RChunks).
@@ -380,6 +388,7 @@ c_expr(any, Ns, T, R?) :- c_arg(any, Ns?, T?, R).
 c_expr(author_of(Y), Ns, T, ['author('|R?]) :- c_arg(Y?, Ns?, [')'|T?], R).
 c_expr(item_of(Y), Ns, T, ['item('|R?]) :- c_arg(Y?, Ns?, [')'|T?], R).
 c_expr(val(C), _, T, [C?|T?]).
+c_expr(cmp(F, As), Ns, T, R?) :- c_arg(cmp(F?, As?), Ns?, T?, R).
 
 procedure c_exprs(Exprs?, NameOfs?, RChunks?, RChunks).
 c_exprs([], _, T, T?).
@@ -408,6 +417,7 @@ c_operand(any, Ns, T, R?) :- c_arg(any, Ns?, T?, R).
 c_operand(author_of(Y), Ns, T, R?) :- c_expr(author_of(Y?), Ns?, T?, R).
 c_operand(item_of(Y), Ns, T, R?) :- c_expr(item_of(Y?), Ns?, T?, R).
 c_operand(val(C), _, T, [C?|T?]).
+c_operand(cmp(F, As), Ns, T, R?) :- c_arg(cmp(F?, As?), Ns?, T?, R).
 
 % --- A schema (def:schema, def:numbers) -------------------------------------
 % tau: H <- on a line, then B, gamma guarded by G on the next, indented.

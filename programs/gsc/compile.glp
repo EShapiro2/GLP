@@ -99,6 +99,10 @@ latex_arg(any, T, ['\\ast'|T?]).
 latex_arg(item_of(Y), T, ['\\mathrm{item}('|R?]) :- latex_arg(Y?, [')'|T?], R).
 % A constant value, its name as a variable's is written.
 latex_arg(val(C), T, [C?|T?]).
+% A compound value f(t1, ..., tk), \mathit{f}(t1,...,tk), as Section 18
+% writes \mathit{bond}(d).
+latex_arg(cmp(F, As), T, ['\\mathit{', F?, '}('|R?]) :- ground(As?), ground(T?) |
+    latex_args(As?, [')'|T?], R).
 
 procedure latex_args(Args?, Chunks?, Chunks).
 latex_args([], T, T?).
@@ -548,6 +552,7 @@ latex_expr(any, T, R?) :- latex_arg(any, T?, R).
 latex_expr(author_of(Y), T, ['\\mathrm{author}('|R?]) :- latex_arg(Y?, [')'|T?], R).
 latex_expr(item_of(Y), T, ['\\mathrm{item}('|R?]) :- latex_arg(Y?, [')'|T?], R).
 latex_expr(val(C), T, [C?|T?]).
+latex_expr(cmp(F, As), T, R?) :- latex_arg(cmp(F?, As?), T?, R).
 
 % An operand in parentheses where it is a sum or a difference.
 procedure latex_operand(Expr?, Chunks?, Chunks).
@@ -573,6 +578,7 @@ latex_operand(any, T, R?) :- latex_arg(any, T?, R).
 latex_operand(author_of(Y), T, R?) :- latex_expr(author_of(Y?), T?, R).
 latex_operand(item_of(Y), T, R?) :- latex_expr(item_of(Y?), T?, R).
 latex_operand(val(C), T, [C?|T?]).
+latex_operand(cmp(F, As), T, R?) :- latex_arg(cmp(F?, As?), T?, R).
 
 procedure latex_exprs(Exprs?, Chunks?, Chunks).
 latex_exprs([], T, T?).
