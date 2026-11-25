@@ -252,7 +252,8 @@ class _DescribedScreenState extends State<DescribedScreen> {
         final allowed = from == 'everyone' ? _everyone() : _valuesOf(from);
         if (!allowed.any((v) => _same(v, x[e.key]!))) ok = false;
       }
-      if (ok) out.add(x);
+      // A way the act forbids, where the person's state determines it, is not offered (ActInfo.lacks).
+      if (ok && info.lacks(s.atoms, {...x, act.proposer: s.me})) out.add(x);
     }
     return out;
   }

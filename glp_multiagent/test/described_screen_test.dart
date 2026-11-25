@@ -11,6 +11,11 @@
 library;
 
 import 'dart:io';
+import 'dart:ui' as dui;
+
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:glp_multiagent/ui_runtime/look.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +37,22 @@ import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'programs_dir.dart';
 
 const Size _phone = Size(390, 844);
+
+/// Where the screens are written, a PNG of both phones after each step, where `DESCRIBED_SHOTS` names a
+/// directory; nothing is written otherwise.
+final String? _shots = Platform.environment['DESCRIBED_SHOTS'];
+
+Future<void> _loadFonts() async {
+  final root = Platform.environment['FLUTTER_ROOT'] ?? '/opt/homebrew/share/flutter';
+  final dir = '$root/bin/cache/artifacts/material_fonts';
+  Future<ByteData> bytes(String f) async => ByteData.view(File('$dir/$f').readAsBytesSync().buffer);
+  final roboto = FontLoader('Roboto');
+  for (final f in ['Roboto-Regular.ttf', 'Roboto-Medium.ttf', 'Roboto-Bold.ttf']) {
+    roboto.addFont(bytes(f));
+  }
+  await roboto.load();
+  await (FontLoader('MaterialIcons')..addFont(bytes('MaterialIcons-Regular.otf'))).load();
+}
 
 class _Person {
   final String name;
@@ -56,6 +77,22 @@ class _Person {
 void main() {
   testWidgets('Friendship from its interface description: acquaint, befriend, on two phones', (tester) async {
     final programs = programsDir();
+    if (_shots != null) await _loadFonts();
+    final all = GlobalKey();
+    var shot = 0;
+    Future<void> snap(String what) async {
+      if (_shots == null) return;
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      final b = all.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final png = await tester.runAsync(() async {
+        final image = await b.toImage(pixelRatio: 2);
+        final data = await image.toByteData(format: dui.ImageByteFormat.png);
+        image.dispose();
+        return data!.buffer.asUint8List();
+      });
+      File('${_shots!}/${(++shot).toString().padLeft(2, '0')}-$what.png').writeAsBytesSync(png!);
+    }
     final ui = UiDescription.parse(File('$programs/gce/ui/Friendship.ui.json').readAsStringSync());
     final engine = GlpEngine(rootSelfGlpPath: '$programs/self.glp');
     expect(engine.loadProgram('$programs/apps/gsg'), isTrue);
@@ -113,19 +150,22 @@ void main() {
     drain();
     feed();
     await tester.pumpWidget(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: _shots == null ? null : Looks.readSync('$programs/self.glp').of('gsg').theme(fontFamily: 'Roboto'),
       home: Scaffold(
         body: DescribedUi(
           ui: ui,
-          child: Row(children: [
+          child: RepaintBoundary(key: all, child: Row(children: [
             for (final p in persons)
               RepaintBoundary(
                 key: p.shot,
                 child: SizedBox.fromSize(size: _phone, child: AgentSurface(agentId: p.name, runtime: p.ui, muteNotices: true)),
               ),
-          ]),
+          ])),
         ),
       ),
     ));
+    await snap('start');
     await tester.pumpAndSettle();
 
     Finder on(_Person p, Finder f) => find.descendant(of: find.byKey(p.shot), matching: f);
@@ -149,18 +189,35 @@ void main() {
     await tap(alice, on(alice, find.byKey(describedKey('act:establish'))));
     await tap(bob, on(bob, find.byKey(describedKey('act:establish'))));
     expect(alice.atoms, containsAll(['identity', 'person']));
+    expect(on(alice, find.byKey(describedKey('act:establish'))), findsNothing);
+    await snap('established');
 
     // Alice acquaints Bob by his key: the field the description types, then the request; Bob is asked.
     await tap(alice, on(alice, find.byKey(describedKey('act:acquaint'))));
     await tester.enterText(find.byKey(describedKey('field:2')), 'bob');
+    await tester.pumpAndSettle();
+    if (_shots != null) {
+      final b = all.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final png = await tester.runAsync(() async {
+        final image = await b.toImage(pixelRatio: 2);
+        final data = await image.toByteData(format: dui.ImageByteFormat.png);
+        image.dispose();
+        return data!.buffer.asUint8List();
+      });
+      File('${_shots!}/${(++shot).toString().padLeft(2, '0')}-acquaint-form.png').writeAsBytesSync(png!);
+    }
     await tap(alice, find.byKey(describedKey('submit')));
+    await snap('bob-asked');
     await yes(bob);
     expect(alice.atoms, contains('knows(bob)'));
 
     // Bob in Alice's contacts; his screen offers Befriend, from the subject, with nothing to fill.
+    await snap('contacts');
     await tap(alice, on(alice, find.byKey(describedKey('row:bob'))));
+    await snap('bob-screen');
     expect(on(alice, find.byKey(describedKey('act:unfriend:bob'))), findsNothing);
     await tap(alice, on(alice, find.byKey(describedKey('act:befriend:bob'))));
+    await snap('befriend-asked');
     await yes(bob);
     expect(alice.atoms, contains('friend(bob)'));
     expect(bob.atoms, contains('friend(alice)'));
@@ -169,6 +226,7 @@ void main() {
     expect(on(alice, find.byKey(describedKey('act:unfriend:bob'))), findsOneWidget);
     expect(on(alice, find.byKey(describedKey('act:befriend:bob'))), findsNothing);
 
+    await snap('friends');
     // Back to the start screen.
     await tap(alice, on(alice, find.byKey(describedKey('back'))));
     expect(on(alice, find.byKey(describedKey('row:bob'))), findsOneWidget);
