@@ -361,6 +361,15 @@ void main() {
       expect(ways.length, 4);
     });
 
+    // "The person gives the size of a set variable in a field, a number" (vGLP, VEUI 7db9d2e): size(S, F), the set place S and its size's field F, is read beside same(K, J) and binds no two roles to one person.
+    test('size(S, F) names the field that gives the size of a set place', () {
+      final (o, s) = read('size(2, 3)');
+      final remove = ActInfo(o.buttons[0].acts.single);
+      expect(remove.sizes, {2: 3});
+      expect(remove.mayShare(2, 3), isFalse);
+      expect(o.buttons[0].acts.single.same.single.source, 'size(2, 3)');
+    });
+
     test('two roles possibly one person may be bound to one', () {
       final (o, s) = read('same(1, 2)');
       final remove = ActInfo(o.buttons[0].acts.single);
@@ -419,7 +428,13 @@ void main() {
     expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:c')), findsNothing);
     await _tap(tester, 'set:pay:note(carol, coin, a):5:b');
     await _tap(tester, 'send:pay:note(carol, coin, a)');
-    expect(s.grants, ['input(1, [], propose(pay(alice, bob, carol, coin, [a, b])))']);
+    // The request, then its set an element at a time and [end] on the proposal's fifth argument (vGLP, Section 6.3: "an open request asks a list one element at a time, end ending it").
+    expect(s.grants, [
+      'input(1, [], propose(pay(alice, bob, carol, coin, [a, b])))',
+      'input(1, [1, 5], a)',
+      'input(1, [1, 5], b)',
+      'input(1, [1, 5], [end])'
+    ]);
   });
 
   testWidgets('a set variable: Pay of the one note picked names the set of it',
@@ -431,7 +446,11 @@ void main() {
     await _tap(tester, 'act:pay:note(carol, coin, a)');
     expect(find.byKey(socialKey(1, 'set:pay:note(carol, coin, a):5:a')), findsNothing);
     await _tap(tester, 'send:pay:note(carol, coin, a)');
-    expect(s.grants, ['input(1, [], propose(pay(alice, bob, carol, coin, [a])))']);
+    expect(s.grants, [
+      'input(1, [], propose(pay(alice, bob, carol, coin, [a])))',
+      'input(1, [1, 5], a)',
+      'input(1, [1, 5], [end])'
+    ]);
   });
 
   testWidgets('a set variable: the field of Issue takes its elements apart by '
@@ -444,6 +463,11 @@ void main() {
     await tester.enterText(find.byKey(socialKey(1, 'field:issue::3')), 'a, b, a');
     await tester.pumpAndSettle();
     await _tap(tester, 'send:issue:');
-    expect(s.grants, ['input(1, [], propose(issue(alice, coin, [a, b])))']);
+    expect(s.grants, [
+      'input(1, [], propose(issue(alice, coin, [a, b])))',
+      'input(1, [1, 3], a)',
+      'input(1, [1, 3], b)',
+      'input(1, [1, 3], [end])'
+    ]);
   });
 }

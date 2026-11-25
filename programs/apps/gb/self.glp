@@ -19,7 +19,7 @@ introduce(Peer, Peer, Peer)
 ;
 issue(Peer, CValue, List(Constant), Integer)
 ;
-swap(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, CValue, List(Constant), Integer)
+swap(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, CValue, Integer)
 ;
 pay(Peer, Peer, Peer, CValue, List(Constant), Integer)
 ;
@@ -31,13 +31,13 @@ release(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
 return(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
-redeem(Peer, Peer, List(Constant), Peer, List(Constant))
+redeem(Peer, Peer, List(Constant), Peer)
 ;
-redeem_coin_against_bond(Peer, Peer, List(Constant), Peer, Integer, List(Constant))
+redeem_coin_against_bond(Peer, Peer, List(Constant), Peer, Integer)
 ;
-redeem_bond(Peer, Peer, Integer, List(Constant), Peer, List(Constant))
+redeem_bond(Peer, Peer, Integer, List(Constant), Peer)
 ;
-redeem_bond_against_bond(Peer, Peer, Integer, List(Constant), Peer, Integer, List(Constant))
+redeem_bond_against_bond(Peer, Peer, Integer, List(Constant), Peer, Integer)
 .
 
 Proposal ::=
@@ -49,7 +49,7 @@ introduce(Peer, Peer, Peer)
 ;
 issue(Peer, CValue, List(Constant), Integer)
 ;
-swap(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, CValue, List(Constant), Integer)
+swap(Peer, Peer, Peer, CValue, List(Constant), Integer, Peer, CValue, Integer)
 ;
 pay(Peer, Peer, Peer, CValue, List(Constant), Integer)
 ;
@@ -61,13 +61,13 @@ release(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
 return(Peer, Peer, Peer, CValue, Peer, Speech, List(Constant), Integer)
 ;
-redeem(Peer, Peer, List(Constant), Peer, List(Constant))
+redeem(Peer, Peer, List(Constant), Peer)
 ;
-redeem_coin_against_bond(Peer, Peer, List(Constant), Peer, Integer, List(Constant))
+redeem_coin_against_bond(Peer, Peer, List(Constant), Peer, Integer)
 ;
-redeem_bond(Peer, Peer, Integer, List(Constant), Peer, List(Constant))
+redeem_bond(Peer, Peer, Integer, List(Constant), Peer)
 ;
-redeem_bond_against_bond(Peer, Peer, Integer, List(Constant), Peer, Integer, List(Constant))
+redeem_bond_against_bond(Peer, Peer, Integer, List(Constant), Peer, Integer)
 .
 Request  ::= propose(Proposal).
 YesNo    ::= yes ; no.

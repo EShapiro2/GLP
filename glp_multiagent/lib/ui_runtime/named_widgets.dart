@@ -895,6 +895,12 @@ class ActInfo {
           ((c.args[0] == i && c.args[1] == j) ||
               (c.args[0] == j && c.args[1] == i)));
 
+  /// The place of the field that gives the size of each set place, `size(S, F)`: "The person gives the size of a set variable in a field, a number" (vGLP, VEUI 7db9d2e).
+  Map<int, int> get sizes => {
+        for (final c in act.same)
+          if (c.kind == 'size') c.args[0] as int: c.args[1] as int
+      };
+
   /// Whether [at] binds distinct roles to distinct persons, but for two the clause says are possibly one person: "every binding of the variables of the atoms the schema requires there that a schema-binding makes, distinct roles bound to distinct persons" (vGLP e22e2ad, Section 5.4, "The contract's words").  An agent variable is bound by no such rule, so Introduce with Carol = Bob is a way, and Remove of herself is none (vGLP #23, Code_inbox.md, 2026-11-06 12:00 UTC, 1).
   bool distinct(Map<int, GTerm> at) {
     final rs = [
@@ -1194,8 +1200,21 @@ class SocialAsk {
   /// Whether the question is open and its type offers [f] of arity [n].
   bool can(String f, int n) => at != null && offers.has(f, n);
 
-  /// Answer the question with the request `propose(P)`, as the default widget of the request type grants it: the form `propose` holding the form of `P`.
-  void propose(GTerm p) => grant(at!, GStruct('propose', [p]));
+  /// Answer the question with the request `propose(P)`, as the default widget of the request type grants it: the form `propose` holding the form of `P`; and then each set `P` names, an element at a time and `[end]` after the last, on the K-th argument of the proposal, the path of the question followed by 1 and K: "an open request asks a list one element at a time, end ending it" (vGLP, Section 6.3, the paragraph after the construct process; programs/vglp/cva/self.glp, grant_elems).
+  void propose(GTerm p) {
+    final q = at!;
+    grant(q, GStruct('propose', [p]));
+    if (p is! GStruct) return;
+    for (var k = 1; k <= p.args.length; k++) {
+      final x = p.args[k - 1];
+      if (x is! GList) continue;
+      final path = GList([...q.items, const GInt(1), GInt(k)]);
+      for (final e in x.items) {
+        grant(path, e);
+      }
+      grant(path, listEnd);
+    }
+  }
 
   /// Grant `refresh` on the person channel, addressed to no construct: the request type has no alternative refresh, and on the grant the dispatcher has every construct draw again what it last drew (vGLP d433f71, Sections 5.4 and 6.3).
   void refresh() => onRefresh?.call();
@@ -1660,6 +1679,17 @@ class _SocialTabState extends State<SocialTab> {
   /// The elements picked for the set place of a composer, `composer:place`, each by its text; none picked yet is the element of the way the form was opened for.
   final Map<String, Set<String>> _setPicked = {};
 
+  /// The new names of the set the composer [c] makes, [n] of them, each a constant no other of this platform's names is: the clock's microseconds when the composer first made names, and the element's number.  The names of a composer stay the same while its size is, so the request the form shows is the one it sends.
+  final Map<String, (int, List<GTerm>)> _names = {};
+  List<GTerm> _newNames(String c, int n) {
+    final held = _names[c];
+    if (held != null && held.$2.length == n) return held.$2;
+    final t = held?.$1 ?? DateTime.now().microsecondsSinceEpoch;
+    final ns = [for (var i = 1; i <= n; i++) GAtom('n${t}_$i')];
+    _names[c] = (t, ns);
+    return ns;
+  }
+
   /// The places of the request of [a] that its atoms bind and that are set places ([RequestOffers.isSet]).
   static List<int> _setPlaces(RequestOffers o, ActInfo a) => [
         for (final p in a.act.binds)
@@ -1816,8 +1846,28 @@ class _SocialTabState extends State<SocialTab> {
     final sets = <int, List<GTerm>>{
       for (final p in _setPlaces(o, first.act)) p: _setChoices(s, me, first, p)
     };
-    Set<String> pickedAt(int p) => _setPicked['$composer:$p'] ??
-        {if (first.at[p] != null) formatTerm(first.at[p]!)};
+    // The size the person gives a set place in its field, where it is given ([ActInfo.sizes]).
+    int? sizeAt(ActInfo a, int p) {
+      final f = a.sizes[p];
+      if (f == null) return null;
+      for (final x in a.fields) {
+        if (x.place != f) continue;
+        final v = _fieldValue(s, o, a, x, fieldKey(x.label), pickKey(x.label), me);
+        return v is GInt ? v.value : null;
+      }
+      return null;
+    }
+
+    // None picked yet: of a set place whose size is given, the first that many elements as the chips list them, "the notes a payer pays, which the person picks from their own" (vGLP, VEUI 7db9d2e; vGLP #32, Code_inbox.md, 2026-11-25 09:47 UTC, (b)); of another, the element of the way the form was opened for.
+    Set<String> pickedAt(int p) {
+      final held = _setPicked['$composer:$p'];
+      if (held != null) return held;
+      final n = sizeAt(first.act, p);
+      if (n != null) {
+        return {for (final e in sets[p]!.take(n)) formatTerm(e)};
+      }
+      return {if (first.at[p] != null) formatTerm(first.at[p]!)};
+    }
     GTerm? request() {
       for (final w in chosen ?? const <_Way>[]) {
         final ls = {for (final f in w.act.fields) f.label};
@@ -1836,8 +1886,17 @@ class _SocialTabState extends State<SocialTab> {
                 if (ps.contains(formatTerm(e))) e
             ];
             if (es.isEmpty) return null;
+            final n = sizeAt(w.act, p);
+            if (n != null && es.length != n) return null;
             values[p] = GList(es);
           }
+        }
+        // A set place no atom binds and no field fills, whose size a field gives: "the notes an issuer issues, each a new name the platform makes and the person signs" (vGLP, VEUI 7db9d2e).
+        for (final MapEntry(key: p, value: _) in w.act.sizes.entries) {
+          if (w.act.act.binds.contains(p) || values.containsKey(p)) continue;
+          final n = sizeAt(w.act, p);
+          if (n == null || n < 1) return null;
+          values[p] = GList(_newNames(composer, n));
         }
         final r = _request(s, o, w, values, ask);
         if (r != null) return r;
@@ -1952,6 +2011,7 @@ class _SocialTabState extends State<SocialTab> {
                 ? null
                 : () {
                     ask.propose(r);
+                    _names.remove(composer);
                     for (final l in union) {
                       if (kept[l]!.$2.type != 'person') {
                         TypedBefore.record(

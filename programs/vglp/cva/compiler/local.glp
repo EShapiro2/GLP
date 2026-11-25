@@ -69,17 +69,55 @@ num_info_of(Nm, Hd, C, Fs, Rs, B, num_info(Nm?, C?, Ls?, Cj?, Fi?, Rd?)) :- grou
     unset(Hd?, Hd3),
     unset(Hd?, Hd4),
     unset(Hd?, Hd5),
-    det_locals(C?, Hd1?, Rs?, Ls00?, Ls),
-    det_locals(C?, Hd2?, Rs?, Ls10?, Ls1),
-    det_locals(C?, Hd3?, Rs?, Ls20?, Ls2),
-    det_locals(C?, Hd4?, Rs?, Ls30?, Ls3),
-    det_locals(C?, Hd5?, Rs?, Ls40?, Ls4),
+    det_locals(C?, Hd1?, Rs?, Ls00?, Ls01),
+    det_locals(C?, Hd2?, Rs?, Ls10?, Ls11),
+    det_locals(C?, Hd3?, Rs?, Ls20?, Ls21),
+    det_locals(C?, Hd4?, Rs?, Ls30?, Ls31),
+    det_locals(C?, Hd5?, Rs?, Ls40?, Ls41),
+    set_locals(Hd?, Rs?, B?, Sl0),
+    set_locals(Hd?, Rs?, B?, Sl1),
+    set_locals(Hd?, Rs?, B?, Sl2),
+    set_locals(Hd?, Rs?, B?, Sl3),
+    set_locals(Hd?, Rs?, B?, Sl4),
+    app(Ls01?, Sl0?, Ls),
+    app(Ls11?, Sl1?, Ls1),
+    app(Ls21?, Sl2?, Ls2),
+    app(Ls31?, Sl3?, Ls3),
+    app(Ls41?, Sl4?, Ls4),
     conjuncts_of(C?, Ls1?, Cj, _),
     conjuncts_of(C?, Ls3?, Cj2, Crs),
     reads_of(Rs?, Ls2?, Cj2?, Crs?, Rd),
     form_infos(Fs?, Vs4?, Ls4?, Fi).
 
-%% The head with its set variables left out: a set variable is local to no role, the schema-binding binding it and the request naming it, as the notes a payer pays (GSC, the set variable, def:numbers; OSPM, act-schemas-local).
+%% "A set variable of atoms the schema deletes at a role other than the base is local to that role, as the notes Bob gives in a swap, which his machine picks from his own" (OSPM, act-schemas-local, VEUI vglp32-sets-2026-11-24): loc(J, num(X)) for each set variable X of the head that the role J, not the base B, deletes, the first such role; taken after det_locals, so that a variable the constraint names with it, its size, stays bound by the schema-binding.
+procedure set_locals(Args?, RoleSpecs?, Integer?, Locs).
+set_locals([], _, _, []).
+set_locals([set(X)|As], Rs, B, Ls?) :- ground(X?), ground(Rs?), integer(B?) |
+    set_deleter(Rs?, 1, B?, num(X?), Js),
+    set_locs(Js?, num(X?), L1),
+    set_locals(As?, Rs?, B?, L2),
+    app(L1?, L2?, Ls).
+set_locals([_|As], Rs, B, Ls?) :- otherwise | set_locals(As?, Rs?, B?, Ls).
+%% The first role, from I, other than B, that deletes an atom, not a cleared one, naming V: [J], or [] where none does.
+procedure set_deleter(RoleSpecs?, Integer?, Integer?, Arg?, Ints).
+set_deleter([], _, _, _, []).
+set_deleter([_|Rs], I, B, V, Js?) :- I? =:= B?, ground(V?) | I1 := I? + 1, set_deleter(Rs?, I1?, B?, V?, Js).
+set_deleter([R|Rs], I, B, V, Js?) :- I? =\= B?, ground(R?), ground(V?) |
+    rs_lists(R?, _, M, _, _),
+    uncleared(M?, M1),
+    own_args(M1?, A0),
+    flat_args(A0?, A),
+    mem(V?, A?, D),
+    I1 := I? + 1,
+    set_deleter1(D?, I?, Rs?, I1?, B?, V?, Js).
+procedure set_deleter1(YesNo?, Integer?, RoleSpecs?, Integer?, Integer?, Arg?, Ints).
+set_deleter1(yes, I, _, _, _, _, [I?]).
+set_deleter1(no, _, Rs, I1, B, V, Js?) :- set_deleter(Rs?, I1?, B?, V?, Js).
+procedure set_locs(Ints?, Arg?, Locs).
+set_locs([], _, []).
+set_locs([J|_], V, [loc(J?, V?)]).
+
+%% The head with its set variables left out: a set variable is local to no role, the schema-binding binding it and the request naming it, as the notes a payer pays, but for one set_locals makes local (GSC, the set variable, def:numbers; OSPM, act-schemas-local).
 procedure unset(Args?, Args).
 unset([], []).
 unset([set(_)|As], Bs?) :- unset(As?, Bs).
