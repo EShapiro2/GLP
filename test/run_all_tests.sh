@@ -6812,6 +6812,20 @@ check "CVA calcs: ... d has no field and the form computes it, calc(3, mul(at(2)
 check "CVA calcs: ... the request type has calc (calc_lines)" "same(Integer, Integer) ; calc(Integer, MenuExpr)\.\$" "$cva_calcs_out"
 check "CVA calcs: the request of lend names s, of a cleared atom, and not t or r, local to the role" "^lend(Peer, Integer)\$" "$cva_calcs_out"
 check "CVA calcs: ... MenuExpr is a type definition on a line of its own, as sGLP's interface.sh reads them (line_after)" "^MenuExpr ::= at(Integer) ; lit(Integer)" "$cva_calcs_out"
+# The platform completes the request, the form putting a placeholder at d (complete; Code #39, vGLP_inbox.md, 2026-11-25 22:58 UTC, agreed by vGLP #35): pass with v 7 and d 0 is completed to d 14; lend, with no place the constraint determines at a place of the request, is as it is.
+cva_calcs_dir="$GLP_DIR/programs/tests/vg_calcs_$$"
+mkdir -p "$cva_calcs_dir"
+printf '%s\n' "$cva_calcs_out" | sed -e 's/^\(GLP> \)*//' | awk '$0 == "%% compile begin" { on = 1; next } $0 == "%% compile end" && on { on = 0; next } on { print }' > "$cva_calcs_dir/platform.vglp"
+cva_calcs_run=$("$REPL_RUN" <<HEREDOC
+:emit $cva_calcs_dir
+load $cva_calcs_dir/platform.glp
+complete(pass(alice, 7, 0), C1).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_calcs_dir"
+check "CVA calcs: the platform loads" "Loaded: .*vg_calcs_" "$cva_calcs_run"
+check "CVA calcs: ... the request is completed by the proposer's machine, pass with d 0 to d 14 (complete)" "C1 = pass(alice, 7, 14)\$" "$cva_calcs_run"
 # A function the owner of a value type gives as a typed GLP procedure (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; GLP #120; Audit #157): the file NAME-functions.glp beside NAME.txt, which pragmas.sh reads into the eighth argument of the pragmas, fns(Fns, Lines); the compiler takes fn(F, Es) where F is declared there of arity |Es|+1, refuses any other, and the platform carries the owner's procedures and calls them from expr_val (owner_fn).  The contract: square, r = root(m), root the whole square root rounded down.
 cva_fns_out=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/vglp/cva/compiler/
@@ -6875,6 +6889,8 @@ binding_of(start(alice, start), N1, B1), con_holds(eq(num(b), fn(first, [])), B1
 binding_of(start(alice, other), N2, B2), con_holds(eq(num(b), fn(first, [])), B2?, K2).
 binding_of(move(alice, start, e2e4, opened, 1), N3, B3), con_holds(and(eq(num(s), fn(side, [num(b)])), eq(num(n), fn(after, [num(m), num(b)]))), B3?, K3).
 binding_of(move(alice, start, e2e4, start, 1), N4, B4), con_holds(and(eq(num(s), fn(side, [num(b)])), eq(num(n), fn(after, [num(m), num(b)]))), B4?, K4).
+complete(move(alice, start, e2e4, '', 0), C5).
+complete(start(alice, ''), C6).
 :quit
 HEREDOC
 2>&1)
@@ -6890,6 +6906,10 @@ check "CVA functions of constants: b = first() holds with b start" "^K1 = yes\$"
 check "CVA functions of constants: ... and not with b other" "^K2 = no\$" "$cva_fnc_run"
 check "CVA functions of constants: s = side(b) and n = after(m, b) hold with n opened" "^K3 = yes\$" "$cva_fnc_run"
 check "CVA functions of constants: ... and not with n start" "^K4 = no\$" "$cva_fnc_run"
+check "CVA functions of constants: the platform completes a request, each place the constraint determines computed under its binding (complete)" "^await_request(propose(C), \[req(propose(C1?))\]) :- complete(C?, C1)\.\$" "$cva_fnc_out"
+check "CVA functions of constants: ... move's n and s by the owner's after and side" "^complete_move(B, move(V1, V2, V3, V4, V5), C?) :- .* | calc_num(fn(side, \[num(b)\]), B?, V5?, W5), calc_term(fn(after, \[num(m), num(b)\]), B?, V4?, W4), C = move(V1?, V2?, V3?, W4?, W5?)\.\$" "$cva_fnc_out"
+check "CVA functions of constants: the request move with placeholders is completed to n opened, s 1" "C5 = move(alice, start, e2e4, opened, 1)\$" "$cva_fnc_run"
+check "CVA functions of constants: ... and start with b start" "C6 = start(alice, start)\$" "$cva_fnc_run"
 # Functions a file exports (GCE's Chess-functions.glp; vGLP #35): a file that exports a procedure gives as functions only those it exports, the others being their helpers, carried without the word exported; and a function with a place of a type that is no number or constant is carried and not called by the platform (plain_fns), so that its platform loads.
 cva_fne_t=$(mktemp -d)
 printf '%s\n' 'Game' 'Alice is a person.' '1. ■ Start: Alice may start.' 'Pragmas' 'At: the positions.' 'Start: Alice [Start]' > "$cva_fne_t/Game.txt"

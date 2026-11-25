@@ -2228,7 +2228,9 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     found_lines(Fx01?, Fy?, Fx02),
     trust_lines_in(Fx02?, Ty?, Fx03),
     app(Fx03?, Ltr?, Fx0),
-    shared_lines(Fx0?, Gd?, Dy?, En?, Sd?, Fx1),
+    shared_lines(Fx0?, Gd?, Dy?, En?, Sd?, Fx1a),
+    complete_lines(Ci?, Nt?, head, Lcm0),
+    complete_req(Lcm0?, Fx1a?, Fx1),
     proved_rules(C?, Rl),
     worded_lx(W?, Lx7),
     real_heads(C?, Lx7?, Ch),
@@ -2293,7 +2295,11 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     lapp(Lqp0?, Lmt?, Lqp1),
     worded_fns(W?, Wfn1),
     owner_fn_lines(Wfn1?, Lfn),
-    lapp(Lqp1?, Lfn?, Lqp),
+    complete_lines(Ci?, Nt?, head, Lcm1),
+    complete_lines(Ci?, Nt?, body, Lcm2),
+    complete_text(Lcm1?, Lcm2?, Lcm),
+    lapp(Lfn?, Lcm?, Lfc),
+    lapp(Lqp1?, Lfc?, Lqp),
     lapp(Ln1?, Lqp?, Ln),
     T2a =.. [reflexive_preds, Rf?],
     term_to_string(T2a?, T2),
@@ -4311,6 +4317,139 @@ calc_mul(_, _, none) :- otherwise | true.
 procedure calc_item(Ints?, CalcR?, Preconds).
 calc_item([P], ok(E), [calc(P?, E?)]).
 calc_item(_, _, []) :- otherwise | true.
+%% The completion of a request (Code #39, vGLP_inbox.md, 2026-11-25 22:58 UTC, agreed by vGLP #35: the form holds no GLP runtime and cannot call the owner's functions): each place the constraint determines, calc(P, E), is computed by the proposer's machine, the agent the platform runs (vGLP, Section 5.4, "Speech-act schemas as local specifications": "The proposer's machine finds in its own state every way to satisfy an act"), when it reads the request propose(C) and before it names it, the form putting a placeholder there.  For each class with such places and no listed role, complete(C, C1): the binding of C, and each such place replaced by the value of its expression under it, expr_val for a number, expr_term for a constant, the placeholder kept where an argument has no value, which the constraint then refuses; any other request is as it is.
+procedure complete_lines(Contract?, NumInfos?, Constant?, Lines).
+complete_lines([], _, _, []).
+complete_lines([schema(S, Hd, Rs)|Ss], Nt, M, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Nt?), ground(M?) |
+    schema_vars(Rs?, Hd?, Vs),
+    list_places(Rs?, Hd?, Lis),
+    num_lookup(S?, Nt?, Ni),
+    complete_s(Vs?, Lis?, Ni?, S?, M?, L1),
+    complete_lines(Ss?, Nt?, M?, L2),
+    lapp(L1?, L2?, L).
+complete_lines([cschema(_, _, _, _)|Ss], Nt, M, L?) :- complete_lines(Ss?, Nt?, M?, L).
+complete_lines([nschema(_, _, _, _)|Ss], Nt, M, L?) :- complete_lines(Ss?, Nt?, M?, L).
+procedure complete_s(Args?, Ints?, NumInfo?, Constant?, Constant?, Lines).
+complete_s(Vs, Lis, Ni, S, M, L?) :- ground(Vs?) |
+    keys_of(Vs?, Vk),
+    cmp_calcs(Ni?, Vs?, Vk?, Cs),
+    complete_line(Lis?, Cs?, S?, Vs?, M?, L).
+%% The variables of a class term as the binding and the constraint write them (bind_key).
+procedure keys_of(Args?, Args).
+keys_of([], []).
+keys_of([V|Vs], [K?|Ks?]) :- bind_key(V?, K), keys_of(Vs?, Ks).
+CCalc   ::= cc(Integer, FnKind, Expr).
+CCalcs  ::= [] ; [CCalc | CCalcs].
+%% The places a conjunct eq(num(Y), E) of the constraint determines, Y a number or a constant of the request at the place P and E an expression of its places (calc_expr), cc(P, K, E), K num or const.
+procedure cmp_calcs(NumInfo?, Args?, Args?, CCalcs).
+cmp_calcs(num_info(_, C, _, _, _, _), Vs, Vk, Cs?) :- ground(C?) |
+    con_list(C?, Cl),
+    cmp_items(Cl?, Vs?, Vk?, Cs).
+procedure cmp_items(Constraints?, Args?, Args?, CCalcs).
+cmp_items([], _, _, []).
+cmp_items([eq(num(Y), E)|Cl], Vs, Vk, Cs?) :- ground(Y?), ground(E?), ground(Vs?), ground(Vk?) |
+    arg_place(num(Y?), Vs?, 1, Pn),
+    arg_place(const(Y?), Vs?, 1, Pc),
+    calc_expr(E?, Vk?, Me),
+    cmp_item(Pn?, Pc?, Me?, E?, C1),
+    cmp_items(Cl?, Vs?, Vk?, C2),
+    app(C1?, C2?, Cs).
+cmp_items([_|Cl], Vs, Vk, Cs?) :- otherwise | cmp_items(Cl?, Vs?, Vk?, Cs).
+procedure cmp_item(Ints?, Ints?, CalcR?, Expr?, CCalcs).
+cmp_item([P], [], ok(_), E, [cc(P?, num, E?)]).
+cmp_item([], [P], ok(_), E, [cc(P?, const, E?)]).
+cmp_item(_, _, _, _, []) :- otherwise | true.
+%% The two clauses of a class with places to compute and no listed role: complete(S(V1, ..., Vn), C) taking the binding, and complete_S(B, S(V1, ..., Vn), C) computing the places.
+procedure complete_line(Ints?, CCalcs?, Constant?, Args?, Constant?, Lines).
+complete_line([], [Cc|Ccs], S, Vs, M, L?) :- ground(Cc?), ground(Ccs?), ground(S?), ground(Vs?) |
+    var_names(Vs?, 1, Ns, Qs),
+    complete_line2(Ns?, Qs?, Cc?, Ccs?, S?, T1, T2, T3, T4),
+    complete_mode(M?, T1?, T2?, T3?, T4?, L).
+complete_line(_, _, _, _, _, []) :- otherwise | true.
+%% complete/2's clause (head), or the procedure complete_S (body), so that the clauses of complete/2 are together.
+procedure complete_mode(Constant?, String?, String?, String?, String?, Lines).
+complete_mode(head, T1, _, _, _, [T1?]).
+complete_mode(body, _, T2, T3, T4, [T2?, T3?, T4?]).
+procedure complete_line2(Strings?, Strings?, CCalc?, CCalcs?, Constant?, String, String, String, String).
+complete_line2(Ns, Qs, Cc, Ccs, S, T1?, T2?, T3?, T4?) :- ground(Ns?), ground(Qs?), ground(Cc?), ground(Ccs?), ground(S?) |
+    named_call(S?, Ns?, Hd),
+    named_call(S?, Qs?, Hq),
+    term_to_string(S?, Sn),
+    string_concat(['complete_', Sn?], Cn),
+    ground_guards(Qs?, Gs),
+    string_concat(['complete(', Hd?, ', C?) :- ', Gs?, ' | binding_of(', Hq?, ', _, B), ', Cn?, '(B?, ', Hq?, ', C).'], T1),
+    string_concat(['procedure ', Cn?, '(Binding?, Class?, Class).'], T2),
+    string_concat([Cn?, '(_, C, C?) :- otherwise | true.'], T4),
+    cmp_calls(Cc?, Ccs?, Ns?, Qs?, Cl, Ws),
+    named_call(S?, Ws?, Hw),
+    string_concat([Cn?, '(B, ', Hd?, ', C?) :- ground(B?), ', Gs?, ' | ', Cl?, 'C = ', Hw?, '.'], T3).
+procedure ground_guards(Strings?, String).
+ground_guards(Qs, G?) :- ground(Qs?) | ground_list(Qs?, Gl), joined(Gl?, ', ', G).
+procedure ground_list(Strings?, Strings).
+ground_list([], []).
+ground_list([Q|Qs], [G?|Gs?]) :- ground(Q?) | string_concat(['ground(', Q?, ')'], G), ground_list(Qs?, Gs).
+%% The calls computing each place, calc_num(E, B?, V?, W) or calc_term(E, B?, V?, W), each followed by a comma, and the arguments of the completed term: W? at each place computed, V? elsewhere.
+procedure cmp_calls(CCalc?, CCalcs?, Strings?, Strings?, String, Strings).
+cmp_calls(Cc, Ccs, Ns, Qs, Cl?, Ws?) :- ground(Cc?), ground(Ccs?), ground(Ns?), ground(Qs?) |
+    cmp_texts([Cc?|Ccs?], Qs?, Ts),
+    sjoin(Ts?, Cl),
+    cmp_args(Ns?, Qs?, 1, [Cc?|Ccs?], Ws).
+procedure cmp_texts(CCalcs?, Strings?, Strings).
+cmp_texts([], _, []).
+cmp_texts([cc(P, K, E)|Cs], Qs, [T?|Ts?]) :- integer(P?), ground(K?), ground(E?), ground(Qs?) |
+    nth_str(P?, Qs?, Q),
+    term_to_string(P?, Ps),
+    term_to_string(E?, Es),
+    cmp_head(K?, H),
+    string_concat([H?, '(', Es?, ', B?, ', Q?, ', W', Ps?, '), '], T),
+    cmp_texts(Cs?, Qs?, Ts).
+procedure cmp_head(FnKind?, String).
+cmp_head(num, 'calc_num').
+cmp_head(const, 'calc_term').
+cmp_head(other, 'calc_none').
+procedure cmp_args(Strings?, Strings?, Integer?, CCalcs?, Strings).
+cmp_args([], _, _, _, []).
+cmp_args([_|Ns], [Q|Qs], I, Cs, [A?|As?]) :- integer(I?), ground(Q?), ground(Cs?) |
+    cmp_at(I?, Cs?, Y),
+    cmp_arg(Y?, I?, Q?, A),
+    I1 := I? + 1,
+    cmp_args(Ns?, Qs?, I1?, Cs?, As).
+procedure cmp_at(Integer?, CCalcs?, YesNo).
+cmp_at(_, [], no).
+cmp_at(I, [cc(P, _, _)|_], yes) :- integer(I?), integer(P?), I? =:= P? | true.
+cmp_at(I, [_|Cs], Y?) :- otherwise | cmp_at(I?, Cs?, Y).
+procedure cmp_arg(YesNo?, Integer?, String?, String).
+cmp_arg(yes, I, _, A?) :- integer(I?) | term_to_string(I?, Is), string_concat(['W', Is?, '?'], A).
+cmp_arg(no, _, Q, Q?).
+procedure nth_str(Integer?, Strings?, String).
+nth_str(1, [S|_], S?).
+nth_str(_, [], '').
+nth_str(I, [_|Ss], S?) :- integer(I?), I? > 1 | I1 := I? - 1, nth_str(I1?, Ss?, S).
+procedure sjoin(Strings?, String).
+sjoin([], '').
+sjoin([S|Ss], J?) :- sjoin(Ss?, J1), string_concat([S?, J1?], J).
+%% The completion's shared lines, printed where some class has a place to compute, and the request read through it.
+procedure complete_text(Lines?, Lines?, Lines).
+complete_text([], _, []).
+complete_text([L|Ls], Lb, ['',
+        '%% The completion of a request: each place the constraint determines computed by the proposer\'s machine under the binding the request names, before it names it (complete; the form puts a placeholder there).',
+        'procedure complete(Class?, Class).',
+        L?|R?]) :-
+    lapp(Ls?, ['complete(C, C?) :- otherwise | true.'|L2?], R),
+    lapp(Lb?, [
+        'procedure calc_num(Expr?, Binding?, Integer?, Integer).',
+        'calc_num(E, B, V, W?) :- ground(B?) | expr_val(E?, B?, R), calc_num1(R?, V?, W).',
+        'procedure calc_num1(NumRes?, Integer?, Integer).',
+        'calc_num1(num_is(N), _, N?) :- integer(N?) | true.',
+        'calc_num1(_, V, V?) :- otherwise | true.',
+        'procedure calc_term(Expr?, Binding?, Constant?, Constant).',
+        'calc_term(E, B, V, W?) :- ground(B?) | expr_term(E?, B?, F), calc_term1(F?, V?, W).',
+        'procedure calc_term1(Found?, Constant?, Constant).',
+        'calc_term1(found(v(C)), _, C?) :- ground(C?) | true.',
+        'calc_term1(_, V, V?) :- otherwise | true.'], L2).
+procedure complete_req(Lines?, Lines?, Lines).
+complete_req([], Ls, Ls?).
+complete_req([_|_], Ls, R?) :- line_sub(Ls?, 'await_request(propose(C), [req(propose(C?))]).', 'await_request(propose(C), [req(propose(C1?))]) :- complete(C?, C1).', R).
 %% Whether an act of the request type has a number to compute (calc_places), an act a button of the pragmas names whose schema the request type proposes, as act_buttons finds them, so that a platform with none prints its types as before.
 procedure calc_acts(Worded?, TActs).
 calc_acts(words(pragmas(_, As, _, _, _, _, _, _), _, _, _, _), As?).
