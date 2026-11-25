@@ -90,11 +90,11 @@
 %%                       at q  +greeting
 %%   cheer(p?)        :  at p  -greeted, +cheered
 %%
-%% greeted, greeting and cheered are of arity zero, so a state holds a count
-%% of each; greet names its two roles possibly one person, schema(greet, ['Alice', one('Bob', 'Alice')], ...), so greet(p, p) sends them to one person, neither adding or
+%% greeted, greeting and cheered are of arity zero, and a local state is a set,
+%% so a state holds each once (Audit #128); greet names its two roles possibly one person, schema(greet, ['Alice', one('Bob', 'Alice')], ...), so greet(p, p) sends them to one person, neither adding or
 %% deleting an atom naming the other, so they act together there, friend(p)
 %% holding at p, friend being reflexive, and greeted and greeting both added;
-%% and each cheer deletes one greeted (vGLP, Section 5.4, the paragraph on act
+%% and a cheer deletes greeted (vGLP, Section 5.4, the paragraph on act
 %% schemas; vGLP 2026-10-16 13:53 UTC, C.4).
 %%
 %% friends/self.glp plays it.
@@ -150,26 +150,28 @@
 %%
 %% A schema-binding of close determines a part for each list L of the people of its listed role, the persons q with listed(q, n) in the state of the person in a, and the base person requires that it list exactly the people of L (ibid.).  Its request name is close(a, n), and the base agent, on its person's request, completes L from its listed atoms.  The base, a, is close's only guarding role, as Section 5.4 asks of a schema with a listed role.  groups/self.glp plays it.
 %%
-%% counter is befriend with a counter, an unguarded class always open to its agent once its person has begun counting, so that a contract compiled here has an agent that takes an own transaction on every own trigger it reads, without end, and still reads its other triggers between them: "The agent goal takes its own transactions one at a time, one on each own trigger it reads.  It writes an own trigger when it starts, after each other trigger it reads unless an own trigger it has written is still unread, and after each own transaction it takes, so that it reads its other triggers between its own transactions" (vGLP 6c8c663, Section 5.4, "The compilation"; vGLP #15 Cowork to Code, 2026-10-19 14:20 UTC).  The contract language has no integers and no arithmetic, an argument of an atom being a role, a variable or a name term, so a counter is not written n(k) to n(k+1); a state is a multiset, holding a count of each atom of arity zero, as friends' greeted, so count adds one tick:
+%% counter is befriend with a counter, an unguarded class always open to its agent once its person has begun counting, so that a contract compiled here has an agent that takes an own transaction on every own trigger it reads, without end, and still reads its other triggers between them: "The agent goal takes its own transactions one at a time, one on each own trigger it reads.  It writes an own trigger when it starts, after each other trigger it reads unless an own trigger it has written is still unread, and after each own transaction it takes, so that it reads its other triggers between its own transactions" (vGLP 6c8c663, Section 5.4, "The compilation"; vGLP #15 Cowork to Code, 2026-10-19 14:20 UTC).  A local state is a set (the Calculus, Definition "Local state, configuration"; Audit #128), so count raises a number, tick(t) to tick(t1), t1 = t + 1, as numbers' step raises a level:
 %%
 %%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
 %%                       at q  not friend(p), +friend(p)
-%%   begin(a?)        :  at a  not counting, +counting
-%%   count(a)         :  at a  counting, +tick
+%%   begin(a?)        :  at a  not counting, +counting, +tick(0)
+%%   count(a)         :  at a  counting, tick(t), -tick(t), +tick(t1)  | t1 = t + 1
 %%
-%% count is guarded at no role and has one role and no variable, so the atoms its role requires need name no other role and no variable, and the contract is effective; its schema-binding at a determines an unguarded part opened by a, in the domain of a's function wherever a holds counting, which no act deletes.  begin, guarded by a, lets the play choose whose agent counts.  counter/self.glp plays it.
+%% count is guarded at no role and has one role, its variables t and t1 local to it, bound by tick(t) and by the constraint, so the atoms its role requires need name no other role and no variable, and the contract is effective; its schema-binding at a determines an unguarded part opened by a, in the domain of a's function wherever a holds counting, which no act deletes.  begin, guarded by a, lets the play choose whose agent counts.  counter/self.glp plays it.
 %%
 %% pokes is counter with a second unguarded class, of two participants, opened by the other person, so that a contract compiled here has an agent that always has an own transaction to take while it must also read the starts of another's, and neither may wait for ever while the other holds (vGLP, Section 5.4, "The compilation": "At every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger"; the audit's Finding 1; Udi, 2026-11-16):
 %%
 %%   befriend(p?, q?) :  at p  not friend(q), +friend(q)
 %%                       at q  not friend(p), +friend(p)
-%%   begin(a?)        :  at a  not counting, +counting
-%%   count(a)         :  at a  counting, +tick
+%%   begin(a?)        :  at a  not counting, +counting, +tick(0)
+%%   count(a)         :  at a  counting, tick(t), -tick(t), +tick(t1)  | t1 = t + 1
 %%   arm(b?)          :  at b  not armed, +armed
-%%   poke(b, a)       :  at b  armed, friend(a), +poked(a)
-%%                       at a  friend(b), +poked_by(b)
+%%   poke(b, a)       :  at b  armed, friend(a), not poked(a), +poked(a)
+%%                       at a  friend(b), not poked_by(b), +poked_by(b)
+%%   unpoke(b, a)     :  at b  armed, friend(a), -poked(a)
+%%                       at a  friend(b), -poked_by(b)
 %%
-%% poke is guarded at no role, and the atoms each role requires name the other role, so the contract is effective; its schema-binding at b and a determines an unguarded part opened by b, in its domain wherever b holds armed and the two are friends, which no act deletes, so that b's agent proposes it again after each commit.  The person who begins counts, and the person who arms pokes.  pokes/self.glp plays it.
+%% A local state is a set, so poke and unpoke take turns, each changing the state of both.  poke and unpoke are guarded at no role, and the atoms each role requires name the other role, so the contract is effective; the schema-bindings at b and a determine two unguarded parts opened by b, one of them in its domain wherever b holds armed and the two are friends, which no act deletes, so that b's agent proposes one after each commit.  The person who begins counts, and the person who arms pokes.  pokes/self.glp plays it.
 %%
 %% merges is befriend with groups, a leader merging two of their groups in one act of the leader and of every member the leader lists in either, so that a contract compiled here has a schema with two listed roles of one base, a[listed(*, n1)] and a[listed(*, n2)] (vGLP c649c0d, Section 5.4, "Act schemas as local specifications": "each schema-binding determines a part [t]_j of a class for each list L of the people of its listed roles"; vGLP #16 Cowork to Code, 2026-10-19 15:51 UTC); a group is named by its leader and a speech act, and its leader does not list themself:
 %%
@@ -262,12 +264,12 @@
 %% counts is a contract with a count and a sum of a quantifier's instances in a constraint, local to the role holding the anchor, the functions min and floor, and environment predicates, cap and wt, values the contract declares and does not fix, given when the platform is deployed and held from startup (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications"; vGLP #24, Code_inbox.md, 2026-11-07 13:11 UTC, 3 and 4):
 %%
 %%   start(p?)             :  at p  not started, +started
-%%   fill(p)               :  at p  cap(d), +tok
-%%                            | #{tok at p} < d
+%%   fill(p)               :  at p  cap(d), not tok(k), +tok(k)
+%%                            | #{tok(x) at p} < d, k = #{tok(x) at p}
 %%   heavy(p)              :  at p  cap(d), not heavy, +heavy
 %%                            | sum of w over wt(w) at p >= min(2 floor(d), 100)
 %%
-%% start is its introductory act; fill and heavy are unguarded, opened by p, d local to p's role and bound by the cap(d) p's state holds from startup; the count of tok counts each copy, so p's machine takes fill until it holds d copies, and the sum of the weights given at deployment decides heavy.  Section VG runs its agent with no person.
+%% start is its introductory act; fill and heavy are unguarded, opened by p, d local to p's role and bound by the cap(d) p's state holds from startup; k local to p's role, the constraint determining it from the count of tok(x), the instances p's state holds, so p's machine takes fill until it holds d of them, tok(0) to tok(d-1), a local state being a set (the Calculus, Definition "Local state, configuration"; Audit #128), and the sum of the weights given at deployment decides heavy.  Section VG runs its agent with no person.
 %%
 %% shares is a contract with a quantified conjunct whose instances the attempt names, binding no listed role and with a conditional literal at a role other than the one holding its anchor, as GCC's appoint's "every person Alice lists as appointed, Bob lists too" (vGLP 9ee6f87, Section 5.4, "Speech-act schemas as local specifications": "A conjunct with a listed role, or with conditional literals at a role other than the one holding its anchor, is local to its base; the base's machine finds its instances, the attempt names them, and every participant takes them as arguments of the transaction"):
 %%
@@ -765,23 +767,26 @@ counter([schema(befriend, [],
            [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
             rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
          schema(begin, [],
-           [rs(guarded, [atom(counting, [])], [], [], [atom(counting, [])])]),
-         schema(count, [],
-           [rs(unguarded, [atom(tick, [])], [], [atom(counting, [])], [])])]).
+           [rs(guarded, [atom(counting, []), atom(tick, [num(0)])], [], [], [atom(counting, [])])]),
+         nschema(count, [num(t), num(t1)], succ(num(t), num(t1)),
+           [rs(unguarded, [atom(tick, [num(t1)])], [atom(tick, [num(t)])], [atom(counting, [])], [])])]).
 
 procedure pokes(Contract).
 pokes([schema(befriend, [],
          [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
           rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
        schema(begin, [],
-         [rs(guarded, [atom(counting, [])], [], [], [atom(counting, [])])]),
-       schema(count, [],
-         [rs(unguarded, [atom(tick, [])], [], [atom(counting, [])], [])]),
+         [rs(guarded, [atom(counting, []), atom(tick, [num(0)])], [], [], [atom(counting, [])])]),
+       nschema(count, [num(t), num(t1)], succ(num(t), num(t1)),
+         [rs(unguarded, [atom(tick, [num(t1)])], [atom(tick, [num(t)])], [atom(counting, [])], [])]),
        schema(arm, [],
          [rs(guarded, [atom(armed, [])], [], [], [atom(armed, [])])]),
        schema(poke, [],
-         [rs(unguarded, [atom(poked, [role(2)])], [], [atom(armed, []), atom(friend, [role(2)])], []),
-          rs(unguarded, [atom(poked_by, [role(1)])], [], [atom(friend, [role(1)])], [])])]).
+         [rs(unguarded, [atom(poked, [role(2)])], [], [atom(armed, []), atom(friend, [role(2)])], [atom(poked, [role(2)])]),
+          rs(unguarded, [atom(poked_by, [role(1)])], [], [atom(friend, [role(1)])], [atom(poked_by, [role(1)])])]),
+       schema(unpoke, [],
+         [rs(unguarded, [], [atom(poked, [role(2)])], [atom(armed, []), atom(friend, [role(2)])], []),
+          rs(unguarded, [], [atom(poked_by, [role(1)])], [atom(friend, [role(1)])], [])])]).
 
 procedure merges(Contract).
 merges([schema(befriend, [],
@@ -941,8 +946,8 @@ linear([schema(start, [],
 procedure counts(Contract).
 counts([schema(start, [],
           [rs(guarded, [atom(started, [])], [], [], [atom(started, [])])]),
-        qschema(fill, [num(d)], [], lt(cardinality([], role(1), atom(tok, []), fcons(true)), num(d)),
-          [rs(unguarded, [atom(tok, [])], [], [atom(cap, [num(d)])], [])],
+        qschema(fill, [num(d), num(k)], [num(x)], and(lt(cardinality([num(x)], role(1), atom(tok, [num(x)]), fcons(true)), num(d)), eq(num(k), cardinality([num(x)], role(1), atom(tok, [num(x)]), fcons(true)))),
+          [rs(unguarded, [atom(tok, [num(k)])], [], [atom(cap, [num(d)])], [atom(tok, [num(k)])])],
           [], []),
         qschema(heavy, [num(d)], [num(w)],
           ge(sum([num(w)], role(1), atom(wt, [num(w)]), fcons(true), num(w)), fn(min, [mul(fn(floor, [num(d)]), num(2)), num(100)])),
