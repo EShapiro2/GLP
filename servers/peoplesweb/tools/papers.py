@@ -36,7 +36,7 @@ BY_DIR = {
     'GM': {'title': 'Anonymous Grassroots Matching: Dating, Exchanging, Booking', 'authors': 'Ehud Shapiro'},
     # The one paper of the Villagers site, peoplesweb.org/villagers
     # (deploy/villagers.sh; Udi, 2026-11-25); title and author as its main file has them.
-    'Villagers': {'title': 'Villagers: A Grassroots Contract for Village Digital Life', 'authors': 'Ehud Shapiro', 'pdf': 'Villagers'},
+    'Villagers': {'title': 'Villagers: A Grassroots Contract for Village Digital Life', 'authors': 'Anonymous', 'pdf': 'Villagers'},
 }
 
 # Where each paper's source is, this file being the one record of it: its repository under EShapiro2 on GitHub, the one Overleaf syncs with, and its main file.  tools/papers_sync.py builds each from there; a paper on arXiv gets a PDF too, served as Updated while its repository is ahead of its latest arXiv version.
@@ -121,6 +121,17 @@ def built(v, name, served_pdfs, st):
             v['pdf_on'] = st['changed'][:10]
 
 
+def anonymous(v, st):
+    """A paper not on arXiv whose main file is anonymous, its document class
+    given the option anonymous, is by Anonymous: its authors are not yet
+    determined, and the site names no one (Udi, 2026-11-25 10:27 UTC: "author
+    is anonymous, why did you list my name? correct for all papers.  anonymous
+    also means author list not determined yet").  tools/papers_sync.py records
+    it, 'anonymous' in its state of the paper."""
+    if st.get('anonymous') and 'arxiv' not in v:
+        v['authors'] = 'Anonymous'
+
+
 def load_state(papers_dir):
     """What tools/papers_sync.py recorded of each paper: the date of its
     source's last change, and for a paper on arXiv the date of its latest
@@ -160,9 +171,11 @@ def cite_of(d, served_pdfs=(), state=None):
         v = {k: x for k, x in f.items() if k not in ('dir', 'key')}
         if 'dir' in f:
             built(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
+            anonymous(v, (state or {}).get(f['dir'], {}))
         return v
     v = dict(BY_DIR[d])
     st = (state or {}).get(d, {})
+    anonymous(v, st)
     name = v.pop('pdf', None)
     served = name is not None and name in served_pdfs
     if 'arxiv' in v:
@@ -226,7 +239,7 @@ FOUNDATIONAL = [
     {'key': 'IVMAT', 'title': 'Fault-Resilient Implementations of Volition-Guarded Atomic Transactions', 'authors': '', 'state': 'in preparation'},
     {'key': 'GFWC', 'title': 'Grassroots Federation Without Consensus', 'authors': '', 'state': 'in preparation'},
     {'key': 'CDWC', 'title': 'Constitutional Democracy Without Consensus', 'authors': '', 'state': 'in preparation'},
-    {'key': 'GPW', 'title': 'The Grassroots Web: A Personal Website on Your Smartphone', 'authors': '', 'state': 'in preparation'},
+    {'key': 'GPW', 'title': 'The Grassroots Web: A Personal Website on Your Smartphone', 'authors': 'Anonymous', 'state': 'in preparation'},
     {'key': 'Secure-GLP', 'title': 'Secure GLP: Executing Digital Social Contracts without Consensus', 'authors': '', 'state': 'in preparation'},
     {'key': 'P99', 'title': 'Solving the Ninety-Nine Prolog Problems in Grassroots Logic Programming, with Measured Effort', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
     {'key': 'DDD', 'title': 'Digital Speech Acts Dissolve Orphaned Disinformation', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
@@ -251,5 +264,6 @@ def foundational(served_pdfs=(), state=None, but=()):
         v = {k: x for k, x in f.items() if k not in ('dir', 'key')}
         if 'dir' in f:
             built(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
+            anonymous(v, (state or {}).get(f['dir'], {}))
         out.append(v)
     return out
