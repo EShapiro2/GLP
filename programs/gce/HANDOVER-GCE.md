@@ -6,6 +6,8 @@ GCE is Nimrod Talmon's contracts, `programs/gce`, mail `GCE_inbox.md`.  Branch `
 
 `programs/gce/chess/Chess-functions.glp` loads and type-checks in glpc (two clauses added: `cell` and `set` on `[]`, which the checker's coverage asked for).  Tested in Section GCE of `test/run_all_tests.sh` (33 checks, all pass): first position, legal moves and not, castling, en passant, promotion, a check blocked and not, fool's mate, stalemate, the kings alone, fifty moves, threefold repetition.  `draw` on a position with moves scans for a legal move and takes about 50,000 reductions; the REPL's default limit of 10,000 caps it, so the section sets `:limit`.  Mailed vGLP #34 and Code #39 the commit.
 
+Then (Udi approved string_to_term, 2026-11-25 22:52 UTC): the six functions take and give positions and moves as constants, the text of their terms, by string_to_term and term_to_string; the procedures over terms are renamed with `_pos` and Section GCE tests them (33 checks, pass).  Six checks over constants wait on Code #39's kernel: when it is on a branch, merge it, run `GLP_SECTIONS="GCE TY"`, fix what the checker says of the wrappers' types.
+
 Encoding: square = rank*8 + file (a1 = 0, h8 = 63); cell 0 empty, else colour*10 + kind (colour 1 white, 2 black; kind 1 pawn ... 6 king); `pos(Cells, Side, cas(WK,WQ,BK,BQ), Ep or -1, HalfMoves, Keys)`; `mv(From, To, PromoKind or 0)`.
 
 ## Waiting on others

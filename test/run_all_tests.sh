@@ -11288,24 +11288,28 @@ if _section GCE; then
 # compiler's platform calls (vGLP Section 5.4; Grassroots-Audit #157, Finding
 # 1): first, legal, after, side, mate and draw, by FIDE's Laws of Chess.  A
 # square is rank*8 + file (a1 = 0, h8 = 63); a cell is 0 or colour*10 + kind.
+# The six take and give positions and moves as constants, the text of their
+# terms (string_to_term, term_to_string); the same names with _pos are over the
+# terms.
 echo "=== Section GCE: the functions of Chess ==="
 echo ""
 GCE_CHESS="../programs/gce/chess/Chess-functions.glp"
 gce_out=$("$REPL_RUN" <<HEREDOC
 :limit 100000000
 load $GCE_CHESS
-first(B), side(B?, S0).
-first(B), legal(mv(12,28,0), B?, Le4), legal(mv(12,36,0), B?, Le5), legal(mv(6,21,0), B?, Lnf3), legal(mv(6,22,0), B?, Lng3), legal(mv(4,6,0), B?, Lcas0).
-first(B), after(mv(12,28,0), B?, C), side(C?, S1), mate(C?, M1), draw(C?, D1).
-first(B), draw(B?, D0).
-first(B), after(mv(13,21,0),B?,B1), after(mv(52,36,0),B1?,B2), after(mv(14,30,0),B2?,B3), legal(mv(59,31,0),B3?,Lqh4), after(mv(59,31,0),B3?,B4), mate(B4?,Mfool), draw(B4?,Dfool), side(B4?,Sfool).
-side(pos([0,0,0,0,0,0,0,16, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,15,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 26,0,0,0,0,0,0,0], 2, cas(0,0,0,0), -1, 0, []), Sstale), mate(pos([0,0,0,0,0,0,0,16, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,15,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 26,0,0,0,0,0,0,0], 2, cas(0,0,0,0), -1, 0, []), Mstale), draw(pos([0,0,0,0,0,0,0,16, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,15,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 26,0,0,0,0,0,0,0], 2, cas(0,0,0,0), -1, 0, []), Dstale).
-draw(pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, []), Dkk), draw(pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,14], 1, cas(0,0,0,0), -1, 0, []), Dkkr), draw(pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,14], 1, cas(0,0,0,0), -1, 100, []), Dfifty).
-first(B), after(mv(6,21,0),B?,B1), after(mv(62,45,0),B1?,B2), after(mv(21,6,0),B2?,B3), after(mv(45,62,0),B3?,B4), after(mv(6,21,0),B4?,B5), after(mv(62,45,0),B5?,B6), after(mv(21,6,0),B6?,B7), draw(B7?,Drep2), after(mv(45,62,0),B7?,B8), draw(B8?,Drep3).
-first(B), after(mv(12,28,0),B?,B1), after(mv(52,44,0),B1?,B2), after(mv(6,21,0),B2?,B3), after(mv(51,43,0),B3?,B4), after(mv(5,12,0),B4?,B5), after(mv(50,42,0),B5?,B6), legal(mv(4,6,0),B6?,Lcastle), after(mv(4,6,0),B6?,C), board(C?,Xcastle).
-first(B), after(mv(12,28,0),B?,B1), after(mv(48,40,0),B1?,B2), after(mv(28,36,0),B2?,B3), after(mv(51,35,0),B3?,B4), legal(mv(36,43,0),B4?,Lep), after(mv(36,43,0),B4?,C), board(C?,Xep).
-first(B), after(mv(12,28,0),B?,B1), after(mv(51,35,0),B1?,B2), after(mv(5,33,0),B2?,B3), legal(mv(50,42,0),B3?,Lblock), legal(mv(52,44,0),B3?,Lpinned).
-legal(mv(48,56,5), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, []), Lpromo), legal(mv(48,56,0), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, []), Lnopromo), after(mv(48,56,5), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, []), C), board(C?,Xpromo).
+first_pos(B), side_pos(B?, S0).
+first_pos(B), legal_pos(mv(12,28,0), B?, Le4), legal_pos(mv(12,36,0), B?, Le5), legal_pos(mv(6,21,0), B?, Lnf3), legal_pos(mv(6,22,0), B?, Lng3), legal_pos(mv(4,6,0), B?, Lcas0).
+first_pos(B), after_pos(mv(12,28,0), B?, C), side_pos(C?, S1), mate_pos(C?, M1), draw_pos(C?, D1).
+first_pos(B), draw_pos(B?, D0).
+first_pos(B), after_pos(mv(13,21,0),B?,B1), after_pos(mv(52,36,0),B1?,B2), after_pos(mv(14,30,0),B2?,B3), legal_pos(mv(59,31,0),B3?,Lqh4), after_pos(mv(59,31,0),B3?,B4), mate_pos(B4?,Mfool), draw_pos(B4?,Dfool), side_pos(B4?,Sfool).
+side_pos(pos([0,0,0,0,0,0,0,16, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,15,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 26,0,0,0,0,0,0,0], 2, cas(0,0,0,0), -1, 0, []), Sstale), mate_pos(pos([0,0,0,0,0,0,0,16, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,15,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 26,0,0,0,0,0,0,0], 2, cas(0,0,0,0), -1, 0, []), Mstale), draw_pos(pos([0,0,0,0,0,0,0,16, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,15,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 26,0,0,0,0,0,0,0], 2, cas(0,0,0,0), -1, 0, []), Dstale).
+draw_pos(pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, []), Dkk), draw_pos(pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,14], 1, cas(0,0,0,0), -1, 0, []), Dkkr), draw_pos(pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,14], 1, cas(0,0,0,0), -1, 100, []), Dfifty).
+first_pos(B), after_pos(mv(6,21,0),B?,B1), after_pos(mv(62,45,0),B1?,B2), after_pos(mv(21,6,0),B2?,B3), after_pos(mv(45,62,0),B3?,B4), after_pos(mv(6,21,0),B4?,B5), after_pos(mv(62,45,0),B5?,B6), after_pos(mv(21,6,0),B6?,B7), draw_pos(B7?,Drep2), after_pos(mv(45,62,0),B7?,B8), draw_pos(B8?,Drep3).
+first_pos(B), after_pos(mv(12,28,0),B?,B1), after_pos(mv(52,44,0),B1?,B2), after_pos(mv(6,21,0),B2?,B3), after_pos(mv(51,43,0),B3?,B4), after_pos(mv(5,12,0),B4?,B5), after_pos(mv(50,42,0),B5?,B6), legal_pos(mv(4,6,0),B6?,Lcastle), after_pos(mv(4,6,0),B6?,C), board(C?,Xcastle).
+first_pos(B), after_pos(mv(12,28,0),B?,B1), after_pos(mv(48,40,0),B1?,B2), after_pos(mv(28,36,0),B2?,B3), after_pos(mv(51,35,0),B3?,B4), legal_pos(mv(36,43,0),B4?,Lep), after_pos(mv(36,43,0),B4?,C), board(C?,Xep).
+first_pos(B), after_pos(mv(12,28,0),B?,B1), after_pos(mv(51,35,0),B1?,B2), after_pos(mv(5,33,0),B2?,B3), legal_pos(mv(50,42,0),B3?,Lblock), legal_pos(mv(52,44,0),B3?,Lpinned).
+legal_pos(mv(48,56,5), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, []), Lpromo), legal_pos(mv(48,56,0), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, []), Lnopromo), after_pos(mv(48,56,5), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, []), C), board(C?,Xpromo).
+first(S), side(S?, Xs0), legal('mv(12, 28, 0)', S?, Xe4), legal('mv(12, 36, 0)', S?, Xe5), after('mv(12, 28, 0)', S?, C), side(C?, Xs1), mate(C?, Xm1), draw(C?, Xd1).
 :quit
 HEREDOC
 2>&1)
@@ -11342,6 +11346,12 @@ check "GCE: a check not met" "Lpinned = 0$" "$gce_out"
 check "GCE: a pawn promoted to a queen" "Lpromo = 1$" "$gce_out"
 check "GCE: a pawn on the last rank must be promoted" "Lnopromo = 0$" "$gce_out"
 check "GCE: the queen on a8" "Xpromo = .*, 0, 15, 0, 0, 0, 26, 0, 0, 0\\]$" "$gce_out"
+check "GCE: over constants, the first position, white to move" "Xs0 = 1$" "$gce_out"
+check "GCE: over constants, e2-e4 is legal" "Xe4 = 1$" "$gce_out"
+check "GCE: over constants, e2-e5 is not" "Xe5 = 0$" "$gce_out"
+check "GCE: over constants, after e2-e4, black to move" "Xs1 = 2$" "$gce_out"
+check "GCE: over constants, after e2-e4, no mate" "Xm1 = 0$" "$gce_out"
+check "GCE: over constants, after e2-e4, no draw" "Xd1 = 0$" "$gce_out"
 echo ""
 fi  # Section GCE
 
