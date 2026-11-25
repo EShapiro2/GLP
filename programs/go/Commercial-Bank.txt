@@ -51,9 +51,9 @@ Leave, Expel: Bob [Leave] <director>
   Codecider: Bob consents to end his participation and his office in Orga.
   CodeciderB: Bob consents to end his participation and his office in Orga.
 Bank deposit: Bob [Bank deposit] <amount>
-Loan: Alice [Loan] <customer> <denomination> <amount> <total> <maturity>
+Loan: Alice [Loan] <customer> <denomination> <amount> <maturity> <total>
   Bob: Alice offers you coins of Orga for your bonds.
-  Alice [Loan by the directors] <customer> <denomination> <amount> <total> <maturity> <votes>
+  Alice [Loan by the directors] <customer> <denomination> <amount> <maturity> <total> <votes>
   Bob: Alice offers you coins of Orga for your bonds.
   Erin [Vote to lend] <customer> <amount> <maturity>
 Set lending limit: Alice [Set lending limit] <loan officer> <limit> <votes>

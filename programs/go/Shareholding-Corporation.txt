@@ -33,14 +33,17 @@ Officers: Decider [Appoint] <person> <role>
   Codecider: Decider asks to end Bob's office in your organisation Orga.
   Bob [Resign] [Officer unfriend]
 Issue: AliceOfficer [Issue for Alice] <denomination>
+  Proposer [Proposal of Alice for Issue] <amount> <type>
   Voter [Vote of Alice for Issue]
 Swap, Redeem, Escrow: Alice [Swap] <issuer wanted> <amount given> <type wanted> <amount wanted>
   Bob: Alice asks to swap coins with you.
   AliceOfficer [Swap for Alice] <denomination>
   Bob: AliceOfficer asks to swap coins of the organisation Alice with you.
+  Proposer [Proposal of Alice for Swap] <other party> <amount given> <issuer given> <type given> <amount wanted> <issuer wanted> <type wanted>
   Voter [Vote of Alice for Swap]
   Alice [Swap for Bob] <officer of the other party> <issuer wanted> <amount given> <amount wanted> <votes of the other party>
   BobOfficer: Alice asks to swap coins with your organisation Bob.
+  Proposer [Proposal of Bob for Swap] <other party> <amount given> <issuer given> <type given> <amount wanted> <issuer wanted> <type wanted>
   Voter [Vote of Bob for Swap]
   AliceOfficer [Swap for Alice and Bob] <officer of the other party> <denomination>
   BobOfficer: AliceOfficer asks to swap coins of the organisation Alice with your organisation Bob.
@@ -48,9 +51,11 @@ Swap, Redeem, Escrow: Alice [Swap] <issuer wanted> <amount given> <type wanted> 
   Carol: Alice asks to deposit coins with you.
   AliceOfficer [Deposit for Alice] <denomination>
   Carol: AliceOfficer asks to deposit coins of the organisation Alice with you.
+  Proposer [Proposal of Alice for Deposit] <amount> <issuer> <type> <escrow> <beneficiary> <condition>
   Voter [Vote of Alice for Deposit]
   Alice [Deposit for Carol] <officer of the other party> <amount> <condition>
   CarolOfficer: Alice asks to deposit coins with your organisation Carol.
+  Proposer [Proposal of Carol for Deposit] <depositor> <amount> <issuer> <type> <beneficiary> <condition>
   Voter [Vote of Carol for Deposit]
   AliceOfficer [Deposit for Alice and Carol] <officer of the other party> <denomination>
   CarolOfficer: AliceOfficer asks to deposit coins of the organisation Alice with your organisation Carol.
@@ -58,9 +63,11 @@ Pay: Alice [Pay] <amount>
   Bob: Alice asks to pay you coins or bonds.
   AliceOfficer [Pay for Alice] <denomination>
   Bob: AliceOfficer asks to pay coins of the organisation Alice to you.
+  Proposer [Proposal of Alice for Pay] <payee> <amount> <issuer> <type>
   Voter [Vote of Alice for Pay]
   Alice [Pay for Bob] <officer of the other party> <amount>
   BobOfficer: Alice asks to pay coins to your organisation Bob.
+  Proposer [Proposal of Bob for Pay] <other party> <amount> <issuer> <type>
   Voter [Vote of Bob for Pay]
   AliceOfficer [Pay for Alice and Bob] <officer of the other party> <denomination>
   BobOfficer: AliceOfficer asks to pay coins of the organisation Alice to your organisation Bob.
@@ -68,9 +75,11 @@ Escrow: Carol [Release] <amount>
   Bob: Carol asks to release coins or bonds to you.
   CarolOfficer [Release for Carol] <denomination>
   Bob: CarolOfficer asks to release coins held by the organisation Carol to you.
+  Proposer [Proposal of Carol for Release] <beneficiary> <amount> <issuer> <type> <depositor> <condition>
   Voter [Vote of Carol for Release]
   Carol [Release for Bob] <officer of the other party> <amount>
   BobOfficer: Carol asks to release coins to your organisation Bob.
+  Proposer [Proposal of Bob for Release] <escrow> <amount> <issuer> <type> <depositor> <condition>
   Voter [Vote of Bob for Release]
   CarolOfficer [Release for Carol and Bob] <officer of the other party> <denomination>
   BobOfficer: CarolOfficer asks to release coins held by the organisation Carol to your organisation Bob.
@@ -78,9 +87,11 @@ Escrow: Carol [Release] <amount>
   Alice: Carol asks to return coins or bonds to you.
   CarolOfficer [Return for Carol] <denomination>
   Alice: CarolOfficer asks to return coins held by the organisation Carol to you.
+  Proposer [Proposal of Carol for Return] <depositor> <amount> <issuer> <type> <beneficiary> <condition>
   Voter [Vote of Carol for Return]
   Carol [Return for Alice] <officer of the other party> <amount>
   AliceOfficer: Carol asks to return coins to your organisation Alice.
+  Proposer [Proposal of Alice for Return] <escrow> <amount> <issuer> <type> <beneficiary> <condition>
   Voter [Vote of Alice for Return]
   CarolOfficer [Return for Carol and Alice] <officer of the other party> <denomination>
   AliceOfficer: CarolOfficer asks to return coins held by the organisation Carol to your organisation Alice.

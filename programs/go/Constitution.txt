@@ -27,12 +27,16 @@ Look: 🗳️, governance
 Join: Bob [Join] <organisation> <officer> <votes>
   Decider: Bob asks to become a member of Orga.
   Codecider: Bob asks to become a member of Orga.
+  Proposer [Proposal of Orga for Join] <person>
   Carol [Vote of Orga for Join]
 Leave, Expel: Decider [Expel] <person> <votes>
   Codecider: Decider asks to end Bob's membership in Orga.
+  Proposer [Proposal of Orga for Expel] <person>
   Carol [Vote of Orga for Expel]
   Decider [Officer expel] <person> <votes>
   Codecider: Decider asks to end Bob's membership and his office in Orga.
+  Proposer [Proposal of Orga for Officer expel] <person>
   Carol [Vote of Orga for Officer expel]
 Amend: Alice [Amend] <votes>
+  Proposer [Proposal of Orga for Amend] <amender> <amendment>
   Carol [Vote of Orga for Amend]
