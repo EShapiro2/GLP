@@ -6,7 +6,7 @@
 % Schemas: Warnings.glp beside this file.
 Warnings
 Warnings extends Organisation, and weakens it.
-A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident.
+A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident. An officer holds at most one warning to a participant at a time.
 Alice and Bob are persons, Orga an organisation.
 1. ■ Warn: Alice may warn Bob in Orga of an incident, provided Alice is an officer of Orga and Orga has Bob as a participant.
 2. ■ Answer: Bob may answer a warning to him.
@@ -14,7 +14,7 @@ Alice and Bob are persons, Orga an organisation.
 4. ■ Expel: Organisation:3 Expel, only if two officers of Orga hold their warnings to Bob. Officer expel: Organisation:3 Officer expel, only if two officers of Orga hold their warnings to Bob.
 Logic pragmas
 Warnings extends Organisation, and weakens it.
-A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident.
+A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident. An officer holds at most one warning to a participant at a time.
 Alice and Bob are persons, Orga an organisation, Case an incident, Text an answer.
 1. ■ Warn: Alice may warn Bob in Orga of Case, provided Alice is an officer of Orga and Orga has Bob as a participant.
 2. ■ Answer: Bob may answer Alice's warning in Orga of Case with Text.
@@ -22,7 +22,7 @@ Alice and Bob are persons, Orga an organisation, Case an incident, Text an answe
 4. ■ Expel: Organisation:3 Expel, only if Orga holds the warnings of at least 2 persons to Bob. Officer expel: Organisation:3 Officer expel, only if Orga holds the warnings of at least 2 persons to Bob.
 Logic pragmas.
 Vocabulary: z holds x's warning to y = warning(z,x,y); z holds x's warning to y of k = warning_of(z,x,y,k); y has answered x's warning in z of k with t = warning_answer(y,x,z,k,t).
-After x warns y in z of k, which requires z does not hold x's warning to y of k: z holds x's warning to y and z holds x's warning to y of k.
+After x warns y in z of k, which requires z does not hold x's warning to y: z holds x's warning to y and z holds x's warning to y of k.
 After y answers x's warning in z of k with t, which requires z holds x's warning to y of k: y has answered x's warning in z of k with t.
 After x withdraws x's warning to y in z of k: no longer z holds x's warning to y and no longer z holds x's warning to y of k.
 After g annuls x's warning to y in z of k: no longer z holds x's warning to y and no longer z holds x's warning to y of k.
