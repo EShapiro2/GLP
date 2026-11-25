@@ -138,6 +138,9 @@ def schema_nums(lits, values, places=frozenset()):
         for i, a in enumerate(l[2]):
             if a[:1] in '*#':
                 nums.add(a[1:])
+            c = re.fullmatch(r'[a-z][a-z_0-9]*\((.+)\)', a)
+            if c:                   # the variables of a compound value, bond(Day): numbers (GSC #21, Definition Values)
+                nums.update(x.strip() for x in c.group(1).split(',') if re.fullmatch(gcsas.NAME, x.strip()))
             m = re.fullmatch(r'(<=|>=|<|>|=)(\w+)', a)
             if m and not m.group(2).isdigit():
                 nums.add(m.group(2))
@@ -381,6 +384,16 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             return 'sgn(%s, %s)' % (arg('@'.join(t)), arg(s))
         if a in consts:              # a name of no kind that no one holds, as the role Arbiter: a constant the contract names
             return 'val(%s)' % q(a)
+        m = re.fullmatch(r'([a-z][a-z_0-9]*)\((.+)\)', a)
+        if m:                        # a compound value, f(v1, ..., vk): val(bond, [num('Day')]), each vi a value or a value
+            # variable, a variable a number where no other kind is known (GSC #21, Calculus_inbox.md, 2026-11-25 02:29 UTC:
+            # Definition Values; Bonds' 'x holds a y-bond due e = note(x,y,bond(e),*1)', Currencies #23)
+            def sub(x):
+                x = x.strip()
+                if re.fullmatch(gcsas.NAME, x) and x not in consts and x not in cvars and x not in roles:
+                    nums.add(x)
+                return arg(x)
+            return 'val(%s, [%s])' % (m.group(1), ', '.join(sub(x) for x in m.group(2).split(',')))
         if a in nums:
             if a not in others:
                 others.append(a)
