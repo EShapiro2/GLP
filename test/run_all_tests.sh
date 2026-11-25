@@ -5561,9 +5561,9 @@ cva_text=$("$REPL_RUN" 2>&1 <<HEREDOC
 $cva_scratch/platform.glp
 requests_first([again(establish(alice)), recheck, own, again(establish(bob)), recheck], R1).
 requests_first([recheck, own], R2).
-question_words(swap(alice, bob, alice, coin, [a1, a2], 2, bob, coin, [b1, b2, b3], 3), bob, W1).
-question_words(swap(alice, bob, carol, coin, [c1, c2], 2, bob, coin, [b1, b2, b3], 3), bob, W2).
-question_words(swap(bob, carol, alice, coin, [a1, a2], 2, bob, coin, [b1, b2, b3], 3), bob, W3).
+question_words(swap(alice, bob, alice, coin, [a1, a2], 2, bob, coin, 3), bob, W1).
+question_words(swap(alice, bob, carol, coin, [c1, c2], 2, bob, coin, 3), bob, W2).
+question_words(swap(bob, carol, alice, coin, [a1, a2], 2, bob, coin, 3), bob, W3).
 :quit
 HEREDOC
 )
