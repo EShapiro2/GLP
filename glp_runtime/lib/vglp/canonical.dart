@@ -1741,10 +1741,10 @@ class DeclaredWidget {
 
   static ActCondition? _condition(Term x) {
     if (x is! StructTerm) return null;
-    if (x.functor == 'same' && x.args.length == 2) {
+    if ((x.functor == 'same' || x.functor == 'size') && x.args.length == 2) {
       final k = _int(x.args[0]), j = _int(x.args[1]);
       if (k == null || j == null) return null;
-      return ActCondition('same', '', [k, j]);
+      return ActCondition(x.functor, '', [k, j]);
     }
     if (x.functor == 'proved' && x.args.length == 4) {
       final q = _labelConstant(x.args[0]), p = _labelConstant(x.args[2]);
@@ -1937,9 +1937,12 @@ class DeclaredAct {
 }
 
 /// An entry of an act's `Pre` or `Same`: `req(P, As)`, `forb(P, As)`,
-/// `unless(P, As)`, `proved(Q, Ws, P, As)` or `same(K, J)`, by its [kind].  Of
-/// `As`, [args] holds each argument's place: `at(K)` the int K, `grp(J, K)` the
-/// pair `(J, K)`, and `any` null; of `same(K, J)`, the two places.
+/// `unless(P, As)`, `proved(Q, Ws, P, As)`, `same(K, J)` or `size(S, F)`, by
+/// its [kind].  Of `As`, [args] holds each argument's place: `at(K)` the int K,
+/// `grp(J, K)` the pair `(J, K)`, and `any` null; of `same(K, J)`, the two
+/// places; of `size(S, F)`, the set place S and the place F of the field that
+/// gives its size ("The person gives the size of a set variable in a field, a
+/// number", vGLP, VEUI 7db9d2e).
 class ActCondition {
   final String kind;
   final String pred;
@@ -1953,7 +1956,7 @@ class ActCondition {
       {this.proves = '', this.provesArgs = const []});
 
   String get source {
-    if (kind == 'same') return 'same(${args[0]}, ${args[1]})';
+    if (kind == 'same' || kind == 'size') return '$kind(${args[0]}, ${args[1]})';
     final as_ = '[${[
       for (final a in args)
         a is int
