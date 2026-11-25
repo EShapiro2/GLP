@@ -1,3 +1,8 @@
+# Code #37, 2026-11-25 08:55 UTC
+
+- Main 852ed07: compound values (vGLP 2ad8dde, GSC 95d299c, Calculus b924830, Currencies 0eb5365 and d85e1df gb, GO d233191 and 5c02ddb); 91 adopted, platforms compile, 66 records printed, APPS and GSC 1021/1021, site check clean.  gb's known-red entries gone.  Also on main: Calculus derive.py b42a475 and 4e68cca (Audit PR 123, 125).
+- Owed: Flutter QF as non-root.
+
 # Code #37, 2026-11-25 02:35 UTC
 
 - Main 8d14cc0: the sets change.  The Calculus's set terms (35dafec, d7b7a8f, 08f4b51 Found by an organisation and a single note a set of one, 5e6186d Disputes' ruling, a31ed7e Provenance Groups' messages), GSC 4a9175a (checker for sets), vGLP 881c449 (compiler and pragmas.sh on sets, Organisation's plays), GO da8ae14, GAI 4bef766 (gsnp screens), Currencies eac7ad2 (gc).  All 91 adopted (adopted-check 91/0, --check on all); every platform compiles (apps, CSSN, vGLP --check); the 66 records printed at 2d33962 plus Provenance Groups and Secure Friendship (its plays' platform printed afresh); gfwc dormant.  Section APPS 227/227 with gb's 22 checks known red: Bonds' term names a bond's type val('bond(Day)'), sent by Currencies to Calculus #11 and vGLP #32; Currencies mends gb, then the entries come off.
