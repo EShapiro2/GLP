@@ -249,7 +249,7 @@ def file_of(name):
 
 # Every contract's text, wherever its owner keeps it: programs/**/NAME.txt.
 texts = {}
-for d, _, fs in ([] if VILLAGERS else os.walk(os.path.join(GLP, 'programs'))):
+for d, _, fs in os.walk(os.path.join(GLP, 'programs')):
     for f in fs:
         if f.endswith('.txt') and f[:-4] == f[:-4].strip() and re.fullmatch(r'[A-Z][A-Za-z]*(?:-[A-Za-z]+)*', f[:-4]):
             p = os.path.join(d, f)
@@ -257,11 +257,14 @@ for d, _, fs in ([] if VILLAGERS else os.walk(os.path.join(GLP, 'programs'))):
             if first.startswith(f[:-4] + ': ') or file_of(first.strip()) == f[:-4]:
                 texts[f[:-4]] = p
 
-# The Villagers site's contracts: contracts/NAME/contract.txt of the Villagers repository.
+# The Villagers site's contracts: contracts/NAME/contract.txt of the Villagers repository, beside
+# every contract of programs/, of which the site keeps those they inherit from (KEEP, below).
+VILL = set()
 if VILLAGERS:
     for f in sorted(os.listdir(VILLAGERS)):
         if os.path.exists(os.path.join(VILLAGERS, f, 'contract.txt')):
             texts[f] = os.path.join(VILLAGERS, f, 'contract.txt')
+            VILL.add(f)
 
 # The owners, as cascade.sh's table names them; else the first word of the % Owner line.
 owners = {}
@@ -370,7 +373,7 @@ for c in cat.values():
     c['extends'] = extends_of(c, read(texts[c['id']]).split('\n'))
     own = next((l for l in c['meta'] if l.startswith('% Owner:')), '% Owner: ')
     c['owner'] = re.sub(r'[^A-Za-z].*$', '', own[len('% Owner:'):].strip()) or owners.get(c['id'], '')
-    if VILLAGERS:
+    if c['id'] in VILL:
         c['owner'] = 'Villagers'
     c['source'] = 'example' if c['meta'] and re.search(r'an (example|experimental) contract', c['meta'][0]) else 'paper'
 
@@ -381,7 +384,28 @@ def has_platform(n):
     return os.path.exists(p) and 'exported procedure agent(' in read(p)
 
 
-compiled = [] if VILLAGERS else sorted(n for n in os.listdir(os.path.join(GLP, 'cascade')) if has_platform(n) and n in cat)
+compiled = sorted(n for n in os.listdir(os.path.join(GLP, 'cascade')) if has_platform(n) and n in cat)
+
+
+def ancestors0(cid, seen=None):
+    seen = set() if seen is None else seen
+    for p in cat[cid]['extends']:
+        if p in cat and p not in seen:
+            seen.add(p)
+            ancestors0(p, seen)
+    return seen
+
+
+# The Villagers site keeps the Villagers repository's contracts and every
+# contract they inherit from, directly or through others (Udi, 2026-11-25
+# 01:07 UTC: "it should include all contracts villagers inherit from, and show
+# both terse and full contracts").
+KEEP = set(cat)
+if VILLAGERS:
+    KEEP = set(VILL)
+    for v in VILL:
+        KEEP |= ancestors0(v)
+    compiled = [n for n in compiled if n in KEEP]
 # The test site writes no world: its apps are the live server's, so a contract
 # is live there where the live build made its world.
 # The live build's worlds are in the live clone, LIVE_WORLDS, which
@@ -424,7 +448,7 @@ for n in compiled:
 # Since 2026-11-24 the Calculus keeps each contract in calculus/contracts/NAME/ (Code #37).
 CALC = os.environ.get('CALCULUS_DIR') or next((d for d in (os.path.join(GLP, 'calculus', 'contracts'), os.path.join(GLP, 'calculus')) if os.path.exists(os.path.join(d, 'STATE.txt'))), os.path.join(GLP, 'calculus', 'contracts'))
 calc_state = {}
-if not VILLAGERS and os.path.exists(os.path.join(CALC, 'STATE.txt')):
+if os.path.exists(os.path.join(CALC, 'STATE.txt')):
     for l in read(os.path.join(CALC, 'STATE.txt')).split('\n'):
         f = l.split()
         if len(f) == 5:
@@ -454,6 +478,20 @@ def calculus_of(n):
     # calculus/contracts/NAME/ and its pragmas).
     calc_fc = os.path.join(CALC, n, 'full-contract.txt')
     fc = calc_fc if os.path.exists(calc_fc) else own if v['adopted'] else calc_fc
+    return full_of(v, n, fc)
+
+
+def villagers_of(n):
+    """A contract of the Villagers repository: its full contract, as its
+    owner prints it, contracts/n/full-contract.txt, where there is one."""
+    fc = os.path.join(VILLAGERS, n, 'full-contract.txt')
+    if not os.path.exists(fc):
+        return None
+    return full_of({'owner': 'Villagers', 'certified': False, 'compiled': False, 'adopted': True}, n, fc)
+
+
+def full_of(v, n, fc):
+    """v with the full contract fc, where it exists, copied into the site."""
     if os.path.exists(fc):
         os.makedirs(os.path.join(WWW, 'stack', n), exist_ok=True)
         shutil.copy(fc, os.path.join(WWW, 'stack', n, 'full-contract.txt'))
@@ -497,7 +535,7 @@ def ancestors(cid):
     return out
 
 
-shown = set(cat)
+shown = set(cat) & KEEP
 
 
 def nearest(cid):
@@ -520,7 +558,7 @@ def look_line(pragmas):
 
 
 contracts = []
-for n in sorted(set(compiled) | set(cat)):
+for n in sorted((set(compiled) | set(cat)) & KEEP):
     c = dict(cat[n])
     d = os.path.join(GLP, 'cascade', n)
     # The icon and family the contract's Look line names, where its owner
@@ -539,8 +577,8 @@ for n in sorted(set(compiled) | set(cat)):
             t = re.sub(re.escape(cat[p]['title']), cat[p]['name'], t, flags=re.I)
     c['label'] = f"{c['name']}: {t}" if t != c['name'] else c['name'] 
     c['cascade'] = n in compiled
-    c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts and not VILLAGERS else ''
-    c['paper'] = cite_of('Villagers', served, paper_state) if VILLAGERS else paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
+    c['dir'] = os.path.relpath(os.path.dirname(texts[n]), GLP) if n in texts and n not in VILL else ''
+    c['paper'] = cite_of('Villagers', served, paper_state) if n in VILL else paper_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''), served, paper_state)
     c['paperKey'] = key_of(next((l for l in c['meta'] if l.startswith('% Owner:')), ''))
     c['schemaHeader'], c['schemas'] = parse_schemas(os.path.join(d, 'schemas.txt'))
     c['verdict'] = read(os.path.join(d, 'verdict.txt')).strip() if os.path.exists(os.path.join(d, 'verdict.txt')) else ''
@@ -572,7 +610,7 @@ for n in sorted(set(compiled) | set(cat)):
     # verbatim: "i want the web to include for each contract a button you
     # press 'full contract' that show the full contract"), and the Calculus's
     # proposed text and state.
-    c['calculus'] = None if VILLAGERS else calculus_of(n)
+    c['calculus'] = villagers_of(n) if n in VILL else calculus_of(n)
     # A contract that builds on one with no platform is drawn building on the nearest shown ones.
     ps = nearest(n)
     c['extends'] = [p for p in ps if not any(p in set(ancestors(q)) for q in ps if q != p)]
@@ -634,7 +672,7 @@ with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
 # A contract the Calculus has and its owner has not written, SGSG today: listed
 # from the Calculus with its proposed text and nothing in force, until its
 # owner adopts it (calculus/MIGRATION.md, Website, item 2).
-for n in sorted(set(calc_state) - set(cat)):
+for n in sorted(set(calc_state) - set(cat) if not VILLAGERS else []):
     v = calculus_of(n)
     if not v or 'proposed' not in v:
         continue
@@ -670,7 +708,7 @@ if served:
 # tree, the build prints and the page shows, so that every directory is
 # accounted for.
 projects, code, faults = ([{'id': 'Villagers', 'name': cite_of('Villagers')['title'], 'dirs': [],
-                             'papers': [{'key': 'Villagers', 'dirs': [], 'contracts': [{'id': c['id'], 'items': []} for c in contracts]}]}], [], []) if VILLAGERS else directories.tree(GLP, [(c['id'], os.path.relpath(texts[c['id']], GLP), c.pop('paperKey')) for c in contracts if c['id'] in texts])
+                             'papers': [{'key': 'Villagers', 'dirs': [], 'contracts': [{'id': c['id'], 'items': []} for c in contracts if c['id'] in VILL]}]}], [], []) if VILLAGERS else directories.tree(GLP, [(c['id'], os.path.relpath(texts[c['id']], GLP), c.pop('paperKey')) for c in contracts if c['id'] in texts])
 for p in projects:
     for q in p['papers']:
         q['cite'] = cite_of(q['key'], served, paper_state) or {}
@@ -710,7 +748,7 @@ with open(os.path.join(WWW, 'data.js'), 'w', encoding='utf-8') as f:
     if VILLAGERS:
         # The globe upside down: the contract built on all the others at the
         # south pole (web/index.html, D.flip).
-        data['flip'], data['site'] = True, 'villagers'
+        data['south'], data['site'] = 'Villagers', 'villagers'
         data['villagersCommit'] = subprocess.run(['git', '-C', os.path.dirname(VILLAGERS.rstrip('/')), 'log', '-1', '--format=%H %cs'], capture_output=True, text=True).stdout.split()
     f.write('window.DATA = ' + json.dumps(data, ensure_ascii=False) + ';\n')
 print(len(contracts), 'contracts:', ' '.join(c['id'] for c in contracts))
