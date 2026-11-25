@@ -124,72 +124,65 @@ class DescribedScreen extends StatefulWidget {
   State<DescribedScreen> createState() => _DescribedScreenState();
 }
 
-/// A way an action offers: the values of the places a way of the act binds, and of those the subject fixes.
-typedef _Way = Map<int, GTerm>;
+typedef DescribedWay = Map<int, GTerm>;
 
-class _DescribedScreenState extends State<DescribedScreen> {
-  /// The screens the person came through, each with its subject; the last is on the screen.
-  final List<(String, GTerm?)> _stack = [];
-  final Map<String, TextEditingController> _fields = {};
+/// What a described screen offers, over the person's last view and her request question: the logic of the
+/// screens, apart from their drawing, so that a test can walk every screen.
+class DescribedCore {
+  final UiDescription ui;
+  final SocialState s;
+  final SocialAsk? ask;
+  DescribedCore(this.ui, this.s, this.ask);
 
-  @override
-  void dispose() {
-    for (final c in _fields.values) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  SocialState get s => widget.state;
-  String _k(GTerm t) => formatTerm(t);
-  bool _same(GTerm a, GTerm b) => _k(a) == _k(b);
+  String key(GTerm t) => formatTerm(t);
+  bool same(GTerm a, GTerm b) => key(a) == key(b);
 
   /// A person or a value as the person reads it: a key with its underscores as spaces, capitalized.
-  String _show(GTerm t) {
-    if (_same(t, s.me)) return 'you';
+  String show(GTerm t) {
+    if (same(t, s.me)) return 'you';
     final x = displayText(t).replaceAll('_', ' ');
     return x.isEmpty ? x : x[0].toUpperCase() + x.substring(1);
   }
 
   /// What the person reads for a predicate: the name of the list the contract gives it, or the predicate.
-  String _label(String p) {
+  String label(String p) {
     for (final l in s.lists) {
       if (l.predicate == p) return l.name;
     }
     return p.replaceAll('_', ' ');
   }
 
-  List<GTerm> _args(GTerm a) => ctorArgs(a).$2;
-  String _pred(GTerm a) => ctorArgs(a).$1;
+  List<GTerm> args(GTerm a) => ctorArgs(a).$2;
+  String pred(GTerm a) => ctorArgs(a).$1;
 
   /// Whether the fact [a] names [v]: every argument of [v] where [v] is a fact, [v] itself otherwise.
-  bool _names(GTerm a, GTerm v, {bool fact = false}) => fact
-      ? _args(v).every((x) => _args(a).any((y) => _same(x, y)))
-      : _args(a).any((y) => _same(v, y));
+  bool names(GTerm a, GTerm v, {bool fact = false}) => fact
+      ? args(v).every((x) => args(a).any((y) => same(x, y)))
+      : args(a).any((y) => same(v, y));
 
   /// The persons named in the person's state: those she knows, and those at a person's position of a fact.
-  List<GTerm> _everyone() {
+  List<GTerm> everyone() {
     final out = <String, GTerm>{};
     for (final k in s.known) {
-      out[_k(k)] = k;
+      out[key(k)] = k;
     }
     for (final a in s.atoms) {
-      final ps = widget.ui.personPos[_pred(a)] ?? const [];
-      final xs = _args(a);
+      final ps = ui.personPos[pred(a)] ?? const [];
+      final xs = args(a);
       for (final i in ps) {
-        if (i <= xs.length) out[_k(xs[i - 1])] = xs[i - 1];
+        if (i <= xs.length) out[key(xs[i - 1])] = xs[i - 1];
       }
     }
-    out.remove(_k(s.me));
+    out.remove(key(s.me));
     return out.values.toList();
   }
 
-  List<GTerm> _valuesOf(String p) {
+  List<GTerm> valuesOf(String p) {
     final out = <String, GTerm>{};
     for (final a in s.atoms) {
-      if (_pred(a) == p) {
-        for (final x in _args(a)) {
-          out[_k(x)] = x;
+      if (pred(a) == p) {
+        for (final x in args(a)) {
+          out[key(x)] = x;
         }
       }
     }
@@ -197,29 +190,29 @@ class _DescribedScreenState extends State<DescribedScreen> {
   }
 
   /// The items of a list, on a screen about [subject].
-  List<GTerm> _items(UiComponent c, GTerm? subject) {
+  List<GTerm> items(UiComponent c, GTerm? subject) {
     final items = c.j['items'] as Map<String, dynamic>;
-    if (items['everyone'] == true) return _everyone();
-    if (items['from'] != null) return _valuesOf(items['from'] as String);
+    if (items['everyone'] == true) return everyone();
+    if (items['from'] != null) return valuesOf(items['from'] as String);
     final p = items['facts'] as String, keep = items['keep'] as int?;
-    final kept = keep != null && subject != null && keep <= _args(subject).length ? _args(subject)[keep - 1] : null;
+    final kept = keep != null && subject != null && keep <= args(subject).length ? args(subject)[keep - 1] : null;
     return [
       for (final a in s.atoms)
-        if (_pred(a) == p && (kept == null || _names(a, kept))) a
+        if (pred(a) == p && (kept == null || names(a, kept))) a
     ];
   }
 
   /// The value of the subject the source [src] takes.
-  GTerm? _ofSubject(PlaceSource src, GTerm? subject) {
+  GTerm? ofSubject(PlaceSource src, GTerm? subject) {
     if (subject == null) return null;
     if (src.pos == null) return subject;
-    final xs = _args(subject);
+    final xs = args(subject);
     return src.pos! <= xs.length ? xs[src.pos! - 1] : null;
   }
 
   /// The act of [c] at the person's role, as the platform's request type declares it.
-  DeclaredAct? _act(UiComponent c) {
-    final o = widget.ask?.offers;
+  DeclaredAct? act(UiComponent c) {
+    final o = ask?.offers;
     if (o == null) return null;
     for (final b in o.buttons) {
       for (final a in b.acts) {
@@ -231,26 +224,26 @@ class _DescribedScreenState extends State<DescribedScreen> {
 
   /// The ways [c] offers on a screen about [subject]: those of its act the person's state satisfies, each
   /// with the values the subject fixes, kept to those its lists allow.
-  List<_Way> _ways(UiComponent c, DeclaredAct act, GTerm? subject) {
+  List<DescribedWay> ways(UiComponent c, DeclaredAct act, GTerm? subject) {
     final info = ActInfo(act), fixed = <int, GTerm>{};
     for (final e in c.places.entries) {
       if (e.value.subject) {
-        final v = _ofSubject(e.value, subject);
+        final v = ofSubject(e.value, subject);
         if (v == null) return const [];
         fixed[e.key] = v;
       }
     }
     final ways = act.binds.isEmpty ? [<int, GTerm>{}] : info.ways(s.atoms, s.me);
-    final out = <_Way>[];
+    final out = <DescribedWay>[];
     for (final w in ways) {
-      if (fixed.entries.any((f) => w[f.key] != null && !_same(w[f.key]!, f.value))) continue;
+      if (fixed.entries.any((f) => w[f.key] != null && !same(w[f.key]!, f.value))) continue;
       final x = {...w, ...fixed};
       var ok = true;
       for (final e in c.places.entries) {
         final from = e.value.from;
         if (from == null || x[e.key] == null) continue;
-        final allowed = from == 'everyone' ? _everyone() : _valuesOf(from);
-        if (!allowed.any((v) => _same(v, x[e.key]!))) ok = false;
+        final allowed = from == 'everyone' ? everyone() : valuesOf(from);
+        if (!allowed.any((v) => same(v, x[e.key]!))) ok = false;
       }
       // A way the act forbids, where the person's state determines it, is not offered (ActInfo.lacks).
       if (ok && info.lacks(s.atoms, {...x, act.proposer: s.me})) out.add(x);
@@ -259,15 +252,21 @@ class _DescribedScreenState extends State<DescribedScreen> {
   }
 
   /// The places of [act] the person fills: its fields, each from a list or typed.
-  List<DeclaredField> _fieldsOf(DeclaredAct act, _Way w) => [
+  List<DeclaredField> fieldsOf(DeclaredAct act, DescribedWay w) => [
         for (final f in act.fields)
           if (w[f.place] == null) f
       ];
 
   /// The value a field's text gives, as the request widget forms it.
-  GTerm? _textValue(DeclaredField f, String text) {
+  GTerm? textValue(DeclaredField f, String text, {String? schema}) {
     final t = text.trim();
     if (t.isEmpty) return null;
+    // A speech act's text is the text signed by the person, as the request widget forms it.
+    final o = ask?.offers, k = schema == null || o == null ? null : o.keyOf(schema);
+    final kinds = k == null ? const <String>[] : o!.kinds[k] ?? const [];
+    if (f.place <= kinds.length && kinds[f.place - 1] == 'speech') {
+      return GStruct('speech', [GStruct('utterance', [GString(t)]), s.me]);
+    }
     switch (f.type) {
       case 'number':
         final v = int.tryParse(t);
@@ -285,15 +284,15 @@ class _DescribedScreenState extends State<DescribedScreen> {
   }
 
   /// The request of [act] at [at], or null where a place is unfilled or the act is not allowed there.
-  GTerm? _request(DeclaredAct act, Map<int, GTerm> at) {
-    final o = widget.ask?.offers;
-    if (o == null || widget.ask?.at == null) return null;
+  GTerm? request(DeclaredAct act, Map<int, GTerm> at) {
+    final o = ask?.offers;
+    if (o == null || ask?.at == null) return null;
     final key = o.keyOf(act.schema);
     if (key == null) return null;
     final n = int.parse(key.substring(key.lastIndexOf('/') + 1));
     final args = [for (var i = 1; i <= n; i++) i == act.proposer ? (at[i] ?? s.me) : at[i]];
-    final full = {for (var i = 1; i <= n; i++) i: args[i - 1]!};
     if (args.contains(null)) return null;
+    final full = {for (var i = 1; i <= n; i++) i: args[i - 1]!};
     final info = ActInfo(act);
     if (!info.lacks(s.atoms, full) || !info.distinct(full)) return null;
     return GStruct(act.schema, [
@@ -301,19 +300,60 @@ class _DescribedScreenState extends State<DescribedScreen> {
     ]);
   }
 
+
+  /// Every screen the person can reach from the start, each with its subject, to a depth of four.
+  List<(String, GTerm?)> screens() {
+    final out = <(String, GTerm?)>[], seen = <String>{};
+    void walk(String name, GTerm? subject, int depth) {
+      if (!seen.add('$name|${subject == null ? '' : key(subject)}')) return;
+      out.add((name, subject));
+      if (depth >= 4) return;
+      for (final c in ui.screens[name]!.components) {
+        final opens = c.j['opens'] as String?;
+        if (c.kind != 'list' || opens == null) continue;
+        for (final it in items(c, subject)) {
+          walk(opens, it, depth + 1);
+        }
+      }
+    }
+
+    walk(ui.start, null, 0);
+    return out;
+  }
+}
+
+/// A way an action offers: the values of the places a way of the act binds, and of those the subject fixes.
+
+
+class _DescribedScreenState extends State<DescribedScreen> {
+  /// The screens the person came through, each with its subject; the last is on the screen.
+  final List<(String, GTerm?)> _stack = [];
+  final Map<String, TextEditingController> _fields = {};
+
+  @override
+  void dispose() {
+    for (final c in _fields.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  SocialState get s => widget.state;
+  DescribedCore get c0 => DescribedCore(widget.ui, widget.state, widget.ask);
+
   void _toast(String m) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(m)));
 
   /// The person taps the action [c]: where nothing is left to choose or fill, the request is made; otherwise a
   /// sheet asks for what is left.
-  void _tap(UiComponent c, DeclaredAct act, List<_Way> ways, GTerm? subject) {
+  void _tap(UiComponent c, DeclaredAct act, List<DescribedWay> ways, GTerm? subject) {
     final w0 = ways.first;
-    final fields = _fieldsOf(act, w0);
+    final fields = c0.fieldsOf(act, w0);
     final varying = [
       for (final p in act.binds)
-        if (ways.map((w) => w[p] == null ? '' : _k(w[p]!)).toSet().length > 1) p
+        if (ways.map((w) => w[p] == null ? '' : c0.key(w[p]!)).toSet().length > 1) p
     ];
     if (ways.length == 1 && fields.isEmpty) {
-      final r = _request(act, w0);
+      final r = c0.request(act, w0);
       if (r == null) return _toast('${c.button}: not allowed now');
       widget.ask!.propose(r);
       return;
@@ -328,21 +368,37 @@ class _DescribedScreenState extends State<DescribedScreen> {
         varying: varying,
         fields: fields,
         sources: c.places,
-        show: _show,
+        show: c0.show,
         options: (f) {
           final src = c.places[f.place];
           if (src?.from == null) return null;
-          return src!.from == 'everyone' ? _everyone() : _valuesOf(src.from!);
+          return src!.from == 'everyone' ? c0.everyone() : c0.valuesOf(src.from!);
         },
-        textValue: _textValue,
+        textValue: (f, t) => c0.textValue(f, t, schema: act.schema),
         submit: (w, given) {
-          final r = _request(act, {...w, ...given});
+          final r = c0.request(act, {...w, ...given});
           if (r == null) return false;
           widget.ask!.propose(r);
           return true;
         },
       ),
     );
+  }
+
+  /// The text field of the screen's composer, by the screen and its subject.
+  TextEditingController _composer(String k) => _fields.putIfAbsent(k, TextEditingController.new);
+
+  /// An avatar: a person's initial in a colour of its own, a value's in grey.
+  Widget _avatar(GTerm t, {double r = 18}) {
+    final mine = c0.same(t, s.me);
+    final name = mine ? displayText(t) : c0.show(t), person = mine || c0.everyone().any((x) => c0.same(x, t));
+    const colors = [Color(0xFFEF6F4F), Color(0xFF2A9D8F), Color(0xFF8E63CF), Color(0xFFE0A030), Color(0xFF3B82C4)];
+    final color = person ? colors[c0.key(t).codeUnits.fold(0, (a, b) => a + b) % colors.length] : Colors.blueGrey.shade300;
+    return CircleAvatar(
+        radius: r,
+        backgroundColor: color,
+        child: Text(name.isEmpty ? '?' : name[0].toUpperCase(),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: r * .85)));
   }
 
   @override
@@ -355,135 +411,212 @@ class _DescribedScreenState extends State<DescribedScreen> {
     }
     final (name, subject) = _stack.last;
     final scr = ui.screens[name]!;
-    final theme = Theme.of(context);
-    final body = <Widget>[];
-    final actions = <Widget>[];
-    for (final c in scr.components) {
-      switch (c.kind) {
+    final theme = Theme.of(context), muted = TextStyle(color: Colors.grey.shade600, fontSize: 13);
+    final c = c0;
+    final body = <Widget>[], actions = <Widget>[], menu = <(String, VoidCallback)>[];
+    Widget? composer;
+    final thread = scr.components.any((x) => x.kind == 'thread');
+    final here = '$name|${subject == null ? '' : c.key(subject)}';
+    for (final comp in scr.components) {
+      switch (comp.kind) {
         case 'questions':
-          body.addAll(widget.questions);
+          if (widget.questions.isNotEmpty) {
+            body.add(Padding(padding: const EdgeInsets.only(top: 4), child: Column(children: widget.questions)));
+          }
         case 'show':
-          final of = c.j['of'] as String, pos = c.j['pos'] as int?;
+          final of = comp.j['of'] as String, pos = comp.j['pos'] as int?;
           final facts = of == 'me'
-              ? [for (final a in s.atoms) if (c.preds.contains(_pred(a)) && _args(a).isEmpty) a]
+              ? [for (final a in s.atoms) if (comp.preds.contains(c.pred(a)) && c.args(a).isEmpty) a]
               : subject == null
                   ? const <GTerm>[]
                   : [
                       for (final a in s.atoms)
-                        if (c.preds.contains(_pred(a)) &&
-                            (pos != null
-                                ? _names(a, _args(subject)[pos - 1])
-                                : _names(a, subject, fact: scr.fact != null)))
+                        if (comp.preds.contains(c.pred(a)) &&
+                            (pos != null ? c.names(a, c.args(subject)[pos - 1]) : c.names(a, subject, fact: scr.fact != null)))
                           a
                     ];
           if (facts.isEmpty) break;
+          final labels = {for (final a in facts) () { final l = c.label(c.pred(a)); return l.isEmpty ? l : l[0].toUpperCase() + l.substring(1); }()};
           body.add(Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
             child: Wrap(spacing: 6, runSpacing: 6, children: [
-              for (final p in {for (final a in facts) _pred(a)})
-                Chip(label: Text(_label(p)), visualDensity: VisualDensity.compact),
+              for (final l in labels)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(color: theme.colorScheme.primary.withValues(alpha: .10), borderRadius: BorderRadius.circular(99)),
+                  child: Text(l, style: TextStyle(fontSize: 12.5, color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
+                ),
             ]),
           ));
         case 'thread':
           final lines = [
             for (final a in s.atoms)
-              if (c.preds.contains(_pred(a)) && subject != null && _names(a, subject, fact: scr.fact != null))
-                for (final x in _args(a))
-                  if (x is GString) x.value
+              if (comp.preds.contains(c.pred(a)) && subject != null && c.names(a, subject, fact: scr.fact != null))
+                for (final x in c.args(a))
+                  if (x is GString || (x is GStruct && x.functor == 'speech')) (a, x)
           ];
           body.add(Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (lines.isEmpty) Text('No messages yet.', style: TextStyle(color: Colors.grey.shade600)),
-              for (final l in lines)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer, borderRadius: BorderRadius.circular(14)),
-                  child: Text(l),
-                ),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              if (lines.isEmpty) Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('No messages yet.', style: muted))),
+              for (final (a, x) in lines)
+                Builder(builder: (_) {
+                  final text = x is GString ? x.value : displayText(c.args(x).first).replaceAll('utterance', '').trim();
+                  final mine = x is GStruct && x.args.length > 1 && c.same(x.args[1], s.me) || c.pred(a).startsWith('sent');
+                  return Align(
+                    alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      constraints: const BoxConstraints(maxWidth: 280),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                          color: mine ? theme.colorScheme.primary.withValues(alpha: .14) : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(16)),
+                      child: Text(text),
+                    ),
+                  );
+                }),
             ]),
           ));
         case 'list':
-          final items = _items(c, subject);
-          final opens = c.j['opens'] as String?;
+          final items = c.items(comp, subject);
+          final opens = comp.j['opens'] as String?;
+          final isFact = comp.j['items']['facts'] != null;
           body.add(Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-            child: Text((c.j['title'] as String).toUpperCase(),
-                style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey.shade600, letterSpacing: .8)),
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
+            child: Text((comp.j['title'] as String).toUpperCase(),
+                style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey.shade600, letterSpacing: .9, fontWeight: FontWeight.w600)),
           ));
           if (items.isEmpty) {
-            body.add(Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text('None yet.', style: TextStyle(color: Colors.grey.shade600))));
+            body.add(Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 6), child: Text('None yet.', style: muted)));
           }
           for (final it in items) {
-            final isFact = c.j['items']['facts'] != null;
-            final lead = isFact
-                ? (_args(it).isEmpty ? GAtom(_pred(it)) : _args(it).first)
-                : it;
+            final lead = isFact ? (c.args(it).isEmpty ? GAtom(c.pred(it)) : c.args(it).first) : it;
             final chips = [
-              for (final p in c.preds)
-                if (s.atoms.any((a) => _pred(a) == p && _names(a, it, fact: isFact))) _label(p)
+              for (final p in comp.preds)
+                if (s.atoms.any((a) => c.pred(a) == p && c.names(a, it, fact: isFact))) c.label(p)
             ];
-            body.add(ListTile(
-              key: describedKey('row:${_k(it)}'),
-              leading: CircleAvatar(child: Text(_show(lead).isEmpty ? '?' : _show(lead)[0])),
-              title: Text(_show(lead)),
-              subtitle: isFact && _args(it).length > 1
-                  ? Text(_args(it).skip(1).map(_show).join(' · '))
-                  : chips.isEmpty
-                      ? null
-                      : Text(chips.join(' · ')),
-              onTap: opens == null ? null : () => setState(() => _stack.add((opens, it))),
+            final sub = isFact && c.args(it).length > 1
+                ? c.args(it).skip(1).map(c.show).join(' · ')
+                : chips.join(' · ');
+            body.add(Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              child: Material(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Colors.grey.shade200)),
+                child: ListTile(
+                  key: describedKey('row:${c.key(it)}'),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  leading: _avatar(lead),
+                  title: Text(c.show(lead), style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: sub.isEmpty ? null : Text(sub, style: muted),
+                  trailing: opens == null ? null : Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                  onTap: opens == null ? null : () => setState(() => _stack.add((opens, it))),
+                ),
+              ),
             ));
           }
         case 'action':
-          final act = _act(c);
+          final act = c.act(comp);
           if (act == null) break;
-          final ways = _ways(c, act, subject);
+          final ways = c.ways(comp, act, subject);
           if (ways.isEmpty) break;
-          actions.add(FilledButton(
-            key: describedKey('act:${c.schema}${subject == null ? '' : ':${_k(subject)}'}'),
-            onPressed: widget.ask?.at == null ? null : () => _tap(c, act, ways, subject),
-            child: Text(c.button),
-          ));
+          final open = widget.ask?.at != null;
+          final fields = c.fieldsOf(act, ways.first);
+          // On a conversation, the act of one way and one text field is its composer; the other acts go in a menu.
+          if (thread && composer == null && ways.length == 1 && fields.length == 1 && fields.single.type == 'text' && comp.places[fields.single.place]?.from == null) {
+            final f = fields.single, tc = _composer(here);
+            void send() {
+              final v = c.textValue(f, tc.text, schema: act.schema);
+              if (v == null) return;
+              final r = c.request(act, {...ways.first, f.place: v});
+              if (r == null) return _toast('${comp.button}: not allowed now');
+              widget.ask!.propose(r);
+              tc.clear();
+            }
+
+            composer = Padding(
+              padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+              child: Row(children: [
+                Expanded(
+                  child: TextField(
+                    key: describedKey('compose:${comp.schema}'),
+                    controller: tc,
+                    enabled: open,
+                    onSubmitted: (_) => send(),
+                    decoration: InputDecoration(
+                        hintText: comp.button,
+                        isDense: true,
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none)),
+                  ),
+                ),
+                IconButton.filled(key: describedKey('send:${comp.schema}'), onPressed: open ? send : null, icon: const Icon(Icons.send, size: 18)),
+              ]),
+            );
+            break;
+          }
+          void go() => _tap(comp, act, ways, subject);
+          final k = describedKey('act:${comp.schema}${subject == null ? '' : ':${c.key(subject)}'}');
+          if (thread) {
+            menu.add((comp.button, go));
+            actions.add(SizedBox.shrink(key: k));
+          } else {
+            actions.add(actions.isEmpty
+                ? FilledButton(key: k, onPressed: open ? go : null, child: Text(comp.button))
+                : OutlinedButton(key: k, onPressed: open ? go : null, child: Text(comp.button)));
+          }
       }
     }
     final title = subject == null
-        ? _show(s.me) == 'you' ? displayText(s.me) : _show(s.me)
-        : _show(scr.fact != null && _args(subject).isNotEmpty ? _args(subject).first : subject);
-    return Column(children: [
-      Material(
-        color: theme.colorScheme.surface,
-        elevation: 1,
-        child: SizedBox(
-          height: 52,
-          child: Row(children: [
-            if (_stack.length > 1)
-              IconButton(
-                  key: describedKey('back'),
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => setState(() => _stack.removeLast()))
-            else
-              const SizedBox(width: 16),
-            Expanded(
-                child: Text(title.isEmpty ? title : title[0].toUpperCase() + title.substring(1),
-                    style: theme.textTheme.titleMedium)),
-          ]),
-        ),
-      ),
-      Expanded(child: ListView(padding: const EdgeInsets.only(bottom: 8), children: body)),
-      if (actions.isNotEmpty)
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
-            child: Wrap(spacing: 8, runSpacing: 8, children: actions),
+        ? c.show(s.me) == 'you' ? displayText(s.me) : c.show(s.me)
+        : c.show(scr.fact != null && c.args(subject).isNotEmpty ? c.args(subject).first : subject);
+    final shown = title.isEmpty ? title : title[0].toUpperCase() + title.substring(1);
+    return ColoredBox(
+      color: const Color(0xFFF6F6F4),
+      child: Column(children: [
+        Material(
+          color: Colors.white,
+          child: Container(
+            height: 56,
+            decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
+            child: Row(children: [
+              if (_stack.length > 1)
+                IconButton(key: describedKey('back'), icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => setState(() => _stack.removeLast()))
+              else
+                const SizedBox(width: 14),
+              _avatar(subject == null ? s.me : (scr.fact != null && c.args(subject).isNotEmpty ? c.args(subject).first : subject), r: 16),
+              const SizedBox(width: 10),
+              Expanded(child: Text(shown, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600))),
+              if (menu.isNotEmpty)
+                PopupMenuButton<int>(
+                  key: describedKey('menu'),
+                  icon: const Icon(Icons.more_horiz),
+                  onSelected: (i) => menu[i].$2(),
+                  itemBuilder: (_) => [for (var i = 0; i < menu.length; i++) PopupMenuItem(value: i, child: Text(menu[i].$1))],
+                ),
+            ]),
           ),
         ),
-    ]);
+        Expanded(child: ListView(padding: const EdgeInsets.only(bottom: 10), children: body)),
+        if (composer != null)
+          Material(color: Colors.white, child: SafeArea(top: false, child: composer))
+        else if (actions.whereType<ButtonStyleButton>().isNotEmpty)
+          Material(
+            color: Colors.white,
+            child: SafeArea(
+              top: false,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade200))),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: Wrap(spacing: 8, runSpacing: 8, children: actions),
+              ),
+            ),
+          ),
+      ]),
+    );
   }
 }
 
@@ -491,14 +624,14 @@ class _DescribedScreenState extends State<DescribedScreen> {
 class _Sheet extends StatefulWidget {
   final String title;
   final String? sentence;
-  final List<_Way> ways;
+  final List<DescribedWay> ways;
   final List<int> varying;
   final List<DeclaredField> fields;
   final Map<int, PlaceSource> sources;
   final String Function(GTerm) show;
   final List<GTerm>? Function(DeclaredField) options;
   final GTerm? Function(DeclaredField, String) textValue;
-  final bool Function(_Way, Map<int, GTerm>) submit;
+  final bool Function(DescribedWay, Map<int, GTerm>) submit;
   const _Sheet(
       {required this.title,
       required this.sentence,

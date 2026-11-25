@@ -14,3 +14,11 @@ The app draws a description in place of its tabs where it is given one
 `glp_multiagent/`:
 
     flutter run -d macos -t lib/main_described.dart
+
+## Walking contracts' apps
+
+`glp_multiagent/test/described_village_test.dart` walks contracts' apps drawn from descriptions, three persons
+each, every agent GLP's, and compares at every step what the screens offer with what the platform's request
+widget offers.  An app directory for a contract of the cascade is made by
+`python3 programs/gce/ui/tools/mkapp.py . NAME dir` (under `programs/apps/_ui/`, not committed); the list of
+apps and descriptions is given by `DV_LIST`.
