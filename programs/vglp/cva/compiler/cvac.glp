@@ -2229,7 +2229,7 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     trust_lines_in(Fx02?, Ty?, Fx03),
     app(Fx03?, Ltr?, Fx0),
     shared_lines(Fx0?, Gd?, Dy?, En?, Sd?, Fx1a),
-    complete_lines(Ci?, Nt?, head, Lcm0),
+    complete_lines(Ci?, Nt?, Ps?, head, Lcm0),
     complete_req(Lcm0?, Fx1a?, Fx1),
     proved_rules(C?, Rl),
     worded_lx(W?, Lx7),
@@ -2295,8 +2295,8 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     lapp(Lqp0?, Lmt?, Lqp1),
     worded_fns(W?, Wfn1),
     owner_fn_lines(Wfn1?, Lfn),
-    complete_lines(Ci?, Nt?, head, Lcm1),
-    complete_lines(Ci?, Nt?, body, Lcm2),
+    complete_lines(Ci?, Nt?, Ps?, head, Lcm1),
+    complete_lines(Ci?, Nt?, Ps?, body, Lcm2),
     complete_text(Lcm1?, Lcm2?, Lcm),
     lapp(Lfn?, Lcm?, Lfc),
     lapp(Lqp1?, Lfc?, Lqp),
@@ -4229,7 +4229,10 @@ schema_acts(yes, sfound(Hd, Rs), sfound(Hh, _), S, Fs, Ft, Q, By, Ni, Rf, Ws?) :
     schema_vars(Rs?, Hd?, Vc0),
     listed_ixs(Rs?, 1, Lis3),
     drop_listed(Vc0?, Lis3?, Vc),
-    calc_places(Ni?, Vc?, Cl),
+    schema_vars(Rs?, Hh?, Vh0),
+    listed_ixs(Rs?, 1, Lis4),
+    drop_listed(Vh0?, Lis4?, Vh),
+    calc_places(Ni?, Vc?, Vh?, Cl),
     app(Sm0?, Sz?, Sm1),
     app(Sm1?, Cl?, Sm),
     form_text(Hd?, Rs?, Q?, Tx),
@@ -4263,19 +4266,19 @@ MExpr   ::= at(Integer) ; lit(Constant) ; plus(MExpr, MExpr) ; minus(MExpr, MExp
 MExprs  ::= [] ; [MExpr | MExprs].
 CalcR   ::= none ; ok(MExpr).
 CalcRs  ::= [] ; [CalcR | CalcRs].
-procedure calc_places(NumInfo?, Args?, Preconds).
-calc_places(num_info(_, C, _, _, _, _), Vs, Cl?) :- ground(C?), ground(Vs?) |
+procedure calc_places(NumInfo?, Args?, Args?, Preconds).
+calc_places(num_info(_, C, _, _, _, _), Vs, Vh, Cl?) :- ground(C?), ground(Vs?), ground(Vh?) |
     con_list(C?, Cs),
-    calc_items(Cs?, Vs?, Cl).
-procedure calc_items(Constraints?, Args?, Preconds).
-calc_items([], _, []).
-calc_items([eq(num(Y), E)|Cs], Vs, Cl?) :- ground(Y?), ground(E?), ground(Vs?) |
+    calc_items(Cs?, Vs?, Vh?, Cl).
+procedure calc_items(Constraints?, Args?, Args?, Preconds).
+calc_items([], _, _, []).
+calc_items([eq(num(Y), E)|Cs], Vs, Vh, Cl?) :- ground(Y?), ground(E?), ground(Vs?), ground(Vh?) |
     arg_place(num(Y?), Vs?, 1, Py),
     calc_expr(E?, Vs?, Me),
-    calc_item(Py?, Me?, C1),
-    calc_items(Cs?, Vs?, C2),
+    calc_item(Py?, Me?, Vh?, C1),
+    calc_items(Cs?, Vs?, Vh?, C2),
     app(C1?, C2?, Cl).
-calc_items([_|Cs], Vs, Cl?) :- otherwise | calc_items(Cs?, Vs?, Cl).
+calc_items([_|Cs], Vs, Vh, Cl?) :- otherwise | calc_items(Cs?, Vs?, Vh?, Cl).
 %% An expression of arithmetic: a bare variable or number determines nothing to compute.
 procedure calc_expr(Expr?, Args?, CalcR).
 calc_expr(plus(A, B), Vs, R?) :- ground(Vs?) | calc_arg(A?, Vs?, Ra), calc_arg(B?, Vs?, Rb), calc_plus(Ra?, Rb?, R).
@@ -4314,21 +4317,31 @@ calc_minus(_, _, none) :- otherwise | true.
 procedure calc_mul(CalcR?, CalcR?, CalcR).
 calc_mul(ok(A), ok(B), ok(mul(A?, B?))).
 calc_mul(_, _, none) :- otherwise | true.
-procedure calc_item(Ints?, CalcR?, Preconds).
-calc_item([P], ok(E), [calc(P?, E?)]).
-calc_item(_, _, []) :- otherwise | true.
+%% With the kind of the place, num or const, by the variable at it in the head with its types, so that the form puts its placeholder, 0 or '', there (Code #39, vGLP_inbox.md, 2026-11-25 23:16 UTC).
+procedure calc_item(Ints?, CalcR?, Args?, Preconds).
+calc_item([P], ok(E), Vh, [calc(P?, E?, K?)]) :- integer(P?) | nth_arg(P?, Vh?, A), calc_kind(A?, K).
+calc_item(_, _, _, []) :- otherwise | true.
+procedure calc_kind(Arg?, FnKind).
+calc_kind(const(_), const).
+calc_kind(_, num) :- otherwise | true.
 %% The completion of a request (Code #39, vGLP_inbox.md, 2026-11-25 22:58 UTC, agreed by vGLP #35: the form holds no GLP runtime and cannot call the owner's functions): each place the constraint determines, calc(P, E), is computed by the proposer's machine, the agent the platform runs (vGLP, Section 5.4, "Speech-act schemas as local specifications": "The proposer's machine finds in its own state every way to satisfy an act"), when it reads the request propose(C) and before it names it, the form putting a placeholder there.  For each class with such places and no listed role, complete(C, C1): the binding of C, and each such place replaced by the value of its expression under it, expr_val for a number, expr_term for a constant, the placeholder kept where an argument has no value, which the constraint then refuses; any other request is as it is.
-procedure complete_lines(Contract?, NumInfos?, Constant?, Lines).
-complete_lines([], _, _, []).
-complete_lines([schema(S, Hd, Rs)|Ss], Nt, M, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Nt?), ground(M?) |
+procedure complete_lines(Contract?, NumInfos?, Preds?, Constant?, Lines).
+complete_lines([], _, _, _, []).
+complete_lines([schema(S, Hd, Rs)|Ss], Nt, Ps, M, L?) :- ground(S?), ground(Hd?), ground(Rs?), ground(Nt?), ground(Ps?), ground(M?) |
     schema_vars(Rs?, Hd?, Vs),
-    list_places(Rs?, Hd?, Lis),
+    list_places(Rs?, Hd?, Lis0),
+    mem(S?, Ps?, In),
+    proposed_lis(In?, Lis0?, Lis),
     num_lookup(S?, Nt?, Ni),
     complete_s(Vs?, Lis?, Ni?, S?, M?, L1),
-    complete_lines(Ss?, Nt?, M?, L2),
+    complete_lines(Ss?, Nt?, Ps?, M?, L2),
     lapp(L1?, L2?, L).
-complete_lines([cschema(_, _, _, _)|Ss], Nt, M, L?) :- complete_lines(Ss?, Nt?, M?, L).
-complete_lines([nschema(_, _, _, _)|Ss], Nt, M, L?) :- complete_lines(Ss?, Nt?, M?, L).
+complete_lines([cschema(_, _, _, _)|Ss], Nt, Ps, M, L?) :- complete_lines(Ss?, Nt?, Ps?, M?, L).
+complete_lines([nschema(_, _, _, _)|Ss], Nt, Ps, M, L?) :- complete_lines(Ss?, Nt?, Ps?, M?, L).
+%% A class the request type does not propose is completed by no clause, as one with a listed role is not: its listed places stand for it, [0].
+procedure proposed_lis(YesNo?, Ints?, Ints).
+proposed_lis(yes, Lis, Lis?).
+proposed_lis(no, _, [0]).
 procedure complete_s(Args?, Ints?, NumInfo?, Constant?, Constant?, Lines).
 complete_s(Vs, Lis, Ni, S, M, L?) :- ground(Vs?) |
     keys_of(Vs?, Vk),
@@ -4378,7 +4391,7 @@ complete_line2(Ns, Qs, Cc, Ccs, S, T1?, T2?, T3?, T4?) :- ground(Ns?), ground(Qs
     string_concat(['complete_', Sn?], Cn),
     ground_guards(Qs?, Gs),
     string_concat(['complete(', Hd?, ', C?) :- ', Gs?, ' | binding_of(', Hq?, ', _, B), ', Cn?, '(B?, ', Hq?, ', C).'], T1),
-    string_concat(['procedure ', Cn?, '(Binding?, Class?, Class).'], T2),
+    string_concat(['procedure ', Cn?, '(Binding?, Proposal?, Proposal).'], T2),
     string_concat([Cn?, '(_, C, C?) :- otherwise | true.'], T4),
     cmp_calls(Cc?, Ccs?, Ns?, Qs?, Cl, Ws),
     named_call(S?, Ws?, Hw),
@@ -4433,7 +4446,7 @@ procedure complete_text(Lines?, Lines?, Lines).
 complete_text([], _, []).
 complete_text([L|Ls], Lb, ['',
         '%% The completion of a request: each place the constraint determines computed by the proposer\'s machine under the binding the request names, before it names it (complete; the form puts a placeholder there).',
-        'procedure complete(Class?, Class).',
+        'procedure complete(Proposal?, Proposal).',
         L?|R?]) :-
     lapp(Ls?, ['complete(C, C?) :- otherwise | true.'|L2?], R),
     lapp(Lb?, [
@@ -4474,13 +4487,16 @@ calc_of(sfound(Hd, Rs), Ni, Cl?) :- ground(Hd?), ground(Rs?) |
     schema_vars(Rs?, Hd?, Vz0),
     listed_ixs(Rs?, 1, Lis),
     drop_listed(Vz0?, Lis?, Vz),
-    calc_places(Ni?, Vz?, Cl).
-%% The types of the request widget's term gain calc(Integer, MenuExpr) where an act has a number to compute (calc_any).
+    calc_whether(Ni?, Vz?, Cl).
+%% Whether there is a place to compute, the kinds aside.
+procedure calc_whether(NumInfo?, Args?, Preconds).
+calc_whether(Ni, Vz, Cl?) :- ground(Vz?) | calc_places(Ni?, Vz?, Vz?, Cl).
+%% The types of the request widget's term gain calc(Integer, MenuExpr, Constant), the kind of the place, where an act has a number to compute (calc_any).
 procedure calc_lines(Lines?, YesNo?, Lines).
 calc_lines(Ls, no, Ls?).
 calc_lines(Ls, yes, R?) :-
-    line_sub(Ls?, 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; calc(Integer, MenuExpr).', R1),
-    line_sub(R1?, 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; size(Integer, Integer).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; size(Integer, Integer) ; calc(Integer, MenuExpr).', R2),
+    line_sub(Ls?, 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; calc(Integer, MenuExpr, Constant).', R1),
+    line_sub(R1?, 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; size(Integer, Integer).', 'MenuCond ::= req(Constant, List(MenuCondArg)) ; forb(Constant, List(MenuCondArg)) ; unless(Constant, List(MenuCondArg)) ; proved(Constant, List(Constant), Constant, List(MenuCondArg)) ; same(Integer, Integer) ; size(Integer, Integer) ; calc(Integer, MenuExpr, Constant).', R2),
     line_after(R2?, 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuExpr ::= at(Integer) ; lit(Integer) ; plus(MenuExpr, MenuExpr) ; minus(MenuExpr, MenuExpr) ; mul(MenuExpr, MenuExpr) ; fn(Constant, List(MenuExpr)).', R).
 %% The places of the request that hold persons, its roles and its agent variables: persons of different names are bound to different persons, "but for two the clause names as possibly one person" (vGLP, Section 5.4, "Speech-act schemas as local specifications", Udi, 2026-11-17, to vGLP #30), the pairs pragmas.sh gives as same(K, J) (same_places).
 procedure role_places(Args?, Integer?, Ints).
@@ -4927,7 +4943,7 @@ proved_entry(no, _, _, _, _, _, []).
 proved_entry(yes, pat(Q, Ws), P, N, I, K, [proved(Q?, Ws?, P?, As?)]) :- K? > 0 | unless_args(1, N?, I?, K?, As).
 proved_entry(yes, _, _, _, _, 0, []).
 %% The conditions of an act at the proposer's role, printed in its widget declaration: req(P, As) and forb(P, As), the atoms the schema requires and forbids there; unless(P, As) and proved(Q, Ws, P, As), what the schemas prove of the other roles; and same(K, J), two places possibly one person.
-Precond ::= req(Constant, CondArgs) ; forb(Constant, CondArgs) ; unless(Constant, CondArgs) ; proved(Constant, Preds, Constant, CondArgs) ; same(Integer, Integer) ; size(Integer, Integer) ; calc(Integer, MExpr).
+Precond ::= req(Constant, CondArgs) ; forb(Constant, CondArgs) ; unless(Constant, CondArgs) ; proved(Constant, Preds, Constant, CondArgs) ; same(Integer, Integer) ; size(Integer, Integer) ; calc(Integer, MExpr, FnKind).
 Preconds ::= [] ; [Precond | Preconds].
 procedure nth_rs(Integer?, RoleSpecs?, RoleSpecs).
 nth_rs(_, [], []).

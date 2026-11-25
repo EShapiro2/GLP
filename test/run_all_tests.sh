@@ -6808,8 +6808,8 @@ compile(calcs, [nschema(pass, [num(v), num(d)], eq(num(d), mul(num(v), num(2))),
 HEREDOC
 2>&1)
 check "CVA calcs: the request of pass names v and d" "^pass(Peer, Integer, Integer)\$" "$cva_calcs_out"
-check "CVA calcs: ... d has no field and the form computes it, calc(3, mul(at(2), lit(2)))" "field(2, \"votes\", number)\], \[calc(3, mul(at(2), lit(2)))\]" "$cva_calcs_out"
-check "CVA calcs: ... the request type has calc (calc_lines)" "same(Integer, Integer) ; calc(Integer, MenuExpr)\.\$" "$cva_calcs_out"
+check "CVA calcs: ... d has no field and the form computes it, calc(3, mul(at(2), lit(2)))" "field(2, \"votes\", number)\], \[calc(3, mul(at(2), lit(2)), num)\]" "$cva_calcs_out"
+check "CVA calcs: ... the request type has calc (calc_lines)" "same(Integer, Integer) ; calc(Integer, MenuExpr, Constant)\.\$" "$cva_calcs_out"
 check "CVA calcs: the request of lend names s, of a cleared atom, and not t or r, local to the role" "^lend(Peer, Integer)\$" "$cva_calcs_out"
 check "CVA calcs: ... MenuExpr is a type definition on a line of its own, as sGLP's interface.sh reads them (line_after)" "^MenuExpr ::= at(Integer) ; lit(Integer)" "$cva_calcs_out"
 # The platform completes the request, the form putting a placeholder at d (complete; Code #39, vGLP_inbox.md, 2026-11-25 22:58 UTC, agreed by vGLP #35): pass with v 7 and d 0 is completed to d 14; lend, with no place the constraint determines at a place of the request, is as it is.
@@ -6896,8 +6896,8 @@ HEREDOC
 2>&1)
 rm -rf "$cva_fnc_dir"
 check "CVA functions of constants: the request of move names b, m, n and s" "^move(Peer, Constant, Constant, Constant, Integer)\$" "$cva_fnc_out"
-check "CVA functions of constants: ... the form computes n and s by the owner's functions, calc(P, fn(F, Es))" "\[calc(5, fn(side, \[at(2)\])), calc(4, fn(after, \[at(3), at(2)\]))\]" "$cva_fnc_out"
-check "CVA functions of constants: ... and start's b, calc(2, fn(first, []))" "\[calc(2, fn(first, \[\]))\]" "$cva_fnc_out"
+check "CVA functions of constants: ... the form computes n and s by the owner's functions, calc(P, fn(F, Es))" "\[calc(5, fn(side, \[at(2)\]), num), calc(4, fn(after, \[at(3), at(2)\]), const)\]" "$cva_fnc_out"
+check "CVA functions of constants: ... and start's b, calc(2, fn(first, []))" "\[calc(2, fn(first, \[\]), const)\]" "$cva_fnc_out"
 check "CVA functions of constants: ... the request type has fn (MenuExpr)" "^MenuExpr ::= .* ; fn(Constant, List(MenuExpr))\.\$" "$cva_fnc_out"
 check "CVA functions of constants: ... owner_after takes two constants to a constant" "^owner_after(found(v(X1)), found(v(X2)), found(v(R?))) :- ground(X1?), ground(X2?) | after(X1?, X2?, R)\.\$" "$cva_fnc_out"
 check "CVA functions of constants: ... expr_term takes a function the owner gives" "^expr_term1(fn(F, Es), B, R?) :- ground(F?), ground(B?) | owner_term(F?, Es?, B?, R)\.\$" "$cva_fnc_out"
