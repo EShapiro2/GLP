@@ -483,6 +483,14 @@ uncleared([A|As], R?) :- ground(A?) |
 procedure keep_atom(YesNo?, Atom?, Atoms?, Atoms).
 keep_atom(yes, _, R, R?).
 keep_atom(no, A, R, [A?|R?]).
+%% A role's cleared atoms.
+procedure only_cleared(Atoms?, Atoms).
+only_cleared([], []).
+only_cleared([A|As], R?) :- ground(A?) |
+    cleared(A?, C),
+    only_cleared(As?, R1),
+    neg(C?, U),
+    keep_atom(U?, A?, R1?, R).
 %% Whether an atom is cleared: the wildcard among its arguments, or as the speech act of a name term among them.
 procedure cleared(Atom?, YesNo).
 cleared(atom(_, As), C?) :- args_wild(As?, C).

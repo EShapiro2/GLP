@@ -6789,6 +6789,19 @@ check "CVA joins: ... an atom_of clause for the speech act (joins)" "^atom_of(g(
 check "CVA joins: ... and for the constant (joins)" "^atom_of(g(posted, \[v(V1)\]), shown(posted(V1?)))$" "$cva_joins_out"
 check "CVA joins: the platform emitted and loaded, its types checked (joins)" "Loaded: .*vg_joins_.*platform.glp" "$cva_joins"
 
+# A number the constraint determines from the variables the schema-binding binds is bound to its value, which the proposer's machine computes and the request names, with no field: the act prints calc(P, E) (OSPM, act-schemas-local, VEUI vglp33-determined; Audit #151, DAO's Double = Votes * 2).  A variable of a cleared atom is not local, "a cleared atom being neither" (ibid.; GO #15, Central Bank's Lend): the request names s, and t = s * r is local to the role, r local there.
+cva_calcs_out=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(calcs, [nschema(pass, [num(v), num(d)], eq(num(d), mul(num(v), num(2))), [rs(guarded, [atom(passed, [num(v), num(d)])], [], [], [])]), nschema(lend, [num(s), num(r), num(t)], eq(num(t), mul(num(s), num(r))), [rs(guarded, [atom(lent, [num(s)])], [atom(vote, [any, num(s)])], [atom(rate, [num(r)])], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"Passed"', [passed]), list('"Lent"', [lent])], [act(pass, '"Pass"', ['""', '"votes"'], none, '"Passed"', by([1])), act(lend, '"Lend"', ['""', '"amount"'], none, '"Lent"', by([1]))])).
+:quit
+HEREDOC
+2>&1)
+check "CVA calcs: the request of pass names v and d" "^pass(Peer, Integer, Integer)\$" "$cva_calcs_out"
+check "CVA calcs: ... d has no field and the form computes it, calc(3, mul(at(2), lit(2)))" "field(2, \"votes\", number)\], \[calc(3, mul(at(2), lit(2)))\]" "$cva_calcs_out"
+check "CVA calcs: ... the request type has calc (calc_lines)" "same(Integer, Integer) ; calc(Integer, MenuExpr)\.\$" "$cva_calcs_out"
+check "CVA calcs: the request of lend names s, of a cleared atom, and not t or r, local to the role" "^lend(Peer, Integer)\$" "$cva_calcs_out"
+
 # A set variable, set(N) of a type Set(A) (GSC, the appendix on values, Definitions "Schema with values" and "Binding with values"; the Calculus's record, items 49 to 51): the request names its elements, a list of constants, the schema-binding binds it to st(Cs), an atom with it stands for one atom per element, and size(N) is the number of its elements.  The contract is GSC's own test of payments of notes (programs/gsc/test_gsc.sh, "set variables"), as GSC's reader reads it.
 cva_sets_out=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/vglp/cva/compiler/
