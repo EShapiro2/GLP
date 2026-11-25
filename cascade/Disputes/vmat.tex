@@ -9939,6 +9939,13 @@ c_
  \cup 
 \{
 \mathit{\detokenize{
+dispute
+}}
+(
+Issue
+)
+,
+\mathit{\detokenize{
 raised
 }}
 (
@@ -10043,16 +10050,10 @@ person
 &
 \text{provided } 
 \mathit{\detokenize{
-raised
+dispute
 }}
 (
 Issue
-,
-\mathit{Carol}
-,
-Bob
-,
-\Bob
 )
  \notin c_
 {
@@ -10086,9 +10087,9 @@ raised
 (
 Issue
 ,
-Alice
+\mathit{Carol}
 ,
-Bob
+\mathit{Dave}
 ,
 \Bob
 )
@@ -10103,9 +10104,9 @@ decision
 ,
 Issue
 ,
-Alice
+\mathit{Carol}
 ,
-Bob
+\mathit{Dave}
 ,
 Ruling
 )
@@ -10130,9 +10131,55 @@ case
 ,
 Issue
 ,
-Alice
+\mathit{Carol}
 ,
-Bob
+\mathit{Dave}
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+ \cup 
+\{
+\mathit{\detokenize{
+ruling
+}}
+(
+\Alice
+,
+Issue
+,
+Ruling
+)
+\}
+, \qquad 
+c'_
+{
+\mathit{Dave}
+}
+ := 
+c_
+{
+\mathit{Dave}
+}
+ \cup 
+\{
+\mathit{\detokenize{
+ruling
+}}
+(
+\Alice
+,
+Issue
+,
+Ruling
 )
 \}
 ,\\
@@ -10148,9 +10195,9 @@ raised
 (
 Issue
 ,
-Alice
+\mathit{Carol}
 ,
-Bob
+\mathit{Dave}
 ,
 \Bob
 )
@@ -10175,13 +10222,29 @@ case
 ,
 Issue
 ,
-Alice
+\mathit{Carol}
 ,
-Bob
+\mathit{Dave}
 )
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+ \in c_
+{
+\mathit{Dave}
 }
 ,\\
 &
