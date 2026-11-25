@@ -262,24 +262,6 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
 <script>
 const D = window.DATA, C = {};
 D.contracts.forEach(c => C[c.id] = c);
-// The Villagers site (tools/build.py, VILLAGERS_DIR; Udi, 2026-11-25: "the
-// Villagers contract in the south pole"): the globe upside down.  Its layout
-// starts at the pole from the contract no other is built on, so each
-// contract's extends is, for the globe, the contracts built on it, each with
-// the relation they state to it, and its own bases are kept in bases, which
-// the contract's page shows; the globe is drawn turned half round in the
-// plane of the screen, the pole at the bottom, and each arrow drawn back to
-// front, so it still points from a contract to one built on it.
-const BASES = c => c.bases || c.extends;
-if (D.flip){
-  const up = {}, rel = {}, all = {};
-  D.contracts.forEach(c => { up[c.id] = []; rel[c.id] = {}; all[c.id] = {}; });
-  D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
-    up[p].push(c.id);
-    rel[p][c.id] = (c.rels && c.rels[p]) || c.relation;
-    all[p][c.id] = (c.rels_all && c.rels_all[p]) || [rel[p][c.id]]; }));
-  D.contracts.forEach(c => { c.bases = c.extends; c.extends = up[c.id]; c.rels = rel[c.id]; c.rels_all = all[c.id]; c.rels_of = []; });
-}
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
 // The families' colours and names, from programs/apps/look.json, as the build
@@ -375,7 +357,7 @@ function citeHtml(P){
 // is hidden.
 // The contract at the pole, the one written from no other: GKK, Knowledge
 // by the names of calculus/NAMES.txt.
-const ROOT = (D.contracts.find(c => !c.extends.some(p => C[p]) && (!D.flip || !c.bases.length)) || D.contracts.find(c => !c.extends.some(p => C[p])) || D.contracts[0]).id;
+const ROOT = (D.contracts.find(c => !c.extends.some(p => C[p])) || D.contracts[0]).id;
 const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {}, RING = [], WAY = {}, TAIL = {};
 function depthOf(id){
   if (DEPTH[id] !== undefined) return DEPTH[id];
@@ -389,12 +371,12 @@ function layout(){
   // 2026-11-16, to Website #2: "try spacing layers more equally, not wait for
   // the largest to be on the equator"; until then the fullest ring was on the
   // equator, Udi, 2026-11-08, and the rings below it were crowded).
-  const maxd0 = MAXD(), thMax = Math.acos(-0.93) - V.tilt;
+  // On the Villagers site the last ring is the south pole, where Villagers is
+  // alone (D.south; Udi, 2026-11-25: "the Villagers contract in the south
+  // pole", the contracts it inherits from "starting from north pole").
+  const maxd0 = MAXD(), thMax = D.south ? Math.PI : Math.acos(-0.93) - V.tilt;
   // The first ring half a step further from the pole, where a ring is short.
-  // On the Villagers site, with few rings, the first a step further still, so
-  // that the contracts round the pole have room (D.flip).
-  const r0 = D.flip ? 1 : 0.5;
-  for (let d = 0; d <= maxd0; d++) RING[d] = d === 0 ? 0 : thMax * (d + r0) / (maxd0 + r0);
+  for (let d = 0; d <= maxd0; d++) RING[d] = d === 0 ? 0 : thMax * (d + 0.5) / (maxd0 + 0.5);
   // Where to start: each contract in the range of its first parent, the range
   // shared among its children by how many leaves each has below it.
   D.contracts.forEach(c => { const p = c.extends.find(x => C[x]); if (p) (KIDS[p] = KIDS[p] || []).push(c.id); });
@@ -404,7 +386,7 @@ function layout(){
     const ks = KIDS[id] || [], tot = ks.reduce((n, k) => n + leaves(k), 0);
     let x = lo;
     for (const k of ks){ const w = (hi - lo) * leaves(k) / tot; place(k, x, x + w); x += w; }
-  })(ROOT, (D.flip ? -60 : -80) * Math.PI/180, (D.flip ? 60 : 80) * Math.PI/180);
+  })(ROOT, -80 * Math.PI/180, 80 * Math.PI/180);
   // The rings as the layers of a layered drawing, each relation an edge from
   // the contract to the one built on it.  The order along the rings and the
   // longitudes are found from the contracts alone, each placed by all its
@@ -513,9 +495,6 @@ function layout(){
     for (let i = 1; i < ring.length; i++) ps.push([i-1, i, (two ? 0.3 : 1) * full(ring[i-1], ring[i])]);
     if (two) for (let i = 2; i < ring.length; i++) ps.push([i-2, i, full(ring[i-2], ring[i])]);
     pairs[d] = ps;
-    // On the Villagers site, a tree round its pole, each contract keeps the
-    // longitude of its share of its parent's range, and is only spread (D.flip).
-    if (D.flip){ ring.sort((a, b) => PHI[a] - PHI[b]); ring.forEach(v => X[v] = PHI[v]); continue; }
     let acc = 0; ring.forEach((v, i) => { if (i) acc += ps[i-1][2]; X[v] = acc; });
     ring.forEach(v => X[v] -= acc / 2);
   }
@@ -529,8 +508,7 @@ function layout(){
     }
     ring.forEach((v, i) => X[v] = ph[i]);
   } };
-  if (D.flip) spread();
-  for (let it = 0; it < (D.flip ? 0 : 400); it++){
+  for (let it = 0; it < 400; it++){
     const nx = {};
     for (let d = 1; d <= maxd; d++) Lr[d].forEach(v => {
       let s = 0, t = 0;
@@ -692,6 +670,7 @@ function course(p, q, way = WAY[`${p}>${q}`] || []){
   if (tail.length) way = way.filter(x => x[0] < tail[0][0] - 0.005);
   const cs = [[th0(p), PHI[p]], ...way.map(x => x.slice()), ...tail.map(x => x.slice()), [th0(q), PHI[q]]];
   if (DEPTH[p] === 0) cs[0][1] = cs[1][1];
+  if (q === D.south) cs[cs.length - 1][1] = cs[cs.length - 2][1];
   const n = cs.length, h = [], dl = [], m = [];
   for (let i = 0; i + 1 < n; i++){ h.push(cs[i+1][0] - cs[i][0] || 1e-9); dl.push((cs[i+1][1] - cs[i][1]) / h[i]); }
   for (let i = 0; i < n; i++)
@@ -718,12 +697,10 @@ function composed(c){
   if (ps.length === 1 && of.length && C[of[0].base] && !ps.includes(of[0].base)) ps.unshift(of[0].base);
   return ps.length >= 2 ? {ps, trunk: of.map(x => x.rel)} : null; }
 // A contract's colatitude: its ring's, and its row's on a ring of two rows.
-const th0 = id => DEPTH[id] === 0 ? 0 : RING[DEPTH[id]] + (LAT[id] || 0);
+const th0 = id => DEPTH[id] === 0 ? 0 : id === D.south ? Math.PI : RING[DEPTH[id]] + (LAT[id] || 0);
 const MAXD = () => Math.max(...Object.values(DEPTH));
-// The Villagers site's globe turned half round in the plane of the screen (D.flip).
-const FLIP = P => D.flip ? [GW - P[0], GH - P[1], P[2]] : P;
-// The Villagers site's globe is tilted further, its few contracts round the pole facing the reader (D.flip).
-const V = {phi0: 0, tilt: (D.flip ? 35 : 15) * Math.PI/180, zoom: 1};
+// The Villagers site's globe upright, both its poles on the edge (D.south).
+const V = {phi0: 0, tilt: (D.south ? 0 : 15) * Math.PI/180, zoom: 1};
 // A phone: the card narrower than 640 pixels.  The view is then cropped to the
 // globe, the names drawn larger so they can be read and tapped, and the key
 // set below the globe (Udi, 2026-11-09).
@@ -742,10 +719,10 @@ const BASEZ = () => (NARROW() ? 290 : 548) / 265;
 const clampZ = z => Math.max(0.5 * BASEZ(), Math.min(2.5 * BASEZ(), z));
 function drawGlobe(){
   const S = 265 * V.zoom, al = V.tilt, maxd = MAXD();
-  const th = id => DEPTH[id] === 0 ? 0 : RING[DEPTH[id]] + (LAT[id] || 0);
+  const th = id => DEPTH[id] === 0 ? 0 : id === D.south ? Math.PI : RING[DEPTH[id]] + (LAT[id] || 0);
   const proj = (t, ph) => { ph -= V.phi0;
     const x = Math.sin(t)*Math.sin(ph), y = Math.cos(t), z = Math.sin(t)*Math.cos(ph);
-    return FLIP([CX + S*x, CY - S*(y*Math.cos(al) - z*Math.sin(al)), y*Math.sin(al) + z*Math.cos(al)]); };
+    return [CX + S*x, CY - S*(y*Math.cos(al) - z*Math.sin(al)), y*Math.sin(al) + z*Math.cos(al)]; };
   const pos = {}; D.contracts.forEach(c => pos[c.id] = proj(th(c.id), PHI[c.id]));
   let s = `<circle cx="${CX}" cy="${CY}" r="${S}" fill="#eef3f8" stroke="#b9c6d4"/>`;
   for (let d = 0; d <= maxd; d++){
@@ -804,7 +781,7 @@ function drawGlobe(){
   const vec = (t, ph) => [Math.sin(t)*Math.sin(ph), Math.cos(t), Math.sin(t)*Math.cos(ph)];
   const cp = Math.cos(V.phi0), sp = Math.sin(V.phi0), ca = Math.cos(al), sa = Math.sin(al);
   const projv = ([x0, y, z0]) => { const x = x0*cp - z0*sp, z = z0*cp + x0*sp;
-    return FLIP([CX + S*x, CY - S*(y*ca - z*sa), y*sa + z*ca]); };
+    return [CX + S*x, CY - S*(y*ca - z*sa), y*sa + z*ca]; };
   const add3 = (a, b, f) => [a[0] + b[0]*f, a[1] + b[1]*f, a[2] + b[2]*f];
   const crs = (a, b) => [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]];
   const nrm = a => { const n = Math.hypot(...a) || 1; return a.map(x => x/n); };
@@ -813,7 +790,7 @@ function drawGlobe(){
   // direction on the sphere there.
   const edgeAngle = (id, T) => {
     const rxa = (rx(id) + 2) / S, rya = (RY(id) + 2) / S;
-    if (DEPTH[id] === 0) return (rxa + rya) / 2;
+    if (DEPTH[id] === 0 || id === D.south) return (rxa + rya) / 2;
     const ph = PHI[id], t = th(id), E = [Math.cos(ph), 0, -Math.sin(ph)], Nn = [-Math.cos(t)*Math.sin(ph), Math.sin(t), -Math.cos(t)*Math.cos(ph)];
     return 1 / Math.sqrt((dot3(T, E)/rxa)**2 + (dot3(T, Nn)/rya)**2); };
   // The curve: through the two contracts and the waypoints between them
@@ -822,8 +799,7 @@ function drawGlobe(){
   // never swings past a point it passes and makes no loop; sampled every
   // degree or so.
   const curve = (p, q) => course(p, q).map(([t, f]) => vec(t, f));
-  const paint = (p, q, rel) => { const cols = (Array.isArray(rel) ? rel : [rel]).map(r => RELCOL[r] || RELCOL.extends);
-    return D.flip ? ribbon(curve(p, q).reverse(), q, p, cols, true) : ribbon(curve(p, q), p, q, cols, true); };
+  const paint = (p, q, rel) => ribbon(curve(p, q), p, q, (Array.isArray(rel) ? rel : [rel]).map(r => RELCOL[r] || RELCOL.extends), true);
   // A ribbon along the points U of the sphere, from the edge of contract p's
   // ellipse, or from U's start where p is null, to q's or U's end, in the
   // colours cols, a part of its length each, with a head or none.
@@ -845,7 +821,8 @@ function drawGlobe(){
     const u = 1/265, rs = cols, hl = 4.2*u, hw = 2.1*u, w = 0.45*u;
     const aB = head ? a1 - hl : a1;
     if (aB <= a0) return '';
-    const front = a => projv(at(a))[2] > 0.02;
+    // On the Villagers site the poles are on the edge, and what reaches them is drawn (D.south).
+    const front = a => projv(at(a))[2] > (D.south ? -0.03 : 0.02);
     const xy = v => { const [X0, Y0] = projv(v); return X0.toFixed(1) + ',' + Y0.toFixed(1); };
     let out = '';
     rs.forEach((r, j) => {
@@ -896,17 +873,17 @@ function drawGlobe(){
   });
   D.contracts.forEach(c => {
     const [X, Y, Z] = pos[c.id];
-    if (Z < 0.02 || X < -60 || X > GW+60 || Y < -40 || Y > GH+40) return;
+    if (Z < (D.south && (DEPTH[c.id] === 0 || c.id === D.south) ? -0.03 : 0.02) || X < -60 || X > GW+60 || Y < -40 || Y > GH+40) return;
     // The patch's projected axes: the unit tangents east and north, each
     // foreshortened with the surface but never below .55, so a name near the
     // limb or the pole stays readable.
-    const t = Math.max(th(c.id), 0.055), ph = PHI[c.id], eps = 0.01;
+    const t = Math.min(Math.max(th(c.id), 0.055), Math.PI - 0.055), ph = PHI[c.id], eps = 0.01;
     const Cp = proj(t, ph), Ce = proj(t, ph+eps), Cn = proj(t+eps, ph);
     const de = Math.hypot(Ce[0]-Cp[0], Ce[1]-Cp[1]) || 1e-6, dn = Math.hypot(Cn[0]-Cp[0], Cn[1]-Cp[1]) || 1e-6;
     const fe = Math.max(0.55, Math.min(1, de/(S*Math.sin(t)*eps))), fn = Math.max(0.55, Math.min(1, dn/(S*eps)));
     const ex = (Ce[0]-Cp[0])/de*rx(c.id)*fe, ey = (Ce[1]-Cp[1])/de*rx(c.id)*fe;
     const nx2 = (Cn[0]-Cp[0])/dn*RY(c.id)*fn, ny2 = (Cn[1]-Cp[1])/dn*RY(c.id)*fn;
-    const m = DEPTH[c.id] === 0 ? [rx(c.id), 0, 0, RY(c.id)*Math.max(0.55, Math.abs(Math.sin(al)))*Math.sign(Math.cos(al) || 1)].map(x => x.toFixed(2)).join(' ')
+    const m = DEPTH[c.id] === 0 || c.id === D.south ? [rx(c.id), 0, 0, RY(c.id)*Math.max(0.55, Math.abs(Math.sin(al)))*Math.sign(Math.cos(al) || 1)].map(x => x.toFixed(2)).join(' ')
       : [ex, ey, nx2, ny2].map(x => x.toFixed(2)).join(' ');
     const col = FAM[famOf(c)];
     s += `<g class="node" data-id="${c.id}">
@@ -938,7 +915,7 @@ function drawGlobe(){
   // contract, as it would beside the key.
   const CNT = [['contracts', D.contracts.length],
                ...STAGES.map(([n], i) => [n, D.contracts.filter(c => STAGES.slice(0, i + 1).every(([, reached]) => reached(c))).length])];
-  const cx2 = nar ? kx + KW + 20 : GW - 150, cb = ky - 20 + 24*KEY.length + 16, cy2 = nar && D.flip ? ky : cb - (24*CNT.length + 16) + 20;   // on a phone, the Villagers site's counts below its globe, whose pole is at the bottom
+  const cx2 = nar ? kx + KW + 20 : GW - 150, cb = ky - 20 + 24*KEY.length + 16, cy2 = cb - (24*CNT.length + 16) + 20;
   s += `<g class="key"><rect x="${cx2-12}" y="${cy2-20}" width="150" height="${24*CNT.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   CNT.forEach(([n, k], i) => { const y = cy2 + 24*i;
     if (i === 1) s += `<line x1="${cx2-4}" y1="${y-12}" x2="${cx2+130}" y2="${y-12}" stroke="#d5dee7"/>`;
@@ -1013,9 +990,8 @@ function globeNav(){
       DRAGGED = true;
       if (LASTPT === 'mouse') g.setPointerCapture(e.pointerId); }
     if (!DRAGGED) return;
-    const sg = D.flip ? -1 : 1;
-    V.phi0 = drag[2] - sg * dx / (140 * V.zoom);
-    V.tilt = Math.max(-1.2, Math.min(1.4, drag[3] + sg * dy / 220));
+    V.phi0 = drag[2] - dx / (140 * V.zoom);
+    V.tilt = Math.max(-1.2, Math.min(1.4, drag[3] + dy / 220));
     drawGlobe(); });
   const up = e => {
     pts.delete(e.pointerId);
@@ -1132,7 +1108,7 @@ const projOf = o => D.projects.some(p => p.id === o && hasCode(p)) ? o
   : (D.projects.find(p => hasCode(p) && p.papers.some(k => k.key === o)) || {}).id
   || ((D.noPaper || []).some(p => p.id === o) && D.code.some(d => d.who === o) ? 'Code' : null);
 function page(c, hood){
-  const kids = D.contracts.filter(k => BASES(k).includes(c.id));
+  const kids = D.contracts.filter(k => k.extends.includes(c.id));
   const link = id => `<a data-go="${id}">${esc(NM(id))}</a>`;
   // Builds on and Used by: the box shows how many contracts, and a click on
   // it opens a balloon with their names, each a link to its contract (Udi,
@@ -1146,7 +1122,7 @@ function page(c, hood){
       <div class="acts">${c.live ? `<a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a>` : ''}</div></div></div>
     <div class="stats">
       <div class="stat"><div class="k">Rules</div><div class="v">${c.clauses.length}</div><div class="s">in English</div></div>
-      ${names('Builds on', BASES(c), 'the base')}
+      ${names('Builds on', c.extends, 'the base')}
       ${names('Used by', kids.map(k => k.id), 'none yet')}
       <div class="stat"><div class="k">By</div><div class="v">${projOf(c.owner) ? `<a href="#projects" data-proj="${esc(projOf(c.owner))}" title="Under Projects">${esc(c.owner)}</a>` : esc(c.owner)}</div><div class="s">${esc(NM(c.id))}</div></div>
     </div>
@@ -1253,7 +1229,7 @@ function hoodHtml(c, schemas){
   $('#hood').innerHTML = `
     <div class="sh"><h2>Under the hood${Q('hood')}</h2><span>from the English text to the running app</span></div>
     <div class="stack">
-    <div class="card layer">${n(1)}<h3>The Grassroots Contract</h3><p class="sum">${c.clauses.length} rules${BASES(c).length ? ', on top of ' + BASES(c).map(NM).join(' and ') : ''}, above.</p></div>
+    <div class="card layer">${n(1)}<h3>The Grassroots Contract</h3><p class="sum">${c.clauses.length} rules${c.extends.length ? ', on top of ' + c.extends.map(NM).join(' and ') : ''}, above.</p></div>
     <div class="card layer">${n(2)}<h3>Speech-Act Schemas${Q('acts')}</h3>
       <p class="sum">${own.length} of its own${inh.length ? `, and ${inh.length} from ${[...new Set(inh.map(s => NM(s.from)))].join(', ')}` : ''}.</p>
       ${own.map(s => schemaHtml(s, true)).join('')}
@@ -1261,7 +1237,7 @@ function hoodHtml(c, schemas){
     </div>
     <div class="card layer">${n(3)}<h3>Grassroots Check${Q('check')}</h3><p class="sum">The checker's verdict on the speech-act schemas:</p><span class="verdict">${esc(c.verdict || 'not checked')}</span></div>
     <div class="card layer">${n(4)}<h3>The App${Q('app')}</h3>
-      <p class="sum">${c.live ? 'Four people, each with an agent running the platform compiled from the contract, live.' : c.parametric ? esc(notWhy(c)) + ((ks => ks.length ? ' Used by: ' + ks.map(k => `<a data-go="${k.id}">${esc(NM(k.id))}</a>`).join(', ') + '.' : '')(D.contracts.filter(k => BASES(k).includes(c.id)))) : 'No app yet. ' + esc(notWhy(c))}</p>
+      <p class="sum">${c.live ? 'Four people, each with an agent running the platform compiled from the contract, live.' : c.parametric ? esc(notWhy(c)) + ((ks => ks.length ? ' Used by: ' + ks.map(k => `<a data-go="${k.id}">${esc(NM(k.id))}</a>`).join(', ') + '.' : '')(D.contracts.filter(k => k.extends.includes(c.id)))) : 'No app yet. ' + esc(notWhy(c))}</p>
       ${c.live ? `<div style="margin:10px 0"><a class="btn blue" href="${appUrl(c)}" target="_blank" rel="noopener">Open app</a></div>` : ''}
       ${artHtml(c)}
       ${codeLayer('vmat', 'The transactions', 'Each act as an atomic, volition-guarded transaction among its parties.')}
