@@ -47,7 +47,7 @@ Join: Alice [Join]
   Bob: Alice invites you to her market.
 Posting: Carol [Offer] [Want] <description>
   Alice [Offer own] [Want own] <description>
-Withdraw: Carol [Withdraw] <keeper> <item> <market>
+Withdraw: Carol [Withdraw]
   Alice [Withdraw own]
 Swap, Escrow: Alice [Swap item for coin] <issuer wanted> <amount wanted> [Swap item for bond] <issuer wanted> <maturity wanted> <amount wanted> [Swap items] <item wanted>
   Bob: Alice asks to swap an item with you.
