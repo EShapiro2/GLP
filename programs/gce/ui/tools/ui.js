@@ -216,7 +216,17 @@
         if (!c.step) for (const N of Object.keys(c.sources)) if (!used.has(N)) err(c.line, N + ' is not a name of this sentence');
       }
     }
-    for (const d of Object.values(ui.containers)) for (const c of d.components) if (c.then && c.then !== ui.start && !(ui.landmarks || []).includes(c.then)) err(c.line, 'THEN goes to the start screen or a landmark, and ' + c.then + ' is neither');
+    for (const d of Object.values(ui.containers)) for (const c of d.components) {
+      if (!c.then) continue;
+      if (c.then === 'IT') {
+        /* THEN IT: the screen a list on the start screen or a landmark opens about the fact the act added */
+        const last = c.kind === 'chain' ? d.components.find(x => x.id === (c.stepIds || [])[1]) : c, a = last && spec.acts.find(x => x.name === last.act);
+        const roots = [ui.start, ...(ui.landmarks || [])];
+        let it = null;
+        for (const r of roots) for (const l of ui.containers[r].components) { const pr = l.items && (l.items.atoms || l.items.pred); if (!it && l.kind === 'list' && !l.hidden && l.opens && pr && a && a.adds.includes(pr)) it = {list: l.id, screen: l.opens, pred: pr, of: l.items.atoms ? 'fact' : 'value', from: r}; }
+        if (it) c.thenIt = it; else err(c.line, 'THEN IT needs a list, on the start screen or a landmark, of a fact the act adds, that opens a screen about it');
+      } else if (c.then !== ui.start && !(ui.landmarks || []).includes(c.then)) err(c.line, 'THEN goes to the start screen, a landmark or IT, and ' + c.then + ' is neither');
+    }
     for (const d of Object.values(ui.containers)) for (const c of d.components) if (c.kind === 'chain') for (const id of c.stepIds || []) { const s = d.components.find(x => x.id === id); if (s && !s.act) err(c.line, s.button + ' is no button of the contract'); }
     for (const d of Object.values(ui.containers)) for (const c of d.components) if (c.opens) {
       const to = ui.containers[c.opens];
@@ -241,7 +251,11 @@
       const mine = s.pre.filter(c => c.p && c.args[0] === me && !sim.env.includes(c.p));
       return {name: s.name, button: s.button, names, all: s.persons.concat(Object.keys(s.one), s.values), pnames: s.persons.concat(Object.keys(s.one)), me: names.indexOf(me) + 1, args: names, roles: s.persons.map(x => names.indexOf(x) + 1), people: s.persons.concat(Object.keys(s.one)).map(x => names.indexOf(x) + 1),
         values: s.values.filter(x => !env.has(x) && !s.persons.includes(x) && !sets.has(x) && !derived.has(x)), types: s.types || {}, field: s.field, guard: s.guard, sentence: s.sentence, questions: s.questions,
-        req: mine.filter(c => !c.neg).map(loc), forb: mine.filter(c => c.neg).map(loc)};
+        req: mine.filter(c => !c.neg).map(loc), forb: mine.filter(c => c.neg).map(loc),
+        /* what the act adds and removes: for the person who takes it, and the predicates it adds for anyone */
+        adds: [...new Set((s.effects || []).filter(e => e.p && Array.isArray(e.args) && !e.neg && e.args[0] === me).map(e => e.p))],
+        removes: [...new Set((s.effects || []).filter(e => e.p && Array.isArray(e.args) && e.neg && e.args[0] === me).map(e => e.p))],
+        addsAny: [...new Set((s.effects || []).filter(e => e.p && !e.neg).map(e => e.p))]};
     });
   }
   const placeOf = (a, r) => a.names.indexOf(r) + 1;
@@ -465,13 +479,14 @@
       else if ((q = what.match(/^NEW AS ([A-Za-z][\w-]*?)(\d+)$/))) r = {fresh: {stem: q[1], n: +q[2]}};
       else if ((q = what.match(/^CALLED "([^"]+)"$/))) r = {label: q[1]};
       else if (what === 'TOLD') r = {told: true};
+      else if (what === 'IMPORTANT') r = {important: true};
       else if (/^(NEWEST FIRST|OLDEST FIRST|ALPHABETICAL)$/.test(what)) r = {order: what === 'NEWEST FIRST' ? 'newest' : what === 'OLDEST FIRST' ? 'oldest' : 'alpha'};
       else if (/^(A GRID|ROWS|CHIPS)$/.test(what)) r = {as: what === 'A GRID' ? 'grid' : what.toLowerCase()};
       else if (/^(IN THE MENU|IN THE BAR|PRIMARY)$/.test(what)) r = {as: what === 'PRIMARY' ? 'primary' : what === 'IN THE MENU' ? 'menu' : 'bar'};
-      else { err('not a style: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, SCANNED, DRAWN BY a program, PICKED ON a program, A GRID, ROWS, CHIPS, NEWEST FIRST, OLDEST FIRST, ALPHABETICAL, NEW AS Name1, CALLED "a label", TOLD, IN THE MENU, IN THE BAR or PRIMARY'); continue; }
+      else { err('not a style: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, SCANNED, DRAWN BY a program, PICKED ON a program, A GRID, ROWS, CHIPS, NEWEST FIRST, OLDEST FIRST, ALPHABETICAL, NEW AS Name1, CALLED "a label", TOLD, IMPORTANT, IN THE MENU, IN THE BAR or PRIMARY'); continue; }
       if (r.as === 'slider' && r.from >= r.to) { err('a slider goes from a smaller number to a larger one'); continue; }
       /* a list may have an order beside its look; anything else one style */
-      const had = out.of[name], extra = r.order ? 'order' : r.fresh ? 'fresh' : r.label ? 'label' : r.told ? 'told' : null;
+      const had = out.of[name], extra = r.order ? 'order' : r.fresh ? 'fresh' : r.label ? 'label' : r.told ? 'told' : r.important ? 'important' : null;
       if (had && (extra ? had[extra] : had.as)) { err(name + ' has a style already'); continue; }
       out.of[name] = extra ? {...(had || {line: n}), [extra]: r[extra], [extra + 'Line']: n} : {...(had || {}), ...r, line: n}; L.name = name;
     }
@@ -494,7 +509,7 @@
   }
   function checkLook(spec, ui, look, programs) {
     programs = programs || G.PICTURES;
-    const errors = [...look.errors], err = (i, m) => errors.push({line: i, msg: m});
+    const errors = [...look.errors], err = (i, m) => errors.push({line: i, msg: m}), warnings = [];
     const fields = {}, lists = {}, buttons = {};
     /* a button by its name, and by its name on one screen, "Join ON Group", which a sentence may be kept to */
     for (const [sn, C] of Object.entries(ui.containers)) for (const c of C.components) {
@@ -510,8 +525,17 @@
       if (r.order && !lists[name]) err(r.orderLine, name + ' is no list of the description, so it has no order');
       if (r.told && !lists[name]) err(r.toldLine, name + ' is no list of the description, so nothing new in it can be told');
       if (r.fresh && !fields[name]) err(r.freshLine, name + ' is no value the description has TYPED, so it has no new name');
-      if (r.label && !buttons[name]) err(r.labelLine, name + ' is no button of the description, so it cannot be called anything');
-      if ((r.order || r.fresh || r.label) && !r.as) continue;
+      /* a label for a button, or for a value the description has TYPED: its field's label */
+      if (r.label && !buttons[name] && !fields[name] && !fields[name.replace(/ ON [A-Z][\w-]*$/, '')]) err(r.labelLine, name + ' is no button of the description and no value it has TYPED, so it cannot be called anything');
+      if (r.important) {
+        if (!buttons[name]) err(r.importantLine, name + ' is no button of the description, so it cannot be important');
+        /* an important act's requirement that no act of anyone adds: its hint would have no way to show */
+        else for (const c of buttons[name]) {
+          const a = spec.acts.find(x => x.name === (c.kind === 'chain' ? null : c.act));
+          for (const [pr] of (a ? a.req : [])) if (!spec.acts.some(x => x.addsAny.includes(pr)) && !(spec.personal || []).includes(pr)) warnings.push({line: r.importantLine, msg: name + ' needs ' + pr + ', which no act adds'});
+        }
+      }
+      if ((r.order || r.fresh || r.label || r.important) && !r.as) continue;
       const prog = r.as === 'drawn' ? r.by : r.as === 'picked' ? r.on : null;
       if (prog && programs && !programs[prog]) { err(r.line, prog + ' is no drawing program'); continue; }
       if (r.as === 'drawn') {
@@ -542,7 +566,7 @@
       } else if (['grid', 'rows', 'chips'].includes(r.as)) { if (!lists[name]) err(r.line, name + ' is no list of the description'); }
       else if (!buttons[name]) err(r.line, name + ' is no button of the description');
     }
-    return {errors, loses, ok: !errors.length};
+    return {errors, warnings, loses, ok: !errors.length};
   }
   const api = {read, resolve, check, brute, acts, personal, fact, template, readLook, checkLook, GLOBAL};
   if (typeof module !== 'undefined') module.exports = api; else G.GUI = api;

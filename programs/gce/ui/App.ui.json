@@ -4,6 +4,648 @@
   "theme": "fresh",
   "questions": "top"
  },
+ "effects": {
+  "establish": {
+   "button": "Establish",
+   "adds": [
+    "identity",
+    "person"
+   ],
+   "removes": []
+  },
+  "acquaint": {
+   "button": "Acquaint",
+   "adds": [
+    "knows"
+   ],
+   "removes": []
+  },
+  "introduce": {
+   "button": "Introduce",
+   "adds": [],
+   "removes": []
+  },
+  "open_place": {
+   "button": "Open place",
+   "adds": [
+    "open_place"
+   ],
+   "removes": []
+  },
+  "close_place": {
+   "button": "Close place",
+   "adds": [],
+   "removes": [
+    "open_place"
+   ]
+  },
+  "encounter": {
+   "button": "Encounter",
+   "adds": [
+    "knows"
+   ],
+   "removes": []
+  },
+  "befriend": {
+   "button": "Befriend",
+   "adds": [
+    "friend"
+   ],
+   "removes": []
+  },
+  "person_unfriend": {
+   "button": "Person unfriend",
+   "adds": [],
+   "removes": [
+    "friend"
+   ]
+  },
+  "sign": {
+   "button": "Sign",
+   "adds": [
+    "item"
+   ],
+   "removes": []
+  },
+  "forward": {
+   "button": "Forward",
+   "adds": [],
+   "removes": []
+  },
+  "publish": {
+   "button": "Publish",
+   "adds": [
+    "program"
+   ],
+   "removes": []
+  },
+  "trust": {
+   "button": "Trust",
+   "adds": [
+    "trusts_developer"
+   ],
+   "removes": []
+  },
+  "untrust": {
+   "button": "Untrust",
+   "adds": [],
+   "removes": [
+    "trusts_developer"
+   ]
+  },
+  "offer": {
+   "button": "Offer",
+   "adds": [],
+   "removes": []
+  },
+  "install_own": {
+   "button": "Install own",
+   "adds": [
+    "installed"
+   ],
+   "removes": []
+  },
+  "install": {
+   "button": "Install",
+   "adds": [
+    "installed"
+   ],
+   "removes": []
+  },
+  "invite": {
+   "button": "Invite",
+   "adds": [
+    "participant"
+   ],
+   "removes": []
+  },
+  "leave": {
+   "button": "Leave",
+   "adds": [],
+   "removes": [
+    "installed",
+    "participant"
+   ]
+  },
+  "enter": {
+   "button": "Enter",
+   "adds": [
+    "creator",
+    "guardian",
+    "knows",
+    "friend"
+   ],
+   "removes": []
+  },
+  "make_guardian": {
+   "button": "Make guardian",
+   "adds": [
+    "guardian",
+    "knows",
+    "friend"
+   ],
+   "removes": []
+  },
+  "resign": {
+   "button": "Resign",
+   "adds": [],
+   "removes": [
+    "guardian"
+   ]
+  },
+  "end_guardian": {
+   "button": "End guardian",
+   "adds": [],
+   "removes": []
+  },
+  "guardian_unfriend": {
+   "button": "Guardian unfriend",
+   "adds": [],
+   "removes": [
+    "friend",
+    "guardian"
+   ]
+  },
+  "ward_acquaint": {
+   "button": "Ward acquaint",
+   "adds": [
+    "knows"
+   ],
+   "removes": []
+  },
+  "ward_befriend": {
+   "button": "Ward befriend",
+   "adds": [
+    "friend"
+   ],
+   "removes": []
+  },
+  "ward_end": {
+   "button": "Ward end",
+   "adds": [],
+   "removes": [
+    "friend"
+   ]
+  },
+  "unfriend": {
+   "button": "Unfriend",
+   "adds": [],
+   "removes": [
+    "friend"
+   ]
+  },
+  "ward_unfriend": {
+   "button": "Ward unfriend",
+   "adds": [],
+   "removes": []
+  },
+  "wards_acquaint": {
+   "button": "Wards acquaint",
+   "adds": [
+    "knows"
+   ],
+   "removes": []
+  },
+  "wards_befriend": {
+   "button": "Wards befriend",
+   "adds": [
+    "friend"
+   ],
+   "removes": []
+  },
+  "wards_of_one_guardian_befriend": {
+   "button": "Wards of one guardian befriend",
+   "adds": [
+    "friend"
+   ],
+   "removes": []
+  },
+  "retire": {
+   "button": "Retire",
+   "adds": [],
+   "removes": []
+  },
+  "open_store": {
+   "button": "Open store",
+   "adds": [],
+   "removes": []
+  },
+  "list": {
+   "button": "List",
+   "adds": [],
+   "removes": []
+  },
+  "delist": {
+   "button": "Delist",
+   "adds": [],
+   "removes": []
+  },
+  "trust_store": {
+   "button": "Trust store",
+   "adds": [
+    "trusts_store"
+   ],
+   "removes": []
+  },
+  "untrust_store": {
+   "button": "Untrust store",
+   "adds": [],
+   "removes": [
+    "trusts_store"
+   ]
+  },
+  "install_from_store": {
+   "button": "Install from store",
+   "adds": [
+    "program",
+    "installed"
+   ],
+   "removes": []
+  },
+  "open_server": {
+   "button": "Open server",
+   "adds": [],
+   "removes": []
+  },
+  "sign_link": {
+   "button": "Sign link",
+   "adds": [
+    "link"
+   ],
+   "removes": []
+  },
+  "invite_by_link": {
+   "button": "Invite by link",
+   "adds": [],
+   "removes": []
+  },
+  "use_link": {
+   "button": "Use link",
+   "adds": [
+    "address"
+   ],
+   "removes": []
+  },
+  "present": {
+   "button": "Present",
+   "adds": [],
+   "removes": []
+  },
+  "open_directory": {
+   "button": "Open directory",
+   "adds": [],
+   "removes": []
+  },
+  "list_me": {
+   "button": "List me",
+   "adds": [],
+   "removes": []
+  },
+  "list_me_unshown": {
+   "button": "List me unshown",
+   "adds": [],
+   "removes": []
+  },
+  "delist_me": {
+   "button": "Delist me",
+   "adds": [],
+   "removes": []
+  },
+  "delist_me_unshown": {
+   "button": "Delist me unshown",
+   "adds": [],
+   "removes": []
+  },
+  "lookup": {
+   "button": "Lookup",
+   "adds": [
+    "holds_link"
+   ],
+   "removes": []
+  },
+  "lookup_by_address": {
+   "button": "Lookup by address",
+   "adds": [
+    "holds_link"
+   ],
+   "removes": []
+  }
+ },
+ "addedBy": {
+  "identity": [
+   {
+    "schema": "establish",
+    "button": "Establish",
+    "mine": true
+   },
+   {
+    "schema": "enter",
+    "button": "Enter",
+    "mine": false
+   }
+  ],
+  "person": [
+   {
+    "schema": "establish",
+    "button": "Establish",
+    "mine": true
+   }
+  ],
+  "knows": [
+   {
+    "schema": "acquaint",
+    "button": "Acquaint",
+    "mine": true
+   },
+   {
+    "schema": "introduce",
+    "button": "Introduce",
+    "mine": false
+   },
+   {
+    "schema": "encounter",
+    "button": "Encounter",
+    "mine": true
+   },
+   {
+    "schema": "enter",
+    "button": "Enter",
+    "mine": true
+   },
+   {
+    "schema": "make_guardian",
+    "button": "Make guardian",
+    "mine": true
+   },
+   {
+    "schema": "ward_acquaint",
+    "button": "Ward acquaint",
+    "mine": true
+   },
+   {
+    "schema": "wards_acquaint",
+    "button": "Wards acquaint",
+    "mine": true
+   }
+  ],
+  "open_place": [
+   {
+    "schema": "open_place",
+    "button": "Open place",
+    "mine": true
+   }
+  ],
+  "friend": [
+   {
+    "schema": "befriend",
+    "button": "Befriend",
+    "mine": true
+   },
+   {
+    "schema": "enter",
+    "button": "Enter",
+    "mine": true
+   },
+   {
+    "schema": "make_guardian",
+    "button": "Make guardian",
+    "mine": true
+   },
+   {
+    "schema": "ward_befriend",
+    "button": "Ward befriend",
+    "mine": true
+   },
+   {
+    "schema": "wards_befriend",
+    "button": "Wards befriend",
+    "mine": true
+   },
+   {
+    "schema": "wards_of_one_guardian_befriend",
+    "button": "Wards of one guardian befriend",
+    "mine": true
+   }
+  ],
+  "item": [
+   {
+    "schema": "sign",
+    "button": "Sign",
+    "mine": true
+   },
+   {
+    "schema": "forward",
+    "button": "Forward",
+    "mine": false
+   }
+  ],
+  "program": [
+   {
+    "schema": "publish",
+    "button": "Publish",
+    "mine": true
+   },
+   {
+    "schema": "offer",
+    "button": "Offer",
+    "mine": false
+   },
+   {
+    "schema": "invite",
+    "button": "Invite",
+    "mine": false
+   },
+   {
+    "schema": "install_from_store",
+    "button": "Install from store",
+    "mine": true
+   }
+  ],
+  "trusts_developer": [
+   {
+    "schema": "trust",
+    "button": "Trust",
+    "mine": true
+   }
+  ],
+  "installed": [
+   {
+    "schema": "install_own",
+    "button": "Install own",
+    "mine": true
+   },
+   {
+    "schema": "install",
+    "button": "Install",
+    "mine": true
+   },
+   {
+    "schema": "invite",
+    "button": "Invite",
+    "mine": false
+   },
+   {
+    "schema": "install_from_store",
+    "button": "Install from store",
+    "mine": true
+   }
+  ],
+  "participant": [
+   {
+    "schema": "invite",
+    "button": "Invite",
+    "mine": true
+   }
+  ],
+  "ward": [
+   {
+    "schema": "enter",
+    "button": "Enter",
+    "mine": false
+   }
+  ],
+  "has_guardian": [
+   {
+    "schema": "enter",
+    "button": "Enter",
+    "mine": false
+   },
+   {
+    "schema": "make_guardian",
+    "button": "Make guardian",
+    "mine": false
+   }
+  ],
+  "creator": [
+   {
+    "schema": "enter",
+    "button": "Enter",
+    "mine": true
+   }
+  ],
+  "guardian": [
+   {
+    "schema": "enter",
+    "button": "Enter",
+    "mine": true
+   },
+   {
+    "schema": "make_guardian",
+    "button": "Make guardian",
+    "mine": true
+   }
+  ],
+  "retired": [
+   {
+    "schema": "retire",
+    "button": "Retire",
+    "mine": false
+   }
+  ],
+  "store": [
+   {
+    "schema": "open_store",
+    "button": "Open store",
+    "mine": false
+   }
+  ],
+  "lists_program": [
+   {
+    "schema": "list",
+    "button": "List",
+    "mine": false
+   }
+  ],
+  "listing_signed": [
+   {
+    "schema": "list",
+    "button": "List",
+    "mine": false
+   }
+  ],
+  "trusts_store": [
+   {
+    "schema": "trust_store",
+    "button": "Trust store",
+    "mine": true
+   }
+  ],
+  "rendezvous_server": [
+   {
+    "schema": "open_server",
+    "button": "Open server",
+    "mine": false
+   }
+  ],
+  "link": [
+   {
+    "schema": "sign_link",
+    "button": "Sign link",
+    "mine": true
+   }
+  ],
+  "registered": [
+   {
+    "schema": "invite_by_link",
+    "button": "Invite by link",
+    "mine": false
+   }
+  ],
+  "spent": [
+   {
+    "schema": "use_link",
+    "button": "Use link",
+    "mine": false
+   }
+  ],
+  "address": [
+   {
+    "schema": "use_link",
+    "button": "Use link",
+    "mine": true
+   }
+  ],
+  "presented": [
+   {
+    "schema": "present",
+    "button": "Present",
+    "mine": false
+   }
+  ],
+  "directory": [
+   {
+    "schema": "open_directory",
+    "button": "Open directory",
+    "mine": false
+   }
+  ],
+  "lists_shown": [
+   {
+    "schema": "list_me",
+    "button": "List me",
+    "mine": false
+   }
+  ],
+  "lists_unshown": [
+   {
+    "schema": "list_me_unshown",
+    "button": "List me unshown",
+    "mine": false
+   }
+  ],
+  "holds_link": [
+   {
+    "schema": "lookup",
+    "button": "Lookup",
+    "mine": true
+   },
+   {
+    "schema": "lookup_by_address",
+    "button": "Lookup by address",
+    "mine": true
+   }
+  ]
+ },
  "start": "Home",
  "landmarks": [
   "More"
@@ -103,12 +745,14 @@
      "button": "Establish",
      "sentence": "Alice may establish an identity",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 1,
      "places": {},
      "covers": true,
      "where": null,
-     "label": "Set up my identity"
+     "label": "Set up my identity",
+     "important": false
     },
     {
      "kind": "chain",
@@ -121,6 +765,7 @@
        "button": "Acquaint",
        "sentence": null,
        "then": null,
+       "thenIt": null,
        "me": 1,
        "arity": 2,
        "places": {
@@ -134,7 +779,8 @@
        },
        "covers": false,
        "where": null,
-       "label": "Add a contact (no friendship)"
+       "label": "Add a contact (no friendship)",
+       "important": false
       },
       {
        "kind": "action",
@@ -142,6 +788,7 @@
        "button": "Befriend",
        "sentence": null,
        "then": null,
+       "thenIt": null,
        "me": 1,
        "arity": 2,
        "places": {
@@ -155,10 +802,13 @@
        },
        "covers": false,
        "where": null,
-       "label": null
+       "label": null,
+       "important": false
       }
      ],
      "then": null,
+     "thenIt": null,
+     "important": true,
      "where": "primary",
      "places": {
       "2": {
@@ -181,6 +831,7 @@
      "button": "Acquaint",
      "sentence": "Alice and Bob may jointly come to know each other",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -194,7 +845,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Add a contact (no friendship)"
+     "label": "Add a contact (no friendship)",
+     "important": false
     },
     {
      "kind": "action",
@@ -202,6 +854,7 @@
      "button": "Trust",
      "sentence": "Alice may declare trust in Carol as a developer",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -212,7 +865,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Trust their apps"
+     "label": "Trust their apps",
+     "important": false
     },
     {
      "kind": "action",
@@ -220,6 +874,7 @@
      "button": "Untrust",
      "sentence": "Alice may withdraw her declaration of trust in Carol as a developer",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -230,7 +885,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Stop trusting their apps"
+     "label": "Stop trusting their apps",
+     "important": false
     },
     {
      "kind": "action",
@@ -238,12 +894,14 @@
      "button": "Open place",
      "sentence": "Alice may declare her place open",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 1,
      "places": {},
      "covers": true,
      "where": null,
-     "label": "Open my place to visitors"
+     "label": "Open my place to visitors",
+     "important": false
     },
     {
      "kind": "action",
@@ -251,12 +909,14 @@
      "button": "Close place",
      "sentence": "Alice may close her place",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 1,
      "places": {},
      "covers": true,
      "where": null,
-     "label": "Close my place"
+     "label": "Close my place",
+     "important": false
     },
     {
      "kind": "action",
@@ -264,6 +924,7 @@
      "button": "Sign link",
      "sentence": "Alice may sign Link as an invitation link that names Dave",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 3,
      "places": {
@@ -279,7 +940,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Make an invitation link"
+     "label": "Make an invitation link",
+     "important": false
     },
     {
      "kind": "action",
@@ -287,6 +949,7 @@
      "button": "Invite by link",
      "sentence": "Alice may register Link with Dave",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -301,7 +964,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Register an invitation link"
+     "label": "Register an invitation link",
+     "important": false
     },
     {
      "kind": "action",
@@ -309,6 +973,7 @@
      "button": "Use link",
      "sentence": "Alice may present Link of Bob to Dave",
      "then": null,
+     "thenIt": null,
      "me": 3,
      "arity": 4,
      "places": {
@@ -331,7 +996,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Use an invitation link"
+     "label": "Use an invitation link",
+     "important": false
     },
     {
      "kind": "action",
@@ -339,6 +1005,7 @@
      "button": "Lookup",
      "sentence": "Alice may look Bob up on Dora's page",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -349,7 +1016,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Find someone in a directory"
+     "label": "Find someone in a directory",
+     "important": false
     },
     {
      "kind": "action",
@@ -357,6 +1025,7 @@
      "button": "Install from store",
      "sentence": "Alice may install from a store Prog of Bob",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 4,
      "places": {
@@ -379,7 +1048,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Install from a store"
+     "label": "Install from a store",
+     "important": false
     },
     {
      "kind": "list",
@@ -426,6 +1096,7 @@
      "button": "Encounter",
      "sentence": null,
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -439,7 +1110,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Meet someone in person"
+     "label": "Meet someone in person",
+     "important": false
     },
     {
      "kind": "action",
@@ -447,6 +1119,7 @@
      "button": "Lookup by address",
      "sentence": "Alice may look Bob up with Dora by address",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -457,7 +1130,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Find someone by address"
+     "label": "Find someone by address",
+     "important": false
     },
     {
      "kind": "action",
@@ -465,6 +1139,7 @@
      "button": "List me",
      "sentence": "Alice may list with Dora by Mail under Name on its page",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -485,7 +1160,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "List me in a directory"
+     "label": "List me in a directory",
+     "important": false
     },
     {
      "kind": "action",
@@ -493,6 +1169,7 @@
      "button": "List me unshown",
      "sentence": "Alice may list with Dora by Mail under Name off its page",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -513,7 +1190,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "List me in a directory, hidden"
+     "label": "List me in a directory, hidden",
+     "important": false
     },
     {
      "kind": "action",
@@ -521,6 +1199,7 @@
      "button": "Delist me",
      "sentence": "Alice may delist from Dora by Mail under Name on its page",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -532,7 +1211,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Remove me from a directory"
+     "label": "Remove me from a directory",
+     "important": false
     },
     {
      "kind": "action",
@@ -540,6 +1220,7 @@
      "button": "Delist me unshown",
      "sentence": "Alice may delist from Dora by Mail under Name off its page",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -551,7 +1232,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Remove my hidden listing"
+     "label": "Remove my hidden listing",
+     "important": false
     },
     {
      "kind": "action",
@@ -559,6 +1241,7 @@
      "button": "Person unfriend",
      "sentence": null,
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -569,7 +1252,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "End a friendship"
+     "label": "End a friendship",
+     "important": false
     },
     {
      "kind": "action",
@@ -577,6 +1261,7 @@
      "button": "Sign",
      "sentence": "Alice may create Item by signing it",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -588,7 +1273,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Make a signed item"
+     "label": "Make a signed item",
+     "important": false
     },
     {
      "kind": "action",
@@ -596,6 +1282,7 @@
      "button": "Publish",
      "sentence": "Alice may publish Prog by signing it",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -607,7 +1294,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Publish an app I wrote"
+     "label": "Publish an app I wrote",
+     "important": false
     },
     {
      "kind": "action",
@@ -615,6 +1303,7 @@
      "button": "Enter",
      "sentence": "Alice may create Wendy, and Wendy must consent",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -626,7 +1315,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Create a ward"
+     "label": "Create a ward",
+     "important": false
     },
     {
      "kind": "action",
@@ -634,6 +1324,7 @@
      "button": "Make guardian",
      "sentence": "Those who decide for Wendy may make Alice a guardian of Wendy",
      "then": null,
+     "thenIt": null,
      "me": 3,
      "arity": 3,
      "places": {
@@ -645,7 +1336,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Become a guardian of a ward"
+     "label": "Become a guardian of a ward",
+     "important": false
     },
     {
      "kind": "action",
@@ -653,6 +1345,7 @@
      "button": "End guardian",
      "sentence": "Those who decide for Wendy, other than Bob, may end Bob's guardianship of Wendy",
      "then": null,
+     "thenIt": null,
      "me": 3,
      "arity": 3,
      "places": {
@@ -670,7 +1363,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "End a guardian's role"
+     "label": "End a guardian's role",
+     "important": false
     },
     {
      "kind": "action",
@@ -678,12 +1372,14 @@
      "button": "Ward acquaint",
      "sentence": "Alice and Bob may jointly come to know each other",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 2,
      "places": {},
      "covers": true,
      "where": "menu",
-     "label": "For my ward: add a contact"
+     "label": "For my ward: add a contact",
+     "important": false
     },
     {
      "kind": "action",
@@ -691,6 +1387,7 @@
      "button": "Ward unfriend",
      "sentence": "Alice may end the friendship of Wendy and Bob",
      "then": null,
+     "thenIt": null,
      "me": 3,
      "arity": 3,
      "places": {
@@ -709,7 +1406,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "For my ward: end a friendship"
+     "label": "For my ward: end a friendship",
+     "important": false
     },
     {
      "kind": "action",
@@ -717,6 +1415,7 @@
      "button": "Wards acquaint",
      "sentence": "Alice and Will may jointly come to know each other",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -728,7 +1427,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Introduce two wards"
+     "label": "Introduce two wards",
+     "important": false
     },
     {
      "kind": "action",
@@ -736,6 +1436,7 @@
      "button": "Wards befriend",
      "sentence": "Alice and Will may jointly become friends",
      "then": null,
+     "thenIt": null,
      "me": 3,
      "arity": 4,
      "places": {
@@ -753,7 +1454,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Make two wards friends"
+     "label": "Make two wards friends",
+     "important": false
     },
     {
      "kind": "action",
@@ -761,6 +1463,7 @@
      "button": "Wards of one guardian befriend",
      "sentence": "Alice and Will may jointly become friends",
      "then": null,
+     "thenIt": null,
      "me": 3,
      "arity": 3,
      "places": {
@@ -771,7 +1474,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Make two of my wards friends"
+     "label": "Make two of my wards friends",
+     "important": false
     },
     {
      "kind": "action",
@@ -779,6 +1483,7 @@
      "button": "Delist",
      "sentence": "Alice may delist from Dave Prog of Bob",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -789,7 +1494,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Remove an app from a store"
+     "label": "Remove an app from a store",
+     "important": false
     }
    ]
   },
@@ -815,6 +1521,7 @@
      "button": "Invite",
      "sentence": "Alice may invite Bob to join in App of Carol",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -833,7 +1540,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Invite a friend"
+     "label": "Invite a friend",
+     "important": false
     },
     {
      "kind": "action",
@@ -841,6 +1549,7 @@
      "button": "Offer",
      "sentence": "Alice may offer App of Carol to Bob",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -859,7 +1568,8 @@
      },
      "covers": false,
      "where": null,
-     "label": "Send to a friend"
+     "label": "Send to a friend",
+     "important": false
     },
     {
      "kind": "action",
@@ -867,6 +1577,7 @@
      "button": "Leave",
      "sentence": "Alice may leave App of Carol",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 3,
      "places": {
@@ -877,7 +1588,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Remove app"
+     "label": "Remove app",
+     "important": false
     }
    ]
   },
@@ -895,6 +1607,7 @@
      "button": "Trust",
      "sentence": "Alice may declare trust in Carol as a developer",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -906,14 +1619,21 @@
      },
      "covers": false,
      "where": "primary",
-     "label": "Trust this developer"
+     "label": "Trust this developer",
+     "important": false
     },
     {
      "kind": "action",
      "schema": "install",
      "button": "Install",
      "sentence": "Alice may install Prog of Carol",
-     "then": "Home",
+     "then": "IT",
+     "thenIt": {
+      "screen": "App",
+      "pred": "installed",
+      "of": "fact",
+      "from": "Home"
+     },
      "me": 1,
      "arity": 3,
      "places": {
@@ -928,7 +1648,8 @@
      },
      "covers": true,
      "where": "primary",
-     "label": null
+     "label": null,
+     "important": true
     },
     {
      "kind": "action",
@@ -936,6 +1657,7 @@
      "button": "Install own",
      "sentence": "Alice may install her own Prog",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -946,7 +1668,8 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": null,
+     "important": false
     },
     {
      "kind": "action",
@@ -954,6 +1677,7 @@
      "button": "Offer",
      "sentence": "Alice may offer Prog of Carol to Bob",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -972,7 +1696,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Send to a friend"
+     "label": "Send to a friend",
+     "important": false
     }
    ]
   },
@@ -1009,6 +1734,7 @@
      "button": "Befriend",
      "sentence": "Alice and Bob may jointly become friends",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -1019,7 +1745,8 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": null,
+     "important": false
     },
     {
      "kind": "action",
@@ -1027,6 +1754,7 @@
      "button": "Trust",
      "sentence": "Alice may declare trust in Bob as a developer",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -1038,7 +1766,8 @@
      },
      "covers": false,
      "where": null,
-     "label": "Trust their apps"
+     "label": "Trust their apps",
+     "important": false
     },
     {
      "kind": "action",
@@ -1046,6 +1775,7 @@
      "button": "Untrust",
      "sentence": "Alice may withdraw her declaration of trust in Bob as a developer",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -1057,7 +1787,8 @@
      },
      "covers": false,
      "where": null,
-     "label": "Stop trusting their apps"
+     "label": "Stop trusting their apps",
+     "important": false
     },
     {
      "kind": "action",
@@ -1065,6 +1796,7 @@
      "button": "Introduce",
      "sentence": "Alice may introduce Carol to Bob",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -1079,7 +1811,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Introduce to a contact"
+     "label": "Introduce to a contact",
+     "important": false
     },
     {
      "kind": "action",
@@ -1087,6 +1820,7 @@
      "button": "Introduce",
      "sentence": "Alice may introduce Bob to Carol",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -1101,7 +1835,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Introduce to a contact"
+     "label": "Introduce to a contact",
+     "important": false
     },
     {
      "kind": "action",
@@ -1109,6 +1844,7 @@
      "button": "Trust store",
      "sentence": "Alice may declare trust in Bob",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 3,
      "places": {
@@ -1123,7 +1859,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Trust them as a store"
+     "label": "Trust them as a store",
+     "important": false
     },
     {
      "kind": "action",
@@ -1131,6 +1868,7 @@
      "button": "Present",
      "sentence": "Alice may present to Dave the signature of Bob over the friendship of Alice and Bob",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -1145,7 +1883,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Show our friendship to a contact"
+     "label": "Show our friendship to a contact",
+     "important": false
     },
     {
      "kind": "action",
@@ -1153,6 +1892,7 @@
      "button": "Forward",
      "sentence": "Alice may forward Item to Bob, adding his signature to the signatures Item carries",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -1167,7 +1907,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Send an item"
+     "label": "Send an item",
+     "important": false
     },
     {
      "kind": "action",
@@ -1175,6 +1916,7 @@
      "button": "Ward befriend",
      "sentence": "Alice and Bob may jointly become friends",
      "then": null,
+     "thenIt": null,
      "me": 3,
      "arity": 3,
      "places": {
@@ -1185,7 +1927,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Befriend for my ward"
+     "label": "Befriend for my ward",
+     "important": false
     },
     {
      "kind": "action",
@@ -1193,6 +1936,7 @@
      "button": "Ward end",
      "sentence": "Alice may end her friendship with Bob",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -1203,7 +1947,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "End friendship for my ward"
+     "label": "End friendship for my ward",
+     "important": false
     },
     {
      "kind": "action",
@@ -1211,6 +1956,7 @@
      "button": "Unfriend",
      "sentence": "Alice may end her friendship with Bob",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -1221,7 +1967,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "End friendship"
+     "label": "End friendship",
+     "important": false
     },
     {
      "kind": "action",
@@ -1229,6 +1976,7 @@
      "button": "Guardian unfriend",
      "sentence": "Alice may end her friendship with her ward Bob",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -1239,7 +1987,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "End friendship with my ward"
+     "label": "End friendship with my ward",
+     "important": false
     },
     {
      "kind": "action",
@@ -1247,6 +1996,7 @@
      "button": "Resign",
      "sentence": "Alice may end her guardianship of Bob",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -1257,7 +2007,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Stop being their guardian"
+     "label": "Stop being their guardian",
+     "important": false
     },
     {
      "kind": "action",
@@ -1265,6 +2016,7 @@
      "button": "Retire",
      "sentence": "Those who decide for Bob may retire Bob",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -1275,7 +2027,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Retire this ward"
+     "label": "Retire this ward",
+     "important": false
     },
     {
      "kind": "action",
@@ -1283,6 +2036,7 @@
      "button": "Open store",
      "sentence": "Alice may make Bob a store",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -1293,7 +2047,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Make them a store"
+     "label": "Make them a store",
+     "important": false
     },
     {
      "kind": "action",
@@ -1301,6 +2056,7 @@
      "button": "Open server",
      "sentence": "Alice may make Bob a rendezvous server",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -1311,7 +2067,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Make them a meeting server"
+     "label": "Make them a meeting server",
+     "important": false
     },
     {
      "kind": "action",
@@ -1319,6 +2076,7 @@
      "button": "Open directory",
      "sentence": "Alice may make Bob a directory",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -1329,7 +2087,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "Make them a directory"
+     "label": "Make them a directory",
+     "important": false
     },
     {
      "kind": "action",
@@ -1337,6 +2096,7 @@
      "button": "List",
      "sentence": "Alice may list in Bob Prog of Carol",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -1355,7 +2115,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": "List an app in their store"
+     "label": "List an app in their store",
+     "important": false
     }
    ]
   },
@@ -1383,6 +2144,7 @@
      "button": "Install from store",
      "sentence": "Alice may install from a store Prog of Bob",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 4,
      "places": {
@@ -1405,7 +2167,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Install from a store"
+     "label": "Install from a store",
+     "important": false
     },
     {
      "kind": "action",
@@ -1413,6 +2176,7 @@
      "button": "Untrust store",
      "sentence": "Alice may withdraw her declaration of trust in Dave",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -1423,7 +2187,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Stop trusting this store"
+     "label": "Stop trusting this store",
+     "important": false
     }
    ]
   }

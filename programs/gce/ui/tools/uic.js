@@ -56,7 +56,7 @@ function compile(sim, text, platformText, lookText) {
         /* the name the sentence gives the place, which the steps of a chain share */
         if (places[k]) places[k].name = (c.names || {})[r] || r;
       }
-      return {kind: 'action', schema: a.name, button: c.button, sentence: c.said || (C.components.find(x => x.act === c.act && x.said) || {}).said || null, then: c.then || null, me, arity, places, covers: !!(R.comps[c.id] && R.comps[c.id].ok), where: (lookOf(c.button) || {}).as || null, label: (lookOf(c.button) || {}).label || null};
+      return {kind: 'action', schema: a.name, button: c.button, sentence: c.said || (C.components.find(x => x.act === c.act && x.said) || {}).said || null, then: c.then || null, thenIt: c.thenIt ? {screen: c.thenIt.screen, pred: c.thenIt.pred, of: c.thenIt.of, from: c.thenIt.from} : null, me, arity, places, covers: !!(R.comps[c.id] && R.comps[c.id].ok), where: (lookOf(c.button) || {}).as || null, label: (lookOf(c.button) || {}).label || null, important: !!(lookOf(c.button) || {}).important};
     };
     for (const c of C.components) {
       if (c.hidden) continue;
@@ -64,12 +64,19 @@ function compile(sim, text, platformText, lookText) {
       else if (c.kind === 'details') comps.push({kind: 'show', of: c.about, pos: c.pos, preds: c.shows});
       else if (c.kind === 'thread') comps.push({kind: 'thread', preds: c.shows});
       else if (c.kind === 'list') comps.push({kind: 'list', title: c.title, items: c.items.named ? {everyone: true} : c.items.pred ? {from: c.items.pred} : {facts: c.items.atoms, keep: c.items.within ? c.items.within.pos : null}, with: c.shows || [], opens: c.opens || null, look: (lookOf(c.title) || {}).as || null, order: (lookOf(c.title) || {}).order || null, told: !!(lookOf(c.title) || {}).told});
-      else if (c.kind === 'chain') comps.push({kind: 'chain', button: c.button, label: (lookOf(c.button) || {}).label || null, steps: (c.stepIds || []).map(id => action(C.components.find(x => x.id === id))), then: c.then || null, where: (lookOf(c.button) || {}).as || null, places: action(C.components.find(x => x.id === c.stepIds[0])).places});
+      else if (c.kind === 'chain') comps.push({kind: 'chain', button: c.button, label: (lookOf(c.button) || {}).label || null, steps: (c.stepIds || []).map(id => action(C.components.find(x => x.id === id))), then: c.then || null, thenIt: c.thenIt ? {screen: c.thenIt.screen, pred: c.thenIt.pred, of: c.thenIt.of, from: c.thenIt.from} : null, important: !!(lookOf(c.button) || {}).important, where: (lookOf(c.button) || {}).as || null, places: action(C.components.find(x => x.id === c.stepIds[0])).places});
       else if (c.kind === 'action' && c.act) comps.push(action(c));
     }
     screens[name] = {about: C.aboutPred ? {fact: C.aboutPred} : C.aboutName ? {name: C.aboutName} : null, components: comps};
   }
-  return {version: 1, look: LK.global, start: P.ui.start, landmarks: P.ui.landmarks || [], screens, personPos: Object.fromEntries(Object.entries(personPos).map(([p, s]) => [p, [...s].sort()])), complete: R.complete, visible: R.visible, warnings: [...new Set(warnings)]};
+  /* the contract's acts as operators on predicates, for the way to an important act: what each adds and removes
+     for the person who takes it, and, for each predicate, the acts that add it, by her or by someone else */
+  const effects = {}, addedBy = {};
+  for (const a of spec.acts) {
+    effects[a.name] = {button: a.button, adds: a.adds, removes: a.removes};
+    for (const pr of a.addsAny) (addedBy[pr] = addedBy[pr] || []).push({schema: a.name, button: a.button, mine: a.adds.includes(pr)});
+  }
+  return {version: 1, look: LK.global, effects, addedBy, start: P.ui.start, landmarks: P.ui.landmarks || [], screens, personPos: Object.fromEntries(Object.entries(personPos).map(([p, s]) => [p, [...s].sort()])), complete: R.complete, visible: R.visible, warnings: [...new Set(warnings)]};
 }
 module.exports = compile;
 if (require.main === module) {

@@ -7,7 +7,7 @@ SCREEN Chats ABOUT Alice:
     LIST Contacts: PERSONS WITH knows, friend OPENS Chat
     Establish: Alice may establish an identity
     Acquaint: Alice and Bob may jointly come to know each other, Bob TYPED
-    Create: Alice may create Hikers, Hikers TYPED
+    Create: Alice may create Hikers, Hikers TYPED, THEN IT
     Close: Alice may close Hikers by leaving it, Hikers FROM leader
 
 SCREEN Chat ABOUT Bob:

@@ -21,6 +21,24 @@ shown).
   the `.ui` or the `.style` and print it again:
   `node tools/uic.js CONTRACT.json Friendship.ui cascade/Friendship/platform.vglp --style Friendship.style`.
 
+## Important acts, the way to them, and THEN IT
+
+- `X IS IMPORTANT.` (UI style; X a button, alone or `X ON Screen`): where X is placed and not offered now, the
+  screen shows in its place what is in its way, read off the contract (the first fact it requires that does not
+  hold, or that it forbids and holds, with the screen's names bound), and the way to it: the person's own acts
+  whose effects bring that fact, searched backward three deep, the first one she can take now (on this screen,
+  the start screen or a landmark) as a button, and the rest named ("then Install").  A fact no act of hers
+  brings comes when another person takes the act that does.  In the `.ui.json`: `"important": true` on the
+  action or chain, and at the top `effects` (each act's button and the predicates it adds to and ends for its
+  proposer) and `addedBy` (each predicate, the acts that add it, `mine` when to the proposer), from which the
+  app searches.  The checker refuses an IMPORTANT that names no button and warns when a fact an important act
+  requires is added by no act.
+- `..., THEN IT` (UI structure): once the act is done, the screen that a list on the start screen or a landmark
+  opens about the fact the act added; the checker requires such a list.  In the `.ui.json`:
+  `"then": "IT", "thenIt": {"screen", "pred", "of": "fact" | "value", "from"}`; the app opens `screen` about the
+  newest fact `pred` of the person (`of: value`: about its value, a list `FROM pred`), back to `from`.
+- `Name IS CALLED "label".` for a typed name labels its field: `places[k].look.label`.
+
 ## The tools (`tools/`, Node and Python 3, no Dart)
 
 - `build.py CALC NAME OUT.json`: the contract as the tools read it, from a scratch copy of `calculus/` made as

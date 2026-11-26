@@ -3,6 +3,77 @@
  "look": {
   "theme": "candy"
  },
+ "effects": {
+  "establish": {
+   "button": "Establish",
+   "adds": [
+    "identity",
+    "person"
+   ],
+   "removes": []
+  },
+  "acquaint": {
+   "button": "Acquaint",
+   "adds": [
+    "knows"
+   ],
+   "removes": []
+  },
+  "introduce": {
+   "button": "Introduce",
+   "adds": [],
+   "removes": []
+  },
+  "befriend": {
+   "button": "Befriend",
+   "adds": [
+    "friend"
+   ],
+   "removes": []
+  },
+  "unfriend": {
+   "button": "Unfriend",
+   "adds": [],
+   "removes": [
+    "friend"
+   ]
+  }
+ },
+ "addedBy": {
+  "identity": [
+   {
+    "schema": "establish",
+    "button": "Establish",
+    "mine": true
+   }
+  ],
+  "person": [
+   {
+    "schema": "establish",
+    "button": "Establish",
+    "mine": true
+   }
+  ],
+  "knows": [
+   {
+    "schema": "acquaint",
+    "button": "Acquaint",
+    "mine": true
+   },
+   {
+    "schema": "introduce",
+    "button": "Introduce",
+    "mine": false
+   }
+  ],
+  "friend": [
+   {
+    "schema": "befriend",
+    "button": "Befriend",
+    "mine": true
+   }
+  ]
+ },
  "start": "Home",
  "landmarks": [],
  "screens": {
@@ -42,12 +113,14 @@
      "button": "Establish",
      "sentence": "Alice may establish an identity",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 1,
      "places": {},
      "covers": true,
      "where": null,
-     "label": "Set up my identity"
+     "label": "Set up my identity",
+     "important": false
     },
     {
      "kind": "chain",
@@ -60,6 +133,7 @@
        "button": "Acquaint",
        "sentence": "Alice and Bob may jointly come to know each other",
        "then": null,
+       "thenIt": null,
        "me": 1,
        "arity": 2,
        "places": {
@@ -73,7 +147,8 @@
        },
        "covers": false,
        "where": null,
-       "label": "Add someone"
+       "label": "Add someone",
+       "important": false
       },
       {
        "kind": "action",
@@ -81,6 +156,7 @@
        "button": "Befriend",
        "sentence": "Alice and Bob may jointly become friends",
        "then": null,
+       "thenIt": null,
        "me": 1,
        "arity": 2,
        "places": {
@@ -94,10 +170,13 @@
        },
        "covers": false,
        "where": null,
-       "label": null
+       "label": null,
+       "important": false
       }
      ],
      "then": null,
+     "thenIt": null,
+     "important": true,
      "where": "primary",
      "places": {
       "2": {
@@ -115,6 +194,7 @@
      "button": "Acquaint",
      "sentence": "Alice and Bob may jointly come to know each other",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -128,7 +208,8 @@
      },
      "covers": true,
      "where": null,
-     "label": "Add someone"
+     "label": "Add someone",
+     "important": false
     },
     {
      "kind": "action",
@@ -136,6 +217,7 @@
      "button": "Befriend",
      "sentence": "Alice and Bob may jointly become friends",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -146,7 +228,8 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": null,
+     "important": false
     }
    ]
   },
@@ -170,6 +253,7 @@
      "button": "Befriend",
      "sentence": "Alice and Bob may jointly become friends",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -180,7 +264,8 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": null,
+     "important": false
     },
     {
      "kind": "action",
@@ -188,6 +273,7 @@
      "button": "Unfriend",
      "sentence": "Alice may end her friendship with Bob",
      "then": null,
+     "thenIt": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -198,7 +284,8 @@
      },
      "covers": true,
      "where": "menu",
-     "label": null
+     "label": null,
+     "important": false
     },
     {
      "kind": "action",
@@ -206,6 +293,7 @@
      "button": "Introduce",
      "sentence": "Alice may introduce Carol to Bob",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -220,7 +308,8 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": null,
+     "important": false
     },
     {
      "kind": "action",
@@ -228,6 +317,7 @@
      "button": "Introduce",
      "sentence": "Alice may introduce Bob to Carol",
      "then": null,
+     "thenIt": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -242,7 +332,8 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": null,
+     "important": false
     }
    ]
   }
