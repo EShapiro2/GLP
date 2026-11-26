@@ -61,11 +61,8 @@ def fetch(repo):
     if LOCAL:
         return os.path.join(LOCAL, repo.lower())
     path = os.path.join(SRC, 'git', repo)
-    # A repository named with its owner, outside EShapiro2, is public:
-    # fetched with no token (tools/papers.py, SOURCES).
-    owned = '/' in repo
-    url = f'https://github.com/{repo}.git' if owned else f'https://github.com/EShapiro2/{repo}.git'
-    auth = [] if owned else git_auth()
+    url = f'https://github.com/EShapiro2/{repo}.git'
+    auth = git_auth()
     if os.path.isdir(os.path.join(path, '.git')):
         r = run(['git', *auth, 'fetch', '-q', '--depth', '1', 'origin', 'HEAD'], cwd=path)
         if r.returncode == 0:
