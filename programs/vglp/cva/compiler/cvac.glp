@@ -2234,10 +2234,11 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     proved_rules(C?, Rl),
     worded_lx(W?, Lx7),
     real_heads(C?, Lx7?, Ch),
-    widget_lines(W?, C?, Ch?, Ps?, Nt?, ctx(Rf?, Rl?), Lw0),
+    widget_lines(W?, C?, Ch?, Ps?, Nt?, ctx(Rf?, Rl?, Kc?), Lw0),
     worded_lx(W?, Lx11),
     lx_sets(Lx11?, Ks1),
-    menu_lines(Lw0?, Ks1?, Lw1),
+    menu_lines(Lw0?, Ks1?, Lw1v),
+    value_lines(Lw1v?, Kc?, Lw1),
     calc_acts(W?, Wa),
     calc_any(Wa?, Ps?, Nt?, C?, Kq),
     calc_lines(Lw1?, Kq?, Lw),
@@ -4180,7 +4181,7 @@ fword_texts([at(I)|Ws], [T?|Ts?]) :- term_to_string(at(I?), T), fword_texts(Ws?,
 WField    ::= field(Integer, String, FieldType).
 WFields   ::= [] ; [WField | WFields].
 %% A text field of a typed variable is of its type, as email or name (vGLP 37fe038, Section 5.4), the device told what it takes (Section 6.2, Remark Construct Families).
-FieldType ::= person ; key ; agent ; text ; number ; Constant.
+FieldType ::= person ; key ; agent ; text ; number ; value ; Constant.
 FWord     ::= say(String) ; at(Integer).
 FWords    ::= [] ; [FWord | FWords].
 WAct      ::= act(Constant, Integer, Ints, Preconds, Ints, WFields, Preconds, FWords).
@@ -4218,7 +4219,8 @@ schema_acts(yes, sfound(Hd, Rs), sfound(Hh, _), S, Fs, Ft, Q, By, Ni, Rf, Ws?) :
     drop_listed(Us0?, Lis1?, Us),
     field_places(Hd?, Rs?, Fp),
     meeting_schema(Rs?, Mt),
-    act_fields(Fp?, Fs?, 1, Ft?, Us?, Mt?, Fd),
+    ctx_cval(Rf?, Cv),
+    act_fields(Fp?, Fs?, 1, Ft?, Us?, Mt?, Cv?, Fd),
     guard_roles(Rs?, 1, Gr0),
     proposer_roles(By?, Gr0?, Gr),
     same_places(By?, Sm0),
@@ -4505,22 +4507,28 @@ role_places([role(_)|Vs], I, [I?|Is?]) :- integer(I?) | I1 := I? + 1, role_place
 role_places([pvar(_)|Vs], I, [I?|Is?]) :- integer(I?) | I1 := I? + 1, role_places(Vs?, I1?, Is).
 role_places([V|Vs], I, Is?) :- otherwise, integer(I?), ground(V?) | I1 := I? + 1, role_places(Vs?, I1?, Is).
 %% The fields of an act, field(I, S, T), the k-th field of its pragma at the k-th place field_places counts, a field left empty, an inapplicable field of a schema that shares its button, naming none (README.md beside this file, 2).
-procedure act_fields(Ints?, Strings?, Integer?, FTypes?, Args?, YesNo?, WFields).
-act_fields(_, [], _, _, _, _, []).
-act_fields([], [_|_], _, _, _, _, []).
-act_fields([_|Is], [F|Fs], K, Ft, Vs, Mt, Fd?) :- ground(F?), F? =?= '""', integer(K?) | K1 := K? + 1, act_fields(Is?, Fs?, K1?, Ft?, Vs?, Mt?, Fd).
-act_fields([I|Is], [F|Fs], K, Ft, Vs, Mt, [field(I?, F?, T?)|Fd?]) :- otherwise, integer(I?), integer(K?), ground(F?), ground(Ft?), ground(Vs?), ground(Mt?) |
+procedure act_fields(Ints?, Strings?, Integer?, FTypes?, Args?, YesNo?, YesNo?, WFields).
+act_fields(_, [], _, _, _, _, _, []).
+act_fields([], [_|_], _, _, _, _, _, []).
+act_fields([_|Is], [F|Fs], K, Ft, Vs, Mt, Cv, Fd?) :- ground(F?), F? =?= '""', integer(K?) | K1 := K? + 1, act_fields(Is?, Fs?, K1?, Ft?, Vs?, Mt?, Cv?, Fd).
+act_fields([I|Is], [F|Fs], K, Ft, Vs, Mt, Cv, [field(I?, F?, T?)|Fd?]) :- otherwise, integer(I?), integer(K?), ground(F?), ground(Ft?), ground(Vs?), ground(Mt?), ground(Cv?) |
     nth_arg(I?, Vs?, A),
-    field_type(A?, Mt?, T0),
+    field_value(A?, Mt?, Cv?, T0),
     ftype_of(Ft?, K?, T0?, T),
     K1 := K? + 1,
-    act_fields(Is?, Fs?, K1?, Ft?, Vs?, Mt?, Fd).
+    act_fields(Is?, Fs?, K1?, Ft?, Vs?, Mt?, Cv?, Fd).
 %% The kind of the K-th field: the type its schema gives its speech-act variable, ft(K, T), where it gives one, as email or name, which constrains nothing and which the field's widget is told (vGLP 37fe038, Section 5.4); else its kind by its variable (field_type).
 procedure ftype_of(FTypes?, Integer?, FieldType?, FieldType).
 ftype_of([], _, T, T?).
 ftype_of([ft(J, U)|_], K, text, U?) :- J? =:= K? | true.
 ftype_of([_|Ft], K, T, R?) :- otherwise | ftype_of(Ft?, K?, T?, R).
 %% The type of a field (vGLP, Section 5.4, "The contract's words": "A field is typed, a person by key or picked among the persons the viewer knows"; Section 6.2: "A field that takes a person in a role offers the persons the viewer knows ... The field of an acquaintance takes the key of a person the viewer does not know"): a person in a role, picked among the persons the viewer knows; the key of the peer of an acquaintance schema; an agent variable, a person in no role, by key or picked, which Section 6.2's two sentences do not restrict; a speech act, a text; a number.
+%% A field of a variable over the constants in a contract that names a compound value takes a value, value: the form reads its text by the GLP reader, a ground compound term being that value, as bond(10), any other text the constant of that name (vGLP, Section 5.4, "The contract's words": "A field is typed"; Currencies #24 and Code #39, vGLP_inbox.md, 2026-11-26 01:00 UTC: GB's Issue field type, of CValue ::= Constant ; bond(Integer)).
+procedure ctx_cval(DrawCtx?, YesNo).
+ctx_cval(ctx(_, _, Cv), Cv?).
+procedure field_value(Arg?, YesNo?, YesNo?, FieldType).
+field_value(const(_), _, yes, value).
+field_value(A, Mt, _, T?) :- otherwise | field_type(A?, Mt?, T).
 procedure field_type(Arg?, YesNo?, FieldType).
 field_type(role(_), no, person).
 field_type(role(_), yes, key).
@@ -4680,7 +4688,7 @@ sames_items([mark(_)|Ss], Is?) :- sames_items(Ss?, Is).
 sames_items([gship(_, _, _)|Ss], Is?) :- sames_items(Ss?, Is).
 %% The precondition of the act at the role G, the viewer's (vGLP 6e9f71d, Section 6.2, "The words a platform shows": a button is drawn "in the row of an entry that an atom the act requires or deletes at the proposer's role names, whatever the atom's predicate, a group <a>.n being named by n ...; and only where the viewer's state holds the atoms the act requires at the proposer's role and lacks those it forbids there"), so that the construct family finds from it both the rows the button is drawn in and whether it is drawn there: req(P, As) for each atom the schema requires or deletes at G, forb(P, As) for each it forbids there, As the place of each argument, at(K), a group by the places of its leader and its name, grp(J, K), and any where it is neither, as a variable local to the role; an atom of a reflexive predicate naming the role G itself is left out, holding at every person of that person (Section 5.4, "Act schemas as local specifications").
 procedure condition_places(Integer?, RoleSpecs?, Args?, DrawCtx?, Preconds).
-condition_places(G, Rs, Vs, ctx(Rf, Rl), Cs?) :- integer(G?), ground(Rs?), ground(Vs?), ground(Rf?), ground(Rl?) |
+condition_places(G, Rs, Vs, ctx(Rf, Rl, _), Cs?) :- integer(G?), ground(Rs?), ground(Vs?), ground(Rf?), ground(Rl?) |
     nth_rs(G?, Rs?, R),
     condition_places1(R?, G?, Vs?, Rf?, C1),
     unless_places(Rs?, 1, G?, Vs?, Rl?, C2),
@@ -4745,7 +4753,8 @@ procedure at_arg(Integer?, CondArg).
 at_arg(K, at(K?)) :- K? > 0 | true.
 at_arg(0, any).
 %% What the schemas prove of the other roles (vGLP 893d4ea, Section 6.2, "The words a platform shows": "where every schema that adds an atom naming x at a role requires or adds at x's role an atom that no schema deletes, the viewer holding the first shows that x holds the second, and an act that forbids the second at x's role is not drawn beside x"): rule(P, N, I, pat(Q, Ws)), the atom of P of arity N naming x at its argument I, at the viewer v, shows that x holds Q, its arguments Ws each x or v; derived from the schemas when the contract is compiled.  An act at the viewer's role G that forbids, at the role s of its place K, an atom such a rule proves of the person at K, is drawn with unless(P, As), As at(K) at argument I and any elsewhere: the viewer holding a matching atom, it is not drawn.
-DrawCtx ::= ctx(Preds, Rules).
+%% And whether the contract names a compound value, so that a field of a variable over the constants takes a value (field_value).
+DrawCtx ::= ctx(Preds, Rules, YesNo).
 Pat ::= pat(Constant, Preds).
 Pats ::= [] ; [Pat | Pats].
 Rule ::= rule(Constant, Integer, Integer, Pat).
@@ -5026,6 +5035,12 @@ export_lines(Dn, Pr, Tx, Vn, L?) :- ground(Pr?) |
     lapp(L1?, Tl?, L).
 %% The type of an argument of the contract as read has the alternative const(Constant) only where the contract has a variable over the constants (lx_consts), and set(Constant) only where it has a set variable (lx_sets), so that a platform with neither prints as before.
 %% A field's type has the alternative set only where the contract has a set variable (lx_sets), a field of a set variable taking its elements, so that a platform with none prints as before.
+%% A field's type has the alternative value only where the contract names a compound value (field_value), so that a platform naming none prints as before.
+procedure value_lines(Lines?, YesNo?, Lines).
+value_lines(Ls, no, Ls?).
+value_lines(Ls, yes, R?) :-
+    line_sub(Ls?, 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuFieldType ::= person ; key ; agent ; text ; number ; value.', R1),
+    line_sub(R1?, 'MenuFieldType ::= person ; key ; agent ; text ; number ; set.', 'MenuFieldType ::= person ; key ; agent ; text ; number ; set ; value.', R).
 procedure menu_lines(Lines?, YesNo?, Lines).
 menu_lines(Ls, no, Ls?).
 menu_lines(Ls, yes, R?) :-
