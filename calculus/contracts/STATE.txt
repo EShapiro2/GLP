@@ -103,4 +103,4 @@ Villagers none no no no
 Warded-Groups CSSN yes yes yes
 Warnings GCE yes yes yes
 Workers-Cooperative GO yes yes yes
-Works none yes no no
+Works none yes yes no
