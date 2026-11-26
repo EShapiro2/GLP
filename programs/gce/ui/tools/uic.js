@@ -21,7 +21,7 @@ function compile(sim, text, platformText, lookText) {
   if (!R.complete) throw new Error('not complete: ' + Object.values(R.acts).filter(a => !a.covered).map(a => a.button).join(', '));
   const LK = G.readLook(lookText || ''), LR = G.checkLook(spec, P.ui, LK, require('./pictures.js'));
   if (!LR.ok) throw new Error('the look: ' + LR.errors.map(e => 'line ' + e.line + ': ' + e.msg).join('\n'));
-  const lookOf = n => { const r = LK.of[n]; if (!r) return null; const {line, ...o} = r; return o; };
+  const lookOf = n => { const r = LK.of[n]; if (!r) return null; return Object.fromEntries(Object.entries(r).filter(([k]) => k !== 'line' && !k.endsWith('Line'))); };
   /* the positions of each predicate's facts that hold persons, from the acts that add them */
   const personPos = {};
   for (const s of sim.schemas) {
@@ -31,34 +31,38 @@ function compile(sim, text, platformText, lookText) {
   const screens = {};
   for (const [name, C] of Object.entries(P.ui.containers)) {
     const comps = [];
+    /* an action as the app reads it: its act by its schema, each place by its number in the act's request */
+    const action = c => {
+      const a = spec.acts.find(x => x.name === c.act), places = {};
+      /* the places as the platform's request numbers them, and its proposer's */
+      const pa = plat && plat.acts[a.name];
+      const placeOf = r => pa ? pa.names.indexOf(r) + 1 : a.names.indexOf(r) + 1;
+      let me = a.me, arity = a.names.length;
+      if (pa) {
+        arity = pa.arity;
+        const mine = placeOf(a.names[a.me - 1]);
+        me = pa.proposers.includes(mine) ? mine : pa.proposers[0] || mine;
+      } else if (plat) warnings.push(a.name + ': not in the platform');
+      for (const [r, v] of Object.entries(c.bind)) {
+        const k = placeOf(r);
+        if (k < 1 || k === me) { if (k < 1) warnings.push(a.name + ': ' + r + ' is no place of the request'); continue; }
+        if (v === 'it') places[k] = {subject: null};
+        else if (v.param) places[k] = {subject: v.pos};
+        else if (v.field) places[k] = {typed: true, look: lookOf((c.names || {})[r] || r)};
+        else if (v.select) { const l = C.components.find(x => x.id === v.select); places[k] = {from: l.items.named ? 'everyone' : l.items.pred}; if (v.same) places[k].same = v.same; }
+        /* the name the sentence gives the place, which the steps of a chain share */
+        if (places[k]) places[k].name = (c.names || {})[r] || r;
+      }
+      return {kind: 'action', schema: a.name, button: c.button, sentence: c.said || (C.components.find(x => x.act === c.act && x.said) || {}).said || null, then: c.then || null, me, arity, places, covers: !!(R.comps[c.id] && R.comps[c.id].ok), where: (lookOf(c.button) || {}).as || null, label: (lookOf(c.button) || {}).label || null};
+    };
     for (const c of C.components) {
       if (c.hidden) continue;
       if (c.kind === 'inbox') comps.push({kind: 'questions'});
       else if (c.kind === 'details') comps.push({kind: 'show', of: c.about, pos: c.pos, preds: c.shows});
       else if (c.kind === 'thread') comps.push({kind: 'thread', preds: c.shows});
-      else if (c.kind === 'list') comps.push({kind: 'list', title: c.title, items: c.items.named ? {everyone: true} : c.items.pred ? {from: c.items.pred} : {facts: c.items.atoms, keep: c.items.within ? c.items.within.pos : null}, with: c.shows || [], opens: c.opens || null, look: (lookOf(c.title) || {}).as || null, order: (lookOf(c.title) || {}).order || null});
-      else if (c.kind === 'chain') comps.push({kind: 'chain', button: c.button, steps: (c.stepIds || []).map(id => (C.components.find(x => x.id === id) || {}).act), then: c.then || null, look: (lookOf(c.button) || {}).as || null});
-      else if (c.kind === 'action' && c.act) {
-        const a = spec.acts.find(x => x.name === c.act), places = {};
-        /* the places as the platform's request numbers them, and its proposer's */
-        const pa = plat && plat.acts[a.name];
-        const placeOf = r => pa ? pa.names.indexOf(r) + 1 : a.names.indexOf(r) + 1;
-        let me = a.me, arity = a.names.length;
-        if (pa) {
-          arity = pa.arity;
-          const mine = placeOf(a.names[a.me - 1]);
-          me = pa.proposers.includes(mine) ? mine : pa.proposers[0] || mine;
-        } else if (plat) warnings.push(a.name + ': not in the platform');
-        for (const [r, v] of Object.entries(c.bind)) {
-          const k = placeOf(r);
-          if (k < 1 || k === me) { if (k < 1) warnings.push(a.name + ': ' + r + ' is no place of the request'); continue; }
-          if (v === 'it') places[k] = {subject: null};
-          else if (v.param) places[k] = {subject: v.pos};
-          else if (v.field) places[k] = {typed: true, look: lookOf((c.names || {})[r] || r)};
-          else if (v.select) { const l = C.components.find(x => x.id === v.select); places[k] = {from: l.items.named ? 'everyone' : l.items.pred}; }
-        }
-        comps.push({kind: 'action', schema: a.name, button: c.button, sentence: c.said || null, then: c.then || null, me, arity, places, covers: !!(R.comps[c.id] && R.comps[c.id].ok), where: (lookOf(c.button) || {}).as || null});
-      }
+      else if (c.kind === 'list') comps.push({kind: 'list', title: c.title, items: c.items.named ? {everyone: true} : c.items.pred ? {from: c.items.pred} : {facts: c.items.atoms, keep: c.items.within ? c.items.within.pos : null}, with: c.shows || [], opens: c.opens || null, look: (lookOf(c.title) || {}).as || null, order: (lookOf(c.title) || {}).order || null, told: !!(lookOf(c.title) || {}).told});
+      else if (c.kind === 'chain') comps.push({kind: 'chain', button: c.button, label: (lookOf(c.button) || {}).label || null, steps: (c.stepIds || []).map(id => action(C.components.find(x => x.id === id))), then: c.then || null, where: (lookOf(c.button) || {}).as || null, places: action(C.components.find(x => x.id === c.stepIds[0])).places});
+      else if (c.kind === 'action' && c.act) comps.push(action(c));
     }
     screens[name] = {about: C.aboutPred ? {fact: C.aboutPred} : C.aboutName ? {name: C.aboutName} : null, components: comps};
   }

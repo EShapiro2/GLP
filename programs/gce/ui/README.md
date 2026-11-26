@@ -4,7 +4,8 @@ An app's UI structure, its screens, what each shows and where each act is reques
 the paper The Grassroots UI Layer, in the contract's own words, and checked against the contract: complete (every act a person may take is offered) and visible (every fact
 shown).
 
-- `Friendship.ui`: Friendship's UI structure, person first: everyone Alice knows on the start screen, and a screen for each.
+- `Friendship.ui`: Friendship's UI structure, home first: everyone Alice knows on the start screen, befriending there in
+  one tap with Make friends (a chain: Acquaint AND Befriend), and a screen for each person.
 - `Friendship.style`: its UI style, how it is drawn, one sentence a line, by the names the UI structure uses: a typed value
   LONG or a SLIDER, a list A GRID and NEWEST FIRST or ALPHABETICAL, an action IN THE MENU or PRIMARY, a value
   DRAWN BY a drawing program or PICKED ON one (`tools/pictures.js`: chessboard, tens), the colors of the whole app.  Its checker

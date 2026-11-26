@@ -31,7 +31,8 @@
      "with": [],
      "opens": "Group",
      "look": "grid",
-     "order": null
+     "order": null,
+     "told": false
     },
     {
      "kind": "list",
@@ -45,7 +46,8 @@
      ],
      "opens": "Chat",
      "look": null,
-     "order": null
+     "order": null,
+     "told": false
     },
     {
      "kind": "action",
@@ -57,7 +59,8 @@
      "arity": 1,
      "places": {},
      "covers": true,
-     "where": null
+     "where": null,
+     "label": "Set up my identity"
     },
     {
      "kind": "action",
@@ -72,11 +75,13 @@
        "typed": true,
        "look": {
         "as": "scanned"
-       }
+       },
+       "name": "Bob"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": "Add someone"
     },
     {
      "kind": "action",
@@ -89,11 +94,18 @@
      "places": {
       "2": {
        "typed": true,
-       "look": null
+       "look": {
+        "fresh": {
+         "stem": "Group",
+         "n": 1
+        }
+       },
+       "name": "Hikers"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": "New group"
     },
     {
      "kind": "action",
@@ -105,11 +117,13 @@
      "arity": 2,
      "places": {
       "2": {
-       "from": "leader"
+       "from": "leader",
+       "name": "Hikers"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": null
     }
    ]
   },
@@ -146,11 +160,13 @@
      "arity": 2,
      "places": {
       "2": {
-       "subject": null
+       "subject": null,
+       "name": "Bob"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": null
     },
     {
      "kind": "action",
@@ -162,11 +178,13 @@
      "arity": 2,
      "places": {
       "2": {
-       "subject": null
+       "subject": null,
+       "name": "Bob"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": null
     },
     {
      "kind": "action",
@@ -178,14 +196,17 @@
      "arity": 3,
      "places": {
       "1": {
-       "subject": null
+       "subject": null,
+       "name": "Bob"
       },
       "3": {
-       "from": "knows"
+       "from": "knows",
+       "name": "Carol"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": null
     },
     {
      "kind": "action",
@@ -197,14 +218,17 @@
      "arity": 3,
      "places": {
       "1": {
-       "from": "knows"
+       "from": "knows",
+       "name": "Carol"
       },
       "3": {
-       "subject": null
+       "subject": null,
+       "name": "Bob"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": null
     },
     {
      "kind": "action",
@@ -216,14 +240,17 @@
      "arity": 3,
      "places": {
       "1": {
-       "subject": null
+       "subject": null,
+       "name": "Bob"
       },
       "3": {
-       "from": "leader"
+       "from": "leader",
+       "name": "Hikers"
       }
      },
      "covers": true,
-     "where": "bar"
+     "where": "bar",
+     "label": null
     },
     {
      "kind": "action",
@@ -235,14 +262,17 @@
      "arity": 3,
      "places": {
       "1": {
-       "subject": null
+       "subject": null,
+       "name": "Bob"
       },
       "3": {
-       "from": "listed"
+       "from": "listed",
+       "name": "Hikers"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": null
     },
     {
      "kind": "action",
@@ -254,17 +284,20 @@
      "arity": 3,
      "places": {
       "1": {
-       "subject": null
+       "subject": null,
+       "name": "Bob"
       },
       "3": {
        "typed": true,
        "look": {
         "as": "long"
-       }
+       },
+       "name": "Text"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": "Write"
     }
    ]
   },
@@ -304,14 +337,17 @@
      "arity": 3,
      "places": {
       "1": {
-       "from": "friend"
+       "from": "friend",
+       "name": "Carol"
       },
       "3": {
-       "subject": 1
+       "subject": 1,
+       "name": "Hikers"
       }
      },
      "covers": false,
-     "where": "bar"
+     "where": "bar",
+     "label": null
     },
     {
      "kind": "action",
@@ -323,14 +359,17 @@
      "arity": 3,
      "places": {
       "2": {
-       "subject": 2
+       "subject": 2,
+       "name": "Bob"
       },
       "3": {
-       "subject": 1
+       "subject": 1,
+       "name": "Hikers"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": null
     },
     {
      "kind": "action",
@@ -342,20 +381,24 @@
      "arity": 4,
      "places": {
       "1": {
-       "subject": 2
+       "subject": 2,
+       "name": "Bob"
       },
       "3": {
        "typed": true,
        "look": {
         "as": "long"
-       }
+       },
+       "name": "Text"
       },
       "4": {
-       "subject": 1
+       "subject": 1,
+       "name": "Hikers"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": null
     },
     {
      "kind": "action",
@@ -370,14 +413,17 @@
        "typed": true,
        "look": {
         "as": "long"
-       }
+       },
+       "name": "Text"
       },
       "3": {
-       "subject": 1
+       "subject": 1,
+       "name": "Hikers"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": null
     }
    ]
   }

@@ -14,8 +14,10 @@
 /// [ActInfo.distinct]).
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:glp_runtime/vglp/canonical.dart' show DeclaredAct, DeclaredField;
 
@@ -32,16 +34,24 @@ class PlaceSource {
 
   /// The look of a typed place: `as` long, short, slider (`from`, `to`, and `typed` for a box beside it) or date.
   final Map<String, dynamic>? look;
-  const PlaceSource({this.subject = false, this.pos, this.from, this.typed = false, this.look});
+
+  /// The name the sentence gives the place, which the steps of a chain share.
+  final String? name;
+
+  /// For a place picked from a list whose name the screen's subject also has: the position of the subject's fact
+  /// that holds it, to whose value the choice is kept.
+  final int? same;
+  const PlaceSource({this.subject = false, this.pos, this.from, this.typed = false, this.look, this.name, this.same});
 
   static PlaceSource of(Map<String, dynamic> j) => j.containsKey('subject')
-      ? PlaceSource(subject: true, pos: j['subject'] as int?)
+      ? PlaceSource(subject: true, pos: j['subject'] as int?, name: j['name'] as String?)
       : j.containsKey('from')
-          ? PlaceSource(from: j['from'] as String)
-          : PlaceSource(typed: true, look: j['look'] as Map<String, dynamic>?);
+          ? PlaceSource(from: j['from'] as String, name: j['name'] as String?, same: j['same'] as int?)
+          : PlaceSource(typed: true, look: j['look'] as Map<String, dynamic>?, name: j['name'] as String?);
 }
 
-/// A component of a screen, by its [kind]: `questions`, `show`, `thread`, `list` or `action`.
+/// A component of a screen, by its [kind]: `questions`, `show`, `thread`, `list`, `action`, or `chain`, one button
+/// that takes the acts of its [steps] in turn.
 class UiComponent {
   final String kind;
   final Map<String, dynamic> j;
@@ -50,6 +60,15 @@ class UiComponent {
   List<String> get preds => [for (final p in (j['preds'] ?? j['with'] ?? const []) as List) p as String];
   String get schema => j['schema'] as String;
   String get button => j['button'] as String;
+
+  /// What the button reads: the plain label its UI style calls it by, or its name.
+  String get label => (j['label'] as String?) ?? button;
+
+  /// The screen the person is taken to once the act is done: the start screen or a landmark.
+  String? get then => j['then'] as String?;
+
+  /// The actions of a chain, in turn.
+  List<UiComponent> get steps => [for (final x in (j['steps'] ?? const []) as List) UiComponent('action', x as Map<String, dynamic>)];
   String? get sentence => j['sentence'] as String?;
   int get me => j['me'] as int;
   int get arity => j['arity'] as int;
@@ -267,6 +286,9 @@ class DescribedCore {
         if (from == null || x[e.key] == null) continue;
         final allowed = from == 'everyone' ? everyone() : valuesOf(from);
         if (!allowed.any((v) => same(v, x[e.key]!))) ok = false;
+        // A choice kept to the screen's own value.
+        final k = e.value.same;
+        if (k != null && subject != null && (k > args(subject).length || !same(args(subject)[k - 1], x[e.key]!))) ok = false;
       }
       // A way the act forbids, where the person's state determines it, is not offered (ActInfo.lacks).
       if (ok && info.lacks(s.atoms, {...x, act.proposer: s.me})) out.add(x);
@@ -345,20 +367,131 @@ class DescribedCore {
     }
     return out;
   }
+
+  /// The name a typed place starts filled with, its UI style's `NEW AS Stem1`: the stem and the first number
+  /// from the one given whose name is no name in the person's facts.
+  String? freshName(Map<String, dynamic>? look) {
+    final f = look?['fresh'] as Map<String, dynamic>?;
+    if (f == null) return null;
+    final stem = f['stem'] as String;
+    final taken = {
+      for (final a in s.atoms)
+        for (final x in args(a)) displayText(x).toLowerCase()
+    };
+    var n = f['n'] as int;
+    while (taken.contains('$stem$n'.toLowerCase())) {
+      n++;
+    }
+    return '$stem$n';
+  }
+
+  /// The lines of a conversation drawn from the predicates [preds], about [subject]: each fact's text or speech
+  /// act, with the fact.
+  List<(GTerm, GTerm)> lines(List<String> preds, GTerm? subject, {bool fact = false}) => [
+        for (final a in s.atoms)
+          if (preds.contains(pred(a)) && (subject == null || names(a, subject, fact: fact)))
+            for (final x in args(a))
+              if (x is GString || (x is GStruct && x.functor == 'speech')) (a, x)
+      ];
+
+  /// The text of a line, and whether the person wrote it.
+  (String, bool) line(GTerm a, GTerm x) {
+    final text = x is GString ? x.value : displayText(args(x).first).replaceAll('utterance', '').trim();
+    final mine = x is GStruct && x.args.length > 1 && same(x.args[1], s.me) || pred(a).startsWith('sent');
+    return (text, mine);
+  }
+
+  /// Who wrote a line the person did not: the signer of its speech act, or the first person its fact names.
+  GTerm? author(GTerm a, GTerm x) {
+    if (x is GStruct && x.args.length > 1) return x.args[1];
+    final ps = ui.personPos[pred(a)] ?? const [], xs = args(a);
+    for (final i in ps) {
+      if (i <= xs.length && !same(xs[i - 1], s.me)) return xs[i - 1];
+    }
+    return null;
+  }
+
+  /// Whether a notice or a pending approval names the request [r]: its schema and, of its arguments, those [r] has.
+  bool namesRequest(GTerm n, GTerm r) {
+    if (pred(n) != pred(r)) return false;
+    if (same(n, r)) return true;
+    final ks = {for (final x in args(r)) key(x)};
+    return args(n).every((x) => ks.contains(key(x)) || x is GList);
+  }
 }
 
 /// A way an action offers: the values of the places a way of the act binds, and of those the subject fixes.
 
+
+/// An act the person asked for, followed until it is done or refused: the request, the button's label, the screen
+/// to go to once done, the steps of its chain still to take, the values by the names its sentence gives them, the
+/// subject of its screen, the person's facts when it was asked, and whether it was seen pending.
+class _Asked {
+  final GTerm req;
+  final String label;
+  final String? then;
+  final List<UiComponent> rest;
+  final Map<String, GTerm> named;
+  final GTerm? subject;
+  final Set<String> atoms;
+  bool pending = false;
+  _Asked(this.req, this.label, this.then, this.rest, this.named, this.subject, this.atoms);
+}
 
 class _DescribedScreenState extends State<DescribedScreen> {
   /// The screens the person came through, each with its subject; the last is on the screen.
   final List<(String, GTerm?)> _stack = [];
   final Map<String, TextEditingController> _fields = {};
 
+  /// The acts asked and not yet done or refused.
+  final List<_Asked> _asked = [];
+
+  /// The notes the layer tells the person: after each act she asked, that it is done or why it is not; and each new
+  /// message.  Each fades after a while.
+  final List<({String text, bool bad})> _notes = [];
+  final List<Timer> _timers = [];
+
+  /// The lines of conversations the person has seen, those she was told of, and the refusals she was told of.
+  final Set<String> _seen = {}, _told = {}, _toldRefusals = {};
+
+  /// The items of each list its UI style tells of (`TOLD`), by its title, as last seen.
+  final Map<String, Set<String>> _known = {};
+
+  /// The lists the UI style tells of, on the screens about the person herself.
+  Iterable<UiComponent> get _toldLists => [
+        for (final sc in [widget.ui.start, ...widget.ui.landmarks])
+          for (final c in widget.ui.screens[sc]?.components ?? const <UiComponent>[])
+            if (c.kind == 'list' && c.j['told'] == true) c
+      ];
+
+  @override
+  void initState() {
+    super.initState();
+    // What is there when the screens open is not news.
+    for (final (a, _) in c0.lines(_threadPreds, null)) {
+      _seen.add(formatTerm(a));
+    }
+    for (final n in s.notices) {
+      _toldRefusals.add('${formatTerm(n.part)}|${formatTerm(n.by)}');
+    }
+    for (final l in _toldLists) {
+      _known[l.j['title'] as String] = {for (final x in c0.items(l, null)) formatTerm(x)};
+    }
+  }
+
+  @override
+  void didUpdateWidget(DescribedScreen old) {
+    super.didUpdateWidget(old);
+    if (!identical(old.state, widget.state)) _observe();
+  }
+
   @override
   void dispose() {
     for (final c in _fields.values) {
       c.dispose();
+    }
+    for (final t in _timers) {
+      t.cancel();
     }
     super.dispose();
   }
@@ -366,11 +499,123 @@ class _DescribedScreenState extends State<DescribedScreen> {
   SocialState get s => widget.state;
   DescribedCore get c0 => DescribedCore(widget.ui, widget.state, widget.ask);
 
-  void _toast(String m) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(m)));
+  /// The predicates every conversation of the description is drawn from.
+  List<String> get _threadPreds => {
+        for (final sc in widget.ui.screens.values)
+          for (final c in sc.components)
+            if (c.kind == 'thread') ...c.preds
+      }.toList();
+
+  void _note(String text, {bool bad = false}) {
+    final n = (text: text, bad: bad);
+    _notes.add(n);
+    _timers.add(Timer(const Duration(seconds: 8), () {
+      if (mounted) setState(() => _notes.remove(n));
+    }));
+  }
+
+  /// A new view: the refusals of acts the person asked, the acts done, and the new messages.
+  void _observe() {
+    final c = c0;
+    for (final n in s.notices) {
+      if (!_toldRefusals.add('${formatTerm(n.part)}|${formatTerm(n.by)}')) continue;
+      _asked.removeWhere((q) => c.namesRequest(n.part, q.req));
+      _note(n.sentence(s.me), bad: true);
+    }
+    final now = {for (final a in s.atoms) c.key(a)};
+    var own = false;
+    for (final q in [..._asked]) {
+      if (s.pending.any((p) => c.namesRequest(p, q.req))) {
+        q.pending = true;
+        continue;
+      }
+      // Not yet taken up by the agent: neither pending nor any change to the person's facts.
+      if (!q.pending && setEquals(now, q.atoms)) continue;
+      _asked.remove(q);
+      _done(q);
+      own = true;
+    }
+    // Each new item of a list the UI style tells of, but what came with the person's own act.
+    for (final l in _toldLists) {
+      final title = l.j['title'] as String, xs = c.items(l, null), had = _known[title];
+      if (had != null && !own) {
+        for (final x in xs) {
+          if (had.contains(c.key(x))) continue;
+          final isFact = l.j['items']['facts'] != null, lead = isFact && c.args(x).isNotEmpty ? c.args(x).first : x;
+          _note('$title: ${c.show(lead)}');
+        }
+      }
+      _known[title] = {for (final x in xs) c.key(x)};
+    }
+    final (name, subject) = _stack.isEmpty ? (widget.ui.start, null) : _stack.last;
+    final here = widget.ui.screens[name];
+    for (final (a, x) in c.lines(_threadPreds, null)) {
+      final k = formatTerm(a);
+      if (_seen.contains(k) || _told.contains(k)) continue;
+      final (text, mine) = c.line(a, x);
+      final open = here != null &&
+          subject != null &&
+          here.components.any((t) => t.kind == 'thread' && t.preds.contains(c.pred(a)) && c.names(a, subject, fact: here.fact != null));
+      if (mine || open) {
+        _seen.add(k);
+        continue;
+      }
+      _told.add(k);
+      final who = c.author(a, x);
+      _note(who == null ? text : '${c.show(who)}: $text');
+    }
+  }
+
+  /// An act asked for is done: the person is told so, the next step of its chain is asked, or, the last done, she
+  /// is taken to the screen its action names.
+  void _done(_Asked q) {
+    _note('${q.label}: done');
+    // The next step is asked after this frame: asking writes to the agent, which draws again.
+    if (q.rest.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _next(q));
+      });
+      return;
+    }
+    final t = q.then;
+    if (t != null && widget.ui.screens[t] != null) {
+      _stack
+        ..clear()
+        ..add((t, null));
+    }
+  }
+
+  /// The next step of a chain, with the values the steps share by name.
+  void _next(_Asked q) {
+    final c = c0, step = q.rest.first, act = c.act(step);
+    if (act == null) return _note('${step.label}: not offered now', bad: true);
+    final at = <int, GTerm>{
+      for (final e in step.places.entries)
+        if (e.value.name != null && q.named[e.value.name] != null) e.key: q.named[e.value.name]!
+    };
+    final ways = c.ways(step, act, q.subject);
+    final w = [...ways, <int, GTerm>{}].firstWhere((w) => at.entries.every((e) => w[e.key] == null || c.same(w[e.key]!, e.value)));
+    final r = c.request(act, {...w, ...at});
+    if (r == null) return _note('${step.label}: not allowed now', bad: true);
+    _propose(r, step.label, then: q.then, rest: q.rest.sublist(1), named: q.named, subject: q.subject);
+  }
+
+  /// Ask for the act of the request [r], and follow it.
+  void _propose(GTerm r, String label,
+      {String? then, List<UiComponent> rest = const [], Map<String, GTerm> named = const {}, GTerm? subject}) {
+    widget.ask!.propose(r);
+    _asked.add(_Asked(r, label, then, rest, named, subject, {for (final a in s.atoms) c0.key(a)}));
+  }
+
+  /// The values of a way by the names the action's sentence gives its places.
+  Map<String, GTerm> _named(UiComponent c, Map<int, GTerm> vals) => {
+        for (final e in c.places.entries)
+          if (e.value.name != null && vals[e.key] != null) e.value.name!: vals[e.key]!
+      };
 
   /// The person taps the action [c]: where nothing is left to choose or fill, the request is made; otherwise a
-  /// sheet asks for what is left.
-  void _tap(UiComponent c, DeclaredAct act, List<DescribedWay> ways, GTerm? subject) {
+  /// sheet asks for what is left.  The steps of its chain, [rest], are asked in turn once it is done.
+  void _tap(UiComponent c, DeclaredAct act, List<DescribedWay> ways, GTerm? subject, {List<UiComponent> rest = const []}) {
     final w0 = ways.first;
     final fields = c0.fieldsOf(act, w0);
     final varying = [
@@ -379,21 +624,21 @@ class _DescribedScreenState extends State<DescribedScreen> {
     ];
     if (ways.length == 1 && fields.isEmpty) {
       final r = c0.request(act, w0);
-      if (r == null) return _toast('${c.button}: not allowed now');
-      widget.ask!.propose(r);
-      return;
+      if (r == null) return setState(() => _note('${c.label}: not allowed now', bad: true));
+      return setState(() => _propose(r, c.label, then: c.then, rest: rest, named: _named(c, w0), subject: subject));
     }
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _Sheet(
-        title: c.button,
+        title: c.label,
         sentence: c.sentence,
         ways: ways,
         varying: varying,
         fields: fields,
         sources: c.places,
         show: c0.show,
+        fresh: (f) => c0.freshName(c.places[f.place]?.look),
         options: (f) {
           final src = c.places[f.place];
           if (src?.from == null) return null;
@@ -401,9 +646,9 @@ class _DescribedScreenState extends State<DescribedScreen> {
         },
         textValue: (f, t) => c0.textValue(f, t, schema: act.schema),
         submit: (w, given) {
-          final r = c0.request(act, {...w, ...given});
+          final vals = {...w, ...given}, r = c0.request(act, vals);
           if (r == null) return false;
-          widget.ask!.propose(r);
+          setState(() => _propose(r, c.label, then: c.then, rest: rest, named: _named(c, vals), subject: subject));
           return true;
         },
       ),
@@ -442,7 +687,21 @@ class _DescribedScreenState extends State<DescribedScreen> {
     Widget? composer;
     final thread = scr.components.any((x) => x.kind == 'thread');
     final here = '$name|${subject == null ? '' : c.key(subject)}';
-    for (final comp in scr.components) {
+    // A chain is drawn as its first step, under its own button, the other steps asked in turn.
+    final comps = [
+      for (final x in scr.components)
+        if (x.kind == 'chain' && x.steps.isNotEmpty)
+          (
+            UiComponent('action', {...x.steps.first.j, 'button': x.button, 'label': x.label, 'where': x.where, 'then': x.then}),
+            x.steps.sublist(1)
+          )
+        else
+          (x, const <UiComponent>[])
+    ];
+    // An empty screen points to where to start: its first marked action, or else its first.
+    var lists = 0, filled = 0, emptyAt = -1;
+    String? firstMarked, firstAction;
+    for (final (comp, rest) in comps) {
       switch (comp.kind) {
         case 'questions':
           if (widget.questions.isNotEmpty) {
@@ -474,20 +733,18 @@ class _DescribedScreenState extends State<DescribedScreen> {
             ]),
           ));
         case 'thread':
-          final lines = [
-            for (final a in s.atoms)
-              if (comp.preds.contains(c.pred(a)) && subject != null && c.names(a, subject, fact: scr.fact != null))
-                for (final x in c.args(a))
-                  if (x is GString || (x is GStruct && x.functor == 'speech')) (a, x)
-          ];
+          final lines = subject == null ? const <(GTerm, GTerm)>[] : c.lines(comp.preds, subject, fact: scr.fact != null);
+          // The conversation on the screen is read.
+          for (final (a, _) in lines) {
+            _seen.add(c.key(a));
+          }
           body.add(Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               if (lines.isEmpty) Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('No messages yet.', style: muted))),
               for (final (a, x) in lines)
                 Builder(builder: (_) {
-                  final text = x is GString ? x.value : displayText(c.args(x).first).replaceAll('utterance', '').trim();
-                  final mine = x is GStruct && x.args.length > 1 && c.same(x.args[1], s.me) || c.pred(a).startsWith('sent');
+                  final (text, mine) = c.line(a, x);
                   return Align(
                     alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
@@ -512,9 +769,18 @@ class _DescribedScreenState extends State<DescribedScreen> {
             child: Text((comp.j['title'] as String).toUpperCase(),
                 style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey.shade600, letterSpacing: .9, fontWeight: FontWeight.w600)),
           ));
+          lists++;
+          if (items.isNotEmpty) filled++;
           if (items.isEmpty) {
+            if (emptyAt < 0) emptyAt = body.length;
             body.add(Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 6), child: Text('None yet.', style: muted)));
           }
+          // The conversation a list item opens, whose new lines mark the item.
+          final talk = opens == null ? null : ui.screens[opens];
+          final talkPreds = [
+            for (final t in talk?.components ?? const <UiComponent>[])
+              if (t.kind == 'thread') ...t.preds
+          ];
           final rows = <Widget>[];
           for (final it in items) {
             final lead = isFact ? (c.args(it).isEmpty ? GAtom(c.pred(it)) : c.args(it).first) : it;
@@ -522,6 +788,9 @@ class _DescribedScreenState extends State<DescribedScreen> {
               for (final p in comp.preds)
                 if (s.atoms.any((a) => c.pred(a) == p && c.names(a, it, fact: isFact))) c.label(p)
             ];
+            final unread = talkPreds.isEmpty
+                ? 0
+                : c.lines(talkPreds, it, fact: talk!.fact != null).where((l) => !_seen.contains(c.key(l.$1)) && !c.line(l.$1, l.$2).$2).length;
             final sub = isFact && c.args(it).length > 1
                 ? c.args(it).skip(1).map(c.show).join(' · ')
                 : chips.join(' · ');
@@ -544,7 +813,18 @@ class _DescribedScreenState extends State<DescribedScreen> {
                   leading: _avatar(lead),
                   title: Text(c.show(lead), style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: sub.isEmpty ? null : Text(sub, style: muted),
-                  trailing: opens == null ? null : Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                  trailing: opens == null
+                      ? null
+                      : Row(mainAxisSize: MainAxisSize.min, children: [
+                          if (unread > 0)
+                            Container(
+                              key: describedKey('unread:${c.key(it)}'),
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(color: theme.colorScheme.primary, borderRadius: BorderRadius.circular(99)),
+                              child: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                            ),
+                          Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                        ]),
                   onTap: opens == null ? null : () => setState(() => _stack.add((opens, it))),
                 ),
               ),
@@ -572,8 +852,8 @@ class _DescribedScreenState extends State<DescribedScreen> {
               final v = c.textValue(f, tc.text, schema: act.schema);
               if (v == null) return;
               final r = c.request(act, {...ways.first, f.place: v});
-              if (r == null) return _toast('${comp.button}: not allowed now');
-              widget.ask!.propose(r);
+              if (r == null) return setState(() => _note('${comp.label}: not allowed now', bad: true));
+              setState(() => _propose(r, comp.label, then: comp.then, subject: subject));
               tc.clear();
             }
 
@@ -589,7 +869,7 @@ class _DescribedScreenState extends State<DescribedScreen> {
                     maxLines: comp.places[f.place]?.look?['as'] == 'long' ? 4 : 1,
                     onSubmitted: (_) => send(),
                     decoration: InputDecoration(
-                        hintText: comp.button,
+                        hintText: comp.label,
                         isDense: true,
                         filled: true,
                         fillColor: Colors.grey.shade100,
@@ -601,27 +881,41 @@ class _DescribedScreenState extends State<DescribedScreen> {
             );
             break;
           }
-          void go() => _tap(comp, act, ways, subject);
-          final k = describedKey('act:${comp.schema}${subject == null ? '' : ':${c.key(subject)}'}');
+          void go() => _tap(comp, act, ways, subject, rest: rest);
+          if (comp.where == 'primary') firstMarked ??= comp.label;
+          if (comp.where != 'menu') firstAction ??= comp.label;
+          final k = describedKey('${rest.isEmpty ? 'act:${comp.schema}' : 'chain:${comp.button}'}${subject == null ? '' : ':${c.key(subject)}'}');
           // The look puts an action in the menu, in the bar, or first and marked; on a conversation, the menu.
           final where = comp.where ?? (thread ? 'menu' : 'bar');
           if (where == 'menu') {
             // The menu's actions are marked on the screen, so that a walk finds what it offers.
-            menu.add((comp.button, go));
+            menu.add((comp.label, go));
             body.add(SizedBox.shrink(key: k));
           } else if (where == 'primary') {
-            primary.add(FilledButton(key: k, onPressed: open ? go : null, child: Text(comp.button)));
+            primary.add(FilledButton(key: k, onPressed: open ? go : null, child: Text(comp.label)));
           } else {
             actions.add(actions.whereType<ButtonStyleButton>().isEmpty && primary.isEmpty && comp.where == null
-                ? FilledButton(key: k, onPressed: open ? go : null, child: Text(comp.button))
-                : OutlinedButton(key: k, onPressed: open ? go : null, child: Text(comp.button)));
+                ? FilledButton(key: k, onPressed: open ? go : null, child: Text(comp.label))
+                : OutlinedButton(key: k, onPressed: open ? go : null, child: Text(comp.label)));
           }
       }
+    }
+    final start = firstMarked ?? firstAction;
+    if (lists > 0 && filled == 0 && emptyAt >= 0) {
+      body[emptyAt] = Padding(
+          key: describedKey('hint'),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+          child: Text(start == null ? 'Nothing here yet.' : 'Nothing here yet. Start with “$start”.', style: muted));
     }
     final title = subject == null
         ? c.show(s.me) == 'you' ? displayText(s.me) : c.show(s.me)
         : c.show(scr.fact != null && c.args(subject).isNotEmpty ? c.args(subject).first : subject);
     final shown = title.isEmpty ? title : title[0].toUpperCase() + title.substring(1);
+    // The landmarks, with the start screen, placed as the UI style says: on top, at the bottom or in a menu.
+    final marks = ui.landmarks.isEmpty ? const <String>[] : [ui.start, ...ui.landmarks], placed = ui.look['landmarks'] ?? 'top';
+    void land(String l) => setState(() => _stack
+      ..clear()
+      ..add((l, null)));
     return Theme(
       data: _looked(theme),
       child: ColoredBox(
@@ -640,6 +934,13 @@ class _DescribedScreenState extends State<DescribedScreen> {
               _avatar(subject == null ? s.me : (scr.fact != null && c.args(subject).isNotEmpty ? c.args(subject).first : subject), r: 16),
               const SizedBox(width: 10),
               Expanded(child: Text(shown, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600))),
+              if (marks.isNotEmpty && placed == 'menu')
+                PopupMenuButton<String>(
+                  key: describedKey('landmarks'),
+                  icon: const Icon(Icons.menu),
+                  onSelected: land,
+                  itemBuilder: (_) => [for (final l in marks) PopupMenuItem(value: l, child: Text(l))],
+                ),
               if (menu.isNotEmpty)
                 PopupMenuButton<int>(
                   key: describedKey('menu'),
@@ -650,25 +951,36 @@ class _DescribedScreenState extends State<DescribedScreen> {
             ]),
           ),
         ),
-        if (ui.landmarks.isNotEmpty)
+        if (marks.isNotEmpty && placed == 'top')
           Material(
             color: Colors.white,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
               child: Wrap(spacing: 6, children: [
-                for (final l in [ui.start, ...ui.landmarks])
-                  ChoiceChip(
-                    key: describedKey('landmark:$l'),
-                    label: Text(l),
-                    selected: name == l,
-                    onSelected: (_) => setState(() => _stack
-                      ..clear()
-                      ..add((l, null))),
-                  ),
+                for (final l in marks)
+                  ChoiceChip(key: describedKey('landmark:$l'), label: Text(l), selected: name == l, onSelected: (_) => land(l)),
               ]),
             ),
           ),
         Expanded(child: ListView(padding: const EdgeInsets.only(bottom: 10), children: body)),
+        // The notes, above the buttons the person tapped.
+        if (_notes.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+            child: Column(children: [
+              for (final (i, n) in _notes.indexed)
+                Container(
+                  key: describedKey('note:$i'),
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                      color: n.bad ? Colors.red.shade50 : theme.colorScheme.primary.withValues(alpha: .10),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Text(n.text, style: TextStyle(fontSize: 13, color: n.bad ? Colors.red.shade800 : theme.colorScheme.primary)),
+                ),
+            ]),
+          ),
         if (composer != null)
           Material(color: Colors.white, child: SafeArea(top: false, child: composer))
         else if (actions.whereType<ButtonStyleButton>().isNotEmpty || primary.isNotEmpty)
@@ -681,6 +993,29 @@ class _DescribedScreenState extends State<DescribedScreen> {
                 decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade200))),
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [...primary, ...actions]),
+              ),
+            ),
+          ),
+        if (marks.isNotEmpty && placed == 'bottom')
+          Material(
+            color: Colors.white,
+            child: SafeArea(
+              top: false,
+              child: Container(
+                decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey.shade200))),
+                child: Row(children: [
+                  for (final l in marks)
+                    Expanded(
+                      child: TextButton(
+                        key: describedKey('landmark:$l'),
+                        onPressed: () => land(l),
+                        child: Text(l,
+                            style: TextStyle(
+                                fontWeight: name == l ? FontWeight.w700 : FontWeight.w400,
+                                color: name == l ? theme.colorScheme.primary : Colors.grey.shade700)),
+                      ),
+                    ),
+                ]),
               ),
             ),
           ),
@@ -722,6 +1057,9 @@ class _Sheet extends StatefulWidget {
   final List<DeclaredField> fields;
   final Map<int, PlaceSource> sources;
   final String Function(GTerm) show;
+
+  /// The name a typed place starts filled with, where its UI style gives one (`NEW AS`).
+  final String? Function(DeclaredField) fresh;
   final List<GTerm>? Function(DeclaredField) options;
   final GTerm? Function(DeclaredField, String) textValue;
   final bool Function(DescribedWay, Map<int, GTerm>) submit;
@@ -733,6 +1071,7 @@ class _Sheet extends StatefulWidget {
       required this.fields,
       required this.sources,
       required this.show,
+      required this.fresh,
       required this.options,
       required this.textValue,
       required this.submit});
@@ -757,7 +1096,8 @@ class _SheetState extends State<_Sheet> {
   /// A typed place, drawn as its look says: a long box, a slider (with a box beside it when also typed) or a
   /// calendar, whose day is the number of days since 1970; a short box otherwise.
   Widget _field(DeclaredField f) {
-    final look = widget.sources[f.place]?.look ?? const {}, tc = _text.putIfAbsent(f.place, TextEditingController.new);
+    final look = widget.sources[f.place]?.look ?? const {},
+        tc = _text.putIfAbsent(f.place, () => TextEditingController(text: widget.fresh(f) ?? ''));
     final label = f.type == 'key' ? '${f.label} (their key)' : f.label;
     switch (look['as']) {
       case 'slider':

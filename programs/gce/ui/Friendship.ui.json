@@ -1,7 +1,7 @@
 {
  "version": 1,
  "look": {
-  "theme": "fresh"
+  "theme": "candy"
  },
  "start": "Home",
  "landmarks": [],
@@ -33,7 +33,8 @@
      ],
      "opens": "Person",
      "look": null,
-     "order": null
+     "order": null,
+     "told": false
     },
     {
      "kind": "action",
@@ -45,7 +46,68 @@
      "arity": 1,
      "places": {},
      "covers": true,
-     "where": null
+     "where": null,
+     "label": "Set up my identity"
+    },
+    {
+     "kind": "chain",
+     "button": "Make friends",
+     "label": null,
+     "steps": [
+      {
+       "kind": "action",
+       "schema": "acquaint",
+       "button": "Acquaint",
+       "sentence": "Alice and Bob may jointly come to know each other",
+       "then": null,
+       "me": 1,
+       "arity": 2,
+       "places": {
+        "2": {
+         "typed": true,
+         "look": {
+          "as": "scanned"
+         },
+         "name": "Bob"
+        }
+       },
+       "covers": false,
+       "where": null,
+       "label": "Add someone"
+      },
+      {
+       "kind": "action",
+       "schema": "befriend",
+       "button": "Befriend",
+       "sentence": "Alice and Bob may jointly become friends",
+       "then": null,
+       "me": 1,
+       "arity": 2,
+       "places": {
+        "2": {
+         "typed": true,
+         "look": {
+          "as": "scanned"
+         },
+         "name": "Bob"
+        }
+       },
+       "covers": false,
+       "where": null,
+       "label": null
+      }
+     ],
+     "then": null,
+     "where": "primary",
+     "places": {
+      "2": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       },
+       "name": "Bob"
+      }
+     }
     },
     {
      "kind": "action",
@@ -58,11 +120,33 @@
      "places": {
       "2": {
        "typed": true,
-       "look": null
+       "look": {
+        "as": "scanned"
+       },
+       "name": "Bob"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": "Add someone"
+    },
+    {
+     "kind": "action",
+     "schema": "befriend",
+     "button": "Befriend",
+     "sentence": "Alice and Bob may jointly become friends",
+     "then": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "knows",
+       "name": "Bob"
+      }
+     },
+     "covers": true,
+     "where": null,
+     "label": null
     }
    ]
   },
@@ -71,9 +155,6 @@
     "name": "Bob"
    },
    "components": [
-    {
-     "kind": "questions"
-    },
     {
      "kind": "show",
      "of": "it",
@@ -93,11 +174,13 @@
      "arity": 2,
      "places": {
       "2": {
-       "subject": null
+       "subject": null,
+       "name": "Bob"
       }
      },
      "covers": true,
-     "where": "primary"
+     "where": null,
+     "label": null
     },
     {
      "kind": "action",
@@ -109,11 +192,13 @@
      "arity": 2,
      "places": {
       "2": {
-       "subject": null
+       "subject": null,
+       "name": "Bob"
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": "menu",
+     "label": null
     },
     {
      "kind": "action",
@@ -125,14 +210,17 @@
      "arity": 3,
      "places": {
       "1": {
-       "subject": null
+       "subject": null,
+       "name": "Bob"
       },
       "3": {
-       "from": "knows"
+       "from": "knows",
+       "name": "Carol"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": null
     },
     {
      "kind": "action",
@@ -144,14 +232,17 @@
      "arity": 3,
      "places": {
       "1": {
-       "from": "knows"
+       "from": "knows",
+       "name": "Carol"
       },
       "3": {
-       "subject": null
+       "subject": null,
+       "name": "Bob"
       }
      },
      "covers": true,
-     "where": null
+     "where": null,
+     "label": null
     }
    ]
   }
