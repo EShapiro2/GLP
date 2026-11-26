@@ -1,3 +1,13 @@
+# Code #41, 2026-11-26 ~12:00 UTC, retiring after its 1st compaction
+
+Code #41 retires (Udi, 2026-11-25 10:34 UTC).  The next Code session continues from here.
+
+- **Main fc2e7284e** (GLP #179 step 2: unable/3, the form's conjunct words, neutral fallback; GFF c8b5a5ec).  Before it, a9d40778a: the contracts publication, every row recorded, build.py reads "inherits from"; site check 106 contracts, 0 errors.  Owners' files already said "inherits from" (f916f2d): nothing to do.
+- **Branch `code41-gone` 7621b9ee5** (pushed, not main): main plus vGLP #37 cb30240.  `cascade.sh --check` of all rows there: helper parts 1 and 3 not yet reported to Code #41 (read their reports in Code's mail/thread); part 2: 22/23 OK, **feeds FAILS**: only run.log differs, deterministic (bob's and carol's lines carry more views of 'Third item'); likely GFF c8b5a5ec's play_feeds vs the recorded run: re-record feeds, or ask GFF.  Code #41's own part 4: c3 all OK; c1 and c2 OK so far (anonymous_matching central_bank corporation appstore commercial_bank denominated_coins), the rest (foundation knowledge nonprofit resilient_feeds warded_groups gigs liquid_cooperative partners services secure_friendship) unfinished: check them again.
+- **Branch `code41-gone2` 46cf5715d plus this handover** (pushed, not main): code41-gone plus vGLP #37 d2ee2c0a and Calculus #15 464ffa66.  d2ee2c0a changes 13 rows; helper threads "Record cascade part 1/2/3 (calc)" record them per /mnt/project-files/code/records-2026-11-26d/brief.md onto branches `helper-code41-gone-records-N`.  Take their cascade dirs in, commit, `--check` those 13 and feeds, APPS VG, `bash tools/cloud/site-check.sh` (Village Governance loads only after this merge and Calculus re-runs), merge origin/main, push main.  Then mail vGLP #37 and Calculus #15 the commit.  Works has no GLP cascade row (Villagers' text; told Calculus #15).
+- **Retrospective list for Udi** (sent to the coordinator): Villagers' 13 contracts on the main site; build.py "inherits from" fix; Chess lines taken from GCE (7811c524e), not the Calculus's duplicate; GFF known red added then cleared; VEUI vglp36-unmet 3ae9b56/42f53d1 waits on his consent.
+- **Environment**: as Code #40's below; Secure Friendship: copy cascade.sh's printed platform.vglp into programs/vglp/cva/secure_friendship/ before its row.
+
 # Code #40, 2026-11-26 ~05:10 UTC, retiring after its 1st compaction
 
 Code #40 retires (Udi, 2026-11-25 10:34 UTC).  The next Code session continues from here.
