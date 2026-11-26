@@ -11575,6 +11575,19 @@ check "GCE: over constants, after e2-e4, one move made" "Xn1 = 1$" "$gce_out"
 check "GCE: a text that is no move is not legal" "Xjunk = 0$" "$gce_out"
 check "GCE: a text that is no position has side 0" "Xbad = 0$" "$gce_out"
 check "GCE: after a text that is no move, the position given, white to move" "Xsbad = 1$" "$gce_out"
+# Warnings' Expel deadline (Grassroots-Audit #136): the printed schema's count,
+# evaluated on dated warnings before, at and after seven days; and a warning
+# ended only by Withdraw and Annul, so that it stays when its officer leaves.
+gce_dl=$(python3 "$GLP_DIR/programs/gce/warnings/deadline_control.py" 2>&1; echo "exit $?")
+for gce_c in "two warnings, one at its deadline" "two warnings, both past their deadline" "two warnings, both at their deadline" "two warnings, both a day past it" "one warning, long past" "a former officer's warning still held counts"; do
+    check "GCE: Warnings expel, $gce_c" "^expel: $gce_c ok$" "$gce_dl"
+    check "GCE: Warnings officer expel, $gce_c" "^officer_expel: $gce_c ok$" "$gce_dl"
+done
+check "GCE: Warnings deadline_control.py exits 0" "^exit 0$" "$gce_dl"
+gce_ends=$(grep '~warning_on' "$GLP_DIR/cascade/Warnings/full-schemas.txt" | sed 's/ ■ \([A-Za-z ]*\):.*/ \1/')
+check "GCE: Warnings, Withdraw ends a warning" "Warnings:3 Withdraw$" "$gce_ends"
+check "GCE: Warnings, Annul ends a warning" "Warnings:3 Annul$" "$gce_ends"
+check "GCE: Warnings, no other act ends a warning" "^2$" "$(echo "$gce_ends" | grep -c .)"
 echo ""
 fi  # Section GCE
 
