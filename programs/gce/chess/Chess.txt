@@ -1,6 +1,6 @@
-% Chess --- an example contract by Nimrod Talmon with Claude, 2026-11-25: chess between friends, with no server; the first of the grassroots games (paper "Grassroots Games", in preparation).
+% Chess --- an example contract by Nimrod Talmon with Claude, 2026-11-25: chess between friends, with no server; the example game of the paper "The Grassroots UI Layer", in preparation.
 % Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.
-% Paper: GG, Grassroots Games, in preparation
+% Paper: The Grassroots UI Layer (Nimrod Talmon), in preparation, its example of a game
 % Extends: Friendship, GSC's (programs/gsc).  It cites no clause of it.
 % Defines: the rules of chess, by reference to FIDE's Laws of Chess; a game, a move and a position.  The legality of a move, the position after it, the side to move and checkmate are declared functions (GLP #87, #118), of positions and moves, not numbers.
 % Checked: calculus/tools/gcsas.py (commute yes; return equivalent; recover equivalent) and toglp.py.
@@ -20,16 +20,16 @@ Chess extends Friendship.
 The *rules of chess* are the Laws of Chess of FIDE, the International Chess Federation.
 Alice and Bob are persons, Game a game, Move a move, Board and Next positions, Side a number.
 1. ■ Start: Alice and Bob may jointly start Game at Board, provided Alice and Bob are friends and Board is the first position.
-2. ■ Move: Alice may make Move in Game against Bob from Board to Next, provided Alice and Bob play Game at Board, Alice has the colour Side in Game, Side is the side to move of Board, 1 is the legality of Move on Board and Next is the position after Move on Board.
-3. ■ Win: Alice may claim Game against Bob at Board, provided Alice and Bob play Game at Board, Bob has the colour Side in Game, Side is the side to move of Board and 1 is the mate of Board.
+2. ■ Move: Alice may make Move in Game against Bob from Board to Next, provided Alice and Bob play Game at Board, Alice has the color Side in Game, Side is the side to move of Board, 1 is the legality of Move on Board and Next is the position after Move on Board.
+3. ■ Win: Alice may claim Game against Bob at Board, provided Alice and Bob play Game at Board, Bob has the color Side in Game, Side is the side to move of Board and 1 is the mate of Board.
 4. ■ Resign: Alice may resign Game against Bob at Board, provided Alice and Bob play Game at Board.
 5. ■ Draw: Alice and Bob may jointly draw Game at Board, provided Alice and Bob play Game at Board.
 6. ○ Fair play. Alice will choose each of her moves herself, with no help from a chess engine.
 Logic pragmas.
-Vocabulary: x plays g against y at b = at(x,g,y,b); x has the colour s in g = colour(x,g,s); x has started g = started(x,g); x has won g against y = won(x,g,y); x has drawn g with y = drawn(x,g,y); x has made m in g at b = made(x,g,m,b); b is the first position = first(b); v is the legality of m on b = legal(v,m,b); c is the position after m on b = after(c,m,b); s is the side to move of b = side(s,b); v is the mate of b = mate(v,b).
+Vocabulary: x plays g against y at b = at(x,g,y,b); x has the color s in g = color(x,g,s); x has started g = started(x,g); x has won g against y = won(x,g,y); x has drawn g with y = drawn(x,g,y); x has made m in g at b = made(x,g,m,b); b is the first position = first(b); v is the legality of m on b = legal(v,m,b); c is the position after m on b = after(c,m,b); s is the side to move of b = side(s,b); v is the mate of b = mate(v,b).
 Functions: b is the first position; v is the legality of m on b; c is the position after m on b; s is the side to move of b; v is the mate of b.
 x and y play g at b: x plays g against y at b and y plays g against x at b.
-After x and y start g at b, which requires x has not started g and y has not started g: x has started g, y has started g, x and y play g at b, x has the colour 1 in g and y has the colour 2 in g.
+After x and y start g at b, which requires x has not started g and y has not started g: x has started g, y has started g, x and y play g at b, x has the color 1 in g and y has the color 2 in g.
 After x makes m in g against y from b to c: no longer x and y play g at b, x and y play g at c and x has made m in g at b.
 After x claims g against y at b: no longer x and y play g at b and x has won g against y.
 After x resigns g against y at b: no longer x and y play g at b and y has won g against x.
