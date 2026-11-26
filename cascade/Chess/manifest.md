@@ -1,10 +1,10 @@
 # A run of the cascade on Chess
 
-- Contract: `Chess` (`chess` to the checker), its owner's two files `programs/gce/chess/Chess.txt` and `programs/gce/chess/Chess.glp`, copied here as they stood at `11f65c6d`.
+- Contract: `Chess` (`chess` to the checker), its owner's two files `programs/gce/chess/Chess.txt` and `programs/gce/chess/Chess.glp`, copied here as they stood at `8614fea8`.
 - The paper: ` (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gce/chess/Chess.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gce/chess/Chess.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-26 05:57 UTC by `cascade.sh chess`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `11f65c6d`; each artefact's source and tool:
+- Run on 2026-11-26 09:12 UTC by `cascade.sh chess`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8614fea8`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
