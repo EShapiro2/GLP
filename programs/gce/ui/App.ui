@@ -1,0 +1,80 @@
+# Home: the Grassroots App's own screens, from its contract App. Apps, people and stores first;
+# links, Nearby and the rest of what a person may do on the start screen.
+
+SCREEN Home ABOUT Alice:
+    QUESTIONS
+    SHOW Alice: identity, person, open_place, ward, retired, store, rendezvous_server, directory
+    LIST Apps: "Alice has App of Carol installed" OPENS App
+    LIST People: EVERYONE WITH knows, friend, trusts_developer, trusts_store, has_guardian, guardian, creator, address, holds_link, presented, registered, spent, lists_shown, lists_unshown, lists_program, listing_signed OPENS Person
+    LIST Stores: FROM trusts_store OPENS Store
+    LIST Offered: "Alice holds Prog of Carol" OPENS Program
+    LIST Links: "Alice has signed Link as an invitation link that names Dave"
+    LIST Items: "Alice holds the item Item"
+    LIST Expired: "Alice holds Link expired"
+    Establish: Alice may establish an identity
+    Open place: Alice may declare her place open
+    Close place: Alice may close her place
+    Encounter: Bob TYPED
+    Acquaint: Alice and Bob may jointly come to know each other, Bob TYPED
+    Sign link: Alice may sign Link as an invitation link that names Dave, Dave FROM knows, Link TYPED
+    Invite by link: Alice may register Link with Dave, Dave FROM link, Link FROM link
+    Use link: Alice may present Link of Bob to Dave, Dave FROM knows, Bob TYPED, Link TYPED
+    Lookup: Alice may look Bob up on Dora's page, Dora FROM knows, Bob TYPED, Mail TYPED, Name TYPED
+    Lookup by address: Alice may look Bob up with Dora by address, Dora FROM knows, Bob TYPED, Mail TYPED, Name TYPED
+    List me: Alice may list with Dora by Mail under Name on its page, Dora FROM knows, Mail TYPED, Name TYPED
+    List me unshown: Alice may list with Dora by Mail under Name off its page, Dora FROM knows, Mail TYPED, Name TYPED
+    Delist me: Alice may delist from Dora by Mail under Name on its page, Dora TYPED, Mail TYPED, Name TYPED
+    Delist me unshown: Alice may delist from Dora by Mail under Name off its page, Dora TYPED, Mail TYPED, Name TYPED
+    Install from store: Alice may install from a store Prog of Bob, Dave FROM trusts_store, Bob TYPED, Prog TYPED
+    Trust: Alice may declare trust in Carol as a developer, Carol FROM knows
+    Untrust: Alice may withdraw her declaration of trust in Carol as a developer, Carol FROM trusts_developer
+    Person unfriend: Bob FROM friend
+    Sign: Alice may create Item by signing it, Item TYPED
+    Publish: Alice may publish Prog by signing it, Prog TYPED
+    Enter: Alice may create Wendy, and Wendy must consent, Wendy TYPED
+    Make guardian: Those who decide for Wendy may make Alice a guardian of Wendy, Wendy TYPED, Decider FROM friend, Codecider TYPED
+    End guardian: Those who decide for Wendy, other than Bob, may end Bob's guardianship of Wendy, Bob TYPED, Wendy FROM guardian, Codecider TYPED
+    Ward acquaint: Alice and Bob may jointly come to know each other, Bob TYPED, Alice FROM has_guardian
+    Ward unfriend: Alice may end the friendship of Wendy and Bob, Wendy TYPED, Bob TYPED
+    Wards acquaint: Alice and Will may jointly come to know each other, Will TYPED, Alice FROM has_guardian, Bob TYPED
+    Wards befriend: Alice and Will may jointly become friends, Will FROM knows, Alice FROM has_guardian, Bob TYPED
+    Wards of one guardian befriend: Alice and Will may jointly become friends, Will FROM knows, Alice FROM has_guardian
+    Delist: Alice may delist from Dave Prog of Bob, Dave FROM guardian, Bob TYPED, Prog TYPED
+
+SCREEN App ABOUT "Alice has App of Carol installed":
+    QUESTIONS
+    SHOW: participant
+    Invite: Alice may invite Bob to join in App of Carol, Bob FROM friend
+    Leave: Alice may leave App of Carol
+
+SCREEN Program ABOUT "Alice holds Prog of Carol":
+    QUESTIONS
+    Install: Alice may install Prog of Carol
+    Install own: Alice may install her own Prog
+    Offer: Alice may offer Prog of Carol to Bob, Bob FROM friend
+
+SCREEN Person ABOUT Bob:
+    QUESTIONS
+    SHOW Bob: knows, friend, trusts_developer, has_guardian, guardian, creator, address, holds_link, presented, program, installed, participant
+    Befriend: Alice and Bob may jointly become friends
+    Introduce: Alice may introduce Carol to Bob, Carol FROM knows
+    Introduce: Alice may introduce Bob to Carol, Carol FROM knows
+    Trust store: Alice may declare trust in Bob, Carol FROM knows
+    Present: Alice may present to Dave the signature of Bob over the friendship of Alice and Bob, Dave FROM knows
+    Forward: Alice may forward Item to Bob, adding his signature to the signatures Item carries, Item FROM item
+    Ward befriend: Alice and Bob may jointly become friends, Alice FROM has_guardian
+    Ward end: Alice may end her friendship with Bob, G1 FROM has_guardian
+    Unfriend: Alice may end her friendship with Bob
+    Guardian unfriend: Alice may end her friendship with her ward Bob
+    Resign: Alice may end her guardianship of Bob
+    Retire: Those who decide for Bob may retire Bob, Codecider TYPED
+    Open store: Alice may make Bob a store
+    Open server: Alice may make Bob a rendezvous server
+    Open directory: Alice may make Bob a directory
+    List: Alice may list in Bob Prog of Carol, Carol FROM trusts_developer, Prog FROM program
+
+SCREEN Store ABOUT Dave:
+    QUESTIONS
+    SHOW Dave: store, lists_program, listing_signed
+    Install from store: Alice may install from a store Prog of Bob, Bob TYPED, Prog TYPED
+    Untrust store: Alice may withdraw her declaration of trust in Dave

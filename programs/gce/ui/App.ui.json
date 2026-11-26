@@ -1,0 +1,1169 @@
+{
+ "version": 1,
+ "look": {
+  "theme": "fresh",
+  "questions": "top"
+ },
+ "start": "Home",
+ "screens": {
+  "Home": {
+   "about": null,
+   "components": [
+    {
+     "kind": "questions"
+    },
+    {
+     "kind": "show",
+     "of": "me",
+     "pos": null,
+     "preds": [
+      "identity",
+      "person",
+      "open_place",
+      "ward",
+      "retired",
+      "store",
+      "rendezvous_server",
+      "directory"
+     ]
+    },
+    {
+     "kind": "list",
+     "title": "Apps",
+     "items": {
+      "facts": "installed",
+      "keep": null
+     },
+     "with": [],
+     "opens": "App",
+     "look": "grid"
+    },
+    {
+     "kind": "list",
+     "title": "People",
+     "items": {
+      "everyone": true
+     },
+     "with": [
+      "knows",
+      "friend",
+      "trusts_developer",
+      "trusts_store",
+      "has_guardian",
+      "guardian",
+      "creator",
+      "address",
+      "holds_link",
+      "presented",
+      "registered",
+      "spent",
+      "lists_shown",
+      "lists_unshown",
+      "lists_program",
+      "listing_signed"
+     ],
+     "opens": "Person",
+     "look": null
+    },
+    {
+     "kind": "list",
+     "title": "Stores",
+     "items": {
+      "from": "trusts_store"
+     },
+     "with": [],
+     "opens": "Store",
+     "look": null
+    },
+    {
+     "kind": "list",
+     "title": "Offered",
+     "items": {
+      "facts": "program",
+      "keep": null
+     },
+     "with": [],
+     "opens": "Program",
+     "look": null
+    },
+    {
+     "kind": "list",
+     "title": "Links",
+     "items": {
+      "facts": "link",
+      "keep": null
+     },
+     "with": [],
+     "opens": null,
+     "look": null
+    },
+    {
+     "kind": "list",
+     "title": "Items",
+     "items": {
+      "facts": "item",
+      "keep": null
+     },
+     "with": [],
+     "opens": null,
+     "look": null
+    },
+    {
+     "kind": "list",
+     "title": "Expired",
+     "items": {
+      "facts": "expired",
+      "keep": null
+     },
+     "with": [],
+     "opens": null,
+     "look": null
+    },
+    {
+     "kind": "action",
+     "schema": "establish",
+     "button": "Establish",
+     "sentence": "Alice may establish an identity",
+     "me": 1,
+     "arity": 1,
+     "places": {},
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "open_place",
+     "button": "Open place",
+     "sentence": "Alice may declare her place open",
+     "me": 1,
+     "arity": 1,
+     "places": {},
+     "covers": true,
+     "where": "primary"
+    },
+    {
+     "kind": "action",
+     "schema": "close_place",
+     "button": "Close place",
+     "sentence": "Alice may close her place",
+     "me": 1,
+     "arity": 1,
+     "places": {},
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "encounter",
+     "button": "Encounter",
+     "sentence": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       }
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "acquaint",
+     "button": "Acquaint",
+     "sentence": "Alice and Bob may jointly come to know each other",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       }
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "sign_link",
+     "button": "Sign link",
+     "sentence": "Alice may sign Link as an invitation link that names Dave",
+     "me": 1,
+     "arity": 3,
+     "places": {
+      "2": {
+       "typed": true,
+       "look": null
+      },
+      "3": {
+       "from": "knows"
+      }
+     },
+     "covers": true,
+     "where": "primary"
+    },
+    {
+     "kind": "action",
+     "schema": "invite_by_link",
+     "button": "Invite by link",
+     "sentence": "Alice may register Link with Dave",
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "from": "link"
+      },
+      "3": {
+       "from": "link"
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "use_link",
+     "button": "Use link",
+     "sentence": "Alice may present Link of Bob to Dave",
+     "me": 3,
+     "arity": 4,
+     "places": {
+      "1": {
+       "from": "knows"
+      },
+      "2": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       }
+      },
+      "4": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": "primary"
+    },
+    {
+     "kind": "action",
+     "schema": "lookup",
+     "button": "Lookup",
+     "sentence": "Alice may look Bob up on Dora's page",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "knows"
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "lookup_by_address",
+     "button": "Lookup by address",
+     "sentence": "Alice may look Bob up with Dora by address",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "knows"
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "list_me",
+     "button": "List me",
+     "sentence": "Alice may list with Dora by Mail under Name on its page",
+     "me": 2,
+     "arity": 4,
+     "places": {
+      "1": {
+       "from": "knows"
+      },
+      "3": {
+       "typed": true,
+       "look": null
+      },
+      "4": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "list_me_unshown",
+     "button": "List me unshown",
+     "sentence": "Alice may list with Dora by Mail under Name off its page",
+     "me": 2,
+     "arity": 4,
+     "places": {
+      "1": {
+       "from": "knows"
+      },
+      "3": {
+       "typed": true,
+       "look": null
+      },
+      "4": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "delist_me",
+     "button": "Delist me",
+     "sentence": "Alice may delist from Dora by Mail under Name on its page",
+     "me": 2,
+     "arity": 2,
+     "places": {
+      "1": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "delist_me_unshown",
+     "button": "Delist me unshown",
+     "sentence": "Alice may delist from Dora by Mail under Name off its page",
+     "me": 2,
+     "arity": 2,
+     "places": {
+      "1": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "install_from_store",
+     "button": "Install from store",
+     "sentence": "Alice may install from a store Prog of Bob",
+     "me": 1,
+     "arity": 4,
+     "places": {
+      "2": {
+       "from": "trusts_store"
+      },
+      "3": {
+       "typed": true,
+       "look": null
+      },
+      "4": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       }
+      }
+     },
+     "covers": true,
+     "where": "primary"
+    },
+    {
+     "kind": "action",
+     "schema": "trust",
+     "button": "Trust",
+     "sentence": "Alice may declare trust in Carol as a developer",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "knows"
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "untrust",
+     "button": "Untrust",
+     "sentence": "Alice may withdraw her declaration of trust in Carol as a developer",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "trusts_developer"
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "person_unfriend",
+     "button": "Person unfriend",
+     "sentence": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "friend"
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "sign",
+     "button": "Sign",
+     "sentence": "Alice may create Item by signing it",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "publish",
+     "button": "Publish",
+     "sentence": "Alice may publish Prog by signing it",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "enter",
+     "button": "Enter",
+     "sentence": "Alice may create Wendy, and Wendy must consent",
+     "me": 2,
+     "arity": 2,
+     "places": {
+      "1": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "make_guardian",
+     "button": "Make guardian",
+     "sentence": "Those who decide for Wendy may make Alice a guardian of Wendy",
+     "me": 3,
+     "arity": 3,
+     "places": {
+      "2": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "end_guardian",
+     "button": "End guardian",
+     "sentence": "Those who decide for Wendy, other than Bob, may end Bob's guardianship of Wendy",
+     "me": 3,
+     "arity": 3,
+     "places": {
+      "1": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       }
+      },
+      "2": {
+       "from": "guardian"
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "ward_acquaint",
+     "button": "Ward acquaint",
+     "sentence": "Alice and Bob may jointly come to know each other",
+     "me": 2,
+     "arity": 2,
+     "places": {},
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "ward_unfriend",
+     "button": "Ward unfriend",
+     "sentence": "Alice may end the friendship of Wendy and Bob",
+     "me": 3,
+     "arity": 3,
+     "places": {
+      "1": {
+       "typed": true,
+       "look": null
+      },
+      "2": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       }
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "wards_acquaint",
+     "button": "Wards acquaint",
+     "sentence": "Alice and Will may jointly come to know each other",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "wards_befriend",
+     "button": "Wards befriend",
+     "sentence": "Alice and Will may jointly become friends",
+     "me": 3,
+     "arity": 4,
+     "places": {
+      "2": {
+       "from": "knows"
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "wards_of_one_guardian_befriend",
+     "button": "Wards of one guardian befriend",
+     "sentence": "Alice and Will may jointly become friends",
+     "me": 3,
+     "arity": 3,
+     "places": {
+      "2": {
+       "from": "knows"
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    },
+    {
+     "kind": "action",
+     "schema": "delist",
+     "button": "Delist",
+     "sentence": "Alice may delist from Dave Prog of Bob",
+     "me": 2,
+     "arity": 2,
+     "places": {
+      "1": {
+       "from": "guardian"
+      }
+     },
+     "covers": true,
+     "where": "menu"
+    }
+   ]
+  },
+  "App": {
+   "about": {
+    "fact": "installed"
+   },
+   "components": [
+    {
+     "kind": "questions"
+    },
+    {
+     "kind": "show",
+     "of": "it",
+     "pos": null,
+     "preds": [
+      "participant"
+     ]
+    },
+    {
+     "kind": "action",
+     "schema": "invite",
+     "button": "Invite",
+     "sentence": "Alice may invite Bob to join in App of Carol",
+     "me": 2,
+     "arity": 4,
+     "places": {
+      "1": {
+       "from": "friend"
+      },
+      "3": {
+       "subject": 1
+      },
+      "4": {
+       "subject": 2
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "leave",
+     "button": "Leave",
+     "sentence": "Alice may leave App of Carol",
+     "me": 1,
+     "arity": 3,
+     "places": {
+      "3": {
+       "subject": 1
+      }
+     },
+     "covers": true,
+     "where": null
+    }
+   ]
+  },
+  "Program": {
+   "about": {
+    "fact": "program"
+   },
+   "components": [
+    {
+     "kind": "questions"
+    },
+    {
+     "kind": "action",
+     "schema": "install",
+     "button": "Install",
+     "sentence": "Alice may install Prog of Carol",
+     "me": 1,
+     "arity": 3,
+     "places": {
+      "2": {
+       "subject": 1
+      },
+      "3": {
+       "subject": 2
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "install_own",
+     "button": "Install own",
+     "sentence": "Alice may install her own Prog",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "subject": 1
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "offer",
+     "button": "Offer",
+     "sentence": "Alice may offer Prog of Carol to Bob",
+     "me": 2,
+     "arity": 4,
+     "places": {
+      "1": {
+       "from": "friend"
+      },
+      "3": {
+       "subject": 2
+      }
+     },
+     "covers": true,
+     "where": null
+    }
+   ]
+  },
+  "Person": {
+   "about": {
+    "name": "Bob"
+   },
+   "components": [
+    {
+     "kind": "questions"
+    },
+    {
+     "kind": "show",
+     "of": "it",
+     "pos": null,
+     "preds": [
+      "knows",
+      "friend",
+      "trusts_developer",
+      "has_guardian",
+      "guardian",
+      "creator",
+      "address",
+      "holds_link",
+      "presented",
+      "program",
+      "installed",
+      "participant"
+     ]
+    },
+    {
+     "kind": "action",
+     "schema": "befriend",
+     "button": "Befriend",
+     "sentence": "Alice and Bob may jointly become friends",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "introduce",
+     "button": "Introduce",
+     "sentence": "Alice may introduce Carol to Bob",
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "subject": null
+      },
+      "3": {
+       "from": "knows"
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "introduce",
+     "button": "Introduce",
+     "sentence": "Alice may introduce Bob to Carol",
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "from": "knows"
+      },
+      "3": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "trust_store",
+     "button": "Trust store",
+     "sentence": "Alice may declare trust in Bob",
+     "me": 1,
+     "arity": 3,
+     "places": {
+      "2": {
+       "subject": null
+      },
+      "3": {
+       "from": "knows"
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "present",
+     "button": "Present",
+     "sentence": "Alice may present to Dave the signature of Bob over the friendship of Alice and Bob",
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "from": "knows"
+      },
+      "3": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "forward",
+     "button": "Forward",
+     "sentence": "Alice may forward Item to Bob, adding his signature to the signatures Item carries",
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "subject": null
+      },
+      "3": {
+       "from": "item"
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "ward_befriend",
+     "button": "Ward befriend",
+     "sentence": "Alice and Bob may jointly become friends",
+     "me": 3,
+     "arity": 3,
+     "places": {
+      "2": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "ward_end",
+     "button": "Ward end",
+     "sentence": "Alice may end her friendship with Bob",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "unfriend",
+     "button": "Unfriend",
+     "sentence": "Alice may end her friendship with Bob",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "guardian_unfriend",
+     "button": "Guardian unfriend",
+     "sentence": "Alice may end her friendship with her ward Bob",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "resign",
+     "button": "Resign",
+     "sentence": "Alice may end her guardianship of Bob",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "retire",
+     "button": "Retire",
+     "sentence": "Those who decide for Bob may retire Bob",
+     "me": 2,
+     "arity": 2,
+     "places": {
+      "1": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "open_store",
+     "button": "Open store",
+     "sentence": "Alice may make Bob a store",
+     "me": 2,
+     "arity": 2,
+     "places": {
+      "1": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "open_server",
+     "button": "Open server",
+     "sentence": "Alice may make Bob a rendezvous server",
+     "me": 2,
+     "arity": 2,
+     "places": {
+      "1": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "open_directory",
+     "button": "Open directory",
+     "sentence": "Alice may make Bob a directory",
+     "me": 2,
+     "arity": 2,
+     "places": {
+      "1": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "list",
+     "button": "List",
+     "sentence": "Alice may list in Bob Prog of Carol",
+     "me": 2,
+     "arity": 4,
+     "places": {
+      "1": {
+       "subject": null
+      },
+      "3": {
+       "from": "program"
+      },
+      "4": {
+       "from": "trusts_developer"
+      }
+     },
+     "covers": true,
+     "where": null
+    }
+   ]
+  },
+  "Store": {
+   "about": {
+    "name": "Dave"
+   },
+   "components": [
+    {
+     "kind": "questions"
+    },
+    {
+     "kind": "show",
+     "of": "it",
+     "pos": null,
+     "preds": [
+      "store",
+      "lists_program",
+      "listing_signed"
+     ]
+    },
+    {
+     "kind": "action",
+     "schema": "install_from_store",
+     "button": "Install from store",
+     "sentence": "Alice may install from a store Prog of Bob",
+     "me": 1,
+     "arity": 4,
+     "places": {
+      "2": {
+       "subject": null
+      },
+      "3": {
+       "typed": true,
+       "look": null
+      },
+      "4": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       }
+      }
+     },
+     "covers": true,
+     "where": "primary"
+    },
+    {
+     "kind": "action",
+     "schema": "untrust_store",
+     "button": "Untrust store",
+     "sentence": "Alice may withdraw her declaration of trust in Dave",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "subject": null
+      }
+     },
+     "covers": true,
+     "where": null
+    }
+   ]
+  }
+ },
+ "personPos": {
+  "knows": [
+   1
+  ],
+  "friend": [
+   1
+  ],
+  "program": [
+   2
+  ],
+  "trusts_developer": [
+   1
+  ],
+  "installed": [
+   2
+  ],
+  "participant": [
+   2,
+   3
+  ],
+  "has_guardian": [
+   1
+  ],
+  "creator": [
+   1
+  ],
+  "guardian": [
+   1
+  ],
+  "lists_program": [
+   2
+  ],
+  "listing_signed": [
+   2,
+   3
+  ],
+  "trusts_store": [
+   1
+  ],
+  "link": [
+   2
+  ],
+  "registered": [
+   2
+  ],
+  "spent": [
+   2
+  ],
+  "address": [
+   1
+  ],
+  "presented": [
+   1,
+   2
+  ],
+  "lists_shown": [
+   1
+  ],
+  "lists_unshown": [
+   1
+  ],
+  "holds_link": [
+   1,
+   2
+  ]
+ },
+ "complete": true,
+ "visible": true,
+ "warnings": [
+  "lookup: Alice is no place of the request",
+  "lookup: Mail is no place of the request",
+  "lookup: Name is no place of the request",
+  "lookup_by_address: Alice is no place of the request",
+  "lookup_by_address: Mail is no place of the request",
+  "lookup_by_address: Name is no place of the request",
+  "delist_me: Mail is no place of the request",
+  "delist_me: Name is no place of the request",
+  "delist_me_unshown: Mail is no place of the request",
+  "delist_me_unshown: Name is no place of the request",
+  "make_guardian: Codecider is no place of the request",
+  "end_guardian: Codecider is no place of the request",
+  "ward_acquaint: Alice is no place of the request",
+  "wards_acquaint: Alice is no place of the request",
+  "wards_acquaint: Bob is no place of the request",
+  "wards_befriend: Bob is no place of the request",
+  "delist: Bob is no place of the request",
+  "delist: Prog is no place of the request",
+  "leave: Carol is no place of the request",
+  "ward_end: G1 is no place of the request",
+  "retire: Codecider is no place of the request"
+ ]
+}
