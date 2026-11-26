@@ -2437,6 +2437,21 @@ Mart
 {
 \Alice
 }
+ \text{ and } 
+\mathit{\detokenize{
+post
+}}
+(
+Carol
+,
+Item
+,
+Mart
+)
+ \notin c_
+{
+\Bob
+}
 ,\\
 &
 \text{guarded by } \emptyset
@@ -2549,16 +2564,30 @@ Mart
 \Alice
 }
  \text{ and } 
+\{
 \mathit{\detokenize{
 keeper
 }}
 (
 Mart
 )
- \notin c_
+,
+\mathit{\detokenize{
+post
+}}
+(
+\Bob
+,
+Item
+,
+Mart
+)
+\}
+ \cap c_
 {
 \Bob
 }
+ = \emptyset
 ,\\
 &
 \text{guarded by } \emptyset
@@ -2901,6 +2930,24 @@ Mart
 \mathit{\detokenize{
 identity
 }}
+,
+\mathit{\detokenize{
+posted
+}}
+(
+Item
+,
+Mart
+)
+,
+\mathit{\detokenize{
+member
+}}
+(
+Mart
+,
+\Alice
+)
  \in c_
 {
 \Bob
