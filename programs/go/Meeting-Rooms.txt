@@ -9,3 +9,5 @@ A resource is a *room*.
 Logic pragmas
 Meeting Rooms extends Booking.
 A resource is a *room*.
+Interface pragmas
+Look: 🚪, sharing

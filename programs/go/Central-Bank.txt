@@ -53,6 +53,6 @@ Leave, Expel: Bob [Leave] <governor>
   CodeciderB: Bob consents to end his participation and his office in Orga.
 Set policy rate: Alice [Set policy rate] <term> <rate> <votes>
   Carol [Vote on policy rate] <term> <rate>
-Lend: Alice [Lend] <counterparty> <denomination> <amount> <term> <total> <votes>
+Lend: Alice [Lend] <counterparty> <denomination> <amount> <term> <votes>
   Bob: Alice asks to swap your bonds for coins of Orga at the policy rate.
   Carol [Vote to lend] <counterparty> <amount> <term>

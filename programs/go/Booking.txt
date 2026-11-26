@@ -21,3 +21,7 @@ s of r is free in z: z has s of r booked by no one.
 After x books s of r in z: x has a booking of s of r in z and z has s of r booked by x.
 After x cancels x's booking of s of r in z: no longer x has a booking of s of r in z and no longer z has s of r booked by x.
 Environment: z has the slot s of the resource r; x has fewer outstanding bookings in z than the bound.
+Interface pragmas
+Look: 📅, sharing
+Book: Alice [Book] <resource> <slot>
+  Alice [Cancel]
