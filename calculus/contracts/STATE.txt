@@ -94,7 +94,7 @@ Tennis-Courts GM yes yes yes
 Tools none yes yes no
 Trading-Company GO yes yes yes
 Village-Commons none yes yes no
-Village-Governance none yes no no
+Village-Governance none yes yes no
 Village-Life none yes yes no
 Village-Money none yes yes no
 Village-Services none no no no
