@@ -2198,6 +2198,7 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     cmps_any(Cs?, Kc, Cs1),
     ct_name(Kc?, Ct1),
     ct_name(Kc?, Ct2),
+    ct_name(Kc?, Ct3),
     class_lines(Ci?, Ct1?, L1),
     text # fixed_text(Fx),
     worded_lx(W?, Lx8),
@@ -2304,7 +2305,7 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     owner_fn_lines(Wfn1?, Lfn),
     complete_lines(Ci?, Nt?, Ps?, head, Lcm1),
     complete_lines(Ci?, Nt?, Ps?, body, Lcm2),
-    complete_text(Lcm1?, Lcm2?, Lcm),
+    complete_text(Lcm1?, Lcm2?, Ct3?, Lcm),
     lapp(Lfn?, Lcm?, Lfc),
     lapp(Lqp1?, Lfc?, Lqp),
     lapp(Ln1?, Lqp?, Ln),
@@ -4450,12 +4451,13 @@ procedure sjoin(Strings?, String).
 sjoin([], '').
 sjoin([S|Ss], J?) :- sjoin(Ss?, J1), string_concat([S?, J1?], J).
 %% The completion's shared lines, printed where some class has a place to compute, and the request read through it.
-procedure complete_text(Lines?, Lines?, Lines).
-complete_text([], _, []).
-complete_text([L|Ls], Lb, ['',
+%% calc_term's values of the type of the values over the constants, Ct, Constant or CValue (ct_name), as Val's v(CValue) where the contract names a compound value (Calculus #15, vGLP_inbox.md, 2026-11-26 11:18 UTC: Village Governance's platform.glp, 'Variable pair (C, C?) not dual across clause: Constant vs CValue?').
+procedure complete_text(Lines?, Lines?, String?, Lines).
+complete_text([], _, _, []).
+complete_text([L|Ls], Lb, Ct, ['',
         '%% The completion of a request: each place the constraint determines computed by the proposer\'s machine under the binding the request names, before it names it (complete; the form puts a placeholder there).',
         'procedure complete(Proposal?, Proposal).',
-        L?|R?]) :-
+        L?|R?]) :- ground(Ct?) |
     lapp(Ls?, ['complete(C, C?) :- otherwise | true.'|L2?], R),
     lapp(Lb?, [
         'procedure calc_num(Expr?, Binding?, Integer?, Integer).',
@@ -4463,11 +4465,13 @@ complete_text([L|Ls], Lb, ['',
         'procedure calc_num1(NumRes?, Integer?, Integer).',
         'calc_num1(num_is(N), _, N?) :- integer(N?) | true.',
         'calc_num1(_, V, V?) :- otherwise | true.',
-        'procedure calc_term(Expr?, Binding?, Constant?, Constant).',
+        Pt?,
         'calc_term(E, B, V, W?) :- ground(B?) | expr_term(E?, B?, F), calc_term1(F?, V?, W).',
-        'procedure calc_term1(Found?, Constant?, Constant).',
+        Pt1?,
         'calc_term1(found(v(C)), _, C?) :- ground(C?) | true.',
-        'calc_term1(_, V, V?) :- otherwise | true.'], L2).
+        'calc_term1(_, V, V?) :- otherwise | true.'], L2),
+    string_concat(['procedure calc_term(Expr?, Binding?, ', Ct?, '?, ', Ct?, ').'], Pt),
+    string_concat(['procedure calc_term1(Found?, ', Ct?, '?, ', Ct?, ').'], Pt1).
 procedure complete_req(Lines?, Lines?, Lines).
 complete_req([], Ls, Ls?).
 complete_req([_|_], Ls, R?) :- line_sub(Ls?, 'await_request(propose(C), [req(propose(C?))]).', 'await_request(propose(C), [req(propose(C1?))]) :- complete(C?, C1).', R).
