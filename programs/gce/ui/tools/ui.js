@@ -433,6 +433,7 @@
     CONVERSATIONS: {key: 'convo', vals: {BUBBLES: 'bubbles', PLAIN: 'plain'}},
     QUESTIONS: {key: 'questions', vals: {'ON TOP': 'top', 'IN A BELL': 'bell'}},
     ACTIONS: {key: 'actions', vals: {'IN THE BAR': 'bar', 'IN THE MENU': 'menu', 'ON A BUTTON': 'button'}},
+    LANDMARKS: {key: 'landmarks', vals: {'ON TOP': 'top', 'AT THE BOTTOM': 'bottom', 'IN A MENU': 'menu'}},
   };
   function readLook(text) {
     const out = {name: null, global: {}, of: {}, lines: [], errors: []};
