@@ -41,7 +41,7 @@ After x resigns g against y at b of d: no longer x and y play g at b since d and
 After x and y draw g at b of d: no longer x and y play g at b since d, x has drawn g with y and y has drawn g with x.
 After x claims a draw in g against y at b of d: no longer x and y play g at b since d, x has drawn g with y and y has drawn g with x.
 Interface pragmas
-Games: the games Alice plays.
+Games: the games Alice plays, each at its position.
 Won: the games Alice has won.
 Start: Alice [Start] <game> <board> <limit>
   Bob: Alice asks you to play a game of chess, with Alice as white.
