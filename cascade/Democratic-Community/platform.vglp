@@ -7841,9 +7841,9 @@ calc_num(E, B, V, W?) :- ground(B?) | expr_val(E?, B?, R), calc_num1(R?, V?, W).
 procedure calc_num1(NumRes?, Integer?, Integer).
 calc_num1(num_is(N), _, N?) :- integer(N?) | true.
 calc_num1(_, V, V?) :- otherwise | true.
-procedure calc_term(Expr?, Binding?, Constant?, Constant).
+procedure calc_term(Expr?, Binding?, CValue?, CValue).
 calc_term(E, B, V, W?) :- ground(B?) | expr_term(E?, B?, F), calc_term1(F?, V?, W).
-procedure calc_term1(Found?, Constant?, Constant).
+procedure calc_term1(Found?, CValue?, CValue).
 calc_term1(found(v(C)), _, C?) :- ground(C?) | true.
 calc_term1(_, V, V?) :- otherwise | true.
 
