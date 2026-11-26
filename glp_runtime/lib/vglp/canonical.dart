@@ -1789,6 +1789,12 @@ class DeclaredWidget {
         final j = _int(a.args[0]), k = _int(a.args[1]);
         if (j == null || k == null) return null;
         out.add((j, k));
+      } else if (a is StructTerm && a.functor == 'cmp' && a.args.length == 2) {
+        // `cmp(F, As)`: a compound value F(A1, ..., Ak) in the atom, each Ai a place, a compound value or `any` (vGLP #35, 2026-11-26 01:20 UTC; vGLP 5.4, "every binding of the variables of the atoms the schema requires there"; GSC, Definition "Schema with values").
+        final f = _labelConstant(a.args[0]);
+        final xs = _condArgs(a.args[1]);
+        if (f == null || xs == null) return null;
+        out.add(CmpArg(f, xs));
       } else if (_labelConstant(a) == 'any') {
         out.add(null);
       } else {
@@ -1968,14 +1974,7 @@ class ActCondition {
     if (kind == 'calc') {
       return 'calc(${args[0]}, ${(args[1] as CalcExpr).source}, ${args[2]})';
     }
-    final as_ = '[${[
-      for (final a in args)
-        a is int
-            ? 'at($a)'
-            : a is (int, int)
-                ? 'grp(${a.$1}, ${a.$2})'
-                : 'any'
-    ].join(', ')}]';
+    final as_ = condArgsSource(args);
     if (kind == 'proved') {
       return 'proved(${constantSource(proves)}, '
           '[${[for (final w in provesArgs) constantSource(w)].join(', ')}], '
@@ -2989,6 +2988,43 @@ String printDeclaration(ProcDecl d) {
   return '${prefix}procedure$params ${d.qualifiedName}'
       '(${d.argTypes.map(typeSource).join(', ')}).';
 }
+
+/// An argument `cmp(F, As)` of an atom an act names: the compound value F(A1, ..., Ak), each Ai a place (an int), a group (a pair), a compound value or `any` (null) (vGLP #35, 2026-11-26 01:20 UTC; GSC, Definition "Schema with values").
+class CmpArg {
+  final String functor;
+  final List<Object?> args;
+  const CmpArg(this.functor, this.args);
+
+  /// The places it names, at any depth.
+  Iterable<int> get places sync* {
+    for (final a in args) {
+      if (a is int) {
+        yield a;
+      } else if (a is (int, int)) {
+        yield a.$1;
+        yield a.$2;
+      } else if (a is CmpArg) {
+        yield* a.places;
+      }
+    }
+  }
+
+  /// Whether it names `any` at some depth.
+  bool get hasAny =>
+      args.any((a) => a == null || (a is CmpArg && a.hasAny));
+}
+
+/// The source of the arguments [args] of an atom an act names: `at(K)`, `grp(J, K)`, `cmp(F, As)` or `any`.
+String condArgsSource(List<Object?> args) => '[${[
+      for (final a in args)
+        a is int
+            ? 'at($a)'
+            : a is (int, int)
+                ? 'grp(${a.$1}, ${a.$2})'
+                : a is CmpArg
+                    ? 'cmp(${constantSource(a.functor)}, ${condArgsSource(a.args)})'
+                    : 'any'
+    ].join(', ')}]';
 
 /// The expression `E` of an act's `calc(P, E, K)`: `at(K)`, the value at the place K of the request; `lit(N)`, the number N; `plus`, `minus` and `mul` of two; and `fn(F, Es)`, the function F, which the owner of a value type gives, at the values of Es (programs/vglp/cva/compiler/README.md, 43, 44).  The platform computes it; the form reads it only to print it again.
 class CalcExpr {

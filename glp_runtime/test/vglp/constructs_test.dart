@@ -2518,6 +2518,33 @@ procedure (Ask)*request(Integer?).
                   "field(person, peer), field(text, text)]))")));
     });
 
+    // vGLP #35, Code_inbox.md, 2026-11-26 01:20 UTC, (1): a compound value
+    // in an atom the act requires is a condition argument cmp(F, As), as
+    // Redeem bond's req(note, [at(2), cmp(bond, [at(3)]), at(4)]).
+    test('a condition argument cmp(F, As) names a compound value and the '
+        'places of its arguments, and prints again as it was read', () {
+      const w = 'social_menu([button("Redeem bond", [act(redeem_bond, 1, '
+          '[1, 2, 3, 4, 5], [req(note, [at(2), cmp(bond, [at(3)]), at(4)]), '
+          'req(owes, [cmp(pair, [cmp(bond, [any]), at(5)])])], [2, 4], '
+          '[], [], [at(1), say(" redeems.")])])])';
+      final d = DeclaredWidget.parse(w);
+      expect(DeclaredWidget.parse(d.source).source, d.source);
+      final a = d.buttons.single.acts.single;
+      final r = a.pre[0].args;
+      expect(r[0], 2);
+      expect(r[2], 4);
+      final b = r[1] as CmpArg;
+      expect(b.functor, 'bond');
+      expect(b.args, [3]);
+      expect(b.places.toList(), [3]);
+      expect(b.hasAny, isFalse);
+      final q = a.pre[1].args.single as CmpArg;
+      expect(q.places.toList(), [5]);
+      expect(q.hasAny, isTrue);
+      expect(d.source, contains('cmp(bond, [at(3)])'));
+      expect(d.source, contains('cmp(pair, [cmp(bond, [any]), at(5)])'));
+    });
+
     // vGLP 668df7d, Section 6.3, the paragraph after the construct process:
     // "the term W' a widget declaration names is a name or a name applied to
     // arguments ...; the compilation forms the union of the three, the
