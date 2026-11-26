@@ -427,6 +427,44 @@ void main() {
     expect(heldLine(fixtureTerm('coin(alice)'), 2, s), 'Coins: Alice  2');
     expect(heldLine(fixtureTerm('knows(bob)'), 1, s), 'Contacts: Bob');
   });
+  // vGLP #35, Code_inbox.md, 2026-11-26 01:20 UTC: (1) a compound value in an atom the act requires is cmp(F, As), its places bound by matching; (2) shown(F, v(T)) is drawn as valued(F, K); (3) a compound value is drawn as its term.
+  group('compound values', () {
+    const state = "note(alice, bob, bond(5), n1), note(alice, bob, dollar, n2)";
+    final w = _requestWidget(
+        'button("Redeem bond", [act(redeem_bond, 1, [1, 2, 5], [req(note, [at(1), at(2), cmp(bond, [at(3)]), at(4)])], [2, 4], [], [], [])])',
+        "form(redeem_bond, [field('Peer', peer), field('Peer', peer), field('Integer', number), field('Constant', text), field('Peer', peer)])");
+
+    test('cmp(bond, [at(3)]) binds the day of a bond and matches no other '
+        'value', () {
+      final o = RequestOffers.of(fixtureTerm(w));
+      final (_, s) = SocialState.read(fixtureTerm('[${_view(state, "bob", "")}]'));
+      final redeem = ActInfo(o.buttons[0].acts.single);
+      expect(ActInfo.placesOf(redeem.act.pre.single), {1, 2, 3, 4});
+      expect([
+        for (final at in redeem.ways(s!.atoms, s.me))
+          '${formatTerm(at[2]!)},${formatTerm(at[3]!)},${formatTerm(at[4]!)}'
+      ], ['bob,5,n1']);
+    });
+
+    test('a compound value is drawn as its term, in a tab\'s row and in the '
+        'values of an approval question', () {
+      final (_, s) = SocialState.read(fixtureTerm(
+          '[${_view("identity", "bob", "tab('Notes', note)")}]'));
+      expect(heldLine(fixtureTerm('note(bob, bond(5), n1)'), 1, s),
+          'Notes: Bob, bond(5), N1');
+      expect(valueText(fixtureTerm('bond(5)')), 'bond(5)');
+      expect(valueText(fixtureTerm('dollar')), 'dollar');
+      expect(
+          approvalValues([
+            fixtureTerm('valued("amount", 3)'),
+            fixtureTerm('shown("type wanted", v(bond(5)))'),
+            fixtureTerm('shown("type given", v(dollar))'),
+            fixtureTerm('text("x")'),
+          ]),
+          ['amount: 3', 'type wanted: bond(5)', 'type given: dollar']);
+    });
+  });
+
   testWidgets('a set variable: Pay beside a note, the other notes of its type '
       'picked with it, the request naming the notes picked', (tester) async {
     final s = _Screen(tester);

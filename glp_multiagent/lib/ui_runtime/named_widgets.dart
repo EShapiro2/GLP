@@ -351,6 +351,21 @@ Widget approvalSentence(
   );
 }
 
+/// The values of the binding an approval question's sentence [words] does not name, one to a line, each by the name of its field: named(F, P) a person, valued(F, K) a number and shown(F, v(T)) a value over the constants, a compound value drawn as its term (vGLP 110caf4, Section 5.4, "The contract's words"; vGLP #35, Code_inbox.md, 2026-11-26 01:20 UTC, (2), (3)).
+List<String> approvalValues(List<GTerm> words) => [
+    for (final w in words)
+      switch (ctorArgs(w)) {
+        ('named', [final f, final q]) => '${displayText(f)}: ${personName(q)}',
+        ('valued', [final f, final k]) => '${displayText(f)}: ${valueText(k)}',
+        // shown(F, v(T)): the value T of a field over the constants, F then the value, drawn as valued(F, K) is (vGLP #35, Code_inbox.md, 2026-11-26 01:20 UTC, (2); vGLP 5.4, "The contract's words").
+        ('shown', [final f, final v]) => switch (ctorArgs(v)) {
+            ('v', [final t]) => '${displayText(f)}: ${valueText(t)}',
+            _ => '${displayText(f)}: ${valueText(v)}',
+          },
+        _ => null,
+      }
+    ].nonNulls.toList();
+
 /// A line of an atom the proposer holds, as the tab that lists it draws it, with the name of that tab ([_SocialTabState._wordedAtom]): its first argument by name, with its count [k] where the tab is counted, then its other arguments; the viewer's last view [s] names the tabs.
 String heldLine(GTerm atom, int k, SocialState? s) {
   final (f, xs) = ctorArgs(atom);
@@ -383,19 +398,7 @@ Widget _approvalWorded(BuildContext context, OpenConstruct construct,
         _ => displayText(w),
       }
   ].join();
-  final values = [
-    for (final w in words)
-      switch (ctorArgs(w)) {
-        ('named', [final f, final q]) => '${displayText(f)}: ${personName(q)}',
-        ('valued', [final f, final k]) => '${displayText(f)}: ${valueText(k)}',
-        // shown(F, v(T)): the value T of a field over the constants, F then the value, drawn as valued(F, K) is (vGLP #35, Code_inbox.md, 2026-11-26 01:20 UTC, (2); vGLP 5.4, "The contract's words").
-        ('shown', [final f, final v]) => switch (ctorArgs(v)) {
-            ('v', [final t]) => '${displayText(f)}: ${valueText(t)}',
-            _ => '${displayText(f)}: ${valueText(v)}',
-          },
-        _ => null,
-      }
-  ].nonNulls.toList();
+  final values = approvalValues(words);
   // After the values, the atoms the act requires of the proposer whose predicates the tabs list, held(A, K), as the tabs draw them (vGLP e22e2ad, Section 5.4, "The contract's words": "as the tabs draw them --- in a swap, the coins the proposer gives"; Section 6.2: "An approval question is drawn as its question, with the values and the proposer's atoms after it"), each beside the name of its tab.
   final (_, seen) = SocialState.read(output);
   final held = [
