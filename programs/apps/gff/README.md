@@ -31,7 +31,7 @@ From `glp_runtime/`:
 printf '../programs/apps/gff\n:limit 300000000\nplay_feeds(A, B, C, D).\n:quit\n' | bin/glpc
 ```
 
-`play_feeds` is GFF's play: four executions, alice, bob, carol and dave, over four conversations, alice's and bob's, bob's and carol's, carol's and dave's, and bob's and dave's, the play handing each its ends as the social graph does.  An item is an utterance alice signs at its posting; at a person who holds it the state has `item(X, alice)`, X the item and alice the author of the feed, and at a person who received it `received(X, alice, Q)` besides, Q the person it came from.
+`play_feeds` is GFF's play: four executions, alice, bob, carol and dave, over four conversations, alice's and bob's, bob's and carol's, carol's and dave's, and bob's and dave's, the play handing each its ends as the social graph does.  An item is an utterance alice signs at its posting; at a person who holds it the state has `item(X, alice)`, X the item and alice the author of the feed, and at a person who received it `item_from(X, alice, Q)` besides, Q the person it came from; at the person who delivered it to R, `delivered(X, alice, R)`.
 
 1. Each establishes their identity (Knowledge:1); alice and bob, bob and carol, and carol and dave meet, the first by the second's key, the second answering yes to its hello, and the first then offers the second friendship, who answers yes (Knowledge:2, Friendship:1).  Each two friends have a pointer to each other labeled by the other (Labelled Overlay's definitions): at bob, `pointer(alice, alice)`.
 2. Alice posts two items (Feeds:1).  Bob has an alice-pointer to her, so both reach him from her (Feeds:2, deliver).
