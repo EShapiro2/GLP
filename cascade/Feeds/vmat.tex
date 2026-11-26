@@ -1234,6 +1234,19 @@ c_
 {
 \Alice
 }
+ \cup 
+\{
+\mathit{\detokenize{
+delivered
+}}
+(
+Item
+,
+Carol
+,
+\Bob
+)
+\}
 , \qquad 
 c'_
 {
@@ -1256,7 +1269,7 @@ Carol
 )
 ,
 \mathit{\detokenize{
-received
+item_from
 }}
 (
 Item
@@ -1312,6 +1325,21 @@ Carol
 ,\\
 &
 \text{provided } 
+\mathit{\detokenize{
+delivered
+}}
+(
+Item
+,
+Carol
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
 \mathit{\detokenize{
 item
 }}

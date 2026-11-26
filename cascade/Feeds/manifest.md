@@ -1,10 +1,10 @@
 # A run of the cascade on Feeds
 
-- Contract: `Feeds` (`feeds` to the checker), its owner's two files `programs/gff/Feeds.txt` and `programs/gff/Feeds.glp`, copied here as they stood at `fddffe82`.
+- Contract: `Feeds` (`feeds` to the checker), its owner's two files `programs/gff/Feeds.txt` and `programs/gff/Feeds.glp`, copied here as they stood at `10f3fc71`.
 - The paper: `/Users/udi/Grassroots/GFF (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gff/Feeds.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gff/Feeds.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-25 20:23 UTC by `cascade.sh feeds`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `fddffe82`; each artefact's source and tool:
+- Run on 2026-11-26 06:06 UTC by `cascade.sh feeds`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `10f3fc71`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
