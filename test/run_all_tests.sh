@@ -1687,6 +1687,29 @@ check "tree: member" "R6 = ok" "$a43"
 check "tree: kth at every index" "R7 = ok" "$a43"
 check "tree: union" "R8 = ok" "$a43"
 
+# --- A44: Circular terms, the step cGLP does not have ---
+# GLP-Spec glp.tex, "Circular terms" (GLP-ICLP-2026 main 9d2dedb; Audit
+# Finding 1, Grassroots-Audit #31): cGLP Reduce requires the writer mgu and the
+# accumulated substitution acyclic, so p(Y, Y?) with p(f(X?), X) has no Reduce;
+# "an implementation of GLP makes no occurs check ... and builds a circular
+# term".  TGLP's well-typing accepts the program.  The two acyclic controls
+# reduce as cGLP does: p(Y, a) gives f(a), and p(Y, Z?) gives Y = f(Z?), the
+# normalised writer mgu {Y := f(Z), X := Z} of GLP-Spec Proposition E.1.
+echo "--- A44: Circular terms ---"
+a44=$("$REPL_RUN" <<HEREDOC
+$TYPED/cyclic_mgu_test.glp
+p(Y1, a).
+p(Y2, Z2?).
+:limit 1000
+p(Y3, Y3?).
+:quit
+HEREDOC
+2>&1)
+check "circular: the well-typed fixture loads" "Loaded: .*cyclic_mgu_test.glp" "$a44"
+check "circular: the finite control p(Y, a)" "Y1 = f(a)$" "$a44"
+check "circular: the acyclic control p(Y, Z?) binds Y to f of Z's variable" "Y2 = f(X[0-9]*)$" "$a44"
+check "circular: the implementation takes the step cGLP lacks and builds a circular term" "Y3 = f(f(<circular>))$" "$a44"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 

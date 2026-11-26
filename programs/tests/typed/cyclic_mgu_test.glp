@@ -1,0 +1,15 @@
+%% Circular terms (GLP-Spec glp.tex, "Circular terms", GLP-ICLP-2026 main;
+%% Audit Finding 1, Grassroots-Audit #31).  The unit clause p(f(X?), X) and the
+%% goal p(Y, Y?) have the writer mgu {Y := f(X?), X := Y?}, whose pair
+%% completion would assign Y? a term in which Y? occurs: cGLP has no such
+%% Reduce, so the terms of a cGLP run are finite.  "An implementation of GLP
+%% makes no occurs check ... An implementation thus takes a step cGLP does not
+%% have, and builds a circular term."  The program is well-typed (TGLP,
+%% "Soundness of Well-Typing": well-typing does not exclude the cyclic writer
+%% mgu).  Harness A44 holds the implementation to that sentence on the cyclic
+%% goal, and to cGLP on the two acyclic controls, p(Y, a) and p(Y, Z?).
+
+T ::= a ; f(T).
+
+procedure p(T, T?).
+p(f(X?), X).
