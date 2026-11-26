@@ -1,6 +1,0 @@
-Broadcast
-Broadcast inherits from Friendship.
-A *broadcast* is a message with a unique identifier, which its maker holds. Δ > 0 is a period of time, and a broadcast is *live* for Δ after it is made.
-Alice and Bob are persons.
-1. ■ Forward: Alice, who holds a live broadcast, forwards it to her friend Bob, who does not hold it; Bob then holds it.
-2. ■ Expire: Alice ceases to hold a broadcast that is not live.

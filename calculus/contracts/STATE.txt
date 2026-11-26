@@ -12,8 +12,6 @@ Backed-Community-Bank GO yes yes yes
 Bank GO yes yes yes
 Bonds Currencies yes yes yes
 Booking GO yes yes yes
-Broadcast none yes yes no
-Care none yes yes no
 Carpool GM yes yes yes
 Central-Bank GO yes yes yes
 Chess none yes no no
@@ -36,7 +34,6 @@ Denominated-Currencies Currencies yes yes yes
 Directory GNA yes yes yes
 Disputes GCE yes yes yes
 Distrust GGGA yes yes yes
-Emergencies none yes yes no
 Encounters GSA yes yes yes
 Feeds GFF yes yes yes
 Forwarding GSC yes yes yes
@@ -66,7 +63,6 @@ Meeting-Rooms GO yes yes yes
 Mutual-Credit GO yes yes yes
 Nonprofit GCE yes yes yes
 Notes GSC yes yes yes
-Notices none yes yes no
 Organisation GO yes yes yes
 Overlay GRH yes yes yes
 Partners GM yes yes yes
@@ -91,16 +87,7 @@ Short-Feeds GFF yes yes yes
 Single-Person-Company GO yes yes yes
 Stays GCE yes yes yes
 Tennis-Courts GM yes yes yes
-Tools none yes yes no
 Trading-Company GO yes yes yes
-Village-Commons none yes yes no
-Village-Governance none yes yes no
-Village-Life none yes yes no
-Village-Money none yes yes no
-Village-Services none no no no
-Village-Social none no no no
-Villagers none no no no
 Warded-Groups CSSN yes yes yes
 Warnings GCE yes yes yes
 Workers-Cooperative GO yes yes yes
-Works none yes yes no

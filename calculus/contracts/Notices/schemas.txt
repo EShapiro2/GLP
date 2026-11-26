@@ -1,9 +1,0 @@
-Notices
-Notices unites Broadcast and Organisation, and extends the union.
-Vocabulary: x has broadcast the notice m of z = notice(x,m,z); z has the notice m = notice_of(z,m); z has the notice m with y = notice_with(z,m,y).
-After x broadcasts m as a notice of z, which requires x has not made the broadcast m: x has made the broadcast m, x holds the broadcast m, x has broadcast the notice m of z and z has the notice m.
-After x forwards the notice m to y in z, which requires y does not hold the broadcast m and x has not forwarded the broadcast m to y: y holds the broadcast m, y holds the broadcast m from x, x has forwarded the broadcast m to y and z has the notice m with y.
-Notices:0 - | A *notice* is a broadcast that includes its text and the area it is for.
-Notices:0 - | Alice and Bob are persons, Orga an organisation, Cast a broadcast.
-Notices:1 ■ Notice: made_broadcast(Alice,Cast), broadcast(Alice,Cast), notice(Alice,Cast,Orga), notice_of(Orga,Cast) <- officer(Alice,Orga), has_officer(Orga,Alice), ~made_broadcast(Alice,Cast) guarded by Alice.
-Notices:2 ■ Notice forward: broadcast(Bob,Cast), broadcast_from(Bob,Cast,Alice), forwarded_broadcast(Alice,Cast,Bob), notice_with(Orga,Cast,Bob) <- has_participant(Orga,Alice), has_participant(Orga,Bob), broadcast(Alice,Cast), live(Alice,Cast), notice_of(Orga,Cast), ~broadcast(Bob,Cast), ~forwarded_broadcast(Alice,Cast,Bob) guarded by Alice.

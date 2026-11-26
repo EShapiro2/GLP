@@ -58,9 +58,18 @@ def state(out, names):
             f.write('%s %s %s %s %s\n' % (NM.file_of(n), own.get(n, 'none'), yn(cert.get(n)), yn(comp.get(n)), yn(same.get(n))))
 
 
+def villagers():
+    """The Villagers' own contracts, by their file names (VILLAGERS.txt): they stay in the Villagers repository and the
+    Calculus's own copies, and are never published to GLP, whose site is the main globe (Udi, 2026-11-26 16:48 UTC:
+    "the intention was that villagers-specific contracts stay there and not imported back to the main globe")."""
+    p = os.path.join(ROOT, 'VILLAGERS.txt')
+    return {l.strip() for l in open(p, encoding='utf-8') if l.strip()} if os.path.exists(p) else set()
+
+
 def main(out, hold=()):
     """Built in a fresh directory beside OUT and moved into OUT only when nothing is missing; else OUT is left as it
-    was and the exit is 1."""
+    was and the exit is 1.  The Villagers' contracts are held out (villagers()), and a directory of one of them left in
+    OUT by an earlier publication is removed."""
     final = os.path.abspath(out)
     out = tempfile.mkdtemp(prefix='.publish-', dir=os.path.dirname(final) or '.')
     try:
@@ -76,6 +85,8 @@ def main(out, hold=()):
             elif os.path.exists(dst):
                 os.remove(dst)
             shutil.move(os.path.join(out, e), dst)
+        for f in villagers():
+            if os.path.isdir(os.path.join(final, f)): shutil.rmtree(os.path.join(final, f))
         print('%d contracts in %s; missing: nothing' % (len(names), final))
         return 0
     finally:
@@ -84,7 +95,8 @@ def main(out, hold=()):
 
 def build(out, hold=()):
     names = NM.names_in(os.path.join(ROOT, 'rev'))
-    names = [n for n in names if n not in hold]      # a contract with no certificate is held out
+    vill = villagers()
+    names = [n for n in names if n not in hold and NM.file_of(n) not in vill]      # a contract with no certificate is held out, and the Villagers' own
     missing = []
     for n in names:
         d = os.path.join(out, NM.file_of(n)); os.makedirs(d, exist_ok=True)
@@ -103,7 +115,10 @@ def build(out, hold=()):
         for f in ('verdict.txt',) if param or unc else ('verdict.txt', 'platform.glp'):      # a parametric contract has no platform until instantiated
             if not os.path.exists(os.path.join(d, f)): missing.append('%s: %s' % (n, f))
     for f, g in (('README-PUBLIC.md', 'README.md'), ('NAMES.txt', 'NAMES.txt'), ('OWNERS.md', 'OWNERS.md'), ('LAYERS.txt', 'LAYERS.txt'), ('MIGRATION.md', 'MIGRATION.md'), ('cascade/STATUS.txt', 'STATUS.txt'), ('glp/VERDICTS.txt', 'VERDICTS.txt')):
-        if os.path.exists(os.path.join(ROOT, f)): shutil.copyfile(os.path.join(ROOT, f), os.path.join(out, g))
+        if os.path.exists(os.path.join(ROOT, f)):
+            ls = open(os.path.join(ROOT, f), encoding='utf-8').read().split('\n')
+            if g in ('STATUS.txt', 'VERDICTS.txt'): ls = [l for l in ls if l.split()[:1] == [] or l.split()[0] not in vill]
+            open(os.path.join(out, g), 'w', encoding='utf-8').write('\n'.join(ls))
     state(out, names)
     for d in ('tools', 'tests'):
         shutil.copytree(os.path.join(ROOT, d), os.path.join(out, d), dirs_exist_ok=True, ignore=shutil.ignore_patterns('__pycache__'))

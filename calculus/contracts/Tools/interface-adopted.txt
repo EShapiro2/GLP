@@ -1,6 +1,0 @@
-Interface pragmas
-Hand over: Carol [Hand over] <orga> <alice> <res>
-  Alice: Carol asks for your consent to hand over.
-Take back: Carol [Take back] <orga> <res> <alice>
-Withdraw: Carol [Withdraw] <orga> <res> [Restore] <orga>
-Book: Alice [Book] <res> <slot>

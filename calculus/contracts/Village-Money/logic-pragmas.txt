@@ -1,2 +1,0 @@
-Village Money
-Village Money extends Community Bank, Mutual Credit and Joint Accounts.

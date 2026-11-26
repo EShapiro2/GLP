@@ -1,6 +1,0 @@
-Notices
-Notices inherits from Broadcast and Organisation.
-A *notice* is a broadcast that includes its text and the area it is for.
-Alice and Bob are persons, Orga an organisation.
-1. ■ Notice: Alice, an officer of Orga, may broadcast a notice.
-2. ■ Notice forward: Alice, a participant of Orga, may forward a live notice of Orga that she holds to Bob, a participant of Orga, who does not hold it; Bob then holds it.

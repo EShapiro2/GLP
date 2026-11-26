@@ -1,2 +1,0 @@
-Village Social
-Village Social inherits from Friendship, Encounters, Groups, Feeds, Children, Emergencies and Notices.

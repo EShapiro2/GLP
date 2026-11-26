@@ -1,2 +1,0 @@
-Tools extends Booking: holds
-Tools restricts it (Booking): holds

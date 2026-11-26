@@ -1,2 +1,0 @@
-Village Governance
-Village Governance inherits from Democratic Community, Backed Community Bank, Disputes, Warnings and Works.

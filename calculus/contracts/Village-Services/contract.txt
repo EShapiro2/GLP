@@ -1,2 +1,0 @@
-Village Services
-Village Services inherits from Community Market, Gigs, Rides, Lodging and Ads.
