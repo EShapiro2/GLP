@@ -462,13 +462,14 @@
       else if ((q = what.match(/^DRAWN BY ([a-z]\w*)$/))) r = {as: 'drawn', by: q[1]};
       else if ((q = what.match(/^PICKED ON ([a-z]\w*)(?: FROM ([A-Z]\w*))?$/))) r = {as: 'picked', on: q[1], from: q[2] || null};
       else if ((q = what.match(/^NEW AS ([A-Za-z][\w-]*?)(\d+)$/))) r = {fresh: {stem: q[1], n: +q[2]}};
+      else if ((q = what.match(/^CALLED "([^"]+)"$/))) r = {label: q[1]};
       else if (/^(NEWEST FIRST|OLDEST FIRST|ALPHABETICAL)$/.test(what)) r = {order: what === 'NEWEST FIRST' ? 'newest' : what === 'OLDEST FIRST' ? 'oldest' : 'alpha'};
       else if (/^(A GRID|ROWS|CHIPS)$/.test(what)) r = {as: what === 'A GRID' ? 'grid' : what.toLowerCase()};
       else if (/^(IN THE MENU|IN THE BAR|PRIMARY)$/.test(what)) r = {as: what === 'PRIMARY' ? 'primary' : what === 'IN THE MENU' ? 'menu' : 'bar'};
-      else { err('not a style: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, SCANNED, DRAWN BY a program, PICKED ON a program, A GRID, ROWS, CHIPS, NEWEST FIRST, OLDEST FIRST, ALPHABETICAL, IN THE MENU, IN THE BAR or PRIMARY'); continue; }
+      else { err('not a style: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, SCANNED, DRAWN BY a program, PICKED ON a program, A GRID, ROWS, CHIPS, NEWEST FIRST, OLDEST FIRST, ALPHABETICAL, NEW AS Name1, CALLED "a label", IN THE MENU, IN THE BAR or PRIMARY'); continue; }
       if (r.as === 'slider' && r.from >= r.to) { err('a slider goes from a smaller number to a larger one'); continue; }
       /* a list may have an order beside its look; anything else one style */
-      const had = out.of[name], extra = r.order ? 'order' : r.fresh ? 'fresh' : null;
+      const had = out.of[name], extra = r.order ? 'order' : r.fresh ? 'fresh' : r.label ? 'label' : null;
       if (had && (extra ? had[extra] : had.as)) { err(name + ' has a style already'); continue; }
       out.of[name] = extra ? {...(had || {line: n}), [extra]: r[extra], [extra + 'Line']: n} : {...(had || {}), ...r, line: n}; L.name = name;
     }
@@ -505,7 +506,8 @@
     for (const [name, r] of Object.entries(look.of)) {
       if (r.order && !lists[name]) err(r.orderLine, name + ' is no list of the description, so it has no order');
       if (r.fresh && !fields[name]) err(r.freshLine, name + ' is no value the description has TYPED, so it has no new name');
-      if ((r.order || r.fresh) && !r.as) continue;
+      if (r.label && !buttons[name]) err(r.labelLine, name + ' is no button of the description, so it cannot be called anything');
+      if ((r.order || r.fresh || r.label) && !r.as) continue;
       const prog = r.as === 'drawn' ? r.by : r.as === 'picked' ? r.on : null;
       if (prog && programs && !programs[prog]) { err(r.line, prog + ' is no drawing program'); continue; }
       if (r.as === 'drawn') {
