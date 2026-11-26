@@ -1,7 +1,7 @@
 Ads
-Ads unites Community Network and Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
-An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the community coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
-Alice and Bob are persons, Orga a community network.
-1. ■ Posting. Post: Bob, an advertiser, may post an ad to the members he points to; its budget is then locked on top of his stake. Pass: A member may pass it to the members they point to.
+Ads inherits from Overlay and Backed Community Bank (GRH, Grassroots Ride-Hailing, in preparation).
+An *advertiser* is a member of the community who posts ads. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the community coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
+Alice and Bob are persons, Orga a community.
+1. ■ Posting. Post: Bob, an advertiser, may post an ad to the members he points to; its budget, which he holds, is then locked. Pass: A member may pass it to the members they point to.
 2. ■ Show: Alice, a member, is shown an ad she received if it is for her profile.
 3. ◆ Viewing and clicking. View, Click: Alice may attest that she viewed, or clicked, an ad shown to her, and the ad's budget then pays her its coins for the view or the click, up to the most one member may earn from it.

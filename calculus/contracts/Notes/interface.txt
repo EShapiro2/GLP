@@ -14,14 +14,14 @@ Acquaint: Alice [Acquaint] <bob>
   Bob: Alice asks for your consent to acquaint.
 Introduce: Alice [Introduce]
   Bob: Alice asks for your consent to introduce.
-Issue: Alice [Issue] <type>
-Swap: Alice [Swap] <dave> <other>
+Issue: Alice [Issue] <type> <sum>
+Swap: Alice [Swap] <sum> <dave> <other> <total>
   Bob: Alice asks for your consent to swap.
-Pay: Alice [Pay]
+Pay: Alice [Pay] <sum>
   Bob: Alice asks for your consent to pay.
-Deposit: Alice [Deposit] <cond>
+Deposit: Alice [Deposit] <sum> <cond>
   Carol: Alice asks for your consent to deposit.
-Release: Carol [Release]
+Release: Carol [Release] <sum>
   Bob: Carol asks for your consent to release.
-Return: Carol [Return]
+Return: Carol [Return] <sum>
   Alice: Carol asks for your consent to return.

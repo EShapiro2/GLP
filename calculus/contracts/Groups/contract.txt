@@ -1,5 +1,5 @@
 Groups
-Groups extends Friendship, and strengthens it.
+Groups inherits from Friendship.
 A *message* is what a person sends.
 Alice and Bob are persons.
 1. ■ Message: Alice may send a message to her friend Bob.

@@ -1,2 +1,6 @@
 Interface pragmas
-Award: Alice [Award] [Cancel] [Cancel for the rider]
+Award: Alice [Award] [Arrive]
+  Bob [Driver arrive]
+  Alice [Cancel] [Arrive in full]
+  Bob [Driver arrive in full]
+  Alice [Cancel for the rider]

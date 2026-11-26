@@ -99,6 +99,7 @@ Promoted Gossip | Promoted Gossip | Promoted-Gossip | promoted_gossip | promoted
 Matching | Matching | Matching | matching | matching
 Anonymous Matching | Anonymous Matching | Anonymous-Matching | anonymous_matching | anonymous_matching
 Free Matching | Free Matching | Free-Matching | free_matching | free_matching
+Promoted Community Market | Promoted Community Market | Promoted-Community-Market | promoted_community_market | promoted_community_market
 Promoted Matching | Promoted Matching | Promoted-Matching | promoted_matching | promoted_matching
 Dating | Dating | Dating | dating | dating
 Jobs | Jobs | Jobs | jobs | jobs
@@ -119,3 +120,17 @@ Partnership | Partnership | Partnership | partnership | partnership
 Foundation | Foundation | Foundation | foundation | foundation
 Disputes | Disputes | Disputes | disputes | disputes
 Warnings | Warnings | Warnings | warnings | warnings
+Broadcast | Broadcast | Broadcast | broadcast | broadcast
+Care | Care | Care | care | care
+Emergencies | Emergencies | Emergencies | emergencies | emergencies
+Notices | Notices | Notices | notices | notices
+Tools | Tools | Tools | tools | tools
+Works | Works | Works | works | works
+Village Commons | Village Commons | Village-Commons | village_commons | village_commons
+Village Social | Village Social | Village-Social | village_social | village_social
+Village Governance | Village Governance | Village-Governance | village_governance | village_governance
+Village Life | Village Life | Village-Life | village_life | village_life
+Village Money | Village Money | Village-Money | village_money | village_money
+Village Services | Village Services | Village-Services | village_services | village_services
+Villagers | Villagers | Villagers | villagers | villagers
+Chess | Chess | Chess | chess | chess

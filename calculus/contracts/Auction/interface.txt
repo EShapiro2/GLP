@@ -14,9 +14,10 @@ Auction
 13. ■ Award.  After the bidding period ends, Alice may award the ride to the bidder the terms select among the bidders who have no ride, at the fare the terms set; Alice's fare and the deposit the terms set for Bob are then locked.
 14. ■ Close.  If the terms select no bidder, Alice may close the call.
 15. ■ Pickup.  The pickup is recorded when Alice and Bob are both at the pickup point.
-16. ■ Arrive.  When Alice and Bob are both at the destination, the fare and the deposit are released to Alice and to Bob as the terms say.
-17. ■ Cancel.  If no pickup is recorded within the maximum pickup delay, Alice may cancel; the fare and the deposit are then released to Alice and to Bob as the terms say.
-18. ■ Withdraw.  Alice may withdraw her open call before the bidding period ends.
+16. ■ Arrive.  When Alice and Bob are both at the destination, either of them may claim the release of the fare and the deposit, which are then released to Alice and to Bob as the terms say.
+17. ■ Driver arrive.  When Alice and Bob are both at the destination, either of them may claim the release of the fare and the deposit, which are then released to Alice and to Bob as the terms say.
+18. ■ Cancel.  If no pickup is recorded within the maximum pickup delay, Alice may cancel; the fare and the deposit are then released to Alice and to Bob as the terms say.
+19. ■ Withdraw.  Alice may withdraw her open call before the bidding period ends.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -33,5 +34,7 @@ Call: Alice [Call] <trip>
 Bid: Bob [Bid]
 Award: Alice [Award]
 Close: Alice [Close]
+Arrive: Alice [Arrive]
+Driver arrive: Bob [Driver arrive]
 Cancel: Alice [Cancel]
 Withdraw: Alice [Withdraw]

@@ -19,6 +19,6 @@ Auction:1. ■ Call. Call: Alice, who has no open call and no ride, may call for
 Auction:2. ■ Bid: Bob, who received the call, may bid a fare and a pickup delay before the bidding period ends; Alice may not open a bid before then.
 Auction:3. ■ Award. Award: After the bidding period ends, Alice may award the ride to the bidder the terms select among the bidders who have no ride, at the fare the terms set; Alice's fare and the deposit the terms set for Bob are then locked. Close: If the terms select no bidder, Alice may close the call.
 Auction:4. ■ Pickup: The pickup is recorded when Alice and Bob are both at the pickup point.
-Auction:5. ■ Arrive: When Alice and Bob are both at the destination, the fare and the deposit are released to Alice and to Bob as the terms say.
+Auction:5. ■ Arrive: When Alice and Bob are both at the destination, either of them may claim the release of the fare and the deposit, which are then released to Alice and to Bob as the terms say.
 Auction:6. ■ Cancel: If no pickup is recorded within the maximum pickup delay, Alice may cancel; the fare and the deposit are then released to Alice and to Bob as the terms say.
 Auction:7. ■ Withdraw: Alice may withdraw her open call before the bidding period ends.

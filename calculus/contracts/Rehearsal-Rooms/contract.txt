@@ -1,4 +1,4 @@
 Rehearsal Rooms
-Rehearsal Rooms unites Booking and Partners, and extends the union.
+Rehearsal Rooms inherits from Booking and Partners.
 The activity is music, the place is a *studio*, an organisation that has rehearsal rooms, and the time is a slot.
 1. ■ Organisation and ward. Organisation ward acquaint: Orga, an organisation, and Wendy, a ward, may jointly come to know each other.

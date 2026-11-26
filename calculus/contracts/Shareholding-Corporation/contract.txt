@@ -1,5 +1,5 @@
 Shareholding Corporation
-Shareholding Corporation unites Corporation and an augmentation of a lift of Shares, and extends and augments the union.
+Shareholding Corporation inherits from Corporation and Shares.
 A *shareholding corporation* is a corporation whose bylaws name two roles, *shareholder*, held by every person who holds a share of Orga, and *director*, held by its first officer.
 Orga is a shareholding corporation.
 1. ■ Dividend. Set dividend: The directors may set a dividend, a number of Dollars a share. Claim: A shareholder may then claim it from Orga, once, in Dollar-denominated coins for the shares they hold.

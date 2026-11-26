@@ -1,0 +1,2 @@
+Village Services
+Village Services extends Community Market, Gigs, Rides, Lodging and Ads.

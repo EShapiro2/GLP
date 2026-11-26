@@ -1,5 +1,5 @@
 Resilient Feeds
-Resilient Feeds extends Feeds.
+Resilient Feeds inherits from Feeds.
 d > 1 is an integer.
 Alice, Bob and Carol are persons.
 1. ■ Redundant point: Alice, who has Carol-pointers to at least one person and to fewer than d, adds a Carol-pointer to her friend Bob, who has a Carol-pointer.

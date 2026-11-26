@@ -1,2 +1,2 @@
-Ads extends Community Network and Overlay: holds
-Ads extends it (Community Network and Overlay): holds
+Ads extends Overlay and Backed Community Bank: holds
+Ads extends it (Overlay and Backed Community Bank): holds

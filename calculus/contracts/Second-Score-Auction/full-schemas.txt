@@ -24,8 +24,8 @@ Auction:0 - | Environment: x is a rider; x is a driver; the bidding period of x'
 Auction:1 ■ | Call.
 Auction:1 ■ Call: open_call(Alice,Trip) <- rider(Alice), ~ride(Alice), ~open_call(Alice,_) guarded by Alice.
 Auction:1 ■ | Alice calls for bids from the persons Alice points to, stating the pickup point, the destination, the bidding period and the terms.
-Auction:1 ■ Send call: sent_call(Alice,Bob,Trip), call(Bob,Alice,Trip), direct_call(Bob,Alice,Trip) <- open_call(Alice,Trip), points_to(Alice,Bob), ~call(Bob,Alice,Trip).
-Auction:1 ■ Forward call: forwarded(Bob,Alice,Carol,Trip), call(Carol,Alice,Trip) <- direct_call(Bob,Alice,Trip), points_to(Bob,Carol), ~forwarded(Bob,Alice,Carol,Trip).
+Auction:1 ■ Send call: sent_call(Alice,Bob,Trip), call(Bob,Alice,Trip), direct_call(Bob,Alice,Trip) <- open_call(Alice,Trip), points_to(Alice,Bob), ~call(Bob,Alice,Trip), ~sent_call(Alice,Bob,Trip).
+Auction:1 ■ Forward call: forwarded(Bob,Alice,Carol,Trip), call(Carol,Alice,Trip) <- direct_call(Bob,Alice,Trip), points_to(Bob,Carol), ~forwarded(Bob,Alice,Carol,Trip), ~call(Carol,Alice,Trip).
 Auction:2 ■ Bid: bid(Bob,Alice,Trip) <- driver(Bob), call(Bob,Alice,Trip), ~period_ended(Alice,Trip) guarded by Bob.
 Auction:2 ■ | Alice may not open a bid before then.
 Auction:3 ■ | Award.
@@ -33,10 +33,14 @@ Auction:3+Second-Score Auction:2 ■ Award: ~open_call(Alice,Trip), ride(Alice),
 Auction:3 ■ | The ride is awarded at the fare the terms set, and Alice's fare and the deposit the terms set for Bob are then locked.
 Auction:3+Second-Score Auction:2 ■ Close: ~open_call(Alice,Trip) <- selects_none(Alice,Trip), open_call(Alice,Trip), none_admissible(Alice,Trip) guarded by Alice.
 Auction:4 ■ Pickup: pickup(Alice,Bob), pickup(Bob,Alice) <- ride(Alice), ride(Bob), rides_with(Alice,Bob), rides_with(Bob,Alice), at_pickup(Alice,Bob), at_pickup(Bob,Alice), ~pickup(Alice,Bob), ~pickup(Bob,Alice).
-Auction:5+Second-Score Auction:3 ■ Arrive: ~fare_locked(Alice), ~deposit_locked(Bob), ~ride(Alice), ~ride(Bob), ~rides_with(Alice,Bob), ~rides_with(Bob,Alice), ~pickup(Alice,_), ~pickup(Bob,_), released(Alice,Bob), released(Bob,Alice) <- at_destination(Alice,Bob), at_destination(Bob,Alice), fare_locked(Alice), deposit_locked(Bob), ride(Alice), ride(Bob), rides_with(Alice,Bob), rides_with(Bob,Alice), refund(Alice,Bob).
+Auction:5 ■ | Arrive.
+Auction:5+Second-Score Auction:3 ■ Arrive: ~fare_locked(Alice), ~deposit_locked(Bob), ~ride(Alice), ~ride(Bob), ~rides_with(Alice,Bob), ~rides_with(Bob,Alice), ~pickup(Alice,_), ~pickup(Bob,_), released(Alice,Bob), released(Bob,Alice) <- at_destination(Alice,Bob), at_destination(Bob,Alice), fare_locked(Alice), deposit_locked(Bob), ride(Alice), ride(Bob), rides_with(Alice,Bob), rides_with(Bob,Alice), refund(Alice,Bob) guarded by Alice.
+Auction:5 ■ | The fare and the deposit are then released to Alice and to Bob as the terms say.
+Auction:5+Second-Score Auction:3 ■ Driver arrive: ~fare_locked(Alice), ~deposit_locked(Bob), ~ride(Alice), ~ride(Bob), ~rides_with(Alice,Bob), ~rides_with(Bob,Alice), ~pickup(Alice,_), ~pickup(Bob,_), released(Alice,Bob), released(Bob,Alice) <- at_destination(Alice,Bob), at_destination(Bob,Alice), fare_locked(Alice), deposit_locked(Bob), ride(Alice), ride(Bob), rides_with(Alice,Bob), rides_with(Bob,Alice), refund(Alice,Bob) guarded by Bob.
 Auction:6+Second-Score Auction:4 ■ Cancel: ~fare_locked(Alice), ~deposit_locked(Bob), ~ride(Alice), ~ride(Bob), ~rides_with(Alice,Bob), ~rides_with(Bob,Alice), ~pickup(Alice,_), ~pickup(Bob,_), released(Alice,Bob), released(Bob,Alice) <- no_pickup(Alice), fare_locked(Alice), deposit_locked(Bob), ride(Alice), ride(Bob), rides_with(Alice,Bob), rides_with(Bob,Alice), cancel_release(Alice,Bob) guarded by Alice.
 Auction:6 ■ | The fare and the deposit are then released to Alice and to Bob as the terms say.
 Auction:7 ■ Withdraw: ~open_call(Alice,Trip) <- ~period_ended(Alice,Trip), open_call(Alice,Trip) guarded by Alice.
 Second-Score Auction:0 - | *Second-score terms* state a maximum pickup delay T ≥ 0, a willingness to pay W(τ) = A − λτ with A, λ ≥ 0, and a deposit D ≥ 0. The award is at time t₀. A bid (p, τ) is the fare p ≥ 0 the bidder asks and the pickup delay τ ≥ 0 the bidder promises. Its *score* is W(τ) − p, and it is *admissible* iff τ ≤ T and its score is at least 0.
 Second-Score Auction:0 - | Environment: y is the bidder on x's call c whose admissible bid has the highest score, ties broken as the terms say; no bid on x's call c is admissible; the terms of x's call c set the deposit D; the terms of x's call c set the fare P = W(τ) − s₂, where τ is the pickup delay of y's bid and s₂ is the highest score among the other admissible bids, or 0 if there is none; the fare and the deposit are released to x if x was at the pickup point from t₀ to t₀ + T, and otherwise the fare to x and the deposit to y; the refund min{P, λδ} is released to x, and the rest of the fare and the deposit to y, with δ = max{0, t_pickup − t₀ − τ}.
 Second-Score Auction:2 ■ | Award.
+Second-Score Auction:3 ■ | Arrive.

@@ -1,0 +1,36 @@
+Chess
+1. ○ Establish.  Alice may establish an identity once.
+2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
+3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+5. ■ Unfriend.  Alice may end her friendship with Bob.
+6. ■ Start.  Alice and Bob may jointly start a game of chess with a time limit, provided they are friends and neither has started a game of that name; Alice then plays white and Bob black, from the first position.
+7. ■ Start as black.  Alice and Bob may jointly start a game of chess with a time limit, provided they are friends and neither has started a game of that name; Alice then plays black and Bob white, from the first position.
+8. ■ Move.  Alice may move in a game against Bob, provided it is her turn, the move is legal by the rules of chess and the position after it does not end the game drawn; the game is then at the position after the move, from the date of the move.
+9. ■ Drawing move.  Alice may move in a game against Bob, provided it is her turn, the move is legal by the rules of chess and the position after it ends the game drawn by the rules of chess, by stalemate, a dead position, the position the fifth time or the seventy-five-move rule; the game is then drawn.
+10. ■ Win.  Alice may claim a game against Bob, provided Bob is to move and is checkmated; Alice has then won the game.
+11. ■ Time.  Alice may claim a game against Bob on time, provided Bob is to move and the time limit has passed since the last move; Alice has then won the game.
+12. ■ Resign.  Alice may resign a game against Bob; Bob has then won the game.
+13. ■ Draw.  Alice and Bob may jointly agree a draw in a game, provided each has made a move in it.
+14. ■ Claim draw.  Alice may claim a draw in a game against Bob, provided it is her turn and the position may be claimed drawn by the rules of chess, by the position the third time or the fifty-move rule; the game is then drawn.
+Pragmas
+Establish: Alice [Establish]
+Acquaint: Alice [Acquaint] <bob>
+  Bob: Alice asks for your consent to acquaint.
+Introduce: Alice [Introduce]
+  Bob: Alice asks for your consent to introduce.
+Befriend: Alice [Befriend]
+  Bob: Alice asks for your consent to befriend.
+Unfriend: Alice [Unfriend]
+Start: Alice [Start] <game> <board> <limit>
+  Bob: Alice asks for your consent to start.
+Start as black: Alice [Start as black] <game> <board> <limit>
+  Bob: Alice asks for your consent to start as black.
+Move: Alice [Move] <next> <move>
+Drawing move: Alice [Drawing move] <move> <next>
+Win: Alice [Win]
+Time: Alice [Time]
+Resign: Alice [Resign]
+Draw: Alice [Draw]
+  Bob: Alice asks for your consent to draw.
+Claim draw: Alice [Claim draw]

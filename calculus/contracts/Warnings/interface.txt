@@ -78,13 +78,13 @@ Join: Bob [Join] <orga> <decider>
   Codecider: Bob asks for your consent to join.
 Leave: Bob [Leave]
 Officer leave: Bob [Officer leave]
-Expel: Decider [Expel] <bob>
+Expel: Decider [Expel] <bob> <enough>
   Codecider: Decider asks for your consent to expel.
-Officer expel: Decider [Officer expel] <bob>
+Officer expel: Decider [Officer expel] <bob> <enough>
   Codecider: Decider asks for your consent to officer expel.
 Amend: Alice [Amend]
 Warn: Alice [Warn] <bob> <case>
 Answer: Bob [Answer] <orga> <alice> <case> <text>
 Withdraw: Alice [Withdraw] <orga>
-Annul: Decider [Annul] <alice> <bob> <case>
+Annul: Decider [Annul] <alice> <bob> <case> <day>
   Codecider: Decider asks for your consent to annul.

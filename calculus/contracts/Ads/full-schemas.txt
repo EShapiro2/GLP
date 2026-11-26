@@ -1,7 +1,7 @@
 Ads (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Ads:0 - | Alice, Bob and Carol are persons, Orga a community network, Will and Gov organisations, Motion an act of Orga, Role a role, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum, Total, Limit, S, Held, Pot, Back, Rest, Part and Fee numbers, Type and Other types, Day and Term maturity dates, Today a date, Dollar and Mark fiat currencies, Deal an agreement, Ad an ad.
+Ads:0 - | Alice, Bob and Carol are persons, Orga a community, Will and Gov organisations, Motion an act of Orga, Role a role, Dave a party, Cond a condition Alice, Bob and Carol agree, Sum, Total and Limit numbers, Type and Other types, Day and Term maturity dates, Today a date, Dollar a fiat currency, Ad an ad.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
@@ -13,9 +13,12 @@ Friendship:1 ○ | Alice and Bob will become friends only if they trust each oth
 Friendship:2+Guardians:3 ■ Person unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice) <- person(Alice), person(Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
 Friendship:3 ○ | Loss of Trust.
 Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Overlay:1 ■ Point friend: points_to(Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), ~points_to(Alice,Bob) guarded by Alice.
+Overlay:2 ■ Point transitive: points_to(Alice,Carol) <- knows(Alice,Carol), points_to(Alice,Bob), points_to(Bob,Carol), ~points_to(Alice,Carol) guarded by Alice.
+Overlay:3 ■ Unpoint: ~points_to(Alice,Bob) <- points_to(Alice,Bob) guarded by Alice.
 Guardians:0 - | Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, which the creator of an organisation decides, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
 Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
-Guardians:1+Organisation:1+Community Network:3 ■ Found: identity(Orga), organisation(Orga), has_officer(Orga,Alice), creator(Alice,Orga), officer(Alice,Orga), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice), first_officer(Orga,Alice), role(Alice,Orga,Role), has_role(Orga,Alice,Role), participant(Alice,Orga), has_participant(Orga,Alice), founder(Alice,Orga), community(Orga,Gov) <- person(Alice), ~identity(Orga), participant(Alice,Gov) guarded by Alice, Orga must Orga.
+Guardians:1+Organisation:1 ■ Found: identity(Orga), organisation(Orga), has_officer(Orga,Alice), creator(Alice,Orga), officer(Alice,Orga), knows(Alice,Orga), knows(Orga,Alice), friend(Alice,Orga), friend(Orga,Alice), first_officer(Orga,Alice), role(Alice,Orga,Role), has_role(Orga,Alice,Role), participant(Alice,Orga), has_participant(Orga,Alice), founder(Alice,Orga) <- person(Alice), ~identity(Orga) guarded by Alice, Orga must Orga.
 Guardians:1 ■ | Alice chooses Orga's key pair.
 Guardians:2 ■ | Guardian decisions.
 Guardians:2+Organisation:4+Backed Community Bank:1 ○ Appoint: officer(Bob,Orga), has_officer(Orga,Bob), knows(Bob,Orga), knows(Orga,Bob), friend(Bob,Orga), friend(Orga,Bob), role(Bob,Orga,Role), has_role(Orga,Bob,Role) <- organisation(Orga), ~retired(Orga), person(Bob), has_officer(Orga,Alice), friend(Bob,Alice), ~officer(Bob,Orga), ~has_officer(Orga,Bob), participant(Bob,Orga), all_stay_backed(Orga,Orga) guarded by deciders(Orga), Bob.
@@ -43,7 +46,7 @@ Organisation:2 ■ Propose: proposed(Orga,Motion) <- officer(Bob,Orga), proposer
 Organisation:2 ■ Vote: vote(Orga,Bob,Motion) <- participant(Bob,Orga), voter(Bob,Orga,Motion), organisation(Orga), proposed(Orga,Motion), ~vote(Orga,Bob,Motion) guarded by Bob.
 Organisation:2 ■ Act: taken(Orga,Motion) <- officer(Alice,Orga), proposed(Orga,Motion), taker(Alice,Orga,Motion), decided(Orga,Motion), ~taken(Orga,Motion) guarded by Alice.
 Organisation:3 ■ | Participation.
-Organisation:3+Community Network:3 ■ Join: participant(Bob,Orga), has_participant(Orga,Bob) <- ~participant(Bob,Orga), community(Orga,Gov), participant(Bob,Gov) guarded by Bob, admitters(Orga).
+Organisation:3 ■ Join: participant(Bob,Orga), has_participant(Orga,Bob) <- ~participant(Bob,Orga) guarded by Bob, admitters(Orga).
 Organisation:3+Backed Community Bank:1 ○ Leave: ~participant(Bob,Orga), ~has_participant(Orga,Bob) <- ~officer(Bob,Orga), participant(Bob,Orga), has_participant(Orga,Bob), all_stay_backed(Bob,Orga) guarded by Bob.
 Organisation:3+Backed Community Bank:1 ○ Officer leave: ~participant(Bob,Orga), ~has_participant(Orga,Bob), ~officer(Bob,Orga), ~has_officer(Orga,Bob), ~role(Bob,Orga,_), ~has_role(Orga,Bob,_) <- participant(Bob,Orga), has_participant(Orga,Bob), officer(Bob,Orga), has_officer(Orga,Bob), all_stay_backed(Bob,Orga) guarded by Bob.
 Organisation:3+Backed Community Bank:1 ○ Expel: ~participant(Bob,Orga), ~has_participant(Orga,Bob) <- ~officer(Bob,Orga), participant(Bob,Orga), has_participant(Orga,Bob), all_stay_backed(Orga,Orga) guarded by expellers(Orga).
@@ -202,37 +205,14 @@ Backed Community Bank:3 ◆ Record: paid_in(Orga,Alice) <- organisation(Orga), r
 Backed Community Bank:3 ◆ | Alice, a treasurer, may pay Dollars into the account, and the treasurers may then jointly record them as paid in by Alice.
 Backed Community Bank:4 ○ | Fiat redemption.
 Backed Community Bank:4 ○ | Community Bank:2, from the account while it holds Dollars, and from a treasurer if it holds none.
-Community Network:0 - | A *community network* is created by a backed community, and uses its community coins. Its bylaws name the role *arbiter*. A *provider* is a member of the community whose *stake*, the community coins they hold, is at least *S*, a number of community coins, and a *customer* is a member of the community who accepts community coins. A *dispute* is over community coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
-Community Network:0 - | In clause 2 Alice is the customer and Bob the provider.
-Community Network:0 - | Environment: the terms of k set the arbiter's fee at n, for w.
-Community Network:0 - | Parameters: x has n f-denominated c-coins locked in z on k as the customer of y; y has n f-denominated c-coins locked in z on k as the provider of x.
-Community Network:1 ■ Set stake: ~stake(Orga,_), stake(Orga,S) <- organisation(Orga) guarded by deciders(Orga).
-Community Network:2 ■ | Arbitration.
-Community Network:2 ■ Raise: dispute(Carol,Alice,Bob,Orga,Deal) <- customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total), role(Carol,Orga,Arbiter), has_role(Orga,Carol,Arbiter), ~dispute(Carol,Alice,Bob,Orga,Deal) guarded by Alice.
-Community Network:2 ■ Provider raise: dispute(Carol,Alice,Bob,Orga,Deal) <- customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total), role(Carol,Orga,Arbiter), has_role(Orga,Carol,Arbiter), ~dispute(Carol,Alice,Bob,Orga,Deal) guarded by Bob.
-Community Network:2 ■ Arbitrate: ~dispute(Carol,Alice,Bob,Orga,Deal), ~customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), ~provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total), note(Alice,Gov,coin,Dollar,*Back), note(Bob,Gov,coin,Dollar,*Rest), note(Carol,Gov,coin,Dollar,*Fee) <- arbiter_fee(Carol,Deal,Fee), sum(Pot,Sum,Total), sum(Part,Back,Rest), sum(Pot,Part,Fee), dispute(Carol,Alice,Bob,Orga,Deal), customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total) guarded by Carol.
-Community Network:2 ■ Arbitrate for the customer: ~dispute(Carol,Alice,Bob,Orga,Deal), ~customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), ~provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total), note(Alice,Gov,coin,Dollar,*Back), note(Carol,Gov,coin,Dollar,*Fee) <- arbiter_fee(Carol,Deal,Fee), sum(Pot,Sum,Total), sum(Pot,Back,Fee), dispute(Carol,Alice,Bob,Orga,Deal), customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total) guarded by Carol.
-Community Network:2 ■ Arbitrate for the provider: ~dispute(Carol,Alice,Bob,Orga,Deal), ~customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), ~provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total), note(Bob,Gov,coin,Dollar,*Rest), note(Carol,Gov,coin,Dollar,*Fee) <- arbiter_fee(Carol,Deal,Fee), sum(Pot,Sum,Total), sum(Pot,Rest,Fee), dispute(Carol,Alice,Bob,Orga,Deal), customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total) guarded by Carol.
-Community Network:2 ■ Arbitrate without fee: ~dispute(Carol,Alice,Bob,Orga,Deal), ~customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), ~provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total), note(Alice,Gov,coin,Dollar,*Back), note(Bob,Gov,coin,Dollar,*Rest) <- arbiter_fee(Carol,Deal,Fee), lt(Fee,1), sum(Pot,Sum,Total), sum(Pot,Back,Rest), dispute(Carol,Alice,Bob,Orga,Deal), customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total) guarded by Carol.
-Community Network:2 ■ Arbitrate for the customer without fee: ~dispute(Carol,Alice,Bob,Orga,Deal), ~customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), ~provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total), note(Alice,Gov,coin,Dollar,*Sum), note(Alice,Gov,coin,Dollar,*Total) <- arbiter_fee(Carol,Deal,Fee), lt(Fee,1), dispute(Carol,Alice,Bob,Orga,Deal), customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total) guarded by Carol.
-Community Network:2 ■ Arbitrate for the provider without fee: ~dispute(Carol,Alice,Bob,Orga,Deal), ~customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), ~provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total), note(Bob,Gov,coin,Dollar,*Sum), note(Bob,Gov,coin,Dollar,*Total) <- arbiter_fee(Carol,Deal,Fee), lt(Fee,1), dispute(Carol,Alice,Bob,Orga,Deal), customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total) guarded by Carol.
-Community Network:2 ■ Arbitrate for the fee: ~dispute(Carol,Alice,Bob,Orga,Deal), ~customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), ~provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total), note(Carol,Gov,coin,Dollar,*Sum), note(Carol,Gov,coin,Dollar,*Total) <- arbiter_fee(Carol,Deal,Pot), sum(Pot,Sum,Total), dispute(Carol,Alice,Bob,Orga,Deal), customer_lock(Alice,Bob,Orga,Deal,Gov,Dollar,Sum), provider_lock(Bob,Alice,Orga,Deal,Gov,Dollar,Total) guarded by Carol.
-Community Network:2 ■ | The coins are released less the fee the terms set, which is released to Carol.
-Community Network:3 ■ | Members.
-Community Network:4 ○ | Loss of membership.
-Community Network:4 ○ | Those who decide for Orga will end Bob's participation in Orga if he ceases to be a member of the community.
-Overlay:1 ■ Point friend: points_to(Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), ~points_to(Alice,Bob) guarded by Alice.
-Overlay:2 ■ Point transitive: points_to(Alice,Carol) <- knows(Alice,Carol), points_to(Alice,Bob), points_to(Bob,Carol), ~points_to(Alice,Carol) guarded by Alice.
-Overlay:3 ■ Unpoint: ~points_to(Alice,Bob) <- points_to(Alice,Bob) guarded by Alice.
-Ads:0 - | An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the community coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
-Ads:0 - | In clause 1 Carol is a member.
+Ads:0 - | An *advertiser* is a member of the community who posts ads. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the community coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
 Ads:0 - | Environment: d is for the profile of x.
 Ads:1 ■ | Posting.
-Ads:1 ■ Post: posted(Bob,Ad,Orga), budget_locked(Bob,Ad,Orga) <- knows(Bob,Orga), community(Orga,Gov), participant(Bob,Gov), stake(Orga,S), note(Bob,Gov,coin,Dollar,*Held), ge(Held,S), ~posted(Bob,Ad,Orga) guarded by Bob.
-Ads:1 ■ | Bob posts the ad to the members he points to, and its budget is then locked on top of his stake.
-Ads:1 ■ Send ad: received(Alice,Ad,Bob,Orga) <- posted(Bob,Ad,Orga), points_to(Bob,Alice), knows(Alice,Orga), community(Orga,Gov), participant(Alice,Gov), accepts(Alice,Gov,Dollar), ~received(Alice,Ad,Bob,Orga).
-Ads:1 ■ Pass: received(Carol,Ad,Bob,Orga) <- knows(Alice,Orga), community(Orga,Gov), participant(Alice,Gov), accepts(Alice,Gov,Dollar), received(Alice,Ad,Bob,Orga), points_to(Alice,Carol), participant(Carol,Gov), accepts(Carol,Gov,Mark), ~received(Carol,Ad,Bob,Orga) guarded by Alice.
-Ads:2 ■ Show: ad_shown(Alice,Ad,Bob,Orga) <- knows(Alice,Orga), community(Orga,Gov), participant(Alice,Gov), accepts(Alice,Gov,Dollar), received(Alice,Ad,Bob,Orga), for_profile(Alice,Ad), ~ad_shown(Alice,Ad,Bob,Orga).
+Ads:1 ■ Post: posted(Bob,Ad,Orga), budget_locked(Bob,Ad,Orga) <- participant(Bob,Orga), ~posted(Bob,Ad,Orga) guarded by Bob.
+Ads:1 ■ | Bob posts the ad to the members he points to, and its budget, which he holds, is then locked.
+Ads:1 ■ Send ad: received(Alice,Ad,Bob,Orga), sent(Bob,Ad,Alice,Orga) <- posted(Bob,Ad,Orga), points_to(Bob,Alice), participant(Alice,Orga), ~received(Alice,Ad,Bob,Orga), ~sent(Bob,Ad,Alice,Orga).
+Ads:1 ■ Pass: received(Carol,Ad,Bob,Orga) <- participant(Alice,Orga), received(Alice,Ad,Bob,Orga), points_to(Alice,Carol), participant(Carol,Orga), ~received(Carol,Ad,Bob,Orga) guarded by Alice.
+Ads:2 ■ Show: ad_shown(Alice,Ad,Bob,Orga) <- participant(Alice,Orga), received(Alice,Ad,Bob,Orga), for_profile(Alice,Ad), ~ad_shown(Alice,Ad,Bob,Orga).
 Ads:3 ◆ | Viewing and clicking.
 Ads:3 ◆ View: viewed(Alice,Ad,Bob) <- ad_shown(Alice,Ad,Bob,Orga) guarded by Alice.
 Ads:3 ◆ Click: clicked(Alice,Ad,Bob) <- ad_shown(Alice,Ad,Bob,Orga) guarded by Alice.

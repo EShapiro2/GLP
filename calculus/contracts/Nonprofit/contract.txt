@@ -1,5 +1,5 @@
 Nonprofit
-Nonprofit weakens Corporation.
+Nonprofit inherits from Corporation.
 A *nonprofit* is a corporation that pays none of its coins, notes or bonds to its officers.
 Alice and Bob are parties, Orga a nonprofit.
 1. ■ Nondistribution. Pay, Pay issuer: Notes:3 and Coins:1, only if Bob is not an officer of Alice.

@@ -99,6 +99,7 @@ def build(out, hold=()):
         st = [l for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8') if l.split()[:1] == [NM.file_of(n)]]
         param = any('a parametric contract' in l for l in st)
         unc = any('platform not compiled' in l for l in st)      # its owner's pragmas fault, reported in STATUS.txt and to the owner
+        unc = unc or any(l.split()[1:3] == ['not', 'certified'] for l in st)      # no certificate: published with its verdict, which the website shows, and no platform
         for f in ('verdict.txt',) if param or unc else ('verdict.txt', 'platform.glp'):      # a parametric contract has no platform until instantiated
             if not os.path.exists(os.path.join(d, f)): missing.append('%s: %s' % (n, f))
     for f, g in (('README-PUBLIC.md', 'README.md'), ('NAMES.txt', 'NAMES.txt'), ('OWNERS.md', 'OWNERS.md'), ('LAYERS.txt', 'LAYERS.txt'), ('MIGRATION.md', 'MIGRATION.md'), ('cascade/STATUS.txt', 'STATUS.txt'), ('glp/VERDICTS.txt', 'VERDICTS.txt')):

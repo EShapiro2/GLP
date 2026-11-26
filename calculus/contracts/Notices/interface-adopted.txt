@@ -1,0 +1,3 @@
+Interface pragmas
+Notice: Alice [Notice] <cast>
+Notice forward: Alice [Notice forward] <bob> <orga>

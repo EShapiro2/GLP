@@ -1,5 +1,5 @@
 DAO
-DAO extends Knowledge.
+DAO inherits from Knowledge.
 Alice and Bob are persons.
 1. ■ Found: Alice may found a DAO under a new name of hers; Alice is then its steward and first member.
 2. ■ Join: Alice, the steward of a DAO, may admit Bob, whom she knows and who is not yet a member, with the consent of Bob.

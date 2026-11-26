@@ -1,0 +1,46 @@
+Care (expanded schemas)
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Care:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Visit a visit.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1 ○ Befriend: friend(Alice,Bob), friend(Bob,Alice) <- person(Alice), person(Bob), knows(Alice,Bob), knows(Bob,Alice), ~friend(Alice,Bob), ~friend(Bob,Alice) guarded by Alice, Bob.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2+Groups:3 ■ Unfriend: ~friend(Alice,Bob), ~friend(Bob,Alice), ~member(Alice,_,Bob), ~member(Bob,_,Alice), ~listed(Alice,Bob,_), ~listed(Bob,Alice,_) <- person(Alice), person(Bob), friend(Alice,Bob), friend(Bob,Alice) guarded by Alice.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Groups:0 - | A *message* is what a person sends.
+Groups:0 - | Bob and Carol are possibly Alice or one person.
+Groups:1 ■ Message: message(Bob,Alice,Text) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice possibly Alice=Bob.
+Groups:2 ■ | Group.
+Groups:2 ■ Create: leader(Alice,Grupo), member(Alice,Grupo,Alice), listed(Alice,Alice,Grupo) <- ~leader(Alice,Grupo) guarded by Alice.
+Groups:2 ■ | Alice is then its leader and first member.
+Groups:2 ■ Close: ~leader(Alice,Grupo), ~listed(Alice,_,Grupo), ~member(_,Grupo,Alice) <- leader(Alice,Grupo) guarded by Alice.
+Groups:3 ■ | Joining and Leaving.
+Groups:3 ■ Join: member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), friend(Alice,Bob), friend(Bob,Alice), ~member(Bob,Grupo,_) guarded by Alice, Bob possibly Alice=Bob.
+Groups:3 ■ Remove: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- leader(Alice,Grupo), member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Alice possibly Alice=Bob.
+Groups:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member(Bob,Grupo,Alice), listed(Alice,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+Groups:4 ■ | Group messaging.
+Groups:4 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+Groups:4 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo) guarded by Alice.
+Groups:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol), ~group_message(Carol,Bob,Text,Grupo,Alice) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+Groups:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.
+Care:0 - | A *circle* is a group for the care of a person, its *patient*. A *visit* is a time at which the patient needs a person with them.
+Care:0 - | Bob and Carol are possibly Alice.
+Care:1 ◆ Open: leader(Alice,Grupo), member(Alice,Grupo,Alice), listed(Alice,Alice,Grupo), circle(Alice,Grupo), circle_for(Alice,Grupo,Carol) <- knows(Alice,Carol), ~leader(Alice,Grupo) guarded by Alice possibly Alice=Carol.
+Care:2 ■ Ask: visit_posted(Alice,Visit,Grupo) <- member(Bob,Grupo,Alice), circle(Alice,Grupo), ~visit_posted(Alice,Visit,Grupo) guarded by Bob possibly Alice=Bob.
+Care:3 ○ Take: ~visit_posted(Alice,Visit,Grupo), visit_taken(Alice,Visit,Bob,Grupo) <- member(Bob,Grupo,Alice), visit_posted(Alice,Visit,Grupo) guarded by Bob possibly Alice=Bob.
+Care:3 ○ | Bob will make the visit, or release it in time for another member to take it.
+Care:4 ■ Release: ~visit_taken(Alice,Visit,Bob,Grupo), visit_posted(Alice,Visit,Grupo) <- visit_taken(Alice,Visit,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+Care:4 ■ Release for: ~visit_taken(Alice,Visit,Bob,Grupo), visit_posted(Alice,Visit,Grupo) <- leader(Alice,Grupo), visit_taken(Alice,Visit,Bob,Grupo) guarded by Alice possibly Alice=Bob.
+Care:4 ■ Release by the patient: ~visit_taken(Alice,Visit,Bob,Grupo), visit_posted(Alice,Visit,Grupo) <- circle_for(Alice,Grupo,Carol), visit_taken(Alice,Visit,Bob,Grupo) guarded by Carol possibly Alice=Bob, Alice=Carol.
+Care:5 ◆ | Report.
+Care:5 ◆ Made: ~visit_taken(Alice,Visit,Bob,Grupo), visit_made(Alice,Visit,Bob,Grupo) <- visit_taken(Alice,Visit,Bob,Grupo) guarded by Bob possibly Alice=Bob.
+Care:5 ◆ Missed: ~visit_taken(Alice,Visit,Bob,Grupo), visit_missed(Alice,Visit,Bob,Grupo) <- leader(Alice,Grupo), visit_taken(Alice,Visit,Bob,Grupo) guarded by Alice possibly Alice=Bob.
+Care:5 ◆ Missed by the patient: ~visit_taken(Alice,Visit,Bob,Grupo), visit_missed(Alice,Visit,Bob,Grupo) <- circle_for(Alice,Grupo,Carol), visit_taken(Alice,Visit,Bob,Grupo) guarded by Carol possibly Alice=Bob, Alice=Carol.
+Care:5 ◆ Contest: visit_missed(Alice,Visit,Bob,Grupo) <- leader(Alice,Grupo), visit_made(Alice,Visit,Bob,Grupo), ~visit_missed(Alice,Visit,Bob,Grupo) guarded by Alice possibly Alice=Bob.
+Care:6 ■ End: ~leader(Alice,Grupo), ~listed(Alice,_,Grupo), ~member(_,Grupo,Alice), ~circle(Alice,Grupo), ~circle_for(Alice,Grupo,Carol) <- circle_for(Alice,Grupo,Carol), leader(Alice,Grupo), circle(Alice,Grupo) guarded by Carol possibly Alice=Carol.

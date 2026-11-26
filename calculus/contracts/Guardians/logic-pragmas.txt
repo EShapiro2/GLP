@@ -18,4 +18,5 @@ After y ends y's guardianship of z: no longer y is a guardian of z and no longer
 After g ends y's guardianship of z: no longer y is a guardian of z and no longer z has y as a guardian.
 After y ends y's friendship with y's ward z: y and z are no longer friends, no longer y is a guardian of z and no longer z has y as a guardian.
 After g ends the friendship of x and y: x and y are no longer friends.
+After x and y come to know each other: x and y know each other.
 After g retires z, which requires z is not retired: z is retired, z has no guardians and z has no friends.

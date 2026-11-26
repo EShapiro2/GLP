@@ -1,5 +1,5 @@
 Partnership
-Partnership weakens Corporation.
+Partnership inherits from Corporation.
 A *partnership* is a corporation whose bylaws name one role, *partner*, held by every officer; a person joins only with the consent of every partner.
 Bob is a person, Orga a partnership.
 1. ■ Join: Organisation:3 Join, with the consent of the partners of Orga.

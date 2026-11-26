@@ -16,5 +16,5 @@ After x adds y to g, which requires y is not a member of g: y is a member of the
 After x ends y's membership in g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
 After y ends y's membership in x's g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
 After x sends t to the group g of y, which requires y does not have the post t of x in g: y has the post t of x in g.
-After y delivers t of x in g to z, which requires y has not delivered the message t of x in g to z: y has delivered the message t of x in g to z and z has the message t of x in g delivered by y.
+After y delivers t of x in g to z, which requires y has not delivered the message t of x in g to z and z does not have the message t of x in g delivered by y: y has delivered the message t of x in g to z and z has the message t of x in g delivered by y.
 After y delivers t of x in g to the leader y, which requires y has not delivered the message t of x in g to y: y has delivered the message t of x in g to y and y has the message t of x in g delivered by y.
