@@ -373,13 +373,13 @@ Widget _approvalWorded(BuildContext context, OpenConstruct construct,
   final pending = pendingAt(args[0]) != null || pendingAt(args[1]) != null;
   final theme = Theme.of(context);
   final words = args[1] is GList ? (args[1] as GList).items : const <GTerm>[];
-  // After the sentence, each value of the binding it does not name, by the name of its field, named(F, P) a person and valued(F, K) a number, one to a line (vGLP 110caf4, Section 5.4, "The contract's words": "and shows after it each value of the binding the question does not name, by the name of its field").
+  // After the sentence, each value of the binding it does not name, by the name of its field, named(F, P) a person, valued(F, K) a number and shown(F, v(T)) a value over the constants, one to a line (vGLP 110caf4, Section 5.4, "The contract's words": "and shows after it each value of the binding the question does not name, by the name of its field").
   final said = [
     for (final w in words)
       switch (ctorArgs(w)) {
         ('text', [final t]) => displayText(t),
         ('person', [final q]) => personName(q),
-        ('named', [_, _]) || ('valued', [_, _]) || ('held', [_, _]) => '',
+        ('named', [_, _]) || ('valued', [_, _]) || ('shown', [_, _]) || ('held', [_, _]) => '',
         _ => displayText(w),
       }
   ].join();
@@ -387,7 +387,12 @@ Widget _approvalWorded(BuildContext context, OpenConstruct construct,
     for (final w in words)
       switch (ctorArgs(w)) {
         ('named', [final f, final q]) => '${displayText(f)}: ${personName(q)}',
-        ('valued', [final f, final k]) => '${displayText(f)}: ${displayText(k)}',
+        ('valued', [final f, final k]) => '${displayText(f)}: ${valueText(k)}',
+        // shown(F, v(T)): the value T of a field over the constants, F then the value, drawn as valued(F, K) is (vGLP #35, Code_inbox.md, 2026-11-26 01:20 UTC, (2); vGLP 5.4, "The contract's words").
+        ('shown', [final f, final v]) => switch (ctorArgs(v)) {
+            ('v', [final t]) => '${displayText(f)}: ${valueText(t)}',
+            _ => '${displayText(f)}: ${valueText(v)}',
+          },
         _ => null,
       }
   ].nonNulls.toList();
@@ -1480,7 +1485,7 @@ class _SocialTabState extends State<SocialTab> {
       return '${SpeechAct.of(g.$2)?.text ?? displayText(g.$2)}, '
           '${personName(g.$1)}';
     }
-    return x is GAtom ? personName(x) : displayText(x);
+    return x is GAtom ? personName(x) : valueText(x);
   }
 
   /// An atom as the program writes it, its persons by name.
