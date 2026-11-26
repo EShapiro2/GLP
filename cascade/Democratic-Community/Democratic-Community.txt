@@ -1,0 +1,17 @@
+% Democratic Community --- the contract, the one copy, its owner's (claude.md, "Sessions").
+% Owner: GO (Udi, 2026-11-20, to GO #13).
+% Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
+% Extends: Community and Constitution.
+% Last changed: 2026-11-20, by GO #14 (Udi, 2026-11-20, to GO #13: a democratic community, a child of Community and Constitution).
+% Schemas: Democratic-Community.glp beside this file.
+Democratic Community
+Democratic Community inherits from Community Bank and Constitution.
+A *democratic community* is a community that is a constitutional democratic community.
+Alice and Bob are persons, Orga a democratic community.
+Logic pragmas
+Democratic Community unites an augmentation of Community Bank and Constitution.
+A *democratic community* is a community that is a constitutional democratic community.
+Alice and Bob are persons, Orga a democratic community.
+Logic pragmas.
+Interface pragmas
+Look: 🏘️, governance

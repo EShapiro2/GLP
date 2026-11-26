@@ -1,0 +1,1 @@
+not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable), no_signature_atom(send_listing), no_signature_atom(send_job), no_signature_atom(send_listing_2)])

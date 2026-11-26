@@ -1,0 +1,477 @@
+%% Chess-functions.glp --- the functions of Chess (GCE, programs/gce/chess/Chess.txt), as typed GLP procedures
+%% that the app compiler's platform calls (vGLP Section 5.4; Grassroots-Audit #157, Finding 1; GLP #120, #174).
+%% One procedure for each function of the contract's Logic pragmas, its places in order and its value last:
+%%   b is the first position               first(B)
+%%   v is the legality of m on b           legal(M?, B?, V)     V is 1 or 0
+%%   c is the position after m on b        after(M?, B?, C)
+%%   s is the side to move of b            side(B?, S)          S is 1 (white) or 2 (black)
+%%   v is the mate of b                    mate(B?, V)          V is 1 or 0
+%%   v is the draw of b                    draw(B?, V)          V is 1 or 0, a draw the player to move may claim
+%%   v is the automatic draw of b          autodraw(B?, V)      V is 1 or 0, a draw that ends the game
+%%   n is the moves made on b              plies(B?, N)
+%% A position and a move are constants, the text term_to_string prints of the position's term and the
+%% move's term below; each function reads its arguments by string_to_term and prints its value by
+%% term_to_string (Udi, 2026-11-25, approving string_to_term; vGLP #34, 22:38 UTC), so the request carries
+%% constants the phone shows and signs.  The procedures over the terms are the same names with _pos.
+%% The rules are FIDE's Laws of Chess.  Integers only, so every phone computes the same.
+%%
+%% A square is an integer 0..63, its file the square mod 8 (a = 0) and its rank the square // 8 (rank 1 = 0):
+%% a1 = 0, h1 = 7, a8 = 56, h8 = 63.  A cell holds 0 if empty, else a piece, its colour times 10 plus its kind:
+%% colour 1 white, 2 black; kind 1 pawn, 2 knight, 3 bishop, 4 rook, 5 queen, 6 king (white king 16, black pawn 21).
+%% A position holds the 64 cells from a1 to h8, the side to move, the castling rights (white king's side,
+%% white queen's side, black king's side, black queen's side, each 1 or 0), the en passant square or -1, the
+%% half-moves since the last capture or pawn move, the earlier positions since then, for repetition, and
+%% the moves made in the game.
+%% A move names its square from, its square to and the kind a pawn is promoted to, or 0.
+
+Cells ::= [] ; [Integer | Cells].
+Castling ::= cas(Integer, Integer, Integer, Integer).
+Key ::= key(Cells, Integer, Castling, Integer).
+Keys ::= [] ; [Key | Keys].
+Position ::= pos(Cells, Integer, Castling, Integer, Integer, Keys, Integer).
+Move ::= mv(Integer, Integer, Integer).
+
+%% ---------------------------------------------------------------- the six functions, over constants
+
+%% A constant that is the text of no position, or of no move, is read as none: the move is not legal,
+%% the position after it is the position given, and side, mate and draw are 0.
+Read ::= read(Position) ; none.
+ReadMove ::= read(Move) ; none.
+
+exported procedure first(String).
+first(S?) :- first_pos(P), term_to_string(P?, S).
+
+exported procedure side(String?, Integer).
+side(B, S?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), side_r(R?, S).
+
+exported procedure legal(String?, String?, Integer).
+legal(M, B, V?) :- string(M?), string(B?) |
+    string_to_term(M?, Tm), string_to_term(B?, Tb), term_move(Tm?, Rm), term_pos(Tb?, R), legal_r(Rm?, R?, V).
+
+exported procedure after(String?, String?, String).
+after(M, B, C?) :- string(M?), string(B?) |
+    string_to_term(M?, Tm), string_to_term(B?, Tb), term_move(Tm?, Rm), term_pos(Tb?, R), after_r(Rm?, R?, B?, C).
+
+exported procedure mate(String?, Integer).
+mate(B, V?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), mate_r(R?, V).
+
+exported procedure draw(String?, Integer).
+draw(B, V?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), draw_r(R?, V).
+
+exported procedure autodraw(String?, Integer).
+autodraw(B, V?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), autodraw_r(R?, V).
+
+exported procedure plies(String?, Integer).
+plies(B, V?) :- string(B?) | string_to_term(B?, Tb), term_pos(Tb?, R), plies_r(R?, V).
+
+procedure side_r(Read?, Integer).
+side_r(read(P), S?) :- side_pos(P?, S).
+side_r(none, 0).
+
+procedure legal_r(ReadMove?, Read?, Integer).
+legal_r(read(M), read(P), V?) :- legal_pos(M?, P?, V).
+legal_r(_, _, 0) :- otherwise | true.
+
+procedure after_r(ReadMove?, Read?, String?, String).
+after_r(read(M), read(P), _, C?) :- after_pos(M?, P?, Q), term_to_string(Q?, C).
+after_r(_, _, B, B?) :- otherwise | true.
+
+procedure mate_r(Read?, Integer).
+mate_r(read(P), V?) :- mate_pos(P?, V).
+mate_r(none, 0).
+
+procedure draw_r(Read?, Integer).
+draw_r(read(P), V?) :- draw_pos(P?, V).
+draw_r(none, 0).
+
+procedure autodraw_r(Read?, Integer).
+autodraw_r(read(P), V?) :- autodraw_pos(P?, V).
+autodraw_r(none, 0).
+
+procedure plies_r(Read?, Integer).
+plies_r(read(P), V?) :- plies_pos(P?, V).
+plies_r(none, 0).
+
+%% the term read from a constant, checked to be a position or a move
+procedure term_pos(Term?, Read).
+term_pos(pos(Cs, S, cas(A, B, C, D), E, H, Ks, N), R?) :-
+    integer(S?), integer(A?), integer(B?), integer(C?), integer(D?), integer(E?), integer(H?), integer(N?) |
+    term_cells(Cs?, K1, Cs1), term_keys(Ks?, K2, Ks1),
+    pos_ok(K1?, K2?, pos(Cs1?, S?, cas(A?, B?, C?, D?), E?, H?, Ks1?, N?), R).
+term_pos(_, none) :- otherwise | true.
+
+procedure pos_ok(Integer?, Integer?, Position?, Read).
+pos_ok(1, 1, P, read(P?)).
+pos_ok(_, _, _, none) :- otherwise | true.
+
+procedure term_move(Term?, ReadMove).
+term_move(mv(F, T, P), read(mv(F?, T?, P?))) :- integer(F?), integer(T?), integer(P?) | true.
+term_move(_, none) :- otherwise | true.
+
+%% a list of integers: 1 and the cells, else 0
+procedure term_cells(Term?, Integer, Cells).
+term_cells([], 1, []).
+term_cells([X | Xs], K?, [X? | Ys?]) :- integer(X?) | term_cells(Xs?, K, Ys).
+term_cells(_, 0, []) :- otherwise | true.
+
+procedure term_keys(Term?, Integer, Keys).
+term_keys([], 1, []).
+term_keys([key(Cs, S, cas(A, B, C, D), E) | Ks], K?, [key(Cs1?, S?, cas(A?, B?, C?, D?), E?) | Ks1?]) :-
+    integer(S?), integer(A?), integer(B?), integer(C?), integer(D?), integer(E?) |
+    term_cells(Cs?, K1, Cs1), term_keys(Ks?, K2, Ks1), and01(K1?, K2?, K).
+term_keys(_, 0, []) :- otherwise | true.
+
+%% ---------------------------------------------------------------- the six functions, over terms
+
+procedure first_pos(Position).
+first_pos(pos([14, 12, 13, 15, 16, 13, 12, 14,
+           11, 11, 11, 11, 11, 11, 11, 11,
+           0, 0, 0, 0, 0, 0, 0, 0,
+           0, 0, 0, 0, 0, 0, 0, 0,
+           0, 0, 0, 0, 0, 0, 0, 0,
+           0, 0, 0, 0, 0, 0, 0, 0,
+           21, 21, 21, 21, 21, 21, 21, 21,
+           24, 22, 23, 25, 26, 23, 22, 24], 1, cas(1, 1, 1, 1), -1, 0, [], 0)).
+
+procedure side_pos(Position?, Integer).
+side_pos(pos(_, S, _, _, _, _, _), S?).
+
+procedure legal_pos(Move?, Position?, Integer).
+legal_pos(mv(F, T, Pr), pos(B, Side, Cas, Ep, _, _, _), V?) :-
+    ground(B?), F? >= 0, F? =< 63, T? >= 0, T? =< 63, F? =\= T? |
+    cell(F?, B?, P), cell(T?, B?, Q),
+    legal_own(P?, Q?, F?, T?, Pr?, B?, Side?, Cas?, Ep?, V).
+legal_pos(_, _, 0) :- otherwise | true.
+
+procedure after_pos(Move?, Position?, Position).
+after_pos(mv(F, T, Pr), pos(B, Side, Cas, Ep, H, Ks, N), pos(B2?, S2?, Cas2?, Ep2?, H2?, Ks2?, N2?)) :-
+    ground(B?), ground(Cas?) |
+    cell(F?, B?, P), cell(T?, B?, Q),
+    move_board(B?, F?, T?, Pr?, Ep?, B2),
+    S2 := 3 - Side?, N2 := N? + 1,
+    rights(Cas?, F?, T?, Cas2),
+    new_ep(P?, F?, T?, Ep2),
+    half(P?, Q?, H?, Z, H2),
+    hist(Z?, B?, Side?, Cas?, Ep?, Ks?, Ks2).
+
+procedure mate_pos(Position?, Integer).
+mate_pos(P, V?) :- ground(P?) |
+    board(P?, B), side_pos(P?, S), in_check(B?, S?, C), mate2(C?, P?, V).
+
+%% the draws a player having the move may claim: the position the third time (Article 9.2) or
+%% fifty moves by each player with no capture and no pawn move (9.3)
+procedure draw_pos(Position?, Integer).
+draw_pos(P, V?) :- ground(P?) |
+    reps(P?, N), atleast(N?, 2, A1), fifty(P?, A2), or4(A1?, A2?, 0, 0, V).
+
+%% the draws that end the game with no claim, unless the position is mate (Article 5.1.1): stalemate (5.2.1),
+%% a dead position, here the kings alone or with one knight or one bishop (5.2.2), the position the fifth
+%% time and seventy-five moves by each player with no capture and no pawn move (9.6)
+procedure autodraw_pos(Position?, Integer).
+autodraw_pos(P, V?) :- ground(P?) |
+    board(P?, B1), board(P?, B2), side_pos(P?, S),
+    in_check(B1?, S?, C), stale(C?, P?, A1),
+    material(B2?, 0, 0, A2), reps(P?, N), atleast(N?, 4, A3), seventyfive(P?, A4),
+    or4(A1?, A2?, A3?, A4?, W), mate_pos(P?, M), unless(M?, W?, V).
+
+procedure unless(Integer?, Integer?, Integer).
+unless(1, _, 0).
+unless(0, W, W?).
+
+%% the moves made in the game
+procedure plies_pos(Position?, Integer).
+plies_pos(pos(_, _, _, _, _, _, N), N?).
+
+%% ---------------------------------------------------------------- the position
+
+procedure board(Position?, Cells).
+board(pos(B, _, _, _, _, _, _), B?).
+
+procedure cell(Integer?, Cells?, Integer).
+cell(0, [X | _], X?).
+cell(I, [_ | Xs], V?) :- I? > 0 | I1 := I? - 1, cell(I1?, Xs?, V).
+cell(_, [], 0).
+
+procedure set(Integer?, Integer?, Cells?, Cells).
+set(0, V, [_ | Xs], [V? | Xs?]).
+set(I, V, [X | Xs], [X? | Ys?]) :- I? > 0 | I1 := I? - 1, set(I1?, V?, Xs?, Ys).
+set(_, _, [], []).
+
+%% ---------------------------------------------------------------- legality
+
+procedure legal_own(Integer?, Integer?, Integer?, Integer?, Integer?, Cells?, Integer?, Castling?, Integer?, Integer).
+legal_own(P, Q, F, T, Pr, B, Side, Cas, Ep, V?) :-
+    ground(B?), P? // 10 =:= Side?, Q? // 10 =\= Side? |
+    K := P? mod 10,
+    pseudo(K?, P?, Q?, F?, T?, Pr?, B?, Side?, Cas?, Ep?, A),
+    legal_safe(A?, F?, T?, Pr?, B?, Side?, Ep?, V).
+legal_own(_, _, _, _, _, _, _, _, _, 0) :- otherwise | true.
+
+%% the move does not leave the mover's own king attacked
+procedure legal_safe(Integer?, Integer?, Integer?, Integer?, Cells?, Integer?, Integer?, Integer).
+legal_safe(1, F, T, Pr, B, Side, Ep, V?) :-
+    move_board(B?, F?, T?, Pr?, Ep?, B2), in_check(B2?, Side?, C), neg01(C?, V).
+legal_safe(0, _, _, _, _, _, _, 0).
+
+%% the move as the piece moves, its kind, its piece, the target cell, from, to, promotion, cells, side, castling, en passant
+procedure pseudo(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Cells?, Integer?, Castling?, Integer?, Integer).
+pseudo(K, P, _, F, T, 0, B, _, _, _, A?) :- K? >= 2, K? =< 5 |
+    attacks(B?, F?, T?, P?, A).
+pseudo(6, P, _, F, T, 0, B, _, _, _, A?) :- abs(T? - F?) =\= 2 |
+    attacks(B?, F?, T?, P?, A).
+pseudo(6, _, Q, F, T, 0, B, Side, Cas, _, A?) :- abs(T? - F?) =:= 2 |
+    castle(Side?, F?, T?, Q?, B?, Cas?, A).
+pseudo(1, _, Q, F, T, Pr, B, Side, _, Ep, A?) :-
+    pshape(Side?, Q?, F?, T?, B?, Ep?, A1), prom(Side?, T?, Pr?, A2), and01(A1?, A2?, A).
+pseudo(_, _, _, _, _, _, _, _, _, _, 0) :- otherwise | true.
+
+%% a pawn's move: one forward to an empty square, two from its first rank over an empty one, a capture, en passant
+procedure pshape(Integer?, Integer?, Integer?, Integer?, Cells?, Integer?, Integer).
+pshape(Side, 0, F, T, _, _, 1) :-
+    T? mod 8 =:= F? mod 8, T? // 8 - F? // 8 =:= 3 - 2 * Side? | true.
+pshape(Side, 0, F, T, B, _, A?) :-
+    T? mod 8 =:= F? mod 8, T? // 8 - F? // 8 =:= 6 - 4 * Side?, F? // 8 =:= 5 * Side? - 4 |
+    M := F? + 24 - 16 * Side?, cell(M?, B?, X), zero01(X?, A).
+pshape(Side, Q, F, T, _, _, 1) :-
+    abs(T? mod 8 - F? mod 8) =:= 1, T? // 8 - F? // 8 =:= 3 - 2 * Side?, Q? =\= 0 | true.
+pshape(Side, 0, F, T, _, Ep, 1) :-
+    abs(T? mod 8 - F? mod 8) =:= 1, T? // 8 - F? // 8 =:= 3 - 2 * Side?, T? =:= Ep? | true.
+pshape(_, _, _, _, _, _, 0) :- otherwise | true.
+
+%% a pawn reaching the last rank names a knight, bishop, rook or queen; elsewhere it names none
+procedure prom(Integer?, Integer?, Integer?, Integer).
+prom(Side, T, Pr, 1) :- T? // 8 =:= 14 - 7 * Side?, Pr? >= 2, Pr? =< 5 | true.
+prom(Side, T, 0, 1) :- T? // 8 =\= 14 - 7 * Side? | true.
+prom(_, _, _, 0) :- otherwise | true.
+
+%% castling: the king and the rook unmoved (the rights), the squares between empty, the king not in check
+%% and not passing an attacked square (the square it reaches is checked as for every move)
+procedure castle(Integer?, Integer?, Integer?, Integer?, Cells?, Castling?, Integer).
+castle(1, 4, 6, 0, B, cas(1, _, _, _), A?) :- ground(B?) |
+    cell(5, B?, X), cell(7, B?, R), attacked(B?, 4, 2, A1), attacked(B?, 5, 2, A2),
+    cs(X?, 0, R?, 14, A1?, A2?, A).
+castle(1, 4, 2, 0, B, cas(_, 1, _, _), A?) :- ground(B?) |
+    cell(3, B?, X), cell(1, B?, Y), cell(0, B?, R), attacked(B?, 4, 2, A1), attacked(B?, 3, 2, A2),
+    cs(X?, Y?, R?, 14, A1?, A2?, A).
+castle(2, 60, 62, 0, B, cas(_, _, 1, _), A?) :- ground(B?) |
+    cell(61, B?, X), cell(63, B?, R), attacked(B?, 60, 1, A1), attacked(B?, 61, 1, A2),
+    cs(X?, 0, R?, 24, A1?, A2?, A).
+castle(2, 60, 58, 0, B, cas(_, _, _, 1), A?) :- ground(B?) |
+    cell(59, B?, X), cell(57, B?, Y), cell(56, B?, R), attacked(B?, 60, 1, A1), attacked(B?, 59, 1, A2),
+    cs(X?, Y?, R?, 24, A1?, A2?, A).
+castle(_, _, _, _, _, _, 0) :- otherwise | true.
+
+procedure cs(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer).
+cs(0, 0, R, R0, 0, 0, 1) :- R? =:= R0? | true.
+cs(_, _, _, _, _, _, 0) :- otherwise | true.
+
+%% ---------------------------------------------------------------- attack
+
+%% the piece P on F attacks T: cells, from, to, piece, value
+procedure attacks(Cells?, Integer?, Integer?, Integer?, Integer).
+attacks(B, F, T, P, A?) :-
+    DF := T? mod 8 - F? mod 8, DR := T? // 8 - F? // 8, K := P? mod 10, C := P? // 10,
+    att(K?, C?, B?, F?, T?, DF?, DR?, A).
+
+procedure att(Integer?, Integer?, Cells?, Integer?, Integer?, Integer?, Integer?, Integer).
+att(1, C, _, _, _, DF, DR, 1) :- abs(DF?) =:= 1, DR? =:= 3 - 2 * C? | true.
+att(2, _, _, _, _, DF, DR, 1) :- abs(DF?) * abs(DR?) =:= 2 | true.
+att(3, _, B, F, T, DF, DR, A?) :- abs(DF?) =:= abs(DR?), DF? =\= 0 | path(B?, F?, DF?, DR?, T?, A).
+att(4, _, B, F, T, DF, DR, A?) :- DF? =:= 0, DR? =\= 0 | path(B?, F?, DF?, DR?, T?, A).
+att(4, _, B, F, T, DF, DR, A?) :- DR? =:= 0, DF? =\= 0 | path(B?, F?, DF?, DR?, T?, A).
+att(5, _, B, F, T, DF, DR, A?) :- abs(DF?) =:= abs(DR?), DF? =\= 0 | path(B?, F?, DF?, DR?, T?, A).
+att(5, _, B, F, T, DF, DR, A?) :- DF? =:= 0, DR? =\= 0 | path(B?, F?, DF?, DR?, T?, A).
+att(5, _, B, F, T, DF, DR, A?) :- DR? =:= 0, DF? =\= 0 | path(B?, F?, DF?, DR?, T?, A).
+att(6, _, _, _, _, DF, DR, 1) :- abs(DF?) =< 1, abs(DR?) =< 1 | true.
+att(_, _, _, _, _, _, _, 0) :- otherwise | true.
+
+%% the squares strictly between F and T, on one line, are empty
+procedure path(Cells?, Integer?, Integer?, Integer?, Integer?, Integer).
+path(B, F, DF, DR, T, A?) :-
+    sgn(DF?, SF), sgn(DR?, SR), D := 8 * SR? + SF?, S := F? + D?, clear(B?, S?, T?, D?, A).
+
+procedure clear(Cells?, Integer?, Integer?, Integer?, Integer).
+clear(_, S, T, _, 1) :- S? =:= T? | true.
+clear(B, S, T, D, A?) :- ground(B?), S? =\= T? | cell(S?, B?, X), clear2(X?, B?, S?, T?, D?, A).
+
+procedure clear2(Integer?, Cells?, Integer?, Integer?, Integer?, Integer).
+clear2(0, B, S, T, D, A?) :- S1 := S? + D?, clear(B?, S1?, T?, D?, A).
+clear2(X, _, _, _, _, 0) :- X? =\= 0 | true.
+
+procedure sgn(Integer?, Integer).
+sgn(X, 1) :- X? > 0 | true.
+sgn(X, -1) :- X? < 0 | true.
+sgn(X, 0) :- X? =:= 0 | true.
+
+%% a piece of colour C attacks square Sq: cells, square, colour, value
+procedure attacked(Cells?, Integer?, Integer?, Integer).
+attacked(B, Sq, C, V?) :- ground(B?) | att_scan(B?, B?, 0, Sq?, C?, V).
+
+procedure att_scan(Cells?, Cells?, Integer?, Integer?, Integer?, Integer).
+att_scan(_, [], _, _, _, 0).
+att_scan(B, [P | Ps], I, Sq, C, V?) :- ground(B?), P? // 10 =:= C? |
+    attacks(B?, I?, Sq?, P?, A), att_next(A?, B?, Ps?, I?, Sq?, C?, V).
+att_scan(B, [P | Ps], I, Sq, C, V?) :- P? // 10 =\= C? |
+    I1 := I? + 1, att_scan(B?, Ps?, I1?, Sq?, C?, V).
+
+procedure att_next(Integer?, Cells?, Cells?, Integer?, Integer?, Integer?, Integer).
+att_next(1, _, _, _, _, _, 1).
+att_next(0, B, Ps, I, Sq, C, V?) :- I1 := I? + 1, att_scan(B?, Ps?, I1?, Sq?, C?, V).
+
+%% the king of colour Side is attacked
+procedure in_check(Cells?, Integer?, Integer).
+in_check(B, Side, V?) :- ground(B?) |
+    K := 10 * Side? + 6, kpos(B?, 0, K?, S), O := 3 - Side?, attacked(B?, S?, O?, V).
+
+procedure kpos(Cells?, Integer?, Integer?, Integer).
+kpos([], _, _, -1).
+kpos([P | _], I, K, I?) :- P? =:= K? | true.
+kpos([P | Ps], I, K, S?) :- P? =\= K? | I1 := I? + 1, kpos(Ps?, I1?, K?, S).
+
+%% ---------------------------------------------------------------- the move made
+
+%% the cells after the move: cells, from, to, promotion, en passant, cells after
+procedure move_board(Cells?, Integer?, Integer?, Integer?, Integer?, Cells).
+move_board(B, F, T, Pr, Ep, B4?) :- ground(B?) |
+    cell(F?, B?, P), mb(P?, B?, F?, T?, Pr?, Ep?, B4).
+
+procedure mb(Integer?, Cells?, Integer?, Integer?, Integer?, Integer?, Cells).
+mb(P, B, F, T, Pr, Ep, B4?) :-
+    K := P? mod 10, C := P? // 10, placed(P?, Pr?, Pl),
+    set(F?, 0, B?, B1), set(T?, Pl?, B1?, B2), special(K?, C?, F?, T?, Ep?, B2?, B4).
+
+procedure placed(Integer?, Integer?, Integer).
+placed(P, 0, P?).
+placed(P, Pr, X?) :- Pr? > 0 | X := 10 * (P? // 10) + Pr?.
+
+%% en passant takes the pawn passed; castling moves the rook
+procedure special(Integer?, Integer?, Integer?, Integer?, Integer?, Cells?, Cells).
+special(1, C, F, T, Ep, B, B2?) :- T? =:= Ep?, F? mod 8 =\= T? mod 8 |
+    S := T? - 24 + 16 * C?, set(S?, 0, B?, B2).
+special(6, C, F, T, _, B, B2?) :- T? - F? =:= 2 |
+    R1 := F? + 3, R2 := F? + 1, Rk := 10 * C? + 4, set(R1?, 0, B?, B1), set(R2?, Rk?, B1?, B2).
+special(6, C, F, T, _, B, B2?) :- F? - T? =:= 2 |
+    R1 := F? - 4, R2 := F? - 1, Rk := 10 * C? + 4, set(R1?, 0, B?, B1), set(R2?, Rk?, B1?, B2).
+special(_, _, _, _, _, B, B?) :- otherwise | true.
+
+%% a castling right ends when its king or rook moves or its rook is taken
+procedure rights(Castling?, Integer?, Integer?, Castling).
+rights(cas(WK, WQ, BK, BQ), F, T, cas(WK2?, WQ2?, BK2?, BQ2?)) :-
+    kp(WK?, F?, T?, 4, 7, WK2), kp(WQ?, F?, T?, 4, 0, WQ2),
+    kp(BK?, F?, T?, 60, 63, BK2), kp(BQ?, F?, T?, 60, 56, BQ2).
+
+procedure kp(Integer?, Integer?, Integer?, Integer?, Integer?, Integer).
+kp(_, F, _, K, _, 0) :- F? =:= K? | true.
+kp(_, F, _, _, R, 0) :- F? =:= R? | true.
+kp(_, _, T, K, _, 0) :- T? =:= K? | true.
+kp(_, _, T, _, R, 0) :- T? =:= R? | true.
+kp(X, _, _, _, _, X?) :- otherwise | true.
+
+%% the en passant square after a pawn's double step, else -1
+procedure new_ep(Integer?, Integer?, Integer?, Integer).
+new_ep(P, F, T, E?) :- P? mod 10 =:= 1, abs(T? - F?) =:= 16 | E := (F? + T?) // 2.
+new_ep(_, _, _, -1) :- otherwise | true.
+
+%% a pawn move or a capture sets the count to 0 and is irreversible (1); else the count goes up by one (0)
+procedure half(Integer?, Integer?, Integer?, Integer, Integer).
+half(P, _, _, 1, 0) :- P? mod 10 =:= 1 | true.
+half(_, Q, _, 1, 0) :- Q? =\= 0 | true.
+half(_, _, H, 0, H2?) :- otherwise | H2 := H? + 1.
+
+%% the earlier positions: none after an irreversible move, else the position left added
+procedure hist(Integer?, Cells?, Integer?, Castling?, Integer?, Keys?, Keys).
+hist(1, _, _, _, _, _, []).
+hist(0, B, S, C, E, Ks, [key(B?, S?, C?, E?) | Ks?]).
+
+%% ---------------------------------------------------------------- mate and draw
+
+procedure mate2(Integer?, Position?, Integer).
+mate2(1, P, V?) :- has_move(P?, M), neg01(M?, V).
+mate2(0, _, 0).
+
+procedure stale(Integer?, Position?, Integer).
+stale(1, _, 0).
+stale(0, P, V?) :- has_move(P?, M), neg01(M?, V).
+
+%% the fifty-move rule: fifty moves of each player with no capture and no pawn move
+procedure fifty(Position?, Integer).
+fifty(pos(_, _, _, _, H, _, _), 1) :- H? >= 100 | true.
+fifty(pos(_, _, _, _, H, _, _), 0) :- H? < 100 | true.
+
+%% the seventy-five-move rule (Article 9.6.2)
+procedure seventyfive(Position?, Integer).
+seventyfive(pos(_, _, _, _, H, _, _), 1) :- H? >= 150 | true.
+seventyfive(pos(_, _, _, _, H, _, _), 0) :- H? < 150 | true.
+
+%% repetition: the times the position has stood before, with the same side to move and the same rights
+procedure reps(Position?, Integer).
+reps(pos(B, S, C, E, _, Ks, _), N?) :- count(key(B?, S?, C?, E?), Ks?, 0, N).
+
+procedure count(Key?, Keys?, Integer?, Integer).
+count(_, [], N, N?).
+count(K, [K1 | Ks], N, M?) :- ground(K?), K? =?= K1? | N1 := N? + 1, count(K?, Ks?, N1?, M).
+count(K, [_ | Ks], N, M?) :- otherwise | count(K?, Ks?, N?, M).
+
+%% N is at least K: 1, else 0
+procedure atleast(Integer?, Integer?, Integer).
+atleast(N, K, 1) :- N? >= K? | true.
+atleast(N, K, 0) :- N? < K? | true.
+
+%% no mate is possible: the kings alone, or with one knight or one bishop
+procedure material(Cells?, Integer?, Integer?, Integer).
+material([], N, M, V?) :- insufficient(N?, M?, V).
+material([P | Ps], N, M, V?) :- P? =:= 0 | material(Ps?, N?, M?, V).
+material([P | Ps], N, M, V?) :- P? mod 10 =:= 6 | material(Ps?, N?, M?, V).
+material([P | Ps], N, M, V?) :- P? mod 10 >= 2, P? mod 10 =< 3 |
+    N1 := N? + 1, M1 := M? + 1, material(Ps?, N1?, M1?, V).
+material([P | Ps], N, M, V?) :- P? =\= 0, P? mod 10 =\= 6, P? mod 10 =\= 2, P? mod 10 =\= 3 |
+    N1 := N? + 1, material(Ps?, N1?, M?, V).
+
+procedure insufficient(Integer?, Integer?, Integer).
+insufficient(0, _, 1).
+insufficient(1, 1, 1).
+insufficient(_, _, 0) :- otherwise | true.
+
+%% the side to move has a legal move
+procedure has_move(Position?, Integer).
+has_move(P, V?) :- hm_from(P?, 0, V).
+
+procedure hm_from(Position?, Integer?, Integer).
+hm_from(_, 64, 0).
+hm_from(P, F, V?) :- ground(P?), F? < 64 |
+    board(P?, B), side_pos(P?, S), cell(F?, B?, X), hm_own(X?, S?, P?, F?, V).
+
+procedure hm_own(Integer?, Integer?, Position?, Integer?, Integer).
+hm_own(X, S, P, F, V?) :- ground(P?), X? // 10 =:= S? | hm_to(P?, F?, 0, A), hm_next(A?, P?, F?, V).
+hm_own(X, S, P, F, V?) :- X? // 10 =\= S? | F1 := F? + 1, hm_from(P?, F1?, V).
+
+procedure hm_next(Integer?, Position?, Integer?, Integer).
+hm_next(1, _, _, 1).
+hm_next(0, P, F, V?) :- F1 := F? + 1, hm_from(P?, F1?, V).
+
+procedure hm_to(Position?, Integer?, Integer?, Integer).
+hm_to(_, _, 64, 0).
+hm_to(P, F, T, V?) :- ground(P?), T? < 64 |
+    legal_pos(mv(F?, T?, 0), P?, A), legal_pos(mv(F?, T?, 5), P?, A2), hm_tnext(A?, A2?, P?, F?, T?, V).
+
+procedure hm_tnext(Integer?, Integer?, Position?, Integer?, Integer?, Integer).
+hm_tnext(A, A2, _, _, _, 1) :- A? + A2? > 0 | true.
+hm_tnext(A, A2, P, F, T, V?) :- A? + A2? =:= 0 | T1 := T? + 1, hm_to(P?, F?, T1?, V).
+
+%% ---------------------------------------------------------------- flags
+
+procedure neg01(Integer?, Integer).
+neg01(1, 0).
+neg01(0, 1).
+
+procedure zero01(Integer?, Integer).
+zero01(0, 1).
+zero01(X, 0) :- X? =\= 0 | true.
+
+procedure and01(Integer?, Integer?, Integer).
+and01(1, 1, 1).
+and01(_, _, 0) :- otherwise | true.
+
+procedure or4(Integer?, Integer?, Integer?, Integer?, Integer).
+or4(A, B, C, D, 1) :- A? + B? + C? + D? > 0 | true.
+or4(A, B, C, D, 0) :- A? + B? + C? + D? =:= 0 | true.

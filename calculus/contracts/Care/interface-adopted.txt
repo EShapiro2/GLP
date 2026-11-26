@@ -1,0 +1,12 @@
+Interface pragmas
+Open: Alice [Open] <grupo>
+Ask: Bob [Ask] <visit>
+Take: Bob [Take] <visit>
+Release: Bob [Release] <alice> <visit> <grupo>
+  Alice [Release for]
+  Carol [Release by the patient] <alice> <visit> <grupo>
+Report: Bob [Made] <alice> <visit> <grupo>
+  Alice [Missed]
+  Carol [Missed by the patient] <alice> <visit> <bob> <grupo>
+  Alice [Contest]
+End: Carol [End] <alice> <grupo>

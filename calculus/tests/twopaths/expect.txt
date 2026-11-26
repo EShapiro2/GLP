@@ -1,7 +1,7 @@
 C          commute yes; return yes; recover same
 P          commute yes; return yes; recover same
 Q          commute yes; return yes; recover same
-D          commute yes; return yes; recover same
+D          commute yes; return equivalent; recover same
 names: 0 names of two kinds neither of which is under the other
 4 contracts, 0 with a fault
 --- sasx/C.txt
@@ -11,7 +11,7 @@ C:1 ■ Mark: q(Alice) <- guarded by Alice.
 --- sasx/D.txt
 D: Both (expanded schemas)
 D:0 - | Alice is a person.
-C:1+P:1+Q:1 ■ Mark: q(Alice), ~p(Alice) <- p(Alice), p(Alice) guarded by Alice.
+C:1+P:1+Q:1 ■ Mark: q(Alice), ~p(Alice) <- p(Alice) guarded by Alice.
 --- sasx/P.txt
 P: Strengthens (expanded schemas)
 P:0 - | Alice is a person.

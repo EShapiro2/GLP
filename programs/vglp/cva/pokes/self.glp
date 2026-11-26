@@ -1,8 +1,8 @@
 %% ---------------------------------------------------------------------------
 %% The play of the canonical CVA platform of vGLP's contract pokes
-%% (../contracts.glp, contract_named(pokes, C): befriend, begin and an unguarded count, a counter, always open to an agent whose person has begun counting, and arm and an unguarded poke of two participants, always open to its opener once armed and befriended), platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA Platform").  It runs two agents, alice and bob, their persons scripted and paced on their screens (../self.glp), and gives each person's log, the views with gave(K, A) where the person answers an approval question, and the network's log of the cargoes it carries.
+%% (../contracts.glp, contract_named(pokes, C): befriend, begin and an unguarded count, a counter, always open to an agent whose person has begun counting, and arm and an unguarded poke and unpoke of two participants, one always open to their opener once armed and befriended), platform.vglp, which programs/vglp/cva/compile.sh prints from it: two-phase commit coordinated by the initiating agent (vGLP, Section 3.2, Definition "Canonical CVA Platform").  It runs two agents, alice and bob, their persons scripted and paced on their screens (../self.glp), and gives each person's log, the views with gave(K, A) where the person answers an approval question, and the network's log of the cargoes it carries.
 %%
-%% play_pokes: alice begins counting, and bob arms; bob asks to befriend alice, she answers yes, and it commits.  Then alice's agent always has count(alice) to take, an own transaction of one participant, and bob's agent always has poke(bob, alice) to propose, an own transaction of two participants, on whose start alice's agent votes.  "At every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger" (vGLP, Section 5.4, "The compilation"; the audit's Finding 1; Udi, 2026-11-16): so neither class starves the other, and alice's counting and bob's pokes commit again and again, interleaved.  The run does not suspend: it is stopped at the REPL's :limit, its logs' tails unbound.
+%% play_pokes: alice begins counting, and bob arms; bob asks to befriend alice, she answers yes, and it commits.  Then alice's agent always has count(alice) to take, an own transaction of one participant, and bob's agent always has poke(bob, alice) or unpoke(bob, alice) to propose, adding and deleting poked_by(bob) at alice in turn, a local state being a set (Audit #128), an own transaction of two participants, on whose start alice's agent votes.  "At every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger" (vGLP, Section 5.4, "The compilation"; the audit's Finding 1; Udi, 2026-11-16): so neither class starves the other, and alice's counting and bob's pokes commit again and again, interleaved.  The run does not suspend: it is stopped at the REPL's :limit, its logs' tails unbound.
 %% ---------------------------------------------------------------------------
 
 
@@ -17,7 +17,7 @@ imported procedure platform#dispatch(Stream(Ask(Question))?,
 
 exported procedure play_pokes(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_pokes(LA?, LB?, N?) :-
-    pair(plain, [own([A1], propose(begin(A1?))), wait(holds(tick)),
+    pair(plain, [own([A1], propose(begin(A1?))), wait(holds(tick(1))),
           approval(befriend(bob, alice), yes),
           wait(holds(friend(bob)))],
          [own([B1], propose(arm(B1?))), wait(holds(armed)),
@@ -28,7 +28,7 @@ play_pokes(LA?, LB?, N?) :-
 %% play_pokes_paired: play_pokes on the audit's schedule (the audit's Finding 1, Grassroots-Audit 17cde7e, papers/vGLP.pdf.md): the network holds each outcome to alice until its next message to her, bob's start of his next poke, and delivers the two at once, so that the start is on alice's input before she has dispatched the outcome.  Alice is free between the two, and her count holds there and at no other configuration of the suffix, her agent being locked on bob's poke from its vote on the start to the next outcome.  An agent that took its own transactions only on an own trigger, read in its turn among the triggers arrived, would read the start before the own trigger written after the outcome, and count no more; "at every step the agent goal takes whichever has waited longest, one of its own transactions whose condition holds or the reading of its next trigger" (vGLP, Section 5.4, "The compilation"), so alice counts between every two of bob's pokes.
 exported procedure play_pokes_paired(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
 play_pokes_paired(LA?, LB?, N?) :-
-    pair(paired, [own([A1], propose(begin(A1?))), wait(holds(tick)),
+    pair(paired, [own([A1], propose(begin(A1?))), wait(holds(tick(1))),
           approval(befriend(bob, alice), yes),
           wait(holds(friend(bob)))],
          [own([B1], propose(arm(B1?))), wait(holds(armed)),

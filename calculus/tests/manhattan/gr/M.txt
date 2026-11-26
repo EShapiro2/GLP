@@ -1,0 +1,7 @@
+M: Map
+Orga is a person, East, North, Ex, Nx, Wide, High and Far numbers.
+1. ■ Move: Orga may move the pin to East by North, provided Orga has the pin east at the number Ex, Orga has the pin north at the number Nx, Wide is the difference from Ex to East, High is the difference from Nx to North, Far is Wide plus High and Far is at most 5.
+Logic pragmas.
+Vocabulary: z has the pin east at the number n = east(z,n); z has the pin north at the number n = north(z,n).
+the earlier pin of z has ended: z has the pin east at no number and z has the pin north at no number.
+After z moves the pin to n by m: the earlier pin of z has ended, z has the pin east at the number n and z has the pin north at the number m.

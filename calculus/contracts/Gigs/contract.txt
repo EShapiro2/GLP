@@ -1,10 +1,10 @@
 Gigs
-Gigs extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
-A *worker* is a provider and a *client* a customer. A *job* names the work, its price in Orga-coins and its deadline; its terms say what is released to whom on cancellation.
-Alice and Bob are persons, Orga a networked organisation.
+Gigs inherits from Community Network, Overlay and Recommendations (GRH, Grassroots Ride-Hailing, in preparation).
+A *worker* is a provider and a *client* a customer. A *job* names the work, its price in community coins and its deadline; its terms say what is released to whom on cancellation.
+Alice and Bob are persons, Orga a community network.
 1. ■ Job. Post: Alice, a client, may post a job to the workers she points to. Pass: A worker may pass it to the workers they point to. Withdraw job: Alice may withdraw it.
 2. ■ Engage: Alice may engage Bob, a worker, for the job with the consent of Bob, provided Alice and Bob know each other; Alice's payment and the deposit the terms set for Bob, on top of his stake, are then locked.
 3. ◆ Deliver: Bob may attest that he delivered the work to Alice.
-4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (Networked Organisation:2).
+4. ■ Acceptance. Accept work: Alice may accept delivered work, and the payment and the deposit are then released to Bob. Reject: Alice may reject it, raising a dispute (Community Network:2).
 5. ■ Cancelling. Cancel: Alice or Bob may cancel the engagement before delivery, and the payment and the deposit are then released to Alice and to Bob as the terms say. Lapse: If no delivery is attested by the deadline, Alice may cancel and both are then released to her.
 6. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the work after acceptance.

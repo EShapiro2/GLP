@@ -1,5 +1,5 @@
 Encounters
-Encounters extends Knowledge (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Encounters inherits from Knowledge (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 A person is *nearby* Alice when her phone reaches theirs by Bluetooth or the local network, without the Internet; a *place* is where Alice is.
 Alice and Bob are persons.
 1. ■ Open place: Alice may declare the place she is in open. Close place: Alice may close it.

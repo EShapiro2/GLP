@@ -1,0 +1,12 @@
+Foundation
+Foundation weakens Nonprofit.
+x is a trustee of z: x is an officer of z.
+Vocabulary: m keeps the purpose of z = keeps_purpose(z,m).
+Roles: the trustees of z = trustees(z), listed by z has y as an officer and y is an officer of z.
+Foundation:0 - | A *foundation* is a nonprofit whose bylaws name one role, *trustee*, held by every officer, and state a *purpose*; a person joins only with the consent of every trustee.
+Foundation:0 - | Bob is a person, Orga a foundation, Motion an act of Orga.
+Foundation:0 - | Environment: m keeps the purpose of z.
+Foundation:1 ■ Join: Organisation:3 Join <- guarded by trustees(Orga).
+Foundation:2 ■ Amend: Organisation:5 Amend <- keeps_purpose(Orga,Motion).
+Foundation:3 ○ | Purpose.
+Foundation:3 ○ | The trustees will use the coins of Orga only for its purpose.

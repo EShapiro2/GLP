@@ -1,5 +1,6 @@
 Short Feeds
 Short Feeds extends Feeds.
-After x replaces a w-pointer to y by a w-pointer to z, which requires x does not have a w-pointer to z: no longer x has a w-pointer to y and x has a w-pointer to z.
+Vocabulary: y has been pointed to by x with a w-pointer = pointed(y,x,w); y has been dropped by x from a w-pointer = unpointed(y,x,w).
+After x replaces a w-pointer to y by a w-pointer to z, which requires x does not have a w-pointer to z, z has not been pointed to by x with a w-pointer and y has not been dropped by x from a w-pointer: no longer x has a w-pointer to y, x has a w-pointer to z, z has been pointed to by x with a w-pointer and y has been dropped by x from a w-pointer.
 Short Feeds:0 - | Alice, Bob, Carol and Dave are persons, Carol and Dave possibly one person.
-Short Feeds:1 ■ Shorten: ~pointer(Alice,Bob,Dave), pointer(Alice,Carol,Dave) <- knows(Alice,Carol), knows(Carol,Alice), pointer(Bob,Carol,Dave), ~pointer(Alice,Carol,Dave), pointer(Alice,Bob,Dave) possibly Carol=Dave.
+Short Feeds:1 ■ Shorten: ~pointer(Alice,Bob,Dave), pointer(Alice,Carol,Dave), pointed(Carol,Alice,Dave), unpointed(Bob,Alice,Dave) <- knows(Alice,Carol), knows(Carol,Alice), pointer(Bob,Carol,Dave), ~pointer(Alice,Carol,Dave), ~pointed(Carol,Alice,Dave), ~unpointed(Bob,Alice,Dave), pointer(Alice,Bob,Dave) possibly Carol=Dave.

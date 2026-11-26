@@ -1,0 +1,11 @@
+Booking
+Booking extends Organisation.
+Vocabulary: x has a booking of s of r in z = booking(x,z,r,s); z has s of r booked by x = booked(z,r,s,x); z has the slot s of the resource r = slot(z,r,s); x has fewer outstanding bookings in z than the bound = under_bound(x,z).
+s of r is free in z: z has s of r booked by no one.
+After x books s of r in z: x has a booking of s of r in z and z has s of r booked by x.
+After x cancels x's booking of s of r in z: no longer x has a booking of s of r in z and no longer z has s of r booked by x.
+Booking:0 - | An organisation has *resources*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
+Booking:0 - | Alice is a person, Orga an organisation, Res a resource, Slot a slot.
+Booking:0 - | Environment: z has the slot s of the resource r; x has fewer outstanding bookings in z than the bound.
+Booking:1 ■ Book: booking(Alice,Orga,Res,Slot), booked(Orga,Res,Slot,Alice) <- participant(Alice,Orga), has_participant(Orga,Alice), under_bound(Alice,Orga), slot(Orga,Res,Slot), ~booked(Orga,Res,Slot,_) guarded by Alice.
+Booking:2 ■ Cancel: ~booking(Alice,Orga,Res,Slot), ~booked(Orga,Res,Slot,Alice) <- booking(Alice,Orga,Res,Slot), booked(Orga,Res,Slot,Alice) guarded by Alice.

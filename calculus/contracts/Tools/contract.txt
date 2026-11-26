@@ -1,0 +1,9 @@
+Tools
+Tools inherits from Booking.
+A resource is a *tool*, a thing that the organisation owns and its participants use. A tool is *withdrawn* while it cannot be used.
+Alice and Carol are persons, Orga an organisation.
+1. ◆ Hand over: Carol, an officer of Orga, and Alice, who booked a tool, may jointly attest that Alice took it for her slot, provided no one holds the tool and it is not withdrawn. Alice then holds it.
+2. ○ Return. Alice will return the tool to an officer of Orga by the end of her slot, as she took it.
+3. ◆ Take back: Carol, an officer of Orga, may attest that Alice returned the tool she holds.
+4. ■ Withdraw: Carol, an officer of Orga, may withdraw a tool. Restore: Carol may restore a withdrawn tool.
+5. ■ Book: Booking:1, only if the tool is not withdrawn.

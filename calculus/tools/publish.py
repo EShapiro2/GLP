@@ -46,6 +46,12 @@ def state(out, names):
     own['Notes'] = 'GSC'      # new, Udi's text of 2026-11-16; no text in GLP yet (Calculus #7)
     own['Shares'] = 'GO'      # likewise
     own['Agora'] = 'Currencies'      # Udi, 2026-11-15; its owner line in GLP names Talmon, for Currencies to correct
+    # The owners since the renames of 2026-11-24 (owners-2026-11-24.txt, from the list of paper owners) win over
+    # OWNERS.md, which predates them; Code adopts all 91 into programs/ and cascade/ (Code #37, 2026-11-24).
+    po = os.path.join(ROOT, 'owners-2026-11-24.txt')
+    if os.path.exists(po):
+        for l in open(po, encoding='utf-8'):
+            if '\t' in l: k, v = l.rstrip('\n').split('\t'); own[k] = v; same[k] = True
     yn = lambda b: b if isinstance(b, str) else 'yes' if b else 'no'      # compiled: yes, no, or parametric, certified with no platform until instantiated
     with open(os.path.join(out, 'STATE.txt'), 'w', encoding='utf-8') as f:
         for n in names:
@@ -90,8 +96,11 @@ def build(out, hold=()):
         c = os.path.join(ROOT, 'cascade', NM.file_of(n))
         for f in sorted(os.listdir(c)) if os.path.isdir(c) else []:
             shutil.copyfile(os.path.join(c, f), os.path.join(d, 'interface.txt' if f == NM.file_of(n) + '.txt' else f))
-        param = any(l.split()[:1] == [NM.file_of(n)] and 'a parametric contract' in l for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8'))
-        for f in ('verdict.txt',) if param else ('verdict.txt', 'platform.glp'):      # a parametric contract has no platform until instantiated
+        st = [l for l in open(os.path.join(ROOT, 'cascade', 'STATUS.txt'), encoding='utf-8') if l.split()[:1] == [NM.file_of(n)]]
+        param = any('a parametric contract' in l for l in st)
+        unc = any('platform not compiled' in l for l in st)      # its owner's pragmas fault, reported in STATUS.txt and to the owner
+        unc = unc or any(l.split()[1:3] == ['not', 'certified'] for l in st)      # no certificate: published with its verdict, which the website shows, and no platform
+        for f in ('verdict.txt',) if param or unc else ('verdict.txt', 'platform.glp'):      # a parametric contract has no platform until instantiated
             if not os.path.exists(os.path.join(d, f)): missing.append('%s: %s' % (n, f))
     for f, g in (('README-PUBLIC.md', 'README.md'), ('NAMES.txt', 'NAMES.txt'), ('OWNERS.md', 'OWNERS.md'), ('LAYERS.txt', 'LAYERS.txt'), ('MIGRATION.md', 'MIGRATION.md'), ('cascade/STATUS.txt', 'STATUS.txt'), ('glp/VERDICTS.txt', 'VERDICTS.txt')):
         if os.path.exists(os.path.join(ROOT, f)): shutil.copyfile(os.path.join(ROOT, f), os.path.join(out, g))

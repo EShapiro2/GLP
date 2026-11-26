@@ -1,0 +1,2 @@
+Village Social
+Village Social extends Friendship, Encounters, Groups, Feeds, Children, Emergencies and Notices.

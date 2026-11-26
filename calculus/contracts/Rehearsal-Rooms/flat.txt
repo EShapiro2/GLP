@@ -1,0 +1,111 @@
+Rehearsal Rooms (flat text)
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Rehearsal Rooms:0 - | Alice, Bob and Carol are persons, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Res a room, Slot a slot, Post and Reply posts, Budget, Rest and Part numbers, Other and Key one-time keys, Wendy a ward, Dave a service, Link an invitation link.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
+Knowledge:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice is a person, Bob is a person, Carol is a person, Alice knows Bob, Bob knows Alice and Alice knows Carol.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice is a person, Bob is a person, Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Guardians:0 - | Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, which the creator of an organisation decides, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
+Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
+Guardians:1+Organisation:1 ■ Found: Alice and Orga may jointly Orga has an identity, Orga is an organisation, Orga has Alice as an officer, Alice is the creator of Orga, Alice is an officer of Orga, Alice knows Orga, Orga knows Alice, Alice counts Orga as a friend, Orga counts Alice as a friend, Orga has Alice as its first officer, Alice holds the role Role in Orga, Orga has Alice in the role Role, Alice is a participant of Orga, Orga has Alice as a participant and Alice is the founder of Orga, provided Alice is a person and not Orga has an identity. Must consent: Orga.
+Guardians:1 ■ | Alice chooses Orga's key pair.
+Guardians:2 ■ | Guardian decisions.
+Guardians:2+Organisation:4 ■ Appoint: Those who decide for Orga and Bob may jointly Bob is an officer of Orga, Orga has Bob as an officer, Bob knows Orga, Orga knows Bob, Bob counts Orga as a friend, Orga counts Bob as a friend, Bob holds the role Role in Orga and Orga has Bob in the role Role, provided Orga is an organisation, not Orga is retired, Bob is a person, Orga has Alice as an officer, Bob counts Alice as a friend, not Bob is an officer of Orga, not Orga has Bob as an officer and Bob is a participant of Orga.
+Guardians:2+Organisation:4 ■ Resign: Bob may no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
+Guardians:2+Organisation:4 ■ End officer: Those who decide for Orga, other than Bob, may no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
+Guardians:2+Organisation:4 ■ Officer unfriend: Bob may no longer Bob counts Orga as a friend, no longer Orga counts Bob as a friend, no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
+Guardians:2 ■ | Orga may not end a friendship with her officer.
+Guardians:3 ■ | Ward and person.
+Guardians:3 ■ Organisation acquaint: Orga and Bob may jointly Orga knows Bob and Bob knows Orga, provided Orga is an organisation, Orga has Alice as an officer and Bob is a person.
+Guardians:3 ■ Organisation befriend: Orga, Bob and Alice may jointly Orga counts Bob as a friend and Bob counts Orga as a friend, provided Orga is an organisation, not Orga is retired, Orga has Alice as an officer, Bob is a person, Orga knows Bob, Bob knows Orga, Alice counts Bob as a friend, Bob counts Alice as a friend, not Orga counts Bob as a friend and not Bob counts Orga as a friend.
+Guardians:3 ■ Organisation end: Orga may no longer Orga counts Bob as a friend and no longer Bob counts Orga as a friend, provided not Orga has Bob as an officer.
+Guardians:3 ■ Unfriend: Bob may no longer Bob counts Orga as a friend and no longer Orga counts Bob as a friend, provided not Bob is an officer of Orga.
+Guardians:3 ■ Organisation unfriend: Alice may no longer Orga counts Bob as a friend and no longer Bob counts Orga as a friend, provided Orga has Alice as an officer and not Bob is an officer of Orga.
+Guardians:4 ■ | Wards.
+Guardians:4 ■ Organisations acquaint: Orga and Will may jointly Orga knows Will and Will knows Orga, provided Orga is an organisation, Orga has Alice as an officer, Will is an organisation and Will has Bob as an officer. Possibly one: Alice=Bob.
+Guardians:4 ■ Organisations befriend: Orga, Will, Alice and Bob may jointly Orga counts Will as a friend and Will counts Orga as a friend, provided Orga is an organisation, not Orga is retired, Orga has Alice as an officer, Will is an organisation, not Will is retired, Will has Bob as an officer, Orga knows Will, Will knows Orga, Alice knows Will, Alice counts Bob as a friend, Bob counts Alice as a friend, not Orga counts Will as a friend and not Will counts Orga as a friend. Possibly one: Alice=Bob.
+Guardians:4 ■ Organisations of one officer befriend: Orga, Will and Alice may jointly Orga counts Will as a friend and Will counts Orga as a friend, provided Orga is an organisation, not Orga is retired, Orga has Alice as an officer, Will is an organisation, not Will is retired, Will has Alice as an officer, Orga knows Will, Will knows Orga, not Orga counts Will as a friend and not Will counts Orga as a friend.
+Guardians:5+Organisation:4 ■ Retire: Those who decide for Orga may Orga is retired, no longer anyone is an officer of Orga, no longer Orga has anyone as an officer, no longer Orga counts anyone as a friend, no longer anyone counts Orga as a friend, no longer anyone holds the role anyone in Orga and no longer Orga has anyone in the role anyone, provided not Orga is retired.
+Guardians:5 ■ | Orga can then take no act.
+Organisation:0 - | An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
+Organisation:0 - | Environment: the bylaws of z entitle x to propose motions; the bylaws of z entitle x to vote on m; the bylaws of z entitle x to take m; the votes decide m according to the bylaws of z; the bylaws of z entitle x to amend them as m says; the amendment m is decided according to the bylaws of z.
+Organisation:1 ■ Found by an organisation: Alice, Gov and Orga may jointly Orga has an identity, Orga is an organisation, Orga has Alice as an officer, Alice is the creator of Orga, Alice is an officer of Orga, Alice knows Orga, Orga knows Alice, Alice counts Orga as a friend, Orga counts Alice as a friend, Orga has Alice as its first officer, Alice holds the role Role in Orga, Orga has Alice in the role Role, Alice is a participant of Orga, Orga has Alice as a participant and Gov is the founder of Orga, provided Alice is a person and not Orga has an identity. Must consent: Orga.
+Organisation:2 ■ | Acts of the organisation.
+Organisation:2 ■ Propose: Bob may Orga has Motion proposed, provided Bob is an officer of Orga, the bylaws of Orga entitle Bob to propose motions and not Orga has Motion proposed.
+Organisation:2 ■ Vote: Bob may Orga holds Bob's vote on Motion, provided Bob is a participant of Orga, the bylaws of Orga entitle Bob to vote on Motion, Orga is an organisation, Orga has Motion proposed and not Orga holds Bob's vote on Motion.
+Organisation:2 ■ Act: Alice may Orga has Motion taken, provided Alice is an officer of Orga, Orga has Motion proposed, the bylaws of Orga entitle Alice to take Motion, the votes decide Motion according to the bylaws of Orga and not Orga has Motion taken.
+Organisation:3 ■ | Participation.
+Organisation:3 ■ Join: Bob and those who admit participants of Orga may jointly Bob is a participant of Orga and Orga has Bob as a participant, provided not Bob is a participant of Orga.
+Organisation:3 ■ Leave: Bob may no longer Bob is a participant of Orga and no longer Orga has Bob as a participant, provided not Bob is an officer of Orga.
+Organisation:3 ■ Officer leave: Bob may no longer Bob is a participant of Orga, no longer Orga has Bob as a participant, no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
+Organisation:3 ■ Expel: Those who expel participants of Orga may no longer Bob is a participant of Orga and no longer Orga has Bob as a participant, provided not Bob is an officer of Orga.
+Organisation:3 ■ Officer expel: Those who expel participants of Orga may no longer Bob is a participant of Orga, no longer Orga has Bob as a participant, no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
+Organisation:3 ■ | Every role Bob holds in Orga ends with his participation.
+Organisation:4 ■ | Officers.
+Organisation:4 ■ | The decision names his role.
+Organisation:5 ■ Amend: Alice may Orga has its bylaws amended and Orga has Motion taken, provided Alice is an officer of Orga, Orga has Motion proposed, the bylaws of Orga entitle Alice to amend them as Motion says, the amendment Motion is decided according to the bylaws of Orga and not Orga has Motion taken.
+Organisation:6 ○ | Accountability.
+Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
+Booking:0 - | An organisation has *rooms*, each with *slots*. A slot is *free* when it is not booked. A booking is *outstanding* until its slot has passed or it is cancelled. The bylaws name the *bound*, the number of outstanding bookings a participant may have.
+Booking:0 - | Environment: z has the slot s of the room r; x has fewer outstanding bookings in z than the bound.
+Booking:1 ■ Book: Alice may Alice has a booking of Slot of Res in Orga and Orga has Slot of Res booked by Alice, provided Alice is a participant of Orga, Orga has Alice as a participant, Alice has fewer outstanding bookings in Orga than the bound, Orga has the slot Slot of the room Res and not Orga has Slot of Res booked by anyone.
+Booking:2 ■ Cancel: Alice may no longer Alice has a booking of Slot of Res in Orga and no longer Orga has Slot of Res booked by Alice.
+Gossip:0 - | *Posts* have a *budget*: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them.
+Gossip:0 - | Environment: n is a budget of a new post, for x; n covers the cost of a forward leaving m, for x; the gossip protocol forwards p to y with m of n, for x.
+Gossip:1 ■ Post: Alice may Alice has made the post Post, Alice holds the post Post and Alice has the budget Budget for Post, provided Budget is a budget of a new post for Alice and not Alice has made the post Post.
+Gossip:2 ■ Tell: Alice may Bob holds the post Post from Alice, Bob holds the post Post and Bob has the budget Part for Post, provided Alice holds the post Post, Alice has the budget Budget for Post, Budget covers the cost of a forward leaving Rest for Alice, Alice counts Bob as a friend, Bob counts Alice as a friend and the gossip protocol forwards Post to Bob with Part of Rest for Alice.
+Matching:0 - | Posts have a *test*, whether two *match*.
+Matching:0 - | Environment: p and q match, for x.
+Matching:1 ■ Return: Bob has forwarded Other to Alice, Alice holds the post Other from Bob and Alice holds the post Other, provided Bob holds the post Post from Alice, Bob holds the post Other, Post and Other match for Bob, not Alice holds the post Other from Bob and not Bob has forwarded Other to Alice.
+Matching:2+Anonymous Matching:1 ■ Meet: Alice and Carol may jointly Alice knows Carol and Carol knows Alice, provided Alice has made the post Post, Carol has made the post Other, Alice holds the post Other, Carol holds the post Post, Post and Other match for Alice, Alice has the address of Carol and Carol has the address of Alice.
+Guardians:0 - | Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
+Guardians:1 ■ Enter: Alice and Wendy may jointly Wendy has an identity, Wendy is a ward, Wendy has Alice as a guardian, Alice is the creator of Wendy, Alice is a guardian of Wendy, Alice knows Wendy, Wendy knows Alice, Alice counts Wendy as a friend and Wendy counts Alice as a friend, provided Alice is a person and not Wendy has an identity. Must consent: Wendy.
+Guardians:1 ■ | Alice chooses Wendy's key pair.
+Guardians:2 ■ Make guardian: Those who decide for Wendy and Bob may jointly Bob is a guardian of Wendy, Wendy has Bob as a guardian, Bob knows Wendy, Wendy knows Bob, Bob counts Wendy as a friend and Wendy counts Bob as a friend, provided Wendy is a ward, not Wendy is retired, Bob is a person, Wendy has Alice as a guardian, Bob counts Alice as a friend, not Bob is a guardian of Wendy and not Wendy has Bob as a guardian.
+Guardians:2 ■ Resign: Bob may no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
+Guardians:2 ■ End guardian: Those who decide for Wendy, other than Bob, may no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
+Guardians:2 ■ Guardian unfriend: Bob may no longer Bob counts Wendy as a friend, no longer Wendy counts Bob as a friend, no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
+Guardians:2 ■ | Wendy may not end a friendship with her guardian.
+Guardians:3 ■ Ward acquaint: Wendy and Bob may jointly Wendy knows Bob and Bob knows Wendy, provided Wendy is a ward, Wendy has Alice as a guardian and Bob is a person.
+Guardians:3 ■ Ward befriend: Wendy, Bob and Alice may jointly Wendy counts Bob as a friend and Bob counts Wendy as a friend, provided Wendy is a ward, not Wendy is retired, Wendy has Alice as a guardian, Bob is a person, Wendy knows Bob, Bob knows Wendy, Alice counts Bob as a friend, Bob counts Alice as a friend, not Wendy counts Bob as a friend and not Bob counts Wendy as a friend.
+Guardians:3 ■ Ward end: Wendy may no longer Wendy counts Bob as a friend and no longer Bob counts Wendy as a friend, provided not Wendy has Bob as a guardian.
+Guardians:3 ■ Unfriend: Bob may no longer Bob counts Wendy as a friend and no longer Wendy counts Bob as a friend, provided not Bob is a guardian of Wendy.
+Guardians:3 ■ Ward unfriend: Alice may no longer Wendy counts Bob as a friend and no longer Bob counts Wendy as a friend, provided Wendy has Alice as a guardian and not Bob is a guardian of Wendy.
+Guardians:4 ■ Wards acquaint: Wendy and Will may jointly Wendy knows Will and Will knows Wendy, provided Wendy is a ward, Wendy has Alice as a guardian, Will is a ward and Will has Bob as a guardian. Possibly one: Alice=Bob.
+Guardians:4 ■ Wards befriend: Wendy, Will, Alice and Bob may jointly Wendy counts Will as a friend and Will counts Wendy as a friend, provided Wendy is a ward, not Wendy is retired, Wendy has Alice as a guardian, Will is a ward, not Will is retired, Will has Bob as a guardian, Wendy knows Will, Will knows Wendy, Alice knows Will, Alice counts Bob as a friend, Bob counts Alice as a friend, not Wendy counts Will as a friend and not Will counts Wendy as a friend. Possibly one: Alice=Bob.
+Guardians:4 ■ Wards of one guardian befriend: Wendy, Will and Alice may jointly Wendy counts Will as a friend and Will counts Wendy as a friend, provided Wendy is a ward, not Wendy is retired, Wendy has Alice as a guardian, Will is a ward, not Will is retired, Will has Alice as a guardian, Wendy knows Will, Will knows Wendy, not Wendy counts Will as a friend and not Will counts Wendy as a friend.
+Guardians:5 ■ Retire: Those who decide for Wendy may Wendy is retired, no longer anyone is a guardian of Wendy, no longer Wendy has anyone as a guardian, no longer Wendy counts anyone as a friend and no longer anyone counts Wendy as a friend, provided not Wendy is retired.
+Guardians:5 ■ | Wendy can then take no act.
+Services:0 - | A *service* is a ward operated by a machine at an address every person can reach.
+Rendezvous:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
+Rendezvous:1 ■ Open server: Carol may Dave is a rendezvous server, provided Carol is a guardian of Dave and not Dave is a rendezvous server.
+Rendezvous:2 ■ | Invite by link.
+Rendezvous:2 ■ Sign link: Alice may Alice has signed Link as an invitation link that names Dave, provided Alice knows Dave and not Alice has signed Link as an invitation link that names Dave.
+Rendezvous:2 ■ Invite by link: Alice may Dave has Link registered for Alice, provided Alice has signed Link as an invitation link that names Dave, Alice knows Dave, Dave is a rendezvous server, not Dave holds Link spent for Alice and not Dave has Link registered for Alice.
+Rendezvous:2 ■ | Link has a new serial.
+Rendezvous:3 ■ Use link: Bob may no longer Dave has Link registered for Alice, Dave holds Link spent for Alice, Alice has the address of Bob and Bob has the address of Alice, provided Bob knows Dave and not Dave holds Link expired.
+Rendezvous:3 ■ | The link is then spent.
+Rendezvous:4 ■ | Reconnection.
+Rendezvous:4 ■ Present: Alice may Dave has the signature of Bob over the friendship of Alice and Bob presented, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice knows Dave, Dave is a rendezvous server and not Dave has the signature of Bob over the friendship of Alice and Bob presented.
+Rendezvous:4 ■ Match: No longer Dave has the signature of Bob over the friendship of Alice and Bob presented, no longer Dave has the signature of Alice over the friendship of Bob and Alice presented, Alice has the address of Bob and Bob has the address of Alice, provided not Alice has the address of Bob and not Bob has the address of Alice.
+Anonymous Rendezvous:0 - | A *one-time key* is a key pair its maker uses for one meeting.
+Anonymous Rendezvous:0 - | Environment: x holds the one-time key k; x knows the public key of k.
+Anonymous Rendezvous:1 ■ | Meet.
+Anonymous Rendezvous:1+Anonymous Matching:1 ■ Present: Alice may Dave has the keys Key and Other presented by Alice, provided Alice holds the one-time key Key, Alice knows the public key of Other, Alice knows Dave, Dave is a rendezvous server, not Dave has the keys Key and Other presented by Alice, Alice has made the post Post, Alice holds the post Reply, Post carries the public key of Key for Alice, Reply carries the public key of Other for Alice and Dave is named by the one of Post and Reply whose public key has the smaller hash for Alice.
+Anonymous Rendezvous:1 ■ Match: No longer Dave has the keys Key and Other presented by Alice, no longer Dave has the keys Other and Key presented by Bob, Alice has the address of Bob and Bob has the address of Alice, provided not Alice has the address of Bob and not Bob has the address of Alice.
+Anonymous Matching:0 - | Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
+Anonymous Matching:0 - | Environment: p carries the public key of k, for x; d is named by the one of p and q whose public key has the smaller hash, for x.
+Anonymous Matching:1 ■ | Meet.
+Free Matching:0 - | The budget of a post is an integer, the cost of a forward is one, and the gossip protocol is forwarding to any friend with the budget less one.
+Partners:0 - | A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
+Rehearsal Rooms:0 - | The activity is music, the place is a *studio*, an organisation that has rehearsal rooms, and the time is a slot.
+Rehearsal Rooms:1 ■ | Organisation and ward.
+Rehearsal Rooms:1 ■ Organisation ward acquaint: Orga and Wendy may jointly Orga knows Wendy and Wendy knows Orga, provided Orga is an organisation, Orga has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.

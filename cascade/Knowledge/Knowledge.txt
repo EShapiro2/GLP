@@ -7,7 +7,8 @@
 % Schemas: Knowledge.glp beside this file, the full schemas, printed by calculus/tools/adopt.py GKK from the Logic pragmas and never written by hand; adopt.py --check GKK holds it and cascade/Knowledge/ to what the tools print.
 Knowledge
 An *identity* is a unique cryptographic key pair.
-Alice, Bob and Carol are persons. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Alice, Bob and Carol are persons.
 1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
 2. ■ Acquaint: Alice and Bob may jointly come to know each other.
 3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
@@ -16,8 +17,8 @@ An *identity* is a unique cryptographic key pair.
 A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
 Alice, Bob and Carol are persons.
 1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
 Logic pragmas.
 Vocabulary: x has an identity = identity(x); x is a person = person(x); x knows y = knows(x,y).
 x and y know each other: x knows y and y knows x.

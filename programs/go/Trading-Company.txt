@@ -5,7 +5,7 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Trading-Company.glp beside this file.
 Trading Company
-Trading Company extends Corporation.
+Trading Company inherits from Corporation.
 A *trading company* is a corporation whose bylaws name three roles, *buyer*, *keeper* and *seller*, each held by its first officer. A *good* is a thing it buys and sells.
 Alice, Bob, Carol, Dave and Erin are persons, Orga a trading company.
 1. ■ Buy: Alice, a buyer, and Dave, who know each other, may jointly decide that Orga pays Dave coins for a good Dave delivers to Orga.
@@ -31,8 +31,8 @@ After x and y decide that y pays z n w-coins for v: no longer y holds n w-coins,
 Interface pragmas
 Look: 📦, money
 Goods: the goods sold to Alice.
-Buy: Alice [Buy] <issuer> <amount> <good>
+Buy: Alice [Buy] <issuer> <denomination> <amount> <good>
   Dave: Alice asks that Orga pay you coins for a good you deliver to it.
 Receive: Bob [Receive] <good>
-Sell: Carol [Sell] <issuer> <amount> <good>
+Sell: Carol [Sell] <issuer> <denomination> <amount> <good>
   Erin: Carol asks that you pay Orga coins for a good it holds.

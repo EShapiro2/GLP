@@ -1,0 +1,21 @@
+# KNOWN_RED_CHECKS to remove at the merge of xztgmf 7bf2bb2fd (GSA #9, 2026-11-21 03:14 UTC)
+SG two mini-apps at once: no failed play
+SG two mini-apps at once: alice's swap settles
+SG two mini-apps at once: bob's swap settles
+SG two mini-apps on two smartphones: the currency's conversation opens
+SG two mini-apps on two smartphones: alice's swap settles
+SG two mini-apps on two smartphones: bob's swap settles
+SG two mini-apps at once: bob connected and greeted under it
+SG two mini-apps on two smartphones: and its message arrives
+SG super-app hosts the child-safe platform: alice connected to bob
+SG super-app hosts the child-safe platform: bob connected and greeted
+SG super-app hosts the child-safe platform: no failed play
+SG two mini-apps at once: alice connected under the child-safe platform
+SG two mini-apps on two smartphones: the child-safe friendship holds
+SG child-safe platform on two smartphones: alice is connected to bob
+SG child-safe platform on two smartphones: bob is connected to alice
+SG child-safe platform on two smartphones: alice's message reaches bob
+SG super-app: cssn's artefact is refused a certificate
+SG super-app: load_file gives cssn's artefact as text
+SG super-app: the super-app installs no text
+SG super-app: the child-safe platform's artefact is certified

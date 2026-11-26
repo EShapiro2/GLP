@@ -1,0 +1,10 @@
+Notices
+Notices unites Broadcast and Organisation, and extends the union.
+A *notice* is a broadcast that includes its text and the area it is for.
+Alice and Bob are persons, Orga an organisation, Cast a broadcast.
+1. ■ Notice: Alice may broadcast Cast as a notice of Orga, provided Alice is an officer of Orga and Orga has Alice as an officer.
+2. ■ Notice forward: Alice may forward the notice Cast to Bob in Orga, provided Orga has Alice as a participant, Orga has Bob as a participant, Alice holds the broadcast Cast, Cast is live and Orga has the notice Cast.
+Logic pragmas.
+Vocabulary: x has broadcast the notice m of z = notice(x,m,z); z has the notice m = notice_of(z,m); z has the notice m with y = notice_with(z,m,y).
+After x broadcasts m as a notice of z, which requires x has not made the broadcast m: x has made the broadcast m, x holds the broadcast m, x has broadcast the notice m of z and z has the notice m.
+After x forwards the notice m to y in z, which requires y does not hold the broadcast m and x has not forwarded the broadcast m to y: y holds the broadcast m, y holds the broadcast m from x, x has forwarded the broadcast m to y and z has the notice m with y.

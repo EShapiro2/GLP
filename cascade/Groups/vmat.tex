@@ -12,22 +12,22 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \notin c_
 {
 \Alice
@@ -52,11 +52,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -71,11 +71,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -83,17 +83,25 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Bob
@@ -120,13 +128,13 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -139,16 +147,30 @@ c_
 {
 \Bob
 }
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -157,26 +179,42 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
 }
 ,\\
 &
@@ -200,11 +238,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -219,11 +257,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -231,13 +269,17 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -246,13 +288,17 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -263,9 +309,9 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -274,9 +320,9 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -308,9 +354,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -331,9 +377,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -352,19 +398,19 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 member
-}
+}}
 (
 \ast
 ,
 \Bob
 )
  \text{ or } 
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \Bob
 ,
@@ -380,19 +426,19 @@ listed
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 member
-}
+}}
 (
 \ast
 ,
 \Alice
 )
  \text{ or } 
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \Alice
 ,
@@ -401,13 +447,17 @@ listed
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -416,13 +466,17 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -450,11 +504,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 message
-}
+}}
 (
 \Bob
 ,
@@ -474,13 +528,13 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -489,13 +543,13 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -523,27 +577,27 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 leader
-}
+}}
 (
 Grupo
 )
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \Alice
 ,
@@ -553,9 +607,9 @@ Grupo
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Alice
@@ -563,9 +617,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 leader
-}
+}}
 (
 Grupo
 )
@@ -595,9 +649,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 leader
-}
+}}
 (
 Grupo
 )
@@ -612,9 +666,9 @@ Grupo
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \ast
 ,
@@ -633,10 +687,10 @@ Grupo
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \ast
 ,
@@ -648,9 +702,9 @@ Grupo
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \ast
 ,
@@ -672,16 +726,16 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 leader
-}
+}}
 (
 Grupo
 )
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
@@ -698,9 +752,9 @@ Grupo
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \ast
 ,
@@ -719,10 +773,10 @@ Grupo
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \ast
 ,
@@ -734,9 +788,9 @@ Grupo
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \ast
 ,
@@ -754,9 +808,9 @@ c_
 q
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
@@ -769,9 +823,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \ast
 ,
@@ -786,13 +840,13 @@ q \neq
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 leader
-}
+}}
 (
 Grupo
 )
@@ -801,13 +855,13 @@ Grupo
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
@@ -820,9 +874,9 @@ q \in
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \ast
 ,
@@ -851,11 +905,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
@@ -872,11 +926,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \Alice
 ,
@@ -886,13 +940,13 @@ Grupo
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -901,20 +955,20 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 leader
-}
+}}
 (
 Grupo
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -925,9 +979,9 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
@@ -961,9 +1015,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
@@ -982,9 +1036,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \Alice
 ,
@@ -994,13 +1048,13 @@ Grupo
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
@@ -1011,20 +1065,20 @@ Grupo
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 leader
-}
+}}
 (
 Grupo
 )
 ,
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \Alice
 ,
@@ -1056,9 +1110,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
@@ -1077,9 +1131,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \Alice
 ,
@@ -1089,13 +1143,13 @@ Grupo
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
@@ -1106,13 +1160,13 @@ Grupo
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \Alice
 ,
@@ -1142,11 +1196,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Text
 ,
@@ -1168,21 +1222,21 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
@@ -1195,9 +1249,9 @@ Grupo
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Text
 ,
@@ -1229,11 +1283,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Text
 ,
@@ -1245,13 +1299,13 @@ Grupo
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Grupo
 ,
@@ -1264,9 +1318,9 @@ Grupo
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Text
 ,
@@ -1298,11 +1352,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 group_delivered
-}
+}}
 (
 Bob
 ,
@@ -1323,11 +1377,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 group_message
-}
+}}
 (
 Bob
 ,
@@ -1341,20 +1395,20 @@ Grupo
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 leader
-}
+}}
 (
 Grupo
 )
 ,
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Text
 ,
@@ -1363,9 +1417,9 @@ Bob
 Grupo
 )
 ,
-\mathit{
+\mathit{\detokenize{
 listed
-}
+}}
 (
 \Bob
 ,
@@ -1376,9 +1430,9 @@ Grupo
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -1386,9 +1440,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 group_delivered
-}
+}}
 (
 Bob
 ,
@@ -1401,6 +1455,23 @@ Grupo
  \notin c_
 {
 \Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+group_message
+}}
+(
+Bob
+,
+Text
+,
+Grupo
+,
+\Alice
+)
+ \notin c_
+{
+\Bob
 }
 ,\\
 &
@@ -1420,11 +1491,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 group_delivered
-}
+}}
 (
 Bob
 ,
@@ -1435,9 +1506,9 @@ Grupo
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 group_message
-}
+}}
 (
 Bob
 ,
@@ -1451,20 +1522,20 @@ Grupo
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 leader
-}
+}}
 (
 Grupo
 )
 ,
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Text
 ,
@@ -1479,9 +1550,9 @@ Grupo
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 group_delivered
-}
+}}
 (
 Bob
 ,

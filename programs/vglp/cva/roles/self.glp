@@ -25,6 +25,17 @@
 %% play_roles_other: the same, alice typing clerk: bob's state holds
 %% role(alice, clerk), which is not the atom arbitrate requires, and his
 %% arbitrate is refused, unable.
+%%
+%% play_concur: alice and bob are acquainted, alice appoints bob arbiter and
+%% bob appoints alice arbiter, so alice holds role(bob, arbiter) and bob
+%% role(alice, arbiter); alice's concur(alice, bob) reads r at her role and s
+%% at his, one constant at two roles, eq(r, s) of the part's condition, which
+%% the initiator checks on the readings (vGLP, Section 5.4: "a conjunct that
+%% names variables local to two roles or more is of the part's condition"):
+%% it commits, and her state holds concurs(bob), his concurred(alice).
+%%
+%% play_concur_other: the same, bob typing clerk: the readings give r arbiter
+%% and s clerk, the condition fails, and alice, the initiator, refuses concur, unable.
 %% ---------------------------------------------------------------------------
 
 %% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of their refusals; the log of each.
@@ -58,6 +69,33 @@ play_roles_other(LA?, LB?, N?) :-
           wait(holds(role(alice, clerk))),
           own([B1], propose(arbitrate(B1?))),
           wait(refused(arbitrate(bob), bob, unable))],
+         LA, LB, N).
+
+exported procedure play_concur(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_concur(LA?, LB?, N?) :-
+    pair([own([A1], propose(acquaint(A1?, bob))),
+          wait(holds(knows(bob))),
+          own([A2], propose(appoint(A2?, bob, arbiter))),
+          wait(holds(role(bob, arbiter))),
+          own([A3], propose(concur(A3?, bob))),
+          wait(holds(concurs(bob)))],
+         [approval(acquaint(alice, bob), yes),
+          wait(holds(role(alice, arbiter))),
+          own([B1], propose(appoint(B1?, alice, arbiter))),
+          wait(holds(concurred(alice)))],
+         LA, LB, N).
+
+exported procedure play_concur_other(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_concur_other(LA?, LB?, N?) :-
+    pair([own([A1], propose(acquaint(A1?, bob))),
+          wait(holds(knows(bob))),
+          own([A2], propose(appoint(A2?, bob, arbiter))),
+          wait(holds(role(bob, clerk))),
+          own([A3], propose(concur(A3?, bob))),
+          wait(refused(concur(alice, bob), alice, unable))],
+         [approval(acquaint(alice, bob), yes),
+          wait(holds(role(alice, arbiter))),
+          own([B1], propose(appoint(B1?, alice, clerk)))],
          LA, LB, N).
 
 %% alice and bob, each with its dispatcher and scripted person, their networks

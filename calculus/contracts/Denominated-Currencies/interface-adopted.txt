@@ -1,27 +1,21 @@
 Interface pragmas
-Issue denominated bond: Alice [Issue denominated bond] <day> <sum> <dollar>
-Swap, Redeem, Escrow: Alice [Swap] <sum> <total>
+Issue denominated bond: Alice [Issue denominated bond] <day> <dollar> <sum>
+Swap, Redeem, Escrow: Alice [Swap] <dave> <sum> <other> <total>
   Bob: Alice asks for your consent to swap.
-  Alice [Swap coin for bond] <sum> <day> <total>
-  Bob: Alice asks for your consent to swap coin for bond.
-  Alice [Swap bonds] <sum> <term> <total>
-  Bob: Alice asks for your consent to swap bonds.
   Alice [Deposit] <sum> <cond>
   Carol: Alice asks for your consent to deposit.
-  Alice [Deposit bond] <sum> <cond>
-  Carol: Alice asks for your consent to deposit bond.
-  Alice [Redeem] [Redeem coin against bond] <day> [Redeem bond] [Redeem bond against bond] <term>
+  Alice [Redeem] <carol> [Redeem coin against bond] <carol> <day> [Redeem bond] <carol> [Redeem bond against bond] <carol> <term>
   Alice [Deposit own coins] <sum> <cond>
   Carol: Alice asks for your consent to deposit own coins.
-  Alice [Deposit with the issuer] <sum> <cond> <dollar>
+  Alice [Deposit with the issuer] <sum> <cond>
   Carol: Alice asks for your consent to deposit with the issuer.
-  Alice [Deposit more] <sum> <cond> <dollar>
+  Alice [Deposit more] <sum> <cond>
   Carol: Alice asks for your consent to deposit more.
   Alice [Deposit own bonds] <sum> <cond>
   Carol: Alice asks for your consent to deposit own bonds.
-  Alice [Deposit bond with the issuer] <sum> <cond> <dollar>
+  Alice [Deposit bond with the issuer] <sum> <cond>
   Carol: Alice asks for your consent to deposit bond with the issuer.
-  Alice [Deposit bond more] <sum> <cond> <dollar>
+  Alice [Deposit bond more] <sum> <cond>
   Carol: Alice asks for your consent to deposit bond more.
 Accept: Alice [Accept] <limit> [Accept by bond] <limit>
-Pay accepted coins: Alice [Pay accepted coins] <dollar> [Pay own accepted coins] [Pay accepted coins to the issuer]
+Pay accepted coins: Alice [Pay accepted coins] [Pay own accepted coins] [Pay accepted coins to the issuer]

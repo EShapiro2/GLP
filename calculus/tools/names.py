@@ -15,6 +15,7 @@ two; the file name is the name with a hyphen for each space and no apostrophe ("
     of_glp(f)            the name of a file or directory in GLP, under its file name or its name on main
     add(path)            a test's made-up contracts, rows after the table's
     find(text, known)    the known names in text, longest first, each whole: (start, end, name)
+    split_list(text)     a list of names, 'A, B and C', each a name of the table, longest first, whole
 NAME_RX, REF          a name, of the table or one word, and a citation or a label's part, NAME:n
 """
 import os, re
@@ -60,6 +61,21 @@ _index()
 if os.environ.get('CALCULUS_NAMES') and os.path.exists(os.environ['CALCULUS_NAMES']):
     add(os.environ['CALCULUS_NAMES'])
 
+
+
+def split_list(text, sep=r', and |, | and '):
+    """The names of a list, 'Jobs and Lost and Found': Jobs and Lost and Found, each a name of the table read whole,
+    longest first, with 'a weakening of', 'a lift of' and their like kept before it (Audit #116; Villagers #1,
+    2026-11-24: 'T unites Jobs and Lost and Found.' read as Jobs, Lost and Found).  Where the text is no such list,
+    it is split at each separator, as before."""
+    out, rest = [], text.strip()
+    while rest:
+        m = re.match(r'^((?:an? (?:weakening|strengthening|augmentation|renaming|lift) of )*%s)(?:%s|$)' % (NAME_RX, sep), rest)
+        if not m or not m.group(1):
+            return [x for x in re.split(sep, text) if x]
+        out.append(m.group(1))
+        rest = rest[m.end():]
+    return out
 
 
 def file_of(name):

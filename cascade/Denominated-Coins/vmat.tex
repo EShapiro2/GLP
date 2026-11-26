@@ -12,22 +12,22 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \notin c_
 {
 \Alice
@@ -52,11 +52,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -71,11 +71,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -83,17 +83,25 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Bob
@@ -120,13 +128,13 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -139,16 +147,30 @@ c_
 {
 \Bob
 }
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -157,26 +179,42 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
 }
 ,\\
 &
@@ -200,25 +238,31 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Alice
+,
+Type
+,
+Dollar
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 issued_in
-}
+}}
 (
 Dollar
 )
@@ -226,6 +270,14 @@ Dollar
 {
 \Alice
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -248,25 +300,37 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
+,
+Dollar
+,
+SumSet
 )
 \}
-) \uplus 
+) \cup 
 \{
-Total
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Other
+,
+Dollar
+,
+TotalSet
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Dave
 )
@@ -283,25 +347,37 @@ c'_
 }
  \setminus 
 \{
-Total
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Other
+,
+Dollar
+,
+TotalSet
 )
 \}
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
+,
+Dollar
+,
+SumSet
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -309,53 +385,75 @@ Carol
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
+,
+Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-Total
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Other
+,
+Dollar
+,
+TotalSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
+\land
+|
+TotalSet
+|
+=
+Total
 ,\\
 &
 \text{guarded by } \{
@@ -380,11 +478,17 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
+,
+Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -397,18 +501,24 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
+,
+Dollar
+,
+SumSet
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -416,37 +526,49 @@ Carol
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
+,
+Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -471,11 +593,17 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+Type
+,
+Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -488,49 +616,67 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+Type
+,
+Dollar
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+Type
+,
+Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -553,11 +699,17 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
+,
+Dollar
+,
+SumSet
 )
 \}
 , \qquad 
@@ -570,64 +722,72 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\mathit{
-escrow_coin
-}
+\mathit{\detokenize{
+escrow_note
+}}
 (
 Dave
+,
+Type
+,
+Dollar
 ,
 \Alice
 ,
 Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Bob
 )
 ,
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
+,
+Dollar
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -635,6 +795,14 @@ knows
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -659,19 +827,23 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
-\mathit{
-escrow_coin
-}
+\mathit{\detokenize{
+escrow_note
+}}
 (
 Dave
+,
+Type
+,
+Dollar
 ,
 Alice
 ,
 \Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 , \qquad 
@@ -684,18 +856,24 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
+,
+Dollar
+,
+SumSet
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Dave
 )
@@ -703,45 +881,47 @@ Dave
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-Sum
-\cdot
-\mathit{
-escrow_coin
-}
+\mathit{\detokenize{
+escrow_note
+}}
 (
 Dave
+,
+Type
+,
+Dollar
 ,
 Alice
 ,
 \Bob
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -749,6 +929,14 @@ knows
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -773,19 +961,23 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
-\mathit{
-escrow_coin
-}
+\mathit{\detokenize{
+escrow_note
+}}
 (
 Dave
+,
+Type
+,
+Dollar
 ,
 \Bob
 ,
 Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 , \qquad 
@@ -798,18 +990,24 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
+,
+Dollar
+,
+SumSet
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Dave
 )
@@ -817,45 +1015,47 @@ Dave
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-Sum
-\cdot
-\mathit{
-escrow_coin
-}
+\mathit{\detokenize{
+escrow_note
+}}
 (
 Dave
+,
+Type
+,
+Dollar
 ,
 \Bob
 ,
 Bob
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -863,6 +1063,14 @@ knows
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -887,21 +1095,37 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
+,
+Dollar
+,
+BobCoinDollar1Set
 )
 \}
-) \uplus 
+) \cup 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
+,
+Dollar
+,
+CarolCoinDollar1Set
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -918,53 +1142,99 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
+,
+Dollar
+,
+CarolCoinDollar1Set
 )
 \}
-) \uplus 
+) \cup 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
+,
+Dollar
+,
+BobCoinDollar1Set
 )
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
+,
+Dollar
+,
+BobCoinDollar1Set
 )
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
+,
+Dollar
+,
+CarolCoinDollar1Set
 )
  \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+BobCoinDollar1Set
+|
+=
+1
+\land
+|
+CarolCoinDollar1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -985,18 +1255,24 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Alice
+,
+coin
+,
+Dollar
+,
+SumSet
 )
 ,
-\mathit{
+\mathit{\detokenize{
 issued_in
-}
+}}
 (
 Dollar
 )
@@ -1004,9 +1280,9 @@ Dollar
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Alice
@@ -1014,9 +1290,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 issued_in
-}
+}}
 (
 \ast
 )
@@ -1024,6 +1300,14 @@ issued_in
 {
 \Alice
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{

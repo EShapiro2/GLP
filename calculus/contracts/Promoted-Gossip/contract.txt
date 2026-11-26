@@ -1,0 +1,7 @@
+Promoted Gossip
+Promoted Gossip inherits from Gossip and Community Bank.
+The budget of a post is Orga-coins, and the cost of a forward is a number of them. The gossip protocol also says what part of the budget is the holder's.
+Alice and Bob are persons, Orga a community.
+1. ■ Post: Gossip:1, and then the budget of the post comes from the Orga-coins Alice holds.
+2. ■ Tell: Gossip:2, and then Bob's part of the budget goes to Bob with the post.
+3. ■ Keep: Alice may take her part of the budget of a post she holds, according to the gossip protocol.

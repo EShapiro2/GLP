@@ -60,6 +60,7 @@ def unenabled(n, acts):
 
 
 FN = set()      # the predicates the Logic pragmas declare functions, 'Functions: n is the root of m.' (gcsas.Lex.fn), of the contract values_of read last
+FNV = set()     # the names a function's places hold that the names lines declare of a kind other than number, 'Board and Next positions' (Chess): a value of that kind, const(X), not a number (GLP #87, #135), of the contract values_of read last
 ONE = set()     # the roles any one of whom decides, 'any one listed by' (gcsas.Lex.one), of the contract values_of read last
 
 
@@ -79,7 +80,41 @@ def values_of(n, refl=None, env=None, par=None):
     ONE.update(lex.one)
     FN.clear()
     FN.update(lex.env_preds('fn'))
+    FNV.clear()
+    FNV.update(x for x, ks in gcsas.kinds_from(w, n).items() if ks and not any(k.split()[0] == 'number' for k in ks))
+    # A role two contracts of the first line list differently (Organisation renames Guardians: those who decide for z,
+    # listed by officers of an organisation and by guardians of a ward): each listing with the kinds of its contract.
+    ALTS.clear()
+    parents, _, _ = gcsas.first_line(w.contract(n), w.known)
+    for p in parents:
+        pk = set().union(set(), *[set(v) for v in gcsas.kinds_from(w, p).values()])
+        for r, by in w.lexicon(p).rlist.items():
+            ALTS.setdefault(r, [])
+            if all(b != by for _, b, _ in ALTS[r]):
+                ALTS[r].append((pk, by, gcsas.pattern(by, w.lexicon(p))))
+    for r in [r for r, a in ALTS.items() if len(a) < 2]:
+        del ALTS[r]
     return {p for _, p, a in lex.basic if 'now' in a}, rl, gcsas.kinds_from(w, n)
+
+
+ALTS = {}       # role -> [(kinds of a contract of the first line, its listing, the listing's pattern)]
+
+
+def rlist_for(e, rlist):
+    """The listing of each role of the act: of a role listed differently by the contracts of the first line, the listing
+    of the contract that has the kind of the name the role is of (Wendy a ward: by guardians; Orga an organisation: by officers)."""
+    if not ALTS:
+        return rlist
+    out = dict(rlist)
+    for g in e['guards']:
+        if '(' in g:
+            _, p, a = gcsas.parse_atom(g)
+            if p in ALTS:
+                ks = e.get('_kinds', {}).get(a[0], set())
+                hit = [l for k, _, l in ALTS[p] if ks & k]
+                if len(hit) == 1:
+                    out[p] = hit[0]
+    return out
 
 
 def agents_of(acts, values=()):
@@ -101,11 +136,16 @@ def schema_nums(lits, values, places=frozenset()):
     predicate, (predicate, arity, position), that holds a number in some schema of the contract (num_places)."""
     nums = set()
     for l in lits:
-        if l[1] in values or l[1] in ARITH or l[1] in FN or l[1] in ('sum', 'product', 'difference'):
+        if l[1] in FN:          # a function's place holds a number, but for a name declared of another kind (FNV)
+            nums.update(a for a in l[2] if re.fullmatch(gcsas.NAME, a) and a not in FNV)
+        elif l[1] in values or l[1] in ARITH or l[1] in ('sum', 'product', 'difference'):
             nums.update(a for a in l[2] if re.fullmatch(gcsas.NAME, a))
         for i, a in enumerate(l[2]):
             if a[:1] in '*#':
                 nums.add(a[1:])
+            c = re.fullmatch(r'[a-z][a-z_0-9]*\((.+)\)', a)
+            if c:                   # the variables of a compound value, bond(Day): numbers (GSC #21, Definition Values)
+                nums.update(x.strip() for x in c.group(1).split(',') if re.fullmatch(gcsas.NAME, x.strip()))
             m = re.fullmatch(r'(<=|>=|<|>|=)(\w+)', a)
             if m and not m.group(2).isdigit():
                 nums.add(m.group(2))
@@ -125,6 +165,27 @@ def num_places(acts, values):
             nums = schema_nums(lits, values, places)
             places |= {(l[1], len(l[2]), i) for l in lits for i, a in enumerate(l[2]) if a in nums}
     return frozenset(places)
+
+
+BARE = ('condition', 'message', 'item', 'utterance', 'proposal', 'attestation', 'act')     # the kinds of what persons say, agree, propose or attest (an act of Orga, which an officer proposes): a value of one is a speech act, written bare (Calculus #8, 2026-11-17 16:42 UTC)
+
+
+def value_kinds(acts, agents, kinds, values, places, consts):
+    """The values of the names lines, written by their kind (GSC #19, Calculus_inbox.md, 2026-11-17 15:09 UTC; GLP
+    programs/gsc/README.md, 'Writing a contract', on value types): a value the contract counts or computes with is a
+    number, num(X), a date among them (schema_nums); a value of a kind persons say or agree, a condition, a message,
+    an item or an utterance, a proposal, an attestation or an act, or a value a schema signs or authors, is a speech
+    act, bare; every other value is a constant, const(X).  Returns (const, bare)."""
+    vals = {x for x in kinds if x not in agents and x not in consts}
+    nums = set()
+    for e in acts:
+        nums |= schema_nums(e['head'] + e['body'], values, places)
+    nums |= {x for x in vals if any(k.split()[0] == 'number' for k in kinds[x])}      # a value whose kind is a number
+    bare = {x for x in vals if any(k.split()[0] in BARE for k in kinds[x])}
+    # a value a schema signs or authors, Prog@Alice's sgn(Prog, Alice) or author(Alice, Prog)'s author_of(Prog), is an utterance, bare
+    lits = [l for e in acts for l in e['head'] + e['body']]
+    bare |= vals & ({a.lstrip('*#').split('@')[0] for l in lits for a in l[2] if '@' in a} | {l[2][1] for l in lits if l[1] == 'author' and len(l[2]) > 1})
+    return frozenset(vals - bare - nums), frozenset(bare - nums)
 
 
 def const_places(acts, consts):
@@ -197,7 +258,7 @@ def binding_holds(e, x, y):
     return x in rs and y in rs and not names(x, y) and not names(y, x)
 
 
-def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset(), acts=(), anyof=frozenset()):
+def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=frozenset(), cplaces=frozenset(), persons=frozenset(), acts=(), anyof=frozenset(), cvals=frozenset(), nvals=frozenset(), pref=None, record=None):
     # A name of the act that holds, in what the act requires, the state that lists a role of those who decide, of the
     # same agent, is the one of them who decides, Decider: "Bob, a friend of a guardian of Carol" (GnW:2) is a friend
     # of the guardian who decides, as CSSN's make_guardian had it (Alice, a guardian, deciding).
@@ -221,10 +282,39 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                         sub = lambda ls: [(l[0], l[1], tuple(d if x == n else x for x in l[2])) for l in ls]
                         e = dict(e, head=sub(e['head']), body=[l for l in sub(e['body']) if l != (False, pp, tuple(d if x == n else x for x in hit[2]))])
                     break
+    # A name that two roles each read in a state they hold, and that no effect of the act names, is written as a
+    # variable for each role, required equal: each is then local to its role, as vGLP's compilation asks (OSPM,
+    # sections/parts/act-schemas-local.tex; vGLP by Code #36, 2026-11-20 16:50 UTC: community(Orga, G1) at Orga,
+    # participant(Bob, G2) at Bob, and G1 = G2).  The schema is the same; no atom is added.
+    spliteq = []
+    held = lambda l: bool(l[2]) and l[2][0] in agents and l[1] not in values and l[1] not in ARITH and l[1] not in FN and l[1] not in ('sum', 'product', 'difference', 'author')
+    inhead = {a for l in e['head'] for a in l[2]}
+    firsts = {l[2][0] for l in e['head'] + e['body'] if held(l)} | set(e['guards'])
+    # A value is written so too (vGLP by Code #36, 2026-11-20 17:54 UTC: "a value required at two roles or more and in
+    # no atom the schema adds or deletes", as award's Dollar); a state counted at zero is no atom required (Mutual
+    # Credit's Leave owed nothing), and a constant the contract names is no variable.
+    held0 = held
+    held = lambda l: held0(l) and '#0' not in l[2]
+    for v in sorted({a for l in e['body'] if held(l) for a in l[2][1:] if (a in agents or re.fullmatch(gcsas.NAME, a) and a not in consts) and a not in inhead and a not in firsts}):
+        hs = []
+        for l in e['body']:
+            if held(l) and v in l[2][1:] and l[2][0] not in hs:
+                hs.append(l[2][0])
+        for k, h in enumerate(hs[1:]):
+            w = v + ('Two', 'Three', 'Four', 'Five', 'Six')[k]
+            e = dict(e, body=[(l[0], l[1], tuple(w if x == v and i else x for i, x in enumerate(l[2]))) if held(l) and l[2][0] == h else l for l in e['body']])
+            spliteq.append((v, w))
+            if v in agents:
+                agents = set(agents) | {w}
+            if v in cvals:
+                cvals = frozenset(cvals) | {w}
+            if v in nvals:
+                nvals = frozenset(nvals) | {w}
     lits = e['head'] + e['body']
-    nums = schema_nums(lits, values, places)
+    nums = schema_nums(lits, values, places) | {a for l in lits for a in l[2] if a in nvals}
     cvars = {a for l in lits for i, a in enumerate(l[2]) if (l[1], len(l[2]), i) in cplaces and re.fullmatch(gcsas.NAME, a)
              and a not in consts and a not in nums and a not in agents}
+    cvars |= {a for l in lits for a in l[2] if a in cvals and a not in consts and a not in nums and a not in agents}      # a value of a kind no person says or agrees, const(X) (value_kinds)
     holderless = lambda l: l[1] in values or l[1] in ARITH or l[1] in FN or l[1] in ('sum', 'product', 'difference', 'author') or not l[2] or l[2][0] not in agents
     roles = []
     for l in lits:
@@ -238,7 +328,16 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
         if r and r != roles[0]:
             roles.remove(r)
             roles.insert(0, r)
+    # An act keeps the role order of the act it comes from: the order is decided where the act is first written, and a
+    # contract that has it by citation, restriction, strengthening, instantiation or refinement keeps it; a role the
+    # act gains comes after (Calculus #8, 2026-11-18 07:37 UTC: Denominated Currencies' Swap in Notes' order)
+    if pref:
+        roles = [r for r in pref if r in roles] + [r for r in roles if r not in pref]
+    if record is not None:
+        record[e['name']] = list(roles)
     others, bound, listed, lists, deciders, onecons = [], [], [], [], [], []
+    wrap = lambda x: 'const(%s)' % q(x) if x in cvars else 'num(%s)' % q(x) if x in nums else q(x)
+    onecons.extend('eq(%s, %s)' % (wrap(v), wrap(w)) for v, w in spliteq)
     for g in e['guards']:           # those who decide: one of them, named, and every other the first agent of the role lists for it
         if '(' in g:
             _, p, a = gcsas.parse_atom(g)
@@ -283,13 +382,23 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     def arg(a):
         if a == '_':
             return "'_'"
-        if a.isdigit():
-            return 'val(%s)' % a
+        if a.isdigit():              # a number written in the contract: num(2), as GSC's term form has it (GLP programs/gsc/self.glp, Arg: val(C) is a constant of any type but a number)
+            return 'num(%s)' % a
         if '@' in a:                 # a thing with its signatures, Item@Alice@Bob: sgn(sgn(Item, Alice), Bob) (GSC, Section 3.2, signed terms)
             *t, s = a.split('@')
             return 'sgn(%s, %s)' % (arg('@'.join(t)), arg(s))
         if a in consts:              # a name of no kind that no one holds, as the role Arbiter: a constant the contract names
             return 'val(%s)' % q(a)
+        m = re.fullmatch(r'([a-z][a-z_0-9]*)\((.+)\)', a)
+        if m:                        # a compound value, f(v1, ..., vk): val(bond, [num('Day')]), each vi a value or a value
+            # variable, a variable a number where no other kind is known (GSC #21, Calculus_inbox.md, 2026-11-25 02:29 UTC:
+            # Definition Values; Bonds' 'x holds a y-bond due e = note(x,y,bond(e),*1)', Currencies #23)
+            def sub(x):
+                x = x.strip()
+                if re.fullmatch(gcsas.NAME, x) and x not in consts and x not in cvars and x not in roles:
+                    nums.add(x)
+                return arg(x)
+            return 'val(%s, [%s])' % (m.group(1), ', '.join(sub(x) for x in m.group(2).split(',')))
         if a in nums:
             if a not in others:
                 others.append(a)
@@ -354,7 +463,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                     return env[a]
                 if is_local(a):
                     raise ValueError('%s: a place of a count that no state of numbers defines: %s' % (e['name'], a))
-                return arg(a) if not a.isdigit() else 'val(%s)' % a
+                return arg(a)
             for l in comps:
                 if l[1] not in ARITH:      # a state of numbers whose value is a place of the counted state, or named twice
                     raise ValueError('%s: a state of numbers in a count that defines no number of its own: %s' % (e['name'], l))
@@ -397,15 +506,25 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             if m:
                 xs = ', '.join([o] + [q(a) for a in locs])
                 phi = count_phi(set(locs), cb) if locs else 'true'
-                cons.append('%s(cardinality([%s], %s, %s), %s)' % (cmp(CMP[m.group(1)]), xs, at, phi, arg(m.group(2)) if not m.group(2).isdigit() else 'val(%s)' % m.group(2)))
+                cons.append('%s(cardinality([%s], %s, %s), %s)' % (cmp(CMP[m.group(1)]), xs, at, phi, arg(m.group(2))))
                 return None, cons
         if exact is not None:
             return None, ['%s(cardinality([], %s, true), %s)' % (cmp('eq'), at, arg(exact))]
-        if mult is not None:
-            at = 'times(%s, %s)' % (arg(mult), at)
+        if mult is not None:        # a set of notes, one atom for each (Udi, 2026-11-24, design decisions 49 to 51; GSC's
+            # set('N') and size('N'), GLP claude/project-thread-pgtsao 0daa1b8): the amount n is the size of the set
+            sv = '%sSet' % mult
+            if mult.isdigit():      # a number of notes: those of the atom's other places, one set for each (Coins' Redeem: a Bob-coin, a Carol-coin)
+                sv = ''.join(w[:1].upper() + w[1:] for a in l[2][1:] for w in re.findall(r'[A-Za-z0-9]+', a) if not re.fullmatch(r'[*#]?\d+', a)) + mult + 'Set'
+            if sv not in others:
+                others.append(sv)
+            sc = 'eq(size(%s), %s)' % (q(sv), arg(mult))
+            if sc not in sizes:
+                sizes.append(sc)
+            at = 'atom(%s, [%s])' % (l[1], ', '.join([o for o, _ in out] + ['set(%s)' % q(sv)]))
         return at, cons
 
     head, body, cons = [], [], list(onecons)
+    sizes = []
     cleared = [l for l in e['head'] if l[0] and l[2] and l[2][0] in roles and '_' in l[2][1:]]
     for where, ls in ((head, e['head']), (body, e['body'])):
         for l in ls:
@@ -440,12 +559,12 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                 cons.append('%s(author_of(%s), %s)' % ('ne' if l[0] else 'eq', arg(l[2][1]), arg(l[2][0])))
             elif l[1] in ARITH:
                 cons.append('%s(%s, %s)' % (NOT[ARITH[l[1]]] if l[0] else ARITH[l[1]], arg(l[2][0]), arg(l[2][1])))
+            elif l[1] in FN:      # n is the root of m: n's value is the function root of m, fn(root, [m]) (GSC def:numbers)
+                cons.append('%s(%s, fn(%s, [%s]))' % ('ne' if l[0] else 'eq', arg(l[2][0]), l[1], ', '.join(arg(a) for a in l[2][1:])))
             elif l[1] == 'difference':     # n is the difference from m to k, |m - k|: two linear cases, joined by or (def:numbers' connectives; linear.glp decides or)
                 n, m, k = (arg(a) for a in l[2])
                 c = 'or(and(eq(%s, plus(%s, %s)), ge(%s, %s)), and(eq(%s, plus(%s, %s)), ge(%s, %s)))' % (m, n, k, m, k, k, n, m, k, m)
                 cons.append('not(%s)' % c if l[0] else c)
-            elif l[1] in FN:      # n is the root of m: n's value is the function root of m, fn(root, [m]) (GSC def:numbers)
-                cons.append('%s(%s, fn(%s, [%s]))' % ('ne' if l[0] else 'eq', arg(l[2][0]), l[1], ', '.join(arg(a) for a in l[2][1:])))
             elif l[1] in ('sum', 'product'):
                 cons.append('%s(%s, %s(%s, %s))' % ('ne' if l[0] else 'eq', arg(l[2][0]), 'plus' if l[1] == 'sum' else 'mul', arg(l[2][1]), arg(l[2][2])))
             elif holderless(l) and not re.fullmatch(r'(<=|>=|<|>|=)\w+', l[2][0] if l[2] else ''):      # a counted holder is a count, cardinality(...) (SC's 'fewer than 1 persons holds a share of z')
@@ -457,6 +576,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
                 if at:
                     where.append('not(%s)' % at if l[0] else at)
     made = {l[2][0] for l in e['head'] if l[1] == 'identity' and not l[0]}
+    extra = []
     if marks:                       # who acts is a person, or a ward with a guardian (GSC, Contracts with Wards)
         has = lambda p, g: any(not l[0] and l[1] == p and l[2] and l[2][0] == g for l in e['body'])
         k = 0
@@ -466,11 +586,24 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             if g in persons:        # a guard the act's own contract declares a person or a party is a person, not a ward (Bonds:4's escrow agent, Calculus #6, 2026-11-15 17:23 UTC; a party, Udi, 2026-11-15)
                 lists.append('atom(person, [%s])' % q(g))
                 continue
-            f = 'atom(person, [%s])' % q(g)
+            # a guard the act's contract declares an organisation or a ward is one, acting through its officer or
+            # guardian, never a person (Audit PR 102, Finding 19; GO #15, 2026-11-24): the mirror of persons above
+            own = [m for m in marks if m in e.get('_kinds', {}).get(g, ())]
+            f = None if own else 'atom(person, [%s])' % q(g)
             for m, u in marks.items():
                 k += 1
-                f = 'or(%s, and(atom(%s, [%s]), exists([%s], atom(%s, [%s, %s]), true)))' % (f, m, q(g), q('G%d' % k), u, q(g), q('G%d' % k))
-            lists.append(f)
+                if own and m not in own:
+                    continue
+                if own and len(own) == 1:
+                    # one kind: the guard's ward and its guardian are required literals, G a name of the schema
+                    # (GSC #21, Calculus_inbox.md, 2026-11-24 14:43 UTC: Definition Guardianship's "an atom of the u of its guardianship")
+                    lists.extend(['atom(%s, [%s])' % (m, q(g)), 'atom(%s, [%s, %s])' % (u, q(g), q('G%d' % k))])
+                    extra.append('G%d' % k)
+                    continue
+                d = 'and(atom(%s, [%s]), exists([%s], atom(%s, [%s, %s]), true))' % (m, q(g), q('G%d' % k), u, q(g), q('G%d' % k))
+                f = d if f is None else 'or(%s, %s)' % (f, d)
+            if f is not None:
+                lists.append(f)
         lists[:] = [x.replace('[atom(identity, [%s])' % q(d), '[atom(identity, [%s]), atom(person, [%s])' % (q(d), q(d))) for x in lists for d in [None]] if False else lists
     idn = ['atom(identity, [%s])' % q(r) for r in roles + deciders if r not in made and 'not(atom(identity, [%s]))' % q(r) not in body]
     # Two roles the contract says are possibly one agent are written one(Name, Other), Name the later of the two
@@ -499,16 +632,51 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     used[name] = k + 1
     if k:
         name += '_%d' % (k + 1)
+    # A single note the act only requires, neither deleting nor adding it nor naming it elsewhere, is written with the
+    # wildcard, note(Alice, Carol, coin, Dollar, _): some note it holds, which the act neither names nor records (vGLP,
+    # Section 5.4: a wildcard in an unnegated atom of B is a variable of its own; vGLP #32, Calculus_inbox.md,
+    # 2026-11-24 21:16 UTC, on Denominated Currencies' Accept)
+    for sc in list(sizes):
+        m = re.fullmatch(r"eq\(size\('(\w+1Set)'\), num\(1\)\)", sc)
+        if not m:
+            continue
+        sv = "set('%s')" % m.group(1)
+        if sum(x.count(sv) for x in body) == 1 and not any(sv in x for x in head + lists + idn + cons) \
+                and not any(sv in x and x.startswith('not(') for x in body):
+            body = [x.replace(sv, "'_'") for x in body]
+            sizes.remove(sc)
+            others = [o for o in others if o != m.group(1)]
     constraint = 'true'
-    for c in reversed(cons):
+    for c in reversed(cons + sizes):
         constraint = c if constraint == 'true' else 'and(%s, %s)' % (c, constraint)
     return 'sas(%s, [%s], [%s], [%s], [%s], %s, [%s])' % (
-        q(name), ', '.join(names + [q(x) for x in listed]), ', '.join(q(o) for o in others if o not in roles and o not in deciders), ', '.join(head), ', '.join(idn + body + lists), constraint,
+        q(name), ', '.join(names + [q(x) for x in listed + extra]), ', '.join([q(o) for o in others if o not in roles and o not in deciders] + [q(x) for x in extra]), ', '.join(head), ', '.join(idn + body + lists), constraint,
         ', '.join([q(g) for g in e['guards'] if '(' not in g] + [q(x) for x in deciders + listed]))
+
+
+ORDERS = {}     # {contract: {act: its roles in their order}}, of every contract whose term was made (origin_order)
+
+
+def origin(e):
+    """The contract that first wrote the act: the first of its label, Notes of 'Notes:2+Denominated Currencies:2'."""
+    return re.split(r'[:+]', e['label'])[0]
+
+
+def origin_order(o):
+    """The role order of each act of contract o, as o's own term has it."""
+    if o not in ORDERS:
+        contract_term(o)
+    return ORDERS[o]
 
 
 def contract_term(n):
     acts = [e for e in schemas(n) if e['kind'] == 'act']
+    known = set(NM.names_in(os.path.join(ROOT, 'gr')))
+    prefs = {}
+    for e in acts:          # the orders of the contracts the acts come from, before this contract's own reading (values_of sets ONE)
+        o = origin(e)
+        if o != n and o in known:
+            prefs[(e['label'], e['name'])] = origin_order(o).get(e['name'])
     declared, envd, pard = set(), set(), set()
     values, rlist, kinds = values_of(n, declared, envd, pard)
     agents, used, out, roles = agents_of(acts, values), {}, [], 0
@@ -525,6 +693,8 @@ def contract_term(n):
     consts -= {x for e in acts for x in schema_nums(e['head'] + e['body'], values, places)
                if any(x.startswith(k) and x != k and 'number' in ks for k, ks in kinds.items())}
     cplaces = const_places(acts, consts)
+    cvals, _ = value_kinds(acts, agents, kinds, values, places, consts)
+    nvals = frozenset(x for x in kinds if x not in agents and any(k.split()[0] == 'number' for k in kinds[x]))
     # A predicate the Logic pragmas declare reflexive, 'Reflexive: x knows y.' (GKK's, and so every contract's
     # written from GKK), is declared reflexive in the term, as GSC's GnW declares knows (GSC's Section "Contracts with
     # Wards", "Reflexive predicates"; GLP programs/gsc/GnW.glp), with or without wards; gcsas.py writes no atom p(x,x).
@@ -535,20 +705,35 @@ def contract_term(n):
     w = gcsas.World(NM.names_in(os.path.join(ROOT, 'gr')))
     pmemo = {}
     def persons_of(e):      # the names the contract that wrote the act declares persons or parties, and only those
-        o = re.split(r'[:+]', e['label'])[0]
-        if o not in pmemo:
-            pmemo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if ks & {'person', 'party'} and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
+        out = frozenset()
+        for part in e['label'].split('+'):     # every contract whose clause the act is of (Rides:1 makes Award's Alice a person)
+            o = part.split(':')[0]
+            if o not in pmemo:
+                pmemo[o] = frozenset(x for x, ks in gcsas.kinds_from(w, n, o).items() if ks & {'person', 'party'} and not ks & {'organisation', 'ward'}) if o in w.known else frozenset()
+            out |= pmemo[o]
         # a party guards the act in its person's form as a person, its ward's form being the act derived 'for' it
         # (gcsas.party_specs); who takes an act for a party, and who votes on it, is a person (GO:2's Act and Vote)
-        return pmemo[o] | frozenset((e.get('taken') or {}).values()) | {gcsas.VOTER}
+        return out | frozenset((e.get('taken') or {}).values()) | {gcsas.VOTER}
     amemo = {}
     def anyof(e):           # the names the clause that wrote the act declares possibly any of the others (gcsas.possibly)
         o, num = re.split(r'[:+]', e['label'])[0], int(re.split(r'[:+]', e['label'])[1])
         if (o, num) not in amemo:
             amemo[(o, num)] = frozenset(a for cl, a, b in gcsas.possibly(w.contract(o)) if b == '*' and (cl is None or num in cl)) if o in w.known else frozenset()
         return amemo[(o, num)]
+    orders = {}
+    kmemo = {}
+    def kinds_of(e):        # the kinds the contracts of the act's clauses declare each name of (Gov an organisation)
+        out = {}
+        for part in e['label'].split('+'):
+            o = part.split(':')[0]
+            if o not in kmemo:
+                kmemo[o] = gcsas.kinds_from(w, n, o) if o in w.known else {}
+            for x, ks in kmemo[o].items():
+                out[x] = set(out.get(x, set())) | set(ks)
+        return out
     for e in acts:
-        t = term(e, agents, used, values, rlist, marks, consts, places, cplaces, persons_of(e), acts, anyof(e))
+        e = dict(e, _kinds=kinds_of(e))
+        t = term(e, agents, used, values, rlist_for(e, rlist), marks, consts, places, cplaces, persons_of(e), acts, anyof(e), cvals, nvals, prefs.get((e['label'], e['name'])), orders)
         if t is None:
             roles += 1
         else:
@@ -567,7 +752,19 @@ def contract_term(n):
     par = sorted(p for p in pard if p not in added and any(l[1] == p for e in acts for l in e['body']))
     if par:
         body = 'parametric([%s], %s)' % (', '.join(par), body)
+    ORDERS[n] = orders
     return body, len(acts), roles
+
+
+STAMP = 'verdict-term.sha256'      # beside a verdict, cascade/NAME/verdict.txt: the SHA-256 of the term it was made on
+
+
+def term_hash(t):
+    """The SHA-256 of the term t as its file has it, glp/NAME.glp.txt (adopt.py's term.glp.txt): the text and a newline.
+    cascade.py writes it beside each verdict, and adopt.py refuses a contract whose term has another (Code, 2026-11-20:
+    a verdict is of the text it was made on, and of no other)."""
+    import hashlib
+    return hashlib.sha256((t.rstrip('\n') + '\n').encode('utf-8')).hexdigest()
 
 
 def check(t, glp):

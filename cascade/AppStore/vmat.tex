@@ -12,22 +12,22 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \notin c_
 {
 \Alice
@@ -52,11 +52,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -71,11 +71,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -83,25 +83,25 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Bob
@@ -128,11 +128,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \mathit{Carol}
 )
@@ -160,58 +160,58 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
-,
-\mathit{
-person
-}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \mathit{Carol}
 )
-,
-\mathit{
-person
-}
  \in c_
 {
 \Bob
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \mathit{Carol}
@@ -238,11 +238,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -257,11 +257,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -269,39 +269,39 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
-,
-\mathit{
-person
-}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
-,
-\mathit{
-person
-}
  \in c_
 {
 \Bob
@@ -309,9 +309,9 @@ person
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -320,9 +320,9 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -354,9 +354,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -373,9 +373,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -383,17 +383,17 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -402,17 +402,17 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -440,11 +440,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -452,13 +452,13 @@ Item
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Alice
@@ -466,9 +466,9 @@ person
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -496,11 +496,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 \mathrm{sgn}(
 Item
@@ -522,13 +522,13 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -537,27 +537,27 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Bob
@@ -582,11 +582,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 program
-}
+}}
 (
 Prog
 ,
@@ -596,13 +596,13 @@ Prog
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Alice
@@ -610,9 +610,9 @@ person
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 program
-}
+}}
 (
 Prog
 ,
@@ -642,11 +642,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 trusts_developer
-}
+}}
 (
 Carol
 )
@@ -654,20 +654,20 @@ Carol
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Alice
@@ -675,9 +675,9 @@ person
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 trusts_developer
-}
+}}
 (
 Carol
 )
@@ -707,9 +707,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 trusts_developer
-}
+}}
 (
 Carol
 )
@@ -717,17 +717,17 @@ Carol
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 trusts_developer
-}
+}}
 (
 Carol
 )
@@ -755,11 +755,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 program
-}
+}}
 (
 \mathrm{sgn}(
 Prog
@@ -783,13 +783,13 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -798,29 +798,29 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 program
-}
+}}
 (
 Prog
 ,
 Erin
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Bob
@@ -845,11 +845,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 installed
-}
+}}
 (
 Prog
 ,
@@ -859,22 +859,22 @@ Prog
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 program
-}
+}}
 (
 Prog
 ,
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Alice
@@ -882,9 +882,9 @@ person
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 installed
-}
+}}
 (
 Prog
 ,
@@ -914,11 +914,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 installed
-}
+}}
 (
 Prog
 ,
@@ -928,29 +928,29 @@ Carol
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 program
-}
+}}
 (
 Prog
 ,
 Carol
 )
 ,
-\mathit{
+\mathit{\detokenize{
 trusts_developer
-}
+}}
 (
 Carol
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Alice
@@ -958,9 +958,9 @@ person
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 installed
-}
+}}
 (
 Prog
 ,
@@ -990,11 +990,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 program
-}
+}}
 (
 \mathrm{sgn}(
 Prog
@@ -1005,9 +1005,9 @@ Prog
 Carol
 )
 ,
-\mathit{
+\mathit{\detokenize{
 installed
-}
+}}
 (
 \mathrm{sgn}(
 Prog
@@ -1018,9 +1018,9 @@ Prog
 Carol
 )
 ,
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1039,11 +1039,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1055,55 +1055,55 @@ Carol
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 trusts_developer
-}
+}}
 (
 Carol
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 installed
-}
+}}
 (
 Prog
 ,
 Carol
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Bob
@@ -1132,9 +1132,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 installed
-}
+}}
 (
 Prog
 ,
@@ -1151,9 +1151,9 @@ Carol
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1174,10 +1174,10 @@ Carol
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1191,9 +1191,9 @@ Carol
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1217,18 +1217,18 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 installed
-}
+}}
 (
 Prog
 ,
 Carol
 )
 ,
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1247,9 +1247,9 @@ Carol
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1270,10 +1270,10 @@ Carol
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1287,9 +1287,9 @@ Carol
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1309,9 +1309,9 @@ c_
 q
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1326,9 +1326,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1345,17 +1345,17 @@ q \neq
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 installed
-}
+}}
 (
 Prog
 ,
@@ -1366,13 +1366,13 @@ Carol
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1387,9 +1387,9 @@ q \in
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 Prog
 ,
@@ -1406,9 +1406,9 @@ Carol
 \forall 
 \Bob
 \,(
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 \Alice
 ,
@@ -1419,16 +1419,16 @@ Carol
 \Bob
 )
 \rightarrow
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 (
 \Bob
 )
 \land
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 \Bob
 ,
@@ -1445,9 +1445,9 @@ Carol
 \forall 
 \Bob
 \,(
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 \Alice
 ,
@@ -1459,9 +1459,9 @@ Carol
 )
 \rightarrow
 \neg 
-\mathit{
+\mathit{\detokenize{
 participant
-}
+}}
 (
 \Bob
 ,
@@ -1492,33 +1492,33 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ward
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -1533,32 +1533,32 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 creator
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -1566,13 +1566,13 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Bob
@@ -1580,9 +1580,9 @@ person
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \notin c_
 {
 \Alice
@@ -1609,25 +1609,25 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -1643,25 +1643,25 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -1672,9 +1672,9 @@ friend
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -1692,25 +1692,25 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -1721,9 +1721,9 @@ friend
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -1754,9 +1754,9 @@ q
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -1772,17 +1772,17 @@ q \neq
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \mathit{Carol}
 )
@@ -1791,17 +1791,17 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ward
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \mathit{Carol}
 )
@@ -1810,17 +1810,17 @@ has_guardian
 \Bob
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -1829,17 +1829,17 @@ guardian
 \mathit{Carol}
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -1850,9 +1850,9 @@ q \in
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -1862,9 +1862,9 @@ has_guardian
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -1874,13 +1874,13 @@ guardian
 }
  \text{ and } 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Alice
 )
@@ -1916,9 +1916,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -1935,9 +1935,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Alice
 )
@@ -1945,17 +1945,17 @@ has_guardian
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -1964,13 +1964,13 @@ guardian
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Alice
 )
@@ -2000,9 +2000,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -2013,9 +2013,9 @@ guardian
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -2035,9 +2035,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -2048,9 +2048,9 @@ guardian
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -2070,9 +2070,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Alice
 )
@@ -2083,9 +2083,9 @@ has_guardian
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -2105,9 +2105,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Alice
 )
@@ -2118,9 +2118,9 @@ has_guardian
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -2144,9 +2144,9 @@ c_
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -2170,9 +2170,9 @@ c_
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -2192,9 +2192,9 @@ q
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -2213,13 +2213,13 @@ q \neq
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -2228,20 +2228,20 @@ guardian
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \mathit{Carol}
 )
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Alice
 )
@@ -2250,17 +2250,17 @@ has_guardian
 \Bob
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -2269,17 +2269,17 @@ guardian
 \mathit{Carol}
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -2290,9 +2290,9 @@ q \in
 \mathrm{ext}_c(
 \Bob
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -2305,9 +2305,9 @@ has_guardian
 \forall 
 \mathit{Dave}
 \,(
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Bob
 ,
@@ -2318,23 +2318,23 @@ has_guardian
 \neq
 \Alice
 \rightarrow
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 (
 \mathit{Dave}
 )
 \land
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 (
 \mathit{Dave}
 )
 \land
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \mathit{Dave}
 ,
@@ -2365,16 +2365,16 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -2391,16 +2391,16 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Alice
 )
@@ -2408,24 +2408,24 @@ has_guardian
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -2434,20 +2434,20 @@ guardian
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Alice
 )
@@ -2475,11 +2475,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -2494,11 +2494,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -2506,17 +2506,17 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ward
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 Alice
 )
@@ -2525,13 +2525,13 @@ Alice
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Bob
@@ -2558,11 +2558,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -2577,11 +2577,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -2599,24 +2599,24 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ward
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \mathit{Carol}
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -2625,24 +2625,24 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \mathit{Carol}
 )
@@ -2651,20 +2651,20 @@ friend
 \Bob
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \mathit{Carol}
@@ -2673,13 +2673,13 @@ person
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -2690,9 +2690,9 @@ friend
 }
  = \emptyset
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -2726,15 +2726,14 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
 \}
-,\\
-&
+, \qquad 
 c'_
 {
 \Bob
@@ -2746,9 +2745,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -2756,13 +2755,24 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+ward
+}}
+,
+\mathit{\detokenize{
+has_guardian
+}}
+(
+G1
+)
+,
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -2771,13 +2781,13 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -2788,9 +2798,9 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Bob
 )
@@ -2798,39 +2808,6 @@ has_guardian
 {
 \Alice
 }
-,\\
-&
-\text{provided } 
-(
-\mathit{
-person
-}
-(
-\Alice
-)
-\lor
-(
-\mathit{
-ward
-}
-(
-\Alice
-)
-\land
-\exists 
-G1
-\,(
-\mathit{
-has_guardian
-}
-(
-\Alice
-,
-G1
-)
-)
-)
-)
 ,\\
 &
 \text{guarded by } \{
@@ -2853,9 +2830,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -2872,9 +2849,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -2882,17 +2859,17 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -2901,13 +2878,13 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -2918,9 +2895,9 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -2950,9 +2927,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -2969,9 +2946,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -2989,20 +2966,20 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \mathit{Carol}
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -3011,13 +2988,13 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -3026,13 +3003,13 @@ friend
 \Bob
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \mathit{Carol}
@@ -3040,9 +3017,9 @@ person
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
@@ -3070,11 +3047,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -3089,11 +3066,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -3101,17 +3078,17 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ward
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 Alice
 )
@@ -3120,17 +3097,17 @@ Alice
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ward
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 Bob
 )
@@ -3160,11 +3137,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -3179,11 +3156,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -3211,24 +3188,24 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ward
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \mathit{Carol}
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -3237,24 +3214,24 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ward
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \mathit{Dave}
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -3263,46 +3240,46 @@ knows
 \Bob
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \mathit{Dave}
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \mathit{Carol}
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \mathit{Carol}
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \mathit{Dave}
@@ -3311,13 +3288,13 @@ person
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -3329,13 +3306,13 @@ friend
  = \emptyset
  \text{ and } 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -3371,11 +3348,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -3390,11 +3367,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -3412,24 +3389,24 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ward
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \mathit{Carol}
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -3438,24 +3415,24 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ward
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \mathit{Carol}
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -3464,13 +3441,13 @@ knows
 \Bob
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \mathit{Carol}
@@ -3479,13 +3456,13 @@ person
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -3497,13 +3474,13 @@ friend
  = \emptyset
  \text{ and } 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -3542,11 +3519,11 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 \}
  \qquad (
 \Alice
@@ -3554,9 +3531,9 @@ retired
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3568,9 +3545,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3582,9 +3559,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -3601,17 +3578,17 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
  \text{ or } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -3621,9 +3598,9 @@ friend
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3635,9 +3612,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3649,9 +3626,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -3672,9 +3649,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -3683,11 +3660,11 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 \}
  \qquad (
 \Alice
@@ -3695,9 +3672,9 @@ retired
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3709,9 +3686,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3723,9 +3700,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -3742,17 +3719,17 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
  \text{ or } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -3762,9 +3739,9 @@ friend
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3776,9 +3753,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3790,9 +3767,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -3813,9 +3790,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
@@ -3824,11 +3801,11 @@ guardian
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 \}
  \qquad (
 \Alice
@@ -3836,9 +3813,9 @@ retired
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3850,9 +3827,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3864,9 +3841,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -3883,17 +3860,17 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
  \text{ or } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -3903,9 +3880,9 @@ friend
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3917,9 +3894,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3931,9 +3908,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -3954,16 +3931,16 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -3972,11 +3949,11 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 \}
  \qquad (
 \Alice
@@ -3984,9 +3961,9 @@ retired
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -3998,9 +3975,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4012,9 +3989,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4031,17 +4008,17 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
  \text{ or } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4051,9 +4028,9 @@ friend
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4065,9 +4042,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4079,9 +4056,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4104,11 +4081,11 @@ c_
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 \}
  \qquad (
 \Alice
@@ -4116,9 +4093,9 @@ retired
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4130,9 +4107,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4144,9 +4121,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4163,17 +4140,17 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
  \text{ or } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4183,9 +4160,9 @@ friend
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4197,9 +4174,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4211,9 +4188,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4234,9 +4211,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -4245,11 +4222,11 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 \}
  \qquad (
 \Alice
@@ -4257,9 +4234,9 @@ retired
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4271,9 +4248,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4285,9 +4262,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4304,17 +4281,17 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
  \text{ or } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4324,9 +4301,9 @@ friend
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4338,9 +4315,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4352,9 +4329,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4375,9 +4352,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
@@ -4386,11 +4363,11 @@ guardian
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 \}
  \qquad (
 \Alice
@@ -4398,9 +4375,9 @@ retired
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4412,9 +4389,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4426,9 +4403,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4445,17 +4422,17 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
  \text{ or } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4465,9 +4442,9 @@ friend
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4479,9 +4456,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4493,9 +4470,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4516,16 +4493,16 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -4534,11 +4511,11 @@ friend
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
 \}
  \qquad (
 \Alice
@@ -4546,9 +4523,9 @@ retired
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4560,9 +4537,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4574,9 +4551,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4593,17 +4570,17 @@ friend
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
  \text{ or } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4613,9 +4590,9 @@ friend
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4627,9 +4604,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4641,9 +4618,9 @@ has_guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4663,9 +4640,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
@@ -4676,9 +4653,9 @@ guardian
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4698,16 +4675,16 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -4718,9 +4695,9 @@ friend
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4736,9 +4713,9 @@ c_
 q
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -4749,9 +4726,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4763,9 +4740,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4777,9 +4754,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4801,9 +4778,9 @@ c_
 q
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
@@ -4814,9 +4791,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4828,9 +4805,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4842,9 +4819,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4866,16 +4843,16 @@ c_
 q
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -4886,9 +4863,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4900,9 +4877,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4914,9 +4891,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4942,9 +4919,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4956,9 +4933,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -4970,9 +4947,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -4994,9 +4971,9 @@ c_
 q
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -5007,9 +4984,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -5021,9 +4998,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -5035,9 +5012,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -5059,9 +5036,9 @@ c_
 q
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
@@ -5072,9 +5049,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -5086,9 +5063,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -5100,9 +5077,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -5124,16 +5101,16 @@ c_
 q
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -5144,9 +5121,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -5158,9 +5135,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -5172,9 +5149,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -5190,13 +5167,13 @@ q \neq
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \Bob
 )
@@ -5205,17 +5182,17 @@ has_guardian
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
@@ -5226,17 +5203,17 @@ guardian
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
@@ -5247,9 +5224,9 @@ q \in
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -5259,13 +5236,13 @@ has_guardian
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
@@ -5276,9 +5253,9 @@ q \in
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 has_guardian
-}
+}}
 (
 \ast
 )
@@ -5288,13 +5265,13 @@ has_guardian
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -5305,9 +5282,9 @@ q \in
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \ast
 )
@@ -5317,9 +5294,9 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 retired
-}
+}}
  \notin c_
 {
 \Alice
@@ -5346,11 +5323,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 store
-}
+}}
 \}
 , \qquad 
 c'_
@@ -5365,28 +5342,28 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Bob
@@ -5394,9 +5371,9 @@ person
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 store
-}
+}}
  \notin c_
 {
 \Alice
@@ -5421,20 +5398,20 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 lists_program
-}
+}}
 (
 Prog
 ,
 Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 listing_signed
-}
+}}
 (
 Prog
 ,
@@ -5456,48 +5433,48 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 store
-}
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 trusts_developer
-}
+}}
 (
 Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 program
-}
+}}
 (
 Prog
 ,
 Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Bob
@@ -5505,9 +5482,9 @@ person
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 lists_program
-}
+}}
 (
 Prog
 ,
@@ -5539,9 +5516,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 lists_program
-}
+}}
 (
 Prog
 ,
@@ -5572,10 +5549,10 @@ c_
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 listing_signed
-}
+}}
 (
 Prog
 ,
@@ -5586,13 +5563,13 @@ Bob
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 lists_program
-}
+}}
 (
 Prog
 ,
@@ -5603,20 +5580,20 @@ Bob
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Bob
@@ -5641,11 +5618,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 trusts_store
-}
+}}
 (
 \Bob
 )
@@ -5673,51 +5650,51 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \mathit{Carol}
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 store
-}
+}}
  \in c_
 {
 \Bob
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 guardian
-}
+}}
 (
 \Bob
 )
@@ -5728,9 +5705,9 @@ guardian
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 trusts_store
-}
+}}
 (
 \Bob
 )
@@ -5760,9 +5737,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 trusts_store
-}
+}}
 (
 Dave
 )
@@ -5770,17 +5747,17 @@ Dave
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 trusts_store
-}
+}}
 (
 Dave
 )
@@ -5808,20 +5785,20 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 program
-}
+}}
 (
 Prog
 ,
 Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 installed
-}
+}}
 (
 Prog
 ,
@@ -5841,32 +5818,32 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 trusts_store
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 lists_program
-}
+}}
 (
 Prog
 ,
@@ -5879,9 +5856,9 @@ Bob
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 installed
-}
+}}
 (
 Prog
 ,

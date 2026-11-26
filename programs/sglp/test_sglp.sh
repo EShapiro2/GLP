@@ -262,6 +262,22 @@
 #       draw each agent's stochastic person of its role; and the run refused
 #       for a census drawing nobody and one drawing a person of a role of no
 #       dimension.
+# (xxi) the machine's clock (tests/clock; Audit #4, Grassroots-Audit
+#       programs/sglp/cva/harness.glp.in.md, Finding 2): forty rated goals in a
+#       chain, each of rate 1 a day, each released goal spawning a goal that,
+#       one goal later, reads now/1; each reading is the Release's simulated
+#       time in milliseconds, from 1970-01-01, up to under a second of wall
+#       time, and of its day.
+# (xxii) a platform whose agent is agent/6, of an environment (Audit #4,
+#       Finding 1): tests/environment/environment_sglp.glp over the canonical
+#       platform of Local Overlay (cascade/Local-Overlay), its census of two
+#       persons and its environment/2, exported by the printed profiles; two
+#       agents for a day (cva/run.sh), each agent's first view showing its
+#       person's environment, bound(two) and bound(three), and each
+#       establishing its identity; run.sh refusing, with exit 2 and nothing
+#       run, a source with no environment/2 over that platform, and a platform
+#       whose agent is neither agent/5 nor agent/6 (cascade/Encounters,
+#       agent/8).
 # And, unnumbered: the printer (each line one string, by GLP's string_concat/2
 # and term_to_string/2) and the seeds (tests/seeds, Appendix B, "Seeds").
 #
@@ -1368,6 +1384,44 @@ grep -q '^Ok = no$' "$WORK/census_refused.lines" && [ "$(grep -c '^Ok = no$' "$W
     [ "$(grep -c '^refused$' "$WORK/census_refused.lines")" -eq 2 ] &&
     ! grep -q '^entry(\|^clock(' "$WORK/census_refused.lines"
 check "a census drawing no person, and one drawing a person of a role of no dimension, are refused by the run, which takes no goal but the line refused (Section 3, after Definition \"Well-Formed\")" $?
+
+echo "--- (xxi) the machine's clock is the simulated clock"
+repl "$WORK/clock.out" ':limit 1000000000000' "$HERE/tests/clock" 'clock(40).'
+grep -q '✓ Loaded program' "$WORK/clock.out"
+check "tests/clock loads" $?
+grep -o 'r([^)]*)' "$WORK/clock.out" | awk -F'[(,) ]+' '
+    { t = $2; m = $3; d = m - int(t * 1000); if (d < 0 || d >= 1000) bad++
+      if (int(m / 86400000) != int(t / 86400)) bad++; n++; last = t }
+    END { printf "        %d readings, the last at %.0f s, %d not of their Release\n", n, last, bad
+          exit !(n == 40 && last > 86400 && !bad) }'
+check "each of forty Releases, a day apart on average, read by now/1 one goal after the released goal's: its simulated time in milliseconds from 1970-01-01, up to under a second, and its day" $?
+
+echo "--- (xxii) a platform of an environment, agent/6"
+ENVD="$WORK/env"; mkdir -p "$ENVD"
+bash "$HERE/transform.sh" --interface "$GLP_DIR/cascade/Local-Overlay/interface.glp" --source "$HERE/tests/environment/environment_sglp.glp" --out "$ENVD" > "$WORK/env_tx.out" 2>&1
+st=$?
+[ "$st" -eq 0 ] && grep -q '^exported procedure environment(Person?, List(Atom))\.$' "$ENVD/profiles.glp" &&
+    grep -q '^exported procedure agent(Peer?, Stream(Net)?, Stream(Net), Stream(Output), List(Atom)?, Stream(Ask(Question)))\.$' "$GLP_DIR/cascade/Local-Overlay/platform.glp"
+check "the source of an environment transformed over Local Overlay's interface, whose agent is agent/6: the printed profiles export environment(Person?, List(Atom))" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/env_tx.out"
+bash "$HERE/cva/run.sh" "$GLP_DIR/cascade/Local-Overlay/platform.glp" "$ENVD" census '1 day' 1 "$WORK/env.log" > "$WORK/env_run.out" 2>&1
+st=$?
+[ "$st" -eq 0 ] &&
+    grep -q '^0	1	output	view(p1, \[bound(two)\], ' "$WORK/env.log" &&
+    grep -q '^0	2	output	view(p2, \[bound(three)\], ' "$WORK/env.log" &&
+    grep -q '	1	Request?	propose(establish(p1))$' "$WORK/env.log" &&
+    grep -q '	2	Request?	propose(establish(p2))$' "$WORK/env.log" &&
+    grep -q '	1	output	view(p1, \[identity, person, bound(two)\], ' "$WORK/env.log"
+check "two agents of Local Overlay for a day (cva/run.sh): each agent's first view shows its person's environment, bound(two) and bound(three), and each establishes its identity" $?
+[ "$st" -eq 0 ] || sed 's/^/        /' "$WORK/env_run.out"
+bash "$HERE/cva/run.sh" "$GLP_DIR/cascade/Local-Overlay/platform.glp" "$CVA/census" census '1 day' 1 "$WORK/env_none.log" > "$WORK/env_none.out" 2>&1
+s1=$?
+bash "$HERE/cva/run.sh" "$GLP_DIR/cascade/Encounters/platform.glp" "$ENVD" census '1 day' 1 "$WORK/env_eight.log" > "$WORK/env_eight.out" 2>&1
+s2=$?
+[ "$s1" -eq 2 ] && grep -q "^run.sh: the platform's agent is agent/6, of an environment, and .* exports no environment(Person?, List(Atom))$" "$WORK/env_none.out" &&
+    [ "$s2" -eq 2 ] && grep -q "^run.sh: the platform's agent is agent/5 or agent/6, not 8$" "$WORK/env_eight.out" &&
+    [ ! -e "$WORK/env_none.log" ] && [ ! -e "$WORK/env_eight.log" ]
+check "run.sh refuses, with exit 2 and nothing run, a source with no environment/2 over Local Overlay, and Encounters, whose agent is agent/8" $?
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

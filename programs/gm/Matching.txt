@@ -1,0 +1,21 @@
+% Matching: the contract, the one copy, its owner's.
+% Owner: GM (Udi, 2026-11-18, approving the recommendation, reported by the coordinator).
+% Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
+% Last changed: 2026-11-18, written from the paper at GM main 794a6a2; first line as Udi approved it, 2026-11-18, on the Calculus's recommendation; the Logic pragmas are the Calculus's, in calculus/contracts; no Interface pragmas yet. The budget, in the definitions and in clause 2, 2026-11-19 (Udi, 2026-11-19, "yes", relayed by the coordinator); the Logic pragmas below are the Calculus's, to be printed again. The text of 2026-11-20 (Udi, 2026-11-20, "yes" to each item and to writing it, in the thread Grassroots Matching); the Logic pragmas below are the Calculus's, printed again by adopt.py on 2026-11-21.
+Matching
+Matching inherits from Gossip.
+Posts have a *test*, whether two *match*.
+Alice, Bob and Carol are persons.
+1. ■ Return: Bob, who holds two matching posts, one from Alice, forwards to Alice the second post.
+2. ■ Meet: Alice and Carol, both holding matching posts one made by Alice and one made by Carol, may jointly come to know each other.
+Logic pragmas
+Matching extends Gossip.
+Posts have a *test*, whether two *match*.
+Alice, Bob and Carol are persons, Post and Other posts.
+1. ■ Return: Bob forwards Other to Alice, provided Bob holds the post Post from Alice, Bob holds the post Other and Post and Other match.
+2. ■ Meet: Alice and Carol may jointly come to know each other, provided Alice has made the post Post, Carol has made the post Other, Alice holds the post Other, Carol holds the post Post and Post and Other match.
+Logic pragmas.
+Vocabulary: p and q match, for x = match(x,p,q); x has forwarded p to y = forwarded_post(x,p,y).
+After x and y come to know each other: x and y know each other.
+After x forwards p to y, which requires y does not hold the post p from x and x has not forwarded p to y: x has forwarded p to y, y holds the post p from x and y holds the post p.
+Environment: p and q match, for x.

@@ -1,0 +1,3 @@
+Meeting Rooms
+Meeting Rooms extends Booking.
+Meeting Rooms:0 - | A resource is a *room*.

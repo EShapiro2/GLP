@@ -1,0 +1,39 @@
+% Warnings --- an example contract by Nimrod Talmon with Claude, 2026-11-18: Ostrom's fifth design principle, graduated sanctions (Ostrom 2005, ch. 9, p. 259).
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.
+% Extends: Organisation, GO's (programs/go).
+% Defines: warning.
+% Checked: calculus/tools/gcsas.py (commute, return, recover), relations.py and toglp.py --check (Dart 3.14.1) at GLP 52261a6: syntactically_grassroots_with_wards; GCE 2026-11-25 for Grassroots-Audit #136.  Again by GCE #2, 2026-11-25, for Grassroots-Audit #136 (auditor's PR 162): a warning names its date and counts toward Expel from seven days after it, and stays when its officer leaves office; gcsas.py 92 contracts 0 faults, relations.py 157 of 157 hold, toglp.py --check (Dart 3.13.7): syntactically_grassroots_with_wards.
+% Schemas: Warnings.glp beside this file.
+Warnings
+Warnings inherits from Organisation.
+A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident and the date it is given. An officer holds at most one warning to a participant at a time, and the participant may answer it once; a warning withdrawn or annulled may be given again of the same incident only if it was not answered. A warning stays when the officer who gave it leaves office, until it is withdrawn or annulled. A warning counts toward expelling the participant only from seven days after it is given, so that he has the time to answer it.
+Alice and Bob are persons, Orga an organisation.
+1. ■ Warn: Alice may warn Bob in Orga of an incident, provided Alice is an officer of Orga and Orga has Bob as a participant.
+2. ■ Answer: Bob may answer a warning to him.
+3. ■ Withdrawal. Withdraw: Alice may withdraw her warning. Annul: Those who decide for Orga may annul a warning.
+4. ■ Expel: Organisation:3 Expel, only if Orga holds warnings to Bob of two persons, each given more than seven days before. Officer expel: Organisation:3 Officer expel, only if Orga holds warnings to Bob of two persons, each given more than seven days before.
+Logic pragmas
+Warnings extends Organisation, and weakens it.
+A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident and the date it is given. An officer holds at most one warning to a participant at a time, and the participant may answer it once; a warning withdrawn or annulled may be given again of the same incident only if it was not answered. A warning stays when the officer who gave it leaves office, until it is withdrawn or annulled. A warning counts toward expelling the participant only from seven days after it is given, so that he has the time to answer it.
+Alice and Bob are persons, Orga an organisation, Case an incident, Text an answer, Day and Today dates, Enough a number.
+1. ■ Warn: Alice may warn Bob in Orga of Case on Day, provided Alice is an officer of Orga, Orga has Bob as a participant and the current date is Day.
+2. ■ Answer: Bob may answer Alice's warning in Orga of Case with Text.
+3. ■ Withdrawal. Withdraw: Alice may withdraw her warning to Bob in Orga of Case on Day. Annul: Those who decide for Orga may annul Alice's warning to Bob in Orga of Case on Day.
+4. ■ Expel: Organisation:3 Expel, only if the current date is Today and Orga counts at least Enough persons as warning Bob before Today and Enough is at least 2. Officer expel: Organisation:3 Officer expel, only if the current date is Today and Orga counts at least Enough persons as warning Bob before Today and Enough is at least 2.
+Logic pragmas.
+Vocabulary: z holds x's warning to y = warning(z,x,y); z holds x's warning to y of k = warning_of(z,x,y,k); z holds y's answer to x's warning of k = answered(z,y,x,k); z holds y's answer to x's warning of k as t = answer_text(z,y,x,k,t); z holds x's warning to y on d = warning_on(z,x,y,d); the current date is e, for x = today(x,e).
+z counts x as warning y before t: z holds x's warning to y on d, e is d plus 7 and t is more than e.
+After x warns y in z of k on d, which requires z does not hold x's warning to y and z does not hold y's answer to x's warning of k: z holds x's warning to y, z holds x's warning to y of k and z holds x's warning to y on d.
+After y answers x's warning in z of k with t, which requires z holds x's warning to y of k and z does not hold y's answer to x's warning of k: z holds y's answer to x's warning of k and z holds y's answer to x's warning of k as t.
+After x withdraws x's warning to y in z of k on d: no longer z holds x's warning to y, no longer z holds x's warning to y of k and no longer z holds x's warning to y on d.
+After g annuls x's warning to y in z of k on d: no longer z holds x's warning to y, no longer z holds x's warning to y of k and no longer z holds x's warning to y on d.
+Interface pragmas
+Warn: Alice [Warn] <bob> <case>
+Answer: Bob [Answer] <orga> <alice> <case> <text>
+Withdrawal: Alice [Withdraw] <orga>
+  Decider [Annul] <alice> <bob> <case> <day>
+  Codecider: Decider asks for your consent to annul.
+Expel: Decider [Expel] <bob> <enough>
+  Codecider: Decider asks for your consent to expel.
+  Decider [Officer expel] <bob> <enough>
+  Codecider: Decider asks for your consent to officer expel.

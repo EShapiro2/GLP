@@ -1,0 +1,32 @@
+Works
+Works extends Community Bank.
+Vocabulary: z has w approved at n for y under x = work(z,w,n,y,x); z has w accepted = accepted(z,w); z has w decided = decided_work(z,w); z holds n z-coins locked on w = work_locked(z,w,*n); z has w attested complete by y = completed(z,w,y); z has w rejected by x for r = rejected(z,w,x,r); z has w raised to d = raised_work(z,w,d).
+After g approves w of z at n for y under x locking n z-coins, which requires z does not have w decided: z has w decided, z has w approved at n for y under x, no longer z holds n z-coins and z holds n z-coins locked on w.
+After y attests the completion of w of z, which requires z does not have w attested complete by y: z has w attested complete by y.
+After x accepts w of y in z releasing to y the n z-coins locked: no longer z has w approved at n for y under x, z has w accepted, z has w raised to no one, no longer z holds n z-coins locked on w and y holds n z-coins.
+After x rejects w of z for r: z has w rejected by x for r.
+After g cancels w of z under x releasing q z-coins to y and p z-coins to z of the n locked: no longer z has w approved at n for y under x, z has w raised to no one, no longer z holds n z-coins locked on w, y holds q z-coins and z holds p z-coins.
+After g cancels w of z under x releasing to y the n z-coins locked: no longer z has w approved at n for y under x, z has w raised to no one, no longer z holds n z-coins locked on w and y holds n z-coins.
+After g cancels w of z for y under x releasing to z the n z-coins locked: no longer z has w approved at n for y under x, z has w raised to no one, no longer z holds n z-coins locked on w and z holds n z-coins.
+After g puts x for v as the supervisor of w of z at n for y: no longer z has w approved at n for y under v and z has w approved at n for y under x.
+After y raises w of z to d, which requires z has w raised to no one: z has w raised to d.
+After g raises w of y in z to d, which requires z has w raised to no one: z has w raised to d.
+After d decides the release of q z-coins to y and p z-coins to z of the n locked on w under x: no longer z has w approved at n for y under x, no longer z has w raised to d, no longer z holds n z-coins locked on w, y holds q z-coins and z holds p z-coins.
+After d decides the release to y of the n z-coins locked on w of z under x: no longer z has w approved at n for y under x, no longer z has w raised to d, no longer z holds n z-coins locked on w and y holds n z-coins.
+After d decides the release to z of the n z-coins locked on w for y under x: no longer z has w approved at n for y under x, no longer z has w raised to d, no longer z holds n z-coins locked on w and z holds n z-coins.
+Works:0 - | A *work* names a task, its *price* in community coins, its *contractor*, who will do it, and its *supervisor*, an officer of the community. The bylaws name the role *arbiter*.
+Works:0 - | Bob, Carol, Dave and Erin are persons, Orga a community, Job a work, Sum, Back and Rest numbers, Why a reason.
+Works:1 ■ Approve: decided_work(Orga,Job), work(Orga,Job,Sum,Bob,Carol), ~note(Orga,Orga,coin,*Sum), work_locked(Orga,Job,*Sum) <- has_officer(Orga,Carol), ~decided_work(Orga,Job), note(Orga,Orga,coin,*Sum) guarded by deciders(Orga), Bob.
+Works:2 ◆ Complete: completed(Orga,Job,Bob) <- work(Orga,Job,Sum,Bob,Carol), ~completed(Orga,Job,Bob) guarded by Bob.
+Works:3 ◆ Accept: ~work(Orga,Job,Sum,Bob,Carol), accepted(Orga,Job), ~raised_work(Orga,Job,_), ~work_locked(Orga,Job,*Sum), note(Bob,Orga,coin,*Sum) <- work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by Carol.
+Works:4 ■ Reject: rejected(Orga,Job,Carol,Why) <- work(Orga,Job,Sum,Bob,Carol), completed(Orga,Job,Bob) guarded by Carol.
+Works:5 ■ Cancel: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,_), ~work_locked(Orga,Job,*Sum), note(Bob,Orga,coin,*Rest), note(Orga,Orga,coin,*Back) <- sum(Sum,Rest,Back), work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by deciders(Orga), Bob.
+Works:5 ■ Cancel for the contractor: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,_), ~work_locked(Orga,Job,*Sum), note(Bob,Orga,coin,*Sum) <- work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by deciders(Orga), Bob.
+Works:5 ■ Cancel for the community: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,_), ~work_locked(Orga,Job,*Sum), note(Orga,Orga,coin,*Sum) <- work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by deciders(Orga), Bob.
+Works:6 ■ Supervise: ~work(Orga,Job,Sum,Bob,Erin), work(Orga,Job,Sum,Bob,Carol) <- has_officer(Orga,Carol), work(Orga,Job,Sum,Bob,Erin) guarded by deciders(Orga).
+Works:7 ■ | Arbitration.
+Works:7 ■ Raise: raised_work(Orga,Job,Dave) <- work(Orga,Job,Sum,Bob,Carol), has_role(Orga,Dave,Arbiter), ~raised_work(Orga,Job,_) guarded by Bob.
+Works:7 ■ Raise for the community: raised_work(Orga,Job,Dave) <- work(Orga,Job,Sum,Bob,Carol), has_role(Orga,Dave,Arbiter), ~raised_work(Orga,Job,_) guarded by deciders(Orga).
+Works:7 ■ Arbitrate: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,Dave), ~work_locked(Orga,Job,*Sum), note(Bob,Orga,coin,*Rest), note(Orga,Orga,coin,*Back) <- raised_work(Orga,Job,Dave), sum(Sum,Rest,Back), work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by Dave.
+Works:7 ■ Arbitrate for the contractor: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,Dave), ~work_locked(Orga,Job,*Sum), note(Bob,Orga,coin,*Sum) <- raised_work(Orga,Job,Dave), work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by Dave.
+Works:7 ■ Arbitrate for the community: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,Dave), ~work_locked(Orga,Job,*Sum), note(Orga,Orga,coin,*Sum) <- raised_work(Orga,Job,Dave), work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by Dave.
