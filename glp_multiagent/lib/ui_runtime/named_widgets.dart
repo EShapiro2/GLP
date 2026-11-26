@@ -654,6 +654,9 @@ class SocialNotice {
   /// For `unable(Lacks, Has)`: the atoms the schema requires at the refuser that its state lacks, and those it forbids that its state has.
   final List<GTerm> lacks, has;
 
+  /// For `unable(Lacks, Has, Unmet)`: the conjuncts of the constraint at the refuser that fail under the binding the required atoms give, each in the words of the contract's vocabulary ([conjunctWords]) (VEUI vglp36-unmet 3ae9b56, Section 5.4, "Speech-act schemas", and Section 6.2, "The words a platform shows": "the conjuncts of the constraint that do not hold there, in the words of the contract's vocabulary --- ``Day is more than Today''"; GLP #179).
+  final List<String> unmet;
+
   /// The reason, as the program writes it: `declined` or `unable(Lacks, Has)`.
   final GTerm? reason;
 
@@ -661,6 +664,7 @@ class SocialNotice {
       {this.declined = false,
       this.lacks = const [],
       this.has = const [],
+      this.unmet = const [],
       this.reason});
 
   /// The notice [t], `refused(P, Q, D)`, or null where it is not one.
@@ -684,7 +688,60 @@ class SocialNotice {
           has: (us[1] as GList).items,
           reason: d);
     }
+    // unable(Lacks, Has, Unmet), Unmet the texts of the conjuncts that fail, each as the platform holds it, the contract's term printed (vGLP vglp36-unmet 35454a65, Reason ::= declined ; unable ; unable(List(Atom), List(Atom), List(String))).
+    if (u == 'unable' && us.length == 3 && us[0] is GList && us[1] is GList && us[2] is GList) {
+      return SocialNotice(xs[0], xs[1],
+          lacks: (us[0] as GList).items,
+          has: (us[1] as GList).items,
+          unmet: [
+            for (final c in (us[2] as GList).items)
+              conjunctWords(switch (c) {
+                GString(:final value) => value,
+                GAtom(:final name) => name,
+                _ => formatTerm(c),
+              })
+          ],
+          reason: d);
+    }
     return null;
+  }
+
+  /// The words of the Calculus's vocabulary for the comparisons and the arithmetic of a constraint (calculus/tools/gcsas.py, ARITH: "n is at most m = le(n,m); n is at least m = ge(n,m); n is more than m = gt(n,m); n is less than m = lt(n,m); n is m plus k = sum(n,m,k); n is m times k = product(n,m,k)").
+  static const _compare = {
+    'gt': 'is more than',
+    'ge': 'is at least',
+    'lt': 'is less than',
+    'le': 'is at most',
+    'eq': 'is',
+    'ne': 'is not',
+  };
+  static const _arith = {'plus': 'plus', 'minus': 'minus', 'times': 'times'};
+
+  /// A conjunct of a constraint, the text of its term as the platform holds it (`gt(num('Day'), num('Today'))`), read by the term reader and said in the contract's vocabulary: "Day is more than Today"; num(X) and val(X) as X; and, or and not as the words; a text that is no term, as it is.
+  static String conjunctWords(String text) {
+    final t = tryParseTerm(text);
+    return t == null ? text : _con(t);
+  }
+
+  static String _con(GTerm t) {
+    final (f, xs) = ctorArgs(t);
+    if (xs.length == 2 && _compare.containsKey(f)) {
+      return '${_val(xs[0])} ${_compare[f]} ${_val(xs[1])}';
+    }
+    if (xs.length == 2 && (f == 'and' || f == 'or')) {
+      return '${_con(xs[0])} $f ${_con(xs[1])}';
+    }
+    if (xs.length == 1 && f == 'not') return 'not ${_con(xs[0])}';
+    return _val(t);
+  }
+
+  static String _val(GTerm t) {
+    final (f, xs) = ctorArgs(t);
+    if (xs.length == 1 && (f == 'num' || f == 'val')) return _val(xs[0]);
+    if (xs.length == 2 && _arith.containsKey(f)) {
+      return '${_val(xs[0])} ${_arith[f]} ${_val(xs[1])}';
+    }
+    return valueText(t);
   }
 
   /// The schema of the part's class.
@@ -734,8 +791,13 @@ class SocialNotice {
     final head =
         '${isMe(by) ? 'Your' : "${personName(by)}'s"} machine refused $act';
     // A refusal that names no atom is one for a condition on the act's values, such as a day later than today
-    // (GLP #179): it is said so, and not left with no reason.
-    return reasons.isEmpty ? '$head: a condition on its values does not hold.' : '$head: ${reasons.join('; ')}.';
+    // (GLP #179): it is said so, with each conjunct that does not hold in the contract's words (VEUI 3ae9b56, Section 6.2).
+    if (reasons.isEmpty) {
+      return unmet.isEmpty
+          ? '$head: a condition on its values does not hold.'
+          : '$head: a condition on its values does not hold: ${unmet.join('; ')}.';
+    }
+    return '$head: ${reasons.join('; ')}.';
   }
 
   /// The transaction the part names, as the person reads it, a noun phrase, the person as "you" and "your": a friendship, "your friendship with Bob", or "your friendship" where the other is the refuser, "the friendship of Carol and Dave" where the person is neither; its end, "the end of your friendship with Bob"; a group's acts, "Bob's joining the group friends", "the closing of the group friends"; "your message to Carol"; CSSN's, "Alice's entering Carol as their child", "your entering Dave as your child, with Grace", "Bob's declaring Dave of age", and a child's meeting as a meeting, "the meeting of Carol and Dave"; and, for a class not named here, "the act" and its schema and persons, "the act agent unfriend of Alf, Bob and Alice".
@@ -1506,7 +1568,7 @@ class _SocialTabState extends State<SocialTab> {
     final reason = n.declined ? 'declined' : 'unable';
     final atoms = [for (final a in [...n.lacks, ...n.has]) _atomText(a)];
     final text = '${personName(n.by)} $reason ${o?.labelOf(f) ?? f}'
-        '${atoms.isNotEmpty ? ': ${atoms.join(', ')}' : n.declined ? '' : ': a condition on its values does not hold'}';
+        '${atoms.isNotEmpty ? ': ${atoms.join(', ')}' : n.declined ? '' : ': a condition on its values does not hold${n.unmet.isEmpty ? '' : ': ${n.unmet.join('; ')}'}'}';
     return Container(
       key: socialKey(_id, 'notice:$i'),
       width: double.infinity,
