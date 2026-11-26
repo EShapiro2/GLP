@@ -94,7 +94,7 @@ Tennis-Courts certified; VMAT 60 displays; platform.vglp 9530 lines; platform.gl
 Tools      certified; VMAT 35 displays; platform.vglp 8510 lines; platform.glp 5606 lines
 Trading-Company certified; VMAT 150 displays; platform.vglp 14562 lines; platform.glp 8435 lines
 Village-Commons certified; VMAT 67 displays; platform.vglp 9798 lines; platform.glp 6115 lines
-Village-Governance not certified
+Village-Governance certified; VMAT 176 displays; platform not compiled
 Village-Life certified; VMAT 55 displays; platform.vglp 9133 lines; platform.glp 5887 lines
 Village-Money certified; VMAT 154 displays; platform.vglp 14720 lines; platform.glp 8512 lines
 Village-Services not certified
@@ -103,4 +103,4 @@ Villagers  not certified
 Warded-Groups certified; VMAT 42 displays; platform.vglp 8619 lines; platform.glp 5662 lines
 Warnings   certified; VMAT 33 displays; platform.vglp 8475 lines; platform.glp 5588 lines
 Workers-Cooperative certified; VMAT 159 displays; platform.vglp 14939 lines; platform.glp 8617 lines
-Works      not certified
+Works      certified; VMAT 161 displays; platform not compiled
