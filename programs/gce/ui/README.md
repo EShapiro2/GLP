@@ -8,6 +8,8 @@ shown).
 - `Friendship.style`: its UI style, how it is drawn, one sentence a line, by the names the UI structure uses: a typed value
   LONG or a SLIDER, a list A GRID, an action IN THE MENU or PRIMARY, the colors of the whole app.  Its checker
   refuses a UI style that loses an option the contract allows, such as a slider narrower than the values allowed.
+- `Groups.ui`, `Groups.style` and `Groups.ui.json`: Groups (GSN's app, `programs/apps/gsn`), conversations first:
+  the person's groups and contacts on the start screen, a chat with each contact, a screen for each group.
 - `Friendship.ui.json`: the UI structure and the UI style, compiled with the contract into what the app reads: each
   act by its schema, each place by its number in the act's request, the proposer's place the platform's.  Edit
   the `.ui` or the `.style` and print it again:

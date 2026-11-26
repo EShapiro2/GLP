@@ -1,0 +1,31 @@
+# Chats, on Groups as it is: a person keeps only the messages they receive.
+
+SCREEN Chats ABOUT Alice:
+    QUESTIONS
+    SHOW Alice: identity, person
+    LIST Groups: "Alice is a member of the group Hikers of Bob" OPENS Group
+    LIST Contacts: EVERYONE WITH knows, friend OPENS Chat
+    Establish: Alice may establish an identity
+    Acquaint: Alice and Bob may jointly come to know each other, Bob TYPED
+    Create: Alice may create Hikers, Hikers TYPED
+    Close: Alice may close Hikers by leaving it, Hikers FROM leader
+
+SCREEN Chat ABOUT Bob:
+    QUESTIONS
+    SHOW Bob: knows, friend
+    THREAD: message
+    Befriend: Alice and Bob may jointly become friends
+    Unfriend: Alice may end her friendship with Bob
+    Introduce: Alice may introduce Carol to Bob, Carol FROM knows
+    Introduce: Alice may introduce Bob to Carol, Carol FROM knows
+    Join: Alice may add Bob to Hikers, Hikers FROM leader
+    Remove: Alice may end Bob's membership in Hikers, Hikers FROM listed
+    Message: Alice may send Text to Bob, Text TYPED
+
+SCREEN Group ABOUT "Alice is a member of the group Hikers of Bob":
+    QUESTIONS
+    SHOW: member, leader, listed, posted, group_delivered
+    THREAD: group_message
+    Leave: Alice may end her membership in Bob's Hikers
+    Post: Alice may send Text to the group Hikers of Bob, Text TYPED
+    Post own: Alice may send Text to the group Hikers of Alice, Text TYPED
