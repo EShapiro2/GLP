@@ -1,30 +1,30 @@
 % Ads --- the contract, the one copy, its owner's (claude.md, "Sessions").
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 5.2 and cites a clause as Ads:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
-% Extends: Community Network and Overlay, Grassroots Directed Overlay, GRH's (programs/lbm).
+% Extends: Overlay, GRH's (programs/lbm), and Backed Community Bank (Calculus 6f6a4cd, for Udi's retrospective approval).
 % Changed 2026-11-20 by GO #11: Cur-coins for Orga-coins (Udi, 2026-11-20).
-% Last changed: 2026-11-20, by GO #14 (Udi, 2026-11-20, to GO #13: community coins; Orga a community network).
+% Last changed: 2026-11-26, by GO #16: adopted from Calculus 6f6a4cd (Ads unites Overlay and Backed Community Bank); Interface pragmas for Post, Pass, View and Click.
 % Schemas: Ads.glp beside this file.
 Ads
-Ads unites Community Network and Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
-An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the community coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
-Alice and Bob are persons, Orga a community network.
-1. ■ Posting. Post: Bob, an advertiser, may post an ad to the members he points to; its budget is then locked on top of his stake. Pass: A member may pass it to the members they point to.
+Ads inherits from Overlay and Backed Community Bank (GRH, Grassroots Ride-Hailing, in preparation).
+An *advertiser* is a member of the community who posts ads. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the community coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
+Alice and Bob are persons, Orga a community.
+1. ■ Posting. Post: Bob, an advertiser, may post an ad to the members he points to; its budget, which he holds, is then locked. Pass: A member may pass it to the members they point to.
 2. ■ Show: Alice, a member, is shown an ad she received if it is for her profile.
 3. ◆ Viewing and clicking. View, Click: Alice may attest that she viewed, or clicked, an ad shown to her, and the ad's budget then pays her its coins for the view or the click, up to the most one member may earn from it.
 Logic pragmas
-Ads unites Community Network and Overlay, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
-An *advertiser* is a provider and a *member* a customer. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the community coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
-Alice, Bob and Carol are persons, Orga a community network, Gov an organisation, Mark a fiat currency, Ad an ad; in clause 1 Carol is a member.
-1. ■ Posting. Post: Bob may post Ad in Orga, provided Bob is an advertiser of Orga. Bob posts the ad to the members he points to, and its budget is then locked on top of his stake. Send ad: Ad of Bob goes to Alice in Orga, provided Bob has Ad posted in Orga, Bob points to Alice and Alice is a member of Orga. Pass: Alice may pass Ad of Bob to Carol in Orga, provided Alice is a member of Orga, Alice has received Ad of Bob in Orga, Alice points to Carol, Carol is a participant of Gov and Carol accepts a Mark-denominated Gov-coin in payment.
+Ads unites Overlay and Backed Community Bank, and extends the union (GRH, Grassroots Ride-Hailing, in preparation).
+An *advertiser* is a member of the community who posts ads. A member's *profile* is held by the member and by no one else. An *ad* names the profile it is for, the community coins its advertiser pays for a view and for a click, the most one member may earn from it, and its *budget*, the most it pays in all.
+Alice, Bob and Carol are persons, Orga a community, Ad an ad.
+1. ■ Posting. Post: Bob may post Ad in Orga, provided Bob is an advertiser of Orga. Bob posts the ad to the members he points to, and its budget, which he holds, is then locked. Send ad: Ad of Bob goes to Alice in Orga, provided Bob has Ad posted in Orga, Bob points to Alice and Alice is a member of Orga. Pass: Alice may pass Ad of Bob to Carol in Orga, provided Alice is a member of Orga, Alice has received Ad of Bob in Orga, Alice points to Carol and Carol is a member of Orga.
 2. ■ Show: Alice is shown Ad of Bob in Orga, provided Alice is a member of Orga, Alice has received Ad of Bob in Orga and Ad is for the profile of Alice.
 3. ◆ Viewing and clicking. View: Alice may attest a view of Ad of Bob, provided Alice has been shown Ad of Bob in Orga. Click: Alice may attest a click of Ad of Bob, provided Alice has been shown Ad of Bob in Orga. The ad's budget then pays Alice its coins for the view or the click, up to the most one member may earn from it.
 Logic pragmas.
-Vocabulary: y has d posted in z = posted(y,d,z); y has the budget of d locked in z = budget_locked(y,d,z); x has received d of y in z = received(x,d,y,z); d is for the profile of x = for_profile(x,d); x has been shown d of y in z = ad_shown(x,d,y,z); x has attested a view of d of y = viewed(x,d,y); x has attested a click of d of y = clicked(x,d,y).
-y is an advertiser of z: y is a provider of z.
-x is a member of z: x is a customer of z.
+Vocabulary: y has d posted in z = posted(y,d,z); y has the budget of d locked in z = budget_locked(y,d,z); x has received d of y in z = received(x,d,y,z); d is for the profile of x = for_profile(x,d); x has been shown d of y in z = ad_shown(x,d,y,z); x has attested a view of d of y = viewed(x,d,y); x has attested a click of d of y = clicked(x,d,y); y has sent d to x in z = sent(y,d,x,z).
+y is an advertiser of z: y is a participant of z.
+x is a member of z: x is a participant of z.
 After y posts d in z, which requires y does not have d posted in z: y has d posted in z and y has the budget of d locked in z.
-After d of y goes to x in z, which requires x has not received d of y in z: x has received d of y in z.
+After d of y goes to x in z, which requires x has not received d of y in z and y has not sent d to x in z: x has received d of y in z and y has sent d to x in z.
 After x passes d of y to w in z, which requires w has not received d of y in z: w has received d of y in z.
 After x is shown d of y in z, which requires x has not been shown d of y in z: x has been shown d of y in z.
 After x attests a view of d of y: x has attested a view of d of y.
@@ -32,3 +32,6 @@ After x attests a click of d of y: x has attested a click of d of y.
 Environment: d is for the profile of x.
 Interface pragmas
 Look: 📣, network
+Posting: Bob [Post] <ad>
+  Alice [Pass]
+Viewing and clicking: Alice [View] [Click]
