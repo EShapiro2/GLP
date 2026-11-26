@@ -790,11 +790,13 @@ class SocialNotice {
     ];
     final head =
         '${isMe(by) ? 'Your' : "${personName(by)}'s"} machine refused $act';
-    // A refusal that names no atom is one for a condition on the act's values, such as a day later than today
-    // (GLP #179): it is said so, with each conjunct that does not hold in the contract's words (VEUI 3ae9b56, Section 6.2).
+    // Where the reason names a conjunct of the constraint that does not hold, the notice says that a condition on the
+    // act's values does not hold, and names it in the contract's words; where it names neither an atom nor a conjunct
+    // (bare unable, unable([], []) of an older platform, unable([], [], [])), only who refused the act, and no cause
+    // (VEUI vglp36-unmet 42f53d1, Section 6.2; GLP #179, Audit PR 181).
     if (reasons.isEmpty) {
       return unmet.isEmpty
-          ? '$head: a condition on its values does not hold.'
+          ? '$head.'
           : '$head: a condition on its values does not hold: ${unmet.join('; ')}.';
     }
     return '$head: ${reasons.join('; ')}.';
@@ -1568,7 +1570,7 @@ class _SocialTabState extends State<SocialTab> {
     final reason = n.declined ? 'declined' : 'unable';
     final atoms = [for (final a in [...n.lacks, ...n.has]) _atomText(a)];
     final text = '${personName(n.by)} $reason ${o?.labelOf(f) ?? f}'
-        '${atoms.isNotEmpty ? ': ${atoms.join(', ')}' : n.declined ? '' : ': a condition on its values does not hold${n.unmet.isEmpty ? '' : ': ${n.unmet.join('; ')}'}'}';
+        '${atoms.isNotEmpty ? ': ${atoms.join(', ')}' : n.unmet.isNotEmpty ? ': a condition on its values does not hold: ${n.unmet.join('; ')}' : ''}';
     return Container(
       key: socialKey(_id, 'notice:$i'),
       width: double.infinity,

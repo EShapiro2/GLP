@@ -6,14 +6,21 @@ import 'package:glp_multiagent/ui_runtime/term.dart';
 
 void main() {
   const alice = GAtom('alice'), bob = GAtom('bob');
-  test('a refusal for a condition on values says so', () {
-    final n = SocialNotice.of(const GStruct('refused', [
-      GStruct('lend', [alice, bob, GAtom('tome'), GInt(3)]),
-      alice,
-      GStruct('unable', [GList([]), GList([])]),
-    ]))!;
-    expect(n.sentence(alice), endsWith(': a condition on its values does not hold.'));
-  });
+  // A reason naming neither an atom nor a conjunct gives no cause (VEUI 42f53d1, Section 6.2; Audit PR 181).
+  for (final d in const [
+    GAtom('unable'),
+    GStruct('unable', [GList([]), GList([])]),
+    GStruct('unable', [GList([]), GList([]), GList([])]),
+  ]) {
+    test('a refusal naming no atom and no conjunct says only who refused: ${formatTerm(d)}', () {
+      final n = SocialNotice.of(GStruct('refused', [
+        const GStruct('lend', [alice, bob, GAtom('tome'), GInt(3)]),
+        alice,
+        d,
+      ]))!;
+      expect(n.sentence(alice), matches(RegExp(r'^Your machine refused [^:]*\.$')));
+    });
+  }
   test('a refusal that names atoms says them, as before', () {
     final n = SocialNotice.of(const GStruct('refused', [
       GStruct('lend', [alice, bob, GAtom('tome'), GInt(3)]),
