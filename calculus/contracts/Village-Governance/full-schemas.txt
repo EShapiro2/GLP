@@ -225,17 +225,17 @@ Warnings:3 ■ | Withdrawal.
 Warnings:3 ■ Withdraw: ~warning(Orga,Alice,Bob), ~warning_of(Orga,Alice,Bob,Case), ~warning_on(Orga,Alice,Bob,Day) <- warning(Orga,Alice,Bob), warning_of(Orga,Alice,Bob,Case), warning_on(Orga,Alice,Bob,Day) guarded by Alice.
 Warnings:3 ■ Annul: ~warning(Orga,Alice,Bob), ~warning_of(Orga,Alice,Bob,Case), ~warning_on(Orga,Alice,Bob,Day) <- warning(Orga,Alice,Bob), warning_of(Orga,Alice,Bob,Case), warning_on(Orga,Alice,Bob,Day) guarded by deciders(Orga).
 Works:0 - | A *work* names a task, its *price* in community coins, its *contractor*, who will do it, and its *supervisor*, an officer of the community. The bylaws name the role *arbiter*.
-Works:1 ■ Approve: decided_work(Orga,Job), work(Orga,Job,Sum,Bob,Carol), ~note(Orga,Orga,coin,Dollar,*Sum), work_locked(Orga,Job,*Sum) <- officer(Carol,Orga), ~decided_work(Orga,Job), note(Orga,Orga,coin,Dollar,*Sum) guarded by deciders(Orga), Bob.
-Works:2 ◆ Complete: completed(Bob,Job,Orga) <- work(Orga,Job,Sum,Bob,Carol), ~completed(Bob,Job,Orga) guarded by Bob.
+Works:1 ■ Approve: decided_work(Orga,Job), work(Orga,Job,Sum,Bob,Carol), ~note(Orga,Orga,coin,Dollar,*Sum), work_locked(Orga,Job,*Sum) <- has_officer(Orga,Carol), ~decided_work(Orga,Job), note(Orga,Orga,coin,Dollar,*Sum) guarded by deciders(Orga), Bob.
+Works:2 ◆ Complete: completed(Orga,Job,Bob) <- work(Orga,Job,Sum,Bob,Carol), ~completed(Orga,Job,Bob) guarded by Bob.
 Works:3 ◆ Accept: ~work(Orga,Job,Sum,Bob,Carol), accepted(Orga,Job), ~raised_work(Orga,Job,_), ~work_locked(Orga,Job,*Sum), note(Bob,Orga,coin,Dollar,*Sum) <- work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by Carol.
-Works:4 ■ Reject: rejected(Carol,Job,Bob,Orga,Why) <- work(Orga,Job,Sum,Bob,Carol), completed(Bob,Job,Orga) guarded by Carol.
+Works:4 ■ Reject: rejected(Orga,Job,Carol,Why) <- work(Orga,Job,Sum,Bob,Carol), completed(Orga,Job,Bob) guarded by Carol.
 Works:5 ■ Cancel: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,_), ~work_locked(Orga,Job,*Sum), note(Bob,Orga,coin,Dollar,*Rest), note(Orga,Orga,coin,Dollar,*Back) <- sum(Sum,Rest,Back), work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by deciders(Orga), Bob.
 Works:5 ■ Cancel for the contractor: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,_), ~work_locked(Orga,Job,*Sum), note(Bob,Orga,coin,Dollar,*Sum) <- work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by deciders(Orga), Bob.
 Works:5 ■ Cancel for the community: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,_), ~work_locked(Orga,Job,*Sum), note(Orga,Orga,coin,Dollar,*Sum) <- work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by deciders(Orga), Bob.
-Works:6 ■ Supervise: ~work(Orga,Job,Sum,Bob,Erin), work(Orga,Job,Sum,Bob,Carol) <- officer(Carol,Orga), work(Orga,Job,Sum,Bob,Erin) guarded by deciders(Orga).
+Works:6 ■ Supervise: ~work(Orga,Job,Sum,Bob,Erin), work(Orga,Job,Sum,Bob,Carol) <- has_officer(Orga,Carol), work(Orga,Job,Sum,Bob,Erin) guarded by deciders(Orga).
 Works:7 ■ | Arbitration.
-Works:7 ■ Raise: raised_work(Orga,Job,Dave) <- work(Orga,Job,Sum,Bob,Carol), role(Dave,Orga,Arbiter), has_role(Orga,Dave,Arbiter), ~raised_work(Orga,Job,_) guarded by Bob.
-Works:7 ■ Raise for the community: raised_work(Orga,Job,Dave) <- work(Orga,Job,Sum,Bob,Carol), role(Dave,Orga,Arbiter), has_role(Orga,Dave,Arbiter), ~raised_work(Orga,Job,_) guarded by deciders(Orga).
+Works:7 ■ Raise: raised_work(Orga,Job,Dave) <- work(Orga,Job,Sum,Bob,Carol), has_role(Orga,Dave,Arbiter), ~raised_work(Orga,Job,_) guarded by Bob.
+Works:7 ■ Raise for the community: raised_work(Orga,Job,Dave) <- work(Orga,Job,Sum,Bob,Carol), has_role(Orga,Dave,Arbiter), ~raised_work(Orga,Job,_) guarded by deciders(Orga).
 Works:7 ■ Arbitrate: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,Dave), ~work_locked(Orga,Job,*Sum), note(Bob,Orga,coin,Dollar,*Rest), note(Orga,Orga,coin,Dollar,*Back) <- raised_work(Orga,Job,Dave), sum(Sum,Rest,Back), work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by Dave.
 Works:7 ■ Arbitrate for the contractor: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,Dave), ~work_locked(Orga,Job,*Sum), note(Bob,Orga,coin,Dollar,*Sum) <- raised_work(Orga,Job,Dave), work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by Dave.
 Works:7 ■ Arbitrate for the community: ~work(Orga,Job,Sum,Bob,Carol), ~raised_work(Orga,Job,Dave), ~work_locked(Orga,Job,*Sum), note(Orga,Orga,coin,Dollar,*Sum) <- raised_work(Orga,Job,Dave), work(Orga,Job,Sum,Bob,Carol), work_locked(Orga,Job,*Sum) guarded by Dave.
