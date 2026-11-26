@@ -139,6 +139,22 @@ FAIL=0
 # the commit that turns it green.  Udi's rulings put a dormant project's
 # failures here, since no session exists to repair them.
 KNOWN_RED_CHECKS=(
+# Feeds as the Calculus published it (c63b27e: delivered(y,t,z,x), and a
+# receipt requires y has not delivered t to x): in GFF's play_feeds Carol no
+# longer holds the third item, received from Bob, before she unpoints Bob, and
+# every screen holds the new delivered and item_from atoms (Code #41,
+# 2026-11-26, to GFF and Calculus #14): GFF's play and expected screens, or the
+# Calculus's Feeds, to mend; each entry comes off with that mend.
+    "APPS gff feeds: alice's screen"
+    "APPS gff feeds: bob's screen"
+    "APPS gff feeds: carol's screen"
+    "APPS gff feeds: dave's screen"
+    "APPS gff feeds: carol holds the third item, received from bob"
+# Bonds' Redeem bond as vGLP's compiler prints it since cmp(F, As) (76e7863de):
+# the note's second place is cmp(bond, [at(3)]) and the determined places
+# [2, 3, 4], where the check expects any and [2, 4] (Code #41, 2026-11-26, to
+# Currencies #24): Currencies' check to bring to the print; it comes off then.
+    "APPS gb: Redeem bond's and Redeem bond against bond's fields name the variables the atoms the proposer's role requires do not bind, the current date, today(Bob,Today), required at the issuer's role and not at the bearer's, the bond a note of the issuer wanted held by the proposer (Bonds:1; vGLP, Section 5.4)"
 # Organisation's Found by an organisation has three guarding roles, so it is
 # no acquaintance schema, and its guards must know each other before it is
 # proposed; nobody can know the organisation it founds, which has no identity
@@ -5362,7 +5378,7 @@ check_not "CVA backed: no error" "Error" "$cva_backed"
 cva_sg_text=$(cat "$CVA/social_graph/platform.vglp")
 cva_nd_text=$(cat "$CVA/nudge/platform.vglp")
 check "CVA exports: the platform exports contract(Text, Schemas), typed" "^exported procedure contract(String, Exported).$" "$cva_sg_text"
-check "CVA exports: ... the contract as GSC's reader reads it, with its names, its clauses as text, from GSG.txt" "^contract(\"Friendship\\\\nFriendship extends Knowledge.\\\\nAlice \*trusts\* Bob when .*\\\\nAlice and Bob are persons.\\\\n1. .*\", with(reflexive(\[knows\], \[schema(establish, \['Alice'\], \[\], \[rs(guarded, \[atom(identity, \[\]), atom(person, \[\])\], \[\], \[\], \[atom(identity, \[\])\])\]), " "$cva_sg_text"
+check "CVA exports: ... the contract as GSC's reader reads it, with its names, its clauses as text, from GSG.txt" "^contract(\"Friendship\\\\nFriendship inherits from Knowledge.\\\\nAlice \*trusts\* Bob when .*\\\\nAlice and Bob are persons.\\\\n1. .*\", with(reflexive(\[knows\], \[schema(establish, \['Alice'\], \[\], \[rs(guarded, \[atom(identity, \[\]), atom(person, \[\])\], \[\], \[\], \[atom(identity, \[\])\])\]), " "$cva_sg_text"
 check "CVA exports: ... and its pragmas, each word as the platform reads it, a string, the look among them, nolook for a contract writing none, and the version; vGLP's own nudge, written as a term, with no text" "^contract(\"\", with(\[schema(befriend, \[\], \[rs(guarded, \[atom(friend, \[role(2)\])\], \[\], \[\], \[atom(friend, \[role(2)\])\]), .*, pragmas(\[list(\"Friends\", \[friend\])\], \[act(befriend, \"Befriend\", \[\], said(\[\[\], \[person(1), text(\" asks.\")\]\]), \"Friends\", by(\[1\]))\], \[\], nolook, version(1, 1))))$" "$cva_nd_text"
 check "CVA exports: ... and version(Current, Back), version(1, 1) with no Version line" "^exported procedure version(Integer, Integer).$" "$cva_sg_text"
 check "CVA exports: ... version(1, 1)" "^version(1, 1)$" "$cva_sg_text"
