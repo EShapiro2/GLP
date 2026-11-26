@@ -1,7 +1,7 @@
 % Tennis Courts: the contract, the one copy, its owner's.
 % Owner: GM (Udi, 2026-11-18, approving the recommendation, reported by the coordinator).
 % Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
-% Last changed: 2026-11-25, GM: Book records Carol as the partner, Cancel ends it, Withdraw added (Audit #137); before, 2026-11-18, written from the paper at GM main 794a6a2; first line as Udi approved it, 2026-11-18, on the Calculus's recommendation; the Logic pragmas are the Calculus's, in calculus/contracts; no Interface pragmas yet.
+% Last changed: 2026-11-25, GM: Book records Carol as the partner, Cancel ends it, Withdraw added (Audit #137), Partner added (Audit #137, PR 162); before, 2026-11-18, written from the paper at GM main 794a6a2; first line as Udi approved it, 2026-11-18, on the Calculus's recommendation; the Logic pragmas are the Calculus's, in calculus/contracts; no Interface pragmas yet.
 Tennis Courts
 Tennis Courts unites Booking and Partners, and extends and augments the union.
 The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
@@ -11,6 +11,7 @@ Alice and Carol are persons, Club a club, Court a court, Slot a slot.
 2. ■ Organisation and ward. Organisation ward acquaint: Club, an organisation, and Wendy, a ward, may jointly come to know each other.
 3. ■ Cancel: Booking:2; the cancel frees the slot and ends the partner's part in the booking.
 4. ■ Withdraw: Carol may withdraw as the partner of a booking, which stays the booking of the one who booked.
+5. ■ Partner: Alice and Carol may jointly make Carol the partner of a booking of Alice that has no partner, Carol a participant of the Club with fewer outstanding bookings than the bound; so a partner is replaced, the old one withdrawing, while the slot stays booked.
 Logic pragmas
 Tennis Courts unites Booking and Partners, and extends and augments the union.
 The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
@@ -20,7 +21,9 @@ Alice and Carol are persons, Club an organisation, Court a court, Slot a slot.
 2. ■ Organisation and ward. Organisation ward acquaint: Club and Wendy may jointly come to know each other, provided Club is an organisation, Club has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.
 3. ■ Cancel: Booking:2, and then Club has Slot of Court partnered by no one.
 4. ■ Withdraw: Carol may withdraw from Slot of Court in Club.
+5. ■ Partner: Alice and Carol may jointly partner Slot of Court in Club, provided Club has Slot of Court booked by Alice, Club has Slot of Court partnered by no one, Carol is a participant of Club, Club has Carol as a participant and Carol has fewer outstanding bookings in Club than the bound.
 Logic pragmas.
 Renaming of Booking: a court for a resource.
 Vocabulary: z has s of r partnered by x = partnered(z,r,s,x).
 After x withdraws from s of r in z: no longer z has s of r partnered by x.
+After x and y partner s of r in z: z has s of r partnered by y.
