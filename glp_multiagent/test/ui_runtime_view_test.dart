@@ -126,10 +126,15 @@ final _notesW = _requestWidget(
     "form(issue, [field('Peer', peer), field('Constant', text), field('List', input_list(text))]), "
         "form(pay, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Constant', text), field('List', input_list(text))])");
 
+/// Issue of a contract that names a compound value, as GB's: its type a value field, which takes bond(10) as the term and Dollar as a constant (vGLP #35, vglp35-functions ec7cdc31b; Currencies #24, 2026-11-26 01:00 UTC).
+final _valuesW = _requestWidget(
+    'button("Issue", [act(issue, 1, [1], [req(identity, [])], [], [field(2, "type", value), field(3, "notes", set)], [], [])])',
+    "form(issue, [field('Peer', peer), field('CValue', text), field('List', input_list(text))])");
+
 /// DAO's Pass and Reject as vGLP's compiler prints them (GLP vglp33-calc 4c1663ec, cascade/DAO/platform.vglp): the steward gives the votes, a field, and the form computes Double, the place 5, as Votes * 2, `calc(5, mul(at(4), lit(2)))` (Audit #151; programs/vglp/cva/compiler/README.md, 43).
 final _daoW = _requestWidget(
-    'button("Pass", [act(pass, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)))], [])]), '
-    'button("Reject", [act(reject, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)))], [])])',
+    'button("Pass", [act(pass, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)), num)], [])]), '
+    'button("Reject", [act(reject, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)), num)], [])])',
     "label('Pass', form(pass, [field('Peer', peer), field('Speech', text), field('Constant', text), field('Integer', number), field('Integer', number)])), "
         "label('Reject', form(reject, [field('Peer', peer), field('Speech', text), field('Constant', text), field('Integer', number), field('Integer', number)]))");
 
@@ -422,6 +427,44 @@ void main() {
     expect(heldLine(fixtureTerm('coin(alice)'), 2, s), 'Coins: Alice  2');
     expect(heldLine(fixtureTerm('knows(bob)'), 1, s), 'Contacts: Bob');
   });
+  // vGLP #35, Code_inbox.md, 2026-11-26 01:20 UTC: (1) a compound value in an atom the act requires is cmp(F, As), its places bound by matching; (2) shown(F, v(T)) is drawn as valued(F, K); (3) a compound value is drawn as its term.
+  group('compound values', () {
+    const state = "note(alice, bob, bond(5), n1), note(alice, bob, dollar, n2)";
+    final w = _requestWidget(
+        'button("Redeem bond", [act(redeem_bond, 1, [1, 2, 5], [req(note, [at(1), at(2), cmp(bond, [at(3)]), at(4)])], [2, 4], [], [], [])])',
+        "form(redeem_bond, [field('Peer', peer), field('Peer', peer), field('Integer', number), field('Constant', text), field('Peer', peer)])");
+
+    test('cmp(bond, [at(3)]) binds the day of a bond and matches no other '
+        'value', () {
+      final o = RequestOffers.of(fixtureTerm(w));
+      final (_, s) = SocialState.read(fixtureTerm('[${_view(state, "bob", "")}]'));
+      final redeem = ActInfo(o.buttons[0].acts.single);
+      expect(ActInfo.placesOf(redeem.act.pre.single), {1, 2, 3, 4});
+      expect([
+        for (final at in redeem.ways(s!.atoms, s.me))
+          '${formatTerm(at[2]!)},${formatTerm(at[3]!)},${formatTerm(at[4]!)}'
+      ], ['bob,5,n1']);
+    });
+
+    test('a compound value is drawn as its term, in a tab\'s row and in the '
+        'values of an approval question', () {
+      final (_, s) = SocialState.read(fixtureTerm(
+          '[${_view("identity", "bob", "tab('Notes', note)")}]'));
+      expect(heldLine(fixtureTerm('note(bob, bond(5), n1)'), 1, s),
+          'Notes: Bob, bond(5), N1');
+      expect(valueText(fixtureTerm('bond(5)')), 'bond(5)');
+      expect(valueText(fixtureTerm('dollar')), 'dollar');
+      expect(
+          approvalValues([
+            fixtureTerm('valued("amount", 3)'),
+            fixtureTerm('shown("type wanted", v(bond(5)))'),
+            fixtureTerm('shown("type given", v(dollar))'),
+            fixtureTerm('text("x")'),
+          ]),
+          ['amount: 3', 'type wanted: bond(5)', 'type given: dollar']);
+    });
+  });
+
   testWidgets('a set variable: Pay beside a note, the other notes of its type '
       'picked with it, the request naming the notes picked', (tester) async {
     final s = _Screen(tester);
@@ -478,9 +521,24 @@ void main() {
     ]);
   });
 
+  testWidgets('a value field: bond(10) typed is the term bond(10), Dollar '
+      'typed is the constant (Currencies #24)', (tester) async {
+    for (final (typed, named) in [('bond(10)', 'bond(10)'), ('Dollar', "'Dollar'")]) {
+      final s = _Screen(tester);
+      await s.draw('input([])',
+          w: _valuesW,
+          output: '[${_view("identity", "bob", "tab('Notes', note)")}]');
+      await tester.enterText(find.byKey(socialKey(1, 'field:issue::2')), typed);
+      await tester.enterText(find.byKey(socialKey(1, 'field:issue::3')), 'a');
+      await tester.pumpAndSettle();
+      await _tap(tester, 'send:issue:');
+      expect(s.grants.first, 'input(1, [], propose(issue(alice, $named, [a])))');
+    }
+  });
+
   testWidgets('a number the constraint determines: DAO\'s Pass names the '
-      'votes given and the Double the form computes from them, '
-      'calc(5, mul(at(4), lit(2))) (Audit #151)', (tester) async {
+      'votes given and a placeholder 0 at Double, which the platform computes, '
+      'calc(5, mul(at(4), lit(2)), num) (Audit #151)', (tester) async {
     final s = _Screen(tester);
     await s.draw('input([])',
         w: _daoW,
@@ -504,6 +562,6 @@ void main() {
     await tester.enterText(find.byKey(socialKey(1, 'field:pass:$way:4')), '3');
     await tester.pumpAndSettle();
     await _tap(tester, 'send:pass:$way');
-    expect(s.grants, ['input(1, [], propose(pass(alice, p, delos, 3, 6)))']);
+    expect(s.grants, ['input(1, [], propose(pass(alice, p, delos, 3, 0)))']);
   });
 }

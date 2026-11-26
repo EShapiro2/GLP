@@ -9,7 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:glp_runtime/vglp/canonical.dart'
-    show ActCondition, CalcExpr, DeclaredAct, DeclaredButton, DeclaredField, DeclaredWidget;
+    show ActCondition, CmpArg, DeclaredAct, DeclaredButton, DeclaredField, DeclaredWidget;
 
 import 'bridge.dart';
 import 'construct_family.dart';
@@ -351,6 +351,21 @@ Widget approvalSentence(
   );
 }
 
+/// The values of the binding an approval question's sentence [words] does not name, one to a line, each by the name of its field: named(F, P) a person, valued(F, K) a number and shown(F, v(T)) a value over the constants, a compound value drawn as its term (vGLP 110caf4, Section 5.4, "The contract's words"; vGLP #35, Code_inbox.md, 2026-11-26 01:20 UTC, (2), (3)).
+List<String> approvalValues(List<GTerm> words) => [
+    for (final w in words)
+      switch (ctorArgs(w)) {
+        ('named', [final f, final q]) => '${displayText(f)}: ${personName(q)}',
+        ('valued', [final f, final k]) => '${displayText(f)}: ${valueText(k)}',
+        // shown(F, v(T)): the value T of a field over the constants, F then the value, drawn as valued(F, K) is (vGLP #35, Code_inbox.md, 2026-11-26 01:20 UTC, (2); vGLP 5.4, "The contract's words").
+        ('shown', [final f, final v]) => switch (ctorArgs(v)) {
+            ('v', [final t]) => '${displayText(f)}: ${valueText(t)}',
+            _ => '${displayText(f)}: ${valueText(v)}',
+          },
+        _ => null,
+      }
+    ].nonNulls.toList();
+
 /// A line of an atom the proposer holds, as the tab that lists it draws it, with the name of that tab ([_SocialTabState._wordedAtom]): its first argument by name, with its count [k] where the tab is counted, then its other arguments; the viewer's last view [s] names the tabs.
 String heldLine(GTerm atom, int k, SocialState? s) {
   final (f, xs) = ctorArgs(atom);
@@ -373,24 +388,17 @@ Widget _approvalWorded(BuildContext context, OpenConstruct construct,
   final pending = pendingAt(args[0]) != null || pendingAt(args[1]) != null;
   final theme = Theme.of(context);
   final words = args[1] is GList ? (args[1] as GList).items : const <GTerm>[];
-  // After the sentence, each value of the binding it does not name, by the name of its field, named(F, P) a person and valued(F, K) a number, one to a line (vGLP 110caf4, Section 5.4, "The contract's words": "and shows after it each value of the binding the question does not name, by the name of its field").
+  // After the sentence, each value of the binding it does not name, by the name of its field, named(F, P) a person, valued(F, K) a number and shown(F, v(T)) a value over the constants, one to a line (vGLP 110caf4, Section 5.4, "The contract's words": "and shows after it each value of the binding the question does not name, by the name of its field").
   final said = [
     for (final w in words)
       switch (ctorArgs(w)) {
         ('text', [final t]) => displayText(t),
         ('person', [final q]) => personName(q),
-        ('named', [_, _]) || ('valued', [_, _]) || ('held', [_, _]) => '',
+        ('named', [_, _]) || ('valued', [_, _]) || ('shown', [_, _]) || ('held', [_, _]) => '',
         _ => displayText(w),
       }
   ].join();
-  final values = [
-    for (final w in words)
-      switch (ctorArgs(w)) {
-        ('named', [final f, final q]) => '${displayText(f)}: ${personName(q)}',
-        ('valued', [final f, final k]) => '${displayText(f)}: ${displayText(k)}',
-        _ => null,
-      }
-  ].nonNulls.toList();
+  final values = approvalValues(words);
   // After the values, the atoms the act requires of the proposer whose predicates the tabs list, held(A, K), as the tabs draw them (vGLP e22e2ad, Section 5.4, "The contract's words": "as the tabs draw them --- in a swap, the coins the proposer gives"; Section 6.2: "An approval question is drawn as its question, with the values and the proposer's atoms after it"), each beside the name of its tab.
   final (_, seen) = SocialState.read(output);
   final held = [
@@ -901,10 +909,10 @@ class ActInfo {
           if (c.kind == 'size') c.args[0] as int: c.args[1] as int
       };
 
-  /// The numbers the constraint determines, `calc(P, E)`, each the place P and the expression E that gives it: "A variable the constraint determines from the variables the schema-binding binds is bound by the schema-binding to the value the constraint gives it, which the proposer's machine computes and the request names" (OSPM, act-schemas-local, VEUI vglp33-determined 87f86b7; programs/vglp/cva/compiler/README.md, 43).
-  List<(int, CalcExpr)> get calcs => [
+  /// The places the constraint determines, `calc(P, E, K)`, each the place P and its kind K, `num` or `const`: "A variable the constraint determines from the variables the schema-binding binds is bound by the schema-binding to the value the constraint gives it, which the proposer's machine computes and the request names" (OSPM, act-schemas-local, VEUI vglp33-determined 87f86b7; programs/vglp/cva/compiler/README.md, 43, 44).  The platform computes each when the request reaches it; the form puts a placeholder there (vGLP #35, 2026-11-25 22:59 UTC).
+  List<(int, String)> get calcs => [
         for (final c in act.same)
-          if (c.kind == 'calc') (c.args[0] as int, c.args[1] as CalcExpr)
+          if (c.kind == 'calc') (c.args[0] as int, c.args[2] as String)
       ];
 
   /// Whether [at] binds distinct roles to distinct persons, but for two the clause says are possibly one person: "every binding of the variables of the atoms the schema requires there that a schema-binding makes, distinct roles bound to distinct persons" (vGLP e22e2ad, Section 5.4, "The contract's words").  An agent variable is bound by no such rule, so Introduce with Carol = Bob is a way, and Remove of herself is none (vGLP #23, Code_inbox.md, 2026-11-06 12:00 UTC, 1).
@@ -935,14 +943,26 @@ class ActInfo {
       return held == null || formatTerm(held) == formatTerm(v);
     }
 
-    for (var j = 0; j < xs.length; j++) {
-      final x = c.args[j];
-      if (x is int) {
-        if (!put(x, xs[j])) return null;
-      } else if (x is (int, int)) {
-        final g = SocialState._group(xs[j]);
-        if (g == null || !put(x.$1, g.$1) || !put(x.$2, g.$2)) return null;
+    bool fill(Object? x, GTerm v) {
+      if (x is int) return put(x, v);
+      if (x is (int, int)) {
+        final g = SocialState._group(v);
+        return g != null && put(x.$1, g.$1) && put(x.$2, g.$2);
       }
+      // A compound value F(A1, ..., Ak): the argument is F of k arguments, each matching its Ai (vGLP #35, 2026-11-26 01:20 UTC).
+      if (x is CmpArg) {
+        if (v is! GStruct || v.functor != x.functor || v.args.length != x.args.length) {
+          return false;
+        }
+        for (var i = 0; i < v.args.length; i++) {
+          if (!fill(x.args[i], v.args[i])) return false;
+        }
+      }
+      return true;
+    }
+
+    for (var j = 0; j < xs.length; j++) {
+      if (!fill(c.args[j], xs[j])) return null;
     }
     return out;
   }
@@ -951,7 +971,9 @@ class ActInfo {
   static bool _determined(ActCondition c, Map<int, GTerm> at) =>
       c.args.every((x) => x is int
           ? at.containsKey(x)
-          : x is (int, int) && at.containsKey(x.$1) && at.containsKey(x.$2));
+          : x is CmpArg
+              ? !x.hasAny && x.places.every(at.containsKey)
+              : x is (int, int) && at.containsKey(x.$1) && at.containsKey(x.$2));
 
   /// Whether the state [atoms] lacks what [at] forbids: each atom the schema forbids at the proposer's role that [at] determines ("lacks the atoms the schema forbids there that the binding determines", vGLP, Section 5.4, "The contract's words"), and each `unless(P, As)` whose person [at] gives ("an act that forbids the second at x's role is not offered with x", Section 6.2).
   bool lacks(List<GTerm> atoms, Map<int, GTerm> at) {
@@ -999,7 +1021,7 @@ class ActInfo {
   /// The places an entry names.
   static Set<int> placesOf(ActCondition c) => {
         for (final x in c.args)
-          if (x is int) x else if (x is (int, int)) ...[x.$1, x.$2]
+          if (x is int) x else if (x is (int, int)) ...[x.$1, x.$2] else if (x is CmpArg) ...x.places
       };
 
   /// The atoms that bind the ways of the act, as the family draws them: of each predicate the first atom it requires that binds a place other than the proposer's.  A way is drawn beside the atom it binds there, so Introduce, `knows(q)` and `knows(c)`, beside each person known, with a picker of the others (vGLP, Section 6.2: "How the buttons of one act are arranged, each beside the atoms that bind it or as one button with a picker, is the construct family's"; vGLP #23, Code_inbox.md, 2026-11-05 13:33 UTC, 1).
@@ -1466,7 +1488,7 @@ class _SocialTabState extends State<SocialTab> {
       return '${SpeechAct.of(g.$2)?.text ?? displayText(g.$2)}, '
           '${personName(g.$1)}';
     }
-    return x is GAtom ? personName(x) : displayText(x);
+    return x is GAtom ? personName(x) : valueText(x);
   }
 
   /// An atom as the program writes it, its persons by name.
@@ -1751,6 +1773,10 @@ class _SocialTabState extends State<SocialTab> {
           for (final e in t.split(',')) if (e.trim().isNotEmpty) e.trim()
         };
         return es.isEmpty ? null : GList([for (final e in es) GString(e)]);
+      case 'value':
+        // A ground compound term the GLP reader reads from the text is that value, as bond(10); any other text is the constant of that name, as a text field gives it (vGLP #35, vglp35-functions ec7cdc31b; compiler README 45; vGLP 5.4, "A field is typed").
+        final v = tryParseTerm(t);
+        if (v is GStruct || (v is GList && v.items.isNotEmpty)) return v;
     }
     final key = o.keyOf(a.schema);
     final kinds = key == null ? const <String>[] : o.kinds[key] ?? const [];
@@ -1904,16 +1930,9 @@ class _SocialTabState extends State<SocialTab> {
           if (n == null || n < 1) return null;
           values[p] = GList(_newNames(composer, n));
         }
-        // A number the constraint determines from the places the request names, computed here: "which the proposer's machine computes and the request names" (OSPM, act-schemas-local; Audit #151).
-        for (final (p, e) in w.act.calcs) {
-          int? num(int k) {
-            final v = values[k] ?? w.at[k];
-            return v is GInt ? v.value : null;
-          }
-
-          final n = e.value(num);
-          if (n == null) return null;
-          values[p] = GInt(n);
+        // A place the constraint determines: the platform computes it when the request reaches it, "which the proposer's machine computes and the request names" (OSPM, act-schemas-local; Audit #151, #157); the form puts 0 at a number's place and '' at a constant's (vGLP #35, 2026-11-25 22:59 UTC).
+        for (final (p, k) in w.act.calcs) {
+          values[p] = k == 'num' ? const GInt(0) : const GAtom('');
         }
         final r = _request(s, o, w, values, ask);
         if (r != null) return r;

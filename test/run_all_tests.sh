@@ -4112,6 +4112,7 @@ check "CVA compiler: vGLP's wild, a wildcard in an atom a role requires and in t
 check "CVA compiler: vGLP's wards, coparent taking a listed guarding role whose base, the ward, is its second role and no guard, and meet of four guarding roles, certified by GSC's check/2, compiled to the platform it prints (vGLP, Section 5.4; CSSN #16, Code_inbox.md, 2026-11-15 17:05 UTC)" "wards/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's feeds, an unguarded act its opener's state does not change, compiled to the platform it prints (vGLP 76db5e0, Definition Proposing)" "feeds/platform.vglp: as printed" "$cva_print"
 check "CVA compiler: vGLP's cvalues, a compound value, bond(Day), as a note's type, compiled to the platform it prints (GSC c28d1c7; Calculus #11, 2026-11-25)" "cvalues/platform.vglp: as printed" "$cva_print"
+check "CVA compiler: ... a field of a variable over the constants takes a value, field(2, \"Type\", value), the form reading its text by the GLP reader (field_value; Currencies #24, Code #39, 2026-11-26)" "field(2, \"Type\", value)" "$(cat "$CVA/cvalues/platform.vglp")"
 check "CVA compiler: vGLP's holds, a set variable the schema requires at one role and neither deletes nor adds, read there for its size, compiled to the platform it prints (GO #15, 2026-11-25)" "holds/platform.vglp: as printed" "$cva_print"
 check_not "CVA compiler: no contract refused or missing" "^fault\|^missing\|NOT as printed" "$cva_print"
 # "The platform's own words are four ... Every other word the app shows is the contract's, so the compiler prints a platform only from a contract with pragmas, and refuses one with none; the checks that a contract is local, effective and grassroots are of its schemas and need none" (vGLP ffcb093, Section 5.4, "The contract's words"; vGLP #22 Cowork to Code, Code_inbox.md, 2026-10-31 12:55 UTC, item 3): each of vGLP's contracts carries a pragmas term beside it, pragmas_named/2, which compile.sh gives the compiler.
@@ -6836,10 +6837,137 @@ compile(calcs, [nschema(pass, [num(v), num(d)], eq(num(d), mul(num(v), num(2))),
 HEREDOC
 2>&1)
 check "CVA calcs: the request of pass names v and d" "^pass(Peer, Integer, Integer)\$" "$cva_calcs_out"
-check "CVA calcs: ... d has no field and the form computes it, calc(3, mul(at(2), lit(2)))" "field(2, \"votes\", number)\], \[calc(3, mul(at(2), lit(2)))\]" "$cva_calcs_out"
-check "CVA calcs: ... the request type has calc (calc_lines)" "same(Integer, Integer) ; calc(Integer, MenuExpr)\.\$" "$cva_calcs_out"
+check "CVA calcs: ... d has no field and the form computes it, calc(3, mul(at(2), lit(2)))" "field(2, \"votes\", number)\], \[calc(3, mul(at(2), lit(2)), num)\]" "$cva_calcs_out"
+check "CVA calcs: ... the request type has calc (calc_lines)" "same(Integer, Integer) ; calc(Integer, MenuExpr, Constant)\.\$" "$cva_calcs_out"
 check "CVA calcs: the request of lend names s, of a cleared atom, and not t or r, local to the role" "^lend(Peer, Integer)\$" "$cva_calcs_out"
 check "CVA calcs: ... MenuExpr is a type definition on a line of its own, as sGLP's interface.sh reads them (line_after)" "^MenuExpr ::= at(Integer) ; lit(Integer)" "$cva_calcs_out"
+# The platform completes the request, the form putting a placeholder at d (complete; Code #39, vGLP_inbox.md, 2026-11-25 22:58 UTC, agreed by vGLP #35): pass with v 7 and d 0 is completed to d 14; lend, with no place the constraint determines at a place of the request, is as it is.
+cva_calcs_dir="$GLP_DIR/programs/tests/vg_calcs_$$"
+mkdir -p "$cva_calcs_dir"
+printf '%s\n' "$cva_calcs_out" | sed -e 's/^\(GLP> \)*//' | awk '$0 == "%% compile begin" { on = 1; next } $0 == "%% compile end" && on { on = 0; next } on { print }' > "$cva_calcs_dir/platform.vglp"
+cva_calcs_run=$("$REPL_RUN" <<HEREDOC
+:emit $cva_calcs_dir
+load $cva_calcs_dir/platform.glp
+complete(pass(alice, 7, 0), C1).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_calcs_dir"
+check "CVA calcs: the platform loads" "Loaded: .*vg_calcs_" "$cva_calcs_run"
+check "CVA calcs: ... the request is completed by the proposer's machine, pass with d 0 to d 14 (complete)" "C1 = pass(alice, 7, 14)\$" "$cva_calcs_run"
+# A function the owner of a value type gives as a typed GLP procedure (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; GLP #120; Audit #157): the file NAME-functions.glp beside NAME.txt, which pragmas.sh reads into the eighth argument of the pragmas, fns(Fns, Lines); the compiler takes fn(F, Es) where F is declared there of arity |Es|+1, refuses any other, and the platform carries the owner's procedures and calls them from expr_val (owner_fn).  The contract: square, r = root(m), root the whole square root rounded down.
+cva_fns_out=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(roots, [nschema(square, [num(m), num(r)], eq(num(r), fn(root, [num(m)])), [rs(guarded, [atom(rooted, [num(m), num(r)])], [], [], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"Roots"', [rooted])], [act(square, '"Square"', ['""', '"number"', '"root"'], none, '"Roots"', by([1]))], [], nolook, version(1, 1), '""', [], fns([fn(root, [num], num)], ['procedure root(Integer?, Integer).', 'root(N, R?) :- integer(N?), N? < 2 | R = N?.', 'root(N, R?) :- otherwise, integer(N?) | root_from(N?, N?, R).', 'procedure root_from(Integer?, Integer?, Integer).', 'root_from(N, X, R?) :- integer(N?), integer(X?) | Y := (X? + N? // X?) // 2, root_step(N?, X?, Y?, R).', 'procedure root_step(Integer?, Integer?, Integer?, Integer).', 'root_step(N, X, Y, R?) :- integer(N?), integer(X?), integer(Y?), Y? < X? | root_from(N?, Y?, R).', 'root_step(_, X, _, X?) :- otherwise | true.']))).
+:quit
+HEREDOC
+2>&1)
+cva_fns_no=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(roots, [nschema(square, [num(m), num(r)], eq(num(r), fn(root, [num(m)])), [rs(guarded, [atom(rooted, [num(m), num(r)])], [], [], [])]), nschema(pass, [num(v), num(d)], eq(num(d), fn(twice, [num(v)])), [rs(guarded, [atom(passed, [num(v), num(d)])], [], [], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"Roots"', [rooted]), list('"Passed"', [passed])], [act(square, '"Square"', ['""', '"number"', '"root"'], none, '"Roots"', by([1])), act(pass, '"Pass"', ['""', '"votes"', '"double"'], none, '"Passed"', by([1]))], [], nolook, version(1, 1), '""', [], fns([fn(root, [num], num)], ['procedure root(Integer?, Integer).', 'root(N, R?) :- integer(N?), N? < 2 | R = N?.', 'root(N, R?) :- otherwise, integer(N?) | root_from(N?, N?, R).', 'procedure root_from(Integer?, Integer?, Integer).', 'root_from(N, X, R?) :- integer(N?), integer(X?) | Y := (X? + N? // X?) // 2, root_step(N?, X?, Y?, R).', 'procedure root_step(Integer?, Integer?, Integer?, Integer).', 'root_step(N, X, Y, R?) :- integer(N?), integer(X?), integer(Y?), Y? < X? | root_from(N?, Y?, R).', 'root_step(_, X, _, X?) :- otherwise | true.']))).
+:quit
+HEREDOC
+2>&1)
+cva_fns_dir="$GLP_DIR/programs/tests/vg_fns_$$"
+mkdir -p "$cva_fns_dir"
+printf '%s\n' "$cva_fns_out" | sed -e 's/^\(GLP> \)*//' | awk '$0 == "%% compile begin" { on = 1; next } $0 == "%% compile end" && on { on = 0; next } on { print }' > "$cva_fns_dir/platform.vglp"
+cva_fns_run=$("$REPL_RUN" <<HEREDOC
+:emit $cva_fns_dir
+load $cva_fns_dir/platform.glp
+:limit 10000000
+binding_of(square(alice, 17, 4), N1, B1), con_holds(eq(num(r), fn(root, [num(m)])), B1?, K1).
+binding_of(square(alice, 17, 5), N2, B2), con_holds(eq(num(r), fn(root, [num(m)])), B2?, K2).
+binding_of(square(alice, 1000000, 1000), N3, B3), con_holds(eq(num(r), fn(root, [num(m)])), B3?, K3).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_fns_dir"
+cva_fns_t=$(mktemp -d)
+printf '%s\n' 'Bank' 'Alice is a person.' '1. ■ Open: Alice may open an account.' 'Pragmas' 'Accounts: the accounts Alice opened.' 'Open: Alice [Open]' > "$cva_fns_t/Bank.txt"
+printf '%s\n' '% The root, rounded down.' 'procedure root(Integer?, Integer).' 'root(N, N?).' 'procedure pair(Integer?, List(Integer)?, Integer).' 'pair(_, _, 0).' > "$cva_fns_t/Bank-functions.glp"
+cva_fns_pr=$(bash "$CVA/compiler/pragmas.sh" "$cva_fns_t/Bank.txt" "[schema(open, ['Alice'], [], [rs(guarded, [atom(opened, [])], [], [], [])])]" 2>&1)
+rm -rf "$cva_fns_t"
+check "CVA functions: pragmas.sh reads NAME-functions.glp, each procedure a function with the kinds of its places by their types, and its lines (fns)" "\[\], fns(\[fn(root, \[num\], num), fn(pair, \[num, other\], num)\], \['% The root, rounded down.', 'procedure root(Integer?, Integer).'" "$cva_fns_pr"
+check "CVA functions: the platform calls the owner's root (owner_val, owner_root)" "^owner_val(root, \[E1\], B, R?) :- ground(B?) | expr_val(E1?, B?, A1), owner_root(A1?, R)\.\$" "$cva_fns_out"
+check "CVA functions: ... owner_root takes a whole number to the owner's root" "^owner_root(num_is(X1), num_is(R?)) :- integer(X1?) | root(X1?, R)\.\$" "$cva_fns_out"
+check "CVA functions: ... and carries the owner's procedure" "^procedure root(Integer?, Integer)\.\$" "$cva_fns_out"
+check "CVA functions: ... expr_val takes a function the owner gives" "^expr_val(fn(F, Es), B, R?) :- otherwise, ground(F?), ground(B?) | owner_val(F?, Es?, B?, R)\.\$" "$cva_fns_out"
+check "CVA functions: a function the owner does not give, twice, is refused, with the line saying why" "it has a relation or a function other than min and floor" "$cva_fns_no"
+check "CVA functions: the platform loads" "Loaded: .*vg_fns_" "$cva_fns_run"
+check "CVA functions: r = root(m) holds with m 17, r 4" "^K1 = yes\$" "$cva_fns_run"
+check "CVA functions: ... and not with r 5" "^K2 = no\$" "$cva_fns_run"
+check "CVA functions: ... and with m 1000000, r 1000" "^K3 = yes\$" "$cva_fns_run"
+# Functions of constants (GLP #174; Audit #157, Chess): an argument and a value of a function may be a constant, by the type the owner's procedure declares (Constant or String), read through expr_term (owner_term); a variable that is an argument of a function is compared by no order (side_args); and a place the constraint determines by a function is computed by the proposer's machine, calc(P, fn(F, Es)) (Code #39, 2026-11-25 22:29 UTC).  The contract: a game, start at the first position, move from b by m to n = after(m, b), on the side s = side(b).
+cva_fnc_out=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(game, [nschema(start, [const(b)], eq(const(b), fn(first, [])), [rs(guarded, [atom(at, [const(b)])], [], [], [])]), nschema(move, [const(b), const(m), const(n), num(s)], and(eq(num(s), fn(side, [const(b)])), eq(const(n), fn(after, [const(m), const(b)]))), [rs(guarded, [atom(at, [const(n)]), atom(was, [const(b)])], [atom(at, [const(b)])], [], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"At"', [at]), list('"Was"', [was])], [act(start, '"Start"', ['""', '"board"'], none, '"At"', by([1])), act(move, '"Move"', ['""', '"move"'], none, '"At"', by([1]))], [], nolook, version(1, 1), '""', [], fns([fn(first, [], const), fn(side, [const], num), fn(after, [const, const], const)], ['procedure first(Constant).', 'first(start).', 'procedure side(Constant?, Integer).', 'side(_, 1).', 'procedure after(Constant?, Constant?, Constant).', 'after(e2e4, start, opened).', 'after(_, _, none) :- otherwise | true.']))).
+:quit
+HEREDOC
+2>&1)
+cva_fnc_dir="$GLP_DIR/programs/tests/vg_fnc_$$"
+mkdir -p "$cva_fnc_dir"
+printf '%s\n' "$cva_fnc_out" | sed -e 's/^\(GLP> \)*//' | awk '$0 == "%% compile begin" { on = 1; next } $0 == "%% compile end" && on { on = 0; next } on { print }' > "$cva_fnc_dir/platform.vglp"
+cva_fnc_run=$("$REPL_RUN" <<HEREDOC
+:emit $cva_fnc_dir
+load $cva_fnc_dir/platform.glp
+:limit 10000000
+binding_of(start(alice, start), N1, B1), con_holds(eq(num(b), fn(first, [])), B1?, K1).
+binding_of(start(alice, other), N2, B2), con_holds(eq(num(b), fn(first, [])), B2?, K2).
+binding_of(move(alice, start, e2e4, opened, 1), N3, B3), con_holds(and(eq(num(s), fn(side, [num(b)])), eq(num(n), fn(after, [num(m), num(b)]))), B3?, K3).
+binding_of(move(alice, start, e2e4, start, 1), N4, B4), con_holds(and(eq(num(s), fn(side, [num(b)])), eq(num(n), fn(after, [num(m), num(b)]))), B4?, K4).
+complete(move(alice, start, e2e4, '', 0), C5).
+complete(start(alice, ''), C6).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_fnc_dir"
+check "CVA functions of constants: the request of move names b, m, n and s" "^move(Peer, Constant, Constant, Constant, Integer)\$" "$cva_fnc_out"
+check "CVA functions of constants: ... the form computes n and s by the owner's functions, calc(P, fn(F, Es))" "\[calc(5, fn(side, \[at(2)\]), num), calc(4, fn(after, \[at(3), at(2)\]), const)\]" "$cva_fnc_out"
+check "CVA functions of constants: ... and start's b, calc(2, fn(first, []))" "\[calc(2, fn(first, \[\]), const)\]" "$cva_fnc_out"
+check "CVA functions of constants: ... the request type has fn (MenuExpr)" "^MenuExpr ::= .* ; fn(Constant, List(MenuExpr))\.\$" "$cva_fnc_out"
+check "CVA functions of constants: ... owner_after takes two constants to a constant" "^owner_after(found(v(X1)), found(v(X2)), found(v(R?))) :- ground(X1?), ground(X2?) | after(X1?, X2?, R)\.\$" "$cva_fnc_out"
+check "CVA functions of constants: ... expr_term takes a function the owner gives" "^expr_term1(fn(F, Es), B, R?) :- ground(F?), ground(B?) | owner_term(F?, Es?, B?, R)\.\$" "$cva_fnc_out"
+check "CVA functions of constants: the platform loads" "Loaded: .*vg_fnc_" "$cva_fnc_run"
+check "CVA functions of constants: b = first() holds with b start" "^K1 = yes\$" "$cva_fnc_run"
+check "CVA functions of constants: ... and not with b other" "^K2 = no\$" "$cva_fnc_run"
+check "CVA functions of constants: s = side(b) and n = after(m, b) hold with n opened" "^K3 = yes\$" "$cva_fnc_run"
+check "CVA functions of constants: ... and not with n start" "^K4 = no\$" "$cva_fnc_run"
+check "CVA functions of constants: the platform completes a request, each place the constraint determines computed under its binding (complete)" "^await_request(propose(C), \[req(propose(C1?))\]) :- complete(C?, C1)\.\$" "$cva_fnc_out"
+check "CVA functions of constants: ... move's n and s by the owner's after and side" "^complete_move(B, move(V1, V2, V3, V4, V5), C?) :- .* | calc_num(fn(side, \[num(b)\]), B?, V5?, W5), calc_term(fn(after, \[num(m), num(b)\]), B?, V4?, W4), C = move(V1?, V2?, V3?, W4?, W5?)\.\$" "$cva_fnc_out"
+check "CVA functions of constants: the request move with placeholders is completed to n opened, s 1" "C5 = move(alice, start, e2e4, opened, 1)\$" "$cva_fnc_run"
+check "CVA functions of constants: ... and start with b start" "C6 = start(alice, start)\$" "$cva_fnc_run"
+# Functions a file exports (GCE's Chess-functions.glp; vGLP #35): a file that exports a procedure gives as functions only those it exports, the others being their helpers, carried without the word exported; and a function with a place of a type that is no number or constant is carried and not called by the platform (plain_fns), so that its platform loads.
+cva_fne_t=$(mktemp -d)
+printf '%s\n' 'Game' 'Alice is a person.' '1. ■ Start: Alice may start.' 'Pragmas' 'At: the positions.' 'Start: Alice [Start]' > "$cva_fne_t/Game.txt"
+printf '%s\n' 'Pos ::= pos(Integer).' 'exported procedure first(Constant).' 'first(S?) :- first_pos(P), pos_name(P?, S).' 'procedure first_pos(Pos).' 'first_pos(pos(0)).' 'procedure pos_name(Pos?, Constant).' 'pos_name(pos(_), start).' > "$cva_fne_t/Game-functions.glp"
+cva_fne_pr=$(bash "$CVA/compiler/pragmas.sh" "$cva_fne_t/Game.txt" "[schema(start, ['Alice'], [], [rs(guarded, [atom(at, [])], [], [], [])])]" 2>&1)
+rm -rf "$cva_fne_t"
+check "CVA functions exported: a file that exports a procedure gives only those it exports as functions" "fns(\[fn(first, \[\], const)\], \['Pos ::= pos(Integer).', 'procedure first(Constant).'," "$cva_fne_pr"
+cva_fne_out=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(game, [nschema(start, [const(b)], eq(const(b), fn(first, [])), [rs(guarded, [atom(at, [const(b)])], [], [], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"At"', [at])], [act(start, '"Start"', ['""', '"board"'], none, '"At"', by([1]))], [], nolook, version(1, 1), '""', [], fns([fn(first, [], const), fn(pos_name, [other], const)], ['Pos ::= pos(Integer).', 'procedure first(Constant).', 'first(S?) :- first_pos(P), pos_name(P?, S).', 'procedure first_pos(Pos).', 'first_pos(pos(0)).', 'procedure pos_name(Pos?, Constant).', 'pos_name(pos(_), start).']))).
+:quit
+HEREDOC
+2>&1)
+cva_fne_dir="$GLP_DIR/programs/tests/vg_fne_$$"
+mkdir -p "$cva_fne_dir"
+printf '%s\n' "$cva_fne_out" | sed -e 's/^\(GLP> \)*//' | awk '$0 == "%% compile begin" { on = 1; next } $0 == "%% compile end" && on { on = 0; next } on { print }' > "$cva_fne_dir/platform.vglp"
+cva_fne_run=$("$REPL_RUN" <<HEREDOC
+:emit $cva_fne_dir
+load $cva_fne_dir/platform.glp
+:limit 10000000
+binding_of(start(alice, start), N1, B1), con_holds(eq(num(b), fn(first, [])), B1?, K1).
+:quit
+HEREDOC
+2>&1)
+rm -rf "$cva_fne_dir"
+check_not "CVA functions exported: a function with a place of another type gets no owner_ procedure" "owner_pos_name" "$cva_fne_out"
+check "CVA functions exported: the platform loads" "Loaded: .*vg_fne_" "$cva_fne_run"
+check "CVA functions exported: b = first() holds with b start, first calling helpers over Pos" "^K1 = yes\$" "$cva_fne_run"
 
 # A set variable, set(N) of a type Set(A) (GSC, the appendix on values, Definitions "Schema with values" and "Binding with values"; the Calculus's record, items 49 to 51): the request names its elements, a list of constants, the schema-binding binds it to st(Cs), an atom with it stands for one atom per element, and size(N) is the number of its elements.  The contract is GSC's own test of payments of notes (programs/gsc/test_gsc.sh, "set variables"), as GSC's reader reads it.
 cva_sets_out=$("$REPL_RUN" <<HEREDOC

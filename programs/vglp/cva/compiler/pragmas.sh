@@ -1292,5 +1292,31 @@ pop @cl while @cl && $cl[-1] !~ /\S/;
 my $tx = join("\n", @cl);
 $tx =~ s/\\/\\\\/g; $tx =~ s/"/\\"/g; $tx =~ s/\n/\\n/g;
 # A contract the phone finds a fact for carries a seventh argument, the predicates found, so that every other contract prints the term it printed before.
-print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "], [" . join(", ", @stands) . "], $lk, $vn, " . q_atom("\"$tx\"") . (@found ? ", [" . join(", ", @found) . "]" : "") . ")\n";
+# The functions of the contract\x27s value types that their owner gives as typed GLP procedures (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"): the file NAME-functions.glp beside the NAME.txt of the contract or of a contract it extends, each procedure it declares a function, fn(Name, Kinds, Kind), the kinds of its arguments and of its value, its last argument, by their declared types, and its lines, which the platform carries, the eighth argument fns(Fns, Lines); none where no such file is.
+my (@fns, @fn_lines, %fn_seen);
+for my $f (@order) {
+    (my $ff = $f) =~ s/\.txt$/-functions.glp/;
+    next unless -f $ff;
+    open(my $h, "<", $ff) or die "pragmas.sh: cannot read $ff\n";
+    my @fl = <$h>; close $h; chomp @fl;
+    # A file that exports a procedure gives as functions only the procedures it exports, the others being their helpers; one that exports none gives every procedure it declares.  The lines are carried without the word exported, the platform exporting what it exports.
+    my $exp = grep { /^exported\s+procedure\s/ } @fl;
+    for my $x (@fl) {
+        my $e = ($x =~ s/^exported\s+(procedure\s)/$1/);
+        if ($x =~ /^procedure\s+([a-z]\w*)\((.*)\)\.\s*$/ && ($e || !$exp)) {
+            my ($n, $a) = ($1, $2);
+            my ($d, $cur, @ts) = (0, "");
+            for my $ch (split //, $a) { $d++ if $ch eq "(" || $ch eq "["; $d-- if $ch eq ")" || $ch eq "]"; if ($ch eq "," && $d == 0) { push @ts, $cur; $cur = "" } else { $cur .= $ch } }
+            push @ts, $cur;
+            # The kind of each place, by its declared type: a number (Integer, Number), a constant (Constant, String), or other, which the compiler does not take.
+            my @k = map { (my $t = $_) =~ s/^\s+|\s+$//g; $t =~ s/\?$//; $t =~ /^(Integer|Number)$/ ? "num" : $t =~ /^(Constant|String)$/ ? "const" : "other" } @ts;
+            my $v = pop @k;
+            die "pragmas.sh: $ff: the function $n is declared twice\n" if $fn_seen{$n}++;
+            push @fns, "fn($n, [" . join(", ", @k) . "], $v)";
+        }
+        push @fn_lines, q_atom($x);
+    }
+}
+my $fn_arg = @fns ? ", fns([" . join(", ", @fns) . "], [" . join(", ", @fn_lines) . "])" : "";
+print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "], [" . join(", ", @stands) . "], $lk, $vn, " . q_atom("\"$tx\"") . (@found || @fns ? ", [" . join(", ", @found) . "]" : "") . $fn_arg . ")\n";
 ' "$1" "$PROGRAMS" "${2:-}" "$FROM"

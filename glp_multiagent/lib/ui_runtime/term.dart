@@ -197,6 +197,13 @@ List<String> scalarsOf(GTerm t) => switch (t) {
 String displayText(GTerm t) =>
     scalarGroups(t).map((row) => row.join(' ')).join(', ');
 
+/// An argument of an atom, or a value of a field, drawn as one value: a compound value `f(v1, ..., vk)` as its term, `bond(5)`, each argument drawn the same way, and any other value by [displayText].  "The tabs draw each atom, and a compound value is one value" (vGLP #35, Code_inbox.md, 2026-11-26 01:20 UTC, (3); GSC, Definition "Schema with values": f(v1, ..., vk) in V).
+String valueText(GTerm t) => switch (t) {
+      GStruct(:final functor, :final args) when functor != '.' =>
+        '$functor(${args.map(valueText).join(', ')})',
+      _ => displayText(t),
+    };
+
 /// Read one ground term from the source text [s], requiring the whole string
 /// to be consumed: a display declaration's pattern ([GPattern.parse]), and a
 /// test's fixture.  Nothing the agent emits is read here --- it arrives as a
