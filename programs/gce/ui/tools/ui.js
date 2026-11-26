@@ -394,6 +394,7 @@
    *   Text IS LONG.                             a typed value: a large box (SHORT, a line)
    *   Sum IS A SLIDER FROM 1 TO 100.            a typed number: a slider; ", OR TYPED" adds a box beside it
    *   Day IS A DATE.                            a typed number: a calendar
+ *   Bob IS SCANNED.                           a typed person: her key scanned from her phone's code, or typed
  *   Board IS A CHESSBOARD.                    a value: drawn as a board, here a position of chess
  *   Move IS PICKED ON THE CHESSBOARD.         a typed value: picked by tapping the board drawn beside it, or typed
    *   Groups ARE A GRID.                        a list: a grid of cards (ROWS, the default; CHIPS)
@@ -436,10 +437,11 @@
       else if ((q = what.match(/^A SLIDER FROM (-?\d+) TO (-?\d+)(,\s*OR TYPED)?$/))) r = {as: 'slider', from: +q[1], to: +q[2], typed: !!q[3]};
       else if (what === 'A DATE') r = {as: 'date'};
       else if (what === 'A CHESSBOARD') r = {as: 'chessboard'};
+      else if (what === 'SCANNED') r = {as: 'scanned'};
       else if (what === 'PICKED ON THE CHESSBOARD') r = {as: 'board-pick'};
       else if (/^(A GRID|ROWS|CHIPS)$/.test(what)) r = {as: what === 'A GRID' ? 'grid' : what.toLowerCase()};
       else if (/^(IN THE MENU|IN THE BAR|PRIMARY)$/.test(what)) r = {as: what === 'PRIMARY' ? 'primary' : what === 'IN THE MENU' ? 'menu' : 'bar'};
-      else { err('not a look: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, A CHESSBOARD, PICKED ON THE CHESSBOARD, A GRID, ROWS, CHIPS, IN THE MENU, IN THE BAR or PRIMARY'); continue; }
+      else { err('not a look: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, SCANNED, A CHESSBOARD, PICKED ON THE CHESSBOARD, A GRID, ROWS, CHIPS, IN THE MENU, IN THE BAR or PRIMARY'); continue; }
       if (r.as === 'slider' && r.from >= r.to) { err('a slider goes from a smaller number to a larger one'); continue; }
       if (out.of[name]) { err(name + ' has a look already'); continue; }
       out.of[name] = {...r, line: n}; L.name = name;
@@ -479,12 +481,13 @@
         if (!named) err(r.line, name + ' is no value the description names');
         continue;
       }
-      if (['long', 'short', 'slider', 'date', 'board-pick'].includes(r.as)) {
+      if (['long', 'short', 'slider', 'date', 'board-pick', 'scanned'].includes(r.as)) {
         if (!fields[name]) { err(r.line, name + ' is no value the description has TYPED'); continue; }
         for (const {a, r: place} of fields[name]) {
           const ns = numbersOf(a.guard), num = ns.names.has(place) || (a.types || {})[place] === 'num';
           if ((r.as === 'slider' || r.as === 'date') && !num) { err(r.line, name + ' is not a number in ' + a.button + ', so it is no ' + r.as); continue; }
           if ((r.as === 'long' || r.as === 'short' || r.as === 'board-pick') && num) { err(r.line, name + ' is a number in ' + a.button + ', so it is no text'); continue; }
+          if (r.as === 'scanned' && !(a.pnames || []).includes(place)) { err(r.line, name + ' is not a person in ' + a.button + ', so it has no code to scan'); continue; }
           if (r.as === 'board-pick' && !Object.values(look.of).some(x => x.as === 'chessboard')) { err(r.line, 'there is no CHESSBOARD to pick ' + name + ' on'); continue; }
           if (r.as === 'slider' && !r.typed) {
             const lo = ns.lo[place] ?? -Infinity, hi = ns.hi[place] ?? Infinity, lost = [];
