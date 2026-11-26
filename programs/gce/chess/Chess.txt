@@ -1,5 +1,5 @@
 % Chess --- an example contract by Nimrod Talmon with Claude, 2026-11-25: chess between friends, with no server; the example game of the paper "The Grassroots UI Layer", in preparation.
-% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.
+% Owner: GCE (GUI), Grassroots Contract Examples, Nimrod Talmon's; its paper The Grassroots UI Layer.
 % Paper: The Grassroots UI Layer (Nimrod Talmon), in preparation, its example of a game
 % Extends: Friendship, GSC's (programs/gsc).  It cites no clause of it.
 % Defines: the rules of chess, by reference to FIDE's Laws of Chess; a game, a move and a position.  The legality of a move, the position after it, the side to move and checkmate are declared functions (GLP #87, #118), of positions and moves, not numbers.
