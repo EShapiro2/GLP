@@ -98,6 +98,7 @@
      "schema": "establish",
      "button": "Establish",
      "sentence": "Alice may establish an identity",
+     "then": null,
      "me": 1,
      "arity": 1,
      "places": {},
@@ -109,6 +110,7 @@
      "schema": "open_place",
      "button": "Open place",
      "sentence": "Alice may declare her place open",
+     "then": null,
      "me": 1,
      "arity": 1,
      "places": {},
@@ -120,6 +122,7 @@
      "schema": "close_place",
      "button": "Close place",
      "sentence": "Alice may close her place",
+     "then": null,
      "me": 1,
      "arity": 1,
      "places": {},
@@ -131,6 +134,7 @@
      "schema": "acquaint",
      "button": "Acquaint",
      "sentence": "Alice and Bob may jointly come to know each other",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -149,6 +153,7 @@
      "schema": "sign_link",
      "button": "Sign link",
      "sentence": "Alice may sign Link as an invitation link that names Dave",
+     "then": null,
      "me": 1,
      "arity": 3,
      "places": {
@@ -168,6 +173,7 @@
      "schema": "invite_by_link",
      "button": "Invite by link",
      "sentence": "Alice may register Link with Dave",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -186,6 +192,7 @@
      "schema": "use_link",
      "button": "Use link",
      "sentence": "Alice may present Link of Bob to Dave",
+     "then": null,
      "me": 3,
      "arity": 4,
      "places": {
@@ -211,6 +218,7 @@
      "schema": "lookup",
      "button": "Lookup",
      "sentence": "Alice may look Bob up on Dora's page",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -226,6 +234,7 @@
      "schema": "install_from_store",
      "button": "Install from store",
      "sentence": "Alice may install from a store Prog of Bob",
+     "then": null,
      "me": 1,
      "arity": 4,
      "places": {
@@ -251,6 +260,7 @@
      "schema": "trust",
      "button": "Trust",
      "sentence": "Alice may declare trust in Carol as a developer",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -266,6 +276,7 @@
      "schema": "untrust",
      "button": "Untrust",
      "sentence": "Alice may withdraw her declaration of trust in Carol as a developer",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -322,6 +333,7 @@
      "schema": "encounter",
      "button": "Encounter",
      "sentence": null,
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -340,6 +352,7 @@
      "schema": "lookup_by_address",
      "button": "Lookup by address",
      "sentence": "Alice may look Bob up with Dora by address",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -355,6 +368,7 @@
      "schema": "list_me",
      "button": "List me",
      "sentence": "Alice may list with Dora by Mail under Name on its page",
+     "then": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -378,6 +392,7 @@
      "schema": "list_me_unshown",
      "button": "List me unshown",
      "sentence": "Alice may list with Dora by Mail under Name off its page",
+     "then": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -401,6 +416,7 @@
      "schema": "delist_me",
      "button": "Delist me",
      "sentence": "Alice may delist from Dora by Mail under Name on its page",
+     "then": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -417,6 +433,7 @@
      "schema": "delist_me_unshown",
      "button": "Delist me unshown",
      "sentence": "Alice may delist from Dora by Mail under Name off its page",
+     "then": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -433,6 +450,7 @@
      "schema": "person_unfriend",
      "button": "Person unfriend",
      "sentence": null,
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -448,6 +466,7 @@
      "schema": "sign",
      "button": "Sign",
      "sentence": "Alice may create Item by signing it",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -464,6 +483,7 @@
      "schema": "publish",
      "button": "Publish",
      "sentence": "Alice may publish Prog by signing it",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -480,6 +500,7 @@
      "schema": "enter",
      "button": "Enter",
      "sentence": "Alice may create Wendy, and Wendy must consent",
+     "then": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -496,6 +517,7 @@
      "schema": "make_guardian",
      "button": "Make guardian",
      "sentence": "Those who decide for Wendy may make Alice a guardian of Wendy",
+     "then": null,
      "me": 3,
      "arity": 3,
      "places": {
@@ -512,6 +534,7 @@
      "schema": "end_guardian",
      "button": "End guardian",
      "sentence": "Those who decide for Wendy, other than Bob, may end Bob's guardianship of Wendy",
+     "then": null,
      "me": 3,
      "arity": 3,
      "places": {
@@ -533,6 +556,7 @@
      "schema": "ward_acquaint",
      "button": "Ward acquaint",
      "sentence": "Alice and Bob may jointly come to know each other",
+     "then": null,
      "me": 2,
      "arity": 2,
      "places": {},
@@ -544,6 +568,7 @@
      "schema": "ward_unfriend",
      "button": "Ward unfriend",
      "sentence": "Alice may end the friendship of Wendy and Bob",
+     "then": null,
      "me": 3,
      "arity": 3,
      "places": {
@@ -566,6 +591,7 @@
      "schema": "wards_acquaint",
      "button": "Wards acquaint",
      "sentence": "Alice and Will may jointly come to know each other",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -582,6 +608,7 @@
      "schema": "wards_befriend",
      "button": "Wards befriend",
      "sentence": "Alice and Will may jointly become friends",
+     "then": null,
      "me": 3,
      "arity": 4,
      "places": {
@@ -597,6 +624,7 @@
      "schema": "wards_of_one_guardian_befriend",
      "button": "Wards of one guardian befriend",
      "sentence": "Alice and Will may jointly become friends",
+     "then": null,
      "me": 3,
      "arity": 3,
      "places": {
@@ -612,6 +640,7 @@
      "schema": "delist",
      "button": "Delist",
      "sentence": "Alice may delist from Dave Prog of Bob",
+     "then": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -645,6 +674,7 @@
      "schema": "invite",
      "button": "Invite",
      "sentence": "Alice may invite Bob to join in App of Carol",
+     "then": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -666,6 +696,7 @@
      "schema": "leave",
      "button": "Leave",
      "sentence": "Alice may leave App of Carol",
+     "then": null,
      "me": 1,
      "arity": 3,
      "places": {
@@ -691,6 +722,7 @@
      "schema": "install",
      "button": "Install",
      "sentence": "Alice may install Prog of Carol",
+     "then": null,
      "me": 1,
      "arity": 3,
      "places": {
@@ -709,6 +741,7 @@
      "schema": "install_own",
      "button": "Install own",
      "sentence": "Alice may install her own Prog",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -724,6 +757,7 @@
      "schema": "offer",
      "button": "Offer",
      "sentence": "Alice may offer Prog of Carol to Bob",
+     "then": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -771,6 +805,7 @@
      "schema": "befriend",
      "button": "Befriend",
      "sentence": "Alice and Bob may jointly become friends",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -786,6 +821,7 @@
      "schema": "introduce",
      "button": "Introduce",
      "sentence": "Alice may introduce Carol to Bob",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -804,6 +840,7 @@
      "schema": "introduce",
      "button": "Introduce",
      "sentence": "Alice may introduce Bob to Carol",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -822,6 +859,7 @@
      "schema": "trust_store",
      "button": "Trust store",
      "sentence": "Alice may declare trust in Bob",
+     "then": null,
      "me": 1,
      "arity": 3,
      "places": {
@@ -840,6 +878,7 @@
      "schema": "present",
      "button": "Present",
      "sentence": "Alice may present to Dave the signature of Bob over the friendship of Alice and Bob",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -858,6 +897,7 @@
      "schema": "forward",
      "button": "Forward",
      "sentence": "Alice may forward Item to Bob, adding his signature to the signatures Item carries",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -876,6 +916,7 @@
      "schema": "ward_befriend",
      "button": "Ward befriend",
      "sentence": "Alice and Bob may jointly become friends",
+     "then": null,
      "me": 3,
      "arity": 3,
      "places": {
@@ -891,6 +932,7 @@
      "schema": "ward_end",
      "button": "Ward end",
      "sentence": "Alice may end her friendship with Bob",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -906,6 +948,7 @@
      "schema": "unfriend",
      "button": "Unfriend",
      "sentence": "Alice may end her friendship with Bob",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -921,6 +964,7 @@
      "schema": "guardian_unfriend",
      "button": "Guardian unfriend",
      "sentence": "Alice may end her friendship with her ward Bob",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -936,6 +980,7 @@
      "schema": "resign",
      "button": "Resign",
      "sentence": "Alice may end her guardianship of Bob",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -951,6 +996,7 @@
      "schema": "retire",
      "button": "Retire",
      "sentence": "Those who decide for Bob may retire Bob",
+     "then": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -966,6 +1012,7 @@
      "schema": "open_store",
      "button": "Open store",
      "sentence": "Alice may make Bob a store",
+     "then": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -981,6 +1028,7 @@
      "schema": "open_server",
      "button": "Open server",
      "sentence": "Alice may make Bob a rendezvous server",
+     "then": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -996,6 +1044,7 @@
      "schema": "open_directory",
      "button": "Open directory",
      "sentence": "Alice may make Bob a directory",
+     "then": null,
      "me": 2,
      "arity": 2,
      "places": {
@@ -1011,6 +1060,7 @@
      "schema": "list",
      "button": "List",
      "sentence": "Alice may list in Bob Prog of Carol",
+     "then": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -1052,6 +1102,7 @@
      "schema": "install_from_store",
      "button": "Install from store",
      "sentence": "Alice may install from a store Prog of Bob",
+     "then": null,
      "me": 1,
      "arity": 4,
      "places": {
@@ -1077,6 +1128,7 @@
      "schema": "untrust_store",
      "button": "Untrust store",
      "sentence": "Alice may withdraw her declaration of trust in Dave",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {

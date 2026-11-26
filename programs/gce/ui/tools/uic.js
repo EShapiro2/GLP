@@ -37,6 +37,7 @@ function compile(sim, text, platformText, lookText) {
       else if (c.kind === 'details') comps.push({kind: 'show', of: c.about, pos: c.pos, preds: c.shows});
       else if (c.kind === 'thread') comps.push({kind: 'thread', preds: c.shows});
       else if (c.kind === 'list') comps.push({kind: 'list', title: c.title, items: c.items.named ? {everyone: true} : c.items.pred ? {from: c.items.pred} : {facts: c.items.atoms, keep: c.items.within ? c.items.within.pos : null}, with: c.shows || [], opens: c.opens || null, look: (lookOf(c.title) || {}).as || null, order: (lookOf(c.title) || {}).order || null});
+      else if (c.kind === 'chain') comps.push({kind: 'chain', button: c.button, steps: (c.stepIds || []).map(id => (C.components.find(x => x.id === id) || {}).act), then: c.then || null, look: (lookOf(c.button) || {}).as || null});
       else if (c.kind === 'action' && c.act) {
         const a = spec.acts.find(x => x.name === c.act), places = {};
         /* the places as the platform's request numbers them, and its proposer's */
@@ -56,7 +57,7 @@ function compile(sim, text, platformText, lookText) {
           else if (v.field) places[k] = {typed: true, look: lookOf((c.names || {})[r] || r)};
           else if (v.select) { const l = C.components.find(x => x.id === v.select); places[k] = {from: l.items.named ? 'everyone' : l.items.pred}; }
         }
-        comps.push({kind: 'action', schema: a.name, button: c.button, sentence: c.said || null, me, arity, places, covers: !!(R.comps[c.id] && R.comps[c.id].ok), where: (lookOf(c.button) || {}).as || null});
+        comps.push({kind: 'action', schema: a.name, button: c.button, sentence: c.said || null, then: c.then || null, me, arity, places, covers: !!(R.comps[c.id] && R.comps[c.id].ok), where: (lookOf(c.button) || {}).as || null});
       }
     }
     screens[name] = {about: C.aboutPred ? {fact: C.aboutPred} : C.aboutName ? {name: C.aboutName} : null, components: comps};

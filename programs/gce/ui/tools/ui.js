@@ -23,7 +23,7 @@
  */
 (function (G) {
   const SRC = /^([A-Z]\w*)\s+(TYPED|FROM\s+PERSONS|FROM\s+[a-z]\w*|IS\s+[A-Z]\w*)$/;
-  const KEYWORDS = /^(SCREEN|SHOW|LIST|THREAD|QUESTIONS|ABOUT|WITH|OPENS|FROM|TYPED|PERSONS|IS)\b/;
+  const KEYWORDS = /^(SCREEN|SHOW|LIST|THREAD|QUESTIONS|ABOUT|WITH|OPENS|FROM|TYPED|PERSONS|IS|THEN|AND)\b/;
   function read(text) {
     const ui = {name: '', start: null, landmarks: [], containers: {}}, lines = [], errors = [];
     let scr = null, n = 0;
@@ -72,11 +72,17 @@
       if (KEYWORDS.test(s)) { err(n, 'not understood'); continue; }
       if ((m = s.match(/^([A-Z][\w' -]*?):\s*(.*)$/)) || (m = s.match(/^([A-Z][\w' -]*)()$/))) {
         const parts = m[2].replace(/\.\s*$/, '').split(/,\s*/), sources = {};
+        /* THEN a screen: where the person goes once the act is done */
+        let then = null;
+        if (parts.length && /^THEN\s+[A-Z][\w-]*$/.test(parts[parts.length - 1].trim())) then = parts.pop().trim().replace(/^THEN\s+/, '');
         while (parts.length && SRC.test(parts[parts.length - 1].trim())) {
           const q = parts.pop().trim().match(SRC);
           sources[q[1]] = q[2] === 'TYPED' ? {field: true} : /^IS\s/.test(q[2]) ? {is: q[2].replace(/^IS\s+/, '')} : /^FROM\s+PERSONS$/.test(q[2]) ? {from: 'everyone'} : {from: q[2].replace(/^FROM\s+/, '')};
         }
-        push({...base, zone: 'bottom', kind: 'action', button: m[1].trim(), said: parts.join(', ').trim(), sources, bind: {}});
+        const said = parts.join(', ').trim(), chain = said.match(/^([A-Z][\w' -]*?)\s+AND\s+([A-Z][\w' -]*?)$/);
+        /* a chain: one button for two acts, the second proposed once the first is done, the names they share bound alike */
+        if (chain) push({...base, zone: 'bottom', kind: 'chain', button: m[1].trim(), steps: [chain[1], chain[2]], sources, then});
+        else push({...base, zone: 'bottom', kind: 'action', button: m[1].trim(), said, sources, bind: {}, then});
         continue;
       }
       err(n, 'not understood');
@@ -142,6 +148,9 @@
         else if (f.holder !== 'Alice') err(C.line, 'a screen is about a fact of Alice\'s: it starts with Alice');
         else { C.aboutPred = f.pred; f.args.forEach((x, j) => { if (!(x in C.names)) C.names[x] = j + 1; }); }
       }
+      /* a chain: each step an action of the act its button names, with no sentence, the chain's sources by the act's names */
+      for (const c of [...C.components]) if (c.kind === 'chain')
+        c.stepIds = c.steps.map((b, i) => { const id = c.id + 's' + i; C.components.push({id, line: c.line, zone: 'bottom', kind: 'action', hidden: true, step: true, button: b, said: '', sources: c.sources, bind: {}}); return id; });
       for (const c of [...C.components]) {
         if (c.kind === 'details') {
           if (!c.name) { if (!C.params.length) err(c.line, 'SHOW: shows the subject, and this screen is about nothing'); c.about = 'it'; c.pos = null; }
@@ -160,15 +169,24 @@
             else c.items.within = {param: 'it', pos: C.names[shared[0]]};
           }
         }
+        if (c.kind === 'chain') continue;
         if (c.kind !== 'action') continue;
         const cands = spec.acts.filter(a => a.button === c.button);
         if (!cands.length) { err(c.line, 'the contract has no act of the button ' + c.button); continue; }
         let a = null, map = null;
+        /* two acts may say the same sentence (an act a contract inherits and one it makes anew under the same
+           title); the line's sources then tell them apart: the act that requires the facts they are drawn from */
+        const fits = (x, mm) => Object.entries(c.sources).every(([N, s]) => !s.from || s.from === 'everyone' || x.req.some(([p, ks]) => p === s.from && ks.some(k => (mm[x.names[k - 1]] || x.names[k - 1]) === N)));
+        const found = [];
         for (const x of cands) {
           const slots = [...new Set(x.all.concat(x.names))];
           const mm = c.said ? matchWith(pattern(template(x), slots), c.said) : Object.fromEntries(x.names.map(r => [r, r]));
-          if (mm) { a = x; map = mm; break; }
+          if (mm) found.push([x, mm]);
         }
+        /* and, past that, the act whose own names the line keeps (Orga, not Wendy) */
+        const own = (x, mm) => Object.entries(mm).every(([r, N]) => r === N || r === x.names[x.me - 1] || !x.names.includes(r));
+        const pick = found.find(([x, mm]) => fits(x, mm) && own(x, mm)) || found.find(([x, mm]) => fits(x, mm)) || found[0];
+        if (pick) [a, map] = pick;
         if (!a) { err(c.line, 'not the contract\'s sentence for ' + c.button + ', "' + template(cands[0]) + '", with its names renamed'); continue; }
         c.act = a.name;
         c.names = Object.fromEntries(a.names.map(r => [r, map[r] || r]));
@@ -194,9 +212,11 @@
             }
           } else if (N in C.names) c.bind[r] = C.names[N] === null ? 'it' : {param: 'it', pos: C.names[N]};
         }
-        for (const N of Object.keys(c.sources)) if (!used.has(N)) err(c.line, N + ' is not a name of this sentence');
+        if (!c.step) for (const N of Object.keys(c.sources)) if (!used.has(N)) err(c.line, N + ' is not a name of this sentence');
       }
     }
+    for (const d of Object.values(ui.containers)) for (const c of d.components) if (c.then && c.then !== ui.start && !(ui.landmarks || []).includes(c.then)) err(c.line, 'THEN goes to the start screen or a landmark, and ' + c.then + ' is neither');
+    for (const d of Object.values(ui.containers)) for (const c of d.components) if (c.kind === 'chain') for (const id of c.stepIds || []) { const s = d.components.find(x => x.id === id); if (s && !s.act) err(c.line, s.button + ' is no button of the contract'); }
     for (const d of Object.values(ui.containers)) for (const c of d.components) if (c.opens) {
       const to = ui.containers[c.opens];
       if (!to) { err(c.line, 'no screen ' + c.opens); continue; }
@@ -278,7 +298,7 @@
   function check(spec, ui) {
     const ways = paths(ui), reach = new Set(Object.keys(ways)), acts = {}, comps = {};
     for (const a of spec.acts) acts[a.name] = {button: a.button, covered: false};
-    for (const c of reach) for (const x of ui.containers[c].components) if (x.kind === 'action' && x.act) {
+    for (const c of reach) for (const x of ui.containers[c].components) if (x.kind === 'action' && x.act && !x.step) {
       const a = spec.acts.find(y => y.name === x.act), anc = anchors(a), bind = {[a.me]: 'me'};
       for (const [r, v] of Object.entries(x.bind)) bind[placeOf(a, r)] = v;
       const ps = ui.containers[c].params;
@@ -307,7 +327,7 @@
       comps[x.id] = {ok: !best.length, why: best};
       if (!best.length) acts[a.name].covered = true;
     }
-    for (const d of Object.values(ui.containers)) for (const x of d.components) if (x.kind === 'action' && !(x.id in comps)) comps[x.id] = {ok: false, why: ['no list opens this screen']};
+    for (const d of Object.values(ui.containers)) for (const x of d.components) if (x.kind === 'action' && !x.step && !(x.id in comps)) comps[x.id] = {ok: false, why: ['no list opens this screen']};
     const preds = new Set(Object.keys(spec.vocab).filter(p => !(spec.env || []).includes(p)));
     for (const a of spec.acts) for (const [p] of a.req.concat(a.forb)) preds.add(p);
     /* Proposition 2: a predicate with arguments is shown by a list of its atoms on the start screen or, if
@@ -440,15 +460,16 @@
       else if (what === 'SCANNED') r = {as: 'scanned'};
       else if ((q = what.match(/^DRAWN BY ([a-z]\w*)$/))) r = {as: 'drawn', by: q[1]};
       else if ((q = what.match(/^PICKED ON ([a-z]\w*)(?: FROM ([A-Z]\w*))?$/))) r = {as: 'picked', on: q[1], from: q[2] || null};
+      else if ((q = what.match(/^NEW AS ([A-Za-z][\w-]*?)(\d+)$/))) r = {fresh: {stem: q[1], n: +q[2]}};
       else if (/^(NEWEST FIRST|OLDEST FIRST|ALPHABETICAL)$/.test(what)) r = {order: what === 'NEWEST FIRST' ? 'newest' : what === 'OLDEST FIRST' ? 'oldest' : 'alpha'};
       else if (/^(A GRID|ROWS|CHIPS)$/.test(what)) r = {as: what === 'A GRID' ? 'grid' : what.toLowerCase()};
       else if (/^(IN THE MENU|IN THE BAR|PRIMARY)$/.test(what)) r = {as: what === 'PRIMARY' ? 'primary' : what === 'IN THE MENU' ? 'menu' : 'bar'};
       else { err('not a style: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, SCANNED, DRAWN BY a program, PICKED ON a program, A GRID, ROWS, CHIPS, NEWEST FIRST, OLDEST FIRST, ALPHABETICAL, IN THE MENU, IN THE BAR or PRIMARY'); continue; }
       if (r.as === 'slider' && r.from >= r.to) { err('a slider goes from a smaller number to a larger one'); continue; }
       /* a list may have an order beside its look; anything else one style */
-      const had = out.of[name];
-      if (had && (r.order ? had.order : had.as)) { err(name + ' has a style already'); continue; }
-      out.of[name] = r.order ? {...(had || {line: n}), order: r.order, orderLine: n} : {...(had || {}), ...r, line: n}; L.name = name;
+      const had = out.of[name], extra = r.order ? 'order' : r.fresh ? 'fresh' : null;
+      if (had && (extra ? had[extra] : had.as)) { err(name + ' has a style already'); continue; }
+      out.of[name] = extra ? {...(had || {line: n}), [extra]: r[extra], [extra + 'Line']: n} : {...(had || {}), ...r, line: n}; L.name = name;
     }
     return out;
   }
@@ -473,6 +494,7 @@
     const fields = {}, lists = {}, buttons = {};
     for (const C of Object.values(ui.containers)) for (const c of C.components) {
       if (c.kind === 'list' && !c.hidden) lists[c.title] = c;
+      if (c.kind === 'chain') (buttons[c.button] = buttons[c.button] || []).push(c);
       if (c.kind !== 'action' || !c.act) continue;
       (buttons[c.button] = buttons[c.button] || []).push(c);
       const a = spec.acts.find(x => x.name === c.act);
@@ -481,7 +503,8 @@
     const loses = [];
     for (const [name, r] of Object.entries(look.of)) {
       if (r.order && !lists[name]) err(r.orderLine, name + ' is no list of the description, so it has no order');
-      if (r.order && !r.as) continue;
+      if (r.fresh && !fields[name]) err(r.freshLine, name + ' is no value the description has TYPED, so it has no new name');
+      if ((r.order || r.fresh) && !r.as) continue;
       const prog = r.as === 'drawn' ? r.by : r.as === 'picked' ? r.on : null;
       if (prog && programs && !programs[prog]) { err(r.line, prog + ' is no drawing program'); continue; }
       if (r.as === 'drawn') {

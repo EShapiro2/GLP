@@ -26,6 +26,7 @@ SCREEN Group ABOUT "Alice is a member of the group Hikers of Bob":
     QUESTIONS
     SHOW: member, leader, listed, posted, group_delivered
     THREAD: group_message
+    Join: Alice may add Carol to Hikers, Carol FROM friend
     Leave: Alice may end her membership in Bob's Hikers
     Post: Alice may send Text to the group Hikers of Bob, Text TYPED
     Post own: Alice may send Text to the group Hikers of Alice, Text TYPED

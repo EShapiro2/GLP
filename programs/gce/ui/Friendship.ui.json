@@ -40,6 +40,7 @@
      "schema": "establish",
      "button": "Establish",
      "sentence": "Alice may establish an identity",
+     "then": null,
      "me": 1,
      "arity": 1,
      "places": {},
@@ -51,6 +52,7 @@
      "schema": "acquaint",
      "button": "Acquaint",
      "sentence": "Alice and Bob may jointly come to know each other",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -86,6 +88,7 @@
      "schema": "befriend",
      "button": "Befriend",
      "sentence": "Alice and Bob may jointly become friends",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -101,6 +104,7 @@
      "schema": "unfriend",
      "button": "Unfriend",
      "sentence": "Alice may end her friendship with Bob",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -116,6 +120,7 @@
      "schema": "introduce",
      "button": "Introduce",
      "sentence": "Alice may introduce Carol to Bob",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -134,6 +139,7 @@
      "schema": "introduce",
      "button": "Introduce",
      "sentence": "Alice may introduce Bob to Carol",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {

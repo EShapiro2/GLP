@@ -52,6 +52,7 @@
      "schema": "establish",
      "button": "Establish",
      "sentence": "Alice may establish an identity",
+     "then": null,
      "me": 1,
      "arity": 1,
      "places": {},
@@ -63,6 +64,7 @@
      "schema": "acquaint",
      "button": "Acquaint",
      "sentence": "Alice and Bob may jointly come to know each other",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -81,6 +83,7 @@
      "schema": "create",
      "button": "Create",
      "sentence": "Alice may create Hikers",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -97,6 +100,7 @@
      "schema": "close",
      "button": "Close",
      "sentence": "Alice may close Hikers by leaving it",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -137,6 +141,7 @@
      "schema": "befriend",
      "button": "Befriend",
      "sentence": "Alice and Bob may jointly become friends",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -152,6 +157,7 @@
      "schema": "unfriend",
      "button": "Unfriend",
      "sentence": "Alice may end her friendship with Bob",
+     "then": null,
      "me": 1,
      "arity": 2,
      "places": {
@@ -167,6 +173,7 @@
      "schema": "introduce",
      "button": "Introduce",
      "sentence": "Alice may introduce Carol to Bob",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -185,6 +192,7 @@
      "schema": "introduce",
      "button": "Introduce",
      "sentence": "Alice may introduce Bob to Carol",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -203,6 +211,7 @@
      "schema": "join",
      "button": "Join",
      "sentence": "Alice may add Bob to Hikers",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -214,13 +223,14 @@
       }
      },
      "covers": true,
-     "where": null
+     "where": "bar"
     },
     {
      "kind": "action",
      "schema": "remove",
      "button": "Remove",
      "sentence": "Alice may end Bob's membership in Hikers",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -239,6 +249,7 @@
      "schema": "message",
      "button": "Message",
      "sentence": "Alice may send Text to Bob",
+     "then": null,
      "me": 2,
      "arity": 3,
      "places": {
@@ -285,9 +296,29 @@
     },
     {
      "kind": "action",
+     "schema": "join",
+     "button": "Join",
+     "sentence": "Alice may add Carol to Hikers",
+     "then": null,
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "from": "friend"
+      },
+      "3": {
+       "subject": 1
+      }
+     },
+     "covers": false,
+     "where": "bar"
+    },
+    {
+     "kind": "action",
      "schema": "leave",
      "button": "Leave",
      "sentence": "Alice may end her membership in Bob's Hikers",
+     "then": null,
      "me": 1,
      "arity": 3,
      "places": {
@@ -306,6 +337,7 @@
      "schema": "post",
      "button": "Post",
      "sentence": "Alice may send Text to the group Hikers of Bob",
+     "then": null,
      "me": 2,
      "arity": 4,
      "places": {
@@ -330,6 +362,7 @@
      "schema": "post_own",
      "button": "Post own",
      "sentence": "Alice may send Text to the group Hikers of Alice",
+     "then": null,
      "me": 1,
      "arity": 3,
      "places": {
