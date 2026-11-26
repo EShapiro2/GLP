@@ -1316,6 +1316,7 @@ void appsScreens(Screens screens) {
       'Alice asks to swap coins with you.',
       'amount given: 2',
       'issuer wanted: Bob',
+      'type wanted: coin',
       'amount wanted: 3',
       'Contacts: Bob',
       for (final n in aliceCoins) 'Notes: ${_noteText(n)}',
@@ -1431,6 +1432,7 @@ void appsScreens(Screens screens) {
       'Alice asks to swap coins or bonds with you.',
       'amount given: 2',
       'issuer wanted: Bob',
+      'type wanted: bond(5)',
       'amount wanted: 3',
       'Contacts: Bob',
       for (final n in aliceCoins.take(2)) 'Notes: ${_noteText(n)}',
@@ -1454,7 +1456,8 @@ void appsScreens(Screens screens) {
     await run.tap(alice, run.control(alice, 'act:redeem_bond:$bobBond'));
     await run.type(
         alice, run.control(alice, 'field:redeem_bond:$bobBond:5'), 'alice');
-    run.plain(alice);
+    // A bond's row draws its type as its term, bond(5) (VEUI, Definition "Default Widget").
+    run.plain(alice, allow: const {'bond('});
     await run.shoot(alice, 'gb-c-alice-redeem.png');
     await run.tap(alice, run.control(alice, 'send:redeem_bond:$bobBond'));
     expect(bob.questions('approval'), isEmpty);
@@ -1552,16 +1555,17 @@ void appsScreens(Screens screens) {
       await run.list(v[q]!, 'knows');
       await run.top(v[q]!);
       final texts = run.textsOf(v[q]!, a);
-      expect(texts.take(5), [
+      expect(texts.take(6), [
         '${personName(GAtom(p))} asks to swap coins with you.',
         'amount given: $k',
         'issuer wanted: ${personName(GAtom(w))}',
+        'type wanted: coin',
         'amount wanted: $k1',
         'Contacts: ${personName(GAtom(q))}',
       ]);
-      expect(texts.skip(5).take(k),
+      expect(texts.skip(6).take(k),
           everyElement(startsWith('Notes: ${personName(GAtom(u))}, Coin, ')));
-      expect(texts.skip(5 + k), ['yes', 'no']);
+      expect(texts.skip(6 + k), ['yes', 'no']);
       await run.answer(v[q]!, 'yes');
       expect(v[q]!.questions('approval'), isEmpty);
       expect((held(p, u), held(p, w), held(q, u), held(q, w)),
