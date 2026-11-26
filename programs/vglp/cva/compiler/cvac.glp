@@ -2060,7 +2060,13 @@ gone_walk([V|Vs], I, K, Lv, Gs?) :- integer(I?), integer(K?), ground(Lv?), groun
 procedure gone_step(YesNo?, Arg?, Integer?, Args?, Integer, YesNo).
 gone_step(no, _, K, _, K?, no).
 gone_step(yes, set(X), K, Lv, K1?, G?) :- ground(X?), ground(Lv?), integer(K?) | K1 := K? + 1, mem(num(X?), Lv?, G).
-gone_step(yes, V, K, _, K1?, no) :- otherwise, integer(K?), ground(V?) | K1 := K? + 1.
+gone_step(yes, V, K, Lv, K1?, no) :- otherwise, integer(K?), ground(V?), ground(Lv?) |
+    mem(V?, Lv?, In),
+    gone_next(In?, K?, K1).
+%% A variable local to a role that is no set variable is no place pragmas.sh gives a field string, so the count of the field strings stays (pragmas.sh: "A variable local to a role ... is not named by the request, and no field names it"; a set variable, which is no field, keeping its place): Works' Arbitrate for the contractor, its Job, Sum and Carol read at Dave's role, its fields ["orga", "bob", "", "", "dollar"], SumSet the fourth (Calculus #15, vGLP_inbox.md, 2026-11-26 09:58 UTC).
+procedure gone_next(YesNo?, Integer?, Integer).
+gone_next(yes, K, K?).
+gone_next(no, K, K1?) :- integer(K?) | K1 := K? + 1.
 procedure drop_nths(Strings?, Ints?, Integer?, Strings).
 drop_nths([], _, _, []).
 drop_nths([F|Fs], Gs, K, R?) :- integer(K?), ground(Gs?) |
