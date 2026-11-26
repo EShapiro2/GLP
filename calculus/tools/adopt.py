@@ -274,7 +274,7 @@ def written_from(name, ps):
             die('%s, which a contract compiled is written from, is not among the contracts found' % n)
         out[n] = texts(n, ps[n])
         ls = lines(out[n][0])
-        if len(ls) > 1 and re.match(re.escape(n) + r' (extends|restricts|strengthens|instantiates|composes|relaxes|weakens|augments|renames|lifts|unites)\b', ls[1]):
+        if len(ls) > 1 and re.match(re.escape(n) + r' (inherits|extends|restricts|strengthens|instantiates|composes|relaxes|weakens|augments|renames|lifts|unites)\b', ls[1]):
             first = re.sub(r' \([^()]*\)', '', ls[1])
             todo += [w for _, _, w in NM.find(first[len(n):], ps)]      # the known names, longest first (tools/names.py)
     return out

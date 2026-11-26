@@ -1,2 +1,2 @@
 App
-App unites Encounters, AppStore and Directory.
+App inherits from Encounters, AppStore and Directory.

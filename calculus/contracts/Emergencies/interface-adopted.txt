@@ -1,0 +1,6 @@
+Interface pragmas
+Personal emergency: Alice [Personal emergency] <call>
+Village emergency: Alice [Village emergency] <cast>
+Emergency forward: Alice [Emergency forward] <bob> <orga>
+Resolve: Alice [Resolve] <reply>
+Answer: Bob [Answer] <reply>

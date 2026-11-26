@@ -1,0 +1,1 @@
+not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable), obstructed(encounter, 1, atom(nearby, [role(2)]), environment), obstructed(encounter, 2, atom(nearby, [role(1)]), environment)])

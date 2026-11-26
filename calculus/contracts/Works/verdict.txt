@@ -1,0 +1,1 @@
+not_grassroots([obstructed(acquaint, 1, atom(person, []), unobtainable), obstructed(acquaint, 2, atom(person, []), unobtainable), changes_nothing(approve, 2), changes_nothing(complete, 2), changes_nothing(reject, 2), changes_nothing(reject, 3), changes_nothing(supervise, 2), changes_nothing(raise, 2), changes_nothing(raise_for_the_community, 2)])

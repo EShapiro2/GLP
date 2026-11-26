@@ -19,7 +19,7 @@ Gossip:1+Promoted Gossip:1 ■ Post: made(Alice,Post), post(Alice,Post), budget(
 Gossip:2+Promoted Gossip:2 ■ Tell: post_from(Bob,Post,Alice), post(Bob,Post), budget(Bob,Post,Part), ~post_coins(Alice,Post,Orga,*Part), post_coins(Bob,Post,Orga,*Part), part_due(Bob,Post) <- post(Alice,Post), budget(Alice,Post,Budget), covers(Alice,Budget,Rest), friend(Alice,Bob), friend(Bob,Alice), protocol(Alice,Post,Bob,Part,Rest), post_coins(Alice,Post,Orga,*Part) guarded by Alice.
 Matching:0 - | Posts have a *test*, whether two *match*.
 Matching:0 - | Environment: p and q match, for x.
-Matching:1 ■ Return: post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob).
+Matching:1 ■ Return: forwarded_post(Bob,Other,Alice), post_from(Alice,Other,Bob), post(Alice,Other) <- post_from(Bob,Post,Alice), post(Bob,Other), match(Bob,Post,Other), ~post_from(Alice,Other,Bob), ~forwarded_post(Bob,Other,Alice).
 Matching:2+Anonymous Matching:1 ■ Meet: knows(Alice,Carol), knows(Carol,Alice) <- made(Alice,Post), made(Carol,Other), post(Alice,Other), post(Carol,Post), match(Alice,Post,Other), address(Alice,Carol), address(Carol,Alice) guarded by Alice, Carol.
 Guardians:0 - | Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
 Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
@@ -54,12 +54,12 @@ Rendezvous:3 ■ Use link: ~registered(Dave,Link,Alice), spent(Dave,Link,Alice),
 Rendezvous:3 ■ | The link is then spent.
 Rendezvous:4 ■ | Reconnection.
 Rendezvous:4 ■ Present: presented(Dave,Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), knows(Alice,Dave), rendezvous_server(Dave), ~presented(Dave,Alice,Bob) guarded by Alice.
-Rendezvous:4 ■ Match: ~presented(Dave,Alice,Bob), ~presented(Dave,Bob,Alice), address(Alice,Bob), address(Bob,Alice) <- presented(Dave,Alice,Bob), presented(Dave,Bob,Alice).
+Rendezvous:4 ■ Match: ~presented(Dave,Alice,Bob), ~presented(Dave,Bob,Alice), address(Alice,Bob), address(Bob,Alice) <- ~address(Alice,Bob), ~address(Bob,Alice), presented(Dave,Alice,Bob), presented(Dave,Bob,Alice).
 Anonymous Rendezvous:0 - | A *one-time key* is a key pair its maker uses for one meeting.
 Anonymous Rendezvous:0 - | Environment: x holds the one-time key k; x knows the public key of k.
 Anonymous Rendezvous:1 ■ | Meet.
 Anonymous Rendezvous:1+Anonymous Matching:1 ■ Present: presented_keys(Dave,Key,Other,Alice) <- one_time_key(Alice,Key), knows_key(Alice,Other), knows(Alice,Dave), rendezvous_server(Dave), ~presented_keys(Dave,Key,Other,Alice), made(Alice,Post), post(Alice,Reply), post_key(Alice,Post,Key), post_key(Alice,Reply,Other), pair_server(Alice,Post,Reply,Dave) guarded by Alice.
-Anonymous Rendezvous:1 ■ Match: ~presented_keys(Dave,Key,Other,Alice), ~presented_keys(Dave,Other,Key,Bob), address(Alice,Bob), address(Bob,Alice) <- presented_keys(Dave,Key,Other,Alice), presented_keys(Dave,Other,Key,Bob).
+Anonymous Rendezvous:1 ■ Match: ~presented_keys(Dave,Key,Other,Alice), ~presented_keys(Dave,Other,Key,Bob), address(Alice,Bob), address(Bob,Alice) <- ~address(Alice,Bob), ~address(Bob,Alice), presented_keys(Dave,Key,Other,Alice), presented_keys(Dave,Other,Key,Bob).
 Anonymous Matching:0 - | Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
 Anonymous Matching:0 - | Environment: p carries the public key of k, for x; d is named by the one of p and q whose public key has the smaller hash, for x.
 Anonymous Matching:1 ■ | Meet.

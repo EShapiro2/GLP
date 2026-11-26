@@ -1,0 +1,69 @@
+Emergencies (flat text)
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Emergencies:0 - | Alice, Bob and Carol are persons, Cast and Reply broadcasts, Orga, Will and Gov organisations, Motion an act of Orga, Role a role, Call a personal emergency.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
+Knowledge:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice is a person, Bob is a person, Carol is a person, Alice knows Bob, Bob knows Alice and Alice knows Carol.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice is a person, Bob is a person, Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2+Guardians:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Broadcast:0 - | A *broadcast* is a message with a unique identifier, which its maker holds. Δ > 0 is a period of time, and a broadcast is *live* for Δ after it is made.
+Broadcast:0 - | Environment: m is live, for x.
+Broadcast:1 ■ Forward: Bob holds the broadcast Cast, Bob holds the broadcast Cast from Alice and Alice has forwarded the broadcast Cast to Bob, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice holds the broadcast Cast, Cast is live for Alice, not Bob holds the broadcast Cast and not Alice has forwarded the broadcast Cast to Bob.
+Broadcast:2 ■ Expire: No longer Alice holds the broadcast Cast and no longer Alice holds the broadcast Cast from anyone, provided not Cast is live for Alice.
+Guardians:0 - | Bob *trusts* Orga, an organisation of Alice, when he trusts Alice. The *decision rule*, which the creator of an organisation decides, says who decides for an organisation and how. An organisation takes an act of a party by those who decide for the organisation.
+Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
+Guardians:1+Organisation:1 ■ Found: Alice and Orga may jointly Orga has an identity, Orga is an organisation, Orga has Alice as an officer, Alice is the creator of Orga, Alice is an officer of Orga, Alice knows Orga, Orga knows Alice, Alice counts Orga as a friend, Orga counts Alice as a friend, Orga has Alice as its first officer, Alice holds the role Role in Orga, Orga has Alice in the role Role, Alice is a participant of Orga, Orga has Alice as a participant and Alice is the founder of Orga, provided Alice is a person and not Orga has an identity. Must consent: Orga.
+Guardians:1 ■ | Alice chooses Orga's key pair.
+Guardians:2 ■ | Guardian decisions.
+Guardians:2+Organisation:4 ■ Appoint: Those who decide for Orga and Bob may jointly Bob is an officer of Orga, Orga has Bob as an officer, Bob knows Orga, Orga knows Bob, Bob counts Orga as a friend, Orga counts Bob as a friend, Bob holds the role Role in Orga and Orga has Bob in the role Role, provided Orga is an organisation, not Orga is retired, Bob is a person, Orga has Alice as an officer, Bob counts Alice as a friend, not Bob is an officer of Orga, not Orga has Bob as an officer and Bob is a participant of Orga.
+Guardians:2+Organisation:4 ■ Resign: Bob may no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
+Guardians:2+Organisation:4 ■ End officer: Those who decide for Orga, other than Bob, may no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
+Guardians:2+Organisation:4 ■ Officer unfriend: Bob may no longer Bob counts Orga as a friend, no longer Orga counts Bob as a friend, no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
+Guardians:2 ■ | Orga may not end a friendship with her officer.
+Guardians:3 ■ | Ward and person.
+Guardians:3 ■ Organisation acquaint: Orga and Bob may jointly Orga knows Bob and Bob knows Orga, provided Orga is an organisation, Orga has Alice as an officer and Bob is a person.
+Guardians:3 ■ Organisation befriend: Orga, Bob and Alice may jointly Orga counts Bob as a friend and Bob counts Orga as a friend, provided Orga is an organisation, not Orga is retired, Orga has Alice as an officer, Bob is a person, Orga knows Bob, Bob knows Orga, Alice counts Bob as a friend, Bob counts Alice as a friend, not Orga counts Bob as a friend and not Bob counts Orga as a friend.
+Guardians:3 ■ Organisation end: Orga may no longer Orga counts Bob as a friend and no longer Bob counts Orga as a friend, provided not Orga has Bob as an officer.
+Guardians:3 ■ Unfriend: Bob may no longer Bob counts Orga as a friend and no longer Orga counts Bob as a friend, provided not Bob is an officer of Orga.
+Guardians:3 ■ Organisation unfriend: Alice may no longer Orga counts Bob as a friend and no longer Bob counts Orga as a friend, provided Orga has Alice as an officer and not Bob is an officer of Orga.
+Guardians:4 ■ | Wards.
+Guardians:4 ■ Organisations acquaint: Orga and Will may jointly Orga knows Will and Will knows Orga, provided Orga is an organisation, Orga has Alice as an officer, Will is an organisation and Will has Bob as an officer. Possibly one: Alice=Bob.
+Guardians:4 ■ Organisations befriend: Orga, Will, Alice and Bob may jointly Orga counts Will as a friend and Will counts Orga as a friend, provided Orga is an organisation, not Orga is retired, Orga has Alice as an officer, Will is an organisation, not Will is retired, Will has Bob as an officer, Orga knows Will, Will knows Orga, Alice knows Will, Alice counts Bob as a friend, Bob counts Alice as a friend, not Orga counts Will as a friend and not Will counts Orga as a friend. Possibly one: Alice=Bob.
+Guardians:4 ■ Organisations of one officer befriend: Orga, Will and Alice may jointly Orga counts Will as a friend and Will counts Orga as a friend, provided Orga is an organisation, not Orga is retired, Orga has Alice as an officer, Will is an organisation, not Will is retired, Will has Alice as an officer, Orga knows Will, Will knows Orga, not Orga counts Will as a friend and not Will counts Orga as a friend.
+Guardians:5+Organisation:4 ■ Retire: Those who decide for Orga may Orga is retired, no longer anyone is an officer of Orga, no longer Orga has anyone as an officer, no longer Orga counts anyone as a friend, no longer anyone counts Orga as a friend, no longer anyone holds the role anyone in Orga and no longer Orga has anyone in the role anyone, provided not Orga is retired.
+Guardians:5 ■ | Orga can then take no act.
+Organisation:0 - | An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
+Organisation:0 - | Environment: the bylaws of z entitle x to propose motions; the bylaws of z entitle x to vote on m; the bylaws of z entitle x to take m; the votes decide m according to the bylaws of z; the bylaws of z entitle x to amend them as m says; the amendment m is decided according to the bylaws of z.
+Organisation:1 ■ Found by an organisation: Alice, Gov and Orga may jointly Orga has an identity, Orga is an organisation, Orga has Alice as an officer, Alice is the creator of Orga, Alice is an officer of Orga, Alice knows Orga, Orga knows Alice, Alice counts Orga as a friend, Orga counts Alice as a friend, Orga has Alice as its first officer, Alice holds the role Role in Orga, Orga has Alice in the role Role, Alice is a participant of Orga, Orga has Alice as a participant and Gov is the founder of Orga, provided Alice is a person and not Orga has an identity. Must consent: Orga.
+Organisation:2 ■ | Acts of the organisation.
+Organisation:2 ■ Propose: Bob may Orga has Motion proposed, provided Bob is an officer of Orga, the bylaws of Orga entitle Bob to propose motions and not Orga has Motion proposed.
+Organisation:2 ■ Vote: Bob may Orga holds Bob's vote on Motion, provided Bob is a participant of Orga, the bylaws of Orga entitle Bob to vote on Motion, Orga is an organisation, Orga has Motion proposed and not Orga holds Bob's vote on Motion.
+Organisation:2 ■ Act: Alice may Orga has Motion taken, provided Alice is an officer of Orga, Orga has Motion proposed, the bylaws of Orga entitle Alice to take Motion, the votes decide Motion according to the bylaws of Orga and not Orga has Motion taken.
+Organisation:3 ■ | Participation.
+Organisation:3 ■ Join: Bob and those who admit participants of Orga may jointly Bob is a participant of Orga and Orga has Bob as a participant, provided not Bob is a participant of Orga.
+Organisation:3 ■ Leave: Bob may no longer Bob is a participant of Orga and no longer Orga has Bob as a participant, provided not Bob is an officer of Orga.
+Organisation:3 ■ Officer leave: Bob may no longer Bob is a participant of Orga, no longer Orga has Bob as a participant, no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
+Organisation:3 ■ Expel: Those who expel participants of Orga may no longer Bob is a participant of Orga and no longer Orga has Bob as a participant, provided not Bob is an officer of Orga.
+Organisation:3 ■ Officer expel: Those who expel participants of Orga may no longer Bob is a participant of Orga, no longer Orga has Bob as a participant, no longer Bob is an officer of Orga, no longer Orga has Bob as an officer, no longer Bob holds the role anyone in Orga and no longer Orga has Bob in the role anyone.
+Organisation:3 ■ | Every role Bob holds in Orga ends with his participation.
+Organisation:4 ■ | Officers.
+Organisation:4 ■ | The decision names his role.
+Organisation:5 ■ Amend: Alice may Orga has its bylaws amended and Orga has Motion taken, provided Alice is an officer of Orga, Orga has Motion proposed, the bylaws of Orga entitle Alice to amend them as Motion says, the amendment Motion is decided according to the bylaws of Orga and not Orga has Motion taken.
+Organisation:6 ○ | Accountability.
+Organisation:6 ○ | Orga will be accountable at law for its undertakings where it is a juridical person, and every officer who decided an act of Orga will be accountable for it with Orga.
+Emergencies:0 - | A *personal emergency* is a broadcast that includes the location of its maker, a description and the help its maker asks; it ceases to be live when its maker resolves it. A *village emergency* is a broadcast that includes instructions. A *resolution* of a personal emergency and an *answer* to it are broadcasts.
+Emergencies:0 - | Environment: x has no live personal emergency.
+Emergencies:1 ■ Personal emergency: Alice may Alice has made the broadcast Call, Alice holds the broadcast Call and Alice has broadcast the personal emergency Call, provided Alice has no live personal emergency and not Alice has made the broadcast Call.
+Emergencies:2 ■ Village emergency: Alice may Alice has made the broadcast Cast, Alice holds the broadcast Cast, Alice has broadcast the village emergency Cast of Orga and Orga has the village emergency Cast, provided Alice is an officer of Orga, Orga has Alice as an officer and not Alice has made the broadcast Cast.
+Emergencies:3 ■ Emergency forward: Alice may Bob holds the broadcast Cast, Bob holds the broadcast Cast from Alice, Alice has forwarded the broadcast Cast to Bob and Orga has the village emergency Cast with Bob, provided Orga has Alice as a participant, Orga has Bob as a participant, Alice holds the broadcast Cast, Cast is live for Alice, Orga has the village emergency Cast, not Bob holds the broadcast Cast and not Alice has forwarded the broadcast Cast to Bob.
+Emergencies:4 ■ Resolve: Alice may Alice has made the broadcast Reply, Alice holds the broadcast Reply and Alice has resolved Call by Reply, provided Alice has broadcast the personal emergency Call, not Alice has made the broadcast Reply and not Alice has resolved Call by anyone.
+Emergencies:5 ■ Answer: Bob may Bob has made the broadcast Reply, Bob holds the broadcast Reply and Bob has answered Call by Reply, provided Bob holds the broadcast Call, Call is live for Bob and not Bob has made the broadcast Reply.
+Emergencies:6 ○ | Help.
+Emergencies:6 ○ | Bob will give the help he answered.

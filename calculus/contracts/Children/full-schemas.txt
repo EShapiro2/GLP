@@ -27,7 +27,7 @@ Groups:3 ■ Leave: ~member(Bob,Grupo,Alice), ~listed(Alice,Bob,Grupo) <- member
 Groups:4 ■ | Group messaging.
 Groups:4+Warded Groups:1 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo), person(Bob) guarded by Bob possibly Alice=Bob.
 Groups:4+Warded Groups:1 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo), person(Alice) guarded by Alice.
-Groups:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+Groups:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol), ~group_message(Carol,Bob,Text,Grupo,Alice) possibly Alice=Bob, Alice=Carol, Bob=Carol.
 Groups:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.
 Guardians:0 - | Bob *trusts* Wendy, a child of Alice, when he trusts Alice. The *decision rule*, which the creator of a child decides, says who decides for a child and how. A child takes an act of a party by those who decide for the child.
 Guardians:0 - | In clause 4 Alice and Bob are possibly one person.

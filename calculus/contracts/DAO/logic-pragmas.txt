@@ -12,12 +12,12 @@ Vocabulary: x is the steward of d = steward(x,d); x is a member of y's d = membe
 After x founds d under a new name of x's, which requires x is not the steward of d: x is the steward of d, x is a member of x's d and x has x as a member of d.
 After x admits y to d, which requires y is not a member of x's d: y is a member of x's d and x has y as a member of d.
 After y makes the proposal p to x's d, which requires x does not hold p of d: y has proposed p to x's d and x holds p of d.
-After x delivers p of d to y, which requires x has not delivered p of d to y: x has delivered p of d to y and y holds p of d.
+After x delivers p of d to y, which requires x has not delivered p of d to y and y does not hold p of d: x has delivered p of d to y and y holds p of d.
 After y votes for p of x's d, which requires y has not voted on p of d: y has voted on p of d and x holds y's vote for p of d.
 After y votes against p of x's d, which requires y has not voted on p of d: y has voted on p of d and x holds y's vote against p of d.
-After x delivers y's vote for p of d to z, which requires x has not delivered y's vote on p of d to z: x has delivered y's vote on p of d to z and z holds y's vote for p of d.
-After x delivers y's vote against p of d to z, which requires x has not delivered y's vote on p of d to z: x has delivered y's vote on p of d to z and z holds y's vote against p of d.
+After x delivers y's vote for p of d to z, which requires x has not delivered y's vote on p of d to z and z does not hold y's vote for p of d: x has delivered y's vote on p of d to z and z holds y's vote for p of d.
+After x delivers y's vote against p of d to z, which requires x has not delivered y's vote on p of d to z and z does not hold y's vote against p of d: x has delivered y's vote on p of d to z and z holds y's vote against p of d.
 After x passes p of d, which requires x has not decided p of d: x has decided p of d and x holds p of d as passed.
 After x rejects p of d, which requires x has not decided p of d: x has decided p of d and x holds p of d as rejected.
-After x delivers to y the decision that p of d is passed, which requires x has not delivered the decision on p of d to y: x has delivered the decision on p of d to y and y holds p of d as passed.
-After x delivers to y the decision that p of d is rejected, which requires x has not delivered the decision on p of d to y: x has delivered the decision on p of d to y and y holds p of d as rejected.
+After x delivers to y the decision that p of d is passed, which requires x has not delivered the decision on p of d to y and y does not hold p of d as passed: x has delivered the decision on p of d to y and y holds p of d as passed.
+After x delivers to y the decision that p of d is rejected, which requires x has not delivered the decision on p of d to y and y does not hold p of d as rejected: x has delivered the decision on p of d to y and y holds p of d as rejected.

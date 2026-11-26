@@ -375,6 +375,6 @@ Pay accepted coins to the issuer: Alice [Pay accepted coins to the issuer]
 Pay accepted coins to the issuer for Alice: AliceOfficer [Pay accepted coins to the issuer for Alice]
 Set policy rate: Alice [Set policy rate] <term> <rate> <votes>
 Vote on policy rate: Carol [Vote on policy rate] <term> <rate>
-Lend: Alice [Lend] <bob> <dollar> <sum> <term> <total> <votes>
+Lend: Alice [Lend] <bob> <dollar> <sum> <term> <votes>
   Bob: Alice asks for your consent to lend.
 Vote to lend: Carol [Vote to lend] <bob> <sum> <term>

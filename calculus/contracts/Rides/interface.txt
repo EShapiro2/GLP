@@ -168,11 +168,13 @@ Rides
 167. ■ Award.  After the bidding period ends, Alice may award the ride to the bidder the terms select among the bidders who have no ride, at the fare the terms set; Alice's fare and the deposit the terms set for Bob are then locked, where the terms select the bidder whose admissible bid has the highest score, ties broken as the terms say, or no bidder if no bid is admissible, and only if the fare and the deposit are in community coins, Alice holds the fare, and Bob holds the deposit on top of his stake, and the fare and the deposit are then locked between the provider Bob and the customer Alice (Community Network:2).
 168. ■ Close.  If the terms select no bidder, Alice may close the call, where the terms select the bidder whose admissible bid has the highest score, ties broken as the terms say, or no bidder if no bid is admissible.
 169. ■ Pickup.  The pickup is recorded when Alice and Bob are both at the pickup point.
-170. ■ Arrive.  When Alice and Bob are both at the destination, the fare and the deposit are released to Alice and to Bob as the terms say, where the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}.
-171. ■ Cancel.  If no pickup is recorded within the maximum pickup delay, Alice may cancel; the fare and the deposit are then released to Alice and to Bob as the terms say, where the fare and the deposit are released to Alice if Alice was at the pickup point from t₀ to t₀ + T, and otherwise the fare to Alice and the deposit to Bob.
-172. ■ Withdraw.  Alice may withdraw her open call before the bidding period ends.
-173. ■ Arrive in full.  The fare and the deposit of Sum and Total Dollar-denominated Gov-coins locked in Orga on Trip are released to Bob in full on arrival with Alice, provided Alice and Bob are both at the destination, the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}, the terms of Trip release Back to Alice and Pot to Bob on arrival, Pot is Sum plus Total and Back is less than 1.
-174. ■ Cancel for the rider.  Alice may cancel her ride with Bob taking back the Sum and Total Dollar-denominated Gov-coins locked in Orga on Trip, provided no pickup of Alice's ride is recorded within the maximum pickup delay, the fare and the deposit are released to Alice if Alice was at the pickup point from t₀ to t₀ + T, and otherwise the fare to Alice and the deposit to Bob, the terms of Trip release Pot to Alice and Rest to Bob on cancellation, Pot is Sum plus Total and Rest is less than 1.
+170. ■ Arrive.  When Alice and Bob are both at the destination, either of them may claim the release of the fare and the deposit, which are then released to Alice and to Bob as the terms say, where the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}.
+171. ■ Driver arrive.  When Alice and Bob are both at the destination, either of them may claim the release of the fare and the deposit, which are then released to Alice and to Bob as the terms say, where the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}.
+172. ■ Cancel.  If no pickup is recorded within the maximum pickup delay, Alice may cancel; the fare and the deposit are then released to Alice and to Bob as the terms say, where the fare and the deposit are released to Alice if Alice was at the pickup point from t₀ to t₀ + T, and otherwise the fare to Alice and the deposit to Bob.
+173. ■ Withdraw.  Alice may withdraw her open call before the bidding period ends.
+174. ■ Arrive in full.  Alice may claim the release in full of the Sum and Total Dollar-denominated Gov-coins locked in Orga on Trip to Bob, provided Alice and Bob are both at the destination, the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}, the terms of Trip release Back to Alice and Pot to Bob on arrival, Pot is Sum plus Total and Back is less than 1.
+175. ■ Driver arrive in full.  Bob may claim the release in full of the Sum and Total Dollar-denominated Gov-coins locked in Orga on Trip from the rider Alice, provided Alice and Bob are both at the destination, the refund min{P, λδ} is released to Alice, and the rest of the fare and the deposit to Bob, with δ = max{0, t_pickup − t₀ − τ}, the terms of Trip release Back to Alice and Pot to Bob on arrival, Pot is Sum plus Total and Back is less than 1.
+176. ■ Cancel for the rider.  Alice may cancel her ride with Bob taking back the Sum and Total Dollar-denominated Gov-coins locked in Orga on Trip, provided no pickup of Alice's ride is recorded within the maximum pickup delay, the fare and the deposit are released to Alice if Alice was at the pickup point from t₀ to t₀ + T, and otherwise the fare to Alice and the deposit to Bob, the terms of Trip release Pot to Alice and Rest to Bob on cancellation, Pot is Sum plus Total and Rest is less than 1.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -408,6 +410,10 @@ Call: Alice [Call] <trip>
 Bid: Bob [Bid]
 Award: Alice [Award]
 Close: Alice [Close]
+Arrive: Alice [Arrive]
+Driver arrive: Bob [Driver arrive]
 Cancel: Alice [Cancel]
 Withdraw: Alice [Withdraw]
+Arrive in full: Alice [Arrive in full]
+Driver arrive in full: Bob [Driver arrive in full]
 Cancel for the rider: Alice [Cancel for the rider]

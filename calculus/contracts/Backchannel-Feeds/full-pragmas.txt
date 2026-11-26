@@ -21,5 +21,5 @@ Labelled Overlay:3. ■ Labeled unpoint: Alice may remove her Dave-pointer to Ca
 Labelled Overlay:4. ■ Friend pointers.
 Feeds:1. ■ Post: Alice may post Item to her feed. Alice has a feed, and the item is created or received.
 Feeds:2. ■ Deliver: Alice receives from Bob the item Item of Carol's feed, provided Alice has a Carol-pointer to Bob, Bob knows Alice and Bob holds the item Item of Carol's feed.
-Resilient Feeds:1. ■ Redundant point: Alice adds a Carol-pointer to Bob, provided Alice has a Carol-pointer to Dave, Alice has a Carol-pointer to fewer than D persons, Alice and Bob are friends and Bob has a Carol-pointer to Erin.
+Resilient Feeds:1. ■ Redundant point: Alice adds a redundant Carol-pointer to Bob, provided Alice has a Carol-pointer to Dave, Alice has a Carol-pointer to fewer than D persons, Alice and Bob are friends and Bob has a Carol-pointer to Erin.
 Backchannel Feeds:1. ■ Back forward: Alice forwards the item Item of Dave's feed to Carol, provided Alice has a Dave-pointer to Bob, Alice has a Dave-pointer to Carol, Alice holds the item Item of Dave's feed and Alice has received the item Item of Dave's feed from Bob.

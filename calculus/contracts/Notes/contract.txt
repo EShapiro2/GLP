@@ -1,5 +1,5 @@
 Notes
-Notes extends Knowledge.
+Notes inherits from Knowledge.
 A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Alice, Bob and Carol are parties.
 1. ■ Issue: Alice may issue Alice-notes.

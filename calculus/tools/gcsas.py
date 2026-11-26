@@ -4033,7 +4033,8 @@ def norm(entries):
                        ((tuple(sorted(e.get("drop_guards") or ())), tuple(sorted(e.get("drop_body") or ())), tuple(sorted(tuple(q) for q in e.get("eqs") or ()))) if e.get("relax") else ()) +
                        ((tuple(sorted((e.get("taken") or {}).items())), tuple(e.get("votes") or ())) if e.get("taken") or e.get("votes") else ()))
         else:
-            out.append((e["label"], e["mark"], e["name"], tuple(sorted(e["head"])), tuple(sorted(e["body"])), tuple(sorted(e["guards"])), tuple(e.get("same") or ()), tuple(sorted(e.get("must") or ()))) +
+            out.append((e["label"], e["mark"], e["name"], tuple(sorted(e["head"])), tuple(sorted(set(e["body"]))),      # a body is a conjunction: a literal written twice, by two phrases of one predicate (Village Commons: the slot of the resource and of the room), is one
+                         tuple(sorted(e["guards"])), tuple(e.get("same") or ()), tuple(sorted(e.get("must") or ()))) +
                        ((tuple(e["votes"]),) if e.get("votes") else ()))
     return sorted(out, key=repr)
 

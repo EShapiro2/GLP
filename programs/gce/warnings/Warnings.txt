@@ -5,7 +5,7 @@
 % Checked: calculus/tools/gcsas.py (commute, return, recover), relations.py and toglp.py --check (Dart 3.14.1) at GLP 52261a6: syntactically_grassroots_with_wards; GCE 2026-11-25 for Grassroots-Audit #136.  Again by GCE #2, 2026-11-25, for Grassroots-Audit #136 (auditor's PR 162): a warning names its date and counts toward Expel from seven days after it, and stays when its officer leaves office; gcsas.py 92 contracts 0 faults, relations.py 157 of 157 hold, toglp.py --check (Dart 3.13.7): syntactically_grassroots_with_wards.
 % Schemas: Warnings.glp beside this file.
 Warnings
-Warnings extends Organisation, and weakens it.
+Warnings inherits from Organisation.
 A *warning* is a record in an organisation, made by one of its officers, that a participant broke its bylaws or an undertaking; it names the incident and the date it is given. An officer holds at most one warning to a participant at a time, and the participant may answer it once; a warning withdrawn or annulled may be given again of the same incident only if it was not answered. A warning stays when the officer who gave it leaves office, until it is withdrawn or annulled. A warning counts toward expelling the participant only from seven days after it is given, so that he has the time to answer it.
 Alice and Bob are persons, Orga an organisation.
 1. ■ Warn: Alice may warn Bob in Orga of an incident, provided Alice is an officer of Orga and Orga has Bob as a participant.

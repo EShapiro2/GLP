@@ -28,7 +28,7 @@ Tennis Courts
 27. ■ Expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
 28. ■ Officer expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds.
 29. ■ Amend.  Those who decide it may amend the bylaws.
-30. ■ Book.  Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a court of Orga, by Alice and Carol jointly, each a participant of the Club with fewer outstanding bookings than the bound.
+30. ■ Book.  Alice, a participant of Orga with fewer outstanding bookings than the bound, may book any free slot of a court of Orga, by Alice and Carol jointly, each a participant of the Club with fewer outstanding bookings than the bound; Carol is the partner of the booking.
 31. ■ Cancel.  Alice may cancel her booking.
 32. ■ Post.  Alice may make a post.
 33. ■ Tell.  Alice who holds a post, the budget of which covers the cost, may forward it to her friend Bob with a part of the rest of the budget, both according to the gossip protocol.
@@ -57,6 +57,8 @@ Tennis Courts
 56. ■ Present 2.  Alice and Bob, each holding a one-time key and knowing the public key of the other's, may each present to Dave the two public keys, signed with their own.
 57. ■ Match 2.  Dave then gives each the address of the other.
 58. ■ Organisation ward acquaint.  Club, an organisation, and Wendy, a ward, may jointly come to know each other.
+59. ■ Withdraw.  Carol may withdraw as the partner of a booking, which stays the booking of the one who booked.
+60. ■ Partner.  Alice and Carol may jointly make Carol the partner of a booking of Alice that has no partner, Carol a participant of the Club with fewer outstanding bookings than the bound; so a partner is replaced, the old one withdrawing, while the slot stays booked.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -108,7 +110,7 @@ Expel: Decider [Expel] <bob>
 Officer expel: Decider [Officer expel] <bob>
   Codecider: Decider asks for your consent to officer expel.
 Amend: Alice [Amend]
-Book: Alice [Book] <carol> <res> <slot>
+Book: Alice [Book] <carol> <court> <slot>
   Carol: Alice asks for your consent to book.
 Cancel: Alice [Cancel]
 Post: Alice [Post] <post>
@@ -150,3 +152,6 @@ Present: Alice [Present]
 Present 2: Alice [Present 2]
 Organisation ward acquaint: Club [Organisation ward acquaint] <wendy>
   Wendy: Club asks for your consent to organisation ward acquaint.
+Withdraw: Carol [Withdraw] <club>
+Partner: Alice [Partner] <club> <carol> <court> <slot>
+  Carol: Alice asks for your consent to partner.
