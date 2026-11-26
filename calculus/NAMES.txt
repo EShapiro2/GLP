@@ -119,3 +119,4 @@ Partnership | Partnership | Partnership | partnership | partnership
 Foundation | Foundation | Foundation | foundation | foundation
 Disputes | Disputes | Disputes | disputes | disputes
 Warnings | Warnings | Warnings | warnings | warnings
+Chess | Chess | Chess | chess | chess

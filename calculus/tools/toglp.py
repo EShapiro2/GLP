@@ -60,6 +60,7 @@ def unenabled(n, acts):
 
 
 FN = set()      # the predicates the Logic pragmas declare functions, 'Functions: n is the root of m.' (gcsas.Lex.fn), of the contract values_of read last
+FNV = set()     # the names a function's places hold that the names lines declare of a kind other than number, 'Board and Next positions' (Chess): a value of that kind, const(X), not a number (GLP #87, #135), of the contract values_of read last
 ONE = set()     # the roles any one of whom decides, 'any one listed by' (gcsas.Lex.one), of the contract values_of read last
 
 
@@ -79,6 +80,8 @@ def values_of(n, refl=None, env=None, par=None):
     ONE.update(lex.one)
     FN.clear()
     FN.update(lex.env_preds('fn'))
+    FNV.clear()
+    FNV.update(x for x, ks in gcsas.kinds_from(w, n).items() if ks and not any(k.split()[0] == 'number' for k in ks))
     # A role two contracts of the first line list differently (Organisation renames Guardians: those who decide for z,
     # listed by officers of an organisation and by guardians of a ward): each listing with the kinds of its contract.
     ALTS.clear()
@@ -133,7 +136,9 @@ def schema_nums(lits, values, places=frozenset()):
     predicate, (predicate, arity, position), that holds a number in some schema of the contract (num_places)."""
     nums = set()
     for l in lits:
-        if l[1] in values or l[1] in ARITH or l[1] in FN or l[1] in ('sum', 'product', 'difference'):
+        if l[1] in FN:          # a function's place holds a number, but for a name declared of another kind (FNV)
+            nums.update(a for a in l[2] if re.fullmatch(gcsas.NAME, a) and a not in FNV)
+        elif l[1] in values or l[1] in ARITH or l[1] in ('sum', 'product', 'difference'):
             nums.update(a for a in l[2] if re.fullmatch(gcsas.NAME, a))
         for i, a in enumerate(l[2]):
             if a[:1] in '*#':
