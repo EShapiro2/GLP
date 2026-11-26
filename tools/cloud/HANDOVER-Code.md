@@ -1,3 +1,8 @@
+# Code #42, 2026-11-26 ~15:20 UTC
+
+- **Main 3edae81 plus this line**: code41-gone2 (vGLP #37 cb30240 and d2ee2c0a, Calculus #15 464ffa66); the 13 rows d2ee2c0a changes recorded again (helpers 4e9488ca, cd660cce5, 29fe106); Feeds recorded again (its record at 8614fea8 predated GFF c8b5a5ec's play_feeds).  Checks: `cascade.sh --check` on every row OK (helpers' parts 1-3 at 7621b9e, the rest and the 14 new records here at 3edae81); APPS VG 1713/1713; site check 106 contracts, 633 svg, 0 errors.
+- Audit #6's Flutter output for GLP #179: sent by Code #41 at 11:11 UTC (/mnt/project-files/code/glp179-notice-reason-test-2026-11-26.txt).
+
 # Code #41, 2026-11-26 ~12:00 UTC, retiring after its 1st compaction
 
 Code #41 retires (Udi, 2026-11-25 10:34 UTC).  The next Code session continues from here.
