@@ -1,3 +1,14 @@
+# Code #39, 2026-11-26 ~01:45 UTC, retiring after its 1st compaction
+
+Code #39 retires (Udi, 2026-11-25 10:34 UTC).  The next Code session continues from here.
+
+- **Main 37d31ca95** (01:15 UTC): 80da4331d (00:44 UTC: code38-int, vglp34-inherits f4562f5, string_to_term, Udi's yes 2026-11-25 22:52 UTC, GLP-Spec 1353a8c; App, AppStore, Tennis Courts, Rehearsal Rooms, Commercial Bank, Secure Friendship records printed again) plus Section A44 (Audit #31).  Checks at 80da433: CAS 90/91 (Central Bank: GO's "Lend" <votes>, mended in GO #16 f76f929); site check 92 contracts, /villagers 69, 0 errors; QD 2951 pass; QF 232/238 (3 Arial, the Mac's; 3 GC/GB/village, Currencies', GC two rewritten at 1bd1c34).
+- **Branch `code39-fn` at 71474a851, pushed, not on main.**  vGLP #35's vglp35-functions (213125ca, ec7cdc31b) merged, plus: canonical.dart `calc(P, E, num|const)`, CalcExpr `fn(F, Es)`, field type `value`; named_widgets.dart puts GInt(0)/GAtom('') for calc places, the platform completes them (complete/2); a value field reads a ground compound term (bond(10)) else the constant.  VG 1461/1461 at be6dc60; ui_runtime_view_test 24/24 at 2ff9299.  71474a851 is WIP, untested: `cmp(F, As)` condition args (class CmpArg, condArgsSource; matched/_determined/placesOf).  Test it (constructs_test, ui_runtime_view_test, VG).
+- **Owed on code39-fn, vGLP #35's mail of 01:20 UTC:** (2) draw `shown(F, v(T))` in the approval question as `valued(F, K)` is drawn (named_widgets.dart ~line 380, the `values` list); (3) displayText (glp_multiagent/lib/ui_runtime/term.dart) draws a compound value as its term, bond(5), not its scalars.  Then push and tell vGLP #35 and Currencies #24.
+- **Next merge, when Calculus #14 sends its publication of 106 contracts (inherits-from first lines; Villagers' 13; Chess; Warnings e08383f):** GO #16 f76f929 (and Rides/Ads pragmas to come), GCE #2 claude/project-thread-734uaj (Chess-functions.glp, Section GCE), GM f4ee64c (Tennis Courts:5), vglp35-functions + code39-fn, Currencies 1bd1c34 and 02b81a0.  Print all records again (DAO, Liquid DAO, Funded DAO, Organisation with calc/3; central_bank; GO rows); CAS, VG, QD, QF, site check (legend shows "inherits"); push; mail GCE, GM, GO, vGLP, Currencies, Calculus; tell the coordinator for Audit #5: #157 (Chess functions), #160-#162, #132-#134.
+- **Villagers paper** reaches the papers branch only if papers_publish.py SOURCES lists it: Udi's yes needed through the coordinator; Anonymous, no Udi name anywhere.
+- **Environment:** see team memory code-thread (Dart 3.13.7, Flutter 3.47.9 as user fl, DART= for run_all_tests, cascade rows in separate worktrees).
+
 # Code #38, 2026-11-25 ~22:30 UTC, retiring after its 1st compaction
 
 Code #38 retires (Udi, 2026-11-25 10:34 UTC).  The next Code session continues from here.
