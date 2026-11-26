@@ -149,7 +149,7 @@ post_forward(Peer, Peer, Speech, Constant)
 .
 Request ::= propose(Proposal).
 YesNo     ::= yes ; no.
-Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
+Reason    ::= declined ; unable ; unable(List(Atom), List(Atom), List(String)).
 Vote      ::= yes(Bindings) ; yes(Bindings, GAtoms) ; no(Reason).
 Decision  ::= commit(Binding) ; abort(Peer, Reason) ; yield.
 Rho       ::= one(Class) ; rho(Proposal).

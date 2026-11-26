@@ -42,7 +42,7 @@ Proposal  ::= establish(Peer) ; acquaint(Peer, Peer) ; introduce(Peer, Peer, Pee
             ; child_create(Peer, Peer, Constant).
 Request   ::= propose(Proposal).
 YesNo     ::= yes ; no.
-Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
+Reason    ::= declined ; unable ; unable(List(Atom), List(Atom), List(String)).
 Vote      ::= yes ; no(Reason).
 Decision  ::= commit ; abort(Peer, Reason) ; yield.
 Rho       ::= one(Class) ; rho(Proposal).
