@@ -10452,6 +10452,17 @@ c_
 {
 \Alice
 }
+ \cup 
+\{
+\mathit{\detokenize{
+forwarded_post
+}}
+(
+Other
+,
+\Bob
+)
+\}
 , \qquad 
 c'_
 {
@@ -10526,6 +10537,19 @@ identity
 ,\\
 &
 \text{provided } 
+\mathit{\detokenize{
+forwarded_post
+}}
+(
+Other
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
 \mathit{\detokenize{
 post_from
 }}
@@ -15140,6 +15164,30 @@ identity
 }
 ,\\
 &
+\text{provided } 
+\mathit{\detokenize{
+address
+}}
+(
+\mathit{Carol}
+)
+ \notin c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+address
+}}
+(
+\Bob
+)
+ \notin c_
+{
+\mathit{Carol}
+}
+,\\
+&
 \text{guarded by } \emptyset
 \end{align*}
 \iffalse
@@ -15418,6 +15466,30 @@ identity
 }
 ,\\
 &
+\text{provided } 
+\mathit{\detokenize{
+address
+}}
+(
+\mathit{Carol}
+)
+ \notin c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+address
+}}
+(
+\Bob
+)
+ \notin c_
+{
+\mathit{Carol}
+}
+,\\
+&
 \text{guarded by } \emptyset
 \end{align*}
 \iffalse
@@ -15584,5 +15656,143 @@ person
 &
 \text{guarded by } \{
 \Bob
+\}
+\end{align*}
+\iffalse
+partner
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+c_
+{
+\Alice
+}
+ \cup 
+\{
+\mathit{\detokenize{
+partnered
+}}
+(
+Court
+,
+Slot
+,
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+c_
+{
+\Bob
+}
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+booked
+}}
+(
+Court
+,
+Slot
+,
+\mathit{Carol}
+)
+,
+\mathit{\detokenize{
+has_participant
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+participant
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+under_bound
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+partnered
+}}
+(
+Court
+,
+Slot
+,
+\ast
+)
+ \notin c_
+{
+\Alice
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+,
+\mathit{Carol}
 \}
 \end{align*}

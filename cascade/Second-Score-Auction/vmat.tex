@@ -868,6 +868,19 @@ identity
 &
 \text{provided } 
 \mathit{\detokenize{
+sent_call
+}}
+(
+\Bob
+,
+Trip
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
 call
 }}
 (
@@ -981,6 +994,19 @@ Trip
  \notin c_
 {
 \Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+call
+}}
+(
+Alice
+,
+Trip
+)
+ \notin c_
+{
+\Bob
 }
 ,\\
 &
@@ -1604,7 +1630,204 @@ rides_with
 }
 ,\\
 &
-\text{guarded by } \emptyset
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+driver_arrive
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+fare_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+released
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+deposit_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+) \cup 
+\{
+\mathit{\detokenize{
+released
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\ast
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\ast
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+at_destination
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+refund
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+fare_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+at_destination
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+deposit_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
 \end{align*}
 \iffalse
 cancel
