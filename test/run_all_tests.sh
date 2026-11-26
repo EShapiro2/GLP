@@ -11588,6 +11588,15 @@ gce_ends=$(grep '~warning_on' "$GLP_DIR/cascade/Warnings/full-schemas.txt" | sed
 check "GCE: Warnings, Withdraw ends a warning" "Warnings:3 Withdraw$" "$gce_ends"
 check "GCE: Warnings, Annul ends a warning" "Warnings:3 Annul$" "$gce_ends"
 check "GCE: Warnings, no other act ends a warning" "^2$" "$(echo "$gce_ends" | grep -c .)"
+# Disputes against concurrent cases (Grassroots-Audit #135): the printed Raise
+# and Decide applied to two acts enabled at once, in both orders, and to every
+# run of a village of four persons, two arbiters and one dispute.
+gce_dc=$(python3 "$GLP_DIR/programs/gce/disputes/concurrency_control.py" 2>&1; echo "exit $?")
+for gce_c in "two arbiters raised at once, one case" "both parties raise at once, one case" "a third participant raises it at once, one case" "two rulings decided at once, one ruling" "an arbiter not assigned cannot decide" "no case after the ruling" "both parties hold the one ruling" "two disputes at once, two cases" "one dispute name in two organisations, two cases"; do
+    check "GCE: Disputes, $gce_c" "^$gce_c ok$" "$gce_dc"
+done
+check "GCE: Disputes, every run: one case, one arbiter, at most one ruling" "^every run of the village: one case, one arbiter, at most one ruling (37 configurations) ok$" "$gce_dc"
+check "GCE: Disputes concurrency_control.py exits 0" "^exit 0$" "$gce_dc"
 echo ""
 fi  # Section GCE
 
