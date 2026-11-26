@@ -1,0 +1,28 @@
+%% tens.glp --- a drawing program (The Grassroots UI Layer, "The UI Style"): an amount drawn as ten coins,
+%% worth 10 to 100, those up to the amount lit; a tap on a coin gives its worth.  A UI style names it:
+%% Sum IS PICKED ON tens.  The app draws the cells and passes the taps back; the program decides nothing of
+%% the contract, and a box to type the amount stays beside the picture.
+%%   draw(N?, Picture)            the picture of the amount N, 0 for none
+%%   pick(Taps?, N?, Picked)      the value the taps on the picture of N give: the worth of the first tapped
+
+Shade ::= light ; dark ; on ; off.
+Cell ::= cell(String, Shade, Integer).
+Cells ::= [] ; [Cell | Cells].
+Picture ::= grid(Integer, Cells).
+Taps ::= [] ; [Integer | Taps].
+Picked ::= value(Integer) ; more ; none.
+
+exported procedure draw(Integer?, Picture).
+draw(N, grid(10, Cs?)) :- integer(N?) | coins(1, N?, Cs).
+
+procedure coins(Integer?, Integer?, Cells).
+coins(I, N, []) :- I? > 10, integer(N?) | true.
+coins(I, N, [C? | Cs?]) :- I? =< 10, integer(N?) | V := I? * 10, coin(V?, N?, C), I1 := I? + 1, coins(I1?, N?, Cs).
+
+procedure coin(Integer?, Integer?, Cell).
+coin(V, N, cell(S?, on, V?)) :- integer(V?), integer(N?), V? =< N? | term_to_string(V?, S).
+coin(V, N, cell(S?, off, V?)) :- integer(V?), integer(N?), V? > N? | term_to_string(V?, S).
+
+exported procedure pick(Taps?, Integer?, Picked).
+pick([T | Ts], N, value(T?)) :- integer(T?), ground(Ts?), integer(N?) | true.
+pick([], N, more) :- integer(N?) | true.

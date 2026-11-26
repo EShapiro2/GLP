@@ -1,0 +1,71 @@
+%% chessboard.glp --- a drawing program (The Grassroots UI Layer, "The UI Style"): a position of Chess
+%% (programs/gce/chess, Chess-functions.glp: a constant, the text of pos(Cells, Side, ...), the 64 cells a1 to
+%% h8, 0 empty, else colour times 10 plus kind) drawn as a board, rank 8 at the top; and a move given by two
+%% taps, the square from and then the square to (a constant, the text of mv(From, To, Promotion), a pawn
+%% reaching the last rank promoted to a queen).  A UI style names it: Board IS DRAWN BY chessboard. and
+%% Move IS PICKED ON chessboard FROM Board.  The program decides nothing: the contract's function legal does.
+%%   draw(B?, Picture)            the picture of the position B; the text of no position draws an empty board
+%%   pick(Taps?, B?, Picked)      the value the taps on the picture of B give
+
+Shade ::= light ; dark ; on ; off.
+Cell ::= cell(String, Shade, Integer).
+Cells ::= [] ; [Cell | Cells].
+Picture ::= grid(Integer, Cells).
+Taps ::= [] ; [Integer | Taps].
+Picked ::= value(String) ; more ; none.
+Squares ::= [] ; [Integer | Squares].
+Move ::= mv(Integer, Integer, Integer).
+
+exported procedure draw(String?, Picture).
+draw(B, grid(8, Cs?)) :- string(B?) | string_to_term(B?, T), squares(T?, Sq), rows(7, Sq?, Cs).
+
+%% the 64 cells of a position, or 64 empty ones for the text of no position
+procedure squares(Term?, Squares).
+squares(pos(Cs, _, _, _, _, _, _), Sq?) :- ground(Cs?) | ints(Cs?, 64, Sq).
+squares(_, Sq?) :- otherwise | empty(64, Sq).
+
+procedure ints(Term?, Integer?, Squares).
+ints([X | Xs], K, [X? | Ys?]) :- integer(X?), K? > 0 | K1 := K? - 1, ints(Xs?, K1?, Ys).
+ints([], 0, []).
+ints(_, K, Ys?) :- otherwise | empty(K?, Ys).
+
+procedure empty(Integer?, Squares).
+empty(0, []).
+empty(K, [0 | Ys?]) :- K? > 0 | K1 := K? - 1, empty(K1?, Ys).
+
+%% the cells drawn row by row, rank 8 first, each row from file a to file h
+procedure rows(Integer?, Squares?, Cells).
+rows(R, _, []) :- R? < 0 | true.
+rows(R, Sq, Cs?) :- R? >= 0, ground(Sq?) | row(R?, 0, Sq?, Cs, Rest?), R1 := R? - 1, rows(R1?, Sq?, Rest).
+
+procedure row(Integer?, Integer?, Squares?, Cells, Cells?).
+row(_, F, _, Rest?, Rest) :- F? > 7 | true.
+row(R, F, Sq, [C? | Cs?], Rest) :- F? =< 7, integer(R?), ground(Sq?) |
+    I := R? * 8 + F?, at(I?, Sq?, X), square(I?, R?, F?, X?, C), F1 := F? + 1, row(R?, F1?, Sq?, Cs, Rest?).
+
+procedure at(Integer?, Squares?, Integer).
+at(0, [X | _], X?).
+at(I, [_ | Xs], X?) :- I? > 0 | I1 := I? - 1, at(I1?, Xs?, X).
+at(_, [], 0).
+
+procedure square(Integer?, Integer?, Integer?, Integer?, Cell).
+square(I, R, F, X, cell(S?, dark, I?)) :- integer(R?), integer(F?), (R? + F?) mod 2 =:= 0 | piece(X?, S).
+square(I, R, F, X, cell(S?, light, I?)) :- integer(R?), integer(F?), (R? + F?) mod 2 =:= 1 | piece(X?, S).
+
+procedure piece(Integer?, String).
+piece(0, '').
+piece(11, '♙'). piece(12, '♘'). piece(13, '♗'). piece(14, '♖'). piece(15, '♕'). piece(16, '♔').
+piece(21, '♟'). piece(22, '♞'). piece(23, '♝'). piece(24, '♜'). piece(25, '♛'). piece(26, '♚').
+
+%% two taps make a move; one is not yet one; the same square twice is none
+exported procedure pick(Taps?, String?, Picked).
+pick([_], B, more) :- string(B?) | true.
+pick([F, T], B, none) :- integer(F?), integer(T?), F? =:= T?, string(B?) | true.
+pick([F, T], B, value(M?)) :- integer(F?), integer(T?), F? =\= T? |
+    string_to_term(B?, Tb), squares(Tb?, Sq), at(F?, Sq?, X), promotion(X?, T?, P), term_to_string(mv(F?, T?, P?), M).
+pick(_, _, none) :- otherwise | true.
+
+procedure promotion(Integer?, Integer?, Integer).
+promotion(X, T, 5) :- X? mod 10 =:= 1, T? // 8 =:= 7 | true.
+promotion(X, T, 5) :- X? mod 10 =:= 1, T? // 8 =:= 0 | true.
+promotion(_, _, 0) :- otherwise | true.
