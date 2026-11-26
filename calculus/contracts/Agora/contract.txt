@@ -1,5 +1,5 @@
 Agora
-Agora extends Bonds.
+Agora inherits from Bonds.
 An *item* is a one-of-a-kind thing named by its maker.
 Alice and Bob are persons.
 1. ■ Make: Alice may make an item, which she then holds.

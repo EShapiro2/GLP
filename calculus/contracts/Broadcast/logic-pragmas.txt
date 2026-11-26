@@ -1,0 +1,11 @@
+Broadcast
+Broadcast extends Friendship.
+A *broadcast* is a message with a unique identifier, which its maker holds. Δ > 0 is a period of time, and a broadcast is *live* for Δ after it is made.
+Alice and Bob are persons, Cast a broadcast.
+1. ■ Forward: Alice forwards Cast to Bob, provided Alice and Bob are friends, Alice holds the broadcast Cast and Cast is live.
+2. ■ Expire: Alice ceases to hold Cast, provided Cast is not live.
+Logic pragmas.
+Vocabulary: x holds the broadcast m = broadcast(x,m); y holds the broadcast m from x = broadcast_from(y,m,x); x has made the broadcast m = made_broadcast(x,m); x has forwarded the broadcast m to y = forwarded_broadcast(x,m,y); m is live, for x = live(x,m).
+After x forwards m to y, which requires y does not hold the broadcast m and x has not forwarded the broadcast m to y: y holds the broadcast m, y holds the broadcast m from x and x has forwarded the broadcast m to y.
+After x ceases to hold m: no longer x holds the broadcast m and x holds the broadcast m from no one.
+Environment: m is live, for x.

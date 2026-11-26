@@ -1,3 +1,3 @@
 Cooperative DAO
-Cooperative DAO extends Cooperative.
+Cooperative DAO inherits from Cooperative.
 A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer.

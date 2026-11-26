@@ -1,5 +1,5 @@
 Denominated Currencies
-Denominated Currencies unites a weakening of a lift of Bonds and Denominated Coins, and extends and augments the union.
+Denominated Currencies inherits from Bonds and Denominated Coins.
 A *Dollar-denominated Alice-bond* is an Alice-bond issued as Alice's debt of one Dollar, due at its maturity date.
 Alice, Bob and Carol are parties.
 1. ■ Issue denominated bond: Alice may issue Alice-bonds denominated by a fiat currency, of a maturity later than the current date.

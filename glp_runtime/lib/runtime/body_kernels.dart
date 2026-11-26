@@ -21,6 +21,9 @@ import 'runtime.dart';
 import 'terms.dart';
 import 'package:glp_runtime/compiler/glp_printer.dart'
     show constantSource, functorNameSource;
+import 'package:glp_runtime/compiler/ast.dart' as ast;
+import 'package:glp_runtime/compiler/lexer.dart' show Lexer;
+import 'package:glp_runtime/compiler/parser.dart' show Parser;
 import 'machine_state.dart' show GoalRef;
 import 'sim_clock.dart' show PendingToken;
 import 'package:glp_runtime/multiagent/mad_context.dart';
@@ -115,6 +118,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_string_concat', 2, stringConcatKernel);
   registry.register('_term_to_string', 2, termToStringKernel);
   registry.register('_hash', 2, hashKernel);
+  registry.register('_string_to_term', 2, stringToTermKernel);
 
   // Time operations
   registry.register('_now', 1, nowKernel);
@@ -2069,6 +2073,96 @@ BodyKernelResult termToStringKernel(GlpRuntime rt, List<Object?> args) {
     return kernelAbort("[ABORT] '_term_to_string'/2: ${e.message}");
   }
   return bindResult(rt, args[1], text, kernel: "'_term_to_string'/2");
+}
+
+/// `'_string_to_term'(S?, T)` --- assigns T the ground term the reader reads
+/// from the string S, the converse of `'_term_to_string'`: for a ground term
+/// T, `term_to_string(T, S), string_to_term(S?, T1)` gives T1 equal to T.
+/// The kernel aborts where S is not a string or is not the text of one ground
+/// term, a variable in it included ("A body kernel whose precondition fails
+/// --- ... an argument out of its domain --- aborts").  Approved by Udi,
+/// 2026-11-25 22:52 UTC, for Chess's positions as text (Audit #157).
+BodyKernelResult stringToTermKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    return kernelAbort(
+        "[ABORT] '_string_to_term'/2: expected 2 arguments, got ${args.length}");
+  }
+  final s = _deref(rt, args[0]);
+  // The empty list is a String, its characters [] (string_concat's "the empty
+  // list contributes the characters []").
+  if (s is! ConstTerm || (s.value is! String && s.value != nil)) {
+    return kernelAbort(
+        "[ABORT] '_string_to_term'/2: the first argument is not a string: $s");
+  }
+  final text = s.value == nil ? '[]' : s.value as String;
+  final ast.Term read;
+  try {
+    final m = Parser(Lexer('w($text).').tokenize()).parseModule();
+    if (m.procedures.length != 1 || m.procedures.single.clauses.length != 1) {
+      throw const FormatException('not one term');
+    }
+    final c = m.procedures.single.clauses.single;
+    if (c.head.functor != 'w' ||
+        c.head.args.length != 1 ||
+        (c.guards ?? const []).isNotEmpty ||
+        (c.body ?? const []).isNotEmpty ||
+        c.volitionGuard != null ||
+        c.elseBranch != null) {
+      throw const FormatException('not one term');
+    }
+    read = c.head.args.single;
+  } on Object {
+    return kernelAbort(
+        "[ABORT] '_string_to_term'/2: the text is not one term: $text");
+  }
+  final t = _groundTermOf(read);
+  if (t == null) {
+    return kernelAbort(
+        "[ABORT] '_string_to_term'/2: the text is not a ground term: $text");
+  }
+  return bindResult(rt, args[1], t, kernel: "'_string_to_term'/2");
+}
+
+/// The runtime term of the ground term [t] the reader read, a list as its
+/// cells `'.'(H, T)` ending in [nil]; null where [t] holds a variable.
+Term? _groundTermOf(ast.Term t) {
+  if (t is ast.ConstTerm) {
+    final v = t.value;
+    return ConstTerm(v ?? nil);
+  }
+  if (t is ast.StructTerm) {
+    if (t.args.isEmpty) return ConstTerm(t.functor);
+    final as_ = <Term>[];
+    for (final a in t.args) {
+      final x = _groundTermOf(a);
+      if (x == null) return null;
+      as_.add(x);
+    }
+    return StructTerm(t.functor, as_);
+  }
+  if (t is ast.ListTerm) {
+    final heads = <Term>[];
+    ast.Term? cell = t;
+    while (cell is ast.ListTerm && !cell.isNil) {
+      final h = _groundTermOf(cell.head!);
+      if (h == null) return null;
+      heads.add(h);
+      cell = cell.tail;
+    }
+    Term tail;
+    if (cell == null || (cell is ast.ListTerm && cell.isNil)) {
+      tail = ConstTerm(nil);
+    } else {
+      final x = _groundTermOf(cell);
+      if (x == null) return null;
+      tail = x;
+    }
+    for (final h in heads.reversed) {
+      tail = StructTerm('.', [h, tail]);
+    }
+    return tail;
+  }
+  return null;
 }
 
 /// '_hash'(S?, H) — H is the SHA-256 of the UTF-8 bytes of the string S, as

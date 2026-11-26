@@ -1,0 +1,11 @@
+Works
+Works inherits from Community Bank.
+A *work* names a task, its *price* in community coins, its *contractor*, who will do it, and its *supervisor*, an officer of the community. The bylaws name the role *arbiter*.
+Bob, Carol and Dave are persons, Orga a community.
+1. ■ Approve: Those who decide for Orga may approve a work, with the consent of Bob, its contractor; its price is then locked.
+2. ◆ Complete: Bob may attest that he completed an approved work.
+3. ◆ Accept: Carol, the supervisor of an approved work, may attest that Bob, its contractor, completed it; its price is then released to Bob.
+4. ■ Reject: Carol may reject a work that Bob attested he completed, giving her reason.
+5. ■ Cancel: Those who decide for Orga may cancel an approved work, with the consent of Bob; its price is then released to Bob and to Orga as agreed.
+6. ■ Supervise: Those who decide for Orga may make Carol, an officer of Orga, the supervisor of an approved work.
+7. ■ Arbitration. Raise: Either Bob or those who decide for Orga may raise an approved work, not yet raised, to an arbiter, Dave. Arbitrate: Dave may then decide the release of its price to Bob and to Orga.

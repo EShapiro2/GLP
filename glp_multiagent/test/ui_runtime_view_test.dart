@@ -126,6 +126,13 @@ final _notesW = _requestWidget(
     "form(issue, [field('Peer', peer), field('Constant', text), field('List', input_list(text))]), "
         "form(pay, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Constant', text), field('List', input_list(text))])");
 
+/// DAO's Pass and Reject as vGLP's compiler prints them (GLP vglp33-calc 4c1663ec, cascade/DAO/platform.vglp): the steward gives the votes, a field, and the form computes Double, the place 5, as Votes * 2, `calc(5, mul(at(4), lit(2)))` (Audit #151; programs/vglp/cva/compiler/README.md, 43).
+final _daoW = _requestWidget(
+    'button("Pass", [act(pass, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)))], [])]), '
+    'button("Reject", [act(reject, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)))], [])])',
+    "label('Pass', form(pass, [field('Peer', peer), field('Speech', text), field('Constant', text), field('Integer', number), field('Integer', number)])), "
+        "label('Reject', form(reject, [field('Peer', peer), field('Speech', text), field('Constant', text), field('Integer', number), field('Integer', number)]))");
+
 void main() {
   test(
       'SocialState.read on view(Me, S, K, A, Ts): the key, the atoms, the '
@@ -469,5 +476,34 @@ void main() {
       'input(1, [1, 3], b)',
       'input(1, [1, 3], [end])'
     ]);
+  });
+
+  testWidgets('a number the constraint determines: DAO\'s Pass names the '
+      'votes given and the Double the form computes from them, '
+      'calc(5, mul(at(4), lit(2))) (Audit #151)', (tester) async {
+    final s = _Screen(tester);
+    await s.draw('input([])',
+        w: _daoW,
+        output: '[${_view("identity, steward(delos), proposal(p, delos)", "", "tab('Proposals', proposal)")}]');
+    final keys = [
+      for (final e in find
+          .byWidgetPredicate((w) => w.key is ValueKey<String>)
+          .evaluate())
+        (e.widget.key as ValueKey<String>).value
+    ];
+    final pass = keys.firstWhere((k) => k.contains('act:pass:'),
+        orElse: () => '');
+    expect(pass, isNotEmpty, reason: keys.join(' '));
+    final way = pass.substring(pass.indexOf('act:pass:') + 'act:pass:'.length);
+    await _tap(tester, 'act:pass:$way');
+    // The votes are a field; Double is none, the constraint determining it.
+    // The field of a single act is keyed by its place.
+    expect(find.byKey(socialKey(1, 'field:pass:$way:4')), findsOneWidget);
+    expect(find.byKey(socialKey(1, 'field:pass:$way:5')), findsNothing);
+    await tester.ensureVisible(find.byKey(socialKey(1, 'field:pass:$way:4')));
+    await tester.enterText(find.byKey(socialKey(1, 'field:pass:$way:4')), '3');
+    await tester.pumpAndSettle();
+    await _tap(tester, 'send:pass:$way');
+    expect(s.grants, ['input(1, [], propose(pass(alice, p, delos, 3, 6)))']);
   });
 }

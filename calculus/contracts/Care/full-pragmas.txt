@@ -1,0 +1,22 @@
+Care
+Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity. Reflexive: x knows y.
+Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Of Groups: A *message* is what a person sends. Bob and Carol are possibly Alice or one person.
+Of Care: A *circle* is a group for the care of a person, its *patient*. A *visit* is a time at which the patient needs a person with them. Bob and Carol are possibly Alice.
+Alice, Bob and Carol are persons, Grupo a group, Text a message, Visit a visit.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person and Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+Friendship:2, Groups:3. ■ Unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person, and then Alice is a member of no group of Bob, Bob is a member of no group of Alice, Alice has Bob as a member of no group and Bob has Alice as a member of no group.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Groups:1. ■ Message: Alice may send Text to Bob, provided Alice and Bob are friends.
+Groups:2. ■ Group. Create: Alice may create Grupo. Alice is then its leader and first member. Close: Alice may close Grupo by leaving it.
+Groups:3. ■ Joining and Leaving. Join: Alice may add Bob to Grupo, with the consent of Bob, provided Alice is the leader of Grupo and Alice and Bob are friends. Remove: Alice may end Bob's membership in Grupo, provided Alice is the leader of Grupo. Leave: Bob may end his membership in Alice's Grupo.
+Groups:4. ■ Group messaging. Post: Bob may send Text to the group Grupo of Alice, provided Bob is a member of the group Grupo of Alice. Post own: Alice may send Text to the group Grupo of Alice, provided Alice is a member of the group Grupo of Alice. Deliver: Alice delivers Text of Bob in Grupo to Carol, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo and Alice has Carol as a member of the group Grupo. Deliver leader: Alice delivers Text of Bob in Grupo to the leader Alice, provided Alice is the leader of Grupo and Alice has the post Text of Bob in Grupo.
+Care:1. ◆ Open: Alice may open Grupo for the care of Carol, provided Alice knows Carol.
+Care:2. ■ Ask: Bob may post Visit in Alice's Grupo, provided Bob is a member of the group Grupo of Alice and Alice has Grupo as a circle.
+Care:3. ○ Take: Bob may take Visit in Alice's Grupo, provided Bob is a member of the group Grupo of Alice. Bob will make the visit, or release it in time for another member to take it.
+Care:4. ■ Release: Bob may release Visit in Alice's Grupo. Release for: Alice may release Visit of Bob in Grupo, provided Alice is the leader of Grupo. Release by the patient: Carol may release Visit of Bob in the circle Grupo of Alice, provided Alice has Grupo as a circle for Carol.
+Care:5. ◆ Report. Made: Bob may attest Visit in Alice's Grupo made. Missed: Alice may attest Visit of Bob in Grupo missed, provided Alice is the leader of Grupo. Missed by the patient: Carol may attest Visit of Bob in the circle Grupo of Alice missed, provided Alice has Grupo as a circle for Carol. Contest: Alice may contest Visit of Bob in Grupo, provided Alice is the leader of Grupo and Alice has the visit Visit made by Bob in Grupo.
+Care:6. ■ End: Carol may end the circle Grupo of Alice.

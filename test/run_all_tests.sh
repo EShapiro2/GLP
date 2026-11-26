@@ -67,8 +67,8 @@ MODED="$GLP_DIR/programs/tests/moded_types"
 # red nor a rot, and Section Q's rot guard reads only the KNOWN_RED entries of
 # the half that ran.  Every section stands alone: the REPL build below is made
 # for every run, and the asset step is QF's own.
-ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS CALC SGLP QD QF NET DL"
-FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CALC"
+ALL_SECTIONS="TY A B C D E G I K L M N2 N3 N4 VG O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CAS CALC GCE SGLP QD QF NET DL"
+FAST_SECTIONS="TY A B C D E G I K L M N2 N3 N4 O P J S X Y Z ZG RM SK MB SL MA RV SG APPS GF GSC CALC GCE"
 GLP_SECTIONS="${GLP_SECTIONS:-all}"
 RUN_FAST=0
 RUN_WANTED=" "
@@ -1612,10 +1612,15 @@ string_concat(['one'], C3).
 string_concat(['X = ', []], C4).
 text(1, X1).
 shown(14).
+string_to_term('pos([[1, 2], [3]], w, castle(k, q), e2)', T1).
+string_to_term('[a, b | c]', T2).
 :quit
 HEREDOC
 2>&1)
 check "text: the fixture loads" "Loaded: .*text_test.glp" "$a42"
+# string_to_term/2, the converse of term_to_string/2 (Udi, 2026-11-25 22:52 UTC; Audit #157); its aborts are the Dart test's (glp_runtime/test/runtime/string_to_term_kernel_test.dart).
+check "text: string_to_term reads a position" "T1 = pos(\[\[1, 2\], \[3\]\], w, castle(k, q), e2)" "$a42"
+check "text: string_to_term reads a list with a tail" "T2 = \[a, b | c\]" "$a42"
 check "text: string_concat(['Menu', '?'], S)" "C1 = 'Menu?'" "$a42"
 check "text: string_concat of []" "C2 = ''" "$a42"
 check "text: string_concat of one string" "C3 = one" "$a42"
@@ -1681,6 +1686,29 @@ check "tree: from_list" "R5 = ok" "$a43"
 check "tree: member" "R6 = ok" "$a43"
 check "tree: kth at every index" "R7 = ok" "$a43"
 check "tree: union" "R8 = ok" "$a43"
+
+# --- A44: Circular terms, the step cGLP does not have ---
+# GLP-Spec glp.tex, "Circular terms" (GLP-ICLP-2026 main 9d2dedb; Audit
+# Finding 1, Grassroots-Audit #31): cGLP Reduce requires the writer mgu and the
+# accumulated substitution acyclic, so p(Y, Y?) with p(f(X?), X) has no Reduce;
+# "an implementation of GLP makes no occurs check ... and builds a circular
+# term".  TGLP's well-typing accepts the program.  The two acyclic controls
+# reduce as cGLP does: p(Y, a) gives f(a), and p(Y, Z?) gives Y = f(Z?), the
+# normalised writer mgu {Y := f(Z), X := Z} of GLP-Spec Proposition E.1.
+echo "--- A44: Circular terms ---"
+a44=$("$REPL_RUN" <<HEREDOC
+$TYPED/cyclic_mgu_test.glp
+p(Y1, a).
+p(Y2, Z2?).
+:limit 1000
+p(Y3, Y3?).
+:quit
+HEREDOC
+2>&1)
+check "circular: the well-typed fixture loads" "Loaded: .*cyclic_mgu_test.glp" "$a44"
+check "circular: the finite control p(Y, a)" "Y1 = f(a)$" "$a44"
+check "circular: the acyclic control p(Y, Z?) binds Y to f of Z's variable" "Y2 = f(X[0-9]*)$" "$a44"
+check "circular: the implementation takes the step cGLP lacks and builds a circular term" "Y3 = f(f(<circular>))$" "$a44"
 
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
@@ -4489,12 +4517,22 @@ printf '%s\n' 'Rides' 'Rides unites Bank and an augmentation of Coins, and exten
 printf '%s\n' 'Constitution' 'Constitution extends Bank, and augments it.' 'Alice is a person.' > "$cva_nm/Constitution.txt"
 cva_nm_augu=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Rides.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 cva_nm_augi=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Constitution.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+# The Calculus's one first line, "NAME inherits from A, B and C.", the contracts after it read as those of extends, and a renaming's words from its pragma (Calculus calc11-no-parameters fe486d2, record item 71; Code #38, 2026-11-25) (rels).
+printf '%s\n' 'App' 'App inherits from Bank and Coins.' 'Alice is a person.' > "$cva_nm/App.txt"
+printf '%s\n' 'Children' 'Children inherits from Bank.' 'Alice is a person.' 'Logic pragmas' 'Renaming of Bank: a child for a ward.' > "$cva_nm/Children.txt"
+printf '%s\n' 'Rides' 'Rides inherits from Bank, Coins and Constitution.' 'Alice is a person.' > "$cva_nm/Rides.txt"
+cva_nm_inh2=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/App.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_inh1=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Children.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
+cva_nm_inh3=$(bash "$CVA/compiler/pragmas.sh" --from "$cva_nm/Rides.txt" 2>&1 | sed -e 's|.*/||' | tr '\n' ' ')
 rm -rf "$cva_nm"
 check "CVA pragmas: Denominated Coins lifts Coins, and extends and weakens it, Coins found (rels)" "^Coins.txt Denominated-Coins.txt \$" "$cva_nm_lifts"
 check "CVA pragmas: App unites Bank and a strengthening of Coins, and extends and amends the union, Bank and Coins found (rels)" "^Bank.txt Coins.txt App.txt \$" "$cva_nm_unites"
 check "CVA pragmas: Children renames Bank, and extends and weakens it, Bank found (rels)" "^Bank.txt Children.txt \$" "$cva_nm_renames"
 check "CVA pragmas: Rides unites Bank and an augmentation of Coins, and extends and augments the union, Bank and Coins found (rels)" "^Bank.txt Coins.txt Rides.txt \$" "$cva_nm_augu"
 check "CVA pragmas: Constitution extends Bank, and augments it, Bank found (rels)" "^Bank.txt Constitution.txt \$" "$cva_nm_augi"
+check "CVA pragmas: App inherits from Bank and Coins, Bank and Coins found (rels)" "^Bank.txt Coins.txt App.txt \$" "$cva_nm_inh2"
+check "CVA pragmas: Children inherits from Bank, with the pragma Renaming of Bank, Bank found (rels)" "^Bank.txt Children.txt \$" "$cva_nm_inh1"
+check "CVA pragmas: Rides inherits from Bank, Coins and Constitution, the three found (rels)" "^Bank.txt Coins.txt Constitution.txt Rides.txt \$" "$cva_nm_inh3"
 check "CVA pragmas: the table of the other form, of four columns where this section's has five and of five where it has four (names3)" "^[45]$" "$cva_nm_t_cols"
 check_not "CVA pragmas: ... and not of the columns of this section's table (names3)" "^$cva_cols$" "$cva_nm_t_cols"
 check "CVA pragmas: ... Community Bank, Bank and Coins found by it (names3)" "^Bank.txt Coins.txt Community-Bank.txt $" "$cva_nm3_two"
@@ -11319,6 +11357,96 @@ fi
 check "CALC: tests.py exits 0" "^exit 0\$" "$CALC_OUT"
 echo ""
 fi  # Section CALC
+
+if _section GCE; then
+# =============================================================================
+# Section GCE: the functions of Chess (programs/gce/chess/Chess-functions.glp)
+# =============================================================================
+# GCE's.  Chess.txt's functions as typed GLP procedures, which the app
+# compiler's platform calls (vGLP Section 5.4; Grassroots-Audit #157, Finding
+# 1): first, legal, after, side, mate and draw, by FIDE's Laws of Chess.  A
+# square is rank*8 + file (a1 = 0, h8 = 63); a cell is 0 or colour*10 + kind.
+# The six take and give positions and moves as constants, the text of their
+# terms (string_to_term, term_to_string); the same names with _pos are over the
+# terms.
+echo "=== Section GCE: the functions of Chess ==="
+echo ""
+GCE_CHESS="../programs/gce/chess/Chess-functions.glp"
+gce_out=$("$REPL_RUN" <<HEREDOC
+:limit 100000000
+load $GCE_CHESS
+first_pos(B), side_pos(B?, S0).
+first_pos(B), legal_pos(mv(12,28,0), B?, Le4), legal_pos(mv(12,36,0), B?, Le5), legal_pos(mv(6,21,0), B?, Lnf3), legal_pos(mv(6,22,0), B?, Lng3), legal_pos(mv(4,6,0), B?, Lcas0).
+first_pos(B), after_pos(mv(12,28,0), B?, C), side_pos(C?, S1), mate_pos(C?, M1), draw_pos(C?, D1).
+first_pos(B), draw_pos(B?, D0), autodraw_pos(B?, A0), plies_pos(B?, N0).
+first_pos(B), after_pos(mv(13,21,0),B?,B1), after_pos(mv(52,36,0),B1?,B2), after_pos(mv(14,30,0),B2?,B3), legal_pos(mv(59,31,0),B3?,Lqh4), after_pos(mv(59,31,0),B3?,B4), mate_pos(B4?,Mfool), draw_pos(B4?,Dfool), autodraw_pos(B4?,Afool), plies_pos(B4?,Nfool), side_pos(B4?,Sfool).
+side_pos(pos([0,0,0,0,0,0,0,16, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,15,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 26,0,0,0,0,0,0,0], 2, cas(0,0,0,0), -1, 0, [], 0), Sstale), mate_pos(pos([0,0,0,0,0,0,0,16, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,15,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 26,0,0,0,0,0,0,0], 2, cas(0,0,0,0), -1, 0, [], 0), Mstale), autodraw_pos(pos([0,0,0,0,0,0,0,16, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,15,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 26,0,0,0,0,0,0,0], 2, cas(0,0,0,0), -1, 0, [], 0), Dstale).
+autodraw_pos(pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, [], 0), Dkk), draw_pos(pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,14], 1, cas(0,0,0,0), -1, 0, [], 0), Dkkr), autodraw_pos(pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,14], 1, cas(0,0,0,0), -1, 149, [], 0), D74), autodraw_pos(pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,14], 1, cas(0,0,0,0), -1, 150, [], 0), D75), draw_pos(pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,14], 1, cas(0,0,0,0), -1, 100, [], 0), Dfifty).
+first_pos(B), after_pos(mv(6,21,0),B?,B1), after_pos(mv(62,45,0),B1?,B2), after_pos(mv(21,6,0),B2?,B3), after_pos(mv(45,62,0),B3?,B4), after_pos(mv(6,21,0),B4?,B5), after_pos(mv(62,45,0),B5?,B6), after_pos(mv(21,6,0),B6?,B7), draw_pos(B7?,Drep2), after_pos(mv(45,62,0),B7?,B8), draw_pos(B8?,Drep3), autodraw_pos(B8?,Arep3), after_pos(mv(6,21,0),B8?,B9), after_pos(mv(62,45,0),B9?,B10), after_pos(mv(21,6,0),B10?,B11), after_pos(mv(45,62,0),B11?,B12), autodraw_pos(B12?,Arep4), after_pos(mv(6,21,0),B12?,B13), after_pos(mv(62,45,0),B13?,B14), after_pos(mv(21,6,0),B14?,B15), after_pos(mv(45,62,0),B15?,B16), autodraw_pos(B16?,Arep5).
+first_pos(B), after_pos(mv(12,28,0),B?,B1), after_pos(mv(52,44,0),B1?,B2), after_pos(mv(6,21,0),B2?,B3), after_pos(mv(51,43,0),B3?,B4), after_pos(mv(5,12,0),B4?,B5), after_pos(mv(50,42,0),B5?,B6), legal_pos(mv(4,6,0),B6?,Lcastle), after_pos(mv(4,6,0),B6?,C), board(C?,Xcastle).
+first_pos(B), after_pos(mv(12,28,0),B?,B1), after_pos(mv(48,40,0),B1?,B2), after_pos(mv(28,36,0),B2?,B3), after_pos(mv(51,35,0),B3?,B4), legal_pos(mv(36,43,0),B4?,Lep), after_pos(mv(36,43,0),B4?,C), board(C?,Xep).
+first_pos(B), after_pos(mv(12,28,0),B?,B1), after_pos(mv(51,35,0),B1?,B2), after_pos(mv(5,33,0),B2?,B3), legal_pos(mv(50,42,0),B3?,Lblock), legal_pos(mv(52,44,0),B3?,Lpinned).
+legal_pos(mv(48,56,5), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, [], 0), Lpromo), legal_pos(mv(48,56,0), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, [], 0), Lnopromo), after_pos(mv(48,56,5), pos([0,0,0,0,16,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 11,0,0,0,0,0,0,0, 0,0,0,0,26,0,0,0], 1, cas(0,0,0,0), -1, 0, [], 0), C), board(C?,Xpromo).
+first(S), side(S?, Xs0), legal('mv(12, 28, 0)', S?, Xe4), legal('mv(12, 36, 0)', S?, Xe5), after('mv(12, 28, 0)', S?, C), side(C?, Xs1), mate(C?, Xm1), draw(C?, Xd1), autodraw(C?, Xa1), plies(C?, Xn1).
+first(S), legal('junk', S?, Xjunk), side('pos(1)', Xbad), after('mv(a, b, c)', S?, Cbad), side(Cbad?, Xsbad).
+:quit
+HEREDOC
+2>&1)
+check_not "GCE: Chess-functions.glp type-checks" "Type checking failed" "$gce_out"
+check_not "GCE: Chess-functions.glp loads" "Error loading" "$gce_out"
+check "GCE: the first position, white to move" "S0 = 1$" "$gce_out"
+check "GCE: e2-e4 is legal" "Le4 = 1$" "$gce_out"
+check "GCE: e2-e5 is not" "Le5 = 0$" "$gce_out"
+check "GCE: Ng1-f3 is legal" "Lnf3 = 1$" "$gce_out"
+check "GCE: Ng1-g3 is not" "Lng3 = 0$" "$gce_out"
+check "GCE: no castling over pieces" "Lcas0 = 0$" "$gce_out"
+check "GCE: after e2-e4, black to move" "S1 = 2$" "$gce_out"
+check "GCE: after e2-e4, no mate" "M1 = 0$" "$gce_out"
+check "GCE: after e2-e4, no draw" "D1 = 0$" "$gce_out"
+check "GCE: the first position, no draw" "D0 = 0$" "$gce_out"
+check "GCE: the first position, no draw that ends the game" "A0 = 0$" "$gce_out"
+check "GCE: the first position, no moves made" "N0 = 0$" "$gce_out"
+check "GCE: fool's mate, Qd8-h4 legal" "Lqh4 = 1$" "$gce_out"
+check "GCE: fool's mate is mate" "Mfool = 1$" "$gce_out"
+check "GCE: fool's mate is no draw" "Dfool = 0$" "$gce_out"
+check "GCE: fool's mate is no draw that ends the game" "Afool = 0$" "$gce_out"
+check "GCE: fool's mate after four moves" "Nfool = 4$" "$gce_out"
+check "GCE: fool's mate, white mated" "Sfool = 1$" "$gce_out"
+check "GCE: stalemate, black to move" "Sstale = 2$" "$gce_out"
+check "GCE: stalemate is no mate" "Mstale = 0$" "$gce_out"
+check "GCE: stalemate is a draw that ends the game" "Dstale = 1$" "$gce_out"
+check "GCE: the kings alone, a dead position, a draw that ends the game" "Dkk = 1$" "$gce_out"
+check "GCE: king and rook against king, no draw" "Dkkr = 0$" "$gce_out"
+check "GCE: fifty moves, a draw claimed" "Dfifty = 1$" "$gce_out"
+check "GCE: seventy-four moves, no draw that ends the game" "D74 = 0$" "$gce_out"
+check "GCE: seventy-five moves, a draw that ends the game" "D75 = 1$" "$gce_out"
+check "GCE: a position twice, no draw" "Drep2 = 0$" "$gce_out"
+check "GCE: a position three times, a draw claimed" "Drep3 = 1$" "$gce_out"
+check "GCE: a position three times, not a draw that ends the game" "Arep3 = 0$" "$gce_out"
+check "GCE: a position four times, not a draw that ends the game" "Arep4 = 0$" "$gce_out"
+check "GCE: a position five times, a draw that ends the game" "Arep5 = 1$" "$gce_out"
+check "GCE: white castles king's side" "Lcastle = 1$" "$gce_out"
+check "GCE: the king on g1 and the rook on f1" "Xcastle = \\[14, 12, 13, 15, 0, 14, 16, 0," "$gce_out"
+check "GCE: en passant is legal" "Lep = 1$" "$gce_out"
+check "GCE: en passant takes the pawn passed" "Xep = .*, 0, 0, 0, 0, 0, 0, 0, 0, 21, 0, 0, 11, 0, 0, 0, 0, 0, 21, 21, 0, 21," "$gce_out"
+check "GCE: a check blocked" "Lblock = 1$" "$gce_out"
+check "GCE: a check not met" "Lpinned = 0$" "$gce_out"
+check "GCE: a pawn promoted to a queen" "Lpromo = 1$" "$gce_out"
+check "GCE: a pawn on the last rank must be promoted" "Lnopromo = 0$" "$gce_out"
+check "GCE: the queen on a8" "Xpromo = .*, 0, 15, 0, 0, 0, 26, 0, 0, 0\\]$" "$gce_out"
+check "GCE: over constants, the first position, white to move" "Xs0 = 1$" "$gce_out"
+check "GCE: over constants, e2-e4 is legal" "Xe4 = 1$" "$gce_out"
+check "GCE: over constants, e2-e5 is not" "Xe5 = 0$" "$gce_out"
+check "GCE: over constants, after e2-e4, black to move" "Xs1 = 2$" "$gce_out"
+check "GCE: over constants, after e2-e4, no mate" "Xm1 = 0$" "$gce_out"
+check "GCE: over constants, after e2-e4, no draw" "Xd1 = 0$" "$gce_out"
+check "GCE: over constants, after e2-e4, no draw that ends the game" "Xa1 = 0$" "$gce_out"
+check "GCE: over constants, after e2-e4, one move made" "Xn1 = 1$" "$gce_out"
+check "GCE: a text that is no move is not legal" "Xjunk = 0$" "$gce_out"
+check "GCE: a text that is no position has side 0" "Xbad = 0$" "$gce_out"
+check "GCE: after a text that is no move, the position given, white to move" "Xsbad = 1$" "$gce_out"
+echo ""
+fi  # Section GCE
 
 if _section NET; then
 # =============================================================================

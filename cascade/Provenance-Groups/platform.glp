@@ -2939,8 +2939,8 @@ merge_one(free, V, X, B, [b(V?, X?) | B?]).
 merge_one(found(_), _, _, B, B?).
 
 procedure apply_with(Bindings?, Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, GAtoms?, GAtoms).
-apply_with([B | _], Nm, Rs, _, Id, S, Sh, S1?) :- ground(Rs?), ground(B?), ground(Id?) | specs_at(Rs?, 1, B?, Id?, RsP), joins(RsP?, B?, D, A), local_effect(Nm?, B?, Id?, Sh?, Dl, Al), clear_split(D?, Dp0, Ks), app(Dp0?, Dl?, Dp), ms_diff(S?, Dp?, S0a), clear_out(S0a?, Ks?, S0), app(Al?, S0?, S0b), app(A?, S0b?, S1).
-apply_with([], Nm, Rs, Bn, Id, S, Sh, S1?) :- ground(Rs?), ground(Bn?), ground(Id?) | specs_at(Rs?, 1, Bn?, Id?, RsP), joins(RsP?, Bn?, D, A), local_effect(Nm?, Bn?, Id?, Sh?, Dl, Al), clear_split(D?, Dp0, Ks), app(Dp0?, Dl?, Dp), ms_diff(S?, Dp?, S0a), clear_out(S0a?, Ks?, S0), app(Al?, S0?, S0b), app(A?, S0b?, S1).
+apply_with([B | _], Nm, Rs, _, Id, S, Sh, S1?) :- ground(Rs?), ground(B?), ground(Id?) | specs_at(Rs?, 1, B?, Id?, RsP), joins(RsP?, B?, D, A), local_effect(Nm?, B?, Id?, Sh?, Dl, Al), clear_split(D?, Dp0, Ks), app(Dp0?, Dl?, Dp), ms_diff(S?, Dp?, S0a), clear_out(S0a?, Ks?, S0), app(Al?, S0?, S0b), app(A?, S0b?, S1a), dedup(S1a?, S1).
+apply_with([], Nm, Rs, Bn, Id, S, Sh, S1?) :- ground(Rs?), ground(Bn?), ground(Id?) | specs_at(Rs?, 1, Bn?, Id?, RsP), joins(RsP?, Bn?, D, A), local_effect(Nm?, Bn?, Id?, Sh?, Dl, Al), clear_split(D?, Dp0, Ks), app(Dp0?, Dl?, Dp), ms_diff(S?, Dp?, S0a), clear_out(S0a?, Ks?, S0), app(Al?, S0?, S0b), app(A?, S0b?, S1a), dedup(S1a?, S1).
 
 procedure local_effect(Constant?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
 local_effect(Nm, B, Id, Sh, D?, A?) :- ground(Nm?) | schema_locals(Nm?, Lc), local_apply(Lc?, B?, Id?, Sh?, D, A).

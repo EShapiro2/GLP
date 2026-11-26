@@ -1,5 +1,5 @@
 Separating Distrust
-Separating Distrust weakens Distrust.
+Separating Distrust inherits from Distrust.
 Alice, Bob and Carol are persons.
 1. ○ Befriend: Friendship:1, only if Alice and Bob have not declared distrust of each other.
 2. ○ Taking sides. Alice, whose friend Bob has declared distrust of Carol, will eventually declare distrust of Carol or end her friendship with Bob, unless Bob withdraws the declaration.

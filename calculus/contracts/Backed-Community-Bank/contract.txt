@@ -1,5 +1,5 @@
 Backed Community Bank
-Backed Community Bank extends Community Bank, and weakens it.
+Backed Community Bank inherits from Community Bank.
 *f* is a fraction, 0 ≤ f < 1. Orga's *account* is a bank account in Dollars, held in Orga's name by its treasurers. A treasurer, Alice, is *backed* when the Alice-coins Orga holds are at most the Dollars Alice paid into the account and the coins Alice holds of the other treasurers, leaving out the fraction f of them of whom she holds the most.
 Alice is a person, Orga a community.
 1. ○ Treasurers. Organisation:4 and Guardians:2, only if every treasurer stays backed. Leave, Expel: Organisation:3, only if every treasurer stays backed. Swap, Pay, Redeem, Escrow: Notes:2, Notes:3, Notes:4, Coins:1, Coins:2, Bonds:1 and Denominated Currencies:4, only if every treasurer stays backed.

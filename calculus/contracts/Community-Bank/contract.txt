@@ -1,5 +1,5 @@
 Community Bank
-Community Bank extends Bank.
+Community Bank inherits from Bank.
 A *community* is a bank whose coins are Dollar-denominated. The coins it issues are *community coins*. Its bylaws name two roles, *member*, held by every participant, and *treasurer*.
 Alice and Bob are persons, Orga a community.
 1. ■ Draw: Alice, a treasurer, may swap Alice-coins for Orga-coins.

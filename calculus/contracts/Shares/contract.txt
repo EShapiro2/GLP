@@ -1,4 +1,4 @@
 Shares
-Shares unites Organisation and Notes, and extends the union.
+Shares inherits from Organisation and Notes.
 A *share* of Orga is an Orga-note that gives its holder a vote in Orga and a part of its dividends.
 Orga is an organisation.

@@ -2,10 +2,10 @@ Anonymous Rendezvous
 Anonymous Rendezvous extends Rendezvous.
 Vocabulary: x holds the one-time key k = one_time_key(x,k); x knows the public key of k = knows_key(x,k); d has the keys k and l presented by x = presented_keys(d,k,l,x).
 After x presents to d the keys k and l signed with k, which requires d does not have the keys k and l presented by x: d has the keys k and l presented by x.
-After d matches x and y on k and l: no longer d has the keys k and l presented by x, no longer d has the keys l and k presented by y, x has the address of y and y has the address of x.
+After d matches x and y on k and l, which requires x does not have the address of y and y does not have the address of x: no longer d has the keys k and l presented by x, no longer d has the keys l and k presented by y, x has the address of y and y has the address of x.
 Anonymous Rendezvous:0 - | A *one-time key* is a key pair its maker uses for one meeting.
 Anonymous Rendezvous:0 - | Alice and Bob are persons, Dave a service, Key and Other one-time keys.
 Anonymous Rendezvous:0 - | Environment: x holds the one-time key k; x knows the public key of k.
 Anonymous Rendezvous:1 ■ | Meet.
 Anonymous Rendezvous:1 ■ Present: presented_keys(Dave,Key,Other,Alice) <- one_time_key(Alice,Key), knows_key(Alice,Other), knows(Alice,Dave), rendezvous_server(Dave), ~presented_keys(Dave,Key,Other,Alice) guarded by Alice.
-Anonymous Rendezvous:1 ■ Match: ~presented_keys(Dave,Key,Other,Alice), ~presented_keys(Dave,Other,Key,Bob), address(Alice,Bob), address(Bob,Alice) <- presented_keys(Dave,Key,Other,Alice), presented_keys(Dave,Other,Key,Bob).
+Anonymous Rendezvous:1 ■ Match: ~presented_keys(Dave,Key,Other,Alice), ~presented_keys(Dave,Other,Key,Bob), address(Alice,Bob), address(Bob,Alice) <- ~address(Alice,Bob), ~address(Bob,Alice), presented_keys(Dave,Key,Other,Alice), presented_keys(Dave,Other,Key,Bob).

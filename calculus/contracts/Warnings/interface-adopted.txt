@@ -2,9 +2,9 @@ Interface pragmas
 Warn: Alice [Warn] <bob> <case>
 Answer: Bob [Answer] <orga> <alice> <case> <text>
 Withdrawal: Alice [Withdraw] <orga>
-  Decider [Annul] <alice> <bob> <case>
+  Decider [Annul] <alice> <bob> <case> <day>
   Codecider: Decider asks for your consent to annul.
-Expel: Decider [Expel] <bob>
+Expel: Decider [Expel] <bob> <enough>
   Codecider: Decider asks for your consent to expel.
-  Decider [Officer expel] <bob>
+  Decider [Officer expel] <bob> <enough>
   Codecider: Decider asks for your consent to officer expel.

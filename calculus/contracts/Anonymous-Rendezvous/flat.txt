@@ -46,9 +46,9 @@ Rendezvous:3 ■ Use link: Bob may no longer Dave has Link registered for Alice,
 Rendezvous:3 ■ | The link is then spent.
 Rendezvous:4 ■ | Reconnection.
 Rendezvous:4 ■ Present: Alice may Dave has the signature of Bob over the friendship of Alice and Bob presented, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice knows Dave, Dave is a rendezvous server and not Dave has the signature of Bob over the friendship of Alice and Bob presented.
-Rendezvous:4 ■ Match: No longer Dave has the signature of Bob over the friendship of Alice and Bob presented, no longer Dave has the signature of Alice over the friendship of Bob and Alice presented, Alice has the address of Bob and Bob has the address of Alice.
+Rendezvous:4 ■ Match: No longer Dave has the signature of Bob over the friendship of Alice and Bob presented, no longer Dave has the signature of Alice over the friendship of Bob and Alice presented, Alice has the address of Bob and Bob has the address of Alice, provided not Alice has the address of Bob and not Bob has the address of Alice.
 Anonymous Rendezvous:0 - | A *one-time key* is a key pair its maker uses for one meeting.
 Anonymous Rendezvous:0 - | Environment: x holds the one-time key k; x knows the public key of k.
 Anonymous Rendezvous:1 ■ | Meet.
 Anonymous Rendezvous:1 ■ Present: Alice may Dave has the keys Key and Other presented by Alice, provided Alice holds the one-time key Key, Alice knows the public key of Other, Alice knows Dave, Dave is a rendezvous server and not Dave has the keys Key and Other presented by Alice.
-Anonymous Rendezvous:1 ■ Match: No longer Dave has the keys Key and Other presented by Alice, no longer Dave has the keys Other and Key presented by Bob, Alice has the address of Bob and Bob has the address of Alice.
+Anonymous Rendezvous:1 ■ Match: No longer Dave has the keys Key and Other presented by Alice, no longer Dave has the keys Other and Key presented by Bob, Alice has the address of Bob and Bob has the address of Alice, provided not Alice has the address of Bob and not Bob has the address of Alice.

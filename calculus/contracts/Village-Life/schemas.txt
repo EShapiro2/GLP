@@ -1,0 +1,2 @@
+Village Life
+Village Life extends Jobs, Help, Lending, Library, Lost and Found, Carpool, Home Exchange, Partners, Dating and Care.

@@ -57,37 +57,37 @@ Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <dollar>
   CarolOfficer: AliceOfficer asks for your consent to deposit own coins for alice and carol.
   AliceOfficer [Deposit with the issuer for Alice]
   Carol: AliceOfficer asks for your consent to deposit with the issuer for alice.
-  Alice [Deposit with the issuer for Carol]
+  Alice [Deposit with the issuer for Carol] <carolofficer> <sum> <cond>
   CarolOfficer: Alice asks for your consent to deposit with the issuer for carol.
-  AliceOfficer [Deposit with the issuer for Alice and Carol]
+  AliceOfficer [Deposit with the issuer for Alice and Carol] <carolofficer>
   CarolOfficer: AliceOfficer asks for your consent to deposit with the issuer for alice and carol.
   AliceOfficer [Deposit more for Alice]
   Carol: AliceOfficer asks for your consent to deposit more for alice.
-  Alice [Deposit more for Carol]
+  Alice [Deposit more for Carol] <carolofficer> <sum> <cond>
   CarolOfficer: Alice asks for your consent to deposit more for carol.
-  AliceOfficer [Deposit more for Alice and Carol]
+  AliceOfficer [Deposit more for Alice and Carol] <carolofficer>
   CarolOfficer: AliceOfficer asks for your consent to deposit more for alice and carol.
   AliceOfficer [Deposit own bonds for Alice]
   Carol: AliceOfficer asks for your consent to deposit own bonds for alice.
-  Proposer [Proposal of Alice for Deposit own bonds]
+  Proposer [Proposal of Alice for Deposit own bonds] <sum> <dollar> <day> <carol> <bob> <cond>
   Voter [Vote of Alice for Deposit own bonds]
-  Alice [Deposit own bonds for Carol]
+  Alice [Deposit own bonds for Carol] <carolofficer> <sum> <cond>
   CarolOfficer: Alice asks for your consent to deposit own bonds for carol.
-  Proposer [Proposal of Carol for Deposit own bonds]
+  Proposer [Proposal of Carol for Deposit own bonds] <alice> <sum> <dollar> <day> <bob> <cond>
   Voter [Vote of Carol for Deposit own bonds]
-  AliceOfficer [Deposit own bonds for Alice and Carol]
+  AliceOfficer [Deposit own bonds for Alice and Carol] <carolofficer>
   CarolOfficer: AliceOfficer asks for your consent to deposit own bonds for alice and carol.
   AliceOfficer [Deposit bond with the issuer for Alice]
   Carol: AliceOfficer asks for your consent to deposit bond with the issuer for alice.
-  Alice [Deposit bond with the issuer for Carol]
+  Alice [Deposit bond with the issuer for Carol] <carolofficer> <sum> <cond>
   CarolOfficer: Alice asks for your consent to deposit bond with the issuer for carol.
-  AliceOfficer [Deposit bond with the issuer for Alice and Carol]
+  AliceOfficer [Deposit bond with the issuer for Alice and Carol] <carolofficer>
   CarolOfficer: AliceOfficer asks for your consent to deposit bond with the issuer for alice and carol.
   AliceOfficer [Deposit bond more for Alice]
   Carol: AliceOfficer asks for your consent to deposit bond more for alice.
-  Alice [Deposit bond more for Carol]
+  Alice [Deposit bond more for Carol] <carolofficer> <sum> <cond>
   CarolOfficer: Alice asks for your consent to deposit bond more for carol.
-  AliceOfficer [Deposit bond more for Alice and Carol]
+  AliceOfficer [Deposit bond more for Alice and Carol] <carolofficer>
   CarolOfficer: AliceOfficer asks for your consent to deposit bond more for alice and carol.
 Pay issuer: AliceOfficer [Pay issuer for Alice] <dollar>
   Proposer [Proposal of Alice for Pay issuer] <bob> <sum> <type>
@@ -126,10 +126,10 @@ Issue denominated bond: AliceOfficer [Issue denominated bond for Alice]
   Proposer [Proposal of Alice for Issue denominated bond] <sum> <dollar> <day>
   Voter [Vote of Alice for Issue denominated bond]
 Accept: AliceOfficer [Accept for Alice]
-  Proposer [Proposal of Alice for Accept]
+  Proposer [Proposal of Alice for Accept] <limit> <dollar> <carol>
   Voter [Vote of Alice for Accept]
   AliceOfficer [Accept by bond for Alice]
 Pay accepted coins: AliceOfficer [Pay accepted coins for Alice]
-  Proposer [Proposal of Alice for Pay accepted coins]
+  Proposer [Proposal of Alice for Pay accepted coins] <bob> <carol> <dollar>
   Voter [Vote of Alice for Pay accepted coins]
   AliceOfficer [Pay own accepted coins for Alice] [Pay accepted coins to the issuer for Alice]

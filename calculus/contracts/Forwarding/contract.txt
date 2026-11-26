@@ -1,5 +1,5 @@
 Forwarding
-Forwarding extends Friendship.
+Forwarding inherits from Friendship.
 The *author* of an item is its first signer.
 Alice and Bob are persons.
 1. ■ Sign: Alice may create an item by signing it.

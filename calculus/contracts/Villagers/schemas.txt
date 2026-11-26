@@ -1,0 +1,2 @@
+Villagers
+Villagers extends Village Social, Village Governance, Village Money, Village Services, Village Life and Village Commons.

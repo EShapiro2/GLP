@@ -68,7 +68,7 @@ LEAD_IN = ('Each contract with the operations of its first line and of its citin
 
 NAME = NM.NAME_RX      # a name of the table, longest first, or one word (tools/names.py)
 REF = NM.REF
-VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes', 'weakens', 'augments', 'renames', 'lifts', 'unites')
+VERBS = ('inherits', 'extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes', 'weakens', 'augments', 'renames', 'lifts', 'unites')
 VERB = r'(?:%s)' % '|'.join(VERBS)
 PRONOUNS = ('it', 'them', 'the composition', 'the union')
 OF = re.compile(r'^(?:an? (?:weakening|strengthening|augmentation|renaming|lift) of )+')      # 'a weakening of a lift of Bonds': the contract Bonds
@@ -329,6 +329,18 @@ def renamings(name):
     return out
 
 
+def operations_line(name, line):
+    """The line a first line 'NAME inherits from A and B.' stands for: the operations by which NAME is obtained from them,
+    the first line of gr/NAME.txt, 'NAME unites A and B, and extends the union.' (Definition Inheritance; record item 71)."""
+    if not re.match(r'^%s inherits from ' % re.escape(name), line):
+        return line
+    p = os.path.join(GR or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'gr'), NM.file_of(name) + '.txt')
+    lines = [l.rstrip('\n') for l in open(p, encoding='utf-8')] if os.path.exists(p) else []
+    if len(lines) < 2 or not re.match(r'^%s %s\b' % (re.escape(name), VERB), lines[1]) or ' inherits from ' in lines[1]:
+        raise ValueError('inherits from, and gr/ has no first line of operations')
+    return lines[1]
+
+
 def link(contracts):
     """Parse every first line; check that each contract it names is in rev/."""
     unparsed = []
@@ -340,7 +352,7 @@ def link(contracts):
             c.first = First()
             continue
         try:
-            c.first = parse_first(name, c.first_line, contracts)
+            c.first = parse_first(name, operations_line(name, c.first_line), contracts)
             for dep, words in renamings(name):      # the words of a renaming, a pragma of gr/ (Udi, 2026-11-23, no parameters)
                 pairs = parse_pairs(words)
                 if pairs and dep in c.first.deps:

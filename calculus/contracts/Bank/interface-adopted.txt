@@ -79,7 +79,7 @@ Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <dollar>
   Carol: AliceOfficer asks for your consent to deposit bond more for alice.
   Alice [Deposit bond more for Carol] <carolofficer> <sum> <cond>
   CarolOfficer: Alice asks for your consent to deposit bond more for carol.
-  AliceOfficer [Deposit bond more for Alice and Carol]
+  AliceOfficer [Deposit bond more for Alice and Carol] <carolofficer>
   CarolOfficer: AliceOfficer asks for your consent to deposit bond more for alice and carol.
 Pay issuer: AliceOfficer [Pay issuer for Alice] <dollar>
   Proposer [Proposal of Alice for Pay issuer] <bob> <sum> <type>
@@ -118,10 +118,10 @@ Issue denominated bond: AliceOfficer [Issue denominated bond for Alice]
   Proposer [Proposal of Alice for Issue denominated bond] <sum> <dollar> <day>
   Voter [Vote of Alice for Issue denominated bond]
 Accept: AliceOfficer [Accept for Alice]
-  Proposer [Proposal of Alice for Accept]
+  Proposer [Proposal of Alice for Accept] <limit> <dollar> <carol>
   Voter [Vote of Alice for Accept]
   AliceOfficer [Accept by bond for Alice]
 Pay accepted coins: AliceOfficer [Pay accepted coins for Alice]
-  Proposer [Proposal of Alice for Pay accepted coins]
+  Proposer [Proposal of Alice for Pay accepted coins] <bob> <carol> <dollar>
   Voter [Vote of Alice for Pay accepted coins]
   AliceOfficer [Pay own accepted coins for Alice] [Pay accepted coins to the issuer for Alice]

@@ -1,5 +1,5 @@
 Matching
-Matching extends Gossip.
+Matching inherits from Gossip.
 Posts have a *test*, whether two *match*.
 Alice, Bob and Carol are persons.
 1. ■ Return: Bob, who holds two matching posts, one from Alice, forwards to Alice the second post.

@@ -1,0 +1,111 @@
+Village Life (flat text)
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Village Life:0 - | Alice, Bob and Carol are persons, Post and Reply posts, Budget, Rest and Part numbers, Other and Key one-time keys, Wendy and Will wards, Dave a service, Link an invitation link, Tome a thing, Day a day, Today a date, Grupo a group, Text a message, Visit a visit.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
+Knowledge:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice is a person, Bob is a person, Carol is a person, Alice knows Bob, Bob knows Alice and Alice knows Carol.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice is a person, Bob is a person, Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2+Guardians:3+Groups:3 ■ Person unfriend: Alice may no longer Alice counts Bob as a friend, no longer Bob counts Alice as a friend, no longer Alice is a member of the group anyone of Bob, no longer Bob is a member of the group anyone of Alice, no longer Alice has Bob as a member of the group anyone and no longer Bob has Alice as a member of the group anyone, provided Alice is a person and Bob is a person.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Gossip:0 - | *Posts* have a *budget*: what a post has when made, and the *cost* of a forward. Gossip has a *gossip protocol*: to which of their friends a holder may forward a post, and with what part of the rest of the budget. A person *holds* any post they made or forwarded to them.
+Gossip:0 - | Environment: n is a budget of a new post, for x; n covers the cost of a forward leaving m, for x; the gossip protocol forwards p to y with m of n, for x.
+Gossip:1 ■ Post: Alice may Alice has made the post Post, Alice holds the post Post and Alice has the budget Budget for Post, provided Budget is a budget of a new post for Alice and not Alice has made the post Post.
+Gossip:2 ■ Tell: Alice may Bob holds the post Post from Alice, Bob holds the post Post and Bob has the budget Part for Post, provided Alice holds the post Post, Alice has the budget Budget for Post, Budget covers the cost of a forward leaving Rest for Alice, Alice counts Bob as a friend, Bob counts Alice as a friend and the gossip protocol forwards Post to Bob with Part of Rest for Alice.
+Matching:0 - | Posts have a *test*, whether two *match*.
+Matching:0 - | Environment: p and q match, for x.
+Matching:1 ■ Return: Bob has forwarded Other to Alice, Alice holds the post Other from Bob and Alice holds the post Other, provided Bob holds the post Post from Alice, Bob holds the post Other, Post and Other match for Bob, not Alice holds the post Other from Bob and not Bob has forwarded Other to Alice.
+Matching:2+Anonymous Matching:1 ■ Meet: Alice and Carol may jointly Alice knows Carol and Carol knows Alice, provided Alice has made the post Post, Carol has made the post Other, Alice holds the post Other, Carol holds the post Post, Post and Other match for Alice, Alice has the address of Carol and Carol has the address of Alice.
+Guardians:0 - | Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
+Guardians:0 - | In clause 4 Alice and Bob are possibly one person.
+Guardians:1 ■ Enter: Alice and Wendy may jointly Wendy has an identity, Wendy is a ward, Wendy has Alice as a guardian, Alice is the creator of Wendy, Alice is a guardian of Wendy, Alice knows Wendy, Wendy knows Alice, Alice counts Wendy as a friend and Wendy counts Alice as a friend, provided Alice is a person and not Wendy has an identity. Must consent: Wendy.
+Guardians:1 ■ | Alice chooses Wendy's key pair.
+Guardians:2 ■ | Guardian decisions.
+Guardians:2 ■ Make guardian: Those who decide for Wendy and Bob may jointly Bob is a guardian of Wendy, Wendy has Bob as a guardian, Bob knows Wendy, Wendy knows Bob, Bob counts Wendy as a friend and Wendy counts Bob as a friend, provided Wendy is a ward, not Wendy is retired, Bob is a person, Wendy has Alice as a guardian, Bob counts Alice as a friend, not Bob is a guardian of Wendy and not Wendy has Bob as a guardian.
+Guardians:2 ■ Resign: Bob may no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
+Guardians:2 ■ End guardian: Those who decide for Wendy, other than Bob, may no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
+Guardians:2 ■ Guardian unfriend: Bob may no longer Bob counts Wendy as a friend, no longer Wendy counts Bob as a friend, no longer Bob is a guardian of Wendy and no longer Wendy has Bob as a guardian.
+Guardians:2 ■ | Wendy may not end a friendship with her guardian.
+Guardians:3 ■ | Ward and person.
+Guardians:3 ■ Ward acquaint: Wendy and Bob may jointly Wendy knows Bob and Bob knows Wendy, provided Wendy is a ward, Wendy has Alice as a guardian and Bob is a person.
+Guardians:3 ■ Ward befriend: Wendy, Bob and Alice may jointly Wendy counts Bob as a friend and Bob counts Wendy as a friend, provided Wendy is a ward, not Wendy is retired, Wendy has Alice as a guardian, Bob is a person, Wendy knows Bob, Bob knows Wendy, Alice counts Bob as a friend, Bob counts Alice as a friend, not Wendy counts Bob as a friend and not Bob counts Wendy as a friend.
+Guardians:3 ■ Ward end: Wendy may no longer Wendy counts Bob as a friend and no longer Bob counts Wendy as a friend, provided not Wendy has Bob as a guardian.
+Guardians:3 ■ Unfriend: Bob may no longer Bob counts Wendy as a friend and no longer Wendy counts Bob as a friend, provided not Bob is a guardian of Wendy.
+Guardians:3 ■ Ward unfriend: Alice may no longer Wendy counts Bob as a friend and no longer Bob counts Wendy as a friend, provided Wendy has Alice as a guardian and not Bob is a guardian of Wendy.
+Guardians:4 ■ | Wards.
+Guardians:4 ■ Wards acquaint: Wendy and Will may jointly Wendy knows Will and Will knows Wendy, provided Wendy is a ward, Wendy has Alice as a guardian, Will is a ward and Will has Bob as a guardian. Possibly one: Alice=Bob.
+Guardians:4 ■ Wards befriend: Wendy, Will, Alice and Bob may jointly Wendy counts Will as a friend and Will counts Wendy as a friend, provided Wendy is a ward, not Wendy is retired, Wendy has Alice as a guardian, Will is a ward, not Will is retired, Will has Bob as a guardian, Wendy knows Will, Will knows Wendy, Alice knows Will, Alice counts Bob as a friend, Bob counts Alice as a friend, not Wendy counts Will as a friend and not Will counts Wendy as a friend. Possibly one: Alice=Bob.
+Guardians:4 ■ Wards of one guardian befriend: Wendy, Will and Alice may jointly Wendy counts Will as a friend and Will counts Wendy as a friend, provided Wendy is a ward, not Wendy is retired, Wendy has Alice as a guardian, Will is a ward, not Will is retired, Will has Alice as a guardian, Wendy knows Will, Will knows Wendy, not Wendy counts Will as a friend and not Will counts Wendy as a friend.
+Guardians:5 ■ Retire: Those who decide for Wendy may Wendy is retired, no longer anyone is a guardian of Wendy, no longer Wendy has anyone as a guardian, no longer Wendy counts anyone as a friend and no longer anyone counts Wendy as a friend, provided not Wendy is retired.
+Guardians:5 ■ | Wendy can then take no act.
+Services:0 - | A *service* is a ward operated by a machine at an address every person can reach.
+Rendezvous:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
+Rendezvous:1 ■ Open server: Carol may Dave is a rendezvous server, provided Carol is a guardian of Dave and not Dave is a rendezvous server.
+Rendezvous:2 ■ | Invite by link.
+Rendezvous:2 ■ Sign link: Alice may Alice has signed Link as an invitation link that names Dave, provided Alice knows Dave and not Alice has signed Link as an invitation link that names Dave.
+Rendezvous:2 ■ Invite by link: Alice may Dave has Link registered for Alice, provided Alice has signed Link as an invitation link that names Dave, Alice knows Dave, Dave is a rendezvous server, not Dave holds Link spent for Alice and not Dave has Link registered for Alice.
+Rendezvous:2 ■ | Link has a new serial.
+Rendezvous:3 ■ Use link: Bob may no longer Dave has Link registered for Alice, Dave holds Link spent for Alice, Alice has the address of Bob and Bob has the address of Alice, provided Bob knows Dave and not Dave holds Link expired.
+Rendezvous:3 ■ | The link is then spent.
+Rendezvous:4 ■ | Reconnection.
+Rendezvous:4 ■ Present: Alice may Dave has the signature of Bob over the friendship of Alice and Bob presented, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice knows Dave, Dave is a rendezvous server and not Dave has the signature of Bob over the friendship of Alice and Bob presented.
+Rendezvous:4 ■ Match: No longer Dave has the signature of Bob over the friendship of Alice and Bob presented, no longer Dave has the signature of Alice over the friendship of Bob and Alice presented, Alice has the address of Bob and Bob has the address of Alice, provided not Alice has the address of Bob and not Bob has the address of Alice.
+Anonymous Rendezvous:0 - | A *one-time key* is a key pair its maker uses for one meeting.
+Anonymous Rendezvous:0 - | Environment: x holds the one-time key k; x knows the public key of k.
+Anonymous Rendezvous:1 ■ | Meet.
+Anonymous Rendezvous:1+Anonymous Matching:1 ■ Present: Alice may Dave has the keys Key and Other presented by Alice, provided Alice holds the one-time key Key, Alice knows the public key of Other, Alice knows Dave, Dave is a rendezvous server, not Dave has the keys Key and Other presented by Alice, Alice has made the post Post, Alice holds the post Reply, Post carries the public key of Key for Alice, Reply carries the public key of Other for Alice and Dave is named by the one of Post and Reply whose public key has the smaller hash for Alice.
+Anonymous Rendezvous:1 ■ Match: No longer Dave has the keys Key and Other presented by Alice, no longer Dave has the keys Other and Key presented by Bob, Alice has the address of Bob and Bob has the address of Alice, provided not Alice has the address of Bob and not Bob has the address of Alice.
+Anonymous Matching:0 - | Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
+Anonymous Matching:0 - | Environment: p carries the public key of k, for x; d is named by the one of p and q whose public key has the smaller hash, for x.
+Anonymous Matching:1 ■ | Meet.
+Free Matching:0 - | The budget of a post is an integer, the cost of a forward is one, and the gossip protocol is forwarding to any friend with the budget less one.
+Jobs:0 - | A post is a *vacancy*, stating the work and whom it seeks, or a *candidacy*, stating who its maker is and the work they seek. A vacancy and a candidacy match when each states what the other seeks.
+Help:0 - | A post is a *service*, stating work its maker does, or a *need*, stating work its maker seeks done. A service and a need match when the service is the work the need seeks.
+Lending:0 - | A post is a *loan* or a *gift*, stating a thing its maker lends or gives away, or a *wish*, stating a thing its maker seeks to borrow or receive. A loan or a gift matches a wish when it is of the thing the wish seeks.
+Library:1 ◆ Shelve: Alice may Alice has shelved Tome and Alice has Tome on the shelf, provided not Alice has shelved Tome.
+Library:1 ◆ | Tome is a thing of Alice's own.
+Library:2 ■ Lend: Alice and Bob may jointly no longer Alice has Tome on the shelf and Bob holds Tome of Alice until Day, provided Alice knows Bob, Bob knows Alice, the current date is Today for Alice and Day is more than Today.
+Library:3 ■ Return: Bob may no longer Bob holds Tome of Alice until Day and Alice has Tome on the shelf.
+Library:4 ○ | On time.
+Library:4 ○ | Bob will return a borrowed thing by the agreed day.
+Lost and Found:0 - | A post is a *loss*, stating a thing its maker lost, or a *find*, stating a thing its maker found. A loss and a find match when they are of the same thing.
+Carpool:0 - | A post is a *commute*, stating a route, its times, and whether its maker drives, rides or either. Two commutes match when their routes and times agree and one maker drives and the other rides.
+Home Exchange:0 - | A post is a *home*, stating a dwelling, when it is free, and where and when its maker seeks one. Two homes match when each is where and when the other's maker seeks.
+Partners:0 - | A post is a *plan*, stating an activity, its place and its time, and whom its maker seeks for it. Two plans match when they are of the same activity, place and time and each maker is whom the other seeks.
+Dating:0 - | A post is a *profile*, stating who its maker is and whom they seek. Two profiles match when each states whom the other seeks.
+Groups:0 - | A *message* is what a person sends.
+Groups:0 - | Bob and Carol are possibly Alice or one person.
+Groups:1 ■ Message: Alice may Bob has the message Text from Alice, provided Alice counts Bob as a friend and Bob counts Alice as a friend. Possibly one: Alice=Bob.
+Groups:2 ■ | Group.
+Groups:2 ■ Create: Alice may Alice is the leader of Grupo, Alice is a member of the group Grupo of Alice and Alice has Alice as a member of the group Grupo, provided not Alice is the leader of Grupo.
+Groups:2 ■ | Alice is then its leader and first member.
+Groups:2 ■ Close: Alice may no longer Alice is the leader of Grupo, no longer Alice has anyone as a member of the group Grupo and no longer anyone is a member of the group Grupo of Alice.
+Groups:3 ■ | Joining and Leaving.
+Groups:3 ■ Join: Alice and Bob may jointly Bob is a member of the group Grupo of Alice and Alice has Bob as a member of the group Grupo, provided Alice is the leader of Grupo, Alice counts Bob as a friend, Bob counts Alice as a friend and not Bob is a member of the group Grupo of anyone. Possibly one: Alice=Bob.
+Groups:3 ■ Remove: Alice may no longer Bob is a member of the group Grupo of Alice and no longer Alice has Bob as a member of the group Grupo, provided Alice is the leader of Grupo. Possibly one: Alice=Bob.
+Groups:3 ■ Leave: Bob may no longer Bob is a member of the group Grupo of Alice and no longer Alice has Bob as a member of the group Grupo. Possibly one: Alice=Bob.
+Groups:4 ■ | Group messaging.
+Groups:4 ■ Post: Bob may Alice has the post Text of Bob in Grupo, provided Bob is a member of the group Grupo of Alice and not Alice has the post Text of Bob in Grupo. Possibly one: Alice=Bob.
+Groups:4 ■ Post own: Alice may Alice has the post Text of Alice in Grupo, provided Alice is a member of the group Grupo of Alice and not Alice has the post Text of Alice in Grupo.
+Groups:4 ■ Deliver: Alice has delivered the message Text of Bob in Grupo to Carol and Carol has the message Text of Bob in Grupo delivered by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo, Alice has Carol as a member of the group Grupo, not Alice has delivered the message Text of Bob in Grupo to Carol and not Carol has the message Text of Bob in Grupo delivered by Alice. Possibly one: Alice=Bob, Alice=Carol, Bob=Carol.
+Groups:4 ■ Deliver leader: Alice has delivered the message Text of Bob in Grupo to Alice and Alice has the message Text of Bob in Grupo delivered by Alice, provided Alice is the leader of Grupo, Alice has the post Text of Bob in Grupo and not Alice has delivered the message Text of Bob in Grupo to Alice. Possibly one: Alice=Bob.
+Care:0 - | A *circle* is a group for the care of a person, its *patient*. A *visit* is a time at which the patient needs a person with them.
+Care:0 - | Bob and Carol are possibly Alice.
+Care:1 ◆ Open: Alice may Alice is the leader of Grupo, Alice is a member of the group Grupo of Alice, Alice has Alice as a member of the group Grupo, Alice has Grupo as a circle and Alice has Grupo as a circle for Carol, provided Alice knows Carol and not Alice is the leader of Grupo. Possibly one: Alice=Carol.
+Care:2 ■ Ask: Bob may Alice has the visit Visit posted in Grupo, provided Bob is a member of the group Grupo of Alice, Alice has Grupo as a circle and not Alice has the visit Visit posted in Grupo. Possibly one: Alice=Bob.
+Care:3 ○ Take: Bob may no longer Alice has the visit Visit posted in Grupo and Alice has the visit Visit taken by Bob in Grupo, provided Bob is a member of the group Grupo of Alice and Alice has the visit Visit posted in Grupo. Possibly one: Alice=Bob.
+Care:3 ○ | Bob will make the visit, or release it in time for another member to take it.
+Care:4 ■ Release: Bob may no longer Alice has the visit Visit taken by Bob in Grupo and Alice has the visit Visit posted in Grupo, provided Alice has the visit Visit taken by Bob in Grupo. Possibly one: Alice=Bob.
+Care:4 ■ Release for: Alice may no longer Alice has the visit Visit taken by Bob in Grupo and Alice has the visit Visit posted in Grupo, provided Alice is the leader of Grupo and Alice has the visit Visit taken by Bob in Grupo. Possibly one: Alice=Bob.
+Care:4 ■ Release by the patient: Carol may no longer Alice has the visit Visit taken by Bob in Grupo and Alice has the visit Visit posted in Grupo, provided Alice has Grupo as a circle for Carol and Alice has the visit Visit taken by Bob in Grupo. Possibly one: Alice=Bob, Alice=Carol.
+Care:5 ◆ | Report.
+Care:5 ◆ Made: Bob may no longer Alice has the visit Visit taken by Bob in Grupo and Alice has the visit Visit made by Bob in Grupo, provided Alice has the visit Visit taken by Bob in Grupo. Possibly one: Alice=Bob.
+Care:5 ◆ Missed: Alice may no longer Alice has the visit Visit taken by Bob in Grupo and Alice has the visit Visit missed by Bob in Grupo, provided Alice is the leader of Grupo and Alice has the visit Visit taken by Bob in Grupo. Possibly one: Alice=Bob.
+Care:5 ◆ Missed by the patient: Carol may no longer Alice has the visit Visit taken by Bob in Grupo and Alice has the visit Visit missed by Bob in Grupo, provided Alice has Grupo as a circle for Carol and Alice has the visit Visit taken by Bob in Grupo. Possibly one: Alice=Bob, Alice=Carol.
+Care:5 ◆ Contest: Alice may Alice has the visit Visit missed by Bob in Grupo, provided Alice is the leader of Grupo, Alice has the visit Visit made by Bob in Grupo and not Alice has the visit Visit missed by Bob in Grupo. Possibly one: Alice=Bob.
+Care:6 ■ End: Carol may no longer Alice is the leader of Grupo, no longer Alice has anyone as a member of the group Grupo, no longer anyone is a member of the group Grupo of Alice, no longer Alice has Grupo as a circle and no longer Alice has Grupo as a circle for Carol, provided Alice has Grupo as a circle for Carol. Possibly one: Alice=Carol.

@@ -8,5 +8,7 @@ Second-Score Auction:1 ■ Point transitive: Local Overlay:2 <- driver(Carol).
 Second-Score Auction:2 ■ | Award.
 Second-Score Auction:2 ■ Award: Auction:3 Award <- highest_score(Alice,Bob,Trip), sets_deposit(Alice,Trip), second_score_fare(Alice,Bob,Trip).
 Second-Score Auction:2 ■ Close: Auction:3 Close <- none_admissible(Alice,Trip).
-Second-Score Auction:3 ■ Arrive: Auction:5 <- refund(Alice,Bob).
+Second-Score Auction:3 ■ | Arrive.
+Second-Score Auction:3 ■ Arrive: Auction:5 Arrive <- refund(Alice,Bob).
+Second-Score Auction:3 ■ Driver arrive: Auction:5 Driver arrive <- refund(Alice,Bob).
 Second-Score Auction:4 ■ Cancel: Auction:6 <- cancel_release(Alice,Bob).

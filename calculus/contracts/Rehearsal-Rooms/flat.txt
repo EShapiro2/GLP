@@ -64,7 +64,7 @@ Gossip:1 ■ Post: Alice may Alice has made the post Post, Alice holds the post 
 Gossip:2 ■ Tell: Alice may Bob holds the post Post from Alice, Bob holds the post Post and Bob has the budget Part for Post, provided Alice holds the post Post, Alice has the budget Budget for Post, Budget covers the cost of a forward leaving Rest for Alice, Alice counts Bob as a friend, Bob counts Alice as a friend and the gossip protocol forwards Post to Bob with Part of Rest for Alice.
 Matching:0 - | Posts have a *test*, whether two *match*.
 Matching:0 - | Environment: p and q match, for x.
-Matching:1 ■ Return: Alice holds the post Other from Bob and Alice holds the post Other, provided Bob holds the post Post from Alice, Bob holds the post Other, Post and Other match for Bob and not Alice holds the post Other from Bob.
+Matching:1 ■ Return: Bob has forwarded Other to Alice, Alice holds the post Other from Bob and Alice holds the post Other, provided Bob holds the post Post from Alice, Bob holds the post Other, Post and Other match for Bob, not Alice holds the post Other from Bob and not Bob has forwarded Other to Alice.
 Matching:2+Anonymous Matching:1 ■ Meet: Alice and Carol may jointly Alice knows Carol and Carol knows Alice, provided Alice has made the post Post, Carol has made the post Other, Alice holds the post Other, Carol holds the post Post, Post and Other match for Alice, Alice has the address of Carol and Carol has the address of Alice.
 Guardians:0 - | Bob *trusts* Wendy, a ward of Alice, when he trusts Alice. The *decision rule*, which the creator of a ward decides, says who decides for a ward and how. A ward takes an act of a party by those who decide for the ward.
 Guardians:1 ■ Enter: Alice and Wendy may jointly Wendy has an identity, Wendy is a ward, Wendy has Alice as a guardian, Alice is the creator of Wendy, Alice is a guardian of Wendy, Alice knows Wendy, Wendy knows Alice, Alice counts Wendy as a friend and Wendy counts Alice as a friend, provided Alice is a person and not Wendy has an identity. Must consent: Wendy.
@@ -95,12 +95,12 @@ Rendezvous:3 ■ Use link: Bob may no longer Dave has Link registered for Alice,
 Rendezvous:3 ■ | The link is then spent.
 Rendezvous:4 ■ | Reconnection.
 Rendezvous:4 ■ Present: Alice may Dave has the signature of Bob over the friendship of Alice and Bob presented, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice knows Dave, Dave is a rendezvous server and not Dave has the signature of Bob over the friendship of Alice and Bob presented.
-Rendezvous:4 ■ Match: No longer Dave has the signature of Bob over the friendship of Alice and Bob presented, no longer Dave has the signature of Alice over the friendship of Bob and Alice presented, Alice has the address of Bob and Bob has the address of Alice.
+Rendezvous:4 ■ Match: No longer Dave has the signature of Bob over the friendship of Alice and Bob presented, no longer Dave has the signature of Alice over the friendship of Bob and Alice presented, Alice has the address of Bob and Bob has the address of Alice, provided not Alice has the address of Bob and not Bob has the address of Alice.
 Anonymous Rendezvous:0 - | A *one-time key* is a key pair its maker uses for one meeting.
 Anonymous Rendezvous:0 - | Environment: x holds the one-time key k; x knows the public key of k.
 Anonymous Rendezvous:1 ■ | Meet.
 Anonymous Rendezvous:1+Anonymous Matching:1 ■ Present: Alice may Dave has the keys Key and Other presented by Alice, provided Alice holds the one-time key Key, Alice knows the public key of Other, Alice knows Dave, Dave is a rendezvous server, not Dave has the keys Key and Other presented by Alice, Alice has made the post Post, Alice holds the post Reply, Post carries the public key of Key for Alice, Reply carries the public key of Other for Alice and Dave is named by the one of Post and Reply whose public key has the smaller hash for Alice.
-Anonymous Rendezvous:1 ■ Match: No longer Dave has the keys Key and Other presented by Alice, no longer Dave has the keys Other and Key presented by Bob, Alice has the address of Bob and Bob has the address of Alice.
+Anonymous Rendezvous:1 ■ Match: No longer Dave has the keys Key and Other presented by Alice, no longer Dave has the keys Other and Key presented by Bob, Alice has the address of Bob and Bob has the address of Alice, provided not Alice has the address of Bob and not Bob has the address of Alice.
 Anonymous Matching:0 - | Each post carries the public key of a one-time key of its maker, and names a rendezvous server.
 Anonymous Matching:0 - | Environment: p carries the public key of k, for x; d is named by the one of p and q whose public key has the smaller hash, for x.
 Anonymous Matching:1 ■ | Meet.
