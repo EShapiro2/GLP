@@ -2237,11 +2237,11 @@ module_lines0(Nm, C, Ci, Rf, E, Nt, W, Ps, Ls?) :- ground(Nm?), ground(C?), grou
     widget_lines(W?, C?, Ch?, Ps?, Nt?, ctx(Rf?, Rl?, Kc?), Lw0),
     worded_lx(W?, Lx11),
     lx_sets(Lx11?, Ks1),
-    menu_lines(Lw0?, Ks1?, Lw1v),
-    value_lines(Lw1v?, Kc?, Lw1),
+    menu_lines(Lw0?, Ks1?, Lw1),
     calc_acts(W?, Wa),
     calc_any(Wa?, Ps?, Nt?, C?, Kq),
-    calc_lines(Lw1?, Kq?, Lw),
+    calc_lines(Lw1?, Kq?, Lwv),
+    value_lines(Lwv?, Kc?, Lw),
     lapp(Lr0?, Lw?, Lr),
     worded_lx(W?, Lx3),
     atom_parts(C?, Nt?, Lx3?, Kc?, La00),
@@ -4587,6 +4587,7 @@ at_of([], 0).
 at_of([at(K)|_], K?).
 at_of([grp(_, K)|_], K?).
 at_of([any|As], K?) :- at_of(As?, K).
+at_of([cmp(_, Cs)|As], K?) :- ground(Cs?), ground(As?) | app_conds(Cs?, As?, Ds), at_of(Ds?, K).
 procedure int_in(Integer?, Ints?, YesNo).
 int_in(_, [], no).
 int_in(K, [I|_], yes) :- integer(K?), integer(I?), K? =:= I? | true.
@@ -4605,6 +4606,10 @@ arg_bound([at(K)|As], M, [K?|Bd?]) :- integer(K?), integer(M?), K? =\= M? | arg_
 arg_bound([at(K)|As], M, Bd?) :- integer(K?), integer(M?), K? =:= M? | arg_bound(As?, M?, Bd).
 arg_bound([grp(J, K)|As], M, Bd?) :- integer(J?), integer(K?), integer(M?) | arg_bound([at(J?), at(K?)|As?], M?, Bd).
 arg_bound([any|As], M, Bd?) :- arg_bound(As?, M?, Bd).
+arg_bound([cmp(_, Cs)|As], M, Bd?) :- ground(Cs?), ground(As?) | app_conds(Cs?, As?, Ds), arg_bound(Ds?, M?, Bd).
+procedure app_conds(CondArgs?, CondArgs?, CondArgs).
+app_conds([], Bs, Bs?).
+app_conds([A|As], Bs, [A?|Cs?]) :- app_conds(As?, Bs?, Cs).
 %% The text of the request form of an act with one guarding role, its question "text of the request form, shown with the button: the request is the will, elicited once" (vGLP, Section 5.4, "The contract's words"), each word say(S), or at(I), the person at place I of the request, the sentence's person(K) the K-th of the schema's persons; [] for every other act.
 procedure form_text(Args?, RoleSpecs?, Said?, FWords).
 form_text(_, _, none, []).
@@ -4733,7 +4738,8 @@ procedure cond_atom(YesNo?, Constant?, Constant?, CondArgs?, Preconds).
 cond_atom(yes, _, _, _, []).
 cond_atom(no, req, P, Ks, [req(P?, Ks?)]).
 cond_atom(no, forb, P, Ks, [forb(P?, Ks?)]).
-CondArg ::= at(Integer) ; grp(Integer, Integer) ; any.
+%% A compound value f(t1, ..., tk) in an atom the act requires, cmp(F, As), As the places of its arguments, so that the way binds a variable of it, as the Day of a bond, bond(Day) (vGLP, Section 5.4: "every binding of the variables of the atoms the schema requires there"; Currencies #24, Code #39, 2026-11-26 01:16 UTC, GB's redeem_bond).
+CondArg ::= at(Integer) ; grp(Integer, Integer) ; any ; cmp(Constant, CondArgs).
 CondArgs ::= [] ; [CondArg | CondArgs].
 procedure cond_args(Args?, Args?, CondArgs).
 cond_args([], _, []).
@@ -4741,6 +4747,9 @@ cond_args([nterm(ext(own(J), Y))|Xs], Vs, [A?|As?]) :- integer(J?), ground(Y?), 
     place_of(role(J?), Vs?, 1, PJ),
     place_of(svar(Y?), Vs?, 1, PY),
     grp_arg(PJ?, PY?, A),
+    cond_args(Xs?, Vs?, As).
+cond_args([cmp(F, Ys)|Xs], Vs, [cmp(F?, Cs?)|As?]) :- ground(F?), ground(Ys?), ground(Vs?) |
+    cond_args(Ys?, Vs?, Cs),
     cond_args(Xs?, Vs?, As).
 cond_args([X|Xs], Vs, [A?|As?]) :- otherwise, ground(X?), ground(Vs?) |
     place_of(X?, Vs?, 1, K),
@@ -5040,7 +5049,8 @@ procedure value_lines(Lines?, YesNo?, Lines).
 value_lines(Ls, no, Ls?).
 value_lines(Ls, yes, R?) :-
     line_sub(Ls?, 'MenuFieldType ::= person ; key ; agent ; text ; number.', 'MenuFieldType ::= person ; key ; agent ; text ; number ; value.', R1),
-    line_sub(R1?, 'MenuFieldType ::= person ; key ; agent ; text ; number ; set.', 'MenuFieldType ::= person ; key ; agent ; text ; number ; set ; value.', R).
+    line_sub(R1?, 'MenuFieldType ::= person ; key ; agent ; text ; number ; set.', 'MenuFieldType ::= person ; key ; agent ; text ; number ; set ; value.', R2),
+    line_sub(R2?, 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any.', 'MenuCondArg ::= at(Integer) ; grp(Integer, Integer) ; any ; cmp(Constant, List(MenuCondArg)).', R).
 procedure menu_lines(Lines?, YesNo?, Lines).
 menu_lines(Ls, no, Ls?).
 menu_lines(Ls, yes, R?) :-
@@ -5360,6 +5370,8 @@ procedure value_kind(Arg?, Constant).
 value_kind(role(_), named).
 value_kind(pvar(_), named).
 value_kind(num(_), valued).
+%% A variable over the constants, its value a constant or a compound value, shown(F, v(V)) (Word, const_only).
+value_kind(const(_), shown).
 %% A real field's value is not yet shown after the question: the word valued(S, K) is of the type Integer in every play that declares the platform's types again, and a real there needs it of the type Number in each.
 value_kind(real(_), none).
 value_kind(_, none) :- otherwise | true.
@@ -5369,6 +5381,7 @@ value_place(no, _, nofield, _, []).
 value_place(no, none, field(_), _, []).
 value_place(no, named, field(F), I, Vp?) :- ground(F?) | nonempty_field(F?, named, I?, Vp).
 value_place(no, valued, field(F), I, Vp?) :- ground(F?) | nonempty_field(F?, valued, I?, Vp).
+value_place(no, shown, field(F), I, Vp?) :- ground(F?) | nonempty_field(F?, shown, I?, Vp).
 procedure nonempty_field(String?, Constant?, Integer?, VPlaces).
 nonempty_field(F, _, _, []) :- ground(F?), F? =?= '""' | true.
 nonempty_field(F, K, I, [vp(I?, F?, K?)]) :- otherwise | true.
@@ -5377,7 +5390,13 @@ vplace_ints([], []).
 vplace_ints([vp(I, _, _)|Vs], [I?|Is?]) :- vplace_ints(Vs?, Is).
 procedure value_words(VPlaces?, Strings).
 value_words([], []).
-value_words([vp(I, F, K)|Vs], [W?|Ws?]) :- integer(I?), ground(F?), ground(K?) |
+value_words([vp(I, F, shown)|Vs], [W?|Ws?]) :- integer(I?), ground(F?) |
+    vname(I?, N),
+    name_of(N?, _, Q),
+    call_text(v, [Q?], Vq),
+    named_call(shown, [F?, Vq?], W),
+    value_words(Vs?, Ws).
+value_words([vp(I, F, K)|Vs], [W?|Ws?]) :- otherwise, integer(I?), ground(F?), ground(K?) |
     vname(I?, N),
     name_of(N?, _, Q),
     named_call(K?, [F?, Q?], W),
