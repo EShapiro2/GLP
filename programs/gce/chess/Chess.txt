@@ -6,7 +6,7 @@
 % Checked: calculus/tools/gcsas.py (commute yes; return yes; recover equivalent: Win and Time have the same effects), relations.py, toglp.py --check (Dart 3.14.1) at GLP 4b04f56: syntactically_grassroots.  GCE 2026-11-25, for Grassroots-Audit #157; again by GCE #2 for #160 (draws that end the game, claimed draws by the player to move, an agreed draw after a move each) and #161 (Start requires that neither player has started the game); gcsas.py, relations.py, toglp.py --check (Dart 3.13.7): syntactically_grassroots.
 % Schemas: Chess.glp beside this file, as calculus/tools/adopt.py prints it.
 Chess
-Chess extends Friendship.
+Chess inherits from Friendship.
 The *rules of chess* are the Laws of Chess of FIDE, the International Chess Federation. A *position* is the board with the side to move, the rights to castle and to capture en passant, the positions since the last capture or pawn move and the number of moves made, so that it shows a draw by repetition or by the fifty-move or seventy-five-move rule. The *time limit* of a game is the number of days a player has for each move.
 Alice and Bob are persons.
 1. ■ Start. Start: Alice and Bob may jointly start a game of chess with a time limit, provided they are friends and neither has started a game of that name; Alice then plays white and Bob black, from the first position. Start as black: Alice and Bob may jointly start a game of chess with a time limit, provided they are friends and neither has started a game of that name; Alice then plays black and Bob white, from the first position.
