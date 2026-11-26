@@ -166,7 +166,7 @@ play_forbid(LA?, LB?, LC?, N?) :-
     trio([approval(enrol(carol, alice, speech(utterance(g1), carol)), yes),
           wait(holds(listed(carol, speech(utterance(g1), carol)))),
           own([A1], propose(greet(A1?, carol))),
-          wait(refused(greet(alice, carol), carol, unable([], [member(speech(utterance(g1), carol), alice)])))],
+          wait(refused(greet(alice, carol), carol, unable([], [member(speech(utterance(g1), carol), alice)], [])))],
          [own([B1], propose(greet(B1?, carol))),
           wait(holds(greeting(carol))),
           own([B2], propose(idle(B2?))),

@@ -36,7 +36,7 @@
 %% (vGLP, Section 5.4, "The compilation").  Alice claims 3 of
 %% bob, claim(alice, bob, 3): bob's machine votes no, his level 2 short of 3,
 %% unable, and alice's screen shows refused(claim(alice, bob, 3), bob,
-%% unable([], [])), bob's state holding every atom the schema requires there
+%% unable([], [], ["le(num(d), num(t))"])), bob's state holding every atom the schema requires there
 %% and none it forbids, the constraint failing.  Alice claims 2, bob's machine
 %% votes yes, and it commits: alice holds claimed(bob, 2) and bob
 %% honoured(alice, 2).
@@ -60,7 +60,7 @@ play_numbers(LA?, LB?, N?) :-
     pair([approval(befriend(bob, alice), yes),
           wait(holds(friend(bob))),
           own([A1], propose(claim(A1?, bob, 3))),
-          wait(refused(claim(alice, bob, 3), bob, unable([], []))),
+          wait(refused(claim(alice, bob, 3), bob, unable([], [], ["le(num(d), num(t))"]))),
           own([A2], propose(claim(A2?, bob, 2))),
           wait(holds(claimed(bob, 2)))],
          [own([B1], propose(start(B1?))), wait(holds(started)),
