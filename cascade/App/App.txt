@@ -6,7 +6,7 @@
 % Last changed: 2026-11-16, written by the Calculus at GSA's ask and approved by Udi in its two lines, the title and the first line, with no names line, a contract with no clause of its own needing none (Udi, 2026-11-16, to GSA #6); its Interface pragma GSA's (GSA #6).
 % Schemas: App.glp beside this file, the full schemas, printed by calculus/tools/adopt.py and never written by hand; a check holds it to what the tool prints.
 App
-App unites Encounters, AppStore and Directory.
+App inherits from Encounters, AppStore and Directory.
 Logic pragmas
 App unites Encounters, AppStore and Directory.
 Interface pragmas

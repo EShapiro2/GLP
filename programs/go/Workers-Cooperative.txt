@@ -5,7 +5,7 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Workers-Cooperative.glp beside this file.
 Workers' Cooperative
-Workers' Cooperative extends Cooperative.
+Workers' Cooperative inherits from Cooperative.
 A *workers' cooperative* is a cooperative whose members work for it.
 Bob is a person, Orga a workers' cooperative.
 1. ■ Pay for work: Orga may pay Bob, a member, Dollar-denominated coins for his work.

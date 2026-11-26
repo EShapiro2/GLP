@@ -6,7 +6,7 @@
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus c475902; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GSC's, a line for each act, named by the act.  Git holds what the file said before.
 % Schemas: Groups.glp beside this file, the full schemas, GKK's and GSG's with those of messages and groups, a message a speech act with a name, a post delivered once to each member, printed by calculus/tools/adopt.py GSN from the Logic pragmas and never written by hand; adopt.py --check GSN holds it and cascade/Groups/ to what the tools print.
 Groups
-Groups extends Friendship, and strengthens it.
+Groups inherits from Friendship.
 A *message* is what a person sends.
 Alice and Bob are persons.
 1. ■ Message: Alice may send a message to her friend Bob.
@@ -31,7 +31,7 @@ After x adds y to g, which requires y is not a member of g: y is a member of the
 After x ends y's membership in g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
 After y ends y's membership in x's g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
 After x sends t to the group g of y, which requires y does not have the post t of x in g: y has the post t of x in g.
-After y delivers t of x in g to z, which requires y has not delivered the message t of x in g to z: y has delivered the message t of x in g to z and z has the message t of x in g delivered by y.
+After y delivers t of x in g to z, which requires y has not delivered the message t of x in g to z and z does not have the message t of x in g delivered by y: y has delivered the message t of x in g to z and z has the message t of x in g delivered by y.
 After y delivers t of x in g to the leader y, which requires y has not delivered the message t of x in g to y: y has delivered the message t of x in g to y and y has the message t of x in g delivered by y.
 Interface pragmas
 Groups: the groups Alice is a member of.

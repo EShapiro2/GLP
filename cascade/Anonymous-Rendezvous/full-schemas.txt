@@ -46,9 +46,9 @@ Rendezvous:3 ■ Use link: ~registered(Dave,Link,Alice), spent(Dave,Link,Alice),
 Rendezvous:3 ■ | The link is then spent.
 Rendezvous:4 ■ | Reconnection.
 Rendezvous:4 ■ Present: presented(Dave,Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), knows(Alice,Dave), rendezvous_server(Dave), ~presented(Dave,Alice,Bob) guarded by Alice.
-Rendezvous:4 ■ Match: ~presented(Dave,Alice,Bob), ~presented(Dave,Bob,Alice), address(Alice,Bob), address(Bob,Alice) <- presented(Dave,Alice,Bob), presented(Dave,Bob,Alice).
+Rendezvous:4 ■ Match: ~presented(Dave,Alice,Bob), ~presented(Dave,Bob,Alice), address(Alice,Bob), address(Bob,Alice) <- ~address(Alice,Bob), ~address(Bob,Alice), presented(Dave,Alice,Bob), presented(Dave,Bob,Alice).
 Anonymous Rendezvous:0 - | A *one-time key* is a key pair its maker uses for one meeting.
 Anonymous Rendezvous:0 - | Environment: x holds the one-time key k; x knows the public key of k.
 Anonymous Rendezvous:1 ■ | Meet.
 Anonymous Rendezvous:1 ■ Present: presented_keys(Dave,Key,Other,Alice) <- one_time_key(Alice,Key), knows_key(Alice,Other), knows(Alice,Dave), rendezvous_server(Dave), ~presented_keys(Dave,Key,Other,Alice) guarded by Alice.
-Anonymous Rendezvous:1 ■ Match: ~presented_keys(Dave,Key,Other,Alice), ~presented_keys(Dave,Other,Key,Bob), address(Alice,Bob), address(Bob,Alice) <- presented_keys(Dave,Key,Other,Alice), presented_keys(Dave,Other,Key,Bob).
+Anonymous Rendezvous:1 ■ Match: ~presented_keys(Dave,Key,Other,Alice), ~presented_keys(Dave,Other,Key,Bob), address(Alice,Bob), address(Bob,Alice) <- ~address(Alice,Bob), ~address(Bob,Alice), presented_keys(Dave,Key,Other,Alice), presented_keys(Dave,Other,Key,Bob).

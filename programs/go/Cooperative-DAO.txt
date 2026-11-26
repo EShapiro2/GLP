@@ -5,7 +5,7 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Cooperative-DAO.glp beside this file.
 Cooperative DAO
-Cooperative DAO extends Cooperative.
+Cooperative DAO inherits from Cooperative.
 A *DAO* is a cooperative whose bylaws name one more role, *steward*, held by its first officer.
 Logic pragmas
 Cooperative DAO extends Cooperative.

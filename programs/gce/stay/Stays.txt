@@ -4,7 +4,7 @@
 % Defines: place; stay, stay(x, a, d) at the guest; guest, guest(b, x, d, k) at the host, k the price; review; a night is a day of GB's calendar.
 % Schemas: STAY.glp beside this file, written by tools/contracts.py.
 Stays
-Stays extends Coins.
+Stays inherits from Coins.
 Alice and Bob are persons.
 1. ◆ List place: Alice, who can host guests at a place, may list it under a new name of hers.
 2. ■ Book: Bob, who knows Alice, may book a stay at a place of Alice's on a night later than the current date, for a price Bob pays in Alice-coins, with the consent of Alice; a place may be booked once a night.

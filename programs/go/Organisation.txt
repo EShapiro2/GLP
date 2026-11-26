@@ -5,7 +5,7 @@
 % Last changed: 2026-11-24, by GO #15: the Calculus's text at GLP 08f4b51, adopted (Organisation:1, Found by a person or by an organisation, decision 15 for Udi's retrospective approval); Interface lines of Found and Found by an organisation.
 % Schemas: Organisation.glp beside this file.
 Organisation
-Organisation renames Guardians, and extends and augments it (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Organisation inherits from Guardians (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 An *organisation* is a ward with *participants*, which include its *officers*, each with a *role*. The *bylaws*, which its founder decides, name the roles of an organisation and say who decides each of its acts and how, their own amendment included.
 Alice and Bob are persons, Orga an organisation.
 1. ■ Found: Alice, or an organisation with the consent of Alice, may create Orga (Guardians:1); Alice is then its first officer.

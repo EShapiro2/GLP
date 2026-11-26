@@ -6,7 +6,7 @@
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus 3b5fd5d; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GAI's: a line for each of its two clauses, with the buttons of Message, Post and Post own, which take no field since the item sent is one the sender holds, of Agent message and of Post forward.  The tab Items is GFP's and the other buttons are GSN's, GAI's, GnW's, GSG's and GKK's.  Git holds what the file said before.
 % Schemas: Provenance-Groups.glp beside this file, the full schemas, GKK's, GSG's, GSN's, GnW's, GFP's and GAI's with GSNP's, printed by calculus/tools/adopt.py Provenance-Groups from the Logic pragmas and never written by hand; adopt.py --check Provenance-Groups holds it and cascade/Provenance-Groups/ to what the tools print.
 Provenance Groups
-Provenance Groups unites Groups and a strengthening of AI Agents, and extends and augments the union (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
+Provenance Groups inherits from Groups and AI Agents (GSC, From Grassroots Contract to Grassroots App, https://arxiv.org/abs/2609.06231).
 1. ■ Agent message: An AI agent may send a message to a friend (Groups:1).
 2. ■ Post forward: A member of a group, not its leader, may forward an item they hold to the group, adding their signature.
 Logic pragmas
@@ -16,7 +16,7 @@ Alf is an AI agent, Alice and Bob are persons, Grupo a group, Text a message, It
 2. ■ Post forward: Bob may forward Item to the group Grupo of Alice, adding his signature to the signatures Item carries, provided Bob is a person, Bob is a member of the group Grupo of Alice, Bob is not the leader of Grupo and Bob holds the item Item.
 Logic pragmas.
 After x sends t to y: y has the message t from x and y holds the item t.
-After y delivers t as its author in g to z, which requires y has not delivered the message t of y in g to z: y has delivered the message t of y in g to z, z has the message t of y in g delivered by y and z holds the item t.
+After y delivers t as its author in g to z, which requires y has not delivered the message t of y in g to z and z does not have the message t of y in g delivered by y: y has delivered the message t of y in g to z, z has the message t of y in g delivered by y and z holds the item t.
 After x forwards t to the group g of y, adding x's signature to the signatures t carries: y has the post t signed by x of x in g.
 Interface pragmas
 Agent message: Alice [Message]

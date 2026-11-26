@@ -5,7 +5,7 @@
 % Last changed: 2026-11-25, by GO #15: Interface lines on the compound bond(Day) terms (Calculus c679a4a): the deposits for Carol without <votes of the other party>, Accept by bond for Alice without <maturity>, as pragmas.sh gives them.
 % Schemas: Cooperative.glp beside this file.
 Cooperative
-Cooperative unites Constitution and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Cooperative inherits from Constitution and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 A *cooperative* is a constitutional democratic community whose bylaws name one more role, *board member*.
 Logic pragmas
 Cooperative unites Constitution and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).

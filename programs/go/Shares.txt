@@ -5,7 +5,7 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Shares.glp beside this file.
 Shares
-Shares unites Organisation and Notes, and extends the union.
+Shares inherits from Organisation and Notes.
 A *share* of Orga is an Orga-note that gives its holder a vote in Orga and a part of its dividends.
 Orga is an organisation.
 Logic pragmas

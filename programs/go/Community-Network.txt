@@ -5,7 +5,7 @@
 % Last changed: 2026-11-25, by GO #15: Interface lines on the compound bond(Day) terms (Calculus c679a4a): the deposits for Carol without <votes of the other party>, Accept by bond for Alice without <maturity>, as pragmas.sh gives them.
 % Schemas: Community-Network.glp beside this file.
 Community Network
-Community Network extends Backed Community Bank, and augments it (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Community Network inherits from Backed Community Bank (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 A *community network* is created by a backed community, and uses its community coins. Its bylaws name the role *arbiter*. A *provider* is a member of the community whose *stake*, the community coins they hold, is at least *S*, a number of community coins, and a *customer* is a member of the community who accepts community coins. A *dispute* is over community coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
 Alice, Bob and Carol are persons, Orga a community network.
 1. ■ Set stake: Those who decide for Orga may set S.

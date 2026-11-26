@@ -5,7 +5,7 @@
 % Last changed: 2026-11-25, by GO #15: Interface lines on the compound bond(Day) terms (Calculus c679a4a): the deposits for Carol without <votes of the other party>, Accept by bond for Alice without <maturity>, as pragmas.sh gives them.
 % Schemas: Cooperative.glp beside this file.
 Cooperative
-Cooperative unites Constitution and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+Cooperative inherits from Constitution and Denominated Currencies (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
 A *cooperative* is a constitutional democratic community whose bylaws name one more role, *board member*.
 Logic pragmas
 Cooperative unites Constitution and Denominated Currencies, and extends the union (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
@@ -13,35 +13,47 @@ A *cooperative* is a constitutional democratic community whose bylaws name one m
 Interface pragmas
 Look: 🌱, sharing
 Issue: AliceOfficer [Issue for Alice] <denomination>
+  Proposer [Proposal of Alice for Issue] <amount> <type>
   Voter [Vote of Alice for Issue]
   AliceOfficer [First issue for Alice]
+  Proposer [Proposal of Alice for First issue] <amount> <denomination>
   Voter [Vote of Alice for First issue]
 Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <denomination>
   Bob: AliceOfficer asks to swap coins of the organisation Alice with you.
+  Proposer [Proposal of Alice for Swap] <other party> <amount given> <issuer given> <type given> <amount wanted> <issuer wanted> <type wanted>
   Voter [Vote of Alice for Swap]
   Alice [Swap for Bob] <officer of the other party> <issuer wanted> <amount given> <amount wanted> <votes of the other party>
   BobOfficer: Alice asks to swap coins with your organisation Bob.
+  Proposer [Proposal of Bob for Swap] <other party> <amount given> <issuer given> <type given> <amount wanted> <issuer wanted> <type wanted>
   Voter [Vote of Bob for Swap]
   AliceOfficer [Swap for Alice and Bob] <officer of the other party> <denomination>
   BobOfficer: AliceOfficer asks to swap coins of the organisation Alice with your organisation Bob.
   AliceOfficer [Deposit for Alice] <denomination>
   Carol: AliceOfficer asks to deposit coins of the organisation Alice with you.
+  Proposer [Proposal of Alice for Deposit] <amount> <issuer> <type> <escrow> <beneficiary> <condition>
   Voter [Vote of Alice for Deposit]
   Alice [Deposit for Carol] <officer of the other party> <amount> <condition>
   CarolOfficer: Alice asks to deposit coins with your organisation Carol.
+  Proposer [Proposal of Carol for Deposit] <depositor> <amount> <issuer> <type> <beneficiary> <condition>
   Voter [Vote of Carol for Deposit]
   AliceOfficer [Deposit for Alice and Carol] <officer of the other party> <denomination>
   CarolOfficer: AliceOfficer asks to deposit coins of the organisation Alice with your organisation Carol.
   AliceOfficer [Redeem for Alice] <denomination>
+  Proposer [Proposal of Alice for Redeem] <issuer> <issuer wanted>
   Voter [Vote of Alice for Redeem]
   AliceOfficer [Redeem coin against bond for Alice] <denomination>
+  Proposer [Proposal of Alice for Redeem coin against bond] <issuer> <issuer wanted> <maturity wanted>
   Voter [Vote of Alice for Redeem coin against bond]
   AliceOfficer [Redeem bond for Alice] <denomination>
+  Proposer [Proposal of Alice for Redeem bond] <issuer> <maturity> <issuer wanted>
   Voter [Vote of Alice for Redeem bond]
   AliceOfficer [Redeem bond against bond for Alice] <denomination>
+  Proposer [Proposal of Alice for Redeem bond against bond] <issuer> <maturity> <issuer wanted> <maturity wanted>
   Voter [Vote of Alice for Redeem bond against bond]
+  Proposer [Proposal of Alice for Deposit own coins] <amount> <denomination> <escrow> <beneficiary> <condition>
   AliceOfficer [Deposit own coins for Alice]
   Carol: AliceOfficer asks to deposit the organisation Alice's own coins with you.
+  Proposer [Proposal of Carol for Deposit own coins] <depositor> <amount> <denomination> <beneficiary> <condition>
   Alice [Deposit own coins for Carol] <officer of the other party> <amount> <condition>
   CarolOfficer: Alice asks to deposit her own coins with your organisation Carol.
   AliceOfficer [Deposit own coins for Alice and Carol] <officer of the other party>
@@ -58,8 +70,10 @@ Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <denomination>
   CarolOfficer: Alice asks to deposit more coins with your organisation Carol.
   AliceOfficer [Deposit more for Alice and Carol] <officer of the other party>
   CarolOfficer: AliceOfficer asks to deposit more coins of the organisation Alice with your organisation Carol.
+  Proposer [Proposal of Alice for Deposit own bonds] <amount> <denomination> <maturity> <escrow> <beneficiary> <condition>
   AliceOfficer [Deposit own bonds for Alice]
   Carol: AliceOfficer asks to deposit the organisation Alice's own bonds with you.
+  Proposer [Proposal of Carol for Deposit own bonds] <depositor> <amount> <denomination> <maturity> <beneficiary> <condition>
   Alice [Deposit own bonds for Carol] <officer of the other party> <amount> <condition>
   CarolOfficer: Alice asks to deposit her own bonds with your organisation Carol.
   AliceOfficer [Deposit own bonds for Alice and Carol] <officer of the other party>
@@ -77,36 +91,46 @@ Swap, Redeem, Escrow: AliceOfficer [Swap for Alice] <denomination>
   AliceOfficer [Deposit bond more for Alice and Carol] <officer of the other party>
   CarolOfficer: AliceOfficer asks to deposit more bonds of the organisation Alice with your organisation Carol.
 Pay issuer: AliceOfficer [Pay issuer for Alice] <denomination>
+  Proposer [Proposal of Alice for Pay issuer] <issuer> <amount> <type>
   Voter [Vote of Alice for Pay issuer]
 Pay: AliceOfficer [Pay for Alice] <denomination>
   Bob: AliceOfficer asks to pay coins of the organisation Alice to you.
+  Proposer [Proposal of Alice for Pay] <payee> <amount> <issuer> <type>
   Voter [Vote of Alice for Pay]
   Alice [Pay for Bob] <officer of the other party> <amount>
   BobOfficer: Alice asks to pay coins to your organisation Bob.
+  Proposer [Proposal of Bob for Pay] <other party> <amount> <issuer> <type>
   Voter [Vote of Bob for Pay]
   AliceOfficer [Pay for Alice and Bob] <officer of the other party> <denomination>
   BobOfficer: AliceOfficer asks to pay coins of the organisation Alice to your organisation Bob.
 Escrow: CarolOfficer [Release for Carol] <denomination>
   Bob: CarolOfficer asks to release coins held by the organisation Carol to you.
+  Proposer [Proposal of Carol for Release] <beneficiary> <amount> <issuer> <type> <depositor> <condition>
   Voter [Vote of Carol for Release]
   Carol [Release for Bob] <officer of the other party> <amount>
   BobOfficer: Carol asks to release coins to your organisation Bob.
+  Proposer [Proposal of Bob for Release] <escrow> <amount> <issuer> <type> <depositor> <condition>
   Voter [Vote of Bob for Release]
   CarolOfficer [Release for Carol and Bob] <officer of the other party> <denomination>
   BobOfficer: CarolOfficer asks to release coins held by the organisation Carol to your organisation Bob.
   CarolOfficer [Return for Carol] <denomination>
   Alice: CarolOfficer asks to return coins held by the organisation Carol to you.
+  Proposer [Proposal of Carol for Return] <depositor> <amount> <issuer> <type> <beneficiary> <condition>
   Voter [Vote of Carol for Return]
   Carol [Return for Alice] <officer of the other party> <amount>
   AliceOfficer: Carol asks to return coins to your organisation Alice.
+  Proposer [Proposal of Alice for Return] <escrow> <amount> <issuer> <type> <beneficiary> <condition>
   Voter [Vote of Alice for Return]
   CarolOfficer [Return for Carol and Alice] <officer of the other party> <denomination>
   AliceOfficer: CarolOfficer asks to return coins held by the organisation Carol to your organisation Alice.
 Issue denominated bond: AliceOfficer [Issue denominated bond for Alice]
+  Proposer [Proposal of Alice for Issue denominated bond] <amount> <denomination> <maturity>
   Voter [Vote of Alice for Issue denominated bond]
 Accept: AliceOfficer [Accept for Alice]
+  Proposer [Proposal of Alice for Accept] <limit> <denomination> <issuer>
   Voter [Vote of Alice for Accept]
   AliceOfficer [Accept by bond for Alice]
 Pay accepted coins: AliceOfficer [Pay accepted coins for Alice]
+  Proposer [Proposal of Alice for Pay accepted coins] <payee> <issuer> <denomination>
   Voter [Vote of Alice for Pay accepted coins]
   AliceOfficer [Pay own accepted coins for Alice] [Pay accepted coins to the issuer for Alice]

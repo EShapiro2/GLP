@@ -3,7 +3,7 @@
 % Paper: GM, Grassroots Matching, in preparation (EShapiro2/GM-Grassroots-Matching), which prints it in its box.
 % Last changed: 2026-11-25, GM: Book records Carol as the partner, Cancel ends it, Withdraw added (Audit #137), Partner added (Audit #137, PR 162); before, 2026-11-18, written from the paper at GM main 794a6a2; first line as Udi approved it, 2026-11-18, on the Calculus's recommendation; the Logic pragmas are the Calculus's, in calculus/contracts; no Interface pragmas yet.
 Tennis Courts
-Tennis Courts unites Booking and Partners, and extends and augments the union.
+Tennis Courts inherits from Booking and Partners.
 The activity is tennis, the place is a *club*, an organisation that has a fixed number of courts, and the time is a slot.
 A booking is of the one who books and of a *partner*, and counts among the outstanding bookings of each.
 Alice and Carol are persons, Club a club, Court a court, Slot a slot.
@@ -25,5 +25,6 @@ Alice and Carol are persons, Club an organisation, Court a court, Slot a slot.
 Logic pragmas.
 Renaming of Booking: a court for a resource.
 Vocabulary: z has s of r partnered by x = partnered(z,r,s,x).
+After x and y come to know each other: x and y know each other.
 After x withdraws from s of r in z: no longer z has s of r partnered by x.
 After x and y partner s of r in z: z has s of r partnered by y.

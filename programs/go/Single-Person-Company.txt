@@ -6,7 +6,7 @@
 % Changed 2026-11-22 by GO #14: the first line restricts, the names line and clause 1 Join, for the audit's finding 4 (Udi, 2026-11-22 16:15 UTC, in the project chat: "yes").
 % Schemas: Single-Person-Company.glp beside this file.
 Single-Person Company
-Single-Person Company weakens Corporation.
+Single-Person Company inherits from Corporation.
 A *single-person limited-liability company* is a corporation whose bylaws name one role, the *sole officer*, and admit no participant but the sole officer.
 Bob is a person, Orga a single-person limited-liability company.
 1. ■ Join: Organisation:3, only if Bob is the first officer of Orga.

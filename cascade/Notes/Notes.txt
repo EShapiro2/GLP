@@ -6,7 +6,7 @@
 % Last changed: 2026-11-16, adopted from the Calculus's publication (its repository's branch code ed9032e7): the contract and its Logic pragmas are the Calculus's, as calculus/tools/adopt.py --write prints them, and the Interface pragmas GSC's (GSC #19).
 % Schemas: GN.glp beside this file, the full schemas, printed by calculus/tools/adopt.py GN from the Logic pragmas and never written by hand; adopt.py --check GN holds it and cascade/GN/ to what the tools print.
 Notes
-Notes extends Knowledge.
+Notes inherits from Knowledge.
 A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Alice, Bob and Carol are parties.
 1. ■ Issue: Alice may issue Alice-notes.

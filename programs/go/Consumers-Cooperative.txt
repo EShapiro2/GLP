@@ -5,7 +5,7 @@
 % Last changed: 2026-11-24, by GO #15: Interface fields dropped for values another role's state fixes (a deposit, a payment, a fee), by pragmas.sh at vGLP 1ed1b8387 on the Calculus's set terms.
 % Schemas: Consumers-Cooperative.glp beside this file.
 Consumers' Cooperative
-Consumers' Cooperative unites Cooperative and an augmentation of Trading Company, and extends and augments the union.
+Consumers' Cooperative inherits from Cooperative and Trading Company.
 A *consumers' cooperative* is a cooperative that is a trading company. Its *fee* is a number of Dollars the members set, and the *cost* of a good is the coins Orga paid for it.
 Bob and Erin are persons, Orga a consumers' cooperative.
 1. ■ Fee. Set fee: The members may set the fee. Pay fee: Bob may pay Orga the fee. Join: Organisation:3, only if Bob has paid Orga the fee.

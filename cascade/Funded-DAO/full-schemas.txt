@@ -13,19 +13,19 @@ DAO:2 ■ Join: member(Bob,Delos,Alice), listed(Alice,Bob,Delos) <- steward(Alic
 DAO:3 ■ | Proposing.
 DAO:3 ■ Propose: proposed(Carol,Prop,Delos,Alice), proposal(Alice,Prop,Delos) <- member(Carol,Delos,Alice), steward(Alice,Delos), ~proposal(Alice,Prop,Delos) guarded by Carol possibly Alice=Carol.
 DAO:3 ■ Propose own: proposed(Alice,Prop,Delos,Alice), proposal(Alice,Prop,Delos) <- member(Alice,Delos,Alice), steward(Alice,Delos), ~proposal(Alice,Prop,Delos) guarded by Alice.
-DAO:3 ■ Deliver proposal: delivered(Alice,Prop,Delos,Bob), proposal(Bob,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered(Alice,Prop,Delos,Bob).
+DAO:3 ■ Deliver proposal: delivered(Alice,Prop,Delos,Bob), proposal(Bob,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered(Alice,Prop,Delos,Bob), ~proposal(Bob,Prop,Delos).
 DAO:4 ■ | Voting.
 DAO:4 ■ Vote for: voted(Carol,Prop,Delos), vote_for(Alice,Carol,Prop,Delos) <- member(Carol,Delos,Alice), proposal(Carol,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Carol,Prop,Delos) guarded by Carol possibly Alice=Carol.
 DAO:4 ■ Vote own for: voted(Alice,Prop,Delos), vote_for(Alice,Alice,Prop,Delos) <- member(Alice,Delos,Alice), proposal(Alice,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Alice,Prop,Delos) guarded by Alice.
 DAO:4 ■ Vote against: voted(Carol,Prop,Delos), vote_against(Alice,Carol,Prop,Delos) <- member(Carol,Delos,Alice), proposal(Carol,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Carol,Prop,Delos) guarded by Carol possibly Alice=Carol.
 DAO:4 ■ Vote own against: voted(Alice,Prop,Delos), vote_against(Alice,Alice,Prop,Delos) <- member(Alice,Delos,Alice), proposal(Alice,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Alice,Prop,Delos) guarded by Alice.
-DAO:4 ■ Deliver vote for: delivered_vote(Alice,Carol,Prop,Delos,Bob), vote_for(Bob,Carol,Prop,Delos) <- steward(Alice,Delos), vote_for(Alice,Carol,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_vote(Alice,Carol,Prop,Delos,Bob) possibly Alice=Carol, Bob=Carol.
-DAO:4 ■ Deliver vote against: delivered_vote(Alice,Carol,Prop,Delos,Bob), vote_against(Bob,Carol,Prop,Delos) <- steward(Alice,Delos), vote_against(Alice,Carol,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_vote(Alice,Carol,Prop,Delos,Bob) possibly Alice=Carol, Bob=Carol.
+DAO:4 ■ Deliver vote for: delivered_vote(Alice,Carol,Prop,Delos,Bob), vote_for(Bob,Carol,Prop,Delos) <- steward(Alice,Delos), vote_for(Alice,Carol,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_vote(Alice,Carol,Prop,Delos,Bob), ~vote_for(Bob,Carol,Prop,Delos) possibly Alice=Carol, Bob=Carol.
+DAO:4 ■ Deliver vote against: delivered_vote(Alice,Carol,Prop,Delos,Bob), vote_against(Bob,Carol,Prop,Delos) <- steward(Alice,Delos), vote_against(Alice,Carol,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_vote(Alice,Carol,Prop,Delos,Bob), ~vote_against(Bob,Carol,Prop,Delos) possibly Alice=Carol, Bob=Carol.
 DAO:5 ■ | Deciding.
 DAO:5 ■ Pass: decided(Alice,Prop,Delos), passed(Alice,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), vote_for(Alice,>=Votes,Prop,Delos), product(Double,Votes,2), listed(Alice,<Double,Delos), ~decided(Alice,Prop,Delos) guarded by Alice.
 DAO:5 ■ Reject: decided(Alice,Prop,Delos), rejected(Alice,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), vote_against(Alice,>=Votes,Prop,Delos), product(Double,Votes,2), listed(Alice,<Double,Delos), ~decided(Alice,Prop,Delos) guarded by Alice.
-DAO:5 ■ Deliver pass: delivered_decision(Alice,Prop,Delos,Bob), passed(Bob,Prop,Delos) <- steward(Alice,Delos), passed(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_decision(Alice,Prop,Delos,Bob).
-DAO:5 ■ Deliver reject: delivered_decision(Alice,Prop,Delos,Bob), rejected(Bob,Prop,Delos) <- steward(Alice,Delos), rejected(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_decision(Alice,Prop,Delos,Bob).
+DAO:5 ■ Deliver pass: delivered_decision(Alice,Prop,Delos,Bob), passed(Bob,Prop,Delos) <- steward(Alice,Delos), passed(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_decision(Alice,Prop,Delos,Bob), ~passed(Bob,Prop,Delos).
+DAO:5 ■ Deliver reject: delivered_decision(Alice,Prop,Delos,Bob), rejected(Bob,Prop,Delos) <- steward(Alice,Delos), rejected(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_decision(Alice,Prop,Delos,Bob), ~rejected(Bob,Prop,Delos).
 DAO:6 ■ | Majority.
 DAO:6 ■ | The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.
 Notes:0 - | A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.

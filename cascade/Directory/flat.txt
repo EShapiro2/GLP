@@ -46,7 +46,7 @@ Rendezvous:3 ■ Use link: Bob may no longer Dave has Link registered for Alice,
 Rendezvous:3 ■ | The link is then spent.
 Rendezvous:4 ■ | Reconnection.
 Rendezvous:4 ■ Present: Alice may Dave has the signature of Bob over the friendship of Alice and Bob presented, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Alice knows Dave, Dave is a rendezvous server and not Dave has the signature of Bob over the friendship of Alice and Bob presented.
-Rendezvous:4 ■ Match: No longer Dave has the signature of Bob over the friendship of Alice and Bob presented, no longer Dave has the signature of Alice over the friendship of Bob and Alice presented, Alice has the address of Bob and Bob has the address of Alice.
+Rendezvous:4 ■ Match: No longer Dave has the signature of Bob over the friendship of Alice and Bob presented, no longer Dave has the signature of Alice over the friendship of Bob and Alice presented, Alice has the address of Bob and Bob has the address of Alice, provided not Alice has the address of Bob and not Bob has the address of Alice.
 Directory:0 - | A *directory* is a service with a page every person can read.
 Directory:1 ■ Open directory: Carol may Dora is a directory, provided Carol is a guardian of Dora and not Dora is a directory.
 Directory:2 ■ | Listing.

@@ -19,5 +19,5 @@ Gossip:1 ■ Post: Alice may Alice has made the post Post, Alice holds the post 
 Gossip:2 ■ Tell: Alice may Bob holds the post Post from Alice, Bob holds the post Post and Bob has the budget Part for Post, provided Alice holds the post Post, Alice has the budget Budget for Post, Budget covers the cost of a forward leaving Rest for Alice, Alice counts Bob as a friend, Bob counts Alice as a friend and the gossip protocol forwards Post to Bob with Part of Rest for Alice.
 Matching:0 - | Posts have a *test*, whether two *match*.
 Matching:0 - | Environment: p and q match, for x.
-Matching:1 ■ Return: Alice holds the post Other from Bob and Alice holds the post Other, provided Bob holds the post Post from Alice, Bob holds the post Other, Post and Other match for Bob and not Alice holds the post Other from Bob.
+Matching:1 ■ Return: Bob has forwarded Other to Alice, Alice holds the post Other from Bob and Alice holds the post Other, provided Bob holds the post Post from Alice, Bob holds the post Other, Post and Other match for Bob, not Alice holds the post Other from Bob and not Bob has forwarded Other to Alice.
 Matching:2 ■ Meet: Alice and Carol may jointly Alice knows Carol and Carol knows Alice, provided Alice has made the post Post, Carol has made the post Other, Alice holds the post Other, Carol holds the post Post and Post and Other match for Alice.

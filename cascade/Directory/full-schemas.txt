@@ -46,7 +46,7 @@ Rendezvous:3 ■ Use link: ~registered(Dave,Link,Alice), spent(Dave,Link,Alice),
 Rendezvous:3 ■ | The link is then spent.
 Rendezvous:4 ■ | Reconnection.
 Rendezvous:4 ■ Present: presented(Dave,Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), knows(Alice,Dave), rendezvous_server(Dave), ~presented(Dave,Alice,Bob) guarded by Alice.
-Rendezvous:4 ■ Match: ~presented(Dave,Alice,Bob), ~presented(Dave,Bob,Alice), address(Alice,Bob), address(Bob,Alice) <- presented(Dave,Alice,Bob), presented(Dave,Bob,Alice).
+Rendezvous:4 ■ Match: ~presented(Dave,Alice,Bob), ~presented(Dave,Bob,Alice), address(Alice,Bob), address(Bob,Alice) <- ~address(Alice,Bob), ~address(Bob,Alice), presented(Dave,Alice,Bob), presented(Dave,Bob,Alice).
 Directory:0 - | A *directory* is a service with a page every person can read.
 Directory:1 ■ Open directory: directory(Dora) <- guardian(Carol,Dora), ~directory(Dora) guarded by Carol.
 Directory:2 ■ | Listing.

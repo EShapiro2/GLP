@@ -5,7 +5,7 @@
 % Last changed: 2026-11-16, by GO #8.
 % Schemas: Liquid-Cooperative.glp beside this file.
 Liquid Cooperative
-Liquid Cooperative extends Cooperative DAO.
+Liquid Cooperative inherits from Cooperative DAO.
 A member's *delegate* is another member whose vote counts for theirs.
 Bob and Carol are persons.
 1. ■ Delegating. Delegate: Bob, a member, may make Carol, a member he knows, his delegate, one at a time. Revoke: Bob may revoke it.
