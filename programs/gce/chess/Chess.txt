@@ -9,7 +9,7 @@ Chess
 Chess extends Friendship.
 The *rules of chess* are the Laws of Chess of FIDE, the International Chess Federation.
 Alice and Bob are persons.
-1. ■ Start: Alice and Bob may jointly start a game of chess, provided they are friends; Alice then plays white and Bob black, from the first position.
+1. ■ Start: Alice and Bob may jointly start a new game of chess, provided they are friends and neither has started a game of that name; Alice then plays white and Bob black, from the first position.
 2. ■ Move: Alice may move in a game against Bob, provided it is her turn and the move is legal by the rules of chess; the game is then at the position after the move.
 3. ■ Win: Alice may claim a game against Bob, provided Bob is to move and is checkmated; Alice has then won the game.
 4. ■ Resign: Alice may resign a game against Bob; Bob has then won the game.
@@ -29,7 +29,7 @@ Logic pragmas.
 Vocabulary: x plays g against y at b = at(x,g,y,b); x has the colour s in g = colour(x,g,s); x has started g = started(x,g); x has won g against y = won(x,g,y); x has drawn g with y = drawn(x,g,y); x has made m in g at b = made(x,g,m,b); b is the first position = first(b); v is the legality of m on b = legal(v,m,b); c is the position after m on b = after(c,m,b); s is the side to move of b = side(s,b); v is the mate of b = mate(v,b).
 Functions: b is the first position; v is the legality of m on b; c is the position after m on b; s is the side to move of b; v is the mate of b.
 x and y play g at b: x plays g against y at b and y plays g against x at b.
-After x and y start g at b, which requires x has not started g: x has started g, x and y play g at b, x has the colour 1 in g and y has the colour 2 in g.
+After x and y start g at b, which requires x has not started g and y has not started g: x has started g, y has started g, x and y play g at b, x has the colour 1 in g and y has the colour 2 in g.
 After x makes m in g against y from b to c: no longer x and y play g at b, x and y play g at c and x has made m in g at b.
 After x claims g against y at b: no longer x and y play g at b and x has won g against y.
 After x resigns g against y at b: no longer x and y play g at b and y has won g against x.
