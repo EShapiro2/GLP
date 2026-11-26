@@ -48,5 +48,7 @@ Rides: the persons Alice rides with.
 Call: Alice [Call] <ride>
 Bid: Bob [Bid]
 Award: Alice [Award] [Close]
+Arrive: Alice [Arrive]
+  Bob [Driver arrive]
 Cancel: Alice [Cancel]
 Withdraw: Alice [Withdraw]
