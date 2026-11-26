@@ -1993,8 +1993,8 @@ class ActCondition {
 /// nothing and which the field's widget is told"; programs/vglp/cva/
 /// compiler/README.md, 26).
 class DeclaredField {
-  /// `set`, the field of a set variable, its elements (vGLP #32, GLP 90b2cee71).
-  static const types = {'person', 'key', 'agent', 'text', 'number', 'set'};
+  /// `set`, the field of a set variable, its elements (vGLP #32, GLP 90b2cee71); `value`, the field of a variable over the constants in a contract that names a compound value, which takes a ground compound term the GLP reader reads from its text, as bond(10), or else the constant of the text (vGLP #35, vglp35-functions ec7cdc31b; compiler README 45).
+  static const types = {'person', 'key', 'agent', 'text', 'number', 'set', 'value'};
 
   /// Whether [t] is a field's type: one of [types], or a text's type, a
   /// constant naming it.

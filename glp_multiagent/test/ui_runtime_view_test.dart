@@ -126,6 +126,11 @@ final _notesW = _requestWidget(
     "form(issue, [field('Peer', peer), field('Constant', text), field('List', input_list(text))]), "
         "form(pay, [field('Peer', peer), field('Peer', peer), field('Peer', peer), field('Constant', text), field('List', input_list(text))])");
 
+/// Issue of a contract that names a compound value, as GB's: its type a value field, which takes bond(10) as the term and Dollar as a constant (vGLP #35, vglp35-functions ec7cdc31b; Currencies #24, 2026-11-26 01:00 UTC).
+final _valuesW = _requestWidget(
+    'button("Issue", [act(issue, 1, [1], [req(identity, [])], [], [field(2, "type", value), field(3, "notes", set)], [], [])])',
+    "form(issue, [field('Peer', peer), field('CValue', text), field('List', input_list(text))])");
+
 /// DAO's Pass and Reject as vGLP's compiler prints them (GLP vglp33-calc 4c1663ec, cascade/DAO/platform.vglp): the steward gives the votes, a field, and the form computes Double, the place 5, as Votes * 2, `calc(5, mul(at(4), lit(2)))` (Audit #151; programs/vglp/cva/compiler/README.md, 43).
 final _daoW = _requestWidget(
     'button("Pass", [act(pass, 1, [1], [req(identity, []), req(steward, [at(3)]), req(proposal, [at(2), at(3)]), forb(decided, [at(2), at(3)])], [3, 2], [field(4, "votes", number)], [calc(5, mul(at(4), lit(2)), num)], [])]), '
@@ -476,6 +481,21 @@ void main() {
       'input(1, [1, 3], b)',
       'input(1, [1, 3], [end])'
     ]);
+  });
+
+  testWidgets('a value field: bond(10) typed is the term bond(10), Dollar '
+      'typed is the constant (Currencies #24)', (tester) async {
+    for (final (typed, named) in [('bond(10)', 'bond(10)'), ('Dollar', "'Dollar'")]) {
+      final s = _Screen(tester);
+      await s.draw('input([])',
+          w: _valuesW,
+          output: '[${_view("identity", "bob", "tab('Notes', note)")}]');
+      await tester.enterText(find.byKey(socialKey(1, 'field:issue::2')), typed);
+      await tester.enterText(find.byKey(socialKey(1, 'field:issue::3')), 'a');
+      await tester.pumpAndSettle();
+      await _tap(tester, 'send:issue:');
+      expect(s.grants.first, 'input(1, [], propose(issue(alice, $named, [a])))');
+    }
   });
 
   testWidgets('a number the constraint determines: DAO\'s Pass names the '

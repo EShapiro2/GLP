@@ -1751,6 +1751,10 @@ class _SocialTabState extends State<SocialTab> {
           for (final e in t.split(',')) if (e.trim().isNotEmpty) e.trim()
         };
         return es.isEmpty ? null : GList([for (final e in es) GString(e)]);
+      case 'value':
+        // A ground compound term the GLP reader reads from the text is that value, as bond(10); any other text is the constant of that name, as a text field gives it (vGLP #35, vglp35-functions ec7cdc31b; compiler README 45; vGLP 5.4, "A field is typed").
+        final v = tryParseTerm(t);
+        if (v is GStruct || (v is GList && v.items.isNotEmpty)) return v;
     }
     final key = o.keyOf(a.schema);
     final kinds = key == null ? const <String>[] : o.kinds[key] ?? const [];
