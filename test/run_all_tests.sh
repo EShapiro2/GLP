@@ -150,11 +150,6 @@ KNOWN_RED_CHECKS=(
     "APPS gff feeds: carol's screen"
     "APPS gff feeds: dave's screen"
     "APPS gff feeds: carol holds the third item, received from bob"
-# Bonds' Redeem bond as vGLP's compiler prints it since cmp(F, As) (76e7863de):
-# the note's second place is cmp(bond, [at(3)]) and the determined places
-# [2, 3, 4], where the check expects any and [2, 4] (Code #41, 2026-11-26, to
-# Currencies #24): Currencies' check to bring to the print; it comes off then.
-    "APPS gb: Redeem bond's and Redeem bond against bond's fields name the variables the atoms the proposer's role requires do not bind, the current date, today(Bob,Today), required at the issuer's role and not at the bearer's, the bond a note of the issuer wanted held by the proposer (Bonds:1; vGLP, Section 5.4)"
 # Organisation's Found by an organisation has three guarding roles, so it is
 # no acquaintance schema, and its guards must know each other before it is
 # proposed; nobody can know the organisation it founds, which has no identity
