@@ -706,7 +706,12 @@ with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
 # A contract the Calculus has and its owner has not written, SGSG today: listed
 # from the Calculus with its proposed text and nothing in force, until its
 # owner adopts it (calculus/MIGRATION.md, Website, item 2).
-calc_only = [n for n in sorted(set(calc_state) - set(cat) if not VILLAGERS else []) if 'proposed' in (calculus_of(n) or {})]
+# A contract of the Calculus with no owner ('none' in calculus/contracts/STATE.txt),
+# the Villagers repository's thirteen today, is not on the main globe: the
+# Villagers contracts stay on the Villagers site (Udi, 2026-11-26 16:48 UTC:
+# "villagers-specific contracts stay there and not imported back to the main
+# globe").
+calc_only = [n for n in sorted(set(calc_state) - set(cat) if not VILLAGERS else []) if calc_state[n]['owner'] != 'none' and 'proposed' in (calculus_of(n) or {})]
 for n in calc_only:
     v = calculus_of(n)
     if not v or 'proposed' not in v:
