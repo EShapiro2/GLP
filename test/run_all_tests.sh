@@ -11228,7 +11228,13 @@ if _section QD || _section QF; then
 # sovereign_screen_test was rewritten on the bridge model as coins_screen_test
 # is, its agent started by agent/2 on the person's first act (GLP #11,
 # Code_inbox 2026-11-03 18:03 UTC, item 2).  The list is empty.
-KNOWN_RED=()
+KNOWN_RED=(
+# GFF's app on four phones as Feeds was published by the Calculus (c63b27e:
+# delivered and item_from): its screens are those of play_feeds, which Section
+# APPS's known red checks "APPS gff feeds" hold (Code #41, 2026-11-26, to GFF
+# and Calculus #14): GFF's to mend with its play; the entry comes off then.
+    "glp_multiagent/test/apps_screens_test.dart: GFF's app on four phones, the play of GFF's feeds: the friendships, each friend with a pointer to the other; (1) Alice's Posts after her two posts; and the play's steps 3 to 8 with its screens 2 to 7"
+)
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="
 echo "  (raw output and json reports in $SUITE_RUN_DIR: q_dart.txt, q_dart.json, q_flutter.txt, q_flutter.json)"

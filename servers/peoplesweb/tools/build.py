@@ -706,14 +706,25 @@ with open(os.path.join(WWW, 'relations.json'), 'w', encoding='utf-8') as f:
 # A contract the Calculus has and its owner has not written, SGSG today: listed
 # from the Calculus with its proposed text and nothing in force, until its
 # owner adopts it (calculus/MIGRATION.md, Website, item 2).
-for n in sorted(set(calc_state) - set(cat) if not VILLAGERS else []):
+calc_only = [n for n in sorted(set(calc_state) - set(cat) if not VILLAGERS else []) if 'proposed' in (calculus_of(n) or {})]
+for n in calc_only:
     v = calculus_of(n)
     if not v or 'proposed' not in v:
         continue
     lines = v['proposed'].split('\n')
     title = lines[0].split(': ', 1)[1] if ': ' in lines[0] else n
-    m = next((re.match(re.escape(n) + r' extends ([^.]+)\.', l) for l in lines if l.startswith(n + ' extends ')), None)
-    ext = [x for x in re.findall(r'[A-Z][A-Za-z]*(?:-[A-Z][A-Za-z]*)*', m.group(1)) if x in cat] if m else []
+    # The first line names what it builds on: 'X extends Y.' before
+    # 2026-11-26, 'X inherits from Y, Z and W.' since the Calculus's first
+    # lines (c63b27e), X its title; each name, as the title lines spell it
+    # ('Lost and Found'), found longest first, a contract of the Calculus
+    # alone that it builds on being one of them too.
+    m = next((re.match(re.escape(t) + r' (?:extends|inherits from) ([^.]+)\.', l) for l in lines for t in (title, n, lines[0].strip()) if l.startswith((t + ' extends ', t + ' inherits from '))), None)
+    known = {**{k: v for k, v in NAMEID.items() if v in cat}, **{x.replace('-', ' '): x for x in calc_only}}
+    ext, rest = [], m.group(1) if m else ''
+    for k in sorted(known, key=len, reverse=True):
+        if re.search(r'\b' + re.escape(k) + r'\b', rest):
+            rest = re.sub(r'\b' + re.escape(k) + r'\b', ' ', rest)
+            ext.append(known[k])
     _a = about.get(n, ['📄', 'other', ''])
     contracts.append({'id': n, 'title': title, 'label': f'{n}: {title}', 'preamble': '', 'clauses': [], 'pragmas': [],
                       'extends': ext, 'rels': {x: 'extends' for x in ext}, 'relation': 'extends', 'owner': '' if v['owner'] == 'none' else v['owner'],
