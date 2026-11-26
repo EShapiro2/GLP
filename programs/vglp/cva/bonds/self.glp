@@ -60,7 +60,7 @@
 %% Section 5.4, "The compilation"), so bob's machine proposes the redeem part,
 %% and alice is not asked: her machine votes by its precondition, le(d, t) at
 %% her date.  On the bond maturing at 1000000 it votes no, and bob's screen
-%% shows refused(redeem_bc(bob, alice, 1000000, 3, alice, 1), alice, unable([], [])),
+%% shows refused(redeem_bc(bob, alice, 1000000, 3, alice, 1), alice, unable([], [], ["le(num(d), num(t))"])),
 %% the atoms it lacks and has none, the constraint failing; on the bond
 %% maturing at 10, her date past it, it votes yes, and the redemption commits,
 %% bob holding coin(alice, 1) and alice the bond.  The run does not suspend,
@@ -102,7 +102,7 @@ play_bonds(LA?, LB?, N?) :-
           own([B5], propose(swap_cb(B5?, alice, bob, 2, alice, 10, 1))),
           wait(holds(bond(alice, 10, 1))),
           own([B6], propose(redeem_bc(B6?, alice, 1000000, 3, alice, 1))),
-          wait(refused(redeem_bc(bob, alice, 1000000, 3, alice, 1), alice, unable([], []))),
+          wait(refused(redeem_bc(bob, alice, 1000000, 3, alice, 1), alice, unable([], [], ["le(num(d), num(t))"]))),
           own([B7], propose(redeem_bc(B7?, alice, 10, 1, alice, 1))),
           wait(holds(coin(alice, 1)))],
          LA, LB, N).
