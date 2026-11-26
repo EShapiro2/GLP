@@ -25,7 +25,7 @@ After y claims n f-denominated w-coins from z as the dividend v, which requires 
 Environment: z has issued shares; the shareholders of z decided the issue of shares by a majority of the shares they hold; the shareholders of z decided the officers by a majority of the shares they hold.
 Interface pragmas
 Look: 📈, money
-Shareholdings: the shares Alice holds.
+Shareholdings: the notes Alice holds.
 Officers: Decider [Appoint] <person> <role>
   Bob: Decider asks you to be an officer of the organisation Orga.
   Codecider: Decider asks that Bob be an officer of your organisation Orga.
