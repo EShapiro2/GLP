@@ -2099,7 +2099,7 @@ void appsScreens(Screens screens) {
     await run.shoot(alice, 'gff-app-1.png');
     expect(bob.atoms,
         containsAll(['item($first, alice)', 'item($second, alice)']));
-    expect(bob.atoms, contains('received($first, alice, alice)'));
+    expect(bob.atoms, contains('item_from($first, alice, alice)'));
     final items12 = ['item($first, alice)', 'item($second, alice)'];
     expect(carol.atoms, isNot(contains('item($first, alice)')));
     expect(dave.atoms, isNot(contains('item($first, alice)')));
@@ -2118,7 +2118,7 @@ void appsScreens(Screens screens) {
     await run.tap(carol, run.control(carol, 'send:labeled_point:bob'));
     expect(carol.atoms, contains('pointer(bob, alice)'));
     expect(carol.atoms, containsAll(items12));
-    expect(carol.atoms, contains('received($first, alice, bob)'));
+    expect(carol.atoms, contains('item_from($first, alice, bob)'));
     // (2) Carol's Pointing: Bob with the labels bob and alice.
     await run.list(carol, 'pointer');
     await run.top(carol);
@@ -2139,7 +2139,7 @@ void appsScreens(Screens screens) {
     await run.tap(dave, run.control(dave, 'send:labeled_point:carol'));
     expect(dave.atoms, contains('pointer(carol, alice)'));
     expect(dave.atoms, containsAll(items12));
-    expect(dave.atoms, contains('received($first, alice, carol)'));
+    expect(dave.atoms, contains('item_from($first, alice, carol)'));
 
     // Step 5: Carol introduces Dave to Bob (GKK:3, introduce(bob, carol, dave)): Introduce beside Bob in her Contacts, Dave picked; Bob, whose consent it takes, is asked, and comes to know Dave.  Then Bob to Dave, introduce(dave, carol, bob): Dave is asked, and comes to know Bob.
     await run.list(carol, 'knows');
