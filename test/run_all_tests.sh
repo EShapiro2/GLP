@@ -11588,6 +11588,39 @@ gce_ends=$(grep '~warning_on' "$GLP_DIR/cascade/Warnings/full-schemas.txt" | sed
 check "GCE: Warnings, Withdraw ends a warning" "Warnings:3 Withdraw$" "$gce_ends"
 check "GCE: Warnings, Annul ends a warning" "Warnings:3 Annul$" "$gce_ends"
 check "GCE: Warnings, no other act ends a warning" "^2$" "$(echo "$gce_ends" | grep -c .)"
+# The drawing programs of the UI layer (programs/gce/ui/pictures; The Grassroots UI Layer, "The UI Style"):
+# a UI style names one to draw a value as a picture of cells, or to give a value by taps on it.  tens draws an
+# amount as ten coins and gives the worth of the coin tapped; chessboard draws a position of Chess, rank 8 at
+# the top, and gives a move from two taps, the square from and the square to.
+gce_tens=$("$REPL_RUN" <<HEREDOC
+load ../programs/gce/ui/pictures/tens.glp
+draw(40, Ptens).
+pick([30], 0, Vtens).
+pick([], 0, Vnone).
+:quit
+HEREDOC
+2>&1)
+check_not "GCE: tens.glp type-checks" "Type checking failed" "$gce_tens"
+check "GCE: tens draws 40 as four coins lit" "Ptens = grid(10, \[cell('10', on, 10), cell('20', on, 20), cell('30', on, 30), cell('40', on, 40), cell('50', off, 50)" "$gce_tens"
+check "GCE: tens gives the worth of the coin tapped" "Vtens = value(30)$" "$gce_tens"
+check "GCE: tens waits for a tap" "Vnone = more$" "$gce_tens"
+gce_board=$("$REPL_RUN" <<HEREDOC
+load ../programs/gce/ui/pictures/chessboard.glp
+draw('pos([14, 12, 13, 15, 16, 13, 12, 14, 11, 11, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 21, 21, 21, 21, 21, 21, 21, 24, 22, 23, 25, 26, 23, 22, 24], 1, cas(1, 1, 1, 1), -1, 0, [], 0)', Pb).
+pick([12], 'pos([14, 12, 13, 15, 16, 13, 12, 14, 11, 11, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 21, 21, 21, 21, 21, 21, 21, 24, 22, 23, 25, 26, 23, 22, 24], 1, cas(1, 1, 1, 1), -1, 0, [], 0)', Vone).
+pick([12, 12], 'pos([14, 12, 13, 15, 16, 13, 12, 14, 11, 11, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 21, 21, 21, 21, 21, 21, 21, 24, 22, 23, 25, 26, 23, 22, 24], 1, cas(1, 1, 1, 1), -1, 0, [], 0)', Vsame).
+pick([12, 28], 'pos([14, 12, 13, 15, 16, 13, 12, 14, 11, 11, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 21, 21, 21, 21, 21, 21, 21, 24, 22, 23, 25, 26, 23, 22, 24], 1, cas(1, 1, 1, 1), -1, 0, [], 0)', Ve4).
+pick([48, 56], 'pos([0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 0, 0, 0], 1, cas(0, 0, 0, 0), -1, 0, [], 0)', Vpromo).
+:quit
+HEREDOC
+2>&1)
+check_not "GCE: chessboard.glp type-checks" "Type checking failed" "$gce_board"
+check "GCE: chessboard draws a8 first, a black rook on a light square" "Pb = grid(8, \[cell('♜', light, 56), cell('♞', dark, 57)" "$gce_board"
+check "GCE: chessboard waits for the second tap" "Vone = more$" "$gce_board"
+check "GCE: chessboard gives no move for one square tapped twice" "Vsame = none$" "$gce_board"
+check "GCE: chessboard gives e2-e4 from e2 and e4" "Ve4 = value('mv(12, 28, 0)')$" "$gce_board"
+check "GCE: chessboard promotes a pawn reaching the last rank to a queen" "Vpromo = value('mv(48, 56, 5)')$" "$gce_board"
+check "GCE: the move chessboard gives is legal by Chess's function legal" "Xe4 = 1$" "$gce_out"
 echo ""
 fi  # Section GCE
 
