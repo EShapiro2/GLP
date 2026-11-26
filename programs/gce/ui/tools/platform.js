@@ -1,5 +1,5 @@
 /* Reading a canonical platform (platform.vglp, as vGLP's compiler prints it) for what the UI compiler needs:
- * for each act, the names of the places of its request in order, its arity, and the place of its proposer at
+ * for each act, the names of the places of its request in order, their types, its arity, and the place of its proposer at
  * each guarding role the platform proposes it at.
  *
  * The places of an act's request are the roles of its schema, but for a listed role, then its variables, as many
@@ -37,8 +37,8 @@ function read(text) {
   const out = {acts: {}};
   /* the arity of each request, from the request type */
   const prop = /^Proposal ::=([\s\S]*?)\.\s*$/m.exec(text);
-  const arity = {};
-  if (prop) for (const alt of prop[1].split(/\n;\n|\s;\s/)) { const m = /([a-z]\w*)(?:\((.*)\))?/s.exec(alt.trim()); if (m) arity[m[1]] = m[2] ? m[2].split(/,(?![^()]*\))/).length : 0; }
+  const arity = {}, types = {};
+  if (prop) for (const alt of prop[1].split(/\n;\n|\s;\s/)) { const m = /([a-z]\w*)(?:\((.*)\))?/s.exec(alt.trim()); if (m) { types[m[1]] = m[2] ? m[2].split(/,(?![^()]*\))/).map(x => x.trim()) : []; arity[m[1]] = types[m[1]].length; } }
   /* the schemas: their roles, which of them are listed, and their variables */
   const ci = text.search(/^contract\("/m);
   const names = {};
@@ -50,9 +50,14 @@ function read(text) {
       if (/^[a-z]?schema$/.test(t.f || '') && t.args.length >= 4 && t.args[1].list && t.args[1].list.length && t.args[2].list) {
         const roles = t.args[1].list, vars = t.args[2].list || [], specs = t.args[t.args.length - 1].list || [];
         const listed = new Set(specs.map((s, k) => s.f === 'crs' && s.args[0].f === 'listed' ? k : -1).filter(k => k >= 0));
-        const ns = [];
-        roles.forEach((r, k) => { if (r.atom !== undefined && !listed.has(k)) ns.push(r.atom); });
-        for (const v of vars) { const n = nameOf(v); if (n) ns.push(n); }
+        const ns = [], vs = vars.map(nameOf).filter(n => n);
+        /* a role is a place but for a listed one, and but for one the schema also names among its variables, as
+           one('Erin', ['Alice', 'Carol']), a role possibly one of the others, whose place is the variable's */
+        roles.forEach((r, k) => {
+          const n = r.atom !== undefined ? r.atom : r.f === 'one' && r.args.length && r.args[0].atom !== undefined ? r.args[0].atom : null;
+          if (n && !listed.has(k) && !vs.includes(n)) ns.push(n);
+        });
+        ns.push(...vs);
         if (!names[t.args[0].atom]) names[t.args[0].atom] = ns;
         return;
       }
@@ -74,7 +79,7 @@ function read(text) {
   }
   for (const s of Object.keys(arity)) {
     const n = arity[s], ns = (names[s] || []).slice(0, n);
-    out.acts[s] = {arity: n, names: ns, proposers: prop2[s] || []};
+    out.acts[s] = {arity: n, names: ns, types: types[s], proposers: prop2[s] || []};
   }
   return out;
 }
