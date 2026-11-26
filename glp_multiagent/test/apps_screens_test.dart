@@ -1363,11 +1363,11 @@ void appsScreens(Screens screens) {
   }, timeout: Timeout.none);
 
   testWidgets(
-      'GB\'s app on three phones: Alice mints bonds maturing at day 10; Bob '
+      'GB\'s app on three phones: Alice issues bonds maturing at day 10; Bob '
       'asked to lend, two Alice-coins for three Bob-bonds maturing at day 5; '
       'Alice redeems a matured Bob-bond against an Alice-coin Bob holds; and '
       'Carol, the escrow agent, asked to accept Alice\'s deposit', (tester) async {
-    // GB's app (programs/apps/gb), compiled down the cascade from GB.glp (programs/currencies/bonds/GB.glp) and its pragmas, GB.txt, the tasks of Currencies (Code_inbox.md, 2026-10-20 19:57 and 20:27 UTC, 2026-10-23 22:31 UTC, point 4): each establishes their identity (GKK:1) and gets the first day as their date, from the calendar (GB:2, first_date); Alice comes to know Bob and Carol, Acquaint (GKK:2); (a) Alice mints bonds maturing at day 10 (GB:1); Alice asks Bob for a loan, her coins for his bonds of larger face value maturing later, and (b) Bob is asked and answers yes (GB:3); Bob's date advances to day 5, the calendar giving the day (GB:2, advance); (c) Alice redeems a matured Bob-bond against an Alice-coin Bob holds (GB:4); and (d) Carol, the escrow agent, is asked to accept Alice's deposit of two Alice-coins, and answers yes (GB:5).
+    // GB's app (programs/apps/gb), compiled down the cascade from Bonds.glp (programs/currencies/bonds/Bonds.glp) and its pragmas, Bonds.txt, the steps of the app's scripted persons (programs/apps/gb/person.glp): each establishes their identity (GKK:1) on day 1; Alice comes to know Bob and Carol, Acquaint (GKK:2); Alice issues five Alice-coins and (a) three Alice-bonds maturing at day 10, a bond a note of the type bond(10) (Notes, Issue); Bob issues four Bob-bonds maturing at day 5; Alice asks Bob for a loan, two Alice-coins for three Bob-bonds, and (b) Bob is asked and answers yes (Notes, Swap); the day advances to day 5; (c) Alice redeems a matured Bob-bond against an Alice-coin Bob holds (Bonds, Redeem bond); and (d) Carol, the escrow agent, is asked to accept Alice's deposit of two Alice-coins for Bob, and answers yes (Notes, Escrow).  Each note is note(Issuer, Type, Id), Id the new name the form makes for it, read off the view.
     final run = await _Run.start(tester, screens, 'gb',
         chain: const ['alice', 'bob', 'carol'],
         pairs: const [('alice', 'bob'), ('alice', 'carol')],
@@ -1376,107 +1376,107 @@ void appsScreens(Screens screens) {
     final bob = run.bob;
     final carol = run.person('carol');
 
-    // Three tabs, the lists of GKK's and GB's pragmas: Contacts, Coins and Bonds, "Coins: the coins Alice holds." and "Bonds: the bonds Alice holds."
+    // Two tabs, the lists of the pragmas: Contacts and Notes.
     expect(run.listNamed(alice, 'knows', 'Contacts'), findsOneWidget);
-    expect(run.listNamed(alice, 'coin', 'Coins'), findsOneWidget);
-    expect(run.listNamed(alice, 'bond', 'Bonds'), findsOneWidget);
+    expect(run.listNamed(alice, 'note', 'Notes'), findsOneWidget);
 
     for (final p in [alice, bob, carol]) {
       await run.join(p);
-      // The date is not in the view (programs/vglp/cva/compiler/README.md, 10: "atom_of does not show it"); with it Issue bond, which requires it, is drawn on the first tab.
-      expect(run.control(p, 'send:issue_bond:'), findsOneWidget,
-          reason: '${p.name}: no Issue bond, which requires the date');
     }
     await run.meetByKey(alice, bob);
     await run.meetByKey(alice, carol);
 
-    // Alice mints five Alice-coins (GC:1, GB extending GC): on her Coins tab, the tab of GB, Mint, GB's "[Mint] <amount>".
+    // Alice issues five Alice-coins: Issue's fields type, coin, and amount.
     await run.list(alice, 'knows');
-    await run.type(alice, run.control(alice, 'field:issue::2'), '5');
+    await run.type(alice, run.control(alice, 'field:issue::2'), 'coin');
+    await run.type(alice, run.control(alice, 'field:issue::4'), '5');
     await run.tap(alice, run.control(alice, 'send:issue:'));
-    expect(alice.atoms.where((x) => x == 'coin(alice)'), hasLength(5));
+    expect(_notes(alice, 'alice'), hasLength(5));
 
-    // (a) Alice mints three Alice-bonds maturing at day 10 (GB:1), later than her date, day 1: Mint bond, GB's "[Mint bond] <maturity> <amount>", which proposes mint_bond(alice, 10, 3).
-    await run.type(alice, run.control(alice, 'field:issue_bond::2'), '10');
-    await run.type(alice, run.control(alice, 'field:issue_bond::3'), '3');
+    // (a) Alice issues three Alice-bonds maturing at day 10: the type bond(10), typed in Issue's field type, a value field, which takes the term (vGLP, README 45).
+    await run.type(alice, run.control(alice, 'field:issue::2'), 'bond(10)');
+    await run.type(alice, run.control(alice, 'field:issue::4'), '3');
     await run.top(alice);
     run.plain(alice);
     await run.shoot(alice, 'gb-a-alice-mint-bond.png');
-    await run.tap(alice, run.control(alice, 'send:issue_bond:'));
-    expect(alice.atoms.where((x) => x == 'bond(alice, 10)'), hasLength(3));
+    await run.tap(alice, run.control(alice, 'send:issue:'));
+    expect(_notes(alice, 'alice', 'bond(10)'), hasLength(3));
 
-    // Bob mints four Bob-bonds maturing at day 5.
+    // Bob issues four Bob-bonds maturing at day 5.
     await run.list(bob, 'knows');
-    await run.type(bob, run.control(bob, 'field:issue_bond::2'), '5');
-    await run.type(bob, run.control(bob, 'field:issue_bond::3'), '4');
-    await run.tap(bob, run.control(bob, 'send:issue_bond:'));
-    expect(bob.atoms.where((x) => x == 'bond(bob, 5)'), hasLength(4));
+    await run.type(bob, run.control(bob, 'field:issue::2'), 'bond(5)');
+    await run.type(bob, run.control(bob, 'field:issue::4'), '4');
+    await run.tap(bob, run.control(bob, 'send:issue:'));
+    expect(_notes(bob, 'bob', 'bond(5)'), hasLength(4));
 
-    // Alice asks Bob for a loan (GB:3): Swap, GB's "[Swap]", one button for the four schemas swap to swap_bb, beside Bob in her Contacts, its fields GB's "<issuer given> <maturity given> <amount given> <issuer wanted> <maturity wanted> <amount wanted>": alice, none, 2, bob, 5, 3, the maturity given left empty for a coin; which proposes swap_cb(alice, bob, alice, 2, bob, 5, 3).
+    // Alice asks Bob for a loan (Notes, Swap): Swap beside Bob in her Contacts, the way chosen by an Alice-coin she gives, and the fields amount given, issuer wanted, type wanted and amount wanted: 2, bob, bond(5), 3.
+    final aliceCoins = _notes(alice, 'alice');
     await run.list(alice, 'knows');
-    await run.tap(alice, run.control(alice, 'act:swap_coin_for_bond:bob'));
-    // A picker of the coins she holds, by their issuer, and the fields of the act.
-    await run.tap(alice, run.control(alice, 'pick:swap_coin_for_bond:bob:alice'));
-    for (final (i, v) in [(4, '2'), (5, 'bob'), (6, '5'), (7, '3')]) {
-      await run.type(
-          alice, run.control(alice, 'field:swap_coin_for_bond:bob:$i'), v);
+    await run.tap(alice, run.control(alice, 'act:swap:bob'));
+    await run.tap(alice,
+        run.control(alice, 'pick:swap:bob:alice,coin,${_noteId(aliceCoins.first)}'));
+    for (final (i, v) in [(6, '2'), (7, 'bob'), (8, 'bond(5)'), (9, '3')]) {
+      await run.type(alice, run.control(alice, 'field:swap:bob:$i'), v);
     }
-    await run.tap(alice, run.control(alice, 'send:swap_coin_for_bond:bob'));
+    await run.tap(alice, run.control(alice, 'send:swap:bob'));
 
-    // (b) Bob is asked, GB's question "Alice asks to swap coins or bonds with you.", with yes and no.
+    // (b) Bob is asked, "Alice asks to swap coins or bonds with you.", with yes and no.
     final a = bob.approval;
+    final ids = [for (final n in aliceCoins.take(2)) _noteId(n)].join(', ');
     expect(formatTerm(a.view),
-        contains(', swap_coin_for_bond(alice, bob, alice, 2, bob, 5, 3), none), '));
+        contains(', swap(alice, bob, alice, coin, [$ids], 2, bob, bond(5), 3), none), '));
     await run.list(bob, 'knows');
     await run.top(bob);
     expect(run.textsOf(bob, a), [
       'Alice asks to swap coins or bonds with you.',
       'amount given: 2',
       'issuer wanted: Bob',
-      'maturity wanted: 5',
       'amount wanted: 3',
       'Contacts: Bob',
-      'Coins: Alice  2',
+      for (final n in aliceCoins.take(2)) 'Notes: ${_noteText(n)}',
       'yes',
       'no'
     ]);
-    run.plain(bob);
+    // bond(5) is the value Bob typed in Issue's field type before, offered again beside it.
+    run.plain(bob, allow: const {'bond('});
     await run.shoot(bob, 'gb-b-bob-asked-loan.png');
     await run.answer(bob, 'yes');
     expect(bob.questions('approval'), isEmpty);
-    expect(alice.atoms.where((x) => x == 'bond(bob, 5)'), hasLength(3));
-    expect(bob.atoms.where((x) => x == 'coin(alice)'), hasLength(2));
+    expect(_notes(alice, 'bob', 'bond(5)'), hasLength(3));
+    expect(_notes(bob, 'alice'), hasLength(2));
 
-    // Bob's date advances to day 5, the maturity of his bonds: the calendar gives the day, and his machine takes advance once a day until his date is the day (GB:2).
+    // The day advances to day 5, the maturity of Bob's bonds.
     await run.day(5);
 
-    // (c) Alice redeems a matured Bob-bond against an Alice-coin Bob holds (GB:4): on her Bonds tab, Redeem, GB's "[Redeem] <maturity given> <issuer wanted> <maturity wanted>", beside her Bob-bonds, maturity given 5 and issuer wanted alice, the maturity wanted left empty for a coin; which proposes redeem_bc(alice, bob, 5, alice); Bob is not asked.
-    await run.list(alice, 'bond');
-    const bobBond = 'bond(bob, 5)';
+    // (c) Alice redeems a matured Bob-bond against an Alice-coin Bob holds (Bonds, Redeem bond): Redeem bond beside the Bob-bond on her Notes tab, its field issuer wanted, alice; Bob is not asked.
+    await run.list(alice, 'note');
+    final bobBond = _notes(alice, 'bob', 'bond(5)').first;
     await run.tap(alice, run.control(alice, 'act:redeem_bond:$bobBond'));
     await run.type(
-        alice, run.control(alice, 'field:redeem_bond:$bobBond:4'), 'alice');
+        alice, run.control(alice, 'field:redeem_bond:$bobBond:5'), 'alice');
     run.plain(alice);
     await run.shoot(alice, 'gb-c-alice-redeem.png');
     await run.tap(alice, run.control(alice, 'send:redeem_bond:$bobBond'));
     expect(bob.questions('approval'), isEmpty);
-    expect(alice.atoms.where((x) => x == 'bond(bob, 5)'), hasLength(2));
-    expect(alice.atoms.where((x) => x == 'coin(alice)'), hasLength(4));
+    expect(_notes(alice, 'bob', 'bond(5)'), hasLength(2));
+    expect(_notes(alice, 'alice'), hasLength(4));
 
-    // Alice deposits two Alice-coins with Carol (GB:5): Deposit, GB's "[Deposit] <issuer> <maturity> <amount>", beside Carol in her Contacts, alice, none, 2; which proposes deposit_c(alice, carol, alice, 2).
+    // Alice deposits two Alice-coins with Carol for Bob (Notes, Escrow, Deposit): Deposit beside Carol in her Contacts, the way chosen by an Alice-coin she gives, Bob picked, and the fields amount, 2, and condition, day 10.
     await run.list(alice, 'knows');
     await run.tap(alice, run.control(alice, 'act:deposit:carol'));
-    await run.tap(alice, run.control(alice, 'pick:deposit:carol:bob,alice'));
-    await run.type(alice, run.control(alice, 'field:deposit:carol:4'), '2');
+    await run.tap(alice,
+        run.control(alice, 'pick:deposit:carol:bob,alice,coin,${_noteId(_notes(alice, 'alice').first)}'));
+    final deposited = _notes(alice, 'alice').take(2).toList();
+    await run.type(alice, run.control(alice, 'field:deposit:carol:6'), '2');
     await run.type(
-        alice, run.control(alice, 'field:deposit:carol:6'), 'day 10');
+        alice, run.control(alice, 'field:deposit:carol:8'), 'day 10');
     await run.tap(alice, run.control(alice, 'send:deposit:carol'));
 
-    // (d) Carol is asked, GB's question "Alice asks to deposit coins or bonds with you.", with yes and no; she answers yes, and holds the two Alice-coins.
+    // (d) Carol is asked, "Alice asks to deposit coins or bonds with you.", with yes and no; she answers yes, and holds the two Alice-coins in escrow for Bob on the condition.
     final d = carol.approval;
+    final dids = [for (final n in deposited) _noteId(n)].join(', ');
     expect(formatTerm(d.view),
-        contains(
-            ", deposit(alice, carol, alice, 2, bob, speech(utterance('day 10'), alice)), none), "));
+        contains(", deposit(alice, carol, alice, coin, [$dids], 2, bob, speech(utterance('day 10'), alice)), none), "));
     await run.list(carol, 'knows');
     await run.top(carol);
     expect(run.textsOf(carol, d), [
@@ -1484,7 +1484,7 @@ void appsScreens(Screens screens) {
       'amount: 2',
       'Contacts: Carol',
       'Contacts: Bob',
-      'Coins: Alice  2',
+      for (final n in deposited) 'Notes: ${_noteText(n)}',
       'day 10\nAlice',
       'yes',
       'no'
@@ -1492,12 +1492,11 @@ void appsScreens(Screens screens) {
     run.plain(carol);
     await run.shoot(carol, 'gb-d-carol-asked-deposit.png');
     await run.answer(carol, 'yes');
-    // Carol holds them in escrow, for Bob, on the condition (GB:4, Deposit).
     expect(
-        carol.atoms.where((x) =>
-            x == "escrow_coin(alice, alice, bob, speech(utterance('day 10'), alice))"),
+        carol.atoms.where((x) => x.startsWith(
+            "escrow_note(alice, coin, alice, bob, speech(utterance('day 10'), alice), ")),
         hasLength(2));
-    expect(alice.atoms.where((x) => x == 'coin(alice)'), hasLength(2));
+    expect(_notes(alice, 'alice'), hasLength(2));
     run.finish();
   }, timeout: Timeout.none);
 
