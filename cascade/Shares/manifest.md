@@ -1,10 +1,10 @@
 # A run of the cascade on Shares
 
-- Contract: `Shares` (`shares` to the checker), its owner's two files `programs/go/Shares.txt` and `programs/go/Shares.glp`, copied here as they stood at `3fd547c7`.
+- Contract: `Shares` (`shares` to the checker), its owner's two files `programs/go/Shares.txt` and `programs/go/Shares.glp`, copied here as they stood at `8614fea8`.
 - The paper: `/Users/udi/Grassroots/GO (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/go/Shares.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/go/Shares.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-26 06:31 UTC by `cascade.sh shares`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `3fd547c7`; each artefact's source and tool:
+- Run on 2026-11-26 09:00 UTC by `cascade.sh shares`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8614fea8`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
