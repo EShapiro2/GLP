@@ -390,7 +390,7 @@
   }
   /* The look: how the app is drawn, one sentence a line, keyed by the names the description uses.
    *
-   *   LOOK Chats:                               optional first line
+   *   STYLE Chats:                               optional first line
    *   Text IS LONG.                             a typed value: a large box (SHORT, a line)
    *   Sum IS A SLIDER FROM 1 TO 100.            a typed number: a slider; ", OR TYPED" adds a box beside it
    *   Day IS A DATE.                            a typed number: a calendar
@@ -424,7 +424,7 @@
       if (!s) continue;
       const err = m => { out.errors.push({line: n, msg: m}); L.kind = 'bad'; };
       let m;
-      if (n === out.lines.filter(x => x.kind !== 'blank' && x.kind !== 'comment').length && (m = s.match(/^LOOK\s+([A-Za-z][\w-]*)\s*:$/))) { out.name = m[1]; L.kind = 'head'; continue; }
+      if (n === out.lines.filter(x => x.kind !== 'blank' && x.kind !== 'comment').length && (m = s.match(/^STYLE\s+([A-Za-z][\w-]*)\s*:$/))) { out.name = m[1]; L.kind = 'head'; continue; }
       if ((m = s.match(/^([A-Z]+)\s+(?:IS|ARE)\s+(.+)$/)) && GLOBAL[m[1]]) {
         const g = GLOBAL[m[1]], v = g.vals[m[2].toUpperCase()];
         if (!v) { err(m[1] + ' is one of ' + Object.keys(g.vals).join(', ')); continue; }
@@ -441,9 +441,9 @@
       else if (what === 'PICKED ON THE CHESSBOARD') r = {as: 'board-pick'};
       else if (/^(A GRID|ROWS|CHIPS)$/.test(what)) r = {as: what === 'A GRID' ? 'grid' : what.toLowerCase()};
       else if (/^(IN THE MENU|IN THE BAR|PRIMARY)$/.test(what)) r = {as: what === 'PRIMARY' ? 'primary' : what === 'IN THE MENU' ? 'menu' : 'bar'};
-      else { err('not a look: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, SCANNED, A CHESSBOARD, PICKED ON THE CHESSBOARD, A GRID, ROWS, CHIPS, IN THE MENU, IN THE BAR or PRIMARY'); continue; }
+      else { err('not a style: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, SCANNED, A CHESSBOARD, PICKED ON THE CHESSBOARD, A GRID, ROWS, CHIPS, IN THE MENU, IN THE BAR or PRIMARY'); continue; }
       if (r.as === 'slider' && r.from >= r.to) { err('a slider goes from a smaller number to a larger one'); continue; }
-      if (out.of[name]) { err(name + ' has a look already'); continue; }
+      if (out.of[name]) { err(name + ' has a style already'); continue; }
       out.of[name] = {...r, line: n}; L.name = name;
     }
     return out;

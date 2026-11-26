@@ -1,10 +1,10 @@
 /* The UI compiler: a contract and an interface description in the UI language, to what an app reads.
  *
- *     node uic.js SIM.json NAME.ui [platform.vglp] [--look NAME.look] > NAME.ui.json
+ *     node uic.js SIM.json NAME.ui [platform.vglp] [--style NAME.style] > NAME.ui.json
  *
  * Given the platform the contract compiles to, it numbers each place as the platform's request does and takes
  * the proposer's place from the platform's request widget (platform.js); otherwise from the contract's schemas.
- * Given a look, it refuses one the look's checker refuses (Proposition 3: no look loses an option) and writes
+ * Given a UI style, it refuses one its checker refuses (Proposition 3: no UI style loses an option) and writes
  * the look of each typed place, each list and each action beside it, and the look of the whole app.
  * It refuses a description with errors, and one that is not complete (Proposition 1).  What it writes names
  * each act by its schema and each place by its number in the act's request, the I-th argument of the
@@ -65,6 +65,6 @@ function compile(sim, text, platformText, lookText) {
 }
 module.exports = compile;
 if (require.main === module) {
-  const args = process.argv.slice(2), li = args.indexOf('--look'), look = li >= 0 ? fs.readFileSync(args.splice(li, 2)[1], 'utf8') : null;
+  const args = process.argv.slice(2), li = args.indexOf('--style'), look = li >= 0 ? fs.readFileSync(args.splice(li, 2)[1], 'utf8') : null;
   process.stdout.write(JSON.stringify(compile(JSON.parse(fs.readFileSync(args[0])), fs.readFileSync(args[1], 'utf8'), args[2] ? fs.readFileSync(args[2], 'utf8') : null, look), null, 1) + '\n');
 }
