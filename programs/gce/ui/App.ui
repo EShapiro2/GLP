@@ -1,26 +1,27 @@
-# Home: the Grassroots App's own screens, from its contract App. Apps, people and stores first, with
-# Nearby and links; the rarer acts on More, a landmark screen reached from every screen.
+# Home: the Grassroots App's own screens, from its contract App. Apps, people and the apps offered first, with
+# making friends and trusting a developer; the rarer acts on More, a landmark screen reached from every screen.
 
 SCREEN Home ABOUT Alice:
     QUESTIONS
     SHOW Alice: identity, person, open_place, ward, retired, store, rendezvous_server, directory
     LIST Apps: "Alice has App of Carol installed" OPENS App
+    LIST New apps: "Alice holds Prog of Carol" OPENS Program
     LIST People: PERSONS WITH knows, friend, trusts_developer, trusts_store, has_guardian, guardian, creator, address, holds_link, presented, registered, spent, lists_shown, lists_unshown, lists_program, listing_signed OPENS Person
     LIST Stores: FROM trusts_store OPENS Store
-    LIST Offered: "Alice holds Prog of Carol" OPENS Program
     Establish: Alice may establish an identity
+    Make friends: Acquaint AND Befriend, Bob TYPED
+
+SCREEN More ABOUT Alice:
+    Acquaint: Alice and Bob may jointly come to know each other, Bob TYPED
+    Trust: Alice may declare trust in Carol as a developer, Carol FROM knows
+    Untrust: Alice may withdraw her declaration of trust in Carol as a developer, Carol FROM trusts_developer
     Open place: Alice may declare her place open
     Close place: Alice may close her place
-    Acquaint: Alice and Bob may jointly come to know each other, Bob TYPED
     Sign link: Alice may sign Link as an invitation link that names Dave, Dave FROM knows, Link TYPED
     Invite by link: Alice may register Link with Dave, Dave FROM link, Link FROM link
     Use link: Alice may present Link of Bob to Dave, Dave FROM knows, Bob TYPED, Link TYPED
     Lookup: Alice may look Bob up on Dora's page, Dora FROM knows, Bob TYPED, Mail TYPED, Name TYPED
     Install from store: Alice may install from a store Prog of Bob, Dave FROM trusts_store, Bob TYPED, Prog TYPED
-    Trust: Alice may declare trust in Carol as a developer, Carol FROM knows
-    Untrust: Alice may withdraw her declaration of trust in Carol as a developer, Carol FROM trusts_developer
-
-SCREEN More ABOUT Alice:
     LIST Links: "Alice has signed Link as an invitation link that names Dave"
     LIST Items: "Alice holds the item Item"
     LIST Expired: "Alice holds Link expired"
@@ -47,11 +48,13 @@ SCREEN App ABOUT "Alice has App of Carol installed":
     QUESTIONS
     SHOW: participant
     Invite: Alice may invite Bob to join in App of Carol, Bob FROM friend
+    Offer: Alice may offer App of Carol to Bob, Bob FROM friend
     Leave: Alice may leave App of Carol
 
 SCREEN Program ABOUT "Alice holds Prog of Carol":
     QUESTIONS
-    Install: Alice may install Prog of Carol
+    Trust: Alice may declare trust in Carol as a developer, Carol FROM knows
+    Install: Alice may install Prog of Carol, THEN Home
     Install own: Alice may install her own Prog
     Offer: Alice may offer Prog of Carol to Bob, Bob FROM friend
 
@@ -59,6 +62,8 @@ SCREEN Person ABOUT Bob:
     QUESTIONS
     SHOW Bob: knows, friend, trusts_developer, has_guardian, guardian, creator, address, holds_link, presented, program, installed, participant
     Befriend: Alice and Bob may jointly become friends
+    Trust: Alice may declare trust in Bob as a developer, Bob FROM knows
+    Untrust: Alice may withdraw her declaration of trust in Bob as a developer, Bob FROM trusts_developer
     Introduce: Alice may introduce Carol to Bob, Carol FROM knows
     Introduce: Alice may introduce Bob to Carol, Carol FROM knows
     Trust store: Alice may declare trust in Bob, Carol FROM knows

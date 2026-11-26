@@ -208,8 +208,8 @@
             else {
               const pid = 'pick' + (++picks);
               C.components.push({id: pid, zone: 'middle', line: c.line, kind: 'list', hidden: true, title: N, items: src.from === 'everyone' ? {named: true} : {pred: src.from}});
-              /* a name the screen's subject also has means its value there: the choice is kept to it */
-              c.bind[r] = N in C.names && C.names[N] !== null ? {select: pid, same: C.names[N]} : {select: pid};
+              /* a name the screen's subject also has means its value there: the choice is kept to it (same 0: the subject itself) */
+              c.bind[r] = N in C.names ? {select: pid, same: C.names[N] === null ? 0 : C.names[N]} : {select: pid};
             }
           } else if (N in C.names) c.bind[r] = C.names[N] === null ? 'it' : {param: 'it', pos: C.names[N]};
         }
@@ -496,11 +496,12 @@
     programs = programs || G.PICTURES;
     const errors = [...look.errors], err = (i, m) => errors.push({line: i, msg: m});
     const fields = {}, lists = {}, buttons = {};
-    for (const C of Object.values(ui.containers)) for (const c of C.components) {
+    /* a button by its name, and by its name on one screen, "Join ON Group", which a sentence may be kept to */
+    for (const [sn, C] of Object.entries(ui.containers)) for (const c of C.components) {
       if (c.kind === 'list' && !c.hidden) lists[c.title] = c;
-      if (c.kind === 'chain') (buttons[c.button] = buttons[c.button] || []).push(c);
+      if (c.kind === 'chain') for (const k of [c.button, c.button + ' ON ' + sn]) (buttons[k] = buttons[k] || []).push(c);
       if (c.kind !== 'action' || !c.act) continue;
-      (buttons[c.button] = buttons[c.button] || []).push(c);
+      for (const k of [c.button, c.button + ' ON ' + sn]) (buttons[k] = buttons[k] || []).push(c);
       const a = spec.acts.find(x => x.name === c.act);
       for (const [r, v] of Object.entries(c.bind)) if (v && v.field) (fields[(c.names || {})[r] || r] = fields[(c.names || {})[r] || r] || []).push({a, r});
     }

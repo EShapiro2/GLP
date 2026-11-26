@@ -39,7 +39,7 @@ class PlaceSource {
   final String? name;
 
   /// For a place picked from a list whose name the screen's subject also has: the position of the subject's fact
-  /// that holds it, to whose value the choice is kept.
+  /// that holds it, to whose value the choice is kept; 0 where the name is the subject's own.
   final int? same;
   const PlaceSource({this.subject = false, this.pos, this.from, this.typed = false, this.look, this.name, this.same});
 
@@ -288,7 +288,11 @@ class DescribedCore {
         if (!allowed.any((v) => same(v, x[e.key]!))) ok = false;
         // A choice kept to the screen's own value.
         final k = e.value.same;
-        if (k != null && subject != null && (k > args(subject).length || !same(args(subject)[k - 1], x[e.key]!))) ok = false;
+        // The position 0 is the subject itself, a person's screen keeping a choice to that person.
+        if (k != null && subject != null) {
+          final want = k == 0 ? subject : (k <= args(subject).length ? args(subject)[k - 1] : null);
+          if (want == null || !same(want, x[e.key]!)) ok = false;
+        }
       }
       // A way the act forbids, where the person's state determines it, is not offered (ActInfo.lacks).
       if (ok && info.lacks(s.atoms, {...x, act.proposer: s.me})) out.add(x);

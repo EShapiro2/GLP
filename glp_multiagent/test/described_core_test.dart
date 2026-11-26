@@ -31,8 +31,12 @@ void main() {
 
   test('IS CALLED: a button reads its label; one with none, its name', () {
     expect(action(groups, 'Chats', 'create').label, 'New group');
-    expect(action(groups, 'Chats', 'acquaint').label, 'Add someone');
-    expect(action(groups, 'Chats', 'close').label, 'Close');
+    expect(action(groups, 'Chats', 'acquaint').label, 'Add a contact');
+    expect(action(groups, 'Chats', 'close').label, 'Close a group');
+    // A label kept to one screen: Join is "Add to group" on a group's screen, "Add to a group of mine" on a person's.
+    expect(action(groups, 'Group', 'join').label, 'Add to group');
+    expect(action(groups, 'Chat', 'join').label, 'Add to a group of mine');
+    expect(action(groups, 'Chat', 'unfriend').label, 'Unfriend');
   });
 
   test('a chain: its steps, each an action, sharing the names of their places', () {
@@ -50,6 +54,8 @@ void main() {
     final core = DescribedCore(ui, const SocialState(GAtom('alice'), [], [], []), null);
     expect(const PlaceSource(from: 'leader', same: 1).same, 1);
     expect(PlaceSource.of({'from': 'leader', 'same': 1, 'name': 'Grupo'}).same, 1);
+    // 0: the subject itself, as on a person's screen.
+    expect(PlaceSource.of({'from': 'knows', 'same': 0, 'name': 'Bob'}).same, 0);
     expect(core.names(const GStruct('member', [GAtom('hikers'), GAtom('bob')]), const GAtom('hikers')), isTrue);
   });
 

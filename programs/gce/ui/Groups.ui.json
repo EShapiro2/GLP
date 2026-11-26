@@ -81,7 +81,7 @@
      },
      "covers": true,
      "where": null,
-     "label": "Add someone"
+     "label": "Add a contact"
     },
     {
      "kind": "action",
@@ -122,8 +122,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Close a group"
     }
    ]
   },
@@ -165,8 +165,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "primary",
+     "label": "Make friends"
     },
     {
      "kind": "action",
@@ -183,7 +183,7 @@
       }
      },
      "covers": true,
-     "where": null,
+     "where": "menu",
      "label": null
     },
     {
@@ -206,7 +206,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Introduce to a contact"
     },
     {
      "kind": "action",
@@ -228,7 +228,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Introduce to a contact"
     },
     {
      "kind": "action",
@@ -250,7 +250,7 @@
      },
      "covers": true,
      "where": "bar",
-     "label": null
+     "label": "Add to a group of mine"
     },
     {
      "kind": "action",
@@ -271,8 +271,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Remove from the group"
     },
     {
      "kind": "action",
@@ -347,7 +347,7 @@
      },
      "covers": false,
      "where": "bar",
-     "label": null
+     "label": "Add to group"
     },
     {
      "kind": "action",
@@ -368,8 +368,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Leave the group"
     },
     {
      "kind": "action",
@@ -398,7 +398,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Post"
     },
     {
      "kind": "action",
@@ -423,7 +423,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Post"
     }
    ]
   }

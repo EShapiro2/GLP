@@ -45,6 +45,19 @@
     },
     {
      "kind": "list",
+     "title": "New apps",
+     "items": {
+      "facts": "program",
+      "keep": null
+     },
+     "with": [],
+     "opens": "Program",
+     "look": null,
+     "order": null,
+     "told": false
+    },
+    {
+     "kind": "list",
      "title": "People",
      "items": {
       "everyone": true
@@ -85,19 +98,6 @@
      "told": false
     },
     {
-     "kind": "list",
-     "title": "Offered",
-     "items": {
-      "facts": "program",
-      "keep": null
-     },
-     "with": [],
-     "opens": "Program",
-     "look": null,
-     "order": null,
-     "told": false
-    },
-    {
      "kind": "action",
      "schema": "establish",
      "button": "Establish",
@@ -108,34 +108,73 @@
      "places": {},
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Set up my identity"
     },
     {
-     "kind": "action",
-     "schema": "open_place",
-     "button": "Open place",
-     "sentence": "Alice may declare her place open",
+     "kind": "chain",
+     "button": "Make friends",
+     "label": null,
+     "steps": [
+      {
+       "kind": "action",
+       "schema": "acquaint",
+       "button": "Acquaint",
+       "sentence": null,
+       "then": null,
+       "me": 1,
+       "arity": 2,
+       "places": {
+        "2": {
+         "typed": true,
+         "look": {
+          "as": "scanned"
+         },
+         "name": "Bob"
+        }
+       },
+       "covers": false,
+       "where": null,
+       "label": "Add a contact (no friendship)"
+      },
+      {
+       "kind": "action",
+       "schema": "befriend",
+       "button": "Befriend",
+       "sentence": null,
+       "then": null,
+       "me": 1,
+       "arity": 2,
+       "places": {
+        "2": {
+         "typed": true,
+         "look": {
+          "as": "scanned"
+         },
+         "name": "Bob"
+        }
+       },
+       "covers": false,
+       "where": null,
+       "label": null
+      }
+     ],
      "then": null,
-     "me": 1,
-     "arity": 1,
-     "places": {},
-     "covers": true,
      "where": "primary",
-     "label": null
-    },
-    {
-     "kind": "action",
-     "schema": "close_place",
-     "button": "Close place",
-     "sentence": "Alice may close her place",
-     "then": null,
-     "me": 1,
-     "arity": 1,
-     "places": {},
-     "covers": true,
-     "where": null,
-     "label": null
-    },
+     "places": {
+      "2": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       },
+       "name": "Bob"
+      }
+     }
+    }
+   ]
+  },
+  "More": {
+   "about": null,
+   "components": [
     {
      "kind": "action",
      "schema": "acquaint",
@@ -155,7 +194,69 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Add a contact (no friendship)"
+    },
+    {
+     "kind": "action",
+     "schema": "trust",
+     "button": "Trust",
+     "sentence": "Alice may declare trust in Carol as a developer",
+     "then": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "knows",
+       "name": "Carol"
+      }
+     },
+     "covers": true,
+     "where": null,
+     "label": "Trust their apps"
+    },
+    {
+     "kind": "action",
+     "schema": "untrust",
+     "button": "Untrust",
+     "sentence": "Alice may withdraw her declaration of trust in Carol as a developer",
+     "then": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "trusts_developer",
+       "name": "Carol"
+      }
+     },
+     "covers": true,
+     "where": null,
+     "label": "Stop trusting their apps"
+    },
+    {
+     "kind": "action",
+     "schema": "open_place",
+     "button": "Open place",
+     "sentence": "Alice may declare her place open",
+     "then": null,
+     "me": 1,
+     "arity": 1,
+     "places": {},
+     "covers": true,
+     "where": null,
+     "label": "Open my place to visitors"
+    },
+    {
+     "kind": "action",
+     "schema": "close_place",
+     "button": "Close place",
+     "sentence": "Alice may close her place",
+     "then": null,
+     "me": 1,
+     "arity": 1,
+     "places": {},
+     "covers": true,
+     "where": null,
+     "label": "Close my place"
     },
     {
      "kind": "action",
@@ -177,8 +278,8 @@
       }
      },
      "covers": true,
-     "where": "primary",
-     "label": null
+     "where": null,
+     "label": "Make an invitation link"
     },
     {
      "kind": "action",
@@ -199,8 +300,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Register an invitation link"
     },
     {
      "kind": "action",
@@ -229,8 +330,8 @@
       }
      },
      "covers": true,
-     "where": "primary",
-     "label": null
+     "where": null,
+     "label": "Use an invitation link"
     },
     {
      "kind": "action",
@@ -248,7 +349,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Find someone in a directory"
     },
     {
      "kind": "action",
@@ -277,50 +378,9 @@
       }
      },
      "covers": true,
-     "where": "primary",
-     "label": null
-    },
-    {
-     "kind": "action",
-     "schema": "trust",
-     "button": "Trust",
-     "sentence": "Alice may declare trust in Carol as a developer",
-     "then": null,
-     "me": 1,
-     "arity": 2,
-     "places": {
-      "2": {
-       "from": "knows",
-       "name": "Carol"
-      }
-     },
-     "covers": true,
      "where": null,
-     "label": null
+     "label": "Install from a store"
     },
-    {
-     "kind": "action",
-     "schema": "untrust",
-     "button": "Untrust",
-     "sentence": "Alice may withdraw her declaration of trust in Carol as a developer",
-     "then": null,
-     "me": 1,
-     "arity": 2,
-     "places": {
-      "2": {
-       "from": "trusts_developer",
-       "name": "Carol"
-      }
-     },
-     "covers": true,
-     "where": null,
-     "label": null
-    }
-   ]
-  },
-  "More": {
-   "about": null,
-   "components": [
     {
      "kind": "list",
      "title": "Links",
@@ -379,7 +439,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Meet someone in person"
     },
     {
      "kind": "action",
@@ -396,8 +456,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Find someone by address"
     },
     {
      "kind": "action",
@@ -424,8 +484,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "List me in a directory"
     },
     {
      "kind": "action",
@@ -452,8 +512,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "List me in a directory, hidden"
     },
     {
      "kind": "action",
@@ -471,8 +531,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Remove me from a directory"
     },
     {
      "kind": "action",
@@ -490,8 +550,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Remove my hidden listing"
     },
     {
      "kind": "action",
@@ -509,7 +569,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "End a friendship"
     },
     {
      "kind": "action",
@@ -527,8 +587,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Make a signed item"
     },
     {
      "kind": "action",
@@ -546,8 +606,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Publish an app I wrote"
     },
     {
      "kind": "action",
@@ -565,8 +625,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Create a ward"
     },
     {
      "kind": "action",
@@ -584,8 +644,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Become a guardian of a ward"
     },
     {
      "kind": "action",
@@ -609,8 +669,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "End a guardian's role"
     },
     {
      "kind": "action",
@@ -622,8 +682,8 @@
      "arity": 2,
      "places": {},
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "For my ward: add a contact"
     },
     {
      "kind": "action",
@@ -648,8 +708,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "For my ward: end a friendship"
     },
     {
      "kind": "action",
@@ -667,8 +727,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Introduce two wards"
     },
     {
      "kind": "action",
@@ -682,11 +742,18 @@
       "2": {
        "from": "knows",
        "name": "Will"
+      },
+      "4": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       },
+       "name": "Bob"
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Make two wards friends"
     },
     {
      "kind": "action",
@@ -703,8 +770,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Make two of my wards friends"
     },
     {
      "kind": "action",
@@ -721,8 +788,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Remove an app from a store"
     }
    ]
   },
@@ -766,7 +833,33 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Invite a friend"
+    },
+    {
+     "kind": "action",
+     "schema": "offer",
+     "button": "Offer",
+     "sentence": "Alice may offer App of Carol to Bob",
+     "then": null,
+     "me": 2,
+     "arity": 4,
+     "places": {
+      "1": {
+       "from": "friend",
+       "name": "Bob"
+      },
+      "3": {
+       "subject": 1,
+       "name": "App"
+      },
+      "4": {
+       "subject": 2,
+       "name": "Carol"
+      }
+     },
+     "covers": false,
+     "where": null,
+     "label": "Send to a friend"
     },
     {
      "kind": "action",
@@ -784,7 +877,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Remove app"
     }
    ]
   },
@@ -798,10 +891,29 @@
     },
     {
      "kind": "action",
+     "schema": "trust",
+     "button": "Trust",
+     "sentence": "Alice may declare trust in Carol as a developer",
+     "then": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "knows",
+       "same": 2,
+       "name": "Carol"
+      }
+     },
+     "covers": false,
+     "where": "primary",
+     "label": "Trust this developer"
+    },
+    {
+     "kind": "action",
      "schema": "install",
      "button": "Install",
      "sentence": "Alice may install Prog of Carol",
-     "then": null,
+     "then": "Home",
      "me": 1,
      "arity": 3,
      "places": {
@@ -815,7 +927,7 @@
       }
      },
      "covers": true,
-     "where": null,
+     "where": "primary",
      "label": null
     },
     {
@@ -850,13 +962,17 @@
        "name": "Bob"
       },
       "3": {
+       "subject": 1,
+       "name": "Prog"
+      },
+      "4": {
        "subject": 2,
        "name": "Carol"
       }
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Send to a friend"
     }
    ]
   },
@@ -907,6 +1023,44 @@
     },
     {
      "kind": "action",
+     "schema": "trust",
+     "button": "Trust",
+     "sentence": "Alice may declare trust in Bob as a developer",
+     "then": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "knows",
+       "same": 0,
+       "name": "Bob"
+      }
+     },
+     "covers": false,
+     "where": null,
+     "label": "Trust their apps"
+    },
+    {
+     "kind": "action",
+     "schema": "untrust",
+     "button": "Untrust",
+     "sentence": "Alice may withdraw her declaration of trust in Bob as a developer",
+     "then": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "trusts_developer",
+       "same": 0,
+       "name": "Bob"
+      }
+     },
+     "covers": false,
+     "where": null,
+     "label": "Stop trusting their apps"
+    },
+    {
+     "kind": "action",
      "schema": "introduce",
      "button": "Introduce",
      "sentence": "Alice may introduce Carol to Bob",
@@ -925,7 +1079,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Introduce to a contact"
     },
     {
      "kind": "action",
@@ -947,7 +1101,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Introduce to a contact"
     },
     {
      "kind": "action",
@@ -968,8 +1122,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Trust them as a store"
     },
     {
      "kind": "action",
@@ -990,8 +1144,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Show our friendship to a contact"
     },
     {
      "kind": "action",
@@ -1013,7 +1167,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Send an item"
     },
     {
      "kind": "action",
@@ -1030,8 +1184,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Befriend for my ward"
     },
     {
      "kind": "action",
@@ -1048,8 +1202,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "End friendship for my ward"
     },
     {
      "kind": "action",
@@ -1066,8 +1220,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "End friendship"
     },
     {
      "kind": "action",
@@ -1084,8 +1238,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "End friendship with my ward"
     },
     {
      "kind": "action",
@@ -1102,8 +1256,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Stop being their guardian"
     },
     {
      "kind": "action",
@@ -1120,8 +1274,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Retire this ward"
     },
     {
      "kind": "action",
@@ -1138,8 +1292,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Make them a store"
     },
     {
      "kind": "action",
@@ -1156,8 +1310,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Make them a meeting server"
     },
     {
      "kind": "action",
@@ -1174,8 +1328,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "Make them a directory"
     },
     {
      "kind": "action",
@@ -1200,8 +1354,8 @@
       }
      },
      "covers": true,
-     "where": null,
-     "label": null
+     "where": "menu",
+     "label": "List an app in their store"
     }
    ]
   },
@@ -1250,8 +1404,8 @@
       }
      },
      "covers": true,
-     "where": "primary",
-     "label": null
+     "where": null,
+     "label": "Install from a store"
     },
     {
      "kind": "action",
@@ -1269,7 +1423,7 @@
      },
      "covers": true,
      "where": null,
-     "label": null
+     "label": "Stop trusting this store"
     }
    ]
   }
@@ -1358,7 +1512,6 @@
   "ward_acquaint: Alice is no place of the request",
   "wards_acquaint: Alice is no place of the request",
   "wards_acquaint: Bob is no place of the request",
-  "wards_befriend: Bob is no place of the request",
   "delist: Bob is no place of the request",
   "delist: Prog is no place of the request",
   "leave: Carol is no place of the request",

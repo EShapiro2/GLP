@@ -21,7 +21,9 @@ function compile(sim, text, platformText, lookText) {
   if (!R.complete) throw new Error('not complete: ' + Object.values(R.acts).filter(a => !a.covered).map(a => a.button).join(', '));
   const LK = G.readLook(lookText || ''), LR = G.checkLook(spec, P.ui, LK, require('./pictures.js'));
   if (!LR.ok) throw new Error('the look: ' + LR.errors.map(e => 'line ' + e.line + ': ' + e.msg).join('\n'));
-  const lookOf = n => { const r = LK.of[n]; if (!r) return null; return Object.fromEntries(Object.entries(r).filter(([k]) => k !== 'line' && !k.endsWith('Line'))); };
+  let AT = null;
+  /* a button's look: the style's sentences on it, then those kept to the screen it is on ("Join ON Group") */
+  const lookOf = n => { const r = Object.assign({}, LK.of[n] || {}, (AT && LK.of[n + ' ON ' + AT]) || {}); if (!Object.keys(r).length) return null; return Object.fromEntries(Object.entries(r).filter(([k]) => k !== 'line' && !k.endsWith('Line'))); };
   /* the positions of each predicate's facts that hold persons, from the acts that add them */
   const personPos = {};
   for (const s of sim.schemas) {
@@ -30,6 +32,7 @@ function compile(sim, text, platformText, lookText) {
   }
   const screens = {};
   for (const [name, C] of Object.entries(P.ui.containers)) {
+    AT = name;
     const comps = [];
     /* an action as the app reads it: its act by its schema, each place by its number in the act's request */
     const action = c => {
@@ -49,7 +52,7 @@ function compile(sim, text, platformText, lookText) {
         if (v === 'it') places[k] = {subject: null};
         else if (v.param) places[k] = {subject: v.pos};
         else if (v.field) places[k] = {typed: true, look: lookOf((c.names || {})[r] || r)};
-        else if (v.select) { const l = C.components.find(x => x.id === v.select); places[k] = {from: l.items.named ? 'everyone' : l.items.pred}; if (v.same) places[k].same = v.same; }
+        else if (v.select) { const l = C.components.find(x => x.id === v.select); places[k] = {from: l.items.named ? 'everyone' : l.items.pred}; if (v.same !== undefined) places[k].same = v.same; }
         /* the name the sentence gives the place, which the steps of a chain share */
         if (places[k]) places[k].name = (c.names || {})[r] || r;
       }
