@@ -111,7 +111,7 @@ def parse_rules(text):
             cur = {'name': m.group(1), 'head': f"{m.group(1)}: {m.group(2)}", 'form': 'rule',
                    'adds': [h for h in heads if not h.startswith('not ')],
                    'removes': [h[4:] for h in heads if h.startswith('not ')],
-                   'body': '', 'needs': [], 'guarded': []}
+                   'body': '', 'needs': [], 'guarded': [], 'guard': ''}
             out.append(cur)
         elif cur is not None and line.startswith(' '):
             cur['body'] += ' ' + line.strip()
@@ -120,6 +120,7 @@ def parse_rules(text):
                 body, g = cur['body'].strip(), ''
             cur['needs'] = split_top(body)
             cur['guarded'] = [x.strip() for x in g.split(',') if x.strip()]
+            cur['guard'] = g.strip()
         else:
             header.append(line.strip())
     return header, out
@@ -164,7 +165,7 @@ def parse_calculus(text):
                     'adds': [h for h in heads if not h.startswith('~')],
                     'removes': [h[1:] for h in heads if h.startswith('~')],
                     'body': body.strip(), 'needs': ['not ' + n[1:] if n.startswith('~') else n for n in needs],
-                    'guarded': [x.strip() for x in g.split(',') if x.strip()]})
+                    'guarded': [x.strip() for x in g.split(',') if x.strip()], 'guard': g.strip()})
     return header, out
 
 

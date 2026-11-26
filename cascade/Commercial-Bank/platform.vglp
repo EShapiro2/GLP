@@ -1,5 +1,4 @@
 %% not compiled(commercial_bank)
-%% a pragma names more fields than the schema has variables the person fills:(loan)
 %% a guarded schema has no button in the contract's pragmas:(proposal_of_alice_for_issue)
 %% a guarded schema has no button in the contract's pragmas:(proposal_of_alice_for_swap)
 %% a guarded schema has no button in the contract's pragmas:(proposal_of_bob_for_swap)
