@@ -155,7 +155,7 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
   }
 
   Future<void> _start() async {
-    if (debugLogOn) {
+    if (debugLogOn && _reporter == null) {      // made once, so a second _start does not open a second reporter
       final reporter = await startDebugReporter();
       if (reporter != null) {
         _reporter = reporter;
