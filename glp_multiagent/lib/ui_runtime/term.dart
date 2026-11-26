@@ -120,11 +120,11 @@ String formatTerm(GTerm t) {
   }
 }
 
-/// The default display of a value — vGLP (`shapiro2026volition`, Section
-/// 6.3, the ruling of 2026-09-18): "A value of a compound type has no widget
-/// of its own: under default display it renders as its arguments, in order,
-/// each by the widget of its type, and a list as one such group per element,
-/// a term never being shown to the person."
+/// The default display of a value where no functor is drawn.  Until
+/// 2026-11-26 this quoted vGLP's Section 6.3, the ruling of 2026-09-18, "a
+/// term never being shown to the person", which the paper no longer says:
+/// VEUI a39fc56, Definition "Default Widget", draws "a tuple: a form headed
+/// by its functor, with one field per argument", as [valueText] does.
 ///
 /// This is the rule's one implementation, and every place a value reaches the
 /// screen without a widget of its own goes through it: a card's context
@@ -197,7 +197,7 @@ List<String> scalarsOf(GTerm t) => switch (t) {
 String displayText(GTerm t) =>
     scalarGroups(t).map((row) => row.join(' ')).join(', ');
 
-/// An argument of an atom, or a value of a field, drawn as one value: a compound value `f(v1, ..., vk)` as its term, `bond(5)`, each argument drawn the same way, and any other value by [displayText].  "The tabs draw each atom, and a compound value is one value" (vGLP #35, Code_inbox.md, 2026-11-26 01:20 UTC, (3); GSC, Definition "Schema with values": f(v1, ..., vk) in V).
+/// An argument of an atom, or a value of a field, drawn as one value: a compound value `f(v1, ..., vk)` as its functor with its arguments, `bond(5)`, each argument drawn the same way, and any other value by [displayText].  VEUI a39fc56, sections/elicitation.tex, Definition "Default Widget": "a tuple: a form headed by its functor, with one field per argument", and "a value the program writes: shown and not edited" (vGLP #35, Code_inbox.md, 2026-11-26 01:20 and 01:32 UTC; GSC, Definition "Schema with values": f(v1, ..., vk) in V).
 String valueText(GTerm t) => switch (t) {
       GStruct(:final functor, :final args) when functor != '.' =>
         '$functor(${args.map(valueText).join(', ')})',
