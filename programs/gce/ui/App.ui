@@ -5,7 +5,7 @@ SCREEN Home ABOUT Alice:
     QUESTIONS
     SHOW Alice: identity, person, open_place, ward, retired, store, rendezvous_server, directory
     LIST Apps: "Alice has App of Carol installed" OPENS App
-    LIST People: EVERYONE WITH knows, friend, trusts_developer, trusts_store, has_guardian, guardian, creator, address, holds_link, presented, registered, spent, lists_shown, lists_unshown, lists_program, listing_signed OPENS Person
+    LIST People: PERSONS WITH knows, friend, trusts_developer, trusts_store, has_guardian, guardian, creator, address, holds_link, presented, registered, spent, lists_shown, lists_unshown, lists_program, listing_signed OPENS Person
     LIST Stores: FROM trusts_store OPENS Store
     LIST Offered: "Alice holds Prog of Carol" OPENS Program
     LIST Links: "Alice has signed Link as an invitation link that names Dave"

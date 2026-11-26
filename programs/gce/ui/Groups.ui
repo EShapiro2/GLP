@@ -4,7 +4,7 @@ SCREEN Chats ABOUT Alice:
     QUESTIONS
     SHOW Alice: identity, person
     LIST Groups: "Alice is a member of the group Hikers of Bob" OPENS Group
-    LIST Contacts: EVERYONE WITH knows, friend OPENS Chat
+    LIST Contacts: PERSONS WITH knows, friend OPENS Chat
     Establish: Alice may establish an identity
     Acquaint: Alice and Bob may jointly come to know each other, Bob TYPED
     Create: Alice may create Hikers, Hikers TYPED

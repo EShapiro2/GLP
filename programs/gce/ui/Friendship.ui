@@ -3,7 +3,7 @@
 SCREEN Home ABOUT Alice:
     QUESTIONS
     SHOW Alice: identity, person
-    LIST Contacts: EVERYONE WITH knows, friend OPENS Person
+    LIST Contacts: PERSONS WITH knows, friend OPENS Person
     Establish: Alice may establish an identity
     Acquaint: Alice and Bob may jointly come to know each other, Bob TYPED
 

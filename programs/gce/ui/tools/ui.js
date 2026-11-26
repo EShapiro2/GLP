@@ -9,20 +9,20 @@
  *       SHOW Alice: identity, person                 facts of these predicates about Alice, about a name of the
  *       SHOW Bob: knows, friend                      screen's subject, or (SHOW:) about the whole subject
  *       THREAD: message, sent_message                the same, drawn as a conversation
- *       LIST Contacts: EVERYONE WITH knows OPENS Chat        everyone named in Alice's facts
+ *       LIST Contacts: PERSONS WITH knows OPENS Chat        everyone named in Alice's facts
  *       LIST Groups: "Alice is a member of Bob's Hikers" OPENS Group  Alice's facts of a predicate; on a screen
  *                                                    about a fact, a name they share with it keeps the list to it
  *       LIST Markets: FROM keeper OPENS Market       the values in Alice's facts of a predicate
  *       Introduce: Alice may introduce Carol to Bob, Carol FROM knows
  *           an action: its button, then the contract's sentence for the act, its names renamed as one likes
  *           (Alice for the one who acts); a name of the screen's subject takes its value from it, and any other
- *           name is TYPED, FROM EVERYONE, FROM a predicate's values, or IS a name of the subject; an act whose
+ *           name is TYPED, FROM PERSONS, FROM a predicate's values, or IS a name of the subject; an act whose
  *           clause only points to another (Pay issuer: Notes:3, ...) is written with no sentence, in the act's names
  *   A line indented deeper than the lines of its screen goes on the line before it.
  */
 (function (G) {
-  const SRC = /^([A-Z]\w*)\s+(TYPED|FROM\s+EVERYONE|FROM\s+[a-z]\w*|IS\s+[A-Z]\w*)$/;
-  const KEYWORDS = /^(SCREEN|SHOW|LIST|THREAD|QUESTIONS|ABOUT|WITH|OPENS|FROM|TYPED|EVERYONE|IS)\b/;
+  const SRC = /^([A-Z]\w*)\s+(TYPED|FROM\s+PERSONS|FROM\s+[a-z]\w*|IS\s+[A-Z]\w*)$/;
+  const KEYWORDS = /^(SCREEN|SHOW|LIST|THREAD|QUESTIONS|ABOUT|WITH|OPENS|FROM|TYPED|PERSONS|IS)\b/;
   function read(text) {
     const ui = {name: '', start: null, containers: {}}, lines = [], errors = [];
     let scr = null, n = 0;
@@ -62,8 +62,8 @@
       if (s === 'QUESTIONS') { push({...base, zone: 'top', kind: 'inbox'}); continue; }
       if ((m = s.match(/^SHOW(?:\s+([A-Z]\w*))?\s*:\s*([\w,\s]+)$/))) { push({...base, zone: 'middle', kind: 'details', name: m[1] || null, shows: m[2].split(',').map(x => x.trim()).filter(Boolean)}); continue; }
       if ((m = s.match(/^THREAD\s*:\s*([\w,\s]+)$/))) { push({...base, zone: 'middle', kind: 'thread', shows: m[1].split(',').map(x => x.trim()).filter(Boolean)}); continue; }
-      if ((m = s.match(/^LIST\s+([^:"]+):\s*(EVERYONE|FROM\s+[a-z]\w*|"[^"]+")(?:\s+WITH\s+([\w\s,]+?))?(?:\s+OPENS\s+([\w-]+))?$/))) {
-        const c = {...base, zone: 'middle', kind: 'list', title: m[1].trim(), items: m[2] === 'EVERYONE' ? {named: true} : m[2].startsWith('FROM') ? {pred: m[2].replace(/^FROM\s+/, '')} : {fact: m[2].slice(1, -1)}};
+      if ((m = s.match(/^LIST\s+([^:"]+):\s*(PERSONS|FROM\s+[a-z]\w*|"[^"]+")(?:\s+WITH\s+([\w\s,]+?))?(?:\s+OPENS\s+([\w-]+))?$/))) {
+        const c = {...base, zone: 'middle', kind: 'list', title: m[1].trim(), items: m[2] === 'PERSONS' ? {named: true} : m[2].startsWith('FROM') ? {pred: m[2].replace(/^FROM\s+/, '')} : {fact: m[2].slice(1, -1)}};
         if (m[3]) c.shows = m[3].split(',').map(x => x.trim()).filter(Boolean);
         if (m[4]) c.opens = m[4];
         push(c); continue;
@@ -73,7 +73,7 @@
         const parts = m[2].replace(/\.\s*$/, '').split(/,\s*/), sources = {};
         while (parts.length && SRC.test(parts[parts.length - 1].trim())) {
           const q = parts.pop().trim().match(SRC);
-          sources[q[1]] = q[2] === 'TYPED' ? {field: true} : /^IS\s/.test(q[2]) ? {is: q[2].replace(/^IS\s+/, '')} : /^FROM\s+EVERYONE$/.test(q[2]) ? {from: 'everyone'} : {from: q[2].replace(/^FROM\s+/, '')};
+          sources[q[1]] = q[2] === 'TYPED' ? {field: true} : /^IS\s/.test(q[2]) ? {is: q[2].replace(/^IS\s+/, '')} : /^FROM\s+PERSONS$/.test(q[2]) ? {from: 'everyone'} : {from: q[2].replace(/^FROM\s+/, '')};
         }
         push({...base, zone: 'bottom', kind: 'action', button: m[1].trim(), said: parts.join(', ').trim(), sources, bind: {}});
         continue;
