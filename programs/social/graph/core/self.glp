@@ -73,7 +73,7 @@ imported procedure home#home(Key?, AgentToUserStream?, Stream(UserInMsg), Stream
 imported procedure home#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 imported procedure place#os_phone(Key?, List(Key)?, List(RvServer)?, Directory?, UserInStream?, NetInStream?, AgentToUserStream, NetOutStream).
-exported procedure superapp(Key?, List(Key)?, List(Service)?, PersonIn(Drawn)?, NetInStream?).
+exported procedure superapp(Key?, List(Key)?, List(Service)?, PhoneGrants?, NetInStream?).
 superapp(Id, Known, Services, Grants, NetIn) :-
     ground(Id?), ground(Known?), ground(Services?) |
     servers_of(Services?, Servers),
@@ -81,10 +81,102 @@ superapp(Id, Known, Services, Grants, NetIn) :-
     place # os_phone(Id?, Known?, Servers?, Dir?, Cmds?, NetIn?, Outs, NetOut),
     send_to_net(NetOut?),
     split_out(Outs?, Shown, Seen),
-    home # home(Id?, Seen?, Cmds, Asks),
-    home # dispatch(Asks?, ch(Grants?, Draws), MCh),
+    phone_grants(Grants?, HomeGrants, AppGrants),
+    home # home(Id?, Seen?, HomeCmds, Asks),
+    app_screens(HomeCmds?, Cmds, Opened, AppDraws),
+    merge(Opened?, AppGrants?, Events),
+    route_grants(Events?, []),
+    home # dispatch(Asks?, ch(HomeGrants?, Draws), MCh),
     show_notices(MCh?, Shown?),
-    send_to_user(Draws?).
+    home_draws(Draws?, HomeDraws),
+    merge(HomeDraws?, AppDraws?, ToUser),
+    send_to_user(ToUser?).
+
+%% --- The screens of the installed mini-apps (EShapiro2/GLP#181) ---
+%%
+%% Each mini-app the person installs gets its own screen: the person's end of
+%% its person channel goes to the person, not to hold_person/1.  Its draws
+%% leave by send_to_user/1 with home's, each tagged app(App, D) with the name
+%% the mini-app is installed under; the person's grants on its screen come back
+%% tagged app(App, G) among home's, and go to that mini-app alone.  The
+%% super-app reads none of them: they are the mini-app's, at Opaque (GSG paper,
+%% Section 3, "What the super-app grants a mini-app").
+
+%% A grant of the phone's person: one of home's, or one of a mini-app's,
+%% tagged with its name.
+PhoneGrant  ::= input(Integer, Path, Drawn) ; refresh ; app(Constant, Input(Opaque)).
+PhoneGrants ::= [] ; [PhoneGrant | PhoneGrants].
+
+%% What the phone's person is shown: home's draws, and a mini-app's, tagged.
+PhoneDraw ::= draw(Integer, Widget(Drawn), Drawn) ; withdraw(Integer) ; app(Constant, Draw(Opaque)).
+
+%% The router's events: a mini-app's screen opened, with the writer of its
+%% grants, and a grant for a mini-app.
+ScreenEvent ::= opened(Constant, PersonIn(Opaque)?) ; grant(Constant, Input(Opaque)).
+AppPort     ::= port(Constant, PersonIn(Opaque)?).
+AppPorts    ::= [] ; [AppPort | AppPorts].
+
+%% phone_grants(Grants, HomeGrants, AppGrants): the person's grants, home's
+%% to home, each mini-app's to the router.  Where the person's stream closes,
+%% home's grants are held for good, as person_grants/2 holds them.
+procedure phone_grants(PhoneGrants?, PersonIn(Drawn), Stream(ScreenEvent)).
+phone_grants([input(I, P, R) | Gs], [input(I?, P?, R?) | Hs?], Es?) :-
+    phone_grants(Gs?, Hs, Es).
+phone_grants([refresh | Gs], [refresh | Hs?], Es?) :-
+    phone_grants(Gs?, Hs, Es).
+phone_grants([app(A, G) | Gs], Hs?, [grant(A?, G?) | Es?]) :-
+    phone_grants(Gs?, Hs, Es).
+phone_grants([], Hs?, []) :-
+    new_channel(A, B), hold_grants(A?, B?, Hs).
+
+%% app_screens(HomeCmds, Cmds, Opened, AppDraws): home's commands to the agent,
+%% each install given a fresh person channel whose person's end is the
+%% person's: its grants' writer to the router, its draws, tagged, to the
+%% person.  The channel home made for the install is not used.
+procedure app_screens(UserInStream?, UserInStream, Stream(ScreenEvent), Stream(PhoneDraw)).
+app_screens([msg(person, Id, install(App, M, CSig, _)) | Cmds],
+            [msg(person, Id?, install(App?, M?, CSig?, Ui?)) | Cmds1?], Ev?, Out?) :-
+    ground(App?) |
+    new_channel(Ui, Person),
+    app_end(App?, Person?, Ev1, D1),
+    app_screens(Cmds?, Cmds1, Ev2, D2),
+    merge(Ev1?, Ev2?, Ev),
+    merge(D1?, D2?, Out).
+app_screens([C | Cmds], [C? | Cmds1?], Ev?, Out?) :-
+    otherwise | app_screens(Cmds?, Cmds1, Ev, Out).
+app_screens([], [], [], []).
+
+%% app_end(App, Person, Opened, Draws): the person's end of a mini-app's
+%% person channel: the writer of its grants to the router, its draws tagged.
+procedure app_end(Constant?, Channel(PersonOut(Opaque), PersonIn(Opaque))?, Stream(ScreenEvent), Stream(PhoneDraw)).
+app_end(App, ch(Ds, Gs?), [opened(App?, Gs)], Out?) :-
+    ground(App?) | tag_draws(App?, Ds?, Out).
+
+procedure tag_draws(Constant?, PersonOut(Opaque)?, Stream(PhoneDraw)).
+tag_draws(App, [D | Ds], [app(App?, D?) | Out?]) :-
+    ground(App?) | tag_draws(App?, Ds?, Out).
+
+%% home_draws(Draws, Out): home's own draws, as the phone's person is shown them.
+procedure home_draws(PersonOut(Drawn)?, Stream(PhoneDraw)).
+home_draws([draw(I, W, V) | Ds], [draw(I?, W?, V?) | Out?]) :- home_draws(Ds?, Out).
+home_draws([withdraw(I) | Ds], [withdraw(I?) | Out?]) :- home_draws(Ds?, Out).
+
+%% route_grants(Events, Ports): each mini-app's grants to its person channel,
+%% by its name; a grant for a name with no screen is dropped.
+procedure route_grants(Stream(ScreenEvent)?, AppPorts?).
+route_grants([opened(App, Gs?) | Ev], Ps) :-
+    route_grants(Ev?, [port(App?, Gs) | Ps?]).
+route_grants([grant(App, G) | Ev], Ps) :-
+    deliver_grant(App?, G?, Ps?, Ps1),
+    route_grants(Ev?, Ps1?).
+route_grants([], _).
+
+procedure deliver_grant(Constant?, Input(Opaque)?, AppPorts?, AppPorts).
+deliver_grant(App, G, [port(A, [G? | Gs1?]) | Ps], [port(A?, Gs1) | Ps?]) :-
+    App? =?= A? | true.
+deliver_grant(App, G, [P | Ps], [P? | Ps1?]) :-
+    otherwise | deliver_grant(App?, G?, Ps?, Ps1).
+deliver_grant(_, _, [], []).
 
 %% link_phone(Id, Known, Services, Grants, NetIn): the operating system on
 %% the layer (place.glp, os_phone/8), with the services Services, as the
@@ -353,8 +445,8 @@ route_to(_, [], [], []).
 
 %% The super-app as a play, the person with a scripted peer for each key the
 %% person knows: what the Flutter agent runtime starts (home_ui.glp).
-imported procedure home_ui#superapp_ui(Key?, List(Key)?, PersonIn(Drawn)?, NetInStream?).
-exported procedure superapp_ui(Key?, List(Key)?, PersonIn(Drawn)?, NetInStream?).
+imported procedure home_ui#superapp_ui(Key?, List(Key)?, PhoneGrants?, NetInStream?).
+exported procedure superapp_ui(Key?, List(Key)?, PhoneGrants?, NetInStream?).
 superapp_ui(Id, Peers, Grants, NetIn) :- home_ui # superapp_ui(Id?, Peers?, Grants?, NetIn?).
 
 %% The plays of superapp_plays.glp, each given the keys of its two agents,
@@ -543,7 +635,7 @@ CoreAct ::= superapp(Key, List(Key), List(Service))
           ; coins_phone(Constant, Key, List(Key))
           ; dated_phone(Constant, Key, List(Key))
           ; sovereign_phone(Constant, Key, List(Key)).
-CoreIn  ::= [] ; [CoreAct | Grants].
+CoreIn  ::= [] ; [CoreAct | PhoneGrants].
 Grants  ::= [] ; [Input(Drawn) | Grants].
 
 %% The smartphones of the apps' boots (programs/apps/<app>_boot.glp) and of
@@ -566,11 +658,11 @@ agent(ch(In, []), ch(N, [])) :- self_key(_), core_start(In?, N?).
 %% The entry the person's first act names, on the network input.
 procedure core_start(CoreIn?, NetInStream?).
 core_start([superapp(P, Qs, Ss) | Gs], N) :-
-    person_grants(Gs?, Grants), superapp(P?, Qs?, Ss?, Grants?, N?).
+    superapp(P?, Qs?, Ss?, Gs?, N?).
 core_start([link_phone(P, Qs, Ss) | Gs], N) :-
-    link_phone(P?, Qs?, Ss?, Gs?, N?).
+    home_only(Gs?, Hs), link_phone(P?, Qs?, Ss?, Hs?, N?).
 core_start([superapp_ui(P, Qs) | Gs], N) :-
-    person_grants(Gs?, Grants), superapp_ui(P?, Qs?, Grants?, N?).
+    superapp_ui(P?, Qs?, Gs?, N?).
 core_start([sg_init(P, M, Qs) | _], N) :-
     ground(Qs?) | known_peers(Qs?), sg_init(P?, M?, Qs?, N?).
 core_start([gsg_phone(R, P, Qs) | _], N) :-
@@ -613,6 +705,14 @@ known_peers([]).
 %% channel, which never closes (vGLP, Section 6.3): where the person's stream
 %% closes, no grant comes again, and the channel's grants are held for good,
 %% on a fresh channel nothing writes, as hold_person/1 holds a person channel.
+%% home_only(PhoneGrants, Grants): the person's grants to home, a grant
+%% tagged for a mini-app's screen dropped, where no mini-app has one.
+procedure home_only(PhoneGrants?, Grants).
+home_only([input(I, P, R) | Gs], [input(I?, P?, R?) | Hs?]) :- home_only(Gs?, Hs).
+home_only([refresh | Gs], [refresh | Hs?]) :- home_only(Gs?, Hs).
+home_only([app(_, _) | Gs], Hs?) :- home_only(Gs?, Hs).
+home_only([], []).
+
 procedure person_grants(Grants?, PersonIn(Drawn)).
 person_grants([G | Gs], [G? | Ps?]) :- person_grants(Gs?, Ps).
 person_grants([], Ps?) :- new_channel(A, B), hold_grants(A?, B?, Ps).

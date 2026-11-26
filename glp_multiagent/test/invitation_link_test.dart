@@ -27,7 +27,9 @@ const _requestForm = "input_box(menu([form(trust, [field('CompilerKey', peer)]),
     "form(open_link, [field('Link', text)]), "
     "form(list, [field('Email', text), field('Name', text)]), "
     "form(list_unlisted, [field('Email', text), field('Name', text)]), "
-    "button(unlist)]))";
+    "button(unlist), "
+    "form(activate, [field('AppName', text)]), "
+    "form(accept, [field('AppName', text), field('Friend', peer)])]))";
 
 /// A link's text with the characters a term's text carries: spaces, quotes,
 /// parentheses, commas, a colon and a dot.

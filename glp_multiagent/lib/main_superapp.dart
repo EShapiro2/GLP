@@ -45,6 +45,7 @@ import 'phone_network.dart';
 import 'scripted_person.dart';
 import 'superapp_host.dart';
 import 'ui_runtime/agent_surface.dart';
+import 'ui_runtime/apps_bar.dart';
 import 'ui_runtime/look.dart';
 
 /// The persona's name in the seed of the agent's key pair, made once at the
@@ -224,6 +225,9 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
         if (mounted) setState(() {});
         _screenChanged();
       };
+      host.apps.addListener(() {
+        if (mounted) setState(() {});
+      });
       host.onOutput = (line) {
         if (debugLogOn) reporter?.runtimeOutput(line);
         if (line.startsWith('[ERROR]') && mounted) {
@@ -290,6 +294,12 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
                       child: Text(_status,
                           style: const TextStyle(
                               fontSize: 11, color: Colors.grey)),
+                    ),
+                  if (host.apps.apps.isNotEmpty)
+                    AppsBar(
+                      screens: host.apps,
+                      open: (app) => Navigator.of(context).push(MaterialPageRoute<void>(
+                          builder: (_) => AppPage(app: app, screens: host.apps, look: _look))),
                     ),
                   Expanded(
                     child: KeyedSubtree(

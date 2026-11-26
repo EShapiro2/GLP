@@ -42,16 +42,22 @@ imported procedure home#dispatch(Stream(Ask(Question))?, PersonChannel(Drawn)?, 
 imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 imported procedure place#os_agent(Key?, List(Key)?, List(RvServer)?, Directory?, UserInStream?, NetInStream?, Stream(Presence)?, Stream(Presence)?, AgentToUserStream, NetOutStream).
 
-exported procedure superapp_ui(Key?, List(Key)?, PersonIn(Drawn)?, NetInStream?).
+exported procedure superapp_ui(Key?, List(Key)?, PhoneGrants?, NetInStream?).
 superapp_ui(Id, Peers, Grants, _) :-
     ground(Id?), ground(Peers?) |
     place # os_agent(Id?, Peers?, [], none, Cmds?, NetIn?, Pan?, [], Outs, NetOut),
     seen_all(Peers?, Pan),
     split_out(Outs?, Shown, Seen),
-    home # home(Id?, Seen?, Cmds, Asks),
-    home # dispatch(Asks?, ch(Grants?, Draws), MCh),
+    phone_grants(Grants?, HomeGrants, AppGrants),
+    home # home(Id?, Seen?, HomeCmds, Asks),
+    app_screens(HomeCmds?, Cmds, Opened, AppDraws),
+    merge(Opened?, AppGrants?, Events),
+    route_grants(Events?, []),
+    home # dispatch(Asks?, ch(HomeGrants?, Draws), MCh),
     show_notices(MCh?, Shown?),
-    send_to_user(Draws?),
+    home_draws(Draws?, HomeDraws),
+    merge(HomeDraws?, AppDraws?, ToUser),
+    send_to_user(ToUser?),
     merge(NetOut?, PeersOut?, All),
     route_to(Id?, All?, NetIn, ToPeers),
     scripted_peers(Peers?, ToPeers?, PeersOut).

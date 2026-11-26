@@ -1,0 +1,291 @@
+/// The screens of the mini-apps installed on the super-app (EShapiro2/GLP#181):
+/// the flow of superapp_screen_test.dart --- trust, install, befriend in
+/// Nearby, invite --- on `superapp_ui/4`, and then the installed mini-app's
+/// own screen: its draws reach the person tagged `app(App, D)`, kept apart
+/// from home's by [AppScreens], and a grant on its screen goes back tagged
+/// `app(App, G)` to the mini-app alone.  No font is loaded and no picture is
+/// written, so it runs on any host.
+library;
+
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:glp_multiagent/manifests/superapp_ui.dart';
+import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
+import 'package:glp_multiagent/ui_runtime/app_screens.dart';
+import 'package:glp_multiagent/ui_runtime/look.dart';
+import 'package:glp_multiagent/ui_runtime/bridge.dart';
+import 'package:glp_multiagent/ui_runtime/construct_family.dart';
+import 'package:glp_multiagent/ui_runtime/runtime.dart';
+import 'package:glp_multiagent/ui_runtime/term.dart';
+import 'package:glp_multiagent/isolate_protocol.dart'
+    show runtimeTermOf, screenTermOf;
+import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/scheduler.dart' show ExecutionStatus;
+import 'programs_dir.dart';
+
+Widget _phoneApp(Widget surface) => MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: Looks.readSync('${programsDir()}/self.glp').of(superappContract).theme(),
+      home: surface,
+    );
+
+void main() {
+  testWidgets('a mini-app installed on the super-app gets its own screen (#181)', (tester) async {
+    tester.view.physicalSize = const Size(420, 860);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final repo = Directory('../programs').existsSync()
+        ? Directory('../programs').absolute.path
+        : '/Users/udi/Grassroots/GLP/programs';
+    final core = '$repo/social/graph/core';
+
+    // The certified mini-app the super-app installs, and the key it is
+    // certified under. `.glpw` is a build product (gitignored), written by the
+    // REPL's `:artefact` from Currencies' program into the super-app's own
+    // directory, where `load_file/2` reads it — the route superapp_plays.glp
+    // documents. The key comes from the same command rather than from the
+    // container's bytes, so this test assumes nothing about its format.
+    final key = await tester.runAsync(() => _writeArtefact(repo, core));
+    expect(key, isNotNull);
+    expect(File('$core/currency.glpw').existsSync(), isTrue);
+
+    // What send_to_user/1 sends alice, each term whole.
+    final notifies = <GTerm>[];
+    final engine = GlpEngine(rootSelfGlpPath: '$repo/self.glp');
+    engine.runtime.outputTermCallback = (t) => notifies.add(screenTermOf(t));
+    expect(engine.loadProgram(core), isTrue);
+    final play = engine.postGoal('superapp_ui(alice, [bob], Grants?, [])',
+        inputs: ['Grants']);
+    final grants = play.inputs['Grants']!;
+
+    /// The play run until quiescent, as one event of the agent's is.
+    void drain() {
+      final result = play.scheduler.drainToQuiescence(maxCycles: 200000);
+      expect(result.status, isNot(ExecutionStatus.capped),
+          reason: 'the play did not quiesce');
+    }
+
+    final sends = <GTerm>[];
+    final r = UiRuntime(manifest: superappManifest, onSend: sends.add);
+    final apps = AppScreens(send: sends.add);
+
+    var fed = 0;
+    void replay() {
+      for (; fed < notifies.length; fed++) {
+        if (!apps.handle(notifies[fed])) r.handle(notifies[fed]);
+      }
+    }
+
+    // Each of alice's grants, a ground term, onto her person channel.
+    Future<void> settle() async {
+      while (sends.isNotEmpty) {
+        grants
+            .inject(runtimeTermOf(sends.removeAt(0)))
+            .forEach(engine.runtime.gq.enqueue);
+        drain();
+      }
+      replay();
+      await tester.pumpAndSettle();
+    }
+
+    drain();
+    replay();
+
+    // The person interface asks its question as soon as it runs, before the
+    // person has done anything: the stream of her requests, one construct,
+    // drawn as the default widget of Stream(Request)? --- an input box of a
+    // menu of the five alternatives of Request ::= trust(CompilerKey) ;
+    // install(AppName, Artefact) ; invite(AppName, Friend) ; open_place ;
+    // close_place, the three forms each field labelled by the name of its
+    // declared type, a Key a peer field and a String a text field, and the
+    // two constants, Open place and Close place (GPE:1), a button each, Invite
+    // by link (GRV:2) a button, and the opening of a link a form with the
+    // link's text (GDS's implementation pragma Contact), and List and List
+    // unlisted forms with the email address and the name, and Unlist a
+    // button (GDS's interface pragma Listing).  No
+    // form connects with a person by a key typed: a person is befriended by
+    // picking them in Nearby (GSA #2, 2026-11-08 08:07 UTC, item 2).
+    const requestForm = "input_box(menu([form(trust, [field('CompilerKey', peer)]), "
+        "form(install, [field('AppName', text), field('Artefact', text)]), "
+        "form(invite, [field('AppName', text), field('Friend', peer)]), "
+        "button(open_place), "
+        "button(close_place), "
+        "button(invite_link), "
+        "form(open_link, [field('Link', text)]), "
+        "form(list, [field('Email', text), field('Name', text)]), "
+        "form(list_unlisted, [field('Email', text), field('Name', text)]), "
+        "button(unlist), "
+        "form(activate, [field('AppName', text)]), "
+        "form(accept, [field('AppName', text), field('Friend', peer)])]))";
+    // What the super-app tells its person reaches her only as the thread of
+    // construct 0, each notice by the widget of the reserved type Output ::=
+    // Notice; the questions are numbered from 1 (vGLP 169b008, Definition
+    // "Canonical Compilation"; vGLP, 2026-10-13 19:25 UTC, items 2 and 3;
+    // GSG, 2026-10-13 20:16 UTC).
+    expect(formatTerm(r.bridge.construct(0)!.widget),
+        startsWith('thread(form(msg, '));
+    List<OpenConstruct> questions() =>
+        [for (final c in r.bridge.constructs) if (c.id != 0) c];
+    /// Each notice's content, as the thread shows it.
+    List<String> notices() {
+      final v = r.bridge.construct(0)!.view;
+      return [
+        if (v is GList)
+          for (final m in v.items) formatTerm(ctorArgs(m).$2[2])
+      ];
+    }
+
+    // The persons the person knows, seen nearby (superapp_ui/4: bob), each on
+    // a card of Nearby with the button befriend (home.vglp, befriend_card/3).
+    const nearbyCard =
+        "form(nearby, [field('Friend', shown), field('Befriend', button(befriend))])";
+    expect(questions().map((c) => formatTerm(c.widget)),
+        unorderedEquals([requestForm, nearbyCard]));
+    final form = questions()
+        .singleWhere((c) => formatTerm(c.widget) == requestForm);
+    final card = questions()
+        .singleWhere((c) => formatTerm(c.widget) == nearbyCard);
+    expect(notices(), contains('nearby([bob])'));
+    expect(formatTerm(form.view), 'input([])');
+
+    await tester.pumpWidget(_phoneApp(AgentSurface(agentId: 'alice', runtime: r)));
+    await tester.pumpAndSettle();
+
+    Finder inForm(Finder f) =>
+        find.descendant(of: find.byKey(constructKey(form.id)), matching: f);
+
+    /// Bring [f] on screen: the surface scrolls, the output thread above the
+    /// questions growing with every notice.
+    Future<void> show(Finder f) async {
+      if (f.evaluate().isEmpty) {
+        await tester.scrollUntilVisible(f, 200,
+            scrollable: find.byType(Scrollable).first);
+      }
+      await tester.ensureVisible(f);
+      await tester.pumpAndSettle();
+    }
+
+    /// Choose one of the menu's forms, fill its fields, and send it: one
+    /// request on the request form, one element of the stream.
+    Future<void> request(String alternative, Map<List<int>, (String, String)> fields) async {
+      await show(inForm(find.widgetWithText(ChoiceChip, alternative)));
+      await tester.tap(inForm(find.widgetWithText(ChoiceChip, alternative)));
+      await tester.pumpAndSettle();
+      expect(inForm(find.byType(TextField)), findsNWidgets(fields.length));
+      for (final e in fields.entries) {
+        final (kind, text) = e.value;
+        await tester.enterText(
+            find.descendant(
+                of: find.byKey(nodeKey(form.id, kind, e.key)),
+                matching: find.byType(TextField)),
+            text);
+      }
+      await tester.pumpAndSettle();
+      await show(find.byKey(constructKey(form.id)));
+      await show(find.byKey(submitKey(form.id, const [])));
+      await tester.tap(find.byKey(submitKey(form.id, const [])));
+      await tester.pumpAndSettle();
+      await settle();
+    }
+
+    // The form offers the ten acts of the person's own super-app, a menu of
+    // their forms and buttons, and only those: the alternatives of Request
+    // (programs/social/graph/core/home.vglp): trust and install (GAS), invite
+    // (GPE), the place (GPE:1), the links (GRV:2) and the listings (GDS:2).
+    for (final label in [
+      'trust', 'install', 'invite', 'open_place', 'close_place',
+      'invite_link', 'open_link', 'list', 'list_unlisted', 'unlist',
+      'activate', 'accept'
+    ]) {
+      expect(inForm(find.widgetWithText(ChoiceChip, label)), findsOneWidget);
+    }
+    expect(inForm(find.byType(ChoiceChip)), findsNWidgets(12));
+
+    // --- Trust the compiler that certified the mini-app: its key, a Key and
+    // so a peer field. ---------------------------------------------------------
+    await request('trust', {
+      [1]: ('peer', key!)
+    });
+    expect(sends, isEmpty);
+
+    // --- Install it: the name it takes, and the file load_file/2 reads. -----
+    await request('install', {
+      [1]: ('text', 'currency'),
+      [2]: ('text', 'currency.glpw'),
+    });
+
+    // --- Befriend bob by picking him in Nearby, no key typed; his script
+    // consents, and the friends view fills. ----------------------------------
+    final befriend = find.descendant(
+        of: find.byKey(constructKey(card.id)),
+        matching: find.byKey(nodeKey(card.id, 'button', const [2])));
+    await show(befriend);
+    await tester.tap(befriend);
+    await tester.pumpAndSettle();
+    await settle();
+    expect(notices(), contains('connected(bob)'));
+    expect(r.store.lists, isEmpty);
+
+    // --- Invite him to the mini-app now that they are friends. -------------
+    await request('invite', {
+      [1]: ('text', 'currency'),
+      [2]: ('peer', 'bob'),
+    });
+    // The notice reads with its functor and its labelled field.
+    expect(find.text('FRIENDS'), findsNothing);
+    await show(find.descendant(
+        of: find.byKey(constructKey(0)), matching: find.text('connected')));
+    expect(
+        find.descendant(
+            of: find.byKey(constructKey(0)), matching: find.text('Constant')),
+        findsWidgets);
+
+    // The question stands: a stream question takes one element per
+    // submission and stays open while its stream does (vGLP, Remark
+    // "Persistence"), so the same construct takes every request, and it is
+    // the only one open.
+    expect(questions().map((c) => c.id), [form.id]);
+
+    // --- Activate the currency, as the person may now from home (#181): it
+    // runs, and what it draws reaches her tagged with its name, on a screen of
+    // its own, and nothing of it on home's. ----------------------------------
+    expect(apps.apps, isEmpty);
+    await request('activate', {
+      [1]: ('text', 'currency'),
+    });
+    expect(apps.apps, ['currency']);
+    final screen = apps.screen('currency')!;
+    expect(screen.bridge.constructs, isNotEmpty);
+    expect(r.raw.where((t) => ctorArgs(t).$1 == appTag), isEmpty);
+    // A grant on the mini-app's screen goes to the mini-app alone: refresh,
+    // and it draws every construct again.
+    final before = screen.raw.length;
+    screen.bridge.refresh();
+    expect(formatTerm(sends.single), 'app(currency, refresh)');
+    await settle();
+    expect(screen.raw.length, greaterThan(before));
+  }, timeout: const Timeout(Duration(minutes: 3)));
+}
+
+/// Write the currency's certified artefact into the super-app's directory and
+/// return the compiler's key it is certified under — what the person trusts.
+///
+/// This is the REPL's `:artefact <program> <to>`, the one route that produces
+/// a `.glpw`, run here so the test carries its own fixture.
+Future<String?> _writeArtefact(String repo, String core) async {
+  final runtime = Directory('$repo/../glp_runtime').absolute.path;
+  final out = await Process.run(
+    'bash',
+    [
+      '-c',
+      "printf ':artefact $repo/currencies/coins/currency $core\n:quit\n' | bin/glpc"
+    ],
+    workingDirectory: runtime,
+  );
+  final m = RegExp(r'certified under ([0-9a-f]{64})')
+      .firstMatch('${out.stdout}${out.stderr}');
+  return m?.group(1);
+}
