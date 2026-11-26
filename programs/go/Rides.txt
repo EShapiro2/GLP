@@ -3,7 +3,7 @@
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Community Network and Second-Score Auction, Grassroots Ride Auction, Second-Score Restriction, GRH's (programs/lbm).
 % Changed 2026-11-20 by GO #11: Cur-coins for Orga-coins (Udi, 2026-11-20).
-% Last changed: 2026-11-20, by GO #14 (Udi, 2026-11-20, to GO #13: community coins; Orga a community network).
+% Last changed: 2026-11-26, by GO #16: adopted from Calculus 6f6a4cd (Arrive and Arrive in full by either party, for Udi's retrospective approval); Interface buttons Arrive, Driver arrive, Arrive in full, Driver arrive in full.
 % Schemas: Rides.glp beside this file.
 Rides
 Rides inherits from Community Network and Second-Score Auction (GRH, Grassroots Ride-Hailing, in preparation).
@@ -23,4 +23,8 @@ After x cancels x's ride with y taking back the n and m c-coins locked in z on k
 Environment: the fare and the deposit of x's call c are n and m z-coins; the terms of c release p to x and q to y on arrival; the terms of c release p to x and q to y on cancellation.
 Interface pragmas
 Look: 🚕, network
-Award: Alice [Award] [Cancel] [Cancel for the rider]
+Award: Alice [Award] [Arrive]
+  Bob [Driver arrive]
+  Alice [Cancel] [Arrive in full]
+  Bob [Driver arrive in full]
+  Alice [Cancel for the rider]
