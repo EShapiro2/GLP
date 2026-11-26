@@ -733,7 +733,9 @@ class SocialNotice {
     ];
     final head =
         '${isMe(by) ? 'Your' : "${personName(by)}'s"} machine refused $act';
-    return reasons.isEmpty ? '$head.' : '$head: ${reasons.join('; ')}.';
+    // A refusal that names no atom is one for a condition on the act's values, such as a day later than today
+    // (GLP #179): it is said so, and not left with no reason.
+    return reasons.isEmpty ? '$head: a condition on its values does not hold.' : '$head: ${reasons.join('; ')}.';
   }
 
   /// The transaction the part names, as the person reads it, a noun phrase, the person as "you" and "your": a friendship, "your friendship with Bob", or "your friendship" where the other is the refuser, "the friendship of Carol and Dave" where the person is neither; its end, "the end of your friendship with Bob"; a group's acts, "Bob's joining the group friends", "the closing of the group friends"; "your message to Carol"; CSSN's, "Alice's entering Carol as their child", "your entering Dave as your child, with Grace", "Bob's declaring Dave of age", and a child's meeting as a meeting, "the meeting of Carol and Dave"; and, for a class not named here, "the act" and its schema and persons, "the act agent unfriend of Alf, Bob and Alice".
@@ -1504,7 +1506,7 @@ class _SocialTabState extends State<SocialTab> {
     final reason = n.declined ? 'declined' : 'unable';
     final atoms = [for (final a in [...n.lacks, ...n.has]) _atomText(a)];
     final text = '${personName(n.by)} $reason ${o?.labelOf(f) ?? f}'
-        '${atoms.isEmpty ? '' : ': ${atoms.join(', ')}'}';
+        '${atoms.isNotEmpty ? ': ${atoms.join(', ')}' : n.declined ? '' : ': a condition on its values does not hold'}';
     return Container(
       key: socialKey(_id, 'notice:$i'),
       width: double.infinity,
