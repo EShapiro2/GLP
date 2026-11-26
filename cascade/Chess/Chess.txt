@@ -44,13 +44,14 @@ Interface pragmas
 Games: the games Alice plays.
 Won: the games Alice has won.
 Start: Alice [Start] <game> <board> <limit>
+  Bob: Alice asks you to play a game of chess, with Alice as white.
   Alice [Start as black] <game> <board> <limit>
-  Bob: Alice asks you to play a game of chess.
+  Bob: Alice asks you to play a game of chess, with Alice as black.
 Move: Alice [Move] <move> <next>
   Alice [Drawing move] <move> <next>
 Win: Alice [Win]
 Time: Alice [Time]
 Resign: Alice [Resign]
 Draw: Alice [Draw]
-  Alice [Claim draw]
   Bob: Alice offers a draw.
+  Alice [Claim draw]
