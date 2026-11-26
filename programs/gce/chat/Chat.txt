@@ -1,0 +1,22 @@
+% Chat --- an example contract by Nimrod Talmon with Claude, 2026-11-25: a message kept by both its sender and its receiver, with its date, so that an app can show a conversation as a thread.
+% Owner: GCE, Grassroots Contract Examples, Nimrod Talmon's.
+% Strengthens and restricts: Groups, GSC's (programs/gsc).
+% Defines: sent_message, received_message.
+% Checked: calculus/tools/gcsas.py (commute, return, recover), relations.py (strengthens Groups: holds; restricts it: holds), toglp.py, tests.py (62 cases, 0 that differ); toglp.py --check needs Dart and was not run.
+% Schemas: Chat.glp beside this file.
+Chat
+Chat strengthens Groups, and restricts it.
+A *message* is what a person sends.
+Alice and Bob are persons and Today a date.
+1. ■ Message: Groups:1, only if the current date is Today, and then Alice has sent the message to Bob on Today and Bob has received it from Alice on Today.
+Logic pragmas
+Chat strengthens Groups, and restricts it.
+A *message* is what a person sends.
+Alice and Bob are persons, Text a message and Today a date.
+1. ■ Message: Groups:1, only if the current date is Today, and then Alice has sent Text to Bob on Today and Bob has received Text from Alice on Today.
+Logic pragmas.
+Vocabulary: x has sent t to y on e = sent_message(x,y,t,e); y has received t from x on e = received_message(y,x,t,e); the current date is e, for x = today(x,e).
+Interface pragmas
+Messages: the received messages of Alice.
+Sent: the sent messages of Alice.
+Message: Alice [Message] <text>
