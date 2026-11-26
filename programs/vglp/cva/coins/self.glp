@@ -30,7 +30,7 @@
 %% proposes it again and refuses it at once, the refuser alice, reason unable,
 %% the Bob-coin the payment requires at her and her state lacks; her approval
 %% ends, and her screen shows the notice refused(pay(alice, bob), alice,
-%% unable([coin(bob)], [])), naming her machine (vGLP #18
+%% unable([coin(bob)], [], [])), naming her machine (vGLP #18
 %% Cowork to Code, 2026-10-20 10:44 UTC, item 6).  alice mints again and
 %% requests a swap of her coin for bob's, swap(alice, bob, bob, alice); bob,
 %% asked by the question Start raises, answers no, his vote no declined, and
@@ -58,7 +58,7 @@ play_coins(LA?, LB?, LC?, N?) :-
           wait(holds(coin(bob))),
           own([A2], propose(pay(A2?, bob))),
           own([A3], propose(swap(A3?, bob, carol, bob))),
-          wait(refused(pay(alice, bob), alice, unable([coin(bob)], []))),
+          wait(refused(pay(alice, bob), alice, unable([coin(bob)], [], []))),
           own([A4], propose(mint(A4?))),
           wait(holds(coin(alice))),
           own([A5], propose(swap(A5?, bob, bob, alice))),

@@ -206,9 +206,12 @@ String valueText(GTerm t) => switch (t) {
 
 /// Read one ground term from the source text [s], requiring the whole string
 /// to be consumed: a display declaration's pattern ([GPattern.parse]), and a
-/// test's fixture.  Nothing the agent emits is read here --- it arrives as a
-/// term --- and no row key is read back: a key's term is the store's
-/// (runtime.dart, `ActivityStore.termOf`).
+/// test's fixture; and the text of a conjunct a notice unable(Lacks, Has,
+/// Unmet) carries, which the agent emits as a string, the contract's term
+/// printed (`SocialNotice.conjunctWords`; vGLP vglp36-unmet 35454a65).  No
+/// other output of the agent is read here --- it arrives as a term --- and no
+/// row key is read back: a key's term is the store's (runtime.dart,
+/// `ActivityStore.termOf`).
 ///
 /// Returns `null` when [s] is not a single well-formed ground term — e.g.
 /// `[INIT] Loaded ...` (trailing text) or `> connect(bob)` (leading prompt).

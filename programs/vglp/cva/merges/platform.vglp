@@ -357,7 +357,8 @@ Speech    ::= speech(Utterance, Peer).
 Utterance ::= utterance(String) ; program(Module) ; Speech.
 YesNo     ::= yes ; no.
 %% A notice of a request dropped because the agent can carry out no part it names carries the reason unable alone (vGLP, Section 5.4, "The compilation": "with a notice refused(N, p, unable)").
-Reason    ::= declined ; unable ; unable(List(Atom), List(Atom)).
+%% The reason unable(Lacks, Has, Unmet) carries, beside the atoms, the conjuncts of the constraint at the voter that fail under the binding the required atoms give, each the text of the conjunct as the contract writes it (vGLP 3ae9b56, Section 5.4, "Speech-act schemas": "where its state lacks none of the first, the conjuncts of the constraint local to the voter's role that fail under the binding the required atoms give, as the contract writes them").
+Reason    ::= declined ; unable ; unable(List(Atom), List(Atom), List(String)).
 %% A vote yes carries the readings of its voter's state, each a binding of the variables read at its roles and of the counts of the condition it takes (vGLP 566c186, Definition "Cargo, App State, Question, Approval, Free, Ready": "a vote yes carrying the readings of its voter's state and a vote no its reason"); a commit the readings the initiator chose, one of each participant's, joined ("a commit carrying the readings its initiator chose").
 %% A vote yes carries the readings of the voter's state, and, for a part whose condition holds a formula across roles, the atoms of its state the formula's atoms at its role match, yes(Readings, Atoms) (vGLP 5f55cf3, Section 5.4).
 Vote      ::= yes(Bindings) ; yes(Bindings, GAtoms) ; no(Reason).
@@ -2850,7 +2851,7 @@ named_open(A, Rr, K, R, B?) :- ground(A?), ground(R?) |
     and(S?, Open?, B).
 procedure start_named(YesNo?, Info?, Attempt?, Peer?, App?, Sends, Outputs, App).
 start_named(no, _, At, Id, Ap, Ss?, [], Ap1?) :- vote_yes_app(At?, Id?, Ap?, Ss, Ap1).
-start_named(yes, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- vote_no(I?, At?, Id?, unable([], []), Ap?, Ss, Ns, Ap1).
+start_named(yes, I, At, Id, Ap, Ss?, Ns?, Ap1?) :- vote_no(I?, At?, Id?, unable([], [], []), Ap?, Ss, Ns, Ap1).
 procedure start_asked(YesNo?, YesNo?, Attempt?, Peer?, App?, Sends, ApprovalRes, Outputs, App).
 start_asked(yes, no, At, _, app(S, K, L, R), [], approval_for(At?), [], app(S?, K?, L?, [asked(At?)|R?])) :-
     ground(At?) | true.
@@ -3167,7 +3168,7 @@ unlock_recs(app(S, K, _, _), R, app(S?, K?, unlocked, R?)).
 procedure unable_rec(Reason?, Attempt?, Peer?, Peer?, Recs?, Recs).
 unable_rec(declined, _, _, _, R, R?).
 unable_rec(unable, At, F, Id, R, R1?) :- ground(F?), ground(Id?), ground(At?), ground(R?) | same(F?, Id?, Me), unable_other(Me?, At?, F?, R?, R1).
-unable_rec(unable(_, _), At, F, _, R, [unable(At?, F?)|R?]).
+unable_rec(unable(_, _, _), At, F, _, R, [unable(At?, F?)|R?]).
 procedure unable_other(YesNo?, Attempt?, Peer?, Recs?, Recs).
 unable_other(yes, _, _, R, R?).
 unable_other(no, At, F, R, [unable(At?, F?)|R?]).
@@ -3506,7 +3507,7 @@ unmet_rec(Q, unable, At, R, R1?) :- ground(Q?), ground(At?), ground(R?) |
     commits_of(R?, N),
     unmet_add(Go?, At?, N?, R?, R1).
 unmet_rec(_, declined, _, R, R?).
-unmet_rec(_, unable(_, _), _, R, R?).
+unmet_rec(_, unable(_, _, _), _, R, R?).
 procedure unmet_add(YesNo?, Attempt?, Integer?, Recs?, Recs).
 unmet_add(yes, At, N, R, [unmet(At?, N?)|R?]).
 unmet_add(no, _, _, R, R?).
@@ -4110,28 +4111,51 @@ hat([], _, S, S?).
 hat([P|Ps], Id, S, [g(P?, [p(Id?)])|R?]) :- ground(Id?) | hat(Ps?, Id?, S?, R).
 %% The reason of a vote unable of the compiled program, unable(Lacks, Has): "the atoms the schema requires at the voter that its state lacks and those it forbids that its state has" (vGLP f0acbc1, Section 5.4, "Act schemas"), as the contract writes them, the atoms of the reflexive predicates naming the voter holding there; and, for the person in the base of a listed role, who "lists in d_p exactly the people of that role in L" (Section 5.4, "Act schemas as local specifications"), the listing atoms of the people of the role its state lacks, and those of others it has; and, for the person in the base of a conjunct whose instances the attempt names, the anchors of the instances of the list its state lacks, and those of the instances it has beyond the list (gaps_of).
 procedure unable_reason(Class?, Peer?, GAtoms?, Reason).
-unable_reason(P, Id, S, unable(L?, H?)) :- ground(P?), ground(S?) |
+unable_reason(P, Id, S, unable(L?, H?, U?)) :- ground(P?), ground(S?) |
     term_spec(P?, Nm, Rs, Bn),
-    unable_atoms(Nm?, Rs?, Bn?, Id?, S?, L0, H0),
+    unable_atoms(Nm?, Rs?, Bn?, Id?, S?, L0, H0, U),
     atoms_of(L0?, L),
     atoms_of(H0?, H).
-procedure unable_atoms(Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms).
-unable_atoms(Nm, Rs, Bn, Id, S, L?, H?) :- ground(Nm?), ground(Rs?), ground(Bn?), ground(S?) |
+procedure unable_atoms(Constant?, RoleSpecs?, Binding?, Peer?, GAtoms?, GAtoms, GAtoms, List(String)).
+unable_atoms(Nm, Rs, Bn, Id, S, L?, H?, U?) :- ground(Nm?), ground(Rs?), ground(Bn?), ground(S?) |
     reflexive_preds(Rf),
     hat(Rf?, Id?, S?, Sh),
     specs_at(Rs?, 1, Bn?, Id?, RsP),
     unlocal(Bn?, B0),
-    unable_at(RsP?, B0?, Sh?, L1, H1),
+    unable_at(RsP?, B0?, Sh?, L0, H1, Bf, Sh1),
+    unmet_of(L0?, Nm?, Bf?, Id?, Sh1?, L1, U),
     listing_gaps(Nm?, Bn?, Id?, S?, L2, H2),
     app(L1?, L2?, L),
     app(H1?, H2?, H).
+%% The conjuncts of the constraint at the voter that fail under the binding Bf the required atoms give, where its state lacks none of them, each the text of the conjunct as the contract writes it; none where it lacks some, the variables those atoms would bind being unbound (vGLP 3ae9b56, Section 5.4, "Speech-act schemas").
+procedure unmet_of(GAtoms?, Constant?, Binding?, Peer?, GAtoms?, GAtoms, List(String)).
+unmet_of([], Nm, Bf, Id, Sh, [], U?) :- ground(Nm?), ground(Bf?), ground(Id?) |
+    con_at(Nm?, Bf?, Id?, C),
+    con_leaves(C?, Cs),
+    unmet_cs(Cs?, Bf?, Sh?, U).
+unmet_of([A|As], _, _, _, _, [A?|As?], []).
+%% The conjuncts of a constraint, and(C1, C2) taken apart and true left out.
+procedure con_leaves(Constraint?, List(Constraint)).
+con_leaves(true, []).
+con_leaves(and(C1, C2), L?) :- con_leaves(C1?, L1), con_leaves(C2?, L2), app(L1?, L2?, L).
+con_leaves(C, [C?]) :- otherwise | true.
+procedure unmet_cs(List(Constraint)?, Binding?, GAtoms?, List(String)).
+unmet_cs([], _, _, []).
+unmet_cs([C|Cs], B, Sh, U?) :- ground(C?), ground(B?), ground(Sh?) |
+    con_counted(C?, B?, Sh?, C1),
+    con_holds(C1?, B?, R),
+    unmet_cs(Cs?, B?, Sh?, U1),
+    unmet_keep(R?, C?, U1?, U).
+procedure unmet_keep(YesNo?, Constraint?, List(String)?, List(String)).
+unmet_keep(yes, _, U, U?).
+unmet_keep(no, C, U, [S?|U?]) :- ground(C?) | term_to_string(C?, S).
 %% The variables local to the voter's roles bound by the first way the required atoms bind them, where they bind them at all, and left standing for themselves otherwise, an atom of one shown by no Atom (atom_of).
-procedure unable_at(RoleSpecs?, Binding?, GAtoms?, GAtoms, GAtoms).
-unable_at(RsP, B0, Sh, L?, H?) :- ground(RsP?), ground(B0?), ground(Sh?) |
+procedure unable_at(RoleSpecs?, Binding?, GAtoms?, GAtoms, GAtoms, Binding, GAtoms).
+unable_at(RsP, B0, Sh, L?, H?, Bf?, Sh?) :- ground(RsP?), ground(B0?), ground(Sh?) |
     reqs_of(RsP?, Q0),
     match_all(Q0?, Sh?, B0?, Cs),
     first_or(Cs?, B0?, Bn),
-    unable_at1(RsP?, Bn?, Sh?, L, H).
+    unable_at1(RsP?, Bn?, Sh?, L, H, Bf).
 procedure first_or(Bindings?, Binding?, Binding).
 first_or([B|_], _, B?).
 first_or([], B, B?).
@@ -4147,8 +4171,8 @@ lacks_of([R|Rs], Bn, Sh, L?) :- ground(R?), ground(Bn?), ground(Sh?) |
 %% The multiset of the greater multiplicity of each atom of two.
 procedure ms_max(GAtoms?, GAtoms?, GAtoms).
 ms_max(L1, L2, L?) :- ground(L1?), ground(L2?) | ms_diff(L2?, L1?, D), app(L1?, D?, L).
-procedure unable_at1(RoleSpecs?, Binding?, GAtoms?, GAtoms, GAtoms).
-unable_at1(RsP, Bn, Sh, L?, H?) :- ground(RsP?), ground(Bn?), ground(Sh?) |
+procedure unable_at1(RoleSpecs?, Binding?, GAtoms?, GAtoms, GAtoms, Binding).
+unable_at1(RsP, Bn, Sh, L?, H?, Bn?) :- ground(RsP?), ground(Bn?), ground(Sh?) |
     lacks_of(RsP?, Bn?, Sh?, L),
     forbs_of(RsP?, F),
     img_atoms(F?, Bn?, Fg),

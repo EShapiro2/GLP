@@ -1,10 +1,10 @@
 # A run of the cascade on Auction
 
-- Contract: `Auction` (`auction` to the checker), its owner's two files `programs/lbm/Auction.txt` and `programs/lbm/Auction.glp`, copied here as they stood at `9a1d3ad3`.
+- Contract: `Auction` (`auction` to the checker), its owner's two files `programs/lbm/Auction.txt` and `programs/lbm/Auction.glp`, copied here as they stood at `8614fea8`.
 - The paper: `/Users/udi/Grassroots/GRH (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/lbm/Auction.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/lbm/Auction.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-26 06:39 UTC by `cascade.sh auction`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `9a1d3ad3`; each artefact's source and tool:
+- Run on 2026-11-26 08:52 UTC by `cascade.sh auction`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8614fea8`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

@@ -1,10 +1,10 @@
 # A run of the cascade on Short-Feeds
 
-- Contract: `Short-Feeds` (`short_feeds` to the checker), its owner's two files `programs/gff/Short-Feeds.txt` and `programs/gff/Short-Feeds.glp`, copied here as they stood at `10f3fc71`.
+- Contract: `Short-Feeds` (`short_feeds` to the checker), its owner's two files `programs/gff/Short-Feeds.txt` and `programs/gff/Short-Feeds.glp`, copied here as they stood at `8614fea8`.
 - The paper: `/Users/udi/Grassroots/GFF (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/gff/Short-Feeds.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/gff/Short-Feeds.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-26 05:47 UTC by `cascade.sh short_feeds`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `10f3fc71`; each artefact's source and tool:
+- Run on 2026-11-26 08:55 UTC by `cascade.sh short_feeds`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8614fea8`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|
