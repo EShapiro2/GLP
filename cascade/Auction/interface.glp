@@ -7,8 +7,8 @@
 
 exported procedure interface(SglpTerms).
 interface([
-  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), point_friend('Peer', 'Peer'), point_transitive('Peer', 'Peer', 'Peer'), unpoint('Peer', 'Peer'), call('Peer', 'Constant'), send_call('Peer', 'Peer', 'Constant'), forward_call('Peer', 'Peer', 'Peer', 'Constant'), bid('Peer', 'Peer', 'Constant'), award('Peer', 'Peer', 'Constant'), close('Peer', 'Constant'), pickup('Peer', 'Peer'), arrive('Peer', 'Peer'), cancel('Peer', 'Peer'), withdraw('Peer', 'Constant')]),
-  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), point_friend('Peer', 'Peer'), point_transitive('Peer', 'Peer', 'Peer'), unpoint('Peer', 'Peer'), call('Peer', 'Constant'), bid('Peer', 'Peer', 'Constant'), award('Peer', 'Peer', 'Constant'), close('Peer', 'Constant'), cancel('Peer', 'Peer'), withdraw('Peer', 'Constant')]),
+  type('Class', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), point_friend('Peer', 'Peer'), point_transitive('Peer', 'Peer', 'Peer'), unpoint('Peer', 'Peer'), call('Peer', 'Constant'), send_call('Peer', 'Peer', 'Constant'), forward_call('Peer', 'Peer', 'Peer', 'Constant'), bid('Peer', 'Peer', 'Constant'), award('Peer', 'Peer', 'Constant'), close('Peer', 'Constant'), pickup('Peer', 'Peer'), arrive('Peer', 'Peer'), driver_arrive('Peer', 'Peer'), cancel('Peer', 'Peer'), withdraw('Peer', 'Constant')]),
+  type('Proposal', [establish('Peer'), acquaint('Peer', 'Peer'), introduce('Peer', 'Peer', 'Peer'), befriend('Peer', 'Peer'), unfriend('Peer', 'Peer'), point_friend('Peer', 'Peer'), point_transitive('Peer', 'Peer', 'Peer'), unpoint('Peer', 'Peer'), call('Peer', 'Constant'), bid('Peer', 'Peer', 'Constant'), award('Peer', 'Peer', 'Constant'), close('Peer', 'Constant'), arrive('Peer', 'Peer'), driver_arrive('Peer', 'Peer'), cancel('Peer', 'Peer'), withdraw('Peer', 'Constant')]),
   type('Request', [propose('Proposal')]),
   type('RequestMenu', [social_menu('List'('MenuEntry'))]),
   type('MenuEntry', [button('String', 'List'('MenuAct')), label('Constant', 'String'), label('Constant', 'Integer', 'String')]),
@@ -82,7 +82,7 @@ interface([
   type('Net', [msg('Peer', 'Content')]),
   type('Asking', ['Attempt', hello('Peer', 'Proposal')]),
   type('Approval', [approval('Asking', 'List'('Word'), dual('YesNo'))]),
-  type('Word', [text('String'), person('Peer'), named('String', 'Peer'), valued('String', 'Number'), held('Atom', 'Integer')]),
+  type('Word', [text('String'), person('Peer'), named('String', 'Peer'), valued('String', 'Number'), held('Atom', 'Integer'), shown('String', 'Val')]),
   type('RoleAsk', [q('Peer', 'Integer', 'List'('Word')), ql('List'('Peer'), 'Integer', 'List'('Word'))]),
   type('Asked', [asked('Integer', 'List'('Word'))]),
   type('Close', [close]),
@@ -1353,6 +1353,8 @@ interface([
   compiled(join_proposal_bid_3, 4),
   compiled(join_proposal_award_3, 4),
   compiled(join_proposal_close_2, 3),
+  compiled(join_proposal_arrive_2, 3),
+  compiled(join_proposal_driver_arrive_2, 3),
   compiled(join_proposal_cancel_2, 3),
   compiled(join_proposal_withdraw_2, 3),
   compiled(form_proposal, 2),

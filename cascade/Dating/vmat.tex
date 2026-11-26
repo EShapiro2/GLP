@@ -650,6 +650,17 @@ c_
 {
 \Alice
 }
+ \cup 
+\{
+\mathit{\detokenize{
+forwarded_post
+}}
+(
+Other
+,
+\Bob
+)
+\}
 , \qquad 
 c'_
 {
@@ -724,6 +735,19 @@ identity
 ,\\
 &
 \text{provided } 
+\mathit{\detokenize{
+forwarded_post
+}}
+(
+Other
+,
+\Bob
+)
+ \notin c_
+{
+\Alice
+}
+ \text{ and } 
 \mathit{\detokenize{
 post_from
 }}
@@ -5338,6 +5362,30 @@ identity
 }
 ,\\
 &
+\text{provided } 
+\mathit{\detokenize{
+address
+}}
+(
+\mathit{Carol}
+)
+ \notin c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+address
+}}
+(
+\Bob
+)
+ \notin c_
+{
+\mathit{Carol}
+}
+,\\
+&
 \text{guarded by } \emptyset
 \end{align*}
 \iffalse
@@ -5611,6 +5659,30 @@ identity
 identity
 }}
  \in c_
+{
+\mathit{Carol}
+}
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+address
+}}
+(
+\mathit{Carol}
+)
+ \notin c_
+{
+\Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+address
+}}
+(
+\Bob
+)
+ \notin c_
 {
 \mathit{Carol}
 }
