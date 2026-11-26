@@ -60,6 +60,7 @@ def unenabled(n, acts):
 
 
 FN = set()      # the predicates the Logic pragmas declare functions, 'Functions: n is the root of m.' (gcsas.Lex.fn), of the contract values_of read last
+FNV = set()     # the names a function's places hold that the names lines declare of a kind other than number, 'Board and Next positions' (Chess): a value of that kind, const(X), not a number (GLP #87, #135), of the contract values_of read last
 ONE = set()     # the roles any one of whom decides, 'any one listed by' (gcsas.Lex.one), of the contract values_of read last
 
 
@@ -79,6 +80,8 @@ def values_of(n, refl=None, env=None, par=None):
     ONE.update(lex.one)
     FN.clear()
     FN.update(lex.env_preds('fn'))
+    FNV.clear()
+    FNV.update(x for x, ks in gcsas.kinds_from(w, n).items() if ks and not any(k.split()[0] == 'number' for k in ks))
     # A role two contracts of the first line list differently (Organisation renames Guardians: those who decide for z,
     # listed by officers of an organisation and by guardians of a ward): each listing with the kinds of its contract.
     ALTS.clear()
@@ -133,7 +136,9 @@ def schema_nums(lits, values, places=frozenset()):
     predicate, (predicate, arity, position), that holds a number in some schema of the contract (num_places)."""
     nums = set()
     for l in lits:
-        if l[1] in values or l[1] in ARITH or l[1] in FN or l[1] in ('sum', 'product', 'difference'):
+        if l[1] in FN:          # a function's place holds a number, but for a name declared of another kind (FNV)
+            nums.update(a for a in l[2] if re.fullmatch(gcsas.NAME, a) and a not in FNV)
+        elif l[1] in values or l[1] in ARITH or l[1] in ('sum', 'product', 'difference'):
             nums.update(a for a in l[2] if re.fullmatch(gcsas.NAME, a))
         for i, a in enumerate(l[2]):
             if a[:1] in '*#':
@@ -257,7 +262,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     # A name of the act that holds, in what the act requires, the state that lists a role of those who decide, of the
     # same agent, is the one of them who decides, Decider: "Bob, a friend of a guardian of Carol" (GnW:2) is a friend
     # of the guardian who decides, as CSSN's make_guardian had it (Alice, a guardian, deciding).
-    k = 0
+    k, decs = 0, set()
     for g in e['guards']:
         if '(' in g:
             k += 1
@@ -265,6 +270,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
             exn = {x[1:] for x in a if x.startswith('-')}
             a = [x for x in a if not x.startswith('-')]
             d = 'Decider' + ('' if k == 1 else 'ABCDEFG'[k - 1])
+            decs.add(d)
             deleted = {(l[1], l[2]) for l in e['head'] if l[0]}
             for _, pp, aa in rlist.get(p, []):
                 if aa[:1] == ('z',) and 'y' in aa:
@@ -280,7 +286,9 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     # A name that two roles each read in a state they hold, and that no effect of the act names, is written as a
     # variable for each role, required equal: each is then local to its role, as vGLP's compilation asks (OSPM,
     # sections/parts/act-schemas-local.tex; vGLP by Code #36, 2026-11-20 16:50 UTC: community(Orga, G1) at Orga,
-    # participant(Bob, G2) at Bob, and G1 = G2).  The schema is the same; no atom is added.
+    # participant(Bob, G2) at Bob, and G1 = G2).  The schema is the same; no atom is added.  The one who decides,
+    # Decider, is a role of the act, never a name so written: Villagers' Make parent, Children's and Guardians' joined,
+    # reads has_parent and has_guardian of the decider at Wendy and friend at Bob (constraint_not_numeric, Calculus #15).
     spliteq = []
     held = lambda l: bool(l[2]) and l[2][0] in agents and l[1] not in values and l[1] not in ARITH and l[1] not in FN and l[1] not in ('sum', 'product', 'difference', 'author')
     inhead = {a for l in e['head'] for a in l[2]}
@@ -290,7 +298,7 @@ def term(e, agents, used, values=(), rlist={}, marks={}, consts=(), places=froze
     # Credit's Leave owed nothing), and a constant the contract names is no variable.
     held0 = held
     held = lambda l: held0(l) and '#0' not in l[2]
-    for v in sorted({a for l in e['body'] if held(l) for a in l[2][1:] if (a in agents or re.fullmatch(gcsas.NAME, a) and a not in consts) and a not in inhead and a not in firsts}):
+    for v in sorted({a for l in e['body'] if held(l) for a in l[2][1:] if (a in agents or re.fullmatch(gcsas.NAME, a) and a not in consts) and a not in inhead and a not in firsts and a not in decs}):
         hs = []
         for l in e['body']:
             if held(l) and v in l[2][1:] and l[2][0] not in hs:
