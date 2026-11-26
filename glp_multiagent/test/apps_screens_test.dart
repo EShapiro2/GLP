@@ -2203,7 +2203,7 @@ void appsScreens(Screens screens) {
     await post(alice, 'Fourth item');
     final fourth = said('Fourth item', 'alice');
     expect(bob.atoms, contains('item($fourth, alice)'));
-    expect(dave.atoms, contains('received($fourth, alice, bob)'));
+    expect(dave.atoms, contains('item_from($fourth, alice, bob)'));
     expect(carol.atoms, isNot(contains('item($fourth, alice)')));
     // (7) Dave's Feeds with the four items; Carol's has three.
     await tab(dave, 'Feeds');
