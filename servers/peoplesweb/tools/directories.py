@@ -37,6 +37,8 @@ DIRECTORIES = [
     ('programs/ggga', 'GGGA', ['SRC'], 'its contracts, which the paper SRC prints'),
     ('programs/go', 'GO', ['GO'], ''),
     ('programs/gm', 'GM', ['GM'], ''),
+    ('programs/gce/ui', 'GUI', ['GUI'], "the screens and looks of the contracts' apps, and the tools that print and check them"),
+    ('programs/gce/chess', 'GUI', ['GUI'], "the contract Chess, the paper's game"),
     ('programs/gce', 'GCE', [], "Grassroots Contract Examples, Nimrod Talmon's; the paper responsible for each is named in its NAME.txt's % Owner line"),
     ('programs/lbm', 'GRH', ['GRH'], ''),
     ('programs/currencies', 'Currencies', ['GC', 'GB', 'SGC', 'GCC'], ''),
@@ -125,6 +127,9 @@ PROJECTS = [
     ('DDD', 'Digital Speech Acts Dissolve Orphaned Disinformation', ['DDD']),
     ('KYC', 'Making Digital Speech Accountable', ['KYC']),
     ('LBM', 'Location Based Matching', ['LBM']),
+    # Nimrod Talmon's, its paper on his Overleaf, mirrored to a public
+    # repository of his (tools/papers.py, SOURCES).
+    ('GUI', 'The Grassroots UI Layer', ['GUI']),
 ]
 
 # The projects with no paper, in the order the site lists them under Code:

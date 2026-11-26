@@ -37,6 +37,10 @@ BY_DIR = {
     # The one paper of the Villagers site, peoplesweb.org/villagers
     # (deploy/villagers.sh; Udi, 2026-11-25); title and author as its main file has them.
     'Villagers': {'title': 'Villagers: A Grassroots Contract for Village Digital Life', 'authors': 'Anonymous', 'pdf': 'Villagers'},
+    # GUI's contracts (programs/gce/chess) and the screens and looks of the
+    # apps (programs/gce/ui), in preparation; title and author as its main
+    # file has them.
+    'GUI': {'title': 'The Grassroots UI Layer', 'authors': 'Nimrod Talmon', 'pdf': 'GUI'},
 }
 
 # Where each paper's source is, this file being the one record of it: its repository under EShapiro2 on GitHub, the one Overleaf syncs with, and its main file.  tools/papers_sync.py builds each from there; a paper on arXiv gets a PDF too, served as Updated while its repository is ahead of its latest arXiv version.
@@ -54,6 +58,9 @@ SOURCES = {
     'GSA': {'repo': 'GSG-Grassroots-Social-Graph', 'main': 'main_SGSG.tex'},
     'GNA': {'repo': 'GLP-Networking-API', 'main': 'main.tex'},
     'GO': {'repo': 'GO-Grassroots-Organisations', 'main': 'main_characterisation_ArXiv.tex'},
+    # A repository outside EShapiro2 is named with its owner; it is public,
+    # and tools/papers_sync.py fetches it with no token.
+    'GUI': {'repo': 'nimrodtalmon/grassroots-ui-layer', 'main': 'main.tex'},
 }
 # Papers built only when asked by name (tools/papers_sync.py, PAPERS_ONLY), not by the hourly sweep of the live site's papers: the Villagers paper, which deploy/villagers.sh builds for peoplesweb.org/villagers.
 ONLY_SOURCES = {'Villagers': {'repo': 'Villagers', 'main': 'main.tex'}}
