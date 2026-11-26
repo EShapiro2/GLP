@@ -3,6 +3,7 @@
  * Alice is the person whose phone it is.  Keywords are in capitals; everything else is the contract's.
  *
  *   SCREEN Chats ABOUT Alice:                        the first screen is the start screen, about Alice herself
+ *   SCREEN More ABOUT Alice:                         any other screen about Alice is a landmark, reached from every screen
  *   SCREEN Chat ABOUT Bob:                           a screen about a person or a value, named Bob here
  *   SCREEN Group ABOUT "Alice is a member of Bob's Hikers":  or about a fact of Alice's, in the contract's words
  *       QUESTIONS                                    the questions put to Alice, with yes and no
@@ -24,7 +25,7 @@
   const SRC = /^([A-Z]\w*)\s+(TYPED|FROM\s+PERSONS|FROM\s+[a-z]\w*|IS\s+[A-Z]\w*)$/;
   const KEYWORDS = /^(SCREEN|SHOW|LIST|THREAD|QUESTIONS|ABOUT|WITH|OPENS|FROM|TYPED|PERSONS|IS)\b/;
   function read(text) {
-    const ui = {name: '', start: null, containers: {}}, lines = [], errors = [];
+    const ui = {name: '', start: null, landmarks: [], containers: {}}, lines = [], errors = [];
     let scr = null, n = 0;
     const err = (i, m) => errors.push({line: i, msg: m});
     /* a line indented deeper than the lines of its screen goes on the line before it */
@@ -49,9 +50,9 @@
         if (ui.containers[scr]) { err(n, 'screen ' + scr + ' twice'); scr = null; continue; }
         /* every screen is about something: the start screen about Alice herself, whose phone it is */
         const first = !ui.start, me = m[3] === 'Alice';
-        ui.containers[scr] = {params: (m[2] || m[3]) && !(first && me) ? ['it'] : [], components: [], line: n, aboutText: first ? null : m[2] || null, aboutName: first || me ? null : m[3] || null};
+        ui.containers[scr] = {params: (m[2] || m[3]) && !me ? ['it'] : [], components: [], line: n, aboutText: first ? null : m[2] || null, aboutName: first || me ? null : m[3] || null};
         if (first) { ui.start = scr; if (m[2] || (m[3] && !me)) err(n, 'the start screen is about Alice: SCREEN ' + scr + ' ABOUT Alice:'); }
-        else if (me) err(n, 'only the start screen is about Alice');
+        else if (me) ui.landmarks.push(scr);
         else if (!m[2] && !m[3]) err(n, 'a screen other than the start is ABOUT something');
         mark({kind: 'screen', screen: scr});
         continue;
@@ -232,12 +233,12 @@
   /* the ways into a screen: each a path of lists from the start screen, to a depth of four, every list
      after the first kept, by `with`, to the atoms that name a position of its screen's parameter */
   function paths(ui) {
-    const out = {[ui.start]: [null]}, todo = [[ui.start, null, 0]];
+    const roots = [ui.start, ...(ui.landmarks || [])], out = Object.fromEntries(roots.map(r => [r, [null]])), todo = roots.map(r => [r, null, 0]);
     while (todo.length) {
       const [c, d, depth] = todo.shift();
       if (depth >= 4) continue;
       /* past the start screen, a way goes on only through a list kept to its screen's parameter */
-      for (const x of ui.containers[c].components) if (x.event && (c === ui.start || x.items.within)) {
+      for (const x of ui.containers[c].components) if (x.event && (roots.includes(c) || x.items.within)) {
         const nd = {kind: itemKinds(x)[0], list: x.id, via: x.items.within ? {desc: d, pos: x.items.within.pos} : null};
         const to = x.event.navigate, key = JSON.stringify(nd);
         out[to] = out[to] || [];
@@ -312,7 +313,7 @@
     /* Proposition 2: a predicate with arguments is shown by a list of its atoms on the start screen or, if
        its atoms each name a person, next to everyone there or by the details of a person whose screen that
        list opens; one without arguments, by the person's details on the start screen */
-    const st = ui.containers[ui.start].components, shown = new Set(), arity = p => spec.vocab[p] ? spec.vocab[p].vars.length - 1 : (spec.acts.flatMap(a => a.req.concat(a.forb)).find(([q]) => q === p) || [null, []])[1].length;
+    const st = [ui.start, ...(ui.landmarks || [])].flatMap(c => ui.containers[c].components), shown = new Set(), arity = p => spec.vocab[p] ? spec.vocab[p].vars.length - 1 : (spec.acts.flatMap(a => a.req.concat(a.forb)).find(([q]) => q === p) || [null, []])[1].length;
     const everyone = st.filter(x => x.kind === 'list' && !x.hidden && x.items.named);
     const opened = new Set(everyone.filter(x => x.event).map(x => x.event.navigate));
     for (const p of preds) {
@@ -333,7 +334,7 @@
 
   /* every state of one viewer among the persons, the allowed answers, and those the interface does not offer */
   function offered(spec, ui, st, me, persons) {
-    const named = [...new Set(st.flatMap(([, xs]) => xs))].sort(), out = new Set(), seen = new Set(), todo = [[ui.start, {}]];
+    const named = [...new Set(st.flatMap(([, xs]) => xs))].sort(), out = new Set(), seen = new Set(), todo = [ui.start, ...(ui.landmarks || [])].map(c => [c, {}]);
     while (todo.length) {
       const [c, env] = todo.pop(), key = c + JSON.stringify(env);
       if (seen.has(key)) continue;
@@ -436,15 +437,18 @@
       if (/^(LONG|SHORT)$/.test(what)) r = {as: what.toLowerCase()};
       else if ((q = what.match(/^A SLIDER FROM (-?\d+) TO (-?\d+)(,\s*OR TYPED)?$/))) r = {as: 'slider', from: +q[1], to: +q[2], typed: !!q[3]};
       else if (what === 'A DATE') r = {as: 'date'};
-      else if (what === 'A CHESSBOARD') r = {as: 'chessboard'};
       else if (what === 'SCANNED') r = {as: 'scanned'};
-      else if (what === 'PICKED ON THE CHESSBOARD') r = {as: 'board-pick'};
+      else if ((q = what.match(/^DRAWN BY ([a-z]\w*)$/))) r = {as: 'drawn', by: q[1]};
+      else if ((q = what.match(/^PICKED ON ([a-z]\w*)(?: FROM ([A-Z]\w*))?$/))) r = {as: 'picked', on: q[1], from: q[2] || null};
+      else if (/^(NEWEST FIRST|OLDEST FIRST|ALPHABETICAL)$/.test(what)) r = {order: what === 'NEWEST FIRST' ? 'newest' : what === 'OLDEST FIRST' ? 'oldest' : 'alpha'};
       else if (/^(A GRID|ROWS|CHIPS)$/.test(what)) r = {as: what === 'A GRID' ? 'grid' : what.toLowerCase()};
       else if (/^(IN THE MENU|IN THE BAR|PRIMARY)$/.test(what)) r = {as: what === 'PRIMARY' ? 'primary' : what === 'IN THE MENU' ? 'menu' : 'bar'};
-      else { err('not a style: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, SCANNED, A CHESSBOARD, PICKED ON THE CHESSBOARD, A GRID, ROWS, CHIPS, IN THE MENU, IN THE BAR or PRIMARY'); continue; }
+      else { err('not a style: LONG, SHORT, A SLIDER FROM 1 TO 100, A DATE, SCANNED, DRAWN BY a program, PICKED ON a program, A GRID, ROWS, CHIPS, NEWEST FIRST, OLDEST FIRST, ALPHABETICAL, IN THE MENU, IN THE BAR or PRIMARY'); continue; }
       if (r.as === 'slider' && r.from >= r.to) { err('a slider goes from a smaller number to a larger one'); continue; }
-      if (out.of[name]) { err(name + ' has a style already'); continue; }
-      out.of[name] = {...r, line: n}; L.name = name;
+      /* a list may have an order beside its look; anything else one style */
+      const had = out.of[name];
+      if (had && (r.order ? had.order : had.as)) { err(name + ' has a style already'); continue; }
+      out.of[name] = r.order ? {...(had || {line: n}), order: r.order, orderLine: n} : {...(had || {}), ...r, line: n}; L.name = name;
     }
     return out;
   }
@@ -463,7 +467,8 @@
     for (const a of g.a || []) (Array.isArray(a) ? a : [a]).forEach(e => numbersOf(e, out, top && g.f === 'and'));
     return out;
   }
-  function checkLook(spec, ui, look) {
+  function checkLook(spec, ui, look, programs) {
+    programs = programs || G.PICTURES;
     const errors = [...look.errors], err = (i, m) => errors.push({line: i, msg: m});
     const fields = {}, lists = {}, buttons = {};
     for (const C of Object.values(ui.containers)) for (const c of C.components) {
@@ -475,20 +480,25 @@
     }
     const loses = [];
     for (const [name, r] of Object.entries(look.of)) {
-      if (r.as === 'chessboard') {
+      if (r.order && !lists[name]) err(r.orderLine, name + ' is no list of the description, so it has no order');
+      if (r.order && !r.as) continue;
+      const prog = r.as === 'drawn' ? r.by : r.as === 'picked' ? r.on : null;
+      if (prog && programs && !programs[prog]) { err(r.line, prog + ' is no drawing program'); continue; }
+      if (r.as === 'drawn') {
         /* a value the description names, in a fact a screen is about or as a typed value; drawing it shows it */
         const named = Object.values(ui.containers).some(C => C.names && name in C.names) || fields[name];
         if (!named) err(r.line, name + ' is no value the description names');
         continue;
       }
-      if (['long', 'short', 'slider', 'date', 'board-pick', 'scanned'].includes(r.as)) {
+      if (r.as === 'picked' && r.from && !(look.of[r.from] && look.of[r.from].as === 'drawn' && look.of[r.from].by === r.on)) { err(r.line, r.from + ' is not DRAWN BY ' + r.on + ', so ' + name + ' cannot be picked on it'); continue; }
+      if (['long', 'short', 'slider', 'date', 'picked', 'scanned'].includes(r.as)) {
         if (!fields[name]) { err(r.line, name + ' is no value the description has TYPED'); continue; }
         for (const {a, r: place} of fields[name]) {
           const ns = numbersOf(a.guard), num = ns.names.has(place) || (a.types || {})[place] === 'num';
           if ((r.as === 'slider' || r.as === 'date') && !num) { err(r.line, name + ' is not a number in ' + a.button + ', so it is no ' + r.as); continue; }
-          if ((r.as === 'long' || r.as === 'short' || r.as === 'board-pick') && num) { err(r.line, name + ' is a number in ' + a.button + ', so it is no text'); continue; }
+          if ((r.as === 'long' || r.as === 'short') && num) { err(r.line, name + ' is a number in ' + a.button + ', so it is no text'); continue; }
+          if (r.as === 'picked' && programs && programs[r.on] && (programs[r.on].kind === 'number') !== num) { err(r.line, r.on + ' picks ' + (programs[r.on].kind === 'number' ? 'a number' : 'a text') + ', and ' + name + ' is ' + (num ? 'a number' : 'a text') + ' in ' + a.button); continue; }
           if (r.as === 'scanned' && !(a.pnames || []).includes(place)) { err(r.line, name + ' is not a person in ' + a.button + ', so it has no code to scan'); continue; }
-          if (r.as === 'board-pick' && !Object.values(look.of).some(x => x.as === 'chessboard')) { err(r.line, 'there is no CHESSBOARD to pick ' + name + ' on'); continue; }
           if (r.as === 'slider' && !r.typed) {
             const lo = ns.lo[place] ?? -Infinity, hi = ns.hi[place] ?? Infinity, lost = [];
             const span = (x, y) => x === y ? String(x) : 'from ' + x + ' to ' + y;

@@ -5,6 +5,9 @@
   "questions": "top"
  },
  "start": "Home",
+ "landmarks": [
+  "More"
+ ],
  "screens": {
   "Home": {
    "about": null,
@@ -36,7 +39,8 @@
      },
      "with": [],
      "opens": "App",
-     "look": "grid"
+     "look": "grid",
+     "order": null
     },
     {
      "kind": "list",
@@ -63,7 +67,8 @@
       "listing_signed"
      ],
      "opens": "Person",
-     "look": null
+     "look": null,
+     "order": "alpha"
     },
     {
      "kind": "list",
@@ -73,7 +78,8 @@
      },
      "with": [],
      "opens": "Store",
-     "look": null
+     "look": null,
+     "order": null
     },
     {
      "kind": "list",
@@ -84,40 +90,8 @@
      },
      "with": [],
      "opens": "Program",
-     "look": null
-    },
-    {
-     "kind": "list",
-     "title": "Links",
-     "items": {
-      "facts": "link",
-      "keep": null
-     },
-     "with": [],
-     "opens": null,
-     "look": null
-    },
-    {
-     "kind": "list",
-     "title": "Items",
-     "items": {
-      "facts": "item",
-      "keep": null
-     },
-     "with": [],
-     "opens": null,
-     "look": null
-    },
-    {
-     "kind": "list",
-     "title": "Expired",
-     "items": {
-      "facts": "expired",
-      "keep": null
-     },
-     "with": [],
-     "opens": null,
-     "look": null
+     "look": null,
+     "order": null
     },
     {
      "kind": "action",
@@ -151,24 +125,6 @@
      "places": {},
      "covers": true,
      "where": null
-    },
-    {
-     "kind": "action",
-     "schema": "encounter",
-     "button": "Encounter",
-     "sentence": null,
-     "me": 1,
-     "arity": 2,
-     "places": {
-      "2": {
-       "typed": true,
-       "look": {
-        "as": "scanned"
-       }
-      }
-     },
-     "covers": true,
-     "where": "menu"
     },
     {
      "kind": "action",
@@ -267,99 +223,6 @@
     },
     {
      "kind": "action",
-     "schema": "lookup_by_address",
-     "button": "Lookup by address",
-     "sentence": "Alice may look Bob up with Dora by address",
-     "me": 1,
-     "arity": 2,
-     "places": {
-      "2": {
-       "from": "knows"
-      }
-     },
-     "covers": true,
-     "where": "menu"
-    },
-    {
-     "kind": "action",
-     "schema": "list_me",
-     "button": "List me",
-     "sentence": "Alice may list with Dora by Mail under Name on its page",
-     "me": 2,
-     "arity": 4,
-     "places": {
-      "1": {
-       "from": "knows"
-      },
-      "3": {
-       "typed": true,
-       "look": null
-      },
-      "4": {
-       "typed": true,
-       "look": null
-      }
-     },
-     "covers": true,
-     "where": null
-    },
-    {
-     "kind": "action",
-     "schema": "list_me_unshown",
-     "button": "List me unshown",
-     "sentence": "Alice may list with Dora by Mail under Name off its page",
-     "me": 2,
-     "arity": 4,
-     "places": {
-      "1": {
-       "from": "knows"
-      },
-      "3": {
-       "typed": true,
-       "look": null
-      },
-      "4": {
-       "typed": true,
-       "look": null
-      }
-     },
-     "covers": true,
-     "where": "menu"
-    },
-    {
-     "kind": "action",
-     "schema": "delist_me",
-     "button": "Delist me",
-     "sentence": "Alice may delist from Dora by Mail under Name on its page",
-     "me": 2,
-     "arity": 2,
-     "places": {
-      "1": {
-       "typed": true,
-       "look": null
-      }
-     },
-     "covers": true,
-     "where": "menu"
-    },
-    {
-     "kind": "action",
-     "schema": "delist_me_unshown",
-     "button": "Delist me unshown",
-     "sentence": "Alice may delist from Dora by Mail under Name off its page",
-     "me": 2,
-     "arity": 2,
-     "places": {
-      "1": {
-       "typed": true,
-       "look": null
-      }
-     },
-     "covers": true,
-     "where": "menu"
-    },
-    {
-     "kind": "action",
      "schema": "install_from_store",
      "button": "Install from store",
      "sentence": "Alice may install from a store Prog of Bob",
@@ -412,6 +275,158 @@
      },
      "covers": true,
      "where": null
+    }
+   ]
+  },
+  "More": {
+   "about": null,
+   "components": [
+    {
+     "kind": "list",
+     "title": "Links",
+     "items": {
+      "facts": "link",
+      "keep": null
+     },
+     "with": [],
+     "opens": null,
+     "look": null,
+     "order": null
+    },
+    {
+     "kind": "list",
+     "title": "Items",
+     "items": {
+      "facts": "item",
+      "keep": null
+     },
+     "with": [],
+     "opens": null,
+     "look": null,
+     "order": null
+    },
+    {
+     "kind": "list",
+     "title": "Expired",
+     "items": {
+      "facts": "expired",
+      "keep": null
+     },
+     "with": [],
+     "opens": null,
+     "look": null,
+     "order": null
+    },
+    {
+     "kind": "action",
+     "schema": "encounter",
+     "button": "Encounter",
+     "sentence": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       }
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "lookup_by_address",
+     "button": "Lookup by address",
+     "sentence": "Alice may look Bob up with Dora by address",
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "knows"
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "list_me",
+     "button": "List me",
+     "sentence": "Alice may list with Dora by Mail under Name on its page",
+     "me": 2,
+     "arity": 4,
+     "places": {
+      "1": {
+       "from": "knows"
+      },
+      "3": {
+       "typed": true,
+       "look": null
+      },
+      "4": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "list_me_unshown",
+     "button": "List me unshown",
+     "sentence": "Alice may list with Dora by Mail under Name off its page",
+     "me": 2,
+     "arity": 4,
+     "places": {
+      "1": {
+       "from": "knows"
+      },
+      "3": {
+       "typed": true,
+       "look": null
+      },
+      "4": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "delist_me",
+     "button": "Delist me",
+     "sentence": "Alice may delist from Dora by Mail under Name on its page",
+     "me": 2,
+     "arity": 2,
+     "places": {
+      "1": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": null
+    },
+    {
+     "kind": "action",
+     "schema": "delist_me_unshown",
+     "button": "Delist me unshown",
+     "sentence": "Alice may delist from Dora by Mail under Name off its page",
+     "me": 2,
+     "arity": 2,
+     "places": {
+      "1": {
+       "typed": true,
+       "look": null
+      }
+     },
+     "covers": true,
+     "where": null
     },
     {
      "kind": "action",
@@ -426,7 +441,7 @@
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": null
     },
     {
      "kind": "action",
@@ -442,7 +457,7 @@
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": null
     },
     {
      "kind": "action",
@@ -458,7 +473,7 @@
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": null
     },
     {
      "kind": "action",
@@ -474,7 +489,7 @@
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": null
     },
     {
      "kind": "action",
@@ -490,7 +505,7 @@
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": null
     },
     {
      "kind": "action",
@@ -511,7 +526,7 @@
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": null
     },
     {
      "kind": "action",
@@ -522,7 +537,7 @@
      "arity": 2,
      "places": {},
      "covers": true,
-     "where": "menu"
+     "where": null
     },
     {
      "kind": "action",
@@ -544,7 +559,7 @@
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": null
     },
     {
      "kind": "action",
@@ -560,7 +575,7 @@
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": null
     },
     {
      "kind": "action",
@@ -575,7 +590,7 @@
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": null
     },
     {
      "kind": "action",
@@ -590,7 +605,7 @@
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": null
     },
     {
      "kind": "action",
@@ -605,7 +620,7 @@
       }
      },
      "covers": true,
-     "where": "menu"
+     "where": null
     }
    ]
   },

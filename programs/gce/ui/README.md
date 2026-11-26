@@ -6,13 +6,15 @@ shown).
 
 - `Friendship.ui`: Friendship's UI structure, person first: everyone Alice knows on the start screen, and a screen for each.
 - `Friendship.style`: its UI style, how it is drawn, one sentence a line, by the names the UI structure uses: a typed value
-  LONG or a SLIDER, a list A GRID, an action IN THE MENU or PRIMARY, the colors of the whole app.  Its checker
+  LONG or a SLIDER, a list A GRID and NEWEST FIRST or ALPHABETICAL, an action IN THE MENU or PRIMARY, a value
+  DRAWN BY a drawing program or PICKED ON one (`tools/pictures.js`: chessboard, tens), the colors of the whole app.  Its checker
   refuses a UI style that loses an option the contract allows, such as a slider narrower than the values allowed.
 - `Groups.ui`, `Groups.style` and `Groups.ui.json`: Groups (GSN's app, `programs/apps/gsn`), conversations first:
   the person's groups and contacts on the start screen, a chat with each contact, a screen for each group.
 - `App.ui`, `App.style` and `App.ui.json`: the Grassroots App's own screens, home, from its contract App
   (`programs/social/graph/App.txt`, platform `cascade/App/platform.vglp`): apps, people and stores on the start
-  screen, a screen for each; links, Nearby, the directory and wards there too, the rarer acts in the menu.
+  screen, a screen for each, Nearby and links; the rarer acts on More, a landmark: a second screen about the
+  person herself, reached from every screen.
 - `Friendship.ui.json`: the UI structure and the UI style, compiled with the contract into what the app reads: each
   act by its schema, each place by its number in the act's request, the proposer's place the platform's.  Edit
   the `.ui` or the `.style` and print it again:

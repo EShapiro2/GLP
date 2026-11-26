@@ -79,12 +79,15 @@ class UiDescription {
   final String start;
   final Map<String, UiScreen> screens;
 
+  /// The landmarks: the other screens about the person herself, each reached from every screen.
+  final List<String> landmarks;
+
   /// The positions of each predicate's facts that hold persons.
   final Map<String, List<int>> personPos;
 
   /// The look of the whole app: `theme`, `shape`, `density`, `home`, `convo`, `questions`, `actions`.
   final Map<String, String> look;
-  const UiDescription(this.start, this.screens, this.personPos, [this.look = const {}]);
+  const UiDescription(this.start, this.screens, this.personPos, [this.look = const {}, this.landmarks = const []]);
 
   static UiDescription parse(String source) {
     final j = jsonDecode(source) as Map<String, dynamic>;
@@ -101,7 +104,7 @@ class UiDescription {
         e.key: [for (final p in e.value as List) p as int]
     }, {
       for (final e in ((j['look'] ?? const <String, dynamic>{}) as Map<String, dynamic>).entries) e.key: e.value as String
-    });
+    }, [for (final l in (j['landmarks'] ?? const []) as List) l as String]);
   }
 }
 
@@ -213,6 +216,14 @@ class DescribedCore {
         if (pred(a) == p && (kept == null || names(a, kept))) a
     ];
   }
+
+  /// The items of a list in the order its UI style gives: `newest` first, `oldest` first, or `alpha` by how they
+  /// are shown; with none, as the person's facts hold them.
+  List<GTerm> ordered(UiComponent c, List<GTerm> xs) => switch (c.j['order']) {
+        'newest' => xs.reversed.toList(),
+        'alpha' => [...xs]..sort((a, b) => show(a).compareTo(show(b))),
+        _ => xs,
+      };
 
   /// The value of the subject the source [src] takes.
   GTerm? ofSubject(PlaceSource src, GTerm? subject) {
@@ -329,7 +340,9 @@ class DescribedCore {
       }
     }
 
-    walk(ui.start, null, 0);
+    for (final root in [ui.start, ...ui.landmarks]) {
+      walk(root, null, 0);
+    }
     return out;
   }
 }
@@ -491,7 +504,7 @@ class _DescribedScreenState extends State<DescribedScreen> {
             ]),
           ));
         case 'list':
-          final items = c.items(comp, subject);
+          final items = c.ordered(comp, c.items(comp, subject));
           final opens = comp.j['opens'] as String?;
           final isFact = comp.j['items']['facts'] != null;
           body.add(Padding(
@@ -637,6 +650,24 @@ class _DescribedScreenState extends State<DescribedScreen> {
             ]),
           ),
         ),
+        if (ui.landmarks.isNotEmpty)
+          Material(
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+              child: Wrap(spacing: 6, children: [
+                for (final l in [ui.start, ...ui.landmarks])
+                  ChoiceChip(
+                    key: describedKey('landmark:$l'),
+                    label: Text(l),
+                    selected: name == l,
+                    onSelected: (_) => setState(() => _stack
+                      ..clear()
+                      ..add((l, null))),
+                  ),
+              ]),
+            ),
+          ),
         Expanded(child: ListView(padding: const EdgeInsets.only(bottom: 10), children: body)),
         if (composer != null)
           Material(color: Colors.white, child: SafeArea(top: false, child: composer))

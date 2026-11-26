@@ -4,6 +4,7 @@
   "theme": "fresh"
  },
  "start": "Chats",
+ "landmarks": [],
  "screens": {
   "Chats": {
    "about": null,
@@ -29,7 +30,8 @@
      },
      "with": [],
      "opens": "Group",
-     "look": "grid"
+     "look": "grid",
+     "order": null
     },
     {
      "kind": "list",
@@ -42,7 +44,8 @@
       "friend"
      ],
      "opens": "Chat",
-     "look": null
+     "look": null,
+     "order": null
     },
     {
      "kind": "action",

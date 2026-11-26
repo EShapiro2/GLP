@@ -19,7 +19,7 @@ function compile(sim, text, platformText, lookText) {
   const P = G.resolve(spec, G.read(text)), R = G.check(spec, P.ui);
   if (P.errors.length) throw new Error(P.errors.map(e => 'line ' + e.line + ': ' + e.msg).join('\n'));
   if (!R.complete) throw new Error('not complete: ' + Object.values(R.acts).filter(a => !a.covered).map(a => a.button).join(', '));
-  const LK = G.readLook(lookText || ''), LR = G.checkLook(spec, P.ui, LK);
+  const LK = G.readLook(lookText || ''), LR = G.checkLook(spec, P.ui, LK, require('./pictures.js'));
   if (!LR.ok) throw new Error('the look: ' + LR.errors.map(e => 'line ' + e.line + ': ' + e.msg).join('\n'));
   const lookOf = n => { const r = LK.of[n]; if (!r) return null; const {line, ...o} = r; return o; };
   /* the positions of each predicate's facts that hold persons, from the acts that add them */
@@ -36,7 +36,7 @@ function compile(sim, text, platformText, lookText) {
       if (c.kind === 'inbox') comps.push({kind: 'questions'});
       else if (c.kind === 'details') comps.push({kind: 'show', of: c.about, pos: c.pos, preds: c.shows});
       else if (c.kind === 'thread') comps.push({kind: 'thread', preds: c.shows});
-      else if (c.kind === 'list') comps.push({kind: 'list', title: c.title, items: c.items.named ? {everyone: true} : c.items.pred ? {from: c.items.pred} : {facts: c.items.atoms, keep: c.items.within ? c.items.within.pos : null}, with: c.shows || [], opens: c.opens || null, look: (lookOf(c.title) || {}).as || null});
+      else if (c.kind === 'list') comps.push({kind: 'list', title: c.title, items: c.items.named ? {everyone: true} : c.items.pred ? {from: c.items.pred} : {facts: c.items.atoms, keep: c.items.within ? c.items.within.pos : null}, with: c.shows || [], opens: c.opens || null, look: (lookOf(c.title) || {}).as || null, order: (lookOf(c.title) || {}).order || null});
       else if (c.kind === 'action' && c.act) {
         const a = spec.acts.find(x => x.name === c.act), places = {};
         /* the places as the platform's request numbers them, and its proposer's */
@@ -61,7 +61,7 @@ function compile(sim, text, platformText, lookText) {
     }
     screens[name] = {about: C.aboutPred ? {fact: C.aboutPred} : C.aboutName ? {name: C.aboutName} : null, components: comps};
   }
-  return {version: 1, look: LK.global, start: P.ui.start, screens, personPos: Object.fromEntries(Object.entries(personPos).map(([p, s]) => [p, [...s].sort()])), complete: R.complete, visible: R.visible, warnings: [...new Set(warnings)]};
+  return {version: 1, look: LK.global, start: P.ui.start, landmarks: P.ui.landmarks || [], screens, personPos: Object.fromEntries(Object.entries(personPos).map(([p, s]) => [p, [...s].sort()])), complete: R.complete, visible: R.visible, warnings: [...new Set(warnings)]};
 }
 module.exports = compile;
 if (require.main === module) {

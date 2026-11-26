@@ -4,6 +4,7 @@
   "theme": "fresh"
  },
  "start": "Home",
+ "landmarks": [],
  "screens": {
   "Home": {
    "about": null,
@@ -31,7 +32,8 @@
       "friend"
      ],
      "opens": "Person",
-     "look": null
+     "look": null,
+     "order": null
     },
     {
      "kind": "action",
