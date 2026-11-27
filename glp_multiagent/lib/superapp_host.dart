@@ -71,7 +71,7 @@ import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'isolate_protocol.dart' show runtimeTermOf, screenTermOf;
 import 'ui_runtime/manifest.dart';
 import 'ui_runtime/runtime.dart';
-import 'ui_runtime/term.dart' show GTerm;
+import 'ui_runtime/term.dart' show GAtom, GStruct, GTerm;
 
 /// The entry the person's first act names on a phone: superapp/5 of
 /// `programs/social/graph/core` (core's CoreAct
@@ -120,6 +120,29 @@ class SuperAppHost {
         onAct?.call(cmd);
         act(runtimeTermOf(cmd));
       });
+
+  /// The screen of each installed mini-app the agent has drawn on, by its name: what the
+  /// mini-app draws on its person channel, which the super-app shows under its name, and the
+  /// person's grants on it, which go to the agent under that name, `app(App, Input)`.
+  final Map<String, UiRuntime> apps = {};
+
+  /// Told when a mini-app's screen is made, on its install, and when it changes.
+  void Function()? onAppsChange;
+
+  /// The screen of the mini-app [name], made on its first draw.
+  UiRuntime appScreen(String name) => apps.putIfAbsent(name, () {
+        final screen = UiRuntime(
+            manifest: Manifest(title: name, panels: [Panel(id: name, name: name, constructs: true)], activity: const []),
+            onSend: (cmd) => act(runtimeTermOf(GStruct('app', [GAtom(name), cmd]))));
+        screen.onChange = () => onAppsChange?.call();
+        onAppsChange?.call();
+        return screen;
+      });
+
+  /// The person opens her mini-app [app], an instance begun with her alone where none runs
+  /// (programs/social/graph/core/self.glp, AppAct); installing it and inviting a friend to it are
+  /// home's request and card (home.vglp).
+  Future<void> activate(String app) => act(runtimeTermOf(GStruct('activate', [GAtom(app)])));
 
   /// Each act of the person on the screen, as the bridge sends it, before it
   /// is handed to the agent; null, and none is told.  A debuggable build
@@ -198,7 +221,17 @@ class SuperAppHost {
   Future<void> start() async {
     agent.onUserOutput = (term) {
       onUserOutput?.call(term);
-      ui.handle(screenTermOf(term));
+      final t = screenTermOf(term);
+      // A draw of an installed mini-app's, under its name, app(App, Draw), goes to its screen
+      // (programs/social/graph/core/self.glp, app_screens/1); everything else is home's.
+      if (t case GStruct(functor: 'app', args: [GAtom(:final name), final draw])) {
+        appScreen(name).handle(draw);
+      } else if (t case GStruct(functor: 'opened', args: [GAtom(:final name)])) {
+        // A mini-app installed: its screen, empty until the mini-app draws on it.
+        appScreen(name);
+      } else {
+        ui.handle(t);
+      }
     };
     agent.onOutput = (line) => onOutput?.call(line);
     final log = onLog;

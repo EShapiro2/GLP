@@ -43,6 +43,7 @@ import 'invitation_link.dart';
 import 'manifests/superapp_ui.dart';
 import 'phone_network.dart';
 import 'scripted_person.dart';
+import 'superapp_apps.dart';
 import 'superapp_host.dart';
 import 'ui_runtime/agent_surface.dart';
 import 'ui_runtime/look.dart';
@@ -294,14 +295,19 @@ class _GrassrootsScreenState extends State<GrassrootsScreen> {
                   Expanded(
                     child: KeyedSubtree(
                       key: _surface,
-                      child: _look == null
-                          ? AgentSurface(agentId: _persona, runtime: host.ui)
-                          : Theme(
-                              data: _look!.theme(),
-                              child: AgentSurface(
-                                  agentId: _persona,
-                                  runtime: host.ui,
-                                  icon: _look!.icon)),
+                      // Home, and each mini-app the person installed on a screen of its own
+                      // (superapp_apps.dart).
+                      child: SuperAppScreens(
+                        host: host,
+                        home: _look == null
+                            ? AgentSurface(agentId: _persona, runtime: host.ui)
+                            : Theme(
+                                data: _look!.theme(),
+                                child: AgentSurface(
+                                    agentId: _persona,
+                                    runtime: host.ui,
+                                    icon: _look!.icon)),
+                      ),
                     ),
                   ),
                 ],

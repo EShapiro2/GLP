@@ -689,8 +689,33 @@ procedure offer_consent(Consent?, Key?, Key?, String?, String?, RootChannel(Opaq
 offer_consent(app(App), Id, From, Src, _, End, UserIn, NetIn, Outs, Host) :-
     do_join(Id?, App?, From?, Src?, End?, UserIn?, NetIn?, Outs?, Host?).
 offer_consent(none, Id, From, Src, InvSig, End, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    agent(Id?, UserIn?, NetIn?, Outs?,
-          host(Apps?, Atts?, [offered(From?, Src?, InvSig?, End?) | Pend?], Trusted?)).
+    ground(From?), ground(Src?) |
+    app_of_source(Src?, Apps?, Apps1, Named),
+    tell_invited(Named?, From?, Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?,
+          host(Apps1?, Atts?, [offered(From?, Src?, InvSig?, End?) | Pend?], Trusted?)).
+
+%% tell_invited(Named, From, Outs, Outs1): an offer from From of a mini-app
+%% installed here, told to the person under the name it is installed under,
+%% for her to consent to on home's card; an offer of a mini-app not installed
+%% here is told nothing, the person having nothing to join it with.
+procedure tell_invited(Named?, Key?, OutputsList?, OutputsList).
+tell_invited(named(App), From, Outs, Outs1?) :-
+    send_user(msg(agent, person, invited(From?, App?)), Outs?, Outs1).
+tell_invited(none, _, Outs, Outs?).
+
+%% app_of_source(Src, Apps, Apps1, Named): the name of the mini-app installed
+%% here whose source identity is Src, from its certificate; none where none is.
+procedure app_of_source(String?, AppList?, AppList, Named).
+app_of_source(Src, [app(A, M, C, St) | Rest], [app(A?, M?, C?, St?) | Rest1?], N?) :-
+    ground(Src?), ground(A?) |
+    decompose_module(M?, _, S, _),
+    source_step(S?, Src?, A?, Rest?, Rest1, N).
+app_of_source(_, [], [], none).
+
+procedure source_step(String?, String?, Constant?, AppList?, AppList, Named).
+source_step(S, Src, A, Rest, Rest?, named(A?)) :- S? =?= Src? | true.
+source_step(_, Src, _, Rest, Rest1?, N?) :- otherwise | app_of_source(Src?, Rest?, Rest1, N).
 
 %% do_join: the person having consented, where the mini-app is installed here
 %% with the offered source identity, sign the undertaking to keep its contract
