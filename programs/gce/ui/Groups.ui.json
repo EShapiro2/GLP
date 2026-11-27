@@ -181,6 +181,94 @@
    }
   ]
  },
+ "vocab": {
+  "identity": {
+   "phrase": "x has an identity",
+   "vars": [
+    "x"
+   ]
+  },
+  "person": {
+   "phrase": "x is a person",
+   "vars": [
+    "x"
+   ]
+  },
+  "knows": {
+   "phrase": "x knows y",
+   "vars": [
+    "x",
+    "y"
+   ]
+  },
+  "friend": {
+   "phrase": "x counts y as a friend",
+   "vars": [
+    "x",
+    "y"
+   ]
+  },
+  "message": {
+   "phrase": "y has the message t from x",
+   "vars": [
+    "y",
+    "x",
+    "t"
+   ]
+  },
+  "leader": {
+   "phrase": "x is the leader of g",
+   "vars": [
+    "x",
+    "g"
+   ]
+  },
+  "member": {
+   "phrase": "x is a member of the group g of y",
+   "vars": [
+    "x",
+    "g",
+    "y"
+   ]
+  },
+  "listed": {
+   "phrase": "x has y as a member of the group g",
+   "vars": [
+    "x",
+    "y",
+    "g"
+   ]
+  },
+  "posted": {
+   "phrase": "y has the post t of x in g",
+   "vars": [
+    "y",
+    "t",
+    "x",
+    "g"
+   ]
+  },
+  "group_message": {
+   "phrase": "z has the message t of x in g delivered by y",
+   "vars": [
+    "z",
+    "x",
+    "t",
+    "g",
+    "y"
+   ]
+  },
+  "group_delivered": {
+   "phrase": "y has delivered the message t of x in g to z",
+   "vars": [
+    "y",
+    "x",
+    "t",
+    "g",
+    "z"
+   ]
+  }
+ },
  "start": "Chats",
  "landmarks": [],
  "screens": {

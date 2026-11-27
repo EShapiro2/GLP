@@ -80,4 +80,11 @@ void main() {
     expect(core.namesRequest(const GStruct('befriend', [GAtom('alice'), GAtom('bob')]), const GStruct('befriend', [GAtom('alice'), GAtom('bob')])), isTrue);
     expect(core.namesRequest(const GStruct('unfriend', [GAtom('alice')]), const GStruct('befriend', [GAtom('alice'), GAtom('bob')])), isFalse);
   });
+
+  test('a fact in the contract\'s words: the holder you, the verb without its s', () {
+    final app = _read('App');
+    expect(app.phrase('trusts_developer', ['Carol']), 'you trust Carol as a developer');
+    expect(app.phrase('identity', []), 'you have an identity');
+    expect(app.phrase('no_such', []), isNull);
+  });
 }

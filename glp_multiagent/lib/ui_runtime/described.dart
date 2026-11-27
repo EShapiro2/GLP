@@ -127,8 +127,11 @@ class UiDescription {
 
   /// The look of the whole app: `theme`, `shape`, `density`, `home`, `convo`, `questions`, `actions`.
   final Map<String, String> look;
+
+  /// The contract's phrase of each predicate, its first variable the holder: "x trusts y as a developer".
+  final Map<String, ({String phrase, List<String> vars})> vocab;
   const UiDescription(this.start, this.screens, this.personPos,
-      [this.look = const {}, this.landmarks = const [], this.effects = const {}, this.addedBy = const {}]);
+      [this.look = const {}, this.landmarks = const [], this.effects = const {}, this.addedBy = const {}, this.vocab = const {}]);
 
   static UiDescription parse(String source) {
     final j = jsonDecode(source) as Map<String, dynamic>;
@@ -158,7 +161,36 @@ class UiDescription {
           for (final x in e.value as List)
             (schema: x['schema'] as String, button: x['button'] as String, mine: x['mine'] == true)
         ]
+    }, {
+      for (final e in ((j['vocab'] ?? const <String, dynamic>{}) as Map<String, dynamic>).entries)
+        e.key: (
+          phrase: (e.value as Map<String, dynamic>)['phrase'] as String,
+          vars: [for (final v in (e.value['vars'] ?? const []) as List) v as String]
+        )
     });
+  }
+
+  /// A fact of the person in the contract's words, where its vocabulary has a phrase: the holder read "you", a
+  /// place not chosen "someone", the verb after "you" without its s ("you trust", "you have", "you are").
+  String? phrase(String pred, List<String> args) {
+    final v = vocab[pred];
+    if (v == null || v.vars.isEmpty) return null;
+    final val = {v.vars.first: 'you'};
+    for (var i = 1; i < v.vars.length && i - 1 < args.length; i++) {
+      val[v.vars[i]] = args[i - 1];
+    }
+    var out = v.phrase.replaceAllMapped(RegExp(r'\b\w+\b'), (m) => val[m[0]!] ?? m[0]!);
+    out = out.replaceAllMapped(RegExp(r'^you (\w+)'), (m) {
+      final w = m[1]!;
+      final verb = switch (w) {
+        'has' => 'have',
+        'is' => 'are',
+        'does' => 'do',
+        _ => w.endsWith('ss') || !w.endsWith('s') ? w : w.endsWith('ies') ? '${w.substring(0, w.length - 3)}y' : w.substring(0, w.length - 1),
+      };
+      return 'you $verb';
+    });
+    return out;
   }
 
   /// Whether the act [schema] only removes facts, ends something: it is taken on a second tap.
@@ -599,6 +631,8 @@ class DescribedCore {
       for (final x in w.c.args)
         x is int && w.at[x] != null ? w.at[x]! : SocialNotice.someone
     ];
+    final said = ui.phrase(w.c.pred, [for (final x in xs) same(x, SocialNotice.someone) ? 'someone' : show(x)]);
+    if (said != null) return said;
     final atom = xs.isEmpty ? GAtom(w.c.pred) : GStruct(w.c.pred, xs);
     return SocialNotice.factWords(atom, s.me, true, (q) => same(q, s.me));
   }

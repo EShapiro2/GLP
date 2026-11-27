@@ -646,6 +646,233 @@
    }
   ]
  },
+ "vocab": {
+  "identity": {
+   "phrase": "x has an identity",
+   "vars": [
+    "x"
+   ]
+  },
+  "person": {
+   "phrase": "x is a person",
+   "vars": [
+    "x"
+   ]
+  },
+  "knows": {
+   "phrase": "x knows y",
+   "vars": [
+    "x",
+    "y"
+   ]
+  },
+  "nearby": {
+   "phrase": "x is nearby y",
+   "vars": [
+    "x",
+    "y"
+   ]
+  },
+  "open_place": {
+   "phrase": "x has declared the place open",
+   "vars": [
+    "x"
+   ]
+  },
+  "friend": {
+   "phrase": "x counts y as a friend",
+   "vars": [
+    "x",
+    "y"
+   ]
+  },
+  "ward": {
+   "phrase": "z is a ward",
+   "vars": [
+    "z"
+   ]
+  },
+  "has_guardian": {
+   "phrase": "x has y as a guardian",
+   "vars": [
+    "x",
+    "y"
+   ]
+  },
+  "guardian": {
+   "phrase": "y is a guardian of x",
+   "vars": [
+    "y",
+    "x"
+   ]
+  },
+  "creator": {
+   "phrase": "y is the creator of x",
+   "vars": [
+    "y",
+    "x"
+   ]
+  },
+  "retired": {
+   "phrase": "x is retired",
+   "vars": [
+    "x"
+   ]
+  },
+  "rendezvous_server": {
+   "phrase": "d is a rendezvous server",
+   "vars": [
+    "d"
+   ]
+  },
+  "link": {
+   "phrase": "x has signed n as an invitation link that names d",
+   "vars": [
+    "x",
+    "n",
+    "d"
+   ]
+  },
+  "registered": {
+   "phrase": "d has n registered for x",
+   "vars": [
+    "d",
+    "n",
+    "x"
+   ]
+  },
+  "expired": {
+   "phrase": "d holds n expired",
+   "vars": [
+    "d",
+    "n"
+   ]
+  },
+  "spent": {
+   "phrase": "d holds n spent for x",
+   "vars": [
+    "d",
+    "n",
+    "x"
+   ]
+  },
+  "address": {
+   "phrase": "x has the address of y",
+   "vars": [
+    "x",
+    "y"
+   ]
+  },
+  "presented": {
+   "phrase": "d has the signature of y over the friendship of x and y presented",
+   "vars": [
+    "d",
+    "x",
+    "y"
+   ]
+  },
+  "directory": {
+   "phrase": "d is a directory",
+   "vars": [
+    "d"
+   ]
+  },
+  "lists_shown": {
+   "phrase": "d lists x by e under m on its page",
+   "vars": [
+    "d",
+    "x",
+    "e",
+    "m"
+   ]
+  },
+  "lists_unshown": {
+   "phrase": "d lists x by e under m off its page",
+   "vars": [
+    "d",
+    "x",
+    "e",
+    "m"
+   ]
+  },
+  "holds_link": {
+   "phrase": "y holds an invitation link of x from d",
+   "vars": [
+    "y",
+    "x",
+    "d"
+   ]
+  },
+  "item": {
+   "phrase": "x holds the item t",
+   "vars": [
+    "x",
+    "t"
+   ]
+  },
+  "program": {
+   "phrase": "x holds p of y",
+   "vars": [
+    "x",
+    "p",
+    "y"
+   ]
+  },
+  "trusts_developer": {
+   "phrase": "x trusts y as a developer",
+   "vars": [
+    "x",
+    "y"
+   ]
+  },
+  "installed": {
+   "phrase": "x has p of y installed",
+   "vars": [
+    "x",
+    "p",
+    "y"
+   ]
+  },
+  "participant": {
+   "phrase": "x is a participant of p of z with y",
+   "vars": [
+    "x",
+    "p",
+    "z",
+    "y"
+   ]
+  },
+  "store": {
+   "phrase": "d is a store",
+   "vars": [
+    "d"
+   ]
+  },
+  "lists_program": {
+   "phrase": "d lists p of y",
+   "vars": [
+    "d",
+    "p",
+    "y"
+   ]
+  },
+  "listing_signed": {
+   "phrase": "d has p of y signed by x",
+   "vars": [
+    "d",
+    "p",
+    "y",
+    "x"
+   ]
+  },
+  "trusts_store": {
+   "phrase": "x trusts the store d",
+   "vars": [
+    "x",
+    "d"
+   ]
+  }
+ },
  "start": "Home",
  "landmarks": [
   "More"

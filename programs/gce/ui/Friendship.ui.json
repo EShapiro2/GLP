@@ -74,6 +74,34 @@
    }
   ]
  },
+ "vocab": {
+  "identity": {
+   "phrase": "x has an identity",
+   "vars": [
+    "x"
+   ]
+  },
+  "person": {
+   "phrase": "x is a person",
+   "vars": [
+    "x"
+   ]
+  },
+  "knows": {
+   "phrase": "x knows y",
+   "vars": [
+    "x",
+    "y"
+   ]
+  },
+  "friend": {
+   "phrase": "x counts y as a friend",
+   "vars": [
+    "x",
+    "y"
+   ]
+  }
+ },
  "start": "Home",
  "landmarks": [],
  "screens": {

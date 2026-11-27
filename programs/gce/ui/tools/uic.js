@@ -76,7 +76,9 @@ function compile(sim, text, platformText, lookText) {
     effects[a.name] = {button: a.button, adds: a.adds, removes: a.removes};
     for (const pr of a.addsAny) (addedBy[pr] = addedBy[pr] || []).push({schema: a.name, button: a.button, mine: a.adds.includes(pr)});
   }
-  return {version: 1, look: LK.global, effects, addedBy, start: P.ui.start, landmarks: P.ui.landmarks || [], screens, personPos: Object.fromEntries(Object.entries(personPos).map(([p, s]) => [p, [...s].sort()])), complete: R.complete, visible: R.visible, warnings: [...new Set(warnings)]};
+  /* the contract's phrase of each predicate, its first variable the holder: how the app says a fact in words */
+  const vocab = Object.fromEntries(Object.entries(spec.vocab || {}).filter(([, v]) => v && v.phrase).map(([p, v]) => [p, {phrase: v.phrase, vars: v.vars}]));
+  return {version: 1, look: LK.global, effects, addedBy, vocab, start: P.ui.start, landmarks: P.ui.landmarks || [], screens, personPos: Object.fromEntries(Object.entries(personPos).map(([p, s]) => [p, [...s].sort()])), complete: R.complete, visible: R.visible, warnings: [...new Set(warnings)]};
 }
 module.exports = compile;
 if (require.main === module) {
