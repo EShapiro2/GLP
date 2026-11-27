@@ -71,7 +71,7 @@ import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'isolate_protocol.dart' show runtimeTermOf, screenTermOf;
 import 'ui_runtime/manifest.dart';
 import 'ui_runtime/runtime.dart';
-import 'ui_runtime/term.dart' show GAtom, GString, GStruct, GTerm;
+import 'ui_runtime/term.dart' show GAtom, GStruct, GTerm;
 
 /// The entry the person's first act names on a phone: superapp/5 of
 /// `programs/social/graph/core` (core's CoreAct
@@ -126,7 +126,7 @@ class SuperAppHost {
   /// person's grants on it, which go to the agent under that name, `app(App, Input)`.
   final Map<String, UiRuntime> apps = {};
 
-  /// Told when a mini-app's screen is made, and when it changes.
+  /// Told when a mini-app's screen is made, on its install, and when it changes.
   void Function()? onAppsChange;
 
   /// The screen of the mini-app [name], made on its first draw.
@@ -139,21 +139,10 @@ class SuperAppHost {
         return screen;
       });
 
-  /// The person's act on her mini-app [app] (programs/social/graph/core/self.glp, AppAct):
-  /// `activate`, `invite` or `accept_invite` with a friend's key, or `install_bundled` with the
-  /// artefact the app carries.
-  Future<void> appAct(String what, String app, [String? arg]) {
-    if (what == 'install_bundled' && !installed.contains(app)) installed.add(app);
-    return _appAct(what, app, arg);
-  }
-
-  /// The mini-apps the person installed on this phone, in the order installed.
-  final List<String> installed = [];
-
-  Future<void> _appAct(String what, String app, [String? arg]) => act(runtimeTermOf(GStruct(what, [
-        GAtom(app),
-        if (arg != null) what == 'install_bundled' ? GString(arg) : GAtom(arg),
-      ])));
+  /// The person opens her mini-app [app], an instance begun with her alone where none runs
+  /// (programs/social/graph/core/self.glp, AppAct); installing it and inviting a friend to it are
+  /// home's request and card (home.vglp).
+  Future<void> activate(String app) => act(runtimeTermOf(GStruct('activate', [GAtom(app)])));
 
   /// Each act of the person on the screen, as the bridge sends it, before it
   /// is handed to the agent; null, and none is told.  A debuggable build
@@ -237,6 +226,9 @@ class SuperAppHost {
       // (programs/social/graph/core/self.glp, app_screens/1); everything else is home's.
       if (t case GStruct(functor: 'app', args: [GAtom(:final name), final draw])) {
         appScreen(name).handle(draw);
+      } else if (t case GStruct(functor: 'opened', args: [GAtom(:final name)])) {
+        // A mini-app installed: its screen, empty until the mini-app draws on it.
+        appScreen(name);
       } else {
         ui.handle(t);
       }

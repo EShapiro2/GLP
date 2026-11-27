@@ -77,18 +77,18 @@ exported procedure superapp(Key?, List(Key)?, List(Service)?, PersonIn(Drawn)?, 
 superapp(Id, Known, Services, Grants, NetIn) :-
     shown_superapp(Id?, Known?, Services?, Grants?, [], [], NetIn?).
 
-%% shown_superapp(Id, Known, Services, Grants, AppGrants, NetIn): the
-%% super-app, the person's end of each mini-app she installs shown to her.
-%% home installs a mini-app with a fresh person channel whose person's end it
-%% holds "until there is a screen to show it on" (home.vglp, install_act/7);
-%% here, between home and the agent, each install is given a person channel
-%% of its own instead (shown_installs/3), whose draws go to the person tagged
-%% with the mini-app's name, app(App, Draw), and whose grants are those of
-%% the person's that carry that name, app(App, Input) (app_screens/2).  The
-%% screen draws each installed mini-app's constructs apart from home's, under
-%% its name, and the person's acts on it, opening it, inviting a friend to it
-%% and consenting to a friend's invitation, go to the agent beside home's
-%% (app_acts/3); nothing of a mini-app's types is known here, its draws and
+%% shown_superapp(Id, Known, Services, Grants, AppGrants, AppActs, NetIn):
+%% the super-app, the person's end of each mini-app she installs shown to
+%% her.  home installs a mini-app with a fresh person channel whose person's
+%% end it holds "until there is a screen to show it on" (home.vglp,
+%% install_act/7); here, between home and the agent, each install is given a
+%% person channel of its own instead (shown_installs/3): the person is told
+%% of the mini-app, opened(App), its draws go to her under its name,
+%% app(App, Draw), and her grants that carry that name, app(App, Input), go
+%% to it (app_screens/1).  The screen draws each installed mini-app's
+%% constructs apart from home's, under its name, and the person's opening of
+%% one goes to the agent beside home's acts (app_acts/3); nothing of a
+%% mini-app's types is known here, its draws and
 %% grants held at Opaque (GSG paper, Section 3, "What the super-app grants a
 %% mini-app").
 procedure shown_superapp(Key?, List(Key)?, List(Service)?, PersonIn(Drawn)?, Stream(AppEvent)?, Stream(AppAct)?, NetInStream?).
@@ -114,7 +114,9 @@ shown_superapp(Id, Known, Services, Grants, AppGrants, AppActs, NetIn) :-
 %% person's on one of its constructs, under its name.
 AppEvent ::= opened(Constant, Channel(PersonOut(Opaque), PersonIn(Opaque)))
            ; app(Constant, Input(Opaque)).
-AppDraw  ::= app(Constant, Draw(Opaque)).
+%% What the person is shown of her mini-apps: one installed, opened(App), and
+%% each of its draws under its name.
+AppDraw  ::= opened(Constant) ; app(Constant, Draw(Opaque)).
 
 %% shown_installs(Cmds, Cmds1, Opened): home's acts on to the agent, each
 %% install with a person channel of its own, the person's end of which is
@@ -140,7 +142,7 @@ procedure app_screens(Stream(AppEvent)?).
 app_screens([opened(App, ch(Ds, Gs?)) | Es]) :-
     ground(App?) |
     app_draws(App?, Ds?, Out),
-    send_to_user(Out?),
+    send_to_user([opened(App?) | Out?]),
     app_filter(App?, Es?, Gs, Es1),
     app_screens(Es1?).
 app_screens([app(_, _) | Es]) :- app_screens(Es?).
@@ -625,15 +627,11 @@ CoreIn  ::= [] ; [CoreAct | Grants].
 Grants  ::= [] ; [Grant | Grants].
 Grant   ::= input(Integer, Path, Drawn) ; refresh ; app(Constant, Input(Opaque))
           ; AppAct.
-%% The person's acts on an installed mini-app from its screen: opening it,
-%% inviting a friend to it, and consenting to a friend's invitation to it, or
-%% declining it (agent.glp; GSA paper, Section 3, "Activation and joining").
-%% install_bundled: installing a mini-app the app carries, its artefact read
-%% beside this program, the compiler that certified it trusted, as the
-%% bundled compiler is trusted by installing the super-app (graph/self.glp,
-%% trust), and installed as gsg_phone/4 installs it.
-AppAct  ::= activate(Constant) ; invite(Constant, Key) ; accept_invite(Constant, Key) ; decline_invite(Constant, Key)
-          ; install_bundled(Constant, String).
+%% The person's act on an installed mini-app from its screen: opening it, an
+%% instance begun with her alone (agent.glp, activate; GSA paper, Section 3,
+%% "Activation and joining").  Installing, inviting and answering an
+%% invitation are home's requests and cards (home.vglp).
+AppAct  ::= activate(Constant).
 
 %% The smartphones of the apps' boots (programs/apps/<app>_boot.glp) and of
 %% the currencies' plays' boots (programs/currencies/<program>_<play>_boot.glp),
@@ -712,10 +710,6 @@ split_grants([input(I, P, R) | Gs], [input(I?, P?, R?) | Ps?], As?, Xs?) :- spli
 split_grants([refresh | Gs], [refresh | Ps?], As?, Xs?) :- split_grants(Gs?, Ps, As, Xs).
 split_grants([app(App, G) | Gs], Ps?, [app(App?, G?) | As?], Xs?) :- split_grants(Gs?, Ps, As, Xs).
 split_grants([activate(App) | Gs], Ps?, As?, [activate(App?) | Xs?]) :- split_grants(Gs?, Ps, As, Xs).
-split_grants([invite(App, K) | Gs], Ps?, As?, [invite(App?, K?) | Xs?]) :- split_grants(Gs?, Ps, As, Xs).
-split_grants([accept_invite(App, K) | Gs], Ps?, As?, [accept_invite(App?, K?) | Xs?]) :- split_grants(Gs?, Ps, As, Xs).
-split_grants([decline_invite(App, K) | Gs], Ps?, As?, [decline_invite(App?, K?) | Xs?]) :- split_grants(Gs?, Ps, As, Xs).
-split_grants([install_bundled(App, F) | Gs], Ps?, As?, [install_bundled(App?, F?) | Xs?]) :- split_grants(Gs?, Ps, As, Xs).
 split_grants([], Ps?, [], []) :- new_channel(A, B), hold_grants(A?, B?, Ps).
 
 procedure drop_app_grants(Stream(AppEvent)?).
@@ -730,29 +724,8 @@ drop_app_acts([]).
 %% it puts on her stream to the agent.
 procedure app_acts(Key?, Stream(AppAct)?, UserInStream).
 app_acts(Id, [activate(App) | Xs], [msg(person, Id?, activate(App?)) | Cs?]) :- ground(Id?) | app_acts(Id?, Xs?, Cs).
-app_acts(Id, [invite(App, K) | Xs], [msg(person, Id?, invite(App?, K?)) | Cs?]) :- ground(Id?) | app_acts(Id?, Xs?, Cs).
-app_acts(Id, [accept_invite(App, K) | Xs], [msg(person, Id?, accept_invite(App?, K?)) | Cs?]) :- ground(Id?) | app_acts(Id?, Xs?, Cs).
-app_acts(Id, [decline_invite(App, K) | Xs], [msg(person, Id?, decline_invite(App?, K?)) | Cs?]) :- ground(Id?) | app_acts(Id?, Xs?, Cs).
-app_acts(Id, [install_bundled(App, F) | Xs],
-         [msg(person, Id?, trust(CK?)), msg(person, Id?, install(App?, C?, CSig?, Ui?)) | Cs?]) :-
-    ground(Id?), ground(F?) |
-    load_file(F?, C),
-    bundle_certified(C?, CK, CSig),
-    new_channel(Ui, Person),
-    hold_person(Person?),
-    app_acts(Id?, Xs?, Cs).
 app_acts(_, [], []).
 
-%% The person publishes the bundled program they install, by GPD:1, and
-%% installs it as their own, by GPD:4, under the compiler's key its
-%% certificate carries, which they trust: as gsg_phone.glp's certified/3,
-%% written again, which it does not export.
-procedure bundle_certified(Content?, String, String).
-bundle_certified(M, CK?, CSig?) :-
-    module(M?) |
-    decompose_module(M?, CK, Src, Cmp),
-    self_key(K),
-    sign(publish(Src?, Cmp?), K?, CSig).
 
 procedure hold_grants(Channel(PersonOut(Drawn), PersonIn(Drawn))?, Channel(PersonIn(Drawn), PersonOut(Drawn))?, PersonIn(Drawn)).
 hold_grants(ch([_ | Ds], Gs?), B, Ps?) :- hold_grants(ch(Ds?, Gs), B?, Ps).

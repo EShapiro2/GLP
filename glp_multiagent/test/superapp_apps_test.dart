@@ -14,6 +14,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/superapp_apps.dart';
+import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/manifests/superapp_ui.dart';
 import 'package:glp_multiagent/superapp_host.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
@@ -130,6 +131,25 @@ class _Phone {
     return null;
   }
 
+  /// The card home draws of a friend and a mini-app installed here, `form(invitation, ...)`, with
+  /// the button invite (home.vglp, invite_card/4).
+  OpenConstruct? invitationCard(String friend, String app) {
+    for (final c in ui.bridge.constructs) {
+      final v = formatTerm(c.view);
+      if (c.id != 0 && formatTerm(c.widget).startsWith('form(invitation,') && _questionIn(c.view) != null &&
+          v.contains(friend) && v.contains(app)) {
+        return c;
+      }
+    }
+    return null;
+  }
+
+  /// Invite on that card.
+  void pickInvite(String friend, String app) {
+    final c = invitationCard(friend, app)!;
+    ui.bridge.grant(c.id, _questionIn(c.view)!, const GAtom('invite'));
+  }
+
   /// Yes on the invitation's card.
   void acceptInvite() {
     final c = inviteCard()!;
@@ -241,15 +261,22 @@ void main() {
 
   test('each installs Friendship and Alice invites Bob: his home asks him on a card of its own, he says '
       'yes, and each phone shows the mini-app\'s screen, under its name, its view its person\'s own', () async {
-    await alice.host.appAct('install_bundled', 'gsg', 'gsg.glpw');
-    await bob.host.appAct('install_bundled', 'gsg', 'gsg.glpw');
-    await alice.host.appAct('invite', 'gsg', bob.key);
+    // Each installs it by home's request, picking it among the apps the phone carries: no key typed
+    // and no file named (home.vglp, install_carried).
+    for (final p in [alice, bob]) {
+      p.request(const GStruct('install_carried', [GAtom('friendship')]));
+    }
+    await alice.until(() => alice.host.apps.containsKey('friendship'));
+    await bob.until(() => bob.host.apps.containsKey('friendship'));
+    // Home draws Alice a card of Bob, her friend, and the mini-app she installed: she picks invite.
+    await alice.until(() => alice.invitationCard(bob.key, 'friendship') != null);
+    alice.pickInvite(bob.key, 'friendship');
     // The invitation waits for Bob's consent: the agent tells him, invited(Alice, gsg), and home asks him.
     await bob.until(() => bob.inviteCard() != null);
-    expect(formatTerm(bob.inviteCard()!.view), allOf(contains('gsg'), contains(alice.key)));
+    expect(formatTerm(bob.inviteCard()!.view), allOf(contains('friendship'), contains(alice.key)));
     bob.acceptInvite();
     String? viewOf(_Phone p) {
-      final v = p.host.apps['gsg']?.bridge.construct(0)?.view;
+      final v = p.host.apps['friendship']?.bridge.construct(0)?.view;
       return v == null ? null : formatTerm(v);
     }
     await alice.until(() => (viewOf(alice) ?? '').contains('view('));
@@ -257,7 +284,7 @@ void main() {
     expect(viewOf(alice), contains(alice.key));
     expect(viewOf(bob), contains(bob.key));
     // The mini-app's own request form is drawn on its screen, apart from home's.
-    OpenConstruct? request(_Phone p) => p.host.apps['gsg']!.bridge.constructs
+    OpenConstruct? request(_Phone p) => p.host.apps['friendship']!.bridge.constructs
         .where((c) => c.id != 0 && formatTerm(c.widget).contains('social_menu'))
         .firstOrNull;
     await alice.until(() => request(alice) != null);
@@ -268,22 +295,22 @@ void main() {
 
   test('on the mini-app\'s screens, over the network between the phones: each sets up an identity, '
       'Alice asks to know Bob, Bob says yes on his phone, and each knows the other', () async {
-    String viewOf(_Phone p) => formatTerm(p.host.apps['gsg']!.bridge.construct(0)!.view);
+    String viewOf(_Phone p) => formatTerm(p.host.apps['friendship']!.bridge.construct(0)!.view);
     // The person's last view on the mini-app's screen holds knows(K): read off the terms, a key
     // being an atom whatever its first character.
     bool knows(_Phone p, String k) {
-      final v = p.host.apps['gsg']!.bridge.construct(0)!.view;
+      final v = p.host.apps['friendship']!.bridge.construct(0)!.view;
       final views = v is GList ? v.items.where((x) => x is GStruct && x.functor == 'view').toList() : const <GTerm>[];
       if (views.isEmpty) return false;
       final state = (views.last as GStruct).args[1];
       return state is GList &&
           state.items.any((a) => a is GStruct && a.functor == 'knows' && a.args.single is GAtom && (a.args.single as GAtom).name == k);
     }
-    OpenConstruct request(_Phone p) => p.host.apps['gsg']!.bridge.constructs
+    OpenConstruct request(_Phone p) => p.host.apps['friendship']!.bridge.constructs
         .firstWhere((c) => c.id != 0 && formatTerm(c.widget).contains('social_menu'));
     void propose(_Phone p, GTerm act) {
       final r = request(p);
-      p.host.apps['gsg']!.bridge.grant(r.id, questionAt(r.view) ?? const GList([]), GStruct('propose', [act]));
+      p.host.apps['friendship']!.bridge.grant(r.id, questionAt(r.view) ?? const GList([]), GStruct('propose', [act]));
     }
     for (final p in [alice, bob]) {
       propose(p, GStruct('establish', [GAtom(p.key)]));
@@ -292,32 +319,30 @@ void main() {
     await bob.until(() => viewOf(bob).contains('identity'));
     propose(alice, GStruct('acquaint', [GAtom(alice.key), GAtom(bob.key)]));
     // Bob's phone asks him, on the mini-app's screen: its approval question.
-    OpenConstruct? asked() => bob.host.apps['gsg']!.bridge.constructs
+    OpenConstruct? asked() => bob.host.apps['friendship']!.bridge.constructs
         .where((c) => c.id != 0 && _questionIn(c.view) != null && !formatTerm(c.widget).contains('social_menu'))
         .firstOrNull;
     await bob.until(() => asked() != null);
     final q = asked()!;
-    bob.host.apps['gsg']!.bridge.grant(q.id, _questionIn(q.view)!, const GAtom('yes'));
+    bob.host.apps['friendship']!.bridge.grant(q.id, _questionIn(q.view)!, const GAtom('yes'));
     await alice.until(() => knows(alice, bob.key));
     await bob.until(() => knows(bob, alice.key));
     expect(alice.errors, isEmpty);
     expect(bob.errors, isEmpty);
   }, timeout: const Timeout(Duration(minutes: 5)));
 
-  testWidgets('the phone\'s screens: home and a tab for each installed mini-app, the apps the phone '
-      'carries, and on the mini-app\'s screen its own constructs and Invite a friend', (tester) async {
+  testWidgets('the phone\'s screens: home, and a tab for each installed mini-app, opening its own '
+      'screen; installing and inviting are home\'s', (tester) async {
     await tester.pumpWidget(MaterialApp(home: Scaffold(body: SuperAppScreens(host: alice.host, home: const Text('home')))));
     expect(find.text('home'), findsOneWidget);
-    expect(find.byKey(const ValueKey('superapp:tab:gsg')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('superapp:tab:+')));
+    expect(find.byKey(const ValueKey('superapp:tab:friendship')), findsOneWidget);
+    expect(find.text('Friendship'), findsOneWidget, reason: 'the tab reads the mini-app\'s name');
+    await tester.tap(find.byKey(const ValueKey('superapp:tab:friendship')));
     await tester.pumpAndSettle();
-    expect(find.text('Friendship'), findsWidgets);
-    expect(find.text('Groups'), findsOneWidget);
-    expect(find.descendant(of: find.byKey(const ValueKey('superapp:app:gsg')), matching: find.text('Open')), findsOneWidget);
-    expect(find.descendant(of: find.byKey(const ValueKey('superapp:app:gsn')), matching: find.text('Install')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('superapp:tab:gsg')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('superapp:invite:gsg')), findsOneWidget, reason: 'Bob is a friend');
     expect(find.text('home'), findsNothing);
+    expect(find.byType(AgentSurface), findsOneWidget, reason: 'the mini-app\'s own screen');
+    await tester.tap(find.byKey(const ValueKey('superapp:tab:home')));
+    await tester.pumpAndSettle();
+    expect(find.text('home'), findsOneWidget);
   });
 }

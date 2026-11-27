@@ -103,6 +103,7 @@ Name        ::= String.
 %% GSA #2, 2026-11-08 08:07 UTC, item 2).
 Request ::= trust(CompilerKey)
           ; install(AppName, Artefact)
+          ; install_carried(Carried)
           ; invite(AppName, Friend)
           ; open_place
           ; close_place
@@ -111,6 +112,16 @@ Request ::= trust(CompilerKey)
           ; list(Email, Name)
           ; list_unlisted(Email, Name)
           ; unlist.
+
+%% A mini-app the app carries, its artefact beside this program
+%% (carried_artefact/2), installed under that name.
+Carried ::= friendship ; groups ; coins.
+
+%% The card of a friend and a mini-app the person installed: the two, which
+%% the program writes for the person to see, and the button invite, which the
+%% person picks: her invitation of the friend to the mini-app, GSA's invite.
+Invite     ::= invite.
+Invitation ::= invitation(Friend, MiniApp, Invite?).
 
 %% The card of a friend who asks to connect: the friend, which the program
 %% writes for the person to see, and the person's answer, yes or no.
@@ -180,6 +191,73 @@ procedure (InviteRequest)*respond_invite(Key?, Key?, Constant?, Stream(UserInMsg
 procedure decide_invite(Decision?, Key?, Key?, Constant?, Stream(UserInMsg)).
 decide_invite(yes, Id, From, App, [msg(person, Id?, accept_invite(App?, From?))]).
 decide_invite(no, Id, From, App, [msg(person, Id?, decline_invite(App?, From?))]).
+
+%% =============================================================================
+%% Inviting a friend to a mini-app by picking them.
+%% =============================================================================
+
+%% Show the person a friend and a mini-app she installed, and, on invite,
+%% invite the friend to it.
+procedure (Invitation)*invite_card(Key?, Key?, Constant?, Stream(UserInMsg)).
+(invitation(K?, App?, I))*invite_card(Id, K, App, Cmds?) :-
+    ground(Id?), ground(K?), ground(App?) |
+    invite_pick(I?, Id?, K?, App?, Cmds).
+
+procedure invite_pick(Invite?, Key?, Key?, Constant?, Stream(UserInMsg)).
+invite_pick(invite, Id, K, App, [msg(person, Id?, invite(App?, K?))]).
+
+%% A friend made or a mini-app installed, in the order they come.
+Made ::= friend(Key) ; installed(Constant).
+
+%% made(Cmds, Cmds1, Ms): the person's commands passed on whole, each install
+%% of hers, installed(App), on Ms as well.
+procedure made(Stream(UserInMsg)?, Stream(UserInMsg), Stream(Made)).
+made([msg(person, Id, install(App, M, CSig, Ui)) | Cs], [msg(person, Id?, install(App1?, M?, CSig?, Ui?)) | Cs1?], [installed(App2?) | Ms?]) :-
+    ground(App?) | App1 = App?, App2 = App?, made(Cs?, Cs1, Ms).
+made([C | Cs], [C? | Cs1?], Ms?) :- otherwise | made(Cs?, Cs1, Ms).
+made([], [], []).
+
+%% friends_made(Ks, Ms): each friend as made(Ms).
+procedure friends_made(Stream(Key)?, Stream(Made)).
+friends_made([K | Ks], [friend(K?) | Ms?]) :- friends_made(Ks?, Ms).
+friends_made([], []).
+
+%% copy_keys(Ks, Ks1, Ks2): the friends, twice.
+procedure copy_keys(Stream(Key)?, Stream(Key), Stream(Key)).
+copy_keys([K | Ks], [K1? | Ks1?], [K2? | Ks2?]) :- ground(K?) | K1 = K?, K2 = K?, copy_keys(Ks?, Ks1, Ks2).
+copy_keys([], [], []).
+
+%% invitations(Id, Fs, As, Ms, Cmds): for each friend made, a card with each
+%% mini-app installed, and for each mini-app installed, a card with each
+%% friend; Fs and As those made before.
+procedure invitations(Key?, List(Key)?, List(Constant)?, Stream(Made)?, Stream(UserInMsg)).
+invitations(Id, Fs, As, [friend(K) | Ms], Cmds?) :-
+    ground(Id?), ground(Fs?), ground(As?), ground(K?) |
+    friend_cards(Id?, K?, As?, C1),
+    invitations(Id?, [K? | Fs?], As?, Ms?, C2),
+    merge(C1?, C2?, Cmds).
+invitations(Id, Fs, As, [installed(A) | Ms], Cmds?) :-
+    ground(Id?), ground(Fs?), ground(As?), ground(A?) |
+    app_cards(Id?, A?, Fs?, C1),
+    invitations(Id?, Fs?, [A? | As?], Ms?, C2),
+    merge(C1?, C2?, Cmds).
+invitations(_, _, _, [], []).
+
+procedure friend_cards(Key?, Key?, List(Constant)?, Stream(UserInMsg)).
+friend_cards(Id, K, [A | As], Cmds?) :-
+    ground(Id?), ground(K?), ground(A?) |
+    invite_card(Id?, K?, A?, C1),
+    friend_cards(Id?, K?, As?, C2),
+    merge(C1?, C2?, Cmds).
+friend_cards(_, _, [], []).
+
+procedure app_cards(Key?, Constant?, List(Key)?, Stream(UserInMsg)).
+app_cards(Id, A, [K | Ks], Cmds?) :-
+    ground(Id?), ground(K?), ground(A?) |
+    invite_card(Id?, K?, A?, C1),
+    app_cards(Id?, A?, Ks?, C2),
+    merge(C1?, C2?, Cmds).
+app_cards(_, _, [], []).
 
 %% =============================================================================
 %% The person's answer to an introduction.
@@ -302,9 +380,15 @@ exported procedure (Stream(Request)?)*home(Key?, AgentToUserStream?, Stream(User
 (Reqs)*home(Id, Outs, Cmds?) :-
     ground(Id?) |
     friends_told(Outs?, Outs1, Friends),
-    serve(Reqs?, Id?, [], Outs1?, Cmds1),
-    introductions(Id?, [], Friends?, Cmds2),
-    merge(Cmds1?, Cmds2?, Cmds).
+    copy_keys(Friends?, Fr1, Fr2),
+    serve(Reqs?, Id?, [], Outs1?, Cmds0),
+    made(Cmds0?, Cmds1, Installed),
+    introductions(Id?, [], Fr1?, Cmds2),
+    friends_made(Fr2?, Befriended),
+    merge(Befriended?, Installed?, Made),
+    invitations(Id?, [], [], Made?, Cmds3),
+    merge(Cmds1?, Cmds2?, Cmds12),
+    merge(Cmds12?, Cmds3?, Cmds).
 
 %% serve(Reqs, Id, Cd, Outs, Cmds): home, with the rest of the person's
 %% requests, Cd the persons nearby offered a card or friends.
@@ -369,6 +453,16 @@ serve([install(App, Name) | Reqs], Id, Cd, Outs, Cmds?) :-
     load_file(Name?, C),
     install_act(C?, App?, Id?, Cd?, Reqs?, Outs?, Cmds).
 
+%% Install a mini-app the app carries, picked by its name: its artefact beside
+%% this program read, the compiler that certified it trusted, as installing
+%% the super-app trusts the compiler it carries, and installed as install/2
+%% installs an artefact, so the person types no key and no file name.
+serve([install_carried(App) | Reqs], Id, Cd, Outs, Cmds?) :-
+    ground(Id?), ground(App?) |
+    carried_artefact(App?, Name),
+    load_file(Name?, C),
+    carried_act(C?, App?, Id?, Cd?, Reqs?, Outs?, Cmds).
+
 %% Invite a friend to a mini-app installed here.
 serve([invite(App, Friend) | Reqs], Id, Cd, Outs, Cmds?) :-
     ground(Id?), ground(App?), ground(Friend?) |
@@ -424,6 +518,23 @@ invite_act(App, Friend, Id, Cd, Reqs, Outs, [msg(person, Id?, invite(App?, Frien
 procedure place_act(UserContent?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
 place_act(A, Id, Cd, Reqs, Outs, [msg(person, Id?, A?) | Cmds?]) :-
     ground(Id?) | serve(Reqs?, Id?, Cd?, Outs?, Cmds).
+
+%% The artefact of each mini-app the app carries (tool/sync_glp_assets.sh).
+procedure carried_artefact(Carried?, String).
+carried_artefact(friendship, "gsg.glpw").
+carried_artefact(groups, "gsn.glpw").
+carried_artefact(coins, "currency.glpw").
+
+%% carried_act(Content, App, ...): the compiler's key the certificate carries
+%% trusted, and the artefact installed as install_act/7 installs it.
+procedure carried_act(Content?, Carried?, Key?, List(Key)?, Stream(Request)?, AgentToUserStream?, Stream(UserInMsg)).
+carried_act(M, App, Id, Cd, Reqs, Outs, [msg(person, Id?, trust(CK?)), msg(person, Id?, install(App?, M?, CSig?, Ui?)) | Cmds?]) :-
+    module(M?) |
+    decompose_module(M?, CK, _, _),
+    publication(M?, CSig),
+    new_channel(Ui, Person),
+    hold_person(Person?),
+    serve(Reqs?, Id?, Cd?, Outs?, Cmds).
 
 %% install_act(Content, App, Id, Reqs, Outs, Cmds): a certified artefact is
 %% installed under the person's name for it, with the mini-app's end of a
