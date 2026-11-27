@@ -1,0 +1,2 @@
+EShapiro2/GLP calculus/contracts at a7a96b3876217464b9a59c5c59ef788e6aa4b13a
+The full contracts of the 13: the exp/ of EShapiro2/GCC-Grassroots-Contracts-Calculus, branch calc11-no-parameters, at 7f5e40cb5e52c8e9eebcc5485b2603a61ce20b92

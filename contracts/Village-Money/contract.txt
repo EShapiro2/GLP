@@ -1,0 +1,2 @@
+Village Money
+Village Money inherits from Community Bank, Mutual Credit and Joint Accounts.
