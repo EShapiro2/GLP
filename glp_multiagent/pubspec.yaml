@@ -34,6 +34,8 @@ dependencies:
   grassroots_networking_core:
     path: ../networking/core
   ffi: ^2.1.0
+  qr: ^4.0.1
+  mobile_scanner: ^7.5.0
 
 dev_dependencies:
   flutter_test:

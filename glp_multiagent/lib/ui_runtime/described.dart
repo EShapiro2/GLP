@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:glp_runtime/vglp/canonical.dart' show ActCondition, DeclaredAct, DeclaredField;
 
 import 'named_widgets.dart';
+import 'qr_code.dart';
 import 'term.dart';
 
 /// A source of a place: the subject of the screen, whole or the argument at [pos]; a list to pick from, of
@@ -127,6 +128,10 @@ class UiDescription {
 
   /// The look of the whole app: `theme`, `shape`, `density`, `home`, `convo`, `questions`, `actions`.
   final Map<String, String> look;
+
+  /// Whether a place anywhere is drawn as scanned: the person then has a code to show.
+  bool get scanned => screens.values.any((sc) => sc.components.any((c) => [c, ...c.steps]
+      .any((x) => (x.kind == 'action' || x.kind == 'chain') && x.j['places'] != null && x.places.values.any((p) => p.look?['as'] == 'scanned'))));
 
   /// The contract's phrase of each predicate, its first variable the holder: "x trusts y as a developer".
   final Map<String, ({String phrase, List<String> vars})> vocab;
@@ -839,6 +844,21 @@ class _DescribedScreenState extends State<DescribedScreen> {
 
   /// The label of the action a hint sent the person to this screen for, drawn lit.
   String? _glow;
+
+  /// The person's code, for another phone to scan: her key, as the app says it.
+  void _myCode() => showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => Padding(
+            key: describedKey('mycode:sheet'),
+            padding: const EdgeInsets.all(20),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text('My code', style: Theme.of(ctx).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              QrView(formatTerm(widget.state.me)),
+              const SizedBox(height: 8),
+              Text('Another phone scans it to give your key.', style: TextStyle(color: Colors.grey.shade700)),
+            ]),
+          ));
 
   /// The line that says where the person is, each step a tap back to it.
   Widget _crumbLine(List<(String, VoidCallback?)> crumbs, ThemeData theme) {
@@ -1597,6 +1617,8 @@ class _DescribedScreenState extends State<DescribedScreen> {
                 if (crumbs.length > 1) _crumbLine(crumbs, theme),
                 Text(shown, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
               ])),
+              if (name == ui.start && ui.scanned)
+                IconButton(key: describedKey('mycode'), tooltip: 'My code', icon: const Icon(Icons.qr_code), onPressed: _myCode),
               IconButton(key: describedKey('help'), tooltip: 'Help', icon: const Icon(Icons.help_outline), onPressed: _help),
               if (marks.isNotEmpty && placed == 'menu')
                 PopupMenuButton<String>(
@@ -1801,6 +1823,19 @@ class _SheetState extends State<_Sheet> {
             if (d != null) setState(() => tc.text = (DateTime.utc(d.year, d.month, d.day).millisecondsSinceEpoch ~/ 86400000).toString());
           },
         );
+      case 'scanned':
+        // A value given face to face: typed, or read off the other phone's code.
+        return Row(children: [
+          Expanded(child: TextField(key: describedKey('field:${f.place}'), controller: tc, decoration: InputDecoration(labelText: label))),
+          IconButton(
+              key: describedKey('scan:${f.place}'),
+              tooltip: 'Scan their code',
+              icon: const Icon(Icons.qr_code_scanner),
+              onPressed: () async {
+                final v = await scanCode(context);
+                if (v != null) setState(() => tc.text = v);
+              }),
+        ]);
       default:
         return TextField(
           key: describedKey('field:${f.place}'),

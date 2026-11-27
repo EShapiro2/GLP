@@ -288,6 +288,14 @@ void main() {
     expect(find.descendant(of: hint, matching: find.byKey(describedKey('act:establish'))), findsOneWidget);
     expect(t.on(alice, find.text('Nothing here yet. Start with “Set up my identity”.')), findsOneWidget);
 
+    // Her code, for another phone to scan: the start screen offers it, the contacts being scanned.
+    await t.tap(alice, t.on(alice, find.byKey(describedKey('mycode'))));
+    expect(find.byKey(describedKey('mycode:sheet')), findsOneWidget);
+    expect(find.text('Another phone scans it to give your key.'), findsOneWidget);
+    await t.snap('mycode');
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
     // Help: each act the UI structure places, and whether she can take it now.
     await t.tap(alice, t.on(alice, find.byKey(describedKey('help'))));
     expect(find.byKey(describedKey('help:sheet')), findsOneWidget);
@@ -321,6 +329,7 @@ void main() {
 
     // Friends, as the chain makes them.
     await t.tap(alice, t.on(alice, find.byKey(describedKey('chain:Make friends'))));
+    expect(find.byKey(describedKey('scan:2')), findsOneWidget, reason: 'a contact is typed or scanned');
     await tester.enterText(find.byKey(describedKey('field:2')), 'bob');
     await tester.pumpAndSettle();
     await t.tap(alice, find.byKey(describedKey('submit')));
