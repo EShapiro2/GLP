@@ -5436,7 +5436,7 @@ cva_lf=$(bash "$CVA/compiler/libfns.sh" "@$cva_lf_t")
 printf '%s\n' "[nschema(fence, [num(a), num(s)], le(num(s), fn(floor, [num(a)])), [])]" > "$cva_lf_t"
 cva_lf_no=$(bash "$CVA/compiler/libfns.sh" "@$cva_lf_t")
 rm -f "$cva_lf_t"
-check "CVA roots: libfns.sh gives the library's functions where the reading applies one, as pragmas.sh gives an owner's (fns)" "^fns(\[fn(root, \[num\], num)\], \['%% numbers.glp" "$cva_lf"
+check "CVA roots: libfns.sh gives the library's functions where the reading applies one, as pragmas.sh gives an owner's (fns), distance's places lists of whole numbers (nums)" "^fns(\[fn(root, \[num\], num), fn(distance, \[nums, nums\], num)\], \['%% numbers.glp" "$cva_lf"
 check_not "CVA roots: ... and nothing where it applies none" "fns(" "$cva_lf_no"
 # A second function of the standard library, distance, given by programs/lib/numbers on two lists of whole numbers, the first half of the arguments the contract applies it to one point and the second half the other (#120, #124; compiler/README.md, item 48), the Manhattan distance between two points of as many numbers each (#120): vGLP's distances, its agent run with no person and given at deployment home(x, y) and shop(u, v); visit, whose constraint is distance(x, y, u, v) =< 3, is taken with home (1, 1) and shop (3, 2), at distance 3, and not with shop (3, 3), at distance 4.
 cva_ds_dir="$GLP_DIR/programs/tests/vg_distances_$$"
@@ -5473,6 +5473,15 @@ check "CVA nearer: the platform emitted to GLP" "wrote .*vg_nearer_.*platform.gl
 check "CVA nearer: pass taken, two ideal points nearer to the proposal than to the status quo and two needed" "view(alice, \[passed, ideal(1, 1), ideal(2, 2), ideal(5, 5), status(0, 0), prop(2, 2), need(2)\]" "$cva_nr"
 check "CVA nearer: ... bob's first view, three needed" "view(bob, \[ideal(1, 1), ideal(2, 2), ideal(5, 5), status(0, 0), prop(2, 2), need(3)\]" "$cva_nr"
 check_not "CVA nearer: ... and not taken where three are needed" "view(bob, \[passed" "$cva_nr"
+# A function whose places are lists of whole numbers is applied to a positive multiple of their number of arguments, and refused otherwise (compiler/README.md, item 48): distance applied to three numbers.
+cva_odd=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/vglp/cva/compiler/
+:limit 1000000000
+compile(odd, [nschema(go, [num(x), num(y), num(u)], le(fn(distance, [num(x), num(y), num(u)]), num(3)), [rs(guarded, [atom(went, [num(x), num(y), num(u)])], [], [], [])])], not_grassroots([no_introductory_act]), no_introduction, pragmas([list('"Went"', [went])], [act(go, '"Go"', ['""', '"x"', '"y"', '"u"'], none, '"Went"', by([1]))], [], nolook, version(1, 1), '""', [], fns([fn(distance, [nums, nums], num)], ['procedure distance(List(Integer)?, List(Integer)?, Integer).', 'distance(_, _, 0).']))).
+:quit
+HEREDOC
+2>&1)
+check "CVA distances: distance applied to three numbers, an odd number, is refused, with the line saying why" "it has a relation or a function other than min and floor" "$cva_odd"
 # The values the developer gives (vGLP 922ac53, Section 5.4, "Speech-act schemas as local specifications": "A platform is deployed when its developer compiles it, giving the compiler the values; the program carries them, so every participant of one of its instances holds the same values"): counts compiled with counts/values, cap(3), wt(4) and wt(2), prints developer_values and an agent of four arguments that starts the agent of five with them, which a mini-app calls; run with no person, its first view shows them, held from startup (devvalues).
 cva_dv_dir="$GLP_DIR/programs/tests/vg_devvalues_$$"
 mkdir -p "$cva_dv_dir" && cp "$CVA/counts/platform.vglp" "$cva_dv_dir/platform.vglp"

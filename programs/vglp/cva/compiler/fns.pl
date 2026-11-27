@@ -29,6 +29,10 @@ sub fns_of_file {
             # The kind of each place, by its declared type: a number (Integer, Number), a constant (Constant, String) or other, which the compiler does not take.
             my @k = map { (my $t = $_) =~ s/^\s+|\s+$//g; $t =~ s/\?$//; $t =~ /^(Integer|Number)$/ ? "num" : $t =~ /^(Constant|String)$/ ? "const" : "other" } @ts;
             my $v = pop @k;
+            # A function all of whose arguments are lists of whole numbers, List(Integer), and whose value is a whole number takes the numbers a contract applies it to in equal parts, one list for each argument (README.md, item 48): each such place is nums; a list of whole numbers elsewhere is other.
+            my @t = map { (my $t = $_) =~ s/^\s+|\s+$//g; $t =~ s/\?$//; $t } @ts;
+            my $vt = pop @t;
+            @k = map { "nums" } @t if @t && $vt eq "Integer" && !grep { $_ ne "List(Integer)" } @t;
             die "pragmas.sh: $ff: the function $n is declared twice\n" if $seen->{$n}++;
             push @$fns, "fn($n, [" . join(", ", @k) . "], $v)";
         }

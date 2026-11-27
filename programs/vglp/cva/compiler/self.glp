@@ -428,8 +428,8 @@ Pragmas   ::= no_pragmas ; pragmas(PLists, PActs) ; pragmas(PLists, PActs, PStan
 FPragmas  ::= Pragmas ; with_fns(Pragmas, PFns).
 %% The functions of the contract's value types that their owner gives as typed GLP procedures, fn(Name, Kinds, Kind), the kinds of its arguments and of its value, its last argument, and the lines of the owner's file, which the platform carries; or none (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"; pragmas.sh, NAME-functions.glp).
 PFns       ::= nofns ; fns(FnDecls, List(String)).
-%% The kind of a function's place, by its declared type: a number (Integer, Number), a constant (Constant, String), or other, which the compiler does not take.
-FnKind     ::= num ; const ; other.
+%% The kind of a function's place, by its declared type: a number (Integer, Number), a constant (Constant, String), a list of whole numbers (List(Integer)) of a function all of whose arguments are such lists and whose value is a whole number, or other, which the compiler does not take (README.md, item 48).
+FnKind     ::= num ; const ; nums ; other.
 FnKinds    ::= [] ; [FnKind | FnKinds].
 FnDecl     ::= fn(Constant, FnKinds, FnKind).
 FnDecls    ::= [] ; [FnDecl | FnDecls].

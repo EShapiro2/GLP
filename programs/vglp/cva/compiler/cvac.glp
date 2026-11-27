@@ -638,7 +638,14 @@ kinds_ok([], other, _, _, yes).
 kinds_ok([], _, J, K, no) :- otherwise, integer(J?), integer(K?), J? =?= K? | true.
 kinds_ok([], _, _, _, yes) :- otherwise | true.
 kinds_ok([other|_], _, _, _, yes).
+%% A function whose places are all lists of whole numbers, nums, takes a number of arguments that is a multiple of the number of its places, at least one each, the platform giving it the arguments in equal parts, in order (README.md, item 48).
+kinds_ok([nums|Ks], V, J, K, B?) :- integer(J?), J? =:= 1 | nums_ok([nums|Ks?], V?, 0, K?, B).
+kinds_ok([nums|_], _, _, _, yes) :- otherwise | true.
 kinds_ok([_|Ks], V, J, K, B?) :- otherwise, integer(J?) | J1 := J? + 1, kinds_ok(Ks?, V?, J1?, K?, B).
+procedure nums_ok(FnKinds?, FnKind?, Integer?, Integer?, YesNo).
+nums_ok([nums|Ks], V, P, K, B?) :- integer(P?) | P1 := P? + 1, nums_ok(Ks?, V?, P1?, K?, B).
+nums_ok([], num, P, K, no) :- integer(P?), integer(K?), P? > 0, K? > P?, (K? - 1) - ((K? - 1) // P?) * P? =:= 0 | true.
+nums_ok(_, _, _, _, yes) :- otherwise | true.
 %% The arity of a function applied to the expressions, one more than their number, its value its last argument.
 procedure exprs_count(Exprs?, Integer?, Integer).
 exprs_count([], K, K?).
@@ -846,7 +853,10 @@ procedure owner_fn_plain(FnDecls?, Lines?, Lines).
 owner_fn_plain(Fs, Ls, L?) :- ground(Fs?) |
     owner_calls(Fs?, num, 'owner_val', Lv),
     owner_calls(Fs?, const, 'owner_term', Lt),
-    owner_wrappers(Fs?, Lw),
+    owner_wrappers(Fs?, Lw0),
+    any_nums(Fs?, An),
+    nums_helpers(An?, Lh),
+    lapp(Lw0?, Lh?, Lw),
     lapp(Lw?, ['', '%% The functions the owner of the value types gives, its file NAME-functions.glp beside the contract.'|Ls?], L3),
     lapp(Lt?, ['owner_term(_, _, _, free) :- otherwise | true.'|L3?], L2),
     lapp(Lv?, ['owner_val(_, _, _, no_num) :- otherwise | true.', 'procedure owner_term(Constant?, Exprs?, Binding?, Found).'|L2?], L1),
@@ -868,7 +878,18 @@ owner_calls([], _, _, []).
 owner_calls([fn(F, Ks, V)|Fs], W, H, [T?|Ls?]) :- ground(F?), ground(Ks?), ground(W?), ground(H?), V? =?= W? | owner_call(H?, F?, Ks?, T), owner_calls(Fs?, W?, H?, Ls).
 owner_calls([_|Fs], W, H, Ls?) :- otherwise | owner_calls(Fs?, W?, H?, Ls).
 procedure owner_call(String?, Constant?, FnKinds?, String).
-owner_call(H, F, Ks, T?) :- ground(H?), ground(F?), ground(Ks?) |
+owner_call(H, F, Ks, T?) :- ground(Ks?) | all_nums(Ks?, A), owner_call_by(A?, H?, F?, Ks?, T).
+%% A function whose places are lists of whole numbers takes the values of its arguments, each a whole number, in as many equal parts as it has places, ints_of and ints_parts (nums_helpers), its own procedure owner_F the parts (README.md, item 48).
+procedure owner_call_by(YesNo?, String?, Constant?, FnKinds?, String).
+owner_call_by(no, H, F, Ks, T?) :- owner_call1(H?, F?, Ks?, T).
+owner_call_by(yes, H, F, Ks, T?) :- ground(H?), ground(F?), ground(Ks?) |
+    term_to_string(F?, Fn1),
+    term_to_string(F?, Fn2),
+    kinds_len(Ks?, 0, N),
+    term_to_string(N?, Ns),
+    string_concat([H?, '(', Fn1?, ', Es, B, R?) :- ground(B?) | ints_of(Es?, B?, Is), ints_parts(Is?, ', Ns?, ', Ps), owner_', Fn2?, '(Ps?, R).'], T).
+procedure owner_call1(String?, Constant?, FnKinds?, String).
+owner_call1(H, F, Ks, T?) :- ground(H?), ground(F?), ground(Ks?) |
     term_to_string(F?, Fn1),
     term_to_string(F?, Fn2),
     kind_list(Ks?, 1, e, Le),
@@ -884,12 +905,70 @@ owner_call(H, F, Ks, T?) :- ground(H?), ground(F?), ground(Ks?) |
 %% Each function's own procedure, owner_F, taking the values of its arguments, as expr_val and expr_term give them, and calling the owner's procedure F.
 procedure owner_wrappers(FnDecls?, Lines).
 owner_wrappers([], []).
-owner_wrappers([fn(F, Ks, V)|Fs], [D?, C?|L?]) :- ground(F?), ground(Ks?), ground(V?) |
-    owner_decl(F?, Ks?, V?, D),
-    owner_clause(F?, Ks?, V?, C),
-    owner_rest(F?, Ks?, V?, L0),
+owner_wrappers([fn(F, Ks, V)|Fs], L?) :- ground(F?), ground(Ks?), ground(V?) |
+    all_nums(Ks?, A),
+    owner_wrapper(A?, F?, Ks?, V?, L0),
     owner_wrappers(Fs?, L1),
     lapp(L0?, L1?, L).
+procedure owner_wrapper(YesNo?, Constant?, FnKinds?, FnKind?, Lines).
+owner_wrapper(no, F, Ks, V, [D?, C?|L?]) :- ground(F?), ground(Ks?), ground(V?) |
+    owner_decl(F?, Ks?, V?, D),
+    owner_clause(F?, Ks?, V?, C),
+    owner_rest(F?, Ks?, V?, L).
+%% Of a function whose places are lists of whole numbers: owner_F(parts([X1, ..., Xn]), num_is(R)) calls F(X1, ..., Xn, R), and has no value where the arguments are not whole numbers in n equal parts.
+owner_wrapper(yes, F, Ks, _, [D?, C?, U?]) :- ground(F?), ground(Ks?) |
+    term_to_string(F?, Fn1),
+    term_to_string(F?, Fn2),
+    term_to_string(F?, Fn3),
+    term_to_string(F?, Fn4),
+    string_concat(['procedure owner_', Fn1?, '(IntParts?, NumRes).'], D),
+    kind_list(Ks?, 1, xp, Lp),
+    joined(Lp?, ', ', Ps),
+    kind_list(Ks?, 1, gg, Lg),
+    joined(Lg?, ', ', Gs),
+    kind_list(Ks?, 1, x, Lx),
+    joined(Lx?, ', ', Xs),
+    string_concat(['owner_', Fn2?, '(parts([', Ps?, ']), num_is(R?)) :- ', Gs?, ' | ', Fn3?, '(', Xs?, ', R).'], C),
+    string_concat(['owner_', Fn4?, '(_, no_num) :- otherwise | true.'], U).
+%% Whether every place of a function is a list of whole numbers, and whether some function's are.
+procedure all_nums(FnKinds?, YesNo).
+all_nums([nums], yes).
+all_nums([nums, K|Ks], A?) :- all_nums([K?|Ks?], A).
+all_nums(_, no) :- otherwise | true.
+procedure any_nums(FnDecls?, YesNo).
+any_nums([], no).
+any_nums([fn(_, Ks, _)|Fs], A?) :- ground(Ks?) | all_nums(Ks?, A1), any_nums(Fs?, A2), or(A1?, A2?, A).
+procedure kinds_len(FnKinds?, Integer?, Integer).
+kinds_len([], N, N?).
+kinds_len([_|Ks], N, M?) :- integer(N?) | N1 := N? + 1, kinds_len(Ks?, N1?, M).
+%% The platform's lines that give a function whose places are lists of whole numbers its arguments: ints_of, the values of the expressions, ints([X1, ...]) where each is a whole number and none otherwise; and ints_parts, those numbers in K equal parts, in order, parts([P1, ..., PK]), none where they are not a positive multiple of K in number.  None where no function is such.
+procedure nums_helpers(YesNo?, Lines).
+nums_helpers(no, []).
+nums_helpers(yes, ['',
+    '%% The arguments of a function whose places are lists of whole numbers: ints_of, the values of the expressions, ints(Xs) where each is a whole number, and ints_parts, those numbers in K equal parts, in order, parts(Ps); none otherwise.',
+    'IntsRes ::= ints(List(Integer)) ; none.',
+    'IntParts ::= parts(List(List(Integer))) ; none.',
+    'procedure ints_of(Exprs?, Binding?, IntsRes).',
+    'ints_of([], _, ints([])).',
+    'ints_of([E|Es], B, R?) :- ground(B?) | expr_val(E?, B?, A), ints_of(Es?, B?, R1), ints_cons(A?, R1?, R).',
+    'procedure ints_cons(NumRes?, IntsRes?, IntsRes).',
+    'ints_cons(num_is(X), ints(Xs), ints([X?|Xs?])) :- integer(X?) | true.',
+    'ints_cons(_, _, none) :- otherwise | true.',
+    'procedure ints_parts(IntsRes?, Integer?, IntParts).',
+    'ints_parts(ints(Xs), K, P?) :- ground(Xs?), integer(K?), K? > 0 | ints_len(Xs?, 0, N), ints_split(Xs?, N?, K?, P).',
+    'ints_parts(_, _, none) :- otherwise | true.',
+    'procedure ints_len(List(Integer)?, Integer?, Integer).',
+    'ints_len([], N, N?).',
+    'ints_len([_|Xs], N, M?) :- integer(N?) | N1 := N? + 1, ints_len(Xs?, N1?, M).',
+    'procedure ints_split(List(Integer)?, Integer?, Integer?, IntParts).',
+    'ints_split(Xs, N, K, parts(Ps?)) :- integer(N?), integer(K?), N? > 0, N? - (N? // K?) * K? =:= 0 | M := N? // K?, ints_chunks(Xs?, M?, Ps).',
+    'ints_split(_, _, _, none) :- otherwise | true.',
+    'procedure ints_chunks(List(Integer)?, Integer?, List(List(Integer))).',
+    'ints_chunks([], _, []).',
+    'ints_chunks([X|Xs], M, [C?|Cs?]) :- integer(M?) | ints_take(M?, [X?|Xs?], C, Rest), ints_chunks(Rest?, M?, Cs).',
+    'procedure ints_take(Integer?, List(Integer)?, List(Integer), List(Integer)).',
+    'ints_take(M, Xs, [], Xs?) :- integer(M?), M? =:= 0 | true.',
+    'ints_take(M, [X|Xs], [X?|Cs?], R?) :- integer(M?), M? > 0 | M1 := M? - 1, ints_take(M1?, Xs?, Cs, R).']).
 procedure owner_decl(Constant?, FnKinds?, FnKind?, String).
 owner_decl(F, Ks, V, D?) :- ground(F?), ground(Ks?), ground(V?) |
     term_to_string(F?, Fn),
@@ -940,6 +1019,8 @@ part_of(guard, num, Is, S?) :- string_concat(['integer(X', Is?, '?)'], S).
 part_of(guard, const, Is, S?) :- string_concat(['ground(X', Is?, '?)'], S).
 part_of(x, _, Is, S?) :- string_concat(['X', Is?, '?'], S).
 part_of(us, _, _, '_').
+part_of(xp, _, Is, S?) :- string_concat(['X', Is?], S).
+part_of(gg, _, Is, S?) :- string_concat(['ground(X', Is?, '?)'], S).
 part_of(_, _, _, '') :- otherwise | true.
 %% The same parts of a function's value.
 procedure val_kind(Constant?, FnKind?, String).
@@ -4434,6 +4515,7 @@ procedure cmp_head(FnKind?, String).
 cmp_head(num, 'calc_num').
 cmp_head(const, 'calc_term').
 cmp_head(other, 'calc_none').
+cmp_head(nums, 'calc_none').
 procedure cmp_args(Strings?, Strings?, Integer?, CCalcs?, Strings).
 cmp_args([], _, _, _, []).
 cmp_args([_|Ns], [Q|Qs], I, Cs, [A?|As?]) :- integer(I?), ground(Q?), ground(Cs?) |

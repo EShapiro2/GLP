@@ -235,16 +235,45 @@ meeting_peer(_, _, nopeer) :- otherwise | true.
 %% The functions of the value types that their owner gives as typed GLP procedures: owner_val(F, Es, B, R), the value R of F at the values of Es under B, a number, and owner_term(F, Es, B, V), a constant; each argument a number or a constant by the type its procedure declares it, the value no_num or free where an argument has none.
 procedure owner_val(Constant?, Exprs?, Binding?, NumRes).
 owner_val(root, [E1], B, R?) :- ground(B?) | expr_val(E1?, B?, A1), owner_root(A1?, R).
+owner_val(distance, Es, B, R?) :- ground(B?) | ints_of(Es?, B?, Is), ints_parts(Is?, 2, Ps), owner_distance(Ps?, R).
 owner_val(_, _, _, no_num) :- otherwise | true.
 procedure owner_term(Constant?, Exprs?, Binding?, Found).
 owner_term(_, _, _, free) :- otherwise | true.
 procedure owner_root(NumRes?, NumRes).
 owner_root(num_is(X1), num_is(R?)) :- integer(X1?) | root(X1?, R).
 owner_root(_, no_num) :- otherwise | true.
+procedure owner_distance(IntParts?, NumRes).
+owner_distance(parts([X1, X2]), num_is(R?)) :- ground(X1?), ground(X2?) | distance(X1?, X2?, R).
+owner_distance(_, no_num) :- otherwise | true.
+
+%% The arguments of a function whose places are lists of whole numbers: ints_of, the values of the expressions, ints(Xs) where each is a whole number, and ints_parts, those numbers in K equal parts, in order, parts(Ps); none otherwise.
+IntsRes ::= ints(List(Integer)) ; none.
+IntParts ::= parts(List(List(Integer))) ; none.
+procedure ints_of(Exprs?, Binding?, IntsRes).
+ints_of([], _, ints([])).
+ints_of([E|Es], B, R?) :- ground(B?) | expr_val(E?, B?, A), ints_of(Es?, B?, R1), ints_cons(A?, R1?, R).
+procedure ints_cons(NumRes?, IntsRes?, IntsRes).
+ints_cons(num_is(X), ints(Xs), ints([X?|Xs?])) :- integer(X?) | true.
+ints_cons(_, _, none) :- otherwise | true.
+procedure ints_parts(IntsRes?, Integer?, IntParts).
+ints_parts(ints(Xs), K, P?) :- ground(Xs?), integer(K?), K? > 0 | ints_len(Xs?, 0, N), ints_split(Xs?, N?, K?, P).
+ints_parts(_, _, none) :- otherwise | true.
+procedure ints_len(List(Integer)?, Integer?, Integer).
+ints_len([], N, N?).
+ints_len([_|Xs], N, M?) :- integer(N?) | N1 := N? + 1, ints_len(Xs?, N1?, M).
+procedure ints_split(List(Integer)?, Integer?, Integer?, IntParts).
+ints_split(Xs, N, K, parts(Ps?)) :- integer(N?), integer(K?), N? > 0, N? - (N? // K?) * K? =:= 0 | M := N? // K?, ints_chunks(Xs?, M?, Ps).
+ints_split(_, _, _, none) :- otherwise | true.
+procedure ints_chunks(List(Integer)?, Integer?, List(List(Integer))).
+ints_chunks([], _, []).
+ints_chunks([X|Xs], M, [C?|Cs?]) :- integer(M?) | ints_take(M?, [X?|Xs?], C, Rest), ints_chunks(Rest?, M?, Cs).
+procedure ints_take(Integer?, List(Integer)?, List(Integer), List(Integer)).
+ints_take(M, Xs, [], Xs?) :- integer(M?), M? =:= 0 | true.
+ints_take(M, [X|Xs], [X?|Cs?], R?) :- integer(M?), M? > 0 | M1 := M? - 1, ints_take(M1?, Xs?, Cs, R).
 
 %% The functions the owner of the value types gives, its file NAME-functions.glp beside the contract.
 %% numbers.glp - functions of whole numbers, exact and the same on every machine.
-%% Owner: GCE (Nimrod Talmon), for the standard library (GLP #120, #123).
+%% Owner: GCE (Nimrod Talmon), for the standard library (GLP #120, #123, #124).
 %%
 %% A contract applies them in a constraint as functions of a value type, which
 %% the type's owner gives as typed GLP procedures (vGLP, Section 5.4, "Speech-act
@@ -254,6 +283,10 @@ owner_root(_, no_num) :- otherwise | true.
 %% root(N, R): R is the whole square root of N, rounded down, N a whole number
 %%   at least 0, by Newton's method on whole numbers; the goal fails for N
 %%   below 0.
+%% distance(Ps, Qs, D): D is the Manhattan distance between the points Ps and
+%%   Qs, lists of as many whole numbers each: the sum, over their places, of
+%%   the larger number less the smaller; the goal fails for lists of unequal
+%%   lengths.
 
 procedure root(Integer?, Integer).
 root(N, 0) :- N? =:= 0 | true.
@@ -267,6 +300,15 @@ root_step(N, X, R?) :- X? > 0 | Y := (X? + N? // X?) // 2, root_next(N?, X?, Y?,
 procedure root_next(Integer?, Integer?, Integer?, Integer).
 root_next(N, X, Y, R?) :- Y? < X? | root_step(N?, Y?, R).
 root_next(_, X, Y, X?) :- Y? >= X? | true.
+
+procedure distance(List(Integer)?, List(Integer)?, Integer).
+distance(Ps, Qs, D?) :- dist_from(Ps?, Qs?, 0, D).
+
+%% dist_from(Ps, Qs, S, D): D is S plus the distance between Ps and Qs.
+procedure dist_from(List(Integer)?, List(Integer)?, Integer?, Integer).
+dist_from([], [], S, S?).
+dist_from([P|Ps], [Q|Qs], S, D?) :- P? >= Q? | S1 := S? + (P? - Q?), dist_from(Ps?, Qs?, S1?, D).
+dist_from([P|Ps], [Q|Qs], S, D?) :- P? < Q? | S1 := S? + (Q? - P?), dist_from(Ps?, Qs?, S1?, D).
 
 %% ===========================================================================
 %% The agent (vGLP, Section 5.4, "The compilation"): it calls the agent goal on the fair merge of the answers to its request questions, the arriving messages, the answers of its responders and its own triggers, which the agent goal writes on a stream of its own, one at a time (vGLP 6c8c663, Section 5.4, "The compilation").  A request question is a goal of a volitional procedure whose question, of the request type Request?, takes one request (vGLP 12f629d, Section 5.4, "The compilation"); the request form reads the agent's own key and the persons it knows from the last view drawn on construct 0 (Section 6.2: "A declared widget is drawn also with the last value drawn on construct 0"); the agent asks one when it starts and the agent goal the next when it reads the answer to the last.  On the request propose(N) the agent takes a Request, its person's approval, which stands until the transaction is taken or refused; its machine proposes, and proposes again an attempt that yields, with no further question to its person; and a machine that cannot carry out a transaction its person approved refuses it (vGLP f0acbc1, Section 5.4, "Triggers").  On the program's output to its person, Output, construct 0, the agent goal writes its view, view(Id, S, K, A, Ts), its own key Id, the machine state S of its app state, the persons K it knows and the approvals A its person made that are pending, each by its request name, and the tabs Ts of its app, when it starts and whenever any changes, and the person's screen shows the last view written; and, when an approval its person made, by a request or by an answer yes, ends by a refusal, a notice refused(N, Q, D), N the request name of the part of the refused attempt, Q its refuser and D the reason, declined or unable, from the abort outcome, or from its own vote where its own vote no refused the attempt (vGLP e286276, Section 5.4, "The compilation").
