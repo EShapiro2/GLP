@@ -116,6 +116,13 @@ Request ::= trust(CompilerKey)
 %% writes for the person to see, and the person's answer, yes or no.
 FriendRequest ::= from(Friend, Decision?).
 
+%% The card of a friend's invitation to a mini-app the person installed, an
+%% offer that waits for the person (agent.glp, offer_consent/10): the friend
+%% and the mini-app, which the program writes for the person to see, and the
+%% person's answer, yes or no.
+MiniApp       ::= Constant.
+InviteRequest ::= invited(Friend, MiniApp, Decision?).
+
 %% The card of an introduction: the introducer and the other party, intro(I,
 %% O), the words GKK's pragma Introduction puts to the person, which the
 %% program writes for the person to see, and the person's answer, yes or no.
@@ -158,6 +165,21 @@ procedure (FriendRequest)*respond_friend(Key?, Key?, PendingValue?, Stream(UserI
 procedure decide_friend(Decision?, Key?, Key?, PendingValue?, Stream(UserInMsg)).
 decide_friend(yes, Id, From, P, [msg(person, Id?, decision(yes, From?, P?))]).
 decide_friend(no, Id, From, P, [msg(person, Id?, decision(no, From?, P?))]).
+
+%% =============================================================================
+%% The person's answer to a friend's invitation.
+%% =============================================================================
+
+%% Show the person the friend and the mini-app, and pass their answer on: yes
+%% consents to the offer, which joins it, and no declines it.
+procedure (InviteRequest)*respond_invite(Key?, Key?, Constant?, Stream(UserInMsg)).
+(invited(From?, App?, Answer))*respond_invite(Id, From, App, Cmds?) :-
+    ground(Id?), ground(From?), ground(App?) |
+    decide_invite(Answer?, Id?, From?, App?, Cmds).
+
+procedure decide_invite(Decision?, Key?, Key?, Constant?, Stream(UserInMsg)).
+decide_invite(yes, Id, From, App, [msg(person, Id?, accept_invite(App?, From?))]).
+decide_invite(no, Id, From, App, [msg(person, Id?, decline_invite(App?, From?))]).
 
 %% =============================================================================
 %% The person's answer to an introduction.
@@ -300,6 +322,14 @@ serve(Reqs, Id, Cd, [msg(agent, person, befriend(From, P)) | Outs], Cmds?) :-
 serve(Reqs, Id, Cd, [msg(agent, person, befriend_intro(From, Other, P)) | Outs], Cmds?) :-
     ground(Id?), ground(From?), ground(Other?) |
     respond_intro(Id?, From?, Other?, P?, Answer),
+    merge(Answer?, Cmds1?, Cmds),
+    serve(Reqs?, Id?, Cd?, Outs?, Cmds1).
+
+%% A friend invites the person to a mini-app she installed: the person answers
+%% on a card of their own.
+serve(Reqs, Id, Cd, [msg(agent, person, invited(From, App)) | Outs], Cmds?) :-
+    ground(Id?), ground(From?), ground(App?) |
+    respond_invite(Id?, From?, App?, Answer),
     merge(Answer?, Cmds1?, Cmds),
     serve(Reqs?, Id?, Cd?, Outs?, Cmds1).
 

@@ -5,9 +5,8 @@
 /// says where she is.  Apps lists the mini-apps the app carries, each installed by one tap (the
 /// super-app's install_bundled: the artefact read beside the program, its compiler trusted, and
 /// installed, as each app's boot installs it); an installed mini-app is opened by a tap, which
-/// activates it, and on its screen the person invites a friend to it and may consent, once for
-/// all her friends, to their invitations (the agent's accept_invite, consent given before the
-/// offer arrives; agent.glp).
+/// activates it, and on its screen the person invites a friend to it.  A friend's invitation she
+/// answers on home's own card (home.vglp, respond_invite/4).
 library;
 
 import 'package:flutter/material.dart';
@@ -49,12 +48,6 @@ class _SuperAppScreensState extends State<SuperAppScreens> {
   /// Where the person is: null home, '+' the apps the app carries, else a mini-app's name.
   String? _at;
 
-  /// The mini-apps whose friends' invitations the person consented to, once for all her friends.
-  final Set<String> _joining = {};
-
-  /// The friends each joining consent was given for, so that a friend made later is consented to.
-  final Map<String, Set<String>> _consented = {};
-
   SuperAppHost get host => widget.host;
 
   @override
@@ -95,21 +88,10 @@ class _SuperAppScreensState extends State<SuperAppScreens> {
     if (host.apps[name] == null) await host.appAct('activate', name);
   }
 
-  /// Consent to each friend's invitation to [app], those made later too.
-  Future<void> _consent(String app) async {
-    final done = _consented.putIfAbsent(app, () => {});
-    for (final f in friends) {
-      if (done.add(f)) await host.appAct('accept_invite', app, f);
-    }
-  }
-
   String _short(String key) => key.length > 8 ? '${key.substring(0, 8)}…' : key;
 
   @override
   Widget build(BuildContext context) {
-    for (final a in _joining) {
-      _consent(a);
-    }
     final theme = Theme.of(context);
     final tabs = <(String?, String)>[
       (null, 'Home'),
@@ -172,18 +154,6 @@ class _SuperAppScreensState extends State<SuperAppScreens> {
               itemBuilder: (_) => [for (final f in fs) PopupMenuItem(value: f, child: Text('Invite ${_short(f)}'))],
               child: const Chip(avatar: Icon(Icons.person_add_alt, size: 18), label: Text('Invite a friend')),
             ),
-          FilterChip(
-            key: ValueKey('superapp:join:$at'),
-            label: const Text('Join friends who invite me'),
-            selected: _joining.contains(at),
-            onSelected: (on) => setState(() {
-              if (on) {
-                _joining.add(at);
-              } else {
-                _joining.remove(at);
-              }
-            }),
-          ),
         ]),
       ),
       Expanded(

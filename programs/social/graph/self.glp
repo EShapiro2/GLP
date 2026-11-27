@@ -99,6 +99,10 @@ AgentContent ::= befriend(Key, PendingValue)
                ; rejected(Constant)
                ; unfriended(Constant)
                ; received(Key, Constant)
+               %% A friend's invitation to a mini-app installed here under
+               %% the name given, which waits for the person's consent
+               %% (core/agent.glp, offer_consent/10; home's card).
+               ; invited(Key, Constant)
                %% A message the person addressed to someone who is not their
                %% friend is not sent, and the agent tells the person so
                %% (Section 5.1).
@@ -250,6 +254,8 @@ Pending      ::= invited(Constant, Key, String, RootChannel(Opaque))
 PendingInv   ::= [] ; [Pending | PendingInv].
 Trust ::= trust(Stream(String), List(Key)).
 Host ::= host(AppList, AttestList, PendingInv, Trust).
+%% The name a mini-app is installed under, found by its source identity, or none.
+Named ::= named(Constant) ; none.
 
 %% The vocabulary of the super-app's own person interface (core/home.vglp, its
 %% compilation home.glp): an ask on its ask stream, and the person's grants on

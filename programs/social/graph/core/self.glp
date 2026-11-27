@@ -344,6 +344,7 @@ NoticeContent ::= befriend(Key)
                 ; rejected(Constant)
                 ; unfriended(Constant)
                 ; received(Key, Constant)
+                ; invited(Key, Constant)
                 ; not_a_friend(Key)
                 ; nearby(List(Key)).
 Output ::= Notice.
@@ -374,6 +375,8 @@ notice(msg(A, P, rejected(C)), msg(A?, P?, rejected(C?)), msg(A?, P?, rejected(C
 notice(msg(A, P, unfriended(C)), msg(A?, P?, unfriended(C?)), msg(A?, P?, unfriended(C?))) :-
     ground(A?), ground(P?), ground(C?) | true.
 notice(msg(A, P, received(K, C)), msg(A?, P?, received(K?, C?)), msg(A?, P?, received(K?, C?))) :-
+    ground(A?), ground(P?), ground(K?), ground(C?) | true.
+notice(msg(A, P, invited(K, C)), msg(A?, P?, invited(K?, C?)), msg(A?, P?, invited(K?, C?))) :-
     ground(A?), ground(P?), ground(K?), ground(C?) | true.
 notice(msg(A, P, not_a_friend(K)), msg(A?, P?, not_a_friend(K?)), msg(A?, P?, not_a_friend(K?))) :-
     ground(A?), ground(P?), ground(K?) | true.
