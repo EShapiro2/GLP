@@ -1,0 +1,17 @@
+%% numbers_test.glp - tests of numbers.glp.
+%% Owner: GCE (Nimrod Talmon).
+%%
+%%   test_root(N, R): for each M from 0 to N - 1, root(M) is the K with
+%%     K * K =< M < (K + 1) * (K + 1); ok if every check holds and bad otherwise.
+%% Load the directory and run, e.g., test_root(2000, R).
+
+exported procedure test_root(Integer?, Result).
+test_root(N, R?) :- root_all(0, N?, ok, R).
+
+procedure root_all(Integer?, Integer?, Result?, Result).
+root_all(M, N, A, A?) :- M? >= N? | true.
+root_all(M, N, A, R?) :- M? < N? | root(M?, K), root_ok(M?, K?, A?, A1), M1 := M? + 1, root_all(M1?, N?, A1?, R).
+
+procedure root_ok(Integer?, Integer?, Result?, Result).
+root_ok(M, K, ok, ok) :- K? * K? =< M?, M? < (K? + 1) * (K? + 1) | true.
+root_ok(_, _, _, bad) :- otherwise | true.
