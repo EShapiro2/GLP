@@ -1,5 +1,5 @@
 %% programs/lib/numbers: the library numbers.glp, functions of whole numbers
-%% (root), and numbers_test.glp, its tests.  The directory is a
+%% (root, distance), and numbers_test.glp, its tests.  The directory is a
 %% program so that the tests load with the library, and its entry points are
 %% the tests, as programs/lib/tree's.  A platform carries numbers.glp where its
 %% contract applies one of its functions (programs/vglp/cva/compiler/README.md,
@@ -12,3 +12,7 @@ Result ::= ok ; bad.
 imported procedure numbers_test#test_root(Integer?, Result).
 exported procedure test_root(Integer?, Result).
 test_root(N, R?) :- numbers_test # test_root(N?, R).
+
+imported procedure numbers_test#test_distance(Integer?, Result).
+exported procedure test_distance(Integer?, Result).
+test_distance(N, R?) :- numbers_test # test_distance(N?, R).

@@ -1691,17 +1691,20 @@ check "tree: union" "R8 = ok" "$a43"
 # Functions of whole numbers, exact and the same on every machine, which a
 # platform carries where its contract applies one (GLP #120, #123): root, the
 # whole square root rounded down, against K * K =< M < (K + 1) * (K + 1) for
-# each M below 3000.  numbers_test.glp's header names the checks.
+# each M below 3000; distance, the Manhattan distance of two lists of whole
+# numbers (#124).  numbers_test.glp's header names the checks.
 echo "--- A43b: lib/numbers ---"
 a43b=$("$REPL_RUN" <<HEREDOC
 :limit 100000000
 $GLP_DIR/programs/lib/numbers/
 test_root(3000, R1).
+test_distance(300, R2).
 :quit
 HEREDOC
 2>&1)
 check "numbers: the library and its tests load" "Loaded program: .*lib/numbers" "$a43b"
 check "numbers: root of each whole number below 3000" "R1 = ok" "$a43b"
+check "numbers: distance between [I, 0, 2I] and [I, I, I], and of a point to itself, for each I below 300" "R2 = ok" "$a43b"
 
 # --- A44: Circular terms, the step cGLP does not have ---
 # GLP-Spec glp.tex, "Circular terms" (GLP-ICLP-2026 main 9d2dedb; Audit

@@ -3,6 +3,8 @@
 %%
 %%   test_root(N, R): for each M from 0 to N - 1, root(M) is the K with
 %%     K * K =< M < (K + 1) * (K + 1); ok if every check holds and bad otherwise.
+%%   test_distance(N, R): for each I from 0 to N - 1, the distance between
+%%     [I, 0, 2 * I] and [I, I, I] is 2 * I, and between a point and itself 0.
 %% Load the directory and run, e.g., test_root(2000, R).
 
 exported procedure test_root(Integer?, Result).
@@ -15,3 +17,20 @@ root_all(M, N, A, R?) :- M? < N? | root(M?, K), root_ok(M?, K?, A?, A1), M1 := M
 procedure root_ok(Integer?, Integer?, Result?, Result).
 root_ok(M, K, ok, ok) :- K? * K? =< M?, M? < (K? + 1) * (K? + 1) | true.
 root_ok(_, _, _, bad) :- otherwise | true.
+
+exported procedure test_distance(Integer?, Result).
+test_distance(N, R?) :- dist_all(0, N?, ok, R).
+
+procedure dist_all(Integer?, Integer?, Result?, Result).
+dist_all(I, N, A, A?) :- I? >= N? | true.
+dist_all(I, N, A, R?) :- I? < N? |
+    J := 2 * I?,
+    distance([I?, 0, J?], [I?, I?, I?], D1),
+    distance([I?, 0, J?], [I?, 0, J?], D2),
+    dist_ok(I?, D1?, D2?, A?, A1),
+    I1 := I? + 1,
+    dist_all(I1?, N?, A1?, R).
+
+procedure dist_ok(Integer?, Integer?, Integer?, Result?, Result).
+dist_ok(I, D1, D2, ok, ok) :- D1? =:= 2 * I?, D2? =:= 0 | true.
+dist_ok(_, _, _, _, bad) :- otherwise | true.
