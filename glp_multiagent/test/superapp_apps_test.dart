@@ -11,7 +11,9 @@ library;
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:glp_multiagent/superapp_apps.dart';
 import 'package:glp_multiagent/manifests/superapp_ui.dart';
 import 'package:glp_multiagent/superapp_host.dart';
 import 'package:glp_multiagent/ui_runtime/bridge.dart';
@@ -283,4 +285,23 @@ void main() {
     expect(alice.errors, isEmpty);
     expect(bob.errors, isEmpty);
   }, timeout: const Timeout(Duration(minutes: 5)));
+
+  testWidgets('the phone\'s screens: home and a tab for each installed mini-app, the apps the phone '
+      'carries, and on the mini-app\'s screen its own constructs, Invite a friend and the consent to '
+      'friends\' invitations', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: SuperAppScreens(host: alice.host, home: const Text('home')))));
+    expect(find.text('home'), findsOneWidget);
+    expect(find.byKey(const ValueKey('superapp:tab:gsg')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('superapp:tab:+')));
+    await tester.pumpAndSettle();
+    expect(find.text('Friendship'), findsWidgets);
+    expect(find.text('Groups'), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('superapp:app:gsg')), matching: find.text('Open')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('superapp:app:gsn')), matching: find.text('Install')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('superapp:tab:gsg')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('superapp:invite:gsg')), findsOneWidget, reason: 'Bob is a friend');
+    expect(find.byKey(const ValueKey('superapp:join:gsg')), findsOneWidget);
+    expect(find.text('home'), findsNothing);
+  });
 }

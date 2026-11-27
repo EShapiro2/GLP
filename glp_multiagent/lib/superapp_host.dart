@@ -142,7 +142,15 @@ class SuperAppHost {
   /// The person's act on her mini-app [app] (programs/social/graph/core/self.glp, AppAct):
   /// `activate`, `invite` or `accept_invite` with a friend's key, or `install_bundled` with the
   /// artefact the app carries.
-  Future<void> appAct(String what, String app, [String? arg]) => act(runtimeTermOf(GStruct(what, [
+  Future<void> appAct(String what, String app, [String? arg]) {
+    if (what == 'install_bundled' && !installed.contains(app)) installed.add(app);
+    return _appAct(what, app, arg);
+  }
+
+  /// The mini-apps the person installed on this phone, in the order installed.
+  final List<String> installed = [];
+
+  Future<void> _appAct(String what, String app, [String? arg]) => act(runtimeTermOf(GStruct(what, [
         GAtom(app),
         if (arg != null) what == 'install_bundled' ? GString(arg) : GAtom(arg),
       ])));
