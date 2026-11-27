@@ -157,6 +157,10 @@ for c in $CONTRACTS; do
         repl "$WORK/pn.in" "$WORK/$c.pn.out"
         pr=$(grep -E '^P = ' "$WORK/$c.pn.out" | head -1 | sed -e 's/^P = //')
         [ -n "$pr" ] || pr=no_pragmas
+        # And the functions of the standard library its constraints apply, with_fns(Pragmas, Fns) (compiler/libfns.sh; compiler/README.md, item 47).
+        printf '%s\n' "$rd" > "$WORK/$c.rd"
+        lf=$(bash "$HERE/compiler/libfns.sh" "@$WORK/$c.rd")
+        [ -z "$lf" ] || [ "$pr" = no_pragmas ] || pr="with_fns($pr, $lf)"
     elif [ -f "${src%.glp}.txt" ] \
         && ! pr=$(printf '%s\n' "$rd" > "$WORK/$c.rd" && bash "$HERE/compiler/pragmas.sh" "${src%.glp}.txt" "@$WORK/$c.rd" 2> "$WORK/$c.pr.err"); then
         echo "missing $d: its pragmas were not read: $(head -1 "$WORK/$c.pr.err")" >> "$WORK/status"
