@@ -1,3 +1,8 @@
+# Code #43, 2026-11-27 ~23:15 UTC
+
+- **Main: 43d9ee8 (organisation/claude.md, writing-style-guide.md: Udi approves only marked text; a large set of marked changes as one page; section 12's rule for mathematical text; 41's seventeen entries) and 6e74244 (check.py: 20 constructions reject those 17 Wrong texts, their Right texts pass; tests.tsv 49, 0 wrong; a tests.tsv Wrong text of 41 must fail by a rule or another entry, not by its own entry; a ban inside a 41 Right text, word for word, does not fail it).**  Sample at 43d9ee8: C RM MA DL 136/136; QF 250/253, the 3 failed the three screenshot tests that read a macOS font (the Mac's).  Site check 93 contracts, 0 errors.
+- **Not urgent** (Coordination #19, 2026-11-27 22:31 UTC, from Calculus #11 12:23 UTC item 4): the check of the three conditions of the Calculus's Section 5 (Introduction, Agent provenance, Volition) is the paper's check; GLP's checker is still GSC's.  Not needed now that met is gone.
+
 # Code #42, 2026-11-26 ~15:20 UTC
 
 - **Main 3edae81 plus this line**: code41-gone2 (vGLP #37 cb30240 and d2ee2c0a, Calculus #15 464ffa66); the 13 rows d2ee2c0a changes recorded again (helpers 4e9488ca, cd660cce5, 29fe106); Feeds recorded again (its record at 8614fea8 predated GFF c8b5a5ec's play_feeds).  Checks: `cascade.sh --check` on every row OK (helpers' parts 1-3 at 7621b9e, the rest and the 14 new records here at 3edae81); APPS VG 1713/1713; site check 106 contracts, 633 svg, 0 errors.
