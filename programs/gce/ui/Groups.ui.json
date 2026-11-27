@@ -1,0 +1,763 @@
+{
+ "version": 1,
+ "look": {
+  "theme": "fresh"
+ },
+ "effects": {
+  "establish": {
+   "button": "Establish",
+   "adds": [
+    "identity",
+    "person"
+   ],
+   "removes": []
+  },
+  "acquaint": {
+   "button": "Acquaint",
+   "adds": [
+    "knows"
+   ],
+   "removes": []
+  },
+  "introduce": {
+   "button": "Introduce",
+   "adds": [],
+   "removes": []
+  },
+  "befriend": {
+   "button": "Befriend",
+   "adds": [
+    "friend"
+   ],
+   "removes": []
+  },
+  "unfriend": {
+   "button": "Unfriend",
+   "adds": [],
+   "removes": [
+    "friend",
+    "member",
+    "listed"
+   ]
+  },
+  "message": {
+   "button": "Message",
+   "adds": [],
+   "removes": []
+  },
+  "create": {
+   "button": "Create",
+   "adds": [
+    "leader",
+    "member",
+    "listed"
+   ],
+   "removes": []
+  },
+  "close": {
+   "button": "Close",
+   "adds": [],
+   "removes": [
+    "leader",
+    "listed"
+   ]
+  },
+  "join": {
+   "button": "Join",
+   "adds": [
+    "listed"
+   ],
+   "removes": []
+  },
+  "remove": {
+   "button": "Remove",
+   "adds": [],
+   "removes": [
+    "listed"
+   ]
+  },
+  "leave": {
+   "button": "Leave",
+   "adds": [],
+   "removes": [
+    "member"
+   ]
+  },
+  "post": {
+   "button": "Post",
+   "adds": [],
+   "removes": []
+  },
+  "post_own": {
+   "button": "Post own",
+   "adds": [
+    "posted"
+   ],
+   "removes": []
+  }
+ },
+ "addedBy": {
+  "identity": [
+   {
+    "schema": "establish",
+    "button": "Establish",
+    "mine": true
+   }
+  ],
+  "person": [
+   {
+    "schema": "establish",
+    "button": "Establish",
+    "mine": true
+   }
+  ],
+  "knows": [
+   {
+    "schema": "acquaint",
+    "button": "Acquaint",
+    "mine": true
+   },
+   {
+    "schema": "introduce",
+    "button": "Introduce",
+    "mine": false
+   }
+  ],
+  "friend": [
+   {
+    "schema": "befriend",
+    "button": "Befriend",
+    "mine": true
+   }
+  ],
+  "message": [
+   {
+    "schema": "message",
+    "button": "Message",
+    "mine": false
+   }
+  ],
+  "leader": [
+   {
+    "schema": "create",
+    "button": "Create",
+    "mine": true
+   }
+  ],
+  "member": [
+   {
+    "schema": "create",
+    "button": "Create",
+    "mine": true
+   },
+   {
+    "schema": "join",
+    "button": "Join",
+    "mine": false
+   }
+  ],
+  "listed": [
+   {
+    "schema": "create",
+    "button": "Create",
+    "mine": true
+   },
+   {
+    "schema": "join",
+    "button": "Join",
+    "mine": true
+   }
+  ],
+  "posted": [
+   {
+    "schema": "post",
+    "button": "Post",
+    "mine": false
+   },
+   {
+    "schema": "post_own",
+    "button": "Post own",
+    "mine": true
+   }
+  ]
+ },
+ "vocab": {
+  "identity": {
+   "phrase": "x has an identity",
+   "vars": [
+    "x"
+   ]
+  },
+  "person": {
+   "phrase": "x is a person",
+   "vars": [
+    "x"
+   ]
+  },
+  "knows": {
+   "phrase": "x knows y",
+   "vars": [
+    "x",
+    "y"
+   ]
+  },
+  "friend": {
+   "phrase": "x counts y as a friend",
+   "vars": [
+    "x",
+    "y"
+   ]
+  },
+  "message": {
+   "phrase": "y has the message t from x",
+   "vars": [
+    "y",
+    "x",
+    "t"
+   ]
+  },
+  "leader": {
+   "phrase": "x is the leader of g",
+   "vars": [
+    "x",
+    "g"
+   ]
+  },
+  "member": {
+   "phrase": "x is a member of the group g of y",
+   "vars": [
+    "x",
+    "g",
+    "y"
+   ]
+  },
+  "listed": {
+   "phrase": "x has y as a member of the group g",
+   "vars": [
+    "x",
+    "y",
+    "g"
+   ]
+  },
+  "posted": {
+   "phrase": "y has the post t of x in g",
+   "vars": [
+    "y",
+    "t",
+    "x",
+    "g"
+   ]
+  },
+  "group_message": {
+   "phrase": "z has the message t of x in g delivered by y",
+   "vars": [
+    "z",
+    "x",
+    "t",
+    "g",
+    "y"
+   ]
+  },
+  "group_delivered": {
+   "phrase": "y has delivered the message t of x in g to z",
+   "vars": [
+    "y",
+    "x",
+    "t",
+    "g",
+    "z"
+   ]
+  }
+ },
+ "start": "Chats",
+ "landmarks": [],
+ "screens": {
+  "Chats": {
+   "about": null,
+   "components": [
+    {
+     "kind": "questions"
+    },
+    {
+     "kind": "show",
+     "of": "me",
+     "pos": null,
+     "preds": [
+      "identity",
+      "person"
+     ]
+    },
+    {
+     "kind": "list",
+     "title": "Groups",
+     "items": {
+      "facts": "member",
+      "keep": null
+     },
+     "with": [],
+     "opens": "Group",
+     "look": "grid",
+     "order": null,
+     "told": false
+    },
+    {
+     "kind": "list",
+     "title": "Contacts",
+     "items": {
+      "everyone": true
+     },
+     "with": [
+      "knows",
+      "friend"
+     ],
+     "opens": "Chat",
+     "look": null,
+     "order": null,
+     "told": false
+    },
+    {
+     "kind": "action",
+     "schema": "establish",
+     "button": "Establish",
+     "sentence": "Alice may establish an identity",
+     "then": null,
+     "thenIt": null,
+     "me": 1,
+     "arity": 1,
+     "places": {},
+     "covers": true,
+     "where": null,
+     "label": "Set up my identity",
+     "important": false
+    },
+    {
+     "kind": "action",
+     "schema": "acquaint",
+     "button": "Acquaint",
+     "sentence": "Alice and Bob may jointly come to know each other",
+     "then": null,
+     "thenIt": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "typed": true,
+       "look": {
+        "as": "scanned"
+       },
+       "name": "Bob"
+      }
+     },
+     "covers": true,
+     "where": null,
+     "label": "Add a contact",
+     "important": false
+    },
+    {
+     "kind": "action",
+     "schema": "create",
+     "button": "Create",
+     "sentence": "Alice may create Hikers",
+     "then": "IT",
+     "thenIt": {
+      "screen": "Group",
+      "pred": "member",
+      "of": "fact",
+      "from": "Chats"
+     },
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "typed": true,
+       "look": {
+        "fresh": {
+         "stem": "Group",
+         "n": 1
+        }
+       },
+       "name": "Hikers"
+      }
+     },
+     "covers": true,
+     "where": null,
+     "label": "New group",
+     "important": false
+    },
+    {
+     "kind": "action",
+     "schema": "close",
+     "button": "Close",
+     "sentence": "Alice may close Hikers by leaving it",
+     "then": null,
+     "thenIt": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "from": "leader",
+       "name": "Hikers"
+      }
+     },
+     "covers": true,
+     "where": "menu",
+     "label": "Close a group",
+     "important": false
+    }
+   ]
+  },
+  "Chat": {
+   "about": {
+    "name": "Bob"
+   },
+   "components": [
+    {
+     "kind": "questions"
+    },
+    {
+     "kind": "show",
+     "of": "it",
+     "pos": null,
+     "preds": [
+      "knows",
+      "friend"
+     ]
+    },
+    {
+     "kind": "thread",
+     "preds": [
+      "message"
+     ]
+    },
+    {
+     "kind": "action",
+     "schema": "befriend",
+     "button": "Befriend",
+     "sentence": "Alice and Bob may jointly become friends",
+     "then": null,
+     "thenIt": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "subject": null,
+       "name": "Bob"
+      }
+     },
+     "covers": true,
+     "where": "primary",
+     "label": "Make friends",
+     "important": false
+    },
+    {
+     "kind": "action",
+     "schema": "unfriend",
+     "button": "Unfriend",
+     "sentence": "Alice may end her friendship with Bob",
+     "then": null,
+     "thenIt": null,
+     "me": 1,
+     "arity": 2,
+     "places": {
+      "2": {
+       "subject": null,
+       "name": "Bob"
+      }
+     },
+     "covers": true,
+     "where": "menu",
+     "label": null,
+     "important": false
+    },
+    {
+     "kind": "action",
+     "schema": "introduce",
+     "button": "Introduce",
+     "sentence": "Alice may introduce Carol to Bob",
+     "then": null,
+     "thenIt": null,
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "subject": null,
+       "name": "Bob"
+      },
+      "3": {
+       "from": "knows",
+       "name": "Carol"
+      }
+     },
+     "covers": true,
+     "where": null,
+     "label": "Introduce to a contact",
+     "important": false
+    },
+    {
+     "kind": "action",
+     "schema": "introduce",
+     "button": "Introduce",
+     "sentence": "Alice may introduce Bob to Carol",
+     "then": null,
+     "thenIt": null,
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "from": "knows",
+       "name": "Carol"
+      },
+      "3": {
+       "subject": null,
+       "name": "Bob"
+      }
+     },
+     "covers": true,
+     "where": null,
+     "label": "Introduce to a contact",
+     "important": false
+    },
+    {
+     "kind": "action",
+     "schema": "join",
+     "button": "Join",
+     "sentence": "Alice may add Bob to Hikers",
+     "then": null,
+     "thenIt": null,
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "subject": null,
+       "name": "Bob"
+      },
+      "3": {
+       "from": "leader",
+       "name": "Hikers"
+      }
+     },
+     "covers": true,
+     "where": "bar",
+     "label": "Add to a group of mine",
+     "important": false
+    },
+    {
+     "kind": "action",
+     "schema": "remove",
+     "button": "Remove",
+     "sentence": "Alice may end Bob's membership in Hikers",
+     "then": null,
+     "thenIt": null,
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "subject": null,
+       "name": "Bob"
+      },
+      "3": {
+       "from": "listed",
+       "name": "Hikers"
+      }
+     },
+     "covers": true,
+     "where": "menu",
+     "label": "Remove from the group",
+     "important": false
+    },
+    {
+     "kind": "action",
+     "schema": "message",
+     "button": "Message",
+     "sentence": "Alice may send Text to Bob",
+     "then": null,
+     "thenIt": null,
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "subject": null,
+       "name": "Bob"
+      },
+      "3": {
+       "typed": true,
+       "look": {
+        "as": "long"
+       },
+       "name": "Text"
+      }
+     },
+     "covers": true,
+     "where": null,
+     "label": "Write",
+     "important": false
+    }
+   ]
+  },
+  "Group": {
+   "about": {
+    "fact": "member"
+   },
+   "components": [
+    {
+     "kind": "questions"
+    },
+    {
+     "kind": "show",
+     "of": "it",
+     "pos": null,
+     "preds": [
+      "member",
+      "leader",
+      "listed",
+      "posted",
+      "group_delivered"
+     ]
+    },
+    {
+     "kind": "thread",
+     "preds": [
+      "group_message"
+     ]
+    },
+    {
+     "kind": "action",
+     "schema": "join",
+     "button": "Join",
+     "sentence": "Alice may add Carol to Hikers",
+     "then": null,
+     "thenIt": null,
+     "me": 2,
+     "arity": 3,
+     "places": {
+      "1": {
+       "from": "friend",
+       "name": "Carol"
+      },
+      "3": {
+       "subject": 1,
+       "name": "Hikers"
+      }
+     },
+     "covers": false,
+     "where": "bar",
+     "label": "Add to group",
+     "important": false
+    },
+    {
+     "kind": "action",
+     "schema": "leave",
+     "button": "Leave",
+     "sentence": "Alice may end her membership in Bob's Hikers",
+     "then": null,
+     "thenIt": null,
+     "me": 1,
+     "arity": 3,
+     "places": {
+      "2": {
+       "subject": 2,
+       "name": "Bob"
+      },
+      "3": {
+       "subject": 1,
+       "name": "Hikers"
+      }
+     },
+     "covers": true,
+     "where": "menu",
+     "label": "Leave the group",
+     "important": false
+    },
+    {
+     "kind": "action",
+     "schema": "post",
+     "button": "Post",
+     "sentence": "Alice may send Text to the group Hikers of Bob",
+     "then": null,
+     "thenIt": null,
+     "me": 2,
+     "arity": 4,
+     "places": {
+      "1": {
+       "subject": 2,
+       "name": "Bob"
+      },
+      "3": {
+       "typed": true,
+       "look": {
+        "as": "long"
+       },
+       "name": "Text"
+      },
+      "4": {
+       "subject": 1,
+       "name": "Hikers"
+      }
+     },
+     "covers": true,
+     "where": null,
+     "label": "Post",
+     "important": true
+    },
+    {
+     "kind": "action",
+     "schema": "post_own",
+     "button": "Post own",
+     "sentence": "Alice may send Text to the group Hikers of Alice",
+     "then": null,
+     "thenIt": null,
+     "me": 1,
+     "arity": 3,
+     "places": {
+      "2": {
+       "typed": true,
+       "look": {
+        "as": "long"
+       },
+       "name": "Text"
+      },
+      "3": {
+       "subject": 1,
+       "name": "Hikers"
+      }
+     },
+     "covers": true,
+     "where": null,
+     "label": "Post",
+     "important": false
+    }
+   ]
+  }
+ },
+ "personPos": {
+  "knows": [
+   1
+  ],
+  "friend": [
+   1
+  ],
+  "message": [
+   1
+  ],
+  "member": [
+   2
+  ],
+  "listed": [
+   1
+  ],
+  "posted": [
+   2
+  ],
+  "group_delivered": [
+   1,
+   4
+  ],
+  "group_message": [
+   1,
+   4
+  ]
+ },
+ "complete": true,
+ "visible": false,
+ "warnings": []
+}

@@ -1,0 +1,17 @@
+# Friendship, home first: everyone Alice knows on the start screen, befriending there in one tap with Make friends, and a screen for each person.
+
+SCREEN Home ABOUT Alice:
+    QUESTIONS
+    SHOW Alice: identity, person
+    LIST Contacts: PERSONS WITH knows, friend OPENS Person
+    Establish: Alice may establish an identity
+    Make friends: Acquaint AND Befriend, Bob TYPED
+    Acquaint: Alice and Bob may jointly come to know each other, Bob TYPED
+    Befriend: Alice and Bob may jointly become friends, Bob FROM knows
+
+SCREEN Person ABOUT Bob:
+    SHOW Bob: knows, friend
+    Befriend: Alice and Bob may jointly become friends
+    Unfriend: Alice may end her friendship with Bob
+    Introduce: Alice may introduce Carol to Bob, Carol FROM knows
+    Introduce: Alice may introduce Bob to Carol, Carol FROM knows

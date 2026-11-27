@@ -880,8 +880,16 @@ class SocialNotice {
   }
 
   /// The atom [atom] in words, said of the refuser, the person as "you": held where [held], the schema forbidding it, and lacked otherwise, the schema requiring it.  `identity`, "Bob has no identity"; `friend(Q)`, "Bob and Carol are not friends"; `child`, "Bob is a child"; `parent(Q)`, "Alice is not Carol's parent"; `parenting(R)`, "Alice is Carol's parent"; `coparent(Q)`, "Bob and Grace are parents of a child together"; `coparented`, "Dave has two parents"; `retired`; `agent`, "Alf is an AI agent"; `principal_of(R)` and `principal(P)`; `member(C)`, "Bob is not a member of the group friends"; `listed(Q, N)`, "Bob is not listed in Alice's group friends"; `closed(N)`; `item(X)` and `authored(X)`, a speech act by its text; `retired_of(R)`; and any other atom by its predicate and its arguments, "Bob holds received "Hi" Alice".
-  String _words(GTerm atom, bool held, bool Function(GTerm) isMe) {
-    final v = by;
+  String _words(GTerm atom, bool held, bool Function(GTerm) isMe) => factWords(atom, by, held, isMe);
+
+  /// A place not yet chosen, read "someone", as in "you and someone are friends" (lib/ui_runtime/described.dart,
+  /// what is in the way of an act).
+  static const GTerm someone = GAtom('\u2026someone');
+
+  /// The atom [atom] of [holder] in words, as [_words] says it of the refuser: held where [held], lacked otherwise;
+  /// an argument [someone] read "someone".
+  static String factWords(GTerm atom, GTerm holder, bool held, bool Function(GTerm) isMe) {
+    final v = holder;
     final you = isMe(v);
     final s = you ? 'you' : personName(v);
     final be = you ? 'are' : 'is';
@@ -889,8 +897,9 @@ class SocialNotice {
     final hold = you ? 'hold' : 'holds';
     final doNot = you ? 'do not' : 'does not';
     final not = held ? '' : ' not';
-    String who(GTerm q) => isMe(q) ? 'you' : personName(q);
-    String whose(GTerm q) => isMe(q) ? 'your' : "${personName(q)}'s";
+    bool open(GTerm q) => formatTerm(q) == formatTerm(someone);
+    String who(GTerm q) => open(q) ? 'someone' : isMe(q) ? 'you' : personName(q);
+    String whose(GTerm q) => open(q) ? "someone's" : isMe(q) ? 'your' : "${personName(q)}'s";
     String isOf(GTerm q) => isMe(q) ? 'are' : 'is';
     String say(GTerm x) => x is GList
         ? _and([for (final y in x.items) say(y)])

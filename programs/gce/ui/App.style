@@ -1,0 +1,88 @@
+STYLE Home:
+COLOR IS FRESH.
+QUESTIONS ARE ON TOP.
+Apps ARE A GRID.
+People ARE ALPHABETICAL.
+Bob IS SCANNED.
+Make friends IS PRIMARY.
+Establish IS CALLED "Set up my identity".
+Acquaint IS CALLED "Add a contact (no friendship)".
+Trust IS CALLED "Trust their apps".
+Untrust IS CALLED "Stop trusting their apps".
+Install IS PRIMARY.
+Invite IS CALLED "Invite a friend".
+Offer IS CALLED "Send to a friend".
+Leave IS CALLED "Remove app".
+Open place IS CALLED "Open my place to visitors".
+Close place IS CALLED "Close my place".
+Sign link IS CALLED "Make an invitation link".
+Invite by link IS CALLED "Register an invitation link".
+Invite by link IS IN THE MENU.
+Use link IS CALLED "Use an invitation link".
+Lookup IS CALLED "Find someone in a directory".
+Lookup by address IS CALLED "Find someone by address".
+Lookup by address IS IN THE MENU.
+Install from store IS CALLED "Install from a store".
+Encounter IS CALLED "Meet someone in person".
+List me IS CALLED "List me in a directory".
+List me IS IN THE MENU.
+List me unshown IS CALLED "List me in a directory, hidden".
+List me unshown IS IN THE MENU.
+Delist me IS CALLED "Remove me from a directory".
+Delist me IS IN THE MENU.
+Delist me unshown IS CALLED "Remove my hidden listing".
+Delist me unshown IS IN THE MENU.
+Person unfriend IS CALLED "End a friendship".
+Sign IS CALLED "Make a signed item".
+Sign IS IN THE MENU.
+Publish IS CALLED "Publish an app I wrote".
+Publish IS IN THE MENU.
+Enter IS CALLED "Create a ward".
+Enter IS IN THE MENU.
+Make guardian IS CALLED "Become a guardian of a ward".
+Make guardian IS IN THE MENU.
+End guardian IS CALLED "End a guardian's role".
+End guardian IS IN THE MENU.
+Ward acquaint IS CALLED "For my ward: add a contact".
+Ward acquaint IS IN THE MENU.
+Ward unfriend IS CALLED "For my ward: end a friendship".
+Ward unfriend IS IN THE MENU.
+Wards acquaint IS CALLED "Introduce two wards".
+Wards acquaint IS IN THE MENU.
+Wards befriend IS CALLED "Make two wards friends".
+Wards befriend IS IN THE MENU.
+Wards of one guardian befriend IS CALLED "Make two of my wards friends".
+Wards of one guardian befriend IS IN THE MENU.
+Delist IS CALLED "Remove an app from a store".
+Delist IS IN THE MENU.
+Introduce IS CALLED "Introduce to a contact".
+Trust store IS CALLED "Trust them as a store".
+Trust store IS IN THE MENU.
+Untrust store IS CALLED "Stop trusting this store".
+Present IS CALLED "Show our friendship to a contact".
+Present IS IN THE MENU.
+Forward IS CALLED "Send an item".
+Ward befriend IS CALLED "Befriend for my ward".
+Ward befriend IS IN THE MENU.
+Ward end IS CALLED "End friendship for my ward".
+Ward end IS IN THE MENU.
+Unfriend IS CALLED "End friendship".
+Unfriend IS IN THE MENU.
+Guardian unfriend IS CALLED "End friendship with my ward".
+Guardian unfriend IS IN THE MENU.
+Resign IS CALLED "Stop being their guardian".
+Resign IS IN THE MENU.
+Retire IS CALLED "Retire this ward".
+Retire IS IN THE MENU.
+Open store IS CALLED "Make them a store".
+Open store IS IN THE MENU.
+Open server IS CALLED "Make them a meeting server".
+Open server IS IN THE MENU.
+Open directory IS CALLED "Make them a directory".
+Open directory IS IN THE MENU.
+List IS CALLED "List an app in their store".
+List IS IN THE MENU.
+Trust ON Program IS CALLED "Trust this developer".
+Trust ON Program IS PRIMARY.
+Install IS IMPORTANT.
+Make friends IS IMPORTANT.
