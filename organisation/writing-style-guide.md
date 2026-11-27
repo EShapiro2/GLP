@@ -112,6 +112,7 @@ Precision over persuasion.
 ## 12. Mathematical Text
 
 - **Theorems are one-liners.**  Hypotheses are fixed before the theorem; every notion it needs is a definition.
+- **"1. NO VERBIAGE  2. NO UNNECESSARY FORMAL SYMBOLISM  Clean, simple, clear, My English definitions that are precise and formal without being formalistic."** (Udi, 2026-11-27 22:23 UTC, to vGLP #29, reported by the vGLP Cowork session; examples in 41.)  A symbol that only the proofs use is introduced in the proofs.
 - **A formal definition is for mathematical content, and it is short.**  "Definitions cannot be that long."  A program or a procedure is described in text.
 - **NEVER use the LaTeX definition environment for something that is not math, but is prose.**  Define it with `\emph` in running text.
 - **NEVER include explanatory text in mathematical text: definitions, theorems, proofs.**
@@ -302,3 +303,93 @@ Wrong: A yes to a text in chat is not his consent to replace his words in the pa
 Right: A change to his text is made only as he approved it, marked.
 Why: "too wordy and in Claudese, try to say it in one short sentnece"; a rule told by what is not consent, and as a story of steps.
 Source: Udi, 2026-11-22 23:21 UTC.
+
+Wrong: N(C) := {v : v is a variable of C, and an agent occurs in a term of its type}
+Right: A variable of a type that includes an agent is an agent variable.
+Why: a symbol for a notion that a plain term names; the proofs use the symbol, the definition does not need it.
+Source: Udi, 2026-11-27 21:58 and 22:18 UTC, the Calculus, Section 5, reported by the vGLP Cowork session.
+
+Wrong: Provenance.  For every clause C of G, each variable of N(C) that occurs in a literal of H+ is in A(C) or occurs in a literal of B+.
+Right: Agent provenance.  An agent variable in a head atom occurs as an agent of the clause or in a primitive body atom.
+Why: four symbols for what plain words say; and the condition is named for what it is of.
+Source: Udi, 2026-11-27 22:01 and 22:09 UTC, the Calculus, reported by the vGLP Cowork session.
+
+Wrong: Gamma(C) := (A(C), {{u, v} in A(C) : u differs from v, u:s in B+, v in ag(s)})
+Right: The graph of a clause has its agents as vertices, with an edge between u and v if v occurs in a primitive body atom of u.
+Why: a set formula for a graph that one sentence describes.
+Source: Udi, 2026-11-27 22:23 UTC, the Calculus, Section 5, reported by the vGLP Cowork session.
+
+Wrong: Volition.  For every clause C of G, Gamma(C) is connected or each of its connected components has a member of Q.
+Right: Volition.  A clause whose graph is not connected has a guard in each of its connected components.
+Why: the disjunction did not say which clauses need guards; "So say it".
+Source: Udi, 2026-11-27 22:21 UTC, the Calculus, reported by the vGLP Cowork session.
+
+Wrong: A clause I = H <- x:person, y:person guarded by x, y of a grassroots contract G, with x differing from y and A(I) = {x, y}, is an introductory act of G if: 1. H = H+, and H has literals x:s and y:s' with y in ag(s) and x in ag(s').
+Right: A clause I of a grassroots contract G is an introductory act of G if: 1. Its agents are x and y, both are its guards, and its body is x:person, y:person.  2. Its head has only atoms, with y in a head atom of x and x in a head atom of y.
+Why: the form of the clause written as a formula and its head by set equations, for what two plain sentences say.
+Source: Udi, 2026-11-27 22:23 UTC, the Calculus, reported by the vGLP Cowork session.
+
+Wrong: A positive atom is a literal that is not negated.
+Right: An atom, a negated atom; a literal is an atom or a negated atom.
+Why: "An atom is always positive, no need to say.  A negated atom is what it is. A literal is an atom or a negated atom."
+Source: Udi, 2026-11-27 22:07 UTC, reported by the vGLP Cowork session.
+
+Wrong: A clause agent is an agent of the clause.
+Right: (the sentence is deleted)
+Why: "huh? a rose is a rose is a rose?": a definition that says nothing.
+Source: Udi, 2026-11-27 22:07 UTC, reported by the vGLP Cowork session.
+
+Wrong: That definition has no notion of agents that are not persons; since the Calculus introduces them, it defines grassroots for persons only.
+Right: A grassroots protocol is oblivious, and any two sets of its persons that have not interacted can always come to interact.
+Why: "Since you are recalling Calculus, no need for this at all.": a paper that recalls a definition recalls it, with no account of its history.
+Source: Udi, 2026-11-27 21:53 UTC, Compiling GC, Section 3, reported by the vGLP Cowork session.
+
+Wrong: Suppose that from some configuration on no attempt of a class [t] is decided, while in every configuration some act of [t] holds with all its guards for [t].
+Right: Let a class [t] meet the hypothesis of steadiness (Definition Steady) in a suffix of r'.
+Why: a supposition that restates a definition's hypothesis at length; name the definition.
+Source: Udi, 2026-11-27 14:08 UTC, to vGLP #27: "Claudese, note it and try again"; the right text, 14:14 UTC, "yes"; reported by vGLP #27.
+
+Wrong: If the answer is yes, the question waits only while a question with priority over α, answered yes, is pending at q, or while q is blocked, and both end as for the start.
+Right: If q answers yes, its question waits while q has a question with priority over α answered yes pending, or q is blocked.  Such a question is of an attempt that is not stuck, so it closes at q.  An attempt that blocks q closes at q, as shown above, and q comes to be blocked again only finitely often.
+Why: two conditions and a conclusion by analogy in one sentence; say each fact, and why it holds, in its own sentence.
+Source: Udi, 2026-11-27 14:20 and 14:22 UTC, to vGLP #27, reported by vGLP #27.
+
+Wrong: Both end, as they do for the start.
+Right: Such a question is of an attempt that is not stuck, so it closes at q.  An attempt that blocks q closes at q, as shown above, and q comes to be blocked again only finitely often.
+Why: "as they do for X" points at an analogy in place of the fact; state the fact and its reason.
+Source: Udi, 2026-11-27 14:21 and 14:22 UTC, to vGLP #27, reported by vGLP #27.
+
+Wrong: with H' and B' sets of well-typed literals and Q' a set of agents of its literals, any of the three empty.
+Right: with H' and B' sets of well-typed literals and Q' a set of agents of its literals; any of the three may be empty.
+Why: "present tense is Claudese!  any of the three may be empty.  record this for the future".
+Source: Udi, 2026-11-25 23:32 UTC, to Calculus #10, reported by the Calculus Cowork session.
+
+Wrong: Issue: an act inherited along two lines becomes two acts, and the weaker one is a route; 40 contracts change.
+Right: Issue: an act inherited along two lines becomes two acts, and the act may then be taken under the conditions of one line alone; 40 contracts change.
+Why: "and the weaker one is a route; - my english?": "is a route" for "may be taken".
+Source: Udi, 2026-11-26 16:56 UTC, to Calculus #10, reported by the Calculus Cowork session.
+
+Wrong: Solution: the Logic pragmas say them with what the logic has, votes and a clause for each agent; no math and no text changes.
+Right: We write the Logic pragmas of Guardians again, and the logic stays as it is.
+Why: "Claudese, try again": a text as the actor of "say", and "what the logic has" names nothing.
+Source: Udi, 2026-11-26 17:50 UTC, to Calculus #10, reported by the Calculus Cowork session.
+
+Wrong: An act inherited along two lines is one act, with what both lines added to it.  For example, Warded Groups has Person unfriend of Friendship:2 from Groups and from Guardians, with what each of them added.  Two acts that differ in more are two acts: Rehearsal Rooms has Retire of an organisation and Retire of a ward.
+Right: An act of a contract that two of these contracts inherit from is added once, with the conditions, the consents and the effects that either of them added to it.
+Why: "is this math or verbiage?": the rule told in loose words, "along two lines", "what each added", "differ in more", with an example in place of the rule.
+Source: Udi, 2026-11-26 20:48 UTC, to Calculus #10, reported by the Calculus Cowork session (Calculus record item 117).
+
+Wrong: Two of these contracts may have one act of a contract they both inherit from, each with what it added to the act.  If the two acts differ only in what was added, they are added as one act, with what both added; otherwise both are added.
+Right: An act of a contract that two of these contracts inherit from is added once, with the conditions, the consents and the effects that either of them added to it.
+Why: "this is Claudese, try agaiun": a clause with no verb, "each with what it added", and a rule split in two cases with "otherwise".
+Source: Udi, 2026-11-26 20:42 UTC, to Calculus #10, reported by the Calculus Cowork session.
+
+Wrong: Two acts of these contracts that are one act of a contract they both inherit from, each with conditions, consents and effects added, are added as one act, with the additions of both.
+Right: An act of a contract that two of these contracts inherit from is added once, with the conditions, the consents and the effects that either of them added to it.
+Why: "much better! now this is still Claudese, can you try in my english?": a clause with no verb, "each with ... added", and a noun made from a verb, "the additions of both".
+Source: Udi, 2026-11-26 20:46 and 20:48 UTC, to Calculus #10, reported by the Calculus Cowork session.
+
+Wrong: Q: Shall I bring the sentence on madGLP fully to IGLP: the conditions of its two theorems, and the smartphone implementation as still in development?
+Right: Q: Shall VMAT say of madGLP what IGLP says?
+Why: "this is Claudese, don't you have a Claudese filter? speak my english": "bring X to Y" for making a text say what another paper says, and a question that lists the mechanics of a change after a colon.
+Source: Udi, 2026-11-26 22:06 UTC, to VMAT #4, reported by the VMAT Cowork session.
