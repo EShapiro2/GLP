@@ -64,4 +64,4 @@ the token a fine-grained one of EShapiro2's with Contents read-only on the repos
 
 Without it the sweep publishes nothing and says so, and the site links the PDFs it serves.
 
-The sweep runs hourly from then on; to take the repository's latest at once, `systemctl start peoplesweb-sweep.service`.
+The sweep runs hourly from then on; to take the repository's latest at once, `systemctl start peoplesweb-sweep.service`.  The test site is built again within a minute of each push to `Website-site`, by `peoplesweb-next.timer` and `deploy/next.sh`, which the sweep installs; to build it at once, `systemctl start peoplesweb-next.service`.

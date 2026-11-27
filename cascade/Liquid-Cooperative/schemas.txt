@@ -3,10 +3,17 @@ Liquid Cooperative extends Cooperative DAO.
 Vocabulary: y has a delegate in z = delegating(y,z); z holds the delegation of y to x = delegation(z,y,x).
 After y makes x y's delegate in z, which requires y does not have a delegate in z: y has a delegate in z and z holds the delegation of y to x.
 After y revokes y's delegation to x in z: no longer y has a delegate in z and no longer z holds the delegation of y to x.
+After z counts y as voting on m, which requires z does not hold y's vote on m: z holds y's vote on m.
+After z counts y as voting on whether z ends w's participation in z, which requires z does not hold y's vote on whether z ends w's participation in z: z holds y's vote on whether z ends w's participation in z.
+After z counts y as voting on whether z ends w's participation and w's office in z, which requires z does not hold y's vote on whether z ends w's participation and w's office in z: z holds y's vote on whether z ends w's participation and w's office in z.
+After z counts y as voting on whether x amends the bylaws of z as m says, which requires z does not hold y's vote on whether x amends the bylaws of z as m says: z holds y's vote on whether x amends the bylaws of z as m says.
 Liquid Cooperative:0 - | A member's *delegate* is another member whose vote counts for theirs.
 Liquid Cooperative:0 - | Bob and Carol are persons.
 Liquid Cooperative:1 ■ | Delegating.
 Liquid Cooperative:1 ■ Delegate: delegating(Bob,Orga), delegation(Orga,Bob,Carol) <- participant(Bob,Orga), participant(Carol,Orga), knows(Bob,Carol), ~delegating(Bob,Orga) guarded by Bob.
 Liquid Cooperative:1 ■ Revoke: ~delegating(Bob,Orga), ~delegation(Orga,Bob,Carol) <- delegating(Bob,Orga), delegation(Orga,Bob,Carol) guarded by Bob.
-Liquid Cooperative:2 ■ | Count.
+Liquid Cooperative:2 ■ Count: vote(Orga,Bob,Motion) <- participant(Bob,Orga), voter(Bob,Orga,Motion), organisation(Orga), proposed(Orga,Motion), delegation(Orga,Bob,Carol), vote(Orga,Carol,Motion), ~vote(Orga,Bob,Motion).
+Liquid Cooperative:2 ■ Count expel: vote_expel_orga(Orga,Bob,Orga,Dave) <- voter_expel_orga(Bob,Orga,Orga,Dave), delegation(Orga,Bob,Carol), vote_expel_orga(Orga,Carol,Orga,Dave), ~vote_expel_orga(Orga,Bob,Orga,Dave).
+Liquid Cooperative:2 ■ Count officer expel: vote_officer_expel_orga(Orga,Bob,Orga,Dave) <- voter_officer_expel_orga(Bob,Orga,Orga,Dave), delegation(Orga,Bob,Carol), vote_officer_expel_orga(Orga,Carol,Orga,Dave), ~vote_officer_expel_orga(Orga,Bob,Orga,Dave).
+Liquid Cooperative:2 ■ Count amend: vote_amend_orga(Orga,Bob,Alice,Motion) <- voter_amend_orga(Bob,Orga,Alice,Motion), delegation(Orga,Bob,Carol), vote_amend_orga(Orga,Carol,Alice,Motion), ~vote_amend_orga(Orga,Bob,Alice,Motion).
 Liquid Cooperative:2 ■ | A member who has not voted on a proposal counts as voting as their delegate did, down a chain of delegates, and can no longer vote on it.

@@ -1,5 +1,5 @@
 Liquid DAO
-Liquid DAO extends DAO.
+Liquid DAO inherits from DAO.
 1. ■ Delegate: A member of a DAO, the steward included, may make another member, whom they know, their delegate in it, one at a time; the steward records the delegation.
 2. ■ Revoke: A member may revoke their delegation; the steward erases it.
 3. ■ Count: After the delegate of a member who has not voted on a proposal has a vote on it counted, the steward counts the member as voting the same way, and the member can no longer vote on it.

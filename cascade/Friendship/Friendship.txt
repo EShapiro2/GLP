@@ -6,7 +6,7 @@
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus c475902; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, GSG:1 undertaken (Udi, 2026-11-15, to GSC #17), and the Interface pragmas GSC's, their lines named by the clauses' new titles.  Git holds what the file said before.
 % Schemas: Friendship.glp beside this file, the full schemas, GKK's three and two over the predicate friend, printed by calculus/tools/adopt.py GSG from the Logic pragmas and never written by hand; adopt.py --check GSG holds it and cascade/Friendship/ to what the tools print.
 Friendship
-Friendship extends Knowledge.
+Friendship inherits from Knowledge.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 Alice and Bob are persons.
 1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
@@ -16,8 +16,8 @@ Logic pragmas
 Friendship extends Knowledge.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 Alice and Bob are persons.
-1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
-2. ■ Unfriend: Alice may end her friendship with Bob.
+1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person and Alice and Bob know each other. Alice and Bob will become friends only if they trust each other.
+2. ■ Unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
 3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 Logic pragmas.
 Vocabulary: x counts y as a friend = friend(x,y).

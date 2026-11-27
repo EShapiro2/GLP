@@ -1,0 +1,8 @@
+# Starts the sweep when GLP main has moved (deploy/main-watch.sh).  Run each minute by peoplesweb-main.timer.
+[Unit]
+Description=peoplesweb.org on each push to GLP main
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/bin/sh /srv/glp/servers/peoplesweb/deploy/main-watch.sh

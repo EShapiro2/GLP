@@ -29,7 +29,7 @@ play_parts(LA?, LB?, N?) :-
           own([A4], propose(mint(A4?))),
           wait(holds(coin)),
           own([A5], propose(pat(A5?, bob))),
-          wait(refused(pat(alice, bob), bob, unable([coin], []))),
+          wait(refused(pat(alice, bob), bob, unable([coin], [], []))),
           own([A6], propose(tap(A6?, bob))),
           wait(has(tapped(bob), 2))],
          [approval(befriend(alice, bob), yes)],

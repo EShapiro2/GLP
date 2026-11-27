@@ -1,0 +1,1 @@
+Booking extends Organisation: holds

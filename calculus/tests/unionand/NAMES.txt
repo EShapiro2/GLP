@@ -1,0 +1,6 @@
+The made-up contracts of this case, after the table of NAMES.txt: a name with 'and' in it (Audit #116, Villagers #1, 2026-11-24: 'T unites Jobs and Lost and Found.').
+
+name on main | name | file name | row and atom | row and atom on main
+Bids | Bids | Bids | bids | bids
+Seek and Find | Seek and Find | Seek-and-Find | seek_and_find | seek_and_find
+Union T | Union T | Union-T | union_t | union_t

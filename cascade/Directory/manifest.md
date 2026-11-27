@@ -1,10 +1,10 @@
 # A run of the cascade on Directory
 
-- Contract: `Directory` (`directory` to the checker), its owner's two files `programs/examples/rendezvous/Directory.txt` and `programs/examples/rendezvous/Directory.glp`, copied here as they stood at `dcb4cfc1`.
+- Contract: `Directory` (`directory` to the checker), its owner's two files `programs/examples/rendezvous/Directory.txt` and `programs/examples/rendezvous/Directory.glp`, copied here as they stood at `8614fea8`.
 - The paper: `/Users/udi/Grassroots/GNA (not on this machine)` at `unknown`, for the paper's own record.
 - Adopted from the Calculus: `programs/examples/rendezvous/Directory.txt` is the contract, its Logic pragmas and its Interface pragmas, and `programs/examples/rendezvous/Directory.glp` the full schemas as calculus/tools/adopt.py prints them from it (claude.md "Code", "The record of a contract adopted from the Calculus"; calculus/README.md, "Adopting a contract").
-- Run on 2026-11-17 14:32 UTC by `cascade.sh directory`; the suite's Section CAS re-runs it and holds these files to what the tools print.
-- Every source and every tool at this repository's `dcb4cfc1`; each artefact's source and tool:
+- Run on 2026-11-26 08:55 UTC by `cascade.sh directory`; the suite's Section CAS re-runs it and holds these files to what the tools print.
+- Every source and every tool at this repository's `8614fea8`; each artefact's source and tool:
 
 | Artefact | Source | Tool | What it holds |
 |---|---|---|---|

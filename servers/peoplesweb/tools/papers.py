@@ -31,6 +31,12 @@ BY_DIR = {
     # 2026-11-11, from GO 84c9335).
     'GO': {'title': 'Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives',
            'authors': 'Ehud Shapiro', 'pdf': 'GO'},
+    # GM's contracts (programs/gm), in preparation, no PDF served yet;
+    # its main file is anonymous (\documentclass[...,anonymous,...]; Udi, 2026-11-25).
+    'GM': {'title': 'Anonymous Grassroots Matching: Dating, Exchanging, Booking', 'authors': 'Anonymous'},
+    # The one paper of the Villagers site, peoplesweb.org/villagers
+    # (deploy/villagers.sh; Udi, 2026-11-25); title and author as its main file has them.
+    'Villagers': {'title': 'Villagers: A Grassroots Contract for Village Digital Life', 'authors': 'Anonymous', 'pdf': 'Villagers'},
 }
 
 # Where each paper's source is, this file being the one record of it: its repository under EShapiro2 on GitHub, the one Overleaf syncs with, and its main file.  tools/papers_sync.py builds each from there; a paper on arXiv gets a PDF too, served as Updated while its repository is ahead of its latest arXiv version.
@@ -49,6 +55,8 @@ SOURCES = {
     'GNA': {'repo': 'GLP-Networking-API', 'main': 'main.tex'},
     'GO': {'repo': 'GO-Grassroots-Organisations', 'main': 'main_characterisation_ArXiv.tex'},
 }
+# Papers built only when asked by name (tools/papers_sync.py, PAPERS_ONLY), not by the hourly sweep of the live site's papers: the Villagers paper, which deploy/villagers.sh builds for peoplesweb.org/villagers.
+ONLY_SOURCES = {'Villagers': {'repo': 'Villagers', 'main': 'main.tex'}}
 # Built from a copy with these replacements, the repository left as it is:
 # acmart wants a country in every affiliation, which Overleaf forgives
 # (Udi, 2026-11-07: not to be fixed in GFF's repository).
@@ -113,6 +121,17 @@ def built(v, name, served_pdfs, st):
             v['pdf_on'] = st['changed'][:10]
 
 
+def anonymous(v, st):
+    """A paper not on arXiv whose main file is anonymous, its document class
+    given the option anonymous, is by Anonymous: its authors are not yet
+    determined, and the site names no one (Udi, 2026-11-25 10:27 UTC: "author
+    is anonymous, why did you list my name? correct for all papers.  anonymous
+    also means author list not determined yet").  tools/papers_sync.py records
+    it, 'anonymous' in its state of the paper."""
+    if st.get('anonymous') and 'arxiv' not in v:
+        v['authors'] = 'Anonymous'
+
+
 def load_state(papers_dir):
     """What tools/papers_sync.py recorded of each paper: the date of its
     source's last change, and for a paper on arXiv the date of its latest
@@ -152,9 +171,11 @@ def cite_of(d, served_pdfs=(), state=None):
         v = {k: x for k, x in f.items() if k not in ('dir', 'key')}
         if 'dir' in f:
             built(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
+            anonymous(v, (state or {}).get(f['dir'], {}))
         return v
     v = dict(BY_DIR[d])
     st = (state or {}).get(d, {})
+    anonymous(v, st)
     name = v.pop('pdf', None)
     served = name is not None and name in served_pdfs
     if 'arxiv' in v:
@@ -206,7 +227,7 @@ FOUNDATIONAL = [
     {'title': 'Cordial Miners: A Family of Simple and Efficient Consensus Protocols for Every Eventuality', 'authors': 'Idit Keidar, Oded Naor and Ehud Shapiro', 'arxiv': '2205.09174', 'venue': 'DISC 2023'},
     {'title': 'Morpheus Consensus: Excelling on trails and autobahns', 'authors': 'Andrew Lewis-Pye and Ehud Shapiro', 'arxiv': '2502.08465', 'venue': 'OPODIS 2025'},
     {'title': 'Federated Assemblies', 'authors': 'Daniel Halpern, Ariel D. Procaccia, Ehud Shapiro and Nimrod Talmon', 'arxiv': '2405.19129', 'venue': 'AAAI 2025'},
-    {'key': 'GGGA', 'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Ehud Shapiro and Nimrod Talmon', 'state': 'in preparation'},
+    {'key': 'GGGA', 'title': 'Grassroots Governance of Grassroots Apps', 'authors': 'Anonymous', 'state': 'in preparation'},
     # The papers not on arXiv of the projects that have no other paper on the
     # site (Udi, 2026-11-14, to Website #2), each by its project's name as
     # 'key', with the title and authors its main file has (Website #2,
@@ -214,15 +235,15 @@ FOUNDATIONAL = [
     # a main file whose author is empty or a placeholder ("Friends" in IVMAT's,
     # "Anonymous Author(s)" in GPW's, none in Secure-GLP's) gives no authors.
     {'key': 'GBM', 'title': 'Grassroots Business Models', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
-    {'key': 'CFRI', 'title': 'Composing Fault-Resilient Implementations', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
+    {'key': 'CFRI', 'title': 'Composing Fault-Resilient Implementations', 'authors': 'Anonymous', 'state': 'in preparation'},
     {'key': 'IVMAT', 'title': 'Fault-Resilient Implementations of Volition-Guarded Atomic Transactions', 'authors': '', 'state': 'in preparation'},
     {'key': 'GFWC', 'title': 'Grassroots Federation Without Consensus', 'authors': '', 'state': 'in preparation'},
     {'key': 'CDWC', 'title': 'Constitutional Democracy Without Consensus', 'authors': '', 'state': 'in preparation'},
-    {'key': 'GPW', 'title': 'The Grassroots Web: A Personal Website on Your Smartphone', 'authors': '', 'state': 'in preparation'},
+    {'key': 'GPW', 'title': 'The Grassroots Web: A Personal Website on Your Smartphone', 'authors': 'Anonymous', 'state': 'in preparation'},
     {'key': 'Secure-GLP', 'title': 'Secure GLP: Executing Digital Social Contracts without Consensus', 'authors': '', 'state': 'in preparation'},
-    {'key': 'P99', 'title': 'Solving the Ninety-Nine Prolog Problems in Grassroots Logic Programming, with Measured Effort', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
+    {'key': 'P99', 'title': 'Solving the Ninety-Nine Prolog Problems in Grassroots Logic Programming, with Measured Effort', 'authors': 'Anonymous', 'state': 'in preparation'},
     {'key': 'DDD', 'title': 'Digital Speech Acts Dissolve Orphaned Disinformation', 'authors': 'Ehud Shapiro', 'state': 'in preparation'},
-    {'key': 'KYC', 'title': 'Making Digital Speech Accountable', 'authors': 'James Golike and Ehud Shapiro', 'state': 'in preparation'},
+    {'key': 'KYC', 'title': 'Making Digital Speech Accountable', 'authors': 'Anonymous', 'state': 'in preparation'},
     {'key': 'LBM', 'title': 'Location-Based Matching for Digital Cooperatives', 'authors': '', 'state': 'in preparation'},
     # 'url': the version a venue publishes, linked from the state (Udi,
     # 2026-11-12, to Website #1).
@@ -243,5 +264,6 @@ def foundational(served_pdfs=(), state=None, but=()):
         v = {k: x for k, x in f.items() if k not in ('dir', 'key')}
         if 'dir' in f:
             built(v, pdf_name(f['dir']), served_pdfs, (state or {}).get(f['dir'], {}))
+            anonymous(v, (state or {}).get(f['dir'], {}))
         out.append(v)
     return out

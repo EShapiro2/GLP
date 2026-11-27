@@ -2,40 +2,99 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 6.3 and cites a clause as Shareholding Corporation:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Corporation, instantiating its bylaws and restricting it.
-% Last changed: 2026-11-16, by GO #8.
+% Last changed: 2026-11-20, by GO #14: the Calculus's Logic pragmas at its 96d0ad2d; no clause changed.
 % Schemas: Shareholding-Corporation.glp beside this file.
 Shareholding Corporation
-Shareholding Corporation instantiates Corporation with shareholding corporation bylaws, composes it with Shares, and extends the composition.
-A *shareholding corporation* is a corporation whose bylaws name two roles, *shareholder*, held by every person who holds a share of Orga, and *director*, held by its first officer, who decides the first issue of shares; the shareholders decide later issues and the appointment and the removal of directors, by a majority of the shares they hold, and the directors jointly decide the other acts of Orga.
+Shareholding Corporation inherits from Corporation and Shares.
+A *shareholding corporation* is a corporation whose bylaws name two roles, *shareholder*, held by every person who holds a share of Orga, and *director*, held by its first officer.
 Orga is a shareholding corporation.
 1. ■ Dividend. Set dividend: The directors may set a dividend, a number of Dollars a share. Claim: A shareholder may then claim it from Orga, once, in Dollar-denominated coins for the shares they hold.
 Logic pragmas
-Shareholding Corporation instantiates Corporation with shareholding corporation bylaws; x is a director of z for x is entitled to propose m in z; x is a director of z for x is entitled to take m for z; x is a director of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons in the role Director for the votes decide m according to the bylaws of z; the first officer of z while z has not issued shares, or any officer of z while z has issued shares and the shareholders of z decided the issue of shares by a majority of the shares they hold for those who decide the issue of shares of z; any officer of z while the shareholders of z decided the officers by a majority of the shares they hold for those who decide the officers of z, composes it with Shares, and extends the composition.
-A *shareholding corporation* is a corporation whose bylaws name two roles, *shareholder*, held by every person who holds a share of Orga, and *director*, held by its first officer, who decides the first issue of shares; the shareholders decide later issues and the appointment and the removal of directors, by a majority of the shares they hold, and the directors jointly decide the other acts of Orga.
+Shareholding Corporation unites Corporation and an augmentation of a lift of Shares, and extends and augments the union.
+A *shareholding corporation* is a corporation whose bylaws name two roles, *shareholder*, held by every person who holds a share of Orga, and *director*, held by its first officer.
 Alice, Bob, Carol and Erin are persons, Orga a shareholding corporation, Dollar a fiat currency, Div a dividend, a number of Dollars a share, Held, Total, Votes and Double numbers; Carol is possibly Alice, Bob or Orga.
 1. ■ Dividend. Set dividend: Alice may set Div as a dividend of Orga, provided Alice is a director of Orga, Orga holds the votes of at least Votes persons to set Div as a dividend, Double is Votes times 2 and Orga has fewer than Double persons in the role Director. Vote on dividend: Erin may vote to set Div as a dividend of Orga, provided Erin is a director of Orga. Claim: Bob may claim Total Dollar-denominated Carol-coins from Orga as the dividend Div, provided Bob holds a share of Orga, Bob holds exactly Held shares of Orga, Orga has Div as a dividend, Total is Held times Div, Carol has issued coins of the denomination Dollar and Bob accepts a Dollar-denominated Carol-coin in payment. Claim own coins: Bob may claim Total Dollar-denominated Bob-coins from Orga as the dividend Div, provided Bob holds a share of Orga, Bob holds exactly Held shares of Orga, Orga has Div as a dividend, Total is Held times Div, Bob has issued coins of the denomination Dollar and Bob accepts a Dollar-denominated Bob-coin in payment. Claim coins of the corporation: Bob may claim Total Dollar-denominated Orga-coins from Orga as the dividend Div, provided Bob holds a share of Orga, Bob holds exactly Held shares of Orga, Orga has Div as a dividend, Total is Held times Div, Orga has issued coins of the denomination Dollar and Bob accepts a Dollar-denominated Orga-coin in payment.
 Logic pragmas.
-Vocabulary: z has v as a dividend = dividend(z,v); z has paid y the dividend v in the denomination f = paid_dividend(z,y,v,f); z holds v's vote to set u as a dividend = vote_dividend(z,v,u).
+Vocabulary: z has v as a dividend = dividend(z,v); z has paid y the dividend v in the denomination f = paid_dividend(z,y,v,f); z holds v's vote to set u as a dividend = vote_dividend(z,v,u); x holds an f-denominated share of z = note(x,z,share,f,*1); x holds n f-denominated shares of z = note(x,z,share,f,*n); x holds exactly n f-denominated shares of z = note(x,z,share,f,#n).
 Vocabulary: z has issued shares = issued_shares(z); the shareholders of z decided the issue of shares by a majority of the shares they hold = share_majority(z); the shareholders of z decided the officers by a majority of the shares they hold = officer_majority(z).
 Roles: the directors of z = directors(z); the first officer of z = first_officers(z), listed by z has y as its first officer.
 x is a director of z: x holds the role Director in z.
 After w votes to set u as a dividend of z, which requires z does not hold w's vote to set u as a dividend: z holds w's vote to set u as a dividend.
 After x sets v as a dividend of z, which requires z does not have v as a dividend: z has v as a dividend and z holds no one's vote to set v as a dividend.
-After y claims n f-denominated w-coins from z as the dividend v, which requires z has not paid y the dividend v in the denomination f: no longer z holds n w-coins, y holds n w-coins and z has paid y the dividend v in the denomination f.
+After y claims n f-denominated w-coins from z as the dividend v, which requires z has not paid y the dividend v in the denomination f: no longer z holds n f-denominated w-coins, y holds n f-denominated w-coins and z has paid y the dividend v in the denomination f.
 Environment: z has issued shares; the shareholders of z decided the issue of shares by a majority of the shares they hold; the shareholders of z decided the officers by a majority of the shares they hold.
 Interface pragmas
 Look: 📈, money
-Shareholdings: the shares Alice holds.
+Shareholdings: the notes Alice holds.
 Officers: Decider [Appoint] <person> <role>
   Bob: Decider asks you to be an officer of the organisation Orga.
+  Codecider: Decider asks that Bob be an officer of your organisation Orga.
   Decider [End officer] <person>
+  Codecider: Decider asks to end Bob's office in your organisation Orga.
   Bob [Resign] [Officer unfriend]
-Issue: AliceOfficer [Issue shares by any officer for Alice] <decider> <amount>
-  Decider: AliceOfficer asks to issue the first shares of your organisation Alice.
-Swap: Alice [Swap coin for share] <amount given> <amount wanted>
-  Bob: Alice asks to swap coins for shares with you.
-  Alice [Swap bond for share] <amount given> <amount wanted>
-  Bob: Alice asks to swap bonds for shares with you.
+Issue: AliceOfficer [Issue for Alice] <denomination>
+  Proposer [Proposal of Alice for Issue] <amount> <type>
+  Voter [Vote of Alice for Issue]
+Swap, Redeem, Escrow: Alice [Swap] <issuer wanted> <amount given> <type wanted> <amount wanted>
+  Bob: Alice asks to swap coins with you.
+  AliceOfficer [Swap for Alice] <denomination>
+  Bob: AliceOfficer asks to swap coins of the organisation Alice with you.
+  Proposer [Proposal of Alice for Swap] <other party> <amount given> <issuer given> <type given> <amount wanted> <issuer wanted> <type wanted>
+  Voter [Vote of Alice for Swap]
+  Alice [Swap for Bob] <officer of the other party> <issuer wanted> <amount given> <amount wanted> <votes of the other party>
+  BobOfficer: Alice asks to swap coins with your organisation Bob.
+  Proposer [Proposal of Bob for Swap] <other party> <amount given> <issuer given> <type given> <amount wanted> <issuer wanted> <type wanted>
+  Voter [Vote of Bob for Swap]
+  AliceOfficer [Swap for Alice and Bob] <officer of the other party> <denomination>
+  BobOfficer: AliceOfficer asks to swap coins of the organisation Alice with your organisation Bob.
+  Alice [Deposit] <amount> <condition>
+  Carol: Alice asks to deposit coins with you.
+  AliceOfficer [Deposit for Alice] <denomination>
+  Carol: AliceOfficer asks to deposit coins of the organisation Alice with you.
+  Proposer [Proposal of Alice for Deposit] <amount> <issuer> <type> <escrow> <beneficiary> <condition>
+  Voter [Vote of Alice for Deposit]
+  Alice [Deposit for Carol] <officer of the other party> <amount> <condition>
+  CarolOfficer: Alice asks to deposit coins with your organisation Carol.
+  Proposer [Proposal of Carol for Deposit] <depositor> <amount> <issuer> <type> <beneficiary> <condition>
+  Voter [Vote of Carol for Deposit]
+  AliceOfficer [Deposit for Alice and Carol] <officer of the other party> <denomination>
+  CarolOfficer: AliceOfficer asks to deposit coins of the organisation Alice with your organisation Carol.
+Pay: Alice [Pay] <amount>
+  Bob: Alice asks to pay you coins or bonds.
+  AliceOfficer [Pay for Alice] <denomination>
+  Bob: AliceOfficer asks to pay coins of the organisation Alice to you.
+  Proposer [Proposal of Alice for Pay] <payee> <amount> <issuer> <type>
+  Voter [Vote of Alice for Pay]
+  Alice [Pay for Bob] <officer of the other party> <amount>
+  BobOfficer: Alice asks to pay coins to your organisation Bob.
+  Proposer [Proposal of Bob for Pay] <other party> <amount> <issuer> <type>
+  Voter [Vote of Bob for Pay]
+  AliceOfficer [Pay for Alice and Bob] <officer of the other party> <denomination>
+  BobOfficer: AliceOfficer asks to pay coins of the organisation Alice to your organisation Bob.
+Escrow: Carol [Release] <amount>
+  Bob: Carol asks to release coins or bonds to you.
+  CarolOfficer [Release for Carol] <denomination>
+  Bob: CarolOfficer asks to release coins held by the organisation Carol to you.
+  Proposer [Proposal of Carol for Release] <beneficiary> <amount> <issuer> <type> <depositor> <condition>
+  Voter [Vote of Carol for Release]
+  Carol [Release for Bob] <officer of the other party> <amount>
+  BobOfficer: Carol asks to release coins to your organisation Bob.
+  Proposer [Proposal of Bob for Release] <escrow> <amount> <issuer> <type> <depositor> <condition>
+  Voter [Vote of Bob for Release]
+  CarolOfficer [Release for Carol and Bob] <officer of the other party> <denomination>
+  BobOfficer: CarolOfficer asks to release coins held by the organisation Carol to your organisation Bob.
+  Carol [Return] <amount>
+  Alice: Carol asks to return coins or bonds to you.
+  CarolOfficer [Return for Carol] <denomination>
+  Alice: CarolOfficer asks to return coins held by the organisation Carol to you.
+  Proposer [Proposal of Carol for Return] <depositor> <amount> <issuer> <type> <beneficiary> <condition>
+  Voter [Vote of Carol for Return]
+  Carol [Return for Alice] <officer of the other party> <amount>
+  AliceOfficer: Carol asks to return coins to your organisation Alice.
+  Proposer [Proposal of Alice for Return] <escrow> <amount> <issuer> <type> <beneficiary> <condition>
+  Voter [Vote of Alice for Return]
+  CarolOfficer [Return for Carol and Alice] <officer of the other party> <denomination>
+  AliceOfficer: CarolOfficer asks to return coins held by the organisation Carol to your organisation Alice.
 Dividend: Alice [Set dividend] <dividend> <votes>
   Erin [Vote on dividend] <dividend>
   Bob [Claim] <total> <dividend> [Claim own coins] <total> <dividend> [Claim coins of the corporation] <total> <dividend>

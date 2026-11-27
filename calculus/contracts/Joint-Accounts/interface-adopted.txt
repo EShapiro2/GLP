@@ -1,11 +1,9 @@
 Interface pragmas
 Open account: Alice [Open account] <acct>
   Bob: Alice asks for your consent to open account.
-Deposit: Alice [Deposit] <sum>
+Account deposit: Alice [Account deposit] <sum>
   Bob [Partner deposit] <sum>
 Withdraw: Alice [Withdraw] <sum>
   Bob: Alice asks for your consent to withdraw.
   Alice [Partner withdraw] <sum>
   Bob: Alice asks for your consent to partner withdraw.
-Escrow: Alice [Deposit coin] <sum> <cond>
-  Carol: Alice asks for your consent to deposit coin.

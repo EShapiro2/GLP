@@ -176,10 +176,10 @@ set -u
 GLP_DIR="$(cd "$(dirname "$0")" && pwd)"
 RT="$GLP_DIR/glp_runtime"
 
-usage() { echo "usage: cascade.sh <contract> [<contract> ...] [--check | --record]" >&2; exit 2; }
+usage() { echo "usage: cascade.sh <contract> [<contract> ...] [--check | --record | --schemas]" >&2; exit 2; }
 [ $# -ge 1 ] || usage
 MODE=write
-case "${!#}" in --check|--record) MODE="${!#}"; set -- "${@:1:$#-1}" ;; esac
+case "${!#}" in --check|--record|--schemas) MODE="${!#}"; set -- "${@:1:$#-1}" ;; esac
 [ $# -ge 1 ] || usage
 NAMES=("$@")
 # A row's key is the contract's row and atom of calculus/NAMES.txt, its file name in lower case, a hyphen an underscore; FILE is its file name (the renaming of 2026-11-16, Udi).
@@ -211,13 +211,13 @@ case "$1" in
     children) FILE=Children; OWNER="programs/cssn";             PAPER="/Users/udi/Grassroots/CSSN"; PLAYDIR=""
           PLAYAT="programs/cssn"; PLAYLIMIT=100000000 ;;
     gfwc) FILE=GFWC; OWNER="programs/federation";       PAPER="/Users/udi/Grassroots/GFWC"; PLAYDIR="" ;;
-    agents) FILE=Agents;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
+    ai_agents) FILE=AI-Agents;  OWNER="programs/gai";              PAPER="/Users/udi/Grassroots/GAI";  PLAYDIR="" ;;
     feeds) FILE=Feeds;  OWNER="programs/gff";              PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR=""
           PLAYAT="programs/apps/gff"; PLAYLIMIT=30000000 ;;   # the five persons' play, the same limit as Section APPS's
     agora) FILE=Agora; OWNER="programs/currencies/agora"; PAPER="";                           PLAYDIR="" ;;
     overlay) FILE=Overlay;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/GRH";  PLAYDIR="" ;;
     denominated_currencies) FILE=Denominated-Currencies;  OWNER="programs/currencies/sovereign"; PAPER="/Users/udi/Grassroots/SGC"; PLAYDIR="" ;;
-    community_currency) FILE=Community-Currency;  OWNER="programs/currencies/gcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
+    community_bank) FILE=Community-Bank;  OWNER="programs/currencies/gcc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     denominated_coins) FILE=Denominated-Coins;  OWNER="programs/currencies/gdc";   PAPER="/Users/udi/Grassroots/GCC";  PLAYDIR="" ;;
     auction) FILE=Auction;  OWNER="programs/lbm";              PAPER="/Users/udi/Grassroots/GRH";  PLAYDIR="" ;;
     short_feeds) FILE=Short-Feeds; OWNER="programs/gff";             PAPER="/Users/udi/Grassroots/GFF";  PLAYDIR="" ;;
@@ -233,11 +233,10 @@ case "$1" in
     stays) FILE=Stays; OWNER="programs/gce/stay";        PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     library) FILE=Library;  OWNER="programs/gce/lib";         PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GB (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
     joint_accounts) FILE=Joint-Accounts; OWNER="programs/gce/joint";       PAPER="";                            PLAYDIR="" ;;   # Nimrod Talmon's example contract, extends GC (pull request 9; GCE, Grassroots Contract Examples, Nimrod Talmon's: Udi, 2026-11-09)
-    community_bank) FILE=Community-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's twenty-three, each its % Owner line's (Udi, 2026-11-09, to GO #3); rows added 2026-11-12, the contracts having been checked and never recorded (Udi, 2026-11-12, to Code #28)
-    commercial_bank) FILE=Commercial-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    commercial_bank) FILE=Commercial-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;   # GO's twenty-three, each its % Owner line's (Udi, 2026-11-09, to GO #3); rows added 2026-11-12, the contracts having been checked and never recorded (Udi, 2026-11-12, to Code #28); Community Bank deleted 2026-11-24 (Udi)
     consumers_cooperative) FILE=Consumers-Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     ads) FILE=Ads; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
-    backed_currency) FILE=Backed-Currency; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    backed_community_bank) FILE=Backed-Community-Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     bank) FILE=Bank; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     cooperative) FILE=Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     corporation) FILE=Corporation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
@@ -245,9 +244,9 @@ case "$1" in
     liquid_cooperative) FILE=Liquid-Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     gigs) FILE=Gigs; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     lodging) FILE=Lodging; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
-    marketplace) FILE=Marketplace; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
-    networked_organisation) FILE=Networked-Organisation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
-    organisation) FILE=Organisation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    community_market) FILE=Community-Market; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    community_network) FILE=Community-Network; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
+    organisation) FILE=Organisation; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="organisation" ;;
     mutual_credit) FILE=Mutual-Credit; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     rides) FILE=Rides; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     notes) FILE=Notes; OWNER="programs/gsc"; PAPER="/Users/udi/Grassroots/GSC"; PLAYDIR="" ;;   # the notes, GSC's (the Calculus's publication of 2026-11-16)
@@ -261,8 +260,16 @@ case "$1" in
     workers_cooperative) FILE=Workers-Cooperative; OWNER="programs/go"; PAPER="/Users/udi/Grassroots/GO"; PLAYDIR="" ;;
     local_overlay) FILE=Local-Overlay; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
     second_score_auction) FILE=Second-Score-Auction; OWNER="programs/lbm"; PAPER="/Users/udi/Grassroots/GRH"; PLAYDIR="" ;;
-    secure_friendship) FILE=Secure-Friendship; OWNER="programs/social/spm"; PAPER="/Users/udi/Grassroots/SPM"; PLAYDIR="" ;;   # SPM's, adopted from the Calculus (SPM #1, 2026-11-15)
-    *) echo "cascade.sh: no contract named $1; the names are forwarding programs appstore rendezvous services directory encounters knowledge friendship groups guardians provenance_groups coins bonds warded_groups children gfwc agents feeds agora overlay denominated_currencies community_currency denominated_coins auction short_feeds resilient_feeds backchannel_feeds distrust separating_distrust labelled_overlay dao liquid_dao funded_dao recommendations stays library joint_accounts community_bank commercial_bank consumers_cooperative ads backed_currency bank cooperative corporation cooperative_dao liquid_cooperative gigs lodging marketplace networked_organisation organisation mutual_credit rides notes app constitution shares shareholding_corporation central_bank single_person_company trading_company workers_cooperative local_overlay second_score_auction secure_friendship" >&2; exit 2 ;;
+    secure_friendship) FILE=Secure-Friendship; OWNER="programs/social/spm"; PAPER="/Users/udi/Grassroots/SPM"; PLAYDIR="secure_friendship"; PLAYLIMIT=200000000 ;;   # SPM's, adopted from the Calculus (SPM #1, 2026-11-15); its play, play_replace (SPM #2, 2026-11-21)
+    *) # A contract with no row yet: its file name from the key, each word capitalised and joined by a hyphen, found once under programs/ (Code, 2026-11-18, for the contracts not yet given a row).
+       FILE=$(awk -F' [|] ' -v k="$1" '$4 == k { print $3; exit }' "$GLP_DIR/calculus/NAMES.txt" 2>/dev/null)   # the file name of NAMES.txt's row, "Lost-and-Found" for lost_and_found
+       [ -n "$FILE" ] || FILE=$(echo "$1" | awk -F_ '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) substr($i,2); print}' OFS=-)
+       FOUND=$(cd "$GLP_DIR" && find programs -name "$FILE.txt" -not -path '*/cascade_emit/*' | head -2)
+       if [ -n "$FOUND" ] && [ "$(echo "$FOUND" | wc -l)" -eq 1 ]; then
+           OWNER=$(dirname "$FOUND"); PAPER=""; PLAYDIR=""
+           return
+       fi
+       echo "cascade.sh: no contract named $1; the names are forwarding programs appstore rendezvous services directory encounters knowledge friendship groups guardians provenance_groups coins bonds warded_groups children gfwc ai_agents feeds agora overlay denominated_currencies denominated_coins auction short_feeds resilient_feeds backchannel_feeds distrust separating_distrust labelled_overlay dao liquid_dao funded_dao recommendations stays library joint_accounts community_bank commercial_bank consumers_cooperative ads backed_community_bank bank cooperative corporation cooperative_dao liquid_cooperative gigs lodging community_market community_network organisation mutual_credit rides notes app constitution shares shareholding_corporation central_bank single_person_company trading_company workers_cooperative local_overlay second_score_auction secure_friendship" >&2; exit 2 ;;
 esac
 }
 # Each contract named: its files, NAME.txt (NAME.md where the owner has not
@@ -517,7 +524,14 @@ say "schemas.txt: $(grep -cE '^[a-z_0-9]*: .* <-$' "$OUT/schemas.txt") schemas"
 fi
 
 # 3. The verdict, and 4. the VMAT form, from programs/gsc.
-printf '%s\n:limit 1000000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
+# Checked once: with --schemas by check/2; otherwise by compile_contract/3, which
+# compiles the contract on that verdict and gives it back, the verdict and the
+# displays being of one term (GSC, programs/gsc/self.glp).
+if [ "$MODE" = "--schemas" ]; then
+    printf '%s\n:limit 1000000000\ncheck(%s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$CT" > "$WORK/v.in"
+else
+    printf '%s\n:limit 1000000000\ncompile_contract(%s, %s, V).\n:quit\n' "$GLP_DIR/programs/gsc/" "$NAME" "$CT" > "$WORK/v.in"
+fi
 repl "$WORK/v.in" "$WORK/v.out"
 VT=$(grep -E '^V = ' "$WORK/v.out" | head -1 | sed -e 's/^V = //')
 if [ -z "$VT" ]; then
@@ -528,11 +542,28 @@ fi
 printf '%s\n' "$VT" > "$OUT/verdict.txt"
 say "verdict: $VT"
 
-printf '%s\n:limit 1000000000\ncompile_contract(%s, %s).\n:quit\n' "$GLP_DIR/programs/gsc/" "$NAME" "$CT" > "$WORK/m.in"
-repl "$WORK/m.in" "$WORK/m.out"
+# --schemas: the contract checked and its schemas printed, and nothing compiled
+# (Udi, 2026-11-18, to the project: "for now no compilation, i want to know what
+# all contracts are comiled to sas and pass checking"): the record holds the
+# contract, its schemas, their notation and the verdict, with a manifest naming
+# the run, and no VMAT form, platform or run.
+if [ "$MODE" = "--schemas" ]; then
+    {
+        echo "# cascade/$FILE: the contract checked, nothing compiled"
+        echo ""
+        echo "Printed by \`cascade.sh $NAME --schemas\` at GLP $(git -C "$GLP_DIR" rev-parse --short=8 HEAD 2>/dev/null || echo unknown); the verdict: \`$VT\`."
+        echo "No VMAT form, platform or run: the contract is not compiled."
+    } > "$OUT/manifest.md"
+    [ -f "$REC/relations.txt" ] && cp "$REC/relations.txt" "$OUT/relations.txt"
+    rm -rf "$REC" && mkdir -p "$REC" && cp "$OUT"/* "$REC"/ || { say "the record could not be written"; exit 1; }
+    say "written to cascade/$FILE: the schemas and the verdict, nothing compiled"
+    exit 0
+fi
+
+cp "$WORK/v.out" "$WORK/m.out"
 # What the compiler prints between the goal and its status line: the displays,
 # a token to a line, or the lines of its refusal.
-awk '/^Goal reduction limit set to/ { on = 1; next } /^→ / { on = 0 } /^$/ { next } on' "$WORK/m.out" > "$OUT/vmat.tex"
+awk '/^Goal reduction limit set to/ { on = 1; next } /^→ / { on = 0 } /^$/ { next } /^V = / { next } on' "$WORK/m.out" > "$OUT/vmat.tex"
 if [ ! -s "$OUT/vmat.tex" ]; then
     say "the compiler to VMAT printed nothing"
     grep -E '(Error|error|✗)' "$WORK/m.out" | head -10
@@ -628,11 +659,13 @@ if [ "$COMPILED" = 1 ]; then
             exit 1
         fi
         # One goal per play the plays export, a fresh variable per argument.
-        GOALS=$(perl -ne '
-            next unless /^exported procedure (play_[a-z0-9_]*)\((.*)\)\.\s*$/;
+        # A declaration may run over several lines.
+        GOALS=$(perl -0777 -ne '
+            while (/^exported procedure (play_[a-z0-9_]*)\((.*?)\)\.[ \t]*$/msg) {
             my ($p, $args) = ($1, $2); my $d = 0; my $n = 1;
             for my $ch (split //, $args) { $d++ if $ch eq "("; $d-- if $ch eq ")"; $n++ if $ch eq "," && $d == 0 }
             print "$p(", join(", ", map { "V$_" } 1 .. $n), ").\n";
+            }
         ' "$PLAYS/self.glp")
         if [ -z "$GOALS" ]; then
             NOTE+=("run: $PLAYS/self.glp exports no play")

@@ -1,0 +1,12 @@
+R          commute yes; return equivalent; recover equivalent
+S          commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
+2 contracts, 0 with a fault
+--- sasx/R.txt
+R: Required and deleted (expanded schemas)
+R:0 - | Alice is a person.
+R:1 ■ Spend: ~p(Alice) <- p(Alice) guarded by Alice.
+--- sasx/S.txt
+S: Deleted only (expanded schemas)
+S:0 - | Alice is a person.
+S:1 ■ Drop: ~p(Alice) <- p(Alice) guarded by Alice.

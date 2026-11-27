@@ -1,0 +1,7 @@
+Rehearsal Rooms
+Rehearsal Rooms unites Booking and Partners, and extends the union.
+The activity is music, the place is a *studio*, an organisation that has rehearsal rooms, and the time is a slot.
+1. ■ Organisation and ward. Organisation ward acquaint: Orga and Wendy may jointly come to know each other, provided Orga is an organisation, Orga has Alice as an officer, Wendy is a ward and Wendy has Bob as a guardian.
+Logic pragmas.
+Renaming of Booking: a room for a resource.
+After x and y come to know each other: x and y know each other.

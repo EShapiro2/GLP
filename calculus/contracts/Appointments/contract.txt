@@ -1,0 +1,3 @@
+Appointments
+Appointments inherits from Booking.
+A resource is the time of a *provider*, an officer of the organisation.

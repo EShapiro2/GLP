@@ -1,0 +1,12 @@
+Interface pragmas
+Start: Alice [Start] <game> <board> <limit>
+  Bob: Alice asks for your consent to start.
+  Alice [Start as black] <game> <board> <limit>
+  Bob: Alice asks for your consent to start as black.
+Move: Alice [Move] <next> <move> [Drawing move] <move> <next>
+Win: Alice [Win]
+Time: Alice [Time]
+Resign: Alice [Resign]
+Draw: Alice [Draw]
+  Bob: Alice asks for your consent to draw.
+  Alice [Claim draw]

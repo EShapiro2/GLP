@@ -1,0 +1,95 @@
+Knowledge  commute yes; return yes; recover same
+Bids       commute yes; return yes; recover same
+Seek and Find commute yes; return yes; recover same
+Union T    commute yes; return yes; recover same
+names: 0 names of two kinds neither of which is under the other
+4 contracts, 0 with a fault
+--- sasx/Bids.txt
+Bids (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Bids:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Bids:1 ■ Bid: bids(Alice,Bob) <- knows(Alice,Bob) guarded by Alice.
+--- sasx/Knowledge.txt
+Knowledge (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Knowledge:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+--- sasx/Seek-and-Find.txt
+Seek and Find (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Seek and Find:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Seek and Find:1 ■ Seek: seeks(Alice,Bob) <- knows(Alice,Bob) guarded by Alice.
+--- sasx/Union-T.txt
+Union T (expanded schemas)
+Knowledge:0 - | An *identity* is a unique key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Union T:0 - | Alice, Bob and Carol are persons.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
+Knowledge:1 ○ | Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Bids:1 ■ Bid: bids(Alice,Bob) <- knows(Alice,Bob) guarded by Alice.
+Seek and Find:1 ■ Seek: seeks(Alice,Bob) <- knows(Alice,Bob) guarded by Alice.
+--- expand.py: exit 0; --check: exit 0
+--- exp/Bids.txt
+% Written by tools/expand.py from rev/; do not edit.
+Bids
+An *identity* is a unique key pair.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Alice, Bob and Carol are persons.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Bids:1. ■ Bid: Alice may bid to Bob, provided Alice knows Bob.
+--- exp/Knowledge.txt
+% Written by tools/expand.py from rev/; do not edit.
+Knowledge
+An *identity* is a unique key pair.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Alice, Bob and Carol are persons.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+--- exp/Seek-and-Find.txt
+% Written by tools/expand.py from rev/; do not edit.
+Seek and Find
+An *identity* is a unique key pair.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Alice, Bob and Carol are persons.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Seek and Find:1. ■ Seek: Alice may seek from Bob, provided Alice knows Bob.
+--- exp/Union-T.txt
+% Written by tools/expand.py from rev/; do not edit.
+Union T
+An *identity* is a unique key pair.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Alice, Bob and Carol are persons.
+Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by its public key, sign her acts with its private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Bids:1. ■ Bid: Alice may bid to Bob, provided Alice knows Bob.
+Seek and Find:1. ■ Seek: Alice may seek from Bob, provided Alice knows Bob.
+--- relations.py
+Bids extends Knowledge: holds
+Seek and Find extends Knowledge: holds
+Union T extends Bids and Seek and Find: holds

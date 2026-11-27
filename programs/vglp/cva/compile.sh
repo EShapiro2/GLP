@@ -1,23 +1,24 @@
 #!/bin/bash
 # The compiler from an act-schema contract to its canonical CVA platform in
 # vGLP (programs/vglp/cva/compiler; vGLP, Section 3.2, the paragraph on act
-# schemas, and Section 5.4, "The compilation"), run on the social graph's, the social network's and the currency's contracts, read
+# schemas, and Section 5.4, "The compilation"), run on the social graph's, the social network's, the currency's and the organisation's contracts, read
 # from their owners' files, and on vGLP's own, contracts.glp, through the REPL.
 #
 #   bash programs/vglp/cva/compile.sh            print into programs/vglp/cva/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh <dir>      print into <dir>/<contract>/platform.vglp
 #   bash programs/vglp/cva/compile.sh --check    print into a scratch directory and compare
 #
-# for <contract> social_graph, social_network and currency, the directories of Friendship (GSC's,
+# for <contract> social_graph, social_network, currency and organisation, the directories of Friendship (GSC's,
 # programs/gsc/Friendship.glp, the checker's friendship, the social graph), Groups (GSC's,
 # programs/gsc/Groups.glp, the checker's groups, the social network) and Coins
 # (Currencies', programs/currencies/coins/Coins.glp, the checker's coins; Section
-# 3.4), each the one copy in its owner's file (claude.md "Sessions", the
+# 3.4) and Organisation (GO's, programs/go/Organisation.glp, the checker's
+# organisation; GO #15, 2026-11-24 21:22 UTC, for Audit PR 108, Finding 19), each the one copy in its owner's file (claude.md "Sessions", the
 # cascade rule; Coordination Appendix C), its file and the name its file gives
 # it found by the table of the contracts' names, calculus/NAMES.txt, and nudge, introduce, gnudge,
 # childsafe, link, friends, waves, parts, opens, groups, counter, pokes, merges, coins, wardclose, numbers, bonds, intros, days, linear, forms, counts, shares and roots, vGLP's, which contracts.glp beside the compiler
 # holds, with the introduction predicate each names, introduction_named/2, or
-# none (GSC's three name none).  A contract is checked before it is compiled
+# none (GSC's, Currencies' and GO's name none).  A contract is checked before it is compiled
 # (GSC, Section 5): for each contract, a REPL session on its owner's file, or
 # on contracts.glp, prints it, contract_named/2; one on programs/gsc prints the
 # checker's verdict on it, check/2; and one on the compiler calls
@@ -42,21 +43,23 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GLP_DIR="$(cd "$HERE/../../.." && pwd)"
 RT="$GLP_DIR/glp_runtime"
-THEIRS="social_graph social_network currency"
-OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter pokes merges coins wardclose numbers bonds intros days linear forms counts shares roots published leaves readings backed consts roles wild wards feeds"
+THEIRS="social_graph social_network currency organisation"
+OURS="nudge introduce gnudge childsafe link friends waves parts opens groups counter pokes merges coins wardclose numbers bonds intros days linear forms counts shares roots published leaves readings backed consts roles wild wards feeds cvalues holds"
 CONTRACTS="$THEIRS $OURS"
 
 # The contract of each of GSC's and Currencies' rows, by its name in the table
 # of the contracts' names, calculus/NAMES.txt ("name on main | name | file name
 # | row and atom | row and atom on main"), the one source of the names: the
 # social graph is Friendship, the social network Groups and the currency Coins
-# (Udi, 2026-11-16; Code #33, vGLP_inbox.md, 23:53 UTC).  A row is the directory
+# (Udi, 2026-11-16; Code #33, vGLP_inbox.md, 23:53 UTC), and the organisation
+# Organisation.  A row is the directory
 # of its platform and plays here.
 contract_name() {
     case "$1" in
         social_graph)   echo Friendship ;;
         social_network) echo Groups ;;
         currency)       echo Coins ;;
+        organisation)   echo Organisation ;;
     esac
 }
 # The table, calculus/NAMES.txt, or the file CONTRACT_NAMES names, a table of
@@ -85,13 +88,13 @@ row_file() { # row_file <row> ; "<file>|<atom>"
 }
 contract_file() { # contract_file <contract> ; the file that holds it, its owner's
     case "$1" in
-        social_graph|social_network|currency) row_file "$1" | cut -d'|' -f1 ;;
+        social_graph|social_network|currency|organisation) row_file "$1" | cut -d'|' -f1 ;;
         *)   echo "$HERE/contracts.glp" ;;
     esac
 }
 name_in() { # name_in <contract> ; the name its file gives it, contract_named/2
     case "$1" in
-        social_graph|social_network|currency) row_file "$1" | cut -d'|' -f2 ;;
+        social_graph|social_network|currency|organisation) row_file "$1" | cut -d'|' -f2 ;;
         *)  echo "$1" ;;
     esac
 }

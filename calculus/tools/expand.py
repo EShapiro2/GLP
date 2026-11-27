@@ -68,9 +68,10 @@ LEAD_IN = ('Each contract with the operations of its first line and of its citin
 
 NAME = NM.NAME_RX      # a name of the table, longest first, or one word (tools/names.py)
 REF = NM.REF
-VERBS = ('extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes')
+VERBS = ('inherits', 'extends', 'restricts', 'strengthens', 'instantiates', 'composes', 'relaxes', 'weakens', 'augments', 'renames', 'lifts', 'unites')
 VERB = r'(?:%s)' % '|'.join(VERBS)
-PRONOUNS = ('it', 'them', 'the composition')
+PRONOUNS = ('it', 'them', 'the composition', 'the union')
+OF = re.compile(r'^(?:an? (?:weakening|strengthening|augmentation|renaming|lift) of )+')      # 'a weakening of a lift of Bonds': the contract Bonds
 
 # The act sentences a citing clause restricts, where its heading names none of the
 # cited clause: (contract, clause number) -> the acts, as the cited contract heads
@@ -222,7 +223,7 @@ def parse_first(name, line, known):
             if not last:
                 raise ValueError("'%s' refers to nothing" % text)
             return list(last)
-        out = re.split(r', and |, | and ', text)
+        out = [OF.sub('', x) for x in NM.split_list(text)]      # 'Jobs and Lost and Found' (Audit #116)
         for x in out:
             if not re.match(r'^%s$' % NAME, x):
                 raise ValueError("'%s' in '%s' is no contract's name" % (x, chunk))
@@ -313,6 +314,33 @@ def resolve(x, contracts):
     return None
 
 
+GR = None      # the pragmas beside the texts read: gr/ beside --rev
+
+
+def renamings(name):
+    """[(contract, words)] of gr/NAME's 'Renaming of Guardians: an organisation for a ward and an officer for a guardian.'"""
+    p = os.path.join(GR or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'gr'), NM.file_of(name) + '.txt')
+    out = []
+    if os.path.exists(p):
+        for l in open(p, encoding='utf-8'):
+            m = re.match(r'^Renaming of (.+?): (.*)\.$', l.rstrip('\n'))
+            if m:
+                out.append((m.group(1), m.group(2)))
+    return out
+
+
+def operations_line(name, line):
+    """The line a first line 'NAME inherits from A and B.' stands for: the operations by which NAME is obtained from them,
+    the first line of gr/NAME.txt, 'NAME unites A and B, and extends the union.' (Definition Inheritance; record item 71)."""
+    if not re.match(r'^%s inherits from ' % re.escape(name), line):
+        return line
+    p = os.path.join(GR or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'gr'), NM.file_of(name) + '.txt')
+    lines = [l.rstrip('\n') for l in open(p, encoding='utf-8')] if os.path.exists(p) else []
+    if len(lines) < 2 or not re.match(r'^%s %s\b' % (re.escape(name), VERB), lines[1]) or ' inherits from ' in lines[1]:
+        raise ValueError('inherits from, and gr/ has no first line of operations')
+    return lines[1]
+
+
 def link(contracts):
     """Parse every first line; check that each contract it names is in rev/."""
     unparsed = []
@@ -324,7 +352,12 @@ def link(contracts):
             c.first = First()
             continue
         try:
-            c.first = parse_first(name, c.first_line, contracts)
+            c.first = parse_first(name, operations_line(name, c.first_line), contracts)
+            for dep, words in renamings(name):      # the words of a renaming, a pragma of gr/ (Udi, 2026-11-23, no parameters)
+                pairs = parse_pairs(words)
+                if pairs and dep in c.first.deps:
+                    c.first.inst.append(dep)
+                    c.first.pairs += pairs
         except ValueError as e:
             fail('%s: the first line is not read (%s): %s' % (name, e, c.first_line))
             unparsed.append(name)
@@ -474,11 +507,17 @@ def bind(name, target, defs, binding, sub):
         d.here.append(here)
 
 
+WEAK = '■◆○'    # the legal modalities, strongest first: enforced, attested, undertaken; an act had by two paths whose
+                # texts differ only in the modality is one act, with the weaker of the two (Calculus #8, 2026-11-17)
+
+
 def merge(a, b):
     """A clause that comes by two paths (rule 1): where the two are one clause, sentence by sentence, with restrictions
-    appended, A takes every restriction of B it lacks, after its own, and B's labels; the expanded text then carries
+    appended, A takes every restriction of B it lacks, after its own, and B's labels, and the weaker of the two marks; the expanded text then carries
     every inherited restriction, as the merged schema has every condition (tools/gcsas.py).  False where they are not."""
-    if len(a.sents) != len(b.sents) or a.mark != b.mark or a.title != b.title:
+    if len(a.sents) != len(b.sents) or a.title != b.title:
+        return False
+    if a.mark != b.mark and not (a.mark in WEAK and b.mark in WEAK):
         return False
     for x, y in zip(a.sents, b.sents):
         if x.heads != y.heads or x.base() is None or x.base() != y.base():
@@ -491,6 +530,8 @@ def merge(a, b):
     for l in b.labels:
         if l not in a.labels:
             a.labels.append(l)
+    if a.mark != b.mark:                      # texts that differ only in the modality: one act, with the weaker
+        a.mark = max(a.mark, b.mark, key=WEAK.index)
     return True
 
 
@@ -605,7 +646,8 @@ def expand(name, contracts, cache):
                     s.heads = [sub(h) for h in s.heads] if s.heads else s.heads
                     s.text = sub(s.text)
                     s.rests = [sub(x) for x in s.rests]
-            bind(name, dep, e.defs, c.first.binding, sub)
+            if c.first.binding:
+                bind(name, dep, e.defs, c.first.binding, sub)
         for d in e.defs:                      # definitions: a sentence once
             same = [x for x in exp.defs if x.text == d.text]
             if same:
@@ -623,9 +665,13 @@ def expand(name, contracts, cache):
             same = [x for x in exp.clauses if x.origin == cl.origin]
             if not same:
                 exp.clauses.append(cl)
-            elif same[0].render() != cl.render() and not merge(same[0], cl):
-                fail('%s, %s: comes by two paths in two texts that are not one clause with restrictions: [%s] and [%s]'
-                     % (name, cl.origin, same[0].render(), cl.render()))
+            elif any(x.render() == cl.render() for x in same):
+                continue
+            elif not any(merge(x, cl) for x in same):
+                # plain union (the task of 2026-11-23, point 6): two texts of one clause that are not one clause with
+                # restrictions are two clauses of the union, as Retire of Orga and Retire of Wendy in Rehearsal Rooms
+                note(name, cl.origin, 'two clauses of the union: [%s] and [%s]' % (same[0].render(), cl.render()))
+                exp.clauses.append(cl)
     exp.inherited = len(exp.clauses)
 
     for k, line in enumerate(c.def_lines):
@@ -757,6 +803,8 @@ def main():
     ap.add_argument('--notes', action='store_true', help='print each place where a rule did not decide')
     args = ap.parse_args()
 
+    global GR
+    GR = os.path.join(os.path.dirname(os.path.abspath(args.rev)), 'gr')
     contracts, raw = read_all(args.rev)
     if not contracts:
         sys.exit('expand: no contract in %s' % args.rev)

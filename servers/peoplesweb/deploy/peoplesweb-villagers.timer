@@ -1,0 +1,10 @@
+# The Villagers site, peoplesweb.org/villagers, on each push to EShapiro2/Villagers (Udi, 2026-11-25).  Each minute it runs peoplesweb-villagers.service, which builds the site only if the repository has moved.  Installed and enabled by deploy/sweep.sh.
+[Unit]
+Description=peoplesweb.org/villagers on each push to EShapiro2/Villagers
+
+[Timer]
+OnCalendar=*-*-* *:*:45
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

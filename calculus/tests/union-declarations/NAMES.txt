@@ -1,0 +1,6 @@
+The made-up contracts of this case, after the table of NAMES.txt: a union of two contracts that each declare member/2, one for a club and one for a market; the union is undefined (Audit PR 127: 'Probe unites Groups and Agora').
+
+name on main | name | file name | row and atom | row and atom on main
+Clubs | Clubs | Clubs | clubs | clubs
+Markets | Markets | Markets | markets | markets
+Union U | Union U | Union-U | union_u | union_u

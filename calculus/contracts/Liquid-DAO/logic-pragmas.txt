@@ -8,5 +8,5 @@ Logic pragmas.
 Vocabulary: x has a delegate in d = delegating(x,d); x holds the delegation of y to z in d = delegation(x,y,z,d).
 After y makes z y's delegate in x's d, which requires y does not have a delegate in d: y has a delegate in d and x holds the delegation of y to z in d.
 After y revokes y's delegation to z in x's d: no longer y has a delegate in d and no longer x holds the delegation of y to z in d.
-After x counts y as voting for p of d, which requires y has not voted on p of d: y has voted on p of d and x holds y's vote for p of d.
-After x counts y as voting against p of d, which requires y has not voted on p of d: y has voted on p of d and x holds y's vote against p of d.
+After x counts y as voting for p of d, which requires y has not voted on p of d and x does not hold y's vote for p of d: y has voted on p of d and x holds y's vote for p of d.
+After x counts y as voting against p of d, which requires y has not voted on p of d and x does not hold y's vote against p of d: y has voted on p of d and x holds y's vote against p of d.

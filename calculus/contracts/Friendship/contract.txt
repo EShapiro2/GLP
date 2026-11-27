@@ -1,5 +1,5 @@
 Friendship
-Friendship extends Knowledge.
+Friendship inherits from Knowledge.
 Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 Alice and Bob are persons.
 1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.

@@ -12,22 +12,22 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \notin c_
 {
 \Alice
@@ -52,11 +52,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -71,11 +71,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -83,17 +83,25 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Bob
@@ -120,13 +128,13 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -139,16 +147,30 @@ c_
 {
 \Bob
 }
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -157,26 +179,42 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
 }
 ,\\
 &
@@ -200,11 +238,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -219,11 +257,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -231,13 +269,17 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -246,13 +288,17 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -263,9 +309,9 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -274,9 +320,9 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -308,9 +354,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -327,9 +373,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -337,13 +383,17 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -352,13 +402,17 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -386,11 +440,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 points_to
-}
+}}
 (
 \Bob
 )
@@ -408,20 +462,20 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 may_point_friend
-}
+}}
 (
 \Bob
 )
@@ -430,13 +484,13 @@ may_point_friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -447,9 +501,9 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 points_to
-}
+}}
 (
 \Bob
 )
@@ -477,11 +531,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 points_to
-}
+}}
 (
 Carol
 )
@@ -499,27 +553,27 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
 ,
-\mathit{
+\mathit{\detokenize{
 points_to
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 closer
-}
+}}
 (
 Carol
 )
@@ -528,13 +582,13 @@ Carol
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 points_to
-}
+}}
 (
 Carol
 )
@@ -545,9 +599,9 @@ Carol
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 points_to
-}
+}}
 (
 Carol
 )
@@ -577,9 +631,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 points_to
-}
+}}
 (
 Bob
 )
@@ -587,27 +641,27 @@ Bob
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 bound
-}
+}}
 (
 D
 )
 ,
-\mathit{
+\mathit{\detokenize{
 furthest
-}
+}}
 (
 Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 points_to
-}
+}}
 (
 Bob
 )
@@ -621,9 +675,9 @@ Bob
 \mathrm{cardinality}(
 X1
 ,
-\mathit{
+\mathit{\detokenize{
 points_to
-}
+}}
 (
 \Alice
 ,
@@ -652,11 +706,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 open_call
-}
+}}
 (
 Trip
 )
@@ -664,13 +718,13 @@ Trip
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rider
-}
+}}
  \in c_
 {
 \Alice
@@ -679,13 +733,13 @@ rider
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 open_call
-}
+}}
 (
 \ast
 )
@@ -715,11 +769,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 sent_call
-}
+}}
 (
 \Bob
 ,
@@ -736,20 +790,20 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 call
-}
+}}
 (
 \Alice
 ,
 Trip
 )
 ,
-\mathit{
+\mathit{\detokenize{
 direct_call
-}
+}}
 (
 \Alice
 ,
@@ -759,20 +813,20 @@ Trip
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 open_call
-}
+}}
 (
 Trip
 )
 ,
-\mathit{
+\mathit{\detokenize{
 points_to
-}
+}}
 (
 \Bob
 )
@@ -781,9 +835,9 @@ points_to
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -791,9 +845,22 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
-call
+\mathit{\detokenize{
+sent_call
+}}
+(
+\Bob
+,
+Trip
+)
+ \notin c_
+{
+\Alice
 }
+ \text{ and } 
+\mathit{\detokenize{
+call
+}}
 (
 \Alice
 ,
@@ -821,11 +888,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 forwarded
-}
+}}
 (
 Alice
 ,
@@ -844,11 +911,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 call
-}
+}}
 (
 Alice
 ,
@@ -858,22 +925,22 @@ Trip
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 direct_call
-}
+}}
 (
 Alice
 ,
 Trip
 )
 ,
-\mathit{
+\mathit{\detokenize{
 points_to
-}
+}}
 (
 \Bob
 )
@@ -882,9 +949,9 @@ points_to
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -892,9 +959,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 forwarded
-}
+}}
 (
 Alice
 ,
@@ -905,6 +972,19 @@ Trip
  \notin c_
 {
 \Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+call
+}}
+(
+Alice
+,
+Trip
+)
+ \notin c_
+{
+\Bob
 }
 ,\\
 &
@@ -924,11 +1004,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 bid
-}
+}}
 (
 \Bob
 ,
@@ -948,17 +1028,17 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 driver
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 call
-}
+}}
 (
 \Bob
 ,
@@ -969,9 +1049,9 @@ Trip
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -979,9 +1059,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 period_ended
-}
+}}
 (
 Trip
 )
@@ -1011,29 +1091,29 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 open_call
-}
+}}
 (
 Trip
 )
 \}
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 fare_locked
-}
+}}
 \}
 , \qquad 
 c'_
@@ -1045,49 +1125,49 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 deposit_locked
-}
+}}
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 period_ended
-}
+}}
 (
 Trip
 )
 ,
-\mathit{
+\mathit{\detokenize{
 selects
-}
+}}
 (
 \Bob
 ,
 Trip
 )
 ,
-\mathit{
+\mathit{\detokenize{
 open_call
-}
+}}
 (
 Trip
 )
@@ -1096,13 +1176,13 @@ Trip
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 bid
-}
+}}
 (
 \Alice
 ,
@@ -1115,9 +1195,9 @@ Trip
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
  \notin c_
 {
 \Bob
@@ -1144,9 +1224,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 open_call
-}
+}}
 (
 Trip
 )
@@ -1154,20 +1234,20 @@ Trip
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 selects_none
-}
+}}
 (
 Trip
 )
 ,
-\mathit{
+\mathit{\detokenize{
 open_call
-}
+}}
 (
 Trip
 )
@@ -1195,11 +1275,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 pickup
-}
+}}
 (
 \Bob
 )
@@ -1214,11 +1294,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 pickup
-}
+}}
 (
 \Alice
 )
@@ -1226,24 +1306,24 @@ pickup
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 at_pickup
-}
+}}
 (
 \Bob
 )
@@ -1252,24 +1332,24 @@ at_pickup
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 at_pickup
-}
+}}
 (
 \Alice
 )
@@ -1280,9 +1360,9 @@ at_pickup
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 pickup
-}
+}}
 (
 \Bob
 )
@@ -1291,9 +1371,9 @@ pickup
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 pickup
-}
+}}
 (
 \Alice
 )
@@ -1322,17 +1402,17 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 fare_locked
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Bob
 )
@@ -1341,11 +1421,11 @@ rides_with
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 released
-}
+}}
 (
 \Bob
 )
@@ -1363,17 +1443,17 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 deposit_locked
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Alice
 )
@@ -1382,11 +1462,11 @@ rides_with
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 released
-}
+}}
 (
 \Alice
 )
@@ -1401,10 +1481,10 @@ released
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 pickup
-}
+}}
 (
 \ast
 )
@@ -1418,38 +1498,38 @@ pickup
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 pickup
-}
+}}
 (
 \ast
 )
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 at_destination
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 fare_locked
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Bob
 )
@@ -1458,28 +1538,28 @@ rides_with
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 at_destination
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 deposit_locked
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Alice
 )
@@ -1489,7 +1569,197 @@ rides_with
 }
 ,\\
 &
-\text{guarded by } \emptyset
+\text{guarded by } \{
+\Alice
+\}
+\end{align*}
+\iffalse
+driver_arrive
+\fi
+\begin{align*}
+&
+c'_
+{
+\Alice
+}
+ := 
+(
+(c_
+{
+\Alice
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+fare_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+\}
+) \setminus K_
+{
+\Alice
+}
+) \cup 
+\{
+\mathit{\detokenize{
+released
+}}
+(
+\Bob
+)
+\}
+, \qquad 
+c'_
+{
+\Bob
+}
+ := 
+(
+(c_
+{
+\Bob
+}
+ \setminus 
+\{
+\mathit{\detokenize{
+deposit_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+\}
+) \setminus K_
+{
+\Bob
+}
+) \cup 
+\{
+\mathit{\detokenize{
+released
+}}
+(
+\Alice
+)
+\}
+,\\
+&
+\text{where } K_
+{
+\Alice
+}
+ \text{ holds every atom of } c_
+{
+\Alice
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\ast
+)
+,\\
+&
+\text{where } K_
+{
+\Bob
+}
+ \text{ holds every atom of } c_
+{
+\Bob
+}
+ \text{ that matches } 
+\mathit{\detokenize{
+pickup
+}}
+(
+\ast
+)
+,\\
+&
+\text{provided } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+at_destination
+}}
+(
+\Bob
+)
+,
+\mathit{\detokenize{
+fare_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Bob
+)
+ \in c_
+{
+\Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+at_destination
+}}
+(
+\Alice
+)
+,
+\mathit{\detokenize{
+deposit_locked
+}}
+,
+\mathit{\detokenize{
+ride
+}}
+,
+\mathit{\detokenize{
+rides_with
+}}
+(
+\Alice
+)
+ \in c_
+{
+\Bob
+}
+,\\
+&
+\text{guarded by } \{
+\Bob
+\}
 \end{align*}
 \iffalse
 cancel
@@ -1508,17 +1778,17 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 fare_locked
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Bob
 )
@@ -1527,11 +1797,11 @@ rides_with
 {
 \Alice
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 released
-}
+}}
 (
 \Bob
 )
@@ -1549,17 +1819,17 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 deposit_locked
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Alice
 )
@@ -1568,11 +1838,11 @@ rides_with
 {
 \Bob
 }
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 released
-}
+}}
 (
 \Alice
 )
@@ -1587,10 +1857,10 @@ released
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 pickup
-}
+}}
 (
 \ast
 )
@@ -1604,35 +1874,35 @@ pickup
 {
 \Bob
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 pickup
-}
+}}
 (
 \ast
 )
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 no_pickup
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 fare_locked
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Bob
 )
@@ -1641,21 +1911,21 @@ rides_with
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 deposit_locked
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 ride
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 rides_with
-}
+}}
 (
 \Alice
 )
@@ -1685,9 +1955,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 open_call
-}
+}}
 (
 Trip
 )
@@ -1695,13 +1965,13 @@ Trip
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 open_call
-}
+}}
 (
 Trip
 )
@@ -1712,9 +1982,9 @@ Trip
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 period_ended
-}
+}}
 (
 Trip
 )

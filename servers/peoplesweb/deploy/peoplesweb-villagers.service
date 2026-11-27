@@ -1,0 +1,8 @@
+# Builds the Villagers site, peoplesweb.org/villagers, when EShapiro2/Villagers has moved (deploy/villagers-watch.sh).  Run each minute by peoplesweb-villagers.timer.  When the sweep holds the lock, this run is skipped and ends cleanly, the sweep building the site itself.
+[Unit]
+Description=peoplesweb.org/villagers on each push to EShapiro2/Villagers
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/flock -n -E 0 /run/peoplesweb-sweep.lock sh /srv/glp/servers/peoplesweb/deploy/villagers-watch.sh
