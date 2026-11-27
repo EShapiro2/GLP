@@ -33,7 +33,9 @@ What it reads from the files:
      kind"), the same noun on both sides of a preposition ("its community for a community"), and
      the rest.  Each Claudese text Udi names is entered in tests.tsv and a construction is added or
      mended until --test passes; --test also reports which texts of rejected-coordination.md are not
-     yet caught.
+     yet caught.  A wrong text of tests.tsv that is a Wrong text of section 41 must fail by a construction
+     or by another entry, never by its own entry alone, or the test tests nothing; and a ban inside a Right
+     text of section 41, word for word, does not fail it, Udi having approved that text.
 
 What it tests besides (writing-style-guide.md, the section named):
   section 17's quoted hedges and insistences, from the file; hedges and apologies (8, 17); "users", hyperbole, "the author", "final" (1, 8, Talking to Udi);
@@ -192,6 +194,12 @@ def phrase_regex_literal(q):
     return re.compile(r'\s+'.join(words), re.I)
 
 
+def load_rights(entries):
+    """Section 41's Right texts of four words or more, as patterns, for approved_spans."""
+    RIGHTS[:] = [phrase_regex_literal(e['Right']) for e in entries
+                 if len(e.get('Right', '').split()) >= 4 and not e['Right'].startswith('(')]
+
+
 def read_guide(path):
     """Section 41's blocks: lines beginning Wrong:, Right:, Why:, Source:, a blank line between blocks."""
     entries = []
@@ -304,6 +312,11 @@ def close_matches(text, entries, threshold=0.75):
             right = words_of(e.get('Right', ''))
             if right and difflib.SequenceMatcher(None, right, seq[i:i + size], autojunk=False).ratio() >= r:
                 continue
+            # The text holds the Right text whole, and the passage lies in it (Code #43, 2026-11-27: the Right text
+            # "any of the three may be empty" failed as 98% close to its Wrong, "any of the three empty").
+            if right and any(seq[j:j + len(right)] == right and j <= i and i + size <= j + len(right) + 2
+                             for j in range(max(0, i - len(right)), i + 1)):
+                continue
             no = toks[i][1]
             found = ' '.join(seq[i:i + size])
             kind = 'wrong text' if r >= 0.999 else 'close to a wrong text (%d%%)' % round(100 * r)
@@ -411,10 +424,49 @@ SYNTAX = [
     ('the present tense for what may happen',
      r"\b(?:which|that|whom|where|when|if|unless|until|once)\s+(?:a|an|the|its|their|his|her|each|every|any|this|that|some|no)\s+(?:[\w'-]+\s+){0,3}?(?!(?:is|has|was|does)\b)[a-z]{2,}(?:s|es)\s+or\s+(?!(?:is|has|was|does)\b)(?:[a-z]{2,}(?:s|es)|not)\b",
      '"which a local state may pass or fail": a modality, or the past or future; the present only for what is (Udi, 2026-11-23 22:58 UTC; claudese.md, 32)'),
+    # Udi, 2026-11-25 to 2026-11-27, writing-style-guide.md 41 and 12: "1. NO VERBIAGE  2. NO UNNECESSARY FORMAL
+    # SYMBOLISM"; each rule below is one of his rejected texts, named in tests.tsv.
+    ('a symbol defined by a formula', r"\b[A-Za-z]\w*\([A-Za-z]\)\s*(?::=|=)",
+     'name the notion in words: "A variable of a type that includes an agent is an agent variable." (Udi, 2026-11-27, style guide 12)'),
+    ('an equation of symbols in a sentence', r"(?<![\w$\\])[A-Z]['+-]?\s*=\s*[A-Z]\w*(?:[+-](?![\w(])|\s*<-)",
+     'say it in words: "Its head has only atoms" (Udi, 2026-11-27 22:23 UTC, style guide 41)'),
+    ('a set formula with words in it', r"\{[^{}]{0,30}\s:\s[^{}]*\b(?:is|are|occurs?|differs?|and)\b",
+     'one sentence for what the set is (Udi, 2026-11-27 22:23 UTC, style guide 41)'),
+    ('symbols for what words say', r"\b[A-Z]\w*\([A-Z]\)(?=[^.;]*\b[a-z]{3,} [a-z]{2,} [a-z]{2,}\b[^.;]*\b[A-Z]\w*\([A-Z]\))|\b(?:of|in|to|from) [A-Z][+-](?=[\s.,;:)])",
+     'plain words: "An agent variable in a head atom occurs as an agent of the clause or in a primitive body atom." (Udi, 2026-11-27, style guide 41)'),
+    ('a quantifier over named symbols', r"\b[Ff]or (?:every|each|all) [a-z]+ [A-Z]\w? of [A-Z]\w?\b",
+     'say which ones: "A clause whose graph is not connected has a guard in each of its connected components." (Udi, 2026-11-27 22:21 UTC)'),
+    ('"positive atom"', r"\bpositive atoms?\b", '"atom": "An atom is always positive, no need to say." (Udi, 2026-11-27 22:07 UTC)'),
+    ('a definition by what is not', r"(?:^|[.;]\s+)An? [\w-]+(?: [\w-]+)? is an? [\w-]+ that (?:is|are) not\b",
+     'say what it is: "a literal is an atom or a negated atom" (Udi, 2026-11-27 22:07 UTC)'),
+    ('a definition that says nothing', r"\b[Aa]n? ([a-z]+) ([a-z]+) is an? \2 of (?:the|a|an) \1\b",
+     'delete it: "huh? a rose is a rose is a rose?" (Udi, 2026-11-27 22:07 UTC)'),
+    ('an account of a definition\'s history', r"\bhas no notion of\b|\bsince (?:the|this|that|it) [\w ]{0,30}?introduces\b",
+     'recall the definition, with no account of its history (Udi, 2026-11-27 21:53 UTC)'),
+    ('a supposition that restates a hypothesis', r"\b[Ss]uppose that\b[^.;]*,\s+while\b|\bfrom some [a-z]+ on\b",
+     'name the definition: "Let a class [t] meet the hypothesis of steadiness (Definition Steady)" (Udi, 2026-11-27 14:08 UTC)'),
+    ('a conclusion by analogy', r"\bas (?:(?:they|it|we|he|she) (?:do|does|did) )?for (?:the|a|an|its|their)\b",
+     'state the fact and its reason, in its own sentence (Udi, 2026-11-27 14:20 and 14:21 UTC)'),
+    ('an elided "may be"', r"\b(?:any|each|all|both|none|either|one) of the [a-z]+ (?:empty|equal|true|false|nonempty|non-empty|finite|infinite|distinct|zero)\b",
+     '"any of the three may be empty" (Udi, 2026-11-25 23:32 UTC)'),
+    ('a metaphor of being', r"\b(?:is|are|was|were|becomes?) an? (?:route|path|road|door|doorway|gate|gateway|window|bridge|channel)\b",
+     'the plain verb: "may be taken under the conditions of one line alone" (Udi, 2026-11-26 16:56 UTC)'),
+    ('a text as the actor of "say"', r"\b(?:pragma|schema|clause|rule|logic|contract|text|definition|section|paper)s?\s+says?\s+(?:them|it|that|so|this)\b",
+     'name who writes what: "We write the Logic pragmas of Guardians again" (Udi, 2026-11-26 17:50 UTC)'),
+    ('"what X has" for a thing it names', r"\bwhat (?:the|its|their|a|an) [a-z]+ (?:has|have|holds|gives)\b",
+     'name the thing (Udi, 2026-11-26 17:50 UTC)'),
+    ('"with what X added"', r"\bwith what (?:both|each|either|all|it|they|the two)\b|\beach with [^.;]{1,60}?\badded\b",
+     '"with the conditions, the consents and the effects that either of them added to it" (Udi, 2026-11-26 20:42 to 20:48 UTC)'),
+    ('a loose comparison', r"\bdiffer(?:s)? in more\b|\bdiffer only in what\b", 'state the rule once (Udi, 2026-11-26 20:48 UTC)'),
+    ('an act written as a noun', r"\bthe (?:additions|removals|changes|omissions) of (?:both|each|all|either|the two|them)\b",
+     'write the verb: "that either of them added to it" (Udi, 2026-11-26 20:46 UTC)'),
+    ('"bring X to Y"', r"\bbring\b[^.?]{1,40}?\bto [A-Z]", 'say what the text will say: "Shall VMAT say of madGLP what IGLP says?" (Udi, 2026-11-26 22:06 UTC)'),
+    ('a question listing the mechanics after a colon', r"Q:[^?\n]*\w:\s[^?\n]*\?", 'one short question (Udi, 2026-11-26 22:06 UTC)'),
     ('a vague abstraction for a fact', r'\b(?:in (?:effect|essence)|at (?:heart|its core)|the (?:heart|crux|essence) of|boils? down|in its own right)\b',
      'state the fact'),
 ]
-CASED = ('a fronted', 'a cleft', 'the same noun', 'an undertaking', 'a mathematical object')
+CASED = ('a fronted', 'a cleft', 'the same noun', 'an undertaking', 'a mathematical object', 'a symbol defined by', 'an equation',
+         'symbols for', 'a quantifier over', 'a definition by', 'a definition that', 'a supposition', '"bring', 'a question listing')
 SYNTAX = [(n, re.compile(r, 0 if n.startswith(CASED) else re.I), a) for n, r, a in SYNTAX]
 
 
@@ -431,6 +483,20 @@ def syntax(line, mode='paper'):
     return out
 
 
+def approved_spans(line):
+    """The spans of the line that are a Right text of section 41, word for word: Udi approved each, so a ban
+    of claudese.md or register.txt inside one does not fail it ("the act may then be taken under the
+    conditions of one line alone", Udi, 2026-11-26 16:56 UTC, holds "alone")."""
+    out = []
+    for r in RIGHTS:
+        for m in r.finditer(line):
+            out.append((m.start(), m.end()))
+    return out
+
+
+RIGHTS = []
+
+
 def check(text, mode, fails, checks):
     out_fail, out_check = [], []
     lines = text.split('\n')
@@ -438,9 +504,12 @@ def check(text, mode, fails, checks):
     for no, raw in enumerate(lines, 1):
         line = strip_code(raw)
         low = line.lower()
+        spans = approved_spans(line)
         for kind, name, rx, exempt, alt in fails:
             for m in rx.finditer(line):
                 if exempt and exempt.lower() in low:
+                    continue
+                if any(a <= m.start() and m.end() <= b for a, b in spans):
                     continue
                 out_fail.append((no, kind, m.group(0), alt))
         for kind, name, rx, exempt, alt, cond in checks:
@@ -498,6 +567,7 @@ def run_tests():
     fails += read_register(REGISTER)
     fails += read_guide_bans(GUIDE)
     wrongs = read_guide(GUIDE)
+    load_rights(wrongs)
     bad = n = 0
     for l in open(TESTS, encoding='utf-8').read().split('\n'):
         if not l.strip() or l.startswith('#'):
@@ -507,7 +577,10 @@ def run_tests():
         tmode = tmode or 'paper'
         text = text.replace('\\n', '\n')
         of, _ = check(text, tmode, fails, checks)
-        of = list(of) + close_matches(text, wrongs)
+        # A wrong text that is itself a Wrong text of section 41 must fail by a rule or by another entry,
+        # never by its own entry alone, or the test tests nothing (Code #43, 2026-11-27).
+        others = [e for e in wrongs if norm(e['Wrong']) != norm(text)]
+        of = list(of) + close_matches(text, others if want == 'wrong' else wrongs)
         n += 1
         if (want == 'wrong') != bool(of):
             bad += 1
@@ -545,6 +618,7 @@ def main(argv):
     fails += read_register(REGISTER)
     fails += read_guide_bans(GUIDE)
     wrongs = read_guide(GUIDE)
+    load_rights(wrongs)
     texts = [(f, open(f, encoding='utf-8').read()) for f in files] or [('-', sys.stdin.read())]
     failed = 0
     for name, text in texts:
