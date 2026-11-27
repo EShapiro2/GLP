@@ -153,6 +153,7 @@ class _TabScreenState extends State<TabScreen> {
     if (described != null && state != null) {
       return DescribedScreen(
         ui: described.ui,
+        rules: described.rules,
         state: state,
         ask: request == null
             ? null

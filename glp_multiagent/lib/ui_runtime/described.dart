@@ -19,7 +19,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
-import 'package:glp_runtime/vglp/canonical.dart' show DeclaredAct, DeclaredField;
+import 'package:glp_runtime/vglp/canonical.dart' show ActCondition, DeclaredAct, DeclaredField;
 
 import 'named_widgets.dart';
 import 'term.dart';
@@ -67,6 +67,14 @@ class UiComponent {
   /// The screen the person is taken to once the act is done: the start screen or a landmark.
   String? get then => j['then'] as String?;
 
+  /// THEN IT: the screen opened once the act is done, `screen`, about the person's newest fact of `pred`, or its
+  /// value where `of` is `value`, the way Back going to `from`.
+  Map<String, dynamic>? get thenIt => j['thenIt'] as Map<String, dynamic>?;
+
+  /// Whether the UI style marks the action IMPORTANT: where it is not offered, what is in its way is shown in its
+  /// place, with the first step of a way to it.
+  bool get important => j['important'] == true;
+
   /// The actions of a chain, in turn.
   List<UiComponent> get steps => [for (final x in (j['steps'] ?? const []) as List) UiComponent('action', x as Map<String, dynamic>)];
   String? get sentence => j['sentence'] as String?;
@@ -93,8 +101,21 @@ class UiScreen {
   const UiScreen(this.name, this.about, this.fact, this.components);
 }
 
+/// What an act does to the facts of the persons it binds, from the contract's effects: the predicates of the facts
+/// it adds and of those it removes.
+typedef UiEffect = ({String button, List<String> adds, List<String> removes});
+
+/// An act that adds a fact of a predicate, and whether it adds it to the person who takes it ([UiEffect]).
+typedef UiAdder = ({String schema, String button, bool mine});
+
 /// An interface description, compiled with its contract.
 class UiDescription {
+  /// Each act's effects, by its schema.
+  final Map<String, UiEffect> effects;
+
+  /// The acts that add each predicate's facts.
+  final Map<String, List<UiAdder>> addedBy;
+
   final String start;
   final Map<String, UiScreen> screens;
 
@@ -106,7 +127,8 @@ class UiDescription {
 
   /// The look of the whole app: `theme`, `shape`, `density`, `home`, `convo`, `questions`, `actions`.
   final Map<String, String> look;
-  const UiDescription(this.start, this.screens, this.personPos, [this.look = const {}, this.landmarks = const []]);
+  const UiDescription(this.start, this.screens, this.personPos,
+      [this.look = const {}, this.landmarks = const [], this.effects = const {}, this.addedBy = const {}]);
 
   static UiDescription parse(String source) {
     final j = jsonDecode(source) as Map<String, dynamic>;
@@ -123,20 +145,67 @@ class UiDescription {
         e.key: [for (final p in e.value as List) p as int]
     }, {
       for (final e in ((j['look'] ?? const <String, dynamic>{}) as Map<String, dynamic>).entries) e.key: e.value as String
-    }, [for (final l in (j['landmarks'] ?? const []) as List) l as String]);
+    }, [for (final l in (j['landmarks'] ?? const []) as List) l as String], {
+      for (final e in ((j['effects'] ?? const <String, dynamic>{}) as Map<String, dynamic>).entries)
+        e.key: (
+          button: (e.value as Map<String, dynamic>)['button'] as String,
+          adds: [for (final x in (e.value['adds'] ?? const []) as List) x as String],
+          removes: [for (final x in (e.value['removes'] ?? const []) as List) x as String],
+        )
+    }, {
+      for (final e in ((j['addedBy'] ?? const <String, dynamic>{}) as Map<String, dynamic>).entries)
+        e.key: [
+          for (final x in e.value as List)
+            (schema: x['schema'] as String, button: x['button'] as String, mine: x['mine'] == true)
+        ]
+    });
   }
+
+  /// Whether the act [schema] only removes facts, ends something: it is taken on a second tap.
+  bool ends(String schema) {
+    final e = effects[schema];
+    return e != null && e.adds.isEmpty && e.removes.isNotEmpty;
+  }
+
+  /// The components of [screen] as drawn, each with the steps after it: a chain as its first step under its own
+  /// button, label and look, its other steps asked in turn.
+  static List<(UiComponent, List<UiComponent>)> drawn(UiScreen screen) => [
+        for (final x in screen.components)
+          if (x.kind == 'chain' && x.steps.isNotEmpty)
+            (
+              UiComponent('action', {
+                ...x.steps.first.j,
+                'button': x.button,
+                'label': x.label,
+                'where': x.where,
+                'then': x.then,
+                'thenIt': x.thenIt,
+                'important': x.important,
+                'chain': true,
+              }),
+              x.steps.sublist(1)
+            )
+          else
+            (x, const <UiComponent>[])
+      ];
+
+  /// The key of an action as drawn ([drawn]): of its act, or of its chain.
+  static String keyOf(UiComponent c) => c.j['chain'] == true ? 'chain:${c.button}' : 'act:${c.schema}';
 }
 
 /// The interface description the screens below it are drawn from.
 class DescribedUi extends InheritedWidget {
   final UiDescription ui;
-  const DescribedUi({super.key, required this.ui, required super.child});
+
+  /// The person's routing rules, where the host keeps them ([DescribedScreen.rules]).
+  final ValueNotifier<Map<String, bool>>? rules;
+  const DescribedUi({super.key, required this.ui, this.rules, required super.child});
 
   static DescribedUi? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<DescribedUi>();
 
   @override
-  bool updateShouldNotify(DescribedUi old) => old.ui != ui;
+  bool updateShouldNotify(DescribedUi old) => old.ui != ui || old.rules != rules;
 }
 
 /// The key of a control of a described screen.
@@ -151,8 +220,15 @@ class DescribedScreen extends StatefulWidget {
   /// The questions put to the person, each drawn by the construct family.
   final List<Widget> questions;
 
+  /// The routing rules the person chose, by schema, yes or no: after she takes, on the start screen, an act of one
+  /// place, herself, that every other act she may take needs (as Establish), she is asked once "Do “Establish” for
+  /// you in each app you open?".  Within one app nothing more is done with the answer; a host that opens apps (the
+  /// super-app) listens here, and where an app it opens offers the act and the answer is yes, takes it for her
+  /// there: that hook is where opening an app applies the rule.
+  final ValueNotifier<Map<String, bool>>? rules;
+
   const DescribedScreen(
-      {super.key, required this.ui, required this.state, required this.ask, required this.questions});
+      {super.key, required this.ui, required this.state, required this.ask, required this.questions, this.rules});
 
   @override
   State<DescribedScreen> createState() => _DescribedScreenState();
@@ -422,6 +498,259 @@ class DescribedCore {
     final ks = {for (final x in args(r)) key(x)};
     return args(n).every((x) => ks.contains(key(x)) || x is GList);
   }
+
+  // ---------- what is in the way of an act, and the way to it ----------
+
+  /// Every act at the person's role the platform declares, one by schema.
+  List<DeclaredAct> get declared {
+    final out = <String, DeclaredAct>{};
+    for (final b in ask?.offers.buttons ?? const []) {
+      for (final a in b.acts) {
+        out.putIfAbsent(a.schema, () => a);
+      }
+    }
+    return out.values.toList();
+  }
+
+  /// The label the act [schema] goes by: that of its action on [screen], else on the start screen, else, where
+  /// [anywhere], on any screen, a chain's step's own; else its button.  A label kept to another screen
+  /// (`Join ON Group`) is not the act's name off it, so a fill hint takes the button there.
+  String actLabel(String schema, {String? screen, String? button, bool anywhere = true}) {
+    String? on(UiScreen? sc) {
+      for (final c in sc?.components ?? const <UiComponent>[]) {
+        if (c.kind == 'action' && c.schema == schema) return c.label;
+        if (c.kind == 'chain') {
+          for (final st in c.steps) {
+            if (st.schema == schema) return st.label;
+          }
+        }
+      }
+      return null;
+    }
+
+    return on(ui.screens[screen]) ??
+        on(ui.screens[ui.start]) ??
+        (anywhere ? ui.screens.values.map(on).nonNulls.firstOrNull : null) ??
+        button ??
+        ui.effects[schema]?.button ??
+        schema;
+  }
+
+  /// How the items of an empty list come, from the contract: the acts that add a fact of its kind, each by its
+  /// label, with "(by someone else)" where it adds the fact to another than the person who takes it.
+  String fillHint(UiComponent list, {String? screen}) {
+    final items = list.j['items'] as Map<String, dynamic>? ?? const {};
+    final p = (items['facts'] ?? items['from']) as String?;
+    final by = <String>{
+      for (final a in ui.addedBy[p] ?? const <UiAdder>[])
+        '“${actLabel(a.schema, screen: screen, button: a.button, anywhere: false)}”${a.mine ? '' : ' (by someone else)'}'
+    };
+    return by.isEmpty ? '' : ' They come with ${by.join(', ')}.';
+  }
+
+  static bool _determined(ActCondition c, Map<int, GTerm> at) => c.args
+      .every((x) => x is int ? at.containsKey(x) : x is (int, int) && at.containsKey(x.$1) && at.containsKey(x.$2));
+
+  /// What is in the way of [act] with the places [fixed] given, the person at her role, the other places open:
+  /// the first fact it requires there that her state lacks, with the places the facts before it bind, or else the
+  /// first fact it forbids that her state holds (`held`); null where nothing is.  A fact of a person not yet
+  /// chosen is no fact of hers, and the platform's request type holds none.  A condition on values (a guard) is not
+  /// looked at.
+  ({ActCondition c, Map<int, GTerm> at, bool held})? inWay(DeclaredAct act, Map<int, GTerm> fixed) {
+    final info = ActInfo(act), reqs = [for (final c in act.pre) if (c.kind == 'req') c];
+    var best = -1;
+    var bestAt = <int, GTerm>{};
+    Map<int, GTerm>? clear, blocked;
+    void from(int i, Map<int, GTerm> at) {
+      if (clear != null) return;
+      if (i > best) {
+        best = i;
+        bestAt = at;
+      }
+      if (i == reqs.length) {
+        if (info.lacks(s.atoms, at) && info.distinct(at)) {
+          clear = at;
+        } else {
+          blocked ??= at;
+        }
+        return;
+      }
+      for (final a in s.atoms) {
+        final next = ActInfo.matched(a, reqs[i], at);
+        if (next != null) from(i + 1, next);
+      }
+    }
+
+    from(0, {...fixed, act.proposer: s.me});
+    if (clear != null) return null;
+    if (best < reqs.length) return (c: reqs[best], at: bestAt, held: false);
+    final at = blocked ?? bestAt;
+    for (final c in act.pre) {
+      if (c.kind != 'forb' && c.kind != 'unless') continue;
+      if (c.kind == 'forb' && !_determined(c, at)) continue;
+      if (s.atoms.any((a) => ActInfo.matched(a, c, at) != null)) return (c: c, at: at, held: true);
+    }
+    return null;
+  }
+
+  /// The fact of [w] in words, said of the person, a place not bound read "someone": "you have an identity".
+  String factSaid(({ActCondition c, Map<int, GTerm> at, bool held}) w) {
+    final xs = [
+      for (final x in w.c.args)
+        x is int && w.at[x] != null ? w.at[x]! : SocialNotice.someone
+    ];
+    final atom = xs.isEmpty ? GAtom(w.c.pred) : GStruct(w.c.pred, xs);
+    return SocialNotice.factWords(atom, s.me, true, (q) => same(q, s.me));
+  }
+
+  /// [w] as what is in the way: "it needs that you have an identity", or "you and Bob are friends now".
+  String whySaid(({ActCondition c, Map<int, GTerm> at, bool held}) w) =>
+      w.held ? '${factSaid(w)} now' : 'it needs that ${factSaid(w)}';
+
+  /// The actions of [schema] the person reaches from the screen [here]: on it, on the start screen and on the
+  /// landmarks, a step of a chain by its chain ([UiDescription.drawn]), each with the screen it is on.
+  List<({String at, UiComponent c, List<UiComponent> rest})> placings(String schema, String here) {
+    final out = <({String at, UiComponent c, List<UiComponent> rest})>[];
+    for (final at in {here, ui.start, ...ui.landmarks}) {
+      final sc = ui.screens[at];
+      if (sc == null) continue;
+      for (final (c, rest) in UiDescription.drawn(sc)) {
+        if (c.kind != 'action') continue;
+        final steps = [c, ...rest];
+        if (steps.any((x) => x.schema == schema)) out.add((at: at, c: c, rest: rest));
+      }
+    }
+    return out;
+  }
+
+  /// The places of [c] its screen's [subject] fixes; null where one is not fixed.
+  Map<int, GTerm>? fixedBy(UiComponent c, GTerm? subject) {
+    final out = <int, GTerm>{};
+    for (final e in c.places.entries) {
+      if (!e.value.subject) continue;
+      final v = ofSubject(e.value, subject);
+      if (v == null) return null;
+      out[e.key] = v;
+    }
+    return out;
+  }
+
+  /// The way to [act], not offered on the screen [here] about [subject]: what is in its way ([inWay]), and the
+  /// person's own acts that add that fact (or remove it, where it is in the way by holding), searched backward, each
+  /// act's own missing fact in turn, three deep; the first act on the way she can take now, from this screen, the
+  /// start screen or a landmark, is `first`, the acts after it `then`.  A fact no act of hers adds comes when
+  /// another person takes an act that adds it, `other`.  Null where nothing is in the way, or the act is in the
+  /// way of itself, done already.
+  ({
+    String why,
+    ({String at, UiComponent c, List<UiComponent> rest, DeclaredAct act, List<DescribedWay> ways})? first,
+    List<String> then,
+    String? other
+  })? wayTo(DeclaredAct act, Map<int, GTerm> fixed, String here, GTerm? subject, {int depth = 1}) {
+    final w = inWay(act, fixed);
+    if (w == null) return null;
+    if (w.held && (ui.effects[act.schema]?.adds ?? const []).contains(w.c.pred)) return null;
+    final why = whySaid(w);
+    if (depth > 3) return (why: why, first: null, then: const [], other: null);
+    final bound = [
+      for (final x in w.c.args)
+        if (x is int && w.at[x] != null && !same(w.at[x]!, s.me)) w.at[x]!
+    ];
+    final mine = w.held
+        ? [
+            for (final e in ui.effects.entries)
+              if (e.value.removes.contains(w.c.pred)) e.key
+          ]
+        : [
+            for (final a in ui.addedBy[w.c.pred] ?? const <UiAdder>[])
+              if (a.mine) a.schema
+          ];
+    final tried = <({String at, UiComponent c, List<UiComponent> rest, DeclaredAct act, Map<int, GTerm> fixed, GTerm? subject})>[];
+    for (final schema in mine) {
+      if (schema == act.schema) continue;
+      for (final p in placings(schema, here)) {
+        final a2 = this.act(p.c);
+        if (a2 == null) continue;
+        final sub = p.at == here ? subject : null, fx = fixedBy(p.c, sub);
+        if (fx == null) continue;
+        tried.add((at: p.at, c: p.c, rest: p.rest, act: a2, fixed: fx, subject: sub));
+        final ways = this.ways(p.c, a2, sub);
+        // The way brings the fact about the values it names, or leaves a place to fill with them.
+        final fit = [
+          for (final v in ways)
+            if (fieldsOf(a2, v).isNotEmpty || bound.every((b) => v.values.any((x) => same(x, b)))) v
+        ];
+        if (fit.isNotEmpty) {
+          return (why: why, first: (at: p.at, c: p.c, rest: p.rest, act: a2, ways: fit), then: const [], other: null);
+        }
+      }
+    }
+    for (final t in tried) {
+      final r = wayTo(t.act, t.fixed, here, t.subject, depth: depth + 1);
+      if (r != null && r.first != null) return (why: why, first: r.first, then: [...r.then, t.c.label], other: null);
+    }
+    if (!w.held) {
+      for (final a in ui.addedBy[w.c.pred] ?? const <UiAdder>[]) {
+        if (!a.mine) return (why: why, first: null, then: const [], other: actLabel(a.schema, screen: here, button: a.button));
+      }
+    }
+    return (why: why, first: null, then: const [], other: null);
+  }
+
+  /// The act [schema] is one every other act the person may take needs: it adds a fact each of them requires.
+  bool neededByAll(String schema) {
+    final adds = ui.effects[schema]?.adds ?? const [];
+    final others = [for (final a in declared) if (a.schema != schema) a];
+    return adds.isNotEmpty &&
+        others.isNotEmpty &&
+        others.every((a) => a.pre.any((c) => c.kind == 'req' && adds.contains(c.pred)));
+  }
+
+  /// The words of [act]'s request form with the values of [w]: a place the person's "you", another its value, or
+  /// "…" where open; null where the form has no words.
+  String? said(DeclaredAct act, DescribedWay w) {
+    if (act.text.isEmpty) return null;
+    final t = [
+      for (final x in act.text)
+        x is int ? (x == act.proposer ? 'you' : w[x] == null ? '…' : show(w[x]!)) : x as String
+    ].join(' ').replaceAll(RegExp(r' +([,.?!])'), r'$1');
+    return t.isEmpty ? null : t[0].toUpperCase() + t.substring(1);
+  }
+
+  /// Help: each act the UI structure places, by its label; its words; the screens offering it; and whether the
+  /// person can take it now, or what is in its way.
+  List<({String schema, String label, String? sentence, List<String> screens, String status})> help() {
+    final where = <String, List<String>>{}, comp = <String, UiComponent>{};
+    for (final sc in ui.screens.values) {
+      for (final c in sc.components) {
+        for (final a in c.kind == 'chain' ? c.steps : c.kind == 'action' ? [c] : const <UiComponent>[]) {
+          final on = where[a.schema] ??= [];
+          if (!on.contains(sc.name)) on.add(sc.name);
+          comp.putIfAbsent(a.schema, () => a);
+        }
+      }
+    }
+    final acts = {for (final a in declared) a.schema: a};
+    return [
+      for (final e in where.entries)
+        if (acts[e.key] case final act?)
+          () {
+            final c = comp[e.key]!, now = ActInfo(act).ways(s.atoms, s.me).isNotEmpty;
+            final w = now ? null : inWay(act, const {});
+            return (
+              schema: e.key,
+              label: actLabel(e.key),
+              sentence: c.sentence ?? said(act, const {}),
+              screens: e.value,
+              status: now
+                  ? 'You can do this now.'
+                  : w == null
+                      ? 'Not now.'
+                      : 'Not now: ${whySaid(w)}.'
+            );
+          }()
+    ];
+  }
 }
 
 /// A way an action offers: the values of the places a way of the act binds, and of those the subject fixes.
@@ -438,8 +767,12 @@ class _Asked {
   final Map<String, GTerm> named;
   final GTerm? subject;
   final Set<String> atoms;
+
+  /// THEN IT, where the action says it ([UiComponent.thenIt]); and whether it was asked on the start screen.
+  final Map<String, dynamic>? thenIt;
+  final bool onStart;
   bool pending = false;
-  _Asked(this.req, this.label, this.then, this.rest, this.named, this.subject, this.atoms);
+  _Asked(this.req, this.label, this.then, this.rest, this.named, this.subject, this.atoms, this.thenIt, this.onStart);
 }
 
 class _DescribedScreenState extends State<DescribedScreen> {
@@ -460,6 +793,10 @@ class _DescribedScreenState extends State<DescribedScreen> {
 
   /// The items of each list its UI style tells of (`TOLD`), by its title, as last seen.
   final Map<String, Set<String>> _known = {};
+
+  /// The routing rules the person chose ([DescribedScreen.rules]), and the one she is being asked about.
+  late final ValueNotifier<Map<String, bool>> _rules = widget.rules ?? ValueNotifier(<String, bool>{});
+  ({String schema, String label})? _rule;
 
   /// The lists the UI style tells of, on the screens about the person herself.
   Iterable<UiComponent> get _toldLists => [
@@ -574,11 +911,31 @@ class _DescribedScreenState extends State<DescribedScreen> {
   /// is taken to the screen its action names.
   void _done(_Asked q) {
     _note('${q.label}: done');
+    // The routing rule: an act of one place, herself, that every other act needs, taken on the start screen.
+    final c = c0, schema = c.pred(q.req);
+    if (q.onStart && c.args(q.req).length == 1 && !_rules.value.containsKey(schema) && _rule == null && c.neededByAll(schema)) {
+      _rule = (schema: schema, label: q.label);
+    }
     // The next step is asked after this frame: asking writes to the agent, which draws again.
     if (q.rest.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _next(q));
       });
+      return;
+    }
+    // THEN IT: the screen about the newest fact of the predicate, the one the act added where there is one.
+    final ti = q.thenIt;
+    if (ti != null && widget.ui.screens[ti['screen']] != null) {
+      final p = ti['pred'] as String, all = [for (final a in s.atoms) if (c.pred(a) == p) a];
+      final added = [for (final a in all) if (!q.atoms.contains(c.key(a))) a];
+      final it = added.isNotEmpty ? added.last : all.lastOrNull;
+      final from = (ti['from'] as String?) ?? widget.ui.start;
+      _stack
+        ..clear()
+        ..add((widget.ui.screens[from] != null ? from : widget.ui.start, null));
+      if (it != null) {
+        _stack.add((ti['screen'] as String, ti['of'] == 'value' && c.args(it).isNotEmpty ? c.args(it).first : it));
+      }
       return;
     }
     final t = q.then;
@@ -601,14 +958,19 @@ class _DescribedScreenState extends State<DescribedScreen> {
     final w = [...ways, <int, GTerm>{}].firstWhere((w) => at.entries.every((e) => w[e.key] == null || c.same(w[e.key]!, e.value)));
     final r = c.request(act, {...w, ...at});
     if (r == null) return _note('${step.label}: not allowed now', bad: true);
-    _propose(r, step.label, then: q.then, rest: q.rest.sublist(1), named: q.named, subject: q.subject);
+    _propose(r, step.label, then: q.then, thenIt: q.thenIt, rest: q.rest.sublist(1), named: q.named, subject: q.subject);
   }
 
   /// Ask for the act of the request [r], and follow it.
   void _propose(GTerm r, String label,
-      {String? then, List<UiComponent> rest = const [], Map<String, GTerm> named = const {}, GTerm? subject}) {
+      {String? then,
+      Map<String, dynamic>? thenIt,
+      List<UiComponent> rest = const [],
+      Map<String, GTerm> named = const {},
+      GTerm? subject}) {
     widget.ask!.propose(r);
-    _asked.add(_Asked(r, label, then, rest, named, subject, {for (final a in s.atoms) c0.key(a)}));
+    final onStart = _stack.isEmpty || (_stack.last.$1 == widget.ui.start && _stack.last.$2 == null);
+    _asked.add(_Asked(r, label, then, rest, named, subject, {for (final a in s.atoms) c0.key(a)}, thenIt, onStart));
   }
 
   /// The values of a way by the names the action's sentence gives its places.
@@ -629,7 +991,38 @@ class _DescribedScreenState extends State<DescribedScreen> {
     if (ways.length == 1 && fields.isEmpty) {
       final r = c0.request(act, w0);
       if (r == null) return setState(() => _note('${c.label}: not allowed now', bad: true));
-      return setState(() => _propose(r, c.label, then: c.then, rest: rest, named: _named(c, w0), subject: subject));
+      void take() => setState(() => _propose(r, c.label, then: c.then, thenIt: c.thenIt, rest: rest, named: _named(c, w0), subject: subject));
+      // An act that only removes facts is shown in its words, and taken on a second tap.
+      if (rest.isEmpty && widget.ui.ends(act.schema)) {
+        showModalBottomSheet<void>(
+          context: context,
+          builder: (ctx) => Padding(
+            key: describedKey('ending:${act.schema}'),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(c.label, style: Theme.of(ctx).textTheme.titleMedium),
+              Padding(
+                padding: const EdgeInsets.only(top: 6, bottom: 14),
+                child: Text('${c0.said(act, w0) ?? c.sentence ?? c.label}.'.replaceAll('..', '.'),
+                    style: TextStyle(color: Colors.grey.shade700)),
+              ),
+              Row(children: [
+                FilledButton(
+                    key: describedKey('confirm'),
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      take();
+                    },
+                    child: Text(c.label)),
+                const SizedBox(width: 8),
+                TextButton(key: describedKey('cancel'), onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+              ]),
+            ]),
+          ),
+        );
+        return;
+      }
+      return take();
     }
     showModalBottomSheet<void>(
       context: context,
@@ -652,7 +1045,7 @@ class _DescribedScreenState extends State<DescribedScreen> {
         submit: (w, given) {
           final vals = {...w, ...given}, r = c0.request(act, vals);
           if (r == null) return false;
-          setState(() => _propose(r, c.label, then: c.then, rest: rest, named: _named(c, vals), subject: subject));
+          setState(() => _propose(r, c.label, then: c.then, thenIt: c.thenIt, rest: rest, named: _named(c, vals), subject: subject));
           return true;
         },
       ),
@@ -675,6 +1068,36 @@ class _DescribedScreenState extends State<DescribedScreen> {
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: r * .85)));
   }
 
+  /// Help, from the contract alone: each act the UI structure places, its label, its words, the screens offering
+  /// it, and whether the person can take it now or what is in its way ([DescribedCore.help]).
+  void _help() {
+    final rows = c0.help();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: ConstrainedBox(
+          key: describedKey('help:sheet'),
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * .8),
+          child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(20, 16, 20, 16), children: [
+            Text('What you can do here', style: Theme.of(ctx).textTheme.titleMedium),
+            for (final r in rows)
+              Padding(
+                key: describedKey('help:${r.schema}'),
+                padding: const EdgeInsets.only(top: 12),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(r.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  if (r.sentence != null) Text(r.sentence!, style: TextStyle(color: Colors.grey.shade700)),
+                  Text('${r.status} On ${r.screens.join(', ')}.',
+                      style: TextStyle(fontSize: 13, color: r.status.startsWith('You can') ? Colors.green.shade800 : Colors.grey.shade700)),
+                ]),
+              ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ui = widget.ui;
@@ -692,20 +1115,72 @@ class _DescribedScreenState extends State<DescribedScreen> {
     final thread = scr.components.any((x) => x.kind == 'thread');
     final here = '$name|${subject == null ? '' : c.key(subject)}';
     // A chain is drawn as its first step, under its own button, the other steps asked in turn.
-    final comps = [
-      for (final x in scr.components)
-        if (x.kind == 'chain' && x.steps.isNotEmpty)
-          (
-            UiComponent('action', {...x.steps.first.j, 'button': x.button, 'label': x.label, 'where': x.where, 'then': x.then}),
-            x.steps.sublist(1)
-          )
-        else
-          (x, const <UiComponent>[])
-    ];
+    final comps = UiDescription.drawn(scr);
+    final open = widget.ask?.at != null;
+    // The ways each action offers.
+    final offered = <int, (DeclaredAct, List<DescribedWay>)>{};
+    for (final (i, (comp, _)) in comps.indexed) {
+      if (comp.kind != 'action') continue;
+      final act = c.act(comp);
+      if (act != null) offered[i] = (act, c.ways(comp, act, subject));
+    }
+    // An important action not offered: in its place, what is in its way and the first step of a way to it, whose
+    // button, where it is on this screen, is the hint's.  An action of the same label offered here is no gap.
+    final hints = <int, Widget>{}, hintFirst = <int, String>{}, byHint = <String>{}, usedFirst = <String>{};
+    final offeredLabels = {
+      for (final e in offered.entries)
+        if (e.value.$2.isNotEmpty) comps[e.key].$1.label
+    };
+    for (final e in offered.entries) {
+      final comp = comps[e.key].$1, act = e.value.$1, ways = e.value.$2;
+      if (!comp.important || ways.isNotEmpty || offeredLabels.contains(comp.label)) continue;
+      final fx = c.fixedBy(comp, subject);
+      if (fx == null) continue;
+      final r = c.wayTo(act, fx, name, subject);
+      if (r == null) continue;
+      final f = r.first;
+      Widget? way;
+      if (f != null) {
+        final fk = UiDescription.keyOf(f.c), then = [...r.then, comp.label].join(', then ');
+        final fs = f.at == name ? subject : null;
+        if (usedFirst.add(fk)) {
+          hintFirst[e.key] = f.c.label;
+          if (f.at == name) byHint.add(fk);
+          way = Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
+            FilledButton.tonal(
+                key: describedKey('$fk${fs == null ? '' : ':${c.key(fs)}'}'),
+                onPressed: open ? () => _tap(f.c, f.act, f.ways, fs, rest: f.rest) : null,
+                child: Text(f.c.label)),
+            Text('then $then', style: muted),
+          ]);
+        } else {
+          way = Text('First “${f.c.label}”, then $then.', style: muted);
+        }
+      } else if (r.other != null) {
+        way = Text('It comes when another person takes “${r.other}”.', style: muted);
+      }
+      hints[e.key] = Container(
+        key: describedKey('important:${UiDescription.keyOf(comp)}'),
+        width: double.infinity,
+        margin: const EdgeInsets.only(top: 6),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: BoxDecoration(
+            color: Colors.amber.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.amber.shade200)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text.rich(TextSpan(children: [
+            const TextSpan(text: 'To '),
+            TextSpan(text: comp.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+            TextSpan(text: ': ${r.why}.'),
+          ])),
+          if (way != null) Padding(padding: const EdgeInsets.only(top: 6), child: way),
+        ]),
+      );
+    }
+    final hintCards = <Widget>[];
     // An empty screen points to where to start: its first marked action, or else its first.
-    var lists = 0, filled = 0, emptyAt = -1;
+    var lists = 0, filled = 0, emptyAt = -1, emptyFills = false;
     String? firstMarked, firstAction;
-    for (final (comp, rest) in comps) {
+    for (final (i, (comp, rest)) in comps.indexed) {
       switch (comp.kind) {
         case 'questions':
           if (widget.questions.isNotEmpty) {
@@ -776,8 +1251,16 @@ class _DescribedScreenState extends State<DescribedScreen> {
           lists++;
           if (items.isNotEmpty) filled++;
           if (items.isEmpty) {
-            if (emptyAt < 0) emptyAt = body.length;
-            body.add(Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 6), child: Text('None yet.', style: muted)));
+            // How its items come, from the contract's effects; where it says, the hint to start goes after it.
+            final fill = c.fillHint(comp, screen: name);
+            if (emptyAt < 0) {
+              emptyAt = body.length;
+              emptyFills = fill.isNotEmpty;
+            }
+            body.add(Padding(
+                key: describedKey('empty:${comp.j['title']}'),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                child: Text('None yet.$fill', style: muted)));
           }
           // The conversation a list item opens, whose new lines mark the item.
           final talk = opens == null ? null : ui.screens[opens];
@@ -843,11 +1326,22 @@ class _DescribedScreenState extends State<DescribedScreen> {
             body.add(Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Wrap(spacing: 8, runSpacing: 4, children: rows)));
           }
         case 'action':
-          final act = c.act(comp);
-          if (act == null) break;
-          final ways = c.ways(comp, act, subject);
+          if (hints[i] case final h?) {
+            hintCards.add(h);
+            if (hintFirst[i] case final fl?) {
+              if (comp.where == 'primary') {
+                firstMarked ??= fl;
+              } else {
+                firstAction ??= fl;
+              }
+            }
+            break;
+          }
+          if (byHint.contains(UiDescription.keyOf(comp))) break;
+          final o = offered[i];
+          if (o == null) break;
+          final (act, ways) = o;
           if (ways.isEmpty) break;
-          final open = widget.ask?.at != null;
           final fields = c.fieldsOf(act, ways.first);
           // On a conversation, the act of one way and one text field is its composer; the other acts go in a menu.
           if (thread && composer == null && ways.length == 1 && fields.length == 1 && fields.single.type == 'text' && comp.places[fields.single.place]?.from == null) {
@@ -857,7 +1351,7 @@ class _DescribedScreenState extends State<DescribedScreen> {
               if (v == null) return;
               final r = c.request(act, {...ways.first, f.place: v});
               if (r == null) return setState(() => _note('${comp.label}: not allowed now', bad: true));
-              setState(() => _propose(r, comp.label, then: comp.then, subject: subject));
+              setState(() => _propose(r, comp.label, then: comp.then, thenIt: comp.thenIt, subject: subject));
               tc.clear();
             }
 
@@ -888,7 +1382,7 @@ class _DescribedScreenState extends State<DescribedScreen> {
           void go() => _tap(comp, act, ways, subject, rest: rest);
           if (comp.where == 'primary') firstMarked ??= comp.label;
           if (comp.where != 'menu') firstAction ??= comp.label;
-          final k = describedKey('${rest.isEmpty ? 'act:${comp.schema}' : 'chain:${comp.button}'}${subject == null ? '' : ':${c.key(subject)}'}');
+          final k = describedKey('${UiDescription.keyOf(comp)}${subject == null ? '' : ':${c.key(subject)}'}');
           // The look puts an action in the menu, in the bar, or first and marked; on a conversation, the menu.
           final where = comp.where ?? (thread ? 'menu' : 'bar');
           if (where == 'menu') {
@@ -906,10 +1400,40 @@ class _DescribedScreenState extends State<DescribedScreen> {
     }
     final start = firstMarked ?? firstAction;
     if (lists > 0 && filled == 0 && emptyAt >= 0) {
-      body[emptyAt] = Padding(
+      final h = Padding(
           key: describedKey('hint'),
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
           child: Text(start == null ? 'Nothing here yet.' : 'Nothing here yet. Start with “$start”.', style: muted));
+      if (emptyFills) {
+        body.insert(emptyAt + 1, h);
+      } else {
+        body[emptyAt] = h;
+      }
+    }
+    // The routing rule, asked once, on the start screen.
+    final rule = _rule;
+    if (rule != null && name == ui.start && subject == null) {
+      void answer(bool yes) => setState(() {
+            _rules.value = {..._rules.value, rule.schema: yes};
+            _rule = null;
+          });
+      body.insert(
+          0,
+          Container(
+            key: describedKey('rule'),
+            margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade300)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Do “${rule.label}” for you in each app you open?'),
+              const SizedBox(height: 8),
+              Row(children: [
+                FilledButton(key: describedKey('rule:yes'), onPressed: () => answer(true), child: const Text('Yes')),
+                const SizedBox(width: 8),
+                TextButton(key: describedKey('rule:no'), onPressed: () => answer(false), child: const Text('No')),
+              ]),
+            ]),
+          ));
     }
     final title = subject == null
         ? c.show(s.me) == 'you' ? displayText(s.me) : c.show(s.me)
@@ -938,6 +1462,7 @@ class _DescribedScreenState extends State<DescribedScreen> {
               _avatar(subject == null ? s.me : (scr.fact != null && c.args(subject).isNotEmpty ? c.args(subject).first : subject), r: 16),
               const SizedBox(width: 10),
               Expanded(child: Text(shown, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600))),
+              IconButton(key: describedKey('help'), tooltip: 'Help', icon: const Icon(Icons.help_outline), onPressed: _help),
               if (marks.isNotEmpty && placed == 'menu')
                 PopupMenuButton<String>(
                   key: describedKey('landmarks'),
@@ -985,6 +1510,8 @@ class _DescribedScreenState extends State<DescribedScreen> {
                 ),
             ]),
           ),
+        // What is in the way of the important actions, and the first step to each.
+        if (hintCards.isNotEmpty) Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 6), child: Column(children: hintCards)),
         if (composer != null)
           Material(color: Colors.white, child: SafeArea(top: false, child: composer))
         else if (actions.whereType<ButtonStyleButton>().isNotEmpty || primary.isNotEmpty)
@@ -1102,7 +1629,9 @@ class _SheetState extends State<_Sheet> {
   Widget _field(DeclaredField f) {
     final look = widget.sources[f.place]?.look ?? const {},
         tc = _text.putIfAbsent(f.place, () => TextEditingController(text: widget.fresh(f) ?? ''));
-    final label = f.type == 'key' ? '${f.label} (their key)' : f.label;
+    // The label the UI style gives the field (`Name IS CALLED "label"`), else the contract's.
+    final named = look['label'] as String? ?? f.label;
+    final label = f.type == 'key' && look['label'] == null ? '$named (their key)' : named;
     switch (look['as']) {
       case 'slider':
         final lo = (look['from'] as num).toDouble(), hi = (look['to'] as num).toDouble();
@@ -1192,7 +1721,7 @@ class _SheetState extends State<_Sheet> {
             for (final f in widget.fields) {
               if (given.containsKey(f.place)) continue;
               final v = widget.textValue(f, _text[f.place]?.text ?? '');
-              if (v == null) return setState(() => _error = 'Fill in ${f.label}.');
+              if (v == null) return setState(() => _error = 'Fill in ${widget.sources[f.place]?.look?['label'] ?? f.label}.');
               given[f.place] = v;
             }
             if (widget.submit(ws[_way], given)) {
