@@ -290,6 +290,12 @@
     if (v.select) return itemKinds(comps.find(x => x.id === v.select));
     return ['any'];
   }
+  /* a place picked from a list and kept to the subject, on a screen whose subject may be any person: its values are
+     those of its own list, each of them a person the subject list holds */
+  function keptKinds(v, d, comps) {
+    if (!v || !v.select || v.same !== 0 || !d || d.kind !== 'named') return null;
+    return itemKinds(comps.find(x => x.id === v.select));
+  }
   function reaches(kinds, k, anc, roles) {
     if (!kinds.length) return false;
     if (kinds.includes('any')) return true;
@@ -315,8 +321,10 @@
     for (const a of spec.acts) acts[a.name] = {button: a.button, covered: false};
     for (const c of reach) for (const x of ui.containers[c].components) if (x.kind === 'action' && x.act && !x.step) {
       const a = spec.acts.find(y => y.name === x.act), anc = anchors(a), bind = {[a.me]: 'me'};
-      for (const [r, v] of Object.entries(x.bind)) bind[placeOf(a, r)] = v;
       const ps = ui.containers[c].params;
+      /* a place picked from a list but kept to the screen's subject takes the subject's value: the parameter */
+      const xb = Object.fromEntries(Object.entries(x.bind).map(([r, v]) => [r, v && v.select && v.same !== undefined && ps.length === 1 ? (v.same === 0 ? ps[0] : {param: ps[0], pos: v.same}) : v]));
+      for (const [r, v] of Object.entries(xb)) bind[placeOf(a, r)] = v;
       /* the action covers its act if, on one way into its screen, every place is reached */
       let best = null;
       for (const d of ways[c]) {
@@ -325,17 +333,17 @@
           if (k === a.me) continue;
           const r = a.names[k - 1];
           if (!(k in bind)) why.push(r + ' gets no value');
-          else if (!reaches(kindsOf(bind[k], d, ui.containers[c].components), k, anc, a.roles)) why.push(r + ' may be someone this source does not reach');
+          else if (!reaches(keptKinds(x.bind[r], d, ui.containers[c].components) || kindsOf(bind[k], d, ui.containers[c].components), k, anc, a.roles)) why.push(r + ' may be someone this source does not reach');
         }
         /* places filled from the parameter's atom: all of them the positions of one required atom of its predicate */
-        const fromAtom = Object.entries(x.bind).filter(([, v]) => v && v.param);
+        const fromAtom = Object.entries(xb).filter(([, v]) => v && v.param);
         if (fromAtom.length) {
           const ks = kindsOf(fromAtom[0][1], d, []), pred = ks.length === 1 && ks[0].startsWith('pos:') ? ks[0].split(':')[1] : null;
           const fit = pred && a.req.find(([p, pl]) => p === pred && fromAtom.every(([r, v]) => pl[v.pos - 1] === placeOf(a, r)));
           if (!fit) why.push('the places taken from the parameter are not the positions of one required ' + (pred || 'atom') + ' fact');
           else if (!chainOK(a, d, fit)) why.push('the act does not require the facts of the lists that lead to this screen');
         } else if (d && d.via) why.push('the act does not require the facts of the lists that lead to this screen');
-        if (ps.length && !Object.values(x.bind).some(v => ps.includes(v) || (v && ps.includes(v.param)))) why.push('this screen opens only from a list, and the action does not use its parameter');
+        if (ps.length && !Object.values(xb).some(v => ps.includes(v) || (v && ps.includes(v.param)))) why.push('this screen opens only from a list, and the action does not use its parameter');
         if (!best || why.length < best.length) best = why;
         if (!why.length) break;
       }
@@ -364,7 +372,23 @@
     }
     /* inner: shown, but only on screens reached through other facts; that each of them is found there
        depends on what else the person holds, which Proposition 2 does not check */
-    return {acts, comps, hidden: hidden.filter(p => !somewhere.has(p)), inner: hidden.filter(p => somewhere.has(p)), inbox, complete: inbox && Object.values(acts).every(a => a.covered), visible: !hidden.length};
+    /* an act about one other person belongs beside her: an action on a screen of the person's own that picks a
+       person from a list, while a screen about a person, opened from a list of persons, does not offer that act */
+    const roots = [ui.start, ...(ui.landmarks || [])];
+    const personScreens = Object.keys(ways).filter(c => !roots.includes(c) && ways[c].some(d => d && d.kind === 'named'));
+    const placement = [];
+    if (personScreens.length) for (const c of roots) for (const x of ui.containers[c].components) if (x.kind === 'action' && x.act && !x.step) {
+      const a = spec.acts.find(y => y.name === x.act);
+      if (Object.keys(ways).some(s => !roots.includes(s) && ui.containers[s].components.some(y => y.act === x.act))) continue;
+      const open = Object.entries(x.bind || {}).filter(([, v]) => v && (v.select || v.field) && v.same === undefined);
+      if (open.length !== 1 || !open[0][1].select) continue;
+      for (const [r] of open) {
+        const k = placeOf(a, r);
+        if (a.req.some(([p, ks]) => ['knows', 'friend', 'identity'].includes(p) && ks.includes(k)))
+          placement.push({line: x.line, msg: `${x.button} on ${c} picks ${r}, a person, from a list: ${personScreens[0]}, the screen about a person, would take ${r} as its subject`});
+      }
+    }
+    return {acts, comps, placement, hidden: hidden.filter(p => !somewhere.has(p)), inner: hidden.filter(p => somewhere.has(p)), inbox, complete: inbox && Object.values(acts).every(a => a.covered), visible: !hidden.length};
   }
 
   /* every state of one viewer among the persons, the allowed answers, and those the interface does not offer */

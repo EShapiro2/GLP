@@ -33,6 +33,8 @@ Delist me IS IN THE MENU.
 Delist me unshown IS CALLED "Remove my hidden listing".
 Delist me unshown IS IN THE MENU.
 Person unfriend IS CALLED "End a friendship".
+Person unfriend ON Person IS CALLED "End friendship".
+Person unfriend ON Person IS IN THE MENU.
 Sign IS CALLED "Make a signed item".
 Sign IS IN THE MENU.
 Publish IS CALLED "Publish an app I wrote".
@@ -82,7 +84,5 @@ Open directory IS CALLED "Make them a directory".
 Open directory IS IN THE MENU.
 List IS CALLED "List an app in their store".
 List IS IN THE MENU.
-Trust ON Program IS CALLED "Trust this developer".
-Trust ON Program IS PRIMARY.
 Install IS IMPORTANT.
 Make friends IS IMPORTANT.

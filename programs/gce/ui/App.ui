@@ -1,5 +1,5 @@
 # Home: the Grassroots App's own screens, from its contract App. Apps, people and the apps offered first, with
-# making friends and trusting a developer; the rarer acts on More, a landmark screen reached from every screen.
+# making friends; trusting a developer is on the developer's own screen; the rarer acts on More, a landmark screen reached from every screen.
 
 SCREEN Home ABOUT Alice:
     QUESTIONS
@@ -13,8 +13,6 @@ SCREEN Home ABOUT Alice:
 
 SCREEN More ABOUT Alice:
     Acquaint: Alice and Bob may jointly come to know each other, Bob TYPED
-    Trust: Alice may declare trust in Carol as a developer, Carol FROM knows
-    Untrust: Alice may withdraw her declaration of trust in Carol as a developer, Carol FROM trusts_developer
     Open place: Alice may declare her place open
     Close place: Alice may close her place
     Sign link: Alice may sign Link as an invitation link that names Dave, Dave FROM knows, Link TYPED
@@ -53,7 +51,6 @@ SCREEN App ABOUT "Alice has App of Carol installed":
 
 SCREEN Program ABOUT "Alice holds Prog of Carol":
     QUESTIONS
-    Trust: Alice may declare trust in Carol as a developer, Carol FROM knows
     Install: Alice may install Prog of Carol, THEN IT
     Install own: Alice may install her own Prog
     Offer: Alice may offer Prog of Carol to Bob, Bob FROM friend
@@ -72,6 +69,7 @@ SCREEN Person ABOUT Bob:
     Ward befriend: Alice and Bob may jointly become friends, Alice FROM has_guardian
     Ward end: Alice may end her friendship with Bob, G1 FROM has_guardian
     Unfriend: Alice may end her friendship with Bob
+    Person unfriend:
     Guardian unfriend: Alice may end her friendship with her ward Bob
     Resign: Alice may end her guardianship of Bob
     Retire: Those who decide for Bob may retire Bob, Codecider TYPED

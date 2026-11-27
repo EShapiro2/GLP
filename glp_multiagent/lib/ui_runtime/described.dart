@@ -231,13 +231,16 @@ class DescribedUi extends InheritedWidget {
 
   /// The person's routing rules, where the host keeps them ([DescribedScreen.rules]).
   final ValueNotifier<Map<String, bool>>? rules;
-  const DescribedUi({super.key, required this.ui, this.rules, required super.child});
+
+  /// Where the app is, as the host names it ([DescribedScreen.where]).
+  final List<String> where;
+  const DescribedUi({super.key, required this.ui, this.rules, this.where = const [], required super.child});
 
   static DescribedUi? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<DescribedUi>();
 
   @override
-  bool updateShouldNotify(DescribedUi old) => old.ui != ui || old.rules != rules;
+  bool updateShouldNotify(DescribedUi old) => old.ui != ui || old.rules != rules || old.where != where;
 }
 
 /// The key of a control of a described screen.
@@ -259,8 +262,17 @@ class DescribedScreen extends StatefulWidget {
   /// there: that hook is where opening an app applies the rule.
   final ValueNotifier<Map<String, bool>>? rules;
 
+  /// Where the app is, as its host names it: the super-app and the app ("Grassroots", "Chess"), the first of the
+  /// line that says where the person is; empty where the app runs alone.
+  final List<String> where;
   const DescribedScreen(
-      {super.key, required this.ui, required this.state, required this.ask, required this.questions, this.rules});
+      {super.key,
+      required this.ui,
+      required this.state,
+      required this.ask,
+      required this.questions,
+      this.rules,
+      this.where = const []});
 
   @override
   State<DescribedScreen> createState() => _DescribedScreenState();
@@ -643,15 +655,27 @@ class DescribedCore {
 
   /// The actions of [schema] the person reaches from the screen [here]: on it, on the start screen and on the
   /// landmarks, a step of a chain by its chain ([UiDescription.drawn]), each with the screen it is on.
-  List<({String at, UiComponent c, List<UiComponent> rest})> placings(String schema, String here) {
-    final out = <({String at, UiComponent c, List<UiComponent> rest})>[];
-    for (final at in {here, ui.start, ...ui.landmarks}) {
+  /// And on the screen about a value [about] names, such as the developer one must trust: the step is taken there,
+  /// `about` its subject.
+  List<({String at, UiComponent c, List<UiComponent> rest, GTerm? about})> placings(String schema, String here,
+      [List<GTerm> about = const []]) {
+    final out = <({String at, UiComponent c, List<UiComponent> rest, GTerm? about})>[];
+    void add(String at, GTerm? of) {
       final sc = ui.screens[at];
-      if (sc == null) continue;
+      if (sc == null) return;
       for (final (c, rest) in UiDescription.drawn(sc)) {
         if (c.kind != 'action') continue;
         final steps = [c, ...rest];
-        if (steps.any((x) => x.schema == schema)) out.add((at: at, c: c, rest: rest));
+        if (steps.any((x) => x.schema == schema)) out.add((at: at, c: c, rest: rest, about: of));
+      }
+    }
+    for (final at in {here, ui.start, ...ui.landmarks}) {
+      add(at, null);
+    }
+    for (final v in about) {
+      for (final e in ui.screens.entries) {
+        if (e.key == here || e.key == ui.start || ui.landmarks.contains(e.key) || !e.value.about || e.value.fact != null) continue;
+        add(e.key, v);
       }
     }
     return out;
@@ -677,7 +701,7 @@ class DescribedCore {
   /// way of itself, done already.
   ({
     String why,
-    ({String at, UiComponent c, List<UiComponent> rest, DeclaredAct act, List<DescribedWay> ways})? first,
+    ({String at, UiComponent c, List<UiComponent> rest, DeclaredAct act, List<DescribedWay> ways, GTerm? about})? first,
     List<String> then,
     String? other
   })? wayTo(DeclaredAct act, Map<int, GTerm> fixed, String here, GTerm? subject, {int depth = 1}) {
@@ -702,10 +726,10 @@ class DescribedCore {
     final tried = <({String at, UiComponent c, List<UiComponent> rest, DeclaredAct act, Map<int, GTerm> fixed, GTerm? subject})>[];
     for (final schema in mine) {
       if (schema == act.schema) continue;
-      for (final p in placings(schema, here)) {
+      for (final p in placings(schema, here, bound)) {
         final a2 = this.act(p.c);
         if (a2 == null) continue;
-        final sub = p.at == here ? subject : null, fx = fixedBy(p.c, sub);
+        final sub = p.about ?? (p.at == here ? subject : null), fx = fixedBy(p.c, sub);
         if (fx == null) continue;
         tried.add((at: p.at, c: p.c, rest: p.rest, act: a2, fixed: fx, subject: sub));
         final ways = this.ways(p.c, a2, sub);
@@ -715,7 +739,7 @@ class DescribedCore {
             if (fieldsOf(a2, v).isNotEmpty || bound.every((b) => v.values.any((x) => same(x, b)))) v
         ];
         if (fit.isNotEmpty) {
-          return (why: why, first: (at: p.at, c: p.c, rest: p.rest, act: a2, ways: fit), then: const [], other: null);
+          return (why: why, first: (at: p.at, c: p.c, rest: p.rest, act: a2, ways: fit, about: p.about), then: const [], other: null);
         }
       }
     }
@@ -812,6 +836,36 @@ class _Asked {
 class _DescribedScreenState extends State<DescribedScreen> {
   /// The screens the person came through, each with its subject; the last is on the screen.
   final List<(String, GTerm?)> _stack = [];
+
+  /// The label of the action a hint sent the person to this screen for, drawn lit.
+  String? _glow;
+
+  /// The line that says where the person is, each step a tap back to it.
+  Widget _crumbLine(List<(String, VoidCallback?)> crumbs, ThemeData theme) {
+    final small = theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600, fontSize: 11.5);
+    return SingleChildScrollView(
+      key: describedKey('where'),
+      scrollDirection: Axis.horizontal,
+      child: Row(children: [
+        for (var i = 0; i < crumbs.length; i++) ...[
+          if (i > 0) Text('  ›  ', style: small?.copyWith(color: Colors.grey.shade400)),
+          crumbs[i].$2 == null
+              ? Text(crumbs[i].$1, style: small)
+              : GestureDetector(
+                  key: describedKey('where:$i'), onTap: crumbs[i].$2, child: Text(crumbs[i].$1, style: small?.copyWith(color: Colors.grey.shade800))),
+        ],
+      ]),
+    );
+  }
+
+  /// [button] lit, where a hint sent the person here for the action [label].
+  Widget _lit(String label, Widget button) => label != _glow
+      ? button
+      : DecoratedBox(
+          key: describedKey('lit:$label'),
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.amber.shade300, spreadRadius: 3)]),
+          child: button);
   final Map<String, TextEditingController> _fields = {};
 
   /// The acts asked and not yet done or refused.
@@ -1177,7 +1231,19 @@ class _DescribedScreenState extends State<DescribedScreen> {
       if (f != null) {
         final fk = UiDescription.keyOf(f.c), then = [...r.then, comp.label].join(', then ');
         final fs = f.at == name ? subject : null;
-        if (usedFirst.add(fk)) {
+        if (f.about != null) {
+          final about = f.about!;
+          way = Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
+            FilledButton.tonal(
+                key: describedKey('page:${f.at}:${c.key(about)}'),
+                onPressed: () => setState(() {
+                  _stack.add((f.at, about));
+                  _glow = f.c.label;
+                }),
+                child: Text('${c.show(about)}’s page ›')),
+            Text('there “${f.c.label}”, then $then', style: muted),
+          ]);
+        } else if (usedFirst.add(fk)) {
           hintFirst[e.key] = f.c.label;
           if (f.at == name) byHint.add(fk);
           way = Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
@@ -1424,11 +1490,13 @@ class _DescribedScreenState extends State<DescribedScreen> {
             menu.add((comp.label, go));
             body.add(SizedBox.shrink(key: k));
           } else if (where == 'primary') {
-            primary.add(FilledButton(key: k, onPressed: open ? go : null, child: Text(comp.label)));
+            primary.add(_lit(comp.label, FilledButton(key: k, onPressed: open ? go : null, child: Text(comp.label))));
           } else {
-            actions.add(actions.whereType<ButtonStyleButton>().isEmpty && primary.isEmpty && comp.where == null
-                ? FilledButton(key: k, onPressed: open ? go : null, child: Text(comp.label))
-                : OutlinedButton(key: k, onPressed: open ? go : null, child: Text(comp.label)));
+            actions.add(_lit(
+                comp.label,
+                actions.whereType<ButtonStyleButton>().isEmpty && primary.isEmpty && comp.where == null
+                    ? FilledButton(key: k, onPressed: open ? go : null, child: Text(comp.label))
+                    : OutlinedButton(key: k, onPressed: open ? go : null, child: Text(comp.label))));
           }
       }
     }
@@ -1478,6 +1546,29 @@ class _DescribedScreenState extends State<DescribedScreen> {
     void land(String l) => setState(() => _stack
       ..clear()
       ..add((l, null)));
+    // Where the person is: the host's names, then the screens she came through, each a step back, then this one.
+    final crumbs = <(String, VoidCallback?)>[
+      for (final w in widget.where) (w, null),
+      for (var i = 0; i < _stack.length - 1; i++)
+        if (i > 0 || _stack[i].$1 != ui.start || _stack[i].$2 != null)
+          (
+            _stack[i].$2 == null ? _stack[i].$1 : '${_stack[i].$1} ${c.show(_stack[i].$2!)}',
+            () => setState(() {
+                  _stack.removeRange(i + 1, _stack.length);
+                  _glow = null;
+                })
+          ),
+      if (_stack.length > 1 || name != ui.start) (name, null),
+    ];
+    if (widget.where.isNotEmpty && _stack.length > 1) {
+      crumbs[widget.where.length - 1] = (
+        widget.where.last,
+        () => setState(() {
+              _stack.removeRange(1, _stack.length);
+              _glow = null;
+            })
+      );
+    }
     return Theme(
       data: _looked(theme),
       child: ColoredBox(
@@ -1486,16 +1577,26 @@ class _DescribedScreenState extends State<DescribedScreen> {
         Material(
           color: Colors.white,
           child: Container(
-            height: 56,
+            height: crumbs.length > 1 ? 64 : 56,
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
             child: Row(children: [
               if (_stack.length > 1)
-                IconButton(key: describedKey('back'), icon: const Icon(Icons.arrow_back_ios_new, size: 18), onPressed: () => setState(() => _stack.removeLast()))
+                IconButton(
+                    key: describedKey('back'),
+                    icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                    onPressed: () => setState(() {
+                          _stack.removeLast();
+                          _glow = null;
+                        }))
               else
                 const SizedBox(width: 14),
               _avatar(subject == null ? s.me : (scr.fact != null && c.args(subject).isNotEmpty ? c.args(subject).first : subject), r: 16),
               const SizedBox(width: 10),
-              Expanded(child: Text(shown, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600))),
+              Expanded(
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (crumbs.length > 1) _crumbLine(crumbs, theme),
+                Text(shown, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+              ])),
               IconButton(key: describedKey('help'), tooltip: 'Help', icon: const Icon(Icons.help_outline), onPressed: _help),
               if (marks.isNotEmpty && placed == 'menu')
                 PopupMenuButton<String>(

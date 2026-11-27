@@ -111,6 +111,7 @@ class _Play {
               DescribedUi(
                 ui: ui,
                 rules: p.rules,
+                where: const ['Grassroots', 'App'],
                 child: RepaintBoundary(
                   key: p.shot,
                   child: SizedBox.fromSize(size: size, child: AgentSurface(agentId: p.name, runtime: p.ui, muteNotices: true)),
@@ -253,6 +254,15 @@ void main() {
       expect(core.actLabel('post_own'), 'Post');
     });
 
+    test('a step on the page of someone the act names: Trust on the developer\'s screen', () {
+      final app = _read('App');
+      final core = DescribedCore(app, const SocialState(GAtom('alice'), [], [], []), null);
+      final here = core.placings('trust', 'Program');
+      expect(here, isEmpty, reason: 'not on the program\'s screen, nor on Home or More');
+      final there = core.placings('trust', 'Program', [const GAtom('carol')]);
+      expect([for (final p in there) (p.at, formatTerm(p.about!))], contains(('Person', 'carol')));
+    });
+
     test('a fact in words, a place not chosen read someone', () {
       bool me(GTerm q) => formatTerm(q) == 'alice';
       expect(SocialNotice.factWords(const GAtom('identity'), const GAtom('alice'), true, me), 'you have an identity');
@@ -322,6 +332,10 @@ void main() {
 
     // Unfriend only removes a fact: shown in its words, taken on a second tap.
     await t.tap(alice, t.on(alice, find.byKey(describedKey('row:bob'))));
+    // Where she is: the super-app, the app, this screen; the app's name a tap back to its start.
+    expect(t.on(alice, find.byKey(describedKey('where'))), findsOneWidget);
+    expect(t.texts(alice), contains('Grassroots'));
+    expect(t.texts(alice), contains('Person'));
     await t.tap(alice, t.on(alice, find.byKey(describedKey('menu'))));
     await t.tap(alice, find.text('Unfriend').last);
     expect(find.byKey(describedKey('ending:unfriend')), findsOneWidget);

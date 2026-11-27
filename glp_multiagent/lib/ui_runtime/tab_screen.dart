@@ -154,6 +154,7 @@ class _TabScreenState extends State<TabScreen> {
       return DescribedScreen(
         ui: described.ui,
         rules: described.rules,
+        where: described.where,
         state: state,
         ask: request == null
             ? null
