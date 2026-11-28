@@ -12,22 +12,22 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \notin c_
 {
 \Alice
@@ -52,11 +52,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -71,11 +71,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -83,17 +83,25 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Bob
@@ -120,13 +128,13 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -139,16 +147,30 @@ c_
 {
 \Bob
 }
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -157,26 +179,42 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
 }
 ,\\
 &
@@ -200,11 +238,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 recommended
-}
+}}
 (
 \Bob
 ,
@@ -221,11 +259,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 recommendation
-}
+}}
 (
 \Alice
 ,
@@ -235,13 +273,13 @@ Skill
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -250,9 +288,9 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -260,9 +298,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 recommended
-}
+}}
 (
 \Bob
 ,
@@ -292,11 +330,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \Bob
 ,
@@ -315,11 +353,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 sees
-}
+}}
 (
 Alice
 ,
@@ -331,22 +369,22 @@ Skill
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 recommendation
-}
+}}
 (
 Alice
 ,
 Skill
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -355,9 +393,9 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -365,9 +403,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \Bob
 ,
@@ -401,9 +439,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 recommendation
-}
+}}
 (
 \Bob
 ,
@@ -420,9 +458,9 @@ Skill
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \ast
 ,
@@ -443,10 +481,10 @@ Skill
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \ast
 ,
@@ -460,9 +498,9 @@ Skill
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \ast
 ,
@@ -486,18 +524,18 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 recommendation
-}
+}}
 (
 \Bob
 ,
 Skill
 )
 ,
-\mathit{
+\mathit{\detokenize{
 sees
-}
+}}
 (
 \Bob
 ,
@@ -516,9 +554,9 @@ Skill
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \ast
 ,
@@ -539,10 +577,10 @@ Skill
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \ast
 ,
@@ -556,9 +594,9 @@ Skill
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \ast
 ,
@@ -586,9 +624,9 @@ c_
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \ast
 ,
@@ -612,9 +650,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 sees
-}
+}}
 (
 \Bob
 ,
@@ -629,9 +667,9 @@ Skill
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \ast
 ,
@@ -651,9 +689,9 @@ c_
 q
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 sees
-}
+}}
 (
 \Bob
 ,
@@ -668,9 +706,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \ast
 ,
@@ -690,13 +728,13 @@ q \neq
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 recommendation
-}
+}}
 (
 \Bob
 ,
@@ -707,21 +745,21 @@ Skill
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 sees
-}
+}}
 (
 \Bob
 ,
@@ -736,9 +774,9 @@ q \in
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 shown
-}
+}}
 (
 \ast
 ,

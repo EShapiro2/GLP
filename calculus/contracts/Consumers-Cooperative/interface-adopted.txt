@@ -1,9 +1,9 @@
 Interface pragmas
-Fee: Bob [Join] <orga> <decider> <votesorga>
+Fee: Bob [Join] <orga> <decider> <votes>
   Decider: Bob asks for your consent to join.
   Codecider: Bob asks for your consent to join.
   Decider [Set fee] <fee>
   Codecider: Decider asks for your consent to set fee.
-  Bob [Pay fee] <fee>
-Sell: Carol [Sell] <frank> <ware>
+  Bob [Pay fee]
+Sell: Carol [Sell] <frank> <dollar> <ware>
   Erin: Carol asks for your consent to sell.

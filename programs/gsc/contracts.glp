@@ -1242,11 +1242,11 @@ ncontract_app([], T, T?).
 ncontract_app([S|Ss], T, [S?|R?]) :- ncontract_app(Ss?, T?, R).
 
 % --- a contract with numbers, syntactically grassroots ---------------------
-% mint(Alice?; d, k, t) | d > t, d <= t + 30 : identity, date(t), +k.bond(Alice, d)
+% mint(Alice?; d, t) | d > t, d <= t + 30 : identity, date(t), +bond(Alice, d)
 % advance(Alice; t, t1) | t1 = t + 1 :      identity, -date(t), +date(t1)
-% swap(Alice?, Bob?; u, d, k, v, d1, k1) :
-%     identity, knows(Bob), -k.bond(u, d), +k1.bond(v, d1)
-%     identity, knows(Alice), -k1.bond(v, d1), +k.bond(u, d)
+% swap(Alice?, Bob?; u, d, v, d1) :
+%     identity, knows(Bob), -bond(u, d), +bond(v, d1)
+%     identity, knows(Alice), -bond(v, d1), +bond(u, d)
 % mature(Alice?, Bob; d, t) | d <= t :
 %     identity, knows(Bob), -bond(Bob, d), +coin(Bob)
 %     identity, date(t), +bond(Bob, d)
@@ -1258,18 +1258,18 @@ procedure nm_bonds(NContract).
 nm_bonds(C?) :-
     nm_base(B),
     ncontract_app(B?,
-      [nschema(mint, [num(d), num(k), num(t)],
+      [nschema(mint, [num(d), num(t)],
                and(gt(num(d), num(t)), le(num(d), plus(num(t), num(30)))),
-         [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
+         [rs(guarded, [atom(bond, [role(1), num(d)])], [],
                       [atom(identity, []), atom(date, [num(t)])], [])]),
        nschema(advance, [num(t), num(t1)], succ(num(t), num(t1)),
          [rs(unguarded, [atom(date, [num(t1)])], [atom(date, [num(t)])], [atom(identity, [])], [])]),
-       schema(swap, [pvar(u), num(d), num(k), pvar(v), num(d1), num(k1)],
-         [rs(guarded, [times(num(k1), atom(bond, [pvar(v), num(d1)]))],
-                      [times(num(k), atom(bond, [pvar(u), num(d)]))],
+       schema(swap, [pvar(u), num(d), pvar(v), num(d1)],
+         [rs(guarded, [atom(bond, [pvar(v), num(d1)])],
+                      [atom(bond, [pvar(u), num(d)])],
                       [atom(identity, []), atom(knows, [role(2)])], []),
-          rs(guarded, [times(num(k), atom(bond, [pvar(u), num(d)]))],
-                      [times(num(k1), atom(bond, [pvar(v), num(d1)]))],
+          rs(guarded, [atom(bond, [pvar(u), num(d)])],
+                      [atom(bond, [pvar(v), num(d1)])],
                       [atom(identity, []), atom(knows, [role(1)])], [])]),
        nschema(mature, [num(d), num(t)], le(num(d), num(t)),
          [rs(guarded,   [atom(coin, [role(2)])], [atom(bond, [role(2), num(d)])],
@@ -1582,30 +1582,31 @@ nm_joint([schema(establish, [],
     nschema(set_date, [num(t)], ge(num(t), num(5)),
        [rs(unguarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])]).
 
-% --- negative: a disjunction -----------------------------------------------
-% mint(Alice?; d, k, t) | d > t or d <= 0 : identity, date(t), +k.bond(Alice, d)
-% A constraint is a conjunction (def:numbers):
-% constraint_not_conjunction(mint, or(gt(num(d), num(t)), le(num(d), num(0)))).
+% --- a disjunction -----------------------------------------------------------
+% mint(Alice?; d, t) | d > t or d <= 0 : identity, date(t), +bond(Alice, d)
+% A constraint is a decidable condition combined by the connectives
+% (def:numbers), so the disjunction is admitted: syntactically grassroots.
 procedure nm_or(NContract).
 nm_or(C?) :-
     nm_base(B),
     ncontract_app(B?,
-      [nschema(mint, [num(d), num(k), num(t)], or(gt(num(d), num(t)), le(num(d), num(0))),
-         [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
+      [nschema(mint, [num(d), num(t)], or(gt(num(d), num(t)), le(num(d), num(0))),
+         [rs(guarded, [atom(bond, [role(1), num(d)])], [],
                       [atom(identity, []), atom(date, [num(t)])], [])]),
        % clock(Alice?; t) : identity, +date(t), which adds the date mint requires (GSC, Section 3.2).
        schema(clock, [num(t)], [rs(guarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).
 
-% --- negative: a product of two value variables ----------------------------
-% mint(Alice?; d, k, t) | d * k <= t : identity, date(t), +k.bond(Alice, d)
-% A constraint is linear (def:numbers):
-% constraint_not_linear(mint, mul(num(d), num(k))).
+% --- a product of two value variables -----------------------------------------
+% mint(Alice?; d, t) | d * t <= 100 : identity, date(t), +bond(Alice, d)
+% A constraint is a decidable condition in the arithmetic of the numbers
+% (def:numbers), so the product is admitted: syntactically grassroots; no
+% implication rests on it, cons_cd reading it with its flag W no (linear.glp).
 procedure nm_nonlinear(NContract).
 nm_nonlinear(C?) :-
     nm_base(B),
     ncontract_app(B?,
-      [nschema(mint, [num(d), num(k), num(t)], le(mul(num(d), num(k)), num(t)),
-         [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
+      [nschema(mint, [num(d), num(t)], le(mul(num(d), num(t)), num(100)),
+         [rs(guarded, [atom(bond, [role(1), num(d)])], [],
                       [atom(identity, []), atom(date, [num(t)])], [])]),
        % clock(Alice?; t) : identity, +date(t), which adds the date mint requires (GSC, Section 3.2).
        schema(clock, [num(t)], [rs(guarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).
@@ -1813,7 +1814,7 @@ nm_added_deleted(C?) :-
                       [atom(identity, [])], [])])], C).
 
 % --- negative: the head and the value variables --------------------------
-% mint(Alice?; 5, k, k) | d > t : identity, date(t), +k.bond(Alice, d)
+% mint(Alice?; 5, k, k) | d > k : identity, date(t), +bond(Alice, d)
 % The head lists the number 5, which is no variable, and k twice, and leaves
 % out d and t, which the atoms and the constraint carry:
 % head_not_variable(mint, num(5)), head_repeated(mint, num(k)),
@@ -1822,8 +1823,8 @@ procedure nm_head(NContract).
 nm_head(C?) :-
     nm_base(B),
     ncontract_app(B?,
-      [nschema(mint, [num(5), num(k), num(k)], gt(num(d), num(t)),
-         [rs(guarded, [times(num(k), atom(bond, [role(1), num(d)]))], [],
+      [nschema(mint, [num(5), num(k), num(k)], gt(num(d), num(k)),
+         [rs(guarded, [atom(bond, [role(1), num(d)])], [],
                       [atom(identity, []), atom(date, [num(t)])], [])]),
        % clock(Alice?; t) : identity, +date(t), which adds the date mint requires (GSC, Section 3.2).
        schema(clock, [num(t)], [rs(guarded, [atom(date, [num(t)])], [], [atom(identity, [])], [])])], C).

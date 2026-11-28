@@ -1,5 +1,5 @@
 Separating Distrust
-Separating Distrust restricts Distrust.
+Separating Distrust weakens Distrust.
 Separating Distrust:0 - | Alice, Bob and Carol are persons.
 Separating Distrust:1 ○ Befriend: Friendship:1 <- ~distrusts(Alice,Bob), ~distrusts(Bob,Alice).
 Separating Distrust:2 ○ | Taking sides.

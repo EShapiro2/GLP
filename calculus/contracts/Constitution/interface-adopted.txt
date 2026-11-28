@@ -1,12 +1,17 @@
 Interface pragmas
-Join: Bob [Join] <orga> <decider> <votesorga>
+Join: Bob [Join] <orga> <decider> <votes>
   Decider: Bob asks for your consent to join.
   Codecider: Bob asks for your consent to join.
-  Voter [Vote of Orga for Join] <bob>
-Leave, Expel: Decider [Expel] <bob> <votesorga>
+  Proposer [Proposal of Orga for Join] <bob>
+  Carol [Vote of Orga for Join]
+Leave, Expel: Decider [Expel] <bob> <votes>
   Codecider: Decider asks for your consent to expel.
-  Voter [Vote of Orga for Expel] <bob>
-  Decider [Officer expel] <bob> <votesorga>
+  Proposer [Proposal of Orga for Expel] <bob>
+  Carol [Vote of Orga for Expel]
+  Decider [Officer expel] <bob> <votes>
   Codecider: Decider asks for your consent to officer expel.
-  Voter [Vote of Orga for Officer expel] <bob>
-Amend: Alice [Amend] <motion> <votes>
+  Proposer [Proposal of Orga for Officer expel] <bob>
+  Carol [Vote of Orga for Officer expel]
+Amend: Alice [Amend] <votes>
+  Proposer [Proposal of Orga for Amend] <alice> <motion>
+  Carol [Vote of Orga for Amend]

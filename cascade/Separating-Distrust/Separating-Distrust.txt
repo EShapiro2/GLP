@@ -7,12 +7,12 @@
 % Schemas: Separating-Distrust.glp beside this file, the full schemas, Distrust's nine, befriend with the two forbidden atoms, printed by calculus/tools/adopt.py "Separating Distrust" from the Logic pragmas and never written by hand; adopt.py --check "Separating Distrust" holds it and cascade/Separating-Distrust/ to what the tools print.  Clause 2 has no schema.
 % Pragmas: the Interface pragmas are Distrust's and Friendship's, Separating Distrust having their acts and adding none; the heading stands with no line under it, vGLP's reader refusing a contract with no heading.
 Separating Distrust
-Separating Distrust restricts Distrust.
+Separating Distrust inherits from Distrust.
 Alice, Bob and Carol are persons.
 1. ○ Befriend: Friendship:1, only if Alice and Bob have not declared distrust of each other.
 2. ○ Taking sides. Alice, whose friend Bob has declared distrust of Carol, will eventually declare distrust of Carol or end her friendship with Bob, unless Bob withdraws the declaration.
 Logic pragmas
-Separating Distrust restricts Distrust.
+Separating Distrust weakens Distrust.
 Alice, Bob and Carol are persons.
 1. ○ Befriend: Friendship:1, only if Alice has not declared distrust of Bob and Bob has not declared distrust of Alice.
 2. ○ Taking sides. Alice, whose friend Bob has declared distrust of Carol, will eventually declare distrust of Carol or end her friendship with Bob, unless Bob withdraws the declaration.

@@ -12,22 +12,22 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \notin c_
 {
 \Alice
@@ -52,11 +52,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -71,11 +71,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -83,17 +83,25 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Bob
@@ -120,13 +128,13 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -139,16 +147,30 @@ c_
 {
 \Bob
 }
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -157,26 +179,42 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
 }
 ,\\
 &
@@ -200,11 +238,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -219,11 +257,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -231,13 +269,17 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -246,13 +288,17 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -263,9 +309,9 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -274,9 +320,9 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -308,9 +354,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -327,9 +373,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -337,13 +383,17 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -352,13 +402,17 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -386,11 +440,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 distrusts
-}
+}}
 (
 \Bob
 )
@@ -408,13 +462,13 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -423,9 +477,9 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -434,16 +488,16 @@ identity
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 distrusts
-}
+}}
 (
 \Bob
 )
@@ -454,9 +508,9 @@ distrusts
 }
  = \emptyset
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -486,18 +540,18 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
 \}
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 distrusts
-}
+}}
 (
 \Bob
 )
@@ -514,9 +568,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -524,20 +578,20 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -546,13 +600,13 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
@@ -563,9 +617,9 @@ friend
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 distrusts
-}
+}}
 (
 \Bob
 )
@@ -593,11 +647,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 distrusts
-}
+}}
 (
 Carol
 )
@@ -615,13 +669,13 @@ c_
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Bob
 )
@@ -630,20 +684,20 @@ friend
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 friend
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 distrusts
-}
+}}
 (
 Carol
 )
@@ -655,16 +709,16 @@ Carol
 &
 \text{provided } 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
 ,
-\mathit{
+\mathit{\detokenize{
 distrusts
-}
+}}
 (
 Carol
 )
@@ -696,9 +750,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 distrusts
-}
+}}
 (
 Carol
 )
@@ -706,13 +760,13 @@ Carol
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 distrusts
-}
+}}
 (
 Carol
 )

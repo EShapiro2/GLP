@@ -1,5 +1,5 @@
 Warded Groups
-Warded Groups extends, restricts and strengthens Groups and Guardians.
+Warded Groups unites Groups and a strengthening of Guardians, and extends and augments the union.
 Alice and Bob are persons, Wendy and Will wards, Grupo a group, Text a message; in clause 1 Wendy is possibly Alice.
 1. ■ A ward's messages. Message: Groups:1, only if Alice is a person. Post: Groups:4 Post, only if Bob is a person. Post own: Groups:4 Post own, only if Alice is a person. Ward message: Wendy may send Text to Bob, provided Wendy is a ward, Wendy is not retired and Wendy and Bob are friends. Ward post: Wendy may send Text to the group Grupo of Alice, provided Wendy is a ward, Wendy is not retired and Wendy is a member of the group Grupo of Alice. Ward post own: Wendy may send Text to the group Grupo of Wendy, provided Wendy is a ward, Wendy is not retired and Wendy is a member of the group Grupo of Wendy.
 2. ■ A ward's group. Create: Groups:2 Create, only if Alice is a person. Close: Groups:2 Close, only if Alice is a person. Ward create: Wendy may create Grupo, provided Wendy is a ward and Wendy is not retired. Ward close: Wendy may close Grupo by leaving it, provided Wendy is a ward and Wendy is not retired. Guardian close: Alice may close the group Grupo of Wendy, provided Alice is a guardian of Wendy.

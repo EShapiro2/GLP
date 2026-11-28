@@ -10,25 +10,28 @@
 %% r by the request; t local to the issuer's role, its date; mint_bond's
 %% gt(d, t) checked by the minter, redeem_bc's le(d, t) by the issuer").
 %% GB.glp's own run waits on GSC's checker reading its numbers.  Written as
-%% GSC writes a contract, u, v and r agent variables, d, d1, k, k1, t and t1
-%% numeric ones:
+%% GSC writes a contract, u, v and r agent variables, d, d1, n, n1, m, t and t1
+%% numeric ones, n, n1 and m naming a coin or a bond, a local state being a
+%% set (GSC 4a9175a):
 %%
 %%   establish(p?)                  :  at p  +identity
 %%   acquaint(p?, q?)               :  at p  identity, +knows(q)
 %%                                     at q  identity, +knows(p)
 %%   dawn(p?)                       :  at p  identity, not dated, +dated, +date(0)
-%%   mint(p? ; k)              :  at p  identity, +k coin(p)
-%%   mint_bond(p? ; d, k, t)        :  at p  identity, date(t), +k bond(p, d)        d > t
+%%   mint(p? ; n)                   :  at p  identity, not coin(p, n), +coin(p, n)
+%%   mint_bond(p? ; d, n, t)        :  at p  identity, date(t), not bond(p, d, n),
+%%                                     +bond(p, d, n)                                 d > t
 %%   advance(p ; t, t1)             :  at p  identity, -date(t), +date(t1)           t1 = t + 1
-%%   swap_cb(p?, q? ; u, k, v, d1, k1) :
-%%                                     at p  identity, knows(q), -k coin(u), +k1 bond(v, d1)
-%%                                     at q  identity, knows(p), -k1 bond(v, d1), +k coin(u)
-%%   redeem_bc(p?, q ; d, r, t)     :  at p  identity, knows(q), -bond(q, d), +coin(r)
-%%                                     at q  identity, date(t), -coin(r), +bond(q, d)  d =< t
+%%   swap_cb(p?, q? ; u, n, v, d1, n1) :
+%%                                     at p  identity, knows(q), -coin(u, n), +bond(v, d1, n1)
+%%                                     at q  identity, knows(p), -bond(v, d1, n1), +coin(u, n)
+%%   redeem_bc(p?, q ; d, n, r, m, t) :
+%%                                     at p  identity, knows(q), -bond(q, d, n), +coin(r, m)
+%%                                     at q  identity, date(t), -coin(r, m), +bond(q, d, n)  d =< t
 %%
 %% mint_bond's t, of an atom the minter's role keeps, is local to that role,
 %% and the constraint gt(d, t), naming it, is checked by the minter's machine;
-%% d and k are bound by the schema-binding and named by the request.  advance
+%% d and n are bound by the schema-binding and named by the request.  advance
 %% is guarded by no role, its t local to its role, of an atom it deletes, and
 %% its t1 given by the constraint once t is bound, so a dated person's machine
 %% advances their date, an unguarded part it opens, whenever it can, without
@@ -39,28 +42,28 @@
 %% play_bonds: alice establishes her identity and takes her first date, and
 %% her machine then advances her date on each own trigger, an unguarded part
 %% it opens, without end.  She mints a bond maturing at 10 while her date is
-%% below it, mint_bond(alice, 10, 1), gt(10, t) checked by her machine at her
-%% date.  She asks to mint a bond maturing at 0, mint_bond(alice, 0, 1), which
+%% below it, mint_bond(alice, 10, 1), bond 1, gt(10, t) checked by her machine at her
+%% date.  She asks to mint a bond maturing at 0, mint_bond(alice, 0, 2), which
 %% gt(0, t) refuses at every date, and her screen shows refused(mint_bond(alice,
-%% 0, 1), alice, unable), the request dropped where her machine is free and
+%% 0, 2), alice, unable), the request dropped where her machine is free and
 %% ready for no part it names (vGLP, Section 5.4, "The compilation").  She
-%% mints two coins, mint(alice, 2), a multiplicity, and a bond maturing
+%% mints two coins, mint(alice, 1) and mint(alice, 2), and a bond maturing
 %% at 1000000, which her date never reaches.  Bob establishes his identity,
 %% mints two coins and asks to come to know alice, the cold call her yes answers; he
 %% swaps a coin of his for each of her bonds, swap_cb, she answering yes.  He
 %% then asks to redeem each bond against a coin of alice's held by her,
-%% redeem_bc(bob, alice, d, alice).  Its class holds swap_cb(alice, bob,
-%% alice, 1, alice, d, 1), the same transaction, a part guarded by alice and
+%% redeem_bc(bob, alice, d, n, alice, 1).  Its class holds swap_cb(alice, bob,
+%% alice, 1, alice, d, n), the same transaction, a part guarded by alice and
 %% bob beside redeem_bc's part guarded by bob; "on an own trigger the agent
 %% proposes, of the class of a pending request, only the parts that request
 %% names" (vGLP #20 Cowork to Code, 2026-10-23 22:09 UTC, item 4; vGLP,
 %% Section 5.4, "The compilation"), so bob's machine proposes the redeem part,
 %% and alice is not asked: her machine votes by its precondition, le(d, t) at
 %% her date.  On the bond maturing at 1000000 it votes no, and bob's screen
-%% shows refused(redeem_bc(bob, alice, 1000000, alice), alice, unable([], [])),
+%% shows refused(redeem_bc(bob, alice, 1000000, 3, alice, 1), alice, unable([], [], ["le(num(d), num(t))"])),
 %% the atoms it lacks and has none, the constraint failing; on the bond
 %% maturing at 10, her date past it, it votes yes, and the redemption commits,
-%% bob holding coin(alice) and alice the bond.  The run does not suspend,
+%% bob holding coin(alice, 1) and alice the bond.  The run does not suspend,
 %% alice's machine advancing her date without end, and is stopped at the
 %% REPL's :limit, its logs' tails unbound.
 %%
@@ -82,24 +85,26 @@ exported procedure play_bonds(Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(
 play_bonds(LA?, LB?, N?) :-
     pair([own([A1], propose(establish(A1?))), wait(holds(identity)),
           own([A2], propose(dawn(A2?))), wait(holds(dated)),
-          own([A3], propose(mint_bond(A3?, 10, 1))), wait(holds(bond(alice, 10))),
-          own([A4], propose(mint_bond(A4?, 0, 1))),
-          own([A5], propose(mint(A5?, 2))), wait(has(coin(alice), 2)),
-          own([A6], propose(mint_bond(A6?, 1000000, 1))), wait(holds(bond(alice, 1000000))),
+          own([A3], propose(mint_bond(A3?, 10, 1))), wait(holds(bond(alice, 10, 1))),
+          own([A4], propose(mint_bond(A4?, 0, 2))),
+          own([A5], propose(mint(A5?, 1))), wait(holds(coin(alice, 1))),
+          own([A7], propose(mint(A7?, 2))), wait(holds(coin(alice, 2))),
+          own([A6], propose(mint_bond(A6?, 1000000, 3))), wait(holds(bond(alice, 1000000, 3))),
           approval(acquaint(bob, alice), yes),
-          approval(swap_cb(bob, alice, bob, 1, alice, 1000000, 1), yes),
-          approval(swap_cb(bob, alice, bob, 1, alice, 10, 1), yes)],
+          approval(swap_cb(bob, alice, bob, 1, alice, 1000000, 3), yes),
+          approval(swap_cb(bob, alice, bob, 2, alice, 10, 1), yes)],
          [own([B1], propose(establish(B1?))), wait(holds(identity)),
-          own([B2], propose(mint(B2?, 2))), wait(has(coin(bob), 2)),
+          own([B2], propose(mint(B2?, 1))), wait(holds(coin(bob, 1))),
+          own([B8], propose(mint(B8?, 2))), wait(holds(coin(bob, 2))),
           own([B3], propose(acquaint(B3?, alice))), wait(holds(knows(alice))),
-          own([B4], propose(swap_cb(B4?, alice, bob, 1, alice, 1000000, 1))),
-          wait(holds(bond(alice, 1000000))),
-          own([B5], propose(swap_cb(B5?, alice, bob, 1, alice, 10, 1))),
-          wait(holds(bond(alice, 10))),
-          own([B6], propose(redeem_bc(B6?, alice, 1000000, alice))),
-          wait(refused(redeem_bc(bob, alice, 1000000, alice), alice, unable([], []))),
-          own([B7], propose(redeem_bc(B7?, alice, 10, alice))),
-          wait(holds(coin(alice)))],
+          own([B4], propose(swap_cb(B4?, alice, bob, 1, alice, 1000000, 3))),
+          wait(holds(bond(alice, 1000000, 3))),
+          own([B5], propose(swap_cb(B5?, alice, bob, 2, alice, 10, 1))),
+          wait(holds(bond(alice, 10, 1))),
+          own([B6], propose(redeem_bc(B6?, alice, 1000000, 3, alice, 1))),
+          wait(refused(redeem_bc(bob, alice, 1000000, 3, alice, 1), alice, unable([], [], ["le(num(d), num(t))"]))),
+          own([B7], propose(redeem_bc(B7?, alice, 10, 1, alice, 1))),
+          wait(holds(coin(alice, 1)))],
          LA, LB, N).
 
 %% alice and bob, each with its dispatcher and scripted person, their networks

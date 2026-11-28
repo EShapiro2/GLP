@@ -6,7 +6,7 @@
 % Last changed: 2026-11-15, adopted from the Calculus (GLP branch Calculus c475902; calculus/MIGRATION.md; Udi's confirmation of the plan): the contract and its Logic pragmas are the Calculus's, written by calculus/tools/adopt.py --write, and the Interface pragmas GSC's, a line for each act, named by the act.  Git holds what the file said before.
 % Schemas: Forwarding.glp beside this file, the full schemas, GKK's and GSG's with sign and forward over item, an item a speech act and a forwarded item signed over, printed by calculus/tools/adopt.py GFP from the Logic pragmas and never written by hand; adopt.py --check GFP holds it and cascade/Forwarding/ to what the tools print.
 Forwarding
-Forwarding extends Friendship.
+Forwarding inherits from Friendship.
 The *author* of an item is its first signer.
 Alice and Bob are persons.
 1. ■ Sign: Alice may create an item by signing it.

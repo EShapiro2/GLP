@@ -1,5 +1,5 @@
 Directory
-Directory extends Rendezvous.
+Directory inherits from Rendezvous.
 A *directory* is a service with a page every person can read.
 Alice, Bob and Carol are persons, Dora a service.
 1. ■ Open directory: Carol may make her service Dora a directory.

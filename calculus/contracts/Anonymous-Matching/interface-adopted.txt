@@ -1,0 +1,4 @@
+Interface pragmas
+Meet: Alice [Meet]
+  Carol: Alice asks for your consent to meet.
+  Alice [Present 2]

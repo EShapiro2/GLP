@@ -1,5 +1,5 @@
 Warded Groups
-Warded Groups extends, restricts and strengthens Groups and Guardians.
+Warded Groups unites Groups and a strengthening of Guardians, and extends and augments the union.
 After w withdraws y from x's g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
 After y closes the group g of z: no longer z is the leader of g, z has no one as a member of the group g and no one is a member of the group g of z.
 Warded Groups:0 - | Alice and Bob are persons, Wendy and Will wards, Grupo a group, Text a message; in clause 1 Wendy is possibly Alice.

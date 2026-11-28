@@ -6,23 +6,23 @@
 % Last changed: 2026-11-16, renamed Feeds with its file (Udi, 2026-11-16, to Calculus #8; calculus/NAMES.txt), the old names below being those of their dates.  2026-11-15, by GFF #6: adopted from the Calculus (branch Calculus of GLP, 79ec48f, calculus/GFF; calculus/MIGRATION.md, Udi confirming it, 2026-11-15), the first line extends and restricts GDO-L, the clauses titled Post and Deliver, Deliver only from a Bob who knows Alice, and clause 3, GDO-L:2 only if Carol knows Alice, the two conditions that were GFF-I's, which is no longer a contract (Udi, 2026-11-15, to GFF #6: 'try to follow calculus let me know if problems'), the Logic pragmas after the clauses, naming the item, and the Interface pragmas named by the adopted titles.  2026-11-07, the predicate pointer, pointer(Bob, Dave) at Alice a Dave-pointer to Bob, named as the clauses and the Pointing tab name it, so that vGLP's reader finds it in the tab's line (Code #25, 12:57 UTC).  2026-11-07, later: the pointers friends have are recorded, befriend adding them and unfriend removing them, every body reading a recorded pointer, the clauses unchanged (Udi, 2026-11-07, to GFF #4: the schemas read the whole contract and do what its preamble says).  2026-11-07, the pointers friendship implies, as GDO-L's preamble says them, read in the schemas' bodies, follow_own gone (Udi, 2026-11-07).  Earlier that day, Carol-pointer and Dave-pointer, as GDO-L's preamble defines them (Udi, 2026-11-07).  Earlier: 2026-11-06, the declaration and Delivery with pointers labeled by persons, 'Carol' (Udi, 2026-11-06, to GFF #3), the acts unchanged; and the Posts tab names its predicate, item, 'the items Alice holds', posted and received alike (Udi, 2026-11-06, to GFF #3; vGLP 5.4, Code #24 10:02 UTC).  2026-11-05, rewritten by GFF #3 Cowork on GDO-L, the clauses as Udi approved them that day (Udi, to GFF #3: 'I think GFF should be based on overlays, GDO and extend it').  The five clauses of 2026-10-28 --- Following Volition, Following via Friend, Delivery with forwarding, Updating --- are gone, and git holds them.
 % Schemas: Feeds.glp beside this file, the full schemas, printed from the Logic pragmas by calculus/tools/adopt.py and never written by hand.
 Feeds
-Feeds extends and restricts Labelled Overlay.
+Feeds inherits from Labelled Overlay.
 A *feed* is named by its author.
 Alice, Bob and Carol are persons, Bob and Carol possibly one person.
 1. ■ Post: Alice has a feed and may post to it an item, created or received.
 2. ■ Deliver: Alice, who has a Carol-pointer to Bob who knows her, receives from Bob every item of Carol's feed that Bob holds.
 3. ■ Labeled point transitive: Labelled Overlay:2, only if Carol knows Alice.
 Logic pragmas
-Feeds extends and restricts Labelled Overlay.
+Feeds extends Labelled Overlay, and weakens it.
 A *feed* is named by its author.
 Alice, Bob and Carol are persons, Item an item, Bob and Carol possibly one person.
 1. ■ Post: Alice may post Item to her feed. Alice has a feed, and the item is created or received.
 2. ■ Deliver: Alice receives from Bob the item Item of Carol's feed, provided Alice has a Carol-pointer to Bob, Bob knows Alice and Bob holds the item Item of Carol's feed.
 3. ■ Labeled point transitive: Labelled Overlay:2, only if Carol knows Alice.
 Logic pragmas.
-Vocabulary: x holds the item t of z's feed = item(x,t,z); x has received the item t of z's feed from y = received(x,t,z,y).
+Vocabulary: x holds the item t of z's feed = item(x,t,z); x has received the item t of z's feed from y = item_from(x,t,z,y); y has delivered the item t of z's feed to x = delivered(y,t,z,x).
 After x posts t to x's feed, which requires x does not hold the item t of x's feed: x holds the item t of x's feed.
-After x receives from y the item t of z's feed, which requires x does not hold the item t of z's feed: x holds the item t of z's feed and x has received the item t of z's feed from y.
+After x receives from y the item t of z's feed, which requires x does not hold the item t of z's feed and y has not delivered the item t of z's feed to x: x holds the item t of z's feed, x has received the item t of z's feed from y and y has delivered the item t of z's feed to x.
 Interface pragmas
 Posts: the items Alice holds.
 Feeds: the items Alice holds, by feed, each once.

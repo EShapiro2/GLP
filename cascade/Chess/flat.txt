@@ -1,0 +1,31 @@
+Chess (flat text)
+Knowledge:0 - | An *identity* is a unique cryptographic key pair.
+Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Chess:0 - | Alice, Bob and Carol are persons, Game a game, Move a move, Board and Next positions, Side, Limit and Made numbers, Day, Today and Due dates.
+Knowledge:0 - | Reflexive: x knows y.
+Knowledge:1 ○ Establish: Alice may Alice has an identity and Alice is a person, provided not Alice has an identity.
+Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2 ■ Acquaint: Alice and Bob may jointly Alice knows Bob and Bob knows Alice, provided Alice is a person and Bob is a person.
+Knowledge:3 ■ Introduce: Alice and Bob may jointly Bob knows Carol, provided Alice is a person, Bob is a person, Carol is a person, Alice knows Bob, Bob knows Alice and Alice knows Carol.
+Friendship:0 - | Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+Friendship:1 ○ Befriend: Alice and Bob may jointly Alice counts Bob as a friend and Bob counts Alice as a friend, provided Alice is a person, Bob is a person, Alice knows Bob, Bob knows Alice, not Alice counts Bob as a friend and not Bob counts Alice as a friend.
+Friendship:1 ○ | Alice and Bob will become friends only if they trust each other.
+Friendship:2 ■ Unfriend: Alice may no longer Alice counts Bob as a friend and no longer Bob counts Alice as a friend, provided Alice is a person and Bob is a person.
+Friendship:3 ○ | Loss of Trust.
+Friendship:3 ○ | Alice will end her friendship with Bob if she ceases to trust him.
+Chess:0 - | The *rules of chess* are the Laws of Chess of FIDE, the International Chess Federation. A *position* is the board with the side to move, the rights to castle and to capture en passant, the positions since the last capture or pawn move and the number of moves made, so that it shows a draw by repetition or by the fifty-move or seventy-five-move rule. The *time limit* of a game is the number of days a player has for each move.
+Chess:0 - | Functions: b is the first position; v is the legality of m on b; c is the position after m on b; s is the side to move of b; v is the mate of b; v is the draw of b; v is the automatic draw of b; n is the moves made on b.
+Chess:1 ■ | Start.
+Chess:1 ■ Start: Alice and Bob may jointly Alice has started Game, Bob has started Game, Alice plays Game against Bob at Board since Day, Bob plays Game against Alice at Board since Day, Alice has the colour 1 in Game, Bob has the colour 2 in Game, Alice has the time limit Limit in Game and Bob has the time limit Limit in Game, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Board is the first position, the current date is Day for Alice, not Alice has started Game and not Bob has started Game.
+Chess:1 ■ Start as black: Alice and Bob may jointly Alice has started Game, Bob has started Game, Alice plays Game against Bob at Board since Day, Bob plays Game against Alice at Board since Day, Alice has the colour 2 in Game, Bob has the colour 1 in Game, Alice has the time limit Limit in Game and Bob has the time limit Limit in Game, provided Alice counts Bob as a friend, Bob counts Alice as a friend, Board is the first position, the current date is Day for Alice, not Alice has started Game and not Bob has started Game.
+Chess:2 ■ | Move.
+Chess:2 ■ Move: Alice may no longer Alice plays Game against Bob at Board since Day, no longer Bob plays Game against Alice at Board since Day, Alice plays Game against Bob at Next since Today and Bob plays Game against Alice at Next since Today, provided Alice has the colour Side in Game, Side is the side to move of Board, 1 is the legality of Move on Board, Next is the position after Move on Board, 0 is the automatic draw of Next and the current date is Today for Alice.
+Chess:2 ■ Drawing move: Alice may no longer Alice plays Game against Bob at Board since Day, no longer Bob plays Game against Alice at Board since Day, Alice has drawn Game with Bob and Bob has drawn Game with Alice, provided Alice has the colour Side in Game, Side is the side to move of Board, 1 is the legality of Move on Board, Next is the position after Move on Board and 1 is the automatic draw of Next.
+Chess:3 ■ Win: Alice may no longer Alice plays Game against Bob at Board since Day, no longer Bob plays Game against Alice at Board since Day and Alice has won Game against Bob, provided Bob has the colour Side in Game, Side is the side to move of Board and 1 is the mate of Board.
+Chess:4 ■ Time: Alice may no longer Alice plays Game against Bob at Board since Day, no longer Bob plays Game against Alice at Board since Day and Alice has won Game against Bob, provided Bob has the colour Side in Game, Side is the side to move of Board, Bob has the time limit Limit in Game, Due is Day plus Limit, the current date is Today for Alice and Today is more than Due.
+Chess:5 ■ Resign: Alice may no longer Alice plays Game against Bob at Board since Day, no longer Bob plays Game against Alice at Board since Day and Bob has won Game against Alice.
+Chess:6 ■ | Draw.
+Chess:6 ■ Draw: Alice and Bob may jointly no longer Alice plays Game against Bob at Board since Day, no longer Bob plays Game against Alice at Board since Day, Alice has drawn Game with Bob and Bob has drawn Game with Alice, provided Made is the moves made on Board and Made is more than 1.
+Chess:6 ■ Claim draw: Alice may no longer Alice plays Game against Bob at Board since Day, no longer Bob plays Game against Alice at Board since Day, Alice has drawn Game with Bob and Bob has drawn Game with Alice, provided Alice has the colour Side in Game, Side is the side to move of Board and 1 is the draw of Board.
+Chess:7 ○ | Fair play.
+Chess:7 ○ | Alice will choose each of her moves herself, with no help from a chess engine.

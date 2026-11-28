@@ -1,0 +1,4 @@
+Interface pragmas
+Join: Bob [Join] <orga> <decider>
+  Decider: Bob asks for your consent to join.
+  Codecider: Bob asks for your consent to join.

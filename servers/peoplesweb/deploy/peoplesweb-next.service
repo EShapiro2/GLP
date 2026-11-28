@@ -1,0 +1,8 @@
+# Builds the test site, peoplesweb.org/next, when the branch Website-site has moved (deploy/next.sh).  Run each minute by peoplesweb-next.timer, and at once by `systemctl start peoplesweb-next.service`.  It does not wait for the sweep: when the sweep holds the lock, this run is skipped and ends cleanly, the sweep building /next itself.
+[Unit]
+Description=peoplesweb.org/next on each push to Website-site
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/flock -n -E 0 /run/peoplesweb-sweep.lock sh /srv/glp/servers/peoplesweb/deploy/next.sh

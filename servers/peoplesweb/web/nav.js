@@ -1,5 +1,5 @@
 // The site's one menu bar, the same on every page (Udi, 2026-11-12, to GSA
-// #5): the site's name, The Grassroots Project, the five tabs --- Home, Contracts, Papers, Projects
+// #5): the site's name, The Grassroots Sphere, the five tabs --- Home, Contracts, Papers, Projects
 // and How it works --- and the search.  A page holds <header id="bar"
 // data-tab="..."> and loads this file after it; data-tab names the tab the
 // page is under, and setTab(name) changes it, as index.html does when it
@@ -13,6 +13,8 @@
   const TABS = [['home', 'Home', './'], ['contracts', 'Contracts', './#contracts'], ['papers', 'Papers', './#papers'],
                 ['projects', 'Projects', './#projects'], ['how', 'How it works', 'how.html'], ['feedback', 'Feedback', 'feedback.html']];
   const TEST = /\/next\//.test(location.pathname);
+  // The Villagers site, under /villagers (tools/build.py, VILLAGERS_DIR), which the bar names.
+  const VILL = /\/villagers\//.test(location.pathname);
   document.head.insertAdjacentHTML('beforeend', `<style>
 #bar{position:sticky;top:0;z-index:10;background:rgba(245,245,247,.82);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-bottom:1px solid rgba(0,0,0,.06);font:15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .bar-in{max-width:1120px;margin:0 auto;padding:8px 24px;display:flex;align-items:center;gap:6px 18px}
@@ -35,7 +37,7 @@
 </style>`);
   const bar = document.getElementById('bar');
   bar.insertAdjacentHTML('afterbegin', `<div class="bar-in">
-  <a class="bar-logo" href="./" data-t="home"><span class="mark"></span><span>The Grassroots Project</span>${TEST ? '<span class="test" title="The test site: what it shows is not yet on the live site">Test</span>' : ''}</a>
+  <a class="bar-logo" href="./" data-t="home"><span class="mark"></span><span>The Grassroots Sphere</span>${TEST ? '<span class="test" title="The test site: what it shows is not yet on the live site">Test</span>' : ''}${VILL ? '<span class="test" title="The contracts and the paper of Villagers alone">Villagers</span>' : ''}</a>
   <nav class="bar-tabs">${TABS.map(([t, name, href]) => `<a href="${href}" data-t="${t}">${name}</a>`).join('')}</nav>
   <div class="bar-search"><svg width="14" height="14" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7" stroke="#000" stroke-width="2.4" fill="none"/><path d="M15.5 15.5L21 21" stroke="#000" stroke-width="2.4" stroke-linecap="round"/></svg><input id="q" placeholder="Search contracts" autocomplete="off" aria-label="Search contracts"></div>
 </div>`);

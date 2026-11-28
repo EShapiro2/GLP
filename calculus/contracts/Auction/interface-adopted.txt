@@ -1,0 +1,8 @@
+Interface pragmas
+Call: Alice [Call] <trip>
+Bid: Bob [Bid]
+Award: Alice [Award] [Close]
+Arrive: Alice [Arrive]
+  Bob [Driver arrive]
+Cancel: Alice [Cancel]
+Withdraw: Alice [Withdraw]

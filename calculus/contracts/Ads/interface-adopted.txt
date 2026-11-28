@@ -1,0 +1,4 @@
+Interface pragmas
+Posting: Bob [Post] <ad>
+  Alice [Pass]
+Viewing and clicking: Alice [View] [Click]

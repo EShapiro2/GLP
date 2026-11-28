@@ -1,0 +1,7 @@
+F: Field
+Orga is a person, Area, Root and Side numbers.
+1. ■ Fence: Orga may fence the side Side, provided Orga has the field at the number Area, Root is the root of Area and Side is at most Root.
+Logic pragmas.
+Vocabulary: z has the field at the number n = field(z,n); n is the root of m = root(n,m); z has fenced the side n = fenced(z,n).
+Functions: n is the root of m.
+After z fences the side n: z has fenced the side n.

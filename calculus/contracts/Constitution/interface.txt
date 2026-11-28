@@ -2,35 +2,40 @@ Constitution
 1. ○ Establish.  Alice may establish an identity once.
 2. ■ Acquaint.  Alice and Bob may jointly come to know each other.
 3. ■ Introduce.  Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-4. ■ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
+4. ○ Befriend.  Alice and Bob, who trust each other and are not friends, may jointly become friends.
 5. ■ Person unfriend.  Alice may end her friendship with Bob.
-6. ■ Enter.  Alice may create an organisation, Carol, and establish Carol's identity by choosing Carol's key pair, and Carol must consent.
-7. ■ Appoint.  Those who decide for Carol may make Bob, a friend of an officer of Carol, an officer and a friend of Carol, with the consent of Bob, only if Bob is a participant; the decision names his role.
-8. ■ Resign.  Bob may end his guardianship of Carol.
-9. ■ End officer.  Those who decide for Carol, other than Bob, may end Bob's guardianship.
-10. ■ Officer unfriend.  Bob may end his friendship with Carol, which ends his guardianship.
-11. ■ Organisation acquaint.  Carol, an organisation of Alice, and Bob may jointly come to know each other.
-12. ■ Organisation befriend.  Carol may enter a relation with Bob with the consent of Bob and Alice, provided Carol and Bob know each other and Alice and Bob are friends.
-13. ■ Organisation end.  Carol, Bob or Alice may end the relation of Bob and Carol.
-14. ■ Unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
-15. ■ Organisation unfriend.  Carol, Bob or Alice may end the relation of Bob and Carol.
-16. ■ Organisations acquaint.  Carol, an organisation of Alice, and Dave, an organisation of Bob, may jointly come to know each other.
-17. ■ Organisations befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
-18. ■ Organisations of one officer befriend.  Carol may enter a relation with Dave with the consent of Dave, Alice and Bob, provided Carol and Dave know each other, Alice knows Dave and is a friend of Bob, Alice and Bob possibly one person.
-19. ■ Retire.  Those who decide for Carol may retire Carol; every guardianship and relation of Carol then ends and Carol can take no act.
-20. ■ Found.  An organisation may create Orga (Guardians:1) with the consent of Alice; Alice is then its first officer, and Orga must consent.
+6. ■ Found.  Alice may create an organisation, Orga, and establish Orga's identity by choosing Orga's key pair, and Orga must consent.
+7. ■ Appoint.  Those who decide for Orga may make Bob, a friend of an officer of Orga, an officer and a friend of Orga, with the consent of Bob, only if Bob is a participant; the decision names his role.
+8. ■ Resign.  Bob may end his guardianship of Orga.
+9. ■ End officer.  Those who decide for Orga, other than Bob, may end Bob's guardianship.
+10. ■ Officer unfriend.  Bob may end his friendship with Orga, which ends his guardianship.
+11. ■ Organisation acquaint.  Orga, an organisation of Alice, and Bob may jointly come to know each other.
+12. ■ Organisation befriend.  Orga may enter a relation with Bob with the consent of Bob and Alice, provided Orga and Bob know each other and Alice and Bob are friends.
+13. ■ Organisation end.  Orga, Bob or Alice may end the relation of Bob and Orga.
+14. ■ Unfriend.  Orga, Bob or Alice may end the relation of Bob and Orga.
+15. ■ Organisation unfriend.  Orga, Bob or Alice may end the relation of Bob and Orga.
+16. ■ Organisations acquaint.  Orga, an organisation of Alice, and Will, an organisation of Bob, may jointly come to know each other.
+17. ■ Organisations befriend.  Orga may enter a relation with Will with the consent of Will, Alice and Bob, provided Orga and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+18. ■ Organisations of one officer befriend.  Orga may enter a relation with Will with the consent of Will, Alice and Bob, provided Orga and Will know each other, Alice knows Will and is a friend of Bob, Alice and Bob possibly one person.
+19. ■ Retire.  Those who decide for Orga may retire Orga; every guardianship and relation of Orga then ends and Orga can take no act.
+20. ■ Found by an organisation.  Alice, or an organisation with the consent of Alice, may create Orga (Guardians:1); Alice is then its first officer, and Orga must consent.
 21. ■ Propose.  An officer, or a person the bylaws name, may propose an act of Orga.
 22. ■ Vote.  Those who decide the act may vote on it.
 23. ■ Act.  An officer the bylaws name for the act may take it for Orga after the votes decide it according to the bylaws.
 24. ■ Join.  Bob may become a participant of Orga with the consent of those who decide for Orga, only if the members decide it.
-25. ■ Vote of Orga for Join.  Voter may vote on whether Bob becomes a participant of Orga in Orga, provided Voter is a member of Orga and Orga knows Bob.
-26. ■ Leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds, only if Bob or the members decide it.
-27. ■ Officer leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds, only if Bob or the members decide it.
-28. ■ Expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds, only if Bob or the members decide it.
-29. ■ Vote of Orga for Expel.  Voter may vote on whether Orga ends Bob's participation in Orga in Orga, provided Voter is a member of Orga and Orga knows Bob.
-30. ■ Officer expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds, only if Bob or the members decide it.
-31. ■ Vote of Orga for Officer expel.  Voter may vote on whether Orga ends Bob's participation and Bob's office in Orga in Orga, provided Voter is a member of Orga and Orga knows Bob.
-32. ■ Amend.  Those who decide it may amend the bylaws, only if the members decide it, and the amended bylaws are egalitarian.
+25. ■ Proposal of Orga for Join.  Proposer may propose whether Bob becomes a participant of Orga in Orga, provided Proposer is an officer of Orga, the bylaws of Orga entitle Proposer to propose motions and Orga knows Bob.
+26. ■ Vote of Orga for Join.  Carol may vote on whether Bob becomes a participant of Orga in Orga, provided Carol is entitled to vote on whether Bob becomes a participant of Orga in Orga, Orga knows Bob, Carol is a member of Orga and Orga has whether Bob becomes a participant of Orga proposed.
+27. ■ Leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds, only if Bob or the members decide it.
+28. ■ Officer leave.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds, only if Bob or the members decide it.
+29. ■ Expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds, only if Bob or the members decide it.
+30. ■ Proposal of Orga for Expel.  Proposer may propose whether Orga ends Bob's participation in Orga in Orga, provided Proposer is an officer of Orga, the bylaws of Orga entitle Proposer to propose motions and Orga knows Bob.
+31. ■ Vote of Orga for Expel.  Carol may vote on whether Orga ends Bob's participation in Orga in Orga, provided Carol is entitled to vote on whether Orga ends Bob's participation in Orga in Orga, Orga knows Bob, Carol is a member of Orga and Orga has whether Orga ends Bob's participation in Orga proposed.
+32. ■ Officer expel.  Either Bob or those who decide for Orga may end Bob's participation, and with it every role he holds, only if Bob or the members decide it.
+33. ■ Proposal of Orga for Officer expel.  Proposer may propose whether Orga ends Bob's participation and Bob's office in Orga in Orga, provided Proposer is an officer of Orga, the bylaws of Orga entitle Proposer to propose motions and Orga knows Bob.
+34. ■ Vote of Orga for Officer expel.  Carol may vote on whether Orga ends Bob's participation and Bob's office in Orga in Orga, provided Carol is entitled to vote on whether Orga ends Bob's participation and Bob's office in Orga in Orga, Orga knows Bob, Carol is a member of Orga and Orga has whether Orga ends Bob's participation and Bob's office in Orga proposed.
+35. ■ Amend.  Those who decide it may amend the bylaws, only if the members decide it, and the amended bylaws are egalitarian.
+36. ■ Proposal of Orga for Amend.  Proposer may propose whether Alice amends the bylaws of Orga as Motion says in Orga, provided Proposer is an officer of Orga, the bylaws of Orga entitle Proposer to propose motions and Orga knows Alice.
+37. ■ Vote of Orga for Amend.  Carol may vote on whether Alice amends the bylaws of Orga as Motion says in Orga, provided Carol is entitled to vote on whether Alice amends the bylaws of Orga as Motion says in Orga, Orga knows Alice, Carol is a member of Orga and Orga has whether Alice amends the bylaws of Orga as Motion says proposed.
 Pragmas
 Establish: Alice [Establish]
 Acquaint: Alice [Acquaint] <bob>
@@ -40,7 +45,7 @@ Introduce: Alice [Introduce]
 Befriend: Alice [Befriend]
   Bob: Alice asks for your consent to befriend.
 Person unfriend: Alice [Person unfriend]
-Enter: Alice [Enter] <carol>
+Found: Alice [Found] <orga> <role>
 Appoint: Bob [Appoint] <role>
   Decider: Bob asks for your consent to appoint.
   Codecider: Bob asks for your consent to appoint.
@@ -48,40 +53,45 @@ Resign: Bob [Resign]
 End officer: Decider [End officer] <bob>
   Codecider: Decider asks for your consent to end officer.
 Officer unfriend: Bob [Officer unfriend]
-Organisation acquaint: Carol [Organisation acquaint] <bob>
-  Bob: Carol asks for your consent to organisation acquaint.
-Organisation befriend: Carol [Organisation befriend]
-  Bob: Carol asks for your consent to organisation befriend.
-  Alice: Carol asks for your consent to organisation befriend.
-Organisation end: Carol [Organisation end]
+Organisation acquaint: Orga [Organisation acquaint] <bob>
+  Bob: Orga asks for your consent to organisation acquaint.
+Organisation befriend: Orga [Organisation befriend]
+  Bob: Orga asks for your consent to organisation befriend.
+  Alice: Orga asks for your consent to organisation befriend.
+Organisation end: Orga [Organisation end]
 Unfriend: Bob [Unfriend]
-Organisation unfriend: Alice [Organisation unfriend] <carol> <bob>
-Organisations acquaint: Carol [Organisations acquaint] <dave>
-  Dave: Carol asks for your consent to organisations acquaint.
-Organisations befriend: Carol [Organisations befriend] <bob>
-  Dave: Carol asks for your consent to organisations befriend.
-  Alice: Carol asks for your consent to organisations befriend.
-  Bob: Carol asks for your consent to organisations befriend.
-Organisations of one officer befriend: Carol [Organisations of one officer befriend]
-  Dave: Carol asks for your consent to organisations of one officer befriend.
-  Alice: Carol asks for your consent to organisations of one officer befriend.
+Organisation unfriend: Alice [Organisation unfriend] <orga> <bob>
+Organisations acquaint: Orga [Organisations acquaint] <will>
+  Will: Orga asks for your consent to organisations acquaint.
+Organisations befriend: Orga [Organisations befriend] <bob>
+  Will: Orga asks for your consent to organisations befriend.
+  Alice: Orga asks for your consent to organisations befriend.
+  Bob: Orga asks for your consent to organisations befriend.
+Organisations of one officer befriend: Orga [Organisations of one officer befriend]
+  Will: Orga asks for your consent to organisations of one officer befriend.
+  Alice: Orga asks for your consent to organisations of one officer befriend.
 Retire: Decider [Retire]
   Codecider: Decider asks for your consent to retire.
-Found: Gov [Found] <orga> <alice> <role>
-  Alice: Gov asks for your consent to found.
+Found by an organisation: Alice [Found by an organisation] <orga> <gov> <role>
+  Gov: Alice asks for your consent to found by an organisation.
 Propose: Bob [Propose] <motion>
-Vote: Bob [Vote] <motion>
-Act: Alice [Act] <motion> <votes>
-Join: Bob [Join] <orga> <decider> <votesorga>
+Vote: Bob [Vote]
+Act: Alice [Act]
+Join: Bob [Join] <orga> <decider> <votes>
   Decider: Bob asks for your consent to join.
   Codecider: Bob asks for your consent to join.
-Vote of Orga for Join: Voter [Vote of Orga for Join] <bob>
+Proposal of Orga for Join: Proposer [Proposal of Orga for Join] <bob>
+Vote of Orga for Join: Carol [Vote of Orga for Join]
 Leave: Bob [Leave]
 Officer leave: Bob [Officer leave]
-Expel: Decider [Expel] <bob> <votesorga>
+Expel: Decider [Expel] <bob> <votes>
   Codecider: Decider asks for your consent to expel.
-Vote of Orga for Expel: Voter [Vote of Orga for Expel] <bob>
-Officer expel: Decider [Officer expel] <bob> <votesorga>
+Proposal of Orga for Expel: Proposer [Proposal of Orga for Expel] <bob>
+Vote of Orga for Expel: Carol [Vote of Orga for Expel]
+Officer expel: Decider [Officer expel] <bob> <votes>
   Codecider: Decider asks for your consent to officer expel.
-Vote of Orga for Officer expel: Voter [Vote of Orga for Officer expel] <bob>
-Amend: Alice [Amend] <motion> <votes>
+Proposal of Orga for Officer expel: Proposer [Proposal of Orga for Officer expel] <bob>
+Vote of Orga for Officer expel: Carol [Vote of Orga for Officer expel]
+Amend: Alice [Amend] <votes>
+Proposal of Orga for Amend: Proposer [Proposal of Orga for Amend] <alice> <motion>
+Vote of Orga for Amend: Carol [Vote of Orga for Amend]

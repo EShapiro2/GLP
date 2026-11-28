@@ -48,7 +48,7 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 | Liquid DAO | GCE | `programs/gce/ldao/LDAO.txt` | 4 lines differ (owner 2, ours 2) | 4 |
 | Local Overlay | GRH | `programs/lbm/GDO-LB.txt` | 12 lines differ (owner 6, ours 6) | 12 |
 | Lodging | GO | `programs/go/GNL.txt` | 8 lines differ (owner 4, ours 4) | 8 |
-| Marketplace | GO | `programs/go/GNM.txt` | 6 lines differ (owner 3, ours 3) | 6 |
+| Community Market | GO | `programs/go/GNM.txt` | 6 lines differ (owner 3, ours 3) | 6 |
 | Mutual Credit | GO | `programs/go/MCS.txt` | 8 lines differ (owner 4, ours 4) | 8 |
 | Networked Organisation | GO | `programs/go/GNO.txt` | 4 lines differ (owner 2, ours 2) | 4 |
 | Notes | GSC | `programs/gsc/Notes.txt` | 2 lines differ (owner 1, ours 1) | 2 |
@@ -426,12 +426,12 @@ Printed by `python3 tools/owners.py` from `rev/` and GLP at origin/main (`8f1f1f
 - ours: 5. ■ Raise: Networked Organisation:2, only before checkout, and by Alice only if she is checked in.
 - ours: 6. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the stay after checkout.
 
-### Marketplace
+### Community Market
 
 - owner: GNM: Network Marketplace
 - owner: GNM extends GNO and GDO (GRH, Grassroots Ride-Hailing, in preparation) and restricts Rec.
-- ours: Marketplace
-- ours: Marketplace extends Networked Organisation and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
+- ours: Community Market
+- ours: Community Market extends Community Network and Overlay (GRH, Grassroots Ride-Hailing, in preparation) and restricts Recommendations.
 
 - owner: 5. ◆ Recommend: Rec:1, where Alice recommends Bob for the good after delivery.
 - ours: 5. ◆ Recommend: Recommendations:1, where Alice recommends Bob for the good after delivery.

@@ -1,0 +1,52 @@
+# The texts Udi called Claudese, each "wrong", and the text he approved in its place, "right".
+# check.py --test fails a wrong text that passes and a right text that fails.  One text a line:
+# wrong|right <TAB> text <TAB> source.
+wrong	If they instantiate it differently, an act of C₀ of two of a kind is also an act of one of each kind.	Udi, 2026-11-21 20:01 UTC, Calculus: "this is Claudese", "kind is Claudese"
+wrong	Community Network instantiates Backed Community with its community for a community, composes it with Organisation and Denominated Currencies, and restricts, strengthens and extends the composition.	Udi, 2026-11-20 22:29 UTC, GO: "with its community for a community - are you sick?"
+right	Community Network extends Backed Community and Organisation, and restricts and strengthens them.	Udi, 2026-11-20 23:15 UTC, GO, approved
+wrong	The two differ in kind.	claudese.md, "differs in kind", inflected
+wrong	The central bank's bylaws for the bylaws.	Udi, "with central bank bylaws for the bylaws - no way, this is broken English"
+right	we need to define precisely what is a contract, and then define operations	Udi, 2026-11-22 12:48 UTC, Calculus discussion
+wrong	We cited it because its demand is ours: test the deployed specification, with no surrogate.	Udi, 2026-11-22 16:45 UTC, sGLP rebuttal
+wrong	The demands of the specification are met by the run.	like Udi's of 2026-11-22 16:45 UTC
+right	We cited it because its requirement is ours: test the deployed specification, with no surrogate.	Udi, 2026-11-22 16:45 UTC, section 41
+wrong	Any other distribution changes only the draw of an activation time, and not the language (Section 7).	Udi, 2026-11-22 16:55 UTC, sGLP rebuttal
+wrong	Supporting another distribution requires changing only how an activation time is drawn; the language does not change (Section 7).	Udi, 2026-11-22 16:55 UTC: "; the language does not change - Claudese!"
+right	Supporting another distribution only requires changing how an activation time is drawn.	Udi, 2026-11-22 16:58 UTC, sGLP rebuttal
+wrong	where n is its clause and its name	Udi, 2026-11-22 22:03-22:05 UTC, Calculus #2: "n is a string? an integeter? a pair of what?"
+wrong	where n is the pair of its clause and its name, as Knowledge:2 Acquaint	Udi, 2026-11-22 22:05 UTC, Calculus #2
+wrong	where n is its label, the clause of its contract and its name, as Knowledge:2 Acquaint	Udi, 2026-11-22 22:05 UTC, Calculus #2: "anti-math Claudese"
+wrong	A yes to a text in chat is not his consent to replace his words in the paper.  A change to his sentence is shown to him as his sentence, marked.  At his yes the paper gets his sentence with that change and nothing else.	Udi, 2026-11-22 23:21 UTC, of Coordination's three sentences for claude.md, Papers, item 6: "No, this is too wordy and in Claudese, try to say it in one short sentnece"
+wrong	which a local state passes or fails	Udi, 2026-11-23 22:58 UTC, Calculus #7: "remember that present tense is Claudese"
+right	which a local state may pass or fail	Udi, 2026-11-23 22:58 UTC, Calculus #7, approved
+wrong	Provenance.  For every clause C of G, each variable of N(C) that occurs in a literal of H+ is in A(C) or occurs in a literal of B+.	Udi, 2026-11-27 22:01 and 22:09 UTC, the Calculus, style guide 41
+right	Agent provenance.  An agent variable in a head atom occurs as an agent of the clause or in a primitive body atom.	Udi, 2026-11-27 22:01 and 22:09 UTC, the Calculus, approved, style guide 41
+wrong	Gamma(C) := (A(C), {{u, v} in A(C) : u differs from v, u:s in B+, v in ag(s)})	Udi, 2026-11-27 22:23 UTC, the Calculus, Section 5, style guide 41
+right	The graph of a clause has its agents as vertices, with an edge between u and v if v occurs in a primitive body atom of u.	Udi, 2026-11-27 22:23 UTC, the Calculus, Section 5, approved, style guide 41
+wrong	Volition.  For every clause C of G, Gamma(C) is connected or each of its connected components has a member of Q.	Udi, 2026-11-27 22:21 UTC, the Calculus, style guide 41
+right	Volition.  A clause whose graph is not connected has a guard in each of its connected components.	Udi, 2026-11-27 22:21 UTC, the Calculus, approved, style guide 41
+wrong	A clause I = H <- x:person, y:person guarded by x, y of a grassroots contract G, with x differing from y and A(I) = {x, y}, is an introductory act of G if: 1. H = H+, and H has literals x:s and y:s' with y in ag(s) and x in ag(s').	Udi, 2026-11-27 22:23 UTC, the Calculus, style guide 41
+right	A clause I of a grassroots contract G is an introductory act of G if: 1. Its agents are x and y, both are its guards, and its body is x:person, y:person.  2. Its head has only atoms, with y in a head atom of x and x in a head atom of y.	Udi, 2026-11-27 22:23 UTC, the Calculus, approved, style guide 41
+wrong	A positive atom is a literal that is not negated.	Udi, 2026-11-27 22:07 UTC, style guide 41
+right	An atom, a negated atom; a literal is an atom or a negated atom.	Udi, 2026-11-27 22:07 UTC, approved, style guide 41
+wrong	A clause agent is an agent of the clause.	Udi, 2026-11-27 22:07 UTC, style guide 41
+wrong	That definition has no notion of agents that are not persons; since the Calculus introduces them, it defines grassroots for persons only.	Udi, 2026-11-27 21:53 UTC, Compiling GC, Section 3, style guide 41
+right	A grassroots protocol is oblivious, and any two sets of its persons that have not interacted can always come to interact.	Udi, 2026-11-27 21:53 UTC, Compiling GC, Section 3, approved, style guide 41
+wrong	Suppose that from some configuration on no attempt of a class [t] is decided, while in every configuration some act of [t] holds with all its guards for [t].	Udi, 2026-11-27 14:08 UTC, to vGLP #27: "Claudese, note it and try again"; the right text, 14:14 UTC, "yes"; reported by vGLP #27., style guide 41
+right	Let a class [t] meet the hypothesis of steadiness (Definition Steady) in a suffix of r'.	Udi, 2026-11-27 14:08 UTC, to vGLP #27: "Claudese, note it and try again"; the right text, 14:14 UTC, "yes"; reported by vGLP #27., approved, style guide 41
+wrong	If the answer is yes, the question waits only while a question with priority over α, answered yes, is pending at q, or while q is blocked, and both end as for the start.	Udi, 2026-11-27 14:20 and 14:22 UTC, to vGLP #27, style guide 41
+right	If q answers yes, its question waits while q has a question with priority over α answered yes pending, or q is blocked.  Such a question is of an attempt that is not stuck, so it closes at q.  An attempt that blocks q closes at q, as shown above, and q comes to be blocked again only finitely often.	Udi, 2026-11-27 14:20 and 14:22 UTC, to vGLP #27, approved, style guide 41
+wrong	Both end, as they do for the start.	Udi, 2026-11-27 14:21 and 14:22 UTC, to vGLP #27, style guide 41
+right	Such a question is of an attempt that is not stuck, so it closes at q.  An attempt that blocks q closes at q, as shown above, and q comes to be blocked again only finitely often.	Udi, 2026-11-27 14:21 and 14:22 UTC, to vGLP #27, approved, style guide 41
+wrong	with H' and B' sets of well-typed literals and Q' a set of agents of its literals, any of the three empty.	Udi, 2026-11-25 23:32 UTC, to Calculus #10, style guide 41
+right	with H' and B' sets of well-typed literals and Q' a set of agents of its literals; any of the three may be empty.	Udi, 2026-11-25 23:32 UTC, to Calculus #10, approved, style guide 41
+wrong	Issue: an act inherited along two lines becomes two acts, and the weaker one is a route; 40 contracts change.	Udi, 2026-11-26 16:56 UTC, to Calculus #10, style guide 41
+right	Issue: an act inherited along two lines becomes two acts, and the act may then be taken under the conditions of one line alone; 40 contracts change.	Udi, 2026-11-26 16:56 UTC, to Calculus #10, approved, style guide 41
+wrong	Solution: the Logic pragmas say them with what the logic has, votes and a clause for each agent; no math and no text changes.	Udi, 2026-11-26 17:50 UTC, to Calculus #10, style guide 41
+right	We write the Logic pragmas of Guardians again, and the logic stays as it is.	Udi, 2026-11-26 17:50 UTC, to Calculus #10, approved, style guide 41
+wrong	An act inherited along two lines is one act, with what both lines added to it.  For example, Warded Groups has Person unfriend of Friendship:2 from Groups and from Guardians, with what each of them added.  Two acts that differ in more are two acts: Rehearsal Rooms has Retire of an organisation and Retire of a ward.	Udi, 2026-11-26 20:48 UTC, to Calculus #10, style guide 41
+right	An act of a contract that two of these contracts inherit from is added once, with the conditions, the consents and the effects that either of them added to it.	Udi, 2026-11-26 20:48 UTC, to Calculus #10, approved, style guide 41
+wrong	Two of these contracts may have one act of a contract they both inherit from, each with what it added to the act.  If the two acts differ only in what was added, they are added as one act, with what both added; otherwise both are added.	Udi, 2026-11-26 20:42 UTC, to Calculus #10, style guide 41
+wrong	Two acts of these contracts that are one act of a contract they both inherit from, each with conditions, consents and effects added, are added as one act, with the additions of both.	Udi, 2026-11-26 20:46 and 20:48 UTC, to Calculus #10, style guide 41
+wrong:udi	Q: Shall I bring the sentence on madGLP fully to IGLP: the conditions of its two theorems, and the smartphone implementation as still in development?	Udi, 2026-11-26 22:06 UTC, to VMAT #4, style guide 41
+right:udi	Q: Shall VMAT say of madGLP what IGLP says?	Udi, 2026-11-26 22:06 UTC, to VMAT #4, approved, style guide 41

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 108 108" role="img" aria-label="The Grassroots mark, Android adaptive icon foreground">
+<!-- The mark of grassroots-mark.svg, copied, scaled by 0.9 about its centre on a
+     108-unit canvas: the globe's diameter is 59.4 units, 55% of the canvas,
+     inside the 61% an adaptive icon's mask never crops.  Keep it in step with
+     grassroots-mark.svg. -->
+<defs><clipPath id="gm-clip-fg"><path d="M50 17 C68.5 16.6 83.4 31 83 50.5 C82.6 68.8 68 83.4 49.4 83 C31 82.5 16.8 68 17.2 49.6 C17.6 31.4 32 17.4 50 17 Z"/></clipPath></defs>
+<g transform="translate(50 50) scale(.9) translate(-50 -50)">
+<g clip-path="url(#gm-clip-fg)">
+<polygon points="0,0 48,0 42,30 24,38 0,34" fill="#2D6BE4"/>
+<polygon points="48,0 100,0 100,22 64,26 42,30" fill="#8B5CD6"/>
+<polygon points="100,22 100,60 80,64 76,46 64,26" fill="#5B8DEF"/>
+<polygon points="42,30 64,26 76,46 58,52 36,50 24,38" fill="#E8A33C"/>
+<polygon points="0,34 24,38 36,50 44,70 30,100 0,100" fill="#1F9AA0"/>
+<polygon points="36,50 58,52 66,72 44,70" fill="#E57A4E"/>
+<polygon points="58,52 76,46 80,64 66,72" fill="#A98BE3"/>
+<polygon points="100,60 100,100 30,100 44,70 66,72 80,64" fill="#2E9E6B"/>
+<path d="M48 0 Q44.2 15.5 42 30 Q33.5 35.2 24 38 Q12 35 0 34 M42 30 Q53 26.6 64 26 Q82 25 100 22 M64 26 Q71.2 35.4 76 46 Q77 55.5 80 64 Q90 61.2 100 60 M24 38 Q31 44.8 36 50 Q47 52.2 58 52 Q67.5 48.2 76 46 M36 50 Q39 60.5 44 70 Q36 85 30 100 M58 52 Q63.2 61.8 66 72 Q73.5 68.8 80 64 M44 70 Q55 72.4 66 72" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M48 0 Q44.2 15.5 42 30 Q33.5 35.2 24 38 Q12 35 0 34 M42 30 Q53 26.6 64 26 Q82 25 100 22 M64 26 Q71.2 35.4 76 46 Q77 55.5 80 64 Q90 61.2 100 60 M24 38 Q31 44.8 36 50 Q47 52.2 58 52 Q67.5 48.2 76 46 M36 50 Q39 60.5 44 70 Q36 85 30 100 M58 52 Q63.2 61.8 66 72 Q73.5 68.8 80 64 M44 70 Q55 72.4 66 72" fill="none" stroke="#1D1D1F" stroke-opacity=".5" stroke-width=".9" stroke-dasharray="2 1.7" stroke-linecap="round"/>
+</g>
+<path d="M50 17 C68.5 16.6 83.4 31 83 50.5 C82.6 68.8 68 83.4 49.4 83 C31 82.5 16.8 68 17.2 49.6 C17.6 31.4 32 17.4 50 17 Z" transform="translate(50 50) scale(.9) translate(-50 -50)" fill="none" stroke="#FFFFFF" stroke-opacity=".85" stroke-width="1.2" stroke-dasharray="2.6 2.2" stroke-linecap="round"/>
+</g>
+</svg>

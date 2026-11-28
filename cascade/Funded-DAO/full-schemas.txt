@@ -1,58 +1,50 @@
 Funded DAO (expanded schemas)
 Knowledge:0 - | An *identity* is a unique cryptographic key pair.
 Knowledge:0 - | A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
-Funded DAO:0 - | Alice, Bob, Carol and Dave are persons, Delos a DAO, Prop a proposal, Votes, Double, Sum and Total numbers, Cond a condition Alice, Bob and Carol agree.
+Funded DAO:0 - | Alice, Bob, Carol and Dave are persons, Delos a DAO, Prop a proposal, Votes, Double, Sum and Total numbers, Cond a condition Alice, Bob and Carol agree, Type and Other types.
 Knowledge:0 - | Reflexive: x knows y.
 Knowledge:1 ○ Establish: identity(Alice), person(Alice) <- ~identity(Alice) guarded by Alice.
 Knowledge:1 ○ | Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- guarded by Alice, Bob.
-Knowledge:3 ■ Introduce: knows(Bob,Carol) <- knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
+Knowledge:2 ■ Acquaint: knows(Alice,Bob), knows(Bob,Alice) <- person(Alice), person(Bob) guarded by Alice, Bob.
+Knowledge:3 ■ Introduce: knows(Bob,Carol) <- person(Alice), person(Bob), person(Carol), knows(Alice,Bob), knows(Bob,Alice), knows(Alice,Carol) guarded by Alice, Bob.
 DAO:0 - | Carol is possibly Alice or Bob.
-DAO:0 - | Environment: p asks x's d to decide by consensus; p asks x's d to decide by a majority.
 DAO:1 ■ Found: steward(Alice,Delos), member(Alice,Delos,Alice), listed(Alice,Alice,Delos) <- ~steward(Alice,Delos) guarded by Alice.
 DAO:2 ■ Join: member(Bob,Delos,Alice), listed(Alice,Bob,Delos) <- steward(Alice,Delos), knows(Alice,Bob), ~member(Bob,Delos,Alice) guarded by Alice, Bob.
 DAO:3 ■ | Proposing.
 DAO:3 ■ Propose: proposed(Carol,Prop,Delos,Alice), proposal(Alice,Prop,Delos) <- member(Carol,Delos,Alice), steward(Alice,Delos), ~proposal(Alice,Prop,Delos) guarded by Carol possibly Alice=Carol.
 DAO:3 ■ Propose own: proposed(Alice,Prop,Delos,Alice), proposal(Alice,Prop,Delos) <- member(Alice,Delos,Alice), steward(Alice,Delos), ~proposal(Alice,Prop,Delos) guarded by Alice.
-DAO:3 ■ Deliver proposal: delivered(Alice,Prop,Delos,Bob), proposal(Bob,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered(Alice,Prop,Delos,Bob).
+DAO:3 ■ Deliver proposal: delivered(Alice,Prop,Delos,Bob), proposal(Bob,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered(Alice,Prop,Delos,Bob), ~proposal(Bob,Prop,Delos).
 DAO:4 ■ | Voting.
 DAO:4 ■ Vote for: voted(Carol,Prop,Delos), vote_for(Alice,Carol,Prop,Delos) <- member(Carol,Delos,Alice), proposal(Carol,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Carol,Prop,Delos) guarded by Carol possibly Alice=Carol.
 DAO:4 ■ Vote own for: voted(Alice,Prop,Delos), vote_for(Alice,Alice,Prop,Delos) <- member(Alice,Delos,Alice), proposal(Alice,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Alice,Prop,Delos) guarded by Alice.
 DAO:4 ■ Vote against: voted(Carol,Prop,Delos), vote_against(Alice,Carol,Prop,Delos) <- member(Carol,Delos,Alice), proposal(Carol,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Carol,Prop,Delos) guarded by Carol possibly Alice=Carol.
 DAO:4 ■ Vote own against: voted(Alice,Prop,Delos), vote_against(Alice,Alice,Prop,Delos) <- member(Alice,Delos,Alice), proposal(Alice,Prop,Delos), steward(Alice,Delos), ~decided(Alice,Prop,Delos), ~voted(Alice,Prop,Delos) guarded by Alice.
-DAO:4 ■ Deliver vote for: delivered_vote(Alice,Carol,Prop,Delos,Bob), vote_for(Bob,Carol,Prop,Delos) <- steward(Alice,Delos), vote_for(Alice,Carol,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_vote(Alice,Carol,Prop,Delos,Bob) possibly Alice=Carol, Bob=Carol.
-DAO:4 ■ Deliver vote against: delivered_vote(Alice,Carol,Prop,Delos,Bob), vote_against(Bob,Carol,Prop,Delos) <- steward(Alice,Delos), vote_against(Alice,Carol,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_vote(Alice,Carol,Prop,Delos,Bob) possibly Alice=Carol, Bob=Carol.
+DAO:4 ■ Deliver vote for: delivered_vote(Alice,Carol,Prop,Delos,Bob), vote_for(Bob,Carol,Prop,Delos) <- steward(Alice,Delos), vote_for(Alice,Carol,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_vote(Alice,Carol,Prop,Delos,Bob), ~vote_for(Bob,Carol,Prop,Delos) possibly Alice=Carol, Bob=Carol.
+DAO:4 ■ Deliver vote against: delivered_vote(Alice,Carol,Prop,Delos,Bob), vote_against(Bob,Carol,Prop,Delos) <- steward(Alice,Delos), vote_against(Alice,Carol,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_vote(Alice,Carol,Prop,Delos,Bob), ~vote_against(Bob,Carol,Prop,Delos) possibly Alice=Carol, Bob=Carol.
 DAO:5 ■ | Deciding.
-DAO:5 ■ Pass: decided(Alice,Prop,Delos), passed(Alice,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), ~consensus(Alice,Delos), vote_for(Alice,>=Votes,Prop,Delos), product(Double,Votes,2), listed(Alice,<Double,Delos), ~decided(Alice,Prop,Delos) guarded by Alice.
-DAO:5 ■ Reject: decided(Alice,Prop,Delos), rejected(Alice,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), ~consensus(Alice,Delos), vote_against(Alice,>=Votes,Prop,Delos), product(Double,Votes,2), listed(Alice,<Double,Delos), ~decided(Alice,Prop,Delos) guarded by Alice.
-DAO:5 ■ Deliver pass: delivered_decision(Alice,Prop,Delos,Bob), passed(Bob,Prop,Delos) <- steward(Alice,Delos), passed(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_decision(Alice,Prop,Delos,Bob).
-DAO:5 ■ Deliver reject: delivered_decision(Alice,Prop,Delos,Bob), rejected(Bob,Prop,Delos) <- steward(Alice,Delos), rejected(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_decision(Alice,Prop,Delos,Bob).
+DAO:5 ■ Pass: decided(Alice,Prop,Delos), passed(Alice,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), vote_for(Alice,>=Votes,Prop,Delos), product(Double,Votes,2), listed(Alice,<Double,Delos), ~decided(Alice,Prop,Delos) guarded by Alice.
+DAO:5 ■ Reject: decided(Alice,Prop,Delos), rejected(Alice,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), vote_against(Alice,>=Votes,Prop,Delos), product(Double,Votes,2), listed(Alice,<Double,Delos), ~decided(Alice,Prop,Delos) guarded by Alice.
+DAO:5 ■ Deliver pass: delivered_decision(Alice,Prop,Delos,Bob), passed(Bob,Prop,Delos) <- steward(Alice,Delos), passed(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_decision(Alice,Prop,Delos,Bob), ~passed(Bob,Prop,Delos).
+DAO:5 ■ Deliver reject: delivered_decision(Alice,Prop,Delos,Bob), rejected(Bob,Prop,Delos) <- steward(Alice,Delos), rejected(Alice,Prop,Delos), listed(Alice,Bob,Delos), ~delivered_decision(Alice,Prop,Delos,Bob), ~rejected(Bob,Prop,Delos).
 DAO:6 ■ | Majority.
-DAO:6 ■ | The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it; while the DAO decides by consensus, clause 7 applies instead.
-DAO:7 ■ | Consensus.
-DAO:7 ■ Pass by consensus: decided(Alice,Prop,Delos), passed(Alice,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), consensus(Alice,Delos), vote_for(Alice,>=Votes,Prop,Delos), listed(Alice,<=Votes,Delos), ~decided(Alice,Prop,Delos) guarded by Alice.
-DAO:7 ■ Reject by consensus: decided(Alice,Prop,Delos), rejected(Alice,Prop,Delos) <- steward(Alice,Delos), proposal(Alice,Prop,Delos), consensus(Alice,Delos), vote_against(Alice,>0,Prop,Delos), ~decided(Alice,Prop,Delos) guarded by Alice.
-DAO:8 ■ | Amending.
-DAO:8 ■ Decide by consensus: consensus(Alice,Delos) <- steward(Alice,Delos), passed(Alice,Prop,Delos), asks_consensus(Alice,Prop,Delos), ~consensus(Alice,Delos) guarded by Alice.
-DAO:8 ■ Decide by a majority: ~consensus(Alice,Delos) <- steward(Alice,Delos), passed(Alice,Prop,Delos), asks_majority(Alice,Prop,Delos), consensus(Alice,Delos) guarded by Alice.
-Notes:0 - | A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+DAO:6 ■ | The steward may pass a proposal only if more than half of the DAO's members at that time have voted for it, and reject it only if more than half have voted against it.
+Notes:0 - | A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Notes:0 - | In clause 2 Carol and Dave are possibly Alice, Bob or one person, in clause 3 Carol is possibly Alice or Bob, and in clause 4 Dave is possibly Alice, Bob or Carol.
-Notes:1 ■ Issue: coin(Alice,Alice,*Sum) <- guarded by Alice.
-Notes:2 ■ Swap: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), ~coin(Bob,Dave,*Total), coin(Alice,Dave,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), coin(Alice,Carol,*Sum), coin(Bob,Dave,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
-Notes:3 ■ Pay: ~coin(Alice,Carol,*Sum), coin(Bob,Carol,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), coin(Alice,Carol,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
-Notes:3+Coins:1 ■ Pay issuer: ~coin(Alice,Bob,*Sum), coin(Bob,Bob,*Sum) <- knows(Alice,Bob), coin(Alice,Bob,*Sum) guarded by Alice.
-Notes:4 ■ | Escrow.
-Notes:4 ■ Deposit: ~coin(Alice,Dave,*Sum), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), coin(Alice,Dave,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Release: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Bob,Dave,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ Return: ~escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum), coin(Alice,Dave,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_coin(Carol,Dave,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
-Notes:4 ■ | Carol will release them only if Cond is met, and return them only if it fails.
+Notes:1 ■ Issue: note(Alice,Alice,Type,*Sum) <- guarded by Alice.
+Notes:2 ■ Swap: ~note(Alice,Carol,Type,*Sum), note(Bob,Carol,Type,*Sum), ~note(Bob,Dave,Other,*Total), note(Alice,Dave,Other,*Total), knows(Bob,Carol), knows(Alice,Dave) <- knows(Alice,Bob), knows(Bob,Alice), note(Alice,Carol,Type,*Sum), note(Bob,Dave,Other,*Total) guarded by Alice, Bob possibly Alice=Carol, Alice=Dave, Bob=Carol, Bob=Dave, Carol=Dave.
+Notes:3 ■ Pay: ~note(Alice,Carol,Type,*Sum), note(Bob,Carol,Type,*Sum), knows(Bob,Carol) <- knows(Alice,Bob), note(Alice,Carol,Type,*Sum) guarded by Alice, Bob possibly Alice=Carol, Bob=Carol.
+Notes:3+Coins:1 ■ Pay issuer: ~note(Alice,Bob,Type,*Sum), note(Bob,Bob,Type,*Sum) <- knows(Alice,Bob), note(Alice,Bob,Type,*Sum) guarded by Alice.
+Notes:4 ○ | Escrow.
+Notes:4 ○ Deposit: ~note(Alice,Dave,Type,*Sum), escrow_note(Carol,Dave,Type,Alice,Bob,Cond,*Sum) <- knows(Alice,Carol), knows(Carol,Alice), knows(Alice,Bob), note(Alice,Dave,Type,*Sum) guarded by Alice, Carol possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Release: ~escrow_note(Carol,Dave,Type,Alice,Bob,Cond,*Sum), note(Bob,Dave,Type,*Sum), knows(Bob,Dave) <- knows(Carol,Bob), knows(Bob,Carol), escrow_note(Carol,Dave,Type,Alice,Bob,Cond,*Sum) guarded by Carol, Bob possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ Return: ~escrow_note(Carol,Dave,Type,Alice,Bob,Cond,*Sum), note(Alice,Dave,Type,*Sum), knows(Alice,Dave) <- knows(Carol,Alice), knows(Alice,Carol), escrow_note(Carol,Dave,Type,Alice,Bob,Cond,*Sum) guarded by Carol, Alice possibly Alice=Dave, Bob=Dave, Carol=Dave.
+Notes:4 ○ | Carol will release them only if Cond is met, and return them only if it fails.
 Coins:0 - | A *coin* is a note that is a unit of its issuer's debt. An *Alice-coin* is a coin issued by Alice.
-Coins:0 - | Kind of note: coin, y-coins for y-notes; its acts keep their names.
-Coins:2 ■ Redeem: ~coin(Alice,Bob), coin(Bob,Bob), ~coin(Bob,Carol), coin(Alice,Carol), knows(Alice,Carol) <- knows(Alice,Bob), coin(Alice,Bob), coin(Bob,Carol) guarded by Alice possibly Alice=Carol, Bob=Carol.
+Coins:2 ■ Redeem: ~note(Alice,Bob,coin,*1), note(Bob,Bob,coin,*1), ~note(Bob,Carol,coin,*1), note(Alice,Carol,coin,*1), knows(Alice,Carol) <- knows(Alice,Bob), note(Alice,Bob,coin,*1), note(Bob,Carol,coin,*1) guarded by Alice possibly Alice=Carol, Bob=Carol.
 Coins:3 ○ | Pricing.
 Coins:3 ○ | Alice will price her offerings in Alice-coins and accept them in payment at those prices.
 Funded DAO:0 - | Dave is possibly Alice, Bob or Carol.
-Funded DAO:1 ■ Fund: ~coin(Carol,Dave,*Sum), dao_coin(Alice,Dave,Delos,*Sum) <- member(Carol,Delos,Alice), steward(Alice,Delos), coin(Carol,Dave,*Sum) guarded by Carol possibly Alice=Carol.
-Funded DAO:2 ■ Grant: ~dao_coin(Alice,Dave,Delos,*Sum), coin(Carol,Dave,*Sum), granted(Alice,Prop,Delos) <- steward(Alice,Delos), passed(Alice,Prop,Delos), proposed(Carol,Prop,Delos,Alice), ~granted(Alice,Prop,Delos), dao_coin(Alice,Dave,Delos,*Sum) guarded by Alice possibly Alice=Carol.
+Funded DAO:1 ■ Fund: ~note(Carol,Dave,coin,*Sum), dao_coin(Alice,Dave,Delos,*Sum) <- member(Carol,Delos,Alice), steward(Alice,Delos), note(Carol,Dave,coin,*Sum) guarded by Carol possibly Alice=Carol.
+Funded DAO:2 ■ Grant: ~dao_coin(Alice,Dave,Delos,*Sum), note(Carol,Dave,coin,*Sum), granted(Alice,Prop,Delos) <- steward(Alice,Delos), passed(Alice,Prop,Delos), proposed(Carol,Prop,Delos,Alice), ~granted(Alice,Prop,Delos), dao_coin(Alice,Dave,Delos,*Sum) guarded by Alice possibly Alice=Carol.
 Funded DAO:3 ○ | Amount.
 Funded DAO:3 ○ | The steward will grant a passed proposal the amount it asks for, as far as the DAO's coins allow.

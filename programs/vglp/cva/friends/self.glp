@@ -21,9 +21,10 @@
 %%   commits.  Meanwhile alice greets herself twice, greet(alice, alice), its
 %%   two roles at her and friend(alice) holding there, friend reflexive: a
 %%   class of one participant, applied at its Propose, adding greeted and
-%%   greeting.  She cheers twice, each cheer deleting one of her two greeted;
-%%   her third cheer finds none, so it is dropped and takes no number; and she
-%%   greets bob, whose machine votes on it.
+%%   greeting, the second adding neither again, a local state being a set
+%%   (Audit #128).  She cheers, deleting greeted; her second cheer finds none,
+%%   so it is dropped and takes no number; and she greets bob, whose machine
+%%   votes on it.
 %%
 %% The types of platform.vglp, written again for the declarations of the
 %% procedures imported from its compiled module.
@@ -49,12 +50,10 @@ play_friends(LA?, LB?, LC?, N?) :-
           own([A3, A4], propose(greet(A3?, A4?))),
           wait(has(greeted, 1)),
           own([A5, A6], propose(greet(A5?, A6?))),
-          wait(has(greeted, 2)),
           own([A7], propose(cheer(A7?))),
-          wait(has(cheered, 1)),
+          wait(holds(cheered)),
           own([A8], propose(cheer(A8?))),
-          wait(has(cheered, 2)),
-          own([A9], propose(cheer(A9?))),
+          wait(refused(cheer(alice), alice, unable)),
           own([A10], propose(greet(A10?, bob)))],
          [approval(befriend(alice, bob), yes),
           wait(known(carol)),

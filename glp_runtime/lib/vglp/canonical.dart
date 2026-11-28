@@ -1741,10 +1741,18 @@ class DeclaredWidget {
 
   static ActCondition? _condition(Term x) {
     if (x is! StructTerm) return null;
-    if (x.functor == 'same' && x.args.length == 2) {
+    if ((x.functor == 'same' || x.functor == 'size') && x.args.length == 2) {
       final k = _int(x.args[0]), j = _int(x.args[1]);
       if (k == null || j == null) return null;
-      return ActCondition('same', '', [k, j]);
+      return ActCondition(x.functor, '', [k, j]);
+    }
+    // `calc(P, E, K)`: the place P that the constraint determines, of the kind K, `num` or `const`, E over `at(K)`, `lit(N)`, `plus`, `minus`, `mul` and `fn(F, Es)`, a function the owner of a value type gives (programs/vglp/cva/compiler/README.md, 43, 44; OSPM, act-schemas-local: "A variable the constraint determines from the variables the schema-binding binds is bound by the schema-binding to the value the constraint gives it, which the proposer's machine computes and the request names").  The platform computes it when the request reaches it (vGLP #35, 2026-11-25 22:59 UTC); the form puts a placeholder there.
+    if (x.functor == 'calc' && x.args.length == 3) {
+      final p = _int(x.args[0]);
+      final e = CalcExpr.of(x.args[1]);
+      final k = _labelConstant(x.args[2]);
+      if (p == null || e == null || (k != 'num' && k != 'const')) return null;
+      return ActCondition('calc', '', [p, e, k]);
     }
     if (x.functor == 'proved' && x.args.length == 4) {
       final q = _labelConstant(x.args[0]), p = _labelConstant(x.args[2]);
@@ -1781,6 +1789,12 @@ class DeclaredWidget {
         final j = _int(a.args[0]), k = _int(a.args[1]);
         if (j == null || k == null) return null;
         out.add((j, k));
+      } else if (a is StructTerm && a.functor == 'cmp' && a.args.length == 2) {
+        // `cmp(F, As)`: a compound value F(A1, ..., Ak) in the atom, each Ai a place, a compound value or `any` (vGLP #35, 2026-11-26 01:20 UTC; vGLP 5.4, "every binding of the variables of the atoms the schema requires there"; GSC, Definition "Schema with values").
+        final f = _labelConstant(a.args[0]);
+        final xs = _condArgs(a.args[1]);
+        if (f == null || xs == null) return null;
+        out.add(CmpArg(f, xs));
       } else if (_labelConstant(a) == 'any') {
         out.add(null);
       } else {
@@ -1937,9 +1951,12 @@ class DeclaredAct {
 }
 
 /// An entry of an act's `Pre` or `Same`: `req(P, As)`, `forb(P, As)`,
-/// `unless(P, As)`, `proved(Q, Ws, P, As)` or `same(K, J)`, by its [kind].  Of
-/// `As`, [args] holds each argument's place: `at(K)` the int K, `grp(J, K)` the
-/// pair `(J, K)`, and `any` null; of `same(K, J)`, the two places.
+/// `unless(P, As)`, `proved(Q, Ws, P, As)`, `same(K, J)` or `size(S, F)`, by
+/// its [kind].  Of `As`, [args] holds each argument's place: `at(K)` the int K,
+/// `grp(J, K)` the pair `(J, K)`, and `any` null; of `same(K, J)`, the two
+/// places; of `size(S, F)`, the set place S and the place F of the field that
+/// gives its size ("The person gives the size of a set variable in a field, a
+/// number", vGLP, VEUI 7db9d2e).
 class ActCondition {
   final String kind;
   final String pred;
@@ -1953,15 +1970,11 @@ class ActCondition {
       {this.proves = '', this.provesArgs = const []});
 
   String get source {
-    if (kind == 'same') return 'same(${args[0]}, ${args[1]})';
-    final as_ = '[${[
-      for (final a in args)
-        a is int
-            ? 'at($a)'
-            : a is (int, int)
-                ? 'grp(${a.$1}, ${a.$2})'
-                : 'any'
-    ].join(', ')}]';
+    if (kind == 'same' || kind == 'size') return '$kind(${args[0]}, ${args[1]})';
+    if (kind == 'calc') {
+      return 'calc(${args[0]}, ${(args[1] as CalcExpr).source}, ${args[2]})';
+    }
+    final as_ = condArgsSource(args);
     if (kind == 'proved') {
       return 'proved(${constantSource(proves)}, '
           '[${[for (final w in provesArgs) constantSource(w)].join(', ')}], '
@@ -1979,7 +1992,8 @@ class ActCondition {
 /// nothing and which the field's widget is told"; programs/vglp/cva/
 /// compiler/README.md, 26).
 class DeclaredField {
-  static const types = {'person', 'key', 'agent', 'text', 'number'};
+  /// `set`, the field of a set variable, its elements (vGLP #32, GLP 90b2cee71); `value`, the field of a variable over the constants in a contract that names a compound value, which takes a ground compound term the GLP reader reads from its text, as bond(10), or else the constant of the text (vGLP #35, vglp35-functions ec7cdc31b; compiler README 45).
+  static const types = {'person', 'key', 'agent', 'text', 'number', 'set', 'value'};
 
   /// Whether [t] is a field's type: one of [types], or a text's type, a
   /// constant naming it.
@@ -2973,4 +2987,87 @@ String printDeclaration(ProcDecl d) {
   final params = d.typeParams.isEmpty ? '' : '(${d.typeParams.join(', ')})';
   return '${prefix}procedure$params ${d.qualifiedName}'
       '(${d.argTypes.map(typeSource).join(', ')}).';
+}
+
+/// An argument `cmp(F, As)` of an atom an act names: the compound value F(A1, ..., Ak), each Ai a place (an int), a group (a pair), a compound value or `any` (null) (vGLP #35, 2026-11-26 01:20 UTC; GSC, Definition "Schema with values").
+class CmpArg {
+  final String functor;
+  final List<Object?> args;
+  const CmpArg(this.functor, this.args);
+
+  /// The places it names, at any depth.
+  Iterable<int> get places sync* {
+    for (final a in args) {
+      if (a is int) {
+        yield a;
+      } else if (a is (int, int)) {
+        yield a.$1;
+        yield a.$2;
+      } else if (a is CmpArg) {
+        yield* a.places;
+      }
+    }
+  }
+
+  /// Whether it names `any` at some depth.
+  bool get hasAny =>
+      args.any((a) => a == null || (a is CmpArg && a.hasAny));
+}
+
+/// The source of the arguments [args] of an atom an act names: `at(K)`, `grp(J, K)`, `cmp(F, As)` or `any`.
+String condArgsSource(List<Object?> args) => '[${[
+      for (final a in args)
+        a is int
+            ? 'at($a)'
+            : a is (int, int)
+                ? 'grp(${a.$1}, ${a.$2})'
+                : a is CmpArg
+                    ? 'cmp(${constantSource(a.functor)}, ${condArgsSource(a.args)})'
+                    : 'any'
+    ].join(', ')}]';
+
+/// The expression `E` of an act's `calc(P, E, K)`: `at(K)`, the value at the place K of the request; `lit(N)`, the number N; `plus`, `minus` and `mul` of two; and `fn(F, Es)`, the function F, which the owner of a value type gives, at the values of Es (programs/vglp/cva/compiler/README.md, 43, 44).  The platform computes it; the form reads it only to print it again.
+class CalcExpr {
+  final String op;
+  final int n;
+  final CalcExpr? l, r;
+
+  /// The function's name and its arguments, of `fn(F, Es)`.
+  final String fn;
+  final List<CalcExpr> es;
+
+  const CalcExpr(this.op,
+      {this.n = 0, this.l, this.r, this.fn = '', this.es = const []});
+
+  static CalcExpr? of(Term t) {
+    if (t is! StructTerm) return null;
+    if ((t.functor == 'at' || t.functor == 'lit') && t.args.length == 1) {
+      final n = DeclaredWidget._int(t.args[0]);
+      return n == null ? null : CalcExpr(t.functor, n: n);
+    }
+    if ((t.functor == 'plus' || t.functor == 'minus' || t.functor == 'mul') &&
+        t.args.length == 2) {
+      final l = of(t.args[0]), r = of(t.args[1]);
+      return l == null || r == null ? null : CalcExpr(t.functor, l: l, r: r);
+    }
+    if (t.functor == 'fn' && t.args.length == 2) {
+      final f = DeclaredWidget._labelConstant(t.args[0]);
+      final xs = DeclaredWidget._items(t.args[1]);
+      if (f == null || xs == null) return null;
+      final es = <CalcExpr>[];
+      for (final x in xs) {
+        final e = of(x);
+        if (e == null) return null;
+        es.add(e);
+      }
+      return CalcExpr('fn', fn: f, es: es);
+    }
+    return null;
+  }
+
+  String get source => switch (op) {
+        'at' || 'lit' => '$op($n)',
+        'fn' => 'fn(${constantSource(fn)}, [${es.map((e) => e.source).join(', ')}])',
+        _ => '$op(${l!.source}, ${r!.source})',
+      };
 }
