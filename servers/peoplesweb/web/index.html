@@ -5,17 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="The Grassroots Project">
-<meta property="og:title" content="The Grassroots Project">
+<meta property="og:site_name" content="The Grassroots Sphere">
+<meta property="og:title" content="The Grassroots Sphere">
 <meta property="og:description" content="Social contracts that run: apps owned and run by the people who use them, on their own phones.">
 <meta property="og:url" content="https://peoplesweb.org/">
 <meta property="og:image" content="https://peoplesweb.org/og.jpg">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="The grassroots contracts on a globe, beside the name of the Grassroots Project">
+<meta property="og:image:alt" content="The grassroots contracts on a sphere, beside the name of the Grassroots Sphere">
 <meta name="twitter:card" content="summary_large_image">
-<title>The Grassroots Project</title>
+<title>The Grassroots Sphere</title>
 <link rel="icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -163,6 +163,7 @@ ol.cl b{font-weight:600}
 .schema summary{padding:9px 14px;font:12.5px var(--mono);list-style:none;display:flex;gap:8px;color:var(--ink);cursor:pointer}
 .schema summary::-webkit-details-marker{display:none}
 .schema summary .fr{margin-left:auto;font:600 11px Inter,sans-serif;color:var(--faint)}
+.schema .imp{padding:2px 14px 10px;font:15px/1.6 'STIX Two Text',Cambria,'Times New Roman',serif;color:var(--ink)}.imp .b{padding-left:2em}.imp .kw{font-style:normal}.imp i{font-style:italic}.imp .lit{white-space:nowrap}
 .schema .say{padding:0 14px 8px;font-size:13.5px;color:var(--mute)}
 table.roles{border-collapse:collapse;width:100%;font-size:13px}
 table.roles th,table.roles td{border-top:1px solid var(--line);padding:7px 14px;text-align:left;vertical-align:top}
@@ -237,7 +238,7 @@ table.roles td.r{font-family:var(--mono);white-space:nowrap}
       <h1>Social contracts that run.</h1>
       <p>Apps owned and run by the people who use them, on their own phones: no company, server or blockchain in the middle. Each app starts as a contract, a few rules in plain English saying who may do what, with whose agreement. Any group can start an app on its own, and separate groups can later join into one. Programs turn the contract into the app, and a theorem guarantees that every app built this way can grow like that, from the bottom up.</p>
     </div>
-    <div class="sh"><h2>Grassroots Contracts</h2><span class="hq"><a href="qr.svg" target="_blank" rel="noopener" title="Scan to open peoplesweb.org"><img src="qr.svg" alt="QR code of peoplesweb.org" width="84" height="84"></a><span id="hint">drag to turn the globe, scroll to zoom</span></span></div>
+    <div class="sh"><h2>Grassroots Contracts</h2><span class="hq"><a href="qr.svg" target="_blank" rel="noopener" title="Scan to open peoplesweb.org"><img src="qr.svg" alt="QR code of peoplesweb.org" width="84" height="84"></a><span id="hint">drag to turn the sphere, scroll to zoom</span></span></div>
     <div class="card" id="mapcard"><svg id="graph"></svg><div id="tip"></div></div>
     <p class="small" style="text-align:center;margin-top:28px">The content of this site is derived from the GLP repository, <a href="https://github.com/EShapiro2/GLP" target="_blank" rel="noopener">https://github.com/EShapiro2/GLP</a>.</p>
   </section>
@@ -303,9 +304,8 @@ const STAGES = [
 /* ---------- help ---------- */
 const HELP = {
   hood: ['Under the hood', `<p>Nobody writes the app by hand. A chain of programs, the <i>cascade</i>, translates the English contract step by step into the code each person's device runs. Each layer is generated from the one above it.</p>`],
-  acts: ['Speech-act schemas', `<p>Each rule becomes one or more <b>speech acts</b>: who takes part, what each must already have, and what each gains or loses.</p>
-    <p><b>?</b> after a role: the act happens only if that person wants it. A role without it is affected without being asked.</p>
-    <p>Small letters (x, n, k, …) are values chosen when acting. <code>&lt;Alice&gt;.n</code> is a name n in Alice's own namespace, such as her group; <code>Alice[listed(*, n)]</code> is everyone Alice lists for n; <code>k.coin(u)</code> is k coins of u.</p>`],
+  acts: ['Speech-act schemas', `<p>Each rule becomes one or more <b>speech acts</b>, each a volition-guarded implication, <i>H</i> ← <i>B</i> guarded by <i>Q</i>, as the Calculus paper writes it: when the body <i>B</i> holds, the act makes the head <i>H</i> hold, if the persons <i>Q</i> want it.  A literal <i>x</i>:<i>s</i> says that the local state of <i>x</i> holds <i>s</i>; ¬<i>x</i>:<i>s</i> that it does not; in the head, <i>x</i>:<i>s</i> adds <i>s</i> to the state of <i>x</i> and ¬<i>x</i>:<i>s</i> removes it.</p>
+    <p>An act guarded by nobody happens without asking anyone.  <i>possibly</i> <i>Alice</i>=<i>Bob</i> after the guards: Alice and Bob may be one person.</p>`],
   // Udi's text, 2026-11-18, to Website #4.
   contract: ['Legal modalities', `<p>Each clause opens with its legal modality:</p>
     <p>■ Enforced: no act of the contract can breach it.<br>◆ Attested: an agent may breach it, and the contract records the breach.<br>○ Undertaken: its performance is the person’s and not the machine’s.</p>
@@ -358,25 +358,40 @@ function citeHtml(P){
 // The contract at the pole, the one written from no other: GKK, Knowledge
 // by the names of calculus/NAMES.txt.
 const ROOT = (D.contracts.find(c => !c.extends.some(p => C[p])) || D.contracts[0]).id;
-const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {}, RING = [], WAY = {};
+const DEPTH = {}, PHI = {}, KIDS = {}, LAT = {}, RING = [], WAY = {}, TAIL = {};
 function depthOf(id){
   if (DEPTH[id] !== undefined) return DEPTH[id];
   const ps = C[id].extends.filter(p => C[p]);
   return DEPTH[id] = ps.length ? 1 + Math.max(...ps.map(depthOf)) : 0;
 }
+// Two layouts are made, the tree under each contract's first parent and the
+// tree under its parent on the ring next above, and the one whose arrows reach
+// least far round the globe is kept: the longest arrow first, then all of them
+// (Udi, 2026-11-25: "feeds and children go through more than half the globe
+// to reach village communication. fix not on the case but also the
+// algorithm").
+function clearLayout(){ for (const T of [PHI, LAT, KIDS, WAY, TAIL]) for (const k in T) delete T[k]; }
 function layout(){
+  const a = layoutWith(0, true); clearLayout();
+  const b = layoutWith(1, true); clearLayout();
+  layoutWith(b[0] < a[0] - 1e-6 || (Math.abs(b[0] - a[0]) <= 1e-6 && b[1] < a[1]) ? 1 : 0);
+}
+function layoutWith(rule, probe){
   D.contracts.forEach(c => depthOf(c.id));
   // The rings' colatitudes: equally spaced from the pole down to near the
   // globe's bottom edge as the first view shows it, tilted by V.tilt (Udi,
   // 2026-11-16, to Website #2: "try spacing layers more equally, not wait for
   // the largest to be on the equator"; until then the fullest ring was on the
   // equator, Udi, 2026-11-08, and the rings below it were crowded).
-  const maxd0 = MAXD(), thMax = Math.acos(-0.93) - V.tilt;
+  // On the Villagers site the last ring is the south pole, where Villagers is
+  // alone (D.south; Udi, 2026-11-25: "the Villagers contract in the south
+  // pole", the contracts it inherits from "starting from north pole").
+  const maxd0 = MAXD(), thMax = D.south ? Math.PI : Math.acos(-0.93) - V.tilt;
   // The first ring half a step further from the pole, where a ring is short.
   for (let d = 0; d <= maxd0; d++) RING[d] = d === 0 ? 0 : thMax * (d + 0.5) / (maxd0 + 0.5);
   // Where to start: each contract in the range of its first parent, the range
   // shared among its children by how many leaves each has below it.
-  D.contracts.forEach(c => { const p = c.extends.find(x => C[x]); if (p) (KIDS[p] = KIDS[p] || []).push(c.id); });
+  D.contracts.forEach(c => { const p = rule ? c.extends.filter(x => C[x]).sort((x, y) => DEPTH[y] - DEPTH[x])[0] : c.extends.find(x => C[x]); if (p) (KIDS[p] = KIDS[p] || []).push(c.id); });
   const leaves = id => (KIDS[id] || []).reduce((n, k) => n + leaves(k), 0) || 1;
   (function place(id, lo, hi){
     PHI[id] = (lo + hi) / 2;
@@ -453,16 +468,28 @@ function layout(){
       }
     }
     return crossings(); };
+  // How far the arrows reach along the rings: the sum, over the arrows not
+  // from the pole, of the distance between their two contracts' places.
+  const reach = () => { const P = place(); let n = 0;
+    for (const [u, v] of EDG) if (DEPTH[u]) n += Math.abs(P[u] - P[v]);
+    return n; };
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   let best = null, bestN = Infinity;
-  for (let t = 0; t < 10; t++){
+  // Since 2026-11-18 (Udi, to Website #4: "the tree structure of contracts
+  // must be clearer, with as little overlap and crossings as possible") each
+  // ring keeps the tree's order, every contract's subtree together under it,
+  // so no arrow from a contract's first parent crosses another; of many orders
+  // of the children, the one whose other arrows cross least is kept, each
+  // arrow's reach along the rings counting too, a fifth of a crossing for
+  // each hundredth of a ring (Udi, 2026-11-25).
+  for (let t = 0; t < 80; t++){
     if (t){ const ord = {}; D.contracts.forEach(c => ord[c.id] = rnd());
       const pos = {}; (function walk(id, lo, hi){ pos[id] = (lo + hi) / 2;
         const ks = (KIDS[id] || []).slice().sort((a, b) => ord[a] - ord[b]), tot = ks.reduce((n, k) => n + leaves(k), 0);
         let x = lo; for (const k of ks){ const w2 = (hi - lo) * leaves(k) / tot; walk(k, x, x + w2); x += w2; } })(ROOT, -1, 1);
       start.forEach((r, d) => Lr[d] = r.slice().sort((a, b) => pos[a] - pos[b]));
     } else start.forEach((r, d) => Lr[d] = r.slice());
-    const n = sweep();
+    const n = crossings() + 20 * reach();
     if (n < bestN){ bestN = n; best = Lr.map(r => r.slice()); }
   }
   best.forEach((r, d) => Lr[d] = r);
@@ -471,11 +498,13 @@ function layout(){
   // needs, up to nearly all the way round (Udi, 2026-11-09: "we can use more
   // than half the globe if needed, not all contracts have to be visible
   // upfront"); then, again and again, each moved halfway to the mean longitude
-  // of its parents and children, a relation that passes more rings weighing
+  // of all its parents and all its children (until 2026-11-25 only its first
+  // parent and the contracts it is first parent of, which left a contract of
+  // several parents far from all but the first; Udi, 2026-11-25), a relation that passes more rings weighing
   // less (GKK, at the pole, has no longitude), the drawing centred, and the
   // gaps restored in the ring's order.  A ring too full even for that sets
   // alternate names on a second row, toward the wider gap beside it.
-  const lim = 170 * Math.PI/180, w = id => 0.33*FS0()*WID(id) + 0.8*FS0();
+  const lim = 170 * Math.PI/180, w = id => 0.31*FS0()*WID(id) + 0.5*FS0();
   const pairs = [];
   for (let d = 1; d <= maxd; d++){
     const ring = Lr[d], R = 265 * Math.sin(RING[d]);
@@ -511,6 +540,9 @@ function layout(){
     for (const v in nx) X[v] -= (lo + hi) / 2;
     spread();
   }
+  if (probe){ let mx = 0, sum = 0;
+    for (const [u, v] of EDG) if (DEPTH[u] && v !== D.south){ const r = Math.abs(WRAP(X[v], X[u]) - X[u]); mx = Math.max(mx, r); sum += r; }
+    return [mx, sum]; }
   // The view: the drawing turned so that the most contracts face the viewer,
   // within 75 degrees of its centre, at the start.
   let off = 0, most = -1;
@@ -543,7 +575,7 @@ function layout(){
   for (const [p, q] of longs){
     const t0 = th0(p), t1 = th0(q), rings = [];
     for (let d = DEPTH[p] + 1; d < DEPTH[q]; d++){
-      const R = 265 * Math.sin(RING[d]), ideal = PHI[p] + (PHI[q] - PHI[p]) * (RING[d] - t0) / (t1 - t0);
+      const R = 265 * Math.sin(RING[d]), ideal = PHI[p] + (WRAP(PHI[q], PHI[p]) - PHI[p]) * (RING[d] - t0) / (t1 - t0);
       const merged = blocked(d), cands = [];
       if (!merged.some(([a, b]) => ideal > a && ideal < b)) cands.push(ideal);
       merged.forEach(([a, b]) => [a, b].forEach(x => { if (Math.abs(x - ideal) < Math.PI/3 && !merged.some(([a2, b2]) => x > a2 + 1e-9 && x < b2 - 1e-9)) cands.push(x); }));
@@ -566,17 +598,151 @@ function layout(){
     route.forEach(([t, ph]) => placed.push([RING.indexOf(t), ph]));
     WAY[`${p}>${q}`] = route;
   }
+  // An arrow that would cross the ellipse of a contract it does not join
+  // goes around it (Udi, 2026-11-18, to Website #4: "the arrow that cross
+  // Organisation could bend around it instead of crossing.  do the same for
+  // similar cases", and "check all and fix"): each arrow in turn, while it
+  // crosses an ellipse, is given a waypoint beside that ellipse, to its left
+  // or right at its colatitude, or above or below it at its longitude,
+  // whichever leaves the arrow crossing fewest ellipses, then swinging least
+  // beyond its two ends, then shortest; the router's waypoints are dropped
+  // too where that is better.  globeFaults() checks the result.
+  const cand = (p, q, way) => { const pts = course(p, q, way), h = hitsOf(p, q, pts), sw = swing(p, q, pts);
+    let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i-1][0], (pts[i][1] - pts[i-1][1]) * Math.sin(pts[i][0]));
+    return {way, n: h.length, h, sw, cost: h.length * 1000 + Math.max(0, sw - 0.05) * 300 + L}; };
+  // The lines of a composition meet at one point on the composing
+  // contract's meridian, a third of the way up from it, and go on to it as
+  // one trunk; each line is routed around the ellipses as an arrow is.
+  D.contracts.forEach(c => { const cm = composed(c); if (!cm) return;
+    const t1 = th0(c.id), tp = Math.max(...cm.ps.map(th0)), tM = t1 - 0.35 * (t1 - tp);
+    cm.ps.forEach(p => TAIL[`${p}>${c.id}`] = [[tM, PHI[c.id]]]); });
+  D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
+    const key = `${p}>${c.id}`, t0 = th0(p), eps = 0.01, t1 = TAIL[key] ? TAIL[key][0][0] : th0(c.id);
+    if (!(t1 > t0 + 2*eps)) return;
+    let best = cand(p, c.id, WAY[key] || []);
+    const bare = cand(p, c.id, []);
+    if (bare.cost < best.cost) best = bare;
+    const around = cur => { const opts = [];
+      const add = (tt, ff) => { if (tt > t0 + eps && tt < t1 - eps){
+        const way = cur.way.filter(x => Math.abs(x[0] - tt) > eps); way.push([tt, ff]); way.sort((x, y) => x[0] - y[0]); opts.push(way); } };
+      for (const [id, t] of cur.h){
+        const [a, b] = ER(id), tc = th0(id), fc = PHI[id], st = Math.sin(tc);
+        for (const m of [4 / 265, 12 / 265]){
+          add(tc, fc - (a + m) / st); add(tc, fc + (a + m) / st);
+          add(tc - b - m, fc); add(tc + b + m, fc);
+          add(t, fc - (a + m) / st); add(t, fc + (a + m) / st); }
+      }
+      // A bow beyond the two ends: drop a waypoint, or hold the farthest
+      // point of the bow at the end's longitude.
+      if (cur.sw > 0.05){
+        cur.way.forEach((_, i) => opts.push(cur.way.filter((_, j) => j !== i)));
+        const pts = course(p, c.id, cur.way), f0 = DEPTH[p] === 0 ? pts[1][1] : pts[0][1], fq = pts[pts.length - 1][1], lo = Math.min(f0, fq), hi = Math.max(f0, fq);
+        let k = 0, w = -1; pts.forEach(([t, f], i) => { const e = Math.max(lo - f, f - hi) * Math.sin(t); if (e > w){ w = e; k = i; } });
+        add(pts[k][0], Math.max(lo, Math.min(hi, pts[k][1]))); }
+      return opts.map(way => cand(p, c.id, way)).sort((x, y) => x.cost - y.cost); };
+    for (let n = 0; n < 24 && (best.n || best.cost > 1e3 || best.sw > 0.05); n++){
+      const rs = around(best);
+      let next = rs[0];
+      // Stuck: two waypoints at once, from the best few of one.
+      if (!next || next.cost >= best.cost)
+        for (const r of rs.slice(0, 12)){ const r2 = around(r)[0]; if (r2 && (!next || r2.cost < next.cost)) next = r2; }
+      if (!next || next.cost >= best.cost) break;
+      best = next;
+    }
+    WAY[key] = best.way;
+  }));
 }
+// A longitude f taken to within half a turn of ref, so that an arrow goes the
+// short way round the globe, never more than half of it (Udi, 2026-11-25:
+// "feeds and children go through more than half the globe to reach village
+// communication. fix not on the case but also the algorithm").
+const WRAP = (f, ref) => ref + ((((f - ref) % (2*Math.PI)) + 3*Math.PI) % (2*Math.PI) - Math.PI);
+// The size of a contract's ellipse on the sphere, in radians east and north,
+// with a margin.
+const ER = id => [(0.31*FS0()*WID(id) + 0.5*FS0() + 3) / 265, ((LINES(id).length > 1 ? 1.6 : 0.85) * FS0() + 3) / 265];
+// The ellipses, other than its own two, that the course pts of the arrow from
+// p to q passes through, each with the colatitude where it enters.
+function hitsOf(p, q, pts){
+  const out = [], seen = new Set();
+  for (const [t, f] of pts) for (const c of D.contracts){ const id = c.id;
+    if (id === p || id === q || DEPTH[id] === 0 || seen.has(id)) continue;
+    const [a, b] = ER(id), dt = t - th0(id);
+    if (Math.abs(dt) > b) continue;
+    let df = (f - PHI[id]) % (2*Math.PI); if (df > Math.PI) df -= 2*Math.PI; if (df < -Math.PI) df += 2*Math.PI;
+    if ((df * Math.sin(th0(id)) / a) ** 2 + (dt / b) ** 2 < 1){ seen.add(id); out.push([id, t]); } }
+  return out;
+}
+// How far, in radians along the sphere, the course swings beyond the
+// longitudes of its two ends: a hook or a loop.
+function swing(p, q, pts, way = []){
+  const f0 = DEPTH[p] === 0 ? pts[1][1] : pts[0][1], fs = [f0, pts[pts.length - 1][1], ...way.map(x => WRAP(x[1], f0))], lo = Math.min(...fs), hi = Math.max(...fs);
+  let w = 0; for (const [t, f] of pts) w = Math.max(w, (lo - f) * Math.sin(t), (f - hi) * Math.sin(t));
+  return w;
+}
+// Every arrow that crosses an ellipse it does not join, or swings beyond its
+// ends by more than lim: the check of the globe.
+function globeFaults(lim = 0.05){
+  const out = [];
+  D.contracts.forEach(c => c.extends.filter(p => C[p]).forEach(p => {
+    // A bend around an ellipse between two contracts on one meridian goes
+    // out to its waypoint; only a bow beyond the waypoints is a fault.
+    const pts = course(p, c.id), h = hitsOf(p, c.id, pts), sw = swing(p, c.id, pts, WAY[`${p}>${c.id}`] || []);
+    if (h.length) out.push(`${p} > ${c.id} crosses ${h.map(x => x[0]).join(', ')}`);
+    if (sw > lim) out.push(`${p} > ${c.id} swings ${sw.toFixed(2)}`); }));
+  return out;
+}
+// The course of the arrow from p to q on the sphere, as [colatitude,
+// longitude] points: through the two contracts and the waypoints between
+// them, its longitude a monotone cubic in its colatitude.
+function course(p, q, way = WAY[`${p}>${q}`] || []){
+  const tail = TAIL[`${p}>${q}`] || [];
+  if (tail.length) way = way.filter(x => x[0] < tail[0][0] - 0.005);
+  const cs = [[th0(p), PHI[p]], ...way.map(x => x.slice()), ...tail.map(x => x.slice()), [th0(q), PHI[q]]];
+  if (DEPTH[p] === 0) cs[0][1] = cs[1][1];
+  for (let i = 1; i < cs.length; i++) cs[i][1] = WRAP(cs[i][1], cs[i-1][1]);
+  if (q === D.south) cs[cs.length - 1][1] = cs[cs.length - 2][1];
+  const n = cs.length, h = [], dl = [], m = [];
+  for (let i = 0; i + 1 < n; i++){ h.push(cs[i+1][0] - cs[i][0] || 1e-9); dl.push((cs[i+1][1] - cs[i][1]) / h[i]); }
+  for (let i = 0; i < n; i++)
+    m.push(i === 0 ? dl[0] : i === n - 1 ? dl[n-2] : dl[i-1] * dl[i] <= 0 ? 0 : (dl[i-1] + dl[i]) / 2);
+  for (let i = 0; i + 1 < n; i++){
+    if (dl[i] === 0){ m[i] = 0; m[i+1] = 0; continue; }
+    const a = m[i] / dl[i], b = m[i+1] / dl[i], r = a*a + b*b;
+    if (r > 9){ const t = 3 / Math.sqrt(r); m[i] = t * a * dl[i]; m[i+1] = t * b * dl[i]; }
+  }
+  const pts = [];
+  for (let i = 0; i + 1 < n; i++){
+    const [t0, f0] = cs[i], [t1, f1] = cs[i+1];
+    const k = Math.max(2, Math.ceil(Math.hypot(t1 - t0, (f1 - f0) * Math.sin((t0 + t1) / 2)) / (Math.PI/180)));
+    for (let j = i ? 1 : 0; j <= k; j++){ const u = j / k, u2 = u*u, u3 = u2*u;
+      const f = (2*u3 - 3*u2 + 1)*f0 + (u3 - 2*u2 + u)*h[i]*m[i] + (-2*u3 + 3*u2)*f1 + (u3 - u2)*h[i]*m[i+1];
+      pts.push([t0 + (t1 - t0) * u, f]); }
+  }
+  return pts;
+}
+
+// The contracts a composition composes, and what the contract does to it.
+function composed(c){
+  const ps = c.extends.filter(p => C[p] && c.rels && c.rels[p] === 'composes'), of = (c.rels_of || []).filter(x => x.of === 'composition');
+  if (ps.length === 1 && of.length && C[of[0].base] && !ps.includes(of[0].base)) ps.unshift(of[0].base);
+  return ps.length >= 2 ? {ps, trunk: of.map(x => x.rel)} : null; }
 // A contract's colatitude: its ring's, and its row's on a ring of two rows.
-const th0 = id => DEPTH[id] === 0 ? 0 : RING[DEPTH[id]] + (LAT[id] || 0);
+const th0 = id => DEPTH[id] === 0 ? 0 : id === D.south ? Math.PI : RING[DEPTH[id]] + (LAT[id] || 0);
 const MAXD = () => Math.max(...Object.values(DEPTH));
-const V = {phi0: 0, tilt: 15 * Math.PI/180, zoom: 1};
+// It opens on the south pole, tilted toward the reader, as Udi's figure of
+// 2026-11-25 shows ("for globes with south pole, show the south pole not the
+// equator upon start").
+const V = {phi0: 0, tilt: (D.south ? -66 : 15) * Math.PI/180, zoom: 1};
 // A phone: the card narrower than 640 pixels.  The view is then cropped to the
 // globe, the names drawn larger so they can be read and tapped, and the key
 // set below the globe (Udi, 2026-11-09).
 const NARROW = () => (($('#mapcard') && $('#mapcard').clientWidth) || innerWidth) < 640;
 // Smaller names and thinner arrows since the 66 contracts (Udi, 2026-11-16).
-const FS0 = () => NARROW() ? 11 : 7.5;
+// Smaller again, and thinner, at Udi's word of 2026-11-18 (to Website #4).
+// One size in the globe's units, on a phone too, and every size scaled with
+// the globe, so that names shrink as it does (Udi, 2026-11-18, to Website #4:
+// "when the globe shrinks fonts remain large, can they shrink with it?").
+const FS0 = () => 5.2;
 // The globe fills the card's width, a sliver to each side (Udi, 2026-11-09):
 // on a wide card a radius of 548 in a view 1120 wide, on a phone 290 in a
 // view 600 wide; a zoom is relative to that.
@@ -585,7 +751,7 @@ const BASEZ = () => (NARROW() ? 290 : 548) / 265;
 const clampZ = z => Math.max(0.5 * BASEZ(), Math.min(2.5 * BASEZ(), z));
 function drawGlobe(){
   const S = 265 * V.zoom, al = V.tilt, maxd = MAXD();
-  const th = id => DEPTH[id] === 0 ? 0 : RING[DEPTH[id]] + (LAT[id] || 0);
+  const th = id => DEPTH[id] === 0 ? 0 : id === D.south ? Math.PI : RING[DEPTH[id]] + (LAT[id] || 0);
   const proj = (t, ph) => { ph -= V.phi0;
     const x = Math.sin(t)*Math.sin(ph), y = Math.cos(t), z = Math.sin(t)*Math.cos(ph);
     return [CX + S*x, CY - S*(y*Math.cos(al) - z*Math.sin(al)), y*Math.sin(al) + z*Math.cos(al)]; };
@@ -596,9 +762,9 @@ function drawGlobe(){
     for (let i = -180; i <= 180; i++){
       const [X, Y, Z] = proj(t, i*Math.PI/180);
       if (Z > 0 && X > -80 && X < GW+80 && Y > -80 && Y < GH+80) run.push(`${X.toFixed(1)},${Y.toFixed(1)}`);
-      else if (run.length){ s += `<polyline points="${run.join(' ')}" fill="none" stroke="#ccd8e2"/>`; run = []; }
+      else if (run.length){ s += `<polyline points="${run.join(' ')}" fill="none" stroke="#ccd8e2" stroke-width="0.6"/>`; run = []; }
     }
-    if (run.length) s += `<polyline points="${run.join(' ')}" fill="none" stroke="#ccd8e2"/>`;
+    if (run.length) s += `<polyline points="${run.join(' ')}" fill="none" stroke="#ccd8e2" stroke-width="0.6"/>`;
   }
   const k = S/265;
   // The solid arrows' outlines, in units of the globe's scale: the shaft's
@@ -608,7 +774,10 @@ function drawGlobe(){
   // relation's outline and its right side the second's; a third relation is a
   // slim arrow of its own outline along the middle, drawn darker (Udi,
   // 2026-11-15, to Website #2).
-  const RELCOL = {extends: '#3b7dd8', restricts: '#d64550', strengthens: '#2a9d6f', relaxes: '#17a5b8', instantiates: '#8b5fd3', composes: '#e39a2d', implements: '#6b7785', amends: '#8d6e63'};
+  // Every operation a colour of its own, no two alike, so the key tells them
+  // apart (Udi, 2026-11-25: "the arrow legend arrow should reflect operation
+  // names", and that it "is dated").
+  const RELCOL = {extends: '#3b7dd8', unites: '#e39a2d', augments: '#2e7d32', weakens: '#d64550', renames: '#8e24aa', lifts: '#00897b', strengthens: '#7cb342', restricts: '#455a64', relaxes: '#17a5b8', instantiates: '#3949ab', composes: '#6d4c41', inherits: '#c2185b', implements: '#6b7785', amends: '#8d6e63'};
   const SOLID = {extends: [0.4, 4.2, 7.5], restricts: [4.2, 0.4, 2.8], strengthens: [3.4, 3.4, 7.5], amends: [2.2, 2.2, 6.5]};
   const solids = rs => rs.length > 1 && rs.every(r => SOLID[r]);
   // The key's arrows, drawn flat in its corner, each a straight shaft and head:
@@ -635,7 +804,9 @@ function drawGlobe(){
   const stroked = (p, q, dash, fill, pad0, pad1, kz = k) => { const [ax, ay, bx, by, ux, uy] = ends(p, q, pad0, pad1), hl = 10*kz, hw = 6.5*kz, cx = bx-ux*hl, cy = by-uy*hl;
     return `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${fill}" stroke-width="${(2.6*k).toFixed(1)}" stroke-dasharray="${dash}" stroke-linecap="round" stroke-opacity=".85"/>`
       + `<polygon points="${[[bx, by], [cx-uy*hw, cy+ux*hw], [cx+uy*hw, cy-ux*hw]].map(t => t[0].toFixed(1)+','+t[1].toFixed(1)).join(' ')}" fill="${fill}" fill-opacity=".85"/>`; };
-  const fs = Math.max(NARROW() ? 10 : 7, FS0()*k), rx = id => 0.33*fs*WID(id) + 0.8*fs, ry0 = 1.1*fs, RY = id => LINES(id).length > 1 ? 1.75*fs : ry0, ry = ry0;
+  // The contracts at the poles, the north's and the south's, named larger (Udi, 2026-11-25).
+  const POLE = id => DEPTH[id] === 0 || id === D.south ? 1.6 : 1;
+  const fs = FS0()*k, rx = id => POLE(id)*(0.31*fs*WID(id) + 0.5*fs), ry0 = 0.85*fs, RY = id => POLE(id)*(LINES(id).length > 1 ? 1.6*fs : ry0), ry = ry0;
   // Each arrow painted on the sphere: a smooth curve on the surface from the
   // contract to the one built on it, through the waypoints the layout keeps
   // for it on the rings it passes, so it goes between the names there; its
@@ -656,7 +827,7 @@ function drawGlobe(){
   // direction on the sphere there.
   const edgeAngle = (id, T) => {
     const rxa = (rx(id) + 2) / S, rya = (RY(id) + 2) / S;
-    if (DEPTH[id] === 0) return (rxa + rya) / 2;
+    if (DEPTH[id] === 0 || id === D.south) return (rxa + rya) / 2;
     const ph = PHI[id], t = th(id), E = [Math.cos(ph), 0, -Math.sin(ph)], Nn = [-Math.cos(t)*Math.sin(ph), Math.sin(t), -Math.cos(t)*Math.cos(ph)];
     return 1 / Math.sqrt((dot3(T, E)/rxa)**2 + (dot3(T, Nn)/rya)**2); };
   // The curve: through the two contracts and the waypoints between them
@@ -664,27 +835,7 @@ function drawGlobe(){
   // longitude a monotone cubic in its colatitude (Fritsch and Carlson), so it
   // never swings past a point it passes and makes no loop; sampled every
   // degree or so.
-  const curve = (p, q) => {
-    const cs = [[th(p), PHI[p]], ...(WAY[`${p}>${q}`] || []), [th(q), PHI[q]]];
-    if (DEPTH[p] === 0) cs[0][1] = cs[1][1];
-    const n = cs.length, h = [], dl = [], m = [];
-    for (let i = 0; i + 1 < n; i++){ h.push(cs[i+1][0] - cs[i][0] || 1e-9); dl.push((cs[i+1][1] - cs[i][1]) / h[i]); }
-    for (let i = 0; i < n; i++)
-      m.push(i === 0 ? dl[0] : i === n - 1 ? dl[n-2] : dl[i-1] * dl[i] <= 0 ? 0 : (dl[i-1] + dl[i]) / 2);
-    for (let i = 0; i + 1 < n; i++){
-      if (dl[i] === 0){ m[i] = 0; m[i+1] = 0; continue; }
-      const a = m[i] / dl[i], b = m[i+1] / dl[i], r = a*a + b*b;
-      if (r > 9){ const t = 3 / Math.sqrt(r); m[i] = t * a * dl[i]; m[i+1] = t * b * dl[i]; }
-    }
-    const pts = [];
-    for (let i = 0; i + 1 < n; i++){
-      const [t0, f0] = cs[i], [t1, f1] = cs[i+1];
-      const k = Math.max(2, Math.ceil(Math.hypot(t1 - t0, (f1 - f0) * Math.sin((t0 + t1) / 2)) / (Math.PI/180)));
-      for (let j = i ? 1 : 0; j <= k; j++){ const u = j / k, u2 = u*u, u3 = u2*u;
-        const f = (2*u3 - 3*u2 + 1)*f0 + (u3 - 2*u2 + u)*h[i]*m[i] + (-2*u3 + 3*u2)*f1 + (u3 - u2)*h[i]*m[i+1];
-        pts.push(vec(t0 + (t1 - t0) * u, f)); }
-    }
-    return pts; };
+  const curve = (p, q) => course(p, q).map(([t, f]) => vec(t, f));
   const paint = (p, q, rel) => ribbon(curve(p, q), p, q, (Array.isArray(rel) ? rel : [rel]).map(r => RELCOL[r] || RELCOL.extends), true);
   // A ribbon along the points U of the sphere, from the edge of contract p's
   // ellipse, or from U's start where p is null, to q's or U's end, in the
@@ -704,10 +855,11 @@ function drawGlobe(){
     // an arrow of two relations is coloured half and half along its length,
     // one of three a third each, the head in the last (Udi, 2026-11-15, to
     // Website #2).
-    const u = 1/265, rs = cols, hl = 6.5*u, hw = 3.4*u, w = 0.85*u;
+    const u = 1/265, rs = cols, hl = 4.2*u, hw = 2.1*u, w = 0.45*u;
     const aB = head ? a1 - hl : a1;
     if (aB <= a0) return '';
-    const front = a => projv(at(a))[2] > 0.02;
+    // On the Villagers site the poles are on the edge, and what reaches them is drawn (D.south).
+    const front = a => projv(at(a))[2] > (D.south ? -0.03 : 0.02);
     const xy = v => { const [X0, Y0] = projv(v); return X0.toFixed(1) + ',' + Y0.toFixed(1); };
     let out = '';
     rs.forEach((r, j) => {
@@ -739,10 +891,6 @@ function drawGlobe(){
   // composes it with GFP': GnW's is instantiates'), and the trunk the colours
   // of what the contract does to the composition, a part each, or composes'
   // where it says nothing (Udi, 2026-11-15, to Website #2).
-  const composed = c => {
-    const ps = c.extends.filter(p => C[p] && c.rels && c.rels[p] === 'composes'), of = (c.rels_of || []).filter(x => x.of === 'composition');
-    if (ps.length === 1 && of.length && C[of[0].base] && !ps.includes(of[0].base)) ps.unshift(of[0].base);
-    return ps.length >= 2 ? {ps, trunk: of.map(x => x.rel)} : null; };
   const unit = id => vec(th(id), PHI[id]);
   D.contracts.forEach(c => {
     const cm = composed(c);
@@ -754,39 +902,44 @@ function drawGlobe(){
     // The lines meet at one point, between the composed contracts and the
     // composing one, however many are composed ('GA composes GPE with GAS
     // and GDS' three).
-    const Ps = cm.ps.map(unit), Cv = unit(c.id), M = nrm(Ps.reduce((a, P) => add3(a, P, 0.5/Ps.length), Cv.map(x => x*0.5))), K = nrm(add3(M.map(x => x*1.5), Cv, -0.5));
-    const leg = P => { const o = []; for (let i = 0; i <= 40; i++){ const t = i/40; o.push(nrm(add3(add3(P.map(x => x*(1-t)*(1-t)), K, 2*t*(1-t)), M, t*t))); } return o; };
-    const trunk = []; for (let i = 0; i <= 30; i++) trunk.push(nrm(add3(M.map(x => x*(1 - i/30)), Cv, i/30)));
-    cm.ps.forEach((p, i) => { s += ribbon(leg(Ps[i]), p, null, [RELCOL[(c.rels && c.rels[p]) || 'composes']], false); });
+    let trunk = [];
+    cm.ps.forEach(p => { const pts = course(p, c.id), tM = TAIL[`${p}>${c.id}`][0][0], k = pts.findIndex(x => x[0] >= tM - 1e-9);
+      s += ribbon(pts.slice(0, k + 1).map(([t, f]) => vec(t, f)), p, null, [RELCOL[(c.rels && c.rels[p]) || 'composes']], false);
+      if (!trunk.length) trunk = pts.slice(k).map(([t, f]) => vec(t, f)); });
     s += ribbon(trunk, null, c.id, (cm.trunk.length ? cm.trunk : ['composes']).map(r => RELCOL[r] || RELCOL.composes), true);
   });
   D.contracts.forEach(c => {
     const [X, Y, Z] = pos[c.id];
-    if (Z < 0.02 || X < -60 || X > GW+60 || Y < -40 || Y > GH+40) return;
+    if (Z < (D.south && (DEPTH[c.id] === 0 || c.id === D.south) ? -0.03 : 0.02) || X < -60 || X > GW+60 || Y < -40 || Y > GH+40) return;
     // The patch's projected axes: the unit tangents east and north, each
     // foreshortened with the surface but never below .55, so a name near the
     // limb or the pole stays readable.
-    const t = Math.max(th(c.id), 0.055), ph = PHI[c.id], eps = 0.01;
+    const t = Math.min(Math.max(th(c.id), 0.055), Math.PI - 0.055), ph = PHI[c.id], eps = 0.01;
     const Cp = proj(t, ph), Ce = proj(t, ph+eps), Cn = proj(t+eps, ph);
     const de = Math.hypot(Ce[0]-Cp[0], Ce[1]-Cp[1]) || 1e-6, dn = Math.hypot(Cn[0]-Cp[0], Cn[1]-Cp[1]) || 1e-6;
     const fe = Math.max(0.55, Math.min(1, de/(S*Math.sin(t)*eps))), fn = Math.max(0.55, Math.min(1, dn/(S*eps)));
     const ex = (Ce[0]-Cp[0])/de*rx(c.id)*fe, ey = (Ce[1]-Cp[1])/de*rx(c.id)*fe;
     const nx2 = (Cn[0]-Cp[0])/dn*RY(c.id)*fn, ny2 = (Cn[1]-Cp[1])/dn*RY(c.id)*fn;
-    const m = DEPTH[c.id] === 0 ? [rx(c.id), 0, 0, RY(c.id)*Math.max(0.55, Math.abs(Math.sin(al)))*Math.sign(Math.cos(al) || 1)].map(x => x.toFixed(2)).join(' ')
+    const m = DEPTH[c.id] === 0 || c.id === D.south ? [rx(c.id), 0, 0, RY(c.id)*Math.max(0.55, Math.abs(Math.sin(al)))*Math.sign(Math.cos(al) || 1)].map(x => x.toFixed(2)).join(' ')
       : [ex, ey, nx2, ny2].map(x => x.toFixed(2)).join(' ');
     const col = FAM[famOf(c)];
     s += `<g class="node" data-id="${c.id}">
-      <ellipse rx="1" ry="1" fill="color-mix(in srgb, ${col[0]} 26%, white)" stroke="${col[1]}" stroke-width="1" transform="matrix(${m} ${X.toFixed(1)} ${Y.toFixed(1)})" vector-effect="non-scaling-stroke"/>
-      ${LINES(c.id).map((ln, i, a) => `<text x="${X.toFixed(1)}" y="${(Y + 0.36*fs + (i - (a.length - 1)/2) * 1.12*fs).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}">${esc(ln)}</text>`).join('')}</g>`;
+      <ellipse rx="1" ry="1" fill="color-mix(in srgb, ${col[0]} 26%, white)" stroke="${col[1]}" stroke-width="0.6" transform="matrix(${m} ${X.toFixed(1)} ${Y.toFixed(1)})" vector-effect="non-scaling-stroke"/>
+      ${LINES(c.id).map((ln, i, a) => { const f = fs*POLE(c.id); return `<text x="${X.toFixed(1)}" y="${(Y + 0.36*f + (i - (a.length - 1)/2) * 1.12*f).toFixed(1)}" text-anchor="middle" font-size="${f.toFixed(1)}"${POLE(c.id) > 1 ? ' font-weight="600"' : ''}>${esc(ln)}</text>`; }).join('')}</g>`;
   });
   // The key: each arrow as the globe draws it, fixed in the corner, unscaled.
-  // The key has each relation the globe draws: of the five of the Calculus
-  // (calculus/README.md, The relations), of implements, GSC's, and of amends,
-  // while a text in force still states it.
+  // The key is the Calculus's operations, those its own contracts state, in
+  // its order (D.operations, which the build reads from the Calculus), each
+  // that an arrow here shows; a word a contract here states that is not one
+  // of them is set apart, so the key never passes it off as the Calculus's
+  // (Udi, 2026-11-25: "arrow legends in the globes not aligned with
+  // operations in Calculus, please revise").  An arrow of several operations
+  // is drawn in their colours along its length.
   const ALL = D.contracts.flatMap(c => Object.values(c.rels_all || {}));
   const USED = new Set([...D.contracts.flatMap(c => [c.relation, ...Object.values(c.rels || {})]), ...ALL.flat()]);
-  const KEY = ['extends', 'restricts', 'strengthens', 'relaxes', 'instantiates', 'composes', 'implements', 'amends'].filter(r => USED.has(r)).map(r => [r, r])
-    .concat([...new Set(ALL.filter(rs => rs.length > 1).sort((a, b) => a.length - b.length).map(rs => rs.join('|')))].map(x => [x.split('|'), x.split('|').join(', ').replace(/, ([^,]*)$/, ' and $1')]));
+  const OPS = D.operations || [];
+  const KEY = OPS.filter(r => USED.has(r)).map(r => [r, r])
+    .concat([...USED].filter(r => r && RELCOL[r] && !OPS.includes(r)).sort().map(r => [r, r + ' (not in the Calculus)']));
   const KW = Math.max(150, 84 + 6.6*Math.max(...KEY.map(([, t]) => t.length))), nar = NARROW(), kk = 1, kc = '#5f6b78', kx = nar ? CX - 276 : 24, ky = nar ? CY + 330 : GH - 22 - 24*KEY.length;
   s += `<g class="key"><rect x="${kx-12}" y="${ky-20}" width="${KW}" height="${24*KEY.length+16}" rx="10" fill="white" fill-opacity=".85" stroke="#d5dee7"/>`;
   KEY.forEach(([r, t], i) => { const y = ky + 24*i, p = [kx, y], q = [kx + 54, y];
@@ -898,7 +1051,7 @@ function globeNav(){
   // for the names' size there.
   let was = NARROW();
   addEventListener('resize', () => { if (NARROW() !== was){ was = NARROW();
-    for (const k in PHI) delete PHI[k]; for (const k in LAT) delete LAT[k]; for (const k in KIDS) delete KIDS[k]; for (const k in WAY) delete WAY[k];
+    clearLayout();
     V.zoom = BASEZ();
     layout(); } drawGlobe(); });
 }
@@ -1172,8 +1325,10 @@ async function texShow(box, src, gh){
       // A name with an underscore, \mathit{has_officer}, is written as it is
       // named: GSC's printer (programs/gsc/compile.glp, latex_pred/3) does
       // not escape it, which LaTeX would read as a subscript (reported to
-      // Code, 2026-11-18).
-      const tex = body.replace(/\s*\n\s*/g, ' ').replace(/\\mathit\{\s*([A-Za-z0-9_]+)\s*\}/g, (_, w) => `\\mathit{${w.replace(/_/g, '\\_')}}`);
+      // Code, 2026-11-18).  A name the printer wraps in \detokenize, which
+      // KaTeX lacks and showed in red, is taken out of it first, so that its
+      // underscores are escaped the same way (Website #6, 2026-11-24).
+      const tex = body.replace(/\s*\n\s*/g, ' ').replace(/\\detokenize\{\s*([^{}]*?)\s*\}/g, (_, w) => w).replace(/\\mathit\{\s*([A-Za-z0-9_]+)\s*\}/g, (_, w) => `\\mathit{${w.replace(/_/g, '\\_')}}`);
       try { k.render(tex, m, {displayMode: true, throwOnError: false, maxExpand: 100000, macros: {...TEXMACROS}}); }
       catch (e){ m.textContent = body; }
       div.appendChild(m); frag.appendChild(div);
@@ -1217,15 +1372,37 @@ function artHtml(c){
     : `<p class="sum" style="margin-top:6px">No certified app: ${esc(a.why.split('\n').pop().slice(0, 300))}</p>`;
 }
 
+// A literal of the paper, x:p(...), from an atom p(x, ...) of the cascade's
+// schemas, whose first argument is the agent whose local state holds it:
+// p(x) is x:p, and a literal that is no atom of an agent (an equality, a
+// count of coins, a forall) is written as it is.
+const LIT = /^([a-z_][a-z_0-9]*)\(\s*([A-Z_][A-Za-z0-9_]*)\s*(?:,\s*([\s\S]*))?\)$/;
+function litHtml(a, neg){
+  if (a.startsWith('not ')){ a = a.slice(4); neg = !neg; }
+  const m = a.match(LIT);
+  const t = m ? `${m[2]}:${m[1]}${m[3] !== undefined ? '(' + m[3].replace(/,\s*/g, ', ') + ')' : ''}` : a;
+  return `<span class="lit">${neg ? '¬' : ''}<i>${esc(t)}</i></span>`;
+}
+function impHtml(s){
+  const head = s.adds.map(a => litHtml(a, false)).concat(s.removes.map(a => litHtml(a, true)));
+  const body = s.needs.map(a => litHtml(a, false));
+  const g = s.guard !== undefined ? s.guard : s.guarded.join(', ');
+  const guard = g ? `<span class="kw">guarded by</span> <i>${esc(g).replace(/\b(possibly|taken for|and for|by|must)\b/g, '<span class="kw">$1</span>')}</i>` : '';
+  const tail = [body.join(', '), guard].filter(x => x).join(' ');
+  return `<div class="h">${head.join(', ')} <span class="kw">←</span></div>${tail ? `<div class="b">${tail}.</div>` : ''}`;
+}
 function schemaHtml(s, open){
   if (s.form === 'rule'){
-    const at = (l, k) => l.map(a => `<span class="atom a-${k}">${esc(a)}</span>`).join('');
-    const who = s.guarded.length ? 'needs the will of ' + s.guarded.join(' and ') : 'nobody is asked';
-    return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${esc(NM(s.from))}</span></summary>
-      <div class="say">${esc(who)}</div>
-      ${s.adds.length ? `<div class="rule"><b>Adds</b>${at(s.adds, 'add')}</div>` : ''}
-      ${s.removes.length ? `<div class="rule"><b>Removes</b>${at(s.removes, 'del')}</div>` : ''}
-      ${s.needs.length ? `<div class="rule"><b>Needs</b>${at(s.needs, 'need')}</div>` : ''}</details>`;
+    // An act as the Calculus paper writes it, a volition-guarded implication
+    // "H <- B guarded by Q" (GCC, sections/01b-contract-object.tex,
+    // Definition Volition-guarded implication): each literal x:s, an atom
+    // p(x, ...) of the local state of its agent x, its negation written with
+    // a "not" sign; the head adds the atoms written plain and removes those
+    // negated; the body is the condition (Udi, 2026-11-25: "can they look
+    // like guarded implications, as in the paper?").
+    const fr = s.labels && s.labels.length > 1 ? s.labels.map(l => NM(l.replace(/:\d+$/, '').replace(/'/g, '').replace(/ /g, '-'))).join(' + ') : NM(s.from);
+    return `<details class="schema" ${open ? 'open' : ''}><summary><span>${esc(s.name)}</span><span class="fr">${esc(fr)}</span></summary>
+      <div class="imp">${impHtml(s)}</div></details>`;
   }
   const willing = s.parties.filter(p => p.endsWith('?')).map(p => p.slice(0, -1));
   const say = `${s.parties.length === 1 ? 'One person' : s.parties.length + ' roles'}; ${willing.length ? 'needs the will of ' + willing.join(' and ') : 'nobody is asked'}${s.vars.length ? '; values: ' + s.vars.join(', ') : ''}${s.constraint ? '; only if ' + s.constraint : ''}.`;

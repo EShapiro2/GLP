@@ -1,0 +1,5 @@
+Promoted Community Market
+Promoted Community Market inherits from Promoted Matching and Community Market.
+A post is an *offer* or a *request*. An *offer* is a listing of Community Market, and a *request* names a good and a price in community coins. An offer and a request match when the offer is of what the request seeks and the price of the request is at least the price of the offer. The budget of a post is community coins, set by its maker, and a forward costs one. By the *gossip protocol of equal parts*, a holder forwards a post to all their friends, each with an equal whole part of the rest of the budget. The holder's part is the cost and the remainder of the division.
+Alice is a person, Orga a community network.
+1. ■ Post: Promoted Gossip:1, a request only if Alice is a buyer of Orga and an offer only if she is a seller.

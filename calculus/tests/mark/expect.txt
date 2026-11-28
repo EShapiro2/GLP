@@ -8,5 +8,5 @@ M:0 - | Bob is possibly Alice.
 M:1 ■ Found: founder(Alice,Club), founder(Bob,Club) <- guarded by Alice, Bob possibly Alice=Bob.
 M:1 ■ Greet: greeted(Bob,Alice) <- guarded by Alice possibly Alice=Bob.
 --- term M
-[sas(found, ['Alice', one('Bob', 'Alice')], ['Club'], [atom(founder, ['Alice', 'Club']), atom(founder, ['Bob', 'Club'])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
+[sas(found, ['Alice', one('Bob', 'Alice')], ['Club'], [atom(founder, ['Alice', const('Club')]), atom(founder, ['Bob', const('Club')])], [atom(identity, ['Alice']), atom(identity, ['Bob'])], true, ['Alice', 'Bob']),
  sas(greet, ['Bob', 'Alice'], [], [atom(greeted, ['Bob', 'Alice'])], [atom(identity, ['Bob']), atom(identity, ['Alice'])], true, ['Alice'])]

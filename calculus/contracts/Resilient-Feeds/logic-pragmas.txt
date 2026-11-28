@@ -1,5 +1,8 @@
 Resilient Feeds
 Resilient Feeds extends Feeds.
-d > 1, an integer, is a parameter of Resilient Feeds.
+d > 1 is an integer.
 Alice, Bob, Carol, Dave and Erin are persons, Dave and Erin are possibly any of the others.
-1. ■ Redundant point: Alice adds a Carol-pointer to Bob, provided Alice has a Carol-pointer to Dave, Alice has a Carol-pointer to fewer than d persons, Alice and Bob are friends and Bob has a Carol-pointer to Erin.
+1. ■ Redundant point: Alice adds a redundant Carol-pointer to Bob, provided Alice has a Carol-pointer to Dave, Alice has a Carol-pointer to fewer than d persons, Alice and Bob are friends and Bob has a Carol-pointer to Erin.
+Logic pragmas.
+Vocabulary: y has been pointed to by x with a w-pointer = pointed(y,x,w).
+After x adds a redundant w-pointer to y, which requires x does not have a w-pointer to y and y has not been pointed to by x with a w-pointer: x has a w-pointer to y and y has been pointed to by x with a w-pointer.

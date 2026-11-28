@@ -6,7 +6,7 @@ After x signs n as an invitation link that names d, which requires x has not sig
 After x registers n with d, which requires d does not have n registered for x: d has n registered for x.
 After y presents n of x to d: no longer d has n registered for x, d holds n spent for x, x has the address of y and y has the address of x.
 After x presents to d the signature of y over the friendship of x and y, which requires d does not have the signature of y over the friendship of x and y presented: d has the signature of y over the friendship of x and y presented.
-After d matches x and y: no longer d has the signature of y over the friendship of x and y presented, no longer d has the signature of x over the friendship of y and x presented, x has the address of y and y has the address of x.
+After d matches x and y, which requires x does not have the address of y and y does not have the address of x: no longer d has the signature of y over the friendship of x and y presented, no longer d has the signature of x over the friendship of y and x presented, x has the address of y and y has the address of x.
 Rendezvous:0 - | An *invitation link* of Alice's is a term she signs, naming her, a rendezvous server, a serial and an expiry.
 Rendezvous:0 - | Alice, Bob and Carol are persons, Dave a service, Link an invitation link.
 Rendezvous:1 ■ Open server: rendezvous_server(Dave) <- guardian(Carol,Dave), ~rendezvous_server(Dave) guarded by Carol.
@@ -18,4 +18,4 @@ Rendezvous:3 ■ Use link: ~registered(Dave,Link,Alice), spent(Dave,Link,Alice),
 Rendezvous:3 ■ | The link is then spent.
 Rendezvous:4 ■ | Reconnection.
 Rendezvous:4 ■ Present: presented(Dave,Alice,Bob) <- friend(Alice,Bob), friend(Bob,Alice), knows(Alice,Dave), rendezvous_server(Dave), ~presented(Dave,Alice,Bob) guarded by Alice.
-Rendezvous:4 ■ Match: ~presented(Dave,Alice,Bob), ~presented(Dave,Bob,Alice), address(Alice,Bob), address(Bob,Alice) <- presented(Dave,Alice,Bob), presented(Dave,Bob,Alice).
+Rendezvous:4 ■ Match: ~presented(Dave,Alice,Bob), ~presented(Dave,Bob,Alice), address(Alice,Bob), address(Bob,Alice) <- ~address(Alice,Bob), ~address(Bob,Alice), presented(Dave,Alice,Bob), presented(Dave,Bob,Alice).

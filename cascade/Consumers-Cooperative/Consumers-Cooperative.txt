@@ -2,16 +2,16 @@
 % Owner: GO (Udi, 2026-11-09, to GO #3).  The paper, GO's main_characterisation_ArXiv.tex, prints it in its box in Section 7.2 and cites a clause as Consumers' Cooperative:1.
 % Paper: GO, Grassroots Organisations: Building Digital Banks, Networks, Corporations and Cooperatives, in preparation
 % Extends: Cooperative and Trading Company.
-% Last changed: 2026-11-16, by GO #8.
+% Last changed: 2026-11-24, by GO #15: Interface fields dropped for values another role's state fixes (a deposit, a payment, a fee), by pragmas.sh at vGLP 1ed1b8387 on the Calculus's set terms.
 % Schemas: Consumers-Cooperative.glp beside this file.
 Consumers' Cooperative
-Consumers' Cooperative instantiates Cooperative and Trading Company with bylaws that delegate no act and restricts and extends them.
+Consumers' Cooperative inherits from Cooperative and Trading Company.
 A *consumers' cooperative* is a cooperative that is a trading company. Its *fee* is a number of Dollars the members set, and the *cost* of a good is the coins Orga paid for it.
 Bob and Erin are persons, Orga a consumers' cooperative.
 1. ■ Fee. Set fee: The members may set the fee. Pay fee: Bob may pay Orga the fee. Join: Organisation:3, only if Bob has paid Orga the fee.
 2. ■ Sell: Trading Company:3, only if Erin is a member and pays the cost of the good.
 Logic pragmas
-Consumers' Cooperative instantiates Cooperative and Trading Company with bylaws that delegate no act; x is a member of z for x is entitled to propose m in z; x is a member of z for x is entitled to take m for z; x is a member of z for x is entitled to vote on m in z; z holds the votes of at least Votes persons on m, Double is Votes times 2 and z has fewer than Double persons as a participant for the votes decide m according to the bylaws of z, and restricts and extends them.
+Consumers' Cooperative unites Cooperative and an augmentation of Trading Company, and extends and augments the union.
 A *consumers' cooperative* is a cooperative that is a trading company. Its *fee* is a number of Dollars the members set, and the *cost* of a good is the coins Orga paid for it.
 Bob, Dave and Erin are persons, Orga a consumers' cooperative, Ware a good, Dollar a fiat currency, Fee, Sum, Votes and Double numbers.
 1. ■ Fee. Set fee: Those who decide for Orga may set the fee of Orga at Fee, provided Orga is an organisation. Pay fee: Bob may pay Orga the fee in Fee Dave-coins, provided Orga has the fee at the number Fee, Orga accepts a Dollar-denominated Dave-coin in payment and Bob knows Orga. Join: Organisation:3 Join, only if Bob has paid Orga the fee.
@@ -28,6 +28,6 @@ Fee: Bob [Join] <organisation> <officer> <votes>
   Codecider: Bob asks to become a member of Orga.
   Decider [Set fee] <fee>
   Codecider: Decider asks to set the fee of Orga.
-  Bob [Pay fee] <fee>
-Sell: Carol [Sell] <issuer> <good>
+  Bob [Pay fee]
+Sell: Carol [Sell] <issuer> <denomination> <good>
   Erin: Carol asks that you pay Orga the cost of a good it holds.

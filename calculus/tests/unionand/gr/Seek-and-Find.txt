@@ -1,0 +1,7 @@
+Seek and Find
+Seek and Find extends Knowledge.
+Alice and Bob are persons.
+1. ■ Seek: Alice may seek from Bob, provided Alice knows Bob.
+Logic pragmas.
+Vocabulary: x seeks from y = seeks(x,y).
+After x seeks from y: x seeks from y.

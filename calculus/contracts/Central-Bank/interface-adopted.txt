@@ -17,6 +17,6 @@ Leave, Expel: Bob [Leave] <decider>
   CodeciderB: Bob asks for your consent to officer expel.
 Set policy rate: Alice [Set policy rate] <term> <rate> <votes>
   Carol [Vote on policy rate] <term> <rate>
-Lend: Alice [Lend] <bob> <sum> <term> <total> <votes>
+Lend: Alice [Lend] <bob> <dollar> <sum> <term> <votes>
   Bob: Alice asks for your consent to lend.
   Carol [Vote to lend] <bob> <sum> <term>

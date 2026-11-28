@@ -6,5 +6,5 @@
 5 Bank Corporation Cooperative Directory Resilient-Feeds Short-Feeds Second-Score-Auction
 6 Cooperative-DAO App Shareholding-Corporation Central-Bank Commercial-Bank Community-Bank Community-Currency Mutual-Credit Single-Person-Company Trading-Company Workers-Cooperative Backchannel-Feeds
 7 Consumers-Cooperative Liquid-Cooperative Backed-Currency
-8 Networked-Organisation
-9 Gigs Lodging Marketplace Ads Rides
+8 Community-Network
+9 Gigs Lodging Community-Market Ads Rides

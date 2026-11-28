@@ -1,5 +1,5 @@
 Groups
-Groups extends and strengthens Friendship.
+Groups extends Friendship, and strengthens it.
 Vocabulary: y has the message t from x = message(y,x,t); x is the leader of g = leader(x,g); x is a member of the group g of y = member(x,g,y); x has y as a member of the group g = listed(x,y,g); y has the post t of x in g = posted(y,t,x,g); z has the message t of x in g delivered by y = group_message(z,x,t,g,y); y has delivered the message t of x in g to z = group_delivered(y,x,t,g,z).
 x is a member of g: x is a member of the group g of someone.
 After x sends t to y: y has the message t from x.
@@ -9,9 +9,9 @@ After x adds y to g, which requires y is not a member of g: y is a member of the
 After x ends y's membership in g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
 After y ends y's membership in x's g: no longer y is a member of the group g of x and no longer x has y as a member of the group g.
 After x sends t to the group g of y, which requires y does not have the post t of x in g: y has the post t of x in g.
-After y delivers t of x in g to z, which requires y has not delivered the message t of x in g to z: y has delivered the message t of x in g to z and z has the message t of x in g delivered by y.
+After y delivers t of x in g to z, which requires y has not delivered the message t of x in g to z and z does not have the message t of x in g delivered by y: y has delivered the message t of x in g to z and z has the message t of x in g delivered by y.
 After y delivers t of x in g to the leader y, which requires y has not delivered the message t of x in g to y: y has delivered the message t of x in g to y and y has the message t of x in g delivered by y.
-Groups:0 - | A *message*, a parameter of Groups, is what a person sends.
+Groups:0 - | A *message* is what a person sends.
 Groups:0 - | Alice, Bob and Carol are persons, Grupo a group, Text a message, Bob and Carol possibly Alice or one person.
 Groups:1 ■ Message: message(Bob,Alice,Text) <- friend(Alice,Bob), friend(Bob,Alice) guarded by Alice possibly Alice=Bob.
 Groups:2 ■ | Group.
@@ -26,5 +26,5 @@ Groups:3 ■ Unfriend: Friendship:2 + ~member(Alice,_,Bob), ~member(Bob,_,Alice)
 Groups:4 ■ | Group messaging.
 Groups:4 ■ Post: posted(Alice,Text,Bob,Grupo) <- member(Bob,Grupo,Alice), ~posted(Alice,Text,Bob,Grupo) guarded by Bob possibly Alice=Bob.
 Groups:4 ■ Post own: posted(Alice,Text,Alice,Grupo) <- member(Alice,Grupo,Alice), ~posted(Alice,Text,Alice,Grupo) guarded by Alice.
-Groups:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol) possibly Alice=Bob, Alice=Carol, Bob=Carol.
+Groups:4 ■ Deliver: group_delivered(Alice,Bob,Text,Grupo,Carol), group_message(Carol,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), listed(Alice,Carol,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Carol), ~group_message(Carol,Bob,Text,Grupo,Alice) possibly Alice=Bob, Alice=Carol, Bob=Carol.
 Groups:4 ■ Deliver leader: group_delivered(Alice,Bob,Text,Grupo,Alice), group_message(Alice,Bob,Text,Grupo,Alice) <- leader(Alice,Grupo), posted(Alice,Text,Bob,Grupo), ~group_delivered(Alice,Bob,Text,Grupo,Alice) possibly Alice=Bob.

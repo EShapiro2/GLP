@@ -1,5 +1,0 @@
-Charter
-Charter restricts Organisation.
-Charter:0 - | A *chartered organisation* is an organisation whose bylaws are its *charter*: its acts are decided as the bylaws say, but the charter is amended only when as many have voted on the amendment as the organisation has officers, under the default bylaws, where the officers vote, every officer.
-Charter:0 - | Alice is a person, Orga an organisation, Motion an act of Orga, All a number.
-Charter:1 ■ Amend: Organisation:5 Amend <- vote(Orga,>=All,Motion), has_officer(Orga,<=All).

@@ -1,5 +1,5 @@
 Recommendations
-Recommendations extends Knowledge.
+Recommendations inherits from Knowledge.
 Alice, Bob and Carol are persons.
 1. ◆ Recommend: Alice may recommend Bob, whom she knows, for something, a skill or a service, once for each thing; Bob keeps the recommendation.
 2. ■ Show: Bob may show a recommendation he holds to Carol, whom he knows, once; Carol then sees who recommended Bob and for what.

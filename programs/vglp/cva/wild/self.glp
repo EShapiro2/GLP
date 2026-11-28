@@ -150,6 +150,35 @@ play_absent(LA?, LB?, LC?, N?) :-
           own([C7], propose(leave(C7?)))],
          LA, LB, LC, N).
 
+%% play_forbid: a wildcard in an atom a role forbids (vGLP, Section 5.4,
+%% "Speech-act schemas as local specifications": "a wildcard in a negated atom
+%% is universally quantified, the atom forbidding, in B, ... every atom of the
+%% state that it matches").  carol enrols with alice in the group g1.  alice
+%% requests greet(alice, carol), which forbids member(_, alice) at carol:
+%% carol, a member of a group of alice, votes no, unable, the reason naming
+%% the membership her state has, and is not asked.
+%% bob requests greet(bob, carol): carol, a member of no group of bob, answers
+%% yes, and it commits.  carol requests idle(carol), which forbids
+%% member(_, _) at her: refused, unable.  bob, a member of no group, requests
+%% idle(bob), and gains idle.
+exported procedure play_forbid(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+play_forbid(LA?, LB?, LC?, N?) :-
+    trio([approval(enrol(carol, alice, speech(utterance(g1), carol)), yes),
+          wait(holds(listed(carol, speech(utterance(g1), carol)))),
+          own([A1], propose(greet(A1?, carol))),
+          wait(refused(greet(alice, carol), carol, unable([], [member(speech(utterance(g1), carol), alice)], [])))],
+         [own([B1], propose(greet(B1?, carol))),
+          wait(holds(greeting(carol))),
+          own([B2], propose(idle(B2?))),
+          wait(holds(idle))],
+         [own([C1, C2], propose(enrol(C1?, alice, speech(utterance(g1), C2?)))),
+          wait(holds(member(speech(utterance(g1), carol), alice))),
+          own([C3], propose(idle(C3?))),
+          wait(refused(idle(carol), carol, unable)),
+          approval(greet(bob, carol), yes),
+          wait(holds(greeted(bob)))],
+         LA, LB, LC, N).
+
 %% alice, bob and carol, each with its dispatcher and scripted person, their
 %% networks joined.
 procedure trio(ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),

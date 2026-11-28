@@ -508,6 +508,7 @@ procedure head_untyped(Args?, Args).
 head_untyped([], []).
 head_untyped([real(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
 head_untyped([const(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
+head_untyped([set(X)|As], [num(X?)|R?]) :- head_untyped(As?, R).
 head_untyped([A|As], [A?|R?]) :- otherwise | head_untyped(As?, R).
 
 procedure head_schemas(NContract?, Faults).
@@ -518,13 +519,8 @@ head_schemas([S|Ss], R?) :- ground(S?), ground(Ss?) |
     faults_app(F1?, F2?, R).
 
 % --- the values of a schema (GSC, Section 3.2; def:numbers) ----------------
-% "An atom of H or of B with no wildcard may carry a multiplicity kappa, a
-% positive whole number or a value variable" (def:numbers): each atom
-% carrying a multiplicity and the wildcard is a fault
-% multiplicity_wildcard(Schema, Role, Atom); each multiplicity that is no
-% value argument a fault multiplicity_not_numeric(Schema, Role, Atom), and a
-% number no positive whole number a fault multiplicity_not_whole(Schema,
-% Role, Atom).  Each argument of a constraint that is no value argument, but
+% An atom carries no multiplicity, a local state being a set (mults_numeric
+% below).  Each argument of a constraint that is no value argument, but
 % in an equality or inequality of two agent variables, two speech-act
 % variables or two name terms (GSC 6f0bda1), is a fault
 % constraint_not_numeric(Schema, Arg).  A constraint is otherwise "a decidable
@@ -541,47 +537,22 @@ procedure is_num(Arg?, Ans).
 is_num(num(_), yes).
 is_num(A, no) :- otherwise, ground(A?) | true.
 
-% A multiplicity on an atom a role adds or deletes: it is a value argument.
-procedure mult_num_fault(Ans?, Atom?, Constant?, Integer?, Faults?, Faults).
-mult_num_fault(yes, _, _, _, T, T?).
-mult_num_fault(no, A, Nm, I, T, [multiplicity_not_numeric(Nm?, I?, A?)|T?]).
-
 procedure mults_numeric(Mults?, Constant?, Integer?, Faults?, Faults).
 mults_numeric([], _, _, T, T?).
 mults_numeric([atom(_, _)|Ms], Nm, I, T, R?) :-
     ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_numeric(Ms?, Nm?, I?, T?, R).
-mults_numeric([times(K, A)|Ms], Nm, I, T, R?) :-
-    ground(K?), ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
-    is_num(K?, Ok),
-    is_whole(K?, Wh),
-    mults_numeric(Ms?, Nm?, I?, T?, R1),
-    mult_whole_fault(Wh?, A?, Nm?, I?, R1?, R2),
-    mult_num_fault(Ok?, A?, Nm?, I?, R2?, R).
-mults_numeric([rest(K, _, A)|Ms], Nm, I, T, R?) :-
-    ground(K?), ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
-    rest_numeric(K?, A?, Nm?, I?, T?, R1),
-    mults_numeric(Ms?, Nm?, I?, R1?, R).
-
-% K of rest(K, J, A), a sum of multiplicities.
-procedure rest_numeric(Expr?, Atom?, Constant?, Integer?, Faults?, Faults).
-rest_numeric(plus(X, Y), A, Nm, I, T, R?) :-
-    ground(X?), ground(Y?), ground(A?), ground(Nm?), integer(I?), ground(T?) |
-    rest_numeric(Y?, A?, Nm?, I?, T?, R1),
-    rest_numeric(X?, A?, Nm?, I?, R1?, R).
-rest_numeric(num(K), A, Nm, I, T, R?) :- mults_numeric([times(num(K?), A?)], Nm?, I?, T?, R).
-rest_numeric(_, _, _, _, T, T?) :- otherwise | true.
-
-% A multiplicity written as a number is a positive whole number
-% (def:numbers); a value variable is one at every binding
-% (def:binding-numbers).
-procedure is_whole(Arg?, Ans).
-is_whole(num(X), R?) :- number(X?) | pos_whole(X?, R).
-is_whole(A, yes) :- otherwise, ground(A?) | true.
-
-procedure mult_whole_fault(Ans?, Atom?, Constant?, Integer?, Faults?, Faults).
-mult_whole_fault(yes, _, _, _, T, T?).
-mult_whole_fault(no, A, Nm, I, T, [multiplicity_not_whole(Nm?, I?, A?)|T?]).
+% The domain is sets (GSC, Section 3.1, Definition Atoms and states: "a
+% local state is a finite set of ground atoms"; the Calculus's record, items
+% 49 and 56): an atom carries no multiplicity, an amount being a set
+% variable (def:numbers), so each atom a role requires, forbids, adds or
+% deletes with a multiplicity is a fault multiplicity(Schema, Role, Atom).
+mults_numeric([times(_, A)|Ms], Nm, I, T, [multiplicity(Nm?, I?, A?)|R?]) :-
+    ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
+    mults_numeric(Ms?, Nm?, I?, T?, R).
+mults_numeric([rest(_, _, A)|Ms], Nm, I, T, [multiplicity(Nm?, I?, A?)|R?]) :-
+    ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
+    mults_numeric(Ms?, Nm?, I?, T?, R).
 
 % A multiplicity on an atom carrying the wildcard, Mults the atoms a role
 % adds or deletes that carry it (mults_cleared).
@@ -590,10 +561,10 @@ mults_wild([], _, _, T, T?).
 mults_wild([atom(_, _)|Ms], Nm, I, T, R?) :-
     ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_wild(Ms?, Nm?, I?, T?, R).
-mults_wild([times(_, A)|Ms], Nm, I, T, [multiplicity_wildcard(Nm?, I?, A?)|R?]) :-
+mults_wild([times(_, A)|Ms], Nm, I, T, [multiplicity(Nm?, I?, A?)|R?]) :-
     ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_wild(Ms?, Nm?, I?, T?, R).
-mults_wild([rest(_, _, A)|Ms], Nm, I, T, [multiplicity_wildcard(Nm?, I?, A?)|R?]) :-
+mults_wild([rest(_, _, A)|Ms], Nm, I, T, [multiplicity(Nm?, I?, A?)|R?]) :-
     ground(A?), ground(Ms?), ground(Nm?), integer(I?), ground(T?) |
     mults_wild(Ms?, Nm?, I?, T?, R).
 

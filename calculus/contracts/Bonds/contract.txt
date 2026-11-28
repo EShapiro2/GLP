@@ -1,6 +1,5 @@
 Bonds
-Bonds restricts and extends Coins.
+Bonds inherits from Coins.
 A *bond* is a note that is a unit of its issuer's debt, due at its maturity date, which it includes. An *Alice-bond* is a bond issued by Alice. A bond is *mature* when its maturity date is at most the current date.
 Alice and Bob are parties.
-1. ■ Issue bond: Notes:1, for bonds, with maturity later than the current date.
-2. ■ Redeem: Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.
+1. ■ Redeem: Alice may redeem a Bob-coin, or a mature Bob-bond, she holds against any coin or bond held by Bob, whom she knows.

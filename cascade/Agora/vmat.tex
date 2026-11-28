@@ -12,22 +12,22 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 person
-}
+}}
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \notin c_
 {
 \Alice
@@ -52,11 +52,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -71,11 +71,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -83,17 +83,25 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+person
+}}
  \in c_
 {
 \Bob
@@ -120,13 +128,13 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
 \}
 , \qquad 
@@ -139,16 +147,30 @@ c_
 {
 \Bob
 }
+, \qquad 
+c'_
+{
+\mathit{Carol}
+}
+ := 
+c_
+{
+\mathit{Carol}
+}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
@@ -157,26 +179,42 @@ knows
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
+person
+}}
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
-Carol
+\mathit{Carol}
 )
  \in c_
 {
 \Bob
+}
+ \text{ and } 
+\mathit{\detokenize{
+identity
+}}
+,
+\mathit{\detokenize{
+person
+}}
+ \in c_
+{
+\mathit{Carol}
 }
 ,\\
 &
@@ -200,71 +238,25 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Alice
+,
+Type
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
- \in c_
-{
-\Alice
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-issue_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \uplus 
-\{
-Sum
-\cdot
-\mathit{
-bond
-}
-(
-\Alice
-,
-Day
-)
-\}
-,\\
-&
-\text{provided } 
-\mathit{
-identity
-}
-,
-\mathit{
-today
-}
-(
-Today
-)
+}}
  \in c_
 {
 \Alice
@@ -272,9 +264,11 @@ Today
 ,\\
 &
 \text{provided } 
-Day
->
-Today
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -297,161 +291,33 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
-)
-\}
-) \uplus 
-\{
-Total
-\cdot
-\text{\textcent}
-(
-Dave
-)
 ,
-\mathit{
-knows
-}
-(
-Dave
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-Total
-\cdot
-\text{\textcent}
-(
-Dave
-)
-\}
-) \uplus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
+Type
 ,
-\mathit{
-knows
-}
-(
-Carol
+SumSet
 )
 \}
-,\\
-&
-\text{provided } 
+) \cup 
 \{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
-Total
-\cdot
-\text{\textcent}
-(
-Dave
-)
-\}
- \subseteq c_
-{
-\Bob
-}
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-swap_coin_for_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\text{\textcent}
-(
-Carol
-)
-\}
-) \uplus 
-\{
-Total
-\cdot
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
 ,
-Day
+Other
+,
+TotalSet
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Dave
 )
@@ -468,29 +334,33 @@ c'_
 }
  \setminus 
 \{
-Total
-\cdot
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
 ,
-Day
+Other
+,
+TotalSet
 )
 \}
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
+,
+SumSet
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -498,213 +368,71 @@ Carol
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-Total
-\cdot
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
 ,
-Day
+Other
+,
+TotalSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
-,\\
-&
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-swap_bonds
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-(c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\mathit{
-bond
-}
-(
-Carol
-,
-Day
-)
-\}
-) \uplus 
-\{
-Total
-\cdot
-\mathit{
-bond
-}
-(
-Dave
-,
-Term
-)
-,
-\mathit{
-knows
-}
-(
-Dave
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-(c_
-{
-\Bob
-}
- \setminus 
-\{
-Total
-\cdot
-\mathit{
-bond
-}
-(
-Dave
-,
-Term
-)
-\}
-) \uplus 
-\{
-Sum
-\cdot
-\mathit{
-bond
-}
-(
-Carol
-,
-Day
-)
-,
-\mathit{
-knows
-}
-(
-Carol
-)
-\}
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
+|
+SumSet
+|
+=
 Sum
-\cdot
-\mathit{
-bond
-}
-(
-Carol
-,
-Day
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
-,
+\land
+|
+TotalSet
+|
+=
 Total
-\cdot
-\mathit{
-bond
-}
-(
-Dave
-,
-Term
-)
-\}
- \subseteq c_
-{
-\Bob
-}
 ,\\
 &
 \text{guarded by } \{
@@ -729,11 +457,15 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
+,
+SumSet
 )
 \}
 , \qquad 
@@ -746,18 +478,22 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
+,
+SumSet
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -765,37 +501,47 @@ Carol
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+Type
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -820,11 +566,15 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+Type
+,
+SumSet
 )
 \}
 , \qquad 
@@ -837,156 +587,67 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+Type
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+Type
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
 }
 ,\\
 &
-\text{guarded by } \{
-\Alice
-\}
-\end{align*}
-\iffalse
-pay_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\mathit{
-bond
-}
-(
-Carol
-,
-Day
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\mathit{
-bond
-}
-(
-Carol
-,
-Day
-)
-,
-\mathit{
-knows
-}
-(
-Carol
-)
-\}
-,\\
-&
 \text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
+|
+SumSet
+|
+=
 Sum
-\cdot
-\mathit{
-bond
-}
-(
-Carol
-,
-Day
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
- \in c_
-{
-\Bob
-}
 ,\\
 &
 \text{guarded by } \{
 \Alice
-,
-\Bob
 \}
 \end{align*}
 \iffalse
@@ -1005,11 +666,15 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
+,
+SumSet
 )
 \}
 , \qquad 
@@ -1022,64 +687,68 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\mathit{
-escrow_coin
-}
+\mathit{\detokenize{
+escrow_note
+}}
 (
 Dave
+,
+Type
 ,
 \Alice
 ,
 Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Bob
 )
 ,
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -1089,120 +758,12 @@ knows
 }
 ,\\
 &
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-deposit_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\mathit{
-bond
-}
-(
-Dave
-,
-Day
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\mathit{
-escrow_bond
-}
-(
-Dave
-,
-Day
-,
-\Alice
-,
-Bob
-,
-Cond
-)
-\}
-,\\
-&
 \text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
-\mathit{
-knows
-}
-(
-Bob
-)
-,
+|
+SumSet
+|
+=
 Sum
-\cdot
-\mathit{
-bond
-}
-(
-Dave
-,
-Day
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
 ,\\
 &
 \text{guarded by } \{
@@ -1227,19 +788,21 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
-\mathit{
-escrow_coin
-}
+\mathit{\detokenize{
+escrow_note
+}}
 (
 Dave
+,
+Type
 ,
 Alice
 ,
 \Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 , \qquad 
@@ -1252,18 +815,22 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
+,
+SumSet
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Dave
 )
@@ -1271,45 +838,45 @@ Dave
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-Sum
-\cdot
-\mathit{
-escrow_coin
-}
+\mathit{\detokenize{
+escrow_note
+}}
 (
 Dave
+,
+Type
 ,
 Alice
 ,
 \Bob
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -1319,126 +886,12 @@ knows
 }
 ,\\
 &
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-release_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\mathit{
-escrow_bond
-}
-(
-Dave
-,
-Day
-,
-Alice
-,
-\Bob
-,
-Cond
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\mathit{
-bond
-}
-(
-Dave
-,
-Day
-)
-,
-\mathit{
-knows
-}
-(
-Dave
-)
-\}
-,\\
-&
 \text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
+|
+SumSet
+|
+=
 Sum
-\cdot
-\mathit{
-escrow_bond
-}
-(
-Dave
-,
-Day
-,
-Alice
-,
-\Bob
-,
-Cond
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
 ,\\
 &
 \text{guarded by } \{
@@ -1463,19 +916,21 @@ c_
 }
  \setminus 
 \{
-Sum
-\cdot
-\mathit{
-escrow_coin
-}
+\mathit{\detokenize{
+escrow_note
+}}
 (
 Dave
+,
+Type
 ,
 \Bob
 ,
 Bob
 ,
 Cond
+,
+SumSet
 )
 \}
 , \qquad 
@@ -1488,18 +943,22 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+Type
+,
+SumSet
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Dave
 )
@@ -1507,45 +966,45 @@ Dave
 ,\\
 &
 \text{provided } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-Sum
-\cdot
-\mathit{
-escrow_coin
-}
+\mathit{\detokenize{
+escrow_note
+}}
 (
 Dave
+,
+Type
 ,
 \Bob
 ,
 Bob
 ,
 Cond
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -1555,126 +1014,12 @@ knows
 }
 ,\\
 &
-\text{guarded by } \{
-\Alice
-,
-\Bob
-\}
-\end{align*}
-\iffalse
-return_bond
-\fi
-\begin{align*}
-&
-c'_
-{
-\Alice
-}
- := 
-c_
-{
-\Alice
-}
- \setminus 
-\{
-Sum
-\cdot
-\mathit{
-escrow_bond
-}
-(
-Dave
-,
-Day
-,
-\Bob
-,
-Bob
-,
-Cond
-)
-\}
-, \qquad 
-c'_
-{
-\Bob
-}
- := 
-c_
-{
-\Bob
-}
- \uplus 
-\{
-Sum
-\cdot
-\mathit{
-bond
-}
-(
-Dave
-,
-Day
-)
-,
-\mathit{
-knows
-}
-(
-Dave
-)
-\}
-,\\
-&
 \text{provided } 
-\{
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Bob
-)
-,
+|
+SumSet
+|
+=
 Sum
-\cdot
-\mathit{
-escrow_bond
-}
-(
-Dave
-,
-Day
-,
-\Bob
-,
-Bob
-,
-Cond
-)
-\}
- \subseteq c_
-{
-\Alice
-}
- \text{ and } 
-\mathit{
-identity
-}
-,
-\mathit{
-knows
-}
-(
-\Alice
-)
- \in c_
-{
-\Bob
-}
 ,\\
 &
 \text{guarded by } \{
@@ -1699,21 +1044,33 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
+,
+BobCoin1Set
 )
 \}
-) \uplus 
+) \cup 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
+,
+CarolCoin1Set
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -1730,53 +1087,91 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
+,
+CarolCoin1Set
 )
 \}
-) \uplus 
+) \cup 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
+,
+BobCoin1Set
 )
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
+,
+BobCoin1Set
 )
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
+,
+CarolCoin1Set
 )
  \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+BobCoin1Set
+|
+=
+1
+\land
+|
+CarolCoin1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -1799,25 +1194,37 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
+,
+BobCoin1Set
 )
 \}
-) \uplus 
+) \cup 
 \{
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
 ,
+\mathit{
+bond
+}(
 Day
 )
 ,
-\mathit{
+CarolBondDay1Set
+)
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -1834,61 +1241,99 @@ c'_
 }
  \setminus 
 \{
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
 ,
+\mathit{
+bond
+}(
 Day
 )
+,
+CarolBondDay1Set
+)
 \}
-) \uplus 
+) \cup 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
+,
+BobCoin1Set
 )
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
+,
+coin
+,
+BobCoin1Set
 )
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
 ,
+\mathit{
+bond
+}(
 Day
+)
+,
+CarolBondDay1Set
 )
  \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+BobCoin1Set
+|
+=
+1
+\land
+|
+CarolBondDay1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -1911,25 +1356,37 @@ c'_
 }
  \setminus 
 \{
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
 ,
+\mathit{
+bond
+}(
 Day
 )
+,
+BobBondDay1Set
+)
 \}
-) \uplus 
+) \cup 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
+,
+CarolCoin1Set
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -1946,63 +1403,87 @@ c'_
 }
  \setminus 
 \{
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
+,
+CarolCoin1Set
 )
 \}
-) \uplus 
+) \cup 
 \{
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
 ,
+\mathit{
+bond
+}(
 Day
+)
+,
+BobBondDay1Set
 )
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
 ,
+\mathit{
+bond
+}(
 Day
+)
+,
+BobBondDay1Set
 )
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 today
-}
+}}
 (
 Today
 )
 ,
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
+,
+coin
+,
+CarolCoin1Set
 )
  \in c_
 {
@@ -2014,6 +1495,18 @@ Carol
 Day
 \le
 Today
+\land
+|
+BobBondDay1Set
+|
+=
+1
+\land
+|
+CarolCoin1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -2036,29 +1529,41 @@ c'_
 }
  \setminus 
 \{
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
 ,
-Day
-)
-\}
-) \uplus 
-\{
 \mathit{
 bond
-}
+}(
+Day
+)
+,
+BobBondDay1Set
+)
+\}
+) \cup 
+\{
+\mathit{\detokenize{
+note
+}}
 (
 Carol
 ,
+\mathit{
+bond
+}(
 Term
 )
 ,
-\mathit{
+CarolBondTerm1Set
+)
+,
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -2075,71 +1580,95 @@ c'_
 }
  \setminus 
 \{
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
 ,
-Term
-)
-\}
-) \uplus 
-\{
 \mathit{
 bond
-}
+}(
+Term
+)
+,
+CarolBondTerm1Set
+)
+\}
+) \cup 
+\{
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
 ,
+\mathit{
+bond
+}(
 Day
+)
+,
+BobBondDay1Set
 )
 \}
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 \Bob
 ,
+\mathit{
+bond
+}(
 Day
+)
+,
+BobBondDay1Set
 )
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 today
-}
+}}
 (
 Today
 )
 ,
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 Carol
 ,
+\mathit{
+bond
+}(
 Term
+)
+,
+CarolBondTerm1Set
 )
  \in c_
 {
@@ -2151,6 +1680,18 @@ Term
 Day
 \le
 Today
+\land
+|
+BobBondDay1Set
+|
+=
+1
+\land
+|
+CarolBondTerm1Set
+|
+=
+1
 ,\\
 &
 \text{guarded by } \{
@@ -2171,18 +1712,18 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 made
-}
+}}
 (
 Item
 )
 ,
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -2190,9 +1731,9 @@ Item
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Alice
@@ -2200,9 +1741,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 made
-}
+}}
 (
 Item
 )
@@ -2230,27 +1771,27 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 keeper
-}
+}}
 (
 Mart
 )
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Mart
 ,
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 has_member
-}
+}}
 (
 \Alice
 ,
@@ -2260,9 +1801,9 @@ Mart
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Alice
@@ -2270,9 +1811,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 keeper
-}
+}}
 (
 Mart
 )
@@ -2300,11 +1841,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Mart
 ,
@@ -2321,11 +1862,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 has_member
-}
+}}
 (
 \Alice
 ,
@@ -2335,28 +1876,28 @@ Mart
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 keeper
-}
+}}
 (
 Mart
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -2367,9 +1908,9 @@ knows
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Mart
 ,
@@ -2401,11 +1942,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Item
 ,
@@ -2422,11 +1963,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Alice
 ,
@@ -2438,22 +1979,22 @@ Mart
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Mart
 ,
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -2462,13 +2003,13 @@ Item
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 keeper
-}
+}}
 (
 Mart
 )
@@ -2479,9 +2020,9 @@ Mart
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Item
 ,
@@ -2511,20 +2052,20 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Item
 ,
 Mart
 )
 ,
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Alice
 ,
@@ -2536,29 +2077,29 @@ Mart
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Mart
 ,
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 keeper
-}
+}}
 (
 Mart
 )
 ,
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -2569,9 +2110,9 @@ Item
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Item
 ,
@@ -2601,11 +2142,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Wish
 ,
@@ -2622,11 +2163,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Alice
 ,
@@ -2638,13 +2179,13 @@ Mart
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Mart
 ,
@@ -2655,13 +2196,13 @@ Mart
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 keeper
-}
+}}
 (
 Mart
 )
@@ -2672,9 +2213,9 @@ Mart
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Wish
 ,
@@ -2704,20 +2245,20 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Wish
 ,
 Mart
 )
 ,
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Alice
 ,
@@ -2729,22 +2270,22 @@ Mart
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 member
-}
+}}
 (
 Mart
 ,
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 keeper
-}
+}}
 (
 Mart
 )
@@ -2755,9 +2296,9 @@ Mart
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 posted
-}
+}}
 (
 Wish
 ,
@@ -2787,11 +2328,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 Carol
 ,
@@ -2812,11 +2353,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 Carol
 ,
@@ -2825,9 +2366,9 @@ Item
 Mart
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Carol
 )
@@ -2835,20 +2376,20 @@ Carol
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 keeper
-}
+}}
 (
 Mart
 )
 ,
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 Carol
 ,
@@ -2857,9 +2398,9 @@ Item
 Mart
 )
 ,
-\mathit{
+\mathit{\detokenize{
 has_member
-}
+}}
 (
 \Bob
 ,
@@ -2870,9 +2411,9 @@ Mart
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -2880,9 +2421,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 Carol
 ,
@@ -2895,6 +2436,21 @@ Mart
  \notin c_
 {
 \Alice
+}
+ \text{ and } 
+\mathit{\detokenize{
+post
+}}
+(
+Carol
+,
+Item
+,
+Mart
+)
+ \notin c_
+{
+\Bob
 }
 ,\\
 &
@@ -2914,11 +2470,11 @@ c_
 {
 \Alice
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -2939,11 +2495,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Bob
 ,
@@ -2955,20 +2511,20 @@ Mart
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 keeper
-}
+}}
 (
 Mart
 )
 ,
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Bob
 ,
@@ -2981,9 +2537,9 @@ Mart
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
  \in c_
 {
 \Bob
@@ -2991,9 +2547,9 @@ identity
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -3008,16 +2564,30 @@ Mart
 \Alice
 }
  \text{ and } 
-\mathit{
+\{
+\mathit{\detokenize{
 keeper
-}
+}}
 (
 Mart
 )
- \notin c_
+,
+\mathit{\detokenize{
+post
+}}
+(
+\Bob
+,
+Item
+,
+Mart
+)
+\}
+ \cap c_
 {
 \Bob
 }
+ = \emptyset
 ,\\
 &
 \text{guarded by } \emptyset
@@ -3038,9 +2608,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Bob
 ,
@@ -3059,9 +2629,9 @@ Mart
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -3084,10 +2654,10 @@ Mart
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -3103,9 +2673,9 @@ Mart
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -3131,9 +2701,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Bob
 ,
@@ -3152,9 +2722,9 @@ Mart
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -3177,10 +2747,10 @@ Mart
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -3196,9 +2766,9 @@ Mart
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -3228,9 +2798,9 @@ c_
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -3256,9 +2826,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Bob
 ,
@@ -3273,9 +2843,9 @@ Mart
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -3297,9 +2867,9 @@ c_
 q
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Bob
 ,
@@ -3314,9 +2884,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -3338,13 +2908,13 @@ q \neq
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Bob
 ,
@@ -3357,21 +2927,39 @@ Mart
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
+,
+\mathit{\detokenize{
+posted
+}}
+(
+Item
+,
+Mart
+)
+,
+\mathit{\detokenize{
+member
+}}
+(
+Mart
+,
+\Alice
+)
  \in c_
 {
 \Bob
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Bob
 ,
@@ -3386,9 +2974,9 @@ q \in
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Bob
 ,
@@ -3407,9 +2995,9 @@ Mart
 \forall 
 \mathit{Carol}
 \,(
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3422,16 +3010,16 @@ Mart
 \mathit{Carol}
 )
 \rightarrow
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 (
 \mathit{Carol}
 )
 \land
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \mathit{Carol}
 ,
@@ -3448,9 +3036,9 @@ Mart
 \forall 
 \mathit{Carol}
 \,(
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3464,9 +3052,9 @@ Mart
 )
 \rightarrow
 \neg 
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \mathit{Carol}
 ,
@@ -3499,9 +3087,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Alice
 ,
@@ -3520,9 +3108,9 @@ Mart
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3545,10 +3133,10 @@ Mart
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3564,9 +3152,9 @@ Mart
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3592,9 +3180,9 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Alice
 ,
@@ -3613,9 +3201,9 @@ Mart
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3638,10 +3226,10 @@ Mart
 {
 \Alice
 }
- \text{, with its multiplicity, that matches } 
-\mathit{
+ \text{ that matches } 
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3657,9 +3245,9 @@ Mart
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3681,9 +3269,9 @@ c_
 q
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Alice
 ,
@@ -3698,9 +3286,9 @@ q
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3719,13 +3307,13 @@ q \neq
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Alice
 ,
@@ -3738,13 +3326,13 @@ Mart
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Alice
 ,
@@ -3759,9 +3347,9 @@ q \in
 \mathrm{ext}_c(
 \Alice
 [
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3780,9 +3368,9 @@ Mart
 \forall 
 \Bob
 \,(
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3795,16 +3383,16 @@ Mart
 \Bob
 )
 \rightarrow
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 (
 \Bob
 )
 \land
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Bob
 ,
@@ -3821,9 +3409,9 @@ Mart
 \forall 
 \Bob
 \,(
-\mathit{
+\mathit{\detokenize{
 delivered_post
-}
+}}
 (
 \Alice
 ,
@@ -3837,9 +3425,9 @@ Mart
 )
 \rightarrow
 \neg 
-\mathit{
+\mathit{\detokenize{
 post
-}
+}}
 (
 \Bob
 ,
@@ -3872,20 +3460,24 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
 \}
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+coin
+,
+SumSet
 )
 \}
 , \qquad 
@@ -3900,18 +3492,22 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+coin
+,
+SumSet
 )
 \}
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -3919,20 +3515,20 @@ Item
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -3941,29 +3537,39 @@ Item
 \Alice
 }
  \text{ and } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-Sum
-\cdot
-\text{\textcent}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
+,
+coin
+,
+SumSet
 )
-\}
- \subseteq c_
+ \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -3988,24 +3594,28 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
 \}
-) \uplus 
+) \cup 
 \{
-Sum
-\cdot
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
 ,
+\mathit{
+bond
+}(
 Day
+)
+,
+SumSet
 )
 \}
 , \qquad 
@@ -4020,22 +3630,26 @@ c'_
 }
  \setminus 
 \{
-Sum
-\cdot
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
 ,
+\mathit{
+bond
+}(
 Day
 )
+,
+SumSet
+)
 \}
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -4043,20 +3657,20 @@ Item
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -4065,33 +3679,43 @@ Item
 \Alice
 }
  \text{ and } 
-\{
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-Sum
-\cdot
-\mathit{
-bond
-}
+\mathit{\detokenize{
+note
+}}
 (
 Dave
 ,
+\mathit{
+bond
+}(
 Day
 )
-\}
- \subseteq c_
+,
+SumSet
+)
+ \in c_
 {
 \Bob
 }
+,\\
+&
+\text{provided } 
+|
+SumSet
+|
+=
+Sum
 ,\\
 &
 \text{guarded by } \{
@@ -4116,18 +3740,18 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
 \}
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Thing
 )
@@ -4144,18 +3768,18 @@ c'_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Thing
 )
 \}
-) \uplus 
+) \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -4163,20 +3787,20 @@ Item
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -4185,20 +3809,20 @@ Item
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
 ,
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Thing
 )
@@ -4230,9 +3854,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -4247,11 +3871,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 escrow_item
-}
+}}
 (
 Item
 ,
@@ -4265,27 +3889,27 @@ Cond
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -4294,13 +3918,13 @@ Item
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -4332,9 +3956,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 escrow_item
-}
+}}
 (
 Item
 ,
@@ -4355,11 +3979,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -4367,20 +3991,20 @@ Item
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 escrow_item
-}
+}}
 (
 Item
 ,
@@ -4395,13 +4019,13 @@ Cond
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )
@@ -4433,9 +4057,9 @@ c_
 }
  \setminus 
 \{
-\mathit{
+\mathit{\detokenize{
 escrow_item
-}
+}}
 (
 Item
 ,
@@ -4456,11 +4080,11 @@ c_
 {
 \Bob
 }
- \uplus 
+ \cup 
 \{
-\mathit{
+\mathit{\detokenize{
 item
-}
+}}
 (
 Item
 )
@@ -4468,20 +4092,20 @@ Item
 ,\\
 &
 \text{provided } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Bob
 )
 ,
-\mathit{
+\mathit{\detokenize{
 escrow_item
-}
+}}
 (
 Item
 ,
@@ -4496,13 +4120,13 @@ Cond
 \Alice
 }
  \text{ and } 
-\mathit{
+\mathit{\detokenize{
 identity
-}
+}}
 ,
-\mathit{
+\mathit{\detokenize{
 knows
-}
+}}
 (
 \Alice
 )

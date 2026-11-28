@@ -1,3 +1,4 @@
 Denominated Currencies extends Bonds and Denominated Coins: holds
-Denominated Currencies restricts Bonds: holds
-Denominated Currencies strengthens Bonds: holds
+Denominated Currencies extends it (Bonds and Denominated Coins): holds
+Denominated Currencies restricts it (Bonds and Denominated Coins): holds
+Denominated Currencies strengthens it (Bonds and Denominated Coins): holds

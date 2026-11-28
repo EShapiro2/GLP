@@ -1,8 +1,8 @@
 Notes
-Notes extends Knowledge.
-A *note* includes its issuer's public key, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
+Notes inherits from Knowledge.
+A *note* includes its issuer's public key and a unique note identifier, is signed by their private key, and gives its holder a right against its issuer. An *Alice-note* is a note issued by Alice.
 Alice, Bob and Carol are parties.
 1. ■ Issue: Alice may issue Alice-notes.
 2. ■ Swap: Alice and Bob, who know each other, may jointly swap notes they hold.
 3. ■ Pay: Alice may pay notes she holds to Bob, whom she knows, with his consent.
-4. ■ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.
+4. ○ Escrow. Deposit: Alice may deposit notes with Carol for Bob, on a condition the three agree, with the consent of Carol. Release: Carol and Bob may jointly release them to Bob. Return: Carol and Alice may jointly return them to Alice. Carol will release them only if the condition is met, and return them only if it fails. Each act is between two parties who know each other.

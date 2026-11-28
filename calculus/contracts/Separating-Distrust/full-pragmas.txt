@@ -3,10 +3,10 @@ Of Knowledge: An *identity* is a unique cryptographic key pair. A *party* to a c
 Of Friendship: Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
 Alice, Bob and Carol are persons.
 Knowledge:1. ○ Establish: Alice may establish an identity. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
-Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
-Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
-Friendship:1, Separating Distrust:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice and Bob know each other, Alice has not declared distrust of Bob and Bob has not declared distrust of Alice. Alice and Bob will become friends only if they trust each other.
-Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other, provided Alice is a person and Bob is a person.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob, with the consent of Bob, provided Alice is a person, Bob is a person, Carol is a person, Alice and Bob know each other and Alice knows Carol.
+Friendship:1, Separating Distrust:1. ○ Befriend: Alice and Bob may jointly become friends, provided Alice is a person, Bob is a person, Alice and Bob know each other, Alice has not declared distrust of Bob and Bob has not declared distrust of Alice. Alice and Bob will become friends only if they trust each other.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob, provided Alice is a person and Bob is a person.
 Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
 Distrust:1. ■ Distrust: Alice may declare distrust of Carol, provided Alice knows Carol and Alice and Carol are not friends. Distrust friend: Alice may declare distrust of her friend Carol, provided Alice knows Carol.
 Distrust:2. ■ Propagate: Alice may declare distrust of Carol, provided Alice does not know Carol, Alice and Bob are friends and Bob has declared distrust of Carol.

@@ -1,0 +1,110 @@
+%% ---------------------------------------------------------------------------
+%% The plays of the canonical CVA platform of Organisation, GO's contract
+%% (programs/go/Organisation.txt and Organisation.glp, which renames, extends
+%% and augments Guardians), platform.vglp, which programs/vglp/cva/compile.sh
+%% prints from it: Organisation:1, Found and Found by an organisation (GO #15,
+%% 2026-11-24 21:22 UTC, for Audit PR 108, Finding 19).  Each play runs four
+%% agents, the persons alice and bob and the organisations o1 and o2, their
+%% persons scripted and paced on their screens (../self.glp), and gives each
+%% person's log and the network's log of the cargoes it carries.  An
+%% organisation establishes no identity: Found gives it one.  The classes, as
+%% the platform names them: found(Orga, Alice, Role), Alice founds Orga and
+%% holds the role Role in it, guarded by Alice and Orga;
+%% found_by_an_organisation(Orga, Alice, Gov, Role), Alice founds Orga with Gov
+%% its founder, guarded by Alice, Gov and Orga, Gov required to be an
+%% organisation with an officer; retire(Orga, Decider), Decider retires Orga
+%% (Organisation:4, Retire), and Orga has no officer after it.
+%%
+%% play_found: alice establishes her identity and requests found(o1, alice,
+%%   chair); o1 is asked and answers yes, and it commits: alice is the officer
+%%   of o1.  alice then requests found_by_an_organisation(o2, alice, o1,
+%%   board); o1 and o2 are asked and answer yes, and it commits: alice is the
+%%   officer of o2, and o1 is the founder of o2.
+%% play_person_gov: alice and bob establish their identities and come to
+%%   know each other by acquaint(alice, bob), and alice requests found_by_an_organisation(o2, alice, bob, board), bob a person;
+%%   bob's machine, its state lacking organisation, votes no without asking
+%%   his person, unable, and alice's screen shows the notice of her approval
+%%   ended by bob's refusal.
+%% play_retired_gov: alice founds o1 as in play_found and requests
+%%   retire(o1, alice), and it commits: o1 has no officer.  alice then
+%%   requests found_by_an_organisation(o2, alice, o1, board); o1's machine,
+%%   its state lacking has_officer, votes no without asking its person,
+%%   unable, and alice's screen shows the notice of her approval ended by
+%%   o1's refusal.
+%%
+%% The types of platform.vglp, written again for the declarations of the
+%% procedures imported from its compiled module.
+%% ---------------------------------------------------------------------------
+
+
+%% The scripted person's steps and log on this platform (../self.glp): the grants of its Drawn, an approval step naming a class, the atoms of its machine state, the approvals pending and the reasons of its views, and its tabs.
+ScriptSteps ::= Steps(Drawn, Class, Atom, Approved, Reason).
+ScriptLog   ::= Logged(Class, Drawn, Atom, Approved, Reason, Tab).
+
+imported procedure platform#agent(Peer?, Stream(Net)?, Stream(Net),
+    Stream(Output), List(Atom)?, Stream(Ask(Question))).
+imported procedure platform#dispatch(Stream(Ask(Question))?,
+    PersonChannel(Drawn)?, Channel(Stream(Input(Drawn)), Stream(Output))).
+
+exported procedure play_found(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
+    Stream(Sent(Cargo))).
+play_found(LA?, LB?, LC?, LD?, N?) :-
+    four([own([A1], propose(establish(A1?))), wait(holds(identity)),
+          own([A2], propose(found(o1, A2?, chair))), wait(holds(officer(o1))),
+          own([A3], propose(found_by_an_organisation(o2, A3?, o1, board))), wait(holds(officer(o2)))],
+         [],
+         [approval(found(o1, alice, chair), yes),
+          approval(found_by_an_organisation(o2, alice, o1, board), yes)],
+         [approval(found_by_an_organisation(o2, alice, o1, board), yes)],
+         LA, LB, LC, LD, N).
+
+exported procedure play_person_gov(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
+    Stream(Sent(Cargo))).
+play_person_gov(LA?, LB?, LC?, LD?, N?) :-
+    four([own([A1], propose(establish(A1?))), wait(holds(identity)),
+          own([A2], propose(acquaint(A2?, bob))), wait(holds(knows(bob))),
+          own([A3], propose(found_by_an_organisation(o2, A3?, bob, board)))],
+         [own([B1], propose(establish(B1?))), wait(holds(identity)),
+          approval(acquaint(alice, bob), yes)],
+         [],
+         [approval(found_by_an_organisation(o2, alice, bob, board), yes)],
+         LA, LB, LC, LD, N).
+
+exported procedure play_retired_gov(Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog), Stream(ScriptLog),
+    Stream(Sent(Cargo))).
+play_retired_gov(LA?, LB?, LC?, LD?, N?) :-
+    four([own([A1], propose(establish(A1?))), wait(holds(identity)),
+          own([A2], propose(found(o1, A2?, chair))), wait(holds(officer(o1))),
+          own([A3], propose(retire(o1, A3?))), wait(lacks(officer(o1))),
+          own([A4], propose(found_by_an_organisation(o2, A4?, o1, board)))],
+         [],
+         [approval(found(o1, alice, chair), yes)],
+         [approval(found_by_an_organisation(o2, alice, o1, board), yes)],
+         LA, LB, LC, LD, N).
+
+%% alice, bob, o1 and o2, each with its dispatcher and scripted person, their
+%% networks joined; each agent given no environment atom, Found requiring none
+%% (Organisation's Environment: the bylaws' entitlements and decisions).
+procedure four(ScriptSteps?, ScriptSteps?, ScriptSteps?, ScriptSteps?, Stream(ScriptLog), Stream(ScriptLog),
+    Stream(ScriptLog), Stream(ScriptLog), Stream(Sent(Cargo))).
+four(SA, SB, SC, SD, LA?, LB?, LC?, LD?, N?) :-
+    platform # agent(alice, InA?, OutA, TA, [], AsA),
+    platform # dispatch(AsA?, ch(GA?, DA), MA),
+    to_person(MA?, TA?),
+    person(DA?, GA, ps(nosess, [], [], SA?), LA),
+    platform # agent(bob, InB?, OutB, TB, [], AsB),
+    platform # dispatch(AsB?, ch(GB?, DB), MB),
+    to_person(MB?, TB?),
+    person(DB?, GB, ps(nosess, [], [], SB?), LB),
+    platform # agent(o1, InC?, OutC, TC, [], AsC),
+    platform # dispatch(AsC?, ch(GC?, DC), MC),
+    to_person(MC?, TC?),
+    person(DC?, GC, ps(nosess, [], [], SC?), LC),
+    platform # agent(o2, InD?, OutD, TD, [], AsD),
+    platform # dispatch(AsD?, ch(GD?, DD), MD),
+    to_person(MD?, TD?),
+    person(DD?, GD, ps(nosess, [], [], SD?), LD),
+    merge(OutA?, OutB?, Net1),
+    merge(OutC?, OutD?, Net2),
+    merge(Net1?, Net2?, Net),
+    route4(Net?, alice, InA, bob, InB, o1, InC, o2, InD, N).

@@ -1,0 +1,10 @@
+# The live site on each push to GLP main (Udi, 2026-11-25).  Each minute it runs peoplesweb-main.service, which starts the sweep only if main has moved.  Installed and enabled by deploy/sweep.sh.
+[Unit]
+Description=peoplesweb.org on each push to GLP main
+
+[Timer]
+OnCalendar=*-*-* *:*:15
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

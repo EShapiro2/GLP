@@ -1,0 +1,20 @@
+% Written by tools/expand.py from rev/; do not edit.
+Chess
+An *identity* is a unique cryptographic key pair.
+A *party* to a contract is whoever has an identity, and a *person* is a party who established their own identity.
+Alice *trusts* Bob when she knows Bob personally and believes him to keep the undertakings he signs under grassroots contracts.
+The *rules of chess* are the Laws of Chess of FIDE, the International Chess Federation. A *position* is the board with the side to move, the rights to castle and to capture en passant, the positions since the last capture or pawn move and the number of moves made, so that it shows a draw by repetition or by the fifty-move or seventy-five-move rule. The *time limit* of a game is the number of days a player has for each move.
+Alice, Bob and Carol are persons.
+Knowledge:1. ○ Establish: Alice may establish an identity once. Alice will make herself known by her public key, sign her acts with her private key, and be accountable for every act signed with it.
+Knowledge:2. ■ Acquaint: Alice and Bob may jointly come to know each other.
+Knowledge:3. ■ Introduce: Alice may introduce Carol to Bob with the consent of Bob, provided Alice and Bob know each other and Alice knows Carol.
+Friendship:1. ○ Befriend: Alice and Bob, who trust each other and are not friends, may jointly become friends.
+Friendship:2. ■ Unfriend: Alice may end her friendship with Bob.
+Friendship:3. ○ Loss of Trust. Alice will end her friendship with Bob if she ceases to trust him.
+Chess:1. ■ Start. Start: Alice and Bob may jointly start a game of chess with a time limit, provided they are friends and neither has started a game of that name; Alice then plays white and Bob black, from the first position. Start as black: Alice and Bob may jointly start a game of chess with a time limit, provided they are friends and neither has started a game of that name; Alice then plays black and Bob white, from the first position.
+Chess:2. ■ Move. Move: Alice may move in a game against Bob, provided it is her turn, the move is legal by the rules of chess and the position after it does not end the game drawn; the game is then at the position after the move, from the date of the move. Drawing move: Alice may move in a game against Bob, provided it is her turn, the move is legal by the rules of chess and the position after it ends the game drawn by the rules of chess, by stalemate, a dead position, the position the fifth time or the seventy-five-move rule; the game is then drawn.
+Chess:3. ■ Win: Alice may claim a game against Bob, provided Bob is to move and is checkmated; Alice has then won the game.
+Chess:4. ■ Time: Alice may claim a game against Bob on time, provided Bob is to move and the time limit has passed since the last move; Alice has then won the game.
+Chess:5. ■ Resign: Alice may resign a game against Bob; Bob has then won the game.
+Chess:6. ■ Draw. Draw: Alice and Bob may jointly agree a draw in a game, provided each has made a move in it. Claim draw: Alice may claim a draw in a game against Bob, provided it is her turn and the position may be claimed drawn by the rules of chess, by the position the third time or the fifty-move rule; the game is then drawn.
+Chess:7. ○ Fair play. Alice will choose each of her moves herself, with no help from a chess engine.

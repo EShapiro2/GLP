@@ -1,5 +1,5 @@
 Agora
-Agora extends Bonds.
+Agora inherits from Bonds.
 An *item* is a one-of-a-kind thing named by its maker.
 Alice and Bob are persons.
 1. ■ Make: Alice may make an item, which she then holds.
@@ -7,4 +7,4 @@ Alice and Bob are persons.
 3. ■ Join: Alice, the keeper of a market, may admit Bob, whom she knows, with the consent of Bob.
 4. ■ Posting. Offer, Want: A member of a market may post to its wall an item they hold, or something they want, each once; its keeper sees the post on their own wall. Deliver: The keeper delivers it to every member but the keeper, the poster included; each member then knows its poster.
 5. ■ Withdraw: A member may withdraw a post of theirs; the keeper removes it from their own wall and from the wall of every member it was delivered to, and the member may not post it to that market again.
-6. ■ Swap, Escrow: Notes:2 and Notes:4 apply to items as to notes.
+6. ○ Swap, Escrow: Notes:2 and Notes:4 apply to items as to notes.

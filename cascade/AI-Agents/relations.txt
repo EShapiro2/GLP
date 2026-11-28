@@ -1,0 +1,5 @@
+AI Agents instantiates Guardians: holds
+AI Agents composes it (Guardians) with Forwarding: holds
+AI Agents extends it (Guardians and Forwarding): holds
+AI Agents restricts it (Guardians and Forwarding): holds
+AI Agents strengthens it (Guardians and Forwarding): holds

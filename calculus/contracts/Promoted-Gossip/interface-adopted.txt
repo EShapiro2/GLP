@@ -1,0 +1,4 @@
+Interface pragmas
+Post: Alice [Post] <post>
+Tell: Alice [Tell]
+Keep: Alice [Keep] <dollar>

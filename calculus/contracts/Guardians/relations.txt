@@ -1,2 +1,1 @@
 Guardians extends Friendship: holds
-Guardians restricts Friendship: holds

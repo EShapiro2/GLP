@@ -1,0 +1,3 @@
+Home Exchange
+Home Exchange extends Free Matching.
+A post is a *home*, stating a dwelling, when it is free, and where and when its maker seeks one. Two homes match when each is where and when the other's maker seeks.

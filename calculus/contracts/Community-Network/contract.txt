@@ -1,0 +1,8 @@
+Community Network
+Community Network inherits from Backed Community Bank (SGC, Sovereign Grassroots Currencies: A CBDC Architecture for Credit and Monetary Policy, https://arxiv.org/abs/2609.27727).
+A *community network* is created by a backed community, and uses its community coins. Its bylaws name the role *arbiter*. A *provider* is a member of the community whose *stake*, the community coins they hold, is at least *S*, a number of community coins, and a *customer* is a member of the community who accepts community coins. A *dispute* is over community coins locked between a provider and a customer, on *terms* that set the arbiter's fee.
+Alice, Bob and Carol are persons, Orga a community network.
+1. ■ Set stake: Those who decide for Orga may set S.
+2. ■ Arbitration. Raise: Either Alice or Bob, the parties to a dispute, may raise it to an arbiter, Carol. Arbitrate: Carol may then decide the release of the locked coins to Alice and to Bob, less the fee the terms set, which is released to her.
+3. ■ Members. Found: Organisation:1, only if Alice is a member of the community. Join: Organisation:3, only if Bob is a member of the community.
+4. ○ Loss of membership. Those who decide for Orga will end Bob's participation in Orga if he ceases to be a member of the community.

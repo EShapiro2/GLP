@@ -98,7 +98,10 @@ sub local_vars {
             }
         }
         for my $k (1 .. $#p) {
-            for my $x (var_tokens($p[$k])) {
+            # A cleared atom, its wildcard among its arguments, requires nothing, so names no variable local to the role (GSC, Definition "Speech-act schema"; Calculus #11, vGLP_inbox.md, 2026-11-24 18:42 UTC: Commercial Bank\x27s Loan clears every vote_lend(Orga, _, Bob, Sum, Day) "and it requires none; so it binds neither Sum nor Day").
+            my $pk = $p[$k];
+            if ($k == 2) { (my $dl = $pk) =~ s/^\[//; $dl =~ s/\]$//; $pk = join(", ", grep { !/\bany\b|\bext_any\(/ } top_args($dl)) }
+            for my $x (var_tokens($pk)) {
                 if ($k == 2 || $k == 3) { $at{$x}{$r} = 1 }
                 if ($k == 2) { $del{$x} = 1 }
                 if ($k == 1) { $add{$x}{$r} = 1 }
@@ -235,7 +238,9 @@ sub find_schemas {
                         listed => ((defined $kind && ($kind->[0] eq "listed" || $kind->[0] eq "qlisted")) ? 1 : 0),
                         comps => [ map { [ map { [ $_->[1][0][0], $_->[1][1][1] ] } @{ $_->[1] } ] } @c ],
                         # The same lists as parsed terms, an atom with a multiplicity, times(K, A), read as its atom A, its multiplicity K not an argument of it (GSC, Appendix "Numbers": "a multiplicity k.phi is k copies of phi").
-                        atoms => [ map { [ map { $_->[0] eq "times" ? $_->[1][1] : $_ } @{ $_->[1] } ] } @c ] };
+                        atoms => [ map { [ map { $_->[0] eq "times" ? $_->[1][1] : $_ } @{ $_->[1] } ] } @c ],
+                        # The multiplicities, which name their variables at the role (det, below).
+                        mults => [ map { $_->[1][0] } grep { $_->[0] eq "times" } map { @{ $_->[1] } } @c ] };
         }
         $roles{$n} = \@rs;
         # The names after those of the roles are the marks of the schema\x27s agent variables that are no roles, one(Name, Other) (programs/gsc/self.glp, as_read, GLP GSC-marks f3314f4e): no role is named by one, and a role\x27s or a variable\x27s mark whose Other is no role, a variable or \x27_\x27, is $vmarks{S}, each [key, key], a key "r<i>" of the role i, "v<Name>" of the variable or "_" (vGLP, Section 5.4: "and persons of different names to different persons but for two the clause names as possibly one person").
@@ -274,9 +279,17 @@ for my $n (keys %cons) {
     my $r = 0;
     for my $rs (@{ $roles{$n} }) {
         $r++;
-        for my $k (0 .. 3) { for my $a (@{ $rs->{atoms}[$k] }) { $named_at{$_}{$r} = 1 for atom_keys($a) } }
+        for my $k (0 .. 3) { for my $a (@{ $rs->{atoms}[$k] }) { next if $k == 1 && cleared($a); $named_at{$_}{$r} = 1 for atom_keys($a) } }
+        # The variable of a multiplicity is named at its role, as k of cmint (local.glp, det_pick).
+        for my $m (@{ $rs->{mults} || [] }) { $named_at{$_}{$r} = 1 for atom_keys($m) }
     }
     for my $x (keys %{ $locals{$n} || {} }) { my @rr = keys %{ $named_at{"v$x"} || {} }; $role_of{"v$x"} = $rr[0] if @rr == 1 }
+    # The variables of the atoms the schema deletes, at any role, which the constraint never determines (local.glp, dels_name; Grassroots-Audit, cvac.glp.md, Finding 2).
+    my %deleted;
+    for my $rs (@{ $roles{$n} }) { for my $a (@{ $rs->{atoms}[1] }) { next if cleared($a); $deleted{$_} = 1 for atom_keys($a) } }
+    # The variables of a cleared atom, which the request names, never local and never determined (OSPM, act-schemas-local, VEUI vglp33-determined: "a cleared atom being neither"), as Sum of Central Bank\x27s Lend, so that Interest = Sum * Rate is determined at Orga, Rate local there (local.glp, occ_roles).
+    my %clr;
+    for my $rs (@{ $roles{$n} }) { for my $a (@{ $rs->{atoms}[1] }) { next unless cleared($a); $clr{$_} = 1 for atom_keys($a) } }
     my $more = 1;
     while ($more) { $more = 0;
     for my $c (con_conjs($cons{$n})) {
@@ -284,11 +297,16 @@ for my $n (keys %cons) {
         my %vs = map { $_ => 1 } (expr_nvars($c->[1][0]), expr_nvars($c->[1][1]));
         my @nl = grep { !$role_of{$_} } keys %vs;
         my %lr = map { $role_of{$_} => 1 } grep { $role_of{$_} } keys %vs;
+        # Of two variables or more local to no role, the one no atom names, the others bound by the schema-binding (local.glp, det_pick).
+        @nl = grep { !%{ $named_at{$_} || {} } && !$clr{$_} } @nl if @nl > 1;
         next unless @nl == 1 && keys %lr == 1;
         my ($v) = @nl; my ($i) = keys %lr;
         next unless lin_coef(["minus", [$c->[1][0], $c->[1][1]]], $v) != 0;
+        next if $deleted{$v};
+        next if $clr{$v};
+        # Named by the atoms of that role, or by none, as Rides\x27 Top = S + Total (local.glp, det_ok; vGLP #32, a5ea6b25).
         my @at = keys %{ $named_at{$v} || {} };
-        next unless @at == 1 && $at[0] == $i;
+        next unless @at == 0 || (@at == 1 && $at[0] == $i);
         (my $vn = $v) =~ s/^v//;
         next unless grep { $_ eq $vn } @{ $svars{$n} || [] };
         next if $locals{$n}{$vn};
@@ -301,6 +319,8 @@ for my $n (keys %cons) {
 }
 # The schemas a button realises: those bearing its name, the button in lower case, or its name with a suffix after an underscore (GSC #7, GSC docs/design-decisions.md, 2026-10-24: "the schemas realising it are those bearing its name or its name with a suffix after an underscore"), as [Enter] realises enter and enter_2 and [Swap] swap_cc, but for a schema another button of the contract names by its own name, as [Post own] names post_own and [Post] does not; the button alone where the term is not given or none is found.
 my %seen; my @order; my %extends;
+# The words of each instantiation, by the contract that writes it and the contract it instantiates ("an organisation for a ward"), and the name the line gives each contract a file extends, by file (relation_names and visit, below), from which an inherited line\x27s names are put in the instance\x27s own (own_names, below).
+my (%inst_words, %parent_name);
 my %named_by_button;
 # The schema a button names (README.md, 2): its text in lower case, each run of spaces an underscore, and every character that is no letter, digit, underscore or hyphen left out, as the apostrophe of [Redeem member\x27s coin], the schema redeem_members_coin (Calculus #6, vGLP_inbox.md, 2026-11-15 16:04 UTC).
 sub act_name { my ($b) = @_; (my $a = lc $b) =~ s/ +/_/g; $a =~ s/[^a-z0-9_-]//g; return $a }
@@ -378,6 +398,80 @@ sub read_base_names {
     return $base_names{$f} = \%bn;
 }
 # A name is renamed only where the instance renames that role, and a role both share keeps its name (GSC #19, vGLP_inbox.md, 2026-11-17 12:33 UTC): a name of the base\x27s schema maps to the name at its place in the instance\x27s schema only where the base\x27s schema bears no role or variable of the instance\x27s name and the instance\x27s bears none of the base\x27s, so that Commercial Bank\x27s expel, adding DeciderB at the place of Organisation\x27s Codecider, renames nothing.  A button the contract replaces with a line of its own is not read from the base\x27s line (vGLP, Section 5.4, "The contract\x27s words": "its button ... replaces the inherited one"), so that Joint Accounts\x27 own [Deposit] maps no name of Coins\x27 Escrow line.  The names of a button line, and of the question lines after it, which belong to it, are renamed by the schemas of that line\x27s buttons.
+# The kinds the names declaration of a contract gives its names, in their order: "Alice and Bob are persons, Orga an organisation." gives Alice and Bob the kind person and Orga organisation (the Calculus, Section 1, "The names line of a contract declares the names of its own clauses"; calculus/tools/gcsas.py, kinds_line).
+my %decl_kinds;
+sub decl_kinds {
+    my ($f) = @_;
+    return $decl_kinds{$f} if exists $decl_kinds{$f};
+    my @out;
+    my $N = qr/[A-Z][A-Za-z]*/;
+    for my $x (read_txt($f)) {
+        next if $x =~ /^%/;
+        last if $x =~ /^\d+\./ || contract_end($x);
+        for my $l (split /\.\s{2,}/, $x) {
+            next if $l =~ /\*/ or $l !~ /^$N(?:, $N)*(?: and $N)? (?:is|are) /;
+            my $seg = (split /; |\. /, $l)[0]; $seg =~ s/\.\s*$//;
+            while ($seg =~ /((?:$N, )*$N(?: and $N)?) (?:(?:is|are) )?((?:an? )?[a-z][A-Za-z\x27 -]*?)(?=, | and [A-Z]|$)/g) {
+                my ($ns, $k) = ($1, $2); $k =~ s/^an? //;
+                next if $k =~ /^possibly/;
+                my @ns = ($ns =~ /($N)/g);
+                $k = $k eq "children" ? "child" : $k =~ /ies$/ ? $k =~ s/ies$/y/r : $k =~ /s$/ ? $k =~ s/s$//r : $k if @ns > 1;
+                push @out, [ $_, $k ] for @ns;
+            }
+        }
+        last if @out;
+    }
+    return $decl_kinds{$f} = \@out;
+}
+# The kinds of the names of a contract and of every contract it is written from, its own first, in order.
+sub kinds_from {
+    my ($f, $seen) = @_;
+    $seen //= {};
+    return () if $seen->{$f}++;
+    return (@{ decl_kinds($f) }, map { kinds_from($_, $seen) } @{ $extends{$f} // [] });
+}
+# The names a contract puts for the names of a contract it instantiates, its own: where it instantiates it with a kind for a kind, "an organisation for a ward", the first name the instantiated contract and those it is written from give the kind replaced, Guardians\x27 Wendy, is the last name the contract\x27s own declaration gives the kind put that they do not give, Organisation\x27s Orga: "Its conditions, persons and effects are written with the names of its own contract: Organisation:4 writes Orga, the organisation, where Guardians:2 writes Wendy, the ward" (the Calculus, Section 1, citations; calculus/tools/gcsas.py, own_for; Udi, 2026-11-17, to Calculus #8).
+sub own_for {
+    my ($c, $p) = @_;
+    my %mp;
+    my $pn = $parent_name{$c}{$p} // return \%mp;
+    my @items = map { split /\s*,\s*(?:and\s+)?|\s+and\s+/ } @{ $inst_words{$c}{$pn} // [] };
+    my @pk = kinds_from($p);
+    my %inp = map { $_->[0] => 1 } @pk;
+    for my $it (@items) {
+        next unless $it =~ /^\s*(?:(?:an?|the)\s+)?(.+?)\s+for\s+(?:(?:an?|the)\s+)?(.+?)\s*$/;
+        my ($new, $old) = ($1, $2);
+        my ($o) = grep { !exists $mp{$_} } map { $_->[1] eq $old ? $_->[0] : () } @pk;
+        my @mine = map { $_->[1] eq $new && !$inp{ $_->[0] } ? $_->[0] : () } @{ decl_kinds($c) };
+        $mp{$o} = $mine[-1] if defined $o && @mine;
+    }
+    return \%mp;
+}
+# The names the contract read, $top, puts for the names of a contract $f it is written from, through every instantiation between them: the map of each step from $f up to $top applied in turn.
+my %own_names;
+sub own_names {
+    my ($f) = @_;
+    return $own_names{$f} if exists $own_names{$f};
+    my @path;
+    my %vis;
+    my $find; $find = sub {
+        my ($g) = @_;
+        return 1 if $g eq $f;
+        return 0 if $vis{$g}++;
+        for my $h (@{ $extends{$g} // [] }) { if ($find->($h)) { unshift @path, [ $g, $h ]; return 1 } }
+        return 0;
+    };
+    my %mp;
+    if ($find->($top)) {
+        for my $st (reverse @path) {
+            my $m = own_for(@$st);
+            $mp{$_} = $m->{ $mp{$_} } // $mp{$_} for keys %mp;
+            for my $k (keys %$m) { $mp{$k} //= $m->{$k} unless grep { $_ eq $k } values %mp }
+        }
+    }
+    delete $mp{$_} for grep { $mp{$_} eq $_ } keys %mp;
+    return $own_names{$f} = \%mp;
+}
 sub inst_renamed {
     my ($f, $ln, $rest) = @_;
     my $bn = read_base_names($f);
@@ -403,6 +497,9 @@ sub inst_renamed {
                 my @bv = @{ $bn->{$sb}{vars} };
                 my %inb = map { $_ => 1 } (@br, @bv);
                 my %ini = map { $_ => 1 } (grep { defined } @ir, @iv);
+                # A name the instance puts for a name of its base by the instantiation\x27s words is renamed so first, wherever the base\x27s schema bears it and the instance\x27s bears the instance\x27s name and not the base\x27s, whatever the places of the two in the schemas (own_names, above): Guardians\x27 enter, of Wendy and Alice, is Organisation\x27s, of Alice and Orga.
+                my $own = own_names($f);
+                for my $o (keys %$own) { $map{$o} //= $own->{$o} if $inb{$o} && !$ini{$o} && $ini{ $own->{$o} } }
                 for my $i (0 .. $#br) { next unless defined $ir[$i]; $map{ $br[$i] } //= $ir[$i] if $br[$i] ne $ir[$i] && !$ini{ $br[$i] } && !$inb{ $ir[$i] } }
                 for my $j (0 .. $#bv) { next unless defined $iv[$j]; $map{ $bv[$j] } //= $iv[$j] if $bv[$j] ne $iv[$j] && !$ini{ $bv[$j] } && !$inb{ $iv[$j] } }
             }
@@ -456,8 +553,14 @@ sub relation_names {
     my $nm = $known;
     # composes, the composition of contracts (GSC, Section Relations among Contracts), names the contracts composed, "composes A with B", A or B "it", "the instance" or "the composition" where it is what the line has named before, as "GAI instantiates GnW, composes it with GFP and restricts the composition" (Agents.txt) and "GSNP composes GAI with GSN and amends the composition" (Provenance-Groups.txt; GAI #13, Code_inbox.md, 2026-11-10 20:39 UTC).
     # relaxes, the sixth relation of the Calculus (calculus/PARTS.txt, 2: "a relaxing citation ... adds the relaxed act and keeps the act cited"), as "GC relaxes and extends GN." (Code #33, vGLP_inbox.md, 2026-11-16 16:50 UTC).
-    my $rel = qr/(?:amends|extends|instantiates|implements|restricts|strengthens|relaxes|composes)\b/;
-    my $back = qr/(?:it|them|the instance|the composition)/;
+    # weakens, a relation of the Calculus (calculus/tools/adopt.py, written_from), as "Feeds extends Labelled Overlay, and weakens it." (Code #37, 2026-11-24).
+    # renames, lifts and unites, relations of the Calculus, read as instantiates, extends and extends (calculus/tools/relations.py, new_verbs: "weakens as restricts, amends as restricts and strengthens, unites and lifts as extends, and renames as instantiates with the words of gr/n\x27s pragma \x27Renaming of B: an organisation for a ward.\x27"), as "Children renames Warded Groups, and extends and weakens it." and "App unites Encounters, AppStore and Directory."; "the union" what the line has named before; and a contract named as "a weakening of", "a strengthening of", "an amendment of", "a renaming of" or "a lift of" it, the contract itself, as "Provenance Groups unites Groups and a strengthening of AI Agents" (calculus/tools/relations.py: "\x27a weakening of a lift of Bonds\x27: Bonds"; Code #37, 2026-11-24).  augments, read as restricts and strengthens (relations.py, new_verbs: "augments as restricts and strengthens"), and a contract named as "an augmentation of" it, as "Rides unites Community Network and Second-Score Auction, and extends and augments the union" (Calculus 1724963; CSSN #19 and Code #37, 2026-11-24).
+    # inherits from, the Calculus\x27s one first line, "NAME inherits from A, B and C.", the contracts after it read as those of extends, the words of a renaming from its pragma "Renaming of B: ..." (Calculus calc11-no-parameters fe486d2, record item 71; Code #38, 2026-11-25).
+    my $rel = qr/(?:amends|extends|instantiates|implements|restricts|strengthens|relaxes|weakens|composes|renames|lifts|unites|augments|inherits\s+from)\b/;
+    my $back = qr/(?:it|them|the instance|the composition|the union)/;
+    my $of = qr/(?:an?\s+(?:weakening|strengthening|amendment|renaming|lift|augmentation)\s+of\s+)*/;
+    # The words of a renaming, the contract\x27s pragma "Renaming of B: a child for a ward and a parent for a guardian.", as an instantiation\x27s.
+    for (@body) { push @{ $inst_words{$f}{$1} }, $2 if /^Renaming of ($nm):\s*(.*?)\.\s*$/ }
     if ($body[1] !~ /^$nm\s+$rel/ && $body[1] =~ /^((?:[A-Z][^\s,]*\s+){1,2}?)$rel/) {
         (my $w = $1) =~ s/\s+$//;
         die "pragmas.sh: $f: the line saying what the contract is written from, \"$body[1]\", names no contract at \"$w\", no name of calculus/NAMES.txt\n";
@@ -476,9 +579,9 @@ sub relation_names {
         # The contract they are to: "it", "the instance" or "the composition", what the line has named before, or contracts joined by commas and "and"; and, of composes, the contract it is composed with after "with", either of the two named or named before.
         my $target = sub {
             if ($s =~ s/^($back)(?=$|[\s,])//) { @names or $no->($1); return }
-            $s =~ s/^($nm)(?=$|[\s,])// or $no->($s);
+            $s =~ s/^$of($nm)(?=$|[\s,])// or $no->($s);
             push @names, $1;
-            while ($s =~ s/^(?:\s*,\s*(?:and\s+)?|\s+and\s+)($nm)(?=$|[\s,])//) { push @names, $1 }
+            while ($s =~ s/^(?:\s*,\s*(?:and\s+)?|\s+and\s+)$of($nm)(?=$|[\s,])//) { push @names, $1 }
         };
         $target->();
         if (grep { $_ eq "composes" } @rels) {
@@ -487,9 +590,10 @@ sub relation_names {
         }
         # An instantiation\x27s words, between commas after the contract\x27s name, up to the next relation or the end of the line, which it may omit.
         # The Calculus writes an instantiation\x27s words after "with", up to the next relation or the end of the line, as "instantiates GnW with bylaws, an organisation for a ward and an officer for a guardian, and restricts, strengthens and extends it" (calculus/README.md, "The relations").
-        if (grep { $_ eq "instantiates" } @rels and !grep { $_ eq "composes" } @rels and $s =~ s/^\s+with\s+(?:(?!\s*,?\s*(?:and\s+)?$rel).)*//) { }
+        if (grep { $_ eq "instantiates" } @rels and !grep { $_ eq "composes" } @rels and $s =~ s/^\s+with\s+((?:(?!\s*,?\s*(?:and\s+)?$rel).)*)//) { push @{ $inst_words{$f}{ $names[-1] } }, $1 }
         elsif (grep { $_ eq "instantiates" } @rels and $s =~ s/^\s*,(?!\s*(?:and\s+)?$rel)\s*((?:(?!,\s*(?:and\s+)?$rel).)*?)\s*(?=,\s*(?:and\s+)?$rel|$)//) {
             my $w = $1;
+            push @{ $inst_words{$f}{ $names[-1] } }, $w;
             $w =~ /\bfor\b/ or die "pragmas.sh: $f: the line saying what the contract is written from, \"$line\", says between commas after the contract instantiated what it writes for what, and \"$w\" does not\n";
         }
         last if $s =~ /^\s*$/;
@@ -512,6 +616,7 @@ sub visit {
             defined $g or die "pragmas.sh: $f: the contract $n, which its line saying what it is written from names, has no " . ($file_of{$n} // $n) . ".txt\n";
             visit($g);
             push @{ $extends{$f} }, $g;
+            $parent_name{$f}{$g} //= $n;
         }
     } elsif (defined $ext) {
         my $dir = $f =~ m{/} ? $f =~ s{/[^/]*$}{}r : ".";   # a file named with no directory is in the current one
@@ -982,6 +1087,8 @@ sub field_keys3 {
         next unless !$b{$k} && ($_->[0] eq "role" || $_->[0] eq "pvar" || $fills{ $_->[2] });
         if ($_->[0] eq "num" && $cons{$S}) {
             my %known = (%b, map { ($_->[0] eq "role" ? "r$_->[3]" : "v$_->[2]") => 1 } @out);
+            # A set variable is never known: the proposer chooses its size, a field, and the platform takes the set of that size, new names for an issue and the notes the proposer holds for a payment (Calculus #11, vGLP_inbox.md, 2026-11-24 18:12 UTC: "So Sum is a field in every case; SumSet is never one"), so size(SumSet) = Sum determines no Sum.
+            for my $h (@{ $head{$S} }) { if ($h->[0] eq "set") { (my $x = $h->[1][0][0] // "") =~ s/^\x27|\x27$//g; delete $known{"v$x"} } }
             my %d = map { $_ => 1 } det_closure($cons{$S}, \%known);
             next if $d{$k};
         }
@@ -991,7 +1098,7 @@ sub field_keys3 {
 }
 # The numeric variables a constraint gives finitely many values once those of %$known are bound, taken again with each it gives, as local.glp’s con_det and determined decide it: succ(X, Y) gives Y once X is bound and X once Y is; eq(X, Y) its one numeric variable not bound, where its coefficient in X - Y is not 0; and(C1, C2) what either gives; or(C1, C2) what both give; the rest give none.
 sub nvar_key { my ($e) = @_; return undef unless @$e == 2 && $e->[0] eq "num"; my $x = $e->[1][0][0]; return undef if $x =~ /^-?\d+$/; $x =~ s/^\x27|\x27$//g; return "v$x" }
-sub expr_nvars { my ($e) = @_; return () if @$e == 1; my $v = nvar_key($e); return ($v) if defined $v; return () if $e->[0] eq "num"; return map { expr_nvars($_) } @{ $e->[1] } if $e->[0] =~ /^(plus|minus|mul)$/; return () }
+sub expr_nvars { my ($e) = @_; return () if @$e == 1; my $v = nvar_key($e); return ($v) if defined $v; return () if $e->[0] eq "num"; return map { expr_nvars($_) } @{ $e->[1] } if $e->[0] =~ /^(plus|minus|mul)$/; return map { expr_nvars($_) } @{ $e->[1][1][1] } if $e->[0] eq "fn" && @{ $e->[1] } == 2 && $e->[1][1][0] eq "[]"; return () }
 sub const_of { my ($e) = @_; return 0 if @$e == 1; return $e->[1][0][0] + 0 if $e->[0] eq "num" && $e->[1][0][0] =~ /^-?\d+$/; my ($a, $b) = @{ $e->[1] }; return const_of($a) + const_of($b) if $e->[0] eq "plus"; return const_of($a) - const_of($b) if $e->[0] eq "minus"; return const_of($a) * const_of($b) if $e->[0] eq "mul"; return 0 }
 sub lin_coef {
     my ($e, $v) = @_;
@@ -1081,9 +1188,10 @@ for my $i (0 .. $#pending) {
     for my $S (@real) {
         my %mine = map { $_->[2] => 1 } field_keys3($S, $pd->{pl}{$S});
         my @sl = field_slots($S);
-        my @own = map { $mine{ $_->[2] } ? $fname{ $_->[2] } : "" } @sl;
+        # Each field at its place in the request, a set variable, which is no field, keeping its place (vGLP #32, 2026-11-24: the swap of Coins, its sets before its amounts).
+        my @own; for my $sl (@sl) { $own[$sl->[1] - 1] = $mine{ $sl->[2] } ? $fname{ $sl->[2] } : "" } @own = map { $_ // "" } @own;
         # The type of each field for a speech-act variable the schema types, typed(T, x), ft(K, T) for its K-th field, as a seventh argument of the act where it has one, the compiler printing T as the field\x27s kind (vGLP 37fe038, Section 5.4: "a text by the type its variable carries in the schema where it carries one").
-        my @ft = map { ($mine{ $sl[$_][2] } && $sl[$_][0] eq "svar" && $ftype{$S}{ $sl[$_][2] }) ? "ft(" . ($_ + 1) . ", " . q_atom($ftype{$S}{ $sl[$_][2] }) . ")" : () } 0 .. $#sl;
+        my @ft = map { ($mine{ $sl[$_][2] } && $sl[$_][0] eq "svar" && $ftype{$S}{ $sl[$_][2] }) ? "ft(" . $sl[$_][1] . ", " . q_atom($ftype{$S}{ $sl[$_][2] }) . ")" : () } 0 .. $#sl;
         push @ft, map { "consents($_)" } @{ $consent_of{$S} // [] };
         pop @own while @own && $own[-1] eq "";
         my $button = (grep { grep { $_ eq $S } @{ $pd->{reals}{$_} } } @{ $pd->{buttons} })[0];
@@ -1184,5 +1292,31 @@ pop @cl while @cl && $cl[-1] !~ /\S/;
 my $tx = join("\n", @cl);
 $tx =~ s/\\/\\\\/g; $tx =~ s/"/\\"/g; $tx =~ s/\n/\\n/g;
 # A contract the phone finds a fact for carries a seventh argument, the predicates found, so that every other contract prints the term it printed before.
-print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "], [" . join(", ", @stands) . "], $lk, $vn, " . q_atom("\"$tx\"") . (@found ? ", [" . join(", ", @found) . "]" : "") . ")\n";
+# The functions of the contract\x27s value types that their owner gives as typed GLP procedures (vGLP, Section 5.4, "Speech-act schemas as local specifications": "any other relation or function of a value type, which the owner of the type gives as a typed GLP procedure that decides the relation or computes the function, and which the platform the compiler prints calls"): the file NAME-functions.glp beside the NAME.txt of the contract or of a contract it extends, each procedure it declares a function, fn(Name, Kinds, Kind), the kinds of its arguments and of its value, its last argument, by their declared types, and its lines, which the platform carries, the eighth argument fns(Fns, Lines); none where no such file is.
+my (@fns, @fn_lines, %fn_seen);
+for my $f (@order) {
+    (my $ff = $f) =~ s/\.txt$/-functions.glp/;
+    next unless -f $ff;
+    open(my $h, "<", $ff) or die "pragmas.sh: cannot read $ff\n";
+    my @fl = <$h>; close $h; chomp @fl;
+    # A file that exports a procedure gives as functions only the procedures it exports, the others being their helpers; one that exports none gives every procedure it declares.  The lines are carried without the word exported, the platform exporting what it exports.
+    my $exp = grep { /^exported\s+procedure\s/ } @fl;
+    for my $x (@fl) {
+        my $e = ($x =~ s/^exported\s+(procedure\s)/$1/);
+        if ($x =~ /^procedure\s+([a-z]\w*)\((.*)\)\.\s*$/ && ($e || !$exp)) {
+            my ($n, $a) = ($1, $2);
+            my ($d, $cur, @ts) = (0, "");
+            for my $ch (split //, $a) { $d++ if $ch eq "(" || $ch eq "["; $d-- if $ch eq ")" || $ch eq "]"; if ($ch eq "," && $d == 0) { push @ts, $cur; $cur = "" } else { $cur .= $ch } }
+            push @ts, $cur;
+            # The kind of each place, by its declared type: a number (Integer, Number), a constant (Constant, String), or other, which the compiler does not take.
+            my @k = map { (my $t = $_) =~ s/^\s+|\s+$//g; $t =~ s/\?$//; $t =~ /^(Integer|Number)$/ ? "num" : $t =~ /^(Constant|String)$/ ? "const" : "other" } @ts;
+            my $v = pop @k;
+            die "pragmas.sh: $ff: the function $n is declared twice\n" if $fn_seen{$n}++;
+            push @fns, "fn($n, [" . join(", ", @k) . "], $v)";
+        }
+        push @fn_lines, q_atom($x);
+    }
+}
+my $fn_arg = @fns ? ", fns([" . join(", ", @fns) . "], [" . join(", ", @fn_lines) . "])" : "";
+print "pragmas([" . join(", ", @lists) . "], [" . join(", ", @acts) . "], [" . join(", ", @stands) . "], $lk, $vn, " . q_atom("\"$tx\"") . (@found || @fns ? ", [" . join(", ", @found) . "]" : "") . $fn_arg . ")\n";
 ' "$1" "$PROGRAMS" "${2:-}" "$FROM"
