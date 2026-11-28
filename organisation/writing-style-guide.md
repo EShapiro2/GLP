@@ -113,6 +113,7 @@ Precision over persuasion.
 
 - **Theorems are one-liners.**  Hypotheses are fixed before the theorem; every notion it needs is a definition.
 - **"1. NO VERBIAGE  2. NO UNNECESSARY FORMAL SYMBOLISM  Clean, simple, clear, My English definitions that are precise and formal without being formalistic."** (Udi, 2026-11-27 22:23 UTC, to vGLP #29, reported by the vGLP Cowork session; examples in 41.)  A symbol that only the proofs use is introduced in the proofs.
+- **A definition first names the larger class, then the condition** (Udi, 2026-11-28 14:53 UTC, to vGLP #30, reported by the vGLP Cowork session: "Something of a certain class [that has both x's and non x's] is x if [certain conditions hold of x].  So, first define (or borrow from previous definitions) the larger class or type that includes both x's and non x's, and then define among them the x's based on the conditions that they satisfy within that class.").  Never "an x is so and so".  A condition that is already a defined kind goes into the kind: "A proper ground instance a of an implication of G is an act of G", not "A ground instance ... is an act of G if it is proper".  Name the notation in the same sentence, with no "We write" (Udi, 15:16 UTC: "why cumbersome? I like simple and elegant!").  Example, before and after, in 41.
 - **A formal definition is for mathematical content, and it is short.**  "Definitions cannot be that long."  A program or a procedure is described in text.
 - **NEVER use the LaTeX definition environment for something that is not math, but is prose.**  Define it with `\emph` in running text.
 - **NEVER include explanatory text in mathematical text: definitions, theorems, proofs.**
@@ -393,3 +394,18 @@ Wrong: Q: Shall I bring the sentence on madGLP fully to IGLP: the conditions of 
 Right: Q: Shall VMAT say of madGLP what IGLP says?
 Why: "this is Claudese, don't you have a Claudese filter? speak my english": "bring X to Y" for making a text say what another paper says, and a question that lists the mechanics of a change after a colon.
 Source: Udi, 2026-11-26 22:06 UTC, to VMAT #4, reported by the VMAT Cowork session.
+
+Wrong: An act of G is a proper ground instance a of an implication of G (Definition Ground instance, participants), with participants A(a) and guards Q(a); a is unguarded if Q(a)=∅, and guarded otherwise.
+Right: A proper ground instance a of an implication of G (Definition Ground instance, participants) is an act of G, with A(a) its participants, Q(a) its guards, a unguarded if Q(a) is empty, guarded otherwise.
+Why: a definition says "an x is so and so"; name the larger class first, then the condition that makes x.
+Source: Udi, 2026-11-28 14:53 and 15:18 UTC, to vGLP #30, Compiling GC, Definition Act: "record the before and after as example and guideline of how I would like all math text revised and cleaned".
+
+Wrong: A ground instance a of an implication of G is an act of G if it is proper.
+Right: A proper ground instance a of an implication of G is an act of G.
+Why: a condition that is already a defined kind goes into the kind.
+Source: Udi, 2026-11-28 15:06 UTC, to vGLP #30: "why not: A proper ground instance a of an implication of G is an act of G".
+
+Wrong: A proper ground instance of an implication of G is an act of G.  We write A(a) for the participants of an act a, and Q(a) for its guards.
+Right: A proper ground instance a of an implication of G is an act of G, with A(a) its participants, Q(a) its guards.
+Why: a second sentence to introduce notation the first can carry.
+Source: Udi, 2026-11-28 15:16 UTC, to vGLP #30: "why cumbersome? I like simple and elegant!".
