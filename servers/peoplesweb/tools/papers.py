@@ -80,6 +80,12 @@ SOURCES.update({
     # Grassroots Platforms: Beyond Decentralisation"; and to Audit #1, the
     # same day: "GPBD has been published, so show recent PDF".
     'GPBD': {'repo': 'GPBC-Grassroots-Platforms-Beyond-Decentralisation', 'main': 'main_characterisation_ArXiv.tex'},
+    # The Calculus, built and published on the branch papers as
+    # papers/Calculus.pdf for the auditors' public verification (Udi,
+    # 2026-11-28 11:15 UTC, of the auditor's request to publish the Calculus
+    # PDF on the GLP papers branch: "huh? you have access to the repo").
+    # Its main file is anonymous, so no author is named.
+    'Calculus': {'repo': 'GCC-Grassroots-Contracts-Calculus', 'main': 'main.tex'},
     # GGGA is not built: "GGGA is but a draft, so dont show it" (Udi,
     # 2026-11-12, to Audit #1, reported by Audit #1).
 })
